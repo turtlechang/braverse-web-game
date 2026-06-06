@@ -46,7 +46,25 @@ node scripts/import-official-cards.mjs \
 | `attackText` | `card_attack_text` | 保留尚未解析的攻擊文字 |
 | `flipText` | `card_flip` | 保留 FLIP 效果文字 |
 
-目前不解析攻擊文字內的 `{R}`、`{N}`、`{da}` 等標記；解析器應在確認完整符號規格後另行實作。
+匯入器不改寫攻擊文字內的 `{R}`、`{N}`、`{da}` 等標記；這些內容由下方的文字解析層處理。
+
+## 文字解析與遊戲轉換
+
+`src/cards/official-text-parser.ts` 目前會解析：
+
+- `{R}`、`{Y}`、`{G}`、`{B}`、`{P}`、`{K}`：各色能源費用
+- `{N}`：任意／中性費用
+- `{da} 數字`：攻擊傷害
+- 其他標記會保留在 `markers` 或 `unknownTokens`，不推測效果規則
+
+`src/cards/official-card-adapter.ts` 負責轉為目前遊戲引擎的 `GameCard`：
+
+- `COOKIE` 與具餅乾數值的 `FLIP` 轉為 `CookieCard`
+- `ITEM`、`TRAP`、`STAGE` 轉為非餅乾卡
+- `EXTRA`、未知類型或缺少必要數值的卡回傳 `unsupported`
+- runtime `id` 使用 `baseCardNumber`，異圖卡號與圖片 URL 保留在來源 metadata
+
+轉換層只處理可確定的基本數值，不會把尚未支援的官方效果文字假裝成可執行效果。
 
 ## 使用與版權
 

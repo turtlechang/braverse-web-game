@@ -1,0 +1,136 @@
+import type {
+  EnergySymbol,
+  ParsedCardText,
+  ParsedOfficialCard,
+} from './types'
+
+const ENERGY_SYMBOLS: Record<string, EnergySymbol> = {
+  R: 'red',
+  Y: 'yellow',
+  G: 'green',
+  B: 'blue',
+  P: 'purple',
+  K: 'black',
+  N: 'neutral',
+}
+
+const DISPLAY_MARKERS: Record<string, string> = {
+  sk: '',
+  ap: '[Activate]',
+  t1: '[Once per turn]',
+  bl: '[Blocker]',
+}
+
+const KNOWN_NON_ENERGY_TOKENS = new Set([
+  'da',
+  'sk',
+  'ap',
+  'mob',
+  't1',
+  'bl',
+  'mt',
+  'mou',
+])
+
+const extractCost = (raw: string) => {
+  const costMatch = raw.match(/<((?:\{[A-Z]\})+)>/)
+  const cost: Partial<Record<EnergySymbol, number>> = {}
+
+  if (!costMatch) {
+    return { cost, totalCost: 0 }
+  }
+
+  for (const tokenMatch of costMatch[1].matchAll(/\{([A-Z])\}/g)) {
+    const energy = ENERGY_SYMBOLS[tokenMatch[1]]
+
+    if (energy) {
+      cost[energy] = (cost[energy] ?? 0) + 1
+    }
+  }
+
+  return {
+    cost,
+    totalCost: Object.values(cost).reduce(
+      (total, amount) => total + (amount ?? 0),
+      0,
+    ),
+  }
+}
+
+const createDisplayText = (raw: string) =>
+  raw
+    .replace(/<((?:\{[A-Z]\})+)>/g, (_, costTokens: string) => {
+      const symbols = [...costTokens.matchAll(/\{([A-Z])\}/g)].map(
+        (match) => match[1],
+      )
+      return `[Cost: ${symbols.join(' ')}]`
+    })
+    .replace(/\{da\}\s*(\d+)/g, 'Damage $1')
+    .replace(/\{([A-Za-z0-9_]+)\}/g, (_, token: string) => {
+      if (token in DISPLAY_MARKERS) {
+        return DISPLAY_MARKERS[token]
+      }
+
+      if (token in ENERGY_SYMBOLS) {
+        return `[${token}]`
+      }
+
+      return `[${token}]`
+    })
+    .replace(/\s+/g, ' ')
+    .trim()
+
+export const parseOfficialCardText = (
+  rawText: string | null,
+): ParsedCardText | null => {
+  if (!rawText?.trim()) {
+    return null
+  }
+
+  const raw = rawText.trim()
+  const tokenNames = [...raw.matchAll(/\{([A-Za-z0-9_]+)\}/g)].map(
+    (match) => match[1],
+  )
+  const { cost, totalCost } = extractCost(raw)
+  const damageMatch = raw.match(/\{da\}\s*(\d+)/)
+  const markers = [
+    ...new Set(
+      tokenNames.filter(
+        (token) => token in DISPLAY_MARKERS || KNOWN_NON_ENERGY_TOKENS.has(token),
+      ),
+    ),
+  ]
+  const unknownTokens = [
+    ...new Set(
+      tokenNames.filter(
+        (token) =>
+          !(token in ENERGY_SYMBOLS) && !KNOWN_NON_ENERGY_TOKENS.has(token),
+      ),
+    ),
+  ]
+
+  return {
+    raw,
+    displayText: createDisplayText(raw),
+    cost,
+    totalCost,
+    damage: damageMatch ? Number(damageMatch[1]) : null,
+    markers,
+    unknownTokens,
+  }
+}
+
+export const parseOfficialCardTexts = ({
+  skill,
+  attackText,
+  flipText,
+}: {
+  skill: { name: string | null; text: string | null }
+  attackText: string | null
+  flipText: string | null
+}): ParsedOfficialCard => ({
+  skillName: parseOfficialCardText(skill.name),
+  skillText: parseOfficialCardText(skill.text),
+  attack: parseOfficialCardText(attackText),
+  flip: parseOfficialCardText(flipText),
+})
