@@ -1,4 +1,11 @@
 export { GameRuleError } from './errors'
+export {
+  executeCardEffect,
+  getAttackDamageAgainst,
+  getEffectTargetCandidates,
+  getEffectiveAttack,
+  selectEffectTargets,
+} from './effects'
 export { createDemoGame } from './demo'
 export {
   attackCookie,
@@ -17,15 +24,27 @@ export {
   resolveBasicVictory,
 } from './victory'
 export type {
+  AttackModifier,
   BaseCard,
+  BreakLevelCondition,
+  CardEffect,
   CardType,
   CookieCard,
   CookieInBattle,
+  DamageEffect,
+  DamageReceivedModifier,
   DefeatReason,
+  EffectCondition,
+  EffectContext,
+  EffectDuration,
+  EffectTargetSelector,
+  EffectTargetSide,
   GameCard,
   GameResult,
   GameState,
   GameStatus,
+  ModifyAttackEffect,
+  ModifyDamageReceivedEffect,
   NonCookieCard,
   PlayerId,
   PlayerSetup,

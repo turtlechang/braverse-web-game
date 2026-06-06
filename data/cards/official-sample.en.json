@@ -5,237 +5,41 @@
     "pageUrl": "https://cookierunbraverse.com/en/cardList",
     "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
     "locale": "en",
-    "fetchedAt": "2026-06-06T14:21:12.187Z",
+    "fetchedAt": "2026-06-06T16:03:45.295Z",
     "totalAvailable": 1992,
-    "importedCount": 10,
+    "matchedAvailable": 22,
+    "importedCount": 22,
+    "filter": {
+      "categoryTitle": "Starter Deck RED"
+    },
     "imagesDownloaded": false
   },
   "cards": [
     {
-      "sourceId": 46297,
+      "sourceId": 45253,
       "locale": "en",
-      "cardNumber": "BS9-001@1",
-      "baseCardNumber": "BS9-001",
-      "variant": "1",
-      "name": "Icicle Yeti Cookie",
-      "type": "flip",
-      "officialType": "FLIP",
-      "rarity": "C",
-      "grade": "COMMON",
-      "level": 2,
-      "hp": 3,
-      "energyType": "RED",
-      "color": "RED",
-      "skill": {
-        "name": null,
-        "text": null
-      },
-      "attackText": "<{R}{R}> Pointy Icicle {da} 2",
-      "flipText": "Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.",
-      "keywords": [],
-      "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/G2fck1k1zK2Vi2PeQy2GWA.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
-    {
-      "sourceId": 46298,
-      "locale": "en",
-      "cardNumber": "BS9-001@2",
-      "baseCardNumber": "BS9-001",
-      "variant": "2",
-      "name": "Icicle Yeti Cookie",
-      "type": "flip",
-      "officialType": "FLIP",
-      "rarity": "C",
-      "grade": "COMMON",
-      "level": 2,
-      "hp": 3,
-      "energyType": "RED",
-      "color": "RED",
-      "skill": {
-        "name": null,
-        "text": null
-      },
-      "attackText": "<{R}{R}> Pointy Icicle {da} 2",
-      "flipText": "Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.",
-      "keywords": [],
-      "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7bh33IzyDVrZKEOuVJDjnA.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
-    {
-      "sourceId": 46150,
-      "locale": "en",
-      "cardNumber": "BS9-001",
-      "baseCardNumber": "BS9-001",
-      "variant": null,
-      "name": "Icicle Yeti Cookie",
-      "type": "flip",
-      "officialType": "FLIP",
-      "rarity": "C",
-      "grade": "COMMON",
-      "level": 2,
-      "hp": 3,
-      "energyType": "RED",
-      "color": "RED",
-      "skill": {
-        "name": null,
-        "text": null
-      },
-      "attackText": "<{R}{R}> Pointy Icicle {da} 2",
-      "flipText": "Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.",
-      "keywords": [],
-      "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/PIvCKB3m5W1V4IW1nP7ycw.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
-    {
-      "sourceId": 46299,
-      "locale": "en",
-      "cardNumber": "BS9-002@1",
-      "baseCardNumber": "BS9-002",
-      "variant": "1",
-      "name": "Princess Cookie",
-      "type": "cookie",
-      "officialType": "COOKIE",
-      "rarity": "U",
-      "grade": "UNCOMMON",
-      "level": 3,
-      "hp": 5,
-      "energyType": "RED",
-      "color": "RED",
-      "skill": {
-        "name": "{sk} Princess Party",
-        "text": "【Activate】 【Once Per Turn】 If your {R} LV.1 Cookie fainted during your opponent's previous turn, during this turn, this Cookie gains +1 attack damage."
-      },
-      "attackText": "<{R}{R}{R}> Lovely Perfume {da} 3",
-      "flipText": null,
-      "keywords": [],
-      "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Po9J3aB7TS2M1swKA164QA.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
-    {
-      "sourceId": 46151,
-      "locale": "en",
-      "cardNumber": "BS9-002",
-      "baseCardNumber": "BS9-002",
+      "cardNumber": "ST1-001",
+      "baseCardNumber": "ST1-001",
       "variant": null,
       "name": "Princess Cookie",
-      "type": "cookie",
-      "officialType": "COOKIE",
-      "rarity": "U",
-      "grade": "UNCOMMON",
-      "level": 3,
-      "hp": 5,
-      "energyType": "RED",
-      "color": "RED",
-      "skill": {
-        "name": "{sk} Princess Party",
-        "text": "【Activate】 【Once Per Turn】 If your {R} LV.1 Cookie fainted during your opponent's previous turn, during this turn, this Cookie gains +1 attack damage."
-      },
-      "attackText": "<{R}{R}{R}> Lovely Perfume {da} 3",
-      "flipText": null,
-      "keywords": [],
-      "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ghJiF7A26ePkWzbmaALoLQ.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
-    {
-      "sourceId": 46300,
-      "locale": "en",
-      "cardNumber": "BS9-003@1",
-      "baseCardNumber": "BS9-003",
-      "variant": "1",
-      "name": "Strawberry Cookie",
-      "type": "cookie",
-      "officialType": "COOKIE",
-      "rarity": "U",
-      "grade": "UNCOMMON",
-      "level": 1,
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
       "hp": 2,
       "energyType": "RED",
       "color": "RED",
       "skill": {
-        "name": "{sk} Power up...!",
-        "text": "【On Play】 Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage."
+        "name": null,
+        "text": null
       },
-      "attackText": "<{R}{R}> Lollipop Hammer {da} 1",
-      "flipText": null,
+      "attackText": "《{R}{R}》 Deals 2 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
       "keywords": [],
       "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "id": 214,
+        "title": "Starter Deck RED",
         "category": null
       },
       "restrictions": {
@@ -247,75 +51,35 @@
         "hidden": false,
         "extra": false
       },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/aXxg8gHX_FAbbpPYU8VJHQ.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/D7O9P8V9M3szT3hFpjrEDw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
       "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
     },
     {
-      "sourceId": 46152,
+      "sourceId": 45255,
       "locale": "en",
-      "cardNumber": "BS9-003",
-      "baseCardNumber": "BS9-003",
+      "cardNumber": "ST1-002",
+      "baseCardNumber": "ST1-002",
       "variant": null,
-      "name": "Strawberry Cookie",
+      "name": "Ninja Cookie",
       "type": "cookie",
       "officialType": "COOKIE",
-      "rarity": "U",
-      "grade": "UNCOMMON",
-      "level": 1,
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
       "hp": 2,
       "energyType": "RED",
       "color": "RED",
       "skill": {
-        "name": "{sk} Power up...!",
-        "text": "【On Play】 Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage."
-      },
-      "attackText": "<{R}{R}> Lollipop Hammer {da} 1",
-      "flipText": null,
-      "keywords": [],
-      "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
-        "category": null
-      },
-      "restrictions": {
-        "banned": false,
-        "limited": false
-      },
-      "flags": {
-        "enabled": true,
-        "hidden": false,
-        "extra": false
-      },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/pPOslQVH79i-Ws1-ZG5vOg.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
-      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
-    },
-    {
-      "sourceId": 46301,
-      "locale": "en",
-      "cardNumber": "BS9-004@1",
-      "baseCardNumber": "BS9-004",
-      "variant": "1",
-      "name": "Linzer Cookie",
-      "type": "cookie",
-      "officialType": "COOKIE",
-      "rarity": "C",
-      "grade": "COMMON",
-      "level": 2,
-      "hp": 5,
-      "energyType": "RED MIX",
-      "color": "RED",
-      "skill": {
         "name": null,
-        "text": null
+        "text": "{ap} 《{R}》 If your break area is LV.6 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
       },
-      "attackText": "<{R}{R}{N}{N}> Perfect Deduction {da} 3",
+      "attackText": "《{R}{R}》 Deals 2 damage.",
       "flipText": null,
       "keywords": [],
       "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "id": 214,
+        "title": "Starter Deck RED",
         "category": null
       },
       "restrictions": {
@@ -327,35 +91,35 @@
         "hidden": false,
         "extra": false
       },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/PmpZcxNsL25aJdbryOpnQA.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/d8T2cqQvPut6_eehNZH8hg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
       "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
     },
     {
-      "sourceId": 46153,
+      "sourceId": 45256,
       "locale": "en",
-      "cardNumber": "BS9-004",
-      "baseCardNumber": "BS9-004",
+      "cardNumber": "ST1-003",
+      "baseCardNumber": "ST1-003",
       "variant": null,
-      "name": "Linzer Cookie",
+      "name": "Dino-Sour Cookie",
       "type": "cookie",
       "officialType": "COOKIE",
-      "rarity": "C",
-      "grade": "COMMON",
+      "rarity": "U",
+      "grade": "UNCOMMON",
       "level": 2,
-      "hp": 5,
-      "energyType": "RED MIX",
+      "hp": 1,
+      "energyType": "RED",
       "color": "RED",
       "skill": {
         "name": null,
-        "text": null
+        "text": "{mob} {t1} 《{R}{R}{N}{N}》 Select up to 2 of your opponent's Cookies. Those Cookies receive 2 damage each."
       },
-      "attackText": "<{R}{R}{N}{N}> Perfect Deduction {da} 3",
+      "attackText": "《{R}{R}{N}》 Deals 2 damage.",
       "flipText": null,
       "keywords": [],
       "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "id": 214,
+        "title": "Starter Deck RED",
         "category": null
       },
       "restrictions": {
@@ -367,19 +131,139 @@
         "hidden": false,
         "extra": false
       },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4bZB-O6MQwjq8cV6QpvZ3g.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fepF1lTBVAl_BtUl3OKARA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
       "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
     },
     {
-      "sourceId": 46302,
+      "sourceId": 45257,
       "locale": "en",
-      "cardNumber": "BS9-005@1",
-      "baseCardNumber": "BS9-005",
-      "variant": "1",
-      "name": "Macaron Cookie",
+      "cardNumber": "ST1-004",
+      "baseCardNumber": "ST1-004",
+      "variant": null,
+      "name": "Carrot Cookie",
       "type": "flip",
       "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}》 Deals 1 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/QcnOBU3mTSizFKTTmET5ww.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45259,
+      "locale": "en",
+      "cardNumber": "ST1-005",
+      "baseCardNumber": "ST1-005",
+      "variant": null,
+      "name": "Leek Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/G5nTkM81Uhk0uoN_rH0ylA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45260,
+      "locale": "en",
+      "cardNumber": "ST1-006",
+      "baseCardNumber": "ST1-006",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xoFEap09Ha06RQbJD39MPQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45261,
+      "locale": "en",
+      "cardNumber": "ST1-007",
+      "baseCardNumber": "ST1-007",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
       "rarity": "C",
       "grade": "COMMON",
       "level": 3,
@@ -388,14 +272,14 @@
       "color": "RED",
       "skill": {
         "name": null,
-        "text": null
+        "text": "{ap} 《{R}》 Select up to 1 of your other Cookies. During this turn, that Cookie gains +1 attack damage."
       },
-      "attackText": "<{R}{R}{R}> *BA-DUM-TSS* {da} 3",
-      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "attackText": "《{R}{R}》 Deals 2 damage.",
+      "flipText": null,
       "keywords": [],
       "product": {
-        "id": 241,
-        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "id": 214,
+        "title": "Starter Deck RED",
         "category": null
       },
       "restrictions": {
@@ -407,8 +291,608 @@
         "hidden": false,
         "extra": false
       },
-      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wsPiseW4wxhd0xIf8l5Cbw.webp",
-      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/OUboaNsQAmpKyuQfyU6hMA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45262,
+      "locale": "en",
+      "cardNumber": "ST1-008",
+      "baseCardNumber": "ST1-008",
+      "variant": null,
+      "name": "Cherry Blossom Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 1,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《{R}{R}》 《Rest this card.》 Select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each."
+      },
+      "attackText": "《{R}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/I_9H3W4UvafjFkH2PrqZLw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45263,
+      "locale": "en",
+      "cardNumber": "ST1-009",
+      "baseCardNumber": "ST1-009",
+      "variant": null,
+      "name": "Espresso Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{mt} If your break area is LV.6 or higher, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{R}{R}{R}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/iigw00y9eyFkfLTtFqCNsw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45264,
+      "locale": "en",
+      "cardNumber": "ST1-010",
+      "baseCardNumber": "ST1-010",
+      "variant": null,
+      "name": "Alchemist Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{mob} 《{R}{R}{R}》 Select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each."
+      },
+      "attackText": "《{R}{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/iN4nfStYMIhJ31bwdeDLQw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45265,
+      "locale": "en",
+      "cardNumber": "ST1-011",
+      "baseCardNumber": "ST1-011",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/oBeZmq2sk4AFS4CmnqwMPA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45266,
+      "locale": "en",
+      "cardNumber": "ST1-012",
+      "baseCardNumber": "ST1-012",
+      "variant": null,
+      "name": "Zombie Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1oi6Mp_O68tOxdcY5wccDQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45267,
+      "locale": "en",
+      "cardNumber": "ST1-013",
+      "baseCardNumber": "ST1-013",
+      "variant": null,
+      "name": "Adventurer Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}》 Deals 1 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/H-xrCrjeVGEdHNivUaVQtg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45269,
+      "locale": "en",
+      "cardNumber": "ST1-014",
+      "baseCardNumber": "ST1-014",
+      "variant": null,
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ekB9Ovh2Se2jdiOs4P8RGg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45270,
+      "locale": "en",
+      "cardNumber": "ST1-015",
+      "baseCardNumber": "ST1-015",
+      "variant": null,
+      "name": "Pistachio Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}{R}》 Deals 3 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/P79ruoF_JfWHqvCFLwb3Rg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45271,
+      "locale": "en",
+      "cardNumber": "ST1-016",
+      "baseCardNumber": "ST1-016",
+      "variant": null,
+      "name": "Icky Sticky Jelly",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}》 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4QxG2OUp1xQU2RG-1xiFWA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45272,
+      "locale": "en",
+      "cardNumber": "ST1-017",
+      "baseCardNumber": "ST1-017",
+      "variant": null,
+      "name": "Exceptional Cake Knife",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}》 Select up to 1 of your Cookies whose remaining HP is 1 and is LV.2 or higher. During this turn, that Cookie gains +2 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/X8XovFwaMj3Mcp1jTUIw4g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45273,
+      "locale": "en",
+      "cardNumber": "ST1-018",
+      "baseCardNumber": "ST1-018",
+      "variant": null,
+      "name": "Sugar-Coated Snail Shell",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}{R}》 Select up to 1 of your Cookies whose remaining HP is 1. During your opponent's next turn, that Cookie receives -2 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GN8jcPSwoCVpf8w5KN9j9Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45274,
+      "locale": "en",
+      "cardNumber": "ST1-019",
+      "baseCardNumber": "ST1-019",
+      "variant": null,
+      "name": "Fiery Jelly Clump",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}》 Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/XnNos5-_1xzhL82apvpWTg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45275,
+      "locale": "en",
+      "cardNumber": "ST1-020",
+      "baseCardNumber": "ST1-020",
+      "variant": null,
+      "name": "Overhydrated Dough Swamp",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/11M-zjlmvd2TEVqxo9MiLQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45276,
+      "locale": "en",
+      "cardNumber": "ST1-021",
+      "baseCardNumber": "ST1-021",
+      "variant": null,
+      "name": "Ouch-Inducing Star Jelly",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}》 Select up to 1 of your opponent's Cookies whose remaining HP is 1. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/50iBzzOE502cGSCjaHEzTw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45277,
+      "locale": "en",
+      "cardNumber": "ST1-022",
+      "baseCardNumber": "ST1-022",
+      "variant": null,
+      "name": "Burning Jelly Volcano",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}》 Place in your stage area.\r\n\r\n{mob} 《{R}》 《Rest this card.》 Select 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 214,
+        "title": "Starter Deck RED",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/qxexdqBq605E0IA5vcOJxA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
       "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
     }
   ]

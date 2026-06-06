@@ -19,7 +19,9 @@
         "locale",
         "fetchedAt",
         "totalAvailable",
+        "matchedAvailable",
         "importedCount",
+        "filter",
         "imagesDownloaded"
       ],
       "properties": {
@@ -29,7 +31,16 @@
         "locale": { "type": "string" },
         "fetchedAt": { "type": "string", "format": "date-time" },
         "totalAvailable": { "type": "integer", "minimum": 0 },
+        "matchedAvailable": { "type": "integer", "minimum": 0 },
         "importedCount": { "type": "integer", "minimum": 0 },
+        "filter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["categoryTitle"],
+          "properties": {
+            "categoryTitle": { "$ref": "#/$defs/nullableString" }
+          }
+        },
         "imagesDownloaded": { "const": false }
       }
     },
@@ -144,4 +155,3 @@
     }
   }
 }
-

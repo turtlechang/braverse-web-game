@@ -86,6 +86,16 @@ export const advancePhase = (state: GameState): GameState => {
     case 'end':
       return {
         ...state,
+        attackModifiers: state.attackModifiers.filter(
+          (modifier) =>
+            modifier.expiresAfterTurn === null ||
+            modifier.expiresAfterTurn > state.turnNumber,
+        ),
+        damageReceivedModifiers: state.damageReceivedModifiers.filter(
+          (modifier) =>
+            modifier.expiresAfterTurn === null ||
+            modifier.expiresAfterTurn > state.turnNumber,
+        ),
         activePlayerId: getOpponentId(state.activePlayerId),
         turnNumber: state.turnNumber + 1,
         phase: 'active',

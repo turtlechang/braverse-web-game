@@ -28,6 +28,76 @@ export interface CookieInBattle {
   rested: boolean
 }
 
+export type EffectTargetSide = 'self' | 'opponent'
+
+export interface EffectTargetSelector {
+  side: EffectTargetSide
+  min: number
+  max: number
+  excludeSource?: boolean
+  remainingHp?: number
+  minLevel?: number
+}
+
+export interface BreakLevelCondition {
+  kind: 'break-level-at-least'
+  level: number
+}
+
+export type EffectCondition = BreakLevelCondition
+
+export interface DamageEffect {
+  kind: 'damage'
+  amount: number
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+export type EffectDuration =
+  | 'this-turn'
+  | 'opponent-next-turn'
+  | 'persistent'
+
+export interface ModifyAttackEffect {
+  kind: 'modify-attack'
+  amount: number
+  duration: EffectDuration
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+export interface ModifyDamageReceivedEffect {
+  kind: 'modify-damage-received'
+  amount: number
+  duration: EffectDuration
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+export type CardEffect =
+  | DamageEffect
+  | ModifyAttackEffect
+  | ModifyDamageReceivedEffect
+
+export interface AttackModifier {
+  sourceInstanceId: string
+  targetInstanceId: string
+  amount: number
+  expiresAfterTurn: number | null
+}
+
+export interface DamageReceivedModifier {
+  sourceInstanceId: string
+  targetInstanceId: string
+  amount: number
+  expiresAfterTurn: number | null
+}
+
+export interface EffectContext {
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+}
+
 export interface SupportCard {
   card: GameCard
   rested: boolean
@@ -71,6 +141,8 @@ export interface GameState {
   status: GameStatus
   result: GameResult | null
   supportPlacedThisTurn: boolean
+  attackModifiers: AttackModifier[]
+  damageReceivedModifiers: DamageReceivedModifier[]
   pendingReplacementPlayerId: PlayerId | null
   pendingRefresh: {
     playerId: PlayerId

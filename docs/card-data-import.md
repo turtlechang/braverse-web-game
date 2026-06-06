@@ -12,7 +12,7 @@
 
 ## 執行方式
 
-預設只匯入前 10 筆英文資料：
+預設匯入英文版 `Starter Deck RED`：
 
 ```bash
 npm run cards:import:sample
@@ -23,11 +23,16 @@ npm run cards:import:sample
 ```bash
 node scripts/import-official-cards.mjs \
   --locale en \
-  --limit 10 \
+  --category-title "Starter Deck RED" \
+  --limit 100 \
   --output data/cards/official-sample.en.json
 ```
 
-`--limit` 限制為 1 到 100。匯入器只請求一份官方 JSON，並不下載任何卡牌圖片。
+官方 `cardList` 使用 `card_product_title`，其值對應產品分類清單的
+`category_title`。目前 `Starter Deck RED` 共匯入 22 張不同卡號。
+
+`--limit` 限制為 1 到 100，篩選會先於數量上限執行。匯入器只請求
+一份官方 JSON，並不下載任何卡牌圖片。
 
 ## 資料格式
 
@@ -65,6 +70,21 @@ node scripts/import-official-cards.mjs \
 - runtime `id` 使用 `baseCardNumber`，異圖卡號與圖片 URL 保留在來源 metadata
 
 轉換層只處理可確定的基本數值，不會把尚未支援的官方效果文字假裝成可執行效果。
+
+## Starter Deck RED 效果轉換
+
+`src/cards/official-effect-adapter.ts` 將可確認的英文效果文字轉成
+`CardEffect`。目前 22 張範例中有 12 張可轉換，支援：
+
+- 指定自己或對手戰場上的餅乾
+- 「最多 N 張」與固定數量目標
+- 排除效果來源、剩餘 HP、最低等級等目標條件
+- 直接傷害
+- 本回合或對手下回合的攻擊傷害增減
+- Break Area 最低等級的發動條件
+
+抽牌、HP 增加、被動攻擊加成，以及棄牌、休息等發動成本尚未進入
+執行器，會明確回傳 `unsupported`。
 
 ## 使用與版權
 

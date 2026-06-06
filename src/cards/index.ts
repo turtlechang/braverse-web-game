@@ -3,6 +3,10 @@ export {
   convertOfficialCards,
 } from './official-card-adapter'
 export {
+  convertOfficialCardEffects,
+  convertOfficialCardEffectSet,
+} from './official-effect-adapter'
+export {
   parseOfficialCardText,
   parseOfficialCardTexts,
 } from './official-text-parser'
@@ -16,3 +20,4 @@ export type {
   ParsedOfficialCard,
   UnsupportedOfficialCard,
 } from './types'
+export type { OfficialEffectConversion } from './official-effect-adapter'

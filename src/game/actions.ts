@@ -1,4 +1,5 @@
 import { GameRuleError } from './errors'
+import { getAttackDamageAgainst } from './effects'
 import { findCardIndex, getOpponentId, updatePlayer } from './helpers'
 import { getRefreshCandidates } from './refresh'
 import { canAttack } from './turn'
@@ -276,7 +277,7 @@ export const attackCookie = (
   const updatedDefender = receiveDamage(
     defender,
     targetInstanceId,
-    attacker.card.attack,
+    getAttackDamageAgainst(state, attackerInstanceId, targetInstanceId),
   )
 
   let updatedState = resolveBasicVictory({

@@ -32,8 +32,11 @@ const KNOWN_NON_ENERGY_TOKENS = new Set([
   'mou',
 ])
 
+const COST_PATTERN = /(?:<|《)((?:\{[A-Z]\})+)(?:>|》)/
+const COST_PATTERN_GLOBAL = /(?:<|《)((?:\{[A-Z]\})+)(?:>|》)/g
+
 const extractCost = (raw: string) => {
-  const costMatch = raw.match(/<((?:\{[A-Z]\})+)>/)
+  const costMatch = raw.match(COST_PATTERN)
   const cost: Partial<Record<EnergySymbol, number>> = {}
 
   if (!costMatch) {
@@ -59,7 +62,7 @@ const extractCost = (raw: string) => {
 
 const createDisplayText = (raw: string) =>
   raw
-    .replace(/<((?:\{[A-Z]\})+)>/g, (_, costTokens: string) => {
+    .replace(COST_PATTERN_GLOBAL, (_, costTokens: string) => {
       const symbols = [...costTokens.matchAll(/\{([A-Z])\}/g)].map(
         (match) => match[1],
       )
@@ -92,7 +95,8 @@ export const parseOfficialCardText = (
     (match) => match[1],
   )
   const { cost, totalCost } = extractCost(raw)
-  const damageMatch = raw.match(/\{da\}\s*(\d+)/)
+  const damageMatch =
+    raw.match(/\{da\}\s*(\d+)/) ?? raw.match(/Deals?\s+(\d+)\s+damage/i)
   const markers = [
     ...new Set(
       tokenNames.filter(

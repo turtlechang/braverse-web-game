@@ -54,14 +54,48 @@ describe('official card importer', () => {
       rawCards: [rawCard, { ...rawCard, card_idx: 2, card_no: 'BS9-001' }],
       locale: 'en',
       limit: 1,
+      categoryTitle: null,
       sourceUrl: getDatasetUrl('en'),
       importedAt: '2026-06-06T00:00:00.000Z',
     })
 
     expect(document.cards).toHaveLength(1)
     expect(document.source.totalAvailable).toBe(2)
+    expect(document.source.matchedAvailable).toBe(2)
     expect(document.source.importedCount).toBe(1)
     expect(document.source.imagesDownloaded).toBe(false)
+  })
+
+  it('filters by official product title before applying the limit', () => {
+    const document = createImportDocument({
+      rawCards: [
+        rawCard,
+        {
+          ...rawCard,
+          card_idx: 2,
+          card_no: 'ST1-001',
+          card_product_title: 'Starter Deck RED',
+        },
+        {
+          ...rawCard,
+          card_idx: 3,
+          card_no: 'ST1-002',
+          card_product_title: 'Starter Deck RED',
+        },
+      ],
+      locale: 'en',
+      limit: 1,
+      categoryTitle: 'Starter Deck RED',
+      sourceUrl: getDatasetUrl('en'),
+      importedAt: '2026-06-06T00:00:00.000Z',
+    })
+
+    expect(document.source.totalAvailable).toBe(3)
+    expect(document.source.matchedAvailable).toBe(2)
+    expect(document.source.filter.categoryTitle).toBe('Starter Deck RED')
+    expect(document.cards.map((card) => card.cardNumber)).toEqual([
+      'ST1-001',
+    ])
   })
 
   it('rejects unsupported locales', () => {

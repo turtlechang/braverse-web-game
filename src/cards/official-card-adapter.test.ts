@@ -86,12 +86,12 @@ describe('official text parser', () => {
 })
 
 describe('official card adapter', () => {
-  it('converts all 10 records from the imported official sample', () => {
+  it('converts all 22 records from the Starter Deck RED sample', () => {
     const records = officialSample.cards as OfficialCardRecord[]
     const results = convertOfficialCards(records)
 
-    expect(records).toHaveLength(10)
-    expect(results).toHaveLength(10)
+    expect(records).toHaveLength(22)
+    expect(results).toHaveLength(22)
     expect(results.every((result) => result.status === 'converted')).toBe(
       true,
     )

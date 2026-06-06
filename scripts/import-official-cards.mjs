@@ -3,8 +3,9 @@ import { dirname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 export const DEFAULT_LOCALE = 'en'
-export const DEFAULT_LIMIT = 10
+export const DEFAULT_LIMIT = 100
 export const DEFAULT_OUTPUT = 'data/cards/official-sample.en.json'
+export const DEFAULT_CATEGORY_TITLE = 'Starter Deck RED'
 export const OFFICIAL_SITE_URL = 'https://cookierunbraverse.com'
 
 const SUPPORTED_LOCALES = new Set(['en', 'asia', 'ko'])
@@ -131,6 +132,7 @@ export const createImportDocument = ({
   rawCards,
   locale,
   limit,
+  categoryTitle,
   sourceUrl,
   importedAt = new Date().toISOString(),
 }) => {
@@ -138,7 +140,13 @@ export const createImportDocument = ({
     throw new Error('官方資料缺少 cardList 陣列。')
   }
 
-  const cards = rawCards
+  const matchingCards = categoryTitle
+    ? rawCards.filter(
+        (card) =>
+          toOptionalString(card.card_product_title) === categoryTitle,
+      )
+    : rawCards
+  const cards = matchingCards
     .slice(0, limit)
     .map((card) => normalizeOfficialCard(card, sourceUrl))
 
@@ -151,7 +159,11 @@ export const createImportDocument = ({
       locale,
       fetchedAt: importedAt,
       totalAvailable: rawCards.length,
+      matchedAvailable: matchingCards.length,
       importedCount: cards.length,
+      filter: {
+        categoryTitle: categoryTitle ?? null,
+      },
       imagesDownloaded: false,
     },
     cards,
@@ -163,6 +175,7 @@ const parseArguments = (argumentsList) => {
     locale: DEFAULT_LOCALE,
     limit: DEFAULT_LIMIT,
     output: DEFAULT_OUTPUT,
+    categoryTitle: DEFAULT_CATEGORY_TITLE,
   }
 
   for (let index = 0; index < argumentsList.length; index += 1) {
@@ -177,6 +190,9 @@ const parseArguments = (argumentsList) => {
       index += 1
     } else if (argument === '--output' && nextValue) {
       options.output = nextValue
+      index += 1
+    } else if (argument === '--category-title' && nextValue) {
+      options.categoryTitle = nextValue
       index += 1
     } else {
       throw new Error(`不支援的參數：${argument}`)
@@ -195,6 +211,7 @@ export const runImport = async ({
   locale = DEFAULT_LOCALE,
   limit = DEFAULT_LIMIT,
   output = DEFAULT_OUTPUT,
+  categoryTitle = DEFAULT_CATEGORY_TITLE,
   fetchImpl = fetch,
   importedAt,
 } = {}) => {
@@ -215,6 +232,7 @@ export const runImport = async ({
     rawCards: payload.cardList,
     locale,
     limit,
+    categoryTitle,
     sourceUrl,
     importedAt,
   })
