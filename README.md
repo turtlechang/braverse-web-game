@@ -12,7 +12,7 @@ npm run dev
 ## 驗證
 
 ```bash
+npm test
 npm run lint
 npm run build
 ```
-
