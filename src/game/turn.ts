@@ -54,6 +54,7 @@ export const advancePhase = (state: GameState): GameState => {
         activePlayerId: getOpponentId(state.activePlayerId),
         turnNumber: state.turnNumber + 1,
         phase: 'active',
+        supportPlacedThisTurn: false,
       }
   }
 }

@@ -69,6 +69,7 @@ export const createGame = (
     phase: 'active',
     status: 'setup',
     result: null,
+    supportPlacedThisTurn: false,
   }
 }
 
@@ -158,4 +159,3 @@ export const selectStartingCookie = (
       }
     : updatedState
 }
-

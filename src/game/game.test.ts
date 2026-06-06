@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   advancePhase,
+  attackCookie,
   canAttack,
   createDemoGame,
   createGame,
+  deployCookie,
   evaluateBasicVictory,
   getBreakAreaLevel,
   mulliganOpeningHand,
+  placeSupportCard,
   resolveBasicVictory,
   selectStartingCookie,
   type CookieCard,
@@ -28,6 +31,7 @@ const createCookie = (
   type: 'cookie',
   level,
   hp,
+  attack: 1,
 })
 
 const createItem = (instanceId: string): GameCard => ({
@@ -209,6 +213,106 @@ describe('回合階段', () => {
     state = advancePhase(state)
     expect(state.phase).toBe('main')
     expect(canAttack(state)).toBe(true)
+  })
+})
+
+describe('玩家動作', () => {
+  const reachPhase = (state: GameState, phase: GameState['phase']) => {
+    let current = state
+
+    while (current.phase !== phase) {
+      current = advancePhase(current)
+    }
+
+    return current
+  }
+
+  it('支援階段可從手牌放置一張支援卡，每回合限一次', () => {
+    let state = reachPhase(createReadyGame(), 'support')
+    const player = state.players[state.activePlayerId]
+    const firstCard = player.hand[0]
+
+    state = placeSupportCard(state, firstCard.instanceId)
+
+    expect(state.players['player-one'].hand).toHaveLength(4)
+    expect(state.players['player-one'].supportArea[0].card).toBe(firstCard)
+    expect(state.supportPlacedThisTurn).toBe(true)
+    expect(() =>
+      placeSupportCard(
+        state,
+        state.players['player-one'].hand[0].instanceId,
+      ),
+    ).toThrow('每回合只能放置一張支援卡。')
+  })
+
+  it('主要階段可登場第二隻餅乾並配置 HP', () => {
+    let state = reachPhase(createReadyGame(), 'main')
+    const player = state.players['player-one']
+    const cookie = player.hand.find((card) => card.type === 'cookie')
+
+    expect(cookie).toBeDefined()
+    state = deployCookie(state, cookie!.instanceId)
+
+    expect(state.players['player-one'].battleArea).toHaveLength(2)
+    expect(state.players['player-one'].battleArea[1].hpCards).toHaveLength(
+      cookie!.type === 'cookie' ? cookie!.hp : 0,
+    )
+    expect(state.players['player-one'].hand).not.toContain(cookie)
+  })
+
+  it('攻擊使攻擊者休息，並將目標 HP 卡移入棄牌區', () => {
+    let state = createReadyGame()
+    state = reachPhase(state, 'end')
+    state = advancePhase(state)
+    state = reachPhase(state, 'main')
+
+    const attacker = state.players['player-two'].battleArea[0]
+    const target = state.players['player-one'].battleArea[0]
+    const targetHp = target.hpCards.length
+    const discardCount = state.players['player-one'].discardPile.length
+
+    state = attackCookie(
+      state,
+      attacker.card.instanceId,
+      target.card.instanceId,
+    )
+
+    expect(state.players['player-two'].battleArea[0].rested).toBe(true)
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      targetHp - attacker.card.attack,
+    )
+    expect(state.players['player-one'].discardPile).toHaveLength(
+      discardCount + attacker.card.attack,
+    )
+  })
+
+  it('HP 歸零時目標餅乾進入休息區', () => {
+    let state = createReadyGame()
+    state = reachPhase(state, 'end')
+    state = advancePhase(state)
+    state = reachPhase(state, 'main')
+
+    const target = state.players['player-one'].battleArea[0]
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [{ ...target, hpCards: [target.hpCards[0]] }],
+        },
+      },
+    }
+
+    state = attackCookie(
+      state,
+      state.players['player-two'].battleArea[0].card.instanceId,
+      target.card.instanceId,
+    )
+
+    expect(state.players['player-one'].battleArea).toHaveLength(0)
+    expect(state.players['player-one'].breakArea).toContain(target.card)
+    expect(state.players['player-one'].discardPile).toContain(target.hpCards[0])
   })
 })
 

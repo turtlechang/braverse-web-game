@@ -12,6 +12,7 @@ export interface CookieCard extends BaseCard {
   type: 'cookie'
   level: number
   hp: number
+  attack: number
 }
 
 export interface NonCookieCard extends BaseCard {
@@ -65,6 +66,7 @@ export interface GameState {
   phase: TurnPhase
   status: GameStatus
   result: GameResult | null
+  supportPlacedThisTurn: boolean
 }
 
 export interface PlayerSetup {
