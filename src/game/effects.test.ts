@@ -235,7 +235,18 @@ describe('card effect engine', () => {
     let state = createDemoGame()
     const attacker = state.players['player-one'].battleArea[0]
     const target = state.players['player-two'].battleArea[0]
-    const payment = createSupport('effect-payment')
+    const extendedTarget = {
+      ...target,
+      hpCards: [
+        ...target.hpCards,
+        createSupport('extra-hp-1'),
+        createSupport('extra-hp-2'),
+      ],
+    }
+    const payments = Array.from(
+      { length: attacker.card.attackCost },
+      (_, index) => createSupport(`effect-payment-${index + 1}`),
+    )
     state = {
       ...state,
       turnNumber: 2,
@@ -244,7 +255,14 @@ describe('card effect engine', () => {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          supportArea: [{ card: payment, rested: false }],
+          supportArea: payments.map((card) => ({
+            card,
+            rested: false,
+          })),
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [extendedTarget],
         },
       },
     }
@@ -263,11 +281,13 @@ describe('card effect engine', () => {
       state,
       attacker.card.instanceId,
       target.card.instanceId,
-      [payment.instanceId],
+      payments.map((card) => card.instanceId),
     )
 
     expect(
       state.players['player-two'].battleArea[0].hpCards,
-    ).toHaveLength(target.hpCards.length - attacker.card.attack - 1)
+    ).toHaveLength(
+      extendedTarget.hpCards.length - attacker.card.attack - 1,
+    )
   })
 })

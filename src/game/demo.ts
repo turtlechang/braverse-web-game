@@ -1,54 +1,64 @@
+import officialSample from '../../data/cards/official-sample.en.json'
 import { createGame, selectStartingCookie } from './setup'
 import type { GameCard, GameState, PlayerId } from './types'
 
+interface DemoCardSource {
+  baseCardNumber: string
+  cardNumber: string
+  name: string
+  type: string
+  level: number | null
+  hp: number | null
+  attackText: string | null
+  imageUrl: string
+}
+
+const parseAttack = (text: string | null) => {
+  const cost = text?.match(/\{[A-Z]\}/g)?.length ?? 0
+  const damage =
+    Number(text?.match(/Deals?\s+(\d+)\s+damage/i)?.[1] ?? 1)
+
+  return { cost, damage }
+}
+
 const createDemoDeck = (playerId: PlayerId): GameCard[] => {
-  const label = playerId === 'player-one' ? '勇氣' : '謀略'
-  const cards: GameCard[] = [
-    {
-      id: `${playerId}-starter`,
-      instanceId: `${playerId}-starter-1`,
-      name: `${label}薑餅勇士`,
-      type: 'cookie',
-      level: 2,
-      hp: 3,
-      attack: 1,
-      attackCost: 1,
-    },
-    {
-      id: `${playerId}-cookie-scout`,
-      instanceId: `${playerId}-scout-1`,
-      name: `${label}斥候餅乾`,
-      type: 'cookie',
-      level: 1,
-      hp: 2,
-      attack: 1,
-      attackCost: 1,
-    },
-  ]
+  const sourceCards = officialSample.cards as DemoCardSource[]
 
-  for (let index = cards.length; index < 60; index += 1) {
-    cards.push(
-      index % 8 === 0
-        ? {
-            id: `${playerId}-cookie-guard`,
-            instanceId: `${playerId}-guard-${index}`,
-            name: `${label}守衛餅乾`,
-            type: 'cookie',
-            level: 1,
-            hp: 2,
-            attack: 1,
-            attackCost: 1,
-          }
-        : {
-            id: `${playerId}-item-supply`,
-            instanceId: `${playerId}-supply-${index}`,
-            name: `${label}補給`,
-            type: 'item',
-          },
-    )
-  }
+  return Array.from({ length: 60 }, (_, index) => {
+    const source = sourceCards[index % sourceCards.length]
+    const instanceId = `${playerId}-${source.cardNumber}-${index + 1}`
 
-  return cards
+    if (
+      (source.type === 'cookie' || source.type === 'flip') &&
+      source.level !== null &&
+      source.hp !== null
+    ) {
+      const attack = parseAttack(source.attackText)
+
+      return {
+        id: source.baseCardNumber,
+        instanceId,
+        name: source.name,
+        imageUrl: source.imageUrl,
+        type: 'cookie',
+        level: source.level,
+        hp: source.hp,
+        attack: attack.damage,
+        attackCost: attack.cost,
+      }
+    }
+
+    return {
+      id: source.baseCardNumber,
+      instanceId,
+      name: source.name,
+      imageUrl: source.imageUrl,
+      type:
+        source.type === 'trap' || source.type === 'stage'
+          ? source.type
+          : 'item',
+    }
+  })
 }
 
 const identityShuffle = (cards: GameCard[]) => [...cards]
@@ -57,20 +67,28 @@ export const createDemoGame = (): GameState => {
   let state = createGame(
     {
       id: 'player-one',
-      name: '玩家一',
+      name: '玩家',
       deck: createDemoDeck('player-one'),
     },
     {
       id: 'player-two',
-      name: '玩家二',
+      name: 'AI 對手',
       deck: createDemoDeck('player-two'),
     },
     'player-one',
     identityShuffle,
   )
 
-  state = selectStartingCookie(state, 'player-one', 'player-one-starter-1')
-  state = selectStartingCookie(state, 'player-two', 'player-two-starter-1')
+  state = selectStartingCookie(
+    state,
+    'player-one',
+    'player-one-ST1-001-1',
+  )
+  state = selectStartingCookie(
+    state,
+    'player-two',
+    'player-two-ST1-001-1',
+  )
 
   return state
 }

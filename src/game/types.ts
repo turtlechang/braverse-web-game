@@ -6,6 +6,7 @@ export interface BaseCard {
   id: string
   instanceId: string
   name: string
+  imageUrl?: string
 }
 
 export interface CookieCard extends BaseCard {

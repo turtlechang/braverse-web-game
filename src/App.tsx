@@ -1,4 +1,13 @@
 import { useState } from 'react'
+import {
+  ChevronRight,
+  Eye,
+  Layers3,
+  Pause,
+  RotateCcw,
+  Swords,
+  X,
+} from 'lucide-react'
 import './App.css'
 import {
   advancePhase,
@@ -11,11 +20,13 @@ import {
   placeSupportCard,
   refreshDeck,
   replaceDefeatedCookie,
+  type GameCard,
   type GameState,
   type PlayerId,
   type TurnPhase,
 } from './game'
 
+const phases: TurnPhase[] = ['active', 'draw', 'support', 'main', 'end']
 const phaseLabels: Record<TurnPhase, string> = {
   active: '活躍階段',
   draw: '抽牌階段',
@@ -23,7 +34,6 @@ const phaseLabels: Record<TurnPhase, string> = {
   main: '主要階段',
   end: '結束階段',
 }
-
 const nextPhaseLabels: Record<TurnPhase, string> = {
   active: '完成活躍',
   draw: '前往支援',
@@ -35,167 +45,253 @@ const nextPhaseLabels: Record<TurnPhase, string> = {
 const opponentOf = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
 
-interface PlayerBoardProps {
-  game: GameState
-  playerId: PlayerId
+interface CardFaceProps {
+  card: GameCard
+  className?: string
   concealed?: boolean
-  selectedAttackerId: string | null
-  onSelectAttacker?: (instanceId: string) => void
-  onAttackTarget?: (instanceId: string) => void
-  onPlaceSupport?: (instanceId: string) => void
-  onDeployCookie?: (instanceId: string) => void
+  rested?: boolean
+  selected?: boolean
+  onClick?: () => void
 }
 
-function PlayerBoard({
+function CardFace({
+  card,
+  className = '',
+  concealed = false,
+  rested = false,
+  selected = false,
+  onClick,
+}: CardFaceProps) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const content = concealed ? (
+    <div className="card-back">
+      <span>COOKIE RUN</span>
+      <strong>BRAVERSE</strong>
+    </div>
+  ) : card.imageUrl && !imageFailed ? (
+    <img
+      src={card.imageUrl}
+      alt={card.name}
+      onError={() => setImageFailed(true)}
+    />
+  ) : (
+    <div className="card-fallback">
+      <span>{card.type.toUpperCase()}</span>
+      <strong>{card.name}</strong>
+      {card.type === 'cookie' && (
+        <small>LV {card.level} · HP {card.hp}</small>
+      )}
+    </div>
+  )
+
+  if (!onClick) {
+    return (
+      <div
+        className={`card-face ${className}${rested ? ' is-rested' : ''}${
+          selected ? ' is-selected' : ''
+        }`}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      className={`card-face ${className}${rested ? ' is-rested' : ''}${
+        selected ? ' is-selected' : ''
+      }`}
+      type="button"
+      title={card.name}
+      onClick={onClick}
+    >
+      {content}
+    </button>
+  )
+}
+
+interface BattleRowProps {
+  game: GameState
+  playerId: PlayerId
+  selectedAttackerId: string | null
+  concealed?: boolean
+  onSelectAttacker?: (instanceId: string) => void
+  onAttackTarget?: (instanceId: string) => void
+  onInspectCard: (card: GameCard) => void
+}
+
+function BattleRow({
   game,
   playerId,
-  concealed = false,
   selectedAttackerId,
+  concealed = false,
   onSelectAttacker,
   onAttackTarget,
-  onPlaceSupport,
-  onDeployCookie,
-}: PlayerBoardProps) {
+  onInspectCard,
+}: BattleRowProps) {
   const player = game.players[playerId]
-  const isActive = game.activePlayerId === playerId
-  const isPlaying = game.status === 'playing'
+  const isActivePlayer = game.activePlayerId === playerId
 
   return (
     <section
-      className={`player-board${isActive ? ' is-active' : ''}`}
-      aria-label={`${player.name}遊戲區`}
+      className={`battle-row ${concealed ? 'opponent-row' : 'player-row'}`}
+      aria-label={`${player.name}戰鬥區`}
     >
-      <header className="player-header">
-        <div>
-          <span className="player-label">{concealed ? '對手' : '我方'}</span>
-          <h2>{player.name}</h2>
-        </div>
-        <div className="player-stats">
-          <span>牌庫 {player.deck.length}</span>
-          <span>手牌 {player.hand.length}</span>
-          <strong>休息區 LV {getBreakAreaLevel(game, playerId)} / 10</strong>
-        </div>
-      </header>
+      <div className="row-meta">
+        <span>{concealed ? 'OPPONENT' : 'PLAYER'}</span>
+        <strong>{player.name}</strong>
+        <small>
+          {isActivePlayer ? '行動中' : '等待'} · 手牌 {player.hand.length}
+        </small>
+      </div>
 
-      <div className="board-zones">
-        <div className="board-zone battle-zone">
-          <span className="zone-title">戰鬥區</span>
-          <div className="card-row">
-            {player.battleArea.map((cookie) => (
-              <article
-                className={`game-card cookie-card${
-                  selectedAttackerId === cookie.card.instanceId
-                    ? ' is-selected'
-                    : ''
-                }`}
-                key={cookie.card.instanceId}
-              >
-                <div className="card-level">LV {cookie.card.level}</div>
-                <strong>{cookie.card.name}</strong>
-                <span>HP {cookie.hpCards.length} / {cookie.card.hp}</span>
-                <span>攻擊 {cookie.card.attack}</span>
-                <span>費用 {cookie.card.attackCost}</span>
-                <small>{cookie.rested ? '休息' : '活躍'}</small>
-                {!concealed &&
-                  isPlaying &&
-                  game.phase === 'main' &&
-                  canAttack(game) &&
-                  player.supportArea.filter((support) => !support.rested)
-                    .length >= cookie.card.attackCost &&
-                  !cookie.rested && (
-                    <button
-                      className="card-action"
-                      type="button"
-                      onClick={() =>
-                        onSelectAttacker?.(cookie.card.instanceId)
-                      }
-                    >
-                      {selectedAttackerId === cookie.card.instanceId
-                        ? '已選擇'
-                        : '選擇攻擊'}
-                    </button>
-                  )}
-                {concealed && selectedAttackerId && isPlaying && (
-                  <button
-                    className="card-action danger-action"
-                    type="button"
-                    onClick={() => onAttackTarget?.(cookie.card.instanceId)}
-                  >
-                    攻擊此餅乾
-                  </button>
-                )}
-              </article>
-            ))}
-            {player.battleArea.length === 0 && (
-              <span className="empty-zone">沒有餅乾</span>
-            )}
-          </div>
-        </div>
+      <div className="combat-zone">
+        <span className="zone-watermark">戰鬥區</span>
+        <div className="combat-slots">
+          {player.battleArea.map((cookie) => {
+            const canSelectAttack =
+              !concealed &&
+              game.phase === 'main' &&
+              canAttack(game) &&
+              !cookie.rested &&
+              player.supportArea.filter((support) => !support.rested).length >=
+                cookie.card.attackCost
+            const canTarget = concealed && Boolean(selectedAttackerId)
 
-        <div className="board-zone support-zone">
-          <span className="zone-title">支援區</span>
-          <strong>{player.supportArea.length} 張</strong>
-          <div className="support-list">
-            {player.supportArea.map((support) => (
-              <span
-                className={support.rested ? 'is-rested' : ''}
-                key={support.card.instanceId}
-              >
-                {support.card.name} · {support.rested ? '休息' : '活躍'}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="board-zone break-zone">
-          <span className="zone-title">休息區</span>
-          <strong>{player.breakArea.length} 張餅乾</strong>
+            return (
+              <div className="combat-card-wrap" key={cookie.card.instanceId}>
+                <CardFace
+                  card={cookie.card}
+                  rested={cookie.rested}
+                  selected={selectedAttackerId === cookie.card.instanceId}
+                  onClick={
+                    canTarget
+                      ? () => onAttackTarget?.(cookie.card.instanceId)
+                      : canSelectAttack
+                        ? () => onSelectAttacker?.(cookie.card.instanceId)
+                        : () => onInspectCard(cookie.card)
+                  }
+                />
+                <div className="card-badges">
+                  <span>HP {cookie.hpCards.length}/{cookie.card.hp}</span>
+                  <span>ATK {cookie.card.attack}</span>
+                </div>
+                {canTarget && <span className="target-hint">攻擊目標</span>}
+              </div>
+            )
+          })}
+          {player.battleArea.length === 0 && (
+            <span className="empty-zone">等待餅乾登場</span>
+          )}
         </div>
       </div>
 
-      <div className={`hand${concealed ? ' concealed' : ''}`}>
-        <span className="zone-title">手牌</span>
-        <div className="hand-cards">
-          {player.hand.map((card) => (
-            <div className="hand-card" key={card.instanceId}>
-              {concealed ? (
-                <span>BRAVERSE</span>
-              ) : (
-                <>
-                  <strong>{card.name}</strong>
-                  <small>
-                    {card.type === 'cookie'
-                      ? `餅乾 LV ${card.level} · HP ${card.hp}`
-                      : '道具'}
-                  </small>
-                  {isPlaying &&
-                    game.phase === 'support' &&
-                    !game.supportPlacedThisTurn && (
-                      <button
-                        className="hand-action"
-                        type="button"
-                        onClick={() => onPlaceSupport?.(card.instanceId)}
-                      >
-                        放入支援
-                      </button>
-                    )}
-                  {isPlaying &&
-                    game.phase === 'main' &&
-                    card.type === 'cookie' &&
-                    player.battleArea.length < 2 && (
-                      <button
-                        className="hand-action"
-                        type="button"
-                        onClick={() => onDeployCookie?.(card.instanceId)}
-                      >
-                        登場
-                      </button>
-                    )}
-                </>
+      <div className="side-zones">
+        <div className="break-zone">
+          <span>休息區</span>
+          <strong>LV. {getBreakAreaLevel(game, playerId)}</strong>
+          <small>{player.breakArea.length} 張</small>
+        </div>
+        <div className="deck-zone" aria-label={`牌庫 ${player.deck.length} 張`}>
+          <div className="mini-deck" />
+          <strong>{player.deck.length}</strong>
+          <span>牌庫</span>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+interface SupportAndHandProps {
+  game: GameState
+  playerId: PlayerId
+  onPlaceSupport: (instanceId: string) => void
+  onDeployCookie: (instanceId: string) => void
+  onInspectCard: (card: GameCard) => void
+}
+
+function SupportAndHand({
+  game,
+  playerId,
+  onPlaceSupport,
+  onDeployCookie,
+  onInspectCard,
+}: SupportAndHandProps) {
+  const player = game.players[playerId]
+
+  return (
+    <section className="lower-table">
+      <div className="support-zone">
+        <span className="zone-watermark">支援區</span>
+        <div className="support-cards">
+          {player.supportArea.map((support) => (
+            <CardFace
+              card={support.card}
+              className="support-card"
+              rested={support.rested}
+              key={support.card.instanceId}
+              onClick={() => onInspectCard(support.card)}
+            />
+          ))}
+          {player.supportArea.length === 0 && (
+            <span className="empty-zone">尚未配置支援</span>
+          )}
+        </div>
+      </div>
+
+      <div className="stage-zone">
+        <span>場景區</span>
+        {player.stage ? (
+          <CardFace
+            card={player.stage}
+            className="stage-card"
+            onClick={() => onInspectCard(player.stage!)}
+          />
+        ) : (
+          <Layers3 aria-hidden="true" />
+        )}
+      </div>
+
+      <div className="hand-fan" aria-label="我方手牌">
+        {player.hand.map((card, index) => {
+          const canSupport =
+            game.phase === 'support' && !game.supportPlacedThisTurn
+          const canDeploy =
+            game.phase === 'main' &&
+            card.type === 'cookie' &&
+            player.battleArea.length < 2
+          const offset = index - (player.hand.length - 1) / 2
+
+          return (
+            <div
+              className="hand-card-wrap"
+              key={card.instanceId}
+              style={{
+                '--fan-index': index,
+                '--fan-offset': offset,
+              } as React.CSSProperties}
+            >
+              <CardFace
+                card={card}
+                className="hand-card"
+                onClick={() => onInspectCard(card)}
+              />
+              {(canSupport || canDeploy) && (
+                <button
+                  className="hand-card-action"
+                  type="button"
+                  onClick={() =>
+                    canDeploy
+                      ? onDeployCookie(card.instanceId)
+                      : onPlaceSupport(card.instanceId)
+                  }
+                >
+                  {canDeploy ? '登場' : '支援'}
+                </button>
               )}
             </div>
-          ))}
-        </div>
+          )
+        })}
       </div>
     </section>
   )
@@ -206,16 +302,11 @@ function App() {
   const [selectedAttackerId, setSelectedAttackerId] = useState<string | null>(
     null,
   )
-  const [message, setMessage] = useState('請推進階段開始對戰。')
+  const [message, setMessage] = useState('推進階段，開始這場對戰。')
+  const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
+  const [showPause, setShowPause] = useState(false)
   const activePlayer = game.players[game.activePlayerId]
   const opponentId = opponentOf(game.activePlayerId)
-  const pendingReplacementPlayer = game.pendingReplacementPlayerId
-    ? game.players[game.pendingReplacementPlayerId]
-    : null
-  const refreshPlayerIds =
-    game.status === 'playing' && game.pendingRefresh
-      ? [game.pendingRefresh.playerId]
-      : []
 
   const runAction = (
     action: (current: GameState) => GameState,
@@ -234,36 +325,9 @@ function App() {
     setSelectedAttackerId(null)
   }
 
-  const handleRestart = () => {
-    setGame(createDemoGame())
-    setSelectedAttackerId(null)
-    setMessage('已建立新的範例對局。')
-  }
-
-  const handlePlaceSupport = (instanceId: string) => {
-    runAction(
-      (current) => placeSupportCard(current, instanceId),
-      '已放置一張支援卡。',
-    )
-  }
-
-  const handleDeployCookie = (instanceId: string) => {
-    runAction(
-      (current) => deployCookie(current, instanceId),
-      '餅乾已登場並配置 HP。',
-    )
-  }
-
   const handleAttackTarget = (targetInstanceId: string) => {
-    if (!selectedAttackerId) {
-      setMessage('請先選擇攻擊餅乾。')
-      return
-    }
+    if (!selectedAttackerId) return
 
-    const attackerName =
-      activePlayer.battleArea.find(
-        (cookie) => cookie.card.instanceId === selectedAttackerId,
-      )?.card.name ?? '餅乾'
     const attacker = activePlayer.battleArea.find(
       (cookie) => cookie.card.instanceId === selectedAttackerId,
     )
@@ -280,154 +344,262 @@ function App() {
           targetInstanceId,
           supportPaymentIds,
         ),
-      `${attackerName}完成攻擊。`,
+      `${attacker?.card.name ?? '餅乾'}完成攻擊。`,
     )
     setSelectedAttackerId(null)
   }
 
-  const handleReplacement = (instanceId: string) => {
-    runAction(
-      (current) => replaceDefeatedCookie(current, instanceId),
-      '已補充新的戰鬥區餅乾。',
-    )
-  }
-
-  const handleRefresh = (playerId: PlayerId, instanceId: string) => {
-    runAction(
-      (current) => refreshDeck(current, playerId, instanceId),
-      '牌庫 Refresh 已完成。',
-    )
-  }
+  const pendingPlayerId =
+    game.pendingRefresh?.playerId ?? game.pendingReplacementPlayerId
+  const pendingPlayer = pendingPlayerId
+    ? game.players[pendingPlayerId]
+    : null
+  const pendingOptions = game.pendingRefresh
+    ? getRefreshCandidates(game, game.pendingRefresh.playerId)
+    : pendingPlayer?.hand.filter((card) => card.type === 'cookie') ?? []
 
   return (
     <main className="game-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Cookie Battle Prototype</p>
-          <h1>Braverse</h1>
+      <div className="board-texture" />
+
+      <aside className="phase-rail" aria-label="回合階段">
+        <div className="brand-mark">
+          <span>COOKIE RUN</span>
+          <strong>BRAVERSE</strong>
         </div>
-        <div className="turn-status" aria-label="目前回合">
-          <span>第 {game.turnNumber} 回合 · {activePlayer.name}</span>
+        <ol>
+          {phases.map((phase, index) => (
+            <li
+              className={game.phase === phase ? 'is-current' : ''}
+              key={phase}
+            >
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <strong>{phaseLabels[phase]}</strong>
+            </li>
+          ))}
+        </ol>
+        <button
+          className="next-phase-button"
+          type="button"
+          onClick={handleAdvancePhase}
+          disabled={
+            game.status === 'finished' ||
+            Boolean(game.pendingReplacementPlayerId) ||
+            Boolean(game.pendingRefresh)
+          }
+        >
+          <span>{nextPhaseLabels[game.phase]}</span>
+          <ChevronRight aria-hidden="true" />
+        </button>
+        <span className="turn-counter">TURN {game.turnNumber}</span>
+      </aside>
+
+      <header className="match-toolbar">
+        <div className="match-status">
+          <span>{activePlayer.name}的回合</span>
           <strong>{phaseLabels[game.phase]}</strong>
+          <small>{message}</small>
+        </div>
+        <div className="toolbar-actions">
+          <button
+            type="button"
+            title="重新開始"
+            onClick={() => {
+              setGame(createDemoGame())
+              setSelectedAttackerId(null)
+              setMessage('已建立新的 Starter Deck RED 範例對局。')
+            }}
+          >
+            <RotateCcw aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            title="暫停資訊"
+            onClick={() => setShowPause(true)}
+          >
+            <Pause aria-hidden="true" />
+          </button>
         </div>
       </header>
 
-      <section className="battlefield" aria-label="對戰區">
-        {game.result && (
-          <section className="result-banner" role="alert">
-            <span>對局結束</span>
-            <strong>{game.players[game.result.winnerId].name}獲勝</strong>
-            <small>
-              {game.result.reason === 'break-level-limit'
-                ? '對手休息區等級達到 10。'
-                : game.result.reason === 'refresh-unavailable'
-                  ? '對手無法完成牌庫 Refresh。'
-                  : '對手沒有可登場的餅乾。'}
-            </small>
-          </section>
-        )}
-
-        {refreshPlayerIds.map((playerId) => {
-          const player = game.players[playerId]
-
-          return (
-            <section className="forced-action-panel" key={playerId} role="alert">
-              <div>
-                <span>牌庫耗盡</span>
-                <strong>{player.name}必須完成 Refresh</strong>
-                <small>選擇一張 LV1 以上餅乾放入休息區。</small>
-              </div>
-              <div className="forced-action-options">
-                {getRefreshCandidates(game, playerId).map((cookie) => (
-                  <button
-                    type="button"
-                    key={cookie.instanceId}
-                    onClick={() => handleRefresh(playerId, cookie.instanceId)}
-                  >
-                    {cookie.name} · LV {cookie.level}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )
-        })}
-
-        {pendingReplacementPlayer && (
-          <section className="forced-action-panel" role="alert">
-            <div>
-              <span>強制補充</span>
-              <strong>{pendingReplacementPlayer.name}必須登場餅乾</strong>
-              <small>完成補充前不能進行其他動作。</small>
-            </div>
-            <div className="forced-action-options">
-              {pendingReplacementPlayer.hand
-                .filter((card) => card.type === 'cookie')
-                .map((cookie) => (
-                  <button
-                    type="button"
-                    key={cookie.instanceId}
-                    disabled={pendingReplacementPlayer.deck.length < cookie.hp}
-                    onClick={() => handleReplacement(cookie.instanceId)}
-                  >
-                    {cookie.name} · HP {cookie.hp}
-                  </button>
-                ))}
-            </div>
-          </section>
-        )}
-
-        <PlayerBoard
+      <section className="table-area" aria-label="Braverse 對戰桌">
+        <BattleRow
           game={game}
           playerId={opponentId}
           concealed
           selectedAttackerId={selectedAttackerId}
           onAttackTarget={handleAttackTarget}
+          onInspectCard={setInspectedCard}
         />
 
-        <div className="turn-divider" role="status">
-          <span>{activePlayer.name}的回合</span>
-          <strong>{phaseLabels[game.phase]}</strong>
-          {game.phase === 'main' && (
-            <small>{canAttack(game) ? '可以宣告攻擊' : '先攻首回合不能攻擊'}</small>
-          )}
+        <div className="table-divider">
+          <span />
+          <strong>
+            {selectedAttackerId ? (
+              <>
+                <Swords aria-hidden="true" /> 選擇攻擊目標
+              </>
+            ) : (
+              `${activePlayer.name} · ${phaseLabels[game.phase]}`
+            )}
+          </strong>
+          <span />
         </div>
 
-        <PlayerBoard
+        <BattleRow
           game={game}
           playerId={game.activePlayerId}
           selectedAttackerId={selectedAttackerId}
           onSelectAttacker={(instanceId) => {
             setSelectedAttackerId(instanceId)
-            setMessage('已選擇攻擊餅乾，請選擇對手目標。')
+            setMessage('選擇對手戰鬥區中的攻擊目標。')
           }}
-          onPlaceSupport={handlePlaceSupport}
-          onDeployCookie={handleDeployCookie}
+          onInspectCard={setInspectedCard}
+        />
+
+        <SupportAndHand
+          game={game}
+          playerId={game.activePlayerId}
+          onPlaceSupport={(instanceId) =>
+            runAction(
+              (current) => placeSupportCard(current, instanceId),
+              '已將卡牌配置到支援區。',
+            )
+          }
+          onDeployCookie={(instanceId) =>
+            runAction(
+              (current) => deployCookie(current, instanceId),
+              '新餅乾已登場並配置 HP。',
+            )
+          }
+          onInspectCard={setInspectedCard}
         />
       </section>
 
-      <footer className="actionbar">
-        <div>
-          <span className="phase-label">目前操作</span>
-          <strong>{activePlayer.name} · {phaseLabels[game.phase]}</strong>
-          <small className="action-message">{message}</small>
+      <button
+        className="inspect-hand-button"
+        type="button"
+        onClick={() => setInspectedCard(activePlayer.hand[0] ?? null)}
+      >
+        <Eye aria-hidden="true" />
+        <span>查看卡牌</span>
+      </button>
+
+      {pendingPlayer && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="decision-modal" role="alertdialog">
+            <div className="modal-title">
+              {game.pendingRefresh ? '牌庫 Refresh' : '放置餅乾'}
+            </div>
+            <div className="modal-body">
+              <strong>
+                {game.pendingRefresh
+                  ? `${pendingPlayer.name}必須選擇一張餅乾放入休息區`
+                  : `${pendingPlayer.name}必須在戰鬥區放置新餅乾`}
+              </strong>
+              <div className="modal-card-options">
+                {pendingOptions.map((card) => (
+                  <button
+                    type="button"
+                    key={card.instanceId}
+                    disabled={
+                      !game.pendingRefresh &&
+                      card.type === 'cookie' &&
+                      pendingPlayer.deck.length < card.hp
+                    }
+                    onClick={() => {
+                      if (game.pendingRefresh) {
+                        runAction(
+                          (current) =>
+                            refreshDeck(
+                              current,
+                              pendingPlayer.id,
+                              card.instanceId,
+                            ),
+                          '牌庫 Refresh 已完成。',
+                        )
+                      } else {
+                        runAction(
+                          (current) =>
+                            replaceDefeatedCookie(current, card.instanceId),
+                          '已補充新的戰鬥區餅乾。',
+                        )
+                      }
+                    }}
+                  >
+                    <CardFace card={card} />
+                    <span>{card.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
         </div>
-        <div className="action-buttons">
-          <button className="secondary-button" type="button" onClick={handleRestart}>
-            重新開始
-          </button>
-          <button
-            type="button"
-            onClick={handleAdvancePhase}
-            disabled={
-              game.status === 'finished' ||
-              Boolean(game.pendingReplacementPlayerId) ||
-              Boolean(game.pendingRefresh)
-            }
-          >
-            {nextPhaseLabels[game.phase]}
-          </button>
+      )}
+
+      {inspectedCard && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="card-detail-modal" role="dialog">
+            <button
+              className="close-modal"
+              type="button"
+              title="關閉"
+              onClick={() => setInspectedCard(null)}
+            >
+              <X aria-hidden="true" />
+            </button>
+            <CardFace card={inspectedCard} className="detail-card" />
+            <div>
+              <span>{inspectedCard.id}</span>
+              <h2>{inspectedCard.name}</h2>
+              <p>
+                {inspectedCard.type === 'cookie'
+                  ? `LV ${inspectedCard.level} · HP ${inspectedCard.hp} · 攻擊 ${inspectedCard.attack} · 費用 ${inspectedCard.attackCost}`
+                  : `卡牌類型：${inspectedCard.type.toUpperCase()}`}
+              </p>
+            </div>
+          </section>
         </div>
-      </footer>
+      )}
+
+      {showPause && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="pause-modal" role="dialog">
+            <Pause aria-hidden="true" />
+            <span>對戰資訊</span>
+            <h2>遊戲已暫停</h2>
+            <p>目前為第 {game.turnNumber} 回合，{phaseLabels[game.phase]}。</p>
+            <button type="button" onClick={() => setShowPause(false)}>
+              繼續對戰
+            </button>
+          </section>
+        </div>
+      )}
+
+      {game.result && (
+        <div className="modal-backdrop result-backdrop" role="presentation">
+          <section className="result-modal" role="alertdialog">
+            <span>對局結束</span>
+            <h2>{game.players[game.result.winnerId].name}勝利</h2>
+            <p>
+              {game.result.reason === 'break-level-limit'
+                ? '對手休息區等級達到 10。'
+                : game.result.reason === 'refresh-unavailable'
+                  ? '對手無法完成牌庫 Refresh。'
+                  : '對手沒有可登場的餅乾。'}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setGame(createDemoGame())
+                setSelectedAttackerId(null)
+              }}
+            >
+              再來一局
+            </button>
+          </section>
+        </div>
+      )}
     </main>
   )
 }
