@@ -7,7 +7,10 @@ import {
   createDemoGame,
   deployCookie,
   getBreakAreaLevel,
+  getRefreshCandidates,
   placeSupportCard,
+  refreshDeck,
+  replaceDefeatedCookie,
   type GameState,
   type PlayerId,
   type TurnPhase,
@@ -91,11 +94,14 @@ function PlayerBoard({
                 <strong>{cookie.card.name}</strong>
                 <span>HP {cookie.hpCards.length} / {cookie.card.hp}</span>
                 <span>攻擊 {cookie.card.attack}</span>
+                <span>費用 {cookie.card.attackCost}</span>
                 <small>{cookie.rested ? '休息' : '活躍'}</small>
                 {!concealed &&
                   isPlaying &&
                   game.phase === 'main' &&
                   canAttack(game) &&
+                  player.supportArea.filter((support) => !support.rested)
+                    .length >= cookie.card.attackCost &&
                   !cookie.rested && (
                     <button
                       className="card-action"
@@ -131,7 +137,12 @@ function PlayerBoard({
           <strong>{player.supportArea.length} 張</strong>
           <div className="support-list">
             {player.supportArea.map((support) => (
-              <span key={support.card.instanceId}>{support.card.name}</span>
+              <span
+                className={support.rested ? 'is-rested' : ''}
+                key={support.card.instanceId}
+              >
+                {support.card.name} · {support.rested ? '休息' : '活躍'}
+              </span>
             ))}
           </div>
         </div>
@@ -198,6 +209,13 @@ function App() {
   const [message, setMessage] = useState('請推進階段開始對戰。')
   const activePlayer = game.players[game.activePlayerId]
   const opponentId = opponentOf(game.activePlayerId)
+  const pendingReplacementPlayer = game.pendingReplacementPlayerId
+    ? game.players[game.pendingReplacementPlayerId]
+    : null
+  const refreshPlayerIds =
+    game.status === 'playing' && game.pendingRefresh
+      ? [game.pendingRefresh.playerId]
+      : []
 
   const runAction = (
     action: (current: GameState) => GameState,
@@ -246,13 +264,39 @@ function App() {
       activePlayer.battleArea.find(
         (cookie) => cookie.card.instanceId === selectedAttackerId,
       )?.card.name ?? '餅乾'
+    const attacker = activePlayer.battleArea.find(
+      (cookie) => cookie.card.instanceId === selectedAttackerId,
+    )
+    const supportPaymentIds = activePlayer.supportArea
+      .filter((support) => !support.rested)
+      .slice(0, attacker?.card.attackCost ?? 0)
+      .map((support) => support.card.instanceId)
 
     runAction(
       (current) =>
-        attackCookie(current, selectedAttackerId, targetInstanceId),
+        attackCookie(
+          current,
+          selectedAttackerId,
+          targetInstanceId,
+          supportPaymentIds,
+        ),
       `${attackerName}完成攻擊。`,
     )
     setSelectedAttackerId(null)
+  }
+
+  const handleReplacement = (instanceId: string) => {
+    runAction(
+      (current) => replaceDefeatedCookie(current, instanceId),
+      '已補充新的戰鬥區餅乾。',
+    )
+  }
+
+  const handleRefresh = (playerId: PlayerId, instanceId: string) => {
+    runAction(
+      (current) => refreshDeck(current, playerId, instanceId),
+      '牌庫 Refresh 已完成。',
+    )
   }
 
   return (
@@ -276,8 +320,59 @@ function App() {
             <small>
               {game.result.reason === 'break-level-limit'
                 ? '對手休息區等級達到 10。'
-                : '對手沒有可登場的餅乾。'}
+                : game.result.reason === 'refresh-unavailable'
+                  ? '對手無法完成牌庫 Refresh。'
+                  : '對手沒有可登場的餅乾。'}
             </small>
+          </section>
+        )}
+
+        {refreshPlayerIds.map((playerId) => {
+          const player = game.players[playerId]
+
+          return (
+            <section className="forced-action-panel" key={playerId} role="alert">
+              <div>
+                <span>牌庫耗盡</span>
+                <strong>{player.name}必須完成 Refresh</strong>
+                <small>選擇一張 LV1 以上餅乾放入休息區。</small>
+              </div>
+              <div className="forced-action-options">
+                {getRefreshCandidates(game, playerId).map((cookie) => (
+                  <button
+                    type="button"
+                    key={cookie.instanceId}
+                    onClick={() => handleRefresh(playerId, cookie.instanceId)}
+                  >
+                    {cookie.name} · LV {cookie.level}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )
+        })}
+
+        {pendingReplacementPlayer && (
+          <section className="forced-action-panel" role="alert">
+            <div>
+              <span>強制補充</span>
+              <strong>{pendingReplacementPlayer.name}必須登場餅乾</strong>
+              <small>完成補充前不能進行其他動作。</small>
+            </div>
+            <div className="forced-action-options">
+              {pendingReplacementPlayer.hand
+                .filter((card) => card.type === 'cookie')
+                .map((cookie) => (
+                  <button
+                    type="button"
+                    key={cookie.instanceId}
+                    disabled={pendingReplacementPlayer.deck.length < cookie.hp}
+                    onClick={() => handleReplacement(cookie.instanceId)}
+                  >
+                    {cookie.name} · HP {cookie.hp}
+                  </button>
+                ))}
+            </div>
           </section>
         )}
 
@@ -323,7 +418,11 @@ function App() {
           <button
             type="button"
             onClick={handleAdvancePhase}
-            disabled={game.status === 'finished'}
+            disabled={
+              game.status === 'finished' ||
+              Boolean(game.pendingReplacementPlayerId) ||
+              Boolean(game.pendingRefresh)
+            }
           >
             {nextPhaseLabels[game.phase]}
           </button>

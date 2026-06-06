@@ -70,6 +70,8 @@ export const createGame = (
     status: 'setup',
     result: null,
     supportPlacedThisTurn: false,
+    pendingReplacementPlayerId: null,
+    pendingRefresh: null,
   }
 }
 

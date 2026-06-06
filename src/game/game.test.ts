@@ -8,8 +8,11 @@ import {
   deployCookie,
   evaluateBasicVictory,
   getBreakAreaLevel,
+  getRefreshCandidates,
   mulliganOpeningHand,
   placeSupportCard,
+  refreshDeck,
+  replaceDefeatedCookie,
   resolveBasicVictory,
   selectStartingCookie,
   type CookieCard,
@@ -32,6 +35,7 @@ const createCookie = (
   level,
   hp,
   attack: 1,
+  attackCost: 1,
 })
 
 const createItem = (instanceId: string): GameCard => ({
@@ -68,6 +72,16 @@ const createReadyGame = (): GameState => {
 
   state = selectStartingCookie(state, 'player-one', 'one-starter')
   state = selectStartingCookie(state, 'player-two', 'two-starter')
+  return state
+}
+
+const reachSecondTurnActive = (initialState: GameState): GameState => {
+  let state = initialState
+
+  while (!(state.turnNumber === 2 && state.phase === 'active')) {
+    state = advancePhase(state)
+  }
+
   return state
 }
 
@@ -227,6 +241,27 @@ describe('玩家動作', () => {
     return current
   }
 
+  const addActiveSupport = (
+    state: GameState,
+    playerId: PlayerId,
+    instanceId = `${playerId}-payment`,
+  ): GameState => ({
+    ...state,
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...state.players[playerId],
+        supportArea: [
+          ...state.players[playerId].supportArea,
+          {
+            card: createItem(instanceId),
+            rested: false,
+          },
+        ],
+      },
+    },
+  })
+
   it('支援階段可從手牌放置一張支援卡，每回合限一次', () => {
     let state = reachPhase(createReadyGame(), 'support')
     const player = state.players[state.activePlayerId]
@@ -260,11 +295,39 @@ describe('玩家動作', () => {
     expect(state.players['player-one'].hand).not.toContain(cookie)
   })
 
+  it('登場配置 HP 後牌庫歸零時立即要求 Refresh', () => {
+    let state = reachPhase(createReadyGame(), 'main')
+    const cookie = state.players['player-one'].hand.find(
+      (card) => card.type === 'cookie',
+    )
+    const refreshCookie = createCookie('deploy-refresh', 1)
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [createItem('hp-a'), createItem('hp-b')],
+          discardPile: [refreshCookie, createItem('recycled')],
+        },
+      },
+    }
+
+    state = deployCookie(state, cookie!.instanceId)
+
+    expect(state.pendingRefresh).toEqual({
+      playerId: 'player-one',
+      remainingDraws: 0,
+    })
+    expect(() => advancePhase(state)).toThrow('必須先完成牌庫 Refresh。')
+  })
+
   it('攻擊使攻擊者休息，並將目標 HP 卡移入棄牌區', () => {
     let state = createReadyGame()
     state = reachPhase(state, 'end')
     state = advancePhase(state)
     state = reachPhase(state, 'main')
+    state = addActiveSupport(state, 'player-two')
 
     const attacker = state.players['player-two'].battleArea[0]
     const target = state.players['player-one'].battleArea[0]
@@ -275,6 +338,7 @@ describe('玩家動作', () => {
       state,
       attacker.card.instanceId,
       target.card.instanceId,
+      ['player-two-payment'],
     )
 
     expect(state.players['player-two'].battleArea[0].rested).toBe(true)
@@ -291,6 +355,7 @@ describe('玩家動作', () => {
     state = reachPhase(state, 'end')
     state = advancePhase(state)
     state = reachPhase(state, 'main')
+    state = addActiveSupport(state, 'player-two')
 
     const target = state.players['player-one'].battleArea[0]
     state = {
@@ -308,11 +373,299 @@ describe('玩家動作', () => {
       state,
       state.players['player-two'].battleArea[0].card.instanceId,
       target.card.instanceId,
+      ['player-two-payment'],
     )
 
     expect(state.players['player-one'].battleArea).toHaveLength(0)
     expect(state.players['player-one'].breakArea).toContain(target.card)
     expect(state.players['player-one'].discardPile).toContain(target.hpCards[0])
+    expect(state.pendingReplacementPlayerId).toBe('player-one')
+  })
+
+  it('攻擊必須支付足額的活躍支援卡', () => {
+    let state = createReadyGame()
+    state = reachPhase(state, 'end')
+    state = advancePhase(state)
+    state = reachPhase(state, 'main')
+
+    const attacker = state.players['player-two'].battleArea[0]
+    const target = state.players['player-one'].battleArea[0]
+
+    expect(() =>
+      attackCookie(
+        state,
+        attacker.card.instanceId,
+        target.card.instanceId,
+        [],
+      ),
+    ).toThrow('此攻擊需要支付 1 張支援卡。')
+
+    state = addActiveSupport(state, 'player-two')
+    state = attackCookie(
+      state,
+      attacker.card.instanceId,
+      target.card.instanceId,
+      ['player-two-payment'],
+    )
+
+    expect(state.players['player-two'].supportArea[0].rested).toBe(true)
+  })
+
+  it('擊倒最後一隻餅乾後必須補充，補充完成才能繼續', () => {
+    let state = createReadyGame()
+    state = reachPhase(state, 'end')
+    state = advancePhase(state)
+    state = reachPhase(state, 'main')
+    state = addActiveSupport(state, 'player-two')
+
+    const target = state.players['player-one'].battleArea[0]
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [{ ...target, hpCards: [target.hpCards[0]] }],
+        },
+      },
+    }
+    state = attackCookie(
+      state,
+      state.players['player-two'].battleArea[0].card.instanceId,
+      target.card.instanceId,
+      ['player-two-payment'],
+    )
+
+    expect(() => advancePhase(state)).toThrow('必須先補充戰鬥區餅乾。')
+
+    const replacement = state.players['player-one'].hand.find(
+      (card) => card.type === 'cookie',
+    )
+    expect(replacement).toBeDefined()
+
+    state = replaceDefeatedCookie(state, replacement!.instanceId)
+
+    expect(state.pendingReplacementPlayerId).toBeNull()
+    expect(state.players['player-one'].battleArea).toHaveLength(1)
+    expect(state.players['player-one'].battleArea[0].card).toBe(replacement)
+  })
+
+  it('擊倒最後一隻餅乾且手牌無餅乾時立即敗北', () => {
+    let state = createReadyGame()
+    state = reachPhase(state, 'end')
+    state = advancePhase(state)
+    state = reachPhase(state, 'main')
+    state = addActiveSupport(state, 'player-two')
+
+    const target = state.players['player-one'].battleArea[0]
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [createItem('only-item')],
+          battleArea: [{ ...target, hpCards: [target.hpCards[0]] }],
+        },
+      },
+    }
+    state = attackCookie(
+      state,
+      state.players['player-two'].battleArea[0].card.instanceId,
+      target.card.instanceId,
+      ['player-two-payment'],
+    )
+
+    expect(state.status).toBe('finished')
+    expect(state.result).toEqual({
+      winnerId: 'player-two',
+      loserId: 'player-one',
+      reason: 'no-cookie-available',
+    })
+    expect(state.pendingReplacementPlayerId).toBeNull()
+  })
+
+  it('擊倒使休息區 LV 達 10 時直接結束，不進入補充流程', () => {
+    let state = createReadyGame()
+    state = reachPhase(state, 'end')
+    state = advancePhase(state)
+    state = reachPhase(state, 'main')
+    state = addActiveSupport(state, 'player-two')
+
+    const target = state.players['player-one'].battleArea[0]
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [{ ...target, hpCards: [target.hpCards[0]] }],
+          breakArea: [createCookie('break-eight', 8)],
+        },
+      },
+    }
+
+    state = attackCookie(
+      state,
+      state.players['player-two'].battleArea[0].card.instanceId,
+      target.card.instanceId,
+      ['player-two-payment'],
+    )
+
+    expect(state.status).toBe('finished')
+    expect(state.result?.reason).toBe('break-level-limit')
+    expect(state.pendingReplacementPlayerId).toBeNull()
+  })
+})
+
+describe('牌庫 Refresh', () => {
+  const identity = (cards: GameCard[]) => [...cards]
+
+  it('牌庫耗盡時選擇棄牌區餅乾進休息區並洗回其餘卡牌', () => {
+    let state = createReadyGame()
+    const refreshCookie = createCookie('refresh-cookie', 2)
+    const recycledItem = createItem('recycled-item')
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [],
+          discardPile: [refreshCookie, recycledItem],
+        },
+      },
+    }
+
+    expect(getRefreshCandidates(state, 'player-one')).toEqual([refreshCookie])
+    state = refreshDeck(
+      state,
+      'player-one',
+      refreshCookie.instanceId,
+      identity,
+    )
+
+    expect(state.players['player-one'].breakArea).toContain(refreshCookie)
+    expect(state.players['player-one'].deck).toEqual([recycledItem])
+    expect(state.players['player-one'].discardPile).toHaveLength(0)
+  })
+
+  it('抽牌途中耗盡時等待 Refresh，完成後補足剩餘抽牌', () => {
+    let state = createReadyGame()
+    state = reachSecondTurnActive(state)
+    const lastDeckCard = createItem('last-deck-card')
+    const refreshCookie = createCookie('refresh-draw-cookie', 1)
+    const recycledA = createItem('recycled-a')
+    const recycledB = createItem('recycled-b')
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          deck: [lastDeckCard],
+          discardPile: [refreshCookie, recycledA, recycledB],
+        },
+      },
+    }
+    const handSize = state.players['player-two'].hand.length
+
+    state = advancePhase(state)
+
+    expect(state.phase).toBe('draw')
+    expect(state.pendingRefresh).toEqual({
+      playerId: 'player-two',
+      remainingDraws: 1,
+    })
+    expect(state.players['player-two'].hand).toContain(lastDeckCard)
+    expect(() => advancePhase(state)).toThrow('必須先完成牌庫 Refresh。')
+
+    state = refreshDeck(
+      state,
+      'player-two',
+      refreshCookie.instanceId,
+      identity,
+    )
+
+    expect(state.pendingRefresh).toBeNull()
+    expect(state.players['player-two'].hand).toHaveLength(handSize + 2)
+    expect(state.players['player-two'].hand).toContain(recycledA)
+  })
+
+  it('抽牌剛好將牌庫抽成 0 時也必須完成 Refresh', () => {
+    let state = reachSecondTurnActive(createReadyGame())
+    const refreshCookie = createCookie('exact-refresh-cookie', 1)
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          deck: [createItem('exact-a'), createItem('exact-b')],
+          discardPile: [refreshCookie, createItem('exact-recycled')],
+        },
+      },
+    }
+
+    state = advancePhase(state)
+
+    expect(state.players['player-two'].deck).toHaveLength(0)
+    expect(state.pendingRefresh).toEqual({
+      playerId: 'player-two',
+      remainingDraws: 0,
+    })
+  })
+
+  it('Refresh 使休息區 LV 達 10 時立即判敗', () => {
+    let state = createReadyGame()
+    const refreshCookie = createCookie('fatal-refresh', 2)
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [],
+          discardPile: [refreshCookie, createItem('recycled')],
+          breakArea: [createCookie('existing-break', 8)],
+        },
+      },
+    }
+
+    state = refreshDeck(
+      state,
+      'player-one',
+      refreshCookie.instanceId,
+      identity,
+    )
+
+    expect(state.status).toBe('finished')
+    expect(state.result?.reason).toBe('break-level-limit')
+    expect(state.result?.winnerId).toBe('player-two')
+  })
+
+  it('抽牌耗盡且沒有合法 Refresh 候選時立即判敗', () => {
+    let state = reachSecondTurnActive(createReadyGame())
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          deck: [],
+          discardPile: [createItem('no-cookie')],
+        },
+      },
+    }
+
+    state = advancePhase(state)
+
+    expect(state.status).toBe('finished')
+    expect(state.result).toEqual({
+      winnerId: 'player-one',
+      loserId: 'player-two',
+      reason: 'refresh-unavailable',
+    })
   })
 })
 

@@ -12,6 +12,7 @@ const createDemoDeck = (playerId: PlayerId): GameCard[] => {
       level: 2,
       hp: 3,
       attack: 1,
+      attackCost: 1,
     },
     {
       id: `${playerId}-cookie-scout`,
@@ -21,6 +22,7 @@ const createDemoDeck = (playerId: PlayerId): GameCard[] => {
       level: 1,
       hp: 2,
       attack: 1,
+      attackCost: 1,
     },
   ]
 
@@ -35,6 +37,7 @@ const createDemoDeck = (playerId: PlayerId): GameCard[] => {
             level: 1,
             hp: 2,
             attack: 1,
+            attackCost: 1,
           }
         : {
             id: `${playerId}-item-supply`,

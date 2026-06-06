@@ -66,3 +66,18 @@ export const resolveBasicVictory = (state: GameState): GameState => {
     : state
 }
 
+export const finishWithDefeat = (
+  state: GameState,
+  loserId: PlayerId,
+  reason: DefeatReason,
+): GameState => ({
+  ...state,
+  status: 'finished',
+  pendingReplacementPlayerId: null,
+  pendingRefresh: null,
+  result: {
+    loserId,
+    winnerId: getOpponentId(loserId),
+    reason,
+  },
+})

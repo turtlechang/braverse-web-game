@@ -1,12 +1,42 @@
 import { GameRuleError } from './errors'
 import { findCardIndex, getOpponentId, updatePlayer } from './helpers'
+import { getRefreshCandidates } from './refresh'
 import { canAttack } from './turn'
 import type { GameState, PlayerState } from './types'
-import { resolveBasicVictory } from './victory'
+import { finishWithDefeat, resolveBasicVictory } from './victory'
 
 const assertActiveGame = (state: GameState) => {
   if (state.status !== 'playing') {
     throw new GameRuleError('只有進行中的遊戲可以執行玩家動作。')
+  }
+
+  if (state.pendingReplacementPlayerId) {
+    throw new GameRuleError('必須先補充戰鬥區餅乾。')
+  }
+
+  if (state.pendingRefresh) {
+    throw new GameRuleError('必須先完成牌庫 Refresh。')
+  }
+}
+
+const resolveDeckExhaustion = (
+  state: GameState,
+  playerId: GameState['activePlayerId'],
+): GameState => {
+  if (state.players[playerId].deck.length > 0) {
+    return state
+  }
+
+  if (getRefreshCandidates(state, playerId).length === 0) {
+    return finishWithDefeat(state, playerId, 'refresh-unavailable')
+  }
+
+  return {
+    ...state,
+    pendingRefresh: {
+      playerId,
+      remainingDraws: 0,
+    },
   }
 }
 
@@ -71,7 +101,7 @@ export const deployCookie = (
     throw new GameRuleError('牌庫張數不足，無法配置餅乾 HP。')
   }
 
-  return updatePlayer(state, {
+  const updatedState = updatePlayer(state, {
     ...player,
     deck: player.deck.slice(card.hp),
     hand: player.hand.filter((_, index) => index !== cardIndex),
@@ -84,6 +114,59 @@ export const deployCookie = (
       },
     ],
   })
+
+  return resolveDeckExhaustion(updatedState, player.id)
+}
+
+export const replaceDefeatedCookie = (
+  state: GameState,
+  instanceId: string,
+): GameState => {
+  if (state.status !== 'playing' || !state.pendingReplacementPlayerId) {
+    throw new GameRuleError('目前不需要補充戰鬥區餅乾。')
+  }
+
+  if (state.pendingRefresh) {
+    throw new GameRuleError('必須先完成牌庫 Refresh。')
+  }
+
+  const playerId = state.pendingReplacementPlayerId
+  const player = state.players[playerId]
+
+  if (player.battleArea.length > 0) {
+    throw new GameRuleError('戰鬥區仍有餅乾，不需要強制補充。')
+  }
+
+  const cardIndex = findCardIndex(player.hand, instanceId)
+  const card = player.hand[cardIndex]
+
+  if (!card || card.type !== 'cookie') {
+    throw new GameRuleError('必須從手牌選擇一張餅乾補充戰鬥區。')
+  }
+
+  if (player.deck.length < card.hp) {
+    throw new GameRuleError('牌庫張數不足，無法配置補充餅乾 HP。')
+  }
+
+  const updatedState = updatePlayer(state, {
+    ...player,
+    deck: player.deck.slice(card.hp),
+    hand: player.hand.filter((_, index) => index !== cardIndex),
+    battleArea: [
+      {
+        card,
+        hpCards: player.deck.slice(0, card.hp),
+        rested: false,
+      },
+    ],
+  })
+
+  const replacementState = {
+    ...updatedState,
+    pendingReplacementPlayerId: null,
+  }
+
+  return resolveDeckExhaustion(replacementState, player.id)
 }
 
 const receiveDamage = (
@@ -134,6 +217,7 @@ export const attackCookie = (
   state: GameState,
   attackerInstanceId: string,
   targetInstanceId: string,
+  supportPaymentIds: string[],
 ): GameState => {
   assertActiveGame(state)
 
@@ -155,12 +239,38 @@ export const attackCookie = (
     throw new GameRuleError('休息狀態的餅乾不能攻擊。')
   }
 
+  const uniquePaymentIds = [...new Set(supportPaymentIds)]
+
+  if (uniquePaymentIds.length !== attacker.card.attackCost) {
+    throw new GameRuleError(
+      `此攻擊需要支付 ${attacker.card.attackCost} 張支援卡。`,
+    )
+  }
+
+  const paymentIndexes = uniquePaymentIds.map((instanceId) =>
+    attackerPlayer.supportArea.findIndex(
+      (support) => support.card.instanceId === instanceId,
+    ),
+  )
+
+  if (
+    paymentIndexes.some(
+      (index) =>
+        index < 0 || attackerPlayer.supportArea[index]?.rested === true,
+    )
+  ) {
+    throw new GameRuleError('只能使用自己的活躍支援卡支付攻擊費用。')
+  }
+
   const defenderId = getOpponentId(state.activePlayerId)
   const defender = state.players[defenderId]
   const updatedAttacker = {
     ...attackerPlayer,
     battleArea: attackerPlayer.battleArea.map((cookie, index) =>
       index === attackerIndex ? { ...cookie, rested: true } : cookie,
+    ),
+    supportArea: attackerPlayer.supportArea.map((support, index) =>
+      paymentIndexes.includes(index) ? { ...support, rested: true } : support,
     ),
   }
   const updatedDefender = receiveDamage(
@@ -169,7 +279,7 @@ export const attackCookie = (
     attacker.card.attack,
   )
 
-  return resolveBasicVictory({
+  let updatedState = resolveBasicVictory({
     ...state,
     players: {
       ...state.players,
@@ -177,4 +287,16 @@ export const attackCookie = (
       [updatedDefender.id]: updatedDefender,
     },
   })
+
+  if (
+    updatedState.status === 'playing' &&
+    updatedDefender.battleArea.length === 0
+  ) {
+    updatedState = {
+      ...updatedState,
+      pendingReplacementPlayerId: defenderId,
+    }
+  }
+
+  return updatedState
 }

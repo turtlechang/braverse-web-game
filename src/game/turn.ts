@@ -1,10 +1,20 @@
 import { GameRuleError } from './errors'
 import { drawCards, getOpponentId, updatePlayer } from './helpers'
+import { getRefreshCandidates } from './refresh'
 import type { GameState, TurnPhase } from './types'
+import { finishWithDefeat } from './victory'
 
 const assertPlaying = (state: GameState) => {
   if (state.status !== 'playing') {
     throw new GameRuleError('只有進行中的遊戲可以推進回合。')
+  }
+
+  if (state.pendingReplacementPlayerId) {
+    throw new GameRuleError('必須先補充戰鬥區餅乾。')
+  }
+
+  if (state.pendingRefresh) {
+    throw new GameRuleError('必須先完成牌庫 Refresh。')
   }
 }
 
@@ -26,7 +36,32 @@ const activateCurrentPlayer = (state: GameState): GameState => {
 
 const enterDrawPhase = (state: GameState): GameState => {
   const activePlayer = state.players[state.activePlayerId]
-  return updatePlayer(state, drawCards(activePlayer, 2))
+  const drawAmount = Math.min(activePlayer.deck.length, 2)
+  const updatedState = updatePlayer(
+    state,
+    drawCards(activePlayer, drawAmount),
+  )
+  const remainingDraws = 2 - drawAmount
+
+  if (updatedState.players[state.activePlayerId].deck.length > 0) {
+    return updatedState
+  }
+
+  if (getRefreshCandidates(updatedState, state.activePlayerId).length === 0) {
+    return finishWithDefeat(
+      updatedState,
+      state.activePlayerId,
+      'refresh-unavailable',
+    )
+  }
+
+  return {
+    ...updatedState,
+    pendingRefresh: {
+      playerId: state.activePlayerId,
+      remainingDraws,
+    },
+  }
 }
 
 export const advancePhase = (state: GameState): GameState => {
@@ -61,6 +96,8 @@ export const advancePhase = (state: GameState): GameState => {
 
 export const canAttack = (state: GameState): boolean =>
   state.status === 'playing' &&
+  !state.pendingReplacementPlayerId &&
+  !state.pendingRefresh &&
   state.phase === 'main' &&
   !(state.turnNumber === 1 && state.activePlayerId === state.firstPlayerId)
 

@@ -13,6 +13,7 @@ export interface CookieCard extends BaseCard {
   level: number
   hp: number
   attack: number
+  attackCost: number
 }
 
 export interface NonCookieCard extends BaseCard {
@@ -50,7 +51,10 @@ export type TurnPhase = 'active' | 'draw' | 'support' | 'main' | 'end'
 
 export type GameStatus = 'setup' | 'playing' | 'finished'
 
-export type DefeatReason = 'break-level-limit' | 'no-cookie-available'
+export type DefeatReason =
+  | 'break-level-limit'
+  | 'no-cookie-available'
+  | 'refresh-unavailable'
 
 export interface GameResult {
   winnerId: PlayerId
@@ -67,6 +71,11 @@ export interface GameState {
   status: GameStatus
   result: GameResult | null
   supportPlacedThisTurn: boolean
+  pendingReplacementPlayerId: PlayerId | null
+  pendingRefresh: {
+    playerId: PlayerId
+    remainingDraws: number
+  } | null
 }
 
 export interface PlayerSetup {
