@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   advancePhase,
   canAttack,
+  createDemoGame,
   createGame,
   evaluateBasicVictory,
   getBreakAreaLevel,
@@ -67,6 +68,15 @@ const createReadyGame = (): GameState => {
 }
 
 describe('開局', () => {
+  it('範例對局可直接進入第一回合', () => {
+    const state = createDemoGame()
+
+    expect(state.status).toBe('playing')
+    expect(state.turnNumber).toBe(1)
+    expect(state.players['player-one'].battleArea).toHaveLength(1)
+    expect(state.players['player-two'].battleArea).toHaveLength(1)
+  })
+
   it('洗牌後各抽 6 張，並由指定玩家先攻', () => {
     const state = createGame(
       {
