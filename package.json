@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "cards:import:sample": "node scripts/import-official-cards.mjs --limit 10",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",

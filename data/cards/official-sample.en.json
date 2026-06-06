@@ -1,0 +1,415 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-06-06T14:21:12.187Z",
+    "totalAvailable": 1992,
+    "importedCount": 10,
+    "imagesDownloaded": false
+  },
+  "cards": [
+    {
+      "sourceId": 46297,
+      "locale": "en",
+      "cardNumber": "BS9-001@1",
+      "baseCardNumber": "BS9-001",
+      "variant": "1",
+      "name": "Icicle Yeti Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}> Pointy Icicle {da} 2",
+      "flipText": "Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.",
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/G2fck1k1zK2Vi2PeQy2GWA.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46298,
+      "locale": "en",
+      "cardNumber": "BS9-001@2",
+      "baseCardNumber": "BS9-001",
+      "variant": "2",
+      "name": "Icicle Yeti Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}> Pointy Icicle {da} 2",
+      "flipText": "Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.",
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7bh33IzyDVrZKEOuVJDjnA.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46150,
+      "locale": "en",
+      "cardNumber": "BS9-001",
+      "baseCardNumber": "BS9-001",
+      "variant": null,
+      "name": "Icicle Yeti Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}> Pointy Icicle {da} 2",
+      "flipText": "Select up to 1 of your Cookies. During this turn, that Cookie receives -2 effect damage.",
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/PIvCKB3m5W1V4IW1nP7ycw.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46299,
+      "locale": "en",
+      "cardNumber": "BS9-002@1",
+      "baseCardNumber": "BS9-002",
+      "variant": "1",
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Princess Party",
+        "text": "【Activate】 【Once Per Turn】 If your {R} LV.1 Cookie fainted during your opponent's previous turn, during this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}{R}> Lovely Perfume {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Po9J3aB7TS2M1swKA164QA.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46151,
+      "locale": "en",
+      "cardNumber": "BS9-002",
+      "baseCardNumber": "BS9-002",
+      "variant": null,
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Princess Party",
+        "text": "【Activate】 【Once Per Turn】 If your {R} LV.1 Cookie fainted during your opponent's previous turn, during this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}{R}> Lovely Perfume {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ghJiF7A26ePkWzbmaALoLQ.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46300,
+      "locale": "en",
+      "cardNumber": "BS9-003@1",
+      "baseCardNumber": "BS9-003",
+      "variant": "1",
+      "name": "Strawberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Power up...!",
+        "text": "【On Play】 Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}> Lollipop Hammer {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/aXxg8gHX_FAbbpPYU8VJHQ.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46152,
+      "locale": "en",
+      "cardNumber": "BS9-003",
+      "baseCardNumber": "BS9-003",
+      "variant": null,
+      "name": "Strawberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Power up...!",
+        "text": "【On Play】 Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}> Lollipop Hammer {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/pPOslQVH79i-Ws1-ZG5vOg.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46301,
+      "locale": "en",
+      "cardNumber": "BS9-004@1",
+      "baseCardNumber": "BS9-004",
+      "variant": "1",
+      "name": "Linzer Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{N}{N}> Perfect Deduction {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/PmpZcxNsL25aJdbryOpnQA.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46153,
+      "locale": "en",
+      "cardNumber": "BS9-004",
+      "baseCardNumber": "BS9-004",
+      "variant": null,
+      "name": "Linzer Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 5,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{N}{N}> Perfect Deduction {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4bZB-O6MQwjq8cV6QpvZ3g.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 46302,
+      "locale": "en",
+      "cardNumber": "BS9-005@1",
+      "baseCardNumber": "BS9-005",
+      "variant": "1",
+      "name": "Macaron Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}> *BA-DUM-TSS* {da} 3",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 241,
+        "title": "BOOSTER PACK [A Game of Truth and Deceit]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wsPiseW4wxhd0xIf8l5Cbw.webp",
+      "officialUpdatedAt": "2026-06-05T01:22:38.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

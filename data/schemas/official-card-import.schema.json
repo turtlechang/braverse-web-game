@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/turtlechang/braverse-web-game/data/schemas/official-card-import.schema.json",
+  "title": "Braverse Official Card Import",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "source", "cards"],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "pageUrl",
+        "datasetUrl",
+        "locale",
+        "fetchedAt",
+        "totalAvailable",
+        "importedCount",
+        "imagesDownloaded"
+      ],
+      "properties": {
+        "provider": { "type": "string" },
+        "pageUrl": { "type": "string", "format": "uri" },
+        "datasetUrl": { "type": "string", "format": "uri" },
+        "locale": { "type": "string" },
+        "fetchedAt": { "type": "string", "format": "date-time" },
+        "totalAvailable": { "type": "integer", "minimum": 0 },
+        "importedCount": { "type": "integer", "minimum": 0 },
+        "imagesDownloaded": { "const": false }
+      }
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/card"
+      }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "nullableNumber": {
+      "type": ["number", "null"]
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceId",
+        "locale",
+        "cardNumber",
+        "baseCardNumber",
+        "variant",
+        "name",
+        "type",
+        "officialType",
+        "rarity",
+        "grade",
+        "level",
+        "hp",
+        "energyType",
+        "color",
+        "skill",
+        "attackText",
+        "flipText",
+        "keywords",
+        "product",
+        "restrictions",
+        "flags",
+        "imageUrl",
+        "officialUpdatedAt",
+        "sourceUrl"
+      ],
+      "properties": {
+        "sourceId": { "type": "number" },
+        "locale": { "type": "string" },
+        "cardNumber": { "type": "string" },
+        "baseCardNumber": { "type": "string" },
+        "variant": { "$ref": "#/$defs/nullableString" },
+        "name": { "type": "string" },
+        "type": {
+          "enum": ["cookie", "item", "trap", "stage", "flip", "extra", "unknown"]
+        },
+        "officialType": { "type": "string" },
+        "rarity": { "$ref": "#/$defs/nullableString" },
+        "grade": { "$ref": "#/$defs/nullableString" },
+        "level": { "$ref": "#/$defs/nullableNumber" },
+        "hp": { "$ref": "#/$defs/nullableNumber" },
+        "energyType": { "$ref": "#/$defs/nullableString" },
+        "color": { "$ref": "#/$defs/nullableString" },
+        "skill": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "text"],
+          "properties": {
+            "name": { "$ref": "#/$defs/nullableString" },
+            "text": { "$ref": "#/$defs/nullableString" }
+          }
+        },
+        "attackText": { "$ref": "#/$defs/nullableString" },
+        "flipText": { "$ref": "#/$defs/nullableString" },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "product": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "title", "category"],
+          "properties": {
+            "id": { "$ref": "#/$defs/nullableNumber" },
+            "title": { "$ref": "#/$defs/nullableString" },
+            "category": { "$ref": "#/$defs/nullableString" }
+          }
+        },
+        "restrictions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["banned", "limited"],
+          "properties": {
+            "banned": { "type": "boolean" },
+            "limited": { "type": "boolean" }
+          }
+        },
+        "flags": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "hidden", "extra"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "hidden": { "type": "boolean" },
+            "extra": { "type": "boolean" }
+          }
+        },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "officialUpdatedAt": { "$ref": "#/$defs/nullableString" },
+        "sourceUrl": { "type": "string", "format": "uri" }
+      }
+    }
+  }
+}
+
