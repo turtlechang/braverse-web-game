@@ -372,7 +372,7 @@ button.card-face {
   }
 }
 
-.card-back {
+.card-back-fallback {
   height: 100%;
   display: grid;
   place-content: center;
@@ -383,13 +383,13 @@ button.card-face {
     linear-gradient(145deg, #071b46, #020a25);
 }
 
-.card-back span {
+.card-back-fallback span {
   color: #ffcc4e;
   font-size: 0.44rem;
   font-weight: 900;
 }
 
-.card-back strong {
+.card-back-fallback strong {
   color: #f7d95a;
   font-size: 0.65rem;
 }
@@ -849,6 +849,49 @@ button.card-face {
   color: #9aedff;
   font-size: 0.62rem;
   font-weight: 900;
+}
+
+.inline-skill-label {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 3px;
+  padding: 2px 6px;
+  color: #071a3f;
+  border-radius: 999px;
+  background: #67e7ff;
+  font-size: 0.72em;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+.energy-icon-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.energy-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-block;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.energy-symbol-fallback {
+  display: inline-grid;
+  min-width: 22px;
+  min-height: 22px;
+  place-items: center;
+  padding: 2px;
+  color: #ffe674;
+  border: 1px solid rgba(255, 230, 116, 0.72);
+  border-radius: 50%;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .effect-panel > p,

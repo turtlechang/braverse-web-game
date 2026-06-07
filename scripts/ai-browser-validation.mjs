@@ -64,11 +64,11 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
-  await page.getByRole('button', { name: '執行 10 場 AI 驗證' }).click()
+  await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
   await page.getByTestId('ai-simulation-report').waitFor()
 
   const matches = []
-  for (let index = 1; index <= 10; index += 1) {
+  for (let index = 1; index <= 20; index += 1) {
     const row = page.getByTestId(`ai-simulation-match-${index}`)
     const validation = await row.getAttribute('data-validation')
     matches.push({
@@ -84,7 +84,7 @@ try {
   const report = {
     generatedAt: new Date().toISOString(),
     baseUrl,
-    completed: 10 - stuckMatches.length,
+    completed: 20 - stuckMatches.length,
     stuck: stuckMatches.length,
     matches,
   }

@@ -194,9 +194,9 @@ export const convertOfficialCookieSkill = (
   }
 
   return {
-    trigger: parsed.markers.includes('ap')
+    trigger: parsed.markers.includes('mob')
       ? 'activate'
-      : parsed.markers.includes('mob')
+      : parsed.markers.includes('ap')
         ? 'on-play'
         : 'passive',
     oncePerTurn: parsed.markers.includes('t1'),

@@ -16,7 +16,8 @@ const ENERGY_SYMBOLS: Record<string, EnergySymbol> = {
 
 const DISPLAY_MARKERS: Record<string, string> = {
   sk: '',
-  ap: '[Activate]',
+  mob: '[Activate]',
+  ap: '[OnPlay]',
   t1: '[Once per turn]',
   bl: '[Blocker]',
 }

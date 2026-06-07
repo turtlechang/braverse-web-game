@@ -81,7 +81,17 @@ describe('official text parser', () => {
     expect(parsed?.totalCost).toBe(1)
     expect(parsed?.markers).toEqual(['mob', 't1'])
     expect(parsed?.unknownTokens).toEqual(['custom'])
+    expect(parsed?.displayText).toContain('[Activate]')
     expect(parsed?.displayText).toContain('[custom]')
+  })
+
+  it('maps official skill markers to their timing labels', () => {
+    expect(parseOfficialCardText('{mob} Skill')?.displayText).toContain(
+      '[Activate]',
+    )
+    expect(parseOfficialCardText('{ap} Skill')?.displayText).toContain(
+      '[OnPlay]',
+    )
   })
 })
 

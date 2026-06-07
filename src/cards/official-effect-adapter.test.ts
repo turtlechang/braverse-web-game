@@ -63,18 +63,18 @@ describe('Starter Deck RED official effect adapter', () => {
 
   it('parses cookie skill timing, usage limits, and energy costs', () => {
     expect(convertOfficialCookieSkill(findCard('ST1-002'))).toMatchObject({
-      trigger: 'activate',
+      trigger: 'on-play',
       oncePerTurn: false,
       yourTurn: false,
       cost: { red: 1 },
     })
     expect(convertOfficialCookieSkill(findCard('ST1-003'))).toMatchObject({
-      trigger: 'on-play',
+      trigger: 'activate',
       oncePerTurn: true,
       cost: { red: 2, neutral: 2 },
     })
     expect(convertOfficialCookieSkill(findCard('ST1-008'))).toMatchObject({
-      trigger: 'on-play',
+      trigger: 'activate',
       oncePerTurn: true,
       restSource: true,
       cost: { red: 2 },

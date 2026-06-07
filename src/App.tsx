@@ -44,6 +44,11 @@ import {
 } from './game'
 
 const phases: TurnPhase[] = ['active', 'draw', 'support', 'main', 'end']
+const cardBackSources = [
+  '/card-back.png',
+  'https://cookierunbraverse.com/images/card/card-back.png',
+] as const
+
 const phaseLabels: Record<TurnPhase, string> = {
   active: '活躍階段',
   draw: '抽牌階段',
@@ -86,21 +91,103 @@ const energyLabels = {
   neutral: '任意',
 } as const
 
+type EnergyKey = keyof typeof energyLabels
+
+const energyVisuals: Partial<
+  Record<EnergyKey, { symbol: string; imageUrl: string }>
+> = {
+  red: { symbol: 'R', imageUrl: '/energy/{R}.webp' },
+  yellow: { symbol: 'Y', imageUrl: '/energy/{Y}.webp' },
+  green: { symbol: 'G', imageUrl: '/energy/{G}.webp' },
+  blue: { symbol: 'B', imageUrl: '/energy/{B}.webp' },
+  purple: { symbol: 'P', imageUrl: '/energy/{P}.webp' },
+  neutral: { symbol: 'N', imageUrl: '/energy/{N}.webp' },
+}
+
+const energyTokens: Partial<Record<string, EnergyKey>> = {
+  R: 'red',
+  Y: 'yellow',
+  G: 'green',
+  B: 'blue',
+  P: 'purple',
+  N: 'neutral',
+}
+
 const getSkillCostTotal = (skill: CardSkill) =>
   Object.values(skill.cost).reduce(
     (total, amount) => total + (amount ?? 0),
     0,
   )
 
-const describeSkillCost = (skill: CardSkill) => {
-  const labels = Object.entries(skill.cost).flatMap(([energy, amount]) =>
+function EnergyIcon({ energy }: { energy: EnergyKey }) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const visual = energyVisuals[energy]
+
+  if (!visual || imageFailed) {
+    return (
+      <span className="energy-symbol-fallback">
+        {visual ? `{${visual.symbol}}` : energyLabels[energy]}
+      </span>
+    )
+  }
+
+  return (
+    <img
+      className="energy-icon"
+      src={visual.imageUrl}
+      alt={`${energyLabels[energy]}色能量`}
+      title={`${energyLabels[energy]}色能量`}
+      onError={() => setImageFailed(true)}
+    />
+  )
+}
+
+function SkillCost({ skill }: { skill: CardSkill }) {
+  const energies = Object.entries(skill.cost).flatMap(([energy, amount]) =>
     Array.from(
       { length: amount ?? 0 },
-      () => energyLabels[energy as keyof typeof energyLabels],
+      () => energy as EnergyKey,
     ),
   )
 
-  return labels.length > 0 ? labels.join('、') : '不需能量'
+  if (energies.length === 0) {
+    return <span>不需能量</span>
+  }
+
+  return (
+    <span className="energy-icon-list">
+      {energies.map((energy, index) => (
+        <EnergyIcon key={`${energy}-${index}`} energy={energy} />
+      ))}
+    </span>
+  )
+}
+
+function CardEffectText({ text }: { text: string }) {
+  const parts = text.split(/(\{(?:mob|ap|R|Y|G|B|P|N)\})/g)
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        const token = part.match(/^\{(.+)\}$/)?.[1]
+        const energy = token ? energyTokens[token] : undefined
+
+        if (energy) {
+          return <EnergyIcon key={`${part}-${index}`} energy={energy} />
+        }
+
+        if (token === 'mob' || token === 'ap') {
+          return (
+            <span className="inline-skill-label" key={`${part}-${index}`}>
+              {token === 'mob' ? 'Activate 啟動' : 'OnPlay 登場'}
+            </span>
+          )
+        }
+
+        return part
+      })}
+    </>
+  )
 }
 
 const getSkillLabels = (skill: CardSkill) => [
@@ -170,11 +257,27 @@ function CardFace({
   onClick,
 }: CardFaceProps) {
   const [imageFailed, setImageFailed] = useState(false)
+  const [cardBackSourceIndex, setCardBackSourceIndex] = useState(0)
+  const cardBackSource = cardBackSources[cardBackSourceIndex]
   const content = concealed ? (
-    <div className="card-back">
-      <span>COOKIE RUN</span>
-      <strong>BRAVERSE</strong>
-    </div>
+    cardBackSource ? (
+      <img
+        src={cardBackSource}
+        alt="Braverse 卡牌背面"
+        onError={() =>
+          setCardBackSourceIndex((currentIndex) => currentIndex + 1)
+        }
+      />
+    ) : (
+      <div
+        className="card-back-fallback"
+        role="img"
+        aria-label="Braverse 卡牌背面"
+      >
+        <span>COOKIE RUN</span>
+        <strong>BRAVERSE</strong>
+      </div>
+    )
   ) : card.imageUrl && !imageFailed ? (
     <img
       src={card.imageUrl}
@@ -766,13 +869,13 @@ function App() {
   const interactionLocked =
     Boolean(pendingEffect) || aiThinking || aiControlsCurrentState
 
-  const runTenMatchSimulation = () => {
-    const results = Array.from({ length: 10 }, () =>
+  const runSimulation = () => {
+    const results = Array.from({ length: 20 }, () =>
       simulateAiMatch(createDemoGame()),
     )
     setSimulationResults(results)
     const completed = results.filter((result) => !result.stuck).length
-    setMessage(`AI 驗證完成：${completed}/10 場正常結束。`)
+    setMessage(`AI 驗證完成：${completed}/20 場正常結束。`)
   }
 
   return (
@@ -946,8 +1049,8 @@ function App() {
         <span>簡易 AI 對手</span>
         <strong>{aiThinking ? '正在決策' : '等待下一步'}</strong>
         <small>已執行 {aiActionCount} 個動作</small>
-        <button type="button" onClick={runTenMatchSimulation}>
-          執行 10 場 AI 驗證
+        <button type="button" onClick={runSimulation}>
+          執行 20 場 AI 驗證
         </button>
       </aside>
 
@@ -970,7 +1073,7 @@ function App() {
               simulationResults.filter((result) => !result.stuck)
                 .length
             }
-            /10 場完成
+            /20 場完成
           </h2>
           <div className="simulation-table">
             {simulationResults.map((result, index) => (
@@ -1026,11 +1129,15 @@ function App() {
                   <span key={label}>{label}</span>
                 ))}
               </div>
-              <p>{pendingEffect.sourceCard.effectText}</p>
+              <p>
+                <CardEffectText
+                  text={pendingEffect.sourceCard.effectText ?? ''}
+                />
+              </p>
               {!pendingEffect.skillActivated && (
                 <div className="skill-cost">
                   <strong>技能費用</strong>
-                  <span>{describeSkillCost(pendingEffect.skill)}</span>
+                  <SkillCost skill={pendingEffect.skill} />
                   <small>
                     已選 {pendingEffect.selectedPaymentIds.length} 張支援卡
                   </small>
@@ -1180,11 +1287,13 @@ function App() {
                         ))}
                       </div>
                       <small>
-                        費用：{describeSkillCost(inspectedCard.skill)}
+                        費用：<SkillCost skill={inspectedCard.skill} />
                       </small>
                     </>
                   )}
-                  <p>{inspectedCard.effectText}</p>
+                  <p>
+                    <CardEffectText text={inspectedCard.effectText} />
+                  </p>
                 </div>
               )}
             </div>
