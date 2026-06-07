@@ -1,17 +1,11 @@
 import officialSample from '../../data/cards/official-sample.en.json'
+import {
+  convertOfficialCardEffects,
+  convertOfficialCookieSkill,
+} from '../cards/official-effect-adapter'
+import type { OfficialCardRecord } from '../cards/types'
 import { createGame, selectStartingCookie } from './setup'
 import type { GameCard, GameState, PlayerId } from './types'
-
-interface DemoCardSource {
-  baseCardNumber: string
-  cardNumber: string
-  name: string
-  type: string
-  level: number | null
-  hp: number | null
-  attackText: string | null
-  imageUrl: string
-}
 
 const parseAttack = (text: string | null) => {
   const cost = text?.match(/\{[A-Z]\}/g)?.length ?? 0
@@ -22,11 +16,24 @@ const parseAttack = (text: string | null) => {
 }
 
 const createDemoDeck = (playerId: PlayerId): GameCard[] => {
-  const sourceCards = officialSample.cards as DemoCardSource[]
+  const sourceCards = officialSample.cards as OfficialCardRecord[]
 
   return Array.from({ length: 60 }, (_, index) => {
     const source = sourceCards[index % sourceCards.length]
     const instanceId = `${playerId}-${source.cardNumber}-${index + 1}`
+    const effectConversion = convertOfficialCardEffects(source)
+    const skill = convertOfficialCookieSkill(source)
+    const energyColor =
+      source.energyType === 'MIX'
+        ? 'wild'
+        : source.color?.toLowerCase()
+    const effectData =
+      effectConversion.status === 'supported'
+        ? {
+            effectText: effectConversion.sourceText,
+            effects: effectConversion.effects,
+          }
+        : {}
 
     if (
       (source.type === 'cookie' || source.type === 'flip') &&
@@ -40,11 +47,23 @@ const createDemoDeck = (playerId: PlayerId): GameCard[] => {
         instanceId,
         name: source.name,
         imageUrl: source.imageUrl,
+        energyColor:
+          energyColor === 'red' ||
+          energyColor === 'yellow' ||
+          energyColor === 'green' ||
+          energyColor === 'blue' ||
+          energyColor === 'purple' ||
+          energyColor === 'black' ||
+          energyColor === 'wild'
+            ? energyColor
+            : undefined,
         type: 'cookie',
         level: source.level,
         hp: source.hp,
         attack: attack.damage,
         attackCost: attack.cost,
+        ...effectData,
+        ...(skill ? { skill } : {}),
       }
     }
 
@@ -53,10 +72,21 @@ const createDemoDeck = (playerId: PlayerId): GameCard[] => {
       instanceId,
       name: source.name,
       imageUrl: source.imageUrl,
+      energyColor:
+        energyColor === 'red' ||
+        energyColor === 'yellow' ||
+        energyColor === 'green' ||
+        energyColor === 'blue' ||
+        energyColor === 'purple' ||
+        energyColor === 'black' ||
+        energyColor === 'wild'
+          ? energyColor
+          : undefined,
       type:
         source.type === 'trap' || source.type === 'stage'
           ? source.type
           : 'item',
+      ...effectData,
     }
   })
 }

@@ -26,6 +26,13 @@ const matchesSelector = (
   context: EffectContext,
 ): boolean => {
   if (
+    selector.sourceOnly &&
+    cookie.card.instanceId !== context.sourceInstanceId
+  ) {
+    return false
+  }
+
+  if (
     selector.excludeSource &&
     cookie.card.instanceId === context.sourceInstanceId
   ) {
@@ -82,16 +89,21 @@ export const selectEffectTargets = (
   return selectedTargets as CookieInBattle[]
 }
 
+export const isEffectConditionMet = (
+  state: GameState,
+  context: EffectContext,
+  effect: CardEffect,
+): boolean =>
+  effect.condition?.kind !== 'break-level-at-least' ||
+  getBreakAreaLevel(state, context.sourcePlayerId) >=
+    effect.condition.level
+
 const assertCondition = (
   state: GameState,
   context: EffectContext,
   effect: CardEffect,
 ) => {
-  if (
-    effect.condition?.kind === 'break-level-at-least' &&
-    getBreakAreaLevel(state, context.sourcePlayerId) <
-      effect.condition.level
-  ) {
+  if (!isEffectConditionMet(state, context, effect)) {
     throw new GameRuleError('尚未滿足卡牌效果的發動條件。')
   }
 }
@@ -189,19 +201,47 @@ export const getEffectiveAttack = (
   state: GameState,
   targetInstanceId: string,
 ): number => {
-  const target = Object.values(state.players)
-    .flatMap((player) => player.battleArea)
-    .find((cookie) => cookie.card.instanceId === targetInstanceId)
+  const owner = Object.values(state.players).find((player) =>
+    player.battleArea.some(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    ),
+  )
+  const target = owner?.battleArea.find(
+    (cookie) => cookie.card.instanceId === targetInstanceId,
+  )
 
-  if (!target) {
+  if (!target || !owner) {
     throw new GameRuleError('找不到要計算攻擊力的餅乾。')
   }
 
   const modifierTotal = state.attackModifiers
     .filter((modifier) => modifier.targetInstanceId === targetInstanceId)
     .reduce((total, modifier) => total + modifier.amount, 0)
+  const passiveModifierTotal =
+    target.card.skill?.trigger === 'passive' &&
+    (!target.card.skill.yourTurn ||
+      state.activePlayerId === owner.id)
+      ? target.card.skill.effects
+          .filter(
+            (effect) =>
+              effect.kind === 'modify-attack' &&
+              effect.target.sourceOnly &&
+              isEffectConditionMet(
+                state,
+                {
+                  sourcePlayerId: owner.id,
+                  sourceInstanceId: targetInstanceId,
+                },
+                effect,
+              ),
+          )
+          .reduce((total, effect) => total + effect.amount, 0)
+      : 0
 
-  return Math.max(0, target.card.attack + modifierTotal)
+  return Math.max(
+    0,
+    target.card.attack + modifierTotal + passiveModifierTotal,
+  )
 }
 
 export const getAttackDamageAgainst = (

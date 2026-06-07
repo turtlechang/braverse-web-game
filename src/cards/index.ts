@@ -5,6 +5,7 @@ export {
 export {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
+  convertOfficialCookieSkill,
 } from './official-effect-adapter'
 export {
   parseOfficialCardText,

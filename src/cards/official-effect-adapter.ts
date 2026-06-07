@@ -1,8 +1,10 @@
 import type {
+  CardSkill,
   CardEffect,
   EffectCondition,
   EffectTargetSelector,
 } from '../game'
+import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
 
 export type OfficialEffectConversion =
@@ -32,6 +34,15 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
 }
 
 const parseTarget = (text: string): EffectTargetSelector | null => {
+  if (/\bthis Cookie\b/i.test(text)) {
+    return {
+      side: 'self',
+      min: 1,
+      max: 1,
+      sourceOnly: true,
+    }
+  }
+
   const match = text.match(
     /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?\s+Cookies/i,
   )
@@ -167,3 +178,32 @@ export const convertOfficialCardEffects = (
 export const convertOfficialCardEffectSet = (
   cards: OfficialCardRecord[],
 ): OfficialEffectConversion[] => cards.map(convertOfficialCardEffects)
+
+export const convertOfficialCookieSkill = (
+  card: OfficialCardRecord,
+): CardSkill | undefined => {
+  if (card.type !== 'cookie' || !card.skill.text) {
+    return undefined
+  }
+
+  const conversion = convertOfficialCardEffects(card)
+  const parsed = parseOfficialCardText(card.skill.text)
+
+  if (conversion.status !== 'supported' || !parsed) {
+    return undefined
+  }
+
+  return {
+    trigger: parsed.markers.includes('ap')
+      ? 'activate'
+      : parsed.markers.includes('mob')
+        ? 'on-play'
+        : 'passive',
+    oncePerTurn: parsed.markers.includes('t1'),
+    yourTurn: parsed.markers.includes('mt'),
+    restSource: /Rest this card/i.test(card.skill.text),
+    cost: parsed.cost,
+    text: conversion.sourceText,
+    effects: conversion.effects,
+  }
+}

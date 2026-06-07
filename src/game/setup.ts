@@ -70,6 +70,8 @@ export const createGame = (
     status: 'setup',
     result: null,
     supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 1,
     attackModifiers: [],
     damageReceivedModifiers: [],
     pendingReplacementPlayerId: null,
@@ -137,6 +139,8 @@ export const selectStartingCookie = (
 
   const cookie = selectedCard as CookieCard
   const hpCards = player.deck.slice(0, cookie.hp)
+  const battleEntryId =
+    `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`
   const updatedPlayer: PlayerState = {
     ...player,
     deck: player.deck.slice(cookie.hp),
@@ -146,12 +150,16 @@ export const selectStartingCookie = (
         card: cookie,
         hpCards,
         rested: false,
+        battleEntryId,
       },
     ],
     startingCookieSelected: true,
   }
 
-  const updatedState = updatePlayer(state, updatedPlayer)
+  const updatedState = {
+    ...updatePlayer(state, updatedPlayer),
+    nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+  }
   const setupComplete = PLAYER_IDS.every(
     (id) => updatedState.players[id].startingCookieSelected,
   )

@@ -4,6 +4,7 @@ export {
   getAttackDamageAgainst,
   getEffectTargetCandidates,
   getEffectiveAttack,
+  isEffectConditionMet,
   selectEffectTargets,
 } from './effects'
 export { createDemoGame } from './demo'
@@ -17,6 +18,11 @@ export { getRefreshCandidates, refreshDeck } from './refresh'
 export { createGame, mulliganOpeningHand, selectStartingCookie } from './setup'
 export { advancePhase, canAttack, TURN_PHASES } from './turn'
 export {
+  activateCookieSkill,
+  canActivateCookieSkill,
+  canPayEnergyCost,
+} from './skills'
+export {
   evaluateBasicVictory,
   finishWithDefeat,
   getBasicDefeatReason,
@@ -28,6 +34,7 @@ export type {
   BaseCard,
   BreakLevelCondition,
   CardEffect,
+  CardSkill,
   CardType,
   CookieCard,
   CookieInBattle,
@@ -39,6 +46,8 @@ export type {
   EffectDuration,
   EffectTargetSelector,
   EffectTargetSide,
+  EnergyColor,
+  EnergyCost,
   GameCard,
   GameResult,
   GameState,
@@ -50,6 +59,7 @@ export type {
   PlayerSetup,
   PlayerState,
   Shuffle,
+  SkillTrigger,
   SupportCard,
   TurnPhase,
 } from './types'

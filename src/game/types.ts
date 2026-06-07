@@ -2,11 +2,37 @@ export type PlayerId = 'player-one' | 'player-two'
 
 export type CardType = 'cookie' | 'item' | 'trap' | 'stage'
 
+export type EnergyColor =
+  | 'red'
+  | 'yellow'
+  | 'green'
+  | 'blue'
+  | 'purple'
+  | 'black'
+
+export type EnergyCost = Partial<Record<EnergyColor | 'neutral', number>>
+
+export type SkillTrigger = 'activate' | 'on-play' | 'passive'
+
+export interface CardSkill {
+  trigger: SkillTrigger
+  oncePerTurn: boolean
+  yourTurn: boolean
+  restSource: boolean
+  cost: EnergyCost
+  text: string
+  effects: CardEffect[]
+}
+
 export interface BaseCard {
   id: string
   instanceId: string
   name: string
   imageUrl?: string
+  energyColor?: EnergyColor | 'wild'
+  effectText?: string
+  effects?: CardEffect[]
+  skill?: CardSkill
 }
 
 export interface CookieCard extends BaseCard {
@@ -27,6 +53,7 @@ export interface CookieInBattle {
   card: CookieCard
   hpCards: GameCard[]
   rested: boolean
+  battleEntryId?: string
 }
 
 export type EffectTargetSide = 'self' | 'opponent'
@@ -36,6 +63,7 @@ export interface EffectTargetSelector {
   min: number
   max: number
   excludeSource?: boolean
+  sourceOnly?: boolean
   remainingHp?: number
   minLevel?: number
 }
@@ -142,6 +170,8 @@ export interface GameState {
   status: GameStatus
   result: GameResult | null
   supportPlacedThisTurn: boolean
+  skillUsesThisTurn: string[]
+  nextBattleEntrySequence: number
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   pendingReplacementPlayerId: PlayerId | null

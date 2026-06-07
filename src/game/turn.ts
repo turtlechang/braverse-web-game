@@ -100,6 +100,7 @@ export const advancePhase = (state: GameState): GameState => {
         turnNumber: state.turnNumber + 1,
         phase: 'active',
         supportPlacedThisTurn: false,
+        skillUsesThisTurn: [],
       }
   }
 }

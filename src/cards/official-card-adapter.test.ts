@@ -110,6 +110,9 @@ describe('official card adapter', () => {
         id: 'BS9-001',
         instanceId: 'BS9-001@1:copy-1',
         name: 'Icicle Yeti Cookie',
+        imageUrl:
+          'https://cookierunbraverse.com/data/en_storage/example.webp',
+        energyColor: 'red',
         type: 'cookie',
         level: 2,
         hp: 3,
@@ -119,6 +122,37 @@ describe('official card adapter', () => {
       expect(result.source.imageUrl).toMatch(/^https:/)
       expect(result.parsedText.flip?.raw).toContain('effect damage')
     }
+  })
+
+  it('attaches supported effects and source text to converted cards', () => {
+    const result = convertOfficialCardToGameCard(
+      createOfficialCard({
+        cardNumber: 'ST1-019',
+        baseCardNumber: 'ST1-019',
+        type: 'item',
+        officialType: 'ITEM',
+        level: null,
+        hp: null,
+        skill: { name: null, text: null },
+        attackText:
+          "《{R}》 Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+      }),
+      'effect-copy',
+    )
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        effectText: expect.stringContaining('gains +1 attack damage'),
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+      },
+    })
   })
 
   it('uses base card number as runtime id while preserving art variant metadata', () => {

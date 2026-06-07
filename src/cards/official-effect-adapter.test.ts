@@ -3,6 +3,7 @@ import officialSample from '../../data/cards/official-sample.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
+  convertOfficialCookieSkill,
   type OfficialCardRecord,
 } from '.'
 
@@ -55,6 +56,37 @@ describe('Starter Deck RED official effect adapter', () => {
             min: 0,
             max: 2,
           },
+        },
+      ],
+    })
+  })
+
+  it('parses cookie skill timing, usage limits, and energy costs', () => {
+    expect(convertOfficialCookieSkill(findCard('ST1-002'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      cost: { red: 1 },
+    })
+    expect(convertOfficialCookieSkill(findCard('ST1-003'))).toMatchObject({
+      trigger: 'on-play',
+      oncePerTurn: true,
+      cost: { red: 2, neutral: 2 },
+    })
+    expect(convertOfficialCookieSkill(findCard('ST1-008'))).toMatchObject({
+      trigger: 'on-play',
+      oncePerTurn: true,
+      restSource: true,
+      cost: { red: 2 },
+    })
+    expect(convertOfficialCookieSkill(findCard('ST1-009'))).toMatchObject({
+      trigger: 'passive',
+      yourTurn: true,
+      cost: {},
+      effects: [
+        {
+          kind: 'modify-attack',
+          target: { sourceOnly: true },
         },
       ],
     })
@@ -132,13 +164,14 @@ describe('Starter Deck RED official effect adapter', () => {
       (conversion) => conversion.cardNumber === 'ST1-001',
     )
 
-    expect(supported).toHaveLength(12)
+    expect(supported).toHaveLength(13)
     expect(supported.map((conversion) => conversion.cardNumber)).toEqual(
       expect.arrayContaining([
         'ST1-002',
         'ST1-003',
         'ST1-007',
         'ST1-008',
+        'ST1-009',
         'ST1-010',
         'ST1-016',
         'ST1-017',

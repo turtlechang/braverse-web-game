@@ -112,11 +112,19 @@ export const deployCookie = (
         card,
         hpCards: player.deck.slice(0, card.hp),
         rested: false,
+        battleEntryId:
+          `${card.instanceId}:battle:${state.nextBattleEntrySequence}`,
       },
     ],
   })
 
-  return resolveDeckExhaustion(updatedState, player.id)
+  return resolveDeckExhaustion(
+    {
+      ...updatedState,
+      nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+    },
+    player.id,
+  )
 }
 
 export const replaceDefeatedCookie = (
@@ -158,6 +166,8 @@ export const replaceDefeatedCookie = (
         card,
         hpCards: player.deck.slice(0, card.hp),
         rested: false,
+        battleEntryId:
+          `${card.instanceId}:battle:${state.nextBattleEntrySequence}`,
       },
     ],
   })
@@ -165,6 +175,7 @@ export const replaceDefeatedCookie = (
   const replacementState = {
     ...updatedState,
     pendingReplacementPlayerId: null,
+    nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
   }
 
   return resolveDeckExhaustion(replacementState, player.id)

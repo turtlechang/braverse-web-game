@@ -1,28 +1,40 @@
 import { useState } from 'react'
 import {
+  Check,
   ChevronRight,
   Eye,
   Layers3,
   Pause,
   RotateCcw,
+  Sparkles,
   Swords,
   X,
 } from 'lucide-react'
 import './App.css'
 import {
+  activateCookieSkill,
   advancePhase,
   attackCookie,
+  canActivateCookieSkill,
   canAttack,
   createDemoGame,
   deployCookie,
+  executeCardEffect,
   getBreakAreaLevel,
+  getEffectTargetCandidates,
+  getEffectiveAttack,
   getRefreshCandidates,
+  isEffectConditionMet,
   placeSupportCard,
   refreshDeck,
   replaceDefeatedCookie,
+  type CardEffect,
+  type CardSkill,
+  type EffectContext,
   type GameCard,
   type GameState,
   type PlayerId,
+  type SkillTrigger,
   type TurnPhase,
 } from './game'
 
@@ -45,12 +57,101 @@ const nextPhaseLabels: Record<TurnPhase, string> = {
 const opponentOf = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
 
+interface PendingEffect {
+  sourceCard: GameCard
+  context: EffectContext
+  skill: CardSkill
+  trigger: SkillTrigger
+  effects: CardEffect[]
+  effectIndex: number
+  selectedTargetIds: string[]
+  selectedPaymentIds: string[]
+  skillActivated: boolean
+  optional: boolean
+  triggerLabel: string
+}
+
+const energyLabels = {
+  red: '紅',
+  yellow: '黃',
+  green: '綠',
+  blue: '藍',
+  purple: '紫',
+  black: '黑',
+  neutral: '任意',
+} as const
+
+const getSkillCostTotal = (skill: CardSkill) =>
+  Object.values(skill.cost).reduce(
+    (total, amount) => total + (amount ?? 0),
+    0,
+  )
+
+const describeSkillCost = (skill: CardSkill) => {
+  const labels = Object.entries(skill.cost).flatMap(([energy, amount]) =>
+    Array.from(
+      { length: amount ?? 0 },
+      () => energyLabels[energy as keyof typeof energyLabels],
+    ),
+  )
+
+  return labels.length > 0 ? labels.join('、') : '不需能量'
+}
+
+const getSkillLabels = (skill: CardSkill) => [
+  skill.trigger === 'activate'
+    ? 'Activate 啟動'
+    : skill.trigger === 'on-play'
+      ? 'OnPlay 登場'
+      : 'Skill 技能',
+  ...(skill.oncePerTurn ? ['Once per turn 一回合一次'] : []),
+  ...(skill.yourTurn ? ['Your Turn 自己的回合'] : []),
+]
+
+const describeEffect = (effect: CardEffect) => {
+  const target =
+    effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
+  const count =
+    effect.target.min === effect.target.max
+      ? `${effect.target.max} 個`
+      : `最多 ${effect.target.max} 個`
+
+  if (effect.kind === 'damage') {
+    return `選擇${count}${target}，造成 ${effect.amount} 點效果傷害。`
+  }
+
+  const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount
+  return effect.kind === 'modify-attack'
+    ? `選擇${count}${target}，攻擊傷害 ${value}。`
+    : `選擇${count}${target}，受到的攻擊傷害 ${value}。`
+}
+
+const describeEffectResult = (
+  effect: CardEffect,
+  targetNames: string[],
+) => {
+  if (targetNames.length === 0) {
+    return '效果已確認，本次沒有選擇目標。'
+  }
+
+  const names = targetNames.join('、')
+  if (effect.kind === 'damage') {
+    return `${names}受到 ${effect.amount} 點效果傷害。`
+  }
+
+  const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount
+  return effect.kind === 'modify-attack'
+    ? `${names}獲得攻擊傷害 ${value} 修正。`
+    : `${names}獲得受到攻擊傷害 ${value} 修正。`
+}
+
 interface CardFaceProps {
   card: GameCard
   className?: string
   concealed?: boolean
   rested?: boolean
   selected?: boolean
+  targetable?: boolean
   onClick?: () => void
 }
 
@@ -60,6 +161,7 @@ function CardFace({
   concealed = false,
   rested = false,
   selected = false,
+  targetable = false,
   onClick,
 }: CardFaceProps) {
   const [imageFailed, setImageFailed] = useState(false)
@@ -89,7 +191,7 @@ function CardFace({
       <div
         className={`card-face ${className}${rested ? ' is-rested' : ''}${
           selected ? ' is-selected' : ''
-        }`}
+        }${targetable ? ' is-targetable' : ''}`}
       >
         {content}
       </div>
@@ -100,7 +202,7 @@ function CardFace({
     <button
       className={`card-face ${className}${rested ? ' is-rested' : ''}${
         selected ? ' is-selected' : ''
-      }`}
+      }${targetable ? ' is-targetable' : ''}`}
       type="button"
       title={card.name}
       onClick={onClick}
@@ -115,8 +217,15 @@ interface BattleRowProps {
   playerId: PlayerId
   position: 'top' | 'bottom'
   selectedAttackerId: string | null
+  effectTargetIds: Set<string>
+  selectedEffectTargetIds: Set<string>
+  selectedSkillPaymentIds: Set<string>
+  interactionLocked: boolean
   onSelectAttacker?: (instanceId: string) => void
   onAttackTarget?: (instanceId: string) => void
+  onEffectTarget?: (instanceId: string) => void
+  onSkillPayment?: (instanceId: string) => void
+  onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
   onDeployCookie?: (instanceId: string) => void
   onInspectCard: (card: GameCard) => void
@@ -127,8 +236,15 @@ function BattleRow({
   playerId,
   position,
   selectedAttackerId,
+  effectTargetIds,
+  selectedEffectTargetIds,
+  selectedSkillPaymentIds,
+  interactionLocked,
   onSelectAttacker,
   onAttackTarget,
+  onEffectTarget,
+  onSkillPayment,
+  onActivateSkill,
   onPlaceSupport,
   onDeployCookie,
   onInspectCard,
@@ -136,7 +252,7 @@ function BattleRow({
   const player = game.players[playerId]
   const isActivePlayer = game.activePlayerId === playerId
   const isOpponent = position === 'top'
-  const canOperate = isActivePlayer && !isOpponent
+  const canOperate = isActivePlayer && !isOpponent && !interactionLocked
   const supportZone = (
     <div className="support-zone">
       <span className="zone-watermark">支援區</span>
@@ -146,8 +262,20 @@ function BattleRow({
             card={support.card}
             className="support-card"
             rested={support.rested}
+            selected={selectedSkillPaymentIds.has(
+              support.card.instanceId,
+            )}
+            targetable={
+              interactionLocked &&
+              !support.rested &&
+              Boolean(onSkillPayment)
+            }
             key={support.card.instanceId}
-            onClick={() => onInspectCard(support.card)}
+            onClick={
+              interactionLocked && !support.rested && onSkillPayment
+                ? () => onSkillPayment(support.card.instanceId)
+                : () => onInspectCard(support.card)
+            }
           />
         ))}
         {player.supportArea.length === 0 && (
@@ -195,6 +323,9 @@ function BattleRow({
           <span className="zone-watermark">戰鬥區</span>
           <div className="combat-slots">
             {player.battleArea.map((cookie) => {
+              const canSelectEffectTarget = effectTargetIds.has(
+                cookie.card.instanceId,
+              )
               const canSelectAttack =
                 canOperate &&
                 game.phase === 'main' &&
@@ -202,16 +333,33 @@ function BattleRow({
                 !cookie.rested &&
                 player.supportArea.filter((support) => !support.rested)
                   .length >= cookie.card.attackCost
-              const canTarget = isOpponent && Boolean(selectedAttackerId)
+              const canTarget =
+                !interactionLocked &&
+                isOpponent &&
+                Boolean(selectedAttackerId)
+              const canActivateSkill =
+                canOperate &&
+                canActivateCookieSkill(
+                  game,
+                  playerId,
+                  cookie.card.instanceId,
+                  'activate',
+                )
 
               return (
                 <div className="combat-card-wrap" key={cookie.card.instanceId}>
                   <CardFace
                     card={cookie.card}
                     rested={cookie.rested}
-                    selected={selectedAttackerId === cookie.card.instanceId}
+                    selected={
+                      selectedAttackerId === cookie.card.instanceId ||
+                      selectedEffectTargetIds.has(cookie.card.instanceId)
+                    }
+                    targetable={canSelectEffectTarget}
                     onClick={
-                      canTarget
+                      canSelectEffectTarget
+                        ? () => onEffectTarget?.(cookie.card.instanceId)
+                        : canTarget
                         ? () => onAttackTarget?.(cookie.card.instanceId)
                         : canSelectAttack
                           ? () => onSelectAttacker?.(cookie.card.instanceId)
@@ -220,9 +368,26 @@ function BattleRow({
                   />
                   <div className="card-badges">
                     <span>HP {cookie.hpCards.length}/{cookie.card.hp}</span>
-                    <span>ATK {cookie.card.attack}</span>
+                    <span>
+                      ATK {getEffectiveAttack(game, cookie.card.instanceId)}
+                    </span>
                   </div>
-                  {canTarget && <span className="target-hint">攻擊目標</span>}
+                  {(canTarget || canSelectEffectTarget) && (
+                    <span className="target-hint">
+                      {canSelectEffectTarget ? '效果目標' : '攻擊目標'}
+                    </span>
+                  )}
+                  {canActivateSkill && (
+                    <button
+                      className="skill-action"
+                      type="button"
+                      onClick={() =>
+                        onActivateSkill?.(cookie.card.instanceId)
+                      }
+                    >
+                      啟動技能
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -318,25 +483,108 @@ function App() {
     null,
   )
   const [message, setMessage] = useState('推進階段，開始這場對戰。')
+  const [effectHistory, setEffectHistory] = useState<string[]>([])
+  const [pendingEffect, setPendingEffect] =
+    useState<PendingEffect | null>(null)
   const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
   const [showPause, setShowPause] = useState(false)
   const activePlayer = game.players[game.activePlayerId]
   const viewerPlayerId: PlayerId = 'player-one'
   const opponentId = opponentOf(viewerPlayerId)
+  const currentEffect =
+    pendingEffect?.effects[pendingEffect.effectIndex] ?? null
+  const effectTargetCandidates =
+    pendingEffect && currentEffect
+      ? getEffectTargetCandidates(
+          game,
+          pendingEffect.context,
+          currentEffect.target,
+        )
+      : []
+  const effectTargetIds = new Set(
+    effectTargetCandidates.map((cookie) => cookie.card.instanceId),
+  )
+  const selectedEffectTargetIds = new Set(
+    pendingEffect?.selectedTargetIds ?? [],
+  )
+  const selectedSkillPaymentIds = new Set(
+    pendingEffect?.selectedPaymentIds ?? [],
+  )
+
+  const beginCookieSkill = (
+    nextGame: GameState,
+    card: GameCard | undefined,
+    playerId: PlayerId,
+    trigger: SkillTrigger,
+    triggerLabel: string,
+    optional = false,
+  ) => {
+    if (
+      !card?.skill ||
+      card.skill.trigger !== trigger ||
+      nextGame.status !== 'playing'
+    ) {
+      return
+    }
+
+    const context = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: card.instanceId,
+    }
+    const availableEffects = card.skill.effects.filter((effect) =>
+      isEffectConditionMet(nextGame, context, effect),
+    )
+
+    if (availableEffects.length === 0) {
+      setMessage(`${card.name}的效果尚未滿足發動條件。`)
+      return
+    }
+
+    if (
+      !canActivateCookieSkill(
+        nextGame,
+        playerId,
+        card.instanceId,
+        trigger,
+      )
+    ) {
+      setMessage(`${card.name}目前無法支付或發動技能。`)
+      return
+    }
+
+    setPendingEffect({
+      sourceCard: card,
+      context,
+      skill: card.skill,
+      trigger,
+      effects: availableEffects,
+      effectIndex: 0,
+      selectedTargetIds: [],
+      selectedPaymentIds: [],
+      skillActivated: false,
+      optional,
+      triggerLabel,
+    })
+    setMessage(`${card.name}的技能等待支付能量並選擇目標。`)
+  }
 
   const runAction = (
     action: (current: GameState) => GameState,
     successMessage: string,
+    onSuccess?: (nextGame: GameState) => void,
   ) => {
     try {
-      setGame(action(game))
+      const nextGame = action(game)
+      setGame(nextGame)
       setMessage(successMessage)
+      onSuccess?.(nextGame)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '動作無法執行。')
     }
   }
 
   const handleAdvancePhase = () => {
+    if (pendingEffect) return
     runAction(advancePhase, '階段已推進。')
     setSelectedAttackerId(null)
   }
@@ -359,10 +607,93 @@ function App() {
           selectedAttackerId,
           targetInstanceId,
           supportPaymentIds,
-        ),
+      ),
       `${attacker?.card.name ?? '餅乾'}完成攻擊。`,
     )
     setSelectedAttackerId(null)
+  }
+
+  const toggleEffectTarget = (instanceId: string) => {
+    if (!pendingEffect || !currentEffect || !effectTargetIds.has(instanceId)) {
+      return
+    }
+
+    const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
+    const selectedTargetIds = isSelected
+      ? pendingEffect.selectedTargetIds.filter((id) => id !== instanceId)
+      : pendingEffect.selectedTargetIds.length < currentEffect.target.max
+        ? [...pendingEffect.selectedTargetIds, instanceId]
+        : pendingEffect.selectedTargetIds
+
+    setPendingEffect({ ...pendingEffect, selectedTargetIds })
+  }
+
+  const toggleSkillPayment = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+
+    const isSelected =
+      pendingEffect.selectedPaymentIds.includes(instanceId)
+    const selectedPaymentIds = isSelected
+      ? pendingEffect.selectedPaymentIds.filter((id) => id !== instanceId)
+      : [...pendingEffect.selectedPaymentIds, instanceId]
+
+    setPendingEffect({ ...pendingEffect, selectedPaymentIds })
+  }
+
+  const skipOptionalSkill = () => {
+    if (!pendingEffect?.optional) return
+
+    setMessage(`${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`)
+    setPendingEffect(null)
+  }
+
+  const confirmEffect = () => {
+    if (!pendingEffect || !currentEffect) return
+
+    const targetNames = pendingEffect.selectedTargetIds.map(
+      (instanceId) =>
+        effectTargetCandidates.find(
+          (cookie) => cookie.card.instanceId === instanceId,
+        )?.card.name ?? instanceId,
+    )
+
+    try {
+      const activatedGame = pendingEffect.skillActivated
+        ? game
+        : activateCookieSkill(
+            game,
+            pendingEffect.context.sourcePlayerId,
+            pendingEffect.sourceCard.instanceId,
+            pendingEffect.trigger,
+            pendingEffect.selectedPaymentIds,
+          )
+      const nextGame = executeCardEffect(
+        activatedGame,
+        pendingEffect.context,
+        currentEffect,
+        pendingEffect.selectedTargetIds,
+      )
+      const result = describeEffectResult(currentEffect, targetNames)
+      const nextEffectIndex = pendingEffect.effectIndex + 1
+
+      setGame(nextGame)
+      setMessage(result)
+      setEffectHistory((history) => [result, ...history].slice(0, 4))
+      setPendingEffect(
+        nextEffectIndex < pendingEffect.effects.length
+          ? {
+              ...pendingEffect,
+              effectIndex: nextEffectIndex,
+              selectedTargetIds: [],
+              skillActivated: true,
+            }
+          : null,
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : '效果無法執行。',
+      )
+    }
   }
 
   const pendingPlayerId =
@@ -401,7 +732,8 @@ function App() {
           disabled={
             game.status === 'finished' ||
             Boolean(game.pendingReplacementPlayerId) ||
-            Boolean(game.pendingRefresh)
+            Boolean(game.pendingRefresh) ||
+            Boolean(pendingEffect)
           }
         >
           <span>{nextPhaseLabels[game.phase]}</span>
@@ -423,6 +755,8 @@ function App() {
             onClick={() => {
               setGame(createDemoGame())
               setSelectedAttackerId(null)
+              setPendingEffect(null)
+              setEffectHistory([])
               setMessage('已建立新的 Starter Deck RED 範例對局。')
             }}
           >
@@ -444,14 +778,23 @@ function App() {
           playerId={opponentId}
           position="top"
           selectedAttackerId={selectedAttackerId}
+          effectTargetIds={effectTargetIds}
+          selectedEffectTargetIds={selectedEffectTargetIds}
+          selectedSkillPaymentIds={selectedSkillPaymentIds}
+          interactionLocked={Boolean(pendingEffect)}
           onAttackTarget={handleAttackTarget}
+          onEffectTarget={toggleEffectTarget}
           onInspectCard={setInspectedCard}
         />
 
         <div className="table-divider">
           <span />
           <strong>
-            {selectedAttackerId ? (
+            {pendingEffect ? (
+              <>
+                <Sparkles aria-hidden="true" /> 選擇效果目標
+              </>
+            ) : selectedAttackerId ? (
               <>
                 <Swords aria-hidden="true" /> 選擇攻擊目標
               </>
@@ -467,25 +810,125 @@ function App() {
           playerId={viewerPlayerId}
           position="bottom"
           selectedAttackerId={selectedAttackerId}
+          effectTargetIds={effectTargetIds}
+          selectedEffectTargetIds={selectedEffectTargetIds}
+          selectedSkillPaymentIds={selectedSkillPaymentIds}
+          interactionLocked={Boolean(pendingEffect)}
           onSelectAttacker={(instanceId) => {
             setSelectedAttackerId(instanceId)
             setMessage('選擇對手戰鬥區中的攻擊目標。')
           }}
+          onEffectTarget={toggleEffectTarget}
           onPlaceSupport={(instanceId) =>
             runAction(
               (current) => placeSupportCard(current, instanceId),
               '已將卡牌配置到支援區。',
             )
           }
+          onSkillPayment={toggleSkillPayment}
+          onActivateSkill={(instanceId) => {
+            const card = activePlayer.battleArea.find(
+              (cookie) => cookie.card.instanceId === instanceId,
+            )?.card
+            beginCookieSkill(
+              game,
+              card,
+              activePlayer.id,
+              'activate',
+              'Activate 主動發動',
+            )
+          }}
           onDeployCookie={(instanceId) =>
             runAction(
               (current) => deployCookie(current, instanceId),
               '新餅乾已登場並配置 HP。',
+              (nextGame) =>
+                beginCookieSkill(
+                  nextGame,
+                  activePlayer.hand.find(
+                    (card) => card.instanceId === instanceId,
+                  ),
+                  activePlayer.id,
+                  'on-play',
+                  'OnPlay 登場觸發',
+                  true,
+                ),
             )
           }
           onInspectCard={setInspectedCard}
         />
       </section>
+
+      {(pendingEffect || effectHistory.length > 0) && (
+        <aside className="effect-panel" aria-live="polite">
+          {pendingEffect && currentEffect ? (
+            <>
+              <span>{pendingEffect.triggerLabel}</span>
+              <strong>{pendingEffect.sourceCard.name}</strong>
+              <div className="skill-labels">
+                {getSkillLabels(pendingEffect.skill).map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <p>{pendingEffect.sourceCard.effectText}</p>
+              {!pendingEffect.skillActivated && (
+                <div className="skill-cost">
+                  <strong>技能費用</strong>
+                  <span>{describeSkillCost(pendingEffect.skill)}</span>
+                  <small>
+                    已選 {pendingEffect.selectedPaymentIds.length} 張支援卡
+                  </small>
+                </div>
+              )}
+              <div className="effect-instruction">
+                <Sparkles aria-hidden="true" />
+                <span>{describeEffect(currentEffect)}</span>
+              </div>
+              <small>
+                已選 {pendingEffect.selectedTargetIds.length}／
+                {currentEffect.target.max}
+              </small>
+              <button
+                type="button"
+                disabled={
+                  (!pendingEffect.skillActivated &&
+                    pendingEffect.selectedPaymentIds.length !==
+                      getSkillCostTotal(pendingEffect.skill)) ||
+                  pendingEffect.selectedTargetIds.length <
+                    currentEffect.target.min ||
+                  pendingEffect.selectedTargetIds.length >
+                    currentEffect.target.max
+                }
+                onClick={confirmEffect}
+              >
+                <Check aria-hidden="true" />
+                確認效果
+              </button>
+              {pendingEffect.optional && !pendingEffect.skillActivated && (
+                <button
+                  className="skip-effect"
+                  type="button"
+                  onClick={skipOptionalSkill}
+                >
+                  不發動
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <span>效果紀錄</span>
+              <strong>{effectHistory[0]}</strong>
+            </>
+          )}
+          {effectHistory.length > 0 && (
+            <ol>
+              {effectHistory.map((entry, index) => (
+                <li key={`${entry}-${index}`}>{entry}</li>
+              ))}
+            </ol>
+          )}
+        </aside>
+      )}
 
       <button
         className="inspect-hand-button"
@@ -570,6 +1013,24 @@ function App() {
                   ? `LV ${inspectedCard.level} · HP ${inspectedCard.hp} · 攻擊 ${inspectedCard.attack} · 費用 ${inspectedCard.attackCost}`
                   : `卡牌類型：${inspectedCard.type.toUpperCase()}`}
               </p>
+              {inspectedCard.effectText && (
+                <div className="card-effect-copy">
+                  <strong>卡牌效果</strong>
+                  {inspectedCard.skill && (
+                    <>
+                      <div className="skill-labels">
+                        {getSkillLabels(inspectedCard.skill).map((label) => (
+                          <span key={label}>{label}</span>
+                        ))}
+                      </div>
+                      <small>
+                        費用：{describeSkillCost(inspectedCard.skill)}
+                      </small>
+                    </>
+                  )}
+                  <p>{inspectedCard.effectText}</p>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -606,6 +1067,8 @@ function App() {
               onClick={() => {
                 setGame(createDemoGame())
                 setSelectedAttackerId(null)
+                setPendingEffect(null)
+                setEffectHistory([])
               }}
             >
               再來一局

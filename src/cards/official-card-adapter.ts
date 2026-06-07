@@ -1,4 +1,8 @@
 import type { GameCard } from '../game'
+import {
+  convertOfficialCardEffects,
+  convertOfficialCookieSkill,
+} from './official-effect-adapter'
 import { parseOfficialCardTexts } from './official-text-parser'
 import type {
   OfficialCardConversion,
@@ -16,11 +20,39 @@ const createInstanceId = (
   instanceSuffix: string,
 ) => `${card.cardNumber}:${instanceSuffix}`
 
+const getEnergyColor = (
+  card: OfficialCardRecord,
+): GameCard['energyColor'] => {
+  if (card.energyType === 'MIX') {
+    return 'wild'
+  }
+
+  const color = card.color?.toLowerCase()
+  return color === 'red' ||
+    color === 'yellow' ||
+    color === 'green' ||
+    color === 'blue' ||
+    color === 'purple' ||
+    color === 'black'
+    ? color
+    : undefined
+}
+
 export const convertOfficialCardToGameCard = (
   card: OfficialCardRecord,
   instanceSuffix = '1',
 ): OfficialCardConversion => {
   const parsedText = parseOfficialCardTexts(card)
+  const effectConversion = convertOfficialCardEffects(card)
+  const skill = convertOfficialCookieSkill(card)
+  const energyColor = getEnergyColor(card)
+  const effectData =
+    effectConversion.status === 'supported'
+      ? {
+          effectText: effectConversion.sourceText,
+          effects: effectConversion.effects,
+        }
+      : {}
 
   if (card.type === 'extra' || card.type === 'unknown') {
     return {
@@ -51,11 +83,15 @@ export const convertOfficialCardToGameCard = (
       id: card.baseCardNumber,
       instanceId: createInstanceId(card, instanceSuffix),
       name: card.name,
+      imageUrl: card.imageUrl,
+      energyColor,
       type: 'cookie',
       level: card.level,
       hp: card.hp,
       attack: parsedText.attack.damage,
       attackCost: parsedText.attack.totalCost,
+      ...effectData,
+      ...(skill ? { skill } : {}),
     }
 
     return {
@@ -89,7 +125,10 @@ export const convertOfficialCardToGameCard = (
       id: card.baseCardNumber,
       instanceId: createInstanceId(card, instanceSuffix),
       name: card.name,
+      imageUrl: card.imageUrl,
+      energyColor,
       type: mappedType,
+      ...effectData,
     },
     source: {
       cardNumber: card.cardNumber,

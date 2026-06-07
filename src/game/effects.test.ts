@@ -6,6 +6,7 @@ import {
   executeCardEffect,
   getAttackDamageAgainst,
   getEffectiveAttack,
+  isEffectConditionMet,
   selectEffectTargets,
   type CardEffect,
   type GameCard,
@@ -210,6 +211,7 @@ describe('card effect engine', () => {
         target.card.instanceId,
       ]),
     ).toThrow('尚未滿足')
+    expect(isEffectConditionMet(state, context, effect)).toBe(false)
 
     state = {
       ...state,
@@ -229,6 +231,24 @@ describe('card effect engine', () => {
         target.card.instanceId,
       ]).players['player-two'].battleArea[0].hpCards,
     ).toHaveLength(target.hpCards.length - 1)
+    expect(isEffectConditionMet(state, context, effect)).toBe(true)
+  })
+
+  it('attaches supported official effects to demo cards', () => {
+    const state = createDemoGame()
+    const cards = Object.values(state.players).flatMap((player) => [
+      ...player.deck,
+      ...player.hand,
+      ...player.battleArea.map((cookie) => cookie.card),
+    ])
+    const ninja = cards.find((card) => card.id === 'ST1-002')
+    const jelly = cards.find((card) => card.id === 'ST1-016')
+
+    expect(ninja?.effects?.[0]).toMatchObject({
+      kind: 'damage',
+      amount: 1,
+    })
+    expect(jelly?.effectText).toContain("opponent's Cookies")
   })
 
   it('uses modified attack damage for a basic attack', () => {
