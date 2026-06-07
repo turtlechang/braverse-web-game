@@ -226,24 +226,30 @@ button {
   max-width: 1320px;
   min-height: calc(100vh - 76px);
   margin-left: var(--rail-width);
-  padding: 18px 24px 136px;
+  padding: 20px 24px 104px;
 }
 
 .battle-row {
+  position: relative;
   min-width: 0;
-  min-height: 218px;
+  min-height: 270px;
   display: grid;
-  grid-template-columns: 132px minmax(360px, 1fr) 132px;
+  grid-template-columns: 132px minmax(440px, 1fr) 132px;
   gap: 16px;
   align-items: stretch;
 }
 
 .row-meta {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  left: 12px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 12px;
+  padding: 7px 9px;
   color: rgba(255, 255, 255, 0.72);
+  background: rgba(3, 22, 58, 0.72);
+  border-left: 3px solid #57e3ff;
 }
 
 .row-meta span {
@@ -271,11 +277,22 @@ button {
   box-shadow: inset 0 0 28px rgba(2, 14, 45, 0.35);
 }
 
-.player-row .combat-zone {
+.bottom-field .combat-zone {
   border-color: rgba(255, 231, 154, 0.66);
   box-shadow:
     inset 0 0 28px rgba(2, 14, 45, 0.35),
     0 0 16px rgba(255, 222, 115, 0.14);
+}
+
+.field-stack {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 82px minmax(178px, 1fr);
+  gap: 10px;
+}
+
+.bottom-field .field-stack {
+  grid-template-rows: minmax(178px, 1fr) 82px;
 }
 
 .zone-watermark {
@@ -420,6 +437,7 @@ button.card-face {
   transform: translate(-50%, -50%);
   color: #fff5a8;
   border-color: #ffe65f;
+  pointer-events: none;
 }
 
 .empty-zone {
@@ -435,7 +453,8 @@ button.card-face {
 
 .break-zone,
 .deck-zone,
-.stage-zone {
+.stage-zone,
+.discard-zone {
   position: relative;
   min-width: 0;
   display: grid;
@@ -447,20 +466,83 @@ button.card-face {
 
 .break-zone span,
 .deck-zone span,
-.stage-zone span {
+.stage-zone span,
+.discard-zone span {
   color: rgba(255, 255, 255, 0.52);
   font-size: 0.65rem;
   font-weight: 800;
 }
 
 .break-zone strong,
-.deck-zone strong {
+.deck-zone strong,
+.discard-zone strong {
   margin: 2px 0;
   font-size: 1.1rem;
 }
 
-.break-zone small {
+.break-zone small,
+.discard-zone small {
   color: rgba(255, 255, 255, 0.42);
+}
+
+.break-zone {
+  min-height: 0;
+  align-content: start;
+  padding: 10px 8px;
+  overflow: hidden;
+}
+
+.zone-heading {
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+}
+
+.break-cards {
+  position: relative;
+  width: 82px;
+  min-height: 210px;
+  margin-top: 8px;
+}
+
+.break-card {
+  position: absolute;
+  left: 50%;
+  width: 66px;
+  transform: translateX(-50%);
+}
+
+.break-card:nth-child(1) {
+  top: 0;
+}
+
+.break-card:nth-child(2) {
+  top: 34px;
+}
+
+.break-card:nth-child(3) {
+  top: 68px;
+}
+
+.break-card:nth-child(4) {
+  top: 102px;
+}
+
+.break-card:nth-child(n + 5) {
+  top: 136px;
+}
+
+.break-cards > .empty-zone {
+  position: absolute;
+  inset: 28px 0 auto;
+  text-align: center;
+}
+
+.utility-zones {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 1.15fr 1fr 0.72fr;
+  gap: 8px;
 }
 
 .mini-deck {
@@ -500,15 +582,6 @@ button.card-face {
   width: 17px;
 }
 
-.lower-table {
-  min-width: 0;
-  height: 130px;
-  display: grid;
-  grid-template-columns: minmax(360px, 1fr) 110px;
-  gap: 16px;
-  margin: 12px 148px 0;
-}
-
 .support-zone {
   overflow: hidden;
 }
@@ -524,7 +597,7 @@ button.card-face {
 }
 
 .support-card {
-  width: 66px;
+  width: 58px;
 }
 
 .stage-zone svg {
@@ -544,6 +617,31 @@ button.card-face {
   width: min(580px, calc(100vw - var(--rail-width) - 80px));
   height: 194px;
   pointer-events: none;
+}
+
+.top-hand {
+  top: -48px;
+  bottom: auto;
+  right: 26%;
+  height: 158px;
+  transform: rotate(180deg);
+}
+
+.top-hand .hand-card-wrap {
+  bottom: 0;
+}
+
+.top-hand .card-face {
+  transform: rotate(180deg);
+}
+
+.top-hand .hand-card-wrap:hover,
+.top-hand .hand-card-wrap:focus-within {
+  bottom: -18px;
+}
+
+.bottom-hand {
+  right: 28px;
 }
 
 .hand-card-wrap {
@@ -781,7 +879,7 @@ button.card-face {
   }
 
   .battle-row {
-    grid-template-columns: 92px minmax(280px, 1fr) 92px;
+    grid-template-columns: 96px minmax(300px, 1fr) 92px;
     gap: 8px;
   }
 
@@ -793,8 +891,8 @@ button.card-face {
     gap: 12px;
   }
 
-  .lower-table {
-    margin-inline: 100px;
+  .break-card {
+    width: 58px;
   }
 }
 
@@ -874,17 +972,18 @@ button.card-face {
   .table-area {
     min-height: auto;
     margin-left: 0;
-    padding: 10px 8px 136px;
+    padding: 176px 8px 146px;
   }
 
   .battle-row {
-    min-height: 190px;
-    grid-template-columns: minmax(0, 1fr) 76px;
+    min-height: 300px;
+    grid-template-columns: 70px minmax(0, 1fr) 70px;
+    gap: 6px;
   }
 
   .row-meta {
-    position: absolute;
-    z-index: 4;
+    top: 4px;
+    left: 4px;
     padding: 7px 9px;
   }
 
@@ -892,12 +991,12 @@ button.card-face {
     display: none;
   }
 
-  .combat-zone {
-    grid-column: 1;
+  .field-stack {
+    grid-template-rows: 82px minmax(200px, 1fr);
   }
 
-  .side-zones {
-    grid-column: 2;
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(200px, 1fr) 82px;
   }
 
   .combat-card-wrap {
@@ -912,14 +1011,29 @@ button.card-face {
     right: -5px;
   }
 
-  .lower-table {
-    height: 100px;
-    grid-template-columns: 1fr 76px;
-    margin: 8px 0 0;
+  .break-zone {
+    padding-inline: 3px;
+  }
+
+  .break-cards {
+    width: 62px;
+    min-height: 220px;
+  }
+
+  .break-card {
+    width: 50px;
+  }
+
+  .utility-zones {
+    gap: 5px;
+  }
+
+  .support-cards {
+    padding: 8px;
   }
 
   .support-card {
-    width: 48px;
+    width: 44px;
   }
 
   .hand-fan {
@@ -927,6 +1041,28 @@ button.card-face {
     bottom: -24px;
     width: 100vw;
     height: 170px;
+  }
+
+  .top-hand {
+    position: fixed;
+    top: 126px;
+    right: 0;
+    width: 100vw;
+    height: 120px;
+  }
+
+  .top-hand .hand-card-wrap {
+    right: calc(var(--fan-index) * 34px);
+  }
+
+  .top-hand .hand-card {
+    width: 76px;
+  }
+
+  .bottom-hand {
+    position: absolute;
+    right: -8px;
+    bottom: -164px;
   }
 
   .hand-card-wrap {

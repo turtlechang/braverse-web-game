@@ -113,150 +113,162 @@ function CardFace({
 interface BattleRowProps {
   game: GameState
   playerId: PlayerId
+  position: 'top' | 'bottom'
   selectedAttackerId: string | null
-  concealed?: boolean
   onSelectAttacker?: (instanceId: string) => void
   onAttackTarget?: (instanceId: string) => void
+  onPlaceSupport?: (instanceId: string) => void
+  onDeployCookie?: (instanceId: string) => void
   onInspectCard: (card: GameCard) => void
 }
 
 function BattleRow({
   game,
   playerId,
+  position,
   selectedAttackerId,
-  concealed = false,
   onSelectAttacker,
   onAttackTarget,
+  onPlaceSupport,
+  onDeployCookie,
   onInspectCard,
 }: BattleRowProps) {
   const player = game.players[playerId]
   const isActivePlayer = game.activePlayerId === playerId
+  const isOpponent = position === 'top'
+  const canOperate = isActivePlayer && !isOpponent
+  const supportZone = (
+    <div className="support-zone">
+      <span className="zone-watermark">支援區</span>
+      <div className="support-cards">
+        {player.supportArea.map((support) => (
+          <CardFace
+            card={support.card}
+            className="support-card"
+            rested={support.rested}
+            key={support.card.instanceId}
+            onClick={() => onInspectCard(support.card)}
+          />
+        ))}
+        {player.supportArea.length === 0 && (
+          <span className="empty-zone">尚未配置支援</span>
+        )}
+      </div>
+    </div>
+  )
 
   return (
     <section
-      className={`battle-row ${concealed ? 'opponent-row' : 'player-row'}`}
-      aria-label={`${player.name}戰鬥區`}
+      className={`battle-row ${position}-field`}
+      aria-label={`${player.name}場地`}
     >
-      <div className="row-meta">
-        <span>{concealed ? 'OPPONENT' : 'PLAYER'}</span>
-        <strong>{player.name}</strong>
-        <small>
-          {isActivePlayer ? '行動中' : '等待'} · 手牌 {player.hand.length}
-        </small>
-      </div>
-
-      <div className="combat-zone">
-        <span className="zone-watermark">戰鬥區</span>
-        <div className="combat-slots">
-          {player.battleArea.map((cookie) => {
-            const canSelectAttack =
-              !concealed &&
-              game.phase === 'main' &&
-              canAttack(game) &&
-              !cookie.rested &&
-              player.supportArea.filter((support) => !support.rested).length >=
-                cookie.card.attackCost
-            const canTarget = concealed && Boolean(selectedAttackerId)
-
-            return (
-              <div className="combat-card-wrap" key={cookie.card.instanceId}>
-                <CardFace
-                  card={cookie.card}
-                  rested={cookie.rested}
-                  selected={selectedAttackerId === cookie.card.instanceId}
-                  onClick={
-                    canTarget
-                      ? () => onAttackTarget?.(cookie.card.instanceId)
-                      : canSelectAttack
-                        ? () => onSelectAttacker?.(cookie.card.instanceId)
-                        : () => onInspectCard(cookie.card)
-                  }
-                />
-                <div className="card-badges">
-                  <span>HP {cookie.hpCards.length}/{cookie.card.hp}</span>
-                  <span>ATK {cookie.card.attack}</span>
-                </div>
-                {canTarget && <span className="target-hint">攻擊目標</span>}
-              </div>
-            )
-          })}
-          {player.battleArea.length === 0 && (
-            <span className="empty-zone">等待餅乾登場</span>
+      <div className="break-zone">
+        <div className="zone-heading">
+          <span>休息區</span>
+          <strong>LV. {getBreakAreaLevel(game, playerId)}</strong>
+        </div>
+        <div className="break-cards">
+          {player.breakArea.map((card) => (
+            <CardFace
+              card={card}
+              className="break-card"
+              key={card.instanceId}
+              onClick={() => onInspectCard(card)}
+            />
+          ))}
+          {player.breakArea.length === 0 && (
+            <small className="empty-zone">0 張</small>
           )}
         </div>
       </div>
 
-      <div className="side-zones">
-        <div className="break-zone">
-          <span>休息區</span>
-          <strong>LV. {getBreakAreaLevel(game, playerId)}</strong>
-          <small>{player.breakArea.length} 張</small>
+      <div className="field-stack">
+        {position === 'top' && supportZone}
+        <div className="combat-zone">
+          <div className="row-meta">
+            <span>{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
+            <strong>{player.name}</strong>
+            <small>
+              {isActivePlayer ? '行動中' : '等待'} · 手牌 {player.hand.length}
+            </small>
+          </div>
+          <span className="zone-watermark">戰鬥區</span>
+          <div className="combat-slots">
+            {player.battleArea.map((cookie) => {
+              const canSelectAttack =
+                canOperate &&
+                game.phase === 'main' &&
+                canAttack(game) &&
+                !cookie.rested &&
+                player.supportArea.filter((support) => !support.rested)
+                  .length >= cookie.card.attackCost
+              const canTarget = isOpponent && Boolean(selectedAttackerId)
+
+              return (
+                <div className="combat-card-wrap" key={cookie.card.instanceId}>
+                  <CardFace
+                    card={cookie.card}
+                    rested={cookie.rested}
+                    selected={selectedAttackerId === cookie.card.instanceId}
+                    onClick={
+                      canTarget
+                        ? () => onAttackTarget?.(cookie.card.instanceId)
+                        : canSelectAttack
+                          ? () => onSelectAttacker?.(cookie.card.instanceId)
+                          : () => onInspectCard(cookie.card)
+                    }
+                  />
+                  <div className="card-badges">
+                    <span>HP {cookie.hpCards.length}/{cookie.card.hp}</span>
+                    <span>ATK {cookie.card.attack}</span>
+                  </div>
+                  {canTarget && <span className="target-hint">攻擊目標</span>}
+                </div>
+              )
+            })}
+            {player.battleArea.length === 0 && (
+              <span className="empty-zone">等待餅乾登場</span>
+            )}
+          </div>
         </div>
+        {position === 'bottom' && supportZone}
+      </div>
+
+      <div className="utility-zones">
         <div className="deck-zone" aria-label={`牌庫 ${player.deck.length} 張`}>
           <div className="mini-deck" />
           <strong>{player.deck.length}</strong>
           <span>牌庫</span>
         </div>
-      </div>
-    </section>
-  )
-}
-
-interface SupportAndHandProps {
-  game: GameState
-  playerId: PlayerId
-  onPlaceSupport: (instanceId: string) => void
-  onDeployCookie: (instanceId: string) => void
-  onInspectCard: (card: GameCard) => void
-}
-
-function SupportAndHand({
-  game,
-  playerId,
-  onPlaceSupport,
-  onDeployCookie,
-  onInspectCard,
-}: SupportAndHandProps) {
-  const player = game.players[playerId]
-
-  return (
-    <section className="lower-table">
-      <div className="support-zone">
-        <span className="zone-watermark">支援區</span>
-        <div className="support-cards">
-          {player.supportArea.map((support) => (
+        <div className="stage-zone">
+          <span>場景區</span>
+          {player.stage ? (
             <CardFace
-              card={support.card}
-              className="support-card"
-              rested={support.rested}
-              key={support.card.instanceId}
-              onClick={() => onInspectCard(support.card)}
+              card={player.stage}
+              className="stage-card"
+              onClick={() => onInspectCard(player.stage!)}
             />
-          ))}
-          {player.supportArea.length === 0 && (
-            <span className="empty-zone">尚未配置支援</span>
+          ) : (
+            <Layers3 aria-hidden="true" />
           )}
+        </div>
+        <div className="discard-zone">
+          <span>棄牌區</span>
+          <strong>{player.discardPile.length}</strong>
         </div>
       </div>
 
-      <div className="stage-zone">
-        <span>場景區</span>
-        {player.stage ? (
-          <CardFace
-            card={player.stage}
-            className="stage-card"
-            onClick={() => onInspectCard(player.stage!)}
-          />
-        ) : (
-          <Layers3 aria-hidden="true" />
-        )}
-      </div>
-
-      <div className="hand-fan" aria-label="我方手牌">
+      <div
+        className={`hand-fan ${position}-hand`}
+        aria-label={`${isOpponent ? '對手' : '我方'}手牌`}
+      >
         {player.hand.map((card, index) => {
           const canSupport =
-            game.phase === 'support' && !game.supportPlacedThisTurn
+            canOperate &&
+            game.phase === 'support' &&
+            !game.supportPlacedThisTurn
           const canDeploy =
+            canOperate &&
             game.phase === 'main' &&
             card.type === 'cookie' &&
             player.battleArea.length < 2
@@ -274,7 +286,10 @@ function SupportAndHand({
               <CardFace
                 card={card}
                 className="hand-card"
-                onClick={() => onInspectCard(card)}
+                concealed={isOpponent}
+                onClick={
+                  isOpponent ? undefined : () => onInspectCard(card)
+                }
               />
               {(canSupport || canDeploy) && (
                 <button
@@ -282,8 +297,8 @@ function SupportAndHand({
                   type="button"
                   onClick={() =>
                     canDeploy
-                      ? onDeployCookie(card.instanceId)
-                      : onPlaceSupport(card.instanceId)
+                      ? onDeployCookie?.(card.instanceId)
+                      : onPlaceSupport?.(card.instanceId)
                   }
                 >
                   {canDeploy ? '登場' : '支援'}
@@ -306,7 +321,8 @@ function App() {
   const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
   const [showPause, setShowPause] = useState(false)
   const activePlayer = game.players[game.activePlayerId]
-  const opponentId = opponentOf(game.activePlayerId)
+  const viewerPlayerId: PlayerId = 'player-one'
+  const opponentId = opponentOf(viewerPlayerId)
 
   const runAction = (
     action: (current: GameState) => GameState,
@@ -426,7 +442,7 @@ function App() {
         <BattleRow
           game={game}
           playerId={opponentId}
-          concealed
+          position="top"
           selectedAttackerId={selectedAttackerId}
           onAttackTarget={handleAttackTarget}
           onInspectCard={setInspectedCard}
@@ -448,18 +464,13 @@ function App() {
 
         <BattleRow
           game={game}
-          playerId={game.activePlayerId}
+          playerId={viewerPlayerId}
+          position="bottom"
           selectedAttackerId={selectedAttackerId}
           onSelectAttacker={(instanceId) => {
             setSelectedAttackerId(instanceId)
             setMessage('選擇對手戰鬥區中的攻擊目標。')
           }}
-          onInspectCard={setInspectedCard}
-        />
-
-        <SupportAndHand
-          game={game}
-          playerId={game.activePlayerId}
           onPlaceSupport={(instanceId) =>
             runAction(
               (current) => placeSupportCard(current, instanceId),
@@ -479,7 +490,9 @@ function App() {
       <button
         className="inspect-hand-button"
         type="button"
-        onClick={() => setInspectedCard(activePlayer.hand[0] ?? null)}
+        onClick={() =>
+          setInspectedCard(game.players[viewerPlayerId].hand[0] ?? null)
+        }
       >
         <Eye aria-hidden="true" />
         <span>查看卡牌</span>
