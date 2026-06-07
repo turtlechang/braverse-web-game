@@ -9,6 +9,16 @@ export {
 } from './effects'
 export { createDemoGame } from './demo'
 export {
+  createOfficialStarterDeck,
+  OFFICIAL_STARTER_DECK_RED,
+} from './starter-deck'
+export type { StarterDeckEntry } from './starter-deck'
+export {
+  selectAiEnergyPayment,
+  simulateAiMatch,
+  takeAiStep,
+} from './ai'
+export {
   attackCookie,
   deployCookie,
   placeSupportCard,
@@ -63,3 +73,10 @@ export type {
   SupportCard,
   TurnPhase,
 } from './types'
+export type {
+  AiActionType,
+  AiDecision,
+  AiEffectSelection,
+  AiMatchMetrics,
+  AiMatchResult,
+} from './ai'

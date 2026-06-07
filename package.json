@@ -9,6 +9,7 @@
     "cards:import:sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck RED\" --limit 100",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:ai:browser": "node scripts/ai-browser-validation.mjs",
     "test:watch": "vitest",
     "preview": "vite preview"
   },

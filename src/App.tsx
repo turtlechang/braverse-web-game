@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Check,
   ChevronRight,
   Eye,
   Layers3,
+  List,
   Pause,
   RotateCcw,
   Sparkles,
@@ -25,9 +26,13 @@ import {
   getEffectiveAttack,
   getRefreshCandidates,
   isEffectConditionMet,
+  OFFICIAL_STARTER_DECK_RED,
   placeSupportCard,
   refreshDeck,
   replaceDefeatedCookie,
+  simulateAiMatch,
+  takeAiStep,
+  type AiMatchResult,
   type CardEffect,
   type CardSkill,
   type EffectContext,
@@ -488,6 +493,12 @@ function App() {
     useState<PendingEffect | null>(null)
   const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
   const [showPause, setShowPause] = useState(false)
+  const [showDeckList, setShowDeckList] = useState(false)
+  const [aiThinking, setAiThinking] = useState(false)
+  const [aiActionCount, setAiActionCount] = useState(0)
+  const [simulationResults, setSimulationResults] = useState<
+    AiMatchResult[] | null
+  >(null)
   const activePlayer = game.players[game.activePlayerId]
   const viewerPlayerId: PlayerId = 'player-one'
   const opponentId = opponentOf(viewerPlayerId)
@@ -510,6 +521,54 @@ function App() {
   const selectedSkillPaymentIds = new Set(
     pendingEffect?.selectedPaymentIds ?? [],
   )
+  const aiControlsCurrentState =
+    game.activePlayerId === 'player-two' ||
+    game.pendingRefresh?.playerId === 'player-two' ||
+    game.pendingReplacementPlayerId === 'player-two'
+
+  useEffect(() => {
+    if (
+      showPause ||
+      game.status !== 'playing' ||
+      !aiControlsCurrentState ||
+      pendingEffect
+    ) {
+      return
+    }
+
+    if (aiActionCount >= 200) {
+      return
+    }
+
+    const thinkingTimer = window.setTimeout(
+      () => setAiThinking(true),
+      0,
+    )
+    const timer = window.setTimeout(() => {
+      const decision = takeAiStep(game, 'player-two')
+      setAiThinking(false)
+
+      if (decision.action === 'error' || decision.state === game) {
+        setMessage(`AI 停止：${decision.description}`)
+        return
+      }
+
+      setGame(decision.state)
+      setMessage(`AI：${decision.description}`)
+      setAiActionCount((count) => count + 1)
+    }, 450)
+
+    return () => {
+      window.clearTimeout(thinkingTimer)
+      window.clearTimeout(timer)
+    }
+  }, [
+    aiActionCount,
+    aiControlsCurrentState,
+    game,
+    pendingEffect,
+    showPause,
+  ])
 
   const beginCookieSkill = (
     nextGame: GameState,
@@ -704,6 +763,17 @@ function App() {
   const pendingOptions = game.pendingRefresh
     ? getRefreshCandidates(game, game.pendingRefresh.playerId)
     : pendingPlayer?.hand.filter((card) => card.type === 'cookie') ?? []
+  const interactionLocked =
+    Boolean(pendingEffect) || aiThinking || aiControlsCurrentState
+
+  const runTenMatchSimulation = () => {
+    const results = Array.from({ length: 10 }, () =>
+      simulateAiMatch(createDemoGame()),
+    )
+    setSimulationResults(results)
+    const completed = results.filter((result) => !result.stuck).length
+    setMessage(`AI 驗證完成：${completed}/10 場正常結束。`)
+  }
 
   return (
     <main className="game-shell">
@@ -757,10 +827,19 @@ function App() {
               setSelectedAttackerId(null)
               setPendingEffect(null)
               setEffectHistory([])
+              setAiActionCount(0)
+              setSimulationResults(null)
               setMessage('已建立新的 Starter Deck RED 範例對局。')
             }}
           >
             <RotateCcw aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            title="查看官方範例牌組"
+            onClick={() => setShowDeckList(true)}
+          >
+            <List aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -781,7 +860,7 @@ function App() {
           effectTargetIds={effectTargetIds}
           selectedEffectTargetIds={selectedEffectTargetIds}
           selectedSkillPaymentIds={selectedSkillPaymentIds}
-          interactionLocked={Boolean(pendingEffect)}
+          interactionLocked={interactionLocked}
           onAttackTarget={handleAttackTarget}
           onEffectTarget={toggleEffectTarget}
           onInspectCard={setInspectedCard}
@@ -790,7 +869,11 @@ function App() {
         <div className="table-divider">
           <span />
           <strong>
-            {pendingEffect ? (
+            {aiThinking ? (
+              <>
+                <Sparkles aria-hidden="true" /> AI 思考中
+              </>
+            ) : pendingEffect ? (
               <>
                 <Sparkles aria-hidden="true" /> 選擇效果目標
               </>
@@ -813,7 +896,7 @@ function App() {
           effectTargetIds={effectTargetIds}
           selectedEffectTargetIds={selectedEffectTargetIds}
           selectedSkillPaymentIds={selectedSkillPaymentIds}
-          interactionLocked={Boolean(pendingEffect)}
+          interactionLocked={interactionLocked}
           onSelectAttacker={(instanceId) => {
             setSelectedAttackerId(instanceId)
             setMessage('選擇對手戰鬥區中的攻擊目標。')
@@ -858,6 +941,79 @@ function App() {
           onInspectCard={setInspectedCard}
         />
       </section>
+
+      <aside className="ai-status-panel" aria-live="polite">
+        <span>簡易 AI 對手</span>
+        <strong>{aiThinking ? '正在決策' : '等待下一步'}</strong>
+        <small>已執行 {aiActionCount} 個動作</small>
+        <button type="button" onClick={runTenMatchSimulation}>
+          執行 10 場 AI 驗證
+        </button>
+      </aside>
+
+      {simulationResults && (
+        <section
+          className="simulation-report"
+          data-testid="ai-simulation-report"
+        >
+          <button
+            type="button"
+            className="close-modal"
+            title="關閉"
+            onClick={() => setSimulationResults(null)}
+          >
+            <X aria-hidden="true" />
+          </button>
+          <span>瀏覽器自動對戰報告</span>
+          <h2>
+            {
+              simulationResults.filter((result) => !result.stuck)
+                .length
+            }
+            /10 場完成
+          </h2>
+          <div className="simulation-table">
+            {simulationResults.map((result, index) => (
+              <div
+                key={index}
+                data-testid={`ai-simulation-match-${index + 1}`}
+                data-validation={JSON.stringify(
+                  result.stuck
+                    ? {
+                        state: result.state,
+                        logs: result.logs.slice(-20),
+                        error: result.error,
+                      }
+                    : {
+                        winnerId: result.state.result?.winnerId,
+                        reason: result.state.result?.reason,
+                        turnNumber: result.state.turnNumber,
+                        actions: result.actions,
+                        metrics: result.metrics,
+                      },
+                )}
+              >
+                <strong>#{index + 1}</strong>
+                <span>
+                  {result.stuck
+                    ? '卡住'
+                    : `${result.state.players[result.state.result!.winnerId].name}勝利`}
+                </span>
+                <span>回合 {result.state.turnNumber}</span>
+                <span>{result.actions} 步</span>
+                <span>技能 {result.metrics.skillActivations}</span>
+                <span>Refresh {result.metrics.refreshes}</span>
+                <span>補位 {result.metrics.replacements}</span>
+                <code>
+                  {result.error ??
+                    result.state.result?.reason ??
+                    'completed'}
+                </code>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {(pendingEffect || effectHistory.length > 0) && (
         <aside className="effect-panel" aria-live="polite">
@@ -941,7 +1097,7 @@ function App() {
         <span>查看卡牌</span>
       </button>
 
-      {pendingPlayer && (
+      {pendingPlayer && pendingPlayer.id !== 'player-two' && (
         <div className="modal-backdrop" role="presentation">
           <section className="decision-modal" role="alertdialog">
             <div className="modal-title">
@@ -1050,6 +1206,41 @@ function App() {
         </div>
       )}
 
+      {showDeckList && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="deck-list-modal" role="dialog">
+            <button
+              className="close-modal"
+              type="button"
+              title="關閉"
+              onClick={() => setShowDeckList(false)}
+            >
+              <X aria-hidden="true" />
+            </button>
+            <div className="deck-reference-image">
+              <img
+                src="/reference/starter-deck-red.webp"
+                alt="官方 Starter Deck RED 套餐組合表"
+              />
+            </div>
+            <div className="deck-list-content">
+              <span>官方範例牌組</span>
+              <h2>Starter Deck RED</h2>
+              <p>依官方套餐組合圖片建立，共 22 種卡、60 張。</p>
+              <div className="deck-list-table">
+                {OFFICIAL_STARTER_DECK_RED.map((entry) => (
+                  <div key={entry.cardNumber}>
+                    <code>{entry.cardNumber}</code>
+                    <span>{entry.name}</span>
+                    <strong>{entry.count}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
       {game.result && (
         <div className="modal-backdrop result-backdrop" role="presentation">
           <section className="result-modal" role="alertdialog">
@@ -1069,6 +1260,8 @@ function App() {
                 setSelectedAttackerId(null)
                 setPendingEffect(null)
                 setEffectHistory([])
+                setAiActionCount(0)
+                setSimulationResults(null)
               }}
             >
               再來一局
