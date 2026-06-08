@@ -1,28 +1,16 @@
 import { GameRuleError } from './errors'
+import {
+  selectEnergyPayment,
+  validateEnergyPayment,
+} from './energy'
 import type {
   CardSkill,
-  EnergyColor,
   EnergyCost,
   GameState,
   PlayerId,
   SkillTrigger,
   SupportCard,
 } from './types'
-
-const ENERGY_COLORS: EnergyColor[] = [
-  'red',
-  'yellow',
-  'green',
-  'blue',
-  'purple',
-  'black',
-]
-
-const getCostTotal = (cost: EnergyCost): number =>
-  Object.values(cost).reduce(
-    (total, amount) => total + (amount ?? 0),
-    0,
-  )
 
 const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
@@ -31,72 +19,21 @@ const getSkillUseKey = (
 export const canPayEnergyCost = (
   cost: EnergyCost,
   supports: SupportCard[],
-): boolean => {
-  const activeSupports = supports.filter((support) => !support.rested)
-
-  if (activeSupports.length < getCostTotal(cost)) {
-    return false
-  }
-
-  let wildCount = activeSupports.filter(
-    (support) => support.card.energyColor === 'wild',
-  ).length
-
-  for (const color of ENERGY_COLORS) {
-    const required = cost[color] ?? 0
-    const matching = activeSupports.filter(
-      (support) => support.card.energyColor === color,
-    ).length
-    wildCount -= Math.max(0, required - matching)
-
-    if (wildCount < 0) {
-      return false
-    }
-  }
-
-  return true
-}
+): boolean => selectEnergyPayment(cost, supports) !== null
 
 const validatePayment = (
   skill: CardSkill,
   supports: SupportCard[],
   paymentIds: string[],
 ) => {
-  const uniqueIds = [...new Set(paymentIds)]
-
-  if (
-    uniqueIds.length !== paymentIds.length ||
-    uniqueIds.length !== getCostTotal(skill.cost)
-  ) {
-    throw new GameRuleError('技能支付的能量數量不正確。')
-  }
-
-  const selected = uniqueIds.map((instanceId) =>
-    supports.find(
-      (support) =>
-        support.card.instanceId === instanceId && !support.rested,
-    ),
+  const validation = validateEnergyPayment(
+    skill.cost,
+    supports,
+    paymentIds,
   )
 
-  if (selected.some((support) => !support)) {
-    throw new GameRuleError('只能使用自己的活躍支援卡支付技能費用。')
-  }
-
-  const remaining = selected as SupportCard[]
-  let wildCount = remaining.filter(
-    (support) => support.card.energyColor === 'wild',
-  ).length
-
-  for (const color of ENERGY_COLORS) {
-    const required = skill.cost[color] ?? 0
-    const matching = remaining.filter(
-      (support) => support.card.energyColor === color,
-    ).length
-    wildCount -= Math.max(0, required - matching)
-
-    if (wildCount < 0) {
-      throw new GameRuleError('技能支付的能量顏色不符合需求。')
-    }
+  if (!validation.valid) {
+    throw new GameRuleError(`技能支付無效：${validation.reason}`)
   }
 }
 

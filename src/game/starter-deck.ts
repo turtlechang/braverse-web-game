@@ -3,6 +3,7 @@ import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
 } from '../cards/official-effect-adapter'
+import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { GameCard, PlayerId } from './types'
 
@@ -82,6 +83,8 @@ const createCard = (
     source.level !== null &&
     source.hp !== null
   ) {
+    const parsedAttack = parseOfficialCardText(source.attackText)
+
     return {
       ...base,
       type: 'cookie',
@@ -90,7 +93,8 @@ const createCard = (
       attack: Number(
         source.attackText?.match(/Deals?\s+(\d+)\s+damage/i)?.[1] ?? 1,
       ),
-      attackCost: source.attackText?.match(/\{[A-Z]\}/g)?.length ?? 0,
+      attackCost: parsedAttack?.totalCost ?? 0,
+      attackEnergyCost: parsedAttack?.cost ?? {},
       ...(skill ? { skill } : {}),
     }
   }

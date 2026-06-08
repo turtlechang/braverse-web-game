@@ -5,6 +5,7 @@ import {
   canAttack,
   createDemoGame,
   createGame,
+  createSeededShuffle,
   deployCookie,
   evaluateBasicVictory,
   getBreakAreaLevel,
@@ -86,6 +87,22 @@ const reachSecondTurnActive = (initialState: GameState): GameState => {
 }
 
 describe('開局', () => {
+  it('種子洗牌可重現、不修改輸入且不同種子產生不同牌序', () => {
+    const deck = createDeck('seeded')
+    const originalOrder = deck.map((card) => card.instanceId)
+    const first = createSeededShuffle(20260607)(deck)
+    const repeated = createSeededShuffle(20260607)(deck)
+    const different = createSeededShuffle(20260608)(deck)
+
+    expect(first.map((card) => card.instanceId)).toEqual(
+      repeated.map((card) => card.instanceId),
+    )
+    expect(different.map((card) => card.instanceId)).not.toEqual(
+      first.map((card) => card.instanceId),
+    )
+    expect(deck.map((card) => card.instanceId)).toEqual(originalOrder)
+  })
+
   it('範例對局可直接進入第一回合', () => {
     const state = createDemoGame()
 
@@ -398,7 +415,7 @@ describe('玩家動作', () => {
         target.card.instanceId,
         [],
       ),
-    ).toThrow('此攻擊需要支付 1 張支援卡。')
+    ).toThrow('需要選擇 1 張支援卡，目前已選 0 張。')
 
     state = addActiveSupport(state, 'player-two')
     state = attackCookie(
@@ -406,6 +423,79 @@ describe('玩家動作', () => {
       attacker.card.instanceId,
       target.card.instanceId,
       ['player-two-payment'],
+    )
+
+    expect(state.players['player-two'].supportArea[0].rested).toBe(true)
+  })
+
+  it('攻擊付款必須符合指定顏色，萬用能量可替代', () => {
+    let state = createReadyGame()
+    state = reachPhase(state, 'end')
+    state = advancePhase(state)
+    state = reachPhase(state, 'main')
+
+    const attacker = state.players['player-two'].battleArea[0]
+    const target = state.players['player-one'].battleArea[0]
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [
+            {
+              ...attacker,
+              card: {
+                ...attacker.card,
+                attackEnergyCost: { red: 1 },
+              },
+            },
+          ],
+          supportArea: [
+            {
+              card: {
+                ...createItem('blue-payment'),
+                energyColor: 'blue',
+              },
+              rested: false,
+            },
+          ],
+        },
+      },
+    }
+
+    expect(() =>
+      attackCookie(
+        state,
+        attacker.card.instanceId,
+        target.card.instanceId,
+        ['blue-payment'],
+      ),
+    ).toThrow('能量顏色不符合費用需求')
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          supportArea: [
+            {
+              card: {
+                ...createItem('wild-payment'),
+                energyColor: 'wild',
+              },
+              rested: false,
+            },
+          ],
+        },
+      },
+    }
+    state = attackCookie(
+      state,
+      attacker.card.instanceId,
+      target.card.instanceId,
+      ['wild-payment'],
     )
 
     expect(state.players['player-two'].supportArea[0].rested).toBe(true)

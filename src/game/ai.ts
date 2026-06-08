@@ -10,18 +10,21 @@ import {
   getEffectiveAttack,
   isEffectConditionMet,
 } from './effects'
+import {
+  getAttackEnergyCost,
+  selectEnergyPayment,
+} from './energy'
 import { getRefreshCandidates, refreshDeck } from './refresh'
 import {
   activateCookieSkill,
   canActivateCookieSkill,
 } from './skills'
-import { advancePhase } from './turn'
+import { advancePhase, canAttack } from './turn'
 import type {
   CardEffect,
   CardSkill,
   CookieInBattle,
   EffectContext,
-  EnergyColor,
   GameState,
   PlayerId,
   SupportCard,
@@ -68,71 +71,10 @@ export interface AiMatchResult {
   error: string | null
 }
 
-const ENERGY_COLORS: EnergyColor[] = [
-  'red',
-  'yellow',
-  'green',
-  'blue',
-  'purple',
-  'black',
-]
-
-const getCostTotal = (skill: CardSkill): number =>
-  Object.values(skill.cost).reduce(
-    (total, amount) => total + (amount ?? 0),
-    0,
-  )
-
 export const selectAiEnergyPayment = (
   skill: CardSkill,
   supportArea: SupportCard[],
-): string[] | null => {
-  const available = supportArea.filter((support) => !support.rested)
-  const selected = new Set<string>()
-
-  for (const color of ENERGY_COLORS) {
-    let remaining = skill.cost[color] ?? 0
-
-    for (const support of available) {
-      if (
-        remaining > 0 &&
-        !selected.has(support.card.instanceId) &&
-        support.card.energyColor === color
-      ) {
-        selected.add(support.card.instanceId)
-        remaining -= 1
-      }
-    }
-
-    for (const support of available) {
-      if (
-        remaining > 0 &&
-        !selected.has(support.card.instanceId) &&
-        support.card.energyColor === 'wild'
-      ) {
-        selected.add(support.card.instanceId)
-        remaining -= 1
-      }
-    }
-
-    if (remaining > 0) {
-      return null
-    }
-  }
-
-  const neutral = skill.cost.neutral ?? 0
-  for (const support of available) {
-    if (selected.size >= getCostTotal(skill)) break
-    if (!selected.has(support.card.instanceId)) {
-      selected.add(support.card.instanceId)
-    }
-  }
-
-  return selected.size === getCostTotal(skill) &&
-    selected.size >= neutral
-    ? [...selected]
-    : null
-}
+): string[] | null => selectEnergyPayment(skill.cost, supportArea)
 
 const chooseEffectTargets = (
   state: GameState,
@@ -402,26 +344,28 @@ export const takeAiStep = (
         if (skillDecision) return skillDecision
       }
 
-      const target = chooseAttackTarget(state, playerId)
-      for (const attacker of player.battleArea) {
-        const paymentIds = player.supportArea
-          .filter((support) => !support.rested)
-          .slice(0, attacker.card.attackCost)
-          .map((support) => support.card.instanceId)
-        if (
-          target &&
-          !attacker.rested &&
-          paymentIds.length === attacker.card.attackCost
-        ) {
-          return {
-            state: attackCookie(
-              state,
-              attacker.card.instanceId,
-              target.card.instanceId,
-              paymentIds,
-            ),
-            action: 'attack',
-            description: `${player.name}以${attacker.card.name}攻擊${target.card.name}。`,
+      if (canAttack(state)) {
+        const target = chooseAttackTarget(state, playerId)
+        for (const attacker of player.battleArea) {
+          const paymentIds = selectEnergyPayment(
+            getAttackEnergyCost(attacker.card),
+            player.supportArea,
+          )
+          if (
+            target &&
+            !attacker.rested &&
+            paymentIds
+          ) {
+            return {
+              state: attackCookie(
+                state,
+                attacker.card.instanceId,
+                target.card.instanceId,
+                paymentIds,
+              ),
+              action: 'attack',
+              description: `${player.name}以${attacker.card.name}攻擊${target.card.name}。`,
+            }
           }
         }
       }

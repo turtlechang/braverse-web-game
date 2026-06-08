@@ -8,11 +8,14 @@ import type {
 
 export const PLAYER_IDS: PlayerId[] = ['player-one', 'player-two']
 
-export const defaultShuffle: Shuffle = (cards) => {
+const fisherYatesShuffle = (
+  cards: GameCard[],
+  nextRandom: () => number,
+): GameCard[] => {
   const shuffled = [...cards]
 
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1))
+    const swapIndex = Math.floor(nextRandom() * (index + 1))
     ;[shuffled[index], shuffled[swapIndex]] = [
       shuffled[swapIndex],
       shuffled[index],
@@ -20,6 +23,23 @@ export const defaultShuffle: Shuffle = (cards) => {
   }
 
   return shuffled
+}
+
+export const defaultShuffle: Shuffle = (cards) =>
+  fisherYatesShuffle(cards, Math.random)
+
+export const createSeededShuffle = (seed: number): Shuffle => {
+  let state = seed >>> 0
+
+  const nextRandom = () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let value = state
+    value = Math.imul(value ^ (value >>> 15), value | 1)
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296
+  }
+
+  return (cards) => fisherYatesShuffle(cards, nextRandom)
 }
 
 export const drawCards = (
@@ -57,4 +77,3 @@ export const findCardIndex = (
   cards: GameCard[],
   instanceId: string,
 ): number => cards.findIndex((card) => card.instanceId === instanceId)
-

@@ -736,7 +736,8 @@ button.card-face {
   width: 18px;
 }
 
-.effect-panel {
+.effect-panel,
+.attack-payment-panel {
   position: fixed;
   z-index: 40;
   right: 18px;
@@ -748,6 +749,64 @@ button.card-face {
   background: rgba(3, 20, 53, 0.95);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(12px);
+}
+
+.attack-payment-panel > span {
+  color: #71e9ff;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.attack-payment-panel > strong {
+  display: block;
+  margin: 3px 0 12px;
+}
+
+.attack-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px;
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  background: rgba(25, 109, 149, 0.16);
+  font-size: 0.76rem;
+}
+
+.attack-payment-panel small,
+.attack-payment-panel em {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.7rem;
+  font-style: normal;
+}
+
+.attack-payment-panel p {
+  margin: 10px 0 0;
+  color: #ff9d9d;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.attack-payment-panel.is-valid {
+  border-color: rgba(116, 255, 164, 0.82);
+}
+
+.attack-payment-panel.is-valid p,
+.attack-payment-panel.is-valid em {
+  color: #88ffb1;
+}
+
+.attack-payment-panel button {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 4px;
+  background: rgba(4, 34, 75, 0.96);
+  color: #fff;
+  cursor: pointer;
 }
 
 .ai-status-panel {
@@ -1444,7 +1503,8 @@ button.card-face {
     padding: 0 10px;
   }
 
-  .effect-panel {
+  .effect-panel,
+  .attack-payment-panel {
     top: 136px;
     right: 8px;
     width: min(300px, calc(100vw - 16px));

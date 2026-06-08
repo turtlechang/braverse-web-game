@@ -90,6 +90,7 @@ export const convertOfficialCardToGameCard = (
       hp: card.hp,
       attack: parsedText.attack.damage,
       attackCost: parsedText.attack.totalCost,
+      attackEnergyCost: parsedText.attack.cost,
       ...effectData,
       ...(skill ? { skill } : {}),
     }

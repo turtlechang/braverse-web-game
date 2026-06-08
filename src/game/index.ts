@@ -8,6 +8,14 @@ export {
   selectEffectTargets,
 } from './effects'
 export { createDemoGame } from './demo'
+export { createSeededShuffle } from './helpers'
+export {
+  getAttackEnergyCost,
+  getEnergyCostTotal,
+  selectEnergyPayment,
+  validateEnergyPayment,
+} from './energy'
+export type { EnergyPaymentValidation } from './energy'
 export {
   createOfficialStarterDeck,
   OFFICIAL_STARTER_DECK_RED,

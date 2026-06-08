@@ -73,6 +73,7 @@ try {
     const validation = await row.getAttribute('data-validation')
     matches.push({
       match: index,
+      seed: validation ? JSON.parse(validation).seed : null,
       text: (await row.innerText()).replace(/\s+/g, ' ').trim(),
       validation: validation ? JSON.parse(validation) : null,
     })

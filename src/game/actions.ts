@@ -1,4 +1,8 @@
 import { GameRuleError } from './errors'
+import {
+  getAttackEnergyCost,
+  validateEnergyPayment,
+} from './energy'
 import { getAttackDamageAgainst } from './effects'
 import { findCardIndex, getOpponentId, updatePlayer } from './helpers'
 import { getRefreshCandidates } from './refresh'
@@ -251,28 +255,21 @@ export const attackCookie = (
     throw new GameRuleError('休息狀態的餅乾不能攻擊。')
   }
 
-  const uniquePaymentIds = [...new Set(supportPaymentIds)]
+  const paymentValidation = validateEnergyPayment(
+    getAttackEnergyCost(attacker.card),
+    attackerPlayer.supportArea,
+    supportPaymentIds,
+  )
 
-  if (uniquePaymentIds.length !== attacker.card.attackCost) {
-    throw new GameRuleError(
-      `此攻擊需要支付 ${attacker.card.attackCost} 張支援卡。`,
-    )
+  if (!paymentValidation.valid) {
+    throw new GameRuleError(`攻擊支付無效：${paymentValidation.reason}`)
   }
 
-  const paymentIndexes = uniquePaymentIds.map((instanceId) =>
+  const paymentIndexes = supportPaymentIds.map((instanceId) =>
     attackerPlayer.supportArea.findIndex(
       (support) => support.card.instanceId === instanceId,
     ),
   )
-
-  if (
-    paymentIndexes.some(
-      (index) =>
-        index < 0 || attackerPlayer.supportArea[index]?.rested === true,
-    )
-  ) {
-    throw new GameRuleError('只能使用自己的活躍支援卡支付攻擊費用。')
-  }
 
   const defenderId = getOpponentId(state.activePlayerId)
   const defender = state.players[defenderId]

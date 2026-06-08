@@ -23,6 +23,7 @@ const createSupport = (instanceId: string): GameCard => ({
   instanceId,
   name: 'Effect payment',
   type: 'item',
+  energyColor: 'red',
 })
 
 const reachEndOfTurn = (state: GameState): GameState => {

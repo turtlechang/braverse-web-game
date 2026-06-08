@@ -22,6 +22,8 @@ import {
   deployCookie,
   executeCardEffect,
   getBreakAreaLevel,
+  getAttackEnergyCost,
+  getEnergyCostTotal,
   getEffectTargetCandidates,
   getEffectiveAttack,
   getRefreshCandidates,
@@ -31,11 +33,14 @@ import {
   refreshDeck,
   replaceDefeatedCookie,
   simulateAiMatch,
+  selectEnergyPayment,
   takeAiStep,
+  validateEnergyPayment,
   type AiMatchResult,
   type CardEffect,
   type CardSkill,
   type EffectContext,
+  type EnergyCost,
   type GameCard,
   type GameState,
   type PlayerId,
@@ -44,6 +49,7 @@ import {
 } from './game'
 
 const phases: TurnPhase[] = ['active', 'draw', 'support', 'main', 'end']
+const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 const cardBackSources = [
   '/card-back.png',
   'https://cookierunbraverse.com/images/card/card-back.png',
@@ -143,7 +149,11 @@ function EnergyIcon({ energy }: { energy: EnergyKey }) {
 }
 
 function SkillCost({ skill }: { skill: CardSkill }) {
-  const energies = Object.entries(skill.cost).flatMap(([energy, amount]) =>
+  return <EnergyCostIcons cost={skill.cost} />
+}
+
+function EnergyCostIcons({ cost }: { cost: EnergyCost }) {
+  const energies = Object.entries(cost).flatMap(([energy, amount]) =>
     Array.from(
       { length: amount ?? 0 },
       () => energy as EnergyKey,
@@ -328,11 +338,14 @@ interface BattleRowProps {
   effectTargetIds: Set<string>
   selectedEffectTargetIds: Set<string>
   selectedSkillPaymentIds: Set<string>
+  selectedAttackPaymentIds: Set<string>
+  attackPaymentValid: boolean
   interactionLocked: boolean
   onSelectAttacker?: (instanceId: string) => void
   onAttackTarget?: (instanceId: string) => void
   onEffectTarget?: (instanceId: string) => void
   onSkillPayment?: (instanceId: string) => void
+  onAttackPayment?: (instanceId: string) => void
   onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
   onDeployCookie?: (instanceId: string) => void
@@ -347,11 +360,14 @@ function BattleRow({
   effectTargetIds,
   selectedEffectTargetIds,
   selectedSkillPaymentIds,
+  selectedAttackPaymentIds,
+  attackPaymentValid,
   interactionLocked,
   onSelectAttacker,
   onAttackTarget,
   onEffectTarget,
   onSkillPayment,
+  onAttackPayment,
   onActivateSkill,
   onPlaceSupport,
   onDeployCookie,
@@ -370,18 +386,29 @@ function BattleRow({
             card={support.card}
             className="support-card"
             rested={support.rested}
-            selected={selectedSkillPaymentIds.has(
-              support.card.instanceId,
-            )}
+            selected={
+              selectedSkillPaymentIds.has(support.card.instanceId) ||
+              selectedAttackPaymentIds.has(support.card.instanceId)
+            }
             targetable={
               interactionLocked &&
               !support.rested &&
               Boolean(onSkillPayment)
+                ? true
+                : canOperate &&
+                  Boolean(selectedAttackerId) &&
+                  !support.rested &&
+                  Boolean(onAttackPayment)
             }
             key={support.card.instanceId}
             onClick={
               interactionLocked && !support.rested && onSkillPayment
                 ? () => onSkillPayment(support.card.instanceId)
+                : canOperate &&
+                    selectedAttackerId &&
+                    !support.rested &&
+                    onAttackPayment
+                  ? () => onAttackPayment(support.card.instanceId)
                 : () => onInspectCard(support.card)
             }
           />
@@ -439,12 +466,15 @@ function BattleRow({
                 game.phase === 'main' &&
                 canAttack(game) &&
                 !cookie.rested &&
-                player.supportArea.filter((support) => !support.rested)
-                  .length >= cookie.card.attackCost
+                selectEnergyPayment(
+                  getAttackEnergyCost(cookie.card),
+                  player.supportArea,
+                ) !== null
               const canTarget =
                 !interactionLocked &&
                 isOpponent &&
-                Boolean(selectedAttackerId)
+                Boolean(selectedAttackerId) &&
+                attackPaymentValid
               const canActivateSkill =
                 canOperate &&
                 canActivateCookieSkill(
@@ -590,6 +620,9 @@ function App() {
   const [selectedAttackerId, setSelectedAttackerId] = useState<string | null>(
     null,
   )
+  const [selectedAttackPaymentIds, setSelectedAttackPaymentIds] = useState<
+    string[]
+  >([])
   const [message, setMessage] = useState('推進階段，開始這場對戰。')
   const [effectHistory, setEffectHistory] = useState<string[]>([])
   const [pendingEffect, setPendingEffect] =
@@ -624,6 +657,20 @@ function App() {
   const selectedSkillPaymentIds = new Set(
     pendingEffect?.selectedPaymentIds ?? [],
   )
+  const selectedAttackPaymentIdSet = new Set(selectedAttackPaymentIds)
+  const selectedAttacker = activePlayer.battleArea.find(
+    (cookie) => cookie.card.instanceId === selectedAttackerId,
+  )
+  const selectedAttackCost = selectedAttacker
+    ? getAttackEnergyCost(selectedAttacker.card)
+    : {}
+  const attackPaymentValidation = selectedAttacker
+    ? validateEnergyPayment(
+        selectedAttackCost,
+        activePlayer.supportArea,
+        selectedAttackPaymentIds,
+      )
+    : { valid: false, reason: '尚未選擇攻擊餅乾。' }
   const aiControlsCurrentState =
     game.activePlayerId === 'player-two' ||
     game.pendingRefresh?.playerId === 'player-two' ||
@@ -714,6 +761,8 @@ function App() {
       return
     }
 
+    setSelectedAttackerId(null)
+    setSelectedAttackPaymentIds([])
     setPendingEffect({
       sourceCard: card,
       context,
@@ -749,18 +798,15 @@ function App() {
     if (pendingEffect) return
     runAction(advancePhase, '階段已推進。')
     setSelectedAttackerId(null)
+    setSelectedAttackPaymentIds([])
   }
 
   const handleAttackTarget = (targetInstanceId: string) => {
-    if (!selectedAttackerId) return
+    if (!selectedAttackerId || !attackPaymentValidation.valid) return
 
     const attacker = activePlayer.battleArea.find(
       (cookie) => cookie.card.instanceId === selectedAttackerId,
     )
-    const supportPaymentIds = activePlayer.supportArea
-      .filter((support) => !support.rested)
-      .slice(0, attacker?.card.attackCost ?? 0)
-      .map((support) => support.card.instanceId)
 
     runAction(
       (current) =>
@@ -768,11 +814,22 @@ function App() {
           current,
           selectedAttackerId,
           targetInstanceId,
-          supportPaymentIds,
+          selectedAttackPaymentIds,
       ),
       `${attacker?.card.name ?? '餅乾'}完成攻擊。`,
+      () => {
+        setSelectedAttackerId(null)
+        setSelectedAttackPaymentIds([])
+      },
     )
-    setSelectedAttackerId(null)
+  }
+
+  const toggleAttackPayment = (instanceId: string) => {
+    setSelectedAttackPaymentIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : [...current, instanceId],
+    )
   }
 
   const toggleEffectTarget = (instanceId: string) => {
@@ -870,8 +927,8 @@ function App() {
     Boolean(pendingEffect) || aiThinking || aiControlsCurrentState
 
   const runSimulation = () => {
-    const results = Array.from({ length: 20 }, () =>
-      simulateAiMatch(createDemoGame()),
+    const results = aiSimulationSeeds.map((seed) =>
+      simulateAiMatch(createDemoGame(seed)),
     )
     setSimulationResults(results)
     const completed = results.filter((result) => !result.stuck).length
@@ -928,6 +985,7 @@ function App() {
             onClick={() => {
               setGame(createDemoGame())
               setSelectedAttackerId(null)
+              setSelectedAttackPaymentIds([])
               setPendingEffect(null)
               setEffectHistory([])
               setAiActionCount(0)
@@ -963,6 +1021,8 @@ function App() {
           effectTargetIds={effectTargetIds}
           selectedEffectTargetIds={selectedEffectTargetIds}
           selectedSkillPaymentIds={selectedSkillPaymentIds}
+          selectedAttackPaymentIds={selectedAttackPaymentIdSet}
+          attackPaymentValid={attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
           onAttackTarget={handleAttackTarget}
           onEffectTarget={toggleEffectTarget}
@@ -999,10 +1059,13 @@ function App() {
           effectTargetIds={effectTargetIds}
           selectedEffectTargetIds={selectedEffectTargetIds}
           selectedSkillPaymentIds={selectedSkillPaymentIds}
+          selectedAttackPaymentIds={selectedAttackPaymentIdSet}
+          attackPaymentValid={attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
           onSelectAttacker={(instanceId) => {
             setSelectedAttackerId(instanceId)
-            setMessage('選擇對手戰鬥區中的攻擊目標。')
+            setSelectedAttackPaymentIds([])
+            setMessage('選擇支援卡支付攻擊費用。')
           }}
           onEffectTarget={toggleEffectTarget}
           onPlaceSupport={(instanceId) =>
@@ -1012,6 +1075,7 @@ function App() {
             )
           }
           onSkillPayment={toggleSkillPayment}
+          onAttackPayment={toggleAttackPayment}
           onActivateSkill={(instanceId) => {
             const card = activePlayer.battleArea.find(
               (cookie) => cookie.card.instanceId === instanceId,
@@ -1044,6 +1108,41 @@ function App() {
           onInspectCard={setInspectedCard}
         />
       </section>
+
+      {selectedAttacker && !pendingEffect && (
+        <aside
+          className={`attack-payment-panel ${
+            attackPaymentValidation.valid ? 'is-valid' : 'is-invalid'
+          }`}
+          aria-live="polite"
+          data-testid="attack-payment-panel"
+        >
+          <span>攻擊能量支付</span>
+          <strong>{selectedAttacker.card.name}</strong>
+          <div className="attack-cost-row">
+            <span>需求</span>
+            <EnergyCostIcons cost={selectedAttackCost} />
+          </div>
+          <small>
+            已選 {selectedAttackPaymentIds.length}／
+            {getEnergyCostTotal(selectedAttackCost)} 張支援卡
+          </small>
+          <p>{attackPaymentValidation.reason}</p>
+          {attackPaymentValidation.valid && (
+            <em>付款合法，請選擇對手戰鬥區中的攻擊目標。</em>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedAttackerId(null)
+              setSelectedAttackPaymentIds([])
+              setMessage('已取消攻擊。')
+            }}
+          >
+            取消攻擊
+          </button>
+        </aside>
+      )}
 
       <aside className="ai-status-panel" aria-live="polite">
         <span>簡易 AI 對手</span>
@@ -1078,16 +1177,18 @@ function App() {
           <div className="simulation-table">
             {simulationResults.map((result, index) => (
               <div
-                key={index}
+                key={aiSimulationSeeds[index]}
                 data-testid={`ai-simulation-match-${index + 1}`}
                 data-validation={JSON.stringify(
                   result.stuck
                     ? {
+                        seed: aiSimulationSeeds[index],
                         state: result.state,
                         logs: result.logs.slice(-20),
                         error: result.error,
                       }
                     : {
+                        seed: aiSimulationSeeds[index],
                         winnerId: result.state.result?.winnerId,
                         reason: result.state.result?.reason,
                         turnNumber: result.state.turnNumber,
@@ -1096,7 +1197,7 @@ function App() {
                       },
                 )}
               >
-                <strong>#{index + 1}</strong>
+                <strong>#{index + 1} · 種子 {aiSimulationSeeds[index]}</strong>
                 <span>
                   {result.stuck
                     ? '卡住'
@@ -1367,6 +1468,7 @@ function App() {
               onClick={() => {
                 setGame(createDemoGame())
                 setSelectedAttackerId(null)
+                setSelectedAttackPaymentIds([])
                 setPendingEffect(null)
                 setEffectHistory([])
                 setAiActionCount(0)

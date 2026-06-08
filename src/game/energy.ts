@@ -1,0 +1,135 @@
+import type {
+  CookieCard,
+  EnergyColor,
+  EnergyCost,
+  SupportCard,
+} from './types'
+
+const ENERGY_COLORS: EnergyColor[] = [
+  'red',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+  'black',
+]
+
+export interface EnergyPaymentValidation {
+  valid: boolean
+  reason: string
+}
+
+export const getEnergyCostTotal = (cost: EnergyCost): number =>
+  Object.values(cost).reduce(
+    (total, amount) => total + (amount ?? 0),
+    0,
+  )
+
+export const getAttackEnergyCost = (card: CookieCard): EnergyCost =>
+  card.attackEnergyCost ?? { neutral: card.attackCost }
+
+export const validateEnergyPayment = (
+  cost: EnergyCost,
+  supports: SupportCard[],
+  paymentIds: string[],
+): EnergyPaymentValidation => {
+  const uniqueIds = [...new Set(paymentIds)]
+  const totalCost = getEnergyCostTotal(cost)
+
+  if (uniqueIds.length !== paymentIds.length) {
+    return { valid: false, reason: '不能重複選擇同一張支援卡。' }
+  }
+
+  if (uniqueIds.length !== totalCost) {
+    return {
+      valid: false,
+      reason: `需要選擇 ${totalCost} 張支援卡，目前已選 ${uniqueIds.length} 張。`,
+    }
+  }
+
+  const selected = uniqueIds.map((instanceId) =>
+    supports.find(
+      (support) =>
+        support.card.instanceId === instanceId && !support.rested,
+    ),
+  )
+
+  if (selected.some((support) => !support)) {
+    return {
+      valid: false,
+      reason: '只能使用自己的活躍支援卡支付費用。',
+    }
+  }
+
+  const selectedSupports = selected as SupportCard[]
+  let wildCount = selectedSupports.filter(
+    (support) => support.card.energyColor === 'wild',
+  ).length
+
+  for (const color of ENERGY_COLORS) {
+    const required = cost[color] ?? 0
+    const matching = selectedSupports.filter(
+      (support) => support.card.energyColor === color,
+    ).length
+    wildCount -= Math.max(0, required - matching)
+
+    if (wildCount < 0) {
+      return {
+        valid: false,
+        reason: '所選支援卡的能量顏色不符合費用需求。',
+      }
+    }
+  }
+
+  return { valid: true, reason: '能量組合合法，可以選擇攻擊目標。' }
+}
+
+export const selectEnergyPayment = (
+  cost: EnergyCost,
+  supports: SupportCard[],
+): string[] | null => {
+  const available = supports.filter((support) => !support.rested)
+  const selected = new Set<string>()
+
+  for (const color of ENERGY_COLORS) {
+    let remaining = cost[color] ?? 0
+
+    for (const support of available) {
+      if (
+        remaining > 0 &&
+        !selected.has(support.card.instanceId) &&
+        support.card.energyColor === color
+      ) {
+        selected.add(support.card.instanceId)
+        remaining -= 1
+      }
+    }
+
+    for (const support of available) {
+      if (
+        remaining > 0 &&
+        !selected.has(support.card.instanceId) &&
+        support.card.energyColor === 'wild'
+      ) {
+        selected.add(support.card.instanceId)
+        remaining -= 1
+      }
+    }
+
+    if (remaining > 0) {
+      return null
+    }
+  }
+
+  for (const support of available) {
+    if (selected.size >= getEnergyCostTotal(cost)) break
+    if (!selected.has(support.card.instanceId)) {
+      selected.add(support.card.instanceId)
+    }
+  }
+
+  const paymentIds = [...selected]
+  return validateEnergyPayment(cost, supports, paymentIds).valid
+    ? paymentIds
+    : null
+}

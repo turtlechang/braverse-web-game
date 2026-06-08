@@ -128,6 +128,7 @@ describe('official card adapter', () => {
         hp: 3,
         attack: 2,
         attackCost: 2,
+        attackEnergyCost: { red: 2 },
       })
       expect(result.source.imageUrl).toMatch(/^https:/)
       expect(result.parsedText.flip?.raw).toContain('effect damage')

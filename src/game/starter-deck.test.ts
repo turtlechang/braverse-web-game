@@ -44,4 +44,21 @@ describe('official Starter Deck RED', () => {
       expect(cards.filter((card) => card.id === 'ST1-022')).toHaveLength(2)
     }
   })
+
+  it('recreates the same opening state from the same seed', () => {
+    const first = createDemoGame(7)
+    const repeated = createDemoGame(7)
+    const different = createDemoGame(8)
+    const getOpeningSignature = (state: ReturnType<typeof createDemoGame>) =>
+      Object.values(state.players).map((player) => ({
+        battle: player.battleArea[0].card.instanceId,
+        hand: player.hand.map((card) => card.instanceId),
+        deck: player.deck.map((card) => card.instanceId),
+      }))
+
+    expect(getOpeningSignature(first)).toEqual(getOpeningSignature(repeated))
+    expect(getOpeningSignature(different)).not.toEqual(
+      getOpeningSignature(first),
+    )
+  })
 })

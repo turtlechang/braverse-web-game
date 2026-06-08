@@ -239,6 +239,25 @@ describe('simple AI opponent', () => {
     expect(decision.state.phase).toBe('end')
   })
 
+  it('does not attack during the first player first turn', () => {
+    let state = createDemoGame(1)
+
+    while (state.phase !== 'main') {
+      state = takeAiStep(state, 'player-one').state
+    }
+
+    const actions: string[] = []
+    while (state.phase === 'main') {
+      const decision = takeAiStep(state, 'player-one')
+      actions.push(decision.action)
+      state = decision.state
+    }
+
+    expect(actions).not.toContain('attack')
+    expect(actions.at(-1)).toBe('advance-phase')
+    expect(state.phase).toBe('end')
+  })
+
   it('does not repeat a Once per turn skill', () => {
     let state = asAiTurn(createDemoGame(), 'main')
     const source = state.players['player-two'].battleArea[0]
@@ -306,6 +325,50 @@ describe('simple AI opponent', () => {
     expect(result.state.status).toBe('finished')
     expect(result.state.result).not.toBeNull()
     expect(result.actions).toBeLessThan(500)
+  })
+
+  it('completes 20 reproducible seeded matches with varied outcomes', () => {
+    const firstRun = Array.from({ length: 20 }, (_, index) => {
+      const seed = index + 1
+      const result = simulateAiMatch(createDemoGame(seed))
+
+      expect(result.stuck, `種子 ${seed}: ${result.error ?? ''}`).toBe(false)
+      return {
+        seed,
+        winnerId: result.state.result?.winnerId,
+        reason: result.state.result?.reason,
+        turnNumber: result.state.turnNumber,
+        actions: result.actions,
+        metrics: result.metrics,
+      }
+    })
+    const repeatedRun = Array.from({ length: 20 }, (_, index) => {
+      const seed = index + 1
+      const result = simulateAiMatch(createDemoGame(seed))
+
+      return {
+        seed,
+        winnerId: result.state.result?.winnerId,
+        reason: result.state.result?.reason,
+        turnNumber: result.state.turnNumber,
+        actions: result.actions,
+        metrics: result.metrics,
+      }
+    })
+    const outcomeSignatures = new Set(
+      firstRun.map((result) =>
+        JSON.stringify({
+          winnerId: result.winnerId,
+          reason: result.reason,
+          turnNumber: result.turnNumber,
+          actions: result.actions,
+          metrics: result.metrics,
+        }),
+      ),
+    )
+
+    expect(repeatedRun).toEqual(firstRun)
+    expect(outcomeSignatures.size).toBeGreaterThan(1)
   })
 
   it('can move from the first active phase without mutating input', () => {

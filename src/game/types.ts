@@ -41,6 +41,7 @@ export interface CookieCard extends BaseCard {
   hp: number
   attack: number
   attackCost: number
+  attackEnergyCost?: EnergyCost
 }
 
 export interface NonCookieCard extends BaseCard {
