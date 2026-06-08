@@ -1,6 +1,6 @@
 import { createSeededShuffle } from './helpers'
 import { createGame, selectStartingCookie } from './setup'
-import { createOfficialStarterDeck } from './starter-deck'
+import { createOfficialRedStarterDeck } from './starter-deck'
 import type { GameCard, GameState } from './types'
 
 const identityShuffle = (cards: GameCard[]) => [...cards]
@@ -25,12 +25,12 @@ export const createDemoGame = (seed?: number): GameState => {
     {
       id: 'player-one',
       name: '玩家',
-      deck: createOfficialStarterDeck('player-one'),
+      deck: createOfficialRedStarterDeck('player-one'),
     },
     {
       id: 'player-two',
       name: 'AI 對手',
-      deck: createOfficialStarterDeck('player-two'),
+      deck: createOfficialRedStarterDeck('player-two'),
     },
     'player-one',
     seed === undefined ? identityShuffle : createSeededShuffle(seed),

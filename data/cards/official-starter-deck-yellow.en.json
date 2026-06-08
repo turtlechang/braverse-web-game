@@ -1,0 +1,819 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-06-08T16:32:32.336Z",
+    "totalAvailable": 2026,
+    "matchedAvailable": 20,
+    "importedCount": 20,
+    "filter": {
+      "categoryTitle": "Starter Deck YELLOW"
+    },
+    "imagesDownloaded": false
+  },
+  "cards": [
+    {
+      "sourceId": 45279,
+      "locale": "en",
+      "cardNumber": "ST2-001",
+      "baseCardNumber": "ST2-001",
+      "variant": null,
+      "name": "Roguefort Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{Y}》 Your opponent must place 1 card from their hand into the trash."
+      },
+      "attackText": "《{Y}{Y}{Y}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/id1k_JAosHQTigirEbCVxg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45280,
+      "locale": "en",
+      "cardNumber": "ST2-002",
+      "baseCardNumber": "ST2-002",
+      "variant": null,
+      "name": "Strawberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_IVPiMOz40QCQ5BsL4Nwnw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45281,
+      "locale": "en",
+      "cardNumber": "ST2-003",
+      "baseCardNumber": "ST2-003",
+      "variant": null,
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}{N}》 Deals 3 damage. Then, select up to 1 LV.1 card from your break area and place it in the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7WemXzTZKf58PCZMZEPOzg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45282,
+      "locale": "en",
+      "cardNumber": "ST2-004",
+      "baseCardNumber": "ST2-004",
+      "variant": null,
+      "name": "Macaron Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{Y}》 Select up to 1 of your other Cookies. That Cookie gains +1 HP."
+      },
+      "attackText": "《{Y}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-uXU02gM9GwR9sYyR3MdRg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45283,
+      "locale": "en",
+      "cardNumber": "ST2-005",
+      "baseCardNumber": "ST2-005",
+      "variant": null,
+      "name": "Mustard Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}》 Deals 1 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/cuYKhe-lLZxBY51ZP4Acyg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45285,
+      "locale": "en",
+      "cardNumber": "ST2-006",
+      "baseCardNumber": "ST2-006",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/w5OcIQu6k-s7zQ-kNv85fQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45286,
+      "locale": "en",
+      "cardNumber": "ST2-007",
+      "baseCardNumber": "ST2-007",
+      "variant": null,
+      "name": "Chestnut Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}》 Deals 1 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/dW8H0Lix2Bb6ZoXwdTePaw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45288,
+      "locale": "en",
+      "cardNumber": "ST2-008",
+      "baseCardNumber": "ST2-008",
+      "variant": null,
+      "name": "Eclair Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{Y}{Y}》 Select up to 1 LV.1 card from your break area and place it in the trash."
+      },
+      "attackText": "《{Y}{Y}{Y}{Y}》 Deals 4 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Hdz8H0D2tGYBhu-dgSZaog.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45289,
+      "locale": "en",
+      "cardNumber": "ST2-009",
+      "baseCardNumber": "ST2-009",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uW4CJvd2OyftYlmXbhz4Pw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45290,
+      "locale": "en",
+      "cardNumber": "ST2-010",
+      "baseCardNumber": "ST2-010",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{Y}》 If your break area is LV.6 or higher, select up to 1 LV.1 card from your break area and place it in the trash."
+      },
+      "attackText": "《{Y}{Y}{N}{N}》 Deals 4 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Sui3Y0--NPd929C8YowftA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45291,
+      "locale": "en",
+      "cardNumber": "ST2-011",
+      "baseCardNumber": "ST2-011",
+      "variant": null,
+      "name": "Cherry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "《{Y}{Y}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5cajlzvF1n9b4SU4tPi4gg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45292,
+      "locale": "en",
+      "cardNumber": "ST2-012",
+      "baseCardNumber": "ST2-012",
+      "variant": null,
+      "name": "Cheerleader Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}》 Deals 2 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/aU4ZBxcWArhXApJb2s2m6A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45293,
+      "locale": "en",
+      "cardNumber": "ST2-013",
+      "baseCardNumber": "ST2-013",
+      "variant": null,
+      "name": "Cheesecake Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LkablJ5T8QJdOJrE9JGVXg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45294,
+      "locale": "en",
+      "cardNumber": "ST2-014",
+      "baseCardNumber": "ST2-014",
+      "variant": null,
+      "name": "Custard Cookie III",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}{Y}》 Deals 3 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/egURcmu3iJwjpk3BeybGIQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45296,
+      "locale": "en",
+      "cardNumber": "ST2-015",
+      "baseCardNumber": "ST2-015",
+      "variant": null,
+      "name": "Hero Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}{N}{N}》 Deals 3 damage. Then, select up to 1 of your opponent's LV.1 Cookies. That Cookie cannot attack during the next turn.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/A1RFGEnzT1n_CWZwRR1EwQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45297,
+      "locale": "en",
+      "cardNumber": "ST2-016",
+      "baseCardNumber": "ST2-016",
+      "variant": null,
+      "name": "Flimsy Screwdriver",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie's HP-attached FLIP effect cannot be activated.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TWGB7wLmapWXvSTMVppxmQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45298,
+      "locale": "en",
+      "cardNumber": "ST2-018",
+      "baseCardNumber": "ST2-018",
+      "variant": null,
+      "name": "Time Travel Ticket",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}》 Draw 1 card from your deck. Then, select up to 1 of your Cookies and view all its HP cards. (You cannot switch the order of HP cards.)",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_Qa1Fa3ML-Z9QshyowY6rw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45299,
+      "locale": "en",
+      "cardNumber": "ST2-019",
+      "baseCardNumber": "ST2-019",
+      "variant": null,
+      "name": "Multi-Vitamin Honey Bomb",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}》 If your break area is LV.6 or higher, all Cookies currently in your battle area gain +1 attack damage during this turn.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/asPSWDkXhmGUxj10MnsNhw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45300,
+      "locale": "en",
+      "cardNumber": "ST2-020",
+      "baseCardNumber": "ST2-020",
+      "variant": null,
+      "name": "Winding Key Shield",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}》 If your break area is LV.5 or higher, select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/m6ftjr1exiIsVcKXjBgEeQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45301,
+      "locale": "en",
+      "cardNumber": "ST2-021",
+      "baseCardNumber": "ST2-021",
+      "variant": null,
+      "name": "Pretzel Snare",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}》 If 1 of your opponent's Cookies attacks more than 4 damage, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 215,
+        "title": "Starter Deck YELLOW",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ZWlzuuXgv-2YcrSa3jZjIA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

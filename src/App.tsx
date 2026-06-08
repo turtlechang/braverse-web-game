@@ -28,7 +28,7 @@ import {
   getEffectiveAttack,
   getRefreshCandidates,
   isEffectConditionMet,
-  OFFICIAL_STARTER_DECK_RED,
+  OFFICIAL_RED_STARTER_DECK,
   placeSupportCard,
   refreshDeck,
   replaceDefeatedCookie,
@@ -990,7 +990,7 @@ function App() {
               setEffectHistory([])
               setAiActionCount(0)
               setSimulationResults(null)
-              setMessage('已建立新的 Starter Deck RED 範例對局。')
+              setMessage('已建立新的紅色起始牌組範例對局。')
             }}
           >
             <RotateCcw aria-hidden="true" />
@@ -1430,15 +1430,15 @@ function App() {
             <div className="deck-reference-image">
               <img
                 src="/reference/starter-deck-red.webp"
-                alt="官方 Starter Deck RED 套餐組合表"
+                alt="官方紅色起始牌組套餐組合表"
               />
             </div>
             <div className="deck-list-content">
               <span>官方範例牌組</span>
-              <h2>Starter Deck RED</h2>
+              <h2>紅色起始牌組</h2>
               <p>依官方套餐組合圖片建立，共 22 種卡、60 張。</p>
               <div className="deck-list-table">
-                {OFFICIAL_STARTER_DECK_RED.map((entry) => (
+                {OFFICIAL_RED_STARTER_DECK.map((entry) => (
                   <div key={entry.cardNumber}>
                     <code>{entry.cardNumber}</code>
                     <span>{entry.name}</span>

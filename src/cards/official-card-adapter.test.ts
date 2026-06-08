@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import officialSample from '../../data/cards/official-sample.en.json'
+import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {
   convertOfficialCardToGameCard,
   convertOfficialCards,
@@ -102,6 +103,23 @@ describe('official card adapter', () => {
 
     expect(records).toHaveLength(22)
     expect(results).toHaveLength(22)
+    expect(results.every((result) => result.status === 'converted')).toBe(
+      true,
+    )
+  })
+
+  it('converts all 20 records from the Starter Deck YELLOW sample', () => {
+    const records = officialYellowSample.cards as OfficialCardRecord[]
+    const results = convertOfficialCards(records)
+
+    expect(officialYellowSample.source.filter.categoryTitle).toBe(
+      'Starter Deck YELLOW',
+    )
+    expect(records).toHaveLength(20)
+    expect(records.every((record) => record.product.title === 'Starter Deck YELLOW')).toBe(
+      true,
+    )
+    expect(results).toHaveLength(20)
     expect(results.every((result) => result.status === 'converted')).toBe(
       true,
     )

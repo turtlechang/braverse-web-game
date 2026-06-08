@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "cards:import:sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck RED\" --limit 100",
+    "cards:import:sample": "node scripts/import-official-cards.mjs --limit 100",
+    "cards:import:red-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck RED\" --output data/cards/official-sample.en.json --limit 100",
+    "cards:import:yellow-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck YELLOW\" --output data/cards/official-starter-deck-yellow.en.json --limit 100",
     "lint": "eslint .",
     "test": "vitest run",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",

@@ -17,8 +17,12 @@ export {
 } from './energy'
 export type { EnergyPaymentValidation } from './energy'
 export {
+  createOfficialRedStarterDeck,
   createOfficialStarterDeck,
+  createOfficialYellowStarterDeck,
+  OFFICIAL_RED_STARTER_DECK,
   OFFICIAL_STARTER_DECK_RED,
+  OFFICIAL_YELLOW_STARTER_DECK,
 } from './starter-deck'
 export type { StarterDeckEntry } from './starter-deck'
 export {

@@ -1,4 +1,5 @@
-import officialSample from '../../data/cards/official-sample.en.json'
+import officialRedSample from '../../data/cards/official-sample.en.json'
+import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
@@ -13,38 +14,61 @@ export interface StarterDeckEntry {
   count: number
 }
 
-export const OFFICIAL_STARTER_DECK_RED: StarterDeckEntry[] = [
-  { cardNumber: 'ST1-001', name: '公主餅乾', count: 4 },
-  { cardNumber: 'ST1-002', name: '忍者餅乾', count: 2 },
-  { cardNumber: 'ST1-003', name: '恐龍餅乾', count: 2 },
-  { cardNumber: 'ST1-004', name: '紅蘿蔔餅乾', count: 4 },
-  { cardNumber: 'ST1-005', name: '大蔥餅乾', count: 4 },
-  { cardNumber: 'ST1-006', name: '活潑餅乾', count: 4 },
-  { cardNumber: 'ST1-007', name: '薄荷巧克力餅乾', count: 2 },
-  { cardNumber: 'ST1-008', name: '櫻花餅乾', count: 2 },
-  { cardNumber: 'ST1-009', name: '濃縮咖啡餅乾', count: 2 },
-  { cardNumber: 'ST1-010', name: '鍊金術師餅乾', count: 2 },
-  { cardNumber: 'ST1-011', name: '勇敢餅乾', count: 4 },
-  { cardNumber: 'ST1-012', name: '殭屍餅乾', count: 4 },
-  { cardNumber: 'ST1-013', name: '探險家餅乾', count: 4 },
-  { cardNumber: 'ST1-014', name: '乾辣椒餅乾', count: 2 },
-  { cardNumber: 'ST1-015', name: '開心果餅乾', count: 4 },
-  { cardNumber: 'ST1-016', name: '黏膩餅乾', count: 2 },
-  { cardNumber: 'ST1-017', name: '祕藏蛋糕刀', count: 2 },
-  { cardNumber: 'ST1-018', name: '蝸牛棒棒糖', count: 2 },
-  { cardNumber: 'ST1-019', name: '炎熱果凍塊', count: 2 },
-  { cardNumber: 'ST1-020', name: '泥濘的麵團沼澤', count: 2 },
-  { cardNumber: 'ST1-021', name: '尖尖的星星糖', count: 2 },
-  { cardNumber: 'ST1-022', name: '熾熱果凍火山', count: 2 },
+export const OFFICIAL_RED_STARTER_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'ST1-001', name: 'Princess Cookie', count: 4 },
+  { cardNumber: 'ST1-002', name: 'Ninja Cookie', count: 2 },
+  { cardNumber: 'ST1-003', name: 'Dino-Sour Cookie', count: 2 },
+  { cardNumber: 'ST1-004', name: 'Carrot Cookie', count: 4 },
+  { cardNumber: 'ST1-005', name: 'Leek Cookie', count: 4 },
+  { cardNumber: 'ST1-006', name: 'GingerBright', count: 4 },
+  { cardNumber: 'ST1-007', name: 'Mint Choco Cookie', count: 2 },
+  { cardNumber: 'ST1-008', name: 'Cherry Blossom Cookie', count: 2 },
+  { cardNumber: 'ST1-009', name: 'Espresso Cookie', count: 2 },
+  { cardNumber: 'ST1-010', name: 'Alchemist Cookie', count: 2 },
+  { cardNumber: 'ST1-011', name: 'GingerBrave', count: 4 },
+  { cardNumber: 'ST1-012', name: 'Zombie Cookie', count: 4 },
+  { cardNumber: 'ST1-013', name: 'Adventurer Cookie', count: 4 },
+  { cardNumber: 'ST1-014', name: 'Peperoncino Cookie', count: 2 },
+  { cardNumber: 'ST1-015', name: 'Pistachio Cookie', count: 4 },
+  { cardNumber: 'ST1-016', name: 'Icky Sticky Jelly', count: 2 },
+  { cardNumber: 'ST1-017', name: 'Exceptional Cake Knife', count: 2 },
+  { cardNumber: 'ST1-018', name: 'Sugar-Coated Snail Shell', count: 2 },
+  { cardNumber: 'ST1-019', name: 'Fiery Jelly Clump', count: 2 },
+  { cardNumber: 'ST1-020', name: 'Overhydrated Dough Swamp', count: 2 },
+  { cardNumber: 'ST1-021', name: 'Ouch-Inducing Star Jelly', count: 2 },
+  { cardNumber: 'ST1-022', name: 'Burning Jelly Volcano', count: 2 },
 ]
+
+export const OFFICIAL_YELLOW_STARTER_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'ST2-001', name: 'Roguefort Cookie', count: 2 },
+  { cardNumber: 'ST2-002', name: 'Strawberry Cookie', count: 4 },
+  { cardNumber: 'ST2-003', name: 'Wizard Cookie', count: 2 },
+  { cardNumber: 'ST2-004', name: 'Macaron Cookie', count: 2 },
+  { cardNumber: 'ST2-005', name: 'Mustard Cookie', count: 4 },
+  { cardNumber: 'ST2-006', name: 'GingerBright', count: 4 },
+  { cardNumber: 'ST2-007', name: 'Chestnut Cookie', count: 4 },
+  { cardNumber: 'ST2-008', name: 'Eclair Cookie', count: 2 },
+  { cardNumber: 'ST2-009', name: 'GingerBrave', count: 4 },
+  { cardNumber: 'ST2-010', name: 'Purple Yam Cookie', count: 4 },
+  { cardNumber: 'ST2-011', name: 'Cherry Cookie', count: 4 },
+  { cardNumber: 'ST2-012', name: 'Cheerleader Cookie', count: 4 },
+  { cardNumber: 'ST2-013', name: 'Cheesecake Cookie', count: 4 },
+  { cardNumber: 'ST2-014', name: 'Custard Cookie III', count: 4 },
+  { cardNumber: 'ST2-015', name: 'Hero Cookie', count: 2 },
+  { cardNumber: 'ST2-016', name: 'Flimsy Screwdriver', count: 2 },
+  { cardNumber: 'ST2-018', name: 'Time Travel Ticket', count: 2 },
+  { cardNumber: 'ST2-019', name: 'Multi-Vitamin Honey Bomb', count: 2 },
+  { cardNumber: 'ST2-020', name: 'Winding Key Shield', count: 2 },
+  { cardNumber: 'ST2-021', name: 'Pretzel Snare', count: 2 },
+]
+
+export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 const getEnergyColor = (
   source: OfficialCardRecord,
 ): GameCard['energyColor'] => {
   const value =
-    source.energyType === 'MIX'
-      ? 'wild'
-      : source.color?.toLowerCase()
+    source.energyType === 'MIX' ? 'wild' : source.color?.toLowerCase()
 
   return value === 'red' ||
     value === 'yellow' ||
@@ -108,18 +132,19 @@ const createCard = (
   }
 }
 
-export const createOfficialStarterDeck = (
+const createOfficialStarterDeckFromRecipe = (
   playerId: PlayerId,
+  recipe: StarterDeckEntry[],
+  records: OfficialCardRecord[],
 ): GameCard[] => {
-  const records = officialSample.cards as OfficialCardRecord[]
   const recordsByNumber = new Map(
     records.map((record) => [record.cardNumber, record]),
   )
 
-  return OFFICIAL_STARTER_DECK_RED.flatMap((entry) => {
+  return recipe.flatMap((entry) => {
     const source = recordsByNumber.get(entry.cardNumber)
     if (!source) {
-      throw new Error(`找不到官方牌組卡牌 ${entry.cardNumber}。`)
+      throw new Error(`Missing official sample card ${entry.cardNumber}`)
     }
 
     return Array.from({ length: entry.count }, (_, index) =>
@@ -127,3 +152,23 @@ export const createOfficialStarterDeck = (
     )
   })
 }
+
+export const createOfficialRedStarterDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    OFFICIAL_RED_STARTER_DECK,
+    officialRedSample.cards as OfficialCardRecord[],
+  )
+
+export const createOfficialYellowStarterDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    OFFICIAL_YELLOW_STARTER_DECK,
+    officialYellowSample.cards as OfficialCardRecord[],
+  )
+
+export const createOfficialStarterDeck = createOfficialRedStarterDeck

@@ -4,8 +4,9 @@ import { pathToFileURL } from 'node:url'
 
 export const DEFAULT_LOCALE = 'en'
 export const DEFAULT_LIMIT = 100
-export const DEFAULT_OUTPUT = 'data/cards/official-sample.en.json'
-export const DEFAULT_CATEGORY_TITLE = 'Starter Deck RED'
+export const DEFAULT_OUTPUT =
+  'data/cards/official-starter-deck-yellow.en.json'
+export const DEFAULT_CATEGORY_TITLE = 'Starter Deck YELLOW'
 export const OFFICIAL_SITE_URL = 'https://cookierunbraverse.com'
 
 const SUPPORTED_LOCALES = new Set(['en', 'asia', 'ko'])

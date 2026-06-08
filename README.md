@@ -1,46 +1,38 @@
 # 薑餅人對戰卡牌 Braverse
 
-以 React、TypeScript 與 Vite 建立的 Braverse 網頁遊戲原型。
+以 React、TypeScript 與 Vite 建置的 CookieRun: Braverse 網頁遊戲原型。
 
 ## 開發背景
 
-本專案以官方 Braverse 規則、Starter Deck RED 卡牌資料、官方套餐組合圖片、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。簡易 AI 用於驅動 `player-two` 回合，也可由同一套決策器控制雙方，搭配 Fisher-Yates 可重現種子洗牌執行多牌序完整對戰與瀏覽器驗證；官方文字標記與能量費用會先轉換成明確規則資料，再由 UI 顯示並驗證玩家選擇。專案開發與交叉協作規範集中於 `AGENTS.md`，作為規則、驗證及 Git 流程的共同依據。
+本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。
+
+官方範例卡目前優先使用 `category_title` / `card_product_title` 為 `Starter Deck YELLOW` 的黃色起始牌組資料；原有 `Starter Deck RED` 資料保留為紅色起始牌組。兩套資料都可建立 60 張牌組，並以官方 JSON 的卡號、名稱、類型、攻擊文字、效果文字與圖片 URL 轉成 runtime `GameCard`。
 
 ## 目前進度
 
-- 已完成雙方戰場、回合階段、攻擊、Refresh、擊破補位與基本勝負判定。
-- 範例對局已依官方圖片使用 22 種、合計 60 張的精確牌組配方，並提供圖片與清單展示。
-- 已串接 Skill、Activate、OnPlay、Once per turn、Your Turn 與彩色能量支付。
-- 已校正官方標記：`{mob}` 代表 Activate、`{ap}` 代表 OnPlay，並以官方圖片顯示 `{R}`、`{Y}`、`{G}`、`{B}`、`{P}`、`{N}` 能量。
-- AI 會依序處理 Refresh、補位、推進階段、配置支援、餅乾登場、技能與攻擊。
-- AI 目標選擇採固定策略，並設有單場 500 步與 UI 200 步安全上限。
-- 已加入不修改原牌組的 Fisher-Yates 種子洗牌；相同種子可重現相同起手與完整對戰，UI 驗證固定記錄種子 1–20。
-- 玩家攻擊時可手動選擇支援卡付款；規則層會驗證指定顏色、任意與萬用能量，UI 即時顯示合法或不合法原因，合法後才開放攻擊目標。
-- UI 會在 `player-two` 回合逐步自動操作，顯示最近一次 AI 行動並鎖定玩家操作。
-- 隱藏卡牌已整合官方卡背：優先讀取本機 `card-back.png`，讀取失敗時改用官方網址，兩者皆失敗時顯示 CSS 卡背。
-- Playwright 種子 1–20 驗證已全數正常結束，玩家與 AI 各勝 10 場；回合分布 9–15、步數 66–120、技能 0–3 次、擊破補位 0–2 次，沒有卡住，尚未觸發 Refresh。
-- 目前共有 80 項單元測試，涵蓋官方牌組張數、Fisher-Yates 種子重現性與多樣性、攻擊與技能能量支付、官方標記語意、AI 決策、Refresh、補位與無限迴圈防護。
-- 已完善 `AGENTS.md`，補齊架構邊界、技能與能量語意、種子洗牌、測試要求及 Git 提交流程；commit 訊息統一使用英文。
+- 已建立紅色起始牌組：22 種卡號，合計 60 張。
+- 已建立黃色起始牌組：20 種卡號，合計 60 張；官方清單未包含 `ST2-017`。
+- 已加入黃色起始牌組官方樣本檔：`data/cards/official-starter-deck-yellow.en.json`。
+- 已新增明確 API：`createOfficialRedStarterDeck`、`createOfficialYellowStarterDeck`、`OFFICIAL_RED_STARTER_DECK`、`OFFICIAL_YELLOW_STARTER_DECK`。
+- `createOfficialStarterDeck` 與 `OFFICIAL_STARTER_DECK_RED` 仍保留為紅色起始牌組相容別名。
+- 單元測試涵蓋官方範例卡轉換、紅色與黃色起始牌組張數、配方數量、種子洗牌重現性、AI 決策、Refresh 與能量付款等流程。
+- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，完整瀏覽器驗證前需先執行 `npm run build`。
 
 ## 下一步計畫
 
-- 擴充種子範圍與較長局面的測試牌序，讓完整對戰實際涵蓋 Refresh。
-- 允許從 UI 輸入指定種子並重播單場對戰，方便重現規則錯誤。
-- 在卡牌詳情與戰鬥區直接顯示完整攻擊能量費用，減少攻擊前反覆查看。
-- 擴充尚未支援的 FLIP、道具、陷阱與場景效果。
-- 增加 AI 難度設定、操作紀錄檢視與錯誤狀態下載。
-- 為其他官方 UI 素材補齊本機快取、遠端備援與載入失敗的瀏覽器驗證。
-- 補齊 `{K}` 黑色能量與其他官方文字標記的素材及顯示規則。
-- 規則、測試數量或提交流程變更時，同步維護 `AGENTS.md`、README 與相關 `docs/` 文件。
+- 將 UI 的牌組清單切換擴充為紅色／黃色起始牌組可選。
+- 持續補齊官方效果文字到 `CardEffect`，並同步新增規則測試。
+- 釐清尚未完全支援的 FLIP、陷阱與條件式效果時機。
+- 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
 
-## 開發
+## 開發指令
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 驗證
+## 驗證指令
 
 ```bash
 npm test
@@ -48,11 +40,21 @@ npm run lint
 npm run build
 ```
 
-瀏覽器 AI 驗證：
+AI 瀏覽器驗證：
 
 ```bash
 npm run build
 npm run test:ai:browser
 ```
 
-若 Playwright 安裝在外部工具目錄，可用 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 搜尋路徑。報告與截圖輸出至 `test-results/`。
+若 Playwright 安裝於外部目錄，可用 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 路徑。測試報告與截圖會輸出到 `test-results/`，不得提交。
+
+## 卡牌資料匯入
+
+```bash
+npm run cards:import:sample
+npm run cards:import:red-sample
+npm run cards:import:yellow-sample
+```
+
+`cards:import:sample` 目前預設匯入黃色起始牌組；紅色與黃色也可使用明確腳本重新產生。

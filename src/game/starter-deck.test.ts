@@ -1,35 +1,51 @@
 import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
-  createOfficialStarterDeck,
-  OFFICIAL_STARTER_DECK_RED,
+  createOfficialRedStarterDeck,
+  createOfficialYellowStarterDeck,
+  OFFICIAL_RED_STARTER_DECK,
+  OFFICIAL_YELLOW_STARTER_DECK,
+  type StarterDeckEntry,
 } from '.'
 
-describe('official Starter Deck RED', () => {
+const expectStarterDeckRecipe = (
+  recipe: StarterDeckEntry[],
+  expectedDistinctCards: number,
+) => {
+  expect(recipe).toHaveLength(expectedDistinctCards)
+  expect(
+    recipe.reduce((total, entry) => total + entry.count, 0),
+  ).toBe(60)
+}
+
+const expectCreatedDeckMatchesRecipe = (
+  deck: ReturnType<typeof createOfficialRedStarterDeck>,
+  recipe: StarterDeckEntry[],
+) => {
+  const counts = deck.reduce<Record<string, number>>((result, card) => {
+    result[card.id] = (result[card.id] ?? 0) + 1
+    return result
+  }, {})
+
+  expect(deck).toHaveLength(60)
+  for (const entry of recipe) {
+    expect(counts[entry.cardNumber]).toBe(entry.count)
+  }
+}
+
+describe('official red starter deck', () => {
   it('contains 22 card numbers and exactly 60 cards', () => {
-    expect(OFFICIAL_STARTER_DECK_RED).toHaveLength(22)
-    expect(
-      OFFICIAL_STARTER_DECK_RED.reduce(
-        (total, entry) => total + entry.count,
-        0,
-      ),
-    ).toBe(60)
+    expectStarterDeckRecipe(OFFICIAL_RED_STARTER_DECK, 22)
   })
 
   it('creates the official quantity for every card number', () => {
-    const deck = createOfficialStarterDeck('player-one')
-    const counts = deck.reduce<Record<string, number>>((result, card) => {
-      result[card.id] = (result[card.id] ?? 0) + 1
-      return result
-    }, {})
-
-    expect(deck).toHaveLength(60)
-    for (const entry of OFFICIAL_STARTER_DECK_RED) {
-      expect(counts[entry.cardNumber]).toBe(entry.count)
-    }
+    expectCreatedDeckMatchesRecipe(
+      createOfficialRedStarterDeck('player-one'),
+      OFFICIAL_RED_STARTER_DECK,
+    )
   })
 
-  it('uses the official recipe for both demo players', () => {
+  it('uses the official red recipe for both demo players', () => {
     const state = createDemoGame()
 
     for (const player of Object.values(state.players)) {
@@ -60,5 +76,53 @@ describe('official Starter Deck RED', () => {
     expect(getOpeningSignature(different)).not.toEqual(
       getOpeningSignature(first),
     )
+  })
+})
+
+describe('official yellow starter deck', () => {
+  it('contains 20 card numbers and exactly 60 cards', () => {
+    expectStarterDeckRecipe(OFFICIAL_YELLOW_STARTER_DECK, 20)
+    expect(
+      OFFICIAL_YELLOW_STARTER_DECK.map((entry) => entry.cardNumber),
+    ).not.toContain('ST2-017')
+  })
+
+  it('creates the official quantity for every card number', () => {
+    expectCreatedDeckMatchesRecipe(
+      createOfficialYellowStarterDeck('player-two'),
+      OFFICIAL_YELLOW_STARTER_DECK,
+    )
+  })
+
+  it('creates yellow cards from the official Starter Deck YELLOW sample', () => {
+    const deck = createOfficialYellowStarterDeck('player-one')
+    const roguefort = deck.find((card) => card.id === 'ST2-001')
+    const strawberry = deck.find((card) => card.id === 'ST2-002')
+    const windingKeyShield = deck.find((card) => card.id === 'ST2-020')
+
+    expect(roguefort).toMatchObject({
+      name: 'Roguefort Cookie',
+      type: 'cookie',
+      energyColor: 'yellow',
+    })
+    expect(strawberry).toMatchObject({
+      name: 'Strawberry Cookie',
+      type: 'cookie',
+      energyColor: 'wild',
+    })
+    expect(windingKeyShield).toMatchObject({
+      name: 'Winding Key Shield',
+      type: 'trap',
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          condition: {
+            kind: 'break-level-at-least',
+            level: 5,
+          },
+        },
+      ],
+    })
   })
 })
