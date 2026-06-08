@@ -1,4 +1,5 @@
 import officialRedSample from '../../data/cards/official-sample.en.json'
+import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {
   convertOfficialCardEffects,
@@ -60,6 +61,31 @@ export const OFFICIAL_YELLOW_STARTER_DECK: StarterDeckEntry[] = [
   { cardNumber: 'ST2-019', name: 'Multi-Vitamin Honey Bomb', count: 2 },
   { cardNumber: 'ST2-020', name: 'Winding Key Shield', count: 2 },
   { cardNumber: 'ST2-021', name: 'Pretzel Snare', count: 2 },
+]
+
+export const OFFICIAL_GREEN_STARTER_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'ST3-001', name: 'Muscle Cookie', count: 4 },
+  { cardNumber: 'ST3-002', name: 'Strawberry Crepe Cookie', count: 2 },
+  { cardNumber: 'ST3-003', name: 'GingerBright', count: 2 },
+  { cardNumber: 'ST3-004', name: 'Vampire Cookie', count: 4 },
+  { cardNumber: 'ST3-005', name: 'Blackberry Cookie', count: 4 },
+  { cardNumber: 'ST3-006', name: 'Beet Cookie', count: 4 },
+  { cardNumber: 'ST3-007', name: 'Sparkling Cookie', count: 2 },
+  { cardNumber: 'ST3-008', name: 'Spinach Cookie', count: 2 },
+  { cardNumber: 'ST3-009', name: 'Avocado Cookie', count: 2 },
+  { cardNumber: 'ST3-010', name: 'Aloe Cookie', count: 2 },
+  { cardNumber: 'ST3-011', name: 'Onion Cookie', count: 4 },
+  { cardNumber: 'ST3-012', name: 'GingerBrave', count: 4 },
+  { cardNumber: 'ST3-013', name: 'Knight Cookie', count: 4 },
+  { cardNumber: 'ST3-014', name: 'Angel Cookie', count: 2 },
+  { cardNumber: 'ST3-015', name: 'Chili Pepper Cookie', count: 4 },
+  { cardNumber: 'ST3-016', name: "Ancient Healer's Gaze", count: 2 },
+  { cardNumber: 'ST3-017', name: 'Viney Vines', count: 2 },
+  { cardNumber: 'ST3-018', name: 'Parsley Tea of Invigoration', count: 2 },
+  { cardNumber: 'ST3-019', name: 'Supreme Whipped Cream', count: 2 },
+  { cardNumber: 'ST3-020', name: 'Divine Light Crystal', count: 2 },
+  { cardNumber: 'ST3-021', name: 'Breath of the Flute', count: 2 },
+  { cardNumber: 'ST3-022', name: "Guardian Tree's Blessing", count: 2 },
 ]
 
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
@@ -169,6 +195,15 @@ export const createOfficialYellowStarterDeck = (
     playerId,
     OFFICIAL_YELLOW_STARTER_DECK,
     officialYellowSample.cards as OfficialCardRecord[],
+  )
+
+export const createOfficialGreenStarterDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    OFFICIAL_GREEN_STARTER_DECK,
+    officialGreenSample.cards as OfficialCardRecord[],
   )
 
 export const createOfficialStarterDeck = createOfficialRedStarterDeck

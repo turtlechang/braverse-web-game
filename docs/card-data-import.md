@@ -9,7 +9,7 @@
 
 ## 指令
 
-預設匯入英文版黃色起始牌組 `Starter Deck YELLOW`：
+預設匯入英文版綠色起始牌組 `Starter Deck GREEN`：
 
 ```bash
 npm run cards:import:sample
@@ -27,20 +27,27 @@ npm run cards:import:red-sample
 npm run cards:import:yellow-sample
 ```
 
+明確匯入綠色起始牌組：
+
+```bash
+npm run cards:import:green-sample
+```
+
 也可以直接指定參數：
 
 ```bash
 node scripts/import-official-cards.mjs \
   --locale en \
-  --category-title "Starter Deck YELLOW" \
+  --category-title "Starter Deck GREEN" \
   --limit 100 \
-  --output data/cards/official-starter-deck-yellow.en.json
+  --output data/cards/official-starter-deck-green.en.json
 ```
 
 目前樣本：
 
 - `data/cards/official-sample.en.json`：`Starter Deck RED`，22 種卡號。
 - `data/cards/official-starter-deck-yellow.en.json`：`Starter Deck YELLOW`，20 種卡號；官方清單未包含 `ST2-017`。
+- `data/cards/official-starter-deck-green.en.json`：`Starter Deck GREEN`，22 種卡號。
 
 ## 欄位轉換
 

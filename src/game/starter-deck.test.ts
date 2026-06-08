@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
+  createOfficialGreenStarterDeck,
   createOfficialRedStarterDeck,
   createOfficialYellowStarterDeck,
+  OFFICIAL_GREEN_STARTER_DECK,
   OFFICIAL_RED_STARTER_DECK,
   OFFICIAL_YELLOW_STARTER_DECK,
   type StarterDeckEntry,
@@ -120,6 +122,53 @@ describe('official yellow starter deck', () => {
           condition: {
             kind: 'break-level-at-least',
             level: 5,
+          },
+        },
+      ],
+    })
+  })
+})
+
+describe('official green starter deck', () => {
+  it('contains 22 card numbers and exactly 60 cards', () => {
+    expectStarterDeckRecipe(OFFICIAL_GREEN_STARTER_DECK, 22)
+  })
+
+  it('creates the official quantity for every card number', () => {
+    expectCreatedDeckMatchesRecipe(
+      createOfficialGreenStarterDeck('player-two'),
+      OFFICIAL_GREEN_STARTER_DECK,
+    )
+  })
+
+  it('creates green cards from the official Starter Deck GREEN sample', () => {
+    const deck = createOfficialGreenStarterDeck('player-one')
+    const muscle = deck.find((card) => card.id === 'ST3-001')
+    const gingerBright = deck.find((card) => card.id === 'ST3-003')
+    const vineyVines = deck.find((card) => card.id === 'ST3-017')
+
+    expect(muscle).toMatchObject({
+      name: 'Muscle Cookie',
+      type: 'cookie',
+      energyColor: 'green',
+      attackEnergyCost: { green: 1, neutral: 1 },
+    })
+    expect(gingerBright).toMatchObject({
+      name: 'GingerBright',
+      type: 'cookie',
+      energyColor: 'wild',
+    })
+    expect(vineyVines).toMatchObject({
+      name: 'Viney Vines',
+      type: 'item',
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: {
+            side: 'opponent',
+            min: 0,
+            max: 2,
           },
         },
       ],

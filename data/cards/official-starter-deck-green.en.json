@@ -1,0 +1,899 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-06-08T16:54:55.562Z",
+    "totalAvailable": 2026,
+    "matchedAvailable": 22,
+    "importedCount": 22,
+    "filter": {
+      "categoryTitle": "Starter Deck GREEN"
+    },
+    "imagesDownloaded": false
+  },
+  "cards": [
+    {
+      "sourceId": 45302,
+      "locale": "en",
+      "cardNumber": "ST3-001",
+      "baseCardNumber": "ST3-001",
+      "variant": null,
+      "name": "Muscle Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《{G}{G}》 This Cookie gains +1 HP."
+      },
+      "attackText": "《{G}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/3W4JiNFvnmV0r9_QfAcQ-Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45303,
+      "locale": "en",
+      "cardNumber": "ST3-002",
+      "baseCardNumber": "ST3-002",
+      "variant": null,
+      "name": "Strawberry Crepe Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Place 1 card from your support area into the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "《{G}{G}{G}{G}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ohWAx57RAEHx4-6k3dJn7A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45304,
+      "locale": "en",
+      "cardNumber": "ST3-003",
+      "baseCardNumber": "ST3-003",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wTcK7EbG6_3DNtgQmcaDhQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45305,
+      "locale": "en",
+      "cardNumber": "ST3-004",
+      "baseCardNumber": "ST3-004",
+      "variant": null,
+      "name": "Vampire Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{G}{G}{G}{N}》 Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. Then, this Cookie gains +1 HP."
+      },
+      "attackText": "《{G}{G}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/rD8ZjQrRb3SntKTb80alRQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45306,
+      "locale": "en",
+      "cardNumber": "ST3-005",
+      "baseCardNumber": "ST3-005",
+      "variant": null,
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Place 1 card from your support area into the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "《{G}{G}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/i5YJoQRq6RU2WcP9jDj-6g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45307,
+      "locale": "en",
+      "cardNumber": "ST3-006",
+      "baseCardNumber": "ST3-006",
+      "variant": null,
+      "name": "Beet Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/n6yhmgtGkNRIZhj67NzQfQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45308,
+      "locale": "en",
+      "cardNumber": "ST3-007",
+      "baseCardNumber": "ST3-007",
+      "variant": null,
+      "name": "Sparkling Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}{G}》 Deals 3 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-kzD0L_zfb2RuBwfmHM8lw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45310,
+      "locale": "en",
+      "cardNumber": "ST3-008",
+      "baseCardNumber": "ST3-008",
+      "variant": null,
+      "name": "Spinach Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}》 Deals 1 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/U0aVBq1jNfaJcvghbB6joA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45312,
+      "locale": "en",
+      "cardNumber": "ST3-009",
+      "baseCardNumber": "ST3-009",
+      "variant": null,
+      "name": "Avocado Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《{G}》 During this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{G}{G}{G}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Me1hciDxhuaXicHjrJJqwQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45313,
+      "locale": "en",
+      "cardNumber": "ST3-010",
+      "baseCardNumber": "ST3-010",
+      "variant": null,
+      "name": "Aloe Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{G}{G}》 Take 1 card from the top your deck and place it in your support area as active."
+      },
+      "attackText": "《{G}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/18HPheO8CnwBgPFIqdkNxA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45314,
+      "locale": "en",
+      "cardNumber": "ST3-011",
+      "baseCardNumber": "ST3-011",
+      "variant": null,
+      "name": "Onion Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}》 Deals 2 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7tn4YkakEgGKc51T3HD87A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45315,
+      "locale": "en",
+      "cardNumber": "ST3-012",
+      "baseCardNumber": "ST3-012",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/aknCdRDZjadPyuR-gtynpQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45316,
+      "locale": "en",
+      "cardNumber": "ST3-013",
+      "baseCardNumber": "ST3-013",
+      "variant": null,
+      "name": "Knight Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-VEoKzfD3RRUBWQN-07Isg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45317,
+      "locale": "en",
+      "cardNumber": "ST3-014",
+      "baseCardNumber": "ST3-014",
+      "variant": null,
+      "name": "Angel Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}》 Deals 1 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/oi6LAJKx3mqsXoD2wvBoLQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45319,
+      "locale": "en",
+      "cardNumber": "ST3-015",
+      "baseCardNumber": "ST3-015",
+      "variant": null,
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Place 1 card from your support area into the trash.》 During this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{G}{G}{G}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Dk8zTakOsnegDt9KtVud8A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45320,
+      "locale": "en",
+      "cardNumber": "ST3-016",
+      "baseCardNumber": "ST3-016",
+      "variant": null,
+      "name": "Ancient Healer's Gaze",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}{G}》 Select 1 Cookie from your battle area that is LV.2 or lower and place it in your support area as active.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/v7WQhZEnJJ0OejoTsvlveA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45321,
+      "locale": "en",
+      "cardNumber": "ST3-017",
+      "baseCardNumber": "ST3-017",
+      "variant": null,
+      "name": "Viney Vines",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}》 Select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each. Then, place 1 card from your support area into the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/DBklDrZguHePUeloxIxolA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45322,
+      "locale": "en",
+      "cardNumber": "ST3-018",
+      "baseCardNumber": "ST3-018",
+      "variant": null,
+      "name": "Parsley Tea of Invigoration",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}》 Play 1 Cookie from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/3YBqraEVVTnhpj5uic0aLg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45323,
+      "locale": "en",
+      "cardNumber": "ST3-019",
+      "baseCardNumber": "ST3-019",
+      "variant": null,
+      "name": "Supreme Whipped Cream",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage. Then, place 1 card from your support area into the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1wbK9IQd3H_k8YVCpLHYWg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45325,
+      "locale": "en",
+      "cardNumber": "ST3-020",
+      "baseCardNumber": "ST3-020",
+      "variant": null,
+      "name": "Divine Light Crystal",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}》 Select up to 1 of your Cookies. That Cookie's HP cannot reach 0 during this battle.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/tUnkCjbDo_t5GeFu9nKxoA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45326,
+      "locale": "en",
+      "cardNumber": "ST3-021",
+      "baseCardNumber": "ST3-021",
+      "variant": null,
+      "name": "Breath of the Flute",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}》 If any of your {G} Cookies fainted during this battle, take the top card from your deck and place it in your support area as rested.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/MHXjlpxWWphClV0OGvmlMA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45327,
+      "locale": "en",
+      "cardNumber": "ST3-022",
+      "baseCardNumber": "ST3-022",
+      "variant": null,
+      "name": "Guardian Tree's Blessing",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}》 Place in your stage area.\r\n\r\n{mob} 《Rest this card.》 Take 1 card from your support area to your hand. If you did, you can draw 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 216,
+        "title": "Starter Deck GREEN",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/9BWjXO-leAM0prOTd6LsYA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}
