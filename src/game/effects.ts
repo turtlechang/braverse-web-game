@@ -1,16 +1,22 @@
 import { GameRuleError } from './errors'
-import { getOpponentId } from './helpers'
+import { drawCards, getOpponentId, updatePlayer } from './helpers'
+import { getRefreshCandidates } from './refresh'
 import type {
+  BreakToTrashEffect,
   CardEffect,
+  CookieCard,
   CookieInBattle,
+  DeckToSupportEffect,
+  DrawEffect,
   EffectContext,
   EffectDuration,
   EffectTargetSelector,
   GameState,
+  ModifyAttackEffect,
   PlayerId,
   PlayerState,
 } from './types'
-import { getBreakAreaLevel, resolveBasicVictory } from './victory'
+import { finishWithDefeat, getBreakAreaLevel, resolveBasicVictory } from './victory'
 
 const getTargetPlayerId = (
   context: EffectContext,
@@ -89,14 +95,68 @@ export const selectEffectTargets = (
   return selectedTargets as CookieInBattle[]
 }
 
+export const isEffectUntargeted = (
+  effect: CardEffect,
+): effect is DrawEffect | DeckToSupportEffect =>
+  effect.kind === 'draw' || effect.kind === 'deck-to-support'
+
+export const getBreakToTrashCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: BreakToTrashEffect,
+): CookieCard[] =>
+  state.players[context.sourcePlayerId].breakArea.filter(
+    (card) => card.level === effect.exactLevel,
+  )
+
+export const validateBreakToTrashTargets = (
+  state: GameState,
+  context: EffectContext,
+  effect: BreakToTrashEffect,
+  selectedTargetIds: string[],
+) => {
+  const uniqueIds = [...new Set(selectedTargetIds)]
+
+  if (uniqueIds.length !== selectedTargetIds.length) {
+    throw new GameRuleError('選擇的效果目標數量不合法。')
+  }
+
+  if (uniqueIds.length > effect.max) {
+    throw new GameRuleError('選擇的效果目標數量不合法。')
+  }
+
+  const candidates = getBreakToTrashCandidates(state, context, effect)
+  const candidateIds = new Set(candidates.map((card) => card.instanceId))
+
+  if (uniqueIds.some((id) => !candidateIds.has(id))) {
+    throw new GameRuleError('選擇的卡牌不是此效果的合法目標。')
+  }
+}
+
 export const isEffectConditionMet = (
   state: GameState,
   context: EffectContext,
   effect: CardEffect,
-): boolean =>
-  effect.condition?.kind !== 'break-level-at-least' ||
-  getBreakAreaLevel(state, context.sourcePlayerId) >=
-    effect.condition.level
+): boolean => {
+  if (isEffectUntargeted(effect)) {
+    return true
+  }
+
+  if (effect.kind === 'break-to-trash') {
+    return (
+      !effect.condition ||
+      effect.condition.kind !== 'break-level-at-least' ||
+      getBreakAreaLevel(state, context.sourcePlayerId) >=
+        effect.condition.level
+    )
+  }
+
+  return (
+    effect.condition?.kind !== 'break-level-at-least' ||
+    getBreakAreaLevel(state, context.sourcePlayerId) >=
+      effect.condition.level
+  )
+}
 
 const assertCondition = (
   state: GameState,
@@ -235,7 +295,7 @@ export const getEffectiveAttack = (
                 effect,
               ),
           )
-          .reduce((total, effect) => total + effect.amount, 0)
+          .reduce((total, effect) => total + (effect as ModifyAttackEffect).amount, 0)
       : 0
 
   return Math.max(
@@ -270,6 +330,123 @@ export const executeCardEffect = (
   }
 
   assertCondition(state, context, effect)
+
+  if (effect.kind === 'draw') {
+    const player = state.players[context.sourcePlayerId]
+    const drawAmount = Math.min(player.deck.length, effect.amount)
+    const updatedState = updatePlayer(
+      state,
+      drawCards(player, drawAmount),
+    )
+    const remainingDraws = effect.amount - drawAmount
+
+    if (
+      updatedState.players[context.sourcePlayerId].deck.length > 0
+    ) {
+      return updatedState
+    }
+
+    if (
+      getRefreshCandidates(
+        updatedState,
+        context.sourcePlayerId,
+      ).length === 0
+    ) {
+      return finishWithDefeat(
+        updatedState,
+        context.sourcePlayerId,
+        'refresh-unavailable',
+      )
+    }
+
+    return {
+      ...updatedState,
+      pendingRefresh: {
+        playerId: context.sourcePlayerId,
+        remainingDraws,
+      },
+    }
+  }
+
+  if (effect.kind === 'deck-to-support') {
+    const player = state.players[context.sourcePlayerId]
+    const takeAmount = Math.min(player.deck.length, effect.amount)
+    const takenCards = player.deck.slice(0, takeAmount)
+    const updatedPlayer: PlayerState = {
+      ...player,
+      deck: player.deck.slice(takeAmount),
+      supportArea: [
+        ...player.supportArea,
+        ...takenCards.map((card) => ({ card, rested: false })),
+      ],
+    }
+    const updatedState = updatePlayer(state, updatedPlayer)
+
+    if (
+      updatedState.players[context.sourcePlayerId].deck.length > 0
+    ) {
+      return updatedState
+    }
+
+    if (
+      getRefreshCandidates(
+        updatedState,
+        context.sourcePlayerId,
+      ).length === 0
+    ) {
+      return finishWithDefeat(
+        updatedState,
+        context.sourcePlayerId,
+        'refresh-unavailable',
+      )
+    }
+
+    return {
+      ...updatedState,
+      pendingRefresh: {
+        playerId: context.sourcePlayerId,
+        remainingDraws: 0,
+      },
+    }
+  }
+
+  if (effect.kind === 'break-to-trash') {
+    validateBreakToTrashTargets(
+      state,
+      context,
+      effect,
+      selectedTargetIds,
+    )
+
+    const sourcePlayer = state.players[context.sourcePlayerId]
+    const selectedIds = new Set(selectedTargetIds)
+
+    if (selectedIds.size === 0) {
+      return { ...state }
+    }
+
+    const updatedPlayer: PlayerState = {
+      ...sourcePlayer,
+      breakArea: sourcePlayer.breakArea.filter(
+        (card) => !selectedIds.has(card.instanceId),
+      ),
+      discardPile: [
+        ...sourcePlayer.discardPile,
+        ...sourcePlayer.breakArea.filter((card) =>
+          selectedIds.has(card.instanceId),
+        ),
+      ],
+    }
+
+    const updatedState = updatePlayer(state, updatedPlayer)
+
+    if (updatedState.status !== 'playing') {
+      return updatedState
+    }
+
+    return resolveBasicVictory(updatedState)
+  }
+
   const targets = selectEffectTargets(
     state,
     context,

@@ -2,12 +2,16 @@ export { GameRuleError } from './errors'
 export {
   executeCardEffect,
   getAttackDamageAgainst,
+  getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
+  isEffectUntargeted,
   selectEffectTargets,
+  validateBreakToTrashTargets,
 } from './effects'
 export { createDemoGame } from './demo'
+export type { DeckConfig } from './demo'
 export { createSeededShuffle } from './helpers'
 export {
   getAttackEnergyCost,
@@ -21,12 +25,14 @@ export {
   createOfficialRedStarterDeck,
   createOfficialStarterDeck,
   createOfficialYellowStarterDeck,
+  DECK_CREATORS,
+  OFFICIAL_DECK_RECIPES,
   OFFICIAL_GREEN_STARTER_DECK,
   OFFICIAL_RED_STARTER_DECK,
   OFFICIAL_STARTER_DECK_RED,
   OFFICIAL_YELLOW_STARTER_DECK,
 } from './starter-deck'
-export type { StarterDeckEntry } from './starter-deck'
+export type { DeckChoice, StarterDeckEntry } from './starter-deck'
 export {
   selectAiEnergyPayment,
   simulateAiMatch,
@@ -57,6 +63,7 @@ export type {
   AttackModifier,
   BaseCard,
   BreakLevelCondition,
+  BreakToTrashEffect,
   CardEffect,
   CardSkill,
   CardType,
@@ -64,7 +71,9 @@ export type {
   CookieInBattle,
   DamageEffect,
   DamageReceivedModifier,
+  DeckToSupportEffect,
   DefeatReason,
+  DrawEffect,
   EffectCondition,
   EffectContext,
   EffectDuration,

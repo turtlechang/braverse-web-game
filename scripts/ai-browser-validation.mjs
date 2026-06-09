@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
+import { strict as assert } from 'node:assert'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -64,6 +65,137 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
+
+  const playerSelect = page.getByTestId('player-deck-select')
+  const aiSelect = page.getByTestId('ai-deck-select')
+  const statusMessage = page.locator('.match-status small')
+
+  assert.strictEqual(
+    await playerSelect.inputValue(),
+    'red',
+    '初始 player-deck-select 應為 red',
+  )
+  assert.strictEqual(
+    await aiSelect.inputValue(),
+    'red',
+    '初始 ai-deck-select 應為 red',
+  )
+
+  await playerSelect.selectOption('yellow')
+  assert.strictEqual(
+    await playerSelect.inputValue(),
+    'yellow',
+    'player-deck-select 應變為 yellow',
+  )
+  await statusMessage.filter({ hasText: '我方 黃色' }).waitFor()
+
+  await aiSelect.selectOption('green')
+  assert.strictEqual(
+    await aiSelect.inputValue(),
+    'green',
+    'ai-deck-select 應變為 green',
+  )
+  await statusMessage.filter({ hasText: 'AI 綠色' }).waitFor()
+
+  await page.locator('button[title="查看官方範例牌組"]').click()
+  await page.locator('.deck-list-modal').waitFor({ state: 'visible' })
+
+  const deckHeading = page.locator('.deck-list-modal h2')
+  await deckHeading.filter({ hasText: '黃色' }).waitFor()
+
+  assert.ok(
+    (await page.locator('.deck-reference-placeholder').count()) > 0,
+    '應顯示 deck-reference-placeholder',
+  )
+  assert.strictEqual(
+    await page.locator('.deck-reference-image img').count(),
+    0,
+    '不應有 starter-deck 圖片',
+  )
+
+  await page.getByTestId('view-ai-deck').click()
+  await deckHeading.filter({ hasText: '綠色' }).waitFor()
+
+  assert.ok(
+    (await page.locator('.deck-reference-placeholder').count()) > 0,
+    'AI 牌組應仍是 placeholder',
+  )
+
+  await page.locator('.deck-list-modal button.close-modal').click()
+  await page.locator('.deck-list-modal').waitFor({ state: 'hidden' })
+
+  await playerSelect.selectOption('red')
+  assert.strictEqual(await playerSelect.inputValue(), 'red')
+  await aiSelect.selectOption('red')
+  assert.strictEqual(await aiSelect.inputValue(), 'red')
+
+  const runBreakToTrashTest = async (variant) => {
+    const testUrl = `${baseUrl}?test-state=break-to-trash-${variant}`
+    await page.goto(testUrl, { waitUntil: 'networkidle' })
+
+    const handCardWrap = page.locator('.bottom-hand .hand-card-wrap').first()
+    await handCardWrap.hover()
+
+    const deployButton = handCardWrap.locator('.hand-card-action', { hasText: '登場' })
+    await deployButton.waitFor({ state: 'visible' })
+    await deployButton.click()
+
+    const effectPanel = page.locator('.effect-panel')
+    await effectPanel.waitFor({ state: 'visible' })
+
+    const supportCards = page.locator('.bottom-field .support-cards .support-card')
+    const supportCount = await supportCards.count()
+    assert.ok(supportCount >= 2, `測試狀態應有至少 2 張支援卡，實際 ${supportCount}`)
+
+    await supportCards.nth(0).click()
+    await supportCards.nth(1).click()
+
+    const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
+
+    if (variant === 'lv1') {
+      const breakCards = page.locator('.bottom-field .break-cards .break-card')
+      const breakCount = await breakCards.count()
+      assert.ok(breakCount >= 1, 'LV.1 測試應有至少 1 張休息區卡牌')
+
+      const firstBreakCard = breakCards.first()
+      const isTargetable = await firstBreakCard.evaluate(
+        (el) => el.classList.contains('is-targetable'),
+      )
+      assert.ok(isTargetable, 'LV.1 休息區卡牌應標示為效果目標')
+
+      await firstBreakCard.click()
+      const isSelected = await firstBreakCard.evaluate(
+        (el) => el.classList.contains('is-selected'),
+      )
+      assert.ok(isSelected, '點選後休息區卡牌應進入已選狀態')
+
+      await confirmButton.click()
+
+      const statusMessage = page.locator('.match-status small')
+      await statusMessage.filter({ hasText: /移至棄牌區/ }).waitFor()
+    } else {
+      const breakCards = page.locator('.bottom-field .break-cards .break-card')
+      const breakCount = await breakCards.count()
+      assert.ok(breakCount >= 1, 'LV.2 測試應有至少 1 張休息區卡牌')
+
+      const firstBreakCard = breakCards.first()
+      const isTargetable = await firstBreakCard.evaluate(
+        (el) => el.classList.contains('is-targetable'),
+      )
+      assert.ok(!isTargetable, 'LV.2 休息區卡牌不應標示為效果目標')
+
+      await confirmButton.click()
+
+      const statusMessage = page.locator('.match-status small')
+      await statusMessage.filter({ hasText: /沒有選擇休息區目標/ }).waitFor()
+    }
+  }
+
+  await runBreakToTrashTest('lv1')
+  await runBreakToTrashTest('lv2')
+
+  await page.goto(baseUrl, { waitUntil: 'networkidle' })
+
   await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
   await page.getByTestId('ai-simulation-report').waitFor()
 

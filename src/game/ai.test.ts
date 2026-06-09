@@ -4,6 +4,7 @@ import {
   selectAiEnergyPayment,
   simulateAiMatch,
   takeAiStep,
+  type CardEffect,
   type CardSkill,
   type GameCard,
   type GameState,
@@ -384,5 +385,95 @@ describe('simple AI opponent', () => {
 
     expect(next.action).toBe('advance-phase')
     expect(state).toEqual(snapshot)
+  })
+})
+
+describe('AI break-to-trash target selection', () => {
+  const bttEffect: CardEffect = {
+    kind: 'break-to-trash',
+    max: 1,
+    exactLevel: 1,
+  }
+
+  const bttSkill: CardSkill = {
+    trigger: 'activate',
+    oncePerTurn: false,
+    yourTurn: false,
+    restSource: false,
+    cost: {},
+    text: 'Test break-to-trash',
+    effects: [bttEffect],
+  }
+
+  it('selects 1 break area target when candidates exist', () => {
+    let state = createDemoGame()
+    const aiCookie = {
+      ...state.players['player-two'].battleArea[0].card,
+      skill: bttSkill,
+      effects: [bttEffect],
+    }
+    const lv1Card = {
+      ...state.players['player-two'].battleArea[0].card,
+      instanceId: 'ai-break-lv1',
+      level: 1,
+    }
+
+    state = {
+      ...state,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [{ ...state.players['player-two'].battleArea[0], card: aiCookie }],
+          breakArea: [lv1Card],
+          hand: state.players['player-two'].hand.filter(
+            (c) => c.type !== 'cookie',
+          ),
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('activate-skill')
+    expect(decision.effectSelections).toBeDefined()
+    expect(decision.effectSelections![0].targetIds).toEqual([lv1Card.instanceId])
+    expect(decision.state.players['player-two'].breakArea).toHaveLength(0)
+    expect(decision.state.players['player-two'].discardPile).toHaveLength(
+      state.players['player-two'].discardPile.length + 1,
+    )
+  })
+
+  it('selects 0 break area targets when no candidates exist', () => {
+    let state = createDemoGame()
+    const aiCookie = {
+      ...state.players['player-two'].battleArea[0].card,
+      skill: bttSkill,
+      effects: [bttEffect],
+    }
+
+    state = {
+      ...state,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [{ ...state.players['player-two'].battleArea[0], card: aiCookie }],
+          breakArea: [],
+          hand: state.players['player-two'].hand.filter(
+            (c) => c.type !== 'cookie',
+          ),
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('activate-skill')
+    expect(decision.effectSelections![0].targetIds).toHaveLength(0)
   })
 })

@@ -1,0 +1,120 @@
+.effect-panel {
+  position: fixed;
+  z-index: 40;
+  right: 18px;
+  top: 94px;
+  width: min(330px, calc(100vw - 36px));
+  padding: 18px;
+  border: 1px solid rgba(113, 236, 255, 0.72);
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.95);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+}
+
+.effect-panel > span {
+  color: #71e9ff;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.effect-panel > strong {
+  display: block;
+  margin-top: 3px;
+}
+
+.skill-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.skill-labels span {
+  padding: 3px 6px;
+  border: 1px solid rgba(113, 233, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(113, 233, 255, 0.1);
+  color: #9aedff;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.effect-panel > p,
+.effect-panel li {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.effect-instruction {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0 8px;
+  padding: 10px;
+  border-left: 3px solid #ffe66e;
+  background: rgba(255, 230, 110, 0.1);
+  color: #fff3a6;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.effect-instruction svg {
+  width: 18px;
+  flex: 0 0 auto;
+}
+
+.effect-panel small {
+  display: block;
+  color: rgba(255, 255, 255, 0.52);
+}
+
+.effect-panel button {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  border: 1px solid #fff17c;
+  border-radius: 5px;
+  background: linear-gradient(#27b8dd, #0875bd);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.effect-panel button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.48;
+}
+
+.effect-panel button.skip-effect {
+  margin-top: 7px;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.effect-panel button svg {
+  width: 18px;
+}
+
+.effect-panel ol {
+  max-height: 112px;
+  margin: 12px 0 0;
+  padding: 10px 10px 0 26px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 680px) {
+  .effect-panel {
+    top: 136px;
+    right: 8px;
+    width: min(300px, calc(100vw - 16px));
+  }
+}

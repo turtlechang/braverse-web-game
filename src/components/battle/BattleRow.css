@@ -1,0 +1,457 @@
+.battle-row {
+  position: relative;
+  min-width: 0;
+  min-height: 270px;
+  display: grid;
+  grid-template-columns: 132px minmax(440px, 1fr) 132px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.row-meta {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  padding: 7px 9px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(3, 22, 58, 0.72);
+  border-left: 3px solid #57e3ff;
+}
+
+.row-meta span {
+  color: #65e8ff;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.row-meta strong {
+  margin-top: 4px;
+  font-size: 1rem;
+}
+
+.row-meta small {
+  margin-top: 4px;
+  font-size: 0.68rem;
+}
+
+.combat-zone,
+.support-zone {
+  position: relative;
+  min-width: 0;
+  border: 2px solid rgba(128, 190, 255, 0.24);
+  background: rgba(6, 34, 81, 0.3);
+  box-shadow: inset 0 0 28px rgba(2, 14, 45, 0.35);
+}
+
+.bottom-field .combat-zone {
+  border-color: rgba(255, 231, 154, 0.66);
+  box-shadow:
+    inset 0 0 28px rgba(2, 14, 45, 0.35),
+    0 0 16px rgba(255, 222, 115, 0.14);
+}
+
+.field-stack {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 82px minmax(178px, 1fr);
+  gap: 10px;
+}
+
+.bottom-field .field-stack {
+  grid-template-rows: minmax(178px, 1fr) 82px;
+}
+
+.zone-watermark {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(255, 255, 255, 0.26);
+  font-size: 1.2rem;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.combat-slots {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 34px;
+  padding: 14px;
+}
+
+.combat-card-wrap {
+  position: relative;
+  width: 112px;
+}
+
+.target-hint {
+  padding: 3px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 3px;
+  background: rgba(2, 16, 45, 0.9);
+  font-size: 0.58rem;
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max-content;
+  transform: translate(-50%, -50%);
+  color: #fff5a8;
+  border-color: #ffe65f;
+  pointer-events: none;
+}
+
+.skill-action {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: -27px;
+  width: max-content;
+  min-height: 24px;
+  transform: translateX(-50%);
+  border: 1px solid #ffe66e;
+  border-radius: 4px;
+  background: rgba(4, 34, 75, 0.96);
+  color: #fff3a6;
+  font-size: 0.62rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.empty-zone {
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 0.76rem;
+}
+
+.side-zones {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+}
+
+.break-zone,
+.deck-zone,
+.stage-zone,
+.discard-zone {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  border: 1px solid rgba(145, 203, 255, 0.3);
+  background: rgba(5, 27, 70, 0.46);
+}
+
+.break-zone span,
+.deck-zone span,
+.stage-zone span,
+.discard-zone span {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.break-zone strong,
+.deck-zone strong,
+.discard-zone strong {
+  margin: 2px 0;
+  font-size: 1.1rem;
+}
+
+.break-zone small,
+.discard-zone small {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.break-zone {
+  min-height: 0;
+  align-content: start;
+  padding: 10px 8px;
+  overflow: hidden;
+}
+
+.zone-heading {
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+}
+
+.break-cards {
+  position: relative;
+  width: 82px;
+  min-height: 210px;
+  margin-top: 8px;
+}
+
+.break-card-wrap {
+  position: relative;
+}
+
+.break-card {
+  position: absolute;
+  left: 50%;
+  width: 66px;
+  transform: translateX(-50%);
+}
+
+.break-card-wrap:nth-child(1) .break-card {
+  top: 0;
+}
+
+.break-card-wrap:nth-child(2) .break-card {
+  top: 34px;
+}
+
+.break-card-wrap:nth-child(3) .break-card {
+  top: 68px;
+}
+
+.break-card-wrap:nth-child(4) .break-card {
+  top: 102px;
+}
+
+.break-card-wrap:nth-child(n + 5) .break-card {
+  top: 136px;
+}
+
+.break-cards > .empty-zone {
+  position: absolute;
+  inset: 28px 0 auto;
+  text-align: center;
+}
+
+.utility-zones {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 1.15fr 1fr 0.72fr;
+  gap: 8px;
+}
+
+.mini-deck {
+  width: 42px;
+  height: 58px;
+  margin-bottom: 3px;
+  border: 2px solid #37588c;
+  border-radius: 3px;
+  background: linear-gradient(145deg, #102c64, #030b27);
+  box-shadow:
+    4px 3px 0 #b7c2d1,
+    7px 5px 0 #8796aa;
+}
+
+.support-zone {
+  overflow: hidden;
+}
+
+.support-cards {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+}
+
+.support-card {
+  width: 58px;
+}
+
+.stage-zone svg {
+  width: 30px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.stage-card {
+  width: 58px;
+}
+
+.hand-fan {
+  position: fixed;
+  z-index: 20;
+  right: 28px;
+  bottom: -32px;
+  width: min(580px, calc(100vw - var(--rail-width) - 80px));
+  height: 194px;
+  pointer-events: none;
+}
+
+.top-hand {
+  top: -48px;
+  bottom: auto;
+  right: 26%;
+  height: 158px;
+  transform: rotate(180deg);
+}
+
+.top-hand .hand-card-wrap {
+  bottom: 0;
+}
+
+.top-hand .card-face {
+  transform: rotate(180deg);
+}
+
+.top-hand .hand-card-wrap:hover,
+.top-hand .hand-card-wrap:focus-within {
+  bottom: -18px;
+}
+
+.bottom-hand {
+  right: 28px;
+}
+
+.hand-card-wrap {
+  --rotation: calc(var(--fan-offset) * 4deg);
+  position: absolute;
+  z-index: calc(20 - var(--fan-index));
+  right: calc(var(--fan-index) * 48px);
+  bottom: 0;
+  transform: rotate(var(--rotation));
+  transform-origin: 50% 120%;
+  pointer-events: auto;
+  transition:
+    transform 150ms ease,
+    bottom 150ms ease;
+}
+
+.hand-card-wrap:hover,
+.hand-card-wrap:focus-within {
+  z-index: 50;
+  bottom: 28px;
+  transform: rotate(0);
+}
+
+.hand-card {
+  width: 112px;
+}
+
+.hand-card-action {
+  position: absolute;
+  inset: auto 8px 12px;
+  min-height: 30px;
+  border: 1px solid #fff17c;
+  border-radius: 4px;
+  background: rgba(4, 34, 75, 0.94);
+  color: #fff5a9;
+  font-size: 0.7rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .battle-row {
+    grid-template-columns: 96px minmax(300px, 1fr) 92px;
+    gap: 8px;
+  }
+
+  .row-meta {
+    padding: 6px;
+  }
+
+  .combat-slots {
+    gap: 12px;
+  }
+
+  .break-card {
+    width: 58px;
+  }
+}
+
+@media (max-width: 680px) {
+  .battle-row {
+    min-height: 300px;
+    grid-template-columns: 70px minmax(0, 1fr) 70px;
+    gap: 6px;
+  }
+
+  .row-meta {
+    top: 4px;
+    left: 4px;
+    padding: 7px 9px;
+  }
+
+  .row-meta small {
+    display: none;
+  }
+
+  .field-stack {
+    grid-template-rows: 82px minmax(200px, 1fr);
+  }
+
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(200px, 1fr) 82px;
+  }
+
+  .combat-card-wrap {
+    width: 88px;
+  }
+
+  .break-zone {
+    padding-inline: 3px;
+  }
+
+  .break-cards {
+    width: 62px;
+    min-height: 220px;
+  }
+
+  .break-card {
+    width: 50px;
+  }
+
+  .utility-zones {
+    gap: 5px;
+  }
+
+  .support-cards {
+    padding: 8px;
+  }
+
+  .support-card {
+    width: 44px;
+  }
+
+  .hand-fan {
+    right: 0;
+    bottom: -24px;
+    width: 100vw;
+    height: 170px;
+  }
+
+  .top-hand {
+    position: fixed;
+    top: 126px;
+    right: 0;
+    width: 100vw;
+    height: 120px;
+  }
+
+  .top-hand .hand-card-wrap {
+    right: calc(var(--fan-index) * 34px);
+  }
+
+  .top-hand .hand-card {
+    width: 76px;
+  }
+
+  .bottom-hand {
+    position: absolute;
+    right: -8px;
+    bottom: -164px;
+  }
+
+  .hand-card-wrap {
+    right: calc(var(--fan-index) * 40px);
+  }
+
+  .hand-card {
+    width: 92px;
+  }
+}

@@ -104,10 +104,30 @@ export interface ModifyDamageReceivedEffect {
   condition?: EffectCondition
 }
 
+export interface DrawEffect {
+  kind: 'draw'
+  amount: number
+}
+
+export interface DeckToSupportEffect {
+  kind: 'deck-to-support'
+  amount: number
+}
+
+export interface BreakToTrashEffect {
+  kind: 'break-to-trash'
+  max: number
+  exactLevel: number
+  condition?: EffectCondition
+}
+
 export type CardEffect =
   | DamageEffect
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
+  | DrawEffect
+  | DeckToSupportEffect
+  | BreakToTrashEffect
 
 export interface AttackModifier {
   sourceInstanceId: string

@@ -9,6 +9,8 @@ import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { GameCard, PlayerId } from './types'
 
+export type DeckChoice = 'red' | 'yellow' | 'green'
+
 export interface StarterDeckEntry {
   cardNumber: string
   name: string
@@ -89,6 +91,12 @@ export const OFFICIAL_GREEN_STARTER_DECK: StarterDeckEntry[] = [
 ]
 
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
+
+export const OFFICIAL_DECK_RECIPES: Record<DeckChoice, StarterDeckEntry[]> = {
+  red: OFFICIAL_RED_STARTER_DECK,
+  yellow: OFFICIAL_YELLOW_STARTER_DECK,
+  green: OFFICIAL_GREEN_STARTER_DECK,
+}
 
 const getEnergyColor = (
   source: OfficialCardRecord,
@@ -207,3 +215,12 @@ export const createOfficialGreenStarterDeck = (
   )
 
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
+
+export const DECK_CREATORS: Record<
+  DeckChoice,
+  (playerId: PlayerId) => GameCard[]
+> = {
+  red: createOfficialRedStarterDeck,
+  yellow: createOfficialYellowStarterDeck,
+  green: createOfficialGreenStarterDeck,
+}

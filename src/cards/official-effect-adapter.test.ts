@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import officialSample from '../../data/cards/official-sample.en.json'
+import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
+import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
@@ -8,11 +10,38 @@ import {
 } from '.'
 
 const cards = officialSample.cards as OfficialCardRecord[]
+const yellowCards = officialYellowSample.cards as OfficialCardRecord[]
+const greenCards = officialGreenSample.cards as OfficialCardRecord[]
+
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
 
   if (!card) {
     throw new Error(`Missing official sample card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findYellowCard = (cardNumber: string) => {
+  const card = yellowCards.find(
+    (candidate) => candidate.cardNumber === cardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing yellow sample card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findGreenCard = (cardNumber: string) => {
+  const card = greenCards.find(
+    (candidate) => candidate.cardNumber === cardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing green sample card ${cardNumber}`)
   }
 
   return card
@@ -164,7 +193,7 @@ describe('Starter Deck RED official effect adapter', () => {
       (conversion) => conversion.cardNumber === 'ST1-001',
     )
 
-    expect(supported).toHaveLength(13)
+    expect(supported).toHaveLength(12)
     expect(supported.map((conversion) => conversion.cardNumber)).toEqual(
       expect.arrayContaining([
         'ST1-002',
@@ -179,12 +208,541 @@ describe('Starter Deck RED official effect adapter', () => {
         'ST1-019',
         'ST1-020',
         'ST1-021',
-        'ST1-022',
       ]),
     )
     expect(princess).toMatchObject({
       status: 'unsupported',
       reason: 'unsupported-effect-text',
+    })
+  })
+
+  describe('Starter Deck YELLOW effect regression', () => {
+    it('imports all 20 distinct YELLOW cards', () => {
+      expect(yellowCards).toHaveLength(20)
+      expect(new Set(yellowCards.map((c) => c.cardNumber)).size).toBe(20)
+      expect(
+        yellowCards.every((c) => c.product.title === 'Starter Deck YELLOW'),
+      ).toBe(true)
+    })
+
+    it('ST2-008, ST2-010, and ST2-020 are the supported YELLOW effects', () => {
+      const conversions = convertOfficialCardEffectSet(yellowCards)
+      const supported = conversions.filter(
+        (c) => c.status === 'supported',
+      )
+
+      expect(supported).toHaveLength(3)
+      expect(supported.map((c) => c.cardNumber).sort()).toEqual(
+        ['ST2-008', 'ST2-010', 'ST2-020'].sort(),
+      )
+    })
+
+    it('rejects ST2-011 (When this Cookie faints)', () => {
+      expect(
+        convertOfficialCardEffects(findYellowCard('ST2-011')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects ST2-021 (If opponent Cookie attacks more than)', () => {
+      expect(
+        convertOfficialCardEffects(findYellowCard('ST2-021')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('ST2-011 does not produce sourceOnly damage (parseTarget ordering fix)', () => {
+      const conversion =
+        convertOfficialCardEffects(findYellowCard('ST2-011'))
+
+      expect(conversion.status).toBe('unsupported')
+    })
+
+    it('ST2-008 Eclair Cookie break-to-trash OnPlay effect is supported', () => {
+      const conversion =
+        convertOfficialCardEffects(findYellowCard('ST2-008'))
+
+      expect(conversion).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST2-008',
+        effects: [
+          {
+            kind: 'break-to-trash',
+            max: 1,
+            exactLevel: 1,
+          },
+        ],
+      })
+      if (conversion.status === 'supported') {
+        expect(conversion.effects[0]).not.toHaveProperty('condition')
+      }
+    })
+
+    it('ST2-010 Purple Yam Cookie break-to-trash with condition is supported', () => {
+      const conversion =
+        convertOfficialCardEffects(findYellowCard('ST2-010'))
+
+      expect(conversion).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST2-010',
+        effects: [
+          {
+            kind: 'break-to-trash',
+            max: 1,
+            exactLevel: 1,
+            condition: {
+              kind: 'break-level-at-least',
+              level: 6,
+            },
+          },
+        ],
+      })
+    })
+
+    it('ST2-008 Eclair Cookie skill parsing returns correct trigger and cost', () => {
+      const skill = convertOfficialCookieSkill(findYellowCard('ST2-008'))
+
+      expect(skill).toMatchObject({
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { yellow: 2 },
+        effects: [{ kind: 'break-to-trash', max: 1, exactLevel: 1 }],
+      })
+    })
+
+    it('ST2-010 Purple Yam Cookie skill parsing returns correct trigger and cost', () => {
+      const skill = convertOfficialCookieSkill(findYellowCard('ST2-010'))
+
+      expect(skill).toMatchObject({
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { yellow: 1 },
+        effects: [
+          {
+            kind: 'break-to-trash',
+            max: 1,
+            exactLevel: 1,
+            condition: { kind: 'break-level-at-least', level: 6 },
+          },
+        ],
+      })
+    })
+
+    it('rejects break-to-trash text with Then (compound effect)', () => {
+      const card = {
+        ...findYellowCard('ST2-008'),
+        skill: {
+          name: null,
+          text: '{ap} Select up to 1 LV.1 card from your break area and place it in the trash. Then, draw 1 card.',
+        },
+      }
+
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('ST2-015 has no skill text (no-effect-text)', () => {
+      expect(
+        convertOfficialCardEffects(findYellowCard('ST2-015')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'no-effect-text',
+      })
+    })
+  })
+
+  describe('Starter Deck GREEN effect regression', () => {
+    it('imports all 22 distinct GREEN cards', () => {
+      expect(greenCards).toHaveLength(22)
+      expect(new Set(greenCards.map((c) => c.cardNumber)).size).toBe(22)
+      expect(
+        greenCards.every((c) => c.product.title === 'Starter Deck GREEN'),
+      ).toBe(true)
+    })
+
+    it('ST3-009 and ST3-010 are the only supported GREEN effects', () => {
+      const conversions = convertOfficialCardEffectSet(greenCards)
+      const supported = conversions.filter(
+        (c) => c.status === 'supported',
+      )
+
+      expect(supported).toHaveLength(2)
+      expect(supported.map((c) => c.cardNumber)).toEqual(['ST3-009', 'ST3-010'])
+    })
+
+    it('rejects ST3-002 (special cost with Place)', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-002')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects ST3-004 (compound effect with Then)', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-004')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects ST3-005 (special cost with Place)', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-005')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects ST3-015 (special cost with Place)', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-015')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects ST3-017 (compound effect with Then)', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-017')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects ST3-019 (compound effect with Then)', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-019')),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('ST3-010 Aloe Cookie deck-to-support is supported', () => {
+      const conversion = convertOfficialCardEffects(findGreenCard('ST3-010'))
+
+      expect(conversion).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST3-010',
+        effects: [{ kind: 'deck-to-support', amount: 1 }],
+      })
+    })
+
+    it('ST3-010 Aloe Cookie skill parsing', () => {
+      const skill = convertOfficialCookieSkill(findGreenCard('ST3-010'))
+
+      expect(skill).toMatchObject({
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { green: 2 },
+        text: '{ap} 《{G}{G}》 Take 1 card from the top your deck and place it in your support area as active.',
+        effects: [{ kind: 'deck-to-support', amount: 1 }],
+      })
+    })
+  })
+
+  describe('draw effect adapter', () => {
+    const makeCard = (
+      overrides: Partial<OfficialCardRecord>,
+    ): OfficialCardRecord =>
+      ({
+        sourceId: 0,
+        locale: 'en',
+        cardNumber: 'TEST-001',
+        baseCardNumber: 'TEST-001',
+        variant: null,
+        name: 'Test Card',
+        type: 'item',
+        officialType: 'Item',
+        rarity: null,
+        grade: null,
+        level: null,
+        hp: null,
+        energyType: null,
+        color: null,
+        skill: { name: null, text: null },
+        attackText: null,
+        flipText: null,
+        keywords: [],
+        product: { id: null, title: null, category: null },
+        restrictions: { banned: false, limited: false },
+        flags: { enabled: true, hidden: false, extra: false },
+        imageUrl: '',
+        officialUpdatedAt: null,
+        sourceUrl: '',
+        ...overrides,
+      }) as OfficialCardRecord
+
+    it('parses Draw 1 card from item attack text', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'item',
+            attackText: '{Y} Draw 1 card from your deck.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'supported',
+        effects: [{ kind: 'draw', amount: 1 }],
+      })
+    })
+
+    it('parses Draw up to 1 card from stage attack text', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'stage',
+            attackText:
+              'Draw up to 1 card from your deck.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'supported',
+        effects: [{ kind: 'draw', amount: 1 }],
+      })
+    })
+
+    it('parses draw from cookie skill text (OnPlay/Activate)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'cookie',
+            skill: {
+              name: null,
+              text: '{mob}{t1} {R} Draw 1 card from your deck.',
+            },
+            attackText: '{R} Deals 1 damage.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'supported',
+        effects: [{ kind: 'draw', amount: 1 }],
+      })
+    })
+
+    it('rejects draw text from flip card type', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'flip',
+            attackText: '{R} Deals 1 damage.',
+            flipText:
+              'Draw up to 1 card from your deck.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('draw amount parses correctly for multiple cards', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'item',
+            attackText: 'Draw 3 cards from your deck.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'supported',
+        effects: [{ kind: 'draw', amount: 3 }],
+      })
+    })
+
+    it('rejects ST2-018 compound draw with Then and view HP (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'item',
+            cardNumber: 'ST2-018',
+            attackText:
+              '《{Y}》 Draw 1 card from your deck. Then, select up to 1 of your Cookies and view all its HP cards. (You cannot switch the order of HP cards.)',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects ST3-022 conditional draw with If you did and support area (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'stage',
+            cardNumber: 'ST3-022',
+            attackText:
+              '《{G}》 Place in your stage area.\r\n\r\n{mob} 《Rest this card.》 Take 1 card from your support area to your hand. If you did, you can draw 1 card from your deck.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects draw + Then compound effect (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'item',
+            attackText: 'Draw 1 card from your deck. Then, deal 1 damage.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects draw + If you did compound effect (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'item',
+            attackText: 'Draw 1 card from your deck. If you did, deal 1 damage.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+  })
+
+  describe('deck-to-support effect adapter', () => {
+    const makeCard = (
+      overrides: Partial<OfficialCardRecord>,
+    ): OfficialCardRecord =>
+      ({
+        sourceId: 0,
+        locale: 'en',
+        cardNumber: 'TEST-001',
+        baseCardNumber: 'TEST-001',
+        variant: null,
+        name: 'Test Card',
+        type: 'cookie',
+        officialType: 'COOKIE',
+        rarity: null,
+        grade: null,
+        level: 1,
+        hp: 1,
+        energyType: null,
+        color: null,
+        skill: { name: null, text: null },
+        attackText: null,
+        flipText: null,
+        keywords: [],
+        product: { id: null, title: null, category: null },
+        restrictions: { banned: false, limited: false },
+        flags: { enabled: true, hidden: false, extra: false },
+        imageUrl: '',
+        officialUpdatedAt: null,
+        sourceUrl: '',
+        ...overrides,
+      }) as OfficialCardRecord
+
+    it('parses Take 1 card from top deck to support area', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            cardNumber: 'ST3-010',
+            skill: {
+              name: null,
+              text: '{ap} 《{G}{G}》 Take 1 card from the top your deck and place it in your support area as active.',
+            },
+            attackText: '《{G}》 Deals 1 damage.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST3-010',
+        effects: [{ kind: 'deck-to-support', amount: 1 }],
+      })
+    })
+
+    it('rejects deck-to-support with Then compound (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'cookie',
+            skill: {
+              name: null,
+              text: '{ap} Take 1 card from the top your deck and place it in your support area as active. Then, draw 1 card.',
+            },
+            attackText: 'Deals 1 damage.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects deck-to-support with If you did compound (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'cookie',
+            skill: {
+              name: null,
+              text: '{ap} Take 1 card from the top your deck and place it in your support area as active. If you did, gain +1 HP.',
+            },
+            attackText: 'Deals 1 damage.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects deck-to-support from flip card type (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'flip',
+            attackText: 'Deals 1 damage.',
+            flipText: 'Take 1 card from the top your deck and place it in your support area as active.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('rejects draw text that partially resembles deck-to-support (unsupported)', () => {
+      expect(
+        convertOfficialCardEffects(
+          makeCard({
+            type: 'item',
+            attackText: 'Take 1 card from the top your deck.',
+          }),
+        ),
+      ).toMatchObject({
+        status: 'unsupported',
+        reason: 'unsupported-effect-text',
+      })
     })
   })
 })

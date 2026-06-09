@@ -34,6 +34,37 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
 }
 
 const parseTarget = (text: string): EffectTargetSelector | null => {
+  const match = text.match(
+    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?\s+Cookies/i,
+  )
+
+  if (match) {
+    const target: EffectTargetSelector = {
+      side: match[3].toLowerCase().includes("opponent's")
+        ? 'opponent'
+        : 'self',
+      min: match[1] ? 0 : Number(match[2]),
+      max: Number(match[2]),
+    }
+
+    if (match[4]) {
+      target.excludeSource = true
+    }
+
+    const remainingHpMatch = text.match(/remaining HP is (\d+)/i)
+    const minimumLevelMatch = text.match(/LV\.(\d+) or higher/i)
+
+    if (remainingHpMatch) {
+      target.remainingHp = Number(remainingHpMatch[1])
+    }
+
+    if (minimumLevelMatch) {
+      target.minLevel = Number(minimumLevelMatch[1])
+    }
+
+    return target
+  }
+
   if (/\bthis Cookie\b/i.test(text)) {
     return {
       side: 'self',
@@ -43,38 +74,7 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
     }
   }
 
-  const match = text.match(
-    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?\s+Cookies/i,
-  )
-
-  if (!match) {
-    return null
-  }
-
-  const target: EffectTargetSelector = {
-    side: match[3].toLowerCase().includes("opponent's")
-      ? 'opponent'
-      : 'self',
-    min: match[1] ? 0 : Number(match[2]),
-    max: Number(match[2]),
-  }
-
-  if (match[4]) {
-    target.excludeSource = true
-  }
-
-  const remainingHpMatch = text.match(/remaining HP is (\d+)/i)
-  const minimumLevelMatch = text.match(/LV\.(\d+) or higher/i)
-
-  if (remainingHpMatch) {
-    target.remainingHp = Number(remainingHpMatch[1])
-  }
-
-  if (minimumLevelMatch) {
-    target.minLevel = Number(minimumLevelMatch[1])
-  }
-
-  return target
+  return null
 }
 
 const parseCondition = (text: string): EffectCondition | undefined => {
@@ -88,6 +88,42 @@ const parseCondition = (text: string): EffectCondition | undefined => {
     : undefined
 }
 
+const COST_OR_MARKER_RE = /\{[A-Za-z0-9_]+\}/g
+const BRACKET_COST_RE = /(?:<|《)[^>》]*(?:>|》)/g
+const DRAW_ONLY_RE = /^Draw\s+(up to\s+)?(\d+)\s+card(?:s)?\s+from\s+your\s+deck\.?$/i
+const DECK_TO_SUPPORT_RE = /^Take\s+(\d+)\s+card(?:s)?\s+from\s+the\s+top\s+your\s+deck\s+and\s+place\s+(?:it|them)\s+in\s+your\s+support\s+area\s+as\s+active\.?$/i
+const BREAK_TO_TRASH_RE = /^(?:If\s+your\s+break\s+area\s+is\s+LV\.(\d+)\s+or\s+higher,\s+)?Select\s+up\s+to\s+(\d+)\s+LV\.(\d+)\s+card\s+from\s+your\s+break\s+area\s+and\s+place\s+it\s+in\s+the\s+trash\.?$/i
+
+const stripEffectText = (text: string): string =>
+  text.replace(COST_OR_MARKER_RE, '').replace(BRACKET_COST_RE, '').replace(/\s+/g, ' ').trim()
+
+const parseSimpleDraw = (stripped: string): number | null => {
+  const match = stripped.match(DRAW_ONLY_RE)
+  return match ? Number(match[2]) : null
+}
+
+const parseDeckToSupport = (stripped: string): number | null => {
+  const match = stripped.match(DECK_TO_SUPPORT_RE)
+  return match ? Number(match[1]) : null
+}
+
+interface ParsedBreakToTrash {
+  max: number
+  exactLevel: number
+  conditionLevel?: number
+}
+
+const parseBreakToTrash = (stripped: string): ParsedBreakToTrash | null => {
+  const match = stripped.match(BREAK_TO_TRASH_RE)
+  return match
+    ? {
+        max: Number(match[2]),
+        exactLevel: Number(match[3]),
+        conditionLevel: match[1] ? Number(match[1]) : undefined,
+      }
+    : null
+}
+
 export const convertOfficialCardEffects = (
   card: OfficialCardRecord,
 ): OfficialEffectConversion => {
@@ -99,6 +135,109 @@ export const convertOfficialCardEffects = (
       cardNumber: card.cardNumber,
       sourceText,
       reason: 'no-effect-text',
+    }
+  }
+
+  if (/When this Cookie faints/i.test(sourceText)) {
+    return {
+      status: 'unsupported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      reason: 'unsupported-effect-text',
+    }
+  }
+
+  if (/\bThen\b/i.test(sourceText)) {
+    return {
+      status: 'unsupported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      reason: 'unsupported-effect-text',
+    }
+  }
+
+  if (/If\s+(?:\d+\s+of\s+)?your opponent's Cookies?\s+attacks?\s+more than\s+\d+/i.test(sourceText)) {
+    return {
+      status: 'unsupported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      reason: 'unsupported-effect-text',
+    }
+  }
+
+  if (/(?:<|《)[^>》]*?(?:Place|Take|Discard)[^>》]*(?:>|》)/i.test(sourceText)) {
+    return {
+      status: 'unsupported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      reason: 'unsupported-effect-text',
+    }
+  }
+
+  if (card.type === 'stage' && /Place in your stage area/i.test(sourceText)) {
+    return {
+      status: 'unsupported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      reason: 'unsupported-effect-text',
+    }
+  }
+
+  if (card.type !== 'flip') {
+    const drawAmount = parseSimpleDraw(stripEffectText(sourceText))
+
+    if (drawAmount !== null) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'draw',
+            amount: drawAmount,
+          },
+        ],
+      }
+    }
+
+    const deckToSupportAmount = parseDeckToSupport(stripEffectText(sourceText))
+
+    if (deckToSupportAmount !== null) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'deck-to-support',
+            amount: deckToSupportAmount,
+          },
+        ],
+      }
+    }
+
+    const breakToTrashParsed = parseBreakToTrash(stripEffectText(sourceText))
+
+    if (breakToTrashParsed) {
+      const effect: CardEffect = {
+        kind: 'break-to-trash',
+        max: breakToTrashParsed.max,
+        exactLevel: breakToTrashParsed.exactLevel,
+      }
+
+      if (breakToTrashParsed.conditionLevel) {
+        effect.condition = {
+          kind: 'break-level-at-least',
+          level: breakToTrashParsed.conditionLevel,
+        }
+      }
+
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [effect],
+      }
     }
   }
 

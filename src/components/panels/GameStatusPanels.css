@@ -1,0 +1,187 @@
+.attack-payment-panel {
+  position: fixed;
+  z-index: 40;
+  right: 18px;
+  top: 94px;
+  width: min(330px, calc(100vw - 36px));
+  padding: 18px;
+  border: 1px solid rgba(113, 236, 255, 0.72);
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.95);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+}
+
+.attack-payment-panel > span {
+  color: #71e9ff;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.attack-payment-panel > strong {
+  display: block;
+  margin: 3px 0 12px;
+}
+
+.attack-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px;
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  background: rgba(25, 109, 149, 0.16);
+  font-size: 0.76rem;
+}
+
+.attack-payment-panel small,
+.attack-payment-panel em {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.7rem;
+  font-style: normal;
+}
+
+.attack-payment-panel p {
+  margin: 10px 0 0;
+  color: #ff9d9d;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.attack-payment-panel.is-valid {
+  border-color: rgba(116, 255, 164, 0.82);
+}
+
+.attack-payment-panel.is-valid p,
+.attack-payment-panel.is-valid em {
+  color: #88ffb1;
+}
+
+.attack-payment-panel button {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 4px;
+  background: rgba(4, 34, 75, 0.96);
+  color: #fff;
+  cursor: pointer;
+}
+
+.ai-status-panel {
+  position: fixed;
+  z-index: 35;
+  left: calc(var(--rail-width) + 18px);
+  bottom: 18px;
+  width: 210px;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid rgba(113, 233, 255, 0.4);
+  border-radius: 7px;
+  background: rgba(3, 20, 53, 0.92);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.32);
+}
+
+.ai-status-panel > span,
+.simulation-report > span {
+  color: #71e9ff;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.ai-status-panel small {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ai-status-panel button {
+  min-height: 34px;
+  margin-top: 7px;
+  border: 1px solid #ffe66e;
+  border-radius: 4px;
+  background: rgba(24, 121, 171, 0.78);
+  font-size: 0.7rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.simulation-report {
+  position: fixed;
+  z-index: 90;
+  inset: 90px 24px 24px calc(var(--rail-width) + 24px);
+  overflow: auto;
+  padding: 24px;
+  border: 2px solid rgba(113, 233, 255, 0.6);
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.98);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.58);
+}
+
+.simulation-report h2 {
+  margin: 4px 0 18px;
+}
+
+.simulation-table {
+  display: grid;
+  gap: 7px;
+}
+
+.simulation-table > div {
+  display: grid;
+  grid-template-columns: 34px 1fr repeat(5, minmax(68px, auto)) 130px;
+  gap: 10px;
+  align-items: center;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.72rem;
+}
+
+.simulation-table code {
+  color: #ffe674;
+}
+
+.close-modal {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  right: 14px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(174, 220, 255, 0.48);
+  border-radius: 50%;
+  background: rgba(3, 20, 53, 0.72);
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.close-modal svg {
+  width: 19px;
+}
+
+@media (max-width: 680px) {
+  .attack-payment-panel {
+    top: 136px;
+    right: 8px;
+    width: min(300px, calc(100vw - 16px));
+  }
+
+  .ai-status-panel {
+    left: 8px;
+    bottom: 8px;
+    width: 190px;
+  }
+
+  .simulation-report {
+    inset: 72px 8px 8px;
+  }
+
+  .simulation-table > div {
+    grid-template-columns: 30px 1fr 70px;
+  }
+}

@@ -6,9 +6,11 @@ import {
 } from './actions'
 import {
   executeCardEffect,
+  getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
+  isEffectUntargeted,
 } from './effects'
 import {
   getAttackEnergyCost,
@@ -81,6 +83,18 @@ const chooseEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): string[] => {
+  if (isEffectUntargeted(effect)) {
+    return []
+  }
+
+  if (effect.kind === 'break-to-trash') {
+    const candidates = getBreakToTrashCandidates(state, context, effect)
+    const count = Math.min(effect.max, candidates.length)
+    return candidates
+      .slice(0, count)
+      .map((card) => card.instanceId)
+  }
+
   const candidates = getEffectTargetCandidates(
     state,
     context,
@@ -164,8 +178,24 @@ const resolveAiSkill = (
   const effectSelections: AiEffectSelection[] = []
 
   for (const effect of effects) {
+    if (isEffectUntargeted(effect)) {
+      nextState = executeCardEffect(
+        nextState,
+        context,
+        effect,
+        [],
+      )
+      effectSelections.push({
+        sourceInstanceId: source.card.instanceId,
+        paymentIds,
+        targetIds: [],
+        effect,
+      })
+      continue
+    }
+
     const targetIds = chooseEffectTargets(nextState, context, effect)
-    if (targetIds.length < effect.target.min) {
+    if (effect.kind !== 'break-to-trash' && targetIds.length < effect.target.min) {
       return null
     }
     nextState = executeCardEffect(

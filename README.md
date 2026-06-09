@@ -17,14 +17,17 @@
 - 已加入綠色起始牌組官方樣本檔：`data/cards/official-starter-deck-green.en.json`。
 - 已新增明確 API：`createOfficialRedStarterDeck`、`createOfficialYellowStarterDeck`、`createOfficialGreenStarterDeck`、`OFFICIAL_RED_STARTER_DECK`、`OFFICIAL_YELLOW_STARTER_DECK`、`OFFICIAL_GREEN_STARTER_DECK`。
 - `createOfficialStarterDeck` 與 `OFFICIAL_STARTER_DECK_RED` 仍保留為紅色起始牌組相容別名。
-- 單元測試涵蓋官方範例卡轉換、紅色與黃色起始牌組張數、配方數量、種子洗牌重現性、AI 決策、Refresh 與能量付款等流程。
-- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，完整瀏覽器驗證前需先執行 `npm run build`。
+- `ST3-010 Aloe Cookie` 的 deck-to-support 效果已完整支援：從牌庫頂取牌直立放入支援區、牌庫歸零觸發 Refresh、無候選敗北。
+- UI 可分別設定玩家與 AI 使用紅色、黃色或綠色起始牌組，重新開始與 AI 種子驗證會沿用目前選擇。
+- 目前共有 173 項單元測試，涵蓋官方範例卡轉換、紅色、黃色與綠色起始牌組張數、配方數量、種子洗牌重現性、AI 決策、Refresh、能量付款、抽牌效果、deck-to-support 效果、break-to-trash 效果、官方效果轉換保守判斷（含紅黃綠三牌組回歸測試）、createDemoGame 多色牌組切換、break-to-trash 測試狀態工廠、localhost 安全閘門等流程。
+- App.tsx 已分階段拆成卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板與 modal 元件，規則協調仍留在 App。
+- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證 break-to-trash 的選 1 與選 0 路徑；完整瀏覽器驗證前需先執行 `npm run build`。
 
 ## 下一步計畫
 
-- 將 UI 的牌組清單切換擴充為紅色／黃色／綠色起始牌組可選。
+- 已達成：三色（RED / YELLOW / GREEN）起始牌組切換、App.tsx 元件拆分（卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板、modal）。
 - 持續補齊官方效果文字到 `CardEffect`，並同步新增規則測試。
-- 釐清尚未完全支援的 FLIP、陷阱與條件式效果時機。
+- 實作尚未支援的 FLIP 同時觸發順序、TRAP 回應視窗、When this Cookie faints、對手攻擊門檻與 Then/If you did 複合效果（參考 docs/card-effects.md 的 unsupported 清單）。
 - 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
 
 ## 開發指令

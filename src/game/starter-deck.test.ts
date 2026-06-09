@@ -127,6 +127,22 @@ describe('official yellow starter deck', () => {
       ],
     })
   })
+
+  it('creates a demo game using the yellow deck', () => {
+    const state = createDemoGame(undefined, 'yellow')
+
+    for (const player of Object.values(state.players)) {
+      const cards = [
+        ...player.deck,
+        ...player.hand,
+        ...player.battleArea.map((cookie) => cookie.card),
+        ...player.battleArea.flatMap((cookie) => cookie.hpCards),
+      ]
+      expect(cards).toHaveLength(60)
+      expect(cards.filter((card) => card.id === 'ST2-001')).toHaveLength(2)
+      expect(cards.filter((card) => card.id === 'ST2-020')).toHaveLength(2)
+    }
+  })
 })
 
 describe('official green starter deck', () => {
@@ -161,17 +177,65 @@ describe('official green starter deck', () => {
     expect(vineyVines).toMatchObject({
       name: 'Viney Vines',
       type: 'item',
-      effects: [
-        {
-          kind: 'damage',
-          amount: 1,
-          target: {
-            side: 'opponent',
-            min: 0,
-            max: 2,
-          },
-        },
-      ],
     })
+    expect(vineyVines).not.toHaveProperty('effects')
+  })
+
+  it('creates a demo game using the green deck', () => {
+    const state = createDemoGame(undefined, 'green')
+
+    for (const player of Object.values(state.players)) {
+      const cards = [
+        ...player.deck,
+        ...player.hand,
+        ...player.battleArea.map((cookie) => cookie.card),
+        ...player.battleArea.flatMap((cookie) => cookie.hpCards),
+      ]
+      expect(cards).toHaveLength(60)
+      expect(cards.filter((card) => card.id === 'ST3-001')).toHaveLength(4)
+      expect(cards.filter((card) => card.id === 'ST3-022')).toHaveLength(2)
+    }
+  })
+})
+
+describe('different decks for player and AI', () => {
+  it('supports separate deck choices for each side', () => {
+    const state = createDemoGame(undefined, {
+      player: 'red',
+      ai: 'yellow',
+    })
+
+    const playerCards = [
+      ...state.players['player-one'].deck,
+      ...state.players['player-one'].hand,
+      ...state.players['player-one'].battleArea.map((cookie) => cookie.card),
+      ...state.players['player-one'].battleArea.flatMap((cookie) => cookie.hpCards),
+    ]
+    const aiCards = [
+      ...state.players['player-two'].deck,
+      ...state.players['player-two'].hand,
+      ...state.players['player-two'].battleArea.map((cookie) => cookie.card),
+      ...state.players['player-two'].battleArea.flatMap((cookie) => cookie.hpCards),
+    ]
+
+    expect(playerCards).toHaveLength(60)
+    expect(aiCards).toHaveLength(60)
+    expect(playerCards.filter((card) => card.id === 'ST1-001')).toHaveLength(4)
+    expect(aiCards.filter((card) => card.id === 'ST2-001')).toHaveLength(2)
+    expect(aiCards.filter((card) => card.id === 'ST1-001')).toHaveLength(0)
+  })
+
+  it('accepts a single string for backward compatibility', () => {
+    const state = createDemoGame(undefined, 'yellow')
+
+    for (const player of Object.values(state.players)) {
+      const cards = [
+        ...player.deck,
+        ...player.hand,
+        ...player.battleArea.map((cookie) => cookie.card),
+        ...player.battleArea.flatMap((cookie) => cookie.hpCards),
+      ]
+      expect(cards.filter((card) => card.id === 'ST2-001')).toHaveLength(2)
+    }
   })
 })
