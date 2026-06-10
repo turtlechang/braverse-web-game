@@ -13,11 +13,15 @@ scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-flash "只回覆 OK"
 scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-pro "只回覆 OK"
 ```
 
-只讀審查使用 OpenCode 內建的 `plan` agent 並停用外部 plugin：
+一般只讀審查使用專案的 `review-fast` agent。此 agent 限制為一次工具迭代、最多讀取 4 個聚焦檔案區段，並禁止 bash、編輯、子代理與網路工具，避免多檔案審查在工具迴圈中超過外部等待時間：
 
 ```powershell
-scripts\opencode-go.cmd run --agent plan --pure --model opencode-go/deepseek-v4-flash "審查任務"
+scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-flash "審查任務"
 ```
+
+需要跨模組完整審查時，將任務拆成數個至多 4 個檔案的 `review-fast` 派工，再由主代理整合。只有明確需要長時間自主探索時才使用內建 `plan` agent，且呼叫端 timeout 應至少設為 300 秒。
+
+若命令因 timeout 結束，先用 `scripts\opencode-go.cmd session list` 找到最新 session，再以 `scripts\opencode-go.cmd export <session-id> --sanitize` 檢查。Token 大於 0 且 session 後續出現 `finish: "stop"`，代表模型仍在背景完成，問題是工具迴圈超過呼叫端 timeout，而不是連線失敗。
 
 ## 模型路由
 

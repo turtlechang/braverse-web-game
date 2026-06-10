@@ -1,6 +1,32 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "opencode-go/deepseek-v4-flash",
+  "agent": {
+    "review-fast": {
+      "description": "Bounded read-only code review for delegated checks",
+      "mode": "primary",
+      "model": "opencode-go/deepseek-v4-flash",
+      "temperature": 0.1,
+      "steps": 2,
+      "prompt": "You are a bounded read-only code reviewer. Inspect only the files explicitly named by the user. Use at most one batched tool round, read no more than four focused file sections, and then return findings immediately. Prioritize correctness, regressions, security, and missing tests. Do not run commands, edit files, invoke subagents, browse the web, or continue exploring after the first tool round. If the requested scope is too broad, review the highest-risk files and state what was not inspected.",
+      "permission": {
+        "read": "allow",
+        "glob": "allow",
+        "grep": "allow",
+        "list": "allow",
+        "edit": "deny",
+        "bash": "deny",
+        "task": "deny",
+        "external_directory": "deny",
+        "todowrite": "deny",
+        "webfetch": "deny",
+        "websearch": "deny",
+        "lsp": "deny",
+        "skill": "deny",
+        "question": "deny"
+      }
+    }
+  },
   "provider": {
     "opencode-go": {
       "npm": "@ai-sdk/openai-compatible",

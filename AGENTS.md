@@ -181,6 +181,7 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 由 Codex 派工時依本節規則透過 `--model` 選擇：
 
 - **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。
+- **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個高風險檔案。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
 - **模式 A（CRUD / 單元測試 / Docstring / 簡單重構 / 一般審查）**：固定使用 `opencode-go/deepseek-v4-flash`。
 - **模式 B（預設路由）**：約 70% `opencode-go/deepseek-v4-flash`、20% `opencode-go/deepseek-v4-pro`、10% `opencode-go/qwen3.7-plus`，百分比非硬配額，視負載與任務特性動態調整。
 - **大型 PR 審查（多檔案跨模組）**：固定使用 `opencode-go/kimi-k2.6`。

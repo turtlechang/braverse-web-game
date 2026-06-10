@@ -27,6 +27,7 @@
 - UI 已加入雙方正面棄牌卡堆與清單、戰鬥區 HP 卡展開、付款橫置預覽、FLIP 棄牌手牌分頁及 PhaseRail 內嵌 AI 狀態。
 - 已加入 `scripts/opencode-go.cmd` 與專案模型設定，使用獨立 runtime 目錄及 `OPENCODE_GO_API_KEY` 環境變數進行派工，不提交認證資料。
 - Codex 受限網路環境執行 OpenCode Go 時，需以核准的外部網路權限啟動派工；`ConnectionRefused` 且 Token 為 0 代表尚未進入模型推理。
+- OpenCode Go 只讀審查改用 `scripts/opencode-go-review.cmd` 與受限步數的 `review-fast` agent，限制讀檔範圍與工具迭代，避免多檔案 `plan` 審查超過呼叫端 timeout。
 - 已加入 `develop-braverse` 專案 Skill，提供漸進式載入的開發流程、架構規則、驗證與 Git、opencode-go 派工參考。
 - UI 可分別設定玩家與 AI 使用紅色、黃色或綠色起始牌組，重新開始與 AI 種子驗證會沿用目前選擇。
 - 目前共有 222 項單元測試，涵蓋官方範例卡轉換、三色起始牌組、FLIP／TRAP 官方文字轉換、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、逐張 HP、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、陷阱傷害續行與延後條件、跨回合 OnPlay 登場窗口、調度、種子洗牌、AI、Refresh、能量付款及既有效果回歸。
