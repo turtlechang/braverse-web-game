@@ -3,13 +3,17 @@ import {
   advancePhase,
   attackCookie,
   canAttack,
+  canActivateCookieSkill,
   createDemoGame,
   createGame,
   createSeededShuffle,
+  drawMulliganCompensation,
   deployCookie,
   evaluateBasicVictory,
   getBreakAreaLevel,
   getRefreshCandidates,
+  forceMulliganOpeningHand,
+  keepOpeningHand,
   mulliganOpeningHand,
   placeSupportCard,
   refreshDeck,
@@ -163,6 +167,84 @@ describe('開局', () => {
     expect(() =>
       mulliganOpeningHand(state, 'player-one', identityShuffle),
     ).toThrow('每位玩家只能自願重抽一次。')
+  })
+
+  it('可保留初始手牌並鎖定自由調度決定', () => {
+    const initialState = createGame(
+      {
+        id: 'player-one',
+        name: '玩家一',
+        deck: createDeck('one'),
+      },
+      {
+        id: 'player-two',
+        name: '玩家二',
+        deck: createDeck('two'),
+      },
+      'player-one',
+      identityShuffle,
+    )
+
+    const state = keepOpeningHand(initialState, 'player-one')
+
+    expect(state.players['player-one'].freeMulliganDecided).toBe(true)
+    expect(() => keepOpeningHand(state, 'player-one')).toThrow(
+      '已完成自由調度決定',
+    )
+  })
+
+  it('無餅乾手牌可反覆強制調度並記錄次數', () => {
+    const itemOnlyDeck = Array.from({ length: 60 }, (_, index) =>
+      createItem(`forced-${index}`),
+    )
+    let state = createGame(
+      {
+        id: 'player-one',
+        name: '玩家一',
+        deck: itemOnlyDeck,
+      },
+      {
+        id: 'player-two',
+        name: '玩家二',
+        deck: createDeck('two'),
+      },
+      'player-one',
+      identityShuffle,
+    )
+
+    state = forceMulliganOpeningHand(
+      state,
+      'player-one',
+      identityShuffle,
+    )
+
+    expect(state.players['player-one'].hand).toHaveLength(6)
+    expect(state.players['player-one'].forcedMulliganCount).toBe(1)
+  })
+
+  it('強制調度後對手可抽取一張補償牌', () => {
+    const initialState = createGame(
+      {
+        id: 'player-one',
+        name: '玩家一',
+        deck: createDeck('one'),
+      },
+      {
+        id: 'player-two',
+        name: '玩家二',
+        deck: createDeck('two'),
+      },
+      'player-one',
+      identityShuffle,
+    )
+    const handSize = initialState.players['player-two'].hand.length
+
+    const state = drawMulliganCompensation(
+      initialState,
+      'player-two',
+    )
+
+    expect(state.players['player-two'].hand).toHaveLength(handSize + 1)
   })
 
   it('選擇起始餅乾後配置 HP，雙方完成後開始遊戲', () => {
@@ -538,6 +620,50 @@ describe('玩家動作', () => {
     expect(state.pendingReplacementPlayerId).toBeNull()
     expect(state.players['player-one'].battleArea).toHaveLength(1)
     expect(state.players['player-one'].battleArea[0].card).toBe(replacement)
+  })
+
+  it('allows replacement OnPlay during the opponent turn', () => {
+    let state = createDemoGame()
+    const replacement: CookieCard = {
+      ...createCookie('opponent-turn-replacement'),
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'OnPlay skill',
+        effects: [],
+      },
+    }
+    state = {
+      ...state,
+      activePlayerId: 'player-two',
+      pendingReplacementPlayerId: 'player-one',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [],
+          hand: [replacement],
+        },
+      },
+    }
+
+    state = replaceDefeatedCookie(state, replacement.instanceId)
+
+    expect(state.pendingOnPlay).toEqual({
+      playerId: 'player-one',
+      sourceInstanceId: replacement.instanceId,
+    })
+    expect(
+      canActivateCookieSkill(
+        state,
+        'player-one',
+        replacement.instanceId,
+        'on-play',
+      ),
+    ).toBe(true)
   })
 
   it('擊倒最後一隻餅乾且手牌無餅乾時立即敗北', () => {

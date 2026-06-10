@@ -2,6 +2,8 @@ import type { GameCard } from '../game'
 import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
+  convertOfficialFlipAbility,
+  convertOfficialTrapAbility,
 } from './official-effect-adapter'
 import { parseOfficialCardTexts } from './official-text-parser'
 import type {
@@ -45,6 +47,8 @@ export const convertOfficialCardToGameCard = (
   const parsedText = parseOfficialCardTexts(card)
   const effectConversion = convertOfficialCardEffects(card)
   const skill = convertOfficialCookieSkill(card)
+  const flip = convertOfficialFlipAbility(card)
+  const trap = convertOfficialTrapAbility(card)
   const energyColor = getEnergyColor(card)
   const effectData =
     effectConversion.status === 'supported'
@@ -85,14 +89,17 @@ export const convertOfficialCardToGameCard = (
       name: card.name,
       imageUrl: card.imageUrl,
       energyColor,
+      officialType: card.type,
       type: 'cookie',
       level: card.level,
       hp: card.hp,
       attack: parsedText.attack.damage,
       attackCost: parsedText.attack.totalCost,
       attackEnergyCost: parsedText.attack.cost,
+      attackText: card.attackText ?? undefined,
       ...effectData,
       ...(skill ? { skill } : {}),
+      ...(flip ? { flip } : {}),
     }
 
     return {
@@ -128,8 +135,10 @@ export const convertOfficialCardToGameCard = (
       name: card.name,
       imageUrl: card.imageUrl,
       energyColor,
+      officialType: card.type,
       type: mappedType,
       ...effectData,
+      ...(trap ? { trap } : {}),
     },
     source: {
       cardNumber: card.cardNumber,

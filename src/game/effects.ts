@@ -15,6 +15,7 @@ import type {
   ModifyAttackEffect,
   PlayerId,
   PlayerState,
+  TargetedCardEffect,
 } from './types'
 import { finishWithDefeat, getBreakAreaLevel, resolveBasicVictory } from './victory'
 
@@ -97,8 +98,22 @@ export const selectEffectTargets = (
 
 export const isEffectUntargeted = (
   effect: CardEffect,
-): effect is DrawEffect | DeckToSupportEffect =>
-  effect.kind === 'draw' || effect.kind === 'deck-to-support'
+): effect is
+  | DrawEffect
+  | DeckToSupportEffect
+  | Extract<CardEffect, { kind: 'gain-hp' | 'support-to-trash' }> =>
+  effect.kind === 'draw' ||
+  effect.kind === 'deck-to-support' ||
+  effect.kind === 'gain-hp' ||
+  effect.kind === 'support-to-trash'
+
+export const isEffectTargeted = (
+  effect: CardEffect,
+): effect is TargetedCardEffect =>
+  effect.kind === 'damage' ||
+  effect.kind === 'modify-attack' ||
+  effect.kind === 'modify-damage-received' ||
+  effect.kind === 'prevent-knockout'
 
 export const getBreakToTrashCandidates = (
   state: GameState,
@@ -149,6 +164,10 @@ export const isEffectConditionMet = (
       getBreakAreaLevel(state, context.sourcePlayerId) >=
         effect.condition.level
     )
+  }
+
+  if (effect.kind === 'prevent-knockout') {
+    return true
   }
 
   return (
@@ -377,7 +396,10 @@ export const executeCardEffect = (
       deck: player.deck.slice(takeAmount),
       supportArea: [
         ...player.supportArea,
-        ...takenCards.map((card) => ({ card, rested: false })),
+        ...takenCards.map((card) => ({
+          card,
+          rested: effect.rested ?? false,
+        })),
       ],
     }
     const updatedState = updatePlayer(state, updatedPlayer)
@@ -447,6 +469,36 @@ export const executeCardEffect = (
     return resolveBasicVictory(updatedState)
   }
 
+  if (effect.kind === 'gain-hp') {
+    throw new GameRuleError('增加 HP 必須在 FLIP 結算流程中執行。')
+  }
+
+  if (effect.kind === 'support-to-trash') {
+    const player = state.players[context.sourcePlayerId]
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== effect.amount) {
+      throw new GameRuleError(
+        `必須選擇 ${effect.amount} 張支援卡送入棄牌區。`,
+      )
+    }
+    const selected = player.supportArea.filter((support) =>
+      uniqueIds.includes(support.card.instanceId),
+    )
+    if (selected.length !== effect.amount) {
+      throw new GameRuleError('只能選擇自己的支援區卡牌。')
+    }
+    return updatePlayer(state, {
+      ...player,
+      supportArea: player.supportArea.filter(
+        (support) => !uniqueIds.includes(support.card.instanceId),
+      ),
+      discardPile: [
+        ...player.discardPile,
+        ...selected.map((support) => support.card),
+      ],
+    })
+  }
+
   const targets = selectEffectTargets(
     state,
     context,
@@ -472,6 +524,10 @@ export const executeCardEffect = (
       },
       targetPlayerId,
     )
+  }
+
+  if (effect.kind === 'prevent-knockout') {
+    throw new GameRuleError('防止昏厥效果必須在陷阱戰鬥流程中執行。')
   }
 
   const modifiers = targets.map((target) => ({

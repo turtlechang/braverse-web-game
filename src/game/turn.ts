@@ -13,8 +13,16 @@ const assertPlaying = (state: GameState) => {
     throw new GameRuleError('必須先補充戰鬥區餅乾。')
   }
 
+  if (state.pendingOnPlay) {
+    throw new GameRuleError('必須先處理餅乾的登場效果。')
+  }
+
   if (state.pendingRefresh) {
     throw new GameRuleError('必須先完成牌庫 Refresh。')
+  }
+
+  if (state.pendingBattle) {
+    throw new GameRuleError('必須先完成目前的戰鬥。')
   }
 }
 
@@ -108,7 +116,9 @@ export const advancePhase = (state: GameState): GameState => {
 export const canAttack = (state: GameState): boolean =>
   state.status === 'playing' &&
   !state.pendingReplacementPlayerId &&
+  !state.pendingOnPlay &&
   !state.pendingRefresh &&
+  !state.pendingBattle &&
   state.phase === 'main' &&
   !(state.turnNumber === 1 && state.activePlayerId === state.firstPlayerId)
 

@@ -70,41 +70,10 @@
   cursor: pointer;
 }
 
-.ai-status-panel {
-  position: fixed;
-  z-index: 35;
-  left: calc(var(--rail-width) + 18px);
-  bottom: 18px;
-  width: 210px;
-  display: grid;
-  gap: 4px;
-  padding: 14px;
-  border: 1px solid rgba(113, 233, 255, 0.4);
-  border-radius: 7px;
-  background: rgba(3, 20, 53, 0.92);
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.32);
-}
-
-.ai-status-panel > span,
 .simulation-report > span {
   color: #71e9ff;
   font-size: 0.68rem;
   font-weight: 900;
-}
-
-.ai-status-panel small {
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.ai-status-panel button {
-  min-height: 34px;
-  margin-top: 7px;
-  border: 1px solid #ffe66e;
-  border-radius: 4px;
-  background: rgba(24, 121, 171, 0.78);
-  font-size: 0.7rem;
-  font-weight: 900;
-  cursor: pointer;
 }
 
 .simulation-report {
@@ -169,12 +138,6 @@
     top: 136px;
     right: 8px;
     width: min(300px, calc(100vw - 16px));
-  }
-
-  .ai-status-panel {
-    left: 8px;
-    bottom: 8px;
-    width: 190px;
   }
 
   .simulation-report {

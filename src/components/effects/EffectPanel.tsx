@@ -112,7 +112,10 @@ export function EffectPanel(props: EffectPanelProps) {
   }
 
   return (
-    <aside className="effect-panel" aria-live="polite">
+    <aside
+      className={`effect-panel${props.pendingEffect ? '' : ' is-complete'}`}
+      aria-live="polite"
+    >
       <EffectPanelContent {...props} />
       {props.effectHistory.length > 0 && (
         <ol>

@@ -5,7 +5,7 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(1, 8, 28, 0.82);
+  background: rgba(1, 8, 28, 0.1);
   backdrop-filter: blur(3px);
 }
 
@@ -21,6 +21,168 @@
   background: #f7f4ee;
   color: #132038;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.54);
+}
+
+.card-pile-modal,
+.opening-setup-modal {
+  position: relative;
+  width: min(900px, 100%);
+  max-height: calc(100vh - 48px);
+  padding: 28px;
+  overflow-y: auto;
+  border: 2px solid rgba(105, 220, 255, 0.68);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  color: #fff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.54);
+}
+
+.battle-response-modal {
+  position: relative;
+  width: min(450px, 100%);
+  max-height: calc(100vh - 48px);
+  padding: 28px;
+  overflow-y: auto;
+  border: 2px solid rgba(105, 220, 255, 0.68);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  color: #fff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.54);
+}
+
+.card-pile-modal > span,
+.battle-response-modal > span {
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.opening-setup-modal > span {
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.opening-setup-modal h2 {
+  margin: 4px 0 8px;
+}
+
+.opening-setup-modal p {
+  color: #bbdaf3;
+}
+
+.setup-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.setup-choice-grid button {
+  min-height: 58px;
+  border: 1px solid #ffe674;
+  border-radius: 6px;
+  background: linear-gradient(#27b8dd, #0875bd);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.setup-hand {
+  justify-content: flex-start;
+}
+
+.card-pile-modal h2,
+.battle-response-modal h2 {
+  margin: 4px 0 8px;
+}
+
+.card-pile-modal p,
+.battle-response-modal p {
+  color: #bbdaf3;
+}
+
+.card-pile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.card-pile-grid > button {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(174, 220, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(3, 20, 53, 0.52);
+  color: #fff;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.card-pile-grid .card-face {
+  width: 82px;
+}
+
+.modal-card-options > button.is-selected {
+  border-color: #fff17c;
+  box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.28);
+}
+
+.modal-card-options.compact .card-face {
+  width: 68px;
+}
+
+.battle-response-summary {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 8px 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  background: rgba(3, 20, 53, 0.45);
+  font-size: 0.78rem;
+}
+
+.battle-response-summary strong {
+  color: #71e9ff;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-actions button {
+  min-width: 130px;
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  background: rgba(4, 34, 75, 0.96);
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.modal-actions button:last-child {
+  border-color: #fff17c;
+  background: linear-gradient(#27b8dd, #0875bd);
+}
+
+.modal-actions button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.flip-reveal-card {
+  width: 160px;
+  margin: 16px auto;
 }
 
 .modal-title {
@@ -162,6 +324,40 @@
 .card-detail-modal p {
   color: #bbdaf3;
   line-height: 1.6;
+}
+
+.card-detail-rules {
+  min-height: 230px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.card-detail-rules.single-rule {
+  display: grid;
+  align-content: center;
+}
+
+.card-rule-section {
+  padding: 16px 0;
+}
+
+.card-rule-section + .card-rule-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.card-rule-section strong {
+  color: #ffe674;
+}
+
+.card-rule-section p {
+  margin: 10px 0 0;
+}
+
+.card-attack-copy {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .close-modal {

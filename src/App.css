@@ -96,27 +96,6 @@ button {
   width: 17px;
 }
 
-.inspect-hand-button {
-  position: fixed;
-  z-index: 22;
-  right: 18px;
-  bottom: 196px;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 16px;
-  border: 1px solid rgba(150, 220, 255, 0.5);
-  border-radius: 5px 0 0 5px;
-  background: rgba(4, 30, 73, 0.86);
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.inspect-hand-button svg {
-  width: 18px;
-}
-
 @media (max-width: 900px) {
   .game-shell {
     --rail-width: 150px;
@@ -144,14 +123,4 @@ button {
     padding: 176px 8px 146px;
   }
 
-  .inspect-hand-button {
-    right: 8px;
-    bottom: 158px;
-    min-height: 38px;
-    padding: 0 10px;
-  }
-
-  .inspect-hand-button span {
-    display: none;
-  }
 }

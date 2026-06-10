@@ -239,3 +239,65 @@ describe('different decks for player and AI', () => {
     }
   })
 })
+
+describe('official FLIP and TRAP abilities', () => {
+  it('drives every starter-deck FLIP from flipText', () => {
+    for (const createDeck of [
+      createOfficialRedStarterDeck,
+      createOfficialYellowStarterDeck,
+      createOfficialGreenStarterDeck,
+    ]) {
+      const flipCards = createDeck('player-one').filter(
+        (card) => card.officialType === 'flip',
+      )
+
+      expect(flipCards.length).toBeGreaterThan(0)
+      expect(flipCards.every((card) => Boolean(card.flip?.text))).toBe(true)
+      expect(
+        flipCards.every((card) => (card.flip?.effects.length ?? 0) > 0),
+      ).toBe(true)
+    }
+  })
+
+  it('drives every starter-deck TRAP from attackText', () => {
+    for (const createDeck of [
+      createOfficialRedStarterDeck,
+      createOfficialYellowStarterDeck,
+      createOfficialGreenStarterDeck,
+    ]) {
+      const trapCards = createDeck('player-two').filter(
+        (card) => card.type === 'trap',
+      )
+
+      expect(trapCards.length).toBeGreaterThan(0)
+      expect(trapCards.every((card) => Boolean(card.trap?.text))).toBe(true)
+      expect(
+        trapCards.every((card) => (card.trap?.effects.length ?? 0) > 0),
+      ).toBe(true)
+    }
+  })
+
+  it('parses FLIP costs and compound TRAP effects without card-number rules', () => {
+    const red = createOfficialRedStarterDeck('player-one')
+    const green = createOfficialGreenStarterDeck('player-one')
+    const gainHpFlip = red.find((card) => card.id === 'ST1-001')
+    const drawFlip = red.find((card) => card.id === 'ST1-013')
+    const compoundTrap = green.find((card) => card.id === 'ST3-019')
+
+    expect(gainHpFlip?.flip).toMatchObject({
+      cost: { energy: {}, discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1 }],
+    })
+    expect(drawFlip?.flip).toMatchObject({
+      cost: { energy: {}, discardHand: 0 },
+      effects: [{ kind: 'draw', amount: 1 }],
+    })
+    expect(compoundTrap?.trap).toMatchObject({
+      cost: { energy: { green: 1 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -3 },
+        { kind: 'support-to-trash', amount: 1 },
+      ],
+    })
+  })
+})

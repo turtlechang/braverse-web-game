@@ -1,5 +1,9 @@
-import { createSeededShuffle } from './helpers'
-import { createGame, selectStartingCookie } from './setup'
+import { createSeededShuffle, defaultShuffle } from './helpers'
+import {
+  createGame,
+  forceMulliganOpeningHand,
+  selectStartingCookie,
+} from './setup'
 import {
   createOfficialYellowStarterDeck,
   DECK_CREATORS,
@@ -7,20 +11,31 @@ import {
 } from './starter-deck'
 import type { CookieCard, GameCard, GameState, PlayerState } from './types'
 
-const identityShuffle = (cards: GameCard[]) => [...cards]
-
 export const isLocalhost = (hostname: string): boolean =>
   hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
 
 export const parseTestStateConfig = (
   searchString: string,
   hostname: string,
-): { level: 1 | 2 } | null => {
+):
+  | { kind: 'break-to-trash'; level: 1 | 2 }
+  | { kind: 'trap-response'; payable: boolean }
+  | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
   const testState = params.get('test-state')
-  if (testState === 'break-to-trash-lv1') return { level: 1 }
-  if (testState === 'break-to-trash-lv2') return { level: 2 }
+  if (testState === 'break-to-trash-lv1') {
+    return { kind: 'break-to-trash', level: 1 }
+  }
+  if (testState === 'break-to-trash-lv2') {
+    return { kind: 'break-to-trash', level: 2 }
+  }
+  if (testState === 'trap-payable') {
+    return { kind: 'trap-response', payable: true }
+  }
+  if (testState === 'trap-unpayable') {
+    return { kind: 'trap-response', payable: false }
+  }
   return null
 }
 
@@ -39,32 +54,69 @@ const selectFirstCookie = (
   return selectStartingCookie(state, playerId, cookie.instanceId)
 }
 
+const ensureOpeningCookie = (
+  state: GameState,
+  playerId: 'player-one' | 'player-two',
+  shuffle: (cards: GameCard[]) => GameCard[],
+) => {
+  let nextState = state
+  let attempts = 0
+
+  while (
+    !nextState.players[playerId].hand.some(
+      (card) => card.type === 'cookie',
+    ) &&
+    attempts < 100
+  ) {
+    nextState = forceMulliganOpeningHand(nextState, playerId, shuffle)
+    attempts += 1
+  }
+
+  if (attempts >= 100) {
+    throw new Error(`無法替 ${playerId} 取得含餅乾的起始手牌。`)
+  }
+
+  return nextState
+}
+
 export type DeckConfig = DeckChoice | { player: DeckChoice; ai: DeckChoice }
+
+export const createDemoSetupGame = (
+  firstPlayerId: 'player-one' | 'player-two',
+  deck: DeckConfig = 'red',
+  seed?: number,
+): GameState => {
+  const playerChoice = typeof deck === 'string' ? deck : deck.player
+  const aiChoice = typeof deck === 'string' ? deck : deck.ai
+  const shuffle =
+    seed === undefined ? defaultShuffle : createSeededShuffle(seed)
+
+  return createGame(
+    {
+      id: 'player-one',
+      name: '玩家',
+      deck: DECK_CREATORS[playerChoice]('player-one'),
+    },
+    {
+      id: 'player-two',
+      name: 'AI 對手',
+      deck: DECK_CREATORS[aiChoice]('player-two'),
+    },
+    firstPlayerId,
+    shuffle,
+  )
+}
 
 export const createDemoGame = (
   seed?: number,
   deck: DeckConfig = 'red',
 ): GameState => {
-  const playerChoice = typeof deck === 'string' ? deck : deck.player
-  const aiChoice = typeof deck === 'string' ? deck : deck.ai
-  const createPlayerDeck = DECK_CREATORS[playerChoice]
-  const createAiDeck = DECK_CREATORS[aiChoice]
+  const effectiveSeed = seed ?? 7
+  const shuffle = createSeededShuffle(effectiveSeed)
+  let state = createDemoSetupGame('player-one', deck, effectiveSeed)
 
-  let state = createGame(
-    {
-      id: 'player-one',
-      name: '玩家',
-      deck: createPlayerDeck('player-one'),
-    },
-    {
-      id: 'player-two',
-      name: 'AI 對手',
-      deck: createAiDeck('player-two'),
-    },
-    'player-one',
-    seed === undefined ? identityShuffle : createSeededShuffle(seed),
-  )
-
+  state = ensureOpeningCookie(state, 'player-one', shuffle)
+  state = ensureOpeningCookie(state, 'player-two', shuffle)
   state = selectFirstCookie(state, 'player-one')
   state = selectFirstCookie(state, 'player-two')
 
@@ -81,6 +133,8 @@ const createTestPlayerState = (): Omit<PlayerState, 'id' | 'name'> => ({
   stage: null,
   hasMulliganed: true,
   startingCookieSelected: true,
+  freeMulliganDecided: true,
+  forcedMulliganCount: 0,
 })
 
 export const createBreakToTrashDemoState = (
@@ -162,5 +216,110 @@ export const createBreakToTrashDemoState = (
     damageReceivedModifiers: [],
     pendingReplacementPlayerId: null,
     pendingRefresh: null,
+    pendingBattle: null,
+  }
+}
+
+export const createTrapResponseDemoState = (payable: boolean): GameState => {
+  const p1Deck = createOfficialYellowStarterDeck('player-one')
+  const p2Deck = createOfficialYellowStarterDeck('player-two')
+  const trap = p1Deck.find((card) => card.id === 'ST2-020')!
+  const defender = p1Deck.find((card) => card.type === 'cookie') as CookieCard
+  const attacker = p2Deck.find((card) => card.type === 'cookie') as CookieCard
+  const breakArea: CookieCard[] = []
+  let breakLevel = 0
+  for (const card of p1Deck) {
+    if (card.type !== 'cookie' || card.instanceId === defender.instanceId) {
+      continue
+    }
+    breakArea.push(card)
+    breakLevel += card.level
+    if (breakLevel >= 5) break
+  }
+  const requiredColor = Object.keys(trap.trap!.cost.energy)[0] as
+    | 'red'
+    | 'yellow'
+    | 'green'
+    | 'blue'
+    | 'purple'
+    | 'black'
+  const requiredCount = trap.trap!.cost.energy[requiredColor] ?? 0
+  const supports = p1Deck
+    .filter(
+      (card) =>
+        card.type !== 'cookie' &&
+        card.instanceId !== trap.instanceId &&
+        (card.energyColor === requiredColor || card.energyColor === 'wild'),
+    )
+    .slice(0, requiredCount)
+
+  if (supports.length !== requiredCount) {
+    throw new Error('測試牌組沒有足夠的同色或萬用支援卡支付陷阱費用。')
+  }
+
+  const p1: PlayerState = {
+    id: 'player-one',
+    name: '玩家',
+    ...createTestPlayerState(),
+    hand: [trap],
+    battleArea: [
+      {
+        card: defender,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${defender.instanceId}:battle:1`,
+      },
+    ],
+    supportArea: payable
+      ? supports.map((card) => ({ card, rested: false }))
+      : [],
+    breakArea,
+  }
+  const p2: PlayerState = {
+    id: 'player-two',
+    name: 'AI 對手',
+    ...createTestPlayerState(),
+    battleArea: [
+      {
+        card: attacker,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${attacker.instanceId}:battle:2`,
+      },
+    ],
+  }
+  const state: GameState = {
+    players: { 'player-one': p1, 'player-two': p2 },
+    firstPlayerId: 'player-two',
+    activePlayerId: 'player-two',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    pendingReplacementPlayerId: null,
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+
+  return {
+    ...state,
+    pendingBattle: {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: defender.instanceId,
+      declaredDamage: attacker.attack,
+      remainingDamage: attacker.attack,
+      stage: 'trap',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+    },
   }
 }

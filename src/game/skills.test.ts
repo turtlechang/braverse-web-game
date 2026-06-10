@@ -6,6 +6,7 @@ import {
   canPayEnergyCost,
   createDemoGame,
   getEffectiveAttack,
+  skipCookieOnPlay,
   type CardSkill,
   type GameCard,
   type GameState,
@@ -264,6 +265,14 @@ describe('cookie skill activation', () => {
     let state = withSkill(createDemoGame(), 'player-two', baseSkill)
     const sourceId =
       state.players['player-two'].battleArea[0].card.instanceId
+    state = {
+      ...state,
+      activePlayerId: 'player-one',
+      pendingOnPlay: {
+        playerId: 'player-two',
+        sourceInstanceId: sourceId,
+      },
+    }
 
     expect(
       canActivateCookieSkill(
@@ -287,6 +296,66 @@ describe('cookie skill activation', () => {
         'on-play',
       ),
     ).toBe(false)
+  })
+
+  it('only allows OnPlay during its matching entry window', () => {
+    const skill: CardSkill = {
+      trigger: 'on-play',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {},
+      text: 'OnPlay skill',
+      effects: [effect],
+    }
+    let state = withSkill(createDemoGame(), 'player-one', skill)
+    const sourceId =
+      state.players['player-one'].battleArea[0].card.instanceId
+
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'on-play'),
+    ).toBe(false)
+
+    state = {
+      ...state,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: sourceId,
+      },
+    }
+    state = activateCookieSkill(
+      state,
+      'player-one',
+      sourceId,
+      'on-play',
+      [],
+    )
+
+    expect(state.pendingOnPlay).toBeNull()
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'on-play'),
+    ).toBe(false)
+  })
+
+  it('consumes an OnPlay window when its owner skips it', () => {
+    const state = createDemoGame()
+    const sourceId =
+      state.players['player-one'].battleArea[0].card.instanceId
+    const pendingState = {
+      ...state,
+      pendingOnPlay: {
+        playerId: 'player-one' as const,
+        sourceInstanceId: sourceId,
+      },
+    }
+
+    expect(
+      skipCookieOnPlay(pendingState, 'player-one', sourceId)
+        .pendingOnPlay,
+    ).toBeNull()
+    expect(() =>
+      skipCookieOnPlay(state, 'player-one', sourceId),
+    ).toThrow('目前沒有可略過的登場效果。')
   })
 
   it('applies a Your Turn passive only while its owner is active', () => {

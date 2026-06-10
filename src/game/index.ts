@@ -6,11 +6,12 @@ export {
   getEffectTargetCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
+  isEffectTargeted,
   isEffectUntargeted,
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './effects'
-export { createDemoGame } from './demo'
+export { createDemoGame, createDemoSetupGame } from './demo'
 export type { DeckConfig } from './demo'
 export { createSeededShuffle } from './helpers'
 export {
@@ -39,18 +40,37 @@ export {
   takeAiStep,
 } from './ai'
 export {
+  beginAttack,
+  getTrapCandidates,
+  getTrapTargetCandidates,
+  playTrap,
+  resolveBattleAutomatically,
+  resolveFlip,
+  resolveNextDamage,
+  skipTrap,
+} from './battle'
+export type { PlayTrapOptions, ResolveFlipOptions } from './battle'
+export {
   attackCookie,
   deployCookie,
   placeSupportCard,
   replaceDefeatedCookie,
 } from './actions'
 export { getRefreshCandidates, refreshDeck } from './refresh'
-export { createGame, mulliganOpeningHand, selectStartingCookie } from './setup'
+export {
+  createGame,
+  drawMulliganCompensation,
+  forceMulliganOpeningHand,
+  keepOpeningHand,
+  mulliganOpeningHand,
+  selectStartingCookie,
+} from './setup'
 export { advancePhase, canAttack, TURN_PHASES } from './turn'
 export {
   activateCookieSkill,
   canActivateCookieSkill,
   canPayEnergyCost,
+  skipCookieOnPlay,
 } from './skills'
 export {
   evaluateBasicVictory,
@@ -61,6 +81,7 @@ export {
 } from './victory'
 export type {
   AttackModifier,
+  AbilityCost,
   BaseCard,
   BreakLevelCondition,
   BreakToTrashEffect,
@@ -85,15 +106,24 @@ export type {
   GameResult,
   GameState,
   GameStatus,
+  FlipAbility,
+  GainHpEffect,
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
   NonCookieCard,
   PlayerId,
   PlayerSetup,
   PlayerState,
+  PendingBattle,
+  PendingBattleStage,
+  PreventKnockoutEffect,
   Shuffle,
   SkillTrigger,
   SupportCard,
+  SupportToTrashEffect,
+  TargetedCardEffect,
+  TrapAbility,
+  TrapCondition,
   TurnPhase,
 } from './types'
 export type {

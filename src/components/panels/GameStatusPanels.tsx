@@ -48,29 +48,6 @@ export function AttackPaymentPanel({
   )
 }
 
-export interface AiStatusPanelProps {
-  aiThinking: boolean
-  aiActionCount: number
-  onRunSimulation: () => void
-}
-
-export function AiStatusPanel({
-  aiThinking,
-  aiActionCount,
-  onRunSimulation,
-}: AiStatusPanelProps) {
-  return (
-    <aside className="ai-status-panel" aria-live="polite">
-      <span>簡易 AI 對手</span>
-      <strong>{aiThinking ? '正在決策' : '等待下一步'}</strong>
-      <small>已執行 {aiActionCount} 個動作</small>
-      <button type="button" onClick={onRunSimulation}>
-        執行 20 場 AI 驗證
-      </button>
-    </aside>
-  )
-}
-
 export interface SimulationReportProps {
   simulationResults: AiMatchResult[]
   seeds: number[]

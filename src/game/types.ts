@@ -1,6 +1,12 @@
 export type PlayerId = 'player-one' | 'player-two'
 
 export type CardType = 'cookie' | 'item' | 'trap' | 'stage'
+export type OfficialRuntimeCardType =
+  | 'cookie'
+  | 'item'
+  | 'trap'
+  | 'stage'
+  | 'flip'
 
 export type EnergyColor =
   | 'red'
@@ -33,6 +39,9 @@ export interface BaseCard {
   effectText?: string
   effects?: CardEffect[]
   skill?: CardSkill
+  officialType?: OfficialRuntimeCardType
+  flip?: FlipAbility
+  trap?: TrapAbility
 }
 
 export interface CookieCard extends BaseCard {
@@ -42,6 +51,7 @@ export interface CookieCard extends BaseCard {
   attack: number
   attackCost: number
   attackEnergyCost?: EnergyCost
+  attackText?: string
 }
 
 export interface NonCookieCard extends BaseCard {
@@ -112,6 +122,7 @@ export interface DrawEffect {
 export interface DeckToSupportEffect {
   kind: 'deck-to-support'
   amount: number
+  rested?: boolean
 }
 
 export interface BreakToTrashEffect {
@@ -121,6 +132,21 @@ export interface BreakToTrashEffect {
   condition?: EffectCondition
 }
 
+export interface GainHpEffect {
+  kind: 'gain-hp'
+  amount: number
+}
+
+export interface PreventKnockoutEffect {
+  kind: 'prevent-knockout'
+  target: EffectTargetSelector
+}
+
+export interface SupportToTrashEffect {
+  kind: 'support-to-trash'
+  amount: number
+}
+
 export type CardEffect =
   | DamageEffect
   | ModifyAttackEffect
@@ -128,6 +154,47 @@ export type CardEffect =
   | DrawEffect
   | DeckToSupportEffect
   | BreakToTrashEffect
+  | GainHpEffect
+  | PreventKnockoutEffect
+  | SupportToTrashEffect
+
+export type TargetedCardEffect =
+  | DamageEffect
+  | ModifyAttackEffect
+  | ModifyDamageReceivedEffect
+  | PreventKnockoutEffect
+
+export interface AbilityCost {
+  energy: EnergyCost
+  discardHand: number
+}
+
+export interface FlipAbility {
+  text: string
+  cost: AbilityCost
+  effects: CardEffect[]
+}
+
+export type TrapCondition =
+  | {
+      kind: 'break-level-at-least'
+      level: number
+    }
+  | {
+      kind: 'attacker-attack-more-than'
+      amount: number
+    }
+  | {
+      kind: 'friendly-color-fainted-this-battle'
+      color: EnergyColor
+    }
+
+export interface TrapAbility {
+  text: string
+  cost: AbilityCost
+  condition?: TrapCondition
+  effects: CardEffect[]
+}
 
 export interface AttackModifier {
   sourceInstanceId: string
@@ -165,6 +232,8 @@ export interface PlayerState {
   stage: GameCard | null
   hasMulliganed: boolean
   startingCookieSelected: boolean
+  freeMulliganDecided?: boolean
+  forcedMulliganCount?: number
 }
 
 export type TurnPhase = 'active' | 'draw' | 'support' | 'main' | 'end'
@@ -196,10 +265,39 @@ export interface GameState {
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   pendingReplacementPlayerId: PlayerId | null
+  pendingOnPlay?: {
+    playerId: PlayerId
+    sourceInstanceId: string
+  } | null
   pendingRefresh: {
     playerId: PlayerId
     remainingDraws: number
   } | null
+  pendingBattle?: PendingBattle | null
+}
+
+export type PendingBattleStage = 'trap' | 'damage' | 'flip'
+
+export interface PendingBattle {
+  attackerPlayerId: PlayerId
+  defenderPlayerId: PlayerId
+  attackerInstanceId: string
+  targetInstanceId: string
+  declaredDamage: number
+  remainingDamage: number
+  stage: PendingBattleStage
+  trapUsed: boolean
+  revealedHpCard: GameCard | null
+  preventKnockoutTargetIds: string[]
+  faintedColors: EnergyColor[]
+  damagePlayerId?: PlayerId
+  damageTargetInstanceId?: string
+  suspendedAttackDamage?: number
+  delayedTrap?: {
+    playerId: PlayerId
+    color: EnergyColor
+    effects: CardEffect[]
+  }
 }
 
 export interface PlayerSetup {

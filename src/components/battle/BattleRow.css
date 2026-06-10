@@ -88,7 +88,34 @@
 .combat-card-wrap {
   position: relative;
   width: 112px;
+  padding-bottom: 42px;
 }
+
+.hp-card-stack {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: -3px;
+  width: 112px;
+  height: 38px;
+  transform: translateX(-50%);
+}
+
+.hp-card-stack .hp-card {
+  position: absolute;
+  left: calc(var(--hp-index, 0) * 14px);
+  bottom: 0;
+  width: 34px;
+  border-width: 1px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.38);
+}
+
+.hp-card-stack .hp-card:nth-child(1) { left: 0; }
+.hp-card-stack .hp-card:nth-child(2) { left: 14px; }
+.hp-card-stack .hp-card:nth-child(3) { left: 28px; }
+.hp-card-stack .hp-card:nth-child(4) { left: 42px; }
+.hp-card-stack .hp-card:nth-child(5) { left: 56px; }
+.hp-card-stack .hp-card:nth-child(n + 6) { left: 70px; }
 
 .target-hint {
   padding: 3px 6px;
@@ -146,6 +173,55 @@
   justify-items: center;
   border: 1px solid rgba(145, 203, 255, 0.3);
   background: rgba(5, 27, 70, 0.46);
+}
+
+button.discard-zone {
+  width: 100%;
+  padding: 4px;
+  color: inherit;
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 18px rgba(80, 218, 255, 0.08),
+    0 0 12px rgba(80, 218, 255, 0.12);
+}
+
+button.discard-zone:not(:disabled):hover,
+button.discard-zone:not(:disabled):focus-visible {
+  border-color: rgba(113, 233, 255, 0.82);
+  box-shadow:
+    inset 0 0 20px rgba(80, 218, 255, 0.16),
+    0 0 18px rgba(80, 218, 255, 0.3);
+}
+
+button.discard-zone:disabled {
+  cursor: default;
+}
+
+.discard-card-stack {
+  position: relative;
+  width: 46px;
+  height: 66px;
+  margin: 4px 0;
+}
+
+.discard-card-stack > i {
+  position: absolute;
+  inset: 5px -4px -5px 4px;
+  border: 1px solid rgba(220, 237, 255, 0.48);
+  border-radius: 4px;
+  background: #132f62;
+}
+
+.discard-card-stack > i:nth-child(2) {
+  inset: 2px -2px -2px 2px;
+}
+
+.discard-top-card {
+  position: absolute;
+  inset: 0;
+  width: 46px;
+  border-width: 1px;
+  pointer-events: none;
 }
 
 .break-zone span,
@@ -304,7 +380,7 @@
 }
 
 .bottom-hand {
-  right: 28px;
+  right: 180px;
 }
 
 .hand-card-wrap {
@@ -391,6 +467,16 @@
 
   .combat-card-wrap {
     width: 88px;
+    padding-bottom: 34px;
+  }
+
+  .hp-card-stack {
+    width: 88px;
+    height: 30px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 28px;
   }
 
   .break-zone {
@@ -443,7 +529,7 @@
 
   .bottom-hand {
     position: absolute;
-    right: -8px;
+    right: 62px;
     bottom: -164px;
   }
 

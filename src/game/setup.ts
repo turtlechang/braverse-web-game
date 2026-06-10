@@ -34,6 +34,8 @@ const createPlayerState = (
       stage: null,
       hasMulliganed: false,
       startingCookieSelected: false,
+      freeMulliganDecided: false,
+      forcedMulliganCount: 0,
     },
     OPENING_HAND_SIZE,
   )
@@ -75,7 +77,9 @@ export const createGame = (
     attackModifiers: [],
     damageReceivedModifiers: [],
     pendingReplacementPlayerId: null,
+    pendingOnPlay: null,
     pendingRefresh: null,
+    pendingBattle: null,
   }
 }
 
@@ -104,11 +108,75 @@ export const mulliganOpeningHand = (
       deck: shuffle([...player.deck, ...player.hand]),
       hand: [],
       hasMulliganed: true,
+      freeMulliganDecided: true,
     },
     OPENING_HAND_SIZE,
   )
 
   return updatePlayer(state, resetPlayer)
+}
+
+export const keepOpeningHand = (
+  state: GameState,
+  playerId: PlayerId,
+): GameState => {
+  if (state.status !== 'setup') {
+    throw new GameRuleError('只能在開局設定時保留起始手牌。')
+  }
+
+  const player = state.players[playerId]
+  if (player.freeMulliganDecided) {
+    throw new GameRuleError('已完成自由調度決定。')
+  }
+
+  return updatePlayer(state, {
+    ...player,
+    freeMulliganDecided: true,
+  })
+}
+
+export const forceMulliganOpeningHand = (
+  state: GameState,
+  playerId: PlayerId,
+  shuffle: Shuffle = defaultShuffle,
+): GameState => {
+  if (state.status !== 'setup') {
+    throw new GameRuleError('只能在開局設定時進行強制調度。')
+  }
+
+  const player = state.players[playerId]
+  if (player.hand.some((card) => card.type === 'cookie')) {
+    throw new GameRuleError('手牌已有餅乾，不需要強制調度。')
+  }
+
+  const resetPlayer = drawCards(
+    {
+      ...player,
+      deck: shuffle([...player.deck, ...player.hand]),
+      hand: [],
+      freeMulliganDecided: true,
+      forcedMulliganCount: (player.forcedMulliganCount ?? 0) + 1,
+    },
+    OPENING_HAND_SIZE,
+  )
+
+  return updatePlayer(state, resetPlayer)
+}
+
+export const drawMulliganCompensation = (
+  state: GameState,
+  playerId: PlayerId,
+): GameState => {
+  if (state.status !== 'setup') {
+    throw new GameRuleError('只能在開局設定時抽取調度補償。')
+  }
+
+  const player = state.players[playerId]
+  if (player.deck.length === 0) {
+    throw new GameRuleError('牌庫沒有可抽取的調度補償。')
+  }
+
+  return updatePlayer(state, drawCards(player, 1))
 }
 
 export const selectStartingCookie = (

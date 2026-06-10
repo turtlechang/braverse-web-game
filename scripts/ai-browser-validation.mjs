@@ -66,6 +66,29 @@ try {
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
 
+  const completeOpeningSetup = async () => {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const modal = page.locator('.opening-setup-modal')
+      if ((await modal.count()) === 0 || !(await modal.isVisible())) return
+
+      const heading = await modal.locator('h2').innerText()
+      if (heading.includes('猜拳')) {
+        await modal.getByRole('button', { name: '石頭' }).click()
+      } else if (heading.includes('先攻或後攻')) {
+        await modal.getByRole('button', { name: '選擇先攻' }).click()
+      } else if (heading.includes('第一次調度')) {
+        await modal.getByRole('button', { name: '保留手牌' }).click()
+      } else if (heading.includes('起始餅乾')) {
+        await modal
+          .locator('.modal-card-options > button:not(:disabled)')
+          .first()
+          .click()
+      }
+      await page.waitForTimeout(60)
+    }
+    throw new Error('開局設定流程未在安全步數內完成。')
+  }
+
   const playerSelect = page.getByTestId('player-deck-select')
   const aiSelect = page.getByTestId('ai-deck-select')
   const statusMessage = page.locator('.match-status small')
@@ -96,6 +119,7 @@ try {
     'ai-deck-select 應變為 green',
   )
   await statusMessage.filter({ hasText: 'AI 綠色' }).waitFor()
+  await completeOpeningSetup()
 
   await page.locator('button[title="查看官方範例牌組"]').click()
   await page.locator('.deck-list-modal').waitFor({ state: 'visible' })
@@ -128,6 +152,7 @@ try {
   assert.strictEqual(await playerSelect.inputValue(), 'red')
   await aiSelect.selectOption('red')
   assert.strictEqual(await aiSelect.inputValue(), 'red')
+  await completeOpeningSetup()
 
   const runBreakToTrashTest = async (variant) => {
     const testUrl = `${baseUrl}?test-state=break-to-trash-${variant}`
@@ -149,6 +174,10 @@ try {
 
     await supportCards.nth(0).click()
     await supportCards.nth(1).click()
+    assert.ok(
+      await supportCards.nth(0).evaluate((el) => el.classList.contains('is-rested')),
+      '選取技能付款後支援卡應立即顯示橫置預覽',
+    )
 
     const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
 
@@ -173,6 +202,15 @@ try {
 
       const statusMessage = page.locator('.match-status small')
       await statusMessage.filter({ hasText: /移至棄牌區/ }).waitFor()
+
+      const discardZone = page.locator('.bottom-field .discard-zone')
+      await discardZone.click()
+      await page.locator('.card-pile-modal').waitFor({ state: 'visible' })
+      assert.ok(
+        (await page.locator('.card-pile-modal .card-pile-grid > button').count()) >= 1,
+        '棄牌區清單應以卡圖顯示',
+      )
+      await page.locator('.card-pile-modal .close-modal').click()
     } else {
       const breakCards = page.locator('.bottom-field .break-cards .break-card')
       const breakCount = await breakCards.count()
@@ -189,12 +227,61 @@ try {
       const statusMessage = page.locator('.match-status small')
       await statusMessage.filter({ hasText: /沒有選擇休息區目標/ }).waitFor()
     }
+
+    await page.waitForTimeout(1200)
+    assert.strictEqual(
+      await effectPanel.count(),
+      0,
+      '完成效果通知應在 1 秒後淡出並移除',
+    )
   }
 
   await runBreakToTrashTest('lv1')
   await runBreakToTrashTest('lv2')
 
+  await page.goto(`${baseUrl}?test-state=trap-payable`, {
+    waitUntil: 'networkidle',
+  })
+  await page.locator('.battle-response-modal').waitFor({ state: 'visible' })
+  assert.strictEqual(
+    await page.locator('.battle-response-modal').count(),
+    1,
+    '可支付陷阱應顯示回應視窗',
+  )
+
+  await page.goto(`${baseUrl}?test-state=trap-unpayable`, {
+    waitUntil: 'networkidle',
+  })
+  await page.waitForFunction(
+    () => document.querySelector('.battle-response-modal') === null,
+  )
+  assert.strictEqual(
+    await page.locator('.battle-response-modal').count(),
+    0,
+    '不可支付陷阱不應顯示回應視窗',
+  )
+  assert.ok(
+    !(await page.locator('.match-status small').innerText()).includes('陷阱'),
+    '不可支付陷阱自動略過時不應顯示提示文字',
+  )
+
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
+  await completeOpeningSetup()
+
+  assert.strictEqual(
+    await page.locator('.inspect-hand-button').count(),
+    0,
+    '不應再顯示 inspect-hand-button',
+  )
+  assert.strictEqual(
+    await page.locator('.phase-rail .rail-ai-status').count(),
+    1,
+    'AI 狀態面板應位於 PhaseRail 內',
+  )
+  assert.ok(
+    (await page.locator('.bottom-field .hp-card-stack .hp-card').count()) > 0,
+    '我方戰鬥區餅乾下方應展開 HP 卡',
+  )
 
   await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
   await page.getByTestId('ai-simulation-report').waitFor()

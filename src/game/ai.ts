@@ -1,9 +1,17 @@
 import {
-  attackCookie,
   deployCookie,
   placeSupportCard,
   replaceDefeatedCookie,
 } from './actions'
+import {
+  beginAttack,
+  getTrapCandidates,
+  getTrapTargetCandidates,
+  playTrap,
+  resolveFlip,
+  resolveNextDamage,
+  skipTrap,
+} from './battle'
 import {
   executeCardEffect,
   getBreakToTrashCandidates,
@@ -20,6 +28,7 @@ import { getRefreshCandidates, refreshDeck } from './refresh'
 import {
   activateCookieSkill,
   canActivateCookieSkill,
+  skipCookieOnPlay,
 } from './skills'
 import { advancePhase, canAttack } from './turn'
 import type {
@@ -41,6 +50,9 @@ export type AiActionType =
   | 'deploy-cookie'
   | 'activate-skill'
   | 'attack'
+  | 'play-trap'
+  | 'resolve-damage'
+  | 'resolve-flip'
   | 'error'
 
 export interface AiEffectSelection {
@@ -111,7 +123,10 @@ const chooseEffectTargets = (
         left.hpCards.length - right.hpCards.length
       )
     })
-  } else if (effect.amount > 0) {
+  } else if (
+    effect.kind !== 'prevent-knockout' &&
+    effect.amount > 0
+  ) {
     ordered.sort(
       (left, right) =>
         getEffectiveAttack(state, right.card.instanceId) -
@@ -257,6 +272,109 @@ export const takeAiStep = (
       }
     }
 
+    if (
+      state.pendingBattle &&
+      !state.pendingRefresh &&
+      !state.pendingReplacementPlayerId
+    ) {
+      const battle = state.pendingBattle
+      if (battle.stage === 'damage') {
+        return {
+          state: resolveNextDamage(state),
+          action: 'resolve-damage',
+          description: '依序翻開並結算下一張 HP 卡。',
+        }
+      }
+
+      if (
+        battle.stage === 'flip' &&
+        (battle.damagePlayerId ?? battle.defenderPlayerId) === playerId
+      ) {
+        const revealed = battle.revealedHpCard
+        const discardCount = revealed?.flip?.cost.discardHand ?? 0
+        const discardHandIds = state.players[playerId].hand
+          .slice(0, discardCount)
+          .map((card) => card.instanceId)
+        const canActivate =
+          Boolean(revealed?.flip) &&
+          discardHandIds.length === discardCount
+        return {
+          state: resolveFlip(state, playerId, {
+            activate: canActivate,
+            discardHandIds,
+          }),
+          action: 'resolve-flip',
+          description: canActivate
+            ? `${state.players[playerId].name}發動${revealed?.name ?? 'FLIP'}。`
+            : `${state.players[playerId].name}略過 FLIP。`,
+        }
+      }
+
+      if (
+        battle.stage === 'trap' &&
+        battle.defenderPlayerId === playerId
+      ) {
+        const trapCard = getTrapCandidates(state, playerId)[0]
+        if (!trapCard?.trap) {
+          return {
+            state: skipTrap(state, playerId),
+            action: 'play-trap',
+            description: `${state.players[playerId].name}未發動陷阱。`,
+          }
+        }
+        const paymentIds =
+          selectEnergyPayment(
+            trapCard.trap.cost.energy,
+            state.players[playerId].supportArea,
+          ) ?? []
+        const targets = getTrapTargetCandidates(
+          state,
+          playerId,
+          trapCard.instanceId,
+        )
+        const targetIds = targets
+          .slice(0, 1)
+          .map((target) => target.card.instanceId)
+        const supportTrashEffect = trapCard.trap.effects.find(
+          (effect) => effect.kind === 'support-to-trash',
+        )
+        const supportTrashIds =
+          supportTrashEffect?.kind === 'support-to-trash'
+            ? state.players[playerId].supportArea
+                .slice(0, supportTrashEffect.amount)
+                .map((support) => support.card.instanceId)
+            : []
+
+        if (
+          supportTrashEffect?.kind === 'support-to-trash' &&
+          supportTrashIds.length < supportTrashEffect.amount
+        ) {
+          return {
+            state: skipTrap(state, playerId),
+            action: 'play-trap',
+            description: `${state.players[playerId].name}無法支付陷阱後續代價。`,
+          }
+        }
+
+        return {
+          state: playTrap(state, playerId, {
+            trapInstanceId: trapCard.instanceId,
+            paymentIds,
+            targetIds,
+            supportTrashIds,
+          }),
+          action: 'play-trap',
+          description: `${state.players[playerId].name}發動${trapCard.name}。`,
+        }
+      }
+
+      return {
+        state,
+        action: 'idle',
+        description: `${state.players[battle.defenderPlayerId].name}等待戰鬥回應。`,
+      }
+    }
+
     if (state.pendingRefresh?.playerId === playerId) {
       const candidate = getRefreshCandidates(state, playerId)[0]
       if (!candidate) {
@@ -284,11 +402,53 @@ export const takeAiStep = (
           error: 'replacement-unavailable',
         }
       }
+      const replacedState = replaceDefeatedCookie(
+        state,
+        replacement.instanceId,
+      )
+      const replaced = replacedState.players[playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === replacement.instanceId,
+      )
+      const onPlay =
+        replaced && !replacedState.pendingRefresh
+          ? resolveAiSkill(replacedState, playerId, replaced, 'on-play')
+          : null
       return {
-        state: replaceDefeatedCookie(state, replacement.instanceId),
+        state:
+          onPlay?.state ??
+          (replacedState.pendingOnPlay && !replacedState.pendingRefresh
+            ? skipCookieOnPlay(
+                replacedState,
+                playerId,
+                replacement.instanceId,
+              )
+            : replacedState),
         action: 'replace-cookie',
+        effectSelections: onPlay?.effectSelections,
         description: `${state.players[playerId].name}補充${replacement.name}到戰鬥區。`,
       }
+    }
+
+    if (state.pendingOnPlay?.playerId === playerId) {
+      const source = state.players[playerId].battleArea.find(
+        (cookie) =>
+          cookie.card.instanceId === state.pendingOnPlay?.sourceInstanceId,
+      )
+      const onPlay = source
+        ? resolveAiSkill(state, playerId, source, 'on-play')
+        : null
+
+      return (
+        onPlay ?? {
+          state: skipCookieOnPlay(
+            state,
+            playerId,
+            state.pendingOnPlay.sourceInstanceId,
+          ),
+          action: 'idle',
+          description: `${state.players[playerId].name}未發動登場效果。`,
+        }
+      )
     }
 
     if (
@@ -354,7 +514,15 @@ export const takeAiStep = (
               )
             : null
           return {
-            state: onPlay?.state ?? deployedState,
+            state:
+              onPlay?.state ??
+              (deployedState.pendingOnPlay
+                ? skipCookieOnPlay(
+                    deployedState,
+                    playerId,
+                    deployable.instanceId,
+                  )
+                : deployedState),
             action: 'deploy-cookie',
             description: onPlay
               ? `${player.name}讓${deployable.name}登場並發動 OnPlay。`
@@ -387,7 +555,7 @@ export const takeAiStep = (
             paymentIds
           ) {
             return {
-              state: attackCookie(
+              state: beginAttack(
                 state,
                 attacker.card.instanceId,
                 target.card.instanceId,
@@ -452,6 +620,15 @@ export const simulateAiMatch = (
     const controller =
       state.pendingRefresh?.playerId ??
       state.pendingReplacementPlayerId ??
+      state.pendingOnPlay?.playerId ??
+      (state.pendingBattle
+        ? state.pendingBattle.stage === 'flip'
+          ? state.pendingBattle.damagePlayerId ??
+            state.pendingBattle.defenderPlayerId
+          : state.pendingBattle.stage === 'trap'
+            ? state.pendingBattle.defenderPlayerId
+            : state.activePlayerId
+        : null) ??
       state.activePlayerId
     const decision = takeAiStep(state, controller)
     logs.push(

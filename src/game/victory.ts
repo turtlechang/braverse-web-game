@@ -74,6 +74,7 @@ export const finishWithDefeat = (
   ...state,
   status: 'finished',
   pendingReplacementPlayerId: null,
+  pendingOnPlay: null,
   pendingRefresh: null,
   result: {
     loserId,

@@ -67,7 +67,13 @@ describe('card effect engine', () => {
 
   it('deals direct damage to each selected target', () => {
     let state = createDemoGame()
-    const firstTarget = state.players['player-two'].battleArea[0]
+    const firstTarget = {
+      ...state.players['player-two'].battleArea[0],
+      hpCards: [
+        ...state.players['player-two'].battleArea[0].hpCards,
+        createSupport('first-target-extra-hp'),
+      ],
+    }
     const secondTarget = {
       ...firstTarget,
       card: {
@@ -199,7 +205,23 @@ describe('card effect engine', () => {
 
   it('enforces break-level activation conditions', () => {
     let state = createDemoGame()
-    const target = state.players['player-two'].battleArea[0]
+    const target = {
+      ...state.players['player-two'].battleArea[0],
+      hpCards: [
+        ...state.players['player-two'].battleArea[0].hpCards,
+        createSupport('condition-extra-hp'),
+      ],
+    }
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [target],
+        },
+      },
+    }
     const effect: CardEffect = {
       kind: 'damage',
       amount: 1,

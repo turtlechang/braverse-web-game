@@ -23,6 +23,14 @@ export const describeEffect = (effect: CardEffect) => {
     return `從休息區選擇最多 ${effect.max} 張 LV.${effect.exactLevel} 卡，移至棄牌區。`
   }
 
+  if (effect.kind === 'gain-hp') {
+    return `該餅乾增加 ${effect.amount} HP。`
+  }
+
+  if (effect.kind === 'support-to-trash') {
+    return `將 ${effect.amount} 張支援卡送入棄牌區。`
+  }
+
   const target =
     effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
   const count =
@@ -32,6 +40,10 @@ export const describeEffect = (effect: CardEffect) => {
 
   if (effect.kind === 'damage') {
     return `選擇${count}${target}，造成 ${effect.amount} 點效果傷害。`
+  }
+
+  if (effect.kind === 'prevent-knockout') {
+    return `選擇${count}${target}，該次戰鬥中 HP 不會降到 0。`
   }
 
   const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount
@@ -60,6 +72,14 @@ export const describeEffectResult = (
     return `${names}已從休息區移至棄牌區。`
   }
 
+  if (effect.kind === 'gain-hp') {
+    return `餅乾增加了 ${effect.amount} HP。`
+  }
+
+  if (effect.kind === 'support-to-trash') {
+    return `${effect.amount} 張支援卡已移至棄牌區。`
+  }
+
   if (targetNames.length === 0) {
     return '效果已確認，本次沒有選擇目標。'
   }
@@ -67,6 +87,10 @@ export const describeEffectResult = (
   const names = targetNames.join('、')
   if (effect.kind === 'damage') {
     return `${names}受到 ${effect.amount} 點效果傷害。`
+  }
+
+  if (effect.kind === 'prevent-knockout') {
+    return `${names}在本次戰鬥中受到 HP 下限保護。`
   }
 
   const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount

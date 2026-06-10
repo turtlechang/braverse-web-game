@@ -33,6 +33,7 @@ export interface BattleRowProps {
   onPlaceSupport?: (instanceId: string) => void
   onDeployCookie?: (instanceId: string) => void
   onInspectCard: (card: import('../../game').GameCard) => void
+  onInspectDiscard: (playerId: PlayerId) => void
 }
 
 export function BattleRow({
@@ -56,6 +57,7 @@ export function BattleRow({
   onPlaceSupport,
   onDeployCookie,
   onInspectCard,
+  onInspectDiscard,
 }: BattleRowProps) {
   const player = game.players[playerId]
   const isActivePlayer = game.activePlayerId === playerId
@@ -69,7 +71,11 @@ export function BattleRow({
           <CardFace
             card={support.card}
             className="support-card"
-            rested={support.rested}
+            rested={
+              support.rested ||
+              selectedSkillPaymentIds.has(support.card.instanceId) ||
+              selectedAttackPaymentIds.has(support.card.instanceId)
+            }
             selected={
               selectedSkillPaymentIds.has(support.card.instanceId) ||
               selectedAttackPaymentIds.has(support.card.instanceId)
@@ -209,6 +215,20 @@ export function BattleRow({
                       ATK {getEffectiveAttack(game, cookie.card.instanceId)}
                     </span>
                   </div>
+                  <div
+                    className="hp-card-stack"
+                    aria-label={`${cookie.card.name} HP 卡 ${cookie.hpCards.length} 張`}
+                  >
+                    {cookie.hpCards.map((hpCard) => (
+                      <CardFace
+                        card={hpCard}
+                        className="hp-card"
+                        concealed
+                        key={hpCard.instanceId}
+                        onClick={() => onInspectCard(cookie.card)}
+                      />
+                    ))}
+                  </div>
                   {(canTarget || canSelectEffectTarget) && (
                     <span className="target-hint">
                       {canSelectEffectTarget ? '效果目標' : '攻擊目標'}
@@ -254,10 +274,25 @@ export function BattleRow({
             <Layers3 aria-hidden="true" />
           )}
         </div>
-        <div className="discard-zone">
+        <button
+          className="discard-zone"
+          type="button"
+          disabled={player.discardPile.length === 0}
+          onClick={() => onInspectDiscard(playerId)}
+        >
           <span>棄牌區</span>
+          {player.discardPile.length > 0 && (
+            <div className="discard-card-stack">
+              <i />
+              <i />
+              <CardFace
+                card={player.discardPile[player.discardPile.length - 1]}
+                className="discard-top-card"
+              />
+            </div>
+          )}
           <strong>{player.discardPile.length}</strong>
-        </div>
+        </button>
       </div>
 
       <div

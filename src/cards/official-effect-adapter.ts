@@ -1,8 +1,11 @@
 import type {
+  AbilityCost,
   CardSkill,
   CardEffect,
   EffectCondition,
   EffectTargetSelector,
+  FlipAbility,
+  TrapAbility,
 } from '../game'
 import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
@@ -96,6 +99,18 @@ const BREAK_TO_TRASH_RE = /^(?:If\s+your\s+break\s+area\s+is\s+LV\.(\d+)\s+or\s+
 
 const stripEffectText = (text: string): string =>
   text.replace(COST_OR_MARKER_RE, '').replace(BRACKET_COST_RE, '').replace(/\s+/g, ' ').trim()
+
+const parseAbilityCost = (text: string): AbilityCost => {
+  const parsed = parseOfficialCardText(text)
+  const discardMatch = text.match(
+    /(?:<|《)\s*Discard\s+(\d+)\s+card(?:s)?\.\s*(?:>|》)/i,
+  )
+
+  return {
+    energy: parsed?.cost ?? {},
+    discardHand: discardMatch ? Number(discardMatch[1]) : 0,
+  }
+}
 
 const parseSimpleDraw = (stripped: string): number | null => {
   const match = stripped.match(DRAW_ONLY_RE)
@@ -317,6 +332,162 @@ export const convertOfficialCardEffects = (
 export const convertOfficialCardEffectSet = (
   cards: OfficialCardRecord[],
 ): OfficialEffectConversion[] => cards.map(convertOfficialCardEffects)
+
+export const convertOfficialFlipAbility = (
+  card: OfficialCardRecord,
+): FlipAbility | undefined => {
+  if (card.type !== 'flip' || !card.flipText) {
+    return undefined
+  }
+
+  const stripped = stripEffectText(card.flipText)
+  const drawAmount = parseSimpleDraw(stripped)
+
+  if (drawAmount !== null) {
+    return {
+      text: card.flipText,
+      cost: parseAbilityCost(card.flipText),
+      effects: [{ kind: 'draw', amount: drawAmount }],
+    }
+  }
+
+  const gainHpMatch = stripped.match(
+    /^The Cookie with this card attached for HP gains \+(\d+) HP\.?$/i,
+  )
+
+  if (gainHpMatch) {
+    return {
+      text: card.flipText,
+      cost: parseAbilityCost(card.flipText),
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: Number(gainHpMatch[1]),
+        },
+      ],
+    }
+  }
+
+  return undefined
+}
+
+const parseTrapCondition = (
+  text: string,
+): TrapAbility['condition'] | undefined => {
+  const breakLevel = text.match(/break area is LV\.(\d+) or higher/i)
+  if (breakLevel) {
+    return {
+      kind: 'break-level-at-least',
+      level: Number(breakLevel[1]),
+    }
+  }
+
+  const attackThreshold = text.match(
+    /opponent's Cookies? attacks? more than (\d+) damage/i,
+  )
+  if (attackThreshold) {
+    return {
+      kind: 'attacker-attack-more-than',
+      amount: Number(attackThreshold[1]),
+    }
+  }
+
+  const faintedColor = text.match(
+    /any of your \{([RYGBPK])\} Cookies fainted during this battle/i,
+  )
+  const colors = {
+    R: 'red',
+    Y: 'yellow',
+    G: 'green',
+    B: 'blue',
+    P: 'purple',
+    K: 'black',
+  } as const
+  const color = faintedColor
+    ? colors[faintedColor[1] as keyof typeof colors]
+    : undefined
+
+  return color
+    ? {
+        kind: 'friendly-color-fainted-this-battle',
+        color,
+      }
+    : undefined
+}
+
+export const convertOfficialTrapAbility = (
+  card: OfficialCardRecord,
+): TrapAbility | undefined => {
+  if (card.type !== 'trap' || !card.attackText) {
+    return undefined
+  }
+
+  const text = card.attackText
+  const condition = parseTrapCondition(text)
+  const target = parseTarget(text)
+  const effects: CardEffect[] = []
+  const attackDecrease = text.match(
+    /deals?\s+-(\d+)\s+attack damage/i,
+  )
+  const damage = text.match(/receives?\s+(\d+)\s+damage/i)
+  const preventKnockout = /HP cannot reach 0 during this battle/i.test(text)
+  const supportToTrash = text.match(
+    /place\s+(\d+)\s+card(?:s)?\s+from your support area into the trash/i,
+  )
+  const deckToRestedSupport = text.match(
+    /take the top card from your deck and place it in your support area as rested/i,
+  )
+
+  if (attackDecrease && target) {
+    effects.push({
+      kind: 'modify-attack',
+      amount: -Number(attackDecrease[1]),
+      duration: 'this-turn',
+      target,
+    })
+  }
+
+  if (damage && target) {
+    effects.push({
+      kind: 'damage',
+      amount: Number(damage[1]),
+      target,
+    })
+  }
+
+  if (preventKnockout && target) {
+    effects.push({
+      kind: 'prevent-knockout',
+      target,
+    })
+  }
+
+  if (supportToTrash) {
+    effects.push({
+      kind: 'support-to-trash',
+      amount: Number(supportToTrash[1]),
+    })
+  }
+
+  if (deckToRestedSupport) {
+    effects.push({
+      kind: 'deck-to-support',
+      amount: 1,
+      rested: true,
+    })
+  }
+
+  if (effects.length === 0) {
+    return undefined
+  }
+
+  return {
+    text,
+    cost: parseAbilityCost(text),
+    condition,
+    effects,
+  }
+}
 
 export const convertOfficialCookieSkill = (
   card: OfficialCardRecord,

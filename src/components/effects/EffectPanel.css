@@ -12,6 +12,22 @@
   backdrop-filter: blur(12px);
 }
 
+.effect-panel.is-complete {
+  animation: effect-complete-fade 1s ease forwards;
+}
+
+@keyframes effect-complete-fade {
+  0%,
+  65% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
 .effect-panel > span {
   color: #71e9ff;
   font-size: 0.68rem;

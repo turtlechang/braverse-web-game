@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createBreakToTrashDemoState, isLocalhost, parseTestStateConfig } from './demo'
+import {
+  createBreakToTrashDemoState,
+  createTrapResponseDemoState,
+  isLocalhost,
+  parseTestStateConfig,
+} from './demo'
+import { getTrapCandidates } from './battle'
 import { isEffectConditionMet } from './effects'
 
 describe('isLocalhost', () => {
@@ -27,12 +33,28 @@ describe('isLocalhost', () => {
 describe('parseTestStateConfig', () => {
   it('returns lv1 config when localhost and test-state=break-to-trash-lv1', () => {
     const result = parseTestStateConfig('?test-state=break-to-trash-lv1', 'localhost')
-    expect(result).toEqual({ level: 1 })
+    expect(result).toEqual({ kind: 'break-to-trash', level: 1 })
   })
 
   it('returns lv2 config when localhost and test-state=break-to-trash-lv2', () => {
     const result = parseTestStateConfig('?test-state=break-to-trash-lv2', '127.0.0.1')
-    expect(result).toEqual({ level: 2 })
+    expect(result).toEqual({ kind: 'break-to-trash', level: 2 })
+  })
+
+  it('returns payable trap response config on localhost', () => {
+    const result = parseTestStateConfig(
+      '?test-state=trap-payable',
+      'localhost',
+    )
+    expect(result).toEqual({ kind: 'trap-response', payable: true })
+  })
+
+  it('returns unpayable trap response config on localhost', () => {
+    const result = parseTestStateConfig(
+      '?test-state=trap-unpayable',
+      'localhost',
+    )
+    expect(result).toEqual({ kind: 'trap-response', payable: false })
   })
 
   it('returns null when localhost but unknown test-state', () => {
@@ -118,5 +140,17 @@ describe('createBreakToTrashDemoState', () => {
     }
     const effect = eclair.skill!.effects[0]
     expect(isEffectConditionMet(state, context, effect)).toBe(true)
+  })
+})
+
+describe('createTrapResponseDemoState', () => {
+  it('creates a payable trap candidate for the response modal', () => {
+    const state = createTrapResponseDemoState(true)
+    expect(getTrapCandidates(state, 'player-one')).toHaveLength(1)
+  })
+
+  it('creates no trap candidates when support cannot pay the cost', () => {
+    const state = createTrapResponseDemoState(false)
+    expect(getTrapCandidates(state, 'player-one')).toEqual([])
   })
 })

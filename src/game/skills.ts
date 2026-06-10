@@ -56,7 +56,18 @@ export const canActivateCookieSkill = (
   if (
     state.status !== 'playing' ||
     state.pendingRefresh ||
-    state.pendingReplacementPlayerId
+    state.pendingReplacementPlayerId ||
+    state.pendingBattle
+  ) {
+    return false
+  }
+
+  if (
+    state.pendingOnPlay
+      ? trigger !== 'on-play' ||
+        state.pendingOnPlay.playerId !== playerId ||
+        state.pendingOnPlay.sourceInstanceId !== sourceInstanceId
+      : trigger === 'on-play'
   ) {
     return false
   }
@@ -113,6 +124,7 @@ export const activateCookieSkill = (
 
   return {
     ...state,
+    pendingOnPlay: trigger === 'on-play' ? null : state.pendingOnPlay,
     players: {
       ...state.players,
       [playerId]: {
@@ -133,5 +145,23 @@ export const activateCookieSkill = (
     skillUsesThisTurn: source.card.skill.oncePerTurn
       ? [...state.skillUsesThisTurn, getSkillUseKey(source)]
       : state.skillUsesThisTurn,
+  }
+}
+
+export const skipCookieOnPlay = (
+  state: GameState,
+  playerId: PlayerId,
+  sourceInstanceId: string,
+): GameState => {
+  if (
+    state.pendingOnPlay?.playerId !== playerId ||
+    state.pendingOnPlay.sourceInstanceId !== sourceInstanceId
+  ) {
+    throw new GameRuleError('目前沒有可略過的登場效果。')
+  }
+
+  return {
+    ...state,
+    pendingOnPlay: null,
   }
 }

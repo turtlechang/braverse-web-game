@@ -4,6 +4,8 @@ import officialYellowSample from '../../data/cards/official-starter-deck-yellow.
 import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
+  convertOfficialFlipAbility,
+  convertOfficialTrapAbility,
 } from '../cards/official-effect-adapter'
 import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
@@ -122,12 +124,17 @@ const createCard = (
 ): GameCard => {
   const effectConversion = convertOfficialCardEffects(source)
   const skill = convertOfficialCookieSkill(source)
+  const flip = convertOfficialFlipAbility(source)
+  const trap = convertOfficialTrapAbility(source)
   const base = {
     id: source.baseCardNumber,
     instanceId: `${playerId}-${source.cardNumber}-${copyNumber}`,
     name: source.name,
     imageUrl: source.imageUrl,
     energyColor: getEnergyColor(source),
+    officialType: (source.type === 'flip'
+      ? 'flip'
+      : 'cookie') as GameCard['officialType'],
     ...(effectConversion.status === 'supported'
       ? {
           effectText: effectConversion.sourceText,
@@ -153,16 +160,22 @@ const createCard = (
       ),
       attackCost: parsedAttack?.totalCost ?? 0,
       attackEnergyCost: parsedAttack?.cost ?? {},
+      attackText: source.attackText ?? undefined,
       ...(skill ? { skill } : {}),
+      ...(flip ? { flip } : {}),
     }
   }
 
+  const runtimeType =
+    source.type === 'trap' || source.type === 'stage'
+      ? source.type
+      : 'item'
+
   return {
     ...base,
-    type:
-      source.type === 'trap' || source.type === 'stage'
-        ? source.type
-        : 'item',
+    officialType: runtimeType,
+    type: runtimeType,
+    ...(trap ? { trap } : {}),
   }
 }
 

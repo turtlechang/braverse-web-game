@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CardSkill, EnergyCost, GameCard } from '../../game'
+import { getCardEffectTokenLabel } from './cardVisualUtils'
 import './CardVisuals.css'
 
 const energyLabels = {
@@ -83,22 +84,27 @@ export function EnergyCostIcons({ cost }: { cost: EnergyCost }) {
 }
 
 export function CardEffectText({ text }: { text: string }) {
-  const parts = text.split(/(\{(?:mob|ap|R|Y|G|B|P|N)\})/g)
+  const parts = text.split(/(\{[A-Za-z0-9_]+\})/g)
 
   return (
     <>
       {parts.map((part, index) => {
         const token = part.match(/^\{(.+)\}$/)?.[1]
         const energy = token ? energyTokens[token] : undefined
+        const label = token
+          ? getCardEffectTokenLabel(token)
+          : undefined
 
         if (energy) {
           return <EnergyIcon key={`${part}-${index}`} energy={energy} />
         }
 
-        if (token === 'mob' || token === 'ap') {
+        if (label !== undefined) {
+          if (label === '') return null
+
           return (
             <span className="inline-skill-label" key={`${part}-${index}`}>
-              {token === 'mob' ? 'Activate 啟動' : 'OnPlay 登場'}
+              {label}
             </span>
           )
         }

@@ -159,12 +159,14 @@ describe('official card adapter', () => {
         imageUrl:
           'https://cookierunbraverse.com/data/en_storage/example.webp',
         energyColor: 'red',
+        officialType: 'flip',
         type: 'cookie',
         level: 2,
         hp: 3,
         attack: 2,
         attackCost: 2,
         attackEnergyCost: { red: 2 },
+        attackText: '<{R}{R}> Pointy Icicle {da} 2',
       })
       expect(result.source.imageUrl).toMatch(/^https:/)
       expect(result.parsedText.flip?.raw).toContain('effect damage')

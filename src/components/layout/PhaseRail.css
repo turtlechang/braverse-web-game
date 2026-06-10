@@ -4,7 +4,7 @@
   inset: 0 auto 0 0;
   width: var(--rail-width);
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto auto auto;
   background: rgba(3, 18, 54, 0.84);
   border-right: 1px solid rgba(130, 194, 255, 0.25);
   backdrop-filter: blur(12px);
@@ -90,6 +90,39 @@
   cursor: pointer;
 }
 
+.rail-ai-status {
+  display: grid;
+  gap: 3px;
+  margin: 8px 12px 0;
+  padding: 10px;
+  border: 1px solid rgba(113, 233, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(3, 20, 53, 0.76);
+}
+
+.rail-ai-status > span {
+  color: #71e9ff;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.rail-ai-status small {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.62rem;
+}
+
+.rail-ai-status button {
+  min-height: 30px;
+  margin-top: 4px;
+  border: 1px solid #ffe66e;
+  border-radius: 4px;
+  background: rgba(24, 121, 171, 0.78);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .next-phase-button:disabled {
   filter: grayscale(1);
   cursor: not-allowed;
@@ -126,6 +159,34 @@
     height: 64px;
     display: grid;
     grid-template-columns: auto 1fr auto;
+  }
+
+  .rail-ai-status {
+    align-self: center;
+    min-width: 42px;
+    margin: 8px 0;
+    padding: 5px;
+  }
+
+  .rail-ai-status > span,
+  .rail-ai-status strong,
+  .rail-ai-status small {
+    display: none;
+  }
+
+  .rail-ai-status button {
+    width: 42px;
+    min-height: 42px;
+    margin: 0;
+    overflow: hidden;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .rail-ai-status button::after {
+    content: "AI";
+    color: #fff;
+    font-size: 0.68rem;
   }
 
   .brand-mark {

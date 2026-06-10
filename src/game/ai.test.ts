@@ -93,11 +93,19 @@ describe('simple AI opponent', () => {
     const decision = takeAiStep(state)
 
     expect(decision.action).toBe('attack')
+    expect(decision.state.pendingBattle).toMatchObject({
+      stage: 'trap',
+      attackerInstanceId: attacker.card.instanceId,
+      targetInstanceId: target.card.instanceId,
+    })
     expect(
-      decision.state.players['player-one'].battleArea[0].hpCards.length,
-    ).toBeLessThan(
-      state.players['player-one'].battleArea[0].hpCards.length,
-    )
+      decision.state.players['player-two'].battleArea[0].rested,
+    ).toBe(true)
+    expect(
+      decision.state.players['player-two'].supportArea.every(
+        (support) => support.rested,
+      ),
+    ).toBe(true)
   })
 
   it('selects colored and neutral skill payments deterministically', () => {
@@ -214,6 +222,45 @@ describe('simple AI opponent', () => {
     }
 
     expect(takeAiStep(replacementState).action).toBe('replace-cookie')
+  })
+
+  it('resolves replacement OnPlay even during the opponent turn', () => {
+    const base = createDemoGame()
+    const replacement = base.players['player-two'].hand.find(
+      (card) => card.type === 'cookie',
+    )
+    expect(replacement).toBeDefined()
+    const onPlayReplacement = {
+      ...replacement!,
+      skill: {
+        trigger: 'on-play' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Draw 1',
+        effects: [{ kind: 'draw' as const, amount: 1 }],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-one',
+      pendingReplacementPlayerId: 'player-two',
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [],
+          hand: [onPlayReplacement],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('replace-cookie')
+    expect(decision.state.pendingOnPlay).toBeNull()
+    expect(decision.effectSelections).toHaveLength(1)
   })
 
   it('advances the phase when no other legal action exists', () => {

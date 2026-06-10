@@ -80,7 +80,9 @@ node scripts/import-official-cards.mjs \
 
 `src/cards/official-card-adapter.ts` 會將官方卡牌轉成 `GameCard`：
 
-- `COOKIE` 與 `FLIP` 轉成 runtime `cookie`。
+- `COOKIE` 與 `FLIP` 轉成 runtime `cookie`，並以 `officialType` 保留來源卡種。
+- `FLIP` 的能力只從 `flipText`（官方 `card_flip`）建立。
+- `TRAP` 的能力只從 `attackText`（官方 `card_attack_text`）建立。
 - `ITEM`、`TRAP`、`STAGE` 轉成對應非餅乾卡。
 - `EXTRA` 與資料不完整的餅乾卡會回傳 `unsupported`。
 - runtime `id` 使用 `baseCardNumber`，保留異圖與圖片 URL 在轉換結果 metadata。
