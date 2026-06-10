@@ -178,7 +178,29 @@ describe('official green starter deck', () => {
       name: 'Viney Vines',
       type: 'item',
     })
-    expect(vineyVines).not.toHaveProperty('effects')
+    expect(vineyVines).toMatchObject({
+      effects: [
+        { kind: 'damage', amount: 1 },
+        { kind: 'support-to-trash', amount: 1 },
+      ],
+      item: {
+        cost: { green: 2 },
+      },
+    })
+
+    const guardianTree = deck.find((card) => card.id === 'ST3-022')
+    expect(guardianTree).toMatchObject({
+      name: "Guardian Tree's Blessing",
+      type: 'stage',
+      stageAbility: {
+        placementCost: { green: 1 },
+        effects: [
+          { kind: 'support-to-hand', amount: 1 },
+          { kind: 'draw', amount: 1 },
+        ],
+        restSource: true,
+      },
+    })
   })
 
   it('creates a demo game using the green deck', () => {

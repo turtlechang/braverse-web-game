@@ -5,6 +5,8 @@ import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
+  convertOfficialItemAbility,
+  convertOfficialStageAbility,
   convertOfficialTrapAbility,
 } from '../cards/official-effect-adapter'
 import { parseOfficialCardText } from '../cards/official-text-parser'
@@ -126,6 +128,8 @@ const createCard = (
   const skill = convertOfficialCookieSkill(source)
   const flip = convertOfficialFlipAbility(source)
   const trap = convertOfficialTrapAbility(source)
+  const item = convertOfficialItemAbility(source)
+  const stageAbility = convertOfficialStageAbility(source)
   const base = {
     id: source.baseCardNumber,
     instanceId: `${playerId}-${source.cardNumber}-${copyNumber}`,
@@ -176,6 +180,8 @@ const createCard = (
     officialType: runtimeType,
     type: runtimeType,
     ...(trap ? { trap } : {}),
+    ...(item ? { item } : {}),
+    ...(stageAbility ? { stageAbility } : {}),
   }
 }
 

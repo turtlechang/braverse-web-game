@@ -5,6 +5,12 @@ import {
   skipDefeatedCookieReplacement,
 } from './actions'
 import {
+  activateStage,
+  canActivateStage,
+  playItem,
+  playStage,
+} from './card-abilities'
+import {
   beginAttack,
   getTrapCandidates,
   getTrapTargetCandidates,
@@ -17,6 +23,8 @@ import {
   executeCardEffect,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getSupportEffectCandidates,
+  getTrashCookieCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectUntargeted,
@@ -56,6 +64,9 @@ export type AiActionType =
   | 'place-support'
   | 'deploy-cookie'
   | 'activate-skill'
+  | 'play-item'
+  | 'play-stage'
+  | 'activate-stage'
   | 'attack'
   | 'play-trap'
   | 'resolve-damage'
@@ -102,6 +113,21 @@ const chooseEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): string[] => {
+  if (
+    effect.kind === 'support-to-trash' ||
+    effect.kind === 'support-to-hand'
+  ) {
+    return getSupportEffectCandidates(state, context)
+      .slice(0, effect.amount)
+      .map((support) => support.card.instanceId)
+  }
+
+  if (effect.kind === 'trash-to-battle') {
+    return getTrashCookieCandidates(state, context)
+      .slice(0, effect.amount)
+      .map((card) => card.instanceId)
+  }
+
   if (isEffectUntargeted(effect)) {
     return []
   }
@@ -131,7 +157,8 @@ const chooseEffectTargets = (
       )
     })
   } else if (
-    effect.kind !== 'prevent-knockout' &&
+    (effect.kind === 'modify-attack' ||
+      effect.kind === 'modify-damage-received') &&
     effect.amount > 0
   ) {
     ordered.sort(
@@ -153,6 +180,74 @@ const chooseEffectTargets = (
   return ordered
     .slice(0, count)
     .map((cookie) => cookie.card.instanceId)
+}
+
+const resolveAiCardAbility = (
+  state: GameState,
+  playerId: PlayerId,
+  card: GameState['players'][PlayerId]['hand'][number],
+): AiDecision | null => {
+  const ability = card.item
+  if (!ability) return null
+  const paymentIds = selectEnergyPayment(
+    ability.cost,
+    state.players[playerId].supportArea,
+  )
+  if (!paymentIds) return null
+  const context = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: card.instanceId,
+  }
+  const effects = ability.effects.filter((effect) =>
+    isEffectConditionMet(state, context, effect),
+  )
+  if (effects.length === 0) return null
+
+  let nextState = playItem(
+    state,
+    playerId,
+    card.instanceId,
+    paymentIds,
+  )
+  const effectSelections: AiEffectSelection[] = []
+  for (const effect of effects) {
+    const targetIds = chooseEffectTargets(nextState, context, effect)
+    if (
+      (effect.kind === 'support-to-trash' ||
+        effect.kind === 'support-to-hand' ||
+        effect.kind === 'trash-to-battle') &&
+      targetIds.length < effect.amount
+    ) {
+      return null
+    }
+    if (
+      !isEffectUntargeted(effect) &&
+      effect.kind !== 'break-to-trash' &&
+      targetIds.length < effect.target.min
+    ) {
+      return null
+    }
+    nextState = executeCardEffect(nextState, context, effect, targetIds)
+    effectSelections.push({
+      sourceInstanceId: card.instanceId,
+      paymentIds,
+      targetIds,
+      effect,
+    })
+    if (
+      nextState.pendingRefresh ||
+      nextState.pendingOnPlay ||
+      nextState.status !== 'playing'
+    ) {
+      break
+    }
+  }
+  return {
+    state: finalizePendingReplacements(nextState),
+    action: 'play-item',
+    description: `${state.players[playerId].name}使用${card.name}。`,
+    effectSelections,
+  }
 }
 
 const resolveAiSkill = (
@@ -501,6 +596,73 @@ export const takeAiStep = (
     }
 
     if (state.phase === 'main') {
+      const stageCard = !canAttack(state) ? player.hand.find(
+        (card) => card.type === 'stage' && card.stageAbility,
+      ) : undefined
+      if (stageCard?.stageAbility) {
+        const paymentIds = selectEnergyPayment(
+          stageCard.stageAbility.placementCost,
+          player.supportArea,
+        )
+        if (paymentIds) {
+          return {
+            state: playStage(
+              state,
+              playerId,
+              stageCard.instanceId,
+              paymentIds,
+            ),
+            action: 'play-stage',
+            description: `${player.name}放置${stageCard.name}。`,
+          }
+        }
+      }
+
+      if (!canAttack(state) && canActivateStage(state, playerId)) {
+        const stage = player.stage!
+        const ability = stage.card.stageAbility!
+        const paymentIds = selectEnergyPayment(
+          ability.cost,
+          player.supportArea,
+        )
+        if (paymentIds) {
+          const context = {
+            sourcePlayerId: playerId,
+            sourceInstanceId: stage.card.instanceId,
+          }
+          let nextState = activateStage(state, playerId, paymentIds)
+          for (const effect of ability.effects) {
+            const targetIds = chooseEffectTargets(nextState, context, effect)
+            if (
+              (effect.kind === 'support-to-hand' ||
+                effect.kind === 'support-to-trash') &&
+              targetIds.length < effect.amount
+            ) {
+              break
+            }
+            nextState = executeCardEffect(
+              nextState,
+              context,
+              effect,
+              targetIds,
+            )
+            if (nextState.pendingRefresh) break
+          }
+          return {
+            state: finalizePendingReplacements(nextState),
+            action: 'activate-stage',
+            description: `${player.name}啟動${stage.card.name}。`,
+          }
+        }
+      }
+
+      if (!canAttack(state)) {
+        for (const card of player.hand) {
+          const itemDecision = resolveAiCardAbility(state, playerId, card)
+          if (itemDecision) return itemDecision
+        }
+      }
+
       if (player.battleArea.length < 2) {
         const deployable = player.hand.find(
           (card) =>

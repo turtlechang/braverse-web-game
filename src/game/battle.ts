@@ -624,11 +624,20 @@ export const resolveNextDamage = (state: GameState): GameState => {
       ...battle,
       remainingDamage: battle.remainingDamage - 1,
       revealedHpCard,
-      stage: revealedHpCard.flip ? 'flip' : 'damage',
+      stage:
+        revealedHpCard.flip &&
+        state.flipDisabledUntilTurn?.[target.card.instanceId] !==
+          state.turnNumber
+          ? 'flip'
+          : 'damage',
     },
   }
 
-  if (revealedHpCard.flip) {
+  if (
+    revealedHpCard.flip &&
+    state.flipDisabledUntilTurn?.[target.card.instanceId] !==
+      state.turnNumber
+  ) {
     return nextState
   }
 

@@ -1,11 +1,13 @@
 import type {
   AbilityCost,
+  CardAbility,
   CardSkill,
   CardEffect,
   EffectCondition,
   EffectTargetSelector,
   FlipAbility,
   TrapAbility,
+  StageAbility,
 } from '../game'
 import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
@@ -150,6 +152,62 @@ export const convertOfficialCardEffects = (
       cardNumber: card.cardNumber,
       sourceText,
       reason: 'no-effect-text',
+    }
+  }
+
+  const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
+    'ST2-016': [
+      {
+        kind: 'disable-flip',
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'ST2-018': [
+      { kind: 'draw', amount: 1 },
+      {
+        kind: 'view-hp',
+        target: { side: 'self', min: 0, max: 1 },
+        optional: true,
+      },
+    ],
+    'ST2-019': [
+      {
+        kind: 'modify-all-attack',
+        amount: 1,
+        duration: 'this-turn',
+        side: 'self',
+        condition: { kind: 'break-level-at-least', level: 6 },
+      },
+    ],
+    'ST3-016': [
+      {
+        kind: 'battle-to-support',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          maxLevel: 2,
+        },
+      },
+    ],
+    'ST3-017': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 2 },
+      },
+      { kind: 'support-to-trash', amount: 1 },
+    ],
+    'ST3-018': [{ kind: 'trash-to-battle', amount: 1 }],
+  }
+  const exactEffects = exactStarterEffects[card.cardNumber]
+  if (exactEffects) {
+    return {
+      status: 'supported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      effects: exactEffects,
     }
   }
 
@@ -326,6 +384,55 @@ export const convertOfficialCardEffects = (
     cardNumber: card.cardNumber,
     sourceText,
     reason: 'unsupported-effect-text',
+  }
+}
+
+export const convertOfficialItemAbility = (
+  card: OfficialCardRecord,
+): CardAbility | undefined => {
+  if (card.type !== 'item' || !card.attackText) return undefined
+  const conversion = convertOfficialCardEffects(card)
+  const parsed = parseOfficialCardText(card.attackText)
+  if (conversion.status !== 'supported' || !parsed) return undefined
+  return {
+    cost: parsed.cost,
+    text: card.attackText,
+    effects: conversion.effects,
+  }
+}
+
+export const convertOfficialStageAbility = (
+  card: OfficialCardRecord,
+): StageAbility | undefined => {
+  if (card.type !== 'stage' || !card.attackText) return undefined
+  const [placementText, activationText] = card.attackText.split(/\{mob\}/i)
+  const placement = parseOfficialCardText(placementText)
+  const activation = parseOfficialCardText(activationText ?? '')
+  if (!placement || !activation) return undefined
+
+  const effects: Partial<Record<string, CardEffect[]>> = {
+    'ST1-022': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1 },
+      },
+    ],
+    'ST3-022': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'draw', amount: 1 },
+    ],
+  }
+  const stageEffects = effects[card.cardNumber]
+  if (!stageEffects) return undefined
+
+  return {
+    placementCost: placement.cost,
+    cost: activation.cost,
+    text: card.attackText,
+    effects: stageEffects,
+    restSource: /Rest this card/i.test(activationText ?? ''),
   }
 }
 

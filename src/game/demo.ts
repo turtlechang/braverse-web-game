@@ -9,7 +9,15 @@ import {
   DECK_CREATORS,
   type DeckChoice,
 } from './starter-deck'
-import type { CookieCard, GameCard, GameState, PlayerState } from './types'
+import type {
+  CookieCard,
+  EnergyColor,
+  GameCard,
+  GameState,
+  PlayerId,
+  PlayerState,
+  TurnPhase,
+} from './types'
 
 export const isLocalhost = (hostname: string): boolean =>
   hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
@@ -22,6 +30,8 @@ export const parseTestStateConfig = (
   | { kind: 'trap-response'; payable: boolean }
   | { kind: 'flip-response' }
   | { kind: 'replacement-choice' }
+  | { kind: 'item-usage'; payable: boolean }
+  | { kind: 'stage-usage'; payable: boolean }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -43,6 +53,18 @@ export const parseTestStateConfig = (
   }
   if (testState === 'replacement-choice') {
     return { kind: 'replacement-choice' }
+  }
+  if (testState === 'item-payable') {
+    return { kind: 'item-usage', payable: true }
+  }
+  if (testState === 'item-unpayable') {
+    return { kind: 'item-usage', payable: false }
+  }
+  if (testState === 'stage-payable') {
+    return { kind: 'stage-usage', payable: true }
+  }
+  if (testState === 'stage-unpayable') {
+    return { kind: 'stage-usage', payable: false }
   }
   return null
 }
@@ -222,6 +244,7 @@ export const createBreakToTrashDemoState = (
     nextBattleEntrySequence: 3,
     attackModifiers: [],
     damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,
@@ -313,6 +336,7 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
     nextBattleEntrySequence: 3,
     attackModifiers: [],
     damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,
@@ -407,6 +431,7 @@ export const createFlipResponseDemoState = (): GameState => {
     nextBattleEntrySequence: 3,
     attackModifiers: [],
     damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,
@@ -500,5 +525,238 @@ export const createReplacementChoiceDemoState = (): GameState => {
     pendingOnPlay: null,
     pendingRefresh: null,
     pendingBattle: null,
+  }
+}
+
+const testCookieCard = (
+  instanceId: string,
+  level = 1,
+  hp = 1,
+  attack = 1,
+): CookieCard => ({
+  id: instanceId,
+  instanceId,
+  name: instanceId,
+  type: 'cookie',
+  level,
+  hp,
+  attack,
+  attackCost: 0,
+})
+
+const testSupportCard = (
+  instanceId: string,
+  color: EnergyColor | 'wild' = 'red',
+): GameCard => ({
+  id: instanceId,
+  instanceId,
+  name: instanceId,
+  type: 'item',
+  energyColor: color,
+})
+
+const baseTestState = (
+  activePlayerId: PlayerId,
+  phase: TurnPhase,
+): GameState => ({
+  players: {
+    'player-one': {
+      id: 'player-one',
+      name: '玩家',
+      ...createTestPlayerState(),
+    },
+    'player-two': {
+      id: 'player-two',
+      name: 'AI 對手',
+      ...createTestPlayerState(),
+    },
+  },
+  firstPlayerId: activePlayerId,
+  activePlayerId,
+  turnNumber: 1,
+  phase,
+  status: 'playing',
+  result: null,
+  supportPlacedThisTurn: false,
+  skillUsesThisTurn: [],
+  nextBattleEntrySequence: 3,
+  attackModifiers: [],
+  damageReceivedModifiers: [],
+  flipDisabledUntilTurn: {},
+  pendingReplacement: null,
+  departedCookieCounts: {
+    'player-one': 0,
+    'player-two': 0,
+  },
+  pendingOnPlay: null,
+  pendingRefresh: null,
+  pendingBattle: null,
+})
+
+export const createItemUsageDemoState = (payable: boolean): GameState => {
+  const itemCard: GameCard = {
+    id: 'test-item',
+    instanceId: 'test-item-1',
+    name: '測試物品',
+    type: 'item',
+    item: {
+      cost: { red: 1 },
+      text: '測試物品效果',
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 1, max: 1 },
+        },
+      ],
+    },
+  }
+
+  const p1Cookie = testCookieCard('p1-cookie')
+  const p2Cookie = testCookieCard('p2-cookie')
+  const support = testSupportCard('pay-1', 'red')
+
+  const state = baseTestState('player-one', payable ? 'main' : 'support')
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        hand: [itemCard],
+        battleArea: [
+          {
+            card: p1Cookie,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${p1Cookie.instanceId}:battle:1`,
+          },
+        ],
+        supportArea: payable
+          ? [{ card: support, rested: false }]
+          : [],
+      },
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: [
+          {
+            card: p2Cookie,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${p2Cookie.instanceId}:battle:2`,
+          },
+        ],
+      },
+    },
+  }
+}
+
+export const createStageUsageDemoState = (payable: boolean): GameState => {
+  const stageCard: GameCard = {
+    id: 'test-stage',
+    instanceId: 'test-stage-1',
+    name: '測試場景',
+    type: 'stage',
+    stageAbility: {
+      placementCost: { red: 1 },
+      cost: { red: 1 },
+      text: '測試場景效果',
+      restSource: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 1, max: 1 },
+        },
+      ],
+    },
+  }
+
+  const oldStage: GameCard = {
+    id: 'old-stage',
+    instanceId: 'old-stage-1',
+    name: '舊場景',
+    type: 'stage',
+  }
+
+  const p1Cookie = testCookieCard('p1-cookie')
+  const p2Cookie = testCookieCard('p2-cookie')
+  const support1 = testSupportCard('pay-1', 'red')
+  const support2 = testSupportCard('pay-2', 'red')
+
+  if (payable) {
+    const state = baseTestState('player-one', 'main')
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [stageCard],
+          battleArea: [
+            {
+              card: p1Cookie,
+              hpCards: [],
+              rested: false,
+              battleEntryId: `${p1Cookie.instanceId}:battle:1`,
+            },
+          ],
+          supportArea: [
+            { card: support1, rested: false },
+            { card: support2, rested: false },
+          ],
+          stage: { card: oldStage, rested: false },
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [
+            {
+              card: p2Cookie,
+              hpCards: [],
+              rested: false,
+              battleEntryId: `${p2Cookie.instanceId}:battle:2`,
+            },
+          ],
+        },
+      },
+    }
+  }
+
+  const state = baseTestState('player-one', 'main')
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        battleArea: [
+          {
+            card: p1Cookie,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${p1Cookie.instanceId}:battle:1`,
+          },
+        ],
+        supportArea: [
+          { card: support1, rested: false },
+          { card: support2, rested: false },
+        ],
+        stage: { card: stageCard, rested: true },
+      },
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: [
+          {
+            card: p2Cookie,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${p2Cookie.instanceId}:battle:2`,
+          },
+        ],
+      },
+    },
   }
 }

@@ -3,9 +3,13 @@ import { Sparkles, Swords } from 'lucide-react'
 import './App.css'
 import {
   activateCookieSkill,
+  activateStage,
   advancePhase,
   beginAttack,
   canActivateCookieSkill,
+  canActivateStage,
+  canPlayItem,
+  canPlayStage,
   createDemoGame,
   createDemoSetupGame,
   deployCookie,
@@ -15,6 +19,8 @@ import {
   getAttackEnergyCost,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getSupportEffectCandidates,
+  getTrashCookieCandidates,
   getRefreshCandidates,
   getCurrentReplacementTask,
   getReplacementCandidates,
@@ -26,6 +32,8 @@ import {
   keepOpeningHand,
   mulliganOpeningHand,
   placeSupportCard,
+  playItem,
+  playStage,
   playTrap,
   refreshDeck,
   replaceDefeatedCookie,
@@ -44,6 +52,7 @@ import {
   type GameState,
   type PlayerId,
   type SkillTrigger,
+  type CardAbility,
 } from './game'
 import { BattleRow } from './components/battle/BattleRow'
 import { PhaseRail } from './components/layout/PhaseRail'
@@ -59,7 +68,9 @@ import type { PendingEffect } from './components/effects/effectUiTypes'
 import {
   createBreakToTrashDemoState,
   createFlipResponseDemoState,
+  createItemUsageDemoState,
   createReplacementChoiceDemoState,
+  createStageUsageDemoState,
   createTrapResponseDemoState,
   parseTestStateConfig,
 } from './game/demo'
@@ -100,6 +111,12 @@ function App() {
     if (testStateConfig?.kind === 'replacement-choice') {
       return createReplacementChoiceDemoState()
     }
+    if (testStateConfig?.kind === 'item-usage') {
+      return createItemUsageDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'stage-usage') {
+      return createStageUsageDemoState(testStateConfig.payable)
+    }
     return createDemoSetupGame('player-one')
   })
   const [setupStep, setSetupStep] = useState<OpeningSetupStep | null>(
@@ -130,14 +147,30 @@ function App() {
     if (testStateConfig?.kind === 'replacement-choice') {
       return '測試狀態：選擇是否補餅乾。'
     }
+    if (testStateConfig?.kind === 'item-usage') {
+      return testStateConfig.payable
+        ? '測試狀態：合法物品卡使用。'
+        : '測試狀態：不合法物品卡使用（非主要階段）。'
+    }
+    if (testStateConfig?.kind === 'stage-usage') {
+      return testStateConfig.payable
+        ? '測試狀態：合法場景卡放置與啟動。'
+        : '測試狀態：不合法場景卡啟動（已橫置）。'
+    }
     return '推進階段，開始這場對戰。'
   })
   const [effectHistory, setEffectHistory] = useState<string[]>([])
   const [pendingEffect, setPendingEffect] =
     useState<PendingEffect | null>(null)
+  const [suspendedEffect, setSuspendedEffect] =
+    useState<PendingEffect | null>(null)
   const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
   const [inspectedDiscardPlayerId, setInspectedDiscardPlayerId] =
     useState<PlayerId | null>(null)
+  const [inspectedHpPile, setInspectedHpPile] = useState<{
+    title: string
+    cards: GameCard[]
+  } | null>(null)
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
@@ -161,6 +194,7 @@ function App() {
     setSelectedAttackerId(null)
     setSelectedAttackPaymentIds([])
     setPendingEffect(null)
+    setSuspendedEffect(null)
     setEffectHistory([])
     setAiActionCount(0)
     setSimulationResults(null)
@@ -290,13 +324,31 @@ function App() {
   const currentEffect =
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
   const effectTargetCandidates =
-    pendingEffect && currentEffect && !isEffectUntargeted(currentEffect) && currentEffect.kind !== 'break-to-trash'
+    pendingEffect &&
+    currentEffect &&
+    !isEffectUntargeted(currentEffect) &&
+    currentEffect.kind !== 'break-to-trash'
       ? getEffectTargetCandidates(
           game,
           pendingEffect.context,
           currentEffect.target,
         )
       : []
+  const supportEffectCandidates =
+    pendingEffect &&
+    currentEffect &&
+    (currentEffect.kind === 'support-to-trash' ||
+      currentEffect.kind === 'support-to-hand')
+      ? getSupportEffectCandidates(game, pendingEffect.context)
+      : []
+  const trashCookieCandidates =
+    pendingEffect && currentEffect?.kind === 'trash-to-battle'
+      ? getTrashCookieCandidates(game, pendingEffect.context)
+      : []
+  const nonBattleEffectCandidateCards = [
+    ...supportEffectCandidates.map((support) => support.card),
+    ...trashCookieCandidates,
+  ]
   const breakToTrashCandidates =
     pendingEffect && currentEffect?.kind === 'break-to-trash'
       ? getBreakToTrashCandidates(
@@ -426,6 +478,34 @@ function App() {
     showPause,
   ])
 
+  useEffect(() => {
+    if (
+      !suspendedEffect ||
+      pendingEffect ||
+      game.status !== 'playing'
+    ) {
+      return
+    }
+
+    const viewerBlocks =
+      (game.pendingRefresh?.playerId === viewerPlayerId) ||
+      (game.pendingOnPlay?.playerId === viewerPlayerId)
+    if (viewerBlocks) return
+
+    const timer = window.setTimeout(() => {
+      setPendingEffect(suspendedEffect)
+      setSuspendedEffect(null)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [
+    suspendedEffect,
+    pendingEffect,
+    game.pendingRefresh,
+    game.pendingOnPlay,
+    game.status,
+    viewerPlayerId,
+  ])
+
   const beginCookieSkill = (
     nextGame: GameState,
     card: GameCard | undefined,
@@ -491,8 +571,53 @@ function App() {
       skillActivated: false,
       optional,
       triggerLabel,
+      sourceKind: 'cookie',
     })
     setMessage(`${card.name}的技能等待支付能量並選擇目標。`)
+  }
+
+  const beginCardAbility = (
+    card: GameCard,
+    ability: CardAbility,
+    sourceKind: 'item' | 'stage',
+    triggerLabel: string,
+  ) => {
+    const context = {
+      sourcePlayerId: viewerPlayerId,
+      sourceInstanceId: card.instanceId,
+    }
+    const effects = ability.effects.filter((effect) =>
+      isEffectConditionMet(game, context, effect),
+    )
+    if (effects.length === 0) {
+      setMessage(`${card.name}目前未滿足使用條件。`)
+      return
+    }
+    setPendingEffect({
+      sourceCard: card,
+      context,
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: sourceKind === 'stage',
+        cost: ability.cost,
+        text: ability.text,
+        effects,
+      },
+      trigger: 'activate',
+      effects,
+      effectIndex: 0,
+      selectedTargetIds: [],
+      selectedPaymentIds: [],
+      skillActivated: false,
+      optional: false,
+      triggerLabel,
+      sourceKind,
+    })
+    setSelectedAttackerId(null)
+    setSelectedAttackPaymentIds([])
+    setMessage(`${card.name}等待支付能量並選擇目標。`)
   }
 
   const runAction = (
@@ -561,6 +686,10 @@ function App() {
     const max =
       currentEffect.kind === 'break-to-trash'
         ? currentEffect.max
+        : currentEffect.kind === 'support-to-trash' ||
+            currentEffect.kind === 'support-to-hand' ||
+            currentEffect.kind === 'trash-to-battle'
+          ? currentEffect.amount
         : isEffectUntargeted(currentEffect)
           ? 0
           : currentEffect.target.max
@@ -588,6 +717,45 @@ function App() {
   }
 
   const skipOptionalSkill = () => {
+    if (
+      pendingEffect &&
+      currentEffect &&
+      'optional' in currentEffect &&
+      currentEffect.optional
+    ) {
+      const nextEffectIndex = pendingEffect.effectIndex + 1
+      const hasNextEffect =
+        nextEffectIndex < pendingEffect.effects.length
+      const viewerMustAct =
+        (game.pendingRefresh?.playerId === viewerPlayerId) ||
+        (game.pendingOnPlay?.playerId === viewerPlayerId)
+
+      if (hasNextEffect && viewerMustAct) {
+        setPendingEffect(null)
+        setSuspendedEffect({
+          ...pendingEffect,
+          effectIndex: nextEffectIndex,
+          selectedTargetIds: [],
+          skillActivated: true,
+        })
+        setMessage('已略過可選效果。')
+        return
+      }
+
+      setPendingEffect(
+        hasNextEffect
+          ? {
+              ...pendingEffect,
+              effectIndex: nextEffectIndex,
+              selectedTargetIds: [],
+              skillActivated: true,
+            }
+          : null,
+      )
+      setMessage('已略過可選效果。')
+      return
+    }
+
     if (!pendingEffect?.optional) return
 
     setGame(
@@ -612,6 +780,21 @@ function App() {
                 (card) => card.instanceId === instanceId,
               )?.name ?? instanceId,
           )
+        : currentEffect.kind === 'support-to-trash' ||
+            currentEffect.kind === 'support-to-hand'
+          ? pendingEffect.selectedTargetIds.map(
+              (instanceId) =>
+                supportEffectCandidates.find(
+                  (support) => support.card.instanceId === instanceId,
+                )?.card.name ?? instanceId,
+            )
+          : currentEffect.kind === 'trash-to-battle'
+            ? pendingEffect.selectedTargetIds.map(
+                (instanceId) =>
+                  trashCookieCandidates.find(
+                    (card) => card.instanceId === instanceId,
+                  )?.name ?? instanceId,
+              )
         : pendingEffect.selectedTargetIds.map(
             (instanceId) =>
               effectTargetCandidates.find(
@@ -622,13 +805,26 @@ function App() {
     try {
       const activatedGame = pendingEffect.skillActivated
         ? game
-        : activateCookieSkill(
-            game,
-            pendingEffect.context.sourcePlayerId,
-            pendingEffect.sourceCard.instanceId,
-            pendingEffect.trigger,
-            pendingEffect.selectedPaymentIds,
-          )
+        : pendingEffect.sourceKind === 'item'
+          ? playItem(
+              game,
+              pendingEffect.context.sourcePlayerId,
+              pendingEffect.sourceCard.instanceId,
+              pendingEffect.selectedPaymentIds,
+            )
+          : pendingEffect.sourceKind === 'stage'
+            ? activateStage(
+                game,
+                pendingEffect.context.sourcePlayerId,
+                pendingEffect.selectedPaymentIds,
+              )
+            : activateCookieSkill(
+                game,
+                pendingEffect.context.sourcePlayerId,
+                pendingEffect.sourceCard.instanceId,
+                pendingEffect.trigger,
+                pendingEffect.selectedPaymentIds,
+              )
       const nextGame = executeCardEffect(
         activatedGame,
         pendingEffect.context,
@@ -636,10 +832,61 @@ function App() {
         pendingEffect.selectedTargetIds,
       )
       const result = describeEffectResult(currentEffect, targetNames)
+      if (
+        currentEffect.kind === 'view-hp' &&
+        pendingEffect.selectedTargetIds.length === 1
+      ) {
+        const target = effectTargetCandidates.find(
+          (cookie) =>
+            cookie.card.instanceId === pendingEffect.selectedTargetIds[0],
+        )
+        if (target) {
+          setInspectedHpPile({
+            title: `${target.card.name}的 HP 卡`,
+            cards: target.hpCards,
+          })
+        }
+      }
       const nextEffectIndex = pendingEffect.effectIndex + 1
       const hasNextEffect =
         nextGame.status === 'playing' &&
         nextEffectIndex < pendingEffect.effects.length
+      const viewerMustAct =
+        (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
+        (nextGame.pendingOnPlay?.playerId === viewerPlayerId)
+
+      if (hasNextEffect && viewerMustAct) {
+        setGame(nextGame)
+        setMessage(result)
+        setEffectHistory((history) => [result, ...history].slice(0, 4))
+        setPendingEffect(null)
+        setSuspendedEffect({
+          ...pendingEffect,
+          effectIndex: nextEffectIndex,
+          selectedTargetIds: [],
+          skillActivated: true,
+        })
+
+        if (nextGame.pendingOnPlay?.playerId === viewerPlayerId) {
+          const onPlayCard = nextGame.players[viewerPlayerId].battleArea.find(
+            (cookie) =>
+              cookie.card.instanceId === nextGame.pendingOnPlay!.sourceInstanceId,
+          )?.card
+          if (onPlayCard) {
+            beginCookieSkill(
+              nextGame,
+              onPlayCard,
+              viewerPlayerId,
+              'on-play',
+              'OnPlay 登場觸發',
+              true,
+            )
+          }
+        }
+
+        return
+      }
+
       const resolvedGame =
         nextGame.status !== 'playing' || hasNextEffect
           ? nextGame
@@ -658,6 +905,26 @@ function App() {
             }
           : null,
       )
+
+      if (!hasNextEffect && resolvedGame.status === 'playing') {
+        const onPlay = resolvedGame.pendingOnPlay
+        if (onPlay && onPlay.playerId === viewerPlayerId) {
+          const onPlayCard = resolvedGame.players[viewerPlayerId].battleArea.find(
+            (cookie) =>
+              cookie.card.instanceId === onPlay.sourceInstanceId,
+          )?.card
+          if (onPlayCard) {
+            beginCookieSkill(
+              resolvedGame,
+              onPlayCard,
+              viewerPlayerId,
+              'on-play',
+              'OnPlay 登場觸發',
+              true,
+            )
+          }
+        }
+      }
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : '效果無法執行。',
@@ -865,6 +1132,56 @@ function App() {
               },
             )
           }
+          onPlayItem={(instanceId) => {
+            if (!canPlayItem(game, activePlayer.id, instanceId)) {
+              setMessage('目前無法使用物品卡。')
+              return
+            }
+            const card = activePlayer.hand.find(
+              (candidate) => candidate.instanceId === instanceId,
+            )
+            if (card?.item) {
+              beginCardAbility(card, card.item, 'item', '使用物品')
+            }
+          }}
+          onPlayStage={(instanceId) => {
+            if (!canPlayStage(game, activePlayer.id, instanceId)) {
+              setMessage('目前無法放置場景卡。')
+              return
+            }
+            const card = activePlayer.hand.find(
+              (candidate) => candidate.instanceId === instanceId,
+            )
+            const ability = card?.stageAbility
+            if (!card || !ability) return
+            const paymentIds = selectEnergyPayment(
+              ability.placementCost,
+              activePlayer.supportArea,
+            )
+            if (!paymentIds) {
+              setMessage(`${card.name}目前無法支付放置費用。`)
+              return
+            }
+            runAction(
+              (current) =>
+                playStage(current, activePlayer.id, instanceId, paymentIds),
+              `${card.name}已放置到場景區。`,
+            )
+          }}
+          onActivateStage={() => {
+            const stage = activePlayer.stage
+            if (
+              stage?.card.stageAbility &&
+              canActivateStage(game, activePlayer.id)
+            ) {
+              beginCardAbility(
+                stage.card,
+                stage.card.stageAbility,
+                'stage',
+                '啟動場景',
+              )
+            }
+          }}
           onInspectCard={setInspectedCard}
           onInspectDiscard={setInspectedDiscardPlayerId}
         />
@@ -899,6 +1216,8 @@ function App() {
         effectHistory={effectHistory}
         onConfirm={confirmEffect}
         onSkip={skipOptionalSkill}
+        candidateCards={nonBattleEffectCandidateCards}
+        onToggleCandidate={toggleEffectTarget}
       />
 
       {setupStep && (
@@ -1093,6 +1412,15 @@ function App() {
             setInspectedCard(card)
           }}
           onClose={() => setInspectedDiscardPlayerId(null)}
+        />
+      )}
+
+      {inspectedHpPile && (
+        <CardPileModal
+          title={inspectedHpPile.title}
+          cards={inspectedHpPile.cards}
+          onInspect={setInspectedCard}
+          onClose={() => setInspectedHpPile(null)}
         />
       )}
 

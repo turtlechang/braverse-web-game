@@ -239,6 +239,185 @@ try {
   await runBreakToTrashTest('lv1')
   await runBreakToTrashTest('lv2')
 
+  const runItemUsageTest = async (payable) => {
+    const variant = payable ? 'payable' : 'unpayable'
+    const testUrl = `${baseUrl}?test-state=item-${variant}`
+    await page.goto(testUrl, { waitUntil: 'networkidle' })
+
+    const handCardWrap = page.locator('.bottom-hand .hand-card-wrap').first()
+    await handCardWrap.hover()
+
+    if (payable) {
+      const useButton = handCardWrap.locator('.hand-card-action', { hasText: '使用' })
+      await useButton.waitFor({ state: 'visible' })
+      await useButton.click()
+
+      const effectPanel = page.locator('.effect-panel')
+      await effectPanel.waitFor({ state: 'visible' })
+
+      const supportCards = page.locator('.bottom-field .support-cards .support-card')
+      const supportCount = await supportCards.count()
+      assert.ok(supportCount >= 1, `物品測試應有至少 1 張支援卡，實際 ${supportCount}`)
+      await supportCards.nth(0).click()
+      assert.ok(
+        await supportCards.nth(0).evaluate((el) => el.classList.contains('is-selected')),
+        '選取物品付款後支援卡應顯示已選狀態',
+      )
+
+      const targetCookie = page.locator('.bottom-field .combat-card-wrap').first()
+      const isTargetable = await targetCookie.locator('.card-face').first().evaluate(
+        (el) => el.classList.contains('is-targetable'),
+      )
+      assert.ok(isTargetable, '戰鬥區餅乾應標示為效果目標')
+      await targetCookie.locator('.card-face').first().click()
+
+      const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
+      await confirmButton.click()
+
+      const statusMessage = page.locator('.match-status small')
+      await statusMessage.filter({ hasText: /獲得攻擊傷害/ }).waitFor()
+
+      await page.waitForTimeout(1200)
+      assert.strictEqual(
+        await effectPanel.count(),
+        0,
+        '物品效果面板應在完成後移除',
+      )
+
+      const discardZone = page.locator('.bottom-field .discard-zone')
+      await discardZone.click()
+      await page.locator('.card-pile-modal').waitFor({ state: 'visible' })
+      const discardCards = page.locator('.card-pile-modal .card-pile-grid > button')
+      const discardCount = await discardCards.count()
+      assert.ok(discardCount >= 1, '棄牌區應包含已使用的物品卡')
+      await page.locator('.card-pile-modal .close-modal').click()
+    } else {
+      const useButton = handCardWrap.locator('.hand-card-action', { hasText: '使用' })
+      assert.strictEqual(
+        await useButton.count(),
+        0,
+        '非主要階段不應顯示物品使用按鈕',
+      )
+      const supportButton = handCardWrap.locator('.hand-card-action', { hasText: '支援' })
+      await supportButton.waitFor({ state: 'visible' })
+
+      const statusMessage = page.locator('.match-status small')
+      const statusText = await statusMessage.innerText()
+      assert.ok(
+        statusText.includes('非主要階段'),
+        '訊息應提示非主要階段',
+      )
+    }
+  }
+
+  await runItemUsageTest(true)
+  await runItemUsageTest(false)
+
+  const runStageUsageTest = async (payable) => {
+    const variant = payable ? 'payable' : 'unpayable'
+    const testUrl = `${baseUrl}?test-state=stage-${variant}`
+    await page.goto(testUrl, { waitUntil: 'networkidle' })
+
+    if (payable) {
+      const handCardWrap = page.locator('.bottom-hand .hand-card-wrap').first()
+      await handCardWrap.hover()
+
+      const placeButton = handCardWrap.locator('.hand-card-action', { hasText: '放置' })
+      await placeButton.waitFor({ state: 'visible' })
+      await placeButton.click()
+
+      const statusMessage = page.locator('.match-status small')
+      await statusMessage.filter({ hasText: /已放置到場景區/ }).waitFor()
+
+      await page.waitForTimeout(300)
+
+      const discardZone = page.locator('.bottom-field .discard-zone')
+      await discardZone.click()
+      await page.locator('.card-pile-modal').waitFor({ state: 'visible' })
+      const discardCards = page.locator('.card-pile-modal .card-pile-grid > button')
+      const hasOldStage = await discardCards.filter({ hasText: /舊場景/ }).count()
+      assert.ok(hasOldStage >= 1, '舊場景應移至棄牌區')
+      await page.locator('.card-pile-modal .close-modal').click()
+      await page.locator('.card-pile-modal').waitFor({ state: 'hidden' })
+
+      const activateButton = page.locator('.stage-zone button', { hasText: '啟動' })
+      await activateButton.waitFor({ state: 'visible' })
+      await activateButton.click()
+
+      await page.waitForTimeout(200)
+
+      const effectPanel = page.locator('.effect-panel')
+      await effectPanel.waitFor({ state: 'visible' })
+
+      const allSupportCards = page.locator('.bottom-field .support-cards .support-card')
+      const supportCount = await allSupportCards.count()
+      assert.ok(supportCount >= 2, `場景測試應有至少 2 張支援卡，實際 ${supportCount}`)
+      let paymentClicked = false
+      for (let i = 0; i < supportCount; i += 1) {
+        const supportCard = allSupportCards.nth(i)
+        const isRested = await supportCard.evaluate((el) =>
+          el.classList.contains('is-rested'),
+        )
+        if (!isRested) {
+          await supportCard.click()
+          paymentClicked = true
+          break
+        }
+      }
+      assert.ok(paymentClicked, '應有至少一張未橫置的支援卡可供付款')
+
+      await page.waitForTimeout(100)
+
+      const targetCookie = page.locator('.bottom-field .combat-card-wrap').first()
+      const isTargetable = await targetCookie.locator('.card-face').first().evaluate(
+        (el) => el.classList.contains('is-targetable'),
+      )
+      assert.ok(isTargetable, '場景啟動後戰鬥區餅乾應標示為效果目標')
+      await targetCookie.locator('.card-face').first().click()
+
+      const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
+      await confirmButton.click()
+
+      await statusMessage.filter({ hasText: /獲得攻擊傷害/ }).waitFor()
+
+      const stageCard = page.locator('.stage-zone .stage-card')
+      const isRested = await stageCard.evaluate(
+        (el) => el.classList.contains('is-rested'),
+      )
+      assert.ok(isRested, '場景卡啟動後應處於橫置狀態')
+
+      await page.waitForTimeout(1200)
+      assert.strictEqual(
+        await effectPanel.count(),
+        0,
+        '場景效果面板應在完成後移除',
+      )
+    } else {
+      const activateButton = page.locator('.stage-zone button', { hasText: '啟動' })
+      assert.strictEqual(
+        await activateButton.count(),
+        0,
+        '已橫置的場景不應顯示啟動按鈕',
+      )
+
+      const stageCard = page.locator('.stage-zone .stage-card')
+      const isRested = await stageCard.evaluate(
+        (el) => el.classList.contains('is-rested'),
+      )
+      assert.ok(isRested, '場景卡應處於橫置狀態')
+
+      const statusMessage = page.locator('.match-status small')
+      const statusText = await statusMessage.innerText()
+      assert.ok(
+        statusText.includes('已橫置'),
+        '訊息應提示場景已橫置',
+      )
+    }
+  }
+
+  await runStageUsageTest(true)
+  await runStageUsageTest(false)
+
   await page.goto(`${baseUrl}?test-state=trap-payable`, {
     waitUntil: 'networkidle',
   })

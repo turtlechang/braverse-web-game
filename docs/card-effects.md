@@ -41,18 +41,24 @@
 |---|---|---|
 | 傷害 | `damage` | 對合法目標造成固定傷害，含勝負與替補判定 |
 | 攻擊修正 | `modify-attack` | 增加或減少攻擊傷害，回合結束移除 |
+| 全體攻擊修正 | `modify-all-attack` | 增加或減少己方所有餅乾攻擊傷害，回合結束移除 |
 | 承受傷害修正 | `modify-damage-received` | 增加或減少承受的攻擊傷害，回合結束移除 |
 | 純抽牌 | `draw` | 從牌庫抽 N 張，牌庫耗盡觸發 pending Refresh；僅接受等價於「Draw N card(s) from your deck」或「Draw up to N card(s) from your deck」的文字（須移除時機／費用標記），不接受含 Then、If you did、view HP、support area 等複合文字 |
 | 牌庫頂→支援區 | `deck-to-support` | 從牌庫頂取 N 張直立放入支援區（例：ST3-010 Aloe Cookie）；牌庫耗盡觸發 pending Refresh（remainingDraws=0）。僅接受等價於「Take N card(s) from the top your deck and place it/them in your support area as active」的文字 |
 | 休息區→棄牌區 | `break-to-trash` | 從效果來源玩家休息區選最多 N 張 LV.X 卡移至棄牌區；不需選擇目標時玩家可選 0 張確認。移動後以 resolveBasicVictory 檢查勝負。僅接受等價於「Select up to N LV.X card(s) from your break area and place it/them in the trash」的文字，不接受 Then/FLIP/額外子效果 |
 | 增加 HP | `gain-hp` | 目前供起始牌組 FLIP 使用，從牌庫頂補入 HP 卡 |
 | HP 下限保護 | `prevent-knockout` | 目前供 TRAP 使用，本次戰鬥保留至少 1 張 HP 卡 |
-| 支援區→棄牌區 | `support-to-trash` | 支援 ST3-019 的後續處理 |
+| 禁止 FLIP | `disable-flip` | 被影響玩家本回合不能發動 FLIP 效果 |
+| 檢視 HP | `view-hp` | 查看目標餅乾的 HP 卡內容（可選） |
+| 戰鬥區→支援區 | `battle-to-support` | 將目標餅乾從戰鬥區移至支援區 |
+| 棄牌區→戰鬥區 | `trash-to-battle` | 從棄牌區將指定餅乾移至戰鬥區 |
+| 支援區→手牌 | `support-to-hand` | 將支援區卡牌移回手牌 |
+| 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 目前支援 Break Area 最低等級檢測 |
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |
 
-無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw` 與 `deck-to-support`）。
+無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw`、`deck-to-support`、`modify-all-attack`、`trash-to-battle` 與 `support-to-hand`）。
 
 ## 未支援（unsupported）效果
 
@@ -71,6 +77,14 @@
 - `card_type=TRAP` 僅解析官方 `card_attack_text`。
 - 原型每次攻擊最多發動 1 張，支援三副起始牌組內的攻擊修正、條件傷害、HP 下限、支援棄置與牌庫頂放入休息支援。
 
+### 已實作：起始牌組物品與場景
+
+- 三副起始牌組共 10 張物品卡與 2 張場景卡已完整支援。
+- 物品卡費用支付後執行效果，結算後放入棄牌區；場景卡於主要階段使用，已有場景時可替換。
+- 已支援效果種類：`disable-flip`、`view-hp`、`modify-all-attack`、`battle-to-support`、`trash-to-battle`、`support-to-hand`。
+- 複合效果序列引擎支援子效果之間暫停、等待玩家選擇（如 ST2-018 的 view-hp 為可選）、Refresh 插入與補位銜接。
+- AI 以 deterministic 策略決定物品/場景使用時機、費用支付與目標選擇。
+
 ### 尚未實作：When this Cookie faints
 
 - 死亡觸發被動技能需要 faint 事件處理引擎，目前引擎無對應的事件系統。
@@ -80,19 +94,16 @@
 
 - TRAP 回應窗會以宣告時鎖定的攻擊傷害檢查門檻。
 
-### 部分實作：Then / If you did 複合效果
+### 已實作：複合效果序列（起始牌組範圍）
 
-- 官方效果文字以「Then」或「If you did」連接兩個以上子效果時，需要複合效果序列引擎（先執行 A，再依 A 的結果決定是否／如何執行 B）。
-- 起始牌組 ST3-019 的攻擊修正後支援棄置已支援；其他任意效果鏈仍維持 unsupported。
-- 純抽牌與 deck-to-support 的轉換保守原則：一旦文字包含 Then 或 If you did，即使前面部分等價於 draw 或 deck-to-support，整體仍維持 unsupported。
+- 官方效果文字以「Then」或「If you did」或連續多個效果連接時，複合效果序列引擎支援依序執行子效果，並在子效果之間暫停等待玩家或 AI 選擇。
+- 已支援：ST2-018（draw + optional view-hp）、ST3-017（damage + support-to-trash）、ST3-022（support-to-hand + draw）及其他起始牌組物品/場景的複合效果。
+- 複合效果執行途中可插入 Refresh（牌庫耗盡時）與補位（餅乾離場時），完成後回到序列中尚未執行的子效果。
+- 起始牌組以外包含 Then/If you did 且無法以現有效果組合安全描述的文字，仍維持 unsupported。
 
 ### 部分實作：特殊代價（非能量／非 Rest this card）
 
 - 起始牌組 FLIP 的棄 1 張手牌，以及 ST3-019 的支援區卡牌移至棄牌區已支援；其他特殊代價仍維持 unsupported。
-
-### 尚未實作：Stage 放置
-
-- 「Place in your stage area」相關效果尚無 Stage 區域管理引擎。
 
 ### 尚未實作：一般移動與持續型條件效果
 

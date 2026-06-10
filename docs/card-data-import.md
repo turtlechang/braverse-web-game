@@ -87,4 +87,4 @@ node scripts/import-official-cards.mjs \
 - `EXTRA` 與資料不完整的餅乾卡會回傳 `unsupported`。
 - runtime `id` 使用 `baseCardNumber`，保留異圖與圖片 URL 在轉換結果 metadata。
 
-`src/cards/official-effect-adapter.ts` 目前支援直接傷害、攻擊傷害增減、受到攻擊傷害減免、目標篩選與 break area 等級條件。無法安全轉換的效果會標記為 `unsupported`，避免把尚未確認的規則誤實作成權威邏輯。
+`src/cards/official-effect-adapter.ts` 目前支援直接傷害、攻擊傷害增減、全體攻擊修正、受到攻擊傷害減免、目標篩選、break area 等級條件、disable-flip、view-hp、battle-to-support、trash-to-battle、support-to-hand 等物品/場景效果。無法安全轉換的效果會標記為 `unsupported`，避免把尚未確認的規則誤實作成權威邏輯。

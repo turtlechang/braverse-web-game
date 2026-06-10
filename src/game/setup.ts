@@ -76,6 +76,7 @@ export const createGame = (
     nextBattleEntrySequence: 1,
     attackModifiers: [],
     damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,

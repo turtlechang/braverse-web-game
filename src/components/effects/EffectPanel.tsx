@@ -1,5 +1,5 @@
 import { Check, Sparkles } from 'lucide-react'
-import type { CardEffect, CardSkill } from '../../game'
+import type { CardEffect, CardSkill, GameCard } from '../../game'
 import { isEffectUntargeted } from '../../game'
 import { CardEffectText, SkillCost } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
@@ -13,6 +13,8 @@ export interface EffectPanelProps {
   effectHistory: string[]
   onConfirm: () => void
   onSkip: () => void
+  candidateCards?: GameCard[]
+  onToggleCandidate?: (instanceId: string) => void
 }
 
 function EffectPanelContent({
@@ -21,9 +23,21 @@ function EffectPanelContent({
   effectHistory,
   onConfirm,
   onSkip,
+  candidateCards = [],
+  onToggleCandidate,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalCost = skill ? getSkillCostTotal(skill) : 0
+  const selectionLimits =
+    currentEffect?.kind === 'break-to-trash'
+      ? { min: 0, max: currentEffect.max }
+      : currentEffect?.kind === 'support-to-trash' ||
+          currentEffect?.kind === 'support-to-hand' ||
+          currentEffect?.kind === 'trash-to-battle'
+        ? { min: currentEffect.amount, max: currentEffect.amount }
+        : currentEffect && !isEffectUntargeted(currentEffect)
+          ? currentEffect.target
+          : null
 
   if (pendingEffect && currentEffect) {
     return (
@@ -53,12 +67,28 @@ function EffectPanelContent({
           <Sparkles aria-hidden="true" />
           <span>{describeEffect(currentEffect)}</span>
         </div>
-        {!isEffectUntargeted(currentEffect) && (
+        {candidateCards.length > 0 && (
+          <div className="effect-candidates">
+            {candidateCards.map((card) => (
+              <button
+                type="button"
+                className={
+                  pendingEffect.selectedTargetIds.includes(card.instanceId)
+                    ? 'is-selected'
+                    : ''
+                }
+                key={card.instanceId}
+                onClick={() => onToggleCandidate?.(card.instanceId)}
+              >
+                {card.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {selectionLimits && (
           <small>
             已選 {pendingEffect.selectedTargetIds.length}／
-            {currentEffect.kind === 'break-to-trash'
-              ? currentEffect.max
-              : currentEffect.target.max}
+            {selectionLimits.max}
           </small>
         )}
         <button
@@ -66,22 +96,19 @@ function EffectPanelContent({
           disabled={
             (!pendingEffect.skillActivated &&
               pendingEffect.selectedPaymentIds.length !== totalCost) ||
-            (!isEffectUntargeted(currentEffect) &&
+            (Boolean(selectionLimits) &&
               (pendingEffect.selectedTargetIds.length <
-                (currentEffect.kind === 'break-to-trash'
-                  ? 0
-                  : currentEffect.target.min) ||
+                selectionLimits!.min ||
               pendingEffect.selectedTargetIds.length >
-                (currentEffect.kind === 'break-to-trash'
-                  ? currentEffect.max
-                  : currentEffect.target.max)))
+                selectionLimits!.max))
           }
           onClick={onConfirm}
         >
           <Check aria-hidden="true" />
           確認效果
         </button>
-        {pendingEffect.optional && !pendingEffect.skillActivated && (
+        {(pendingEffect.optional && !pendingEffect.skillActivated) ||
+        ('optional' in currentEffect && currentEffect.optional) ? (
           <button
             className="skip-effect"
             type="button"
@@ -89,7 +116,7 @@ function EffectPanelContent({
           >
             不發動
           </button>
-        )}
+        ) : null}
       </>
     )
   }

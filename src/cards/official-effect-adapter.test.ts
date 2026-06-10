@@ -6,6 +6,7 @@ import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
   convertOfficialCookieSkill,
+  convertOfficialStageAbility,
   type OfficialCardRecord,
 } from '.'
 
@@ -225,15 +226,22 @@ describe('Starter Deck RED official effect adapter', () => {
       ).toBe(true)
     })
 
-    it('ST2-008, ST2-010, and ST2-020 are the supported YELLOW effects', () => {
+    it('supports YELLOW cookie, item, and trap effects', () => {
       const conversions = convertOfficialCardEffectSet(yellowCards)
       const supported = conversions.filter(
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(3)
+      expect(supported).toHaveLength(6)
       expect(supported.map((c) => c.cardNumber).sort()).toEqual(
-        ['ST2-008', 'ST2-010', 'ST2-020'].sort(),
+        [
+          'ST2-008',
+          'ST2-010',
+          'ST2-016',
+          'ST2-018',
+          'ST2-019',
+          'ST2-020',
+        ].sort(),
       )
     })
 
@@ -243,6 +251,22 @@ describe('Starter Deck RED official effect adapter', () => {
       ).toMatchObject({
         status: 'unsupported',
         reason: 'unsupported-effect-text',
+      })
+    })
+
+    it('ST2-016 Flimsy Screwdriver item has disable-flip effect', () => {
+      expect(
+        convertOfficialCardEffects(findYellowCard('ST2-016')),
+      ).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST2-016',
+        effects: [
+          {
+            kind: 'disable-flip',
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       })
     })
 
@@ -370,14 +394,20 @@ describe('Starter Deck RED official effect adapter', () => {
       ).toBe(true)
     })
 
-    it('ST3-009 and ST3-010 are the only supported GREEN effects', () => {
+    it('supports GREEN cookie and item effects', () => {
       const conversions = convertOfficialCardEffectSet(greenCards)
       const supported = conversions.filter(
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(2)
-      expect(supported.map((c) => c.cardNumber)).toEqual(['ST3-009', 'ST3-010'])
+      expect(supported).toHaveLength(5)
+      expect(supported.map((c) => c.cardNumber)).toEqual([
+        'ST3-009',
+        'ST3-010',
+        'ST3-016',
+        'ST3-017',
+        'ST3-018',
+      ])
     })
 
     it('rejects ST3-002 (special cost with Place)', () => {
@@ -416,12 +446,15 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('rejects ST3-017 (compound effect with Then)', () => {
+    it('supports ST3-017 compound damage and support discard', () => {
       expect(
         convertOfficialCardEffects(findGreenCard('ST3-017')),
       ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+        status: 'supported',
+        effects: [
+          { kind: 'damage', amount: 1 },
+          { kind: 'support-to-trash', amount: 1 },
+        ],
       })
     })
 
@@ -455,6 +488,46 @@ describe('Starter Deck RED official effect adapter', () => {
         cost: { green: 2 },
         text: '{ap} 《{G}{G}》 Take 1 card from the top your deck and place it in your support area as active.',
         effects: [{ kind: 'deck-to-support', amount: 1 }],
+      })
+    })
+
+    it('ST3-016 Ancient Healer\'s Gaze item has battle-to-support effect', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-016')),
+      ).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST3-016',
+        effects: [
+          {
+            kind: 'battle-to-support',
+            target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
+          },
+        ],
+      })
+    })
+
+    it('ST3-018 Parsley Tea of Invigoration item has trash-to-battle effect', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-018')),
+      ).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST3-018',
+        effects: [{ kind: 'trash-to-battle', amount: 1 }],
+      })
+    })
+  })
+
+  describe('stage ability adapter', () => {
+    it('ST3-022 Guardian Tree\'s Blessing stage ability has support-to-hand and draw', () => {
+      const ability = convertOfficialStageAbility(findGreenCard('ST3-022'))
+
+      expect(ability).toMatchObject({
+        placementCost: { green: 1 },
+        effects: [
+          { kind: 'support-to-hand', amount: 1 },
+          { kind: 'draw', amount: 1 },
+        ],
+        restSource: true,
       })
     })
   })
@@ -568,7 +641,7 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('rejects ST2-018 compound draw with Then and view HP (unsupported)', () => {
+    it('supports ST2-018 draw followed by optional HP viewing', () => {
       expect(
         convertOfficialCardEffects(
           makeCard({
@@ -579,8 +652,11 @@ describe('Starter Deck RED official effect adapter', () => {
           }),
         ),
       ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+        status: 'supported',
+        effects: [
+          { kind: 'draw', amount: 1 },
+          { kind: 'view-hp', optional: true },
+        ],
       })
     })
 

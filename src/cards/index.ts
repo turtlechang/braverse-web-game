@@ -7,6 +7,8 @@ export {
   convertOfficialCardEffectSet,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
+  convertOfficialItemAbility,
+  convertOfficialStageAbility,
   convertOfficialTrapAbility,
 } from './official-effect-adapter'
 export {

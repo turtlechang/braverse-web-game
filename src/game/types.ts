@@ -30,6 +30,17 @@ export interface CardSkill {
   effects: CardEffect[]
 }
 
+export interface CardAbility {
+  cost: EnergyCost
+  text: string
+  effects: CardEffect[]
+}
+
+export interface StageAbility extends CardAbility {
+  placementCost: EnergyCost
+  restSource: boolean
+}
+
 export interface BaseCard {
   id: string
   instanceId: string
@@ -42,6 +53,8 @@ export interface BaseCard {
   officialType?: OfficialRuntimeCardType
   flip?: FlipAbility
   trap?: TrapAbility
+  item?: CardAbility
+  stageAbility?: StageAbility
 }
 
 export interface CookieCard extends BaseCard {
@@ -77,6 +90,7 @@ export interface EffectTargetSelector {
   sourceOnly?: boolean
   remainingHp?: number
   minLevel?: number
+  maxLevel?: number
 }
 
 export interface BreakLevelCondition {
@@ -147,6 +161,41 @@ export interface SupportToTrashEffect {
   amount: number
 }
 
+export interface DisableFlipEffect {
+  kind: 'disable-flip'
+  duration: 'this-turn'
+  target: EffectTargetSelector
+}
+
+export interface ViewHpEffect {
+  kind: 'view-hp'
+  target: EffectTargetSelector
+  optional?: boolean
+}
+
+export interface ModifyAllAttackEffect {
+  kind: 'modify-all-attack'
+  amount: number
+  duration: EffectDuration
+  side: EffectTargetSide
+  condition?: EffectCondition
+}
+
+export interface BattleToSupportEffect {
+  kind: 'battle-to-support'
+  target: EffectTargetSelector
+}
+
+export interface TrashToBattleEffect {
+  kind: 'trash-to-battle'
+  amount: number
+}
+
+export interface SupportToHandEffect {
+  kind: 'support-to-hand'
+  amount: number
+}
+
 export type CardEffect =
   | DamageEffect
   | ModifyAttackEffect
@@ -157,12 +206,21 @@ export type CardEffect =
   | GainHpEffect
   | PreventKnockoutEffect
   | SupportToTrashEffect
+  | DisableFlipEffect
+  | ViewHpEffect
+  | ModifyAllAttackEffect
+  | BattleToSupportEffect
+  | TrashToBattleEffect
+  | SupportToHandEffect
 
 export type TargetedCardEffect =
   | DamageEffect
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
   | PreventKnockoutEffect
+  | DisableFlipEffect
+  | ViewHpEffect
+  | BattleToSupportEffect
 
 export interface AbilityCost {
   energy: EnergyCost
@@ -220,6 +278,11 @@ export interface SupportCard {
   rested: boolean
 }
 
+export interface StageCard {
+  card: GameCard
+  rested: boolean
+}
+
 export interface PlayerState {
   id: PlayerId
   name: string
@@ -229,7 +292,7 @@ export interface PlayerState {
   supportArea: SupportCard[]
   breakArea: CookieCard[]
   discardPile: GameCard[]
-  stage: GameCard | null
+  stage: StageCard | null
   hasMulliganed: boolean
   startingCookieSelected: boolean
   freeMulliganDecided?: boolean
@@ -273,6 +336,7 @@ export interface GameState {
   nextBattleEntrySequence: number
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
+  flipDisabledUntilTurn?: Record<string, number>
   pendingReplacement: PendingReplacement | null
   departedCookieCounts: Record<PlayerId, number>
   pendingOnPlay?: {

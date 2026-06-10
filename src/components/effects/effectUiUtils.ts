@@ -31,6 +31,30 @@ export const describeEffect = (effect: CardEffect) => {
     return `將 ${effect.amount} 張支援卡送入棄牌區。`
   }
 
+  if (effect.kind === 'support-to-hand') {
+    return `選擇 ${effect.amount} 張支援卡返回手牌。`
+  }
+
+  if (effect.kind === 'trash-to-battle') {
+    return `從棄牌區選擇 ${effect.amount} 張餅乾登場。`
+  }
+
+  if (effect.kind === 'modify-all-attack') {
+    return `目前戰鬥區所有己方餅乾攻擊傷害 +${effect.amount}。`
+  }
+
+  if (effect.kind === 'disable-flip') {
+    return '選擇最多 1 張對手餅乾，本回合不能發動其 HP FLIP。'
+  }
+
+  if (effect.kind === 'view-hp') {
+    return '選擇最多 1 張己方餅乾，查看其所有 HP 卡。'
+  }
+
+  if (effect.kind === 'battle-to-support') {
+    return '選擇 1 張符合等級的己方餅乾，直立放入支援區。'
+  }
+
   const target =
     effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
   const count =
@@ -78,6 +102,34 @@ export const describeEffectResult = (
 
   if (effect.kind === 'support-to-trash') {
     return `${effect.amount} 張支援卡已移至棄牌區。`
+  }
+
+  if (effect.kind === 'support-to-hand') {
+    return `${effect.amount} 張支援卡已返回手牌。`
+  }
+
+  if (effect.kind === 'trash-to-battle') {
+    return `${targetNames.join('、')}已從棄牌區登場。`
+  }
+
+  if (effect.kind === 'modify-all-attack') {
+    return `目前戰鬥區所有己方餅乾攻擊傷害 +${effect.amount}。`
+  }
+
+  if (effect.kind === 'disable-flip') {
+    return targetNames.length > 0
+      ? `${targetNames.join('、')}本回合不能發動 HP FLIP。`
+      : '未選擇 FLIP 封鎖目標。'
+  }
+
+  if (effect.kind === 'view-hp') {
+    return targetNames.length > 0
+      ? `已查看${targetNames.join('、')}的 HP 卡。`
+      : '未選擇查看 HP。'
+  }
+
+  if (effect.kind === 'battle-to-support') {
+    return `${targetNames.join('、')}已移至支援區。`
   }
 
   if (targetNames.length === 0) {

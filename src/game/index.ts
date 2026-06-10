@@ -4,6 +4,8 @@ export {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getSupportEffectCandidates,
+  getTrashCookieCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectTargeted,
@@ -11,7 +13,12 @@ export {
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './effects'
-export { createDemoGame, createDemoSetupGame } from './demo'
+export {
+  createDemoGame,
+  createDemoSetupGame,
+  createItemUsageDemoState,
+  createStageUsageDemoState,
+} from './demo'
 export type { DeckConfig } from './demo'
 export { createSeededShuffle } from './helpers'
 export {
@@ -57,6 +64,16 @@ export {
   replaceDefeatedCookie,
   skipDefeatedCookieReplacement,
 } from './actions'
+export {
+  activateStage,
+  canActivateStage,
+  canPlayItem,
+  canPlayStage,
+  getItemAbility,
+  getStageAbility,
+  playItem,
+  playStage,
+} from './card-abilities'
 export { getRefreshCandidates, refreshDeck } from './refresh'
 export {
   createGame,
@@ -92,6 +109,7 @@ export {
 export type {
   AttackModifier,
   AbilityCost,
+  CardAbility,
   BaseCard,
   BreakLevelCondition,
   BreakToTrashEffect,
@@ -132,6 +150,8 @@ export type {
   Shuffle,
   SkillTrigger,
   SupportCard,
+  StageAbility,
+  StageCard,
   SupportToTrashEffect,
   TargetedCardEffect,
   TrapAbility,

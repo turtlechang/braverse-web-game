@@ -3,6 +3,8 @@ import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
+  convertOfficialItemAbility,
+  convertOfficialStageAbility,
   convertOfficialTrapAbility,
 } from './official-effect-adapter'
 import { parseOfficialCardTexts } from './official-text-parser'
@@ -49,6 +51,8 @@ export const convertOfficialCardToGameCard = (
   const skill = convertOfficialCookieSkill(card)
   const flip = convertOfficialFlipAbility(card)
   const trap = convertOfficialTrapAbility(card)
+  const item = convertOfficialItemAbility(card)
+  const stageAbility = convertOfficialStageAbility(card)
   const energyColor = getEnergyColor(card)
   const effectData =
     effectConversion.status === 'supported'
@@ -139,6 +143,8 @@ export const convertOfficialCardToGameCard = (
       type: mappedType,
       ...effectData,
       ...(trap ? { trap } : {}),
+      ...(item ? { item } : {}),
+      ...(stageAbility ? { stageAbility } : {}),
     },
     source: {
       cardNumber: card.cardNumber,

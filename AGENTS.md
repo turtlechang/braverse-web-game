@@ -93,8 +93,8 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 ### 測試
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
-- 目前共有 222 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策、Refresh、抽牌效果、deck-to-support、break-to-trash 與無限迴圈防護。
-- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 break-to-trash 選 1 與選 0 路徑、合法陷阱顯示、不合法陷阱不顯示回應視窗、FLIP 棄牌手牌切頁與無水平卷軸，以及補位與略過補位兩條互動路徑。
+- 目前共有 237 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策、Refresh、抽牌效果、deck-to-support、break-to-trash、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）與無限迴圈防護。
+- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 break-to-trash 選 1 與選 0 路徑、合法陷阱顯示、不合法陷阱不顯示回應視窗、FLIP 棄牌手牌切頁與無水平卷軸、補位與略過補位兩條互動路徑，以及物品/場景合法與不合法使用路徑。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。
 - 測試總數或瀏覽器驗證結果改變時，同步更新本文件與 `README.md`，不可保留過期數字。
 
@@ -176,19 +176,44 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 
 ---
 
+## Codex 指揮官職責（強制規範）
+
+Codex App 在此專案中擔任**指揮官**角色，職責範圍僅限於：
+
+- 需求規劃與問題分析
+- 官方規則裁決與衝突判定
+- 任務拆分與派工
+- 唯讀差異審查與最終驗證
+
+**所有程式碼、測試、設定、文件的新增、編輯、修改，一律優先且必須由 OpenCode Go 模型執行。** Codex 不得使用 `apply_patch`、`edit`、`write` 等工具或 shell 指令直接寫入或修改檔案內容。
+
+只有在**同時滿足以下所有條件**時，Codex 才能例外親自編輯：
+
+1. OpenCode Go 完全不可用（API 離線、授權失效等）
+2. OpenCode Go 連續派工失敗且無法透過升級模型解決
+3. **使用者已明確知悉並同意此例外**
+
+平台安全核准與外部網路要求仍不可繞過；若工具要求使用者再次核准，仍須依平台流程正常處理。
+
+---
+
 ## opencode-go 派工策略
 
 由 Codex 派工時依本節規則透過 `--model` 選擇：
 
+- **預設優先派工**：使用者已同意將本專案原始碼內容傳送至 OpenCode Go 外部 API。凡 OpenCode Go 可可靠完成的唯讀審查、測試補強、文件更新、簡單重構、CRUD 與一般實作，預設先派給 OpenCode Go，以降低 Codex GPT 額度消耗；Codex 主線負責需求拆解、規則裁決、跨模組整合、高風險修改與最終驗證。
+- **平台核准仍優先**：上述同意是專案偏好，不取代 Codex 執行環境的安全審查或外部網路核准；若工具要求再次核准，仍須依平台流程處理，不得繞過。
+- **避免重複耗用**：同一子任務原則上只派工一次；結果完整即可直接整合，不再用另一個 GPT／OpenCode 模型重做。只有結果不完整、測試失敗或重大疑點時才依升級機制追加派工。
 - **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。
 - **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個高風險檔案。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
 - **模式 A（CRUD / 單元測試 / Docstring / 簡單重構 / 一般審查）**：固定使用 `opencode-go/deepseek-v4-flash`。
 - **模式 B（預設路由）**：約 70% `opencode-go/deepseek-v4-flash`、20% `opencode-go/deepseek-v4-pro`、10% `opencode-go/qwen3.7-plus`，百分比非硬配額，視負載與任務特性動態調整。
 - **大型 PR 審查（多檔案跨模組）**：固定使用 `opencode-go/kimi-k2.6`。
+- **高複雜度任務（可選）**：當任務涉及深層規則推理、複雜架構設計或需要極高準確度時，可選用 `opencode-go/claude-opus-4.5`。
 - **升級機制**：
-  - 重大疑點或 `opencode-go/kimi-k2.6` 結果不完整 → 升級 `opencode-go/qwen3.7-max`（目前受 `@ai-sdk/openai-compatible` 限制不可自動使用，改以 `opencode-go/deepseek-v4-pro` 作暫時終審）。
+  - 重大疑點或 `opencode-go/kimi-k2.6` 結果不完整 → 升級 `opencode-go/claude-opus-4.5` 或 `opencode-go/qwen3.7-max`（`qwen3.7-max` 目前受 `@ai-sdk/openai-compatible` 限制不可自動使用，改以 `opencode-go/deepseek-v4-pro` 作暫時終審）。
   - `opencode-go/qwen3.7-plus` 不可用 / 逾時 / 不穩定 → 降級 `opencode-go/qwen3.6-plus`。
-  - 一般 Plus 工作兩次仍未解決 → 升級 `opencode-go/qwen3.7-max`（目前限制同上）。
+  - 一般 Plus 工作兩次仍未解決 → 升級 `opencode-go/claude-opus-4.5` 或 `opencode-go/qwen3.7-max`（`qwen3.7-max` 目前限制同上）。
 - **使用者明確指定模式或模型** → 優先採用使用者指定。
 
 ## 禁止提交

@@ -39,6 +39,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
       ...support,
       rested: false,
     })),
+    stage: player.stage ? { ...player.stage, rested: false } : null,
   })
 }
 
@@ -103,6 +104,11 @@ export const advancePhase = (state: GameState): GameState => {
           (modifier) =>
             modifier.expiresAfterTurn === null ||
             modifier.expiresAfterTurn > state.turnNumber,
+        ),
+        flipDisabledUntilTurn: Object.fromEntries(
+          Object.entries(state.flipDisabledUntilTurn ?? {}).filter(
+            ([, turn]) => turn > state.turnNumber,
+          ),
         ),
         activePlayerId: getOpponentId(state.activePlayerId),
         turnNumber: state.turnNumber + 1,

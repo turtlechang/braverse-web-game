@@ -1,6 +1,7 @@
 import { Layers3 } from 'lucide-react'
 import {
   canActivateCookieSkill,
+  canActivateStage,
   canAttack,
   getAttackEnergyCost,
   getBreakAreaLevel,
@@ -32,6 +33,9 @@ export interface BattleRowProps {
   onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
   onDeployCookie?: (instanceId: string) => void
+  onPlayItem?: (instanceId: string) => void
+  onPlayStage?: (instanceId: string) => void
+  onActivateStage?: () => void
   onInspectCard: (card: import('../../game').GameCard) => void
   onInspectDiscard: (playerId: PlayerId) => void
 }
@@ -56,6 +60,9 @@ export function BattleRow({
   onActivateSkill,
   onPlaceSupport,
   onDeployCookie,
+  onPlayItem,
+  onPlayStage,
+  onActivateStage,
   onInspectCard,
   onInspectDiscard,
 }: BattleRowProps) {
@@ -265,11 +272,19 @@ export function BattleRow({
         <div className="stage-zone">
           <span>場景區</span>
           {player.stage ? (
-            <CardFace
-              card={player.stage}
-              className="stage-card"
-              onClick={() => onInspectCard(player.stage!)}
-            />
+            <>
+              <CardFace
+                card={player.stage.card}
+                className="stage-card"
+                rested={player.stage.rested}
+                onClick={() => onInspectCard(player.stage!.card)}
+              />
+              {canOperate && canActivateStage(game, playerId) && (
+                <button type="button" onClick={() => onActivateStage?.()}>
+                  啟動
+                </button>
+              )}
+            </>
           ) : (
             <Layers3 aria-hidden="true" />
           )}
@@ -309,6 +324,10 @@ export function BattleRow({
             game.phase === 'main' &&
             card.type === 'cookie' &&
             player.battleArea.length < 2
+          const canUseItem =
+            canOperate && game.phase === 'main' && card.type === 'item'
+          const canPlaceStage =
+            canOperate && game.phase === 'main' && card.type === 'stage'
           const offset = index - (player.hand.length - 1) / 2
 
           return (
@@ -328,17 +347,21 @@ export function BattleRow({
                   isOpponent ? undefined : () => onInspectCard(card)
                 }
               />
-              {(canSupport || canDeploy) && (
+              {(canSupport || canDeploy || canUseItem || canPlaceStage) && (
                 <button
                   className="hand-card-action"
                   type="button"
                   onClick={() =>
                     canDeploy
                       ? onDeployCookie?.(card.instanceId)
-                      : onPlaceSupport?.(card.instanceId)
+                      : canUseItem
+                        ? onPlayItem?.(card.instanceId)
+                        : canPlaceStage
+                          ? onPlayStage?.(card.instanceId)
+                          : onPlaceSupport?.(card.instanceId)
                   }
                 >
-                  {canDeploy ? '登場' : '支援'}
+                  {canDeploy ? '登場' : canUseItem ? '使用' : canPlaceStage ? '放置' : '支援'}
                 </button>
               )}
             </div>
