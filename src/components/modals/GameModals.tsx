@@ -1,5 +1,11 @@
-import { Pause, X } from 'lucide-react'
-import type { DeckChoice, DefeatReason, GameCard } from '../../game'
+import { useState } from 'react'
+import { ChevronLeft, ChevronRight, Pause, X } from 'lucide-react'
+import type {
+  DeckChoice,
+  DefeatReason,
+  GameCard,
+  PlayerId,
+} from '../../game'
 import { OFFICIAL_DECK_RECIPES } from '../../game'
 import {
   CardFace,
@@ -107,17 +113,21 @@ export function OpeningSetupModal({
 export interface DecisionModalProps {
   isRefresh: boolean
   playerName: string
+  replacementCount?: number
   options: GameCard[]
   isOptionDisabled: (card: GameCard) => boolean
   onSelect: (instanceId: string) => void
+  onSkipReplacement?: () => void
 }
 
 export function DecisionModal({
   isRefresh,
   playerName,
+  replacementCount,
   options,
   isOptionDisabled,
   onSelect,
+  onSkipReplacement,
 }: DecisionModalProps) {
   return (
     <div className="modal-backdrop" role="presentation">
@@ -129,7 +139,9 @@ export function DecisionModal({
           <strong>
             {isRefresh
               ? `${playerName}必須選擇一張餅乾放入休息區`
-              : `${playerName}必須在戰鬥區放置新餅乾`}
+              : `${playerName}是否要在戰鬥區放置新餅乾？（尚可補 ${
+                  replacementCount ?? 1
+                } 張）`}
           </strong>
           <div className="modal-card-options">
             {options.map((card) => (
@@ -144,6 +156,13 @@ export function DecisionModal({
               </button>
             ))}
           </div>
+          {!isRefresh && onSkipReplacement && (
+            <div className="modal-actions decision-modal-actions">
+              <button type="button" onClick={onSkipReplacement}>
+                不補餅乾
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </div>
@@ -266,6 +285,8 @@ export interface FlipResponseModalProps {
   onSkip: () => void
 }
 
+const FLIP_HAND_PAGE_SIZE = 3
+
 export function FlipResponseModal({
   card,
   hand,
@@ -275,9 +296,19 @@ export function FlipResponseModal({
   onActivate,
   onSkip,
 }: FlipResponseModalProps) {
+  const [pageIndex, setPageIndex] = useState(0)
+  const pageCount = Math.max(1, Math.ceil(hand.length / FLIP_HAND_PAGE_SIZE))
+  const visibleHand = hand.slice(
+    pageIndex * FLIP_HAND_PAGE_SIZE,
+    (pageIndex + 1) * FLIP_HAND_PAGE_SIZE,
+  )
+
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="battle-response-modal" role="alertdialog">
+      <section
+        className="battle-response-modal flip-response-modal"
+        role="alertdialog"
+      >
         <span>HP 卡翻開</span>
         <h2>{card.name} FLIP</h2>
         <CardFace card={card} className="flip-reveal-card" />
@@ -285,23 +316,56 @@ export function FlipResponseModal({
         {discardCount > 0 && (
           <>
             <strong>選擇 {discardCount} 張手牌棄置</strong>
-            <div className="modal-card-options compact">
-              {hand.map((handCard) => (
+            <div
+              className={`flip-hand-carousel ${
+                pageCount === 1 ? 'single-page' : ''
+              }`}
+            >
+              {pageCount > 1 && (
                 <button
                   type="button"
-                  className={
-                    selectedDiscardIds.includes(handCard.instanceId)
-                      ? 'is-selected'
-                      : ''
-                  }
-                  key={handCard.instanceId}
-                  onClick={() => onToggleDiscard(handCard.instanceId)}
+                  className="flip-page-arrow"
+                  aria-label="上一頁手牌"
+                  disabled={pageIndex === 0}
+                  onClick={() => setPageIndex((current) => current - 1)}
                 >
-                  <CardFace card={handCard} />
-                  <span>{handCard.name}</span>
+                  <ChevronLeft aria-hidden="true" />
                 </button>
-              ))}
+              )}
+              <div className="modal-card-options compact flip-card-page">
+                {visibleHand.map((handCard) => (
+                  <button
+                    type="button"
+                    className={
+                      selectedDiscardIds.includes(handCard.instanceId)
+                        ? 'is-selected'
+                        : ''
+                    }
+                    key={handCard.instanceId}
+                    onClick={() => onToggleDiscard(handCard.instanceId)}
+                  >
+                    <CardFace card={handCard} />
+                    <span>{handCard.name}</span>
+                  </button>
+                ))}
+              </div>
+              {pageCount > 1 && (
+                <button
+                  type="button"
+                  className="flip-page-arrow"
+                  aria-label="下一頁手牌"
+                  disabled={pageIndex === pageCount - 1}
+                  onClick={() => setPageIndex((current) => current + 1)}
+                >
+                  <ChevronRight aria-hidden="true" />
+                </button>
+              )}
             </div>
+            {pageCount > 1 && (
+              <span className="flip-page-indicator">
+                {pageIndex + 1} / {pageCount}
+              </span>
+            )}
           </>
         )}
         <div className="modal-actions">
@@ -507,21 +571,26 @@ export function DeckListModal({
 
 export interface ResultModalProps {
   winnerName: string
+  loserId: PlayerId
+  viewerPlayerId: PlayerId
   reason: DefeatReason
   onRestart: () => void
 }
 
 export function ResultModal({
   winnerName,
+  loserId,
+  viewerPlayerId,
   reason,
   onRestart,
 }: ResultModalProps) {
+  const defeatedSide = loserId === viewerPlayerId ? '我方' : '對方'
   const reasonText =
     reason === 'break-level-limit'
-      ? '對手休息區等級達到 10。'
+      ? `${defeatedSide}休息區的等級達到 10。`
       : reason === 'refresh-unavailable'
-        ? '對手無法完成牌庫 Refresh。'
-        : '對手沒有可登場的餅乾。'
+        ? `${defeatedSide}無法完成牌庫 Refresh。`
+        : `${defeatedSide}沒有可登場的餅乾。`
 
   return (
     <div className="modal-backdrop result-backdrop" role="presentation">

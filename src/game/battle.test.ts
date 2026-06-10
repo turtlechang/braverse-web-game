@@ -108,7 +108,11 @@ const createBattleState = (): GameState => {
     nextBattleEntrySequence: 3,
     attackModifiers: [],
     damageReceivedModifiers: [],
-    pendingReplacementPlayerId: null,
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
     pendingRefresh: null,
     pendingBattle: null,
   }

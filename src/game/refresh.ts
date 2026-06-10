@@ -5,6 +5,7 @@ import {
   findCardIndex,
   updatePlayer,
 } from './helpers'
+import { continuePendingReplacements } from './replacement'
 import type {
   CookieCard,
   GameState,
@@ -120,8 +121,8 @@ export const refreshDeck = (
     }
   }
 
-  return {
+  return continuePendingReplacements({
     ...updatedState,
     pendingRefresh: null,
-  }
+  })
 }

@@ -27,7 +27,12 @@ export const getBasicDefeatReason = (
 
   const hasCookieInHand = player.hand.some((card) => card.type === 'cookie')
 
-  if (player.battleArea.length === 0 && !hasCookieInHand) {
+  if (
+    !state.pendingReplacement &&
+    state.departedCookieCounts[playerId] === 0 &&
+    player.battleArea.length === 0 &&
+    !hasCookieInHand
+  ) {
     return 'no-cookie-available'
   }
 
@@ -54,6 +59,48 @@ export const evaluateBasicVictory = (state: GameState): GameResult | null => {
   return null
 }
 
+export const evaluateBreakLevelVictory = (
+  state: GameState,
+): GameResult | null => {
+  if (state.status !== 'playing') {
+    return null
+  }
+
+  for (const playerId of ['player-one', 'player-two'] as const) {
+    if (getBreakAreaLevel(state, playerId) >= 10) {
+      return {
+        loserId: playerId,
+        winnerId: getOpponentId(playerId),
+        reason: 'break-level-limit',
+      }
+    }
+  }
+
+  return null
+}
+
+export const resolveBreakLevelVictory = (
+  state: GameState,
+): GameState => {
+  const result = evaluateBreakLevelVictory(state)
+
+  return result
+    ? {
+        ...state,
+        status: 'finished',
+        pendingReplacement: null,
+        departedCookieCounts: {
+          'player-one': 0,
+          'player-two': 0,
+        },
+        pendingOnPlay: null,
+        pendingRefresh: null,
+        pendingBattle: null,
+        result,
+      }
+    : state
+}
+
 export const resolveBasicVictory = (state: GameState): GameState => {
   const result = evaluateBasicVictory(state)
 
@@ -61,6 +108,14 @@ export const resolveBasicVictory = (state: GameState): GameState => {
     ? {
         ...state,
         status: 'finished',
+        pendingReplacement: null,
+        departedCookieCounts: {
+          'player-one': 0,
+          'player-two': 0,
+        },
+        pendingOnPlay: null,
+        pendingRefresh: null,
+        pendingBattle: null,
         result,
       }
     : state
@@ -73,9 +128,14 @@ export const finishWithDefeat = (
 ): GameState => ({
   ...state,
   status: 'finished',
-  pendingReplacementPlayerId: null,
+  pendingReplacement: null,
+  departedCookieCounts: {
+    'player-one': 0,
+    'player-two': 0,
+  },
   pendingOnPlay: null,
   pendingRefresh: null,
+  pendingBattle: null,
   result: {
     loserId,
     winnerId: getOpponentId(loserId),

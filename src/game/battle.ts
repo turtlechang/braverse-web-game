@@ -11,6 +11,10 @@ import {
   validateEnergyPayment,
 } from './energy'
 import { getOpponentId } from './helpers'
+import {
+  finalizePendingReplacements,
+  recordCookieDepartures,
+} from './replacement'
 import { canAttack } from './turn'
 import type {
   CardEffect,
@@ -22,7 +26,7 @@ import type {
   PlayerState,
   TrapAbility,
 } from './types'
-import { getBreakAreaLevel, resolveBasicVictory } from './victory'
+import { getBreakAreaLevel } from './victory'
 
 const requirePendingBattle = (state: GameState): PendingBattle => {
   if (!state.pendingBattle) {
@@ -37,7 +41,7 @@ const assertNoBlockingDecision = (state: GameState) => {
     throw new GameRuleError('必須先完成目前的戰鬥。')
   }
 
-  if (state.pendingReplacementPlayerId) {
+  if (state.pendingReplacement) {
     throw new GameRuleError('必須先補充戰鬥區餅乾。')
   }
 
@@ -479,23 +483,27 @@ const removeFaintedCookie = (
     return state
   }
 
-  return {
-    ...state,
-    players: {
-      ...state.players,
-      [playerId]: {
-        ...player,
-        battleArea: player.battleArea.filter(
-          (cookie) => cookie.card.instanceId !== targetInstanceId,
-        ),
-        breakArea: [...player.breakArea, target.card],
+  return recordCookieDepartures(
+    {
+      ...state,
+      players: {
+        ...state.players,
+        [playerId]: {
+          ...player,
+          battleArea: player.battleArea.filter(
+            (cookie) => cookie.card.instanceId !== targetInstanceId,
+          ),
+          breakArea: [...player.breakArea, target.card],
+        },
+      },
+      pendingBattle: {
+        ...battle,
+        faintedColors: addFaintedColor(battle.faintedColors, target.card),
       },
     },
-    pendingBattle: {
-      ...battle,
-      faintedColors: addFaintedColor(battle.faintedColors, target.card),
-    },
-  }
+    playerId,
+    1,
+  )
 }
 
 const finishBattle = (state: GameState): GameState => {
@@ -518,27 +526,10 @@ const finishBattle = (state: GameState): GameState => {
     }
   }
 
-  let nextState = resolveBasicVictory({
+  return finalizePendingReplacements({
     ...completedState,
     pendingBattle: null,
   })
-  if (nextState.status !== 'playing') return nextState
-
-  for (const playerId of [
-    battle.defenderPlayerId,
-    battle.attackerPlayerId,
-  ]) {
-    const player = nextState.players[playerId]
-    if (player.battleArea.length === 0) {
-      nextState = {
-        ...nextState,
-        pendingReplacementPlayerId: playerId,
-      }
-      break
-    }
-  }
-
-  return nextState
 }
 
 const finishDamageSequence = (state: GameState): GameState => {

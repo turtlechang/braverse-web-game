@@ -2,6 +2,7 @@ import {
   deployCookie,
   placeSupportCard,
   replaceDefeatedCookie,
+  skipDefeatedCookieReplacement,
 } from './actions'
 import {
   beginAttack,
@@ -26,6 +27,11 @@ import {
 } from './energy'
 import { getRefreshCandidates, refreshDeck } from './refresh'
 import {
+  finalizePendingReplacements,
+  getCurrentReplacementTask,
+  getReplacementCandidates,
+} from './replacement'
+import {
   activateCookieSkill,
   canActivateCookieSkill,
   skipCookieOnPlay,
@@ -45,6 +51,7 @@ export type AiActionType =
   | 'idle'
   | 'refresh'
   | 'replace-cookie'
+  | 'skip-replacement'
   | 'advance-phase'
   | 'place-support'
   | 'deploy-cookie'
@@ -193,6 +200,10 @@ const resolveAiSkill = (
   const effectSelections: AiEffectSelection[] = []
 
   for (const effect of effects) {
+    if (nextState.status !== 'playing') {
+      break
+    }
+
     if (isEffectUntargeted(effect)) {
       nextState = executeCardEffect(
         nextState,
@@ -228,7 +239,7 @@ const resolveAiSkill = (
   }
 
   return {
-    state: nextState,
+    state: finalizePendingReplacements(nextState),
     action: 'activate-skill',
     description: `${state.players[playerId].name}發動${source.card.name}的技能。`,
     effectSelections,
@@ -236,12 +247,7 @@ const resolveAiSkill = (
 }
 
 const chooseReplacement = (state: GameState, playerId: PlayerId) =>
-  state.players[playerId].hand
-    .filter(
-      (card) =>
-        card.type === 'cookie' &&
-        state.players[playerId].deck.length >= card.hp,
-    )
+  getReplacementCandidates(state, playerId)
     .sort((left, right) =>
       left.type === 'cookie' && right.type === 'cookie'
         ? left.hp - right.hp
@@ -272,10 +278,12 @@ export const takeAiStep = (
       }
     }
 
+    const replacementTask = getCurrentReplacementTask(state)
+
     if (
       state.pendingBattle &&
       !state.pendingRefresh &&
-      !state.pendingReplacementPlayerId
+      !state.pendingReplacement
     ) {
       const battle = state.pendingBattle
       if (battle.stage === 'damage') {
@@ -392,14 +400,16 @@ export const takeAiStep = (
       }
     }
 
-    if (state.pendingReplacementPlayerId === playerId) {
+    if (
+      !state.pendingOnPlay &&
+      replacementTask?.playerId === playerId
+    ) {
       const replacement = chooseReplacement(state, playerId)
       if (!replacement) {
         return {
-          state,
-          action: 'error',
-          description: 'AI 找不到可補充的餅乾。',
-          error: 'replacement-unavailable',
+          state: skipDefeatedCookieReplacement(state),
+          action: 'skip-replacement',
+          description: `${state.players[playerId].name}選擇不補餅乾。`,
         }
       }
       const replacedState = replaceDefeatedCookie(
@@ -453,7 +463,7 @@ export const takeAiStep = (
 
     if (
       state.pendingRefresh ||
-      state.pendingReplacementPlayerId ||
+      state.pendingReplacement ||
       state.activePlayerId !== playerId
     ) {
       return {
@@ -619,8 +629,8 @@ export const simulateAiMatch = (
 
     const controller =
       state.pendingRefresh?.playerId ??
-      state.pendingReplacementPlayerId ??
       state.pendingOnPlay?.playerId ??
+      getCurrentReplacementTask(state)?.playerId ??
       (state.pendingBattle
         ? state.pendingBattle.stage === 'flip'
           ? state.pendingBattle.damagePlayerId ??

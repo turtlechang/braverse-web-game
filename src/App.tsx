@@ -11,10 +11,13 @@ import {
   deployCookie,
   drawMulliganCompensation,
   executeCardEffect,
+  finalizePendingReplacements,
   getAttackEnergyCost,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getRefreshCandidates,
+  getCurrentReplacementTask,
+  getReplacementCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
   forceMulliganOpeningHand,
@@ -31,6 +34,7 @@ import {
   selectStartingCookie,
   simulateAiMatch,
   skipCookieOnPlay,
+  skipDefeatedCookieReplacement,
   skipTrap,
   takeAiStep,
   validateEnergyPayment,
@@ -54,6 +58,8 @@ import { EffectPanel } from './components/effects/EffectPanel'
 import type { PendingEffect } from './components/effects/effectUiTypes'
 import {
   createBreakToTrashDemoState,
+  createFlipResponseDemoState,
+  createReplacementChoiceDemoState,
   createTrapResponseDemoState,
   parseTestStateConfig,
 } from './game/demo'
@@ -88,6 +94,12 @@ function App() {
     if (testStateConfig?.kind === 'trap-response') {
       return createTrapResponseDemoState(testStateConfig.payable)
     }
+    if (testStateConfig?.kind === 'flip-response') {
+      return createFlipResponseDemoState()
+    }
+    if (testStateConfig?.kind === 'replacement-choice') {
+      return createReplacementChoiceDemoState()
+    }
     return createDemoSetupGame('player-one')
   })
   const [setupStep, setSetupStep] = useState<OpeningSetupStep | null>(
@@ -114,6 +126,9 @@ function App() {
       return testStateConfig.level === 1
         ? '測試狀態：休息區有 1 張 LV.1 餅乾。'
         : '測試狀態：休息區有 1 張 LV.2 餅乾。'
+    }
+    if (testStateConfig?.kind === 'replacement-choice') {
+      return '測試狀態：選擇是否補餅乾。'
     }
     return '推進階段，開始這場對戰。'
   })
@@ -316,13 +331,14 @@ function App() {
         selectedAttackPaymentIds,
       )
     : { valid: false, reason: '尚未選擇攻擊餅乾。' }
+  const replacementTask = getCurrentReplacementTask(game)
   const aiControlsCurrentState =
     game.pendingRefresh
       ? game.pendingRefresh.playerId === 'player-two'
-      : game.pendingReplacementPlayerId
-        ? game.pendingReplacementPlayerId === 'player-two'
-        : game.pendingOnPlay
+      : game.pendingOnPlay
           ? game.pendingOnPlay.playerId === 'player-two'
+        : replacementTask
+          ? replacementTask.playerId === 'player-two'
         : game.pendingBattle
       ? game.pendingBattle.stage === 'damage' ||
         (game.pendingBattle.stage === 'flip'
@@ -621,12 +637,19 @@ function App() {
       )
       const result = describeEffectResult(currentEffect, targetNames)
       const nextEffectIndex = pendingEffect.effectIndex + 1
+      const hasNextEffect =
+        nextGame.status === 'playing' &&
+        nextEffectIndex < pendingEffect.effects.length
+      const resolvedGame =
+        nextGame.status !== 'playing' || hasNextEffect
+          ? nextGame
+          : finalizePendingReplacements(nextGame)
 
-      setGame(nextGame)
+      setGame(resolvedGame)
       setMessage(result)
       setEffectHistory((history) => [result, ...history].slice(0, 4))
       setPendingEffect(
-        nextEffectIndex < pendingEffect.effects.length
+        hasNextEffect
           ? {
               ...pendingEffect,
               effectIndex: nextEffectIndex,
@@ -643,13 +666,16 @@ function App() {
   }
 
   const pendingPlayerId =
-    game.pendingRefresh?.playerId ?? game.pendingReplacementPlayerId
+    game.pendingRefresh?.playerId ??
+    (!game.pendingOnPlay ? replacementTask?.playerId : undefined)
   const pendingPlayer = pendingPlayerId
     ? game.players[pendingPlayerId]
     : null
   const pendingOptions = game.pendingRefresh
     ? getRefreshCandidates(game, game.pendingRefresh.playerId)
-    : pendingPlayer?.hand.filter((card) => card.type === 'cookie') ?? []
+    : pendingPlayer
+      ? getReplacementCandidates(game, pendingPlayer.id)
+      : []
   const interactionLocked =
     Boolean(pendingEffect) ||
     Boolean(game.pendingOnPlay) ||
@@ -705,7 +731,7 @@ function App() {
         turnNumber={game.turnNumber}
         disabled={
           game.status === 'finished' ||
-          Boolean(game.pendingReplacementPlayerId) ||
+          Boolean(game.pendingReplacement) ||
           Boolean(game.pendingOnPlay) ||
           Boolean(game.pendingRefresh) ||
           Boolean(pendingEffect)
@@ -933,6 +959,7 @@ function App() {
           game.pendingBattle.defenderPlayerId) === viewerPlayerId &&
         game.pendingBattle.revealedHpCard && (
           <FlipResponseModal
+            key={game.pendingBattle.revealedHpCard.instanceId}
             card={game.pendingBattle.revealedHpCard}
             hand={game.players[viewerPlayerId].hand}
             discardCount={
@@ -972,11 +999,22 @@ function App() {
         <DecisionModal
           isRefresh={Boolean(game.pendingRefresh)}
           playerName={pendingPlayer.name}
+          replacementCount={replacementTask?.remaining}
           options={pendingOptions}
           isOptionDisabled={(card) =>
             !game.pendingRefresh &&
             card.type === 'cookie' &&
             pendingPlayer.deck.length < card.hp
+          }
+          onSkipReplacement={
+            game.pendingRefresh
+              ? undefined
+              : () =>
+                  runAction(
+                    (current) =>
+                      skipDefeatedCookieReplacement(current),
+                    '已選擇不補餅乾。',
+                  )
           }
           onSelect={(instanceId) => {
             if (game.pendingRefresh) {
@@ -1078,6 +1116,8 @@ function App() {
       {game.result && (
         <ResultModal
           winnerName={game.players[game.result.winnerId].name}
+          loserId={game.result.loserId}
+          viewerPlayerId={viewerPlayerId}
           reason={game.result.reason}
           onRestart={() => {
             resetGame(deckConfig, `我方 ${deckChoiceLabel[deckConfig.player]} vs AI ${deckChoiceLabel[deckConfig.ai]} 新對局。`)

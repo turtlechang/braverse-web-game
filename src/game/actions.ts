@@ -4,13 +4,19 @@ import { getRefreshCandidates } from './refresh'
 import type { GameState } from './types'
 import { finishWithDefeat } from './victory'
 import { beginAttack, resolveBattleAutomatically } from './battle'
+import {
+  consumeReplacementTask,
+  continuePendingReplacements,
+  getCurrentReplacementTask,
+  getReplacementCandidates,
+} from './replacement'
 
 const assertActiveGame = (state: GameState) => {
   if (state.status !== 'playing') {
     throw new GameRuleError('只有進行中的遊戲可以執行玩家動作。')
   }
 
-  if (state.pendingReplacementPlayerId) {
+  if (state.pendingReplacement) {
     throw new GameRuleError('必須先補充戰鬥區餅乾。')
   }
 
@@ -145,7 +151,8 @@ export const replaceDefeatedCookie = (
   state: GameState,
   instanceId: string,
 ): GameState => {
-  if (state.status !== 'playing' || !state.pendingReplacementPlayerId) {
+  const currentTask = getCurrentReplacementTask(state)
+  if (state.status !== 'playing' || !currentTask) {
     throw new GameRuleError('目前不需要補充戰鬥區餅乾。')
   }
 
@@ -153,11 +160,15 @@ export const replaceDefeatedCookie = (
     throw new GameRuleError('必須先完成牌庫 Refresh。')
   }
 
-  const playerId = state.pendingReplacementPlayerId
+  if (state.pendingOnPlay) {
+    throw new GameRuleError('必須先處理餅乾的登場效果。')
+  }
+
+  const playerId = currentTask.playerId
   const player = state.players[playerId]
 
-  if (player.battleArea.length > 0) {
-    throw new GameRuleError('戰鬥區仍有餅乾，不需要強制補充。')
+  if (player.battleArea.length >= 2) {
+    throw new GameRuleError('戰鬥區已滿，無法放置補充餅乾。')
   }
 
   const cardIndex = findCardIndex(player.hand, instanceId)
@@ -176,6 +187,7 @@ export const replaceDefeatedCookie = (
     deck: player.deck.slice(card.hp),
     hand: player.hand.filter((_, index) => index !== cardIndex),
     battleArea: [
+      ...player.battleArea,
       {
         card,
         hpCards: player.deck.slice(0, card.hp),
@@ -186,9 +198,8 @@ export const replaceDefeatedCookie = (
     ],
   })
 
-  const replacementState = {
+  const replacementState = consumeReplacementTask({
     ...updatedState,
-    pendingReplacementPlayerId: null,
     pendingOnPlay:
       card.skill?.trigger === 'on-play'
         ? {
@@ -197,9 +208,49 @@ export const replaceDefeatedCookie = (
           }
         : null,
     nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+  }, playerId)
+
+  const exhaustedState = resolveDeckExhaustion(
+    replacementState,
+    player.id,
+  )
+
+  return continuePendingReplacements(exhaustedState)
+}
+
+export const skipDefeatedCookieReplacement = (
+  state: GameState,
+): GameState => {
+  const currentTask = getCurrentReplacementTask(state)
+  if (state.status !== 'playing' || !currentTask) {
+    throw new GameRuleError('目前沒有可略過的補位選擇。')
   }
 
-  return resolveDeckExhaustion(replacementState, player.id)
+  if (state.pendingRefresh) {
+    throw new GameRuleError('必須先完成牌庫 Refresh。')
+  }
+
+  if (state.pendingOnPlay) {
+    throw new GameRuleError('必須先處理餅乾的登場效果。')
+  }
+
+  const playerId = currentTask.playerId
+  const hasLegalReplacement =
+    getReplacementCandidates(state, playerId).length > 0
+  const replacementState = consumeReplacementTask(state, playerId)
+
+  if (
+    state.players[playerId].battleArea.length === 0 &&
+    !hasLegalReplacement
+  ) {
+    return finishWithDefeat(
+      replacementState,
+      playerId,
+      'no-cookie-available',
+    )
+  }
+
+  return continuePendingReplacements(replacementState)
 }
 
 export const attackCookie = (

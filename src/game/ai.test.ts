@@ -211,7 +211,9 @@ describe('simple AI opponent', () => {
     expect(replacementCard).toBeDefined()
     const replacementState: GameState = {
       ...base,
-      pendingReplacementPlayerId: 'player-two',
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
       players: {
         ...base.players,
         'player-two': {
@@ -245,7 +247,9 @@ describe('simple AI opponent', () => {
     const state: GameState = {
       ...base,
       activePlayerId: 'player-one',
-      pendingReplacementPlayerId: 'player-two',
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
       players: {
         ...base.players,
         'player-two': {
@@ -261,6 +265,32 @@ describe('simple AI opponent', () => {
     expect(decision.action).toBe('replace-cookie')
     expect(decision.state.pendingOnPlay).toBeNull()
     expect(decision.effectSelections).toHaveLength(1)
+  })
+
+  it('skips an optional replacement when no legal Cookie is available', () => {
+    const base = createDemoGame()
+    const state: GameState = {
+      ...base,
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          hand: base.players['player-two'].hand.filter(
+            (card) => card.type !== 'cookie',
+          ),
+          battleArea: [base.players['player-two'].battleArea[0]],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state)
+
+    expect(decision.action).toBe('skip-replacement')
+    expect(decision.state.status).toBe('playing')
+    expect(decision.state.pendingReplacement).toBeNull()
   })
 
   it('advances the phase when no other legal action exists', () => {

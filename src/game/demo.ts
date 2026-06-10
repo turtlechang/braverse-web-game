@@ -20,6 +20,8 @@ export const parseTestStateConfig = (
 ):
   | { kind: 'break-to-trash'; level: 1 | 2 }
   | { kind: 'trap-response'; payable: boolean }
+  | { kind: 'flip-response' }
+  | { kind: 'replacement-choice' }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -35,6 +37,12 @@ export const parseTestStateConfig = (
   }
   if (testState === 'trap-unpayable') {
     return { kind: 'trap-response', payable: false }
+  }
+  if (testState === 'flip-response') {
+    return { kind: 'flip-response' }
+  }
+  if (testState === 'replacement-choice') {
+    return { kind: 'replacement-choice' }
   }
   return null
 }
@@ -214,7 +222,11 @@ export const createBreakToTrashDemoState = (
     nextBattleEntrySequence: 3,
     attackModifiers: [],
     damageReceivedModifiers: [],
-    pendingReplacementPlayerId: null,
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
     pendingRefresh: null,
     pendingBattle: null,
   }
@@ -301,7 +313,11 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
     nextBattleEntrySequence: 3,
     attackModifiers: [],
     damageReceivedModifiers: [],
-    pendingReplacementPlayerId: null,
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
     pendingRefresh: null,
     pendingBattle: null,
   }
@@ -321,5 +337,168 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
       preventKnockoutTargetIds: [],
       faintedColors: [],
     },
+  }
+}
+
+export const createFlipResponseDemoState = (): GameState => {
+  const p1Deck = DECK_CREATORS.red('player-one')
+  const p2Deck = DECK_CREATORS.red('player-two')
+  const revealedFlip = p1Deck.find(
+    (card) => card.id === 'ST1-001' && card.flip,
+  )!
+  const defender = p1Deck.find(
+    (card) =>
+      card.type === 'cookie' &&
+      card.instanceId !== revealedFlip.instanceId,
+  ) as CookieCard
+  const attacker = p2Deck.find((card) => card.type === 'cookie') as CookieCard
+  const hand = p1Deck
+    .filter(
+      (card) =>
+        card.instanceId !== revealedFlip.instanceId &&
+        card.instanceId !== defender.instanceId,
+    )
+    .slice(0, 6)
+  const usedP1 = new Set([
+    revealedFlip.instanceId,
+    defender.instanceId,
+    ...hand.map((card) => card.instanceId),
+  ])
+
+  const p1: PlayerState = {
+    id: 'player-one',
+    name: '玩家',
+    ...createTestPlayerState(),
+    deck: p1Deck.filter((card) => !usedP1.has(card.instanceId)),
+    hand,
+    battleArea: [
+      {
+        card: defender,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${defender.instanceId}:battle:1`,
+      },
+    ],
+  }
+  const p2: PlayerState = {
+    id: 'player-two',
+    name: 'AI 對手',
+    ...createTestPlayerState(),
+    battleArea: [
+      {
+        card: attacker,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${attacker.instanceId}:battle:2`,
+      },
+    ],
+  }
+
+  return {
+    players: { 'player-one': p1, 'player-two': p2 },
+    firstPlayerId: 'player-two',
+    activePlayerId: 'player-two',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
+    pendingRefresh: null,
+    pendingBattle: {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: defender.instanceId,
+      declaredDamage: 1,
+      remainingDamage: 0,
+      stage: 'flip',
+      trapUsed: false,
+      revealedHpCard: revealedFlip,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+    },
+  }
+}
+
+export const createReplacementChoiceDemoState = (): GameState => {
+  const p1Deck = DECK_CREATORS.red('player-one')
+  const p2Deck = DECK_CREATORS.red('player-two')
+  const remainingCookie = p1Deck.find(
+    (card) => card.type === 'cookie',
+  ) as CookieCard
+  const replacementCookie = p1Deck.find(
+    (card) =>
+      card.type === 'cookie' &&
+      card.instanceId !== remainingCookie.instanceId,
+  ) as CookieCard
+  const opponentCookie = p2Deck.find(
+    (card) => card.type === 'cookie',
+  ) as CookieCard
+  const usedP1 = new Set([
+    remainingCookie.instanceId,
+    replacementCookie.instanceId,
+  ])
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((card) => !usedP1.has(card.instanceId)),
+        hand: [replacementCookie],
+        battleArea: [
+          {
+            card: remainingCookie,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${remainingCookie.instanceId}:battle:1`,
+          },
+        ],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        battleArea: [
+          {
+            card: opponentCookie,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${opponentCookie.instanceId}:battle:2`,
+          },
+        ],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    pendingReplacement: {
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    },
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
   }
 }

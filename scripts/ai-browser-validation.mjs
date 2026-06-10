@@ -265,6 +265,79 @@ try {
     '不可支付陷阱自動略過時不應顯示提示文字',
   )
 
+  await page.goto(`${baseUrl}?test-state=flip-response`, {
+    waitUntil: 'networkidle',
+  })
+  const flipModal = page.locator('.flip-response-modal')
+  await flipModal.waitFor({ state: 'visible' })
+  const flipCards = flipModal.locator('.flip-card-page > button')
+  const activateFlipButton = flipModal.getByRole('button', { name: '發動 FLIP' })
+  assert.strictEqual(await flipCards.count(), 3, 'FLIP 每頁應顯示 3 張手牌')
+  assert.ok(await activateFlipButton.isDisabled(), '未選棄牌時不可發動 FLIP')
+  assert.strictEqual(
+    await flipModal.locator('.flip-card-page').evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+    true,
+    'FLIP 手牌選擇區不應出現水平卷軸',
+  )
+
+  await flipCards.first().click()
+  assert.ok(!(await activateFlipButton.isDisabled()), '選擇 1 張手牌後應可發動')
+  await flipModal.getByRole('button', { name: '下一頁手牌' }).click()
+  assert.strictEqual(
+    await flipModal.locator('.flip-page-indicator').innerText(),
+    '2 / 2',
+    '下一頁按鈕應切換到第 2 頁',
+  )
+  await flipModal.getByRole('button', { name: '上一頁手牌' }).click()
+  assert.ok(
+    await flipModal
+      .locator('.flip-card-page > button')
+      .first()
+      .evaluate((element) => element.classList.contains('is-selected')),
+    '切頁後應保留已選取的手牌',
+  )
+  await activateFlipButton.click()
+  await flipModal.waitFor({ state: 'hidden' })
+
+  const replacementUrl = `${baseUrl}?test-state=replacement-choice`
+  await page.goto(replacementUrl, { waitUntil: 'networkidle' })
+  const replacementModal = page.locator('.decision-modal')
+  await replacementModal.waitFor({ state: 'visible' })
+  assert.ok(
+    (await replacementModal.innerText()).includes('是否要在戰鬥區放置新餅乾'),
+    '補位視窗應詢問玩家是否放置餅乾',
+  )
+  assert.strictEqual(
+    await replacementModal.getByRole('button', { name: '不補餅乾' }).count(),
+    1,
+    '補位視窗應提供不補餅乾按鈕',
+  )
+  await replacementModal
+    .locator('.modal-card-options > button:not(:disabled)')
+    .first()
+    .click()
+  await replacementModal.waitFor({ state: 'hidden' })
+  assert.strictEqual(
+    await page.locator('.bottom-field .combat-card-wrap').count(),
+    2,
+    '選擇餅乾後戰鬥區應補回第二張餅乾',
+  )
+
+  await page.goto(replacementUrl, { waitUntil: 'networkidle' })
+  await replacementModal.waitFor({ state: 'visible' })
+  await replacementModal.getByRole('button', { name: '不補餅乾' }).click()
+  await replacementModal.waitFor({ state: 'hidden' })
+  assert.strictEqual(
+    await page.locator('.bottom-field .combat-card-wrap').count(),
+    1,
+    '選擇不補餅乾後應保留原本的一張戰鬥區餅乾',
+  )
+  await page.locator('.match-status small').filter({
+    hasText: '已選擇不補餅乾',
+  }).waitFor()
+
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await completeOpeningSetup()
 

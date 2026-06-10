@@ -1,0 +1,4 @@
+interface:
+  display_name: "Braverse 專案開發"
+  short_description: "依 Braverse 專案規範完成規則實作、測試、審查、文件同步與提交流程"
+  default_prompt: "使用 $develop-braverse 依專案流程完成這項 Braverse 開發工作。"

@@ -251,6 +251,15 @@ export interface GameResult {
   reason: DefeatReason
 }
 
+export interface ReplacementTask {
+  playerId: PlayerId
+  remaining: number
+}
+
+export interface PendingReplacement {
+  tasks: ReplacementTask[]
+}
+
 export interface GameState {
   players: Record<PlayerId, PlayerState>
   firstPlayerId: PlayerId
@@ -264,7 +273,8 @@ export interface GameState {
   nextBattleEntrySequence: number
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
-  pendingReplacementPlayerId: PlayerId | null
+  pendingReplacement: PendingReplacement | null
+  departedCookieCounts: Record<PlayerId, number>
   pendingOnPlay?: {
     playerId: PlayerId
     sourceInstanceId: string

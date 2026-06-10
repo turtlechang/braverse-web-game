@@ -20,6 +20,7 @@ import {
   replaceDefeatedCookie,
   resolveBasicVictory,
   selectStartingCookie,
+  skipDefeatedCookieReplacement,
   type CookieCard,
   type GameCard,
   type GameState,
@@ -478,7 +479,10 @@ describe('玩家動作', () => {
     expect(state.players['player-one'].battleArea).toHaveLength(0)
     expect(state.players['player-one'].breakArea).toContain(target.card)
     expect(state.players['player-one'].discardPile).toContain(target.hpCards[0])
-    expect(state.pendingReplacementPlayerId).toBe('player-one')
+    expect(state.pendingReplacement?.tasks[0]).toEqual({
+      playerId: 'player-one',
+      remaining: 1,
+    })
   })
 
   it('攻擊必須支付足額的活躍支援卡', () => {
@@ -617,7 +621,7 @@ describe('玩家動作', () => {
 
     state = replaceDefeatedCookie(state, replacement!.instanceId)
 
-    expect(state.pendingReplacementPlayerId).toBeNull()
+    expect(state.pendingReplacement).toBeNull()
     expect(state.players['player-one'].battleArea).toHaveLength(1)
     expect(state.players['player-one'].battleArea[0].card).toBe(replacement)
   })
@@ -639,7 +643,9 @@ describe('玩家動作', () => {
     state = {
       ...state,
       activePlayerId: 'player-two',
-      pendingReplacementPlayerId: 'player-one',
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-one', remaining: 1 }],
+      },
       players: {
         ...state.players,
         'player-one': {
@@ -666,7 +672,7 @@ describe('玩家動作', () => {
     ).toBe(true)
   })
 
-  it('擊倒最後一隻餅乾且手牌無餅乾時立即敗北', () => {
+  it('擊倒最後一隻餅乾且無合法補位時，詢問後才判定敗北', () => {
     let state = createReadyGame()
     state = reachPhase(state, 'end')
     state = advancePhase(state)
@@ -692,13 +698,21 @@ describe('玩家動作', () => {
       ['player-two-payment'],
     )
 
+    expect(state.status).toBe('playing')
+    expect(state.pendingReplacement?.tasks[0]).toEqual({
+      playerId: 'player-one',
+      remaining: 1,
+    })
+
+    state = skipDefeatedCookieReplacement(state)
+
     expect(state.status).toBe('finished')
     expect(state.result).toEqual({
       winnerId: 'player-two',
       loserId: 'player-one',
       reason: 'no-cookie-available',
     })
-    expect(state.pendingReplacementPlayerId).toBeNull()
+    expect(state.pendingReplacement).toBeNull()
   })
 
   it('擊倒使休息區 LV 達 10 時直接結束，不進入補充流程', () => {
@@ -730,7 +744,7 @@ describe('玩家動作', () => {
 
     expect(state.status).toBe('finished')
     expect(state.result?.reason).toBe('break-level-limit')
-    expect(state.pendingReplacementPlayerId).toBeNull()
+    expect(state.pendingReplacement).toBeNull()
   })
 })
 

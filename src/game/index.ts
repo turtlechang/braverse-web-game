@@ -55,6 +55,7 @@ export {
   deployCookie,
   placeSupportCard,
   replaceDefeatedCookie,
+  skipDefeatedCookieReplacement,
 } from './actions'
 export { getRefreshCandidates, refreshDeck } from './refresh'
 export {
@@ -74,11 +75,20 @@ export {
 } from './skills'
 export {
   evaluateBasicVictory,
+  evaluateBreakLevelVictory,
   finishWithDefeat,
   getBasicDefeatReason,
   getBreakAreaLevel,
   resolveBasicVictory,
+  resolveBreakLevelVictory,
 } from './victory'
+export {
+  continuePendingReplacements,
+  finalizePendingReplacements,
+  getCurrentReplacementTask,
+  getReplacementCandidates,
+  recordCookieDepartures,
+} from './replacement'
 export type {
   AttackModifier,
   AbilityCost,
@@ -116,7 +126,9 @@ export type {
   PlayerState,
   PendingBattle,
   PendingBattleStage,
+  PendingReplacement,
   PreventKnockoutEffect,
+  ReplacementTask,
   Shuffle,
   SkillTrigger,
   SupportCard,

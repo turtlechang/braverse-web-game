@@ -93,8 +93,8 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 ### 測試
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
-- 目前共有 204 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、官方標記與卡片詳情排版、跨回合 OnPlay 登場窗口、AI 決策、Refresh、補位、抽牌效果、deck-to-support、break-to-trash 與無限迴圈防護。
-- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 break-to-trash 選 1 與選 0 路徑，以及合法陷阱顯示、不合法陷阱不顯示回應視窗。
+- 目前共有 222 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策、Refresh、抽牌效果、deck-to-support、break-to-trash 與無限迴圈防護。
+- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 break-to-trash 選 1 與選 0 路徑、合法陷阱顯示、不合法陷阱不顯示回應視窗、FLIP 棄牌手牌切頁與無水平卷軸，以及補位與略過補位兩條互動路徑。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。
 - 測試總數或瀏覽器驗證結果改變時，同步更新本文件與 `README.md`，不可保留過期數字。
 
@@ -180,6 +180,7 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 
 由 Codex 派工時依本節規則透過 `--model` 選擇：
 
+- **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。
 - **模式 A（CRUD / 單元測試 / Docstring / 簡單重構 / 一般審查）**：固定使用 `opencode-go/deepseek-v4-flash`。
 - **模式 B（預設路由）**：約 70% `opencode-go/deepseek-v4-flash`、20% `opencode-go/deepseek-v4-pro`、10% `opencode-go/qwen3.7-plus`，百分比非硬配額，視負載與任務特性動態調整。
 - **大型 PR 審查（多檔案跨模組）**：固定使用 `opencode-go/kimi-k2.6`。

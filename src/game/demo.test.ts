@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createBreakToTrashDemoState,
+  createReplacementChoiceDemoState,
   createTrapResponseDemoState,
   isLocalhost,
   parseTestStateConfig,
@@ -57,6 +58,14 @@ describe('parseTestStateConfig', () => {
     expect(result).toEqual({ kind: 'trap-response', payable: false })
   })
 
+  it('returns replacement choice config on localhost', () => {
+    const result = parseTestStateConfig(
+      '?test-state=replacement-choice',
+      'localhost',
+    )
+    expect(result).toEqual({ kind: 'replacement-choice' })
+  })
+
   it('returns null when localhost but unknown test-state', () => {
     const result = parseTestStateConfig('?test-state=foo', 'localhost')
     expect(result).toBeNull()
@@ -80,6 +89,23 @@ describe('parseTestStateConfig', () => {
   it('returns null on arbitrary domain with unknown test-state', () => {
     const result = parseTestStateConfig('?test-state=foo', 'evil-site.com')
     expect(result).toBeNull()
+  })
+})
+
+describe('createReplacementChoiceDemoState', () => {
+  it('creates a pending optional replacement with one legal Cookie', () => {
+    const state = createReplacementChoiceDemoState()
+
+    expect(state.pendingReplacement?.tasks[0]).toEqual({
+      playerId: 'player-one',
+      remaining: 1,
+    })
+    expect(state.players['player-one'].battleArea).toHaveLength(1)
+    expect(
+      state.players['player-one'].hand.filter(
+        (card) => card.type === 'cookie',
+      ),
+    ).toHaveLength(1)
   })
 })
 

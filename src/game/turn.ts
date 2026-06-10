@@ -9,7 +9,7 @@ const assertPlaying = (state: GameState) => {
     throw new GameRuleError('只有進行中的遊戲可以推進回合。')
   }
 
-  if (state.pendingReplacementPlayerId) {
+  if (state.pendingReplacement) {
     throw new GameRuleError('必須先補充戰鬥區餅乾。')
   }
 
@@ -115,7 +115,7 @@ export const advancePhase = (state: GameState): GameState => {
 
 export const canAttack = (state: GameState): boolean =>
   state.status === 'playing' &&
-  !state.pendingReplacementPlayerId &&
+  !state.pendingReplacement &&
   !state.pendingOnPlay &&
   !state.pendingRefresh &&
   !state.pendingBattle &&

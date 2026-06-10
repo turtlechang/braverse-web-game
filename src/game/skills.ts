@@ -11,6 +11,7 @@ import type {
   SkillTrigger,
   SupportCard,
 } from './types'
+import { continuePendingReplacements } from './replacement'
 
 const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
@@ -56,9 +57,12 @@ export const canActivateCookieSkill = (
   if (
     state.status !== 'playing' ||
     state.pendingRefresh ||
-    state.pendingReplacementPlayerId ||
     state.pendingBattle
   ) {
+    return false
+  }
+
+  if (state.pendingReplacement && trigger !== 'on-play') {
     return false
   }
 
@@ -160,8 +164,8 @@ export const skipCookieOnPlay = (
     throw new GameRuleError('目前沒有可略過的登場效果。')
   }
 
-  return {
+  return continuePendingReplacements({
     ...state,
     pendingOnPlay: null,
-  }
+  })
 }

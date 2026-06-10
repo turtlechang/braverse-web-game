@@ -76,7 +76,11 @@ export const createGame = (
     nextBattleEntrySequence: 1,
     attackModifiers: [],
     damageReceivedModifiers: [],
-    pendingReplacementPlayerId: null,
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
     pendingOnPlay: null,
     pendingRefresh: null,
     pendingBattle: null,

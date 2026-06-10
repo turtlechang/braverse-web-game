@@ -1,5 +1,6 @@
 import { GameRuleError } from './errors'
 import { drawCards, getOpponentId, updatePlayer } from './helpers'
+import { recordCookieDepartures } from './replacement'
 import { getRefreshCandidates } from './refresh'
 import type {
   BreakToTrashEffect,
@@ -17,7 +18,12 @@ import type {
   PlayerState,
   TargetedCardEffect,
 } from './types'
-import { finishWithDefeat, getBreakAreaLevel, resolveBasicVictory } from './victory'
+import {
+  finishWithDefeat,
+  getBreakAreaLevel,
+  resolveBasicVictory,
+  resolveBreakLevelVictory,
+} from './victory'
 
 const getTargetPlayerId = (
   context: EffectContext,
@@ -234,13 +240,14 @@ const damagePlayerCookie = (
 const resolveDamageOutcome = (
   state: GameState,
   damagedPlayerId: PlayerId,
+  departedCount: number,
 ): GameState => {
   const livingCookieIds = new Set(
     Object.values(state.players).flatMap((player) =>
       player.battleArea.map((cookie) => cookie.card.instanceId),
     ),
   )
-  let updatedState = resolveBasicVictory({
+  const updatedState = recordCookieDepartures({
     ...state,
     attackModifiers: state.attackModifiers.filter((modifier) =>
       livingCookieIds.has(modifier.targetInstanceId),
@@ -248,19 +255,9 @@ const resolveDamageOutcome = (
     damageReceivedModifiers: state.damageReceivedModifiers.filter(
       (modifier) => livingCookieIds.has(modifier.targetInstanceId),
     ),
-  })
+  }, damagedPlayerId, departedCount)
 
-  if (
-    updatedState.status === 'playing' &&
-    updatedState.players[damagedPlayerId].battleArea.length === 0
-  ) {
-    updatedState = {
-      ...updatedState,
-      pendingReplacementPlayerId: damagedPlayerId,
-    }
-  }
-
-  return updatedState
+  return resolveBreakLevelVictory(updatedState)
 }
 
 const getExpirationTurn = (
@@ -508,6 +505,8 @@ export const executeCardEffect = (
   const targetPlayerId = getTargetPlayerId(context, effect.target)
 
   if (effect.kind === 'damage') {
+    const previousBattleAreaCount =
+      state.players[targetPlayerId].battleArea.length
     const damagedPlayer = targets.reduce(
       (player, target) =>
         damagePlayerCookie(player, target.card.instanceId, effect.amount),
@@ -523,6 +522,7 @@ export const executeCardEffect = (
         },
       },
       targetPlayerId,
+      previousBattleAreaCount - damagedPlayer.battleArea.length,
     )
   }
 
