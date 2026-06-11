@@ -710,7 +710,7 @@ try {
     '我方戰鬥區餅乾下方應展開 HP 卡',
   )
 
-  await page.getByRole('button', { name: '執行 100 場 AI 驗證' }).click()
+  await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
   await page.getByTestId('ai-simulation-report').waitFor()
 
   const matches = []

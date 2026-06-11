@@ -218,6 +218,10 @@ function App() {
   const [simulationResults, setSimulationResults] = useState<
     AiMatchResult[] | null
   >(null)
+  const [attackShakeId, setAttackShakeId] = useState<string | null>(null)
+  const [damageFlashId, setDamageFlashId] = useState<string | null>(null)
+  const [faintAnimIds, setFaintAnimIds] = useState<Set<string>>(new Set())
+  const [drawAnimIds, setDrawAnimIds] = useState<Set<string>>(new Set())
 
   const resetGame = (
     nextConfig: { player: DeckChoice; ai: DeckChoice },
@@ -235,6 +239,10 @@ function App() {
     setAiActionCount(0)
     setSimulationResults(null)
     setMessage(nextMessage)
+    setAttackShakeId(null)
+    setDamageFlashId(null)
+    setFaintAnimIds(new Set())
+    setDrawAnimIds(new Set())
   }
 
   const processAiOpeningHand = (initialState: GameState): GameState => {
@@ -363,7 +371,10 @@ function App() {
     pendingEffect &&
     currentEffect &&
     !isEffectUntargeted(currentEffect) &&
-    currentEffect.kind !== 'break-to-trash'
+    currentEffect.kind !== 'break-to-trash' &&
+    currentEffect.kind !== 'support-to-trash' &&
+    currentEffect.kind !== 'support-to-hand' &&
+    currentEffect.kind !== 'trash-to-battle'
       ? getEffectTargetCandidates(
           game,
           pendingEffect.context,
@@ -738,8 +749,73 @@ function App() {
   ) => {
     try {
       const nextGame = action(game)
+      const prevGame = game
       setGame(nextGame)
       setMessage(successMessage)
+
+      // 攻擊動畫：宣告攻擊進入 damage 階段
+      if (
+        (!prevGame.pendingBattle && nextGame.pendingBattle) ||
+        (prevGame.pendingBattle &&
+          nextGame.pendingBattle &&
+          prevGame.pendingBattle.stage !== 'damage' &&
+          nextGame.pendingBattle.stage === 'damage')
+      ) {
+        setAttackShakeId(nextGame.pendingBattle!.attackerInstanceId)
+        window.setTimeout(() => setAttackShakeId(null), 500)
+      }
+
+      // 傷害閃爍：damage 階段 remainingDamage 減少
+      if (
+        prevGame.pendingBattle &&
+        nextGame.pendingBattle &&
+        prevGame.pendingBattle.remainingDamage >
+          nextGame.pendingBattle.remainingDamage
+      ) {
+        const targetId =
+          nextGame.pendingBattle.damageTargetInstanceId ??
+          nextGame.pendingBattle.targetInstanceId
+        setDamageFlashId(targetId)
+        window.setTimeout(() => setDamageFlashId(null), 600)
+      }
+
+      // 昏厥動畫：餅乾從戰鬥區消失
+      const prevBattleIds = new Set(
+        Object.values(prevGame.players).flatMap((p) =>
+          p.battleArea.map((c) => c.card.instanceId),
+        ),
+      )
+      const nextBattleIds = new Set(
+        Object.values(nextGame.players).flatMap((p) =>
+          p.battleArea.map((c) => c.card.instanceId),
+        ),
+      )
+      const faintedIds = [...prevBattleIds].filter(
+        (id) => !nextBattleIds.has(id),
+      )
+      if (faintedIds.length > 0) {
+        setFaintAnimIds(new Set(faintedIds))
+        window.setTimeout(() => setFaintAnimIds(new Set()), 800)
+      }
+
+      // 抽牌動畫：手牌增加
+      for (const pid of ['player-one', 'player-two'] as const) {
+        const prevHand = prevGame.players[pid].hand
+        const nextHand = nextGame.players[pid].hand
+        if (nextHand.length > prevHand.length) {
+          const newIds = nextHand
+            .filter(
+              (card) =>
+                !prevHand.some((p) => p.instanceId === card.instanceId),
+            )
+            .map((card) => card.instanceId)
+          if (newIds.length > 0) {
+            setDrawAnimIds(new Set(newIds))
+            window.setTimeout(() => setDrawAnimIds(new Set()), 700)
+          }
+        }
+      }
+
       onSuccess?.(nextGame)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '動作無法執行。')
@@ -1127,6 +1203,8 @@ function App() {
       <PhaseRail
         phase={game.phase}
         turnNumber={game.turnNumber}
+        activePlayerName={activePlayer.name}
+        isPlayerTurn={game.activePlayerId === viewerPlayerId}
         disabled={
           game.status === 'finished' ||
           Boolean(game.pendingReplacement) ||
@@ -1179,6 +1257,10 @@ function App() {
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
           attackPaymentValid={attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
+          attackShakeId={attackShakeId}
+          damageFlashId={damageFlashId}
+          faintAnimIds={faintAnimIds}
+          drawAnimIds={drawAnimIds}
           onAttackTarget={handleAttackTarget}
           onEffectTarget={toggleEffectTarget}
           onInspectCard={setInspectedCard}
@@ -1223,6 +1305,10 @@ function App() {
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
           attackPaymentValid={attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
+          attackShakeId={attackShakeId}
+          damageFlashId={damageFlashId}
+          faintAnimIds={faintAnimIds}
+          drawAnimIds={drawAnimIds}
           onSelectAttacker={(instanceId) => {
             setSelectedAttackerId(instanceId)
             setSelectedAttackPaymentIds([])

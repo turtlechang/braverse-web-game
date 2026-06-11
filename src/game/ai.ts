@@ -227,6 +227,9 @@ const resolveAiCardAbility = (
     if (
       !isEffectUntargeted(effect) &&
       effect.kind !== 'break-to-trash' &&
+      effect.kind !== 'support-to-trash' &&
+      effect.kind !== 'support-to-hand' &&
+      effect.kind !== 'trash-to-battle' &&
       targetIds.length < effect.target.min
     ) {
       return null
@@ -320,7 +323,21 @@ const resolveAiSkill = (
     }
 
     const targetIds = chooseEffectTargets(nextState, context, effect)
-    if (effect.kind !== 'break-to-trash' && targetIds.length < effect.target.min) {
+    if (
+      (effect.kind === 'support-to-trash' ||
+        effect.kind === 'support-to-hand' ||
+        effect.kind === 'trash-to-battle') &&
+      targetIds.length < effect.amount
+    ) {
+      return null
+    }
+    if (
+      effect.kind !== 'break-to-trash' &&
+      effect.kind !== 'support-to-trash' &&
+      effect.kind !== 'support-to-hand' &&
+      effect.kind !== 'trash-to-battle' &&
+      targetIds.length < effect.target.min
+    ) {
       return null
     }
     nextState = executeCardEffect(

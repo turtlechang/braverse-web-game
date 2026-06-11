@@ -25,6 +25,10 @@ export interface BattleRowProps {
   selectedAttackPaymentIds: Set<string>
   attackPaymentValid: boolean
   interactionLocked: boolean
+  attackShakeId?: string | null
+  damageFlashId?: string | null
+  faintAnimIds?: Set<string>
+  drawAnimIds?: Set<string>
   onSelectAttacker?: (instanceId: string) => void
   onAttackTarget?: (instanceId: string) => void
   onEffectTarget?: (instanceId: string) => void
@@ -52,6 +56,10 @@ export function BattleRow({
   selectedAttackPaymentIds,
   attackPaymentValid,
   interactionLocked,
+  attackShakeId,
+  damageFlashId,
+  faintAnimIds,
+  drawAnimIds,
   onSelectAttacker,
   onAttackTarget,
   onEffectTarget,
@@ -196,8 +204,19 @@ export function BattleRow({
                   'activate',
                 )
 
+              const animClasses = [
+                faintAnimIds?.has(cookie.card.instanceId) && 'animate-faint-shrink',
+                attackShakeId === cookie.card.instanceId && 'animate-attack-shake',
+                damageFlashId === cookie.card.instanceId && 'animate-damage-flash',
+              ]
+                .filter(Boolean)
+                .join(' ')
+
               return (
-                <div className="combat-card-wrap" key={cookie.card.instanceId}>
+                <div
+                  className={`combat-card-wrap ${animClasses}`}
+                  key={cookie.card.instanceId}
+                >
                   <CardFace
                     card={cookie.card}
                     rested={cookie.rested}
@@ -332,7 +351,7 @@ export function BattleRow({
 
           return (
             <div
-              className="hand-card-wrap"
+              className={`hand-card-wrap ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
               key={card.instanceId}
               style={{
                 '--fan-index': index,

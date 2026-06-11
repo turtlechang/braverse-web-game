@@ -151,6 +151,7 @@ export interface BreakToTrashEffect {
 export interface GainHpEffect {
   kind: 'gain-hp'
   amount: number
+  target?: EffectTargetSelector
 }
 
 export interface PreventKnockoutEffect {

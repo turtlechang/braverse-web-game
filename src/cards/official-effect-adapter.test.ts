@@ -233,10 +233,11 @@ describe('Starter Deck RED official effect adapter', () => {
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(8)
+      expect(supported).toHaveLength(9)
       expect(supported.map((c) => c.cardNumber).sort()).toEqual(
         [
           'ST2-001',
+          'ST2-004',
           'ST2-008',
           'ST2-010',
           'ST2-011',
@@ -246,6 +247,22 @@ describe('Starter Deck RED official effect adapter', () => {
           'ST2-020',
         ].sort(),
       )
+    })
+
+    it('ST2-004 Macaron Cookie gain-hp on other cookie is supported', () => {
+      expect(
+        convertOfficialCardEffects(findYellowCard('ST2-004')),
+      ).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST2-004',
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1, excludeSource: true },
+          },
+        ],
+      })
     })
 
     it('ST2-011 Cherry Cookie faint damage is supported', () => {
@@ -441,14 +458,31 @@ describe('Starter Deck RED official effect adapter', () => {
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(5)
+      expect(supported).toHaveLength(6)
       expect(supported.map((c) => c.cardNumber)).toEqual([
+        'ST3-001',
         'ST3-009',
         'ST3-010',
         'ST3-016',
         'ST3-017',
         'ST3-018',
       ])
+    })
+
+    it('ST3-001 Muscle Cookie gain-hp is supported', () => {
+      expect(
+        convertOfficialCardEffects(findGreenCard('ST3-001')),
+      ).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST3-001',
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      })
     })
 
     it('rejects ST3-002 (special cost with Place)', () => {

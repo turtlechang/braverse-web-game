@@ -633,6 +633,12 @@ describe('deck-to-support effect', () => {
     expect(isEffectUntargeted({ kind: 'draw', amount: 1 })).toBe(true)
     expect(isEffectUntargeted({ kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } })).toBe(false)
   })
+
+  it('isEffectUntargeted returns false for support-to-trash, trash-to-battle and support-to-hand', () => {
+    expect(isEffectUntargeted({ kind: 'support-to-trash', amount: 1 })).toBe(false)
+    expect(isEffectUntargeted({ kind: 'trash-to-battle', amount: 1 })).toBe(false)
+    expect(isEffectUntargeted({ kind: 'support-to-hand', amount: 1 })).toBe(false)
+  })
 })
 
 describe('break-to-trash effect', () => {
@@ -1148,5 +1154,62 @@ describe('resolveOpponentHandDiscard', () => {
         resolved.players['player-two'].hand[0]?.instanceId ?? 'any',
       ]),
     ).toThrow('目前沒有等待對手棄牌的決策')
+  })
+})
+
+describe('gain-hp effect', () => {
+  it('adds HP cards from deck top to source cookie in battle', () => {
+    const state = createDemoGame()
+    const sourceCookie = state.players['player-one'].battleArea[0]
+    const effect: CardEffect = {
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }
+    const newState = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: sourceCookie.card.instanceId,
+      },
+      effect,
+      [],
+    )
+    expect(newState.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      sourceCookie.hpCards.length + 1,
+    )
+    expect(newState.players['player-one'].deck).toHaveLength(
+      state.players['player-one'].deck.length - 1,
+    )
+  })
+
+  it('throws when deck is empty', () => {
+    const state = createDemoGame()
+    const emptyState: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+    }
+    expect(() =>
+      executeCardEffect(
+        emptyState,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: emptyState.players['player-one'].battleArea[0].card.instanceId,
+        },
+        effect,
+        [],
+      ),
+    ).toThrow('牌庫張數不足')
   })
 })

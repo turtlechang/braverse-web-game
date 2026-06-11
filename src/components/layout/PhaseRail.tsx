@@ -16,6 +16,8 @@ const nextPhaseLabels: Record<TurnPhase, string> = {
 export interface PhaseRailProps {
   phase: TurnPhase
   turnNumber: number
+  activePlayerName: string
+  isPlayerTurn: boolean
   disabled: boolean
   onAdvance: () => void
   aiThinking: boolean
@@ -26,6 +28,8 @@ export interface PhaseRailProps {
 export function PhaseRail({
   phase,
   turnNumber,
+  activePlayerName,
+  isPlayerTurn,
   disabled,
   onAdvance,
   aiThinking,
@@ -37,6 +41,10 @@ export function PhaseRail({
       <div className="brand-mark">
         <span>COOKIE RUN</span>
         <strong>BRAVERSE</strong>
+      </div>
+      <div className={`turn-indicator ${isPlayerTurn ? 'is-player' : 'is-opponent'}`}>
+        <span>當前回合</span>
+        <strong>{activePlayerName}</strong>
       </div>
       <ol>
         {phases.map((p, index) => (

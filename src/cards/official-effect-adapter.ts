@@ -528,6 +528,22 @@ export const convertOfficialCardEffects = (
     }
   }
 
+  const gainHpMatch = sourceText.match(/gains?\s+\+(\d+)\s+HP/i)
+  if (gainHpMatch && target && card.type !== 'flip') {
+    return {
+      status: 'supported',
+      cardNumber: card.cardNumber,
+      sourceText,
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: Number(gainHpMatch[1]),
+          target,
+        },
+      ],
+    }
+  }
+
   return {
     status: 'unsupported',
     cardNumber: card.cardNumber,

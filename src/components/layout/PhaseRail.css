@@ -31,6 +31,32 @@
   font-size: 1.15rem;
 }
 
+.turn-indicator {
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  gap: 3px;
+}
+
+.turn-indicator span {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.turn-indicator strong {
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.turn-indicator.is-player strong {
+  color: #ffe675;
+}
+
+.turn-indicator.is-opponent strong {
+  color: #71e9ff;
+}
+
 .phase-rail ol {
   padding: 14px 0;
   margin: 0;

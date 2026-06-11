@@ -110,21 +110,12 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind:
-        | 'gain-hp'
-        | 'support-to-trash'
-        | 'modify-all-attack'
-        | 'trash-to-battle'
-        | 'support-to-hand'
-        | 'opponent-discard-hand'
+      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
   effect.kind === 'gain-hp' ||
-  effect.kind === 'support-to-trash' ||
   effect.kind === 'modify-all-attack' ||
-  effect.kind === 'trash-to-battle' ||
-  effect.kind === 'support-to-hand' ||
   effect.kind === 'opponent-discard-hand'
 
 export const isEffectTargeted = (
@@ -218,7 +209,10 @@ export const isEffectConditionMet = (
   if (
     effect.kind === 'disable-flip' ||
     effect.kind === 'view-hp' ||
-    effect.kind === 'battle-to-support'
+    effect.kind === 'battle-to-support' ||
+    effect.kind === 'support-to-trash' ||
+    effect.kind === 'trash-to-battle' ||
+    effect.kind === 'support-to-hand'
   ) {
     return true
   }
@@ -559,7 +553,32 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'gain-hp') {
-    throw new GameRuleError('增加 HP 必須在 FLIP 結算流程中執行。')
+    const player = state.players[context.sourcePlayerId]
+    const targetInstanceId =
+      effect.target?.sourceOnly
+        ? context.sourceInstanceId
+        : state.pendingBattle?.damageTargetInstanceId ??
+          state.pendingBattle?.targetInstanceId
+    if (!targetInstanceId) {
+      throw new GameRuleError('增加 HP 需要明確目標餅乾。')
+    }
+    const targetIndex = player.battleArea.findIndex(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    )
+    const target = player.battleArea[targetIndex]
+    if (!target || player.deck.length < effect.amount) {
+      throw new GameRuleError('牌庫張數不足，無法增加 HP。')
+    }
+    const gainedCards = player.deck.slice(0, effect.amount)
+    return updatePlayer(state, {
+      ...player,
+      deck: player.deck.slice(effect.amount),
+      battleArea: player.battleArea.map((cookie, index) =>
+        index === targetIndex
+          ? { ...cookie, hpCards: [...cookie.hpCards, ...gainedCards] }
+          : cookie,
+      ),
+    })
   }
 
   if (effect.kind === 'support-to-trash') {
