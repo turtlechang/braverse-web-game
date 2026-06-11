@@ -135,17 +135,6 @@ export const refreshDeck = (
         'refresh-unavailable',
       )
     }
-
-    if (updatedPlayer.deck.length === 0) {
-      return finishWithDefeat(
-        {
-          ...updatedState,
-          pendingRefresh: null,
-        },
-        playerId,
-        'refresh-unavailable',
-      )
-    }
   }
 
   // 補足因登場或效果設置 HP 途中耗盡牌庫的餅乾

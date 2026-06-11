@@ -1,7 +1,8 @@
 import { GameRuleError } from './errors'
 import { drawCards, getOpponentId, updatePlayer } from './helpers'
 import { getRefreshCandidates } from './refresh'
-import type { GameState, TurnPhase } from './types'
+import { executeCardEffect, isEffectUntargeted } from './effects'
+import type { CookieCard, GameState, PlayerId, TurnPhase } from './types'
 import { finishWithDefeat } from './victory'
 
 const assertPlaying = (state: GameState) => {
@@ -43,6 +44,18 @@ const activateCurrentPlayer = (state: GameState): GameState => {
   })
 }
 
+const getEndPhaseSkills = (
+  state: GameState,
+  playerId: PlayerId,
+): { cookie: CookieCard; index: number }[] =>
+  state.players[playerId].battleArea
+    .map((cookie, index) => ({ cookie: cookie.card, index }))
+    .filter(
+      (item) =>
+        item.cookie.skill?.endPhase &&
+        !state.skillUsesThisTurn.includes(item.cookie.instanceId),
+    )
+
 const enterDrawPhase = (state: GameState): GameState => {
   const activePlayer = state.players[state.activePlayerId]
   const drawAmount = Math.min(activePlayer.deck.length, 2)
@@ -73,6 +86,66 @@ const enterDrawPhase = (state: GameState): GameState => {
   }
 }
 
+export const processEndPhaseEffects = (state: GameState): GameState => {
+  if (
+    state.pendingReplacement ||
+    state.pendingOnPlay ||
+    state.pendingRefresh ||
+    state.pendingBattle
+  ) {
+    return state
+  }
+
+  const players = [
+    state.activePlayerId,
+    getOpponentId(state.activePlayerId),
+  ]
+
+  let nextState = state
+
+  for (const playerId of players) {
+    const skills = getEndPhaseSkills(nextState, playerId)
+    for (const { cookie } of skills) {
+      const skill = cookie.skill!
+      for (const effect of skill.effects) {
+        const context = {
+          sourcePlayerId: playerId,
+          sourceInstanceId: cookie.instanceId,
+        }
+        if (isEffectUntargeted(effect)) {
+          nextState = executeCardEffect(nextState, context, effect, [])
+          if (nextState.status !== 'playing') {
+            return nextState
+          }
+          if (
+            nextState.pendingReplacement ||
+            nextState.pendingOnPlay ||
+            nextState.pendingRefresh ||
+            nextState.pendingBattle
+          ) {
+            return {
+              ...nextState,
+              skillUsesThisTurn: [
+                ...nextState.skillUsesThisTurn,
+                cookie.instanceId,
+              ],
+            }
+          }
+        }
+      }
+      nextState = {
+        ...nextState,
+        skillUsesThisTurn: [
+          ...nextState.skillUsesThisTurn,
+          cookie.instanceId,
+        ],
+      }
+    }
+  }
+
+  return nextState
+}
+
 export const advancePhase = (state: GameState): GameState => {
   assertPlaying(state)
 
@@ -92,21 +165,30 @@ export const advancePhase = (state: GameState): GameState => {
       return { ...state, phase: 'main' }
     case 'main':
       return { ...state, phase: 'end' }
-    case 'end':
+    case 'end': {
+      const endPhaseState = processEndPhaseEffects(state)
+      if (
+        endPhaseState.pendingReplacement ||
+        endPhaseState.pendingOnPlay ||
+        endPhaseState.pendingRefresh ||
+        endPhaseState.pendingBattle
+      ) {
+        return endPhaseState
+      }
       return {
-        ...state,
-        attackModifiers: state.attackModifiers.filter(
+        ...endPhaseState,
+        attackModifiers: endPhaseState.attackModifiers.filter(
           (modifier) =>
             modifier.expiresAfterTurn === null ||
             modifier.expiresAfterTurn > state.turnNumber,
         ),
-        damageReceivedModifiers: state.damageReceivedModifiers.filter(
+        damageReceivedModifiers: endPhaseState.damageReceivedModifiers.filter(
           (modifier) =>
             modifier.expiresAfterTurn === null ||
             modifier.expiresAfterTurn > state.turnNumber,
         ),
         flipDisabledUntilTurn: Object.fromEntries(
-          Object.entries(state.flipDisabledUntilTurn ?? {}).filter(
+          Object.entries(endPhaseState.flipDisabledUntilTurn ?? {}).filter(
             ([, turn]) => turn > state.turnNumber,
           ),
         ),
@@ -116,6 +198,7 @@ export const advancePhase = (state: GameState): GameState => {
         supportPlacedThisTurn: false,
         skillUsesThisTurn: [],
       }
+    }
   }
 }
 

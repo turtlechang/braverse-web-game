@@ -83,7 +83,7 @@ export {
   mulliganOpeningHand,
   selectStartingCookie,
 } from './setup'
-export { advancePhase, canAttack, TURN_PHASES } from './turn'
+export { advancePhase, canAttack, processEndPhaseEffects, TURN_PHASES } from './turn'
 export {
   activateCookieSkill,
   canActivateCookieSkill,

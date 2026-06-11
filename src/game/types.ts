@@ -29,6 +29,7 @@ export interface CardSkill {
   text: string
   effects: CardEffect[]
   faint?: boolean
+  endPhase?: boolean
 }
 
 export interface CardAbility {

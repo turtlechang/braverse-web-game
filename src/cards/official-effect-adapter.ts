@@ -764,5 +764,6 @@ export const convertOfficialCookieSkill = (
     text: conversion.sourceText,
     effects: conversion.effects,
     faint: /When this Cookie faints/i.test(card.skill.text),
+    endPhase: /(?:at the )?end of (?:your|this) turn/i.test(card.skill.text),
   }
 }

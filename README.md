@@ -33,16 +33,16 @@
 - 已加入 `develop-braverse` 專案 Skill，提供漸進式載入的開發流程、架構規則、驗證與 Git、opencode-go 派工參考。
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - UI 可分別設定玩家與 AI 使用紅色、黃色或綠色起始牌組，重新開始與 AI 種子驗證會沿用目前選擇。
-- 目前共有 239 項單元測試，涵蓋官方範例卡轉換、三色起始牌組、FLIP／TRAP 官方文字轉換、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、逐張 HP、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、陷阱傷害續行與延後條件、跨回合 OnPlay 登場窗口、調度、種子洗牌、AI、Refresh、能量付款、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、When this Cookie faints、通用化物品/場景解析、顏色匹配與既有效果回歸。
+- 目前共有 245 項單元測試，涵蓋官方範例卡轉換、三色起始牌組、FLIP／TRAP 官方文字轉換、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、逐張 HP、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、陷阱傷害續行與延後條件、跨回合 OnPlay 登場窗口、調度、種子洗牌、AI、Refresh、能量付款、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、When this Cookie faints、通用化物品/場景解析、顏色匹配與既有效果回歸、回合結束效果引擎（endPhase 標記、雙方順序觸發、一次性防重複、Refresh 暫停與恢復）。
 - App.tsx 已分階段拆成卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板與 modal 元件，規則協調仍留在 App。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證 break-to-trash 的選 1 與選 0 路徑、合法陷阱顯示、不合法陷阱不顯示回應視窗、FLIP 棄牌手牌切頁與無水平卷軸、補位與略過補位兩條互動路徑，以及物品/場景合法與不合法使用路徑；完整瀏覽器驗證前需先執行 `npm run build`。
 
 ## 下一步計畫
 
 - 已達成：三色（RED / YELLOW / GREEN）起始牌組切換、App.tsx 元件拆分（卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板、modal）；10 張物品與 2 張場景完整支援（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand、複合效果暫停與 OnPlay/Refresh/補位銜接、AI deterministic 使用）。
-- 已達成：陷阱使攻擊者或目標離場後跳過攻擊傷害；HP 配置途中 Refresh 的登場允許；通用化物品/場景效果解析（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）；When this Cookie faints 事件引擎；顏色匹配與 Mix Cost 已實作。
+- 已達成：陷阱使攻擊者或目標離場後跳過攻擊傷害；HP 配置途中 Refresh 的登場允許；通用化物品/場景效果解析（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）；When this Cookie faints 事件引擎；顏色匹配與 Mix Cost 已實作；回合結束效果引擎（endPhase 標記、雙方順序觸發、一次性防重複、Refresh 暫停與恢復）。
 - 持續補齊官方效果文字到 `CardEffect`，並同步新增規則測試。
-- 持續補齊起始牌組以外的複合效果、回合結束效果與完整事件優先權。
+- 持續補齊起始牌組以外的複合效果與完整事件優先權。
 - 專案指令、驗證範圍或派工策略調整時，同步維護 `develop-braverse` Skill。
 - 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
 
