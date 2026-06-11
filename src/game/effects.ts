@@ -148,8 +148,7 @@ export const getTrashCookieCandidates = (
   state.players[context.sourcePlayerId].discardPile.filter(
     (card): card is CookieCard =>
       card.type === 'cookie' &&
-      state.players[context.sourcePlayerId].battleArea.length < 2 &&
-      state.players[context.sourcePlayerId].deck.length >= card.hp,
+      state.players[context.sourcePlayerId].battleArea.length < 2,
   )
 
 export const getBreakToTrashCandidates = (
@@ -303,7 +302,46 @@ const resolveDamageOutcome = (
     ),
   }, damagedPlayerId, departedCount)
 
-  return resolveBreakLevelVictory(updatedState)
+  // 觸發 When this Cookie faints 被動技能（效果傷害）
+  const departedCookies =
+    state.players[damagedPlayerId].battleArea.filter(
+      (cookie) => !livingCookieIds.has(cookie.card.instanceId),
+    )
+  let faintState = updatedState
+  for (const cookie of departedCookies) {
+    const faintSkill = cookie.card.skill
+    if (faintSkill && faintSkill.faint) {
+      for (const effect of faintSkill.effects) {
+        const context = {
+          sourcePlayerId: damagedPlayerId,
+          sourceInstanceId: cookie.card.instanceId,
+        }
+        if (
+          effect.kind === 'damage' ||
+          effect.kind === 'modify-attack' ||
+          effect.kind === 'modify-damage-received'
+        ) {
+          const candidates = getEffectTargetCandidates(
+            faintState,
+            context,
+            effect.target,
+          )
+          if (candidates.length > 0) {
+            faintState = executeCardEffect(
+              faintState,
+              context,
+              effect,
+              [candidates[0].card.instanceId],
+            )
+          }
+        } else {
+          faintState = executeCardEffect(faintState, context, effect, [])
+        }
+      }
+    }
+  }
+
+  return resolveBreakLevelVictory(faintState)
 }
 
 const getExpirationTurn = (
@@ -594,7 +632,7 @@ export const executeCardEffect = (
     }
     const player = state.players[context.sourcePlayerId]
     const cookie = selected[0]!
-    const hpCards = player.deck.slice(0, cookie.hp)
+    const availableHpCards = player.deck.slice(0, cookie.hp)
     const updated = updatePlayer(state, {
       ...player,
       deck: player.deck.slice(cookie.hp),
@@ -605,7 +643,7 @@ export const executeCardEffect = (
         ...player.battleArea,
         {
           card: cookie,
-          hpCards,
+          hpCards: availableHpCards,
           rested: false,
           battleEntryId:
             `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`,

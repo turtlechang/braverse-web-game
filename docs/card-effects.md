@@ -85,10 +85,11 @@
 - 複合效果序列引擎支援子效果之間暫停、等待玩家選擇（如 ST2-018 的 view-hp 為可選）、Refresh 插入與補位銜接。
 - AI 以 deterministic 策略決定物品/場景使用時機、費用支付與目標選擇。
 
-### 尚未實作：When this Cookie faints
+### 已實作：When this Cookie faints
 
-- 死亡觸發被動技能需要 faint 事件處理引擎，目前引擎無對應的事件系統。
-- 任何含「When this Cookie faints」「When this Cookie is knocked out」等文字維持 unsupported。
+- 餅乾因傷害或效果離開戰鬥區時，會觸發 `card.skill.faint` 標記的被動技能。
+- `convertOfficialCardEffects` 已解析「When this Cookie faints」開頭的效果文字（目前支援 damage 與 draw）。
+- 戰鬥傷害與效果傷害均會在餅乾離場後觸發 faint 效果。
 
 ### 已實作：If opponent Cookie attacks more than N
 

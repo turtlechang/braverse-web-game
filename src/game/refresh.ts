@@ -24,6 +24,33 @@ export const getRefreshCandidates = (
       card.type === 'cookie' && card.level >= 1,
   )
 
+const replenishPlayerHpCards = (
+  state: GameState,
+  playerId: PlayerId,
+): GameState => {
+  const player = state.players[playerId]
+  let updatedPlayer = player
+  for (const cookie of player.battleArea) {
+    const needed = cookie.card.hp - cookie.hpCards.length
+    if (needed > 0) {
+      const available = updatedPlayer.deck.slice(0, needed)
+      updatedPlayer = {
+        ...updatedPlayer,
+        deck: updatedPlayer.deck.slice(needed),
+        battleArea: updatedPlayer.battleArea.map((c) =>
+          c.card.instanceId === cookie.card.instanceId
+            ? {
+                ...c,
+                hpCards: [...c.hpCards, ...available],
+              }
+            : c,
+        ),
+      }
+    }
+  }
+  return updatePlayer(state, updatedPlayer)
+}
+
 export const refreshDeck = (
   state: GameState,
   playerId: PlayerId,
@@ -121,8 +148,28 @@ export const refreshDeck = (
     }
   }
 
+  // 補足因登場或效果設置 HP 途中耗盡牌庫的餅乾
+  const replenishedState = replenishPlayerHpCards(updatedState, playerId)
+
+  const replenishedPlayer = replenishedState.players[playerId]
+  const stillNeedsHp = replenishedPlayer.battleArea.some(
+    (cookie) => cookie.hpCards.length < cookie.card.hp,
+  )
+  if (stillNeedsHp && replenishedPlayer.deck.length === 0) {
+    if (getRefreshCandidates(replenishedState, playerId).length === 0) {
+      return finishWithDefeat(replenishedState, playerId, 'refresh-unavailable')
+    }
+    return {
+      ...replenishedState,
+      pendingRefresh: {
+        playerId,
+        remainingDraws: 0,
+      },
+    }
+  }
+
   return continuePendingReplacements({
-    ...updatedState,
+    ...replenishedState,
     pendingRefresh: null,
   })
 }

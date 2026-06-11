@@ -665,8 +665,7 @@ export const takeAiStep = (
 
       if (player.battleArea.length < 2) {
         const deployable = player.hand.find(
-          (card) =>
-            card.type === 'cookie' && player.deck.length >= card.hp,
+          (card) => card.type === 'cookie',
         )
         if (deployable) {
           const deployedState = deployCookie(

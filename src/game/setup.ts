@@ -206,10 +206,6 @@ export const selectStartingCookie = (
     throw new GameRuleError('起始卡牌必須是手牌中的餅乾卡。')
   }
 
-  if (player.deck.length < selectedCard.hp) {
-    throw new GameRuleError('牌庫張數不足，無法配置起始餅乾 HP。')
-  }
-
   const cookie = selectedCard as CookieCard
   const hpCards = player.deck.slice(0, cookie.hp)
   const battleEntryId =

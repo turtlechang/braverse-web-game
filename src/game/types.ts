@@ -28,6 +28,7 @@ export interface CardSkill {
   cost: EnergyCost
   text: string
   effects: CardEffect[]
+  faint?: boolean
 }
 
 export interface CardAbility {

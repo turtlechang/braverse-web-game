@@ -338,7 +338,7 @@ describe('TRAP response window', () => {
     ).toThrow('目前不能發動陷阱')
   })
 
-  it('keeps declared attack damage when a trap knocks out the attacker', () => {
+  it('skips attack damage when a trap knocks out the attacker', () => {
     const trap: GameCard = {
       id: 'damage-trap',
       instanceId: 'damage-trap',
@@ -383,13 +383,10 @@ describe('TRAP response window', () => {
 
     state = resolveNextDamage(state)
     expect(state.players['player-two'].battleArea).toHaveLength(0)
-    expect(state.pendingBattle?.remainingDamage).toBe(3)
-
-    state = resolveNextDamage(state)
-    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    expect(state.pendingBattle).toBeNull()
   })
 
-  it('resolves an attacker FLIP during trap damage before resuming the attack', () => {
+  it('skips attack damage after trap damage knocks out attacker with FLIP', () => {
     const attackerFlip: GameCard = {
       ...cookie('attacker-flip'),
       officialType: 'flip',
@@ -434,11 +431,7 @@ describe('TRAP response window', () => {
     expect(state.pendingBattle?.damagePlayerId).toBe('player-two')
 
     state = resolveFlip(state, 'player-two', { activate: false })
-    expect(state.pendingBattle).toMatchObject({
-      stage: 'damage',
-      remainingDamage: 3,
-      damagePlayerId: undefined,
-    })
+    expect(state.pendingBattle).toBeNull()
   })
 
   it('prevents the protected target from reaching zero HP this battle', () => {

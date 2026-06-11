@@ -232,11 +232,12 @@ describe('Starter Deck RED official effect adapter', () => {
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(6)
+      expect(supported).toHaveLength(7)
       expect(supported.map((c) => c.cardNumber).sort()).toEqual(
         [
           'ST2-008',
           'ST2-010',
+          'ST2-011',
           'ST2-016',
           'ST2-018',
           'ST2-019',
@@ -245,12 +246,19 @@ describe('Starter Deck RED official effect adapter', () => {
       )
     })
 
-    it('rejects ST2-011 (When this Cookie faints)', () => {
+    it('ST2-011 Cherry Cookie faint damage is supported', () => {
       expect(
         convertOfficialCardEffects(findYellowCard('ST2-011')),
       ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+        status: 'supported',
+        cardNumber: 'ST2-011',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       })
     })
 
@@ -279,11 +287,19 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('ST2-011 does not produce sourceOnly damage (parseTarget ordering fix)', () => {
+    it('ST2-011 faint damage targets opponent with min 0 max 1', () => {
       const conversion =
         convertOfficialCardEffects(findYellowCard('ST2-011'))
 
-      expect(conversion.status).toBe('unsupported')
+      expect(conversion.status).toBe('supported')
+      expect(conversion).toMatchObject({
+        effects: [
+          {
+            kind: 'damage',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
     })
 
     it('ST2-008 Eclair Cookie break-to-trash OnPlay effect is supported', () => {

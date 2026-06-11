@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
+  deployCookie,
   executeCardEffect,
   finalizePendingReplacements,
   refreshDeck,
@@ -413,5 +414,88 @@ describe('replacement sequence', () => {
       playerId: 'player-two',
       remaining: 1,
     })
+  })
+
+  it('allows replacement even when deck has fewer cards than cookie HP', () => {
+    let state = createReplacementState()
+    const replacementCookie: CookieCard = {
+      ...cookie('hp3-replacement'),
+      hp: 3,
+    }
+    const refreshCookie = cookie('refresh-cookie')
+    state = {
+      ...state,
+      activePlayerId: 'player-one',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [item('partial-hp-a')],
+          hand: [replacementCookie],
+          battleArea: [],
+          discardPile: [refreshCookie, item('recycled-hp-b'), item('recycled-hp-c')],
+        },
+      },
+      departedCookieCounts: {
+        'player-one': 1,
+        'player-two': 0,
+      },
+    }
+
+    state = finalizePendingReplacements(state)
+    state = replaceDefeatedCookie(state, replacementCookie.instanceId)
+
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+    expect(state.pendingRefresh?.playerId).toBe('player-one')
+
+    state = refreshDeck(
+      state,
+      'player-one',
+      refreshCookie.instanceId,
+      (cards) => [...cards],
+    )
+
+    expect(state.pendingRefresh).toBeNull()
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
+    expect(state.pendingReplacement).toBeNull()
+  })
+
+  it('deploys a cookie from hand even when deck has fewer cards than HP', () => {
+    let state = createReplacementState()
+    const cookieToDeploy: CookieCard = {
+      ...cookie('deploy-hp3'),
+      hp: 3,
+    }
+    const refreshCookie = cookie('refresh-cookie')
+    state = {
+      ...state,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [item('partial-hp-a')],
+          hand: [cookieToDeploy],
+          battleArea: [],
+          discardPile: [refreshCookie, item('recycled-hp-b'), item('recycled-hp-c')],
+        },
+      },
+    }
+
+    state = deployCookie(state, cookieToDeploy.instanceId)
+
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+    expect(state.pendingRefresh?.playerId).toBe('player-one')
+
+    state = refreshDeck(
+      state,
+      'player-one',
+      refreshCookie.instanceId,
+      (cards) => [...cards],
+    )
+
+    expect(state.pendingRefresh).toBeNull()
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
   })
 })

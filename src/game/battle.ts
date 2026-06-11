@@ -417,18 +417,25 @@ export const playTrap = (
   if (activeBattle.suspendedAttackDamage !== undefined) {
     return nextState
   }
-  const attackerStillExists = Object.values(nextState.players).some((owner) =>
-    owner.battleArea.some(
-      (cookie) => cookie.card.instanceId === activeBattle.attackerInstanceId,
-    ),
+
+  const attackerExists = battleParticipantExists(
+    nextState,
+    activeBattle.attackerInstanceId,
   )
-  const recalculatedDamage = attackerStillExists
-    ? getAttackDamageAgainst(
-        nextState,
-        activeBattle.attackerInstanceId,
-        activeBattle.targetInstanceId,
-      )
-    : activeBattle.declaredDamage
+  const targetExists = battleParticipantExists(
+    nextState,
+    activeBattle.targetInstanceId,
+  )
+
+  if (!attackerExists || !targetExists) {
+    return finishBattle(nextState)
+  }
+
+  const recalculatedDamage = getAttackDamageAgainst(
+    nextState,
+    activeBattle.attackerInstanceId,
+    activeBattle.targetInstanceId,
+  )
 
   return {
     ...nextState,
@@ -448,6 +455,18 @@ export const skipTrap = (state: GameState, playerId: PlayerId): GameState => {
     battle.defenderPlayerId !== playerId
   ) {
     throw new GameRuleError('目前沒有可略過的陷阱回應。')
+  }
+
+  const attackerExists = battleParticipantExists(
+    state,
+    battle.attackerInstanceId,
+  )
+  const targetExists = battleParticipantExists(
+    state,
+    battle.targetInstanceId,
+  )
+  if (!attackerExists || !targetExists) {
+    return finishBattle(state)
   }
 
   return {
@@ -483,7 +502,7 @@ const removeFaintedCookie = (
     return state
   }
 
-  return recordCookieDepartures(
+  let nextState = recordCookieDepartures(
     {
       ...state,
       players: {
@@ -504,6 +523,36 @@ const removeFaintedCookie = (
     playerId,
     1,
   )
+
+  // 觸發 When this Cookie faints 被動技能
+  const faintSkill = target.card.skill
+  if (faintSkill && faintSkill.faint) {
+    for (const effect of faintSkill.effects) {
+      const context = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: target.card.instanceId,
+      }
+      if (
+        effect.kind === 'damage' ||
+        effect.kind === 'modify-attack' ||
+        effect.kind === 'modify-damage-received'
+      ) {
+        const candidates = getEffectTargetCandidates(nextState, context, effect.target)
+        if (candidates.length > 0) {
+          nextState = executeCardEffect(
+            nextState,
+            context,
+            effect,
+            [candidates[0].card.instanceId],
+          )
+        }
+      } else {
+        nextState = executeCardEffect(nextState, context, effect, [])
+      }
+    }
+  }
+
+  return nextState
 }
 
 const finishBattle = (state: GameState): GameState => {
@@ -532,9 +581,30 @@ const finishBattle = (state: GameState): GameState => {
   })
 }
 
+const battleParticipantExists = (
+  state: GameState,
+  instanceId: string,
+): boolean =>
+  Object.values(state.players).some((owner) =>
+    owner.battleArea.some(
+      (cookie) => cookie.card.instanceId === instanceId,
+    ),
+  )
+
 const finishDamageSequence = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   if (battle.suspendedAttackDamage !== undefined) {
+    const attackerExists = battleParticipantExists(
+      state,
+      battle.attackerInstanceId,
+    )
+    const targetExists = battleParticipantExists(
+      state,
+      battle.targetInstanceId,
+    )
+    if (!attackerExists || !targetExists) {
+      return finishBattle(state)
+    }
     return {
       ...state,
       pendingBattle: {
@@ -560,6 +630,18 @@ export const resolveNextDamage = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   if (battle.stage !== 'damage') {
     throw new GameRuleError('目前不能翻開下一張 HP 卡。')
+  }
+
+  const attackerExists = battleParticipantExists(
+    state,
+    battle.attackerInstanceId,
+  )
+  const targetExists = battleParticipantExists(
+    state,
+    battle.targetInstanceId,
+  )
+  if (!attackerExists || !targetExists) {
+    return finishBattle(state)
   }
 
   if (battle.remainingDamage <= 0) {

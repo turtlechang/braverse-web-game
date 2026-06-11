@@ -156,39 +156,13 @@ export const convertOfficialCardEffects = (
   }
 
   const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
-    'ST2-016': [
-      {
-        kind: 'disable-flip',
-        duration: 'this-turn',
-        target: { side: 'opponent', min: 0, max: 1 },
-      },
-    ],
+    // 複合效果（含 Then）仍需硬編碼，因通用解析器不處理 Then
     'ST2-018': [
       { kind: 'draw', amount: 1 },
       {
         kind: 'view-hp',
         target: { side: 'self', min: 0, max: 1 },
         optional: true,
-      },
-    ],
-    'ST2-019': [
-      {
-        kind: 'modify-all-attack',
-        amount: 1,
-        duration: 'this-turn',
-        side: 'self',
-        condition: { kind: 'break-level-at-least', level: 6 },
-      },
-    ],
-    'ST3-016': [
-      {
-        kind: 'battle-to-support',
-        target: {
-          side: 'self',
-          min: 1,
-          max: 1,
-          maxLevel: 2,
-        },
       },
     ],
     'ST3-017': [
@@ -199,7 +173,6 @@ export const convertOfficialCardEffects = (
       },
       { kind: 'support-to-trash', amount: 1 },
     ],
-    'ST3-018': [{ kind: 'trash-to-battle', amount: 1 }],
   }
   const exactEffects = exactStarterEffects[card.cardNumber]
   if (exactEffects) {
@@ -211,12 +184,48 @@ export const convertOfficialCardEffects = (
     }
   }
 
-  if (/When this Cookie faints/i.test(sourceText)) {
+  const isFaintSkill = /When this Cookie faints/i.test(sourceText)
+  if (isFaintSkill && card.type !== 'cookie') {
     return {
       status: 'unsupported',
       cardNumber: card.cardNumber,
       sourceText,
       reason: 'unsupported-effect-text',
+    }
+  }
+
+  if (isFaintSkill) {
+    const target = parseTarget(sourceText)
+    const condition = parseCondition(sourceText)
+    const damageMatch = sourceText.match(/receives?\s+(\d+)\s+damage/i)
+    if (damageMatch) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'damage',
+            amount: Number(damageMatch[1]),
+            target: target ?? { side: 'opponent', min: 1, max: 1 },
+            condition,
+          },
+        ],
+      }
+    }
+    const drawMatch = parseSimpleDraw(stripEffectText(sourceText))
+    if (drawMatch !== null) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'draw',
+            amount: drawMatch,
+          },
+        ],
+      }
     }
   }
 
@@ -310,6 +319,129 @@ export const convertOfficialCardEffects = (
         cardNumber: card.cardNumber,
         sourceText,
         effects: [effect],
+      }
+    }
+
+    // 通用物品/場景效果解析
+    if (/flip\s+effect\s+cannot\s+be\s+activated/i.test(sourceText)) {
+      const dfTarget = parseTarget(sourceText) ?? {
+        side: 'opponent',
+        min: 0,
+        max: 1,
+      }
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'disable-flip',
+            duration: 'this-turn',
+            target: dfTarget,
+          },
+        ],
+      }
+    }
+
+    if (/view\s+(?:the\s+)?HP\s+cards/i.test(sourceText)) {
+      const vhTarget = parseTarget(sourceText) ?? {
+        side: 'opponent',
+        min: 0,
+        max: 1,
+      }
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'view-hp',
+            target: vhTarget,
+            optional: true,
+          },
+        ],
+      }
+    }
+
+    const allAttackMatch = sourceText.match(
+      /all\s+(?:your\s+)?Cookies(?:\s+currently\s+in\s+your\s+battle\s+area)?\s+gain\s+\+(\d+)\s+attack\s+damage/i,
+    )
+    if (allAttackMatch) {
+      const condition = parseCondition(sourceText)
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'modify-all-attack',
+            amount: Number(allAttackMatch[1]),
+            duration: /this\s+turn/i.test(sourceText)
+              ? 'this-turn'
+              : 'persistent',
+            side: 'self',
+            condition,
+          },
+        ],
+      }
+    }
+
+    const battleToSupportMatch = sourceText.match(
+      /Select\s+(?:up to\s+)?(\d+)\s+(?:of\s+)?(?:your\s+)?(?:.*\s+)?Cookie.*?\s+(?:LV\.(\d+)\s+or\s+lower\s+)?(?:and\s+)?place\s+it\s+in\s+your\s+support\s+area/i,
+    )
+    if (battleToSupportMatch) {
+      const btsTarget: EffectTargetSelector = {
+        side: 'self',
+        min: Number(battleToSupportMatch[1]),
+        max: Number(battleToSupportMatch[1]),
+      }
+      if (battleToSupportMatch[2]) {
+        btsTarget.maxLevel = Number(battleToSupportMatch[2])
+      }
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'battle-to-support',
+            target: btsTarget,
+          },
+        ],
+      }
+    }
+
+    const trashToBattleMatch = sourceText.match(
+      /(?:Select|Play)\s+(\d+)\s+(?:LV\.(\d+)\s+)?Cookie\s+from\s+your\s+trash/i,
+    )
+    if (trashToBattleMatch) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'trash-to-battle',
+            amount: Number(trashToBattleMatch[1]),
+          },
+        ],
+      }
+    }
+
+    const supportToHandMatch = sourceText.match(
+      /Select\s+(\d+)\s+card\s+from\s+your\s+support\s+area\s+and\s+place\s+it\s+in\s+your\s+hand/i,
+    )
+    if (supportToHandMatch) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'support-to-hand',
+            amount: Number(supportToHandMatch[1]),
+          },
+        ],
       }
     }
   }
@@ -410,28 +542,37 @@ export const convertOfficialStageAbility = (
   const activation = parseOfficialCardText(activationText ?? '')
   if (!placement || !activation) return undefined
 
-  const effects: Partial<Record<string, CardEffect[]>> = {
-    'ST1-022': [
-      {
-        kind: 'modify-attack',
-        amount: 1,
-        duration: 'this-turn',
-        target: { side: 'self', min: 1, max: 1 },
-      },
-    ],
+  // 複合效果（含 Then）仍需硬編碼
+  const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
     'ST3-022': [
       { kind: 'support-to-hand', amount: 1 },
       { kind: 'draw', amount: 1 },
     ],
   }
-  const stageEffects = effects[card.cardNumber]
-  if (!stageEffects) return undefined
+  const stageEffects = exactStageEffects[card.cardNumber]
+  if (stageEffects) {
+    return {
+      placementCost: placement.cost,
+      cost: activation.cost,
+      text: card.attackText,
+      effects: stageEffects,
+      restSource: /Rest this card/i.test(activationText ?? ''),
+    }
+  }
+
+  // 通用化解析：使用 activation 部分作為效果文字
+  const conversion = convertOfficialCardEffects({
+    ...card,
+    type: 'stage',
+    attackText: activationText ?? card.attackText,
+  })
+  if (conversion.status !== 'supported') return undefined
 
   return {
     placementCost: placement.cost,
     cost: activation.cost,
     text: card.attackText,
-    effects: stageEffects,
+    effects: conversion.effects,
     restSource: /Rest this card/i.test(activationText ?? ''),
   }
 }
@@ -622,5 +763,6 @@ export const convertOfficialCookieSkill = (
     cost: parsed.cost,
     text: conversion.sourceText,
     effects: conversion.effects,
+    faint: /When this Cookie faints/i.test(card.skill.text),
   }
 }

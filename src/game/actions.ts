@@ -111,10 +111,7 @@ export const deployCookie = (
     throw new GameRuleError('只能從手牌登場餅乾卡。')
   }
 
-  if (player.deck.length < card.hp) {
-    throw new GameRuleError('牌庫張數不足，無法配置餅乾 HP。')
-  }
-
+  const availableHpCards = player.deck.slice(0, card.hp)
   const updatedState = updatePlayer(state, {
     ...player,
     deck: player.deck.slice(card.hp),
@@ -123,7 +120,7 @@ export const deployCookie = (
       ...player.battleArea,
       {
         card,
-        hpCards: player.deck.slice(0, card.hp),
+        hpCards: availableHpCards,
         rested: false,
         battleEntryId:
           `${card.instanceId}:battle:${state.nextBattleEntrySequence}`,
@@ -178,10 +175,7 @@ export const replaceDefeatedCookie = (
     throw new GameRuleError('必須從手牌選擇一張餅乾補充戰鬥區。')
   }
 
-  if (player.deck.length < card.hp) {
-    throw new GameRuleError('牌庫張數不足，無法配置補充餅乾 HP。')
-  }
-
+  const availableHpCards = player.deck.slice(0, card.hp)
   const updatedState = updatePlayer(state, {
     ...player,
     deck: player.deck.slice(card.hp),
@@ -190,7 +184,7 @@ export const replaceDefeatedCookie = (
       ...player.battleArea,
       {
         card,
-        hpCards: player.deck.slice(0, card.hp),
+        hpCards: availableHpCards,
         rested: false,
         battleEntryId:
           `${card.instanceId}:battle:${state.nextBattleEntrySequence}`,
