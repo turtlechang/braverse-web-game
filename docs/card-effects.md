@@ -53,12 +53,13 @@
 | 戰鬥區→支援區 | `battle-to-support` | 將目標餅乾從戰鬥區移至支援區 |
 | 棄牌區→戰鬥區 | `trash-to-battle` | 從棄牌區將指定餅乾移至戰鬥區 |
 | 支援區→手牌 | `support-to-hand` | 將支援區卡牌移回手牌 |
+| 對手手牌→棄牌區 | `opponent-discard-hand` | 對手必須選擇指定數量的手牌放入棄牌區；對手無手牌時效果直接完成 |
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 目前支援 Break Area 最低等級檢測 |
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |
 
-無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw`、`deck-to-support`、`modify-all-attack`、`trash-to-battle` 與 `support-to-hand`）。
+無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw`、`deck-to-support`、`modify-all-attack`、`trash-to-battle`、`support-to-hand` 與 `opponent-discard-hand`）。
 
 ## 未支援（unsupported）效果
 
@@ -90,10 +91,14 @@
 - 餅乾因傷害或效果離開戰鬥區時，會觸發 `card.skill.faint` 標記的被動技能。
 - `convertOfficialCardEffects` 已解析「When this Cookie faints」開頭的效果文字（目前支援 damage 與 draw）。
 - 戰鬥傷害與效果傷害均會在餅乾離場後觸發 faint 效果。
+- 具有有效目標（如 `min: 0, max: 1` 的 opponent damage）的 faint 效果會進入 `pendingFaintEffects` 佇列，等待玩家或 AI 選擇目標後結算；無目標效果（如 draw）直接結算。
+- 多個餅乾同時昏厥時，faint 效果依序進入佇列，逐個等待選擇。
+- 玩家可選擇 1 個合法目標或選 0 確認（up to 1）；AI 以 deterministic 策略選擇（優先血量最低的對手餅乾）。
 
 ### 已實作：If opponent Cookie attacks more than N
 
 - TRAP 回應窗會以宣告時鎖定的攻擊傷害檢查門檻。
+- 非 Cookie 卡（陷阱、物品、場景）如 `convertOfficialCardEffects` 回傳 unsupported 但已由專屬解析器（`convertOfficialTrapAbility` 等）正確解析，執行期卡牌會自動代入 ability text 作為 `effectText`，供 CardDetailModal 顯示詳情。
 
 ### 已實作：複合效果序列（起始牌組範圍）
 

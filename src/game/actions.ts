@@ -31,6 +31,14 @@ const assertActiveGame = (state: GameState) => {
   if (state.pendingBattle) {
     throw new GameRuleError('必須先完成目前的戰鬥。')
   }
+
+  if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
+    throw new GameRuleError('必須先處理昏厥效果。')
+  }
+
+  if (state.pendingOpponentHandDiscard) {
+    throw new GameRuleError('必須先處理對手棄牌。')
+  }
 }
 
 const resolveDeckExhaustion = (
@@ -161,6 +169,14 @@ export const replaceDefeatedCookie = (
     throw new GameRuleError('必須先處理餅乾的登場效果。')
   }
 
+  if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
+    throw new GameRuleError('必須先處理昏厥效果。')
+  }
+
+  if (state.pendingOpponentHandDiscard) {
+    throw new GameRuleError('必須先處理對手棄牌。')
+  }
+
   const playerId = currentTask.playerId
   const player = state.players[playerId]
 
@@ -226,6 +242,14 @@ export const skipDefeatedCookieReplacement = (
 
   if (state.pendingOnPlay) {
     throw new GameRuleError('必須先處理餅乾的登場效果。')
+  }
+
+  if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
+    throw new GameRuleError('必須先處理昏厥效果。')
+  }
+
+  if (state.pendingOpponentHandDiscard) {
+    throw new GameRuleError('必須先處理對手棄牌。')
   }
 
   const playerId = currentTask.playerId

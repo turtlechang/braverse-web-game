@@ -198,6 +198,11 @@ export interface SupportToHandEffect {
   amount: number
 }
 
+export interface OpponentDiscardHandEffect {
+  kind: 'opponent-discard-hand'
+  count: number
+}
+
 export type CardEffect =
   | DamageEffect
   | ModifyAttackEffect
@@ -214,6 +219,7 @@ export type CardEffect =
   | BattleToSupportEffect
   | TrashToBattleEffect
   | SupportToHandEffect
+  | OpponentDiscardHandEffect
 
 export type TargetedCardEffect =
   | DamageEffect
@@ -321,8 +327,24 @@ export interface ReplacementTask {
   remaining: number
 }
 
+export interface PendingFaintEffect {
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  effect: CardEffect
+  context: EffectContext
+}
+
 export interface PendingReplacement {
   tasks: ReplacementTask[]
+}
+
+export interface PendingOpponentHandDiscard {
+  playerId: PlayerId
+  count: number
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  effectText: string
 }
 
 export interface GameState {
@@ -350,6 +372,8 @@ export interface GameState {
     remainingDraws: number
   } | null
   pendingBattle?: PendingBattle | null
+  pendingFaintEffects?: PendingFaintEffect[]
+  pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
 }
 
 export type PendingBattleStage = 'trap' | 'damage' | 'flip'

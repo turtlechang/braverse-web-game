@@ -71,7 +71,9 @@ export const continuePendingReplacements = (
     state.status !== 'playing' ||
     state.pendingRefresh ||
     state.pendingOnPlay ||
-    state.pendingBattle
+    state.pendingBattle ||
+    state.pendingOpponentHandDiscard ||
+    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0)
   ) {
     return state
   }

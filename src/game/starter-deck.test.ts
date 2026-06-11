@@ -128,6 +128,18 @@ describe('official yellow starter deck', () => {
     })
   })
 
+  it('ST2-001 Roguefort Cookie has opponent-discard-hand OnPlay skill', () => {
+    const deck = createOfficialYellowStarterDeck('player-one')
+    const roguefort = deck.find((card) => card.id === 'ST2-001')!
+    expect(roguefort.skill).toBeTruthy()
+    expect(roguefort.skill!.trigger).toBe('on-play')
+    expect(roguefort.skill!.cost).toEqual({ yellow: 1 })
+    expect(roguefort.effectText).toBeTruthy()
+    expect(roguefort.skill!.effects).toEqual([
+      { kind: 'opponent-discard-hand', count: 1 },
+    ])
+  })
+
   it('creates a demo game using the yellow deck', () => {
     const state = createDemoGame(undefined, 'yellow')
 

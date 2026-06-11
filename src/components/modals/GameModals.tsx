@@ -226,6 +226,10 @@ export interface TrapResponseModalProps {
   onSelectTrap: (instanceId: string) => void
   onConfirm: () => void
   onSkip: () => void
+  onInspectCard?: (card: GameCard) => void
+  allowEmptyTarget?: boolean
+  emptyTargetActive?: boolean
+  onToggleEmptyTarget?: () => void
 }
 
 export function TrapResponseModal({
@@ -236,6 +240,10 @@ export function TrapResponseModal({
   onSelectTrap,
   onConfirm,
   onSkip,
+  onInspectCard,
+  allowEmptyTarget,
+  emptyTargetActive,
+  onToggleEmptyTarget,
 }: TrapResponseModalProps) {
   return (
     <div className="modal-backdrop" role="presentation">
@@ -249,7 +257,10 @@ export function TrapResponseModal({
               type="button"
               className={selectedTrapId === card.instanceId ? 'is-selected' : ''}
               key={card.instanceId}
-              onClick={() => onSelectTrap(card.instanceId)}
+              onClick={() => {
+                onSelectTrap(card.instanceId)
+                onInspectCard?.(card)
+              }}
             >
               <CardFace card={card} />
               <span>{card.name}</span>
@@ -262,6 +273,16 @@ export function TrapResponseModal({
             <span>{paymentCards.map((card) => card.name).join('、') || '不需能量'}</span>
             <strong>效果目標</strong>
             <span>{targetCards.map((card) => card.name).join('、') || '不需目標'}</span>
+            {allowEmptyTarget && (
+              <label className="trap-target-toggle">
+                <input
+                  type="checkbox"
+                  checked={emptyTargetActive ?? false}
+                  onChange={() => onToggleEmptyTarget?.()}
+                />
+                不選擇目標（略過傷害效果）
+              </label>
+            )}
           </div>
         )}
         <div className="modal-actions">

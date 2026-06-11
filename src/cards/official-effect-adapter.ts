@@ -428,6 +428,23 @@ export const convertOfficialCardEffects = (
       }
     }
 
+    const opponentDiscardHandMatch = sourceText.match(
+      /Your opponent must place (\d+) card(?:s)? from their hand into the trash/i,
+    )
+    if (opponentDiscardHandMatch) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'opponent-discard-hand',
+            count: Number(opponentDiscardHandMatch[1]),
+          },
+        ],
+      }
+    }
+
     const supportToHandMatch = sourceText.match(
       /Select\s+(\d+)\s+card\s+from\s+your\s+support\s+area\s+and\s+place\s+it\s+in\s+your\s+hand/i,
     )

@@ -62,6 +62,64 @@ describe('CardDetailModal', () => {
     expect(markup).toContain('<strong>陷阱效果</strong>')
     expect(markup.match(/card-rule-section/g)).toHaveLength(1)
   })
+
+  it('shows ST2-021 Pretzel Snare official effect text', () => {
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={{
+          id: 'ST2-021',
+          instanceId: 'test-ST2-021',
+          name: 'Pretzel Snare',
+          type: 'trap',
+          officialType: 'trap',
+          effectText:
+            '《{Y}{Y}》 [If opponent Cookie attacks more than 4.] Select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+        }}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('card-detail-rules single-rule')
+    expect(markup).toContain('<strong>陷阱效果</strong>')
+    expect(markup).toContain('Pretzel Snare')
+    expect(markup).toContain('Select up to 1')
+    expect(markup).toContain('receives 1 damage')
+  })
+
+  it('shows ST2-001 Roguefort Cookie OnPlay skill text', () => {
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={{
+          id: 'ST2-001',
+          instanceId: 'test-ST2-001',
+          name: 'Roguefort Cookie',
+          type: 'cookie',
+          level: 3,
+          hp: 6,
+          attack: 3,
+          attackCost: 4,
+          attackEnergyCost: { yellow: 3, neutral: 1 },
+          effectText:
+            '{ap} 《{Y}》 Your opponent must place 1 card from their hand into the trash.',
+          skill: {
+            trigger: 'on-play',
+            oncePerTurn: false,
+            yourTurn: false,
+            restSource: false,
+            cost: { yellow: 1 },
+            text: '{ap} 《{Y}》 Your opponent must place 1 card from their hand into the trash.',
+            effects: [{ kind: 'opponent-discard-hand', count: 1 }],
+          },
+        }}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('Roguefort Cookie')
+    expect(markup).toContain('<strong>技能</strong>')
+    expect(markup).toContain('opponent')
+    expect(markup).toContain('hand')
+  })
 })
 
 describe('DecisionModal', () => {

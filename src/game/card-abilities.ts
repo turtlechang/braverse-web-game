@@ -17,7 +17,9 @@ const assertMainAction = (state: GameState, playerId: PlayerId) => {
     state.pendingReplacement ||
     state.pendingOnPlay ||
     state.pendingRefresh ||
-    state.pendingBattle
+    state.pendingBattle ||
+    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
+    state.pendingOpponentHandDiscard
   ) {
     throw new GameRuleError('目前無法使用物品或場景卡。')
   }

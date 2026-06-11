@@ -18,6 +18,8 @@ import {
 import { canAttack } from './turn'
 import type {
   CardEffect,
+  CookieInBattle,
+  EffectTargetSelector,
   EnergyColor,
   GameCard,
   GameState,
@@ -47,6 +49,14 @@ const assertNoBlockingDecision = (state: GameState) => {
 
   if (state.pendingRefresh) {
     throw new GameRuleError('必須先完成牌庫 Refresh。')
+  }
+
+  if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
+    throw new GameRuleError('必須先處理昏厥效果。')
+  }
+
+  if (state.pendingOpponentHandDiscard) {
+    throw new GameRuleError('必須先處理對手棄牌。')
   }
 }
 
@@ -372,6 +382,9 @@ export const playTrap = (
         effect.target,
         options.targetIds,
       )
+      if (targets.length === 0) {
+        continue
+      }
       const target = targets[0]
       const targetPlayerId = Object.values(nextState.players).find((owner) =>
         owner.battleArea.some(
@@ -524,29 +537,38 @@ const removeFaintedCookie = (
     1,
   )
 
-  // 觸發 When this Cookie faints 被動技能
   const faintSkill = target.card.skill
   if (faintSkill && faintSkill.faint) {
     for (const effect of faintSkill.effects) {
-      const context = {
-        sourcePlayerId: playerId,
-        sourceInstanceId: target.card.instanceId,
-      }
       if (
         effect.kind === 'damage' ||
         effect.kind === 'modify-attack' ||
         effect.kind === 'modify-damage-received'
       ) {
+        const context = {
+          sourcePlayerId: playerId,
+          sourceInstanceId: target.card.instanceId,
+        }
         const candidates = getEffectTargetCandidates(nextState, context, effect.target)
         if (candidates.length > 0) {
-          nextState = executeCardEffect(
-            nextState,
-            context,
-            effect,
-            [candidates[0].card.instanceId],
-          )
+          nextState = {
+            ...nextState,
+            pendingFaintEffects: [
+              ...(nextState.pendingFaintEffects ?? []),
+              {
+                sourcePlayerId: playerId,
+                sourceInstanceId: target.card.instanceId,
+                effect,
+                context,
+              },
+            ],
+          }
         }
       } else {
+        const context = {
+          sourcePlayerId: playerId,
+          sourceInstanceId: target.card.instanceId,
+        }
         nextState = executeCardEffect(nextState, context, effect, [])
       }
     }
@@ -662,13 +684,15 @@ export const resolveNextDamage = (state: GameState): GameState => {
   }
 
   if (target.hpCards.length === 0) {
-    return finishDamageSequence(
-      removeFaintedCookie(
-        state,
-        damagePlayerId,
-        damageTargetInstanceId,
-      ),
+    const afterFaint = removeFaintedCookie(
+      state,
+      damagePlayerId,
+      damageTargetInstanceId,
     )
+    if (afterFaint.pendingFaintEffects && afterFaint.pendingFaintEffects.length > 0) {
+      return afterFaint
+    }
+    return finishDamageSequence(afterFaint)
   }
 
   const protectedFromKnockout =
@@ -745,6 +769,10 @@ export const resolveNextDamage = (state: GameState): GameState => {
     defender.id,
     damageTargetInstanceId,
   )
+
+  if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
+    return nextState
+  }
 
   return requirePendingBattle(nextState).remainingDamage <= 0
     ? finishDamageSequence(nextState)
@@ -867,6 +895,10 @@ export const resolveFlip = (
     battle.damageTargetInstanceId ?? battle.targetInstanceId,
   )
 
+  if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
+    return nextState
+  }
+
   return requirePendingBattle(nextState).remainingDamage <= 0
     ? finishDamageSequence(nextState)
     : nextState
@@ -876,9 +908,34 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
   let nextState = state
   let guard = 0
 
-  while (nextState.pendingBattle && guard < 100) {
+  while ((nextState.pendingBattle || (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0)) && guard < 100) {
     guard += 1
-    const battle = nextState.pendingBattle
+
+    if (nextState.status !== 'playing') {
+      break
+    }
+
+    if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
+      const faint = nextState.pendingFaintEffects[0]
+      if (
+        faint.effect.kind === 'damage' ||
+        faint.effect.kind === 'modify-attack' ||
+        faint.effect.kind === 'modify-damage-received'
+      ) {
+        const candidates = getEffectTargetCandidates(
+          nextState,
+          faint.context,
+          (faint.effect as { target: EffectTargetSelector }).target,
+        )
+        const targetIds = candidates.length > 0 ? [candidates[0].card.instanceId] : []
+        nextState = resolveFaintEffect(nextState, targetIds)
+      } else {
+        nextState = resolveFaintEffect(nextState, [])
+      }
+      continue
+    }
+
+    const battle = nextState.pendingBattle!
     if (battle.stage === 'trap') {
       nextState = skipTrap(nextState, battle.defenderPlayerId)
     } else if (battle.stage === 'flip') {
@@ -921,4 +978,73 @@ export const getTrapTargetCandidates = (
         targetEffect.target,
       )
     : []
+}
+
+export const getFaintEffectCandidates = (
+  state: GameState,
+): CookieInBattle[] => {
+  const faint = state.pendingFaintEffects?.[0]
+  if (
+    !faint ||
+    (faint.effect.kind !== 'damage' &&
+      faint.effect.kind !== 'modify-attack' &&
+      faint.effect.kind !== 'modify-damage-received')
+  ) {
+    return []
+  }
+  return getEffectTargetCandidates(state, faint.context, faint.effect.target)
+}
+
+export const getFaintEffectMinMax = (
+  effect: CardEffect,
+): { min: number; max: number } => {
+  if (
+    effect.kind === 'damage' ||
+    effect.kind === 'modify-attack' ||
+    effect.kind === 'modify-damage-received'
+  ) {
+    return { min: effect.target.min ?? 0, max: effect.target.max ?? 1 }
+  }
+  return { min: 0, max: 0 }
+}
+
+export const resolveFaintEffect = (
+  state: GameState,
+  targetIds: string[],
+): GameState => {
+  const faints = state.pendingFaintEffects
+  if (!faints || faints.length === 0) {
+    throw new GameRuleError('目前沒有待處理的昏厥效果。')
+  }
+
+  const faint = faints[0]
+  const remaining = faints.slice(1)
+  let nextState: GameState = {
+    ...state,
+    pendingFaintEffects: remaining.length > 0 ? remaining : undefined,
+  }
+
+  if (
+    faint.effect.kind === 'damage' ||
+    faint.effect.kind === 'modify-attack' ||
+    faint.effect.kind === 'modify-damage-received'
+  ) {
+    if (targetIds.length > 0) {
+      selectEffectTargets(nextState, faint.context, faint.effect.target, targetIds)
+      nextState = executeCardEffect(
+        nextState,
+        faint.context,
+        faint.effect,
+        targetIds,
+      )
+    } else if (faint.effect.target.min > 0) {
+      throw new GameRuleError('昏厥效果目標數量不足。')
+    }
+  }
+
+  if (nextState.status !== 'playing') {
+    return nextState
+  }
+
+  return nextState
 }

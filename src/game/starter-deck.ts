@@ -130,6 +130,24 @@ const createCard = (
   const trap = convertOfficialTrapAbility(source)
   const item = convertOfficialItemAbility(source)
   const stageAbility = convertOfficialStageAbility(source)
+
+  let effectText: string | undefined
+  let effects: import('./types').CardEffect[] | undefined
+
+  if (effectConversion.status === 'supported') {
+    effectText = effectConversion.sourceText
+    effects = effectConversion.effects
+  } else if (trap) {
+    effectText = trap.text
+    effects = trap.effects
+  } else if (item) {
+    effectText = item.text
+    effects = item.effects
+  } else if (stageAbility) {
+    effectText = stageAbility.text
+    effects = stageAbility.effects
+  }
+
   const base = {
     id: source.baseCardNumber,
     instanceId: `${playerId}-${source.cardNumber}-${copyNumber}`,
@@ -139,12 +157,7 @@ const createCard = (
     officialType: (source.type === 'flip'
       ? 'flip'
       : 'cookie') as GameCard['officialType'],
-    ...(effectConversion.status === 'supported'
-      ? {
-          effectText: effectConversion.sourceText,
-          effects: effectConversion.effects,
-        }
-      : {}),
+    ...(effectText ? { effectText, effects } : {}),
   }
 
   if (

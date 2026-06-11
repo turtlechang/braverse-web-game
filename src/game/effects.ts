@@ -1,6 +1,6 @@
 import { GameRuleError } from './errors'
 import { drawCards, getOpponentId, updatePlayer } from './helpers'
-import { recordCookieDepartures } from './replacement'
+import { recordCookieDepartures, continuePendingReplacements } from './replacement'
 import { getRefreshCandidates } from './refresh'
 import type {
   BreakToTrashEffect,
@@ -116,6 +116,7 @@ export const isEffectUntargeted = (
         | 'modify-all-attack'
         | 'trash-to-battle'
         | 'support-to-hand'
+        | 'opponent-discard-hand'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -123,7 +124,8 @@ export const isEffectUntargeted = (
   effect.kind === 'support-to-trash' ||
   effect.kind === 'modify-all-attack' ||
   effect.kind === 'trash-to-battle' ||
-  effect.kind === 'support-to-hand'
+  effect.kind === 'support-to-hand' ||
+  effect.kind === 'opponent-discard-hand'
 
 export const isEffectTargeted = (
   effect: CardEffect,
@@ -286,6 +288,7 @@ const resolveDamageOutcome = (
   state: GameState,
   damagedPlayerId: PlayerId,
   departedCount: number,
+  departedCookieCards: CookieCard[],
 ): GameState => {
   const livingCookieIds = new Set(
     Object.values(state.players).flatMap((player) =>
@@ -302,19 +305,16 @@ const resolveDamageOutcome = (
     ),
   }, damagedPlayerId, departedCount)
 
-  // 觸發 When this Cookie faints 被動技能（效果傷害）
-  const departedCookies =
-    state.players[damagedPlayerId].battleArea.filter(
-      (cookie) => !livingCookieIds.has(cookie.card.instanceId),
-    )
+  const departedCookies = departedCookieCards
+
   let faintState = updatedState
   for (const cookie of departedCookies) {
-    const faintSkill = cookie.card.skill
+    const faintSkill = cookie.skill
     if (faintSkill && faintSkill.faint) {
       for (const effect of faintSkill.effects) {
         const context = {
           sourcePlayerId: damagedPlayerId,
-          sourceInstanceId: cookie.card.instanceId,
+          sourceInstanceId: cookie.instanceId,
         }
         if (
           effect.kind === 'damage' ||
@@ -327,12 +327,18 @@ const resolveDamageOutcome = (
             effect.target,
           )
           if (candidates.length > 0) {
-            faintState = executeCardEffect(
-              faintState,
-              context,
-              effect,
-              [candidates[0].card.instanceId],
-            )
+            faintState = {
+              ...faintState,
+              pendingFaintEffects: [
+                ...(faintState.pendingFaintEffects ?? []),
+                {
+                  sourcePlayerId: damagedPlayerId,
+                  sourceInstanceId: cookie.instanceId,
+                  effect,
+                  context,
+                },
+              ],
+            }
           }
         } else {
           faintState = executeCardEffect(faintState, context, effect, [])
@@ -341,7 +347,9 @@ const resolveDamageOutcome = (
     }
   }
 
-  return resolveBreakLevelVictory(faintState)
+  return faintState.pendingFaintEffects && faintState.pendingFaintEffects.length > 0
+    ? faintState
+    : resolveBreakLevelVictory(faintState)
 }
 
 const getExpirationTurn = (
@@ -681,6 +689,27 @@ export const executeCardEffect = (
     }
   }
 
+  if (effect.kind === 'opponent-discard-hand') {
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    const targetPlayer = state.players[targetPlayerId]
+    if (targetPlayer.hand.length < effect.count) {
+      return { ...state }
+    }
+    return {
+      ...state,
+      pendingOpponentHandDiscard: {
+        playerId: targetPlayerId,
+        count: effect.count,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName: state.players[context.sourcePlayerId].battleArea.find(
+          (c) => c.card.instanceId === context.sourceInstanceId,
+        )?.card.name ?? 'Unknown',
+        effectText: effect.kind,
+      },
+    }
+  }
+
   const targets = selectEffectTargets(
     state,
     context,
@@ -698,6 +727,13 @@ export const executeCardEffect = (
       state.players[targetPlayerId],
     )
 
+    const departedCount = previousBattleAreaCount - damagedPlayer.battleArea.length
+    const departedCookieCards = targets
+      .filter((target) => !damagedPlayer.battleArea.some(
+        (cookie) => cookie.card.instanceId === target.card.instanceId,
+      ))
+      .map((target) => target.card)
+
     return resolveDamageOutcome(
       {
         ...state,
@@ -707,7 +743,8 @@ export const executeCardEffect = (
         },
       },
       targetPlayerId,
-      previousBattleAreaCount - damagedPlayer.battleArea.length,
+      departedCount,
+      departedCookieCards,
     )
   }
 
@@ -778,4 +815,54 @@ export const executeCardEffect = (
           ...modifiers,
         ],
       }
+}
+
+export const resolveOpponentHandDiscard = (
+  state: GameState,
+  playerId: PlayerId,
+  selectedCardIds: string[],
+): GameState => {
+  const pending = state.pendingOpponentHandDiscard
+  if (!pending) {
+    throw new GameRuleError('目前沒有等待對手棄牌的決策。')
+  }
+
+  if (pending.playerId !== playerId) {
+    throw new GameRuleError('不是目前需要棄牌的玩家。')
+  }
+
+  const uniqueIds = [...new Set(selectedCardIds)]
+  if (uniqueIds.length !== pending.count) {
+    throw new GameRuleError(`必須選擇 ${pending.count} 張手牌棄置。`)
+  }
+
+  const player = state.players[playerId]
+  if (uniqueIds.length !== selectedCardIds.length) {
+    throw new GameRuleError('不能重複選擇同一張手牌。')
+  }
+
+  for (const instanceId of uniqueIds) {
+    if (!player.hand.some((card) => card.instanceId === instanceId)) {
+      throw new GameRuleError('選擇的卡片不在你的手牌中。')
+    }
+  }
+
+  const selectedSet = new Set(uniqueIds)
+  const updatedPlayer = {
+    ...player,
+    hand: player.hand.filter((card) => !selectedSet.has(card.instanceId)),
+    discardPile: [
+      ...player.discardPile,
+      ...player.hand.filter((card) => selectedSet.has(card.instanceId)),
+    ],
+  }
+
+  return continuePendingReplacements({
+    ...state,
+    players: {
+      ...state.players,
+      [playerId]: updatedPlayer,
+    },
+    pendingOpponentHandDiscard: null,
+  })
 }

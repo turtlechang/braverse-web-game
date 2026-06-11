@@ -32,6 +32,9 @@ export const parseTestStateConfig = (
   | { kind: 'replacement-choice' }
   | { kind: 'item-usage'; payable: boolean }
   | { kind: 'stage-usage'; payable: boolean }
+  | { kind: 'faint-damage' }
+  | { kind: 'trap-pretzel'; attack: 4 | 5 }
+  | { kind: 'opponent-discard-hand' }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -65,6 +68,18 @@ export const parseTestStateConfig = (
   }
   if (testState === 'stage-unpayable') {
     return { kind: 'stage-usage', payable: false }
+  }
+  if (testState === 'faint-damage') {
+    return { kind: 'faint-damage' }
+  }
+  if (testState === 'trap-pretzel-payable') {
+    return { kind: 'trap-pretzel', attack: 5 }
+  }
+  if (testState === 'trap-pretzel-unpayable') {
+    return { kind: 'trap-pretzel', attack: 4 }
+  }
+  if (testState === 'opponent-discard-hand') {
+    return { kind: 'opponent-discard-hand' }
   }
   return null
 }
@@ -649,6 +664,254 @@ export const createItemUsageDemoState = (payable: boolean): GameState => {
           },
         ],
       },
+    },
+  }
+}
+
+export const createOpponentDiscardHandDemoState = (): GameState => {
+  const p1Deck = createOfficialYellowStarterDeck('player-one')
+  const p2Deck = createOfficialYellowStarterDeck('player-two')
+  const roguefort = p2Deck.find((card) => card.id === 'ST2-001') as CookieCard
+  const yellowSupport = p2Deck.find(
+    (card) =>
+      card.type !== 'cookie' &&
+      (card.energyColor === 'yellow' || card.energyColor === 'wild'),
+  )!
+  const opponentCookie = p1Deck.find((card) => card.type === 'cookie') as CookieCard
+
+  const p2HpCards = Array.from({ length: roguefort.hp }, (_, i) =>
+    testSupportCard(`roguefort-hp-${i}`),
+  )
+  const p1HpCards = Array.from({ length: opponentCookie.hp }, (_, i) =>
+    testSupportCard(`opp-hp-${i}`),
+  )
+
+  const p1HandCards = p1Deck
+    .filter(
+      (card) =>
+        card.instanceId !== opponentCookie.instanceId &&
+        card.type !== 'cookie',
+    )
+    .slice(0, 3)
+
+  const usedP2 = new Set([
+    roguefort.instanceId,
+    yellowSupport.instanceId,
+  ])
+  const usedP1 = new Set([
+    opponentCookie.instanceId,
+    ...p1HandCards.map((c) => c.instanceId),
+  ])
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((c) => !usedP1.has(c.instanceId)),
+        hand: p1HandCards,
+        battleArea: [
+          {
+            card: opponentCookie,
+            hpCards: p1HpCards,
+            rested: false,
+            battleEntryId: `${opponentCookie.instanceId}:battle:1`,
+          },
+        ],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((c) => !usedP2.has(c.instanceId)),
+        hand: [roguefort],
+        battleArea: [
+          {
+            card: roguefort,
+            hpCards: p2HpCards,
+            rested: false,
+            battleEntryId: `${roguefort.instanceId}:battle:2`,
+          },
+        ],
+        supportArea: [{ card: yellowSupport, rested: false }],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-two',
+    turnNumber: 2,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingOpponentHandDiscard: {
+      playerId: 'player-one',
+      count: 1,
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: roguefort.instanceId,
+      sourceCardName: 'Roguefort Cookie',
+      effectText: 'opponent-discard-hand',
+    },
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+}
+
+export const createFaintDamageDemoState = (): GameState => {
+  const p2Cookie = testCookieCard('p2-target', 1, 2)
+  const faintCookie: CookieCard = {
+    ...testCookieCard('cherry-cookie', 2),
+    name: 'Cherry Cookie',
+    attackCost: 0,
+    attackEnergyCost: {},
+    skill: {
+      trigger: 'passive',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {},
+      text: "When this Cookie faints, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+      faint: true,
+    },
+  }
+  const state = baseTestState('player-one', 'main')
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        breakArea: [faintCookie],
+      },
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: [
+          {
+            card: p2Cookie,
+            hpCards: [testSupportCard('hp-1'), testSupportCard('hp-2')],
+            rested: false,
+            battleEntryId: `${p2Cookie.instanceId}:battle:1`,
+          },
+        ],
+      },
+    },
+    pendingFaintEffects: [
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: faintCookie.instanceId,
+        effect: {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        context: {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: faintCookie.instanceId,
+        },
+      },
+    ],
+  }
+}
+
+export const createPretzelSnareDemoState = (attack: number): GameState => {
+  const p1Deck = createOfficialYellowStarterDeck('player-one')
+  const trap = p1Deck.find((card) => card.id === 'ST2-021')!
+  const defender = p1Deck.find((card) => card.type === 'cookie') as CookieCard
+  const p2Deck = createOfficialYellowStarterDeck('player-two')
+  const attacker = p2Deck.find((card) => card.type === 'cookie') as CookieCard
+
+  const requiredColor = Object.keys(trap.trap!.cost.energy)[0] as 'yellow'
+  const requiredCount = trap.trap!.cost.energy[requiredColor] ?? 0
+  const supports = p1Deck
+    .filter(
+      (card) =>
+        card.type !== 'cookie' &&
+        card.instanceId !== trap.instanceId &&
+        (card.energyColor === requiredColor || card.energyColor === 'wild'),
+    )
+    .slice(0, requiredCount)
+
+  const defenderHpCards = Array.from({ length: defender.hp }, (_, i) =>
+    testSupportCard(`def-hp-${i}`),
+  )
+  const attackerHpCards = Array.from({ length: attacker.hp }, (_, i) =>
+    testSupportCard(`atk-hp-${i}`),
+  )
+
+  const p1: PlayerState = {
+    id: 'player-one',
+    name: '玩家',
+    ...createTestPlayerState(),
+    hand: [trap],
+    battleArea: [
+      {
+        card: defender,
+        hpCards: defenderHpCards,
+        rested: false,
+        battleEntryId: `${defender.instanceId}:battle:1`,
+      },
+    ],
+    supportArea: supports.length === requiredCount
+      ? supports.map((card) => ({ card, rested: false }))
+      : [],
+  }
+  const p2: PlayerState = {
+    id: 'player-two',
+    name: 'AI 對手',
+    ...createTestPlayerState(),
+    battleArea: [
+      {
+        card: attacker,
+        hpCards: attackerHpCards,
+        rested: false,
+        battleEntryId: `${attacker.instanceId}:battle:2`,
+      },
+    ],
+  }
+
+  return {
+    players: { 'player-one': p1, 'player-two': p2 },
+    firstPlayerId: 'player-two',
+    activePlayerId: 'player-two',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingRefresh: null,
+    pendingBattle: {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: defender.instanceId,
+      declaredDamage: attack,
+      remainingDamage: attack,
+      stage: 'trap',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
     },
   }
 }

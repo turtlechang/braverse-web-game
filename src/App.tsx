@@ -19,6 +19,8 @@ import {
   getAttackEnergyCost,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getFaintEffectCandidates,
+  getFaintEffectMinMax,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
   getRefreshCandidates,
@@ -37,7 +39,10 @@ import {
   playTrap,
   refreshDeck,
   replaceDefeatedCookie,
+  resolveBattleAutomatically,
+  resolveFaintEffect,
   resolveFlip,
+  resolveOpponentHandDiscard,
   selectEnergyPayment,
   selectStartingCookie,
   simulateAiMatch,
@@ -57,6 +62,7 @@ import {
 import { BattleRow } from './components/battle/BattleRow'
 import { PhaseRail } from './components/layout/PhaseRail'
 import { MatchToolbar } from './components/layout/MatchToolbar'
+import { CardFace } from './components/cards/CardVisuals'
 import {
   AttackPaymentPanel,
   SimulationReport,
@@ -67,9 +73,12 @@ import { EffectPanel } from './components/effects/EffectPanel'
 import type { PendingEffect } from './components/effects/effectUiTypes'
 import {
   createBreakToTrashDemoState,
+  createFaintDamageDemoState,
   createFlipResponseDemoState,
   createItemUsageDemoState,
+  createPretzelSnareDemoState,
   createReplacementChoiceDemoState,
+  createOpponentDiscardHandDemoState,
   createStageUsageDemoState,
   createTrapResponseDemoState,
   parseTestStateConfig,
@@ -117,6 +126,15 @@ function App() {
     if (testStateConfig?.kind === 'stage-usage') {
       return createStageUsageDemoState(testStateConfig.payable)
     }
+    if (testStateConfig?.kind === 'faint-damage') {
+      return createFaintDamageDemoState()
+    }
+    if (testStateConfig?.kind === 'trap-pretzel') {
+      return createPretzelSnareDemoState(testStateConfig.attack)
+    }
+    if (testStateConfig?.kind === 'opponent-discard-hand') {
+      return createOpponentDiscardHandDemoState()
+    }
     return createDemoSetupGame('player-one')
   })
   const [setupStep, setSetupStep] = useState<OpeningSetupStep | null>(
@@ -157,6 +175,17 @@ function App() {
         ? '測試狀態：合法場景卡放置與啟動。'
         : '測試狀態：不合法場景卡啟動（已橫置）。'
     }
+    if (testStateConfig?.kind === 'faint-damage') {
+      return '測試狀態：Cherry Cookie 昏厥效果選擇目標。'
+    }
+    if (testStateConfig?.kind === 'trap-pretzel') {
+      return testStateConfig.attack === 5
+        ? '測試狀態：Pretzel Snare 可支付（攻擊 5）。'
+        : '測試狀態：Pretzel Snare 不可支付（攻擊 4）。'
+    }
+    if (testStateConfig?.kind === 'opponent-discard-hand') {
+      return '測試狀態：Roguefort Cookie OnPlay 對手棄牌。'
+    }
     return '推進階段，開始這場對戰。'
   })
   const [effectHistory, setEffectHistory] = useState<string[]>([])
@@ -172,9 +201,15 @@ function App() {
     cards: GameCard[]
   } | null>(null)
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
   >([])
+  const [selectedFaintTargetIds, setSelectedFaintTargetIds] = useState<
+    string[]
+  >([])
+  const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
+    useState<string[]>([])
   const [showPause, setShowPause] = useState(false)
   const [showDeckList, setShowDeckList] = useState(false)
   const [deckListOwner, setDeckListOwner] = useState<'player' | 'ai'>('player')
@@ -195,6 +230,7 @@ function App() {
     setSelectedAttackPaymentIds([])
     setPendingEffect(null)
     setSuspendedEffect(null)
+    setSelectedFaintTargetIds([])
     setEffectHistory([])
     setAiActionCount(0)
     setSimulationResults(null)
@@ -357,15 +393,47 @@ function App() {
           currentEffect,
         )
       : []
-  const effectTargetIds = new Set(
-    effectTargetCandidates.map((cookie) => cookie.card.instanceId),
-  )
-  const breakEffectTargetIds = new Set(
-    breakToTrashCandidates.map((card) => card.instanceId),
-  )
-  const selectedEffectTargetIds = new Set(
-    pendingEffect?.selectedTargetIds ?? [],
-  )
+  const pendingFaint =
+    game.pendingFaintEffects && game.pendingFaintEffects.length > 0
+      ? game.pendingFaintEffects[0]
+      : null
+  const faintSourceCard =
+    pendingFaint
+      ? (() => {
+          for (const player of Object.values(game.players)) {
+            const found =
+              player.breakArea.find(
+                (cookie) => cookie.instanceId === pendingFaint.sourceInstanceId,
+              ) ??
+              player.battleArea.find(
+                (cookie) => cookie.card.instanceId === pendingFaint.sourceInstanceId,
+              )?.card
+            if (found) return found
+          }
+          return null
+        })()
+      : null
+  const faintCandidates =
+    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
+      ? getFaintEffectCandidates(game)
+      : []
+  const faintActive =
+    Boolean(pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId) &&
+    !pendingEffect
+  const faintMinMax = pendingFaint ? getFaintEffectMinMax(pendingFaint.effect) : { min: 0, max: 0 }
+  const faintMin = faintMinMax.min
+  const faintMax = faintMinMax.max
+  const effectTargetIds = faintActive
+    ? new Set(faintCandidates.map((cookie) => cookie.card.instanceId))
+    : new Set(
+        effectTargetCandidates.map((cookie) => cookie.card.instanceId),
+      )
+  const breakEffectTargetIds = faintActive
+    ? new Set<string>()
+    : new Set(breakToTrashCandidates.map((card) => card.instanceId))
+  const selectedEffectTargetIds = faintActive
+    ? new Set(selectedFaintTargetIds)
+    : new Set(pendingEffect?.selectedTargetIds ?? [])
   const selectedSkillPaymentIds = new Set(
     pendingEffect?.selectedPaymentIds ?? [],
   )
@@ -385,19 +453,23 @@ function App() {
     : { valid: false, reason: '尚未選擇攻擊餅乾。' }
   const replacementTask = getCurrentReplacementTask(game)
   const aiControlsCurrentState =
-    game.pendingRefresh
-      ? game.pendingRefresh.playerId === 'player-two'
-      : game.pendingOnPlay
-          ? game.pendingOnPlay.playerId === 'player-two'
-        : replacementTask
-          ? replacementTask.playerId === 'player-two'
-        : game.pendingBattle
-      ? game.pendingBattle.stage === 'damage' ||
-        (game.pendingBattle.stage === 'flip'
-          ? game.pendingBattle.damagePlayerId ??
-            game.pendingBattle.defenderPlayerId
-          : game.pendingBattle.defenderPlayerId) === 'player-two'
-      : game.activePlayerId === 'player-two'
+    game.pendingFaintEffects && game.pendingFaintEffects.length > 0
+      ? game.pendingFaintEffects[0].sourcePlayerId === 'player-two'
+      : game.pendingRefresh
+          ? game.pendingRefresh.playerId === 'player-two'
+          : game.pendingOnPlay
+              ? game.pendingOnPlay.playerId === 'player-two'
+            : game.pendingOpponentHandDiscard
+                ? game.pendingOpponentHandDiscard.playerId === 'player-two'
+              : replacementTask
+                  ? replacementTask.playerId === 'player-two'
+                : game.pendingBattle
+                  ? game.pendingBattle.stage === 'damage' ||
+                    (game.pendingBattle.stage === 'flip'
+                      ? game.pendingBattle.damagePlayerId ??
+                        game.pendingBattle.defenderPlayerId
+                      : game.pendingBattle.defenderPlayerId) === 'player-two'
+                  : game.activePlayerId === 'player-two'
 
   useEffect(() => {
     if (pendingEffect || effectHistory.length === 0) return
@@ -439,7 +511,8 @@ function App() {
       showPause ||
       game.status !== 'playing' ||
       !aiControlsCurrentState ||
-      pendingEffect
+      pendingEffect ||
+      faintActive
     ) {
       return
     }
@@ -473,6 +546,7 @@ function App() {
   }, [
     aiActionCount,
     aiControlsCurrentState,
+    faintActive,
     game,
     pendingEffect,
     showPause,
@@ -620,6 +694,43 @@ function App() {
     setMessage(`${card.name}等待支付能量並選擇目標。`)
   }
 
+  useEffect(() => {
+    if (
+      !game.pendingOnPlay ||
+      game.pendingOnPlay.playerId !== viewerPlayerId ||
+      pendingEffect ||
+      faintActive ||
+      game.pendingOpponentHandDiscard
+    ) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      const card = game.players[viewerPlayerId].battleArea.find(
+        (cookie) =>
+          cookie.card.instanceId === game.pendingOnPlay?.sourceInstanceId,
+      )?.card
+      if (card) {
+        beginCookieSkill(
+          game,
+          card,
+          viewerPlayerId,
+          'on-play',
+          'OnPlay 登場觸發',
+          true,
+        )
+      }
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [
+    game.pendingOnPlay,
+    game.pendingOpponentHandDiscard,
+    pendingEffect,
+    faintActive,
+    viewerPlayerId,
+    game,
+  ])
+
   const runAction = (
     action: (current: GameState) => GameState,
     successMessage: string,
@@ -636,10 +747,11 @@ function App() {
   }
 
   const handleAdvancePhase = () => {
-    if (pendingEffect) return
+    if (pendingEffect || faintActive) return
     runAction(advancePhase, '階段已推進。')
     setSelectedAttackerId(null)
     setSelectedAttackPaymentIds([])
+    setSelectedFaintTargetIds([])
   }
 
   const handleAttackTarget = (targetInstanceId: string) => {
@@ -674,6 +786,18 @@ function App() {
   }
 
   const toggleEffectTarget = (instanceId: string) => {
+    if (faintActive) {
+      if (!effectTargetIds.has(instanceId)) return
+      setSelectedFaintTargetIds((current) =>
+        current.includes(instanceId)
+          ? current.filter((id) => id !== instanceId)
+          : current.length < faintMax
+            ? [...current, instanceId]
+            : current,
+      )
+      return
+    }
+
     if (
       !pendingEffect ||
       !currentEffect ||
@@ -947,6 +1071,8 @@ function App() {
     Boolean(pendingEffect) ||
     Boolean(game.pendingOnPlay) ||
     Boolean(game.pendingBattle) ||
+    Boolean(game.pendingOpponentHandDiscard) ||
+    faintActive ||
     aiThinking ||
     aiControlsCurrentState
 
@@ -964,7 +1090,12 @@ function App() {
         game.players[viewerPlayerId].supportArea,
       ) ?? []
     : []
-  const selectedTrapTargets = selectedTrap
+  const trapAllowEmptyTarget = selectedTrap?.trap?.effects.some(
+    (effect) =>
+      (effect.kind === 'damage' || effect.kind === 'modify-attack' || effect.kind === 'prevent-knockout') &&
+      (effect.target.min ?? 0) === 0,
+  ) ?? false
+  const selectedTrapTargets = selectedTrap && !trapSelectNoTarget
     ? getTrapTargetCandidates(
         game,
         viewerPlayerId,
@@ -1001,6 +1132,7 @@ function App() {
           Boolean(game.pendingReplacement) ||
           Boolean(game.pendingOnPlay) ||
           Boolean(game.pendingRefresh) ||
+          Boolean(game.pendingFaintEffects && game.pendingFaintEffects.length > 0) ||
           Boolean(pendingEffect)
         }
         onAdvance={handleAdvancePhase}
@@ -1063,6 +1195,10 @@ function App() {
             ) : pendingEffect ? (
               <>
                 <Sparkles aria-hidden="true" /> 選擇效果目標
+              </>
+            ) : faintActive ? (
+              <>
+                <Sparkles aria-hidden="true" /> 選擇昏厥效果目標
               </>
             ) : selectedAttackerId ? (
               <>
@@ -1246,7 +1382,11 @@ function App() {
               )
               .map((support) => support.card)}
             targetCards={selectedTrapTargets.map((target) => target.card)}
-            onSelectTrap={setSelectedTrapId}
+            onSelectTrap={(id) => {
+              setSelectedTrapId(id)
+              setTrapSelectNoTarget(false)
+            }}
+            onInspectCard={(card) => setInspectedCard(card)}
             onSkip={() => {
               setSelectedTrapId(null)
               runAction(
@@ -1257,19 +1397,27 @@ function App() {
             onConfirm={() => {
               if (!selectedTrap) return
               setSelectedTrapId(null)
+              setTrapSelectNoTarget(false)
               runAction(
-                (current) =>
-                  playTrap(current, viewerPlayerId, {
+                (current) => {
+                  const afterTrap = playTrap(current, viewerPlayerId, {
                     trapInstanceId: selectedTrap.instanceId,
                     paymentIds: selectedTrapPaymentIds,
                     targetIds: selectedTrapTargets.map(
                       (target) => target.card.instanceId,
                     ),
                     supportTrashIds: selectedTrapSupportTrashIds,
-                  }),
+                  })
+                  return testStateConfig
+                    ? resolveBattleAutomatically(afterTrap)
+                    : afterTrap
+                },
                 `已發動${selectedTrap.name}。`,
               )
             }}
+            allowEmptyTarget={trapAllowEmptyTarget}
+            emptyTargetActive={trapSelectNoTarget}
+            onToggleEmptyTarget={() => setTrapSelectNoTarget(v => !v)}
           />
         )}
 
@@ -1313,6 +1461,130 @@ function App() {
             }}
           />
         )}
+
+      {faintActive && faintSourceCard && (
+        <div className="modal-backdrop" role="presentation" style={{ pointerEvents: 'none' }}>
+          <section className="faint-response-modal" role="dialog" style={{ pointerEvents: 'auto' }}>
+            <h2>{faintSourceCard.name} 發動昏厥效果</h2>
+            <p className="faint-effect-text">
+              {faintSourceCard.effectText ?? faintSourceCard.skill?.text ?? '昏厥效果'}
+            </p>
+            <p className="faint-target-hint">
+              {faintMin === 0
+                ? `選擇最多 ${faintMax} 個對手餅乾作為目標，或略過。`
+                : `選擇 ${faintMin} 個對手餅乾作為目標。`}
+            </p>
+            <div className="faint-modal-actions">
+              {faintMin === 0 && (
+                <button
+                  type="button"
+                  className="modal-button"
+                  onClick={() => {
+                    setSelectedFaintTargetIds([])
+                    runAction(
+                      (current) => resolveFaintEffect(current, []),
+                      `${faintSourceCard.name}略過昏厥效果。`,
+                    )
+                  }}
+                >
+                  略過
+                </button>
+              )}
+              <button
+                type="button"
+                className="modal-button primary"
+                disabled={selectedFaintTargetIds.length === 0 && faintMin !== 0}
+                onClick={() => {
+                  const targets = selectedFaintTargetIds
+                  setSelectedFaintTargetIds([])
+                  runAction(
+                    (current) => resolveFaintEffect(current, targets),
+                    `${faintSourceCard.name}發動對${faintCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的昏厥效果。`,
+                  )
+                }}
+              >
+                {faintMin === 0 && selectedFaintTargetIds.length === 0
+                  ? '確認略過'
+                  : `確認 (${selectedFaintTargetIds.length})`}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {game.pendingOpponentHandDiscard &&
+        game.pendingOpponentHandDiscard.playerId === viewerPlayerId &&
+        !pendingEffect && (
+        <div className="modal-backdrop" role="presentation" style={{ pointerEvents: 'none' }}>
+          <section className="faint-response-modal" role="dialog" style={{ pointerEvents: 'auto' }}>
+            <h2>
+              {game.pendingOpponentHandDiscard.sourceCardName} 要求棄置手牌
+            </h2>
+            <p className="faint-effect-text">
+              {(() => {
+                const source = Object.values(game.players).flatMap(
+                  (p) => p.battleArea,
+                ).find(
+                  (c) =>
+                    c.card.instanceId ===
+                    game.pendingOpponentHandDiscard?.sourceInstanceId,
+                )
+                return source?.card.effectText ?? source?.card.skill?.text ?? '對手必須棄置手牌'
+              })()}
+            </p>
+            <p className="faint-target-hint">
+              必須選擇 {game.pendingOpponentHandDiscard.count} 張手牌棄置。
+            </p>
+            <div className="modal-card-options">
+              {game.players[viewerPlayerId].hand.map((card) => (
+                <button
+                  type="button"
+                  key={card.instanceId}
+                  className={
+                    selectedOpponentDiscardIds.includes(card.instanceId)
+                      ? 'is-selected'
+                      : ''
+                  }
+                  onClick={() =>
+                    setSelectedOpponentDiscardIds((current) =>
+                      current.includes(card.instanceId)
+                        ? current.filter((id) => id !== card.instanceId)
+                        : current.length <
+                            (game.pendingOpponentHandDiscard?.count ?? 1)
+                          ? [...current, card.instanceId]
+                          : current,
+                    )
+                  }
+                >
+                  <CardFace card={card} />
+                  <span>{card.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="faint-modal-actions">
+              <button
+                type="button"
+                className="modal-button primary"
+                disabled={
+                  selectedOpponentDiscardIds.length !==
+                  game.pendingOpponentHandDiscard.count
+                }
+                onClick={() => {
+                  const ids = selectedOpponentDiscardIds
+                  setSelectedOpponentDiscardIds([])
+                  runAction(
+                    (current) =>
+                      resolveOpponentHandDiscard(current, viewerPlayerId, ids),
+                    `已棄置 ${ids.length} 張手牌。`,
+                  )
+                }}
+              >
+                確認棄置 ({selectedOpponentDiscardIds.length})
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {pendingPlayer && pendingPlayer.id !== 'player-two' && (
         <DecisionModal

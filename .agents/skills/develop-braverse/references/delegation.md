@@ -40,10 +40,13 @@ scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-flash "只回覆 OK"
 scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-pro "只回覆 OK"
 ```
 
-一般只讀審查使用專案的 `review-fast` agent。此 agent 限制為一次工具迭代、最多讀取 4 個聚焦檔案區段，並禁止 bash、編輯、子代理與網路工具，避免多檔案審查在工具迴圈中超過外部等待時間：
+一般只讀審查使用專案的 `review-fast` agent。此 agent 限制為一次工具迭代、最多讀取 4 個聚焦檔案區段，並禁止 bash、編輯、子代理與網路工具：
+
+- 低風險且邊界明確的極聚焦唯讀審查可使用 `opencode-go/deepseek-v4-flash`。
+- 跨模組、高風險或重大疑點的審查改用 `opencode-go/deepseek-v4-pro` 或既有大型 PR 模型。
 
 ```powershell
-scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-flash "審查任務"
+scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-pro "審查任務"
 ```
 
 需要跨模組完整審查時，將任務拆成數個至多 4 個檔案的 `review-fast` 派工，再由主代理整合。只有明確需要長時間自主探索時才使用內建 `plan` agent，且呼叫端 timeout 應至少設為 300 秒。
@@ -54,8 +57,9 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-flash "審查任�
 
 | 任務 | 模型 |
 |---|---|
-| CRUD、單元測試、Docstring、簡單重構、一般審查 | `opencode-go/deepseek-v4-flash` |
-| 一般複雜工作 | 優先 `deepseek-v4-flash`，必要時使用 `deepseek-v4-pro` 或 `qwen3.7-plus` |
+| 預設主要實作（多數程式碼、多檔案/跨模組、規則引擎、React UI、AI、整合、測試套件、複雜文件、完整驗證鏈） | `opencode-go/deepseek-v4-pro` |
+| 極小微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀聚焦審查） | `opencode-go/deepseek-v4-flash`（範圍擴大須立即停止並改派 Pro） |
+| 輔助模型 | `opencode-go/qwen3.7-plus` |
 | 大型、多檔案、跨模組 PR 審查 | `opencode-go/kimi-k2.6` |
 | `qwen3.7-plus` 不可用或不穩定 | `opencode-go/qwen3.6-plus` |
 | Kimi 結果不完整或有重大疑點 | 暫以 `opencode-go/deepseek-v4-pro` 終審 |
@@ -68,3 +72,4 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-flash "審查任�
 - 不讓子任務擅自還原既有修改或提交產物。
 - 將派工結果視為建議；主代理仍需讀取 diff、驗證規則依據並執行測試。
 - 大型審查要求依嚴重度列出具體檔案與行號，優先找行為錯誤、回歸與缺少測試。
+- Flash 僅用於單檔機械式變更；若任務範圍可能擴大，直接派 Pro。

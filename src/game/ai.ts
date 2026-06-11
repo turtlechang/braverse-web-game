@@ -12,9 +12,11 @@ import {
 } from './card-abilities'
 import {
   beginAttack,
+  getFaintEffectCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
   playTrap,
+  resolveFaintEffect,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
@@ -28,6 +30,7 @@ import {
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectUntargeted,
+  resolveOpponentHandDiscard,
 } from './effects'
 import {
   getAttackEnergyCost,
@@ -71,6 +74,7 @@ export type AiActionType =
   | 'play-trap'
   | 'resolve-damage'
   | 'resolve-flip'
+  | 'resolve-faint'
   | 'error'
 
 export interface AiEffectSelection {
@@ -374,6 +378,67 @@ export const takeAiStep = (
     }
 
     const replacementTask = getCurrentReplacementTask(state)
+
+    if (
+      state.pendingFaintEffects &&
+      state.pendingFaintEffects.length > 0 &&
+      !state.pendingRefresh &&
+      !state.pendingOnPlay &&
+      !replacementTask
+    ) {
+      const faint = state.pendingFaintEffects[0]
+      if (faint.sourcePlayerId !== playerId) {
+        return {
+          state,
+          action: 'idle',
+          description: `等待 ${state.players[faint.sourcePlayerId].name} 選擇昏厥效果目標。`,
+        }
+      }
+      const candidates = getFaintEffectCandidates(state)
+      const ordered = [...candidates].sort(
+        (left, right) => left.hpCards.length - right.hpCards.length,
+      )
+      const faintEffect = faint.effect as { target?: { min: number; max: number } }
+      const min = faintEffect.target?.min ?? 0
+      const max = faintEffect.target?.max ?? 1
+      const targetIds =
+        candidates.length >= min
+          ? ordered.slice(0, max).map((cookie) => cookie.card.instanceId)
+          : []
+      return {
+        state: resolveFaintEffect(state, targetIds),
+        action: 'resolve-faint',
+        description:
+          targetIds.length > 0
+            ? `${state.players[playerId].name}發動對${ordered[0].card.name}的昏厥效果。`
+            : `${state.players[playerId].name}略過昏厥效果。`,
+      }
+    }
+
+    if (
+      state.pendingOpponentHandDiscard &&
+      !state.pendingRefresh &&
+      !state.pendingBattle &&
+      !state.pendingReplacement
+    ) {
+      const pending = state.pendingOpponentHandDiscard
+      if (pending.playerId !== playerId) {
+        return {
+          state,
+          action: 'idle',
+          description: `等待 ${state.players[pending.playerId].name} 選擇棄置手牌。`,
+        }
+      }
+      const hand = state.players[playerId].hand
+      const discardIds = hand
+        .slice(0, pending.count)
+        .map((card) => card.instanceId)
+      return {
+        state: resolveOpponentHandDiscard(state, playerId, discardIds),
+        action: 'idle',
+        description: `${state.players[playerId].name}棄置 ${pending.count} 張手牌。`,
+      }
+    }
 
     if (
       state.pendingBattle &&
@@ -789,8 +854,10 @@ export const simulateAiMatch = (
     }
 
     const controller =
+      state.pendingFaintEffects?.[0]?.sourcePlayerId ??
       state.pendingRefresh?.playerId ??
       state.pendingOnPlay?.playerId ??
+      state.pendingOpponentHandDiscard?.playerId ??
       getCurrentReplacementTask(state)?.playerId ??
       (state.pendingBattle
         ? state.pendingBattle.stage === 'flip'

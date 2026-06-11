@@ -10,6 +10,7 @@ export {
   isEffectConditionMet,
   isEffectTargeted,
   isEffectUntargeted,
+  resolveOpponentHandDiscard,
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './effects'
@@ -48,10 +49,13 @@ export {
 } from './ai'
 export {
   beginAttack,
+  getFaintEffectCandidates,
+  getFaintEffectMinMax,
   getTrapCandidates,
   getTrapTargetCandidates,
   playTrap,
   resolveBattleAutomatically,
+  resolveFaintEffect,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
@@ -139,6 +143,9 @@ export type {
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
   NonCookieCard,
+  OpponentDiscardHandEffect,
+  PendingFaintEffect,
+  PendingOpponentHandDiscard,
   PlayerId,
   PlayerSetup,
   PlayerState,

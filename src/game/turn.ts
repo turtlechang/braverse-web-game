@@ -25,6 +25,10 @@ const assertPlaying = (state: GameState) => {
   if (state.pendingBattle) {
     throw new GameRuleError('必須先完成目前的戰鬥。')
   }
+
+  if (state.pendingOpponentHandDiscard) {
+    throw new GameRuleError('必須先處理對手棄牌。')
+  }
 }
 
 const activateCurrentPlayer = (state: GameState): GameState => {
@@ -91,7 +95,8 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
     state.pendingReplacement ||
     state.pendingOnPlay ||
     state.pendingRefresh ||
-    state.pendingBattle
+    state.pendingBattle ||
+    state.pendingOpponentHandDiscard
   ) {
     return state
   }
@@ -208,6 +213,7 @@ export const canAttack = (state: GameState): boolean =>
   !state.pendingOnPlay &&
   !state.pendingRefresh &&
   !state.pendingBattle &&
+  !state.pendingOpponentHandDiscard &&
   state.phase === 'main' &&
   !(state.turnNumber === 1 && state.activePlayerId === state.firstPlayerId)
 

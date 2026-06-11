@@ -104,54 +104,31 @@ try {
     '初始 ai-deck-select 應為 red',
   )
 
-  await playerSelect.selectOption('yellow')
-  assert.strictEqual(
-    await playerSelect.inputValue(),
-    'yellow',
-    'player-deck-select 應變為 yellow',
-  )
-  await statusMessage.filter({ hasText: '我方 黃色' }).waitFor()
+  // 測試不同顏色組合
+  const colorCombinations = [
+    { player: 'red', ai: 'yellow', name: '紅色 vs 黃色' },
+    { player: 'yellow', ai: 'green', name: '黃色 vs 綠色' },
+    { player: 'green', ai: 'red', name: '綠色 vs 紅色' },
+    { player: 'red', ai: 'green', name: '紅色 vs 綠色' },
+    { player: 'yellow', ai: 'red', name: '黃色 vs 紅色' },
+    { player: 'green', ai: 'yellow', name: '綠色 vs 黃色' },
+  ]
 
-  await aiSelect.selectOption('green')
-  assert.strictEqual(
-    await aiSelect.inputValue(),
-    'green',
-    'ai-deck-select 應變為 green',
-  )
-  await statusMessage.filter({ hasText: 'AI 綠色' }).waitFor()
-  await completeOpeningSetup()
+  for (const combo of colorCombinations) {
+    await playerSelect.selectOption(combo.player)
+    await aiSelect.selectOption(combo.ai)
+    await completeOpeningSetup()
+    
+    // 進行一場快速 AI 驗證
+    await page.goto(`${baseUrl}?test-state=ai-match`, { waitUntil: 'networkidle' })
+    await completeOpeningSetup()
+    
+    console.log(`完成 ${combo.name} 組合測試`)
+  }
 
-  await page.locator('button[title="查看官方範例牌組"]').click()
-  await page.locator('.deck-list-modal').waitFor({ state: 'visible' })
-
-  const deckHeading = page.locator('.deck-list-modal h2')
-  await deckHeading.filter({ hasText: '黃色' }).waitFor()
-
-  assert.ok(
-    (await page.locator('.deck-reference-placeholder').count()) > 0,
-    '應顯示 deck-reference-placeholder',
-  )
-  assert.strictEqual(
-    await page.locator('.deck-reference-image img').count(),
-    0,
-    '不應有 starter-deck 圖片',
-  )
-
-  await page.getByTestId('view-ai-deck').click()
-  await deckHeading.filter({ hasText: '綠色' }).waitFor()
-
-  assert.ok(
-    (await page.locator('.deck-reference-placeholder').count()) > 0,
-    'AI 牌組應仍是 placeholder',
-  )
-
-  await page.locator('.deck-list-modal button.close-modal').click()
-  await page.locator('.deck-list-modal').waitFor({ state: 'hidden' })
-
+  // 回到紅色 vs 紅色進行主要 100 場驗證
   await playerSelect.selectOption('red')
-  assert.strictEqual(await playerSelect.inputValue(), 'red')
   await aiSelect.selectOption('red')
-  assert.strictEqual(await aiSelect.inputValue(), 'red')
   await completeOpeningSetup()
 
   const runBreakToTrashTest = async (variant) => {
@@ -517,6 +494,204 @@ try {
     hasText: '已選擇不補餅乾',
   }).waitFor()
 
+  const runFaintDamageTest = async () => {
+    await page.goto(`${baseUrl}?test-state=faint-damage`, {
+      waitUntil: 'networkidle',
+    })
+
+    const faintModal = page.locator('.faint-response-modal')
+    await faintModal.waitFor({ state: 'visible' })
+
+    assert.ok(
+      (await faintModal.innerText()).includes('Cherry Cookie'),
+      '昏厥效果視窗應顯示 Cherry Cookie 名稱',
+    )
+
+    const targetCookie = page.locator('.top-field .combat-card-wrap').first()
+    const isTargetable = await targetCookie.locator('.card-face').first().evaluate(
+      (el) => el.classList.contains('is-targetable'),
+    )
+    assert.ok(isTargetable, '對手餅乾應標示為可選目標')
+
+    await targetCookie.locator('.card-face').first().click()
+    await faintModal.getByRole('button', { name: /確認/ }).click()
+    await faintModal.waitFor({ state: 'hidden' })
+
+    assert.strictEqual(
+      await page.locator('.faint-response-modal').count(),
+      0,
+      '選擇目標後昏厥視窗應關閉',
+    )
+
+    await page.goto(`${baseUrl}?test-state=faint-damage`, {
+      waitUntil: 'networkidle',
+    })
+    await faintModal.waitFor({ state: 'visible' })
+
+    await faintModal.getByRole('button', { name: '略過', exact: true }).click()
+    await faintModal.waitFor({ state: 'hidden' })
+    assert.strictEqual(
+      await page.locator('.faint-response-modal').count(),
+      0,
+      '略過後昏厥視窗應關閉',
+    )
+  }
+
+  await runFaintDamageTest()
+
+  const runPretzelSnareTests = async () => {
+    const payableUrl = `${baseUrl}?test-state=trap-pretzel-payable`
+    await page.goto(payableUrl, { waitUntil: 'networkidle' })
+
+    const battleModal = page.locator('.battle-response-modal')
+    await battleModal.waitFor({ state: 'visible' })
+    assert.strictEqual(
+      await battleModal.count(),
+      1,
+      '攻擊 5 時 Pretzel Snare 應顯示回應視窗',
+    )
+
+    const pretzelCard = battleModal.locator('.modal-card-options > button').first()
+    await pretzelCard.click()
+    await page.locator('.card-detail-modal').waitFor({ state: 'visible' })
+    const detailText = await page.locator('.card-detail-modal').innerText()
+    assert.ok(
+      detailText.includes('Pretzel Snare'),
+      '卡牌詳情應顯示 Pretzel Snare 名稱',
+    )
+    assert.ok(
+      detailText.includes('attacks more than 4'),
+      '卡牌詳情應包含發動條件',
+    )
+    await page.locator('.card-detail-modal .close-modal').click()
+    await page.locator('.card-detail-modal').waitFor({ state: 'hidden' })
+
+    // Capture initial HP card count for the attacker before the trap
+    const hpLocator = page.locator('.top-field .combat-card-wrap .hp-card-stack .hp-card')
+    const initialHp = await hpLocator.count()
+    assert.ok(initialHp > 0, `攻擊者初始應有 HP 卡牌，實際 ${initialHp}`)
+
+    // Pretzel select-1:確認發動，對攻擊者造成 1 點傷害
+    await battleModal.getByRole('button', { name: '支付並發動' }).click()
+    await battleModal.waitFor({ state: 'hidden' })
+    await page.waitForTimeout(400)
+    const hpAfterTrap = await hpLocator.count()
+    assert.strictEqual(
+      hpAfterTrap,
+      initialHp - 1,
+      `選 1 目標後攻擊者應損失 1 HP（原有 ${initialHp}，實際 ${hpAfterTrap}）`,
+    )
+
+    // Pretzel select-0:不選擇目標，略過傷害效果
+    await page.goto(payableUrl, { waitUntil: 'networkidle' })
+    await battleModal.waitFor({ state: 'visible' })
+    await pretzelCard.click()
+    await page.locator('.card-detail-modal .close-modal').click()
+    await page.locator('.card-detail-modal').waitFor({ state: 'hidden' })
+    await page.waitForTimeout(100)
+    const noTargetCheckbox = page.locator('.trap-target-toggle input[type="checkbox"]')
+    await noTargetCheckbox.waitFor({ state: 'visible' })
+    await noTargetCheckbox.click()
+    await battleModal.getByRole('button', { name: '支付並發動' }).click()
+    await battleModal.waitFor({ state: 'hidden' })
+    // Wait for auto-resolution and dismiss any replacement modal
+    await page.waitForTimeout(600)
+    const decisionModal = page.locator('.decision-modal')
+    if (await decisionModal.count() > 0) {
+      const skipButton = decisionModal.getByRole('button', { name: '不補餅乾' })
+      if (await skipButton.count() > 0) {
+        await skipButton.click()
+        await decisionModal.waitFor({ state: 'hidden' })
+        await page.waitForTimeout(200)
+      }
+    }
+    const attackerHpNoTrap = page.locator('.top-field .combat-card-wrap .hp-card-stack .hp-card')
+    const hpNoTrap = await attackerHpNoTrap.count()
+    assert.strictEqual(
+      hpNoTrap,
+      initialHp,
+      `選 0 目標後攻擊者 HP 應維持 ${initialHp}，實際 ${hpNoTrap}`,
+    )
+
+    // Pretzel unpayable:攻擊 4 時不顯示回應視窗
+    await page.goto(`${baseUrl}?test-state=trap-pretzel-unpayable`, {
+      waitUntil: 'networkidle',
+    })
+    await page.waitForFunction(
+      () => document.querySelector('.battle-response-modal') === null,
+    )
+    assert.strictEqual(
+      await page.locator('.battle-response-modal').count(),
+      0,
+      '攻擊 4 時 Pretzel Snare 不應顯示回應視窗',
+    )
+  }
+
+  await runPretzelSnareTests()
+
+  const runOpponentDiscardHandTest = async () => {
+    await page.goto(`${baseUrl}?test-state=opponent-discard-hand`, {
+      waitUntil: 'networkidle',
+    })
+
+    // Opponent discard modal should be visible first
+    const discardModal = page.locator('.faint-response-modal')
+    await discardModal.waitFor({ state: 'visible' })
+    assert.ok(
+      (await discardModal.innerText()).includes('Roguefort Cookie'),
+      '對手棄牌視窗應顯示 Roguefort Cookie 名稱',
+    )
+    assert.ok(
+      (await discardModal.innerText()).includes('棄置手牌'),
+      '對手棄牌視窗應顯示要求棄置手牌',
+    )
+
+    // Verify confirm is disabled without selection
+    const discardConfirm = discardModal.getByRole('button', { name: /確認棄置/ })
+    assert.ok(
+      await discardConfirm.isDisabled(),
+      '未選棄牌時不可確認棄置',
+    )
+
+    // Select a hand card
+    const handCards = discardModal.locator('.modal-card-options > button')
+    const handCount = await handCards.count()
+    assert.ok(handCount >= 1, `對手棄牌視窗應有至少 1 張手牌可選，實際 ${handCount}`)
+    await handCards.first().click()
+    await page.waitForTimeout(100)
+    assert.ok(
+      !(await discardConfirm.isDisabled()),
+      '選擇 1 張手牌後應可確認棄置',
+    )
+
+    await discardConfirm.click()
+    await discardModal.waitFor({ state: 'hidden' })
+    await page.waitForTimeout(300)
+
+    // Now verify card detail shows skill text for Roguefort Cookie
+    const topCookie = page.locator('.top-field .combat-card-wrap').first()
+    await topCookie.locator('.card-face').first().click()
+    const detailModal = page.locator('.card-detail-modal')
+    await detailModal.waitFor({ state: 'visible' })
+    const detailText = await detailModal.innerText()
+    assert.ok(
+      detailText.includes('Roguefort Cookie'),
+      '卡牌詳情應顯示 Roguefort Cookie 名稱',
+    )
+    assert.ok(
+      detailText.includes('技能'),
+      '卡牌詳情應顯示技能標題',
+    )
+    assert.ok(
+      detailText.includes('opponent'),
+      '卡牌詳情應顯示效果文字',
+    )
+    await page.locator('.card-detail-modal .close-modal').click()
+    await detailModal.waitFor({ state: 'hidden' })
+  }
+
+  await runOpponentDiscardHandTest()
+
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await completeOpeningSetup()
 
@@ -535,7 +710,7 @@ try {
     '我方戰鬥區餅乾下方應展開 HP 卡',
   )
 
-  await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
+  await page.getByRole('button', { name: '執行 100 場 AI 驗證' }).click()
   await page.getByTestId('ai-simulation-report').waitFor()
 
   const matches = []

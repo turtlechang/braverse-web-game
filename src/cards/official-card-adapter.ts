@@ -54,13 +54,19 @@ export const convertOfficialCardToGameCard = (
   const item = convertOfficialItemAbility(card)
   const stageAbility = convertOfficialStageAbility(card)
   const energyColor = getEnergyColor(card)
-  const effectData =
-    effectConversion.status === 'supported'
-      ? {
-          effectText: effectConversion.sourceText,
-          effects: effectConversion.effects,
-        }
-      : {}
+  const hasSupportedEffect = effectConversion.status === 'supported'
+  const effectData = hasSupportedEffect
+    ? {
+        effectText: effectConversion.sourceText,
+        effects: effectConversion.effects,
+      }
+    : trap
+      ? { effectText: trap.text, effects: trap.effects }
+      : item
+        ? { effectText: item.text, effects: item.effects }
+        : stageAbility
+          ? { effectText: stageAbility.text, effects: stageAbility.effects }
+          : {}
 
   if (card.type === 'extra' || card.type === 'unknown') {
     return {

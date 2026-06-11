@@ -523,6 +523,141 @@ describe('AI break-to-trash target selection', () => {
     )
   })
 
+  it('resolves faint effect by selecting lowest HP opponent target', () => {
+    const base = createDemoGame()
+    const targetCookie = base.players['player-one'].battleArea[0]
+    const faintCookie: GameCard & { skill: CardSkill } = {
+      ...base.players['player-two'].battleArea[0].card,
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'When this Cookie faints, select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        faint: true,
+      },
+    }
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: faintCookie.instanceId,
+          effect: {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          context: {
+            sourcePlayerId: 'player-two',
+            sourceInstanceId: faintCookie.instanceId,
+          },
+        },
+      ],
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [],
+          breakArea: [faintCookie],
+          hand: base.players['player-two'].hand.filter(
+            (c) => c.type !== 'cookie',
+          ),
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('resolve-faint')
+    expect(
+      decision.state.players['player-one'].battleArea[0].hpCards.length,
+    ).toBe(targetCookie.hpCards.length - 1)
+  })
+
+  it('skips faint effect when target min is 0 and no candidates wanted', () => {
+    const base = createDemoGame()
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'faint-cookie',
+          effect: {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          context: {
+            sourcePlayerId: 'player-two',
+            sourceInstanceId: 'faint-cookie',
+          },
+        },
+      ],
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [],
+          breakArea: [],
+          hand: base.players['player-two'].hand.filter(
+            (c) => c.type !== 'cookie',
+          ),
+        },
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('resolve-faint')
+    expect(decision.state.pendingFaintEffects).toBeUndefined()
+  })
+
+  it('waits for the correct player to resolve faint effect', () => {
+    const base = createDemoGame()
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'p1-cookie',
+          effect: {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'p1-cookie',
+          },
+        },
+      ],
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('idle')
+    expect(decision.description).toContain('等待')
+  })
+
   it('selects 0 break area targets when no candidates exist', () => {
     let state = createDemoGame()
     const aiCookie = {
@@ -552,5 +687,57 @@ describe('AI break-to-trash target selection', () => {
 
     expect(decision.action).toBe('activate-skill')
     expect(decision.effectSelections![0].targetIds).toHaveLength(0)
+  })
+})
+
+describe('AI opponent hand discard decision', () => {
+  it('AI deterministically discards hand cards when forced', () => {
+    const state = createDemoGame()
+    const handCards = state.players['player-two'].hand.slice(0, 3)
+    const discardState: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          hand: handCards,
+        },
+      },
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingOpponentHandDiscard: {
+        playerId: 'player-two',
+        count: 1,
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'player-one-starter-1',
+        sourceCardName: 'Roguefort Cookie',
+        effectText: 'opponent-discard-hand',
+      },
+    }
+    const decision = takeAiStep(discardState, 'player-two')
+    expect(decision.state.pendingOpponentHandDiscard).toBeNull()
+    expect(decision.state.players['player-two'].hand).toHaveLength(
+      handCards.length - 1,
+    )
+  })
+
+  it('AI waits when opponent discard is for the other player', () => {
+    const state = createDemoGame()
+    const waitState: GameState = {
+      ...state,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingOpponentHandDiscard: {
+        playerId: 'player-one',
+        count: 1,
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'player-two-starter-1',
+        sourceCardName: 'Roguefort Cookie',
+        effectText: 'opponent-discard-hand',
+      },
+    }
+    const decision = takeAiStep(waitState, 'player-two')
+    expect(decision.action).toBe('idle')
+    expect(decision.description).toContain('等待')
   })
 })

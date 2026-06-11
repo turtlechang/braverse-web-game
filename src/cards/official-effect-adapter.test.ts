@@ -7,6 +7,7 @@ import {
   convertOfficialCardEffectSet,
   convertOfficialCookieSkill,
   convertOfficialStageAbility,
+  convertOfficialTrapAbility,
   type OfficialCardRecord,
 } from '.'
 
@@ -232,9 +233,10 @@ describe('Starter Deck RED official effect adapter', () => {
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(7)
+      expect(supported).toHaveLength(8)
       expect(supported.map((c) => c.cardNumber).sort()).toEqual(
         [
+          'ST2-001',
           'ST2-008',
           'ST2-010',
           'ST2-011',
@@ -262,6 +264,23 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
+    it('ST2-001 Roguefort Cookie opponent-discard-hand is supported', () => {
+      const conversion = convertOfficialCardEffects(findYellowCard('ST2-001'))
+      expect(conversion).toMatchObject({
+        status: 'supported',
+        cardNumber: 'ST2-001',
+        effects: [{ kind: 'opponent-discard-hand', count: 1 }],
+      })
+
+      const skill = convertOfficialCookieSkill(findYellowCard('ST2-001'))
+      expect(skill).toMatchObject({
+        trigger: 'on-play',
+        oncePerTurn: false,
+        cost: { yellow: 1 },
+        effects: [{ kind: 'opponent-discard-hand', count: 1 }],
+      })
+    })
+
     it('ST2-016 Flimsy Screwdriver item has disable-flip effect', () => {
       expect(
         convertOfficialCardEffects(findYellowCard('ST2-016')),
@@ -278,12 +297,18 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('rejects ST2-021 (If opponent Cookie attacks more than)', () => {
-      expect(
-        convertOfficialCardEffects(findYellowCard('ST2-021')),
-      ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+    it('ST2-021 Pretzel Snare trap ability parses cost, condition, and damage', () => {
+      const conversion = convertOfficialTrapAbility(findYellowCard('ST2-021'))
+      expect(conversion).toMatchObject({
+        cost: { energy: { yellow: 2 }, discardHand: 0 },
+        condition: { kind: 'attacker-attack-more-than', amount: 4 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       })
     })
 

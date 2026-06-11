@@ -55,6 +55,10 @@ export const describeEffect = (effect: CardEffect) => {
     return '選擇 1 張符合等級的己方餅乾，直立放入支援區。'
   }
 
+  if (effect.kind === 'opponent-discard-hand') {
+    return `對手必須棄置 ${effect.count} 張手牌。`
+  }
+
   const target =
     effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
   const count =
@@ -130,6 +134,10 @@ export const describeEffectResult = (
 
   if (effect.kind === 'battle-to-support') {
     return `${targetNames.join('、')}已移至支援區。`
+  }
+
+  if (effect.kind === 'opponent-discard-hand') {
+    return `對手已棄置 ${effect.count} 張手牌。`
   }
 
   if (targetNames.length === 0) {
