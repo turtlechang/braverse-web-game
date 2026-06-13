@@ -1,63 +1,22 @@
-﻿import { useEffect, useState } from 'react'
-import { Sparkles, Swords } from 'lucide-react'
+﻿import { Sparkles, Swords } from 'lucide-react'
 import './App.css'
 import {
-  activateCookieSkill,
-  activateStage,
-  advancePhase,
-  beginAttack,
-  canActivateCookieSkill,
   canActivateStage,
   canPlayItem,
   canPlayStage,
-  createDemoGame,
-  createDemoSetupGame,
+  applyGameCommand,
   deployCookie,
-  drawMulliganCompensation,
-  executeCardEffect,
-  finalizePendingReplacements,
-  getAttackEnergyCost,
-  getBreakToTrashCandidates,
-  getEffectTargetCandidates,
-  getFaintEffectCandidates,
-  getFaintEffectMinMax,
-  getSupportEffectCandidates,
-  getTrashCookieCandidates,
-  getRefreshCandidates,
-  getCurrentReplacementTask,
-  getReplacementCandidates,
-  getTrapCandidates,
-  getTrapTargetCandidates,
-  forceMulliganOpeningHand,
-  isEffectConditionMet,
-  isEffectUntargeted,
-  keepOpeningHand,
-  mulliganOpeningHand,
   placeSupportCard,
-  playItem,
   playStage,
   playTrap,
   refreshDeck,
   replaceDefeatedCookie,
   resolveBattleAutomatically,
-  resolveFaintEffect,
   resolveFlip,
-  resolveOpponentHandDiscard,
   selectEnergyPayment,
-  selectStartingCookie,
-  simulateAiMatch,
-  skipCookieOnPlay,
   skipDefeatedCookieReplacement,
   skipTrap,
-  takeAiStep,
-  validateEnergyPayment,
-  type AiMatchResult,
   type DeckChoice,
-  type GameCard,
-  type GameState,
-  type PlayerId,
-  type SkillTrigger,
-  type CardAbility,
 } from './game'
 import { BattleRow } from './components/battle/BattleRow'
 import { PhaseRail } from './components/layout/PhaseRail'
@@ -68,21 +27,7 @@ import {
   SimulationReport,
 } from './components/panels/GameStatusPanels'
 import { phaseLabels, deckChoiceLabel } from './components/gameUiLabels'
-import { describeEffectResult } from './components/effects/effectUiUtils'
 import { EffectPanel } from './components/effects/EffectPanel'
-import type { PendingEffect } from './components/effects/effectUiTypes'
-import {
-  createBreakToTrashDemoState,
-  createFaintDamageDemoState,
-  createFlipResponseDemoState,
-  createItemUsageDemoState,
-  createPretzelSnareDemoState,
-  createReplacementChoiceDemoState,
-  createOpponentDiscardHandDemoState,
-  createStageUsageDemoState,
-  createTrapResponseDemoState,
-  parseTestStateConfig,
-} from './game/demo'
 import {
   DecisionModal,
   CardDetailModal,
@@ -95,11 +40,13 @@ import {
   OpeningSetupModal,
   type OpeningSetupStep,
 } from './components/modals/GameModals'
+import { parseTestStateConfig } from './game/demo'
+import { useMatchDialogs } from './hooks/useMatchDialogs'
+import { usePendingEffect } from './hooks/usePendingEffect'
+import { useAiTurn } from './hooks/useAiTurn'
+import { useMatchController } from './hooks/useMatchController'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
-
-const opponentOf = (playerId: PlayerId): PlayerId =>
-  playerId === 'player-one' ? 'player-two' : 'player-one'
 
 const testStateConfig = parseTestStateConfig(
   window.location.search,
@@ -107,1174 +54,149 @@ const testStateConfig = parseTestStateConfig(
 )
 
 function App() {
-  const [game, setGame] = useState(() => {
-    if (testStateConfig?.kind === 'break-to-trash') {
-      return createBreakToTrashDemoState(testStateConfig.level)
-    }
-    if (testStateConfig?.kind === 'trap-response') {
-      return createTrapResponseDemoState(testStateConfig.payable)
-    }
-    if (testStateConfig?.kind === 'flip-response') {
-      return createFlipResponseDemoState()
-    }
-    if (testStateConfig?.kind === 'replacement-choice') {
-      return createReplacementChoiceDemoState()
-    }
-    if (testStateConfig?.kind === 'item-usage') {
-      return createItemUsageDemoState(testStateConfig.payable)
-    }
-    if (testStateConfig?.kind === 'stage-usage') {
-      return createStageUsageDemoState(testStateConfig.payable)
-    }
-    if (testStateConfig?.kind === 'faint-damage') {
-      return createFaintDamageDemoState()
-    }
-    if (testStateConfig?.kind === 'trap-pretzel') {
-      return createPretzelSnareDemoState(testStateConfig.attack)
-    }
-    if (testStateConfig?.kind === 'opponent-discard-hand') {
-      return createOpponentDiscardHandDemoState()
-    }
-    return createDemoSetupGame('player-one')
+  const dialogs = useMatchDialogs()
+  const match = useMatchController({ testStateConfig })
+  const pending = usePendingEffect({
+    game: match.game,
+    setGame: match.setGame,
+    viewerPlayerId: match.viewerPlayerId,
+    setMessage: match.setMessage,
+    clearAttacker: match.clearAttacker,
+    setInspectedHpPile: dialogs.openHpPile,
+    hasFaint: match.hasFaint,
+    faintTargetIds: match.faintTargetIds,
+    selectedFaintTargetIds: match.selectedFaintTargetIds,
+    faintMinMax: { min: match.faintMin, max: match.faintMax },
+    setSelectedFaintTargetIds: match.setSelectedFaintTargetIds,
   })
-  const [setupStep, setSetupStep] = useState<OpeningSetupStep | null>(
-    testStateConfig === null ? 'rps' : null,
-  )
-  const [setupMessage, setSetupMessage] = useState(
-    '選擇剪刀、石頭或布，勝者取得先後攻選擇權。',
-  )
-  const [deckConfig, setDeckConfig] = useState<{
-    player: DeckChoice
-    ai: DeckChoice
-  }>({
-    player: 'red',
-    ai: 'red',
+  const ai = useAiTurn({
+    game: match.game,
+    setGame: match.setGame,
+    setMessage: match.setMessage,
+    showPause: dialogs.showPause,
+    aiControlsCurrentState: match.aiControlsCurrentState,
+    pendingEffect: pending.pendingEffect,
+    faintActive: pending.faintActive,
+    deckConfig: match.deckConfig,
   })
-  const [selectedAttackerId, setSelectedAttackerId] = useState<string | null>(
-    null,
-  )
-  const [selectedAttackPaymentIds, setSelectedAttackPaymentIds] = useState<
-    string[]
-  >([])
-  const [message, setMessage] = useState(() => {
-    if (testStateConfig?.kind === 'break-to-trash') {
-      return testStateConfig.level === 1
-        ? '測試狀態：休息區有 1 張 LV.1 餅乾。'
-        : '測試狀態：休息區有 1 張 LV.2 餅乾。'
-    }
-    if (testStateConfig?.kind === 'replacement-choice') {
-      return '測試狀態：選擇是否補餅乾。'
-    }
-    if (testStateConfig?.kind === 'item-usage') {
-      return testStateConfig.payable
-        ? '測試狀態：合法物品卡使用。'
-        : '測試狀態：不合法物品卡使用（非主要階段）。'
-    }
-    if (testStateConfig?.kind === 'stage-usage') {
-      return testStateConfig.payable
-        ? '測試狀態：合法場景卡放置與啟動。'
-        : '測試狀態：不合法場景卡啟動（已橫置）。'
-    }
-    if (testStateConfig?.kind === 'faint-damage') {
-      return '測試狀態：Cherry Cookie 昏厥效果選擇目標。'
-    }
-    if (testStateConfig?.kind === 'trap-pretzel') {
-      return testStateConfig.attack === 5
-        ? '測試狀態：Pretzel Snare 可支付（攻擊 5）。'
-        : '測試狀態：Pretzel Snare 不可支付（攻擊 4）。'
-    }
-    if (testStateConfig?.kind === 'opponent-discard-hand') {
-      return '測試狀態：Roguefort Cookie OnPlay 對手棄牌。'
-    }
-    return '推進階段，開始這場對戰。'
-  })
-  const [effectHistory, setEffectHistory] = useState<string[]>([])
-  const [pendingEffect, setPendingEffect] =
-    useState<PendingEffect | null>(null)
-  const [suspendedEffect, setSuspendedEffect] =
-    useState<PendingEffect | null>(null)
-  const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
-  const [inspectedDiscardPlayerId, setInspectedDiscardPlayerId] =
-    useState<PlayerId | null>(null)
-  const [inspectedHpPile, setInspectedHpPile] = useState<{
-    title: string
-    cards: GameCard[]
-  } | null>(null)
-  const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
-  const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
-  const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
-    string[]
-  >([])
-  const [selectedFaintTargetIds, setSelectedFaintTargetIds] = useState<
-    string[]
-  >([])
-  const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
-    useState<string[]>([])
-  const [showPause, setShowPause] = useState(false)
-  const [showDeckList, setShowDeckList] = useState(false)
-  const [deckListOwner, setDeckListOwner] = useState<'player' | 'ai'>('player')
-  const [aiThinking, setAiThinking] = useState(false)
-  const [aiActionCount, setAiActionCount] = useState(0)
-  const [simulationResults, setSimulationResults] = useState<
-    AiMatchResult[] | null
-  >(null)
-  const [attackShakeId, setAttackShakeId] = useState<string | null>(null)
-  const [damageFlashId, setDamageFlashId] = useState<string | null>(null)
-  const [faintAnimIds, setFaintAnimIds] = useState<Set<string>>(new Set())
-  const [drawAnimIds, setDrawAnimIds] = useState<Set<string>>(new Set())
+
+  const faintActive = pending.faintActive
 
   const resetGame = (
     nextConfig: { player: DeckChoice; ai: DeckChoice },
     nextMessage: string,
   ) => {
-    setGame(createDemoSetupGame('player-one', nextConfig))
-    setSetupStep('rps')
-    setSetupMessage('選擇剪刀、石頭或布，勝者取得先後攻選擇權。')
-    setSelectedAttackerId(null)
-    setSelectedAttackPaymentIds([])
-    setPendingEffect(null)
-    setSuspendedEffect(null)
-    setSelectedFaintTargetIds([])
-    setEffectHistory([])
-    setAiActionCount(0)
-    setSimulationResults(null)
-    setMessage(nextMessage)
-    setAttackShakeId(null)
-    setDamageFlashId(null)
-    setFaintAnimIds(new Set())
-    setDrawAnimIds(new Set())
+    match.resetMatchState(nextConfig)
+    pending.resetEffectContext()
+    ai.resetAiCounts()
+    match.setMessage(nextMessage)
   }
 
-  const processAiOpeningHand = (initialState: GameState): GameState => {
-    let nextState = initialState
-    const aiId: PlayerId = 'player-two'
-    const playerId: PlayerId = 'player-one'
-
-    if (
-      !nextState.players[aiId].hand.some(
-        (card) => card.type === 'cookie',
-      )
-    ) {
-      nextState = mulliganOpeningHand(nextState, aiId)
-    } else {
-      nextState = keepOpeningHand(nextState, aiId)
-    }
-
-    let guard = 0
-    while (
-      !nextState.players[aiId].hand.some(
-        (card) => card.type === 'cookie',
-      ) &&
-      guard < 100
-    ) {
-      nextState = forceMulliganOpeningHand(nextState, aiId)
-      nextState = drawMulliganCompensation(nextState, playerId)
-      guard += 1
-    }
-
-    return nextState
-  }
-
-  const beginOrderedSetup = (firstPlayerId: PlayerId) => {
-    let nextGame = createDemoSetupGame(firstPlayerId, deckConfig)
-    if (firstPlayerId === 'player-two') {
-      nextGame = processAiOpeningHand(nextGame)
-    }
-    setGame(nextGame)
-    setSetupStep('mulligan')
-    setSetupMessage(
-      firstPlayerId === 'player-one'
-        ? '你是先攻玩家，請先決定是否更換全部手牌。'
-        : 'AI 已完成調度，現在輪到你決定是否更換全部手牌。',
-    )
-  }
-
-  const handleRps = (choice: 'rock' | 'paper' | 'scissors') => {
-    const choices = ['rock', 'paper', 'scissors'] as const
-    const aiChoice = choices[Math.floor(Math.random() * choices.length)]
-    if (choice === aiChoice) {
-      setSetupMessage('本次猜拳平手，請再選一次。')
-      return
-    }
-
-    const playerWins =
-      (choice === 'rock' && aiChoice === 'scissors') ||
-      (choice === 'paper' && aiChoice === 'rock') ||
-      (choice === 'scissors' && aiChoice === 'paper')
-
-    if (playerWins) {
-      setSetupStep('choose-order')
-      setSetupMessage('你猜拳獲勝，可以選擇先攻或後攻。')
-      return
-    }
-
-    setSetupMessage('AI 猜拳獲勝並選擇先攻。')
-    beginOrderedSetup('player-two')
-  }
-
-  const handlePlayerMulligan = (replaceAll: boolean) => {
-    let nextGame = replaceAll
-      ? mulliganOpeningHand(game, 'player-one')
-      : keepOpeningHand(game, 'player-one')
-    let forcedCount = 0
-
-    while (
-      !nextGame.players['player-one'].hand.some(
-        (card) => card.type === 'cookie',
-      ) &&
-      forcedCount < 100
-    ) {
-      nextGame = forceMulliganOpeningHand(nextGame, 'player-one')
-      nextGame = drawMulliganCompensation(nextGame, 'player-two')
-      forcedCount += 1
-    }
-
-    if (nextGame.firstPlayerId === 'player-one') {
-      nextGame = processAiOpeningHand(nextGame)
-    }
-
-    setGame(nextGame)
-    setSetupStep('starting-cookie')
-    setSetupMessage(
-      forcedCount > 0
-        ? `已完成 ${forcedCount} 次強制調度；AI 每次均接受補償抽牌。請選擇起始餅乾。`
-        : '雙方調度完成，請選擇一張餅乾作為起始餅乾。',
-    )
-  }
-
-  const handleStartingCookie = (instanceId: string) => {
-    let nextGame = selectStartingCookie(game, 'player-one', instanceId)
-    const aiCookie = nextGame.players['player-two'].hand.find(
-      (card) => card.type === 'cookie',
-    )
-    if (!aiCookie) {
-      setSetupMessage('AI 沒有可放置的起始餅乾。')
-      return
-    }
-    nextGame = selectStartingCookie(
-      nextGame,
-      'player-two',
-      aiCookie.instanceId,
-    )
-    setGame(nextGame)
-    setSetupStep(null)
-    setMessage(
-      `${nextGame.players[nextGame.firstPlayerId].name}先攻，正式進入第一回合。`,
-    )
-  }
-  const activePlayer = game.players[game.activePlayerId]
-  const viewerPlayerId: PlayerId = 'player-one'
-  const opponentId = opponentOf(viewerPlayerId)
-  const currentEffect =
-    pendingEffect?.effects[pendingEffect.effectIndex] ?? null
-  const effectTargetCandidates =
-    pendingEffect &&
-    currentEffect &&
-    !isEffectUntargeted(currentEffect) &&
-    currentEffect.kind !== 'break-to-trash' &&
-    currentEffect.kind !== 'support-to-trash' &&
-    currentEffect.kind !== 'support-to-hand' &&
-    currentEffect.kind !== 'trash-to-battle'
-      ? getEffectTargetCandidates(
-          game,
-          pendingEffect.context,
-          currentEffect.target,
-        )
-      : []
-  const supportEffectCandidates =
-    pendingEffect &&
-    currentEffect &&
-    (currentEffect.kind === 'support-to-trash' ||
-      currentEffect.kind === 'support-to-hand')
-      ? getSupportEffectCandidates(game, pendingEffect.context)
-      : []
-  const trashCookieCandidates =
-    pendingEffect && currentEffect?.kind === 'trash-to-battle'
-      ? getTrashCookieCandidates(game, pendingEffect.context)
-      : []
-  const nonBattleEffectCandidateCards = [
-    ...supportEffectCandidates.map((support) => support.card),
-    ...trashCookieCandidates,
-  ]
-  const breakToTrashCandidates =
-    pendingEffect && currentEffect?.kind === 'break-to-trash'
-      ? getBreakToTrashCandidates(
-          game,
-          pendingEffect.context,
-          currentEffect,
-        )
-      : []
-  const pendingFaint =
-    game.pendingFaintEffects && game.pendingFaintEffects.length > 0
-      ? game.pendingFaintEffects[0]
-      : null
-  const faintSourceCard =
-    pendingFaint
-      ? (() => {
-          for (const player of Object.values(game.players)) {
-            const found =
-              player.breakArea.find(
-                (cookie) => cookie.instanceId === pendingFaint.sourceInstanceId,
-              ) ??
-              player.battleArea.find(
-                (cookie) => cookie.card.instanceId === pendingFaint.sourceInstanceId,
-              )?.card
-            if (found) return found
-          }
-          return null
-        })()
-      : null
-  const faintCandidates =
-    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
-      ? getFaintEffectCandidates(game)
-      : []
-  const faintActive =
-    Boolean(pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId) &&
-    !pendingEffect
-  const faintMinMax = pendingFaint ? getFaintEffectMinMax(pendingFaint.effect) : { min: 0, max: 0 }
-  const faintMin = faintMinMax.min
-  const faintMax = faintMinMax.max
-  const effectTargetIds = faintActive
-    ? new Set(faintCandidates.map((cookie) => cookie.card.instanceId))
-    : new Set(
-        effectTargetCandidates.map((cookie) => cookie.card.instanceId),
-      )
-  const breakEffectTargetIds = faintActive
-    ? new Set<string>()
-    : new Set(breakToTrashCandidates.map((card) => card.instanceId))
-  const selectedEffectTargetIds = faintActive
-    ? new Set(selectedFaintTargetIds)
-    : new Set(pendingEffect?.selectedTargetIds ?? [])
-  const selectedSkillPaymentIds = new Set(
-    pendingEffect?.selectedPaymentIds ?? [],
-  )
-  const selectedAttackPaymentIdSet = new Set(selectedAttackPaymentIds)
-  const selectedAttacker = activePlayer.battleArea.find(
-    (cookie) => cookie.card.instanceId === selectedAttackerId,
-  )
-  const selectedAttackCost = selectedAttacker
-    ? getAttackEnergyCost(selectedAttacker.card)
-    : {}
-  const attackPaymentValidation = selectedAttacker
-    ? validateEnergyPayment(
-        selectedAttackCost,
-        activePlayer.supportArea,
-        selectedAttackPaymentIds,
-      )
-    : { valid: false, reason: '尚未選擇攻擊餅乾。' }
-  const replacementTask = getCurrentReplacementTask(game)
-  const aiControlsCurrentState =
-    game.pendingFaintEffects && game.pendingFaintEffects.length > 0
-      ? game.pendingFaintEffects[0].sourcePlayerId === 'player-two'
-      : game.pendingRefresh
-          ? game.pendingRefresh.playerId === 'player-two'
-          : game.pendingOnPlay
-              ? game.pendingOnPlay.playerId === 'player-two'
-            : game.pendingOpponentHandDiscard
-                ? game.pendingOpponentHandDiscard.playerId === 'player-two'
-              : replacementTask
-                  ? replacementTask.playerId === 'player-two'
-                : game.pendingBattle
-                  ? game.pendingBattle.stage === 'damage' ||
-                    (game.pendingBattle.stage === 'flip'
-                      ? game.pendingBattle.damagePlayerId ??
-                        game.pendingBattle.defenderPlayerId
-                      : game.pendingBattle.defenderPlayerId) === 'player-two'
-                  : game.activePlayerId === 'player-two'
-
-  useEffect(() => {
-    if (pendingEffect || effectHistory.length === 0) return
-
-    const timer = window.setTimeout(() => setEffectHistory([]), 1000)
-    return () => window.clearTimeout(timer)
-  }, [effectHistory, pendingEffect])
-
-  useEffect(() => {
-    const battle = game.pendingBattle
-    if (
-      battle?.stage !== 'trap' ||
-      battle.defenderPlayerId !== viewerPlayerId ||
-      getTrapCandidates(game, viewerPlayerId).length > 0
-    ) {
-      return
-    }
-
-    const timer = window.setTimeout(() => {
-      setSelectedTrapId(null)
-      setGame((current) => {
-        const currentBattle = current.pendingBattle
-        if (
-          currentBattle?.stage !== 'trap' ||
-          currentBattle.defenderPlayerId !== viewerPlayerId ||
-          getTrapCandidates(current, viewerPlayerId).length > 0
-        ) {
-          return current
-        }
-        return skipTrap(current, viewerPlayerId)
-      })
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-  }, [game, viewerPlayerId])
-
-  useEffect(() => {
-    if (
-      showPause ||
-      game.status !== 'playing' ||
-      !aiControlsCurrentState ||
-      pendingEffect ||
-      faintActive
-    ) {
-      return
-    }
-
-    if (aiActionCount >= 200) {
-      return
-    }
-
-    const thinkingTimer = window.setTimeout(
-      () => setAiThinking(true),
-      0,
-    )
-    const timer = window.setTimeout(() => {
-      const decision = takeAiStep(game, 'player-two')
-      setAiThinking(false)
-
-      if (decision.action === 'error' || decision.state === game) {
-        setMessage(`AI 停止：${decision.description}`)
-        return
-      }
-
-      setGame(decision.state)
-      setMessage(`AI：${decision.description}`)
-      setAiActionCount((count) => count + 1)
-    }, 450)
-
-    return () => {
-      window.clearTimeout(thinkingTimer)
-      window.clearTimeout(timer)
-    }
-  }, [
-    aiActionCount,
-    aiControlsCurrentState,
-    faintActive,
-    game,
-    pendingEffect,
-    showPause,
-  ])
-
-  useEffect(() => {
-    if (
-      !suspendedEffect ||
-      pendingEffect ||
-      game.status !== 'playing'
-    ) {
-      return
-    }
-
-    const viewerBlocks =
-      (game.pendingRefresh?.playerId === viewerPlayerId) ||
-      (game.pendingOnPlay?.playerId === viewerPlayerId)
-    if (viewerBlocks) return
-
-    const timer = window.setTimeout(() => {
-      setPendingEffect(suspendedEffect)
-      setSuspendedEffect(null)
-    }, 0)
-    return () => window.clearTimeout(timer)
-  }, [
-    suspendedEffect,
-    pendingEffect,
-    game.pendingRefresh,
-    game.pendingOnPlay,
-    game.status,
-    viewerPlayerId,
-  ])
-
-  const beginCookieSkill = (
-    nextGame: GameState,
-    card: GameCard | undefined,
-    playerId: PlayerId,
-    trigger: SkillTrigger,
-    triggerLabel: string,
-    optional = false,
-  ) => {
-    if (
-      !card?.skill ||
-      card.skill.trigger !== trigger ||
-      nextGame.status !== 'playing'
-    ) {
-      return
-    }
-
-    const context = {
-      sourcePlayerId: playerId,
-      sourceInstanceId: card.instanceId,
-    }
-    const availableEffects = card.skill.effects.filter((effect) =>
-      isEffectConditionMet(nextGame, context, effect),
-    )
-
-    if (availableEffects.length === 0) {
-      if (trigger === 'on-play' && nextGame.pendingOnPlay) {
-        setGame(
-          skipCookieOnPlay(nextGame, playerId, card.instanceId),
-        )
-      }
-      setMessage(`${card.name}的效果尚未滿足發動條件。`)
-      return
-    }
-
-    if (
-      !canActivateCookieSkill(
-        nextGame,
-        playerId,
-        card.instanceId,
-        trigger,
-      )
-    ) {
-      if (trigger === 'on-play' && nextGame.pendingOnPlay) {
-        setGame(
-          skipCookieOnPlay(nextGame, playerId, card.instanceId),
-        )
-      }
-      setMessage(`${card.name}目前無法支付或發動技能。`)
-      return
-    }
-
-    setSelectedAttackerId(null)
-    setSelectedAttackPaymentIds([])
-    setPendingEffect({
-      sourceCard: card,
-      context,
-      skill: card.skill,
-      trigger,
-      effects: availableEffects,
-      effectIndex: 0,
-      selectedTargetIds: [],
-      selectedPaymentIds: [],
-      skillActivated: false,
-      optional,
-      triggerLabel,
-      sourceKind: 'cookie',
-    })
-    setMessage(`${card.name}的技能等待支付能量並選擇目標。`)
-  }
-
-  const beginCardAbility = (
-    card: GameCard,
-    ability: CardAbility,
-    sourceKind: 'item' | 'stage',
-    triggerLabel: string,
-  ) => {
-    const context = {
-      sourcePlayerId: viewerPlayerId,
-      sourceInstanceId: card.instanceId,
-    }
-    const effects = ability.effects.filter((effect) =>
-      isEffectConditionMet(game, context, effect),
-    )
-    if (effects.length === 0) {
-      setMessage(`${card.name}目前未滿足使用條件。`)
-      return
-    }
-    setPendingEffect({
-      sourceCard: card,
-      context,
-      skill: {
-        trigger: 'activate',
-        oncePerTurn: false,
-        yourTurn: true,
-        restSource: sourceKind === 'stage',
-        cost: ability.cost,
-        text: ability.text,
-        effects,
-      },
-      trigger: 'activate',
-      effects,
-      effectIndex: 0,
-      selectedTargetIds: [],
-      selectedPaymentIds: [],
-      skillActivated: false,
-      optional: false,
-      triggerLabel,
-      sourceKind,
-    })
-    setSelectedAttackerId(null)
-    setSelectedAttackPaymentIds([])
-    setMessage(`${card.name}等待支付能量並選擇目標。`)
-  }
-
-  useEffect(() => {
-    if (
-      !game.pendingOnPlay ||
-      game.pendingOnPlay.playerId !== viewerPlayerId ||
-      pendingEffect ||
-      faintActive ||
-      game.pendingOpponentHandDiscard
-    ) {
-      return
-    }
-
-    const timer = window.setTimeout(() => {
-      const card = game.players[viewerPlayerId].battleArea.find(
-        (cookie) =>
-          cookie.card.instanceId === game.pendingOnPlay?.sourceInstanceId,
-      )?.card
-      if (card) {
-        beginCookieSkill(
-          game,
-          card,
-          viewerPlayerId,
-          'on-play',
-          'OnPlay 登場觸發',
-          true,
-        )
-      }
-    }, 0)
-    return () => window.clearTimeout(timer)
-  }, [
-    game.pendingOnPlay,
-    game.pendingOpponentHandDiscard,
-    pendingEffect,
-    faintActive,
-    viewerPlayerId,
-    game,
-  ])
-
-  const runAction = (
-    action: (current: GameState) => GameState,
-    successMessage: string,
-    onSuccess?: (nextGame: GameState) => void,
-  ) => {
-    try {
-      const nextGame = action(game)
-      const prevGame = game
-      setGame(nextGame)
-      setMessage(successMessage)
-
-      // 攻擊動畫：宣告攻擊進入 damage 階段
-      if (
-        (!prevGame.pendingBattle && nextGame.pendingBattle) ||
-        (prevGame.pendingBattle &&
-          nextGame.pendingBattle &&
-          prevGame.pendingBattle.stage !== 'damage' &&
-          nextGame.pendingBattle.stage === 'damage')
-      ) {
-        setAttackShakeId(nextGame.pendingBattle!.attackerInstanceId)
-        window.setTimeout(() => setAttackShakeId(null), 500)
-      }
-
-      // 傷害閃爍：damage 階段 remainingDamage 減少
-      if (
-        prevGame.pendingBattle &&
-        nextGame.pendingBattle &&
-        prevGame.pendingBattle.remainingDamage >
-          nextGame.pendingBattle.remainingDamage
-      ) {
-        const targetId =
-          nextGame.pendingBattle.damageTargetInstanceId ??
-          nextGame.pendingBattle.targetInstanceId
-        setDamageFlashId(targetId)
-        window.setTimeout(() => setDamageFlashId(null), 600)
-      }
-
-      // 昏厥動畫：餅乾從戰鬥區消失
-      const prevBattleIds = new Set(
-        Object.values(prevGame.players).flatMap((p) =>
-          p.battleArea.map((c) => c.card.instanceId),
-        ),
-      )
-      const nextBattleIds = new Set(
-        Object.values(nextGame.players).flatMap((p) =>
-          p.battleArea.map((c) => c.card.instanceId),
-        ),
-      )
-      const faintedIds = [...prevBattleIds].filter(
-        (id) => !nextBattleIds.has(id),
-      )
-      if (faintedIds.length > 0) {
-        setFaintAnimIds(new Set(faintedIds))
-        window.setTimeout(() => setFaintAnimIds(new Set()), 800)
-      }
-
-      // 抽牌動畫：手牌增加
-      for (const pid of ['player-one', 'player-two'] as const) {
-        const prevHand = prevGame.players[pid].hand
-        const nextHand = nextGame.players[pid].hand
-        if (nextHand.length > prevHand.length) {
-          const newIds = nextHand
-            .filter(
-              (card) =>
-                !prevHand.some((p) => p.instanceId === card.instanceId),
-            )
-            .map((card) => card.instanceId)
-          if (newIds.length > 0) {
-            setDrawAnimIds(new Set(newIds))
-            window.setTimeout(() => setDrawAnimIds(new Set()), 700)
-          }
-        }
-      }
-
-      onSuccess?.(nextGame)
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : '動作無法執行。')
-    }
-  }
-
-  const handleAdvancePhase = () => {
-    if (pendingEffect || faintActive) return
-    runAction(advancePhase, '階段已推進。')
-    setSelectedAttackerId(null)
-    setSelectedAttackPaymentIds([])
-    setSelectedFaintTargetIds([])
-  }
-
-  const handleAttackTarget = (targetInstanceId: string) => {
-    if (!selectedAttackerId || !attackPaymentValidation.valid) return
-
-    const attacker = activePlayer.battleArea.find(
-      (cookie) => cookie.card.instanceId === selectedAttackerId,
-    )
-
-    runAction(
-      (current) =>
-        beginAttack(
-          current,
-          selectedAttackerId,
-          targetInstanceId,
-          selectedAttackPaymentIds,
-      ),
-      `${attacker?.card.name ?? '餅乾'}已宣告攻擊。`,
-      () => {
-        setSelectedAttackerId(null)
-        setSelectedAttackPaymentIds([])
-      },
-    )
-  }
-
-  const toggleAttackPayment = (instanceId: string) => {
-    setSelectedAttackPaymentIds((current) =>
-      current.includes(instanceId)
-        ? current.filter((id) => id !== instanceId)
-        : [...current, instanceId],
-    )
-  }
-
-  const toggleEffectTarget = (instanceId: string) => {
-    if (faintActive) {
-      if (!effectTargetIds.has(instanceId)) return
-      setSelectedFaintTargetIds((current) =>
-        current.includes(instanceId)
-          ? current.filter((id) => id !== instanceId)
-          : current.length < faintMax
-            ? [...current, instanceId]
-            : current,
-      )
-      return
-    }
-
-    if (
-      !pendingEffect ||
-      !currentEffect ||
-      (!effectTargetIds.has(instanceId) &&
-        !breakEffectTargetIds.has(instanceId))
-    ) {
-      return
-    }
-
-    const max =
-      currentEffect.kind === 'break-to-trash'
-        ? currentEffect.max
-        : currentEffect.kind === 'support-to-trash' ||
-            currentEffect.kind === 'support-to-hand' ||
-            currentEffect.kind === 'trash-to-battle'
-          ? currentEffect.amount
-        : isEffectUntargeted(currentEffect)
-          ? 0
-          : currentEffect.target.max
-
-    const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
-    const selectedTargetIds = isSelected
-      ? pendingEffect.selectedTargetIds.filter((id) => id !== instanceId)
-      : pendingEffect.selectedTargetIds.length < max
-        ? [...pendingEffect.selectedTargetIds, instanceId]
-        : pendingEffect.selectedTargetIds
-
-    setPendingEffect({ ...pendingEffect, selectedTargetIds })
-  }
-
-  const toggleSkillPayment = (instanceId: string) => {
-    if (!pendingEffect || pendingEffect.skillActivated) return
-
-    const isSelected =
-      pendingEffect.selectedPaymentIds.includes(instanceId)
-    const selectedPaymentIds = isSelected
-      ? pendingEffect.selectedPaymentIds.filter((id) => id !== instanceId)
-      : [...pendingEffect.selectedPaymentIds, instanceId]
-
-    setPendingEffect({ ...pendingEffect, selectedPaymentIds })
-  }
-
-  const skipOptionalSkill = () => {
-    if (
-      pendingEffect &&
-      currentEffect &&
-      'optional' in currentEffect &&
-      currentEffect.optional
-    ) {
-      const nextEffectIndex = pendingEffect.effectIndex + 1
-      const hasNextEffect =
-        nextEffectIndex < pendingEffect.effects.length
-      const viewerMustAct =
-        (game.pendingRefresh?.playerId === viewerPlayerId) ||
-        (game.pendingOnPlay?.playerId === viewerPlayerId)
-
-      if (hasNextEffect && viewerMustAct) {
-        setPendingEffect(null)
-        setSuspendedEffect({
-          ...pendingEffect,
-          effectIndex: nextEffectIndex,
-          selectedTargetIds: [],
-          skillActivated: true,
-        })
-        setMessage('已略過可選效果。')
-        return
-      }
-
-      setPendingEffect(
-        hasNextEffect
-          ? {
-              ...pendingEffect,
-              effectIndex: nextEffectIndex,
-              selectedTargetIds: [],
-              skillActivated: true,
-            }
-          : null,
-      )
-      setMessage('已略過可選效果。')
-      return
-    }
-
-    if (!pendingEffect?.optional) return
-
-    setGame(
-      skipCookieOnPlay(
-        game,
-        pendingEffect.context.sourcePlayerId,
-        pendingEffect.sourceCard.instanceId,
-      ),
-    )
-    setMessage(`${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`)
-    setPendingEffect(null)
-  }
-
-  const confirmEffect = () => {
-    if (!pendingEffect || !currentEffect) return
-
-    const targetNames =
-      currentEffect.kind === 'break-to-trash'
-        ? pendingEffect.selectedTargetIds.map(
-            (instanceId) =>
-              breakToTrashCandidates.find(
-                (card) => card.instanceId === instanceId,
-              )?.name ?? instanceId,
-          )
-        : currentEffect.kind === 'support-to-trash' ||
-            currentEffect.kind === 'support-to-hand'
-          ? pendingEffect.selectedTargetIds.map(
-              (instanceId) =>
-                supportEffectCandidates.find(
-                  (support) => support.card.instanceId === instanceId,
-                )?.card.name ?? instanceId,
-            )
-          : currentEffect.kind === 'trash-to-battle'
-            ? pendingEffect.selectedTargetIds.map(
-                (instanceId) =>
-                  trashCookieCandidates.find(
-                    (card) => card.instanceId === instanceId,
-                  )?.name ?? instanceId,
-              )
-        : pendingEffect.selectedTargetIds.map(
-            (instanceId) =>
-              effectTargetCandidates.find(
-                (cookie) => cookie.card.instanceId === instanceId,
-              )?.card.name ?? instanceId,
-          )
-
-    try {
-      const activatedGame = pendingEffect.skillActivated
-        ? game
-        : pendingEffect.sourceKind === 'item'
-          ? playItem(
-              game,
-              pendingEffect.context.sourcePlayerId,
-              pendingEffect.sourceCard.instanceId,
-              pendingEffect.selectedPaymentIds,
-            )
-          : pendingEffect.sourceKind === 'stage'
-            ? activateStage(
-                game,
-                pendingEffect.context.sourcePlayerId,
-                pendingEffect.selectedPaymentIds,
-              )
-            : activateCookieSkill(
-                game,
-                pendingEffect.context.sourcePlayerId,
-                pendingEffect.sourceCard.instanceId,
-                pendingEffect.trigger,
-                pendingEffect.selectedPaymentIds,
-              )
-      const nextGame = executeCardEffect(
-        activatedGame,
-        pendingEffect.context,
-        currentEffect,
-        pendingEffect.selectedTargetIds,
-      )
-      const result = describeEffectResult(currentEffect, targetNames)
-      if (
-        currentEffect.kind === 'view-hp' &&
-        pendingEffect.selectedTargetIds.length === 1
-      ) {
-        const target = effectTargetCandidates.find(
-          (cookie) =>
-            cookie.card.instanceId === pendingEffect.selectedTargetIds[0],
-        )
-        if (target) {
-          setInspectedHpPile({
-            title: `${target.card.name}的 HP 卡`,
-            cards: target.hpCards,
-          })
-        }
-      }
-      const nextEffectIndex = pendingEffect.effectIndex + 1
-      const hasNextEffect =
-        nextGame.status === 'playing' &&
-        nextEffectIndex < pendingEffect.effects.length
-      const viewerMustAct =
-        (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
-        (nextGame.pendingOnPlay?.playerId === viewerPlayerId)
-
-      if (hasNextEffect && viewerMustAct) {
-        setGame(nextGame)
-        setMessage(result)
-        setEffectHistory((history) => [result, ...history].slice(0, 4))
-        setPendingEffect(null)
-        setSuspendedEffect({
-          ...pendingEffect,
-          effectIndex: nextEffectIndex,
-          selectedTargetIds: [],
-          skillActivated: true,
-        })
-
-        if (nextGame.pendingOnPlay?.playerId === viewerPlayerId) {
-          const onPlayCard = nextGame.players[viewerPlayerId].battleArea.find(
-            (cookie) =>
-              cookie.card.instanceId === nextGame.pendingOnPlay!.sourceInstanceId,
-          )?.card
-          if (onPlayCard) {
-            beginCookieSkill(
-              nextGame,
-              onPlayCard,
-              viewerPlayerId,
-              'on-play',
-              'OnPlay 登場觸發',
-              true,
-            )
-          }
-        }
-
-        return
-      }
-
-      const resolvedGame =
-        nextGame.status !== 'playing' || hasNextEffect
-          ? nextGame
-          : finalizePendingReplacements(nextGame)
-
-      setGame(resolvedGame)
-      setMessage(result)
-      setEffectHistory((history) => [result, ...history].slice(0, 4))
-      setPendingEffect(
-        hasNextEffect
-          ? {
-              ...pendingEffect,
-              effectIndex: nextEffectIndex,
-              selectedTargetIds: [],
-              skillActivated: true,
-            }
-          : null,
-      )
-
-      if (!hasNextEffect && resolvedGame.status === 'playing') {
-        const onPlay = resolvedGame.pendingOnPlay
-        if (onPlay && onPlay.playerId === viewerPlayerId) {
-          const onPlayCard = resolvedGame.players[viewerPlayerId].battleArea.find(
-            (cookie) =>
-              cookie.card.instanceId === onPlay.sourceInstanceId,
-          )?.card
-          if (onPlayCard) {
-            beginCookieSkill(
-              resolvedGame,
-              onPlayCard,
-              viewerPlayerId,
-              'on-play',
-              'OnPlay 登場觸發',
-              true,
-            )
-          }
-        }
-      }
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : '效果無法執行。',
-      )
-    }
-  }
-
-  const pendingPlayerId =
-    game.pendingRefresh?.playerId ??
-    (!game.pendingOnPlay ? replacementTask?.playerId : undefined)
-  const pendingPlayer = pendingPlayerId
-    ? game.players[pendingPlayerId]
-    : null
-  const pendingOptions = game.pendingRefresh
-    ? getRefreshCandidates(game, game.pendingRefresh.playerId)
-    : pendingPlayer
-      ? getReplacementCandidates(game, pendingPlayer.id)
-      : []
   const interactionLocked =
-    Boolean(pendingEffect) ||
-    Boolean(game.pendingOnPlay) ||
-    Boolean(game.pendingBattle) ||
-    Boolean(game.pendingOpponentHandDiscard) ||
+    Boolean(pending.pendingEffect) ||
+    Boolean(match.game.pendingOnPlay) ||
+    Boolean(match.game.pendingBattle) ||
+    Boolean(match.game.pendingOpponentHandDiscard) ||
     faintActive ||
-    aiThinking ||
-    aiControlsCurrentState
+    ai.aiThinking ||
+    match.aiControlsCurrentState
 
-  const playerTrapCandidates =
-    game.pendingBattle?.stage === 'trap' &&
-    game.pendingBattle.defenderPlayerId === viewerPlayerId
-      ? getTrapCandidates(game, viewerPlayerId)
-      : []
-  const selectedTrap = playerTrapCandidates.find(
-    (card) => card.instanceId === selectedTrapId,
-  )
-  const selectedTrapPaymentIds = selectedTrap?.trap
-    ? selectEnergyPayment(
-        selectedTrap.trap.cost.energy,
-        game.players[viewerPlayerId].supportArea,
-      ) ?? []
-    : []
-  const trapAllowEmptyTarget = selectedTrap?.trap?.effects.some(
-    (effect) =>
-      (effect.kind === 'damage' || effect.kind === 'modify-attack' || effect.kind === 'prevent-knockout') &&
-      (effect.target.min ?? 0) === 0,
-  ) ?? false
-  const selectedTrapTargets = selectedTrap && !trapSelectNoTarget
-    ? getTrapTargetCandidates(
-        game,
-        viewerPlayerId,
-        selectedTrap.instanceId,
-      ).slice(0, 1)
-    : []
-  const selectedTrapSupportTrashIds =
-    selectedTrap?.trap?.effects.some(
-      (effect) => effect.kind === 'support-to-trash',
-    )
-      ? game.players[viewerPlayerId].supportArea
-          .slice(0, 1)
-          .map((support) => support.card.instanceId)
-      : []
+  const selectedAttackPaymentIdSet = new Set(match.selectedAttackPaymentIds)
 
-  const runSimulation = () => {
-    const results = aiSimulationSeeds.map((seed) =>
-      simulateAiMatch(createDemoGame(seed, deckConfig)),
-    )
-    setSimulationResults(results)
-    const completed = results.filter((result) => !result.stuck).length
-    setMessage(`AI 驗證完成：${completed}/20 場正常結束。`)
-  }
+  const phaseDisabled =
+    match.game.status === 'finished' ||
+    Boolean(match.game.pendingReplacement) ||
+    Boolean(match.game.pendingOnPlay) ||
+    Boolean(match.game.pendingRefresh) ||
+    Boolean(
+      match.game.pendingFaintEffects &&
+        match.game.pendingFaintEffects.length > 0,
+    ) ||
+    Boolean(pending.pendingEffect)
+
+  const currentJsxEffect = pending.currentEffect
 
   return (
     <main className="game-shell">
       <div className="board-texture" />
 
       <PhaseRail
-        phase={game.phase}
-        turnNumber={game.turnNumber}
-        activePlayerName={activePlayer.name}
-        isPlayerTurn={game.activePlayerId === viewerPlayerId}
-        disabled={
-          game.status === 'finished' ||
-          Boolean(game.pendingReplacement) ||
-          Boolean(game.pendingOnPlay) ||
-          Boolean(game.pendingRefresh) ||
-          Boolean(game.pendingFaintEffects && game.pendingFaintEffects.length > 0) ||
-          Boolean(pendingEffect)
-        }
-        onAdvance={handleAdvancePhase}
-        aiThinking={aiThinking}
-        aiActionCount={aiActionCount}
-        onRunSimulation={runSimulation}
+        phase={match.game.phase}
+        turnNumber={match.game.turnNumber}
+        activePlayerName={match.activePlayer.name}
+        isPlayerTurn={match.game.activePlayerId === match.viewerPlayerId}
+        disabled={phaseDisabled}
+        onAdvance={() => {
+          if (pending.pendingEffect || faintActive) return
+          match.handleAdvancePhase()
+        }}
+        aiThinking={ai.aiThinking}
+        aiActionCount={ai.aiActionCount}
+        onRunSimulation={ai.runSimulation}
       />
 
       <MatchToolbar
-        deckConfig={deckConfig}
-        activePlayerName={activePlayer.name}
-        phase={game.phase}
-        message={message}
+        deckConfig={match.deckConfig}
+        activePlayerName={match.activePlayer.name}
+        phase={match.game.phase}
+        message={match.message}
         onPlayerDeckChange={(deck) => {
-          const newConfig = { ...deckConfig, player: deck }
-          setDeckConfig(newConfig)
-          resetGame(newConfig, `我方 ${deckChoiceLabel[deck]} vs AI ${deckChoiceLabel[deckConfig.ai]}。`)
+          const newConfig = { ...match.deckConfig, player: deck }
+          match.setDeckConfig(newConfig)
+          resetGame(
+            newConfig,
+            `我方 ${deckChoiceLabel[deck]} vs AI ${deckChoiceLabel[match.deckConfig.ai]}。`,
+          )
         }}
         onAiDeckChange={(deck) => {
-          const newConfig = { ...deckConfig, ai: deck }
-          setDeckConfig(newConfig)
-          resetGame(newConfig, `我方 ${deckChoiceLabel[deckConfig.player]} vs AI ${deckChoiceLabel[deck]}。`)
+          const newConfig = { ...match.deckConfig, ai: deck }
+          match.setDeckConfig(newConfig)
+          resetGame(
+            newConfig,
+            `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[deck]}。`,
+          )
         }}
         onReset={() => {
-          resetGame(deckConfig, `我方 ${deckChoiceLabel[deckConfig.player]} vs AI ${deckChoiceLabel[deckConfig.ai]} 新對局。`)
+          resetGame(
+            match.deckConfig,
+            `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
+          )
         }}
-        onViewDeck={() => {
-          setDeckListOwner('player')
-          setShowDeckList(true)
-        }}
-        onPause={() => setShowPause(true)}
+        onViewDeck={() => dialogs.openDeckList('player')}
+        onPause={dialogs.openPause}
       />
 
       <section className="table-area" aria-label="Braverse 對戰桌">
         <BattleRow
-          game={game}
-          playerId={opponentId}
+          game={match.game}
+          playerId={match.opponentId}
           position="top"
-          selectedAttackerId={selectedAttackerId}
-          effectTargetIds={effectTargetIds}
-          breakEffectTargetIds={breakEffectTargetIds}
-          selectedEffectTargetIds={selectedEffectTargetIds}
-          selectedSkillPaymentIds={selectedSkillPaymentIds}
+          selectedAttackerId={match.selectedAttackerId}
+          effectTargetIds={pending.effectTargetIds}
+          breakEffectTargetIds={pending.breakEffectTargetIds}
+          selectedEffectTargetIds={pending.selectedEffectTargetIds}
+          selectedSkillPaymentIds={pending.selectedSkillPaymentIds}
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
-          attackPaymentValid={attackPaymentValidation.valid}
+          attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
-          attackShakeId={attackShakeId}
-          damageFlashId={damageFlashId}
-          faintAnimIds={faintAnimIds}
-          drawAnimIds={drawAnimIds}
-          onAttackTarget={handleAttackTarget}
-          onEffectTarget={toggleEffectTarget}
-          onInspectCard={setInspectedCard}
-          onInspectDiscard={setInspectedDiscardPlayerId}
+          attackShakeId={match.attackShakeId}
+          damageFlashId={match.damageFlashId}
+          faintAnimIds={match.faintAnimIds}
+          drawAnimIds={match.drawAnimIds}
+          onAttackTarget={match.handleAttackTarget}
+          onEffectTarget={pending.toggleEffectTarget}
+          onInspectCard={dialogs.openCardDetail}
+          onInspectDiscard={dialogs.openDiscardPile}
         />
 
         <div className="table-divider">
           <span />
           <strong>
-            {aiThinking ? (
+            {ai.aiThinking ? (
               <>
                 <Sparkles aria-hidden="true" /> AI 思考中
               </>
-            ) : pendingEffect ? (
+            ) : pending.pendingEffect ? (
               <>
                 <Sparkles aria-hidden="true" /> 選擇效果目標
               </>
@@ -1282,71 +204,71 @@ function App() {
               <>
                 <Sparkles aria-hidden="true" /> 選擇昏厥效果目標
               </>
-            ) : selectedAttackerId ? (
+            ) : match.selectedAttackerId ? (
               <>
                 <Swords aria-hidden="true" /> 選擇攻擊目標
               </>
             ) : (
-              `${activePlayer.name} · ${phaseLabels[game.phase]}`
+              `${match.activePlayer.name} · ${phaseLabels[match.game.phase]}`
             )}
           </strong>
           <span />
         </div>
 
         <BattleRow
-          game={game}
-          playerId={viewerPlayerId}
+          game={match.game}
+          playerId={match.viewerPlayerId}
           position="bottom"
-          selectedAttackerId={selectedAttackerId}
-          effectTargetIds={effectTargetIds}
-          breakEffectTargetIds={breakEffectTargetIds}
-          selectedEffectTargetIds={selectedEffectTargetIds}
-          selectedSkillPaymentIds={selectedSkillPaymentIds}
+          selectedAttackerId={match.selectedAttackerId}
+          effectTargetIds={pending.effectTargetIds}
+          breakEffectTargetIds={pending.breakEffectTargetIds}
+          selectedEffectTargetIds={pending.selectedEffectTargetIds}
+          selectedSkillPaymentIds={pending.selectedSkillPaymentIds}
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
-          attackPaymentValid={attackPaymentValidation.valid}
+          attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
-          attackShakeId={attackShakeId}
-          damageFlashId={damageFlashId}
-          faintAnimIds={faintAnimIds}
-          drawAnimIds={drawAnimIds}
+          attackShakeId={match.attackShakeId}
+          damageFlashId={match.damageFlashId}
+          faintAnimIds={match.faintAnimIds}
+          drawAnimIds={match.drawAnimIds}
           onSelectAttacker={(instanceId) => {
-            setSelectedAttackerId(instanceId)
-            setSelectedAttackPaymentIds([])
-            setMessage('選擇支援卡支付攻擊費用。')
+            match.setSelectedAttackerId(instanceId)
+            match.setSelectedAttackPaymentIds([])
+            match.setMessage('選擇支援卡支付攻擊費用。')
           }}
-          onEffectTarget={toggleEffectTarget}
+          onEffectTarget={pending.toggleEffectTarget}
           onPlaceSupport={(instanceId) =>
-            runAction(
+            match.runAction(
               (current) => placeSupportCard(current, instanceId),
               '已將卡牌配置到支援區。',
             )
           }
-          onSkillPayment={toggleSkillPayment}
-          onAttackPayment={toggleAttackPayment}
+          onSkillPayment={pending.toggleSkillPayment}
+          onAttackPayment={match.toggleAttackPayment}
           onActivateSkill={(instanceId) => {
-            const card = activePlayer.battleArea.find(
+            const card = match.activePlayer.battleArea.find(
               (cookie) => cookie.card.instanceId === instanceId,
             )?.card
-            beginCookieSkill(
-              game,
+            pending.beginCookieSkill(
+              match.game,
               card,
-              activePlayer.id,
+              match.activePlayer.id,
               'activate',
               'Activate 主動發動',
             )
           }}
           onDeployCookie={(instanceId) =>
-            runAction(
+            match.runAction(
               (current) => deployCookie(current, instanceId),
               '新餅乾已登場並配置 HP。',
               (nextGame) => {
                 if (nextGame.pendingRefresh) return
-                beginCookieSkill(
+                pending.beginCookieSkill(
                   nextGame,
-                  nextGame.players[activePlayer.id].battleArea.find(
+                  nextGame.players[match.activePlayer.id].battleArea.find(
                     (cookie) => cookie.card.instanceId === instanceId,
                   )?.card,
-                  activePlayer.id,
+                  match.activePlayer.id,
                   'on-play',
                   'OnPlay 登場觸發',
                   true,
@@ -1355,48 +277,57 @@ function App() {
             )
           }
           onPlayItem={(instanceId) => {
-            if (!canPlayItem(game, activePlayer.id, instanceId)) {
-              setMessage('目前無法使用物品卡。')
+            if (
+              !canPlayItem(match.game, match.activePlayer.id, instanceId)
+            ) {
+              match.setMessage('目前無法使用物品卡。')
               return
             }
-            const card = activePlayer.hand.find(
+            const card = match.activePlayer.hand.find(
               (candidate) => candidate.instanceId === instanceId,
             )
             if (card?.item) {
-              beginCardAbility(card, card.item, 'item', '使用物品')
+              pending.beginCardAbility(card, card.item, 'item', '使用物品')
             }
           }}
           onPlayStage={(instanceId) => {
-            if (!canPlayStage(game, activePlayer.id, instanceId)) {
-              setMessage('目前無法放置場景卡。')
+            if (
+              !canPlayStage(match.game, match.activePlayer.id, instanceId)
+            ) {
+              match.setMessage('目前無法放置場景卡。')
               return
             }
-            const card = activePlayer.hand.find(
+            const card = match.activePlayer.hand.find(
               (candidate) => candidate.instanceId === instanceId,
             )
             const ability = card?.stageAbility
             if (!card || !ability) return
             const paymentIds = selectEnergyPayment(
               ability.placementCost,
-              activePlayer.supportArea,
+              match.activePlayer.supportArea,
             )
             if (!paymentIds) {
-              setMessage(`${card.name}目前無法支付放置費用。`)
+              match.setMessage(`${card.name}目前無法支付放置費用。`)
               return
             }
-            runAction(
+            match.runAction(
               (current) =>
-                playStage(current, activePlayer.id, instanceId, paymentIds),
+                playStage(
+                  current,
+                  match.activePlayer.id,
+                  instanceId,
+                  paymentIds,
+                ),
               `${card.name}已放置到場景區。`,
             )
           }}
           onActivateStage={() => {
-            const stage = activePlayer.stage
+            const stage = match.activePlayer.stage
             if (
               stage?.card.stageAbility &&
-              canActivateStage(game, activePlayer.id)
+              canActivateStage(match.game, match.activePlayer.id)
             ) {
-              beginCardAbility(
+              pending.beginCardAbility(
                 stage.card,
                 stage.card.stageAbility,
                 'stage',
@@ -1404,172 +335,204 @@ function App() {
               )
             }
           }}
-          onInspectCard={setInspectedCard}
-          onInspectDiscard={setInspectedDiscardPlayerId}
+          onInspectCard={dialogs.openCardDetail}
+          onInspectDiscard={dialogs.openDiscardPile}
         />
       </section>
 
-      {selectedAttacker && !pendingEffect && (
+      {match.selectedAttacker && !pending.pendingEffect && (
         <AttackPaymentPanel
-          attackerName={selectedAttacker.card.name}
-          attackCost={selectedAttackCost}
-          selectedPaymentCount={selectedAttackPaymentIds.length}
-          isValid={attackPaymentValidation.valid}
-          validationReason={attackPaymentValidation.reason}
+          attackerName={match.selectedAttacker.card.name}
+          attackCost={match.selectedAttackCost}
+          selectedPaymentCount={match.selectedAttackPaymentIds.length}
+          isValid={match.attackPaymentValidation.valid}
+          validationReason={match.attackPaymentValidation.reason}
           onCancel={() => {
-            setSelectedAttackerId(null)
-            setSelectedAttackPaymentIds([])
-            setMessage('已取消攻擊。')
+            match.setSelectedAttackerId(null)
+            match.setSelectedAttackPaymentIds([])
+            match.setMessage('已取消攻擊。')
           }}
         />
       )}
 
-      {simulationResults && (
+      {ai.simulationResults && (
         <SimulationReport
-          simulationResults={simulationResults}
+          simulationResults={ai.simulationResults}
           seeds={aiSimulationSeeds}
-          onClose={() => setSimulationResults(null)}
+          onClose={ai.dismissSimulation}
         />
       )}
 
       <EffectPanel
-        pendingEffect={pendingEffect}
-        currentEffect={currentEffect}
-        effectHistory={effectHistory}
-        onConfirm={confirmEffect}
-        onSkip={skipOptionalSkill}
-        candidateCards={nonBattleEffectCandidateCards}
-        onToggleCandidate={toggleEffectTarget}
+        pendingEffect={pending.pendingEffect}
+        currentEffect={currentJsxEffect}
+        effectHistory={pending.effectHistory}
+        onConfirm={pending.confirmEffect}
+        onSkip={pending.skipOptionalSkill}
+        candidateCards={pending.nonBattleEffectCandidateCards}
+        onToggleCandidate={pending.toggleEffectTarget}
       />
 
-      {setupStep && (
+      {match.setupStep && (
         <OpeningSetupModal
-          step={setupStep}
-          message={setupMessage}
-          hand={game.players[viewerPlayerId].hand}
-          onRps={handleRps}
+          step={match.setupStep as OpeningSetupStep}
+          message={match.setupMessage}
+          hand={match.game.players[match.viewerPlayerId].hand}
+          onRps={match.handleRps}
           onChooseFirstPlayer={(playerFirst) =>
-            beginOrderedSetup(playerFirst ? 'player-one' : 'player-two')
+            match.beginOrderedSetup(
+              playerFirst ? 'player-one' : 'player-two',
+            )
           }
-          onMulligan={handlePlayerMulligan}
-          onSelectStartingCookie={handleStartingCookie}
+          onMulligan={match.handlePlayerMulligan}
+          onSelectStartingCookie={match.handleStartingCookie}
         />
       )}
 
-      {game.pendingBattle?.stage === 'trap' &&
-        game.pendingBattle.defenderPlayerId === viewerPlayerId &&
-        playerTrapCandidates.length > 0 && (
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerTrapCandidates.length > 0 && (
           <TrapResponseModal
-            cards={playerTrapCandidates}
-            selectedTrapId={selectedTrapId}
-            paymentCards={game.players[viewerPlayerId].supportArea
+            cards={match.playerTrapCandidates}
+            selectedTrapId={match.selectedTrapId}
+            paymentCards={match.game.players[
+              match.viewerPlayerId
+            ].supportArea
               .filter((support) =>
-                selectedTrapPaymentIds.includes(support.card.instanceId),
+                match.selectedTrapPaymentIds.includes(
+                  support.card.instanceId,
+                ),
               )
               .map((support) => support.card)}
-            targetCards={selectedTrapTargets.map((target) => target.card)}
+            targetCards={match.selectedTrapTargets.map(
+              (target) => target.card,
+            )}
             onSelectTrap={(id) => {
-              setSelectedTrapId(id)
-              setTrapSelectNoTarget(false)
+              match.setSelectedTrapId(id)
+              match.setTrapSelectNoTarget(false)
             }}
-            onInspectCard={(card) => setInspectedCard(card)}
+            onInspectCard={(card) => dialogs.openCardDetail(card)}
             onSkip={() => {
-              setSelectedTrapId(null)
-              runAction(
-                (current) => skipTrap(current, viewerPlayerId),
+              match.setSelectedTrapId(null)
+              match.runAction(
+                (current) => skipTrap(current, match.viewerPlayerId),
                 '未發動陷阱，進入傷害結算。',
               )
             }}
             onConfirm={() => {
-              if (!selectedTrap) return
-              setSelectedTrapId(null)
-              setTrapSelectNoTarget(false)
-              runAction(
+              if (!match.selectedTrap) return
+              match.setSelectedTrapId(null)
+              match.setTrapSelectNoTarget(false)
+              match.runAction(
                 (current) => {
-                  const afterTrap = playTrap(current, viewerPlayerId, {
-                    trapInstanceId: selectedTrap.instanceId,
-                    paymentIds: selectedTrapPaymentIds,
-                    targetIds: selectedTrapTargets.map(
-                      (target) => target.card.instanceId,
-                    ),
-                    supportTrashIds: selectedTrapSupportTrashIds,
-                  })
+                  const afterTrap = playTrap(
+                    current,
+                    match.viewerPlayerId,
+                    {
+                      trapInstanceId: match.selectedTrap!.instanceId,
+                      paymentIds: match.selectedTrapPaymentIds,
+                      targetIds: match.selectedTrapTargets.map(
+                        (target) => target.card.instanceId,
+                      ),
+                      supportTrashIds: match.selectedTrapSupportTrashIds,
+                    },
+                  )
                   return testStateConfig
                     ? resolveBattleAutomatically(afterTrap)
                     : afterTrap
                 },
-                `已發動${selectedTrap.name}。`,
+                `已發動${match.selectedTrap.name}。`,
               )
             }}
-            allowEmptyTarget={trapAllowEmptyTarget}
-            emptyTargetActive={trapSelectNoTarget}
-            onToggleEmptyTarget={() => setTrapSelectNoTarget(v => !v)}
+            allowEmptyTarget={match.trapAllowEmptyTarget}
+            emptyTargetActive={match.trapSelectNoTarget}
+            onToggleEmptyTarget={() =>
+              match.setTrapSelectNoTarget((v) => !v)
+            }
           />
         )}
 
-      {game.pendingBattle?.stage === 'flip' &&
-        (game.pendingBattle.damagePlayerId ??
-          game.pendingBattle.defenderPlayerId) === viewerPlayerId &&
-        game.pendingBattle.revealedHpCard && (
+      {match.game.pendingBattle?.stage === 'flip' &&
+        (match.game.pendingBattle.damagePlayerId ??
+          match.game.pendingBattle.defenderPlayerId) ===
+          match.viewerPlayerId &&
+        match.game.pendingBattle.revealedHpCard && (
           <FlipResponseModal
-            key={game.pendingBattle.revealedHpCard.instanceId}
-            card={game.pendingBattle.revealedHpCard}
-            hand={game.players[viewerPlayerId].hand}
+            key={match.game.pendingBattle.revealedHpCard.instanceId}
+            card={match.game.pendingBattle.revealedHpCard}
+            hand={match.game.players[match.viewerPlayerId].hand}
             discardCount={
-              game.pendingBattle.revealedHpCard.flip?.cost.discardHand ?? 0
+              match.game.pendingBattle.revealedHpCard.flip?.cost
+                .discardHand ?? 0
             }
-            selectedDiscardIds={selectedFlipDiscardIds}
+            selectedDiscardIds={match.selectedFlipDiscardIds}
             onToggleDiscard={(instanceId) =>
-              setSelectedFlipDiscardIds((current) =>
+              match.setSelectedFlipDiscardIds((current) =>
                 current.includes(instanceId)
                   ? current.filter((id) => id !== instanceId)
                   : [...current, instanceId],
               )
             }
             onSkip={() => {
-              setSelectedFlipDiscardIds([])
-              runAction(
+              match.setSelectedFlipDiscardIds([])
+              match.runAction(
                 (current) =>
-                  resolveFlip(current, viewerPlayerId, { activate: false }),
+                  resolveFlip(current, match.viewerPlayerId, {
+                    activate: false,
+                  }),
                 '未發動 FLIP，繼續傷害結算。',
               )
             }}
             onActivate={() => {
-              setSelectedFlipDiscardIds([])
-              runAction(
+              match.setSelectedFlipDiscardIds([])
+              match.runAction(
                 (current) =>
-                  resolveFlip(current, viewerPlayerId, {
+                  resolveFlip(current, match.viewerPlayerId, {
                     activate: true,
-                    discardHandIds: selectedFlipDiscardIds,
+                    discardHandIds: match.selectedFlipDiscardIds,
                   }),
-                `已發動${game.pendingBattle?.revealedHpCard?.name ?? 'FLIP'}。`,
+                `已發動${match.game.pendingBattle?.revealedHpCard?.name ?? 'FLIP'}。`,
               )
             }}
           />
         )}
 
-      {faintActive && faintSourceCard && (
-        <div className="modal-backdrop" role="presentation" style={{ pointerEvents: 'none' }}>
-          <section className="faint-response-modal" role="dialog" style={{ pointerEvents: 'auto' }}>
-            <h2>{faintSourceCard.name} 發動昏厥效果</h2>
+      {faintActive && match.faintSourceCard && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          style={{ pointerEvents: 'none' }}
+        >
+          <section
+            className="faint-response-modal"
+            role="dialog"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <h2>{match.faintSourceCard.name} 發動昏厥效果</h2>
             <p className="faint-effect-text">
-              {faintSourceCard.effectText ?? faintSourceCard.skill?.text ?? '昏厥效果'}
+              {match.faintSourceCard.effectText ??
+                match.faintSourceCard.skill?.text ??
+                '昏厥效果'}
             </p>
             <p className="faint-target-hint">
-              {faintMin === 0
-                ? `選擇最多 ${faintMax} 個對手餅乾作為目標，或略過。`
-                : `選擇 ${faintMin} 個對手餅乾作為目標。`}
+              {match.faintMin === 0
+                ? `選擇最多 ${match.faintMax} 個對手餅乾作為目標，或略過。`
+                : `選擇 ${match.faintMin} 個對手餅乾作為目標。`}
             </p>
             <div className="faint-modal-actions">
-              {faintMin === 0 && (
+              {match.faintMin === 0 && (
                 <button
                   type="button"
                   className="modal-button"
                   onClick={() => {
-                    setSelectedFaintTargetIds([])
-                    runAction(
-                      (current) => resolveFaintEffect(current, []),
-                      `${faintSourceCard.name}略過昏厥效果。`,
+                    match.setSelectedFaintTargetIds([])
+                    match.runAction(
+                      (current) => applyGameCommand(current, {
+                        kind: 'resolve-faint-effect',
+                        playerId: match.viewerPlayerId,
+                        targetIds: [],
+                      }),
+                      `${match.faintSourceCard!.name}略過昏厥效果。`,
                     )
                   }}
                 >
@@ -1579,234 +542,281 @@ function App() {
               <button
                 type="button"
                 className="modal-button primary"
-                disabled={selectedFaintTargetIds.length === 0 && faintMin !== 0}
-                onClick={() => {
-                  const targets = selectedFaintTargetIds
-                  setSelectedFaintTargetIds([])
-                  runAction(
-                    (current) => resolveFaintEffect(current, targets),
-                    `${faintSourceCard.name}發動對${faintCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的昏厥效果。`,
-                  )
-                }}
-              >
-                {faintMin === 0 && selectedFaintTargetIds.length === 0
-                  ? '確認略過'
-                  : `確認 (${selectedFaintTargetIds.length})`}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
-
-      {game.pendingOpponentHandDiscard &&
-        game.pendingOpponentHandDiscard.playerId === viewerPlayerId &&
-        !pendingEffect && (
-        <div className="modal-backdrop" role="presentation" style={{ pointerEvents: 'none' }}>
-          <section className="faint-response-modal" role="dialog" style={{ pointerEvents: 'auto' }}>
-            <h2>
-              {game.pendingOpponentHandDiscard.sourceCardName} 要求棄置手牌
-            </h2>
-            <p className="faint-effect-text">
-              {(() => {
-                const source = Object.values(game.players).flatMap(
-                  (p) => p.battleArea,
-                ).find(
-                  (c) =>
-                    c.card.instanceId ===
-                    game.pendingOpponentHandDiscard?.sourceInstanceId,
-                )
-                return source?.card.effectText ?? source?.card.skill?.text ?? '對手必須棄置手牌'
-              })()}
-            </p>
-            <p className="faint-target-hint">
-              必須選擇 {game.pendingOpponentHandDiscard.count} 張手牌棄置。
-            </p>
-            <div className="modal-card-options">
-              {game.players[viewerPlayerId].hand.map((card) => (
-                <button
-                  type="button"
-                  key={card.instanceId}
-                  className={
-                    selectedOpponentDiscardIds.includes(card.instanceId)
-                      ? 'is-selected'
-                      : ''
-                  }
-                  onClick={() =>
-                    setSelectedOpponentDiscardIds((current) =>
-                      current.includes(card.instanceId)
-                        ? current.filter((id) => id !== card.instanceId)
-                        : current.length <
-                            (game.pendingOpponentHandDiscard?.count ?? 1)
-                          ? [...current, card.instanceId]
-                          : current,
-                    )
-                  }
-                >
-                  <CardFace card={card} />
-                  <span>{card.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="faint-modal-actions">
-              <button
-                type="button"
-                className="modal-button primary"
                 disabled={
-                  selectedOpponentDiscardIds.length !==
-                  game.pendingOpponentHandDiscard.count
+                  match.selectedFaintTargetIds.length === 0 &&
+                  match.faintMin !== 0
                 }
                 onClick={() => {
-                  const ids = selectedOpponentDiscardIds
-                  setSelectedOpponentDiscardIds([])
-                  runAction(
-                    (current) =>
-                      resolveOpponentHandDiscard(current, viewerPlayerId, ids),
-                    `已棄置 ${ids.length} 張手牌。`,
+                  const targets = match.selectedFaintTargetIds
+                  match.setSelectedFaintTargetIds([])
+                  match.runAction(
+                    (current) => applyGameCommand(current, {
+                      kind: 'resolve-faint-effect',
+                      playerId: match.viewerPlayerId,
+                      targetIds: targets,
+                    }),
+                    `${match.faintSourceCard!.name}發動對${match.faintCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的昏厥效果。`,
                   )
                 }}
               >
-                確認棄置 ({selectedOpponentDiscardIds.length})
+                {match.faintMin === 0 &&
+                match.selectedFaintTargetIds.length === 0
+                  ? '確認略過'
+                  : `確認 (${match.selectedFaintTargetIds.length})`}
               </button>
             </div>
           </section>
         </div>
       )}
 
-      {pendingPlayer && pendingPlayer.id !== 'player-two' && (
-        <DecisionModal
-          isRefresh={Boolean(game.pendingRefresh)}
-          playerName={pendingPlayer.name}
-          replacementCount={replacementTask?.remaining}
-          options={pendingOptions}
-          isOptionDisabled={(card) =>
-            !game.pendingRefresh &&
-            card.type === 'cookie' &&
-            pendingPlayer.deck.length < card.hp
-          }
-          onSkipReplacement={
-            game.pendingRefresh
-              ? undefined
-              : () =>
-                  runAction(
-                    (current) =>
-                      skipDefeatedCookieReplacement(current),
-                    '已選擇不補餅乾。',
+      {match.game.pendingOpponentHandDiscard &&
+        match.game.pendingOpponentHandDiscard.playerId ===
+          match.viewerPlayerId &&
+        !pending.pendingEffect && (
+          <div
+            className="modal-backdrop"
+            role="presentation"
+            style={{ pointerEvents: 'none' }}
+          >
+            <section
+              className="faint-response-modal"
+              role="dialog"
+              style={{ pointerEvents: 'auto' }}
+            >
+              <h2>
+                {match.game.pendingOpponentHandDiscard.sourceCardName}{' '}
+                要求棄置手牌
+              </h2>
+              <p className="faint-effect-text">
+                {(() => {
+                  const source = Object.values(
+                    match.game.players,
                   )
-          }
-          onSelect={(instanceId) => {
-            if (game.pendingRefresh) {
-              runAction(
-                (current) =>
-                  refreshDeck(
-                    current,
-                    pendingPlayer.id,
-                    instanceId,
-                ),
-                '牌庫 Refresh 已完成。',
-                (nextGame) => {
-                  const onPlay = nextGame.pendingOnPlay
-                  if (!onPlay) return
-                  const card = nextGame.players[
-                    onPlay.playerId
-                  ].battleArea.find(
-                    (cookie) =>
-                      cookie.card.instanceId ===
-                      onPlay.sourceInstanceId,
-                  )?.card
-                  beginCookieSkill(
-                    nextGame,
-                    card,
-                    onPlay.playerId,
-                    'on-play',
-                    'OnPlay 登場觸發',
-                    true,
+                    .flatMap((p) => p.battleArea)
+                    .find(
+                      (c) =>
+                        c.card.instanceId ===
+                        match.game.pendingOpponentHandDiscard
+                          ?.sourceInstanceId,
+                    )
+                  return (
+                    source?.card.effectText ??
+                    source?.card.skill?.text ??
+                    '對手必須棄置手牌'
                   )
-                },
-              )
-            } else {
-              runAction(
-                (current) =>
-                  replaceDefeatedCookie(current, instanceId),
-                '已補充新的戰鬥區餅乾。',
-                (nextGame) => {
-                  if (nextGame.pendingRefresh) return
-                  const onPlay = nextGame.pendingOnPlay
-                  if (!onPlay) return
-                  const card = nextGame.players[
-                    onPlay.playerId
-                  ].battleArea.find(
-                    (cookie) =>
-                      cookie.card.instanceId ===
-                      onPlay.sourceInstanceId,
-                  )?.card
-                  beginCookieSkill(
-                    nextGame,
-                    card,
-                    onPlay.playerId,
-                    'on-play',
-                    'OnPlay 登場觸發',
-                    true,
-                  )
-                },
-              )
+                })()}
+              </p>
+              <p className="faint-target-hint">
+                必須選擇{' '}
+                {match.game.pendingOpponentHandDiscard.count} 張手牌棄置。
+              </p>
+              <div className="modal-card-options">
+                {match.game.players[match.viewerPlayerId].hand.map(
+                  (card) => (
+                    <button
+                      type="button"
+                      key={card.instanceId}
+                      className={
+                        match.selectedOpponentDiscardIds.includes(
+                          card.instanceId,
+                        )
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() =>
+                        match.setSelectedOpponentDiscardIds(
+                          (current) =>
+                            current.includes(card.instanceId)
+                              ? current.filter(
+                                  (id) => id !== card.instanceId,
+                                )
+                              : current.length <
+                                  (match.game.pendingOpponentHandDiscard
+                                    ?.count ?? 1)
+                                ? [...current, card.instanceId]
+                                : current,
+                        )
+                      }
+                    >
+                      <CardFace card={card} />
+                      <span>{card.name}</span>
+                    </button>
+                  ),
+                )}
+              </div>
+              <div className="faint-modal-actions">
+                <button
+                  type="button"
+                  className="modal-button primary"
+                  disabled={
+                    match.selectedOpponentDiscardIds.length !==
+                    match.game.pendingOpponentHandDiscard.count
+                  }
+                  onClick={() => {
+                    const ids = match.selectedOpponentDiscardIds
+                    match.setSelectedOpponentDiscardIds([])
+                    match.runAction(
+                      (current) =>
+                        applyGameCommand(current, {
+                          kind: 'resolve-opponent-hand-discard',
+                          playerId: match.viewerPlayerId,
+                          cardIds: ids,
+                        }),
+                      `已棄置 ${ids.length} 張手牌。`,
+                    )
+                  }}
+                >
+                  確認棄置 ({match.selectedOpponentDiscardIds.length})
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
+      {match.pendingPlayer &&
+        match.pendingPlayer.id !== 'player-two' && (
+          <DecisionModal
+            isRefresh={Boolean(match.game.pendingRefresh)}
+            playerName={match.pendingPlayer.name}
+            replacementCount={match.replacementTask?.remaining}
+            options={match.pendingOptions}
+            isOptionDisabled={(card) =>
+              !match.game.pendingRefresh &&
+              card.type === 'cookie' &&
+              match.pendingPlayer!.deck.length < card.hp
             }
-          }}
-        />
-      )}
+            onSkipReplacement={
+              match.game.pendingRefresh
+                ? undefined
+                : () =>
+                    match.runAction(
+                      (current) =>
+                        skipDefeatedCookieReplacement(current),
+                      '已選擇不補餅乾。',
+                    )
+            }
+            onSelect={(instanceId) => {
+              if (match.game.pendingRefresh) {
+                match.runAction(
+                  (current) =>
+                    refreshDeck(
+                      current,
+                      match.pendingPlayer!.id,
+                      instanceId,
+                    ),
+                  '牌庫 Refresh 已完成。',
+                  (nextGame) => {
+                    const onPlay = nextGame.pendingOnPlay
+                    if (!onPlay) return
+                    const card = nextGame.players[
+                      onPlay.playerId
+                    ].battleArea.find(
+                      (cookie) =>
+                        cookie.card.instanceId ===
+                        onPlay.sourceInstanceId,
+                    )?.card
+                    pending.beginCookieSkill(
+                      nextGame,
+                      card,
+                      onPlay.playerId,
+                      'on-play',
+                      'OnPlay 登場觸發',
+                      true,
+                    )
+                  },
+                )
+              } else {
+                match.runAction(
+                  (current) =>
+                    replaceDefeatedCookie(current, instanceId),
+                  '已補充新的戰鬥區餅乾。',
+                  (nextGame) => {
+                    if (nextGame.pendingRefresh) return
+                    const onPlay = nextGame.pendingOnPlay
+                    if (!onPlay) return
+                    const card = nextGame.players[
+                      onPlay.playerId
+                    ].battleArea.find(
+                      (cookie) =>
+                        cookie.card.instanceId ===
+                        onPlay.sourceInstanceId,
+                    )?.card
+                    pending.beginCookieSkill(
+                      nextGame,
+                      card,
+                      onPlay.playerId,
+                      'on-play',
+                      'OnPlay 登場觸發',
+                      true,
+                    )
+                  },
+                )
+              }
+            }}
+          />
+        )}
 
-      {inspectedCard && (
+      {dialogs.inspectedCard && (
         <CardDetailModal
-          card={inspectedCard}
-          onClose={() => setInspectedCard(null)}
+          card={dialogs.inspectedCard}
+          onClose={dialogs.closeCardDetail}
         />
       )}
 
-      {inspectedDiscardPlayerId && (
+      {dialogs.inspectedDiscardPlayerId && (
         <CardPileModal
-          title={`${game.players[inspectedDiscardPlayerId].name}棄牌區`}
-          cards={game.players[inspectedDiscardPlayerId].discardPile}
+          title={`${match.game.players[dialogs.inspectedDiscardPlayerId].name}棄牌區`}
+          cards={
+            match.game.players[dialogs.inspectedDiscardPlayerId]
+              .discardPile
+          }
           onInspect={(card) => {
-            setInspectedDiscardPlayerId(null)
-            setInspectedCard(card)
+            dialogs.closeDiscardPile()
+            dialogs.openCardDetail(card)
           }}
-          onClose={() => setInspectedDiscardPlayerId(null)}
+          onClose={dialogs.closeDiscardPile}
         />
       )}
 
-      {inspectedHpPile && (
+      {dialogs.inspectedHpPile && (
         <CardPileModal
-          title={inspectedHpPile.title}
-          cards={inspectedHpPile.cards}
-          onInspect={setInspectedCard}
-          onClose={() => setInspectedHpPile(null)}
+          title={dialogs.inspectedHpPile.title}
+          cards={dialogs.inspectedHpPile.cards}
+          onInspect={dialogs.openCardDetail}
+          onClose={dialogs.closeHpPile}
         />
       )}
 
-      {showPause && (
+      {dialogs.showPause && (
         <PauseModal
-          turnNumber={game.turnNumber}
-          phaseLabel={phaseLabels[game.phase]}
-          onResume={() => setShowPause(false)}
+          turnNumber={match.game.turnNumber}
+          phaseLabel={phaseLabels[match.game.phase]}
+          onResume={dialogs.closePause}
         />
       )}
 
-      {showDeckList && (
+      {dialogs.showDeckList && (
         <DeckListModal
-          deckListOwner={deckListOwner}
-          viewedDeck={deckConfig[deckListOwner]}
-          onSetDeckListOwner={setDeckListOwner}
-          onClose={() => setShowDeckList(false)}
+          deckListOwner={dialogs.deckListOwner}
+          viewedDeck={match.deckConfig[dialogs.deckListOwner]}
+          onSetDeckListOwner={dialogs.openDeckList}
+          onClose={dialogs.closeDeckList}
         />
       )}
 
-      {game.result && (
+      {match.game.result && (
         <ResultModal
-          winnerName={game.players[game.result.winnerId].name}
-          loserId={game.result.loserId}
-          viewerPlayerId={viewerPlayerId}
-          reason={game.result.reason}
+          winnerName={
+            match.game.players[match.game.result.winnerId].name
+          }
+          loserId={match.game.result.loserId}
+          viewerPlayerId={match.viewerPlayerId}
+          reason={match.game.result.reason}
           onRestart={() => {
-            resetGame(deckConfig, `我方 ${deckChoiceLabel[deckConfig.player]} vs AI ${deckChoiceLabel[deckConfig.ai]} 新對局。`)
+            resetGame(
+              match.deckConfig,
+              `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
+            )
           }}
         />
       )}

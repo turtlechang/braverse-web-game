@@ -92,7 +92,7 @@ sandbox_permissions: "require_escalated"
 ```powershell
 opencode models opencode-go
 ```
-若有列出模型清單（含 glm-5.1、qwen3.7-plus 等），表示外部網路正常，可繼續。
+若有列出模型清單（含 deepseek-v4-pro、qwen3.7-plus、kimi-k2.7-code 等），表示外部網路正常，可繼續。
 
 **完整 PowerShell 指令**（複製整段執行）：
 ```powershell
@@ -107,7 +107,7 @@ Start-Sleep -Seconds 5
 
 $result = & "$env:APPDATA\npm\opencode.cmd" run `
   --attach http://127.0.0.1:4096 `
-  --model opencode-go/glm-5.1 `
+  --model opencode-go/deepseek-v4-pro `
   --pure `
   --dangerously-skip-permissions `
   "你的審查提示詞"
@@ -128,14 +128,14 @@ Write-Output $result
 若上述方案都無法使用，專案提供 `scripts/opencode-go-direct-review.mjs`，以 Node.js 內建 `fetch` 直接呼叫 OpenCode Go 的 chat completions API，完全繞過 `opencode.cmd` CLI。
 
 ```powershell
-node scripts\opencode-go-direct-review.mjs glm-5.1 `
+node scripts\opencode-go-direct-review.mjs deepseek-v4-pro `
   --file src/game/energy.ts `
   --file src/game/energy.test.ts `
   "你的審查提示詞"
 ```
 
 **注意事項**：
-- 此腳本僅支援 OpenAI Chat Completions 格式的模型（deepseek、glm、kimi、minimax）。
+- 此腳本僅支援 OpenAI Chat Completions 格式的模型（deepseek、kimi、minimax）。
 - **不支援** Anthropic Messages API 格式的模型（qwen、claude），使用此類模型需改寫腳本或改用方案 A。
 - 檔案內容會完整包入 prompt，大型檔案可能超過 token 上限或導致逾時。
 - 腳本支援 `--file <path>` 參數自動讀取檔案。

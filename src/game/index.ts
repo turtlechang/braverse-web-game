@@ -165,6 +165,18 @@ export type {
   TrapCondition,
   TurnPhase,
 } from './types'
+export {
+  applyGameCommand,
+  getPendingDecision,
+} from './commands'
+export type {
+  FaintEffectDecision,
+  GameCommand,
+  OpponentHandDiscardDecision,
+  PendingDecision,
+  ResolveFaintEffectCommand,
+  ResolveOpponentHandDiscardCommand,
+} from './commands'
 export type {
   AiActionType,
   AiDecision,

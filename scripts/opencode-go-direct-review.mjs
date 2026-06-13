@@ -12,8 +12,8 @@
  *   node scripts\opencode-go-direct-review.mjs <model> --file <path> [--file <path2> ...] "<prompt>"
  *
  * 範例：
- *   node scripts\opencode-go-direct-review.mjs glm-5.1 "請審查 src/game/energy.ts"
- *   node scripts\opencode-go-direct-review.mjs glm-5.1 --file src/game/energy.ts --file src/game/energy.test.ts "請審查以下檔案..."
+ *   node scripts\opencode-go-direct-review.mjs deepseek-v4-pro "請審查 src/game/energy.ts"
+ *   node scripts\opencode-go-direct-review.mjs kimi-k2.7-code --file src/game/energy.ts --file src/game/energy.test.ts "請審查以下檔案..."
  *
  * 環境需求：
  *   - Node.js 18+（提供內建 fetch）

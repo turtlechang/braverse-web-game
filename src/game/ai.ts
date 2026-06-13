@@ -16,11 +16,14 @@ import {
   getTrapCandidates,
   getTrapTargetCandidates,
   playTrap,
-  resolveFaintEffect,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
 } from './battle'
+import {
+  applyGameCommand,
+  getPendingDecision,
+} from './commands'
 import {
   executeCardEffect,
   getBreakToTrashCandidates,
@@ -30,7 +33,6 @@ import {
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectUntargeted,
-  resolveOpponentHandDiscard,
 } from './effects'
 import {
   getAttackEnergyCost,
@@ -395,35 +397,35 @@ export const takeAiStep = (
     }
 
     const replacementTask = getCurrentReplacementTask(state)
+    const pendingDecision = getPendingDecision(state)
 
     if (
-      state.pendingFaintEffects &&
-      state.pendingFaintEffects.length > 0 &&
+      pendingDecision?.kind === 'faint-effect' &&
       !state.pendingRefresh &&
       !state.pendingOnPlay &&
       !replacementTask
     ) {
-      const faint = state.pendingFaintEffects[0]
-      if (faint.sourcePlayerId !== playerId) {
+      if (pendingDecision.playerId !== playerId) {
         return {
           state,
           action: 'idle',
-          description: `等待 ${state.players[faint.sourcePlayerId].name} 選擇昏厥效果目標。`,
+          description: `等待 ${state.players[pendingDecision.playerId].name} 選擇昏厥效果目標。`,
         }
       }
       const candidates = getFaintEffectCandidates(state)
       const ordered = [...candidates].sort(
         (left, right) => left.hpCards.length - right.hpCards.length,
       )
-      const faintEffect = faint.effect as { target?: { min: number; max: number } }
-      const min = faintEffect.target?.min ?? 0
-      const max = faintEffect.target?.max ?? 1
       const targetIds =
-        candidates.length >= min
-          ? ordered.slice(0, max).map((cookie) => cookie.card.instanceId)
+        candidates.length >= pendingDecision.min
+          ? ordered.slice(0, pendingDecision.max).map((cookie) => cookie.card.instanceId)
           : []
       return {
-        state: resolveFaintEffect(state, targetIds),
+        state: applyGameCommand(state, {
+          kind: 'resolve-faint-effect',
+          playerId,
+          targetIds,
+        }),
         action: 'resolve-faint',
         description:
           targetIds.length > 0
@@ -433,27 +435,30 @@ export const takeAiStep = (
     }
 
     if (
-      state.pendingOpponentHandDiscard &&
+      pendingDecision?.kind === 'opponent-hand-discard' &&
       !state.pendingRefresh &&
       !state.pendingBattle &&
       !state.pendingReplacement
     ) {
-      const pending = state.pendingOpponentHandDiscard
-      if (pending.playerId !== playerId) {
+      if (pendingDecision.playerId !== playerId) {
         return {
           state,
           action: 'idle',
-          description: `等待 ${state.players[pending.playerId].name} 選擇棄置手牌。`,
+          description: `等待 ${state.players[pendingDecision.playerId].name} 選擇棄置手牌。`,
         }
       }
       const hand = state.players[playerId].hand
       const discardIds = hand
-        .slice(0, pending.count)
+        .slice(0, pendingDecision.count)
         .map((card) => card.instanceId)
       return {
-        state: resolveOpponentHandDiscard(state, playerId, discardIds),
+        state: applyGameCommand(state, {
+          kind: 'resolve-opponent-hand-discard',
+          playerId,
+          cardIds: discardIds,
+        }),
         action: 'idle',
-        description: `${state.players[playerId].name}棄置 ${pending.count} 張手牌。`,
+        description: `${state.players[playerId].name}棄置 ${pendingDecision.count} 張手牌。`,
       }
     }
 
@@ -871,10 +876,9 @@ export const simulateAiMatch = (
     }
 
     const controller =
-      state.pendingFaintEffects?.[0]?.sourcePlayerId ??
+      getPendingDecision(state)?.playerId ??
       state.pendingRefresh?.playerId ??
       state.pendingOnPlay?.playerId ??
-      state.pendingOpponentHandDiscard?.playerId ??
       getCurrentReplacementTask(state)?.playerId ??
       (state.pendingBattle
         ? state.pendingBattle.stage === 'flip'

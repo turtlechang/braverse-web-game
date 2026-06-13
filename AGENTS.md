@@ -32,6 +32,7 @@ src/
     victory.ts     ← 勝負判定
     starter-deck.ts← 官方 Starter Deck RED 牌組定義
     helpers.ts     ← createSeededShuffle（Fisher-Yates 種子洗牌）
+    commands.ts    ← typed GameCommand/PendingDecision pilot
     index.ts       ← 公開 API 匯出入口
     *.test.ts      ← 對應模組的單元測試
 
@@ -93,7 +94,7 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 ### 測試
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
-- 目前共有 280 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策（含 faint 效果選擇）、Refresh、抽牌效果、deck-to-support、break-to-trash、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、When this Cookie faints（pending queue、選特定對手、選 0 略過、候選為空、戰鬥與效果雙來源、AI deterministic）、ST2-021 Pretzel Snare（declaredDamage 4 不出現/5 出現、選 1 目標、選 0 略過、不合法 YY 支付）、ST2-001 Roguefort Cookie opponent-discard-hand（對手棄牌 pending decision、空手直接完成、合法選 1、錯誤玩家/卡/張數拒絕、AI deterministic 選擇、CardDetailModal 顯示技能）、gain-hp 效果（技能與 FLIP 雙路徑、sourceOnly 目標、牌庫不足防護）與無限迴圈防護。
+- 目前共有 299 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策（含 faint 效果選擇）、Refresh、抽牌效果、deck-to-support、break-to-trash、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、When this Cookie faints（pending queue、選特定對手、選 0 略過、候選為空、戰鬥與效果雙來源、AI deterministic）、ST2-021 Pretzel Snare（declaredDamage 4 不出現/5 出現、選 1 目標、選 0 略過、不合法 YY 支付）、ST2-001 Roguefort Cookie opponent-discard-hand（對手棄牌 pending decision、空手直接完成、合法選 1、錯誤玩家/卡/張數拒絕、AI deterministic 選擇、CardDetailModal 顯示技能）、gain-hp 效果（技能與 FLIP 雙路徑、sourceOnly 目標、牌庫不足防護）、typed GameCommand/PendingDecision pilot（faint-effect、opponent-hand-discard）與無限迴圈防護。
 - Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 break-to-trash 選 1 與選 0 路徑、合法陷阱顯示、不合法陷阱不顯示回應視窗、FLIP 棄牌手牌切頁與無水平卷軸、補位與略過補位兩條互動路徑、物品/場景合法與不合法使用路徑、ST2-011 Cherry Cookie faint 效果選擇與略過兩路徑，ST2-021 Pretzel Snare 詳情文字、選 1 目標真實操作、選 0 略過真實操作、damage=4 不出現、damage=5 出現，以及 ST2-001 Roguefort Cookie 詳情顯示技能、合法支付後出現對手棄牌視窗、未選棄牌不可確認、選 1 張手牌完成棄牌。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。
 - 測試總數或瀏覽器驗證結果改變時，同步更新本文件與 `README.md`，不可保留過期數字。
@@ -209,11 +210,10 @@ Codex App 在此專案中擔任**指揮官**角色，職責範圍僅限於：
 - **預設主要實作模型**：`opencode-go/deepseek-v4-pro` 為預設且主要實作模型，積極承接大多數程式碼撰寫、多檔案/跨模組變更、規則引擎、React UI、AI 決策、整合任務、測試套件、複雜文件，以及需要 `npm test`、`npm run lint`、`npm run build`、Playwright 等完整驗證鏈的工作。
 - **Flash 微任務限制**：`opencode-go/deepseek-v4-flash` 僅限真正極小、隔離、低風險、邊界明確的任務，原則上限於單一檔案或單一機械式變更（例如錯字修正、極短 docstring、單一 assertion、小型低風險唯讀聚焦審查）。禁止用於跨模組變更、架構或規則邏輯修改、React 與引擎聯動、複雜文件、完整驗證鏈、長時間 Playwright 或大量測試。Flash 執行中若發現範圍擴大，應立即停止並改派 Pro。
 - **輔助模型**：`opencode-go/qwen3.7-plus` 約佔 10%，`opencode-go/deepseek-v4-flash` 的微任務約佔部分派工，但非硬配額且 Flash 必須先符合微任務限制。
-- **試用模型**：`opencode-go/glm-5.1` 目前處於試用階段，可由使用者指定用於中小型實作或審查，以評估其勝任度；試用期間仍由 `opencode-go/deepseek-v4-pro` 擔任主要實作與終審備援。
-- **大型 PR 審查（多檔案跨模組）**：固定使用 `opencode-go/kimi-k2.6`。
+- **大型 PR 審查（多檔案跨模組）**：固定使用 `opencode-go/kimi-k2.7-code`。
 - **高複雜度任務（可選）**：當任務涉及深層規則推理、複雜架構設計或需要極高準確度時，可選用 `opencode-go/claude-opus-4.5`。
 - **升級機制**：
-  - 重大疑點或 `opencode-go/kimi-k2.6` 結果不完整 → 升級 `opencode-go/claude-opus-4.5` 或 `opencode-go/qwen3.7-max`（`qwen3.7-max` 目前受 `@ai-sdk/openai-compatible` 限制不可自動使用，改以 `opencode-go/deepseek-v4-pro` 作暫時終審）。
+  - 重大疑點或 `opencode-go/kimi-k2.7-code` 結果不完整 → 升級 `opencode-go/claude-opus-4.5` 或 `opencode-go/qwen3.7-max`（`qwen3.7-max` 目前受 `@ai-sdk/openai-compatible` 限制不可自動使用，改以 `opencode-go/deepseek-v4-pro` 作暫時終審）。
   - `opencode-go/qwen3.7-plus` 不可用 / 逾時 / 不穩定 → 降級 `opencode-go/qwen3.6-plus`。
   - 一般 Plus 工作兩次仍未解決 → 升級 `opencode-go/claude-opus-4.5` 或 `opencode-go/qwen3.7-max`（`qwen3.7-max` 目前限制同上）。
 - **使用者明確指定模式或模型** → 優先採用使用者指定。
