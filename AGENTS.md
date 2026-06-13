@@ -204,11 +204,12 @@ Codex App 在此專案中擔任**指揮官**角色，職責範圍僅限於：
 - **預設優先派工**：使用者已同意將本專案原始碼內容傳送至 OpenCode Go 外部 API。凡 OpenCode Go 可可靠完成的唯讀審查、測試補強、文件更新、簡單重構、CRUD 與一般實作，預設先派給 OpenCode Go，以降低 Codex GPT 額度消耗；Codex 主線負責需求拆解、規則裁決、跨模組整合、高風險修改與最終驗證。
 - **平台核准仍優先**：上述同意是專案偏好，不取代 Codex 執行環境的安全審查或外部網路核准；若工具要求再次核准，仍須依平台流程處理，不得繞過。
 - **避免重複耗用**：同一子任務原則上只派工一次；結果完整即可直接整合，不再用另一個 GPT／OpenCode 模型重做。只有結果不完整、測試失敗或重大疑點時才依升級機制追加派工。
-- **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。
+- **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。若出現 `Error: Session not found` / `In a restricted Codex environment`，參考 `develop-braverse/references/opencode-go-sandbox.md` 的標準流程處理。
 - **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個檔案。低風險且邊界明確的極聚焦唯讀審查可使用 `opencode-go/deepseek-v4-flash`；跨模組、高風險或重大疑點的審查改用 `opencode-go/deepseek-v4-pro` 或既有大型 PR 模型。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
 - **預設主要實作模型**：`opencode-go/deepseek-v4-pro` 為預設且主要實作模型，積極承接大多數程式碼撰寫、多檔案/跨模組變更、規則引擎、React UI、AI 決策、整合任務、測試套件、複雜文件，以及需要 `npm test`、`npm run lint`、`npm run build`、Playwright 等完整驗證鏈的工作。
 - **Flash 微任務限制**：`opencode-go/deepseek-v4-flash` 僅限真正極小、隔離、低風險、邊界明確的任務，原則上限於單一檔案或單一機械式變更（例如錯字修正、極短 docstring、單一 assertion、小型低風險唯讀聚焦審查）。禁止用於跨模組變更、架構或規則邏輯修改、React 與引擎聯動、複雜文件、完整驗證鏈、長時間 Playwright 或大量測試。Flash 執行中若發現範圍擴大，應立即停止並改派 Pro。
 - **輔助模型**：`opencode-go/qwen3.7-plus` 約佔 10%，`opencode-go/deepseek-v4-flash` 的微任務約佔部分派工，但非硬配額且 Flash 必須先符合微任務限制。
+- **試用模型**：`opencode-go/glm-5.1` 目前處於試用階段，可由使用者指定用於中小型實作或審查，以評估其勝任度；試用期間仍由 `opencode-go/deepseek-v4-pro` 擔任主要實作與終審備援。
 - **大型 PR 審查（多檔案跨模組）**：固定使用 `opencode-go/kimi-k2.6`。
 - **高複雜度任務（可選）**：當任務涉及深層規則推理、複雜架構設計或需要極高準確度時，可選用 `opencode-go/claude-opus-4.5`。
 - **升級機制**：

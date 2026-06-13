@@ -38,6 +38,7 @@ OpenCode Go 會連線至外部 HTTPS API。在 Codex 的受限網路沙箱中執
 ```powershell
 scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-flash "只回覆 OK"
 scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-pro "只回覆 OK"
+scripts\opencode-go.cmd run --model opencode-go/glm-5.1 "只回覆 OK"
 ```
 
 一般只讀審查使用專案的 `review-fast` agent。此 agent 限制為一次工具迭代、最多讀取 4 個聚焦檔案區段，並禁止 bash、編輯、子代理與網路工具：
@@ -60,6 +61,7 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-pro "審查任務
 | 預設主要實作（多數程式碼、多檔案/跨模組、規則引擎、React UI、AI、整合、測試套件、複雜文件、完整驗證鏈） | `opencode-go/deepseek-v4-pro` |
 | 極小微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀聚焦審查） | `opencode-go/deepseek-v4-flash`（範圍擴大須立即停止並改派 Pro） |
 | 輔助模型 | `opencode-go/qwen3.7-plus` |
+| 試用模型（中小型實作或審查，評估勝任度） | `opencode-go/glm-5.1`（試用期間仍以 `opencode-go/deepseek-v4-pro` 擔任主要實作與終審備援） |
 | 大型、多檔案、跨模組 PR 審查 | `opencode-go/kimi-k2.6` |
 | `qwen3.7-plus` 不可用或不穩定 | `opencode-go/qwen3.6-plus` |
 | Kimi 結果不完整或有重大疑點 | 暫以 `opencode-go/deepseek-v4-pro` 終審 |
@@ -73,3 +75,14 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-pro "審查任務
 - 將派工結果視為建議；主代理仍需讀取 diff、驗證規則依據並執行測試。
 - 大型審查要求依嚴重度列出具體檔案與行號，優先找行為錯誤、回歸與缺少測試。
 - Flash 僅用於單檔機械式變更；若任務範圍可能擴大，直接派 Pro。
+
+## 受限環境與沙箱網路問題
+
+若在 Codex 受限環境中執行 `scripts\opencode-go-review.cmd` 或 `scripts\opencode-go.cmd run` 時出現：
+
+```text
+Error: Session not found
+In a restricted Codex environment...
+```
+
+請參考 `opencode-go-sandbox.md` 的標準流程處理：判定為沙箱網路阻擋、使用 `sandbox_permissions: "require_escalated"` 請求核准；若無法使用，改用背景伺服器方案（`Start-Job` + `opencode serve` + `run --attach`）或 `scripts/opencode-go-direct-review.mjs` 直接呼叫 API。
