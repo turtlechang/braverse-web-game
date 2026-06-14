@@ -213,6 +213,53 @@ describe('item and stage actions', () => {
     ).toThrow('能量付款不合法')
   })
 
+  it('does not offer stage activation when its energy cost cannot be paid', () => {
+    const stage: GameCard = {
+      id: 'stage',
+      instanceId: 'stage-1',
+      name: 'Stage',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { red: 1 },
+        cost: { red: 4 },
+        text: 'stage',
+        restSource: true,
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].stage = { card: stage, rested: false }
+
+    expect(canActivateStage(state, 'player-one')).toBe(false)
+  })
+
+  it('does not offer stage activation when a required target is unavailable', () => {
+    const stage: GameCard = {
+      id: 'stage',
+      instanceId: 'stage-1',
+      name: 'Stage',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { red: 1 },
+        cost: { red: 1 },
+        text: 'stage',
+        restSource: true,
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 1, max: 1, minLevel: 99 },
+          },
+        ],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].stage = { card: stage, rested: false }
+
+    expect(canActivateStage(state, 'player-one')).toBe(false)
+  })
+
   it('executes item effect with modify-attack targeting own cookie', () => {
     const item: GameCard = {
       id: 'item',

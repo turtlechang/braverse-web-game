@@ -3,6 +3,7 @@ import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId, PlayerS
 import {
   advancePhase,
   beginAttack,
+  chooseRandomDeck,
   createDemoSetupGame,
   drawMulliganCompensation,
   forceMulliganOpeningHand,
@@ -24,6 +25,7 @@ import {
   type DeckChoice,
 } from '../game'
 import {
+  createAttackEffectDemoState,
   createBreakToTrashDemoState,
   createFaintDamageDemoState,
   createFlipResponseDemoState,
@@ -107,13 +109,21 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'opponent-discard-hand') {
       return createOpponentDiscardHandDemoState()
     }
+    if (testStateConfig?.kind === 'attack-effect') {
+      return createAttackEffectDemoState()
+    }
     return createDemoSetupGame('player-one')
   })
   const [setupStep, setSetupStep] = useState<
-    'rps' | 'choose-order' | 'mulligan' | 'starting-cookie' | null
-  >(testStateConfig === null ? 'rps' : null)
+    | 'deck-selection'
+    | 'rps'
+    | 'choose-order'
+    | 'mulligan'
+    | 'starting-cookie'
+    | null
+  >(testStateConfig === null ? 'deck-selection' : null)
   const [setupMessage, setSetupMessage] = useState(
-    '選擇剪刀、石頭或布，勝者取得先後攻選擇權。',
+    '請選擇本次對戰使用的牌組。',
   )
   const [deckConfig, setDeckConfig] = useState<{
     player: DeckChoice
@@ -157,6 +167,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'opponent-discard-hand') {
       return '測試狀態：Roguefort Cookie OnPlay 對手棄牌。'
+    }
+    if (testStateConfig?.kind === 'attack-effect') {
+      return '測試狀態：Wizard Cookie 攻擊後續效果。'
     }
     return '推進階段，開始這場對戰。'
   })
@@ -359,6 +372,15 @@ export function useMatchController(params: {
     [beginOrderedSetup],
   )
 
+  const handleDeckSelection = useCallback((playerDeck: DeckChoice) => {
+    const aiDeck = chooseRandomDeck()
+    setDeckConfig({ player: playerDeck, ai: aiDeck })
+    setSetupStep('rps')
+    setSetupMessage(
+      `我方使用${playerDeck === 'red' ? '紅色' : playerDeck === 'yellow' ? '黃色' : '綠色'}牌組，AI 隨機選擇${aiDeck === 'red' ? '紅色' : aiDeck === 'yellow' ? '黃色' : '綠色'}牌組。請猜拳決定先後攻選擇權。`,
+    )
+  }, [])
+
   const handlePlayerMulligan = (replaceAll: boolean) => {
     let nextGame = replaceAll
       ? mulliganOpeningHand(game, 'player-one')
@@ -515,6 +537,42 @@ export function useMatchController(params: {
       ? getReplacementCandidates(game, pendingPlayer.id)
       : []
 
+  useEffect(() => {
+    if (
+      setupStep ||
+      game.status !== 'playing' ||
+      game.activePlayerId !== viewerPlayerId ||
+      (game.phase !== 'active' && game.phase !== 'draw') ||
+      game.pendingReplacement ||
+      game.pendingOnPlay ||
+      game.pendingRefresh ||
+      game.pendingBattle ||
+      game.pendingOpponentHandDiscard ||
+      (game.pendingFaintEffects && game.pendingFaintEffects.length > 0)
+    ) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setGame((current) => {
+        if (
+          current.activePlayerId !== viewerPlayerId ||
+          (current.phase !== 'active' && current.phase !== 'draw')
+        ) {
+          return current
+        }
+        return advancePhase(current)
+      })
+      setMessage(
+        game.phase === 'active'
+          ? '活躍動作已自動完成。'
+          : '抽牌已自動完成，進入支援階段。',
+      )
+    }, 350)
+
+    return () => window.clearTimeout(timer)
+  }, [game, setupStep, viewerPlayerId])
+
   // auto-skip trap
   useEffect(() => {
     const battle = game.pendingBattle
@@ -548,8 +606,8 @@ export function useMatchController(params: {
   const resetMatchState = useCallback(
     (nextConfig: { player: DeckChoice; ai: DeckChoice }) => {
       setGame(createDemoSetupGame('player-one', nextConfig))
-      setSetupStep('rps')
-      setSetupMessage('選擇剪刀、石頭或布，勝者取得先後攻選擇權。')
+      setSetupStep('deck-selection')
+      setSetupMessage('請選擇本次對戰使用的牌組。')
       setSelectedAttackerId(null)
       setSelectedAttackPaymentIds([])
       setSelectedFaintTargetIds([])
@@ -580,6 +638,7 @@ export function useMatchController(params: {
     setSelectedAttackPaymentIds,
     message,
     setMessage,
+    handleDeckSelection,
     handleRps,
     beginOrderedSetup,
     handlePlayerMulligan,

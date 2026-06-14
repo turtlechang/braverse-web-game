@@ -8,8 +8,6 @@ export interface MatchToolbarProps {
   activePlayerName: string
   phase: TurnPhase
   message: string
-  onPlayerDeckChange: (deck: DeckChoice) => void
-  onAiDeckChange: (deck: DeckChoice) => void
   onReset: () => void
   onViewDeck: () => void
   onPause: () => void
@@ -20,8 +18,6 @@ export function MatchToolbar({
   activePlayerName,
   phase,
   message,
-  onPlayerDeckChange,
-  onAiDeckChange,
   onReset,
   onViewDeck,
   onPause,
@@ -34,40 +30,10 @@ export function MatchToolbar({
         <small>{message}</small>
       </div>
       <div className="toolbar-actions">
-        <div className="deck-select-group">
-          <label className="deck-select-label">
-            玩家牌組
-            <select
-              className="deck-select"
-              aria-label="玩家牌組"
-              data-testid="player-deck-select"
-              value={deckConfig.player}
-              onChange={(e) =>
-                onPlayerDeckChange(e.target.value as DeckChoice)
-              }
-            >
-              <option value="red">紅色牌組</option>
-              <option value="yellow">黃色牌組</option>
-              <option value="green">綠色牌組</option>
-            </select>
-          </label>
-          <span className="deck-select-vs">vs</span>
-          <label className="deck-select-label">
-            AI 牌組
-            <select
-              className="deck-select"
-              aria-label="AI 牌組"
-              data-testid="ai-deck-select"
-              value={deckConfig.ai}
-              onChange={(e) =>
-                onAiDeckChange(e.target.value as DeckChoice)
-              }
-            >
-              <option value="red">紅色牌組</option>
-              <option value="yellow">黃色牌組</option>
-              <option value="green">綠色牌組</option>
-            </select>
-          </label>
+        <div className="deck-matchup" aria-label="本局牌組">
+          <span>玩家 {deckConfig.player.toUpperCase()}</span>
+          <b>VS</b>
+          <span>AI {deckConfig.ai.toUpperCase()}</span>
         </div>
         <button type="button" title="重新開始" onClick={onReset}>
           <RotateCcw aria-hidden="true" />

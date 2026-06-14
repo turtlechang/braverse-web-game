@@ -159,7 +159,7 @@ describe('replacement sequence', () => {
     expect(state.players['player-one'].battleArea).toHaveLength(1)
   })
 
-  it('allows a player to decline a legal replacement and leave the battle area empty', () => {
+  it('defeats a player who declines a legal replacement and leaves the battle area empty', () => {
     let state = createReplacementState()
     state = {
       ...state,
@@ -182,7 +182,12 @@ describe('replacement sequence', () => {
     state = finalizePendingReplacements(state)
     state = skipDefeatedCookieReplacement(state)
 
-    expect(state.status).toBe('playing')
+    expect(state.status).toBe('finished')
+    expect(state.result).toEqual({
+      winnerId: 'player-two',
+      loserId: 'player-one',
+      reason: 'no-cookie-available',
+    })
     expect(state.pendingReplacement).toBeNull()
     expect(state.players['player-one'].battleArea).toHaveLength(0)
     expect(state.players['player-one'].hand[0]?.instanceId).toBe(

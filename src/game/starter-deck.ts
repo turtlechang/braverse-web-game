@@ -11,7 +11,7 @@ import {
 } from '../cards/official-effect-adapter'
 import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
-import type { GameCard, PlayerId } from './types'
+import type { CardEffect, GameCard, PlayerId } from './types'
 
 export type DeckChoice = 'red' | 'yellow' | 'green'
 
@@ -178,6 +178,13 @@ const createCard = (
       attackCost: parsedAttack?.totalCost ?? 0,
       attackEnergyCost: parsedAttack?.cost ?? {},
       attackText: source.attackText ?? undefined,
+      ...(source.cardNumber === 'ST2-003'
+        ? {
+            attackEffects: [
+              { kind: 'break-to-trash', max: 1, exactLevel: 1 },
+            ] satisfies CardEffect[],
+          }
+        : {}),
       ...(skill ? { skill } : {}),
       ...(flip ? { flip } : {}),
     }

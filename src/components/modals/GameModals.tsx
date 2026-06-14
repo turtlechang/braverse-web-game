@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Pause, X } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  Pause,
+  X,
+} from 'lucide-react'
 import type {
   DeckChoice,
   DefeatReason,
@@ -16,6 +23,7 @@ import { deckChoiceLabel } from '../gameUiLabels'
 import './GameModals.css'
 
 export type OpeningSetupStep =
+  | 'deck-selection'
   | 'rps'
   | 'choose-order'
   | 'mulligan'
@@ -25,6 +33,8 @@ export interface OpeningSetupModalProps {
   step: OpeningSetupStep
   message: string
   hand: GameCard[]
+  deckConfig: { player: DeckChoice; ai: DeckChoice }
+  onSelectDeck: (deck: DeckChoice) => void
   onRps: (choice: 'rock' | 'paper' | 'scissors') => void
   onChooseFirstPlayer: (playerFirst: boolean) => void
   onMulligan: (replaceAll: boolean) => void
@@ -35,13 +45,17 @@ export function OpeningSetupModal({
   step,
   message,
   hand,
+  deckConfig,
+  onSelectDeck,
   onRps,
   onChooseFirstPlayer,
   onMulligan,
   onSelectStartingCookie,
 }: OpeningSetupModalProps) {
   const title =
-    step === 'rps'
+    step === 'deck-selection'
+      ? '選擇牌組'
+      : step === 'rps'
       ? '猜拳決定選擇權'
       : step === 'choose-order'
         ? '選擇先攻或後攻'
@@ -55,12 +69,32 @@ export function OpeningSetupModal({
         <span>對戰開始前設定</span>
         <h2>{title}</h2>
         <p>{message}</p>
-        {step === 'rps' && (
-          <div className="setup-choice-grid">
-            <button type="button" onClick={() => onRps('rock')}>石頭</button>
-            <button type="button" onClick={() => onRps('paper')}>布</button>
-            <button type="button" onClick={() => onRps('scissors')}>剪刀</button>
+        {step === 'deck-selection' && (
+          <div className="setup-deck-grid">
+            {(['red', 'yellow', 'green'] as const).map((deck) => (
+              <button
+                type="button"
+                key={deck}
+                onClick={() => onSelectDeck(deck)}
+              >
+                <strong>{deckChoiceLabel[deck]}起始牌組</strong>
+                <span>選擇此牌組</span>
+              </button>
+            ))}
           </div>
+        )}
+        {step === 'rps' && (
+          <>
+            <div className="setup-matchup">
+              <span>我方：{deckChoiceLabel[deckConfig.player]}</span>
+              <span>AI：{deckChoiceLabel[deckConfig.ai]}</span>
+            </div>
+            <div className="setup-choice-grid">
+              <button type="button" onClick={() => onRps('rock')}>石頭</button>
+              <button type="button" onClick={() => onRps('paper')}>布</button>
+              <button type="button" onClick={() => onRps('scissors')}>剪刀</button>
+            </div>
+          </>
         )}
         {step === 'choose-order' && (
           <div className="setup-choice-grid">
@@ -188,8 +222,12 @@ export function CardPileModal({
   onClose,
 }: CardPileModalProps) {
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="card-pile-modal" role="dialog">
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <section
+        className="card-pile-modal"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
         <button
           className="close-modal"
           type="button"
@@ -213,6 +251,65 @@ export function CardPileModal({
             </button>
           ))}
         </div>
+      </section>
+    </div>
+  )
+}
+
+export interface CardRevealModalProps {
+  card: GameCard
+  title: string
+  description?: string
+  confirmLabel?: string
+  onConfirm: () => void
+}
+
+export function CardRevealModal({
+  card,
+  title,
+  description,
+  confirmLabel = '確認並繼續',
+  onConfirm,
+}: CardRevealModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <CardFace card={card} />
+        <span>
+          <strong>{card.name}</strong>
+          <small>效果待確認</small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop card-reveal-backdrop" role="presentation">
+      <section className="card-reveal-modal" role="alertdialog">
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小卡牌展示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <span>公開卡牌效果</span>
+        <h2>{title}</h2>
+        <CardFace card={card} className="reveal-card" />
+        <strong>{card.name}</strong>
+        <p>{description ?? card.effectText}</p>
+        <button type="button" className="reveal-confirm" onClick={onConfirm}>
+          {confirmLabel}
+        </button>
       </section>
     </div>
   )
@@ -318,11 +415,29 @@ export function FlipResponseModal({
   onSkip,
 }: FlipResponseModalProps) {
   const [pageIndex, setPageIndex] = useState(0)
+  const [minimized, setMinimized] = useState(false)
   const pageCount = Math.max(1, Math.ceil(hand.length / FLIP_HAND_PAGE_SIZE))
   const visibleHand = hand.slice(
     pageIndex * FLIP_HAND_PAGE_SIZE,
     (pageIndex + 1) * FLIP_HAND_PAGE_SIZE,
   )
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <CardFace card={card} />
+        <span>
+          <strong>{card.name}</strong>
+          <small>FLIP 效果待確認</small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -330,6 +445,15 @@ export function FlipResponseModal({
         className="battle-response-modal flip-response-modal"
         role="alertdialog"
       >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小卡牌展示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
         <span>HP 卡翻開</span>
         <h2>{card.name} FLIP</h2>
         <CardFace card={card} className="flip-reveal-card" />
@@ -426,8 +550,12 @@ export function CardDetailModal({
             : '卡牌效果'
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="card-detail-modal" role="dialog">
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <section
+        className="card-detail-modal"
+        role="dialog"
+        onClick={(event) => event.stopPropagation()}
+      >
         <button
           className="close-modal"
           type="button"

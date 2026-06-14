@@ -67,6 +67,7 @@ export interface CookieCard extends BaseCard {
   attackCost: number
   attackEnergyCost?: EnergyCost
   attackText?: string
+  attackEffects?: CardEffect[]
 }
 
 export interface NonCookieCard extends BaseCard {
@@ -377,7 +378,11 @@ export interface GameState {
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
 }
 
-export type PendingBattleStage = 'trap' | 'damage' | 'flip'
+export type PendingBattleStage =
+  | 'trap'
+  | 'damage'
+  | 'flip'
+  | 'attack-effect'
 
 export interface PendingBattle {
   attackerPlayerId: PlayerId
@@ -391,6 +396,8 @@ export interface PendingBattle {
   revealedHpCard: GameCard | null
   preventKnockoutTargetIds: string[]
   faintedColors: EnergyColor[]
+  attackEffects: CardEffect[]
+  attackEffectIndex: number
   damagePlayerId?: PlayerId
   damageTargetInstanceId?: string
   suspendedAttackDamage?: number

@@ -5,6 +5,7 @@ import {
   CardDetailModal,
   DecisionModal,
   FlipResponseModal,
+  OpeningSetupModal,
   ResultModal,
 } from './GameModals'
 
@@ -13,6 +14,30 @@ const createHandCard = (index: number): GameCard => ({
   instanceId: `test-hand-${index}`,
   name: `測試手牌 ${index}`,
   type: 'item',
+})
+
+describe('OpeningSetupModal', () => {
+  it('starts by asking the player to choose one of the three decks', () => {
+    const markup = renderToStaticMarkup(
+      <OpeningSetupModal
+        step="deck-selection"
+        message="請選擇牌組"
+        hand={[]}
+        deckConfig={{ player: 'red', ai: 'green' }}
+        onSelectDeck={() => undefined}
+        onRps={() => undefined}
+        onChooseFirstPlayer={() => undefined}
+        onMulligan={() => undefined}
+        onSelectStartingCookie={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('選擇牌組')
+    expect(markup).toContain('紅色起始牌組')
+    expect(markup).toContain('黃色起始牌組')
+    expect(markup).toContain('綠色起始牌組')
+    expect(markup).not.toContain('剪刀')
+  })
 })
 
 describe('CardDetailModal', () => {

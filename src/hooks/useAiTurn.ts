@@ -6,6 +6,7 @@ import {
   takeAiStep,
 } from '../game'
 import type { AiMatchResult } from '../game'
+import type { AiDecision } from '../game'
 import type { DeckChoice } from '../game'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
@@ -35,6 +36,8 @@ export function useAiTurn(params: {
   const [aiActionCount, setAiActionCount] = useState(0)
   const [simulationResults, setSimulationResults] =
     useState<AiMatchResult[] | null>(null)
+  const [pendingAiDecision, setPendingAiDecision] =
+    useState<AiDecision | null>(null)
   const aiThinkingTimerRef = useRef<number | null>(null)
   const aiActionTimerRef = useRef<number | null>(null)
 
@@ -44,7 +47,8 @@ export function useAiTurn(params: {
       game.status !== 'playing' ||
       !aiControlsCurrentState ||
       pendingEffect ||
-      faintActive
+      faintActive ||
+      pendingAiDecision
     ) {
       return
     }
@@ -64,6 +68,12 @@ export function useAiTurn(params: {
 
       if (decision.action === 'error' || decision.state === game) {
         setMessage(`AI 停止：${decision.description}`)
+        return
+      }
+
+      if (decision.revealedCard) {
+        setPendingAiDecision(decision)
+        setMessage(`AI 公開${decision.revealedCard.name}，等待確認。`)
         return
       }
 
@@ -89,6 +99,7 @@ export function useAiTurn(params: {
     faintActive,
     game,
     pendingEffect,
+    pendingAiDecision,
     showPause,
     setGame,
     setMessage,
@@ -106,7 +117,16 @@ export function useAiTurn(params: {
   const resetAiCounts = useCallback(() => {
     setAiActionCount(0)
     setSimulationResults(null)
+    setPendingAiDecision(null)
   }, [])
+
+  const confirmAiDecision = useCallback(() => {
+    if (!pendingAiDecision) return
+    setGame(pendingAiDecision.state)
+    setMessage(`AI：${pendingAiDecision.description}`)
+    setAiActionCount((count) => count + 1)
+    setPendingAiDecision(null)
+  }, [pendingAiDecision, setGame, setMessage])
 
   const dismissSimulation = useCallback(() => {
     setSimulationResults(null)
@@ -116,6 +136,8 @@ export function useAiTurn(params: {
     aiThinking,
     aiActionCount,
     simulationResults,
+    pendingAiDecision,
+    confirmAiDecision,
     resetAiCounts,
     dismissSimulation,
     runSimulation,

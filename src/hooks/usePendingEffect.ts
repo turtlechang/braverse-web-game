@@ -19,6 +19,7 @@ import {
   isEffectConditionMet,
   isEffectUntargeted,
   playItem,
+  resolveAttackEffect,
   skipCookieOnPlay,
 } from '../game'
 import { describeEffectResult } from '../components/effects/effectUiUtils'
@@ -66,19 +67,28 @@ export function usePendingEffect(params: {
 
   const currentEffect =
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
+  const currentTargetSelector =
+    currentEffect?.kind === 'gain-hp'
+      ? currentEffect.target?.sourceOnly
+        ? null
+        : currentEffect.target ?? null
+      : currentEffect && !isEffectUntargeted(currentEffect)
+        ? currentEffect.kind === 'break-to-trash' ||
+          currentEffect.kind === 'support-to-trash' ||
+          currentEffect.kind === 'support-to-hand' ||
+          currentEffect.kind === 'trash-to-battle'
+          ? null
+          : currentEffect.target
+        : null
 
   const effectTargetCandidates =
     pendingEffect &&
     currentEffect &&
-    !isEffectUntargeted(currentEffect) &&
-    currentEffect.kind !== 'break-to-trash' &&
-    currentEffect.kind !== 'support-to-trash' &&
-    currentEffect.kind !== 'support-to-hand' &&
-    currentEffect.kind !== 'trash-to-battle'
+    currentTargetSelector
       ? getEffectTargetCandidates(
           game,
           pendingEffect.context,
-          currentEffect.target,
+          currentTargetSelector,
         )
       : []
 
@@ -278,6 +288,62 @@ export function usePendingEffect(params: {
   }
 
   useEffect(() => {
+    const battle = game.pendingBattle
+    if (
+      !battle ||
+      battle.stage !== 'attack-effect' ||
+      battle.attackerPlayerId !== viewerPlayerId ||
+      pendingEffect ||
+      faintActive
+    ) {
+      return
+    }
+
+    const sourceCard = game.players[viewerPlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === battle.attackerInstanceId,
+    )?.card
+    const currentAttackEffect =
+      battle.attackEffects[battle.attackEffectIndex]
+    if (!sourceCard || !currentAttackEffect) return
+
+    const timer = window.setTimeout(() => {
+      setPendingEffect({
+        sourceCard,
+        context: {
+          sourcePlayerId: viewerPlayerId,
+          sourceInstanceId: battle.attackerInstanceId,
+        },
+        skill: {
+          trigger: 'activate',
+          oncePerTurn: false,
+          yourTurn: true,
+          restSource: false,
+          cost: {},
+          text: sourceCard.attackText ?? '',
+          effects: battle.attackEffects,
+        },
+        trigger: 'activate',
+        effects: battle.attackEffects,
+        effectIndex: battle.attackEffectIndex,
+        selectedTargetIds: [],
+        selectedPaymentIds: [],
+        skillActivated: true,
+        optional: false,
+        triggerLabel: '攻擊後續效果',
+        sourceKind: 'attack',
+      })
+      setMessage(`${sourceCard.name}等待選擇攻擊後續效果目標。`)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [
+    game,
+    viewerPlayerId,
+    pendingEffect,
+    faintActive,
+    setMessage,
+  ])
+
+  useEffect(() => {
     if (
       !game.pendingOnPlay ||
       game.pendingOnPlay.playerId !== viewerPlayerId ||
@@ -345,7 +411,9 @@ export function usePendingEffect(params: {
             currentEffect.kind === 'trash-to-battle'
           ? currentEffect.amount
         : isEffectUntargeted(currentEffect)
-          ? 0
+          ? currentEffect.kind === 'gain-hp'
+            ? currentEffect.target?.max ?? 0
+            : 0
           : currentEffect.target.max
 
     const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
@@ -457,6 +525,20 @@ export function usePendingEffect(params: {
           )
 
     try {
+      if (pendingEffect.sourceKind === 'attack') {
+        const nextGame = resolveAttackEffect(
+          game,
+          pendingEffect.context.sourcePlayerId,
+          pendingEffect.selectedTargetIds,
+        )
+        const result = describeEffectResult(currentEffect, targetNames)
+        setGame(nextGame)
+        setMessage(result)
+        setEffectHistory((history) => [result, ...history].slice(0, 4))
+        setPendingEffect(null)
+        return
+      }
+
       const activatedGame = pendingEffect.skillActivated
         ? game
         : pendingEffect.sourceKind === 'item'

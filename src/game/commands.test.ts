@@ -31,6 +31,8 @@ describe('getPendingDecision', () => {
         stage: 'trap',
         targetInstanceId: 'target-1',
         trapUsed: false,
+        attackEffects: [],
+        attackEffectIndex: 0,
       },
     }
     expect(getPendingDecision(state)).toBeNull()

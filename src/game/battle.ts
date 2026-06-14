@@ -2,6 +2,7 @@ import { GameRuleError } from './errors'
 import {
   executeCardEffect,
   getAttackDamageAgainst,
+  getBreakToTrashCandidates,
   getEffectTargetCandidates,
   selectEffectTargets,
 } from './effects'
@@ -136,6 +137,8 @@ export const beginAttack = (
       revealedHpCard: null,
       preventKnockoutTargetIds: [],
       faintedColors: [],
+      attackEffects: attacker.card.attackEffects ?? [],
+      attackEffectIndex: 0,
     },
   }
 }
@@ -641,7 +644,70 @@ const finishDamageSequence = (state: GameState): GameState => {
     }
   }
 
+  if (battle.attackEffectIndex < battle.attackEffects.length) {
+    return {
+      ...state,
+      pendingBattle: {
+        ...battle,
+        stage: 'attack-effect',
+      },
+    }
+  }
+
   return finishBattle(state)
+}
+
+export const resolveAttackEffect = (
+  state: GameState,
+  playerId: PlayerId,
+  selectedTargetIds: string[],
+): GameState => {
+  const battle = requirePendingBattle(state)
+  if (
+    battle.stage !== 'attack-effect' ||
+    battle.attackerPlayerId !== playerId
+  ) {
+    throw new GameRuleError('目前沒有可處理的攻擊後續效果。')
+  }
+
+  const effect = battle.attackEffects[battle.attackEffectIndex]
+  if (!effect) {
+    return finishBattle(state)
+  }
+
+  const nextState = executeCardEffect(
+    state,
+    {
+      sourcePlayerId: playerId,
+      sourceInstanceId: battle.attackerInstanceId,
+    },
+    effect,
+    selectedTargetIds,
+  )
+  if (nextState.status !== 'playing') {
+    return { ...nextState, pendingBattle: null }
+  }
+
+  const nextBattle = requirePendingBattle(nextState)
+  const attackEffectIndex = nextBattle.attackEffectIndex + 1
+  if (attackEffectIndex < nextBattle.attackEffects.length) {
+    return {
+      ...nextState,
+      pendingBattle: {
+        ...nextBattle,
+        attackEffectIndex,
+        stage: 'attack-effect',
+      },
+    }
+  }
+
+  return finishBattle({
+    ...nextState,
+    pendingBattle: {
+      ...nextBattle,
+      attackEffectIndex,
+    },
+  })
 }
 
 export const resolveNextDamage = (state: GameState): GameState => {
@@ -942,6 +1008,26 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       nextState = resolveFlip(nextState, battle.defenderPlayerId, {
         activate: false,
       })
+    } else if (battle.stage === 'attack-effect') {
+      const effect = battle.attackEffects[battle.attackEffectIndex]
+      const targetIds =
+        effect?.kind === 'break-to-trash'
+          ? getBreakToTrashCandidates(
+              nextState,
+              {
+                sourcePlayerId: battle.attackerPlayerId,
+                sourceInstanceId: battle.attackerInstanceId,
+              },
+              effect,
+            )
+              .slice(0, effect.max)
+              .map((card) => card.instanceId)
+          : []
+      nextState = resolveAttackEffect(
+        nextState,
+        battle.attackerPlayerId,
+        targetIds,
+      )
     } else {
       nextState = resolveNextDamage(nextState)
     }

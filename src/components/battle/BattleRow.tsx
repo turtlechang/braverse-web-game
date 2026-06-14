@@ -81,6 +81,7 @@ export function BattleRow({
   const supportZone = (
     <div className="support-zone">
       <span className="zone-watermark">支援區</span>
+      <strong className="support-count">支援 {player.supportArea.length} 張</strong>
       <div className="support-cards">
         {player.supportArea.map((support) => (
           <CardFace
@@ -171,6 +172,9 @@ export function BattleRow({
           <div className="row-meta">
             <span>{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
             <strong>{player.name}</strong>
+            <b className="turn-order-badge">
+              {game.firstPlayerId === playerId ? '先攻' : '後攻'}
+            </b>
             <small>
               {isActivePlayer ? '行動中' : '等待'} · 手牌 {player.hand.length}
             </small>

@@ -295,6 +295,13 @@ describe('end phase effects', () => {
       refreshCookie,
       item('recycled'),
     ]
+    state.players['player-two'].battleArea = [
+      {
+        card: cookie('opponent-cookie'),
+        hpCards: [item('opponent-hp')],
+        rested: false,
+      },
+    ]
 
     state = advancePhase(state)
     expect(state.pendingRefresh?.playerId).toBe('player-one')

@@ -61,6 +61,13 @@
 
 無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw`、`deck-to-support`、`modify-all-attack`、`trash-to-battle`、`support-to-hand` 與 `opponent-discard-hand`）。
 
+### 已實作：攻擊後續效果
+
+- `CookieCard.attackEffects` 保存攻擊傷害文字後的效果序列，戰鬥以 `attack-effect` 待決階段在傷害完成後、替補前結算。
+- ST2-003 Wizard Cookie 已支援「造成 3 點傷害，之後可選最多 1 張己方 LV.1 休息區卡牌移至棄牌區」。
+- 玩家沿用效果目標面板選擇 0 或 1 張；AI 與自動戰鬥採 deterministic 合法選擇。
+- 通用 `convertOfficialCardEffects` 仍不接受任意含 `Then` 的複合文字；目前僅對已確認的 ST2-003 攻擊文字建立明確轉接。
+
 ## 未支援（unsupported）效果
 
 下列效果**維持 unsupported**，不得部分轉換。其中 [待確認] 表示官方規則或時機細節尚未明朗，不得自行猜測實作；其餘項目是引擎能力尚未到位。

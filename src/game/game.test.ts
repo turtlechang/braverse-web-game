@@ -950,12 +950,32 @@ describe('基本勝負判定', () => {
     })
   })
 
-  it('戰鬥區清空但手牌仍有餅乾時不會立即敗北', () => {
+  it('戰鬥區清空時即使手牌仍有餅乾也會敗北', () => {
     let state = createReadyGame()
     state = withPlayer(state, 'player-one', {
       battleArea: [],
       hand: [createCookie('replacement')],
     })
+
+    expect(evaluateBasicVictory(state)).toEqual({
+      winnerId: 'player-two',
+      loserId: 'player-one',
+      reason: 'no-cookie-available',
+    })
+  })
+
+  it('補位流程進行中不會提前判定戰鬥區空置的玩家敗北', () => {
+    let state = createReadyGame()
+    state = withPlayer(state, 'player-one', {
+      battleArea: [],
+      hand: [createCookie('replacement')],
+    })
+    state = {
+      ...state,
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-one', remaining: 1 }],
+      },
+    }
 
     expect(evaluateBasicVictory(state)).toBeNull()
   })

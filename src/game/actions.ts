@@ -8,7 +8,6 @@ import {
   consumeReplacementTask,
   continuePendingReplacements,
   getCurrentReplacementTask,
-  getReplacementCandidates,
 } from './replacement'
 
 const assertActiveGame = (state: GameState) => {
@@ -253,14 +252,9 @@ export const skipDefeatedCookieReplacement = (
   }
 
   const playerId = currentTask.playerId
-  const hasLegalReplacement =
-    getReplacementCandidates(state, playerId).length > 0
   const replacementState = consumeReplacementTask(state, playerId)
 
-  if (
-    state.players[playerId].battleArea.length === 0 &&
-    !hasLegalReplacement
-  ) {
+  if (state.players[playerId].battleArea.length === 0) {
     return finishWithDefeat(
       replacementState,
       playerId,

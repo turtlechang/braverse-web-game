@@ -35,6 +35,7 @@ export const parseTestStateConfig = (
   | { kind: 'faint-damage' }
   | { kind: 'trap-pretzel'; attack: 4 | 5 }
   | { kind: 'opponent-discard-hand' }
+  | { kind: 'attack-effect' }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -80,6 +81,9 @@ export const parseTestStateConfig = (
   }
   if (testState === 'opponent-discard-hand') {
     return { kind: 'opponent-discard-hand' }
+  }
+  if (testState === 'attack-effect') {
+    return { kind: 'attack-effect' }
   }
   return null
 }
@@ -270,6 +274,76 @@ export const createBreakToTrashDemoState = (
   }
 }
 
+export const createAttackEffectDemoState = (): GameState => {
+  const p1Deck = createOfficialYellowStarterDeck('player-one')
+  const p2Deck = createOfficialYellowStarterDeck('player-two')
+  const wizard = p1Deck.find((card) => card.id === 'ST2-003') as CookieCard
+  const breakCookie = p1Deck.find((card) => card.id === 'ST2-009') as CookieCard
+  const defender = p2Deck.find((card) => card.id === 'ST2-009') as CookieCard
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        battleArea: [
+          {
+            card: wizard,
+            hpCards: [],
+            rested: true,
+            battleEntryId: `${wizard.instanceId}:battle:1`,
+          },
+        ],
+        breakArea: [breakCookie],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        battleArea: [
+          {
+            card: defender,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${defender.instanceId}:battle:2`,
+          },
+        ],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingRefresh: null,
+    pendingBattle: {
+      attackerPlayerId: 'player-one',
+      defenderPlayerId: 'player-two',
+      attackerInstanceId: wizard.instanceId,
+      targetInstanceId: defender.instanceId,
+      declaredDamage: wizard.attack,
+      remainingDamage: 0,
+      stage: 'attack-effect',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: wizard.attackEffects ?? [],
+      attackEffectIndex: 0,
+    },
+  }
+}
+
 export const createTrapResponseDemoState = (payable: boolean): GameState => {
   const p1Deck = createOfficialYellowStarterDeck('player-one')
   const p2Deck = createOfficialYellowStarterDeck('player-two')
@@ -375,6 +449,8 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
       revealedHpCard: null,
       preventKnockoutTargetIds: [],
       faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
     },
   }
 }
@@ -465,6 +541,8 @@ export const createFlipResponseDemoState = (): GameState => {
       revealedHpCard: revealedFlip,
       preventKnockoutTargetIds: [],
       faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
     },
   }
 }
@@ -912,6 +990,8 @@ export const createPretzelSnareDemoState = (attack: number): GameState => {
       revealedHpCard: null,
       preventKnockoutTargetIds: [],
       faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
     },
   }
 }

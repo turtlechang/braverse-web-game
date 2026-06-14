@@ -42,17 +42,38 @@
         "deepseek-v4-pro": {
           "name": "DeepSeek V4 Pro"
         },
+        "glm-5": {
+          "name": "GLM-5"
+        },
+        "glm-5.1": {
+          "name": "GLM-5.1"
+        },
+        "kimi-k2.6": {
+          "name": "Kimi K2.6"
+        },
         "kimi-k2.7-code": {
           "name": "Kimi K2.7 Code"
+        },
+        "mimo-v2.5": {
+          "name": "MiMo V2.5"
+        },
+        "mimo-v2.5-pro": {
+          "name": "MiMo V2.5 Pro"
+        },
+        "minimax-m2.7": {
+          "name": "MiniMax M2.7"
+        },
+        "minimax-m3": {
+          "name": "MiniMax M3（3x usage）"
         },
         "qwen3.6-plus": {
           "name": "Qwen 3.6 Plus"
         },
-        "qwen3.7-plus": {
-          "name": "Qwen 3.7 Plus"
-        },
         "qwen3.7-max": {
           "name": "Qwen 3.7 Max"
+        },
+        "qwen3.7-plus": {
+          "name": "Qwen 3.7 Plus"
         }
       }
     }

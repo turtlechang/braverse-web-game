@@ -1,5 +1,10 @@
 import { GameRuleError } from './errors'
-import { validateEnergyPayment } from './energy'
+import { selectEnergyPayment, validateEnergyPayment } from './energy'
+import {
+  getEffectTargetCandidates,
+  isEffectConditionMet,
+  isEffectTargeted,
+} from './effects'
 import { findCardIndex, updatePlayer } from './helpers'
 import type {
   CardAbility,
@@ -161,11 +166,36 @@ export const canActivateStage = (
   try {
     assertMainAction(state, playerId)
     const stage = state.players[playerId].stage
-    return Boolean(
-      stage &&
-      !stage.rested &&
-      stage.card.stageAbility,
-    )
+    const ability = stage?.card.stageAbility
+    if (!stage || stage.rested || !ability) return false
+    if (
+      selectEnergyPayment(
+        ability.cost,
+        state.players[playerId].supportArea,
+      ) === null
+    ) {
+      return false
+    }
+
+    const context = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: stage.card.instanceId,
+    }
+    return ability.effects.some((effect) => {
+      if (!isEffectConditionMet(state, context, effect)) return false
+      if (effect.kind === 'gain-hp' && effect.target) {
+        if (effect.target.sourceOnly || effect.target.min === 0) return true
+        return (
+          getEffectTargetCandidates(state, context, effect.target).length >=
+          effect.target.min
+        )
+      }
+      if (!isEffectTargeted(effect) || effect.target.min === 0) return true
+      return (
+        getEffectTargetCandidates(state, context, effect.target).length >=
+        effect.target.min
+      )
+    })
   } catch {
     return false
   }

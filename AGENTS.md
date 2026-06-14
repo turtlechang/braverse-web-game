@@ -94,8 +94,8 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 ### 測試
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
-- 目前共有 299 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策（含 faint 效果選擇）、Refresh、抽牌效果、deck-to-support、break-to-trash、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、When this Cookie faints（pending queue、選特定對手、選 0 略過、候選為空、戰鬥與效果雙來源、AI deterministic）、ST2-021 Pretzel Snare（declaredDamage 4 不出現/5 出現、選 1 目標、選 0 略過、不合法 YY 支付）、ST2-001 Roguefort Cookie opponent-discard-hand（對手棄牌 pending decision、空手直接完成、合法選 1、錯誤玩家/卡/張數拒絕、AI deterministic 選擇、CardDetailModal 顯示技能）、gain-hp 效果（技能與 FLIP 雙路徑、sourceOnly 目標、牌庫不足防護）、typed GameCommand/PendingDecision pilot（faint-effect、opponent-hand-discard）與無限迴圈防護。
-- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 break-to-trash 選 1 與選 0 路徑、合法陷阱顯示、不合法陷阱不顯示回應視窗、FLIP 棄牌手牌切頁與無水平卷軸、補位與略過補位兩條互動路徑、物品/場景合法與不合法使用路徑、ST2-011 Cherry Cookie faint 效果選擇與略過兩路徑，ST2-021 Pretzel Snare 詳情文字、選 1 目標真實操作、選 0 略過真實操作、damage=4 不出現、damage=5 出現，以及 ST2-001 Roguefort Cookie 詳情顯示技能、合法支付後出現對手棄牌視窗、未選棄牌不可確認、選 1 張手牌完成棄牌。
+- 目前共有 312 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局牌組選擇與 AI 隨機牌組、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、ST2-003 Wizard Cookie 攻擊後續效果、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策（含 faint 效果選擇）、Refresh、抽牌效果、deck-to-support、break-to-trash、物品/場景效果與完整場景合法性、When this Cookie faints、ST2-021 Pretzel Snare、ST2-001 Roguefort Cookie opponent-discard-hand、gain-hp 明確目標與 FLIP、typed GameCommand/PendingDecision pilot，以及 AI 昏厥與補位優先順序。
+- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 1920x1080、1907x868、1600x900、1440x960、1366x768 維持 16:9、無垂直捲軸且玩家場地／手牌未超出畫布，戰鬥卡橫置不改變容器高度、確認式大卡縮小／返回，以及既有 break-to-trash、ST2-003 攻擊後續效果、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。
 - 測試總數或瀏覽器驗證結果改變時，同步更新本文件與 `README.md`，不可保留過期數字。
 
@@ -206,17 +206,36 @@ Codex App 在此專案中擔任**指揮官**角色，職責範圍僅限於：
 - **平台核准仍優先**：上述同意是專案偏好，不取代 Codex 執行環境的安全審查或外部網路核准；若工具要求再次核准，仍須依平台流程處理，不得繞過。
 - **避免重複耗用**：同一子任務原則上只派工一次；結果完整即可直接整合，不再用另一個 GPT／OpenCode 模型重做。只有結果不完整、測試失敗或重大疑點時才依升級機制追加派工。
 - **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。若出現 `Error: Session not found` / `In a restricted Codex environment`，參考 `develop-braverse/references/opencode-go-sandbox.md` 的標準流程處理。
-- **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個檔案。低風險且邊界明確的極聚焦唯讀審查可使用 `opencode-go/deepseek-v4-flash`；跨模組、高風險或重大疑點的審查改用 `opencode-go/deepseek-v4-pro` 或既有大型 PR 模型。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
-- **預設主要實作模型**：`opencode-go/deepseek-v4-pro` 為預設且主要實作模型，積極承接大多數程式碼撰寫、多檔案/跨模組變更、規則引擎、React UI、AI 決策、整合任務、測試套件、複雜文件，以及需要 `npm test`、`npm run lint`、`npm run build`、Playwright 等完整驗證鏈的工作。
-- **Flash 微任務限制**：`opencode-go/deepseek-v4-flash` 僅限真正極小、隔離、低風險、邊界明確的任務，原則上限於單一檔案或單一機械式變更（例如錯字修正、極短 docstring、單一 assertion、小型低風險唯讀聚焦審查）。禁止用於跨模組變更、架構或規則邏輯修改、React 與引擎聯動、複雜文件、完整驗證鏈、長時間 Playwright 或大量測試。Flash 執行中若發現範圍擴大，應立即停止並改派 Pro。
-- **輔助模型**：`opencode-go/qwen3.7-plus` 約佔 10%，`opencode-go/deepseek-v4-flash` 的微任務約佔部分派工，但非硬配額且 Flash 必須先符合微任務限制。
-- **大型 PR 審查（多檔案跨模組）**：固定使用 `opencode-go/kimi-k2.7-code`。
-- **高複雜度任務（可選）**：當任務涉及深層規則推理、複雜架構設計或需要極高準確度時，可選用 `opencode-go/claude-opus-4.5`。
-- **升級機制**：
-  - 重大疑點或 `opencode-go/kimi-k2.7-code` 結果不完整 → 升級 `opencode-go/claude-opus-4.5` 或 `opencode-go/qwen3.7-max`（`qwen3.7-max` 目前受 `@ai-sdk/openai-compatible` 限制不可自動使用，改以 `opencode-go/deepseek-v4-pro` 作暫時終審）。
-  - `opencode-go/qwen3.7-plus` 不可用 / 逾時 / 不穩定 → 降級 `opencode-go/qwen3.6-plus`。
-  - 一般 Plus 工作兩次仍未解決 → 升級 `opencode-go/claude-opus-4.5` 或 `opencode-go/qwen3.7-max`（`qwen3.7-max` 目前限制同上）。
+- **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個檔案。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
+
+### 分級路由表
+
+| 任務分級 | 優先 | 備援一 | 備援二 | 備援三 |
+|---|---|---|---|---|
+| 微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀審查） | `opencode-go/deepseek-v4-flash` | `opencode-go/mimo-v2.5` | `opencode-go/minimax-m3` | `opencode-go/deepseek-v4-pro` |
+| 中型一般實作（多數 CRUD、一般功能、中等測試、文件更新） | `opencode-go/qwen3.7-plus` | `opencode-go/minimax-m2.7` | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` |
+| 複雜跨模組實作（規則引擎、React UI、AI 決策、整合、測試套件、完整驗證鏈） | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
+| 大型 PR 審查（多檔案跨模組） | `opencode-go/kimi-k2.7-code` | `opencode-go/deepseek-v4-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
+| UI 截圖／視覺分析 | `opencode-go/mimo-v2.5` | `opencode-go/qwen3.7-plus` | `opencode-go/kimi-k2.6` | `opencode-go/mimo-v2.5-pro` |
+
+### 模型使用限制
+
+- **Qwen3.6 Plus**：僅作為 Qwen3.7 Plus 服務異常時的降級備援，不作一般程式碼首選。
+- **GLM-5**：僅作為 GLM-5.1 服務異常時的降級備援。
+- **Kimi K2.6**：不作一般程式碼首選；僅用於 UI 截圖／視覺分析備援鏈。
+- **Qwen3.7 Max**：僅在前級模型（DeepSeek V4 Pro、MiMo V2.5 Pro、GLM-5.1）皆失敗或任務極高複雜度時使用。
+- **MiniMax M3**：OpenCode Go 中繼資料名稱標示 **3x usage**，代表用量計算可能有倍率，實際成本應依 OpenCode Go 當期帳務規則確認，不可只看每百萬 token 標價；僅用於微任務備援鏈。
 - **使用者明確指定模式或模型** → 優先採用使用者指定。
+
+### 省 token 規則
+
+1. **任務拆分**：先拆成小任務，提供明確檔案清單與驗收條件，避免一次性龐大提示。
+2. **不重複派工**：同一子任務不平行重複派工；結果可用直接整合。
+3. **Flash 升級條件**：Flash 失敗一次、任務範圍意外擴大、漏改、或測試失敗時，直接升級至 Pro，不得連續重抽 Flash。
+4. **逾時判斷**：先分辨逾時原因——token=0 代表網路／連線問題（檢查權限與沙箱），token>0 代表模型已在背景執行（用 `session list` 檢查）。
+5. **Reasoning effort**：支援 reasoning effort 的模型一般使用 `low` 或 `medium`；僅在複雜規則推理、架構設計或疑難除錯時使用 `high`。
+6. **限制輸出**：提示詞中明確要求簡潔回答，限制不必要的長篇說明。
+7. **快取命中**：利用固定提示模板與檔案順序，提高 API 端快取命中率，降低重複 token 消耗。
 
 ## 禁止提交
 

@@ -35,6 +35,10 @@ function EffectPanelContent({
           currentEffect?.kind === 'support-to-hand' ||
           currentEffect?.kind === 'trash-to-battle'
         ? { min: currentEffect.amount, max: currentEffect.amount }
+        : currentEffect?.kind === 'gain-hp' &&
+            currentEffect.target &&
+            !currentEffect.target.sourceOnly
+          ? currentEffect.target
         : currentEffect && !isEffectUntargeted(currentEffect)
           ? currentEffect.target
           : null

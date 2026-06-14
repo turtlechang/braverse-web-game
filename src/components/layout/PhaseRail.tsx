@@ -6,9 +6,9 @@ import './PhaseRail.css'
 const phases: TurnPhase[] = ['active', 'draw', 'support', 'main', 'end']
 
 const nextPhaseLabels: Record<TurnPhase, string> = {
-  active: '完成活躍',
-  draw: '前往支援',
-  support: '前往主要',
+  active: '自動活躍中',
+  draw: '自動抽牌中',
+  support: '略過支援',
   main: '結束主要',
   end: '結束回合',
 }

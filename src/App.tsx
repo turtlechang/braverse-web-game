@@ -1,9 +1,11 @@
 ﻿import { Sparkles, Swords } from 'lucide-react'
+import { useState } from 'react'
 import './App.css'
 import {
   canActivateStage,
   canPlayItem,
   canPlayStage,
+  advancePhase,
   applyGameCommand,
   deployCookie,
   placeSupportCard,
@@ -17,6 +19,7 @@ import {
   skipDefeatedCookieReplacement,
   skipTrap,
   type DeckChoice,
+  type GameCard,
 } from './game'
 import { BattleRow } from './components/battle/BattleRow'
 import { PhaseRail } from './components/layout/PhaseRail'
@@ -31,6 +34,7 @@ import { EffectPanel } from './components/effects/EffectPanel'
 import {
   DecisionModal,
   CardDetailModal,
+  CardRevealModal,
   CardPileModal,
   FlipResponseModal,
   PauseModal,
@@ -54,6 +58,13 @@ const testStateConfig = parseTestStateConfig(
 )
 
 function App() {
+  const [pendingReveal, setPendingReveal] = useState<{
+    card: GameCard
+    title: string
+    description?: string
+    confirmLabel?: string
+    onConfirm: () => void
+  } | null>(null)
   const dialogs = useMatchDialogs()
   const match = useMatchController({ testStateConfig })
   const pending = usePendingEffect({
@@ -93,6 +104,8 @@ function App() {
   }
 
   const interactionLocked =
+    Boolean(pendingReveal) ||
+    Boolean(ai.pendingAiDecision) ||
     Boolean(pending.pendingEffect) ||
     Boolean(match.game.pendingOnPlay) ||
     Boolean(match.game.pendingBattle) ||
@@ -125,7 +138,12 @@ function App() {
         turnNumber={match.game.turnNumber}
         activePlayerName={match.activePlayer.name}
         isPlayerTurn={match.game.activePlayerId === match.viewerPlayerId}
-        disabled={phaseDisabled}
+        disabled={
+          phaseDisabled ||
+          match.game.activePlayerId !== match.viewerPlayerId ||
+          match.game.phase === 'active' ||
+          match.game.phase === 'draw'
+        }
         onAdvance={() => {
           if (pending.pendingEffect || faintActive) return
           match.handleAdvancePhase()
@@ -140,22 +158,6 @@ function App() {
         activePlayerName={match.activePlayer.name}
         phase={match.game.phase}
         message={match.message}
-        onPlayerDeckChange={(deck) => {
-          const newConfig = { ...match.deckConfig, player: deck }
-          match.setDeckConfig(newConfig)
-          resetGame(
-            newConfig,
-            `我方 ${deckChoiceLabel[deck]} vs AI ${deckChoiceLabel[match.deckConfig.ai]}。`,
-          )
-        }}
-        onAiDeckChange={(deck) => {
-          const newConfig = { ...match.deckConfig, ai: deck }
-          match.setDeckConfig(newConfig)
-          resetGame(
-            newConfig,
-            `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[deck]}。`,
-          )
-        }}
         onReset={() => {
           resetGame(
             match.deckConfig,
@@ -239,8 +241,9 @@ function App() {
           onEffectTarget={pending.toggleEffectTarget}
           onPlaceSupport={(instanceId) =>
             match.runAction(
-              (current) => placeSupportCard(current, instanceId),
-              '已將卡牌配置到支援區。',
+              (current) =>
+                advancePhase(placeSupportCard(current, instanceId)),
+              '已將卡牌配置到支援區，進入主要階段。',
             )
           }
           onSkillPayment={pending.toggleSkillPayment}
@@ -287,7 +290,19 @@ function App() {
               (candidate) => candidate.instanceId === instanceId,
             )
             if (card?.item) {
-              pending.beginCardAbility(card, card.item, 'item', '使用物品')
+              setPendingReveal({
+                card,
+                title: '物品卡使用宣告',
+                description: card.item.text,
+                confirmLabel: '確認使用',
+                onConfirm: () =>
+                  pending.beginCardAbility(
+                    card,
+                    card.item!,
+                    'item',
+                    '使用物品',
+                  ),
+              })
             }
           }}
           onPlayStage={(instanceId) => {
@@ -378,6 +393,8 @@ function App() {
           step={match.setupStep as OpeningSetupStep}
           message={match.setupMessage}
           hand={match.game.players[match.viewerPlayerId].hand}
+          deckConfig={match.deckConfig}
+          onSelectDeck={match.handleDeckSelection}
           onRps={match.handleRps}
           onChooseFirstPlayer={(playerFirst) =>
             match.beginOrderedSetup(
@@ -421,28 +438,38 @@ function App() {
             }}
             onConfirm={() => {
               if (!match.selectedTrap) return
-              match.setSelectedTrapId(null)
-              match.setTrapSelectNoTarget(false)
-              match.runAction(
-                (current) => {
-                  const afterTrap = playTrap(
-                    current,
-                    match.viewerPlayerId,
-                    {
-                      trapInstanceId: match.selectedTrap!.instanceId,
-                      paymentIds: match.selectedTrapPaymentIds,
-                      targetIds: match.selectedTrapTargets.map(
-                        (target) => target.card.instanceId,
-                      ),
-                      supportTrashIds: match.selectedTrapSupportTrashIds,
+              const trap = match.selectedTrap
+              setPendingReveal({
+                card: trap,
+                title: '陷阱卡發動宣告',
+                description: trap.trap?.text ?? trap.effectText,
+                confirmLabel: '確認發動',
+                onConfirm: () => {
+                  match.setSelectedTrapId(null)
+                  match.setTrapSelectNoTarget(false)
+                  match.runAction(
+                    (current) => {
+                      const afterTrap = playTrap(
+                        current,
+                        match.viewerPlayerId,
+                        {
+                          trapInstanceId: trap.instanceId,
+                          paymentIds: match.selectedTrapPaymentIds,
+                          targetIds: match.selectedTrapTargets.map(
+                            (target) => target.card.instanceId,
+                          ),
+                          supportTrashIds:
+                            match.selectedTrapSupportTrashIds,
+                        },
+                      )
+                      return testStateConfig
+                        ? resolveBattleAutomatically(afterTrap)
+                        : afterTrap
                     },
+                    `已發動${trap.name}。`,
                   )
-                  return testStateConfig
-                    ? resolveBattleAutomatically(afterTrap)
-                    : afterTrap
                 },
-                `已發動${match.selectedTrap.name}。`,
-              )
+              })
             }}
             allowEmptyTarget={match.trapAllowEmptyTarget}
             emptyTargetActive={match.trapSelectNoTarget}
@@ -755,6 +782,33 @@ function App() {
             }}
           />
         )}
+
+      {pendingReveal && (
+        <CardRevealModal
+          card={pendingReveal.card}
+          title={pendingReveal.title}
+          description={pendingReveal.description}
+          confirmLabel={pendingReveal.confirmLabel}
+          onConfirm={() => {
+            const confirm = pendingReveal.onConfirm
+            setPendingReveal(null)
+            confirm()
+          }}
+        />
+      )}
+
+      {ai.pendingAiDecision?.revealedCard && (
+        <CardRevealModal
+          card={ai.pendingAiDecision.revealedCard}
+          title="AI 公開卡牌"
+          description={
+            ai.pendingAiDecision.revealedCard.effectText ??
+            ai.pendingAiDecision.description
+          }
+          confirmLabel="確認並繼續 AI 行動"
+          onConfirm={ai.confirmAiDecision}
+        />
+      )}
 
       {dialogs.inspectedCard && (
         <CardDetailModal

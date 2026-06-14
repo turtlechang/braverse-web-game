@@ -72,7 +72,9 @@ try {
       if ((await modal.count()) === 0 || !(await modal.isVisible())) return
 
       const heading = await modal.locator('h2').innerText()
-      if (heading.includes('猜拳')) {
+      if (heading.includes('選擇牌組')) {
+        await modal.getByRole('button', { name: /紅色起始牌組/ }).click()
+      } else if (heading.includes('猜拳')) {
         await modal.getByRole('button', { name: '石頭' }).click()
       } else if (heading.includes('先攻或後攻')) {
         await modal.getByRole('button', { name: '選擇先攻' }).click()
@@ -89,47 +91,79 @@ try {
     throw new Error('開局設定流程未在安全步數內完成。')
   }
 
-  const playerSelect = page.getByTestId('player-deck-select')
-  const aiSelect = page.getByTestId('ai-deck-select')
   const statusMessage = page.locator('.match-status small')
 
-  assert.strictEqual(
-    await playerSelect.inputValue(),
-    'red',
-    '初始 player-deck-select 應為 red',
-  )
-  assert.strictEqual(
-    await aiSelect.inputValue(),
-    'red',
-    '初始 ai-deck-select 應為 red',
-  )
-
-  // 測試不同顏色組合
-  const colorCombinations = [
-    { player: 'red', ai: 'yellow', name: '紅色 vs 黃色' },
-    { player: 'yellow', ai: 'green', name: '黃色 vs 綠色' },
-    { player: 'green', ai: 'red', name: '綠色 vs 紅色' },
-    { player: 'red', ai: 'green', name: '紅色 vs 綠色' },
-    { player: 'yellow', ai: 'red', name: '黃色 vs 紅色' },
-    { player: 'green', ai: 'yellow', name: '綠色 vs 黃色' },
-  ]
-
-  for (const combo of colorCombinations) {
-    await playerSelect.selectOption(combo.player)
-    await aiSelect.selectOption(combo.ai)
-    await completeOpeningSetup()
-    
-    // 進行一場快速 AI 驗證
-    await page.goto(`${baseUrl}?test-state=ai-match`, { waitUntil: 'networkidle' })
-    await completeOpeningSetup()
-    
-    console.log(`完成 ${combo.name} 組合測試`)
-  }
-
-  // 回到紅色 vs 紅色進行主要 100 場驗證
-  await playerSelect.selectOption('red')
-  await aiSelect.selectOption('red')
   await completeOpeningSetup()
+
+  for (const viewport of [
+    { width: 1920, height: 1080 },
+    { width: 1907, height: 868 },
+    { width: 1600, height: 900 },
+    { width: 1440, height: 960 },
+    { width: 1366, height: 768 },
+  ]) {
+    await page.setViewportSize(viewport)
+    const metrics = await page.evaluate(() => {
+      const shell = document.querySelector('.game-shell')
+      if (!(shell instanceof HTMLElement)) {
+        throw new Error('找不到 game-shell')
+      }
+      const rect = shell.getBoundingClientRect()
+      const bottomField = document.querySelector('.bottom-field')
+      const bottomHand = document.querySelector('.bottom-hand')
+      if (
+        !(bottomField instanceof HTMLElement) ||
+        !(bottomHand instanceof HTMLElement)
+      ) {
+        throw new Error('找不到玩家場地或手牌')
+      }
+      const bottomFieldRect = bottomField.getBoundingClientRect()
+      const bottomHandRect = bottomHand.getBoundingClientRect()
+      return {
+        width: rect.width,
+        height: rect.height,
+        shellBottom: rect.bottom,
+        bottomFieldBottom: bottomFieldRect.bottom,
+        bottomHandBottom: bottomHandRect.bottom,
+        bodyScrollHeight: document.body.scrollHeight,
+        bodyClientHeight: document.body.clientHeight,
+        documentScrollHeight: document.documentElement.scrollHeight,
+        documentClientHeight: document.documentElement.clientHeight,
+      }
+    })
+    assert.ok(
+      Math.abs(metrics.width / metrics.height - 16 / 9) < 0.01,
+      `${viewport.width}x${viewport.height} 的遊戲畫布應維持 16:9`,
+    )
+    assert.ok(
+      metrics.bodyScrollHeight <= metrics.bodyClientHeight &&
+        metrics.documentScrollHeight <= metrics.documentClientHeight,
+      `${viewport.width}x${viewport.height} 不應出現垂直捲軸`,
+    )
+    assert.ok(
+      metrics.bottomFieldBottom <= metrics.shellBottom + 1 &&
+        metrics.bottomHandBottom <= metrics.shellBottom + 1,
+      `${viewport.width}x${viewport.height} 的玩家場地與手牌必須完整位於遊戲畫布內`,
+    )
+  }
+  await page.setViewportSize({ width: 1440, height: 960 })
+  const restedLayout = await page.evaluate(() => {
+    const wrap = document.querySelector('.bottom-field .combat-card-wrap')
+    const card = wrap?.querySelector('.card-face')
+    if (!(wrap instanceof HTMLElement) || !(card instanceof HTMLElement)) {
+      throw new Error('找不到戰鬥區餅乾')
+    }
+    const before = wrap.getBoundingClientRect().height
+    card.classList.add('is-rested')
+    const after = wrap.getBoundingClientRect().height
+    card.classList.remove('is-rested')
+    return { before, after }
+  })
+  assert.strictEqual(
+    restedLayout.after,
+    restedLayout.before,
+    '戰鬥區卡牌橫置不得改變戰鬥卡容器高度',
+  )
 
   const runBreakToTrashTest = async (variant) => {
     const testUrl = `${baseUrl}?test-state=break-to-trash-${variant}`
@@ -216,6 +250,40 @@ try {
   await runBreakToTrashTest('lv1')
   await runBreakToTrashTest('lv2')
 
+  await page.goto(`${baseUrl}?test-state=attack-effect`, {
+    waitUntil: 'networkidle',
+  })
+  const attackEffectPanel = page.locator('.effect-panel')
+  await attackEffectPanel.waitFor({ state: 'visible' })
+  const attackBreakCard = page
+    .locator('.bottom-field .break-cards .break-card')
+    .first()
+  assert.ok(
+    await attackBreakCard.evaluate((element) =>
+      element.classList.contains('is-targetable'),
+    ),
+    'ST2-003 的 LV.1 休息區卡牌應標示為攻擊效果目標',
+  )
+  await attackBreakCard.click()
+  assert.ok(
+    await attackBreakCard.evaluate((element) =>
+      element.classList.contains('is-selected'),
+    ),
+    'ST2-003 的攻擊效果目標應可選取',
+  )
+  await attackEffectPanel
+    .locator('button', { hasText: '確認效果' })
+    .click()
+  await page
+    .locator('.match-status small')
+    .filter({ hasText: /移至棄牌區/ })
+    .waitFor()
+  assert.strictEqual(
+    await page.locator('.bottom-field .break-cards .break-card').count(),
+    0,
+    'ST2-003 結算後應將所選 LV.1 卡牌移出休息區',
+  )
+
   const runItemUsageTest = async (payable) => {
     const variant = payable ? 'payable' : 'unpayable'
     const testUrl = `${baseUrl}?test-state=item-${variant}`
@@ -228,6 +296,18 @@ try {
       const useButton = handCardWrap.locator('.hand-card-action', { hasText: '使用' })
       await useButton.waitFor({ state: 'visible' })
       await useButton.click()
+
+      const revealModal = page.locator('.card-reveal-modal')
+      await revealModal.waitFor({ state: 'visible' })
+      await revealModal.getByRole('button', { name: /縮小/ }).click()
+      const revealDock = page.locator('.card-reveal-dock')
+      await revealDock.waitFor({ state: 'visible' })
+      assert.ok(
+        (await revealDock.innerText()).includes('效果待確認'),
+        '縮小物品展示後應顯示效果待確認標籤',
+      )
+      await revealDock.click()
+      await revealModal.getByRole('button', { name: '確認使用' }).click()
 
       const effectPanel = page.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible' })
@@ -426,6 +506,11 @@ try {
   })
   const flipModal = page.locator('.flip-response-modal')
   await flipModal.waitFor({ state: 'visible' })
+  await flipModal.getByRole('button', { name: /縮小/ }).click()
+  const flipDock = page.locator('.card-reveal-dock')
+  await flipDock.waitFor({ state: 'visible' })
+  await flipDock.click()
+  await flipModal.waitFor({ state: 'visible' })
   const flipCards = flipModal.locator('.flip-card-page > button')
   const activateFlipButton = flipModal.getByRole('button', { name: '發動 FLIP' })
   assert.strictEqual(await flipCards.count(), 3, 'FLIP 每頁應顯示 3 張手牌')
@@ -573,6 +658,10 @@ try {
 
     // Pretzel select-1:確認發動，對攻擊者造成 1 點傷害
     await battleModal.getByRole('button', { name: '支付並發動' }).click()
+    await page
+      .locator('.card-reveal-modal')
+      .getByRole('button', { name: '確認發動' })
+      .click()
     await battleModal.waitFor({ state: 'hidden' })
     await page.waitForTimeout(400)
     const hpAfterTrap = await hpLocator.count()
@@ -593,6 +682,10 @@ try {
     await noTargetCheckbox.waitFor({ state: 'visible' })
     await noTargetCheckbox.click()
     await battleModal.getByRole('button', { name: '支付並發動' }).click()
+    await page
+      .locator('.card-reveal-modal')
+      .getByRole('button', { name: '確認發動' })
+      .click()
     await battleModal.waitFor({ state: 'hidden' })
     // Wait for auto-resolution and dismiss any replacement modal
     await page.waitForTimeout(600)

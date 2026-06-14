@@ -151,6 +151,52 @@ describe('resolveOpponentHandDiscard', () => {
 })
 
 describe('gain-hp effect', () => {
+  it('adds HP to an explicitly selected other cookie', () => {
+    const base = createDemoGame()
+    const otherCard = base.players['player-one'].hand.find(
+      (card) => card.type === 'cookie',
+    )!
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            ...base.players['player-one'].battleArea,
+            {
+              card: otherCard,
+              hpCards: [],
+              rested: false,
+              battleEntryId: `${otherCard.instanceId}:test`,
+            },
+          ],
+        },
+      },
+    }
+    const sourceCookie = state.players['player-one'].battleArea[0]
+    const otherCookie = state.players['player-one'].battleArea[1]
+    const effect: CardEffect = {
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1, excludeSource: true },
+    }
+
+    const newState = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: sourceCookie.card.instanceId,
+      },
+      effect,
+      [otherCookie.card.instanceId],
+    )
+
+    expect(newState.players['player-one'].battleArea[1].hpCards).toHaveLength(
+      otherCookie.hpCards.length + 1,
+    )
+  })
+
   it('adds HP cards from deck top to source cookie in battle', () => {
     const state = createDemoGame()
     const sourceCookie = state.players['player-one'].battleArea[0]

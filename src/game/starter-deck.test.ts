@@ -140,6 +140,19 @@ describe('official yellow starter deck', () => {
     ])
   })
 
+  it('ST2-003 Wizard Cookie has its post-attack break-to-trash effect', () => {
+    const deck = createOfficialYellowStarterDeck('player-one')
+    const wizard = deck.find((card) => card.id === 'ST2-003')
+
+    expect(wizard).toMatchObject({
+      name: 'Wizard Cookie',
+      type: 'cookie',
+      attackEffects: [
+        { kind: 'break-to-trash', max: 1, exactLevel: 1 },
+      ],
+    })
+  })
+
   it('creates a demo game using the yellow deck', () => {
     const state = createDemoGame(undefined, 'yellow')
 

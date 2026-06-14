@@ -92,6 +92,143 @@
   cursor: pointer;
 }
 
+.setup-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.setup-deck-grid button {
+  min-height: 132px;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  border: 2px solid rgba(113, 233, 255, 0.68);
+  border-radius: 8px;
+  background: linear-gradient(145deg, #0b2a61, #15549b);
+  color: #fff;
+  cursor: pointer;
+}
+
+.setup-deck-grid button strong {
+  color: #ffe675;
+  font-size: 1rem;
+}
+
+.setup-deck-grid button span,
+.setup-matchup {
+  color: #b9ddf5;
+  font-size: 0.78rem;
+}
+
+.setup-matchup {
+  display: flex;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.card-reveal-backdrop {
+  background: rgba(1, 8, 28, 0.78);
+  backdrop-filter: blur(5px);
+}
+
+.card-reveal-modal {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: calc(100vh - 48px);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px;
+  overflow: auto;
+  border: 2px solid #71e9ff;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #06183e, #154d8f);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.72);
+  text-align: center;
+}
+
+.card-reveal-modal > span {
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.card-reveal-modal h2,
+.card-reveal-modal p {
+  margin: 0;
+}
+
+.card-reveal-modal p {
+  color: #c8e2f5;
+  font-size: 0.85rem;
+}
+
+.reveal-card {
+  width: 190px;
+}
+
+.minimize-reveal {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(113, 233, 255, 0.6);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.82);
+  color: #fff;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.minimize-reveal svg {
+  width: 15px;
+}
+
+.reveal-confirm {
+  min-width: 170px;
+  min-height: 42px;
+  border: 1px solid #ffe675;
+  border-radius: 6px;
+  background: linear-gradient(#28b9e7, #0873c7);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.card-reveal-dock {
+  position: fixed;
+  z-index: 140;
+  right: 22px;
+  bottom: 20px;
+  width: 270px;
+  display: grid;
+  grid-template-columns: 46px 1fr 24px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 2px solid #ffe675;
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.96);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-reveal-dock .card-face {
+  width: 46px;
+}
+
+.card-reveal-dock span {
+  display: grid;
+}
+
+.card-reveal-dock small {
+  color: #ffe675;
+}
+
 .setup-hand {
   justify-content: flex-start;
 }
@@ -568,6 +705,9 @@
 }
 
 .faint-response-modal {
+  position: absolute;
+  top: 148px;
+  right: 24px;
   width: min(460px, 100%);
   padding: 24px;
   border: 2px solid rgba(105, 220, 255, 0.68);

@@ -16,6 +16,7 @@ import {
   getTrapCandidates,
   getTrapTargetCandidates,
   playTrap,
+  resolveAttackEffect,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
@@ -55,6 +56,7 @@ import type {
   CardSkill,
   CookieInBattle,
   EffectContext,
+  GameCard,
   GameState,
   PlayerId,
   SupportCard,
@@ -75,6 +77,7 @@ export type AiActionType =
   | 'attack'
   | 'play-trap'
   | 'resolve-damage'
+  | 'resolve-attack-effect'
   | 'resolve-flip'
   | 'resolve-faint'
   | 'error'
@@ -90,6 +93,7 @@ export interface AiDecision {
   state: GameState
   action: AiActionType
   description: string
+  revealedCard?: GameCard
   effectSelections?: AiEffectSelection[]
   error?: string
 }
@@ -132,6 +136,13 @@ const chooseEffectTargets = (
     return getTrashCookieCandidates(state, context)
       .slice(0, effect.amount)
       .map((card) => card.instanceId)
+  }
+
+  if (effect.kind === 'gain-hp' && effect.target) {
+    if (effect.target.sourceOnly) return []
+    return getEffectTargetCandidates(state, context, effect.target)
+      .slice(0, effect.target.max)
+      .map((cookie) => cookie.card.instanceId)
   }
 
   if (isEffectUntargeted(effect)) {
@@ -255,6 +266,7 @@ const resolveAiCardAbility = (
     state: finalizePendingReplacements(nextState),
     action: 'play-item',
     description: `${state.players[playerId].name}使用${card.name}。`,
+    revealedCard: card,
     effectSelections,
   }
 }
@@ -306,6 +318,28 @@ const resolveAiSkill = (
   for (const effect of effects) {
     if (nextState.status !== 'playing') {
       break
+    }
+
+    if (
+      effect.kind === 'gain-hp' &&
+      effect.target &&
+      !effect.target.sourceOnly
+    ) {
+      const targetIds = chooseEffectTargets(nextState, context, effect)
+      if (targetIds.length < effect.target.min) return null
+      nextState = executeCardEffect(
+        nextState,
+        context,
+        effect,
+        targetIds,
+      )
+      effectSelections.push({
+        sourceInstanceId: source.card.instanceId,
+        paymentIds,
+        targetIds,
+        effect,
+      })
+      continue
     }
 
     if (isEffectUntargeted(effect)) {
@@ -402,8 +436,7 @@ export const takeAiStep = (
     if (
       pendingDecision?.kind === 'faint-effect' &&
       !state.pendingRefresh &&
-      !state.pendingOnPlay &&
-      !replacementTask
+      !state.pendingOnPlay
     ) {
       if (pendingDecision.playerId !== playerId) {
         return {
@@ -468,6 +501,34 @@ export const takeAiStep = (
       !state.pendingReplacement
     ) {
       const battle = state.pendingBattle
+      if (
+        battle.stage === 'attack-effect' &&
+        battle.attackerPlayerId === playerId
+      ) {
+        const effect = battle.attackEffects[battle.attackEffectIndex]
+        const targetIds =
+          effect?.kind === 'break-to-trash'
+            ? getBreakToTrashCandidates(
+                state,
+                {
+                  sourcePlayerId: playerId,
+                  sourceInstanceId: battle.attackerInstanceId,
+                },
+                effect,
+              )
+                .slice(0, effect.max)
+                .map((card) => card.instanceId)
+            : []
+        return {
+          state: resolveAttackEffect(state, playerId, targetIds),
+          action: 'resolve-attack-effect',
+          description:
+            targetIds.length > 0
+              ? `${state.players[playerId].name}結算攻擊後續效果。`
+              : `${state.players[playerId].name}略過攻擊後續效果。`,
+        }
+      }
+
       if (battle.stage === 'damage') {
         return {
           state: resolveNextDamage(state),
@@ -494,6 +555,7 @@ export const takeAiStep = (
             discardHandIds,
           }),
           action: 'resolve-flip',
+          revealedCard: revealed ?? undefined,
           description: canActivate
             ? `${state.players[playerId].name}發動${revealed?.name ?? 'FLIP'}。`
             : `${state.players[playerId].name}略過 FLIP。`,
@@ -554,6 +616,7 @@ export const takeAiStep = (
             supportTrashIds,
           }),
           action: 'play-trap',
+          revealedCard: trapCard,
           description: `${state.players[playerId].name}發動${trapCard.name}。`,
         }
       }

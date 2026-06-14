@@ -56,16 +56,24 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-pro "審查任務
 
 ## 模型路由
 
-| 任務 | 模型 |
-|---|---|
-| 預設主要實作（多數程式碼、多檔案/跨模組、規則引擎、React UI、AI、整合、測試套件、複雜文件、完整驗證鏈） | `opencode-go/deepseek-v4-pro` |
-| 極小微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀聚焦審查） | `opencode-go/deepseek-v4-flash`（範圍擴大須立即停止並改派 Pro） |
-| 輔助模型 | `opencode-go/qwen3.7-plus` |
-| 大型、多檔案、跨模組 PR 審查 | `opencode-go/kimi-k2.7-code` |
-| `qwen3.7-plus` 不可用或不穩定 | `opencode-go/qwen3.6-plus` |
-| Kimi 結果不完整或有重大疑點 | 暫以 `opencode-go/deepseek-v4-pro` 終審 |
+### 分級路由表（依優先順序）
 
-使用者指定模型或模式時，優先遵循使用者要求。
+| 任務分級 | 優先 | 備援一 | 備援二 | 備援三 |
+|---|---|---|---|---|
+| 微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀審查） | `opencode-go/deepseek-v4-flash` | `opencode-go/mimo-v2.5` | `opencode-go/minimax-m3` | `opencode-go/deepseek-v4-pro` |
+| 中型一般實作（多數 CRUD、一般功能、中等測試、文件更新） | `opencode-go/qwen3.7-plus` | `opencode-go/minimax-m2.7` | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` |
+| 複雜跨模組實作（規則引擎、React UI、AI 決策、整合、測試套件、完整驗證鏈） | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
+| 大型 PR 審查（多檔案跨模組） | `opencode-go/kimi-k2.7-code` | `opencode-go/deepseek-v4-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
+| UI 截圖／視覺分析 | `opencode-go/mimo-v2.5` | `opencode-go/qwen3.7-plus` | `opencode-go/kimi-k2.6` | `opencode-go/mimo-v2.5-pro` |
+
+### 模型使用限制
+
+- **Qwen3.6 Plus**：僅作為 Qwen3.7 Plus 服務異常時的降級備援，不作一般程式碼首選。
+- **GLM-5**：僅作為 GLM-5.1 服務異常時的降級備援。
+- **Kimi K2.6**：不作一般程式碼首選；僅用於 UI 截圖／視覺分析備援鏈。
+- **Qwen3.7 Max**：僅在前級模型（DeepSeek V4 Pro、MiMo V2.5 Pro、GLM-5.1）皆失敗或任務極高複雜度時使用。
+- **MiniMax M3**：OpenCode Go 中繼資料名稱標示 **3x usage**，代表用量計算可能有倍率，實際成本應依 OpenCode Go 當期帳務規則確認，不可只看每百萬 token 標價；僅用於微任務備援鏈。
+- 使用者指定模型或模式時，優先遵循使用者要求。
 
 ## 派工邊界
 
@@ -73,7 +81,16 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-pro "審查任務
 - 不讓子任務擅自還原既有修改或提交產物。
 - 將派工結果視為建議；主代理仍需讀取 diff、驗證規則依據並執行測試。
 - 大型審查要求依嚴重度列出具體檔案與行號，優先找行為錯誤、回歸與缺少測試。
-- Flash 僅用於單檔機械式變更；若任務範圍可能擴大，直接派 Pro。
+
+## 省 token 策略
+
+1. **任務拆分**：先拆成小任務，提供明確檔案清單與驗收條件，避免一次性龐大提示。
+2. **不重複派工**：同一子任務不平行重複派工；結果可用直接整合。
+3. **Flash 升級條件**：Flash 失敗一次、任務範圍意外擴大、漏改、或測試失敗時，直接升級至 Pro，不得連續重抽 Flash。
+4. **逾時判斷**：先分辨逾時原因——token=0 代表網路／連線問題（檢查權限與沙箱），token>0 代表模型已在背景執行（用 `session list` 檢查）。
+5. **Reasoning effort**：支援 reasoning effort 的模型一般使用 `low` 或 `medium`；僅在複雜規則推理、架構設計或疑難除錯時使用 `high`。
+6. **限制輸出**：提示詞中明確要求簡潔回答，限制不必要的長篇說明。
+7. **快取命中**：利用固定提示模板與檔案順序，提高 API 端快取命中率，降低重複 token 消耗。
 
 ## 受限環境與沙箱網路問題
 

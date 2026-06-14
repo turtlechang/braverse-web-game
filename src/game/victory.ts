@@ -25,13 +25,10 @@ export const getBasicDefeatReason = (
     return 'break-level-limit'
   }
 
-  const hasCookieInHand = player.hand.some((card) => card.type === 'cookie')
-
   if (
     !state.pendingReplacement &&
     state.departedCookieCounts[playerId] === 0 &&
-    player.battleArea.length === 0 &&
-    !hasCookieInHand
+    player.battleArea.length === 0
   ) {
     return 'no-cookie-available'
   }

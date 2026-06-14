@@ -15,8 +15,12 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
-  overflow-x: hidden;
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #020817;
 }
 
 button {
@@ -25,10 +29,11 @@ button {
 }
 
 .game-shell {
-  --rail-width: 210px;
+  --rail-width: 0px;
   position: relative;
+  width: min(100vw, 177.777778vh);
+  height: min(100vh, 56.25vw);
   min-width: 0;
-  min-height: 100vh;
   overflow: hidden;
   background:
     radial-gradient(circle at 52% 42%, rgba(70, 145, 226, 0.28), transparent 32%),
@@ -36,7 +41,7 @@ button {
 }
 
 .board-texture {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: 0.3;
@@ -65,10 +70,12 @@ button {
   position: relative;
   z-index: 2;
   min-width: 0;
-  max-width: 1320px;
-  min-height: calc(100vh - 76px);
-  margin-left: var(--rail-width);
-  padding: 20px 24px 104px;
+  width: 100%;
+  height: calc(100% - 134px);
+  max-width: none;
+  margin-left: 0;
+  padding: 4px 145px;
+  overflow: hidden;
 }
 
 .table-divider {
@@ -97,12 +104,8 @@ button {
 }
 
 @media (max-width: 900px) {
-  .game-shell {
-    --rail-width: 150px;
-  }
-
   .table-area {
-    padding-inline: 12px;
+    padding-inline: 92px;
   }
 }
 
@@ -163,20 +166,14 @@ button {
 }
 
 @media (max-width: 680px) {
-  body {
-    overflow-y: auto;
-  }
-
   .game-shell {
     --rail-width: 0px;
-    min-height: 100svh;
-    padding-bottom: 188px;
   }
 
   .table-area {
-    min-height: auto;
+    height: calc(100% - 126px);
     margin-left: 0;
-    padding: 176px 8px 146px;
+    padding: 4px 68px;
   }
 
 }

@@ -42,6 +42,7 @@ export {
   OFFICIAL_YELLOW_STARTER_DECK,
 } from './starter-deck'
 export type { DeckChoice, StarterDeckEntry } from './starter-deck'
+export { chooseRandomDeck } from './opening'
 export {
   selectAiEnergyPayment,
   simulateAiMatch,
@@ -54,6 +55,7 @@ export {
   getTrapCandidates,
   getTrapTargetCandidates,
   playTrap,
+  resolveAttackEffect,
   resolveBattleAutomatically,
   resolveFaintEffect,
   resolveFlip,

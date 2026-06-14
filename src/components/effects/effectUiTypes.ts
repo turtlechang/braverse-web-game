@@ -18,5 +18,5 @@ export interface PendingEffect {
   skillActivated: boolean
   optional: boolean
   triggerLabel: string
-  sourceKind: 'cookie' | 'item' | 'stage'
+  sourceKind: 'cookie' | 'item' | 'stage' | 'attack'
 }

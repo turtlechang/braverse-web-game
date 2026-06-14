@@ -11,9 +11,11 @@
     "cards:import:yellow-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck YELLOW\" --output data/cards/official-starter-deck-yellow.en.json --limit 100",
     "cards:import:green-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck GREEN\" --output data/cards/official-starter-deck-green.en.json --limit 100",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "vitest run --exclude scripts/opencode-go-benchmark.test.js",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",
-    "test:watch": "vitest",
+    "test:watch": "vitest --exclude scripts/opencode-go-benchmark.test.js",
+    "test:benchmark": "node --test scripts/opencode-go-benchmark.test.js",
+    "benchmark:opencode-go": "node scripts/opencode-go-benchmark.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

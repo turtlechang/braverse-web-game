@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
   selectAiEnergyPayment,
+  simulateAiMatch,
   takeAiStep,
   type CardSkill,
   type GameCard,
   type GameState,
 } from '.'
+import { createFlipResponseDemoState } from './demo'
 
 const createSupport = (
   instanceId: string,
@@ -33,6 +35,30 @@ const asAiTurn = (
 })
 
 describe('simple AI opponent', () => {
+  it('resolves a faint decision before a simultaneous replacement', () => {
+    const result = simulateAiMatch(
+      createDemoGame(8, { player: 'red', ai: 'yellow' }),
+    )
+
+    expect(result.stuck).toBe(false)
+    expect(result.error).toBeNull()
+  })
+
+  it('reports the revealed FLIP card before applying the AI response', () => {
+    const state = createFlipResponseDemoState()
+    const playerId =
+      state.pendingBattle?.damagePlayerId ??
+      state.pendingBattle?.defenderPlayerId
+    expect(playerId).toBeDefined()
+
+    const decision = takeAiStep(state, playerId)
+
+    expect(decision.action).toBe('resolve-flip')
+    expect(decision.revealedCard).toBe(
+      state.pendingBattle?.revealedHpCard,
+    )
+  })
+
   it('places one support card during the support phase', () => {
     const state = asAiTurn(createDemoGame(), 'support')
     const decision = takeAiStep(state)

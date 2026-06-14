@@ -557,7 +557,8 @@ export const executeCardEffect = (
     const targetInstanceId =
       effect.target?.sourceOnly
         ? context.sourceInstanceId
-        : state.pendingBattle?.damageTargetInstanceId ??
+        : selectedTargetIds[0] ??
+          state.pendingBattle?.damageTargetInstanceId ??
           state.pendingBattle?.targetInstanceId
     if (!targetInstanceId) {
       throw new GameRuleError('增加 HP 需要明確目標餅乾。')
