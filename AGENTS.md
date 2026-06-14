@@ -95,7 +95,7 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
 - 目前共有 312 項單元測試，涵蓋：牌組張數驗證、Fisher-Yates 種子重現性、開局牌組選擇與 AI 隨機牌組、開局調度、攻擊與技能能量支付、FLIP／TRAP 官方欄位轉換與戰鬥流程、ST2-003 Wizard Cookie 攻擊後續效果、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、跨回合 OnPlay 登場窗口、AI 決策（含 faint 效果選擇）、Refresh、抽牌效果、deck-to-support、break-to-trash、物品/場景效果與完整場景合法性、When this Cookie faints、ST2-021 Pretzel Snare、ST2-001 Roguefort Cookie opponent-discard-hand、gain-hp 明確目標與 FLIP、typed GameCommand/PendingDecision pilot，以及 AI 昏厥與補位優先順序。
-- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 1920x1080、1907x868、1600x900、1440x960、1366x768 維持 16:9、無垂直捲軸且玩家場地／手牌未超出畫布，戰鬥卡橫置不改變容器高度、確認式大卡縮小／返回，以及既有 break-to-trash、ST2-003 攻擊後續效果、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑。
+- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 1920x1080、1907x868、1600x900、1536x694、1440x960、1366x768、1280x720、1024x576、900x506、768x432、625x351、600x338 維持 16:9、無垂直捲軸；900px 以下切換為頂部階段列、中央牌桌、底部工具列，主要遊戲區域全部位於畫布內，玩家場地／支援區／手牌與左右資源區未超出畫布且互不遮蔽，戰鬥卡橫置不改變卡牌容器、戰鬥區、支援區或玩家場地尺寸、確認式大卡縮小／返回，以及既有 break-to-trash、ST2-003 攻擊後續效果、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。
 - 測試總數或瀏覽器驗證結果改變時，同步更新本文件與 `README.md`，不可保留過期數字。
 

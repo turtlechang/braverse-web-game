@@ -26,7 +26,7 @@
 - 紅、黃、綠起始牌組的 FLIP 已支援棄手牌增加 HP、抽牌與逐張傷害暫停；TRAP 已支援攻擊回應、能量支付、攻擊降低、條件傷害、HP 下限、支援棄置及牌庫頂放入休息支援。
 - 餅乾因暈倒或效果離開戰鬥區後，會依各玩家離場張數逐張詢問是否補位；玩家可選擇補餅乾或略過，雙方同批離場時由回合玩家先完成，再由非回合玩家執行，並在每張實際補位間依序處理 Refresh 與 OnPlay。
 - 新對局會隨機洗牌，並依序進行玩家選牌組、AI 隨機選牌組、猜拳、先後攻、自由／強制調度、補償抽牌與起始餅乾配置。
-- UI 已加入頂部 Phase HUD、雙方先後攻標示、雙方正面棄牌卡堆與清單、支援張數、戰鬥區 HP 卡展開、付款橫置預覽、FLIP 棄牌手牌分頁，以及可縮小後檢視全局的 FLIP／物品／陷阱確認式大卡；玩家場地、右側功能區與手牌會完整收在 16:9 畫布內。
+- UI 已加入 Phase HUD、雙方先後攻標示、雙方正面棄牌卡堆與清單、支援張數、戰鬥區 HP 卡展開、付款橫置預覽、FLIP 棄牌手牌分頁，以及可縮小後檢視全局的 FLIP／物品／陷阱確認式大卡；玩家場地、支援區、左右資源區與手牌會完整收在 16:9 畫布內。畫布使用 CSS Container Queries 依可用寬高切換一般、緊湊與極小桌面尺寸；低於 900px 時改為頂部階段列、中央牌桌、底部工具列，最低支援 600x338，不使用會讓 DOM 文字模糊的整頁 transform 縮放。
 - 已加入 `scripts/opencode-go.cmd` 與專案模型設定，使用獨立 runtime 目錄及 `OPENCODE_GO_API_KEY` 環境變數進行派工，不提交認證資料。
 - Codex 受限網路環境執行 OpenCode Go 時，需以核准的外部網路權限啟動派工；`ConnectionRefused` 且 Token 為 0 代表尚未進入模型推理。
 - OpenCode Go 只讀審查改用 `scripts/opencode-go-review.cmd` 與受限步數的 `review-fast` agent，限制讀檔範圍與工具迭代，避免多檔案 `plan` 審查超過呼叫端 timeout。
@@ -36,7 +36,7 @@
 - 玩家於開局選擇紅色、黃色或綠色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
 - 目前共有 312 項單元測試，涵蓋官方範例卡轉換、三色起始牌組、開局隨機牌組、FLIP／TRAP 官方文字轉換、ST2-003 Wizard Cookie 傷害後的 break-to-trash 攻擊效果、官方標記、卡片詳情與結果提示排版、FLIP 手牌分頁、逐張 HP、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、陷阱傷害續行與延後條件、跨回合 OnPlay 登場窗口、調度、種子洗牌、AI（含 faint 效果選擇）、Refresh、能量付款、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、場景完整合法性、When this Cookie faints（pending faint queue、選特定對手、選 0 略過、候選為空、戰鬥與效果雙來源、AI deterministic）、ST2-021 Pretzel Snare、ST2-001 Roguefort Cookie opponent-discard-hand、gain-hp 明確目標與 FLIP、typed GameCommand/PendingDecision pilot，以及 AI 昏厥與補位優先順序。
 - App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；新增 src/game/commands.ts 的 typed GameCommand/PendingDecision pilot，涵蓋 faint-effect 與 opponent-hand-discard，UI 與 AI 已接入。
-- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證五種桌機解析度維持 16:9、無垂直捲軸且場地／手牌未超出畫布，戰鬥卡橫置不改變容器高度、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑；完整瀏覽器驗證前需先執行 `npm run build`。
+- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（最低至 600x338）維持 16:9、無垂直捲軸，窄版 HUD 上下排列，主要區域、場地、支援區、左右資源區與手牌未超出畫布且互不遮蔽，戰鬥卡橫置不改變戰鬥區、支援區或場地尺寸、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑；完整瀏覽器驗證前需先執行 `npm run build`。
 
 ## 下一步計畫
 

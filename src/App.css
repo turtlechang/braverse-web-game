@@ -29,8 +29,12 @@ button {
 }
 
 .game-shell {
-  --rail-width: 0px;
+  --side-panel-width: clamp(128px, 10.5%, 180px);
+  --compact-phase-height: 54px;
+  --compact-toolbar-height: 52px;
   position: relative;
+  container-name: game-shell;
+  container-type: size;
   width: min(100vw, 177.777778vh);
   height: min(100vh, 56.25vw);
   min-width: 0;
@@ -70,11 +74,13 @@ button {
   position: relative;
   z-index: 2;
   min-width: 0;
-  width: 100%;
-  height: calc(100% - 134px);
+  width: calc(100% - (var(--side-panel-width) * 2));
+  height: 100%;
   max-width: none;
-  margin-left: 0;
-  padding: 4px 145px;
+  margin: 0 0 0 var(--side-panel-width);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 34px minmax(0, 1fr);
+  padding: 4px 8px;
   overflow: hidden;
 }
 
@@ -105,7 +111,62 @@ button {
 
 @media (max-width: 900px) {
   .table-area {
-    padding-inline: 92px;
+    padding: 4px 6px;
+  }
+}
+
+@container game-shell (max-width: 900px) {
+  .table-area {
+    width: 100%;
+    height: calc(
+      100% - var(--compact-phase-height) - var(--compact-toolbar-height)
+    );
+    margin: var(--compact-phase-height) 0 var(--compact-toolbar-height);
+    grid-template-rows: minmax(0, 1fr) 22px minmax(0, 1fr);
+    padding: 2px 4px;
+  }
+
+  .table-divider {
+    height: 22px;
+    gap: 6px;
+    font-size: 0.54rem;
+  }
+
+  .table-divider svg {
+    width: 12px;
+  }
+}
+
+@container game-shell (max-width: 900px) and (max-height: 400px) {
+  .game-shell {
+    --compact-phase-height: 44px;
+    --compact-toolbar-height: 44px;
+  }
+
+  .table-area {
+    grid-template-rows: minmax(0, 1fr) 16px minmax(0, 1fr);
+    padding: 1px 3px;
+  }
+
+  .table-divider {
+    height: 16px;
+    font-size: 0.48rem;
+  }
+}
+
+@container game-shell (max-height: 720px) {
+  .table-area {
+    height: 100%;
+    margin-top: 0;
+    padding-block: 2px;
+  }
+}
+
+@container game-shell (max-height: 620px) {
+  .table-area {
+    height: 100%;
+    margin-top: 0;
+    padding-inline: 4px;
   }
 }
 
@@ -167,13 +228,34 @@ button {
 
 @media (max-width: 680px) {
   .game-shell {
-    --rail-width: 0px;
+    --side-panel-width: 112px;
   }
 
   .table-area {
-    height: calc(100% - 126px);
-    margin-left: 0;
-    padding: 4px 68px;
+    width: calc(100% - (var(--side-panel-width) * 2));
+    height: 100%;
+    margin: 0 0 0 var(--side-panel-width);
+    padding: 4px;
   }
 
+}
+
+/* Keep compact HUD geometry after all height-based table overrides. */
+@container game-shell (max-width: 900px) {
+  .table-area {
+    width: 100%;
+    height: calc(
+      100% - var(--compact-phase-height) - var(--compact-toolbar-height)
+    );
+    margin: var(--compact-phase-height) 0 var(--compact-toolbar-height);
+    grid-template-rows: minmax(0, 1fr) 22px minmax(0, 1fr);
+    padding: 2px 4px;
+  }
+}
+
+@container game-shell (max-width: 900px) and (max-height: 400px) {
+  .table-area {
+    grid-template-rows: minmax(0, 1fr) 16px minmax(0, 1fr);
+    padding: 1px 3px;
+  }
 }

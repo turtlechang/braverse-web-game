@@ -1,24 +1,31 @@
 .match-toolbar {
-  position: relative;
-  z-index: 5;
+  position: absolute;
+  z-index: 11;
+  top: 0;
+  right: 0;
+  width: var(--side-panel-width);
   min-width: 0;
-  height: 62px;
-  margin-top: 72px;
+  height: 100%;
+  margin-top: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 20px;
-  padding: 10px 24px;
-  border-bottom: 1px solid rgba(167, 216, 255, 0.22);
-  background: rgba(4, 24, 62, 0.46);
+  padding: 18px 12px;
+  border-left: 1px solid rgba(167, 216, 255, 0.22);
+  background: rgba(3, 18, 54, 0.92);
+  backdrop-filter: blur(12px);
 }
 
 .match-status {
+  width: 100%;
   min-width: 0;
+  margin-left: 0;
   display: grid;
-  grid-template-columns: auto auto;
-  gap: 1px 14px;
-  align-items: baseline;
+  gap: 4px;
+  justify-items: center;
+  text-align: center;
 }
 
 .match-status span {
@@ -32,8 +39,7 @@
 }
 
 .match-status small {
-  grid-column: 1 / -1;
-  max-width: 600px;
+  max-width: 100%;
   overflow: hidden;
   color: rgba(255, 255, 255, 0.64);
   text-overflow: ellipsis;
@@ -41,15 +47,20 @@
 }
 
 .toolbar-actions {
+  width: 100%;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
   gap: 8px;
 }
 
 .deck-matchup {
-  height: 36px;
+  width: 100%;
+  min-height: 42px;
+  height: auto;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 8px;
   padding: 0 12px;
@@ -67,14 +78,155 @@
 
 @media (max-width: 680px) {
   .match-toolbar {
-    height: 62px;
-    margin-top: 64px;
-    margin-left: 0;
-    padding: 8px 12px;
+    width: var(--side-panel-width);
+    height: 100%;
+    margin-top: 0;
+    padding: 8px;
   }
 
   .match-status small {
     max-width: 210px;
   }
 
+}
+
+@container game-shell (max-height: 720px) {
+  .match-toolbar {
+    width: var(--side-panel-width);
+    height: 100%;
+    margin-top: 0;
+    gap: 10px;
+    padding: 8px;
+  }
+}
+
+@container game-shell (max-width: 1200px) {
+  .match-toolbar {
+    width: var(--side-panel-width);
+    padding-inline: 8px;
+  }
+
+  .toolbar-actions {
+    margin-left: 0;
+    gap: 5px;
+  }
+
+  .deck-matchup {
+    padding-inline: 8px;
+    font-size: 0.62rem;
+  }
+
+  .toolbar-actions button {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+@container game-shell (max-height: 620px) {
+  .match-toolbar {
+    width: var(--side-panel-width);
+    height: 100%;
+    margin-top: 0;
+    gap: 6px;
+    padding: 4px 8px;
+  }
+
+  .match-status small {
+    display: none;
+  }
+
+  .toolbar-actions button {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@container game-shell (max-width: 900px) {
+  .match-toolbar {
+    inset: auto 0 0;
+    width: 100%;
+    height: var(--compact-toolbar-height);
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 4px 6px;
+    border-top: 1px solid rgba(167, 216, 255, 0.22);
+    border-left: 0;
+  }
+
+  .match-status {
+    width: min(210px, 34%);
+    justify-items: start;
+    text-align: left;
+  }
+
+  .match-status span,
+  .match-status strong {
+    font-size: 0.58rem;
+  }
+
+  .match-status small {
+    display: block;
+    width: 100%;
+    font-size: 0.48rem;
+  }
+
+  .toolbar-actions {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+
+  .deck-matchup {
+    width: auto;
+    min-height: 32px;
+    flex-wrap: nowrap;
+    padding-inline: 8px;
+    font-size: 0.56rem;
+    white-space: nowrap;
+  }
+
+  .toolbar-actions button {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 auto;
+  }
+
+  .toolbar-actions svg {
+    width: 15px;
+  }
+}
+
+@container game-shell (max-width: 900px) and (max-height: 400px) {
+  .match-toolbar {
+    gap: 4px;
+    padding: 3px 4px;
+  }
+
+  .match-status {
+    width: 28%;
+  }
+
+  .match-status small {
+    display: none;
+  }
+
+  .match-status span,
+  .match-status strong,
+  .deck-matchup {
+    font-size: 0.48rem;
+  }
+
+  .deck-matchup {
+    min-height: 28px;
+    padding-inline: 5px;
+  }
+
+  .toolbar-actions button {
+    width: 28px;
+    height: 28px;
+  }
 }

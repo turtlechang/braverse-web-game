@@ -1,11 +1,37 @@
 .battle-row {
   position: relative;
   min-width: 0;
-  min-height: 270px;
+  min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: 132px minmax(440px, 1fr) 132px;
   gap: 16px;
   align-items: stretch;
+}
+
+.top-field .break-zone {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.field-stack {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.top-field .utility-zones {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bottom-field .break-zone {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bottom-field .utility-zones {
+  grid-column: 3;
+  grid-row: 1;
 }
 
 .row-meta {
@@ -354,10 +380,19 @@ button.discard-zone:disabled {
   position: absolute;
   z-index: 3;
   top: 6px;
-  right: 8px;
+  left: 8px;
   color: #fff3a6;
   font-size: 0.68rem;
   letter-spacing: 0.04em;
+}
+
+.top-field .support-count {
+  z-index: 30;
+  inset: auto 8px 6px auto;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(3, 20, 53, 0.88);
+  box-shadow: 0 0 8px rgba(3, 20, 53, 0.72);
 }
 
 .support-cards {
@@ -367,11 +402,12 @@ button.discard-zone:disabled {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 10px 20px;
+  padding: 4px 12px;
+  overflow: hidden;
 }
 
-.support-card {
-  width: 58px;
+.card-face.support-card {
+  width: 48px;
 }
 
 .stage-zone svg {
@@ -402,41 +438,38 @@ button.discard-zone:disabled {
   right: 18px;
   bottom: -58px;
   width: min(560px, 56%);
-  height: 176px;
+  height: 136px;
   pointer-events: none;
 }
 
 .top-hand {
-  top: -42px;
+  top: 76px;
   bottom: auto;
-  right: 22%;
-  height: 142px;
-  transform: rotate(180deg);
+  right: 150px;
+  height: 118px;
 }
 
 .top-hand .hand-card-wrap {
   bottom: 0;
-}
-
-.top-hand .card-face {
-  transform: rotate(180deg);
+  --rotation: calc(var(--fan-offset) * -4deg);
 }
 
 .top-hand .hand-card-wrap:hover,
 .top-hand .hand-card-wrap:focus-within {
-  bottom: -18px;
+  bottom: -8px;
+  transform: rotate(0);
 }
 
 .bottom-hand {
-  right: 90px;
-  bottom: 0;
+  right: 150px;
+  bottom: 160px;
 }
 
 .hand-card-wrap {
   --rotation: calc(var(--fan-offset) * 4deg);
   position: absolute;
   z-index: calc(20 - var(--fan-index));
-  right: calc(var(--fan-index) * 48px);
+  right: calc(var(--fan-index) * 26px);
   bottom: 0;
   transform: rotate(var(--rotation));
   transform-origin: 50% 120%;
@@ -449,12 +482,12 @@ button.discard-zone:disabled {
 .hand-card-wrap:hover,
 .hand-card-wrap:focus-within {
   z-index: 50;
-  bottom: 28px;
+  bottom: 36px;
   transform: rotate(0);
 }
 
 .hand-card {
-  width: 112px;
+  width: 88px;
 }
 
 .hand-card-action {
@@ -588,5 +621,412 @@ button.discard-zone:disabled {
 
   .hand-card {
     width: 92px;
+  }
+}
+
+@container game-shell (max-height: 720px) {
+  .field-stack {
+    grid-template-rows: 64px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(0, 1fr) 64px;
+  }
+
+  .combat-slots {
+    gap: 22px;
+    padding: 8px;
+  }
+
+  .combat-card-wrap {
+    width: 88px;
+    height: 121px;
+    padding-bottom: 32px;
+  }
+
+  .combat-card-wrap > .card-face,
+  .hand-card {
+    width: 88px;
+  }
+
+  .hp-card-stack {
+    width: 88px;
+    height: 30px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 28px;
+  }
+
+  .support-cards {
+    padding: 6px 14px;
+  }
+
+  .support-card {
+    width: 44px;
+  }
+
+  .hand-fan {
+    height: 108px;
+  }
+
+  .top-hand {
+    top: 55px;
+    height: 102px;
+  }
+
+  .bottom-hand {
+    bottom: 116px;
+  }
+}
+
+@container game-shell (max-width: 1200px) {
+  .battle-row {
+    grid-template-columns: 92px minmax(300px, 1fr) 88px;
+    gap: 8px;
+  }
+
+  .top-hand,
+  .bottom-hand {
+    right: 12px;
+  }
+
+  .break-card {
+    width: 52px;
+  }
+
+  .row-meta {
+    top: 5px;
+    left: 5px;
+    padding: 5px 7px;
+  }
+}
+
+@container game-shell (max-height: 620px) {
+  .field-stack {
+    grid-template-rows: 54px minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(0, 1fr) 54px;
+  }
+
+  .combat-card-wrap {
+    width: 76px;
+    height: 105px;
+    padding-bottom: 28px;
+  }
+
+  .combat-card-wrap > .card-face,
+  .hand-card {
+    width: 76px;
+  }
+
+  .support-card,
+  .stage-card {
+    width: 36px;
+  }
+
+  .hand-fan {
+    height: 94px;
+  }
+
+  .top-hand {
+    top: 46px;
+    height: 88px;
+  }
+
+  .bottom-hand {
+    bottom: 98px;
+  }
+
+  .hand-card-wrap {
+    right: calc(var(--fan-index) * 26px);
+  }
+
+  .break-zone {
+    padding: 6px 4px;
+  }
+
+  .break-cards {
+    min-height: 150px;
+  }
+}
+
+@container game-shell (max-width: 900px) {
+  .battle-row {
+    min-height: 0;
+    grid-template-columns: 58px minmax(0, 1fr) 58px;
+    gap: 4px;
+  }
+
+  .field-stack,
+  .bottom-field .field-stack {
+    grid-template-rows: 34px minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(0, 1fr) 34px;
+  }
+
+  .combat-slots {
+    gap: 12px;
+    padding: 4px;
+  }
+
+  .combat-card-wrap {
+    width: 58px;
+    height: 80px;
+    padding-bottom: 20px;
+  }
+
+  .combat-card-wrap > .card-face,
+  .hand-card {
+    width: 58px;
+  }
+
+  .hp-card-stack {
+    width: 58px;
+    height: 20px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 18px;
+  }
+
+  .hp-card-stack .hp-card:nth-child(2) { left: 8px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 16px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 24px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 32px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 40px; }
+
+  .row-meta {
+    top: 3px;
+    left: 3px;
+    padding: 3px 4px;
+  }
+
+  .row-meta span,
+  .row-meta small,
+  .turn-order-badge {
+    font-size: 0.44rem;
+  }
+
+  .row-meta strong {
+    margin-top: 1px;
+    font-size: 0.64rem;
+  }
+
+  .turn-order-badge {
+    margin-top: 1px;
+    padding: 1px 4px;
+  }
+
+  .zone-watermark {
+    font-size: 0.72rem;
+  }
+
+  .break-zone {
+    padding: 3px 2px;
+  }
+
+  .break-zone span,
+  .deck-zone span,
+  .stage-zone span,
+  .discard-zone span,
+  .support-count {
+    font-size: 0.46rem;
+  }
+
+  .break-zone strong,
+  .deck-zone strong,
+  .discard-zone strong {
+    font-size: 0.72rem;
+  }
+
+  .break-cards {
+    width: 50px;
+    min-height: 82px;
+    margin-top: 2px;
+  }
+
+  .break-card {
+    width: 34px;
+  }
+
+  .break-card-wrap:nth-child(2) .break-card { top: 16px; }
+  .break-card-wrap:nth-child(3) .break-card { top: 32px; }
+  .break-card-wrap:nth-child(4) .break-card { top: 48px; }
+  .break-card-wrap:nth-child(n + 5) .break-card { top: 64px; }
+
+  .utility-zones {
+    gap: 3px;
+  }
+
+  .mini-deck {
+    width: 22px;
+    height: 30px;
+    border-width: 1px;
+    box-shadow:
+      2px 2px 0 #b7c2d1,
+      4px 3px 0 #8796aa;
+  }
+
+  .stage-zone svg {
+    width: 18px;
+  }
+
+  .stage-card,
+  .card-face.support-card {
+    width: 26px;
+  }
+
+  .support-cards {
+    gap: 3px;
+    padding: 2px 6px;
+  }
+
+  .support-count {
+    top: 2px;
+    left: 4px;
+  }
+
+  .top-field .support-count {
+    inset: auto 4px 2px auto;
+    padding: 1px 3px;
+  }
+
+  .hand-fan {
+    right: 82px;
+    width: 48%;
+    height: 66px;
+  }
+
+  .top-hand {
+    top: 28px;
+    right: 82px;
+    height: 62px;
+  }
+
+  .bottom-hand {
+    right: 82px;
+    bottom: 40px;
+  }
+
+  .hand-card-wrap,
+  .top-hand .hand-card-wrap {
+    right: calc(var(--fan-index) * 18px);
+  }
+
+  .hand-card-wrap:hover,
+  .hand-card-wrap:focus-within {
+    bottom: 12px;
+  }
+
+  .hand-card-action {
+    inset: auto 3px 5px;
+    min-height: 18px;
+    padding: 1px;
+    font-size: 0.46rem;
+  }
+
+  .card-badges span {
+    font-size: 0.46rem;
+  }
+}
+
+@container game-shell (max-width: 900px) and (max-height: 400px) {
+  .battle-row {
+    grid-template-columns: 46px minmax(0, 1fr) 46px;
+    gap: 3px;
+  }
+
+  .field-stack,
+  .bottom-field .field-stack {
+    grid-template-rows: 26px minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(0, 1fr) 26px;
+  }
+
+  .combat-card-wrap {
+    width: 46px;
+    height: 64px;
+    padding-bottom: 16px;
+  }
+
+  .combat-card-wrap > .card-face,
+  .hand-card {
+    width: 46px;
+  }
+
+  .combat-slots {
+    gap: 8px;
+    padding: 2px;
+  }
+
+  .hp-card-stack {
+    width: 46px;
+    height: 16px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 14px;
+  }
+
+  .row-meta small,
+  .zone-watermark,
+  .empty-zone {
+    display: none;
+  }
+
+  .row-meta strong {
+    font-size: 0.54rem;
+  }
+
+  .break-cards {
+    width: 40px;
+    min-height: 58px;
+  }
+
+  .break-card {
+    width: 28px;
+  }
+
+  .mini-deck {
+    width: 18px;
+    height: 24px;
+  }
+
+  .stage-card,
+  .card-face.support-card {
+    width: 22px;
+  }
+
+  .hand-fan {
+    right: 74px;
+    width: 46%;
+    height: 52px;
+  }
+
+  .top-hand {
+    top: 21px;
+    right: 74px;
+    height: 48px;
+  }
+
+  .bottom-hand {
+    right: 74px;
+    bottom: 31px;
+  }
+
+  .hand-card-wrap,
+  .top-hand .hand-card-wrap {
+    right: calc(var(--fan-index) * 14px);
   }
 }

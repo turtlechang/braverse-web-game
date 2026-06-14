@@ -99,8 +99,15 @@ try {
     { width: 1920, height: 1080 },
     { width: 1907, height: 868 },
     { width: 1600, height: 900 },
+    { width: 1536, height: 694 },
     { width: 1440, height: 960 },
     { width: 1366, height: 768 },
+    { width: 1280, height: 720 },
+    { width: 1024, height: 576 },
+    { width: 900, height: 506 },
+    { width: 768, height: 432 },
+    { width: 625, height: 351 },
+    { width: 600, height: 338 },
   ]) {
     await page.setViewportSize(viewport)
     const metrics = await page.evaluate(() => {
@@ -111,20 +118,108 @@ try {
       const rect = shell.getBoundingClientRect()
       const bottomField = document.querySelector('.bottom-field')
       const bottomHand = document.querySelector('.bottom-hand')
+      const bottomSupport = document.querySelector(
+        '.bottom-field .support-zone',
+      )
       if (
         !(bottomField instanceof HTMLElement) ||
-        !(bottomHand instanceof HTMLElement)
+        !(bottomHand instanceof HTMLElement) ||
+        !(bottomSupport instanceof HTMLElement)
       ) {
-        throw new Error('找不到玩家場地或手牌')
+        throw new Error('找不到玩家場地、支援區或手牌')
       }
       const bottomFieldRect = bottomField.getBoundingClientRect()
       const bottomHandRect = bottomHand.getBoundingClientRect()
+      const bottomSupportRect = bottomSupport.getBoundingClientRect()
+      const phaseRail = document.querySelector('.phase-rail')
+      const matchToolbar = document.querySelector('.match-toolbar')
+      const tableArea = document.querySelector('.table-area')
+      if (
+        !(phaseRail instanceof HTMLElement) ||
+        !(matchToolbar instanceof HTMLElement) ||
+        !(tableArea instanceof HTMLElement)
+      ) {
+        throw new Error('找不到階段列、對局工具列或牌桌')
+      }
+      const phaseRailRect = phaseRail.getBoundingClientRect()
+      const matchToolbarRect = matchToolbar.getBoundingClientRect()
+      const tableAreaRect = tableArea.getBoundingClientRect()
+      const majorRegions = [
+        ...document.querySelectorAll(
+          '.battle-row, .combat-zone, .support-zone, .break-zone, .utility-zones',
+        ),
+      ].map((element) => ({
+        name: element.className,
+        rect: element.getBoundingClientRect(),
+      }))
+      const handCards = [
+        ...document.querySelectorAll('.hand-fan .hand-card'),
+      ].map((element) => element.getBoundingClientRect())
+      const battleCards = [
+        ...document.querySelectorAll('.combat-card-wrap'),
+      ].map((element) => element.getBoundingClientRect())
+      const sideZones = [
+        ...document.querySelectorAll('.break-zone, .utility-zones'),
+      ].map((element) => element.getBoundingClientRect())
+      const cardsOverlap = handCards.some((handCard) =>
+        battleCards.some(
+          (battleCard) =>
+            Math.min(handCard.right, battleCard.right) >
+              Math.max(handCard.left, battleCard.left) + 1 &&
+            Math.min(handCard.bottom, battleCard.bottom) >
+              Math.max(handCard.top, battleCard.top) + 1,
+        ),
+      )
+      const handOverlapsSideZone = handCards.some((handCard) =>
+        sideZones.some(
+          (sideZone) =>
+            Math.min(handCard.right, sideZone.right) >
+              Math.max(handCard.left, sideZone.left) + 1 &&
+            Math.min(handCard.bottom, sideZone.bottom) >
+              Math.max(handCard.top, sideZone.top) + 1,
+        ),
+      )
       return {
         width: rect.width,
         height: rect.height,
         shellBottom: rect.bottom,
         bottomFieldBottom: bottomFieldRect.bottom,
         bottomHandBottom: bottomHandRect.bottom,
+        bottomSupportTop: bottomSupportRect.top,
+        bottomSupportBottom: bottomSupportRect.bottom,
+        compactHudValid:
+          rect.width >= 900 ||
+          (phaseRailRect.top >= rect.top - 1 &&
+            phaseRailRect.bottom <= tableAreaRect.top + 1 &&
+            tableAreaRect.bottom <= matchToolbarRect.top + 1 &&
+            matchToolbarRect.bottom <= rect.bottom + 1),
+        compactHudRects: {
+          shell: { top: rect.top, bottom: rect.bottom, width: rect.width },
+          phase: { top: phaseRailRect.top, bottom: phaseRailRect.bottom },
+          table: { top: tableAreaRect.top, bottom: tableAreaRect.bottom },
+          toolbar: {
+            top: matchToolbarRect.top,
+            bottom: matchToolbarRect.bottom,
+          },
+        },
+        outsideMajorRegions: majorRegions
+          .filter(
+            ({ rect: region }) =>
+              region.left < rect.left - 1 ||
+              region.right > rect.right + 1 ||
+              region.top < rect.top - 1 ||
+              region.bottom > rect.bottom + 1,
+          )
+          .map(({ name, rect: region }) => ({
+            name,
+            left: region.left,
+            right: region.right,
+            top: region.top,
+            bottom: region.bottom,
+          })),
+        cardsOverlap,
+        compactSideZonesVisible:
+          rect.width >= 900 || !handOverlapsSideZone,
         bodyScrollHeight: document.body.scrollHeight,
         bodyClientHeight: document.body.clientHeight,
         documentScrollHeight: document.documentElement.scrollHeight,
@@ -145,24 +240,71 @@ try {
         metrics.bottomHandBottom <= metrics.shellBottom + 1,
       `${viewport.width}x${viewport.height} 的玩家場地與手牌必須完整位於遊戲畫布內`,
     )
+    assert.ok(
+      metrics.bottomSupportBottom <= metrics.shellBottom + 1 &&
+        metrics.bottomHandBottom <= metrics.bottomSupportTop + 1,
+      `${viewport.width}x${viewport.height} 的玩家支援區必須完整可見且不能被手牌覆蓋（手牌底部 ${metrics.bottomHandBottom}、支援區頂部 ${metrics.bottomSupportTop}）`,
+    )
+    assert.ok(
+      metrics.outsideMajorRegions.length === 0,
+      `${viewport.width}x${viewport.height} 的主要遊戲區域必須全部位於 16:9 畫布內：${JSON.stringify(metrics.outsideMajorRegions)}`,
+    )
+    assert.ok(
+      !metrics.cardsOverlap,
+      `${viewport.width}x${viewport.height} 的手牌不得遮蔽戰鬥卡或 HP 資訊`,
+    )
+    assert.ok(
+      metrics.compactSideZonesVisible,
+      `${viewport.width}x${viewport.height} 的手牌不得遮蔽休息區、牌庫、場景區或棄牌區`,
+    )
+    assert.ok(
+      metrics.compactHudValid,
+      `${viewport.width}x${viewport.height} 的窄版 HUD 應為頂部階段列、中央牌桌、底部工具列：${JSON.stringify(metrics.compactHudRects)}`,
+    )
+    if (viewport.width === 600 && viewport.height === 338) {
+      await page.screenshot({
+        path: resolve(outputDirectory, 'compact-600x338.png'),
+      })
+    }
   }
   await page.setViewportSize({ width: 1440, height: 960 })
   const restedLayout = await page.evaluate(() => {
     const wrap = document.querySelector('.bottom-field .combat-card-wrap')
     const card = wrap?.querySelector('.card-face')
-    if (!(wrap instanceof HTMLElement) || !(card instanceof HTMLElement)) {
-      throw new Error('找不到戰鬥區餅乾')
+    const field = document.querySelector('.bottom-field')
+    const combatZone = document.querySelector('.bottom-field .combat-zone')
+    const supportZone = document.querySelector('.bottom-field .support-zone')
+    if (
+      !(wrap instanceof HTMLElement) ||
+      !(card instanceof HTMLElement) ||
+      !(field instanceof HTMLElement) ||
+      !(combatZone instanceof HTMLElement) ||
+      !(supportZone instanceof HTMLElement)
+    ) {
+      throw new Error('找不到戰鬥區餅乾或玩家場地')
     }
-    const before = wrap.getBoundingClientRect().height
+    const before = {
+      wrapHeight: wrap.getBoundingClientRect().height,
+      fieldHeight: field.getBoundingClientRect().height,
+      combatHeight: combatZone.getBoundingClientRect().height,
+      supportTop: supportZone.getBoundingClientRect().top,
+      supportHeight: supportZone.getBoundingClientRect().height,
+    }
     card.classList.add('is-rested')
-    const after = wrap.getBoundingClientRect().height
+    const after = {
+      wrapHeight: wrap.getBoundingClientRect().height,
+      fieldHeight: field.getBoundingClientRect().height,
+      combatHeight: combatZone.getBoundingClientRect().height,
+      supportTop: supportZone.getBoundingClientRect().top,
+      supportHeight: supportZone.getBoundingClientRect().height,
+    }
     card.classList.remove('is-rested')
     return { before, after }
   })
-  assert.strictEqual(
+  assert.deepStrictEqual(
     restedLayout.after,
     restedLayout.before,
-    '戰鬥區卡牌橫置不得改變戰鬥卡容器高度',
+    '戰鬥區卡牌橫置不得改變卡牌容器、戰鬥區、支援區或玩家場地尺寸',
   )
 
   const runBreakToTrashTest = async (variant) => {
