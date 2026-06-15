@@ -12,6 +12,8 @@
 
 專案開發流程已整理為 `.agents/skills/develop-braverse` Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟。
 
+CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `npm test`、`npm run lint`、`npm run build` 與手動 Playwright AI 瀏覽器驗證，不負責部署。Vercel 監聽 PR 與 push 後自動產生 Preview 部署與正式部署。GitHub Secrets 不保存 Vercel Token，所有 Vercel 連線設定在 Vercel Dashboard 完成。
+
 ## 目前進度
 
 - 已建立紅色起始牌組：22 種卡號，合計 60 張。
@@ -37,6 +39,8 @@
 - 目前共有 332 項單元測試，涵蓋官方範例卡轉換、三色起始牌組、開局隨機牌組、FLIP／TRAP 官方文字轉換、ST3-002／ST3-005／ST3-015 支援卡送棄牌區技能代價、ST2-003 Wizard Cookie 傷害後的 break-to-trash 攻擊效果、官方標記、卡片詳情與結果提示排版、桌面 HUD 減法配置、手牌選取動作、付款不足時隱藏非法動作與資源浮層、FLIP 手牌分頁、逐張 HP、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、陷阱傷害續行與延後條件、跨回合 OnPlay 登場窗口、調度、種子洗牌、AI（含 faint 效果選擇）、Refresh、能量付款、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、場景完整合法性、When this Cookie faints、ST2-021 Pretzel Snare、ST2-001 Roguefort Cookie opponent-discard-hand、gain-hp 明確目標與 FLIP、typed GameCommand/PendingDecision pilot，以及 AI 昏厥與補位優先順序。
 - App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；新增 src/game/commands.ts 的 typed GameCommand/PendingDecision pilot，涵蓋 faint-effect 與 opponent-hand-discard，UI 與 AI 已接入。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十四種桌機與窄視窗解析度（含 1920x1080、1907x868、1536x864、798x698，最低至 600x338）維持 16:9、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區、左右資源區與手牌未超出畫布且互不遮蔽。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑；完整瀏覽器驗證前需先執行 `npm run build`。
+- 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
+- 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
 
 ## 下一步計畫
 
@@ -52,6 +56,9 @@
 - 持續補齊起始牌組以外的複合效果與完整事件優先權。
 - 專案指令、驗證範圍或派工策略調整時，同步維護 `develop-braverse` Skill。
 - 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
+- 待於 Vercel Dashboard 匯入 GitHub repo，設定 Framework Preset 為 Vite、Build Command 為 `npm run build`、Output Directory 為 `dist`、Install Command 為 `npm ci`、Node.js Version 為 22。
+- 待於 GitHub 啟用 main branch protection：要求 `CI / Test, Lint & Build` 通過、至少 1 人 review、禁止直接 push。
+- 待用第一支 PR 驗證 Vercel Preview 網址可正常載入並操作對局。
 
 ## 開發指令
 
