@@ -624,6 +624,42 @@
   cursor: pointer;
 }
 
+.pause-match-details {
+  width: min(360px, 100%);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 20px auto 10px;
+  padding: 12px 16px;
+  border: 1px solid rgba(21, 159, 209, 0.22);
+  border-radius: 8px;
+  background: rgba(21, 159, 209, 0.07);
+}
+
+.pause-match-details span {
+  margin: 0;
+  color: #304765;
+  font-size: 0.78rem;
+}
+
+.pause-match-details b {
+  color: #159fd1;
+  font-size: 0.68rem;
+}
+
+.pause-modal > small {
+  display: block;
+  color: #738196;
+  font-size: 0.68rem;
+}
+
+.pause-modal .pause-simulation-button {
+  border: 1px solid rgba(21, 159, 209, 0.45);
+  background: transparent;
+  color: #126f9b;
+}
+
 .result-backdrop {
   background:
     radial-gradient(circle at center, rgba(255, 209, 90, 0.15), transparent 30%),

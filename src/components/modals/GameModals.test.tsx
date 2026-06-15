@@ -131,7 +131,7 @@ describe('CardDetailModal', () => {
             oncePerTurn: false,
             yourTurn: false,
             restSource: false,
-            cost: { yellow: 1 },
+            cost: { energy: { yellow: 1 }, discardHand: 0 },
             text: '{ap} 《{Y}》 Your opponent must place 1 card from their hand into the trash.',
             effects: [{ kind: 'opponent-discard-hand', count: 1 }],
           },

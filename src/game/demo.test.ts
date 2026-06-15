@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createBreakToTrashDemoState,
   createReplacementChoiceDemoState,
+  createSupportToTrashSkillDemoState,
   createTrapResponseDemoState,
   isLocalhost,
   parseTestStateConfig,
@@ -66,6 +67,14 @@ describe('parseTestStateConfig', () => {
     expect(result).toEqual({ kind: 'replacement-choice' })
   })
 
+  it('returns support-to-trash skill config on localhost', () => {
+    const result = parseTestStateConfig(
+      '?test-state=st3-002-skill',
+      'localhost',
+    )
+    expect(result).toEqual({ kind: 'support-to-trash-skill' })
+  })
+
   it('returns null when localhost but unknown test-state', () => {
     const result = parseTestStateConfig('?test-state=foo', 'localhost')
     expect(result).toBeNull()
@@ -89,6 +98,20 @@ describe('parseTestStateConfig', () => {
   it('returns null on arbitrary domain with unknown test-state', () => {
     const result = parseTestStateConfig('?test-state=foo', 'evil-site.com')
     expect(result).toBeNull()
+  })
+})
+
+describe('createSupportToTrashSkillDemoState', () => {
+  it('creates ST3-002 in battle with a support cost and opponent target', () => {
+    const state = createSupportToTrashSkillDemoState()
+    const player = state.players['player-one']
+    const opponent = state.players['player-two']
+
+    expect(state.phase).toBe('main')
+    expect(player.battleArea[0].card.id).toBe('ST3-002')
+    expect(player.supportArea).toHaveLength(2)
+    expect(opponent.battleArea).toHaveLength(1)
+    expect(opponent.supportArea).toHaveLength(2)
   })
 })
 

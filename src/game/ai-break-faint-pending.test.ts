@@ -20,7 +20,7 @@ describe('AI break-to-trash target selection', () => {
     oncePerTurn: false,
     yourTurn: false,
     restSource: false,
-    cost: {},
+    cost: { energy: {}, discardHand: 0 },
     text: 'Test break-to-trash',
     effects: [bttEffect],
   }
@@ -76,7 +76,7 @@ describe('AI break-to-trash target selection', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: {},
+        cost: { energy: {}, discardHand: 0 },
         text: 'When this Cookie faints, select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
         effects: [
           {

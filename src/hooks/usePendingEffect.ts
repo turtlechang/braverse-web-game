@@ -12,6 +12,7 @@ import {
   canActivateCookieSkill,
   executeCardEffect,
   finalizePendingReplacements,
+  getEnergyCostTotal,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getSupportEffectCandidates,
@@ -21,6 +22,7 @@ import {
   playItem,
   resolveAttackEffect,
   skipCookieOnPlay,
+  validateEnergyPayment,
 } from '../game'
 import { describeEffectResult } from '../components/effects/effectUiUtils'
 import type { PendingEffect } from '../components/effects/effectUiTypes'
@@ -137,6 +139,67 @@ export function usePendingEffect(params: {
     pendingEffect?.selectedPaymentIds ?? [],
   )
 
+  const pendingSupportArea = pendingEffect
+    ? game.players[pendingEffect.context.sourcePlayerId].supportArea
+    : []
+  const skillEnergyCostTotal = pendingEffect
+    ? getEnergyCostTotal(pendingEffect.skill.cost.energy)
+    : 0
+  const skillEnergyPaymentValid = pendingEffect
+    ? validateEnergyPayment(
+        pendingEffect.skill.cost.energy,
+        pendingSupportArea,
+        pendingEffect.selectedPaymentIds,
+      ).valid
+    : false
+  const skillPaymentTargetIds = new Set(
+    pendingEffect && !pendingEffect.skillActivated && skillEnergyCostTotal > 0
+      ? pendingSupportArea
+          .filter(
+            (support) =>
+              !support.rested &&
+              !pendingEffect.selectedCostSupportToTrashIds.includes(
+                support.card.instanceId,
+              ) &&
+              (pendingEffect.selectedPaymentIds.length <
+                skillEnergyCostTotal ||
+                pendingEffect.selectedPaymentIds.includes(
+                  support.card.instanceId,
+                )),
+          )
+          .map((support) => support.card.instanceId)
+      : [],
+  )
+
+  const supportToTrashCost =
+    pendingEffect?.skill.cost.supportToTrash ?? 0
+  const skillCostSupportCandidates =
+    pendingEffect &&
+    supportToTrashCost > 0 &&
+    skillEnergyPaymentValid
+      ? getSupportEffectCandidates(game, pendingEffect.context).filter(
+          (support) =>
+            !pendingEffect.selectedPaymentIds.includes(
+              support.card.instanceId,
+            ) &&
+            (pendingEffect.selectedCostSupportToTrashIds.length <
+              supportToTrashCost ||
+              pendingEffect.selectedCostSupportToTrashIds.includes(
+                support.card.instanceId,
+              )),
+        )
+      : []
+
+  const skillCostSupportTargetIds = new Set(
+    skillCostSupportCandidates.map(
+      (support) => support.card.instanceId,
+    ),
+  )
+
+  const selectedSkillCostSupportToTrashIds = new Set(
+    pendingEffect?.selectedCostSupportToTrashIds ?? [],
+  )
+
   useEffect(() => {
     if (pendingEffect || effectHistory.length === 0) return
 
@@ -234,12 +297,13 @@ export function usePendingEffect(params: {
       effectIndex: 0,
       selectedTargetIds: [],
       selectedPaymentIds: [],
+      selectedCostSupportToTrashIds: [],
       skillActivated: false,
       optional,
       triggerLabel,
       sourceKind: 'cookie',
     })
-    setMessage(`${card.name}的技能等待支付能量並選擇目標。`)
+    setMessage(`${card.name}的技能等待支付技能代價並選擇目標。`)
     },
     [setGame, setMessage, clearAttacker, setPendingEffect],
   )
@@ -269,7 +333,7 @@ export function usePendingEffect(params: {
         oncePerTurn: false,
         yourTurn: true,
         restSource: sourceKind === 'stage',
-        cost: ability.cost,
+        cost: { energy: ability.cost, discardHand: 0 },
         text: ability.text,
         effects,
       },
@@ -278,6 +342,7 @@ export function usePendingEffect(params: {
       effectIndex: 0,
       selectedTargetIds: [],
       selectedPaymentIds: [],
+      selectedCostSupportToTrashIds: [],
       skillActivated: false,
       optional: false,
       triggerLabel,
@@ -318,7 +383,7 @@ export function usePendingEffect(params: {
           oncePerTurn: false,
           yourTurn: true,
           restSource: false,
-          cost: {},
+          cost: { energy: {}, discardHand: 0 },
           text: sourceCard.attackText ?? '',
           effects: battle.attackEffects,
         },
@@ -327,6 +392,7 @@ export function usePendingEffect(params: {
         effectIndex: battle.attackEffectIndex,
         selectedTargetIds: [],
         selectedPaymentIds: [],
+        selectedCostSupportToTrashIds: [],
         skillActivated: true,
         optional: false,
         triggerLabel: '攻擊後續效果',
@@ -428,14 +494,48 @@ export function usePendingEffect(params: {
 
   const toggleSkillPayment = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
+    if (
+      pendingEffect.selectedCostSupportToTrashIds.includes(instanceId)
+    ) {
+      return
+    }
 
     const isSelected =
       pendingEffect.selectedPaymentIds.includes(instanceId)
+    if (
+      !isSelected &&
+      pendingEffect.selectedPaymentIds.length >= skillEnergyCostTotal
+    ) {
+      return
+    }
     const selectedPaymentIds = isSelected
       ? pendingEffect.selectedPaymentIds.filter((id) => id !== instanceId)
       : [...pendingEffect.selectedPaymentIds, instanceId]
 
     setPendingEffect({ ...pendingEffect, selectedPaymentIds })
+  }
+
+  const toggleSkillCostSupport = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+    if (
+      !skillCostSupportTargetIds.has(instanceId) ||
+      pendingEffect.selectedPaymentIds.includes(instanceId)
+    ) {
+      return
+    }
+
+    const max = pendingEffect.skill.cost.supportToTrash ?? 0
+    const isSelected =
+      pendingEffect.selectedCostSupportToTrashIds.includes(instanceId)
+    const selectedCostSupportToTrashIds = isSelected
+      ? pendingEffect.selectedCostSupportToTrashIds.filter(
+          (id) => id !== instanceId,
+        )
+      : pendingEffect.selectedCostSupportToTrashIds.length < max
+        ? [...pendingEffect.selectedCostSupportToTrashIds, instanceId]
+        : pendingEffect.selectedCostSupportToTrashIds
+
+    setPendingEffect({ ...pendingEffect, selectedCostSupportToTrashIds })
   }
 
   const skipOptionalSkill = () => {
@@ -560,6 +660,7 @@ export function usePendingEffect(params: {
                 pendingEffect.sourceCard.instanceId,
                 pendingEffect.trigger,
                 pendingEffect.selectedPaymentIds,
+                pendingEffect.selectedCostSupportToTrashIds,
               )
       const nextGame = executeCardEffect(
         activatedGame,
@@ -686,6 +787,7 @@ export function usePendingEffect(params: {
     beginCardAbility,
     toggleEffectTarget,
     toggleSkillPayment,
+    toggleSkillCostSupport,
     confirmEffect,
     skipOptionalSkill,
     currentEffect,
@@ -694,10 +796,14 @@ export function usePendingEffect(params: {
     trashCookieCandidates,
     nonBattleEffectCandidateCards,
     breakToTrashCandidates,
+    skillCostSupportCandidates,
+    skillPaymentTargetIds,
+    skillCostSupportTargetIds,
     effectTargetIds,
     breakEffectTargetIds,
     selectedEffectTargetIds,
     selectedSkillPaymentIds,
+    selectedSkillCostSupportToTrashIds,
     faintActive,
   } as const
 }

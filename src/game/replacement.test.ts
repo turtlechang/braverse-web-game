@@ -237,7 +237,7 @@ describe('replacement sequence', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: {},
+        cost: { energy: {}, discardHand: 0 },
         text: 'OnPlay',
         effects: [],
       },

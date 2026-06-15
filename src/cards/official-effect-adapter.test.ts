@@ -6,6 +6,7 @@ import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
   convertOfficialCookieSkill,
+  convertOfficialItemAbility,
   convertOfficialStageAbility,
   convertOfficialTrapAbility,
   type OfficialCardRecord,
@@ -97,23 +98,23 @@ describe('Starter Deck RED official effect adapter', () => {
       trigger: 'on-play',
       oncePerTurn: false,
       yourTurn: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
     })
     expect(convertOfficialCookieSkill(findCard('ST1-003'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
-      cost: { red: 2, neutral: 2 },
+      cost: { energy: { red: 2, neutral: 2 }, discardHand: 0 },
     })
     expect(convertOfficialCookieSkill(findCard('ST1-008'))).toMatchObject({
       trigger: 'activate',
       oncePerTurn: true,
       restSource: true,
-      cost: { red: 2 },
+      cost: { energy: { red: 2 }, discardHand: 0 },
     })
     expect(convertOfficialCookieSkill(findCard('ST1-009'))).toMatchObject({
       trigger: 'passive',
       yourTurn: true,
-      cost: {},
+      cost: { energy: {}, discardHand: 0 },
       effects: [
         {
           kind: 'modify-attack',
@@ -293,7 +294,7 @@ describe('Starter Deck RED official effect adapter', () => {
       expect(skill).toMatchObject({
         trigger: 'on-play',
         oncePerTurn: false,
-        cost: { yellow: 1 },
+        cost: { energy: { yellow: 1 }, discardHand: 0 },
         effects: [{ kind: 'opponent-discard-hand', count: 1 }],
       })
     })
@@ -393,7 +394,7 @@ describe('Starter Deck RED official effect adapter', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: { yellow: 2 },
+        cost: { energy: { yellow: 2 }, discardHand: 0 },
         effects: [{ kind: 'break-to-trash', max: 1, exactLevel: 1 }],
       })
     })
@@ -406,7 +407,7 @@ describe('Starter Deck RED official effect adapter', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: { yellow: 1 },
+        cost: { energy: { yellow: 1 }, discardHand: 0 },
         effects: [
           {
             kind: 'break-to-trash',
@@ -458,11 +459,14 @@ describe('Starter Deck RED official effect adapter', () => {
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(6)
+      expect(supported).toHaveLength(9)
       expect(supported.map((c) => c.cardNumber)).toEqual([
         'ST3-001',
+        'ST3-002',
+        'ST3-005',
         'ST3-009',
         'ST3-010',
+        'ST3-015',
         'ST3-016',
         'ST3-017',
         'ST3-018',
@@ -485,14 +489,42 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('rejects ST3-002 (special cost with Place)', () => {
+    it('ST3-002 Strawberry Crepe Cookie is supported', () => {
       expect(
         convertOfficialCardEffects(findGreenCard('ST3-002')),
       ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+        status: 'supported',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       })
     })
+
+    it.each([
+      ['ST3-002', 'damage'],
+      ['ST3-005', 'damage'],
+      ['ST3-015', 'modify-attack'],
+    ] as const)(
+      '%s parses the support-to-trash skill cost',
+      (cardNumber, effectKind) => {
+        expect(
+          convertOfficialCookieSkill(findGreenCard(cardNumber)),
+        ).toMatchObject({
+          trigger: 'activate',
+          oncePerTurn: true,
+          cost: {
+            energy: {},
+            discardHand: 0,
+            supportToTrash: 1,
+          },
+          effects: [{ kind: effectKind }],
+        })
+      },
+    )
 
     it('rejects ST3-004 (compound effect with Then)', () => {
       expect(
@@ -503,21 +535,34 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('rejects ST3-005 (special cost with Place)', () => {
+    it('ST3-005 Blackberry Cookie is supported', () => {
       expect(
         convertOfficialCardEffects(findGreenCard('ST3-005')),
       ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+        status: 'supported',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       })
     })
 
-    it('rejects ST3-015 (special cost with Place)', () => {
+    it('ST3-015 Chili Pepper Cookie is supported', () => {
       expect(
         convertOfficialCardEffects(findGreenCard('ST3-015')),
       ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+        status: 'supported',
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
       })
     })
 
@@ -560,7 +605,7 @@ describe('Starter Deck RED official effect adapter', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: { green: 2 },
+        cost: { energy: { green: 2 }, discardHand: 0 },
         text: '{ap} 《{G}{G}》 Take 1 card from the top your deck and place it in your support area as active.',
         effects: [{ kind: 'deck-to-support', amount: 1 }],
       })
@@ -684,6 +729,35 @@ describe('Starter Deck RED official effect adapter', () => {
         status: 'supported',
         effects: [{ kind: 'draw', amount: 1 }],
       })
+    })
+
+    it('does not expose cookie discard-hand costs before skill payment supports them', () => {
+      const card = makeCard({
+        type: 'cookie',
+        skill: {
+          name: null,
+          text: '{mob} 《Discard 1 card.》 Draw 1 card from your deck.',
+        },
+        attackText: '{R} Deals 1 damage.',
+      })
+
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+      })
+      expect(convertOfficialCookieSkill(card)).toBeUndefined()
+    })
+
+    it('does not drop unsupported special costs from item abilities', () => {
+      const card = makeCard({
+        type: 'item',
+        attackText:
+          '《Discard 1 card.》 Draw 1 card from your deck.',
+      })
+
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+      })
+      expect(convertOfficialItemAbility(card)).toBeUndefined()
     })
 
     it('rejects draw text from flip card type', () => {

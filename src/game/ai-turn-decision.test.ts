@@ -138,7 +138,7 @@ describe('simple AI opponent', () => {
       oncePerTurn: true,
       yourTurn: false,
       restSource: false,
-      cost: { red: 2, neutral: 1 },
+      cost: { energy: { red: 2, neutral: 1 }, discardHand: 0 },
       text: 'Skill',
       effects: [],
     }
@@ -163,7 +163,7 @@ describe('simple AI opponent', () => {
       oncePerTurn: true,
       yourTurn: true,
       restSource: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
       text: 'Deal damage',
       effects: [
         {
@@ -263,7 +263,7 @@ describe('simple AI opponent', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: {},
+        cost: { energy: {}, discardHand: 0 },
         text: 'Draw 1',
         effects: [{ kind: 'draw' as const, amount: 1 }],
       },
@@ -368,7 +368,7 @@ describe('simple AI opponent', () => {
       oncePerTurn: true,
       yourTurn: false,
       restSource: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
       text: 'Once',
       effects: [
         {

@@ -34,6 +34,7 @@ import {
   createReplacementChoiceDemoState,
   createOpponentDiscardHandDemoState,
   createStageUsageDemoState,
+  createSupportToTrashSkillDemoState,
   createTrapResponseDemoState,
   parseTestStateConfig,
 } from '../game/demo'
@@ -112,6 +113,9 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'attack-effect') {
       return createAttackEffectDemoState()
     }
+    if (testStateConfig?.kind === 'support-to-trash-skill') {
+      return createSupportToTrashSkillDemoState()
+    }
     return createDemoSetupGame('player-one')
   })
   const [setupStep, setSetupStep] = useState<
@@ -170,6 +174,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'attack-effect') {
       return '測試狀態：Wizard Cookie 攻擊後續效果。'
+    }
+    if (testStateConfig?.kind === 'support-to-trash-skill') {
+      return '測試狀態：ST3-002 支援卡代價技能。'
     }
     return '推進階段，開始這場對戰。'
   })

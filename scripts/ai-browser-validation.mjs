@@ -91,7 +91,7 @@ try {
     throw new Error('開局設定流程未在安全步數內完成。')
   }
 
-  const statusMessage = page.locator('.match-status small')
+  const statusMessage = page.locator('.battle-status-message')
 
   await completeOpeningSetup()
 
@@ -99,12 +99,14 @@ try {
     { width: 1920, height: 1080 },
     { width: 1907, height: 868 },
     { width: 1600, height: 900 },
+    { width: 1536, height: 864 },
     { width: 1536, height: 694 },
     { width: 1440, height: 960 },
     { width: 1366, height: 768 },
     { width: 1280, height: 720 },
     { width: 1024, height: 576 },
     { width: 900, height: 506 },
+    { width: 798, height: 698 },
     { width: 768, height: 432 },
     { width: 625, height: 351 },
     { width: 600, height: 338 },
@@ -118,19 +120,57 @@ try {
       const rect = shell.getBoundingClientRect()
       const bottomField = document.querySelector('.bottom-field')
       const bottomHand = document.querySelector('.bottom-hand')
+      const topHand = document.querySelector('.top-hand')
       const bottomSupport = document.querySelector(
         '.bottom-field .support-zone',
       )
       if (
         !(bottomField instanceof HTMLElement) ||
         !(bottomHand instanceof HTMLElement) ||
+        !(topHand instanceof HTMLElement) ||
         !(bottomSupport instanceof HTMLElement)
       ) {
         throw new Error('找不到玩家場地、支援區或手牌')
       }
       const bottomFieldRect = bottomField.getBoundingClientRect()
       const bottomHandRect = bottomHand.getBoundingClientRect()
+      const topHandRect = topHand.getBoundingClientRect()
       const bottomSupportRect = bottomSupport.getBoundingClientRect()
+      const bottomCombat = document.querySelector(
+        '.bottom-field .combat-zone',
+      )
+      if (!(bottomCombat instanceof HTMLElement)) {
+        throw new Error('找不到玩家戰鬥區')
+      }
+      const bottomCombatRect = bottomCombat.getBoundingClientRect()
+      const topSupportCards = [
+        ...document.querySelectorAll('.top-field .support-card'),
+      ].map((element) => element.getBoundingClientRect())
+      const bottomSupportCards = [
+        ...document.querySelectorAll('.bottom-field .support-card'),
+      ].map((element) => element.getBoundingClientRect())
+      const topSupportZone = document.querySelector(
+        '.top-field .support-zone',
+      )
+      const bottomCombatCard = document.querySelector(
+        '.bottom-field .combat-card-wrap',
+      )
+      const topCombatCard = document.querySelector(
+        '.top-field .combat-card-wrap',
+      )
+      const topRowMeta = document.querySelector('.top-field .row-meta')
+      if (
+        !(topSupportZone instanceof HTMLElement) ||
+        !(bottomCombatCard instanceof HTMLElement) ||
+        !(topCombatCard instanceof HTMLElement) ||
+        !(topRowMeta instanceof HTMLElement)
+      ) {
+        throw new Error('找不到支援區、戰鬥卡或對手名稱牌')
+      }
+      const topSupportRect = topSupportZone.getBoundingClientRect()
+      const bottomCombatCardRect = bottomCombatCard.getBoundingClientRect()
+      const topCombatCardRect = topCombatCard.getBoundingClientRect()
+      const topRowMetaRect = topRowMeta.getBoundingClientRect()
       const phaseRail = document.querySelector('.phase-rail')
       const matchToolbar = document.querySelector('.match-toolbar')
       const tableArea = document.querySelector('.table-area')
@@ -144,6 +184,20 @@ try {
       const phaseRailRect = phaseRail.getBoundingClientRect()
       const matchToolbarRect = matchToolbar.getBoundingClientRect()
       const tableAreaRect = tableArea.getBoundingClientRect()
+      const topField = document.querySelector('.top-field')
+      const tableDivider = document.querySelector('.table-divider')
+      const tableDividerContent = tableDivider?.querySelector(':scope > div')
+      if (
+        !(topField instanceof HTMLElement) ||
+        !(tableDivider instanceof HTMLElement) ||
+        !(tableDividerContent instanceof HTMLElement)
+      ) {
+        throw new Error('找不到上方場地或中央指引')
+      }
+      const topFieldRect = topField.getBoundingClientRect()
+      const tableDividerRect = tableDivider.getBoundingClientRect()
+      const tableDividerContentRect =
+        tableDividerContent.getBoundingClientRect()
       const majorRegions = [
         ...document.querySelectorAll(
           '.battle-row, .combat-zone, .support-zone, .break-zone, .utility-zones',
@@ -179,6 +233,42 @@ try {
               Math.max(handCard.top, sideZone.top) + 1,
         ),
       )
+      const topUtilityZones = document.querySelector(
+        '.top-field .utility-zones',
+      )
+      const bottomUtilityZones = document.querySelector(
+        '.bottom-field .utility-zones',
+      )
+      const topUtilityRect = topUtilityZones instanceof HTMLElement
+        ? topUtilityZones.getBoundingClientRect()
+        : null
+      const bottomUtilityRect = bottomUtilityZones instanceof HTMLElement
+        ? bottomUtilityZones.getBoundingClientRect()
+        : null
+      const topHandOverlapsUtility = topUtilityRect
+        ? handCards.some(
+            (handCard) =>
+              Math.min(handCard.right, topUtilityRect.right) >
+                Math.max(handCard.left, topUtilityRect.left) + 1 &&
+              Math.min(handCard.bottom, topUtilityRect.bottom) >
+                Math.max(handCard.top, topUtilityRect.top) + 1,
+          )
+        : false
+      const bottomHandOverlapsUtility = bottomUtilityRect
+        ? handCards.some(
+            (handCard) =>
+              Math.min(handCard.right, bottomUtilityRect.right) >
+                Math.max(handCard.left, bottomUtilityRect.left) + 1 &&
+              Math.min(handCard.bottom, bottomUtilityRect.bottom) >
+                Math.max(handCard.top, bottomUtilityRect.top) + 1,
+          )
+        : false
+      const combatCardWidth =
+        bottomCombatCard instanceof HTMLElement
+          ? bottomCombatCard.getBoundingClientRect().width
+          : 0
+      const supportCardWidth =
+        bottomSupportCards[0]?.width ?? topSupportCards[0]?.width ?? 0
       return {
         width: rect.width,
         height: rect.height,
@@ -187,6 +277,52 @@ try {
         bottomHandBottom: bottomHandRect.bottom,
         bottomSupportTop: bottomSupportRect.top,
         bottomSupportBottom: bottomSupportRect.bottom,
+        fieldRatio:
+          bottomSupportRect.height /
+          (bottomSupportRect.height + bottomCombatRect.height),
+        topHandLeft: topHandRect.left,
+        topHandRight: topHandRect.right,
+        topHandTop: topHandRect.top,
+        bottomHandLeft: bottomHandRect.left,
+        bottomHandRight: bottomHandRect.right,
+        combatCardWidth,
+        supportCardWidthActual: supportCardWidth,
+        topHandOverlapsUtility,
+        bottomHandOverlapsUtility,
+        topUtilityRect: topUtilityRect
+          ? {
+              left: topUtilityRect.left,
+              right: topUtilityRect.right,
+              top: topUtilityRect.top,
+              bottom: topUtilityRect.bottom,
+            }
+          : null,
+        bottomUtilityRect: bottomUtilityRect
+          ? {
+              left: bottomUtilityRect.left,
+              right: bottomUtilityRect.right,
+              top: bottomUtilityRect.top,
+              bottom: bottomUtilityRect.bottom,
+            }
+          : null,
+        supportCardWidth:
+          bottomSupportCards[0]?.width ?? topSupportCards[0]?.width ?? 0,
+        supportCardCount:
+          bottomSupportCards.length + topSupportCards.length,
+        bottomSupportStartsLeft:
+          bottomSupportCards.length === 0 ||
+          bottomSupportCards[0].left - bottomSupportRect.left <
+            bottomSupportRect.width / 3,
+        topSupportStartsRight:
+          topSupportCards.length === 0 ||
+          topSupportRect.right - topSupportCards[0].right <
+            topSupportRect.width / 3,
+        combatCardsNearCenter:
+          topFieldRect.bottom - topCombatCardRect.bottom < 36 &&
+          bottomCombatCardRect.top - bottomFieldRect.top < 36,
+        topMetaAtCombatBottom:
+          topRowMetaRect.bottom >
+          topCombatCardRect.top + topCombatCardRect.height / 2,
         compactHudValid:
           rect.width >= 900 ||
           (phaseRailRect.top >= rect.top - 1 &&
@@ -201,6 +337,24 @@ try {
             top: matchToolbarRect.top,
             bottom: matchToolbarRect.bottom,
           },
+        },
+        compactDividerValid:
+          rect.width > 900 ||
+          (tableDividerContentRect.top >= tableDividerRect.top - 1 &&
+            tableDividerContentRect.bottom <= tableDividerRect.bottom + 1 &&
+            tableDividerContentRect.top >= topFieldRect.bottom - 1 &&
+            tableDividerContentRect.bottom <= bottomFieldRect.top + 1),
+        compactDividerRects: {
+          divider: {
+            top: tableDividerRect.top,
+            bottom: tableDividerRect.bottom,
+          },
+          content: {
+            top: tableDividerContentRect.top,
+            bottom: tableDividerContentRect.bottom,
+          },
+          topFieldBottom: topFieldRect.bottom,
+          bottomFieldTop: bottomFieldRect.top,
         },
         outsideMajorRegions: majorRegions
           .filter(
@@ -218,6 +372,26 @@ try {
             bottom: region.bottom,
           })),
         cardsOverlap,
+        cardRects: {
+          hand: handCards.map(({ left, right, top, bottom }) => ({
+            left,
+            right,
+            top,
+            bottom,
+          })),
+          battle: battleCards.map(({ left, right, top, bottom }) => ({
+            left,
+            right,
+            top,
+            bottom,
+          })),
+          side: sideZones.map(({ left, right, top, bottom }) => ({
+            left,
+            right,
+            top,
+            bottom,
+          })),
+        },
         compactSideZonesVisible:
           rect.width >= 900 || !handOverlapsSideZone,
         bodyScrollHeight: document.body.scrollHeight,
@@ -251,22 +425,134 @@ try {
     )
     assert.ok(
       !metrics.cardsOverlap,
-      `${viewport.width}x${viewport.height} 的手牌不得遮蔽戰鬥卡或 HP 資訊`,
+      `${viewport.width}x${viewport.height} 的手牌不得遮蔽戰鬥卡或 HP 資訊：${JSON.stringify(metrics.cardRects)}`,
     )
     assert.ok(
       metrics.compactSideZonesVisible,
-      `${viewport.width}x${viewport.height} 的手牌不得遮蔽休息區、牌庫、場景區或棄牌區`,
+      `${viewport.width}x${viewport.height} 的手牌不得遮蔽休息區、牌庫、場景區或棄牌區：${JSON.stringify(metrics.cardRects)}`,
     )
     assert.ok(
       metrics.compactHudValid,
       `${viewport.width}x${viewport.height} 的窄版 HUD 應為頂部階段列、中央牌桌、底部工具列：${JSON.stringify(metrics.compactHudRects)}`,
     )
+    assert.ok(
+      metrics.compactDividerValid,
+      `${viewport.width}x${viewport.height} 的中央操作指引不得超出分隔列或遮蔽場地：${JSON.stringify(metrics.compactDividerRects)}`,
+    )
+    assert.ok(
+      metrics.fieldRatio >= 0.43 && metrics.fieldRatio <= 0.47,
+      `${viewport.width}x${viewport.height} 的支援區應約佔場地 45%，實際 ${metrics.fieldRatio}`,
+    )
+    if (metrics.supportCardCount > 0) {
+      assert.ok(
+        metrics.supportCardWidth >=
+          (metrics.width > 900 ? 58 : metrics.height > 400 ? 38 : 24),
+        `${viewport.width}x${viewport.height} 的支援卡不可過小，實際寬度 ${metrics.supportCardWidth}`,
+      )
+      assert.ok(
+        metrics.bottomSupportStartsLeft && metrics.topSupportStartsRight,
+        `${viewport.width}x${viewport.height} 的我方支援卡應由左向右、對手由右向左排列`,
+      )
+    }
+    assert.ok(
+      metrics.combatCardsNearCenter,
+      `${viewport.width}x${viewport.height} 的雙方戰鬥卡應靠近中央分隔列`,
+    )
+    assert.ok(
+      metrics.topMetaAtCombatBottom,
+      `${viewport.width}x${viewport.height} 的對手名稱與先後攻資訊應位於戰鬥區左下角`,
+    )
+    if (viewport.width > 900) {
+      assert.ok(
+        !metrics.topHandOverlapsUtility,
+        `${viewport.width}x${viewport.height} 的對手手牌不得與牌庫/場景/棄牌區重疊：topUtility=${JSON.stringify(metrics.topUtilityRect)}`,
+      )
+      assert.ok(
+        !metrics.bottomHandOverlapsUtility,
+        `${viewport.width}x${viewport.height} 的玩家手牌不得與牌庫/場景/棄牌區重疊：bottomUtility=${JSON.stringify(metrics.bottomUtilityRect)}`,
+      )
+      assert.ok(
+        metrics.topHandLeft + metrics.topHandRight > 0,
+        `${viewport.width}x${viewport.height} 的對手手牌應位於對手場地左側`,
+      )
+      assert.ok(
+        metrics.bottomHandRight > metrics.bottomHandLeft,
+        `${viewport.width}x${viewport.height} 的玩家手牌應位於玩家場地右側`,
+      )
+    }
+    if (viewport.width >= 1500 && viewport.height >= 850) {
+      assert.ok(
+        metrics.combatCardWidth >= 140,
+        `${viewport.width}x${viewport.height} 的戰鬥卡尺寸應明顯放大，實際寬度 ${metrics.combatCardWidth}`,
+      )
+      if (metrics.supportCardCount > 0) {
+        assert.ok(
+          metrics.supportCardWidthActual >= 74,
+          `${viewport.width}x${viewport.height} 的支援卡尺寸應明顯放大，實際寬度 ${metrics.supportCardWidthActual}`,
+        )
+      }
+    }
+    if (viewport.width === 1907 && viewport.height === 868) {
+      await mkdir(outputDirectory, { recursive: true })
+      await page.screenshot({
+        path: resolve(outputDirectory, 'layout-1907x868.png'),
+      })
+    }
     if (viewport.width === 600 && viewport.height === 338) {
       await page.screenshot({
         path: resolve(outputDirectory, 'compact-600x338.png'),
       })
     }
   }
+  await page.setViewportSize({ width: 1536, height: 864 })
+  const playerDeckSummary = page
+    .locator('.bottom-field .deck-zone .resource-summary')
+  await playerDeckSummary.click()
+  await page
+    .locator('.bottom-field .deck-zone .resource-popover')
+    .waitFor({ state: 'visible' })
+  const deckPopoverBounds = await page.evaluate(() => {
+    const shell = document.querySelector('.game-shell')
+    const popover = document.querySelector(
+      '.bottom-field .deck-zone .resource-popover',
+    )
+    if (!(shell instanceof HTMLElement) || !(popover instanceof HTMLElement)) {
+      throw new Error('找不到遊戲畫布或牌庫浮層')
+    }
+    const shellRect = shell.getBoundingClientRect()
+    const popoverRect = popover.getBoundingClientRect()
+    return {
+      shell: {
+        left: shellRect.left,
+        right: shellRect.right,
+        top: shellRect.top,
+        bottom: shellRect.bottom,
+      },
+      popover: {
+        left: popoverRect.left,
+        right: popoverRect.right,
+        top: popoverRect.top,
+        bottom: popoverRect.bottom,
+      },
+    }
+  })
+  assert.ok(
+    deckPopoverBounds.popover.left >= deckPopoverBounds.shell.left &&
+      deckPopoverBounds.popover.right <= deckPopoverBounds.shell.right &&
+      deckPopoverBounds.popover.top >= deckPopoverBounds.shell.top &&
+      deckPopoverBounds.popover.bottom <= deckPopoverBounds.shell.bottom,
+    `資源浮層必須完整位於畫布內：${JSON.stringify(deckPopoverBounds)}`,
+  )
+  await page.keyboard.press('Escape')
+  await page
+    .locator('.bottom-field .deck-zone .resource-popover')
+    .waitFor({ state: 'hidden' })
+  await page.locator('.bottom-field .break-summary').click()
+  await page
+    .locator('.bottom-field .break-zone .resource-popover')
+    .waitFor({ state: 'visible' })
+  await page.keyboard.press('Escape')
+
   await page.setViewportSize({ width: 1440, height: 960 })
   const restedLayout = await page.evaluate(() => {
     const wrap = document.querySelector('.bottom-field .combat-card-wrap')
@@ -312,7 +598,7 @@ try {
     await page.goto(testUrl, { waitUntil: 'networkidle' })
 
     const handCardWrap = page.locator('.bottom-hand .hand-card-wrap').first()
-    await handCardWrap.hover()
+    await handCardWrap.locator('.hand-card').click()
 
     const deployButton = handCardWrap.locator('.hand-card-action', { hasText: '登場' })
     await deployButton.waitFor({ state: 'visible' })
@@ -353,7 +639,7 @@ try {
 
       await confirmButton.click()
 
-      const statusMessage = page.locator('.match-status small')
+      const statusMessage = page.locator('.battle-status-message')
       await statusMessage.filter({ hasText: /移至棄牌區/ }).waitFor()
 
       const discardZone = page.locator('.bottom-field .discard-zone')
@@ -377,7 +663,7 @@ try {
 
       await confirmButton.click()
 
-      const statusMessage = page.locator('.match-status small')
+      const statusMessage = page.locator('.battle-status-message')
       await statusMessage.filter({ hasText: /沒有選擇休息區目標/ }).waitFor()
     }
 
@@ -417,7 +703,7 @@ try {
     .locator('button', { hasText: '確認效果' })
     .click()
   await page
-    .locator('.match-status small')
+    .locator('.battle-status-message')
     .filter({ hasText: /移至棄牌區/ })
     .waitFor()
   assert.strictEqual(
@@ -432,10 +718,24 @@ try {
     await page.goto(testUrl, { waitUntil: 'networkidle' })
 
     const handCardWrap = page.locator('.bottom-hand .hand-card-wrap').first()
-    await handCardWrap.hover()
+    await handCardWrap.locator('.hand-card').click()
 
     if (payable) {
       const useButton = handCardWrap.locator('.hand-card-action', { hasText: '使用' })
+      await useButton.waitFor({ state: 'visible' })
+      assert.ok(
+        await handCardWrap.evaluate((element) =>
+          element.classList.contains('is-selected'),
+        ),
+        '點選可用手牌後應呈現選取狀態',
+      )
+      await page.keyboard.press('Escape')
+      await useButton.waitFor({ state: 'hidden' })
+      await handCardWrap.locator('.hand-card').click()
+      await useButton.waitFor({ state: 'visible' })
+      await page.locator('.table-divider').click()
+      await useButton.waitFor({ state: 'hidden' })
+      await handCardWrap.locator('.hand-card').click()
       await useButton.waitFor({ state: 'visible' })
       await useButton.click()
 
@@ -473,7 +773,7 @@ try {
       const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
       await confirmButton.click()
 
-      const statusMessage = page.locator('.match-status small')
+      const statusMessage = page.locator('.battle-status-message')
       await statusMessage.filter({ hasText: /獲得攻擊傷害/ }).waitFor()
 
       await page.waitForTimeout(1200)
@@ -500,7 +800,7 @@ try {
       const supportButton = handCardWrap.locator('.hand-card-action', { hasText: '支援' })
       await supportButton.waitFor({ state: 'visible' })
 
-      const statusMessage = page.locator('.match-status small')
+      const statusMessage = page.locator('.battle-status-message')
       const statusText = await statusMessage.innerText()
       assert.ok(
         statusText.includes('非主要階段'),
@@ -519,13 +819,13 @@ try {
 
     if (payable) {
       const handCardWrap = page.locator('.bottom-hand .hand-card-wrap').first()
-      await handCardWrap.hover()
+      await handCardWrap.locator('.hand-card').click()
 
       const placeButton = handCardWrap.locator('.hand-card-action', { hasText: '放置' })
       await placeButton.waitFor({ state: 'visible' })
       await placeButton.click()
 
-      const statusMessage = page.locator('.match-status small')
+      const statusMessage = page.locator('.battle-status-message')
       await statusMessage.filter({ hasText: /已放置到場景區/ }).waitFor()
 
       await page.waitForTimeout(300)
@@ -605,7 +905,7 @@ try {
       )
       assert.ok(isRested, '場景卡應處於橫置狀態')
 
-      const statusMessage = page.locator('.match-status small')
+      const statusMessage = page.locator('.battle-status-message')
       const statusText = await statusMessage.innerText()
       assert.ok(
         statusText.includes('已橫置'),
@@ -639,7 +939,7 @@ try {
     '不可支付陷阱不應顯示回應視窗',
   )
   assert.ok(
-    !(await page.locator('.match-status small').innerText()).includes('陷阱'),
+    !(await page.locator('.battle-status-message').innerText()).includes('陷阱'),
     '不可支付陷阱自動略過時不應顯示提示文字',
   )
 
@@ -717,7 +1017,7 @@ try {
     1,
     '選擇不補餅乾後應保留原本的一張戰鬥區餅乾',
   )
-  await page.locator('.match-status small').filter({
+  await page.locator('.battle-status-message').filter({
     hasText: '已選擇不補餅乾',
   }).waitFor()
 
@@ -927,6 +1227,129 @@ try {
 
   await runOpponentDiscardHandTest()
 
+  const runSupportToTrashSkillTest = async () => {
+    await page.setViewportSize({ width: 798, height: 698 })
+    await page.goto(`${baseUrl}?test-state=st3-002-skill`, {
+      waitUntil: 'networkidle',
+    })
+
+    const supportLayout = await page.evaluate(() => {
+      const topZone = document.querySelector('.top-field .support-zone')
+      const bottomZone = document.querySelector('.bottom-field .support-zone')
+      const topCards = [
+        ...document.querySelectorAll('.top-field .support-card'),
+      ]
+      const bottomCards = [
+        ...document.querySelectorAll('.bottom-field .support-card'),
+      ]
+      if (
+        !(topZone instanceof HTMLElement) ||
+        !(bottomZone instanceof HTMLElement) ||
+        !(topCards[0] instanceof HTMLElement) ||
+        !(bottomCards[0] instanceof HTMLElement)
+      ) {
+        throw new Error('ST3-002 測試局面缺少支援區卡牌')
+      }
+      const topZoneRect = topZone.getBoundingClientRect()
+      const bottomZoneRect = bottomZone.getBoundingClientRect()
+      const topCardRect = topCards[0].getBoundingClientRect()
+      const bottomCardRect = bottomCards[0].getBoundingClientRect()
+      return {
+        topGap: topZoneRect.right - topCardRect.right,
+        bottomGap: bottomCardRect.left - bottomZoneRect.left,
+        topWidth: topCardRect.width,
+        bottomWidth: bottomCardRect.width,
+      }
+    })
+    assert.ok(
+      supportLayout.topGap < 24 && supportLayout.bottomGap < 24,
+      `798x698 支援卡應由我方左側、對手右側開始排列：${JSON.stringify(supportLayout)}`,
+    )
+    assert.ok(
+      supportLayout.topWidth >= 38 && supportLayout.bottomWidth >= 38,
+      `798x698 支援卡應維持可辨識尺寸：${JSON.stringify(supportLayout)}`,
+    )
+    await mkdir(outputDirectory, { recursive: true })
+    await page.screenshot({
+      path: resolve(outputDirectory, 'layout-798x698-support.png'),
+    })
+
+    await page
+      .locator('.bottom-field .skill-action', { hasText: '啟動技能' })
+      .click()
+
+    const effectPanel = page.locator('.effect-panel')
+    await effectPanel.waitFor({ state: 'visible' })
+    const confirmButton = effectPanel.getByRole('button', {
+      name: /確認效果/,
+    })
+    const opponentCookie = page
+      .locator('.top-field .combat-card-wrap > .card-face')
+      .first()
+
+    await opponentCookie.click()
+    assert.ok(
+      await confirmButton.isDisabled(),
+      'ST3-002 選好效果目標但未支付支援卡代價時不可確認',
+    )
+
+    const costSupports = page.getByRole('button', {
+      name: /作為技能代價/,
+    })
+    assert.strictEqual(
+      await costSupports.count(),
+      2,
+      'ST3-002 應讓兩張支援卡都可選為代價',
+    )
+    const costSupport = costSupports.first()
+    assert.ok(
+      await costSupport.evaluate((element) =>
+        element.classList.contains('is-targetable'),
+      ),
+      'ST3-002 發動時我方支援卡應標示為可選代價',
+    )
+    await costSupport.click()
+    assert.ok(
+      await costSupport.evaluate((element) =>
+        element.classList.contains('is-selected'),
+      ),
+      '點擊支援卡後應標示為已選技能代價',
+    )
+    assert.strictEqual(
+      await page
+        .locator('.bottom-field .support-card.is-targetable')
+        .count(),
+      1,
+      '選滿技能代價後只應保留已選支援卡可取消',
+    )
+    assert.ok(
+      !(await confirmButton.isDisabled()),
+      'ST3-002 選好目標與支援卡代價後應可確認',
+    )
+
+    await confirmButton.click()
+    await confirmButton.waitFor({ state: 'hidden' })
+
+    assert.strictEqual(
+      await page.locator('.bottom-field .support-card').count(),
+      1,
+      'ST3-002 支付後所選支援卡應離開支援區',
+    )
+    assert.ok(
+      (await page
+        .locator('.bottom-field .discard-zone')
+        .innerText()).includes('1'),
+      'ST3-002 支付後棄牌區數量應增加 1',
+    )
+    assert.strictEqual(
+      await page.locator('.top-field .hp-card-stack .hp-card').count(),
+      1,
+      'ST3-002 應對所選對手餅乾造成 1 點效果傷害',
+    )
+  }
+
+  await runSupportToTrashSkillTest()
+
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await completeOpeningSetup()
 
@@ -937,14 +1360,16 @@ try {
   )
   assert.strictEqual(
     await page.locator('.phase-rail .rail-ai-status').count(),
-    1,
-    'AI 狀態面板應位於 PhaseRail 內',
+    0,
+    'PhaseRail 不應保留 AI 狀態面板',
   )
   assert.ok(
     (await page.locator('.bottom-field .hp-card-stack .hp-card').count()) > 0,
     '我方戰鬥區餅乾下方應展開 HP 卡',
   )
 
+  await page.getByRole('button', { name: '暫停資訊' }).click()
+  await page.locator('.pause-modal').waitFor({ state: 'visible' })
   await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
   await page.getByTestId('ai-simulation-report').waitFor()
 

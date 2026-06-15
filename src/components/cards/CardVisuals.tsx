@@ -59,7 +59,21 @@ export function EnergyIcon({ energy }: { energy: EnergyKey }) {
 }
 
 export function SkillCost({ skill }: { skill: CardSkill }) {
-  return <EnergyCostIcons cost={skill.cost} />
+  return (
+    <span className="skill-cost-text">
+      <EnergyCostIcons cost={skill.cost.energy} />
+      {skill.cost.supportToTrash && (
+        <span className="support-to-trash-cost">
+          + 棄置 {skill.cost.supportToTrash} 張支援區卡牌
+        </span>
+      )}
+      {skill.cost.discardHand > 0 && (
+        <span className="discard-hand-cost">
+          + 棄置 {skill.cost.discardHand} 張手牌
+        </span>
+      )}
+    </span>
+  )
 }
 
 export function EnergyCostIcons({ cost }: { cost: EnergyCost }) {
@@ -122,6 +136,8 @@ export interface CardFaceProps {
   rested?: boolean
   selected?: boolean
   targetable?: boolean
+  ariaPressed?: boolean
+  ariaLabel?: string
   onClick?: () => void
 }
 
@@ -137,6 +153,8 @@ export function CardFace({
   rested = false,
   selected = false,
   targetable = false,
+  ariaPressed,
+  ariaLabel,
   onClick,
 }: CardFaceProps) {
   const [imageFailed, setImageFailed] = useState(false)
@@ -196,6 +214,8 @@ export function CardFace({
       }${targetable ? ' is-targetable' : ''}`}
       type="button"
       title={card.name}
+      aria-label={ariaLabel}
+      aria-pressed={ariaPressed}
       onClick={onClick}
     >
       {content}

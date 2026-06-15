@@ -116,7 +116,7 @@ export interface AiMatchResult {
 export const selectAiEnergyPayment = (
   skill: CardSkill,
   supportArea: SupportCard[],
-): string[] | null => selectEnergyPayment(skill.cost, supportArea)
+): string[] | null => selectEnergyPayment(skill.cost.energy, supportArea)
 
 const chooseEffectTargets = (
   state: GameState,
@@ -291,11 +291,25 @@ const resolveAiSkill = (
     return null
   }
 
-  const paymentIds = selectAiEnergyPayment(
-    skill,
-    state.players[playerId].supportArea,
-  )
+  const player = state.players[playerId]
+  const paymentIds = selectAiEnergyPayment(skill, player.supportArea)
   if (!paymentIds) return null
+
+  const costSupportToTrashIds = skill.cost.supportToTrash
+    ? player.supportArea
+        .filter(
+          (support) => !paymentIds.includes(support.card.instanceId),
+        )
+        .slice(0, skill.cost.supportToTrash)
+        .map((support) => support.card.instanceId)
+    : []
+
+  if (
+    skill.cost.supportToTrash &&
+    costSupportToTrashIds.length < skill.cost.supportToTrash
+  ) {
+    return null
+  }
 
   const context = {
     sourcePlayerId: playerId,
@@ -312,6 +326,7 @@ const resolveAiSkill = (
     source.card.instanceId,
     trigger,
     paymentIds,
+    costSupportToTrashIds,
   )
   const effectSelections: AiEffectSelection[] = []
 

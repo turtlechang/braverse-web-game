@@ -619,12 +619,18 @@ export function CardDetailModal({
 export interface PauseModalProps {
   turnNumber: number
   phaseLabel: string
+  deckConfig: { player: DeckChoice; ai: DeckChoice }
+  aiActionCount: number
+  onRunSimulation: () => void
   onResume: () => void
 }
 
 export function PauseModal({
   turnNumber,
   phaseLabel,
+  deckConfig,
+  aiActionCount,
+  onRunSimulation,
   onResume,
 }: PauseModalProps) {
   return (
@@ -634,6 +640,19 @@ export function PauseModal({
         <span>對戰資訊</span>
         <h2>遊戲已暫停</h2>
         <p>目前為第 {turnNumber} 回合，{phaseLabel}。</p>
+        <div className="pause-match-details">
+          <span>玩家 {deckChoiceLabel[deckConfig.player]}</span>
+          <b>VS</b>
+          <span>AI {deckChoiceLabel[deckConfig.ai]}</span>
+        </div>
+        <small>AI 已執行 {aiActionCount} 個動作</small>
+        <button
+          className="pause-simulation-button"
+          type="button"
+          onClick={onRunSimulation}
+        >
+          執行 20 場 AI 驗證
+        </button>
         <button type="button" onClick={onResume}>
           繼續對戰
         </button>

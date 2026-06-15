@@ -74,10 +74,10 @@ describe('cookie skill activation', () => {
     ]
 
     expect(
-      canPayEnergyCost({ red: 2, neutral: 2 }, supports),
+      canPayEnergyCost({ energy: { red: 2, neutral: 2 }, discardHand: 0 }, supports),
     ).toBe(true)
     expect(
-      canPayEnergyCost({ green: 2, neutral: 2 }, supports),
+      canPayEnergyCost({ energy: { green: 2, neutral: 2 }, discardHand: 0 }, supports),
     ).toBe(false)
   })
 
@@ -88,7 +88,7 @@ describe('cookie skill activation', () => {
       oncePerTurn: false,
       yourTurn: false,
       restSource: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
       text: 'Activate skill',
       effects: [effect],
     }
@@ -126,7 +126,7 @@ describe('cookie skill activation', () => {
       oncePerTurn: true,
       yourTurn: false,
       restSource: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
       text: 'Once per turn skill',
       effects: [effect],
     }
@@ -165,7 +165,7 @@ describe('cookie skill activation', () => {
       oncePerTurn: true,
       yourTurn: false,
       restSource: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
       text: 'Once per turn skill',
       effects: [effect],
     }
@@ -219,7 +219,7 @@ describe('cookie skill activation', () => {
       oncePerTurn: false,
       yourTurn: true,
       restSource: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
       text: 'Your Turn skill',
       effects: [effect],
     }
@@ -258,7 +258,7 @@ describe('cookie skill activation', () => {
       oncePerTurn: false,
       yourTurn: false,
       restSource: false,
-      cost: { red: 1 },
+      cost: { energy: { red: 1 }, discardHand: 0 },
       text: 'OnPlay skill',
       effects: [effect],
     }
@@ -304,7 +304,7 @@ describe('cookie skill activation', () => {
       oncePerTurn: false,
       yourTurn: false,
       restSource: false,
-      cost: {},
+      cost: { energy: {}, discardHand: 0 },
       text: 'OnPlay skill',
       effects: [effect],
     }
@@ -365,7 +365,7 @@ describe('cookie skill activation', () => {
       oncePerTurn: false,
       yourTurn: true,
       restSource: false,
-      cost: {},
+      cost: { energy: {}, discardHand: 0 },
       text: 'This Cookie gains +1 attack damage.',
       effects: [
         {
@@ -397,5 +397,118 @@ describe('cookie skill activation', () => {
     expect(getEffectiveAttack(state, source.instanceId)).toBe(
       source.attack,
     )
+  })
+
+  it('moves a selected support card to trash as a special skill cost', () => {
+    let state = createDemoGame()
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: true,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        supportToTrash: 1,
+      },
+      text: 'Place 1 card from your support area into the trash.',
+      effects: [effect],
+    }
+    state = withSkill(state, 'player-one', skill)
+    state = advancePhase(advancePhase(state))
+    const sourceId =
+      state.players['player-one'].battleArea[0].card.instanceId
+
+    state = activateCookieSkill(
+      state,
+      'player-one',
+      sourceId,
+      'activate',
+      [],
+      ['blue-1'],
+    )
+
+    expect(
+      state.players['player-one'].supportArea.map(
+        (support) => support.card.instanceId,
+      ),
+    ).not.toContain('blue-1')
+    expect(
+      state.players['player-one'].discardPile.map(
+        (card) => card.instanceId,
+      ),
+    ).toContain('blue-1')
+  })
+
+  it('does not allow one support card to pay energy and a trash cost', () => {
+    let state = createDemoGame()
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: { red: 1 },
+        discardHand: 0,
+        supportToTrash: 1,
+      },
+      text: 'Pay energy and trash a support.',
+      effects: [effect],
+    }
+    state = withSkill(state, 'player-one', skill)
+    state = advancePhase(advancePhase(state))
+    const sourceId =
+      state.players['player-one'].battleArea[0].card.instanceId
+
+    expect(() =>
+      activateCookieSkill(
+        state,
+        'player-one',
+        sourceId,
+        'activate',
+        ['red-1'],
+        ['red-1'],
+      ),
+    ).toThrow('同一張支援卡不能同時支付兩種費用。')
+  })
+
+  it('requires separate support cards for energy and trash costs before activation', () => {
+    let state = createDemoGame()
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: { red: 1 },
+        discardHand: 0,
+        supportToTrash: 1,
+      },
+      text: 'Pay energy and trash a support.',
+      effects: [effect],
+    }
+    state = withSkill(state, 'player-one', skill)
+    state = advancePhase(advancePhase(state))
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [state.players['player-one'].supportArea[0]],
+        },
+      },
+    }
+    const sourceId =
+      state.players['player-one'].battleArea[0].card.instanceId
+
+    expect(
+      canActivateCookieSkill(
+        state,
+        'player-one',
+        sourceId,
+        'activate',
+      ),
+    ).toBe(false)
   })
 })

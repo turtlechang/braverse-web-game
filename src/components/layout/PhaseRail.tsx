@@ -20,9 +20,6 @@ export interface PhaseRailProps {
   isPlayerTurn: boolean
   disabled: boolean
   onAdvance: () => void
-  aiThinking: boolean
-  aiActionCount: number
-  onRunSimulation: () => void
 }
 
 export function PhaseRail({
@@ -32,9 +29,6 @@ export function PhaseRail({
   isPlayerTurn,
   disabled,
   onAdvance,
-  aiThinking,
-  aiActionCount,
-  onRunSimulation,
 }: PhaseRailProps) {
   return (
     <aside className="phase-rail" aria-label="回合階段">
@@ -54,21 +48,14 @@ export function PhaseRail({
           </li>
         ))}
       </ol>
-      <section className="rail-ai-status" aria-live="polite">
-        <span>簡易 AI 對手</span>
-        <strong>{aiThinking ? '正在決策' : '等待下一步'}</strong>
-        <small>已執行 {aiActionCount} 個動作</small>
-        <button type="button" onClick={onRunSimulation}>
-          執行 20 場 AI 驗證
-        </button>
-      </section>
       <button
         className="next-phase-button"
         type="button"
         onClick={onAdvance}
         disabled={disabled}
       >
-        <span>{nextPhaseLabels[phase]}</span>
+        <span>下一步</span>
+        <small>{nextPhaseLabels[phase]}</small>
         <ChevronRight aria-hidden="true" />
       </button>
       <span className="turn-counter">TURN {turnNumber}</span>

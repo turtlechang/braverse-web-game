@@ -93,6 +93,36 @@ const parseCondition = (text: string): EffectCondition | undefined => {
     : undefined
 }
 
+const isUnsupportedBracketCost = (text: string): boolean => {
+  const brackets = text.match(BRACKET_COST_RE) ?? []
+
+  for (const bracket of brackets) {
+    const inner = bracket.slice(1, -1).trim()
+
+    if (/^(?:\{[A-Z]\})+$/.test(inner)) {
+      continue
+    }
+
+    if (/^Discard\s+\d+\s+card(?:s)?\.?$/i.test(inner)) {
+      continue
+    }
+
+    if (
+      /^Place\s+\d+\s+card(?:s)?\s+from\s+your\s+support\s+area\s+into\s+the\s+trash\.?$/i.test(
+        inner,
+      )
+    ) {
+      continue
+    }
+
+    if (/(?:Place|Take|Discard)/i.test(inner)) {
+      return true
+    }
+  }
+
+  return false
+}
+
 const COST_OR_MARKER_RE = /\{[A-Za-z0-9_]+\}/g
 const BRACKET_COST_RE = /(?:<|《)[^>》]*(?:>|》)/g
 const DRAW_ONLY_RE = /^Draw\s+(up to\s+)?(\d+)\s+card(?:s)?\s+from\s+your\s+deck\.?$/i
@@ -107,10 +137,16 @@ const parseAbilityCost = (text: string): AbilityCost => {
   const discardMatch = text.match(
     /(?:<|《)\s*Discard\s+(\d+)\s+card(?:s)?\.\s*(?:>|》)/i,
   )
+  const supportToTrashMatch = text.match(
+    /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
+  )
 
   return {
     energy: parsed?.cost ?? {},
     discardHand: discardMatch ? Number(discardMatch[1]) : 0,
+    supportToTrash: supportToTrashMatch
+      ? Number(supportToTrashMatch[1])
+      : undefined,
   }
 }
 
@@ -247,7 +283,7 @@ export const convertOfficialCardEffects = (
     }
   }
 
-  if (/(?:<|《)[^>》]*?(?:Place|Take|Discard)[^>》]*(?:>|》)/i.test(sourceText)) {
+  if (isUnsupportedBracketCost(sourceText)) {
     return {
       status: 'unsupported',
       cardNumber: card.cardNumber,
@@ -558,7 +594,15 @@ export const convertOfficialItemAbility = (
   if (card.type !== 'item' || !card.attackText) return undefined
   const conversion = convertOfficialCardEffects(card)
   const parsed = parseOfficialCardText(card.attackText)
-  if (conversion.status !== 'supported' || !parsed) return undefined
+  const cost = parseAbilityCost(card.attackText)
+  if (
+    conversion.status !== 'supported' ||
+    !parsed ||
+    cost.discardHand > 0 ||
+    Boolean(cost.supportToTrash)
+  ) {
+    return undefined
+  }
   return {
     cost: parsed.cost,
     text: card.attackText,
@@ -778,9 +822,14 @@ export const convertOfficialCookieSkill = (
   }
 
   const conversion = convertOfficialCardEffects(card)
+  const cost = parseAbilityCost(card.skill.text)
   const parsed = parseOfficialCardText(card.skill.text)
 
-  if (conversion.status !== 'supported' || !parsed) {
+  if (
+    conversion.status !== 'supported' ||
+    !parsed ||
+    cost.discardHand > 0
+  ) {
     return undefined
   }
 
@@ -793,7 +842,7 @@ export const convertOfficialCookieSkill = (
     oncePerTurn: parsed.markers.includes('t1'),
     yourTurn: parsed.markers.includes('mt'),
     restSource: /Rest this card/i.test(card.skill.text),
-    cost: parsed.cost,
+    cost,
     text: conversion.sourceText,
     effects: conversion.effects,
     faint: /When this Cookie faints/i.test(card.skill.text),

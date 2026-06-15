@@ -133,7 +133,7 @@ describe('official yellow starter deck', () => {
     const roguefort = deck.find((card) => card.id === 'ST2-001')!
     expect(roguefort.skill).toBeTruthy()
     expect(roguefort.skill!.trigger).toBe('on-play')
-    expect(roguefort.skill!.cost).toEqual({ yellow: 1 })
+    expect(roguefort.skill!.cost).toEqual({ energy: { yellow: 1 }, discardHand: 0 })
     expect(roguefort.effectText).toBeTruthy()
     expect(roguefort.skill!.effects).toEqual([
       { kind: 'opponent-discard-hand', count: 1 },

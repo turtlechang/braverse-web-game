@@ -110,6 +110,7 @@ button.card-face {
   bottom: 5px;
   display: grid;
   gap: 3px;
+  pointer-events: none;
 }
 
 .card-badges span {

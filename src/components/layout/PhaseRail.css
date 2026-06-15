@@ -1,18 +1,22 @@
 .phase-rail {
   position: absolute;
   z-index: 10;
-  top: 0;
-  left: 0;
+  inset: 0 auto 0 0;
   width: var(--side-panel-width);
-  height: 100%;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
-  align-content: start;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  align-items: stretch;
   gap: 10px;
-  padding: 18px 12px;
-  border-right: 1px solid rgba(130, 194, 255, 0.3);
-  background: rgba(3, 18, 54, 0.92);
-  backdrop-filter: blur(12px);
+  padding: 16px 8px 12px;
+  border-right: 1px solid rgba(130, 194, 255, 0.22);
+  background:
+    linear-gradient(90deg, rgba(2, 12, 37, 0.97), rgba(3, 20, 57, 0.88));
+  box-shadow: 14px 0 32px rgba(1, 8, 28, 0.22);
+  backdrop-filter: blur(10px);
+}
+
+.brand-mark {
+  padding-inline: 4px;
 }
 
 .brand-mark span,
@@ -22,31 +26,33 @@
 
 .brand-mark span {
   color: #ffcf49;
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   font-weight: 900;
 }
 
 .brand-mark strong {
-  font-size: 1rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
 }
 
 .turn-indicator {
   display: grid;
   gap: 2px;
-  padding-left: 12px;
-  border-left: 3px solid #71e9ff;
+  padding: 7px 6px 7px 9px;
+  border-left: 2px solid #71e9ff;
+  background: linear-gradient(90deg, rgba(62, 190, 235, 0.1), transparent);
 }
 
-.turn-indicator span,
-.rail-ai-status span,
-.rail-ai-status small {
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 0.6rem;
+.turn-indicator span {
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.52rem;
 }
 
-.turn-indicator strong,
-.rail-ai-status strong {
-  font-size: 0.78rem;
+.turn-indicator strong {
+  overflow: hidden;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .turn-indicator.is-player strong {
@@ -58,160 +64,153 @@
 }
 
 .phase-rail ol {
-  min-width: 0;
   min-height: 0;
   display: grid;
   grid-template-rows: repeat(5, minmax(0, 1fr));
-  gap: 5px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .phase-rail li {
-  min-width: 0;
-  min-height: 44px;
+  position: relative;
+  min-height: 42px;
   display: grid;
   place-content: center;
   justify-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.48);
-  background: rgba(4, 25, 64, 0.62);
+  color: rgba(215, 232, 255, 0.34);
+  background: transparent;
+  transition:
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.phase-rail li::before {
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  width: 3px;
+  height: 0;
+  border-radius: 99px;
+  background: #65e8ff;
+  box-shadow: 0 0 12px rgba(82, 230, 255, 0.7);
+  content: "";
+  transform: translateY(-50%);
+  transition: height 160ms ease;
 }
 
 .phase-rail li span {
-  font-size: 0.52rem;
+  font-size: 0.44rem;
 }
 
 .phase-rail li strong {
-  font-size: 0.7rem;
+  margin-top: 2px;
+  font-size: 0.61rem;
   white-space: nowrap;
 }
 
 .phase-rail li.is-current {
-  border-color: #71e9ff;
   color: #fff;
-  background: linear-gradient(180deg, #1499cf, #075895);
-  box-shadow: 0 0 18px rgba(82, 230, 255, 0.34);
+  background: linear-gradient(90deg, rgba(20, 153, 207, 0.3), transparent);
+  text-shadow: 0 0 12px rgba(113, 233, 255, 0.42);
 }
 
-.rail-ai-status {
-  display: grid;
-  gap: 1px;
-}
-
-.rail-ai-status button {
-  min-height: 24px;
-  margin-top: 3px;
-  border: 1px solid rgba(113, 233, 255, 0.5);
-  border-radius: 4px;
-  background: rgba(14, 79, 130, 0.8);
-  font-size: 0.58rem;
-  cursor: pointer;
+.phase-rail li.is-current::before {
+  height: 74%;
 }
 
 .next-phase-button {
-  min-height: 48px;
-  display: flex;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: 1fr 16px;
+  align-content: center;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  gap: 1px 3px;
+  padding: 8px 7px;
   border: 2px solid rgba(134, 224, 255, 0.9);
-  border-radius: 6px;
-  background: linear-gradient(#28b9e7, #0873c7);
-  font-size: 0.72rem;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(95, 231, 255, 0.42), transparent 44%),
+    linear-gradient(#149bd2, #07569c);
+  box-shadow:
+    inset 0 0 14px rgba(255, 255, 255, 0.12),
+    0 0 18px rgba(82, 230, 255, 0.2);
   font-weight: 900;
   cursor: pointer;
 }
 
-.next-phase-button:disabled {
-  filter: grayscale(1);
-  cursor: not-allowed;
-  opacity: 0.48;
+.next-phase-button span {
+  grid-column: 1;
+  font-size: 0.72rem;
+}
+
+.next-phase-button small {
+  grid-column: 1;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.48rem;
 }
 
 .next-phase-button svg {
-  width: 17px;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  width: 15px;
+}
+
+.next-phase-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+  opacity: 0.42;
 }
 
 .turn-counter {
-  color: rgba(255, 255, 255, 0.56);
-  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.58rem;
   font-weight: 900;
   text-align: center;
 }
 
-@media (max-width: 900px) {
-  .phase-rail {
-    gap: 5px;
-    padding: 10px 8px;
-  }
-
-  .rail-ai-status span,
-  .rail-ai-status strong,
-  .rail-ai-status small {
-    display: none;
-  }
-
-  .rail-ai-status button {
-    height: 38px;
-    margin: 0;
-    overflow: hidden;
-    color: transparent;
-    font-size: 0;
-  }
-
-  .rail-ai-status button::after {
-    content: "AI";
-    color: #fff;
-    font-size: 0.65rem;
-  }
-}
-
 @container game-shell (max-height: 720px) {
   .phase-rail {
-    width: var(--side-panel-width);
-    height: 100%;
-    gap: 6px;
-    padding: 8px;
+    gap: 5px;
+    padding-block: 7px;
   }
 
   .phase-rail li {
-    min-height: 34px;
+    min-height: 30px;
+  }
+
+  .next-phase-button {
+    min-height: 52px;
   }
 }
 
 @container game-shell (max-width: 1200px) {
   .phase-rail {
-    width: var(--side-panel-width);
-    padding-inline: 8px;
+    padding-inline: 6px;
   }
 
   .turn-indicator {
     display: none;
   }
-
-  .rail-ai-status span,
-  .rail-ai-status strong,
-  .rail-ai-status small {
-    display: none;
-  }
 }
 
 @container game-shell (max-height: 620px) {
-  .phase-rail {
-    width: var(--side-panel-width);
-    height: 100%;
-    padding-block: 4px;
+  .brand-mark span {
+    display: none;
+  }
+
+  .brand-mark strong {
+    font-size: 0.7rem;
   }
 
   .phase-rail li {
-    min-height: 28px;
+    min-height: 24px;
   }
 
-  .brand-mark span,
-  .turn-indicator span {
-    display: none;
+  .next-phase-button {
+    min-height: 44px;
+    border-radius: 12px;
   }
 }
 
@@ -220,7 +219,7 @@
     inset: 0 0 auto;
     width: 100%;
     height: var(--compact-phase-height);
-    grid-template-columns: 74px minmax(0, 1fr) 86px 42px;
+    grid-template-columns: 74px minmax(0, 1fr) 90px 40px;
     grid-template-rows: 1fr;
     align-items: center;
     gap: 5px;
@@ -229,30 +228,28 @@
     border-bottom: 1px solid rgba(130, 194, 255, 0.3);
   }
 
-  .brand-mark,
-  .rail-ai-status {
+  .brand-mark {
     display: none;
   }
 
   .turn-indicator {
     display: grid;
-    padding-left: 6px;
+    padding: 4px 4px 4px 6px;
   }
 
   .turn-indicator span {
-    display: block;
-    font-size: 0.48rem;
+    font-size: 0.46rem;
   }
 
   .turn-indicator strong {
-    font-size: 0.64rem;
+    font-size: 0.6rem;
   }
 
   .phase-rail ol {
     height: 100%;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-rows: 1fr;
-    gap: 3px;
+    gap: 2px;
   }
 
   .phase-rail li {
@@ -260,28 +257,52 @@
     height: 100%;
   }
 
+  .phase-rail li::before {
+    inset: auto 12% 1px;
+    width: auto;
+    height: 2px;
+  }
+
+  .phase-rail li.is-current::before {
+    height: 2px;
+  }
+
   .phase-rail li span {
-    font-size: 0.42rem;
+    font-size: 0.4rem;
   }
 
   .phase-rail li strong {
-    font-size: 0.56rem;
+    font-size: 0.52rem;
   }
 
   .next-phase-button {
     min-height: 0;
     height: 100%;
-    padding: 2px 4px;
-    gap: 2px;
-    font-size: 0.56rem;
+    grid-template-columns: 1fr;
+    padding: 2px 5px;
+    border-width: 1px;
+    border-radius: 8px;
+  }
+
+  .next-phase-button span,
+  .next-phase-button small {
+    grid-column: 1;
+  }
+
+  .next-phase-button span {
+    font-size: 0.54rem;
+  }
+
+  .next-phase-button small {
+    font-size: 0.4rem;
   }
 
   .next-phase-button svg {
-    width: 12px;
+    display: none;
   }
 
   .turn-counter {
-    font-size: 0.54rem;
+    font-size: 0.5rem;
   }
 }
 
@@ -292,21 +313,15 @@
     padding: 3px 4px;
   }
 
-  .turn-indicator span {
+  .turn-indicator span,
+  .phase-rail li span,
+  .next-phase-button small {
     display: none;
   }
 
   .turn-indicator strong,
   .phase-rail li strong,
-  .next-phase-button {
-    font-size: 0.48rem;
-  }
-
-  .phase-rail li span {
-    display: none;
-  }
-
-  .next-phase-button svg {
-    display: none;
+  .next-phase-button span {
+    font-size: 0.46rem;
   }
 }

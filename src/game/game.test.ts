@@ -635,7 +635,7 @@ describe('玩家動作', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: {},
+        cost: { energy: {}, discardHand: 0 },
         text: 'OnPlay skill',
         effects: [],
       },

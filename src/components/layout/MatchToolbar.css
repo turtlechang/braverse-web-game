@@ -1,143 +1,51 @@
 .match-toolbar {
   position: absolute;
-  z-index: 11;
-  top: 0;
-  right: 0;
-  width: var(--side-panel-width);
-  min-width: 0;
-  height: 100%;
-  margin-top: 0;
+  z-index: 30;
+  top: 14px;
+  right: 16px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 20px;
-  padding: 18px 12px;
-  border-left: 1px solid rgba(167, 216, 255, 0.22);
-  background: rgba(3, 18, 54, 0.92);
-  backdrop-filter: blur(12px);
+  gap: 7px;
 }
 
-.match-status {
-  width: 100%;
-  min-width: 0;
-  margin-left: 0;
+.match-toolbar button {
+  width: 38px;
+  height: 38px;
   display: grid;
-  gap: 4px;
-  justify-items: center;
-  text-align: center;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(178, 219, 255, 0.38);
+  border-radius: 50%;
+  background: rgba(2, 15, 44, 0.68);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
 }
 
-.match-status span {
-  color: #a9d8ff;
-  font-size: 0.74rem;
-  font-weight: 800;
+.match-toolbar button:hover,
+.match-toolbar button:focus-visible {
+  border-color: rgba(113, 233, 255, 0.86);
+  background: rgba(7, 55, 101, 0.88);
+  transform: translateY(-1px);
 }
 
-.match-status strong {
-  color: #65e8ff;
-}
-
-.match-status small {
-  max-width: 100%;
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.64);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toolbar-actions {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.deck-matchup {
-  width: 100%;
-  min-height: 42px;
-  height: auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border: 1px solid rgba(174, 220, 255, 0.48);
-  border-radius: 999px;
-  background: rgba(3, 20, 53, 0.72);
-  color: #a9d8ff;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.deck-matchup b {
-  color: #ffe675;
-}
-
-@media (max-width: 680px) {
-  .match-toolbar {
-    width: var(--side-panel-width);
-    height: 100%;
-    margin-top: 0;
-    padding: 8px;
-  }
-
-  .match-status small {
-    max-width: 210px;
-  }
-
+.match-toolbar svg {
+  width: 17px;
 }
 
 @container game-shell (max-height: 720px) {
   .match-toolbar {
-    width: var(--side-panel-width);
-    height: 100%;
-    margin-top: 0;
-    gap: 10px;
-    padding: 8px;
-  }
-}
-
-@container game-shell (max-width: 1200px) {
-  .match-toolbar {
-    width: var(--side-panel-width);
-    padding-inline: 8px;
+    top: 7px;
+    right: 9px;
   }
 
-  .toolbar-actions {
-    margin-left: 0;
-    gap: 5px;
-  }
-
-  .deck-matchup {
-    padding-inline: 8px;
-    font-size: 0.62rem;
-  }
-
-  .toolbar-actions button {
-    width: 34px;
-    height: 34px;
-  }
-}
-
-@container game-shell (max-height: 620px) {
-  .match-toolbar {
-    width: var(--side-panel-width);
-    height: 100%;
-    margin-top: 0;
-    gap: 6px;
-    padding: 4px 8px;
-  }
-
-  .match-status small {
-    display: none;
-  }
-
-  .toolbar-actions button {
-    width: 36px;
-    height: 36px;
+  .match-toolbar button {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -146,57 +54,15 @@
     inset: auto 0 0;
     width: 100%;
     height: var(--compact-toolbar-height);
-    flex-direction: row;
-    justify-content: space-between;
-    gap: 6px;
-    padding: 4px 6px;
-    border-top: 1px solid rgba(167, 216, 255, 0.22);
-    border-left: 0;
-  }
-
-  .match-status {
-    width: min(210px, 34%);
-    justify-items: start;
-    text-align: left;
-  }
-
-  .match-status span,
-  .match-status strong {
-    font-size: 0.58rem;
-  }
-
-  .match-status small {
-    display: block;
-    width: 100%;
-    font-size: 0.48rem;
-  }
-
-  .toolbar-actions {
-    width: auto;
-    min-width: 0;
-    flex: 1;
-    flex-direction: row;
     justify-content: flex-end;
-    gap: 5px;
+    padding: 4px 7px;
+    border-top: 1px solid rgba(167, 216, 255, 0.22);
+    background: rgba(3, 18, 54, 0.92);
   }
 
-  .deck-matchup {
-    width: auto;
-    min-height: 32px;
-    flex-wrap: nowrap;
-    padding-inline: 8px;
-    font-size: 0.56rem;
-    white-space: nowrap;
-  }
-
-  .toolbar-actions button {
+  .match-toolbar button {
     width: 32px;
     height: 32px;
-    flex: 0 0 auto;
-  }
-
-  .toolbar-actions svg {
-    width: 15px;
   }
 }
 
@@ -206,26 +72,7 @@
     padding: 3px 4px;
   }
 
-  .match-status {
-    width: 28%;
-  }
-
-  .match-status small {
-    display: none;
-  }
-
-  .match-status span,
-  .match-status strong,
-  .deck-matchup {
-    font-size: 0.48rem;
-  }
-
-  .deck-matchup {
-    min-height: 28px;
-    padding-inline: 5px;
-  }
-
-  .toolbar-actions button {
+  .match-toolbar button {
     width: 28px;
     height: 28px;
   }

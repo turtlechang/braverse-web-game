@@ -3,6 +3,8 @@ import {
   canActivateCookieSkill,
   canActivateStage,
   canAttack,
+  canPlayItem,
+  canPlayStage,
   getAttackEnergyCost,
   getBreakAreaLevel,
   getEffectiveAttack,
@@ -13,6 +15,8 @@ import {
 import { CardFace } from '../cards/CardVisuals'
 import './BattleRow.css'
 
+export type BattleResourceKind = 'deck' | 'stage' | 'break'
+
 export interface BattleRowProps {
   game: GameState
   playerId: PlayerId
@@ -22,9 +26,14 @@ export interface BattleRowProps {
   breakEffectTargetIds: Set<string>
   selectedEffectTargetIds: Set<string>
   selectedSkillPaymentIds: Set<string>
+  skillPaymentTargetIds?: Set<string>
+  skillCostSupportTargetIds?: Set<string>
+  selectedSkillCostSupportIds?: Set<string>
   selectedAttackPaymentIds: Set<string>
   attackPaymentValid: boolean
   interactionLocked: boolean
+  selectedHandCardId?: string | null
+  openResourceKind?: BattleResourceKind | null
   attackShakeId?: string | null
   damageFlashId?: string | null
   faintAnimIds?: Set<string>
@@ -33,6 +42,7 @@ export interface BattleRowProps {
   onAttackTarget?: (instanceId: string) => void
   onEffectTarget?: (instanceId: string) => void
   onSkillPayment?: (instanceId: string) => void
+  onSkillCostSupport?: (instanceId: string) => void
   onAttackPayment?: (instanceId: string) => void
   onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
@@ -40,6 +50,8 @@ export interface BattleRowProps {
   onPlayItem?: (instanceId: string) => void
   onPlayStage?: (instanceId: string) => void
   onActivateStage?: () => void
+  onSelectHandCard?: (instanceId: string | null) => void
+  onToggleResource?: (kind: BattleResourceKind) => void
   onInspectCard: (card: import('../../game').GameCard) => void
   onInspectDiscard: (playerId: PlayerId) => void
 }
@@ -53,9 +65,14 @@ export function BattleRow({
   breakEffectTargetIds,
   selectedEffectTargetIds,
   selectedSkillPaymentIds,
+  skillPaymentTargetIds = new Set<string>(),
+  skillCostSupportTargetIds = new Set<string>(),
+  selectedSkillCostSupportIds = new Set<string>(),
   selectedAttackPaymentIds,
   attackPaymentValid,
   interactionLocked,
+  selectedHandCardId = null,
+  openResourceKind = null,
   attackShakeId,
   damageFlashId,
   faintAnimIds,
@@ -64,6 +81,7 @@ export function BattleRow({
   onAttackTarget,
   onEffectTarget,
   onSkillPayment,
+  onSkillCostSupport,
   onAttackPayment,
   onActivateSkill,
   onPlaceSupport,
@@ -71,6 +89,8 @@ export function BattleRow({
   onPlayItem,
   onPlayStage,
   onActivateStage,
+  onSelectHandCard,
+  onToggleResource,
   onInspectCard,
   onInspectDiscard,
 }: BattleRowProps) {
@@ -78,47 +98,67 @@ export function BattleRow({
   const isActivePlayer = game.activePlayerId === playerId
   const isOpponent = position === 'top'
   const canOperate = isActivePlayer && !isOpponent && !interactionLocked
+  const toggleResource = (kind: BattleResourceKind) =>
+    onToggleResource?.(kind)
   const supportZone = (
     <div className="support-zone">
       <span className="zone-watermark">支援區</span>
       <strong className="support-count">支援 {player.supportArea.length} 張</strong>
       <div className="support-cards">
-        {player.supportArea.map((support) => (
-          <CardFace
-            card={support.card}
-            className="support-card"
-            rested={
-              support.rested ||
-              selectedSkillPaymentIds.has(support.card.instanceId) ||
-              selectedAttackPaymentIds.has(support.card.instanceId)
-            }
-            selected={
-              selectedSkillPaymentIds.has(support.card.instanceId) ||
-              selectedAttackPaymentIds.has(support.card.instanceId)
-            }
-            targetable={
-              interactionLocked &&
-              !support.rested &&
-              Boolean(onSkillPayment)
-                ? true
-                : canOperate &&
+        {player.supportArea.map((support) => {
+          const supportId = support.card.instanceId
+          const canSelectSkillCost =
+            skillCostSupportTargetIds.has(supportId)
+          const canSelectSkillPayment =
+            skillPaymentTargetIds.has(supportId)
+          const selectedForSkillCost =
+            selectedSkillCostSupportIds.has(supportId)
+
+          return (
+            <CardFace
+              card={support.card}
+              className="support-card"
+              rested={
+                support.rested ||
+                selectedSkillPaymentIds.has(supportId) ||
+                selectedAttackPaymentIds.has(supportId)
+              }
+              selected={
+                selectedForSkillCost ||
+                selectedSkillPaymentIds.has(supportId) ||
+                selectedAttackPaymentIds.has(supportId)
+              }
+              targetable={
+                canSelectSkillCost ||
+                canSelectSkillPayment ||
+                (canOperate &&
                   Boolean(selectedAttackerId) &&
                   !support.rested &&
-                  Boolean(onAttackPayment)
-            }
-            key={support.card.instanceId}
-            onClick={
-              interactionLocked && !support.rested && onSkillPayment
-                ? () => onSkillPayment(support.card.instanceId)
-                : canOperate &&
-                    selectedAttackerId &&
-                    !support.rested &&
-                    onAttackPayment
-                  ? () => onAttackPayment(support.card.instanceId)
-                : () => onInspectCard(support.card)
-            }
-          />
-        ))}
+                  Boolean(onAttackPayment))
+              }
+              ariaLabel={
+                canSelectSkillCost
+                  ? `選擇${support.card.name}作為技能代價`
+                  : canSelectSkillPayment
+                    ? `選擇${support.card.name}支付技能能量`
+                  : undefined
+              }
+              key={supportId}
+              onClick={
+                canSelectSkillPayment && onSkillPayment
+                  ? () => onSkillPayment(supportId)
+                  : canSelectSkillCost && onSkillCostSupport
+                    ? () => onSkillCostSupport(supportId)
+                    : canOperate &&
+                        selectedAttackerId &&
+                        !support.rested &&
+                        onAttackPayment
+                      ? () => onAttackPayment(supportId)
+                      : () => onInspectCard(support.card)
+              }
+            />
+          )
+        })}
         {player.supportArea.length === 0 && (
           <span className="empty-zone">尚未配置支援</span>
         )}
@@ -131,11 +171,25 @@ export function BattleRow({
       className={`battle-row ${position}-field`}
       aria-label={`${player.name}場地`}
     >
-      <div className="break-zone">
+      <div className="break-zone resource-dock">
         <div className="zone-heading">
-          <span>休息區</span>
+          <span>休息</span>
           <strong>LV. {getBreakAreaLevel(game, playerId)}</strong>
+          <b>{player.breakArea.length}</b>
         </div>
+        <button
+          className="resource-summary break-summary"
+          type="button"
+          aria-label={`${player.name}休息區摘要`}
+          aria-expanded={openResourceKind === 'break'}
+          onClick={() => toggleResource('break')}
+        >
+          <div className="mini-break-stack" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </div>
+        </button>
         <div className="break-cards">
           {player.breakArea.map((card) => {
             const canSelectBreakEffectTarget = breakEffectTargetIds.has(
@@ -151,7 +205,7 @@ export function BattleRow({
                   onClick={
                     canSelectBreakEffectTarget
                       ? () => onEffectTarget?.(card.instanceId)
-                      : () => onInspectCard(card)
+                      : () => toggleResource('break')
                   }
                 />
                 {canSelectBreakEffectTarget && (
@@ -164,6 +218,34 @@ export function BattleRow({
             <small className="empty-zone">0 張</small>
           )}
         </div>
+        {openResourceKind === 'break' && (
+          <div
+            className="resource-popover break-popover"
+            role="dialog"
+            aria-label={`${player.name}休息區資訊`}
+          >
+            <span>{player.name}休息區</span>
+            <strong>
+              LV. {getBreakAreaLevel(game, playerId)} · {player.breakArea.length} 張
+            </strong>
+            {player.breakArea.length > 0 ? (
+              <div className="resource-card-list">
+                {player.breakArea.map((card) => (
+                  <button
+                    type="button"
+                    key={card.instanceId}
+                    onClick={() => onInspectCard(card)}
+                  >
+                    <CardFace card={card} className="resource-card" />
+                    <small>{card.name}</small>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <small>目前沒有卡牌。</small>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="field-stack">
@@ -287,33 +369,87 @@ export function BattleRow({
       </div>
 
       <div className="utility-zones">
-        <div className="deck-zone" aria-label={`牌庫 ${player.deck.length} 張`}>
-          <div className="mini-deck" />
-          <strong>{player.deck.length}</strong>
-          <span>牌庫</span>
+        <div className="deck-zone resource-dock">
+          <button
+            className="resource-summary"
+            type="button"
+            aria-label={`${player.name}牌庫 ${player.deck.length} 張`}
+            aria-expanded={openResourceKind === 'deck'}
+            onClick={() => toggleResource('deck')}
+          >
+            <div className="mini-deck" />
+            <strong>{player.deck.length}</strong>
+            <span>牌庫</span>
+          </button>
+          {openResourceKind === 'deck' && (
+            <div
+              className="resource-popover"
+              role="dialog"
+              aria-label={`${player.name}牌庫資訊`}
+            >
+              <span>{player.name}牌庫</span>
+              <strong>牌庫剩餘 {player.deck.length} 張</strong>
+              <small>牌庫內容在對局中保持隱藏。</small>
+            </div>
+          )}
         </div>
-        <div className="stage-zone">
-          <span>場景區</span>
-          {player.stage ? (
-            <>
+        <div className="stage-zone resource-dock">
+          <button
+            className="resource-summary"
+            type="button"
+            aria-label={`${player.name}場景區`}
+            aria-expanded={openResourceKind === 'stage'}
+            onClick={() => toggleResource('stage')}
+          >
+            {player.stage ? (
               <CardFace
                 card={player.stage.card}
                 className="stage-card"
                 rested={player.stage.rested}
-                onClick={() => onInspectCard(player.stage!.card)}
               />
-              {canOperate && canActivateStage(game, playerId) && (
-                <button type="button" onClick={() => onActivateStage?.()}>
-                  啟動
-                </button>
+            ) : (
+              <Layers3 aria-hidden="true" />
+            )}
+            <span>場景</span>
+          </button>
+          {canOperate && canActivateStage(game, playerId) && (
+            <button
+              className="stage-quick-action"
+              type="button"
+              onClick={() => onActivateStage?.()}
+            >
+              啟動
+            </button>
+          )}
+          {openResourceKind === 'stage' && (
+            <div
+              className="resource-popover"
+              role="dialog"
+              aria-label={`${player.name}場景區資訊`}
+            >
+              <span>{player.name}場景區</span>
+              {player.stage ? (
+                <>
+                  <strong>{player.stage.card.name}</strong>
+                  <small>
+                    {player.stage.rested ? '目前已橫置' : '目前為活躍狀態'}
+                  </small>
+                  <button
+                    className="resource-detail-button"
+                    type="button"
+                    onClick={() => onInspectCard(player.stage!.card)}
+                  >
+                    查看卡牌詳情
+                  </button>
+                </>
+              ) : (
+                <small>目前沒有場景卡。</small>
               )}
-            </>
-          ) : (
-            <Layers3 aria-hidden="true" />
+            </div>
           )}
         </div>
         <button
-          className="discard-zone"
+          className="discard-zone resource-summary"
           type="button"
           disabled={player.discardPile.length === 0}
           onClick={() => onInspectDiscard(playerId)}
@@ -348,14 +484,40 @@ export function BattleRow({
             card.type === 'cookie' &&
             player.battleArea.length < 2
           const canUseItem =
-            canOperate && game.phase === 'main' && card.type === 'item'
+            canOperate &&
+            canPlayItem(game, playerId, card.instanceId) &&
+            Boolean(
+              card.item &&
+                selectEnergyPayment(
+                  card.item.cost,
+                  player.supportArea,
+                ),
+            )
           const canPlaceStage =
-            canOperate && game.phase === 'main' && card.type === 'stage'
+            canOperate &&
+            canPlayStage(game, playerId, card.instanceId) &&
+            Boolean(
+              card.stageAbility &&
+                selectEnergyPayment(
+                  card.stageAbility.placementCost,
+                  player.supportArea,
+                ),
+            )
+          const actionLabel = canDeploy
+            ? '登場'
+            : canUseItem
+              ? '使用'
+              : canPlaceStage
+                ? '放置'
+                : canSupport
+                  ? '支援'
+                  : null
+          const isSelected = selectedHandCardId === card.instanceId
           const offset = index - (player.hand.length - 1) / 2
 
           return (
             <div
-              className={`hand-card-wrap ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
+              className={`hand-card-wrap${isSelected ? ' is-selected' : ''}${actionLabel ? ' is-actionable' : ''} ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
               key={card.instanceId}
               style={{
                 '--fan-index': index,
@@ -366,26 +528,38 @@ export function BattleRow({
                 card={card}
                 className="hand-card"
                 concealed={isOpponent}
+                ariaPressed={isOpponent ? undefined : isSelected}
                 onClick={
-                  isOpponent ? undefined : () => onInspectCard(card)
+                  isOpponent
+                    ? undefined
+                    : actionLabel && onSelectHandCard
+                      ? () => onSelectHandCard(card.instanceId)
+                      : () => onInspectCard(card)
                 }
               />
-              {(canSupport || canDeploy || canUseItem || canPlaceStage) && (
-                <button
-                  className="hand-card-action"
-                  type="button"
-                  onClick={() =>
-                    canDeploy
-                      ? onDeployCookie?.(card.instanceId)
-                      : canUseItem
-                        ? onPlayItem?.(card.instanceId)
-                        : canPlaceStage
-                          ? onPlayStage?.(card.instanceId)
-                          : onPlaceSupport?.(card.instanceId)
-                  }
-                >
-                  {canDeploy ? '登場' : canUseItem ? '使用' : canPlaceStage ? '放置' : '支援'}
-                </button>
+              {isSelected && actionLabel && (
+                <div className="hand-card-actions">
+                  <button
+                    className="hand-card-action"
+                    type="button"
+                    onClick={() => {
+                      onSelectHandCard?.(null)
+                      if (canDeploy) onDeployCookie?.(card.instanceId)
+                      else if (canUseItem) onPlayItem?.(card.instanceId)
+                      else if (canPlaceStage) onPlayStage?.(card.instanceId)
+                      else onPlaceSupport?.(card.instanceId)
+                    }}
+                  >
+                    {actionLabel}
+                  </button>
+                  <button
+                    className="hand-card-detail"
+                    type="button"
+                    onClick={() => onInspectCard(card)}
+                  >
+                    詳情
+                  </button>
+                </div>
               )}
             </div>
           )

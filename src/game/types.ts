@@ -25,7 +25,7 @@ export interface CardSkill {
   oncePerTurn: boolean
   yourTurn: boolean
   restSource: boolean
-  cost: EnergyCost
+  cost: AbilityCost
   text: string
   effects: CardEffect[]
   faint?: boolean
@@ -235,6 +235,7 @@ export type TargetedCardEffect =
 export interface AbilityCost {
   energy: EnergyCost
   discardHand: number
+  supportToTrash?: number
 }
 
 export interface FlipAbility {

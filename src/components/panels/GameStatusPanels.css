@@ -2,9 +2,9 @@
   position: fixed;
   z-index: 40;
   right: 18px;
-  top: 94px;
-  width: min(330px, calc(100vw - 36px));
-  padding: 18px;
+  top: 62px;
+  width: min(286px, calc(100vw - 36px));
+  padding: 14px;
   border: 1px solid rgba(113, 236, 255, 0.72);
   border-radius: 8px;
   background: rgba(3, 20, 53, 0.95);
@@ -79,7 +79,7 @@
 .simulation-report {
   position: fixed;
   z-index: 90;
-  inset: 90px 24px 24px calc(var(--rail-width) + 24px);
+  inset: 72px 24px 24px calc(var(--side-panel-width) + 24px);
   overflow: auto;
   padding: 24px;
   border: 2px solid rgba(113, 233, 255, 0.6);

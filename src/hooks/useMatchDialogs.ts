@@ -1,9 +1,16 @@
 import { useCallback, useState } from 'react'
 import type { GameCard, PlayerId } from '../game'
 
+export type BattleResourceKind = 'deck' | 'stage' | 'break'
+
 interface HpPileInfo {
   title: string
   cards: GameCard[]
+}
+
+interface ResourcePopover {
+  playerId: PlayerId
+  kind: BattleResourceKind
 }
 
 export function useMatchDialogs() {
@@ -17,6 +24,8 @@ export function useMatchDialogs() {
   const [showDeckList, setShowDeckList] = useState(false)
   const [deckListOwner, setDeckListOwner] =
     useState<'player' | 'ai'>('player')
+  const [resourcePopover, setResourcePopover] =
+    useState<ResourcePopover | null>(null)
 
   const openCardDetail = useCallback(
     (card: GameCard) => setInspectedCard(card),
@@ -46,6 +55,20 @@ export function useMatchDialogs() {
     [],
   )
   const closeDeckList = useCallback(() => setShowDeckList(false), [])
+  const toggleResourcePopover = useCallback(
+    (playerId: PlayerId, kind: BattleResourceKind) => {
+      setResourcePopover((current) =>
+        current?.playerId === playerId && current.kind === kind
+          ? null
+          : { playerId, kind },
+      )
+    },
+    [],
+  )
+  const closeResourcePopover = useCallback(
+    () => setResourcePopover(null),
+    [],
+  )
 
   return {
     inspectedCard,
@@ -64,5 +87,8 @@ export function useMatchDialogs() {
     deckListOwner,
     openDeckList,
     closeDeckList,
+    resourcePopover,
+    toggleResourcePopover,
+    closeResourcePopover,
   } as const
 }

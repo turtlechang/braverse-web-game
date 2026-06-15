@@ -5,6 +5,7 @@ import {
   selectStartingCookie,
 } from './setup'
 import {
+  createOfficialGreenStarterDeck,
   createOfficialYellowStarterDeck,
   DECK_CREATORS,
   type DeckChoice,
@@ -36,6 +37,7 @@ export const parseTestStateConfig = (
   | { kind: 'trap-pretzel'; attack: 4 | 5 }
   | { kind: 'opponent-discard-hand' }
   | { kind: 'attack-effect' }
+  | { kind: 'support-to-trash-skill' }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -84,6 +86,9 @@ export const parseTestStateConfig = (
   }
   if (testState === 'attack-effect') {
     return { kind: 'attack-effect' }
+  }
+  if (testState === 'st3-002-skill') {
+    return { kind: 'support-to-trash-skill' }
   }
   return null
 }
@@ -341,6 +346,81 @@ export const createAttackEffectDemoState = (): GameState => {
       attackEffects: wizard.attackEffects ?? [],
       attackEffectIndex: 0,
     },
+  }
+}
+
+export const createSupportToTrashSkillDemoState = (): GameState => {
+  const p1Deck = createOfficialGreenStarterDeck('player-one')
+  const p2Deck = createOfficialGreenStarterDeck('player-two')
+  const strawberryCrepe = p1Deck.find(
+    (card) => card.id === 'ST3-002',
+  ) as CookieCard
+  const supportCards = p1Deck
+    .filter((card) => card.type !== 'cookie')
+    .slice(0, 2)
+  const defender = p2Deck.find(
+    (card) => card.id === 'ST3-001',
+  ) as CookieCard
+  const opponentSupportCards = p2Deck
+    .filter((card) => card.type !== 'cookie')
+    .slice(0, 2)
+  const hpCards = p2Deck
+    .filter((card) => card.instanceId !== defender.instanceId)
+    .slice(0, 2)
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        battleArea: [
+          {
+            card: strawberryCrepe,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${strawberryCrepe.instanceId}:battle:1`,
+          },
+        ],
+        supportArea: supportCards.map((card) => ({
+          card,
+          rested: false,
+        })),
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        battleArea: [
+          {
+            card: defender,
+            hpCards,
+            rested: false,
+            battleEntryId: `${defender.instanceId}:battle:2`,
+          },
+        ],
+        supportArea: opponentSupportCards.map((card) => ({
+          card,
+          rested: false,
+        })),
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingRefresh: null,
+    pendingBattle: null,
   }
 }
 
@@ -854,7 +934,7 @@ export const createFaintDamageDemoState = (): GameState => {
       oncePerTurn: false,
       yourTurn: false,
       restSource: false,
-      cost: {},
+      cost: { energy: {}, discardHand: 0 },
       text: "When this Cookie faints, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
       effects: [
         {

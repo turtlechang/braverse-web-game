@@ -396,7 +396,7 @@ describe('item and stage effects', () => {
         oncePerTurn: false,
         yourTurn: false,
         restSource: false,
-        cost: {},
+        cost: { energy: {}, discardHand: 0 },
         text: 'OnPlay',
         effects: [{ kind: 'draw' as const, amount: 1 }],
       },

@@ -15,6 +15,9 @@ export interface EffectPanelProps {
   onSkip: () => void
   candidateCards?: GameCard[]
   onToggleCandidate?: (instanceId: string) => void
+  costSupportCandidates?: GameCard[]
+  selectedCostSupportIds?: Set<string>
+  onToggleCostSupport?: (instanceId: string) => void
 }
 
 function EffectPanelContent({
@@ -25,9 +28,13 @@ function EffectPanelContent({
   onSkip,
   candidateCards = [],
   onToggleCandidate,
+  costSupportCandidates = [],
+  selectedCostSupportIds = new Set<string>(),
+  onToggleCostSupport,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
-  const totalCost = skill ? getSkillCostTotal(skill) : 0
+  const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
+  const supportToTrashCost = skill?.cost.supportToTrash ?? 0
   const selectionLimits =
     currentEffect?.kind === 'break-to-trash'
       ? { min: 0, max: currentEffect.max }
@@ -63,14 +70,42 @@ function EffectPanelContent({
             <strong>技能費用</strong>
             <SkillCost skill={pendingEffect.skill} />
             <small>
-              已選 {pendingEffect.selectedPaymentIds.length} 張支援卡
+              已選 {pendingEffect.selectedPaymentIds.length}／
+              {totalEnergyCost} 張能量支援卡
             </small>
+            {supportToTrashCost > 0 && (
+              <small>
+                已選 {pendingEffect.selectedCostSupportToTrashIds.length}／
+                {supportToTrashCost} 張支援區代價
+              </small>
+            )}
           </div>
         )}
         <div className="effect-instruction">
           <Sparkles aria-hidden="true" />
           <span>{describeEffect(currentEffect)}</span>
         </div>
+        {costSupportCandidates.length > 0 && !pendingEffect.skillActivated && (
+          <>
+            <small>選擇要作為代價棄置的支援區卡牌</small>
+            <div className="effect-candidates">
+              {costSupportCandidates.map((card) => (
+                <button
+                  type="button"
+                  className={
+                    selectedCostSupportIds.has(card.instanceId)
+                      ? 'is-selected'
+                      : ''
+                  }
+                  key={card.instanceId}
+                  onClick={() => onToggleCostSupport?.(card.instanceId)}
+                >
+                  {card.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         {candidateCards.length > 0 && (
           <div className="effect-candidates">
             {candidateCards.map((card) => (
@@ -99,7 +134,9 @@ function EffectPanelContent({
           type="button"
           disabled={
             (!pendingEffect.skillActivated &&
-              pendingEffect.selectedPaymentIds.length !== totalCost) ||
+              (pendingEffect.selectedPaymentIds.length !== totalEnergyCost ||
+                pendingEffect.selectedCostSupportToTrashIds.length !==
+                  supportToTrashCost)) ||
             (Boolean(selectionLimits) &&
               (pendingEffect.selectedTargetIds.length <
                 selectionLimits!.min ||

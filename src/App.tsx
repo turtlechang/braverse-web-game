@@ -1,5 +1,5 @@
 ﻿import { Sparkles, Swords } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import {
   canActivateStage,
@@ -58,6 +58,9 @@ const testStateConfig = parseTestStateConfig(
 )
 
 function App() {
+  const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
+    null,
+  )
   const [pendingReveal, setPendingReveal] = useState<{
     card: GameCard
     title: string
@@ -66,6 +69,7 @@ function App() {
     onConfirm: () => void
   } | null>(null)
   const dialogs = useMatchDialogs()
+  const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
   const pending = usePendingEffect({
     game: match.game,
@@ -97,6 +101,8 @@ function App() {
     nextConfig: { player: DeckChoice; ai: DeckChoice },
     nextMessage: string,
   ) => {
+    setSelectedHandCardId(null)
+    dialogs.closeResourcePopover()
     match.resetMatchState(nextConfig)
     pending.resetEffectContext()
     ai.resetAiCounts()
@@ -128,6 +134,38 @@ function App() {
     Boolean(pending.pendingEffect)
 
   const currentJsxEffect = pending.currentEffect
+  const playerHand = match.game.players[match.viewerPlayerId].hand
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (!target.closest('.hand-card-wrap')) {
+        setSelectedHandCardId(null)
+      }
+      if (!target.closest('.resource-dock')) {
+        closeResourcePopover()
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setSelectedHandCardId(null)
+      closeResourcePopover()
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [closeResourcePopover])
+
+  const activeSelectedHandCardId =
+    selectedHandCardId &&
+    playerHand.some((card) => card.instanceId === selectedHandCardId)
+      ? selectedHandCardId
+      : null
 
   return (
     <main className="game-shell">
@@ -148,16 +186,9 @@ function App() {
           if (pending.pendingEffect || faintActive) return
           match.handleAdvancePhase()
         }}
-        aiThinking={ai.aiThinking}
-        aiActionCount={ai.aiActionCount}
-        onRunSimulation={ai.runSimulation}
       />
 
       <MatchToolbar
-        deckConfig={match.deckConfig}
-        activePlayerName={match.activePlayer.name}
-        phase={match.game.phase}
-        message={match.message}
         onReset={() => {
           resetGame(
             match.deckConfig,
@@ -181,6 +212,11 @@ function App() {
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
           attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
+          openResourceKind={
+            dialogs.resourcePopover?.playerId === match.opponentId
+              ? dialogs.resourcePopover.kind
+              : null
+          }
           attackShakeId={match.attackShakeId}
           damageFlashId={match.damageFlashId}
           faintAnimIds={match.faintAnimIds}
@@ -189,31 +225,40 @@ function App() {
           onEffectTarget={pending.toggleEffectTarget}
           onInspectCard={dialogs.openCardDetail}
           onInspectDiscard={dialogs.openDiscardPile}
+          onToggleResource={(kind) =>
+            dialogs.toggleResourcePopover(match.opponentId, kind)
+          }
         />
 
         <div className="table-divider">
           <span />
-          <strong>
-            {ai.aiThinking ? (
-              <>
-                <Sparkles aria-hidden="true" /> AI 思考中
-              </>
-            ) : pending.pendingEffect ? (
-              <>
-                <Sparkles aria-hidden="true" /> 選擇效果目標
-              </>
-            ) : faintActive ? (
-              <>
-                <Sparkles aria-hidden="true" /> 選擇昏厥效果目標
-              </>
-            ) : match.selectedAttackerId ? (
-              <>
-                <Swords aria-hidden="true" /> 選擇攻擊目標
-              </>
-            ) : (
-              `${match.activePlayer.name} · ${phaseLabels[match.game.phase]}`
-            )}
-          </strong>
+          <div role="status" aria-live="polite">
+            <strong>
+              {ai.aiThinking ? (
+                <>
+                  <Sparkles aria-hidden="true" /> AI 思考中
+                </>
+              ) : pending.pendingEffect ? (
+                <>
+                  <Sparkles aria-hidden="true" /> 選擇效果目標
+                </>
+              ) : faintActive ? (
+                <>
+                  <Sparkles aria-hidden="true" /> 選擇昏厥效果目標
+                </>
+              ) : match.selectedAttackerId ? (
+                <>
+                  <Swords aria-hidden="true" />{' '}
+                  {match.attackPaymentValidation.valid
+                    ? '付款完成，選擇攻擊目標'
+                    : '選擇支援卡支付攻擊費用'}
+                </>
+              ) : (
+                `${match.activePlayer.name} · ${phaseLabels[match.game.phase]}`
+              )}
+            </strong>
+            <small className="battle-status-message">{match.message}</small>
+          </div>
           <span />
         </div>
 
@@ -226,9 +271,20 @@ function App() {
           breakEffectTargetIds={pending.breakEffectTargetIds}
           selectedEffectTargetIds={pending.selectedEffectTargetIds}
           selectedSkillPaymentIds={pending.selectedSkillPaymentIds}
+          skillPaymentTargetIds={pending.skillPaymentTargetIds}
+          skillCostSupportTargetIds={pending.skillCostSupportTargetIds}
+          selectedSkillCostSupportIds={
+            pending.selectedSkillCostSupportToTrashIds
+          }
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
           attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
+          selectedHandCardId={activeSelectedHandCardId}
+          openResourceKind={
+            dialogs.resourcePopover?.playerId === match.viewerPlayerId
+              ? dialogs.resourcePopover.kind
+              : null
+          }
           attackShakeId={match.attackShakeId}
           damageFlashId={match.damageFlashId}
           faintAnimIds={match.faintAnimIds}
@@ -247,6 +303,7 @@ function App() {
             )
           }
           onSkillPayment={pending.toggleSkillPayment}
+          onSkillCostSupport={pending.toggleSkillCostSupport}
           onAttackPayment={match.toggleAttackPayment}
           onActivateSkill={(instanceId) => {
             const card = match.activePlayer.battleArea.find(
@@ -350,6 +407,10 @@ function App() {
               )
             }
           }}
+          onSelectHandCard={setSelectedHandCardId}
+          onToggleResource={(kind) =>
+            dialogs.toggleResourcePopover(match.viewerPlayerId, kind)
+          }
           onInspectCard={dialogs.openCardDetail}
           onInspectDiscard={dialogs.openDiscardPile}
         />
@@ -386,6 +447,13 @@ function App() {
         onSkip={pending.skipOptionalSkill}
         candidateCards={pending.nonBattleEffectCandidateCards}
         onToggleCandidate={pending.toggleEffectTarget}
+        costSupportCandidates={
+          pending.pendingEffect && !pending.pendingEffect.skillActivated
+            ? pending.skillCostSupportCandidates.map((s) => s.card)
+            : []
+        }
+        selectedCostSupportIds={pending.selectedSkillCostSupportToTrashIds}
+        onToggleCostSupport={pending.toggleSkillCostSupport}
       />
 
       {match.setupStep && (
@@ -845,6 +913,12 @@ function App() {
         <PauseModal
           turnNumber={match.game.turnNumber}
           phaseLabel={phaseLabels[match.game.phase]}
+          deckConfig={match.deckConfig}
+          aiActionCount={ai.aiActionCount}
+          onRunSimulation={() => {
+            dialogs.closePause()
+            ai.runSimulation()
+          }}
           onResume={dialogs.closePause}
         />
       )}

@@ -11,7 +11,7 @@ const effectTokenLabels: Record<string, string> = {
 }
 
 export const getSkillCostTotal = (skill: CardSkill) =>
-  Object.values(skill.cost).reduce(
+  Object.values(skill.cost.energy).reduce(
     (total, amount) => total + (amount ?? 0),
     0,
   )
