@@ -201,6 +201,18 @@ export const convertOfficialCardEffects = (
         optional: true,
       },
     ],
+    'ST3-004': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
     'ST3-017': [
       {
         kind: 'damage',

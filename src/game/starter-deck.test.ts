@@ -185,6 +185,7 @@ describe('official green starter deck', () => {
   it('creates green cards from the official Starter Deck GREEN sample', () => {
     const deck = createOfficialGreenStarterDeck('player-one')
     const muscle = deck.find((card) => card.id === 'ST3-001')
+    const vampire = deck.find((card) => card.id === 'ST3-004')
     const gingerBright = deck.find((card) => card.id === 'ST3-003')
     const vineyVines = deck.find((card) => card.id === 'ST3-017')
 
@@ -193,6 +194,31 @@ describe('official green starter deck', () => {
       type: 'cookie',
       energyColor: 'green',
       attackEnergyCost: { green: 1, neutral: 1 },
+    })
+    expect(vampire).toMatchObject({
+      name: 'Vampire Cookie',
+      type: 'cookie',
+      energyColor: 'green',
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        cost: {
+          energy: { green: 3, neutral: 1 },
+          discardHand: 0,
+        },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      },
     })
     expect(gingerBright).toMatchObject({
       name: 'GingerBright',

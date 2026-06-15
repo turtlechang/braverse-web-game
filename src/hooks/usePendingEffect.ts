@@ -131,6 +131,12 @@ export function usePendingEffect(params: {
     ? new Set<string>()
     : new Set(breakToTrashCandidates.map((card) => card.instanceId))
 
+  const supportEffectTargetIds = faintActive
+    ? new Set<string>()
+    : new Set(
+        supportEffectCandidates.map((support) => support.card.instanceId),
+      )
+
   const selectedEffectTargetIds = faintActive
     ? new Set(selectedFaintTargetIds)
     : new Set(pendingEffect?.selectedTargetIds ?? [])
@@ -464,7 +470,8 @@ export function usePendingEffect(params: {
       !pendingEffect ||
       !currentEffect ||
       (!effectTargetIds.has(instanceId) &&
-        !breakEffectTargetIds.has(instanceId))
+        !breakEffectTargetIds.has(instanceId) &&
+        !supportEffectTargetIds.has(instanceId))
     ) {
       return
     }
@@ -801,6 +808,7 @@ export function usePendingEffect(params: {
     skillCostSupportTargetIds,
     effectTargetIds,
     breakEffectTargetIds,
+    supportEffectTargetIds,
     selectedEffectTargetIds,
     selectedSkillPaymentIds,
     selectedSkillCostSupportToTrashIds,

@@ -459,10 +459,11 @@ describe('Starter Deck RED official effect adapter', () => {
         (c) => c.status === 'supported',
       )
 
-      expect(supported).toHaveLength(9)
+      expect(supported).toHaveLength(10)
       expect(supported.map((c) => c.cardNumber)).toEqual([
         'ST3-001',
         'ST3-002',
+        'ST3-004',
         'ST3-005',
         'ST3-009',
         'ST3-010',
@@ -526,12 +527,47 @@ describe('Starter Deck RED official effect adapter', () => {
       },
     )
 
-    it('rejects ST3-004 (compound effect with Then)', () => {
+    it('supports ST3-004 Vampire Cookie OnPlay damage and gain-hp', () => {
       expect(
         convertOfficialCardEffects(findGreenCard('ST3-004')),
       ).toMatchObject({
-        status: 'unsupported',
-        reason: 'unsupported-effect-text',
+        status: 'supported',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      })
+    })
+
+    it('ST3-004 Vampire Cookie skill parses as OnPlay with GGGN cost', () => {
+      const skill = convertOfficialCookieSkill(findGreenCard('ST3-004'))
+
+      expect(skill).toMatchObject({
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { green: 3, neutral: 1 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
       })
     })
 
