@@ -11,6 +11,7 @@ import {
   getCurrentReplacementTask,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
+  hasBlockingPending,
   getPendingDecision,
   getReplacementCandidates,
   getRefreshCandidates,
@@ -550,12 +551,7 @@ export function useMatchController(params: {
       game.status !== 'playing' ||
       game.activePlayerId !== viewerPlayerId ||
       (game.phase !== 'active' && game.phase !== 'draw') ||
-      game.pendingReplacement ||
-      game.pendingOnPlay ||
-      game.pendingRefresh ||
-      game.pendingBattle ||
-      game.pendingOpponentHandDiscard ||
-      (game.pendingFaintEffects && game.pendingFaintEffects.length > 0)
+      hasBlockingPending(game)
     ) {
       return
     }

@@ -81,6 +81,7 @@ export {
   playStage,
 } from './card-abilities'
 export { getRefreshCandidates, refreshDeck } from './refresh'
+export { hasBlockingPending } from './pending'
 export {
   createGame,
   drawMulliganCompensation,

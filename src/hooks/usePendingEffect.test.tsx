@@ -95,6 +95,6 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
 
     expect(captured!.pendingEffect?.selectedTargetIds).not.toContain(supportId)
 
-    root.unmount()
+    await act(() => root.unmount())
   })
 })

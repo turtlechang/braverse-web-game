@@ -2,6 +2,7 @@ import { GameRuleError } from './errors'
 import { drawCards, getOpponentId, updatePlayer } from './helpers'
 import { getRefreshCandidates } from './refresh'
 import { executeCardEffect, isEffectUntargeted } from './effects'
+import { hasBlockingPending } from './pending'
 import type { CookieCard, GameState, PlayerId, TurnPhase } from './types'
 import { finishWithDefeat } from './victory'
 
@@ -91,13 +92,7 @@ const enterDrawPhase = (state: GameState): GameState => {
 }
 
 export const processEndPhaseEffects = (state: GameState): GameState => {
-  if (
-    state.pendingReplacement ||
-    state.pendingOnPlay ||
-    state.pendingRefresh ||
-    state.pendingBattle ||
-    state.pendingOpponentHandDiscard
-  ) {
+  if (hasBlockingPending(state)) {
     return state
   }
 
@@ -122,12 +117,7 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
           if (nextState.status !== 'playing') {
             return nextState
           }
-          if (
-            nextState.pendingReplacement ||
-            nextState.pendingOnPlay ||
-            nextState.pendingRefresh ||
-            nextState.pendingBattle
-          ) {
+          if (hasBlockingPending(nextState)) {
             return {
               ...nextState,
               skillUsesThisTurn: [
@@ -172,12 +162,7 @@ export const advancePhase = (state: GameState): GameState => {
       return { ...state, phase: 'end' }
     case 'end': {
       const endPhaseState = processEndPhaseEffects(state)
-      if (
-        endPhaseState.pendingReplacement ||
-        endPhaseState.pendingOnPlay ||
-        endPhaseState.pendingRefresh ||
-        endPhaseState.pendingBattle
-      ) {
+      if (hasBlockingPending(endPhaseState)) {
         return endPhaseState
       }
       return {
@@ -209,11 +194,7 @@ export const advancePhase = (state: GameState): GameState => {
 
 export const canAttack = (state: GameState): boolean =>
   state.status === 'playing' &&
-  !state.pendingReplacement &&
-  !state.pendingOnPlay &&
-  !state.pendingRefresh &&
-  !state.pendingBattle &&
-  !state.pendingOpponentHandDiscard &&
+  !hasBlockingPending(state) &&
   state.phase === 'main' &&
   !(state.turnNumber === 1 && state.activePlayerId === state.firstPlayerId)
 

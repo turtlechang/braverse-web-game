@@ -1,4 +1,5 @@
 import { getOpponentId } from './helpers'
+import { hasBlockingPending } from './pending'
 import type {
   CookieCard,
   GameState,
@@ -69,11 +70,7 @@ export const continuePendingReplacements = (
 ): GameState => {
   if (
     state.status !== 'playing' ||
-    state.pendingRefresh ||
-    state.pendingOnPlay ||
-    state.pendingBattle ||
-    state.pendingOpponentHandDiscard ||
-    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0)
+    hasBlockingPending({ ...state, pendingReplacement: null })
   ) {
     return state
   }

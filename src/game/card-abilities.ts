@@ -6,6 +6,7 @@ import {
   isEffectTargeted,
 } from './effects'
 import { findCardIndex, updatePlayer } from './helpers'
+import { hasBlockingPending } from './pending'
 import type {
   CardAbility,
   GameCard,
@@ -19,12 +20,7 @@ const assertMainAction = (state: GameState, playerId: PlayerId) => {
     state.status !== 'playing' ||
     state.activePlayerId !== playerId ||
     state.phase !== 'main' ||
-    state.pendingReplacement ||
-    state.pendingOnPlay ||
-    state.pendingRefresh ||
-    state.pendingBattle ||
-    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
-    state.pendingOpponentHandDiscard
+    hasBlockingPending(state)
   ) {
     throw new GameRuleError('目前無法使用物品或場景卡。')
   }
