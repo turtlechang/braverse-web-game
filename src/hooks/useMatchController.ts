@@ -12,11 +12,11 @@ import {
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   hasBlockingPending,
-  getPendingDecision,
   getReplacementCandidates,
   getRefreshCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
+  isPlayerControllingState,
   keepOpeningHand,
   mulliganOpeningHand,
   selectEnergyPayment,
@@ -515,23 +515,8 @@ export function useMatchController(params: {
 
   const replacementTask = getCurrentReplacementTask(game)
 
-  const pendingDecision = getPendingDecision(game)
   const aiControlsCurrentState: boolean =
-    pendingDecision
-      ? pendingDecision.playerId === 'player-two'
-      : game.pendingRefresh
-          ? game.pendingRefresh.playerId === 'player-two'
-          : game.pendingOnPlay
-              ? game.pendingOnPlay.playerId === 'player-two'
-            : replacementTask
-                ? replacementTask.playerId === 'player-two'
-                : game.pendingBattle
-                  ? game.pendingBattle.stage === 'damage' ||
-                    (game.pendingBattle.stage === 'flip'
-                      ? game.pendingBattle.damagePlayerId ??
-                        game.pendingBattle.defenderPlayerId
-                      : game.pendingBattle.defenderPlayerId) === 'player-two'
-                  : game.activePlayerId === 'player-two'
+    isPlayerControllingState(game, 'player-two')
 
   const pendingPlayerId =
     game.pendingRefresh?.playerId ??
