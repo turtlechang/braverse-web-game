@@ -81,6 +81,10 @@ export const describeEffect = (effect: CardEffect) => {
     return `隨機棄置對手 ${effect.count} 張手牌。`
   }
 
+  if (effect.kind === 'set-active') {
+    return `將此餅乾與 ${effect.supportCount} 張支援卡設為直立狀態。`
+  }
+
   const target =
     effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
   const count =
@@ -174,6 +178,10 @@ export const describeEffectResult = (
 
   if (effect.kind === 'opponent-random-discard') {
     return `對手已隨機棄置 ${effect.count} 張手牌。`
+  }
+
+  if (effect.kind === 'set-active') {
+    return `此餅乾與 ${effect.supportCount} 張支援卡已設為直立狀態。`
   }
 
   if (targetNames.length === 0) {

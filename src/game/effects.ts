@@ -110,7 +110,7 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'return-to-hand' | 'opponent-random-discard'
+      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'return-to-hand' | 'opponent-random-discard' | 'set-active'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -119,7 +119,8 @@ export const isEffectUntargeted = (
   effect.kind === 'opponent-discard-hand' ||
   effect.kind === 'opponent-battle-to-trash' ||
   effect.kind === 'return-to-hand' ||
-  effect.kind === 'opponent-random-discard'
+  effect.kind === 'opponent-random-discard' ||
+  effect.kind === 'set-active'
 
 export const isEffectTargeted = (
   effect: CardEffect,
@@ -762,6 +763,32 @@ export const executeCardEffect = (
             ...state.players[targetPlayerId].discardPile,
             ...discarded,
           ],
+        },
+      },
+    }
+  }
+
+  if (effect.kind === 'set-active') {
+    const player = state.players[context.sourcePlayerId]
+    let unRested = 0
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        [context.sourcePlayerId]: {
+          ...player,
+          battleArea: player.battleArea.map((b) =>
+            b.card.instanceId === context.sourceInstanceId
+              ? { ...b, rested: false }
+              : b,
+          ),
+          supportArea: player.supportArea.map((s) => {
+            if (s.rested && unRested < effect.supportCount) {
+              unRested++
+              return { ...s, rested: false }
+            }
+            return s
+          }),
         },
       },
     }

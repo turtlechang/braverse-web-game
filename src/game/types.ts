@@ -210,6 +210,12 @@ export interface OpponentBattleToTrashEffect {
   maxLevel?: number
   minLevel?: number
   remainingHp?: number
+  allowStage?: boolean
+}
+
+export interface SetActiveEffect {
+  kind: 'set-active'
+  supportCount: number
 }
 
 export interface ReturnToHandEffect {
@@ -246,6 +252,7 @@ export type CardEffect =
   | OpponentBattleToTrashEffect
   | ReturnToHandEffect
   | OpponentRandomDiscardEffect
+  | SetActiveEffect
 
 export type TargetedCardEffect =
   | DamageEffect

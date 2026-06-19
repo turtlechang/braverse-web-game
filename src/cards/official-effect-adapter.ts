@@ -238,6 +238,10 @@ export const convertOfficialCardEffects = (
       },
       { kind: 'support-to-trash', amount: 1 },
     ],
+    'ST4-004': [
+      { kind: 'set-active' as const, supportCount: 1 } satisfies CardEffect as CardEffect,
+    ],
+    'ST4-013': [{ kind: 'draw', amount: 1 }],
     'ST5-019': [
       {
         kind: 'damage',
@@ -573,11 +577,15 @@ export const convertOfficialCardEffects = (
     }
 
     const battleToTrashMatch = sourceText.match(
-      /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+Cookies?\s+(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
+      /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+(?:LV\.(\d+)(?:\s+or\s+lower)?\s+)?Cookies?\s+(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
     )
     if (battleToTrashMatch) {
       const hpMatch = sourceText.match(/remaining HP is (\d+) or less/i)
-      const lvMatch = sourceText.match(/LV\.(\d+) or lower/i)
+      const lvLowerMatch = sourceText.match(/LV\.(\d+) or lower/i)
+      const lvExactMatch = sourceText.match(
+        /LV\.(\d+)\s+(?!or lower)/i,
+      )
+      const stageMatch = /or\s+\d+\s+stage\s+card/i.test(sourceText)
       return {
         status: 'supported',
         cardNumber: card.cardNumber,
@@ -586,7 +594,9 @@ export const convertOfficialCardEffects = (
           {
             kind: 'opponent-battle-to-trash' as const,
             ...(hpMatch ? { remainingHp: Number(hpMatch[1]) } : {}),
-            ...(lvMatch ? { maxLevel: Number(lvMatch[1]) } : {}),
+            ...(lvLowerMatch ? { maxLevel: Number(lvLowerMatch[1]) } : {}),
+            ...(lvExactMatch ? { minLevel: Number(lvExactMatch[1]), maxLevel: Number(lvExactMatch[1]) } : {}),
+            ...(stageMatch ? { allowStage: true } : {}),
           } satisfies CardEffect as CardEffect,
         ],
       }
@@ -920,7 +930,7 @@ export const convertOfficialTrapAbility = (
   }
 
   const battleToTrash = text.match(
-    /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+Cookies?\s+(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
+    /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+(?:LV\.(\d+)(?:\s+or\s+lower)?\s+)?Cookies?\s+(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
   )
   if (battleToTrash) {
     const trapHpMatch = text.match(/remaining HP is (\d+) or less/i)

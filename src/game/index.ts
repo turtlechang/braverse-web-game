@@ -165,6 +165,7 @@ export type {
   PreventKnockoutEffect,
   ReplacementTask,
   ReturnToHandEffect,
+  SetActiveEffect,
   Shuffle,
   SkillTrigger,
   SupportCard,
