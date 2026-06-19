@@ -13,6 +13,7 @@ import {
   type PlayerId,
 } from '../../game'
 import { CardFace } from '../cards/CardVisuals'
+import { computeOpponentFan } from './opponentFan'
 import './BattleRow.css'
 
 export type BattleResourceKind = 'deck' | 'stage' | 'break'
@@ -250,6 +251,42 @@ export function BattleRow({
 
       <div className="field-stack">
         {position === 'top' && supportZone}
+        {isOpponent && player.hand.length > 0 && (() => {
+          const baseFan = computeOpponentFan(player.hand.length, 0)
+          const count = player.hand.length
+          return (
+            <div
+              className="hand-fan top-hand"
+              aria-label="對手手牌"
+              style={{
+                '--safety-ratio': baseFan.safetyRatio,
+                ...(count === 1
+                  ? { left: '50%', transform: 'translateX(-50%)', width: 'var(--opponent-card-width)' }
+                  : {}),
+              } as React.CSSProperties}
+            >
+              {player.hand.map((card, index) => {
+                const fan = computeOpponentFan(player.hand.length, index)
+                return (
+                  <div
+                    className={`hand-card-wrap opponent-hand-card${player.hand.length === 1 ? ' single-card' : ''}`}
+                    key={card.instanceId}
+                    style={{
+                      '--opponent-angle': `${fan.opponentAngle}deg`,
+                      '--fan-z-index': fan.fanZIndex,
+                    } as React.CSSProperties}
+                  >
+                    <CardFace
+                      card={card}
+                      className="hand-card opponent-oriented-card"
+                      concealed
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
         <div className="combat-zone">
           <div className="row-meta">
             <span>{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
@@ -469,112 +506,112 @@ export function BattleRow({
         </button>
       </div>
 
-      <div
-        className={`hand-fan ${position}-hand`}
-        aria-label={`${isOpponent ? '對手' : '我方'}手牌`}
-      >
-        {player.hand.map((card, index) => {
-          const canSupport =
-            canOperate &&
-            game.phase === 'support' &&
-            !game.supportPlacedThisTurn
-          const canDeploy =
-            canOperate &&
-            game.phase === 'main' &&
-            card.type === 'cookie' &&
-            player.battleArea.length < 2
-          const canUseItem =
-            canOperate &&
-            canPlayItem(game, playerId, card.instanceId) &&
-            Boolean(
-              card.item &&
-                selectEnergyPayment(
-                  card.item.cost,
-                  player.supportArea,
-                ),
-            )
-          const canPlaceStage =
-            canOperate &&
-            canPlayStage(game, playerId, card.instanceId) &&
-            Boolean(
-              card.stageAbility &&
-                selectEnergyPayment(
-                  card.stageAbility.placementCost,
-                  player.supportArea,
-                ),
-            )
-          const actionLabel = canDeploy
-            ? '登場'
-            : canUseItem
-              ? '使用'
-              : canPlaceStage
-                ? '放置'
-                : canSupport
-                  ? '支援'
-                  : null
-          const isSelected = selectedHandCardId === card.instanceId
-          const count = player.hand.length
-          const center = (count - 1) / 2
-          const offset = index - center
-          const baseStep = count <= 1 ? 0 : Math.max(18, Math.min(28, 190 / count))
-          const fanX = offset * baseStep
-          const maxNorm = (count - 1) / 2 || 1
-          const normOffset = offset / maxNorm
-          const fanY = normOffset * normOffset * 30
-          const fanRotation = Math.max(-18, Math.min(18, offset * 5.2))
+      {!isOpponent && (
+        <div
+          className="hand-fan bottom-hand"
+          aria-label="我方手牌"
+        >
+          {player.hand.map((card, index) => {
+            const canSupport =
+              canOperate &&
+              game.phase === 'support' &&
+              !game.supportPlacedThisTurn
+            const canDeploy =
+              canOperate &&
+              game.phase === 'main' &&
+              card.type === 'cookie' &&
+              player.battleArea.length < 2
+            const canUseItem =
+              canOperate &&
+              canPlayItem(game, playerId, card.instanceId) &&
+              Boolean(
+                card.item &&
+                  selectEnergyPayment(
+                    card.item.cost,
+                    player.supportArea,
+                  ),
+              )
+            const canPlaceStage =
+              canOperate &&
+              canPlayStage(game, playerId, card.instanceId) &&
+              Boolean(
+                card.stageAbility &&
+                  selectEnergyPayment(
+                    card.stageAbility.placementCost,
+                    player.supportArea,
+                  ),
+              )
+            const actionLabel = canDeploy
+              ? '登場'
+              : canUseItem
+                ? '使用'
+                : canPlaceStage
+                  ? '放置'
+                  : canSupport
+                    ? '支援'
+                    : null
+            const isSelected = selectedHandCardId === card.instanceId
+            const count = player.hand.length
+            const center = (count - 1) / 2
+            const offset = index - center
+            const baseStep = count <= 1 ? 0 : Math.max(20, Math.min(30, 150 / count))
+            const fanX = offset * baseStep
+            const maxNorm = (count - 1) / 2 || 1
+            const normOffset = offset / maxNorm
+            const fanY = normOffset * normOffset * 50
+            const angleStep = count <= 1 ? 0 : Math.min(12, 60 / count)
+            const fanRotation = offset * angleStep
 
-          return (
-            <div
-              className={`hand-card-wrap${isSelected ? ' is-selected' : ''}${actionLabel ? ' is-actionable' : ''} ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
-              key={card.instanceId}
-              style={{
-                '--fan-index': index,
-                '--fan-x': `${fanX}px`,
-                '--fan-y': `${fanY}px`,
-                '--fan-rotation': `${fanRotation}deg`,
-              } as React.CSSProperties}
-            >
-              <CardFace
-                card={card}
-                className="hand-card"
-                concealed={isOpponent}
-                ariaPressed={isOpponent ? undefined : isSelected}
-                onClick={
-                  isOpponent
-                    ? undefined
-                    : actionLabel && onSelectHandCard
+            return (
+              <div
+                className={`hand-card-wrap${isSelected ? ' is-selected' : ''}${actionLabel ? ' is-actionable' : ''} ${drawAnimIds?.has(card.instanceId) ? 'animate-draw-slide-up' : ''}`}
+                key={card.instanceId}
+                style={{
+                  '--fan-index': index,
+                  '--fan-x': `${fanX}px`,
+                  '--fan-y': `${fanY}px`,
+                  '--fan-rotation': `${fanRotation}deg`,
+                } as React.CSSProperties}
+              >
+                <CardFace
+                  card={card}
+                  className="hand-card"
+                  ariaPressed={isSelected}
+                  onClick={
+                    actionLabel && onSelectHandCard
                       ? () => onSelectHandCard(card.instanceId)
                       : () => onInspectCard(card)
-                }
-              />
-              {isSelected && actionLabel && (
-                <div className="hand-card-actions">
-                  <button
-                    className="hand-card-action"
-                    type="button"
-                    onClick={() => {
-                      onSelectHandCard?.(null)
-                      if (canDeploy) onDeployCookie?.(card.instanceId)
-                      else if (canUseItem) onPlayItem?.(card.instanceId)
-                      else if (canPlaceStage) onPlayStage?.(card.instanceId)
-                      else onPlaceSupport?.(card.instanceId)
-                    }}
-                  >
-                    {actionLabel}
-                  </button>
-                  <button
-                    className="hand-card-detail"
-                    type="button"
-                    onClick={() => onInspectCard(card)}
-                  >
-                    詳情
-                  </button>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+                  }
+                />
+                {isSelected && actionLabel && (
+                  <div className="hand-card-actions">
+                    <button
+                      className="hand-card-action"
+                      type="button"
+                      onClick={() => {
+                        onSelectHandCard?.(null)
+                        if (canDeploy) onDeployCookie?.(card.instanceId)
+                        else if (canUseItem) onPlayItem?.(card.instanceId)
+                        else if (canPlaceStage) onPlayStage?.(card.instanceId)
+                        else onPlaceSupport?.(card.instanceId)
+                      }}
+                    >
+                      {actionLabel}
+                    </button>
+                    <button
+                      className="hand-card-detail"
+                      type="button"
+                      onClick={() => onInspectCard(card)}
+                    >
+                      詳情
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }
