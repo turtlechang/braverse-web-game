@@ -1,16 +1,16 @@
 .match-toolbar {
   position: absolute;
   z-index: 30;
-  top: 14px;
-  right: 16px;
+  top: 8px;
+  left: 8px;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 4px;
 }
 
 .match-toolbar button {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -39,24 +39,19 @@
 
 @container game-shell (max-height: 720px) {
   .match-toolbar {
-    top: 7px;
-    right: 9px;
-  }
-
-  .match-toolbar button {
-    width: 32px;
-    height: 32px;
+    top: 5px;
+    left: 5px;
   }
 }
 
 @container game-shell (max-width: 900px) {
   .match-toolbar {
-    inset: auto 0 0;
+    inset: 0 0 auto 0;
     width: 100%;
     height: var(--compact-toolbar-height);
     justify-content: flex-end;
     padding: 4px 7px;
-    border-top: 1px solid rgba(167, 216, 255, 0.22);
+    border-bottom: 1px solid rgba(167, 216, 255, 0.22);
     background: rgba(3, 18, 54, 0.92);
   }
 

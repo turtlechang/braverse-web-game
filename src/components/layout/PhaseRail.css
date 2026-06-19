@@ -7,7 +7,7 @@
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   align-items: stretch;
   gap: 10px;
-  padding: 16px 8px 12px;
+  padding: 58px 8px 12px;
   border-right: 1px solid rgba(130, 194, 255, 0.22);
   background:
     linear-gradient(90deg, rgba(2, 12, 37, 0.97), rgba(3, 20, 57, 0.88));
@@ -173,7 +173,8 @@
 @container game-shell (max-height: 720px) {
   .phase-rail {
     gap: 5px;
-    padding-block: 7px;
+    padding-top: 44px;
+    padding-bottom: 7px;
   }
 
   .phase-rail li {
@@ -216,7 +217,7 @@
 
 @container game-shell (max-width: 900px) {
   .phase-rail {
-    inset: 0 0 auto;
+    inset: var(--compact-toolbar-height) 0 auto 0;
     width: 100%;
     height: var(--compact-phase-height);
     grid-template-columns: 74px minmax(0, 1fr) 90px 40px;

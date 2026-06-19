@@ -171,6 +171,17 @@ function App() {
     <main className="game-shell">
       <div className="board-texture" />
 
+      <MatchToolbar
+        onReset={() => {
+          resetGame(
+            match.deckConfig,
+            `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
+          )
+        }}
+        onViewDeck={() => dialogs.openDeckList('player')}
+        onPause={dialogs.openPause}
+      />
+
       <PhaseRail
         phase={match.game.phase}
         turnNumber={match.game.turnNumber}
@@ -186,17 +197,6 @@ function App() {
           if (pending.pendingEffect || faintActive) return
           match.handleAdvancePhase()
         }}
-      />
-
-      <MatchToolbar
-        onReset={() => {
-          resetGame(
-            match.deckConfig,
-            `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
-          )
-        }}
-        onViewDeck={() => dialogs.openDeckList('player')}
-        onPause={dialogs.openPause}
       />
 
       <section className="table-area" aria-label="Braverse 對戰桌">

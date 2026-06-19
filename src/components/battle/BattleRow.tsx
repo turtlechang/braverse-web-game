@@ -513,7 +513,15 @@ export function BattleRow({
                   ? '支援'
                   : null
           const isSelected = selectedHandCardId === card.instanceId
-          const offset = index - (player.hand.length - 1) / 2
+          const count = player.hand.length
+          const center = (count - 1) / 2
+          const offset = index - center
+          const baseStep = count <= 1 ? 0 : Math.max(18, Math.min(28, 190 / count))
+          const fanX = offset * baseStep
+          const maxNorm = (count - 1) / 2 || 1
+          const normOffset = offset / maxNorm
+          const fanY = normOffset * normOffset * 30
+          const fanRotation = Math.max(-18, Math.min(18, offset * 5.2))
 
           return (
             <div
@@ -521,7 +529,9 @@ export function BattleRow({
               key={card.instanceId}
               style={{
                 '--fan-index': index,
-                '--fan-offset': offset,
+                '--fan-x': `${fanX}px`,
+                '--fan-y': `${fanY}px`,
+                '--fan-rotation': `${fanRotation}deg`,
               } as React.CSSProperties}
             >
               <CardFace

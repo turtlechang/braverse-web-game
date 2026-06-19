@@ -129,7 +129,7 @@ button {
     height: calc(
       100% - var(--compact-phase-height) - var(--compact-toolbar-height)
     );
-    margin: var(--compact-phase-height) 0 var(--compact-toolbar-height);
+    margin: calc(var(--compact-toolbar-height) + var(--compact-phase-height)) 0 0;
     grid-template-rows: minmax(0, 1fr) 22px minmax(0, 1fr);
     padding: 2px 4px;
   }
@@ -281,7 +281,7 @@ button {
     height: calc(
       100% - var(--compact-phase-height) - var(--compact-toolbar-height)
     );
-    margin: var(--compact-phase-height) 0 var(--compact-toolbar-height);
+    margin: calc(var(--compact-toolbar-height) + var(--compact-phase-height)) 0 0;
     grid-template-rows: minmax(0, 1fr) 22px minmax(0, 1fr);
     padding: 2px 4px;
   }
