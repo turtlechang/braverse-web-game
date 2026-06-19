@@ -212,6 +212,20 @@ export interface OpponentBattleToTrashEffect {
   remainingHp?: number
 }
 
+export interface ReturnToHandEffect {
+  kind: 'return-to-hand'
+  side: 'self' | 'opponent'
+  minLevel?: number
+  maxLevel?: number
+  remainingHp?: number
+  energyColor?: EnergyColor
+}
+
+export interface OpponentRandomDiscardEffect {
+  kind: 'opponent-random-discard'
+  count: number
+}
+
 export type CardEffect =
   | DamageEffect
   | ModifyAttackEffect
@@ -230,6 +244,8 @@ export type CardEffect =
   | SupportToHandEffect
   | OpponentDiscardHandEffect
   | OpponentBattleToTrashEffect
+  | ReturnToHandEffect
+  | OpponentRandomDiscardEffect
 
 export type TargetedCardEffect =
   | DamageEffect

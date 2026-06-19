@@ -8,6 +8,7 @@ import type {
   FlipAbility,
   TrapAbility,
   StageAbility,
+  ReturnToHandEffect,
 } from '../game'
 import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
@@ -163,6 +164,14 @@ const parseSimpleDraw = (stripped: string): number | null => {
   return match ? Number(match[2]) : null
 }
 
+const CONDITIONAL_DRAW_RE =
+  /^If\s+.+?,\s*you\s+can\s+draw\s+(?:up\s+to\s+)?(\d+)\s+card(?:s)?\s+from\s+your\s+deck\.?$/i
+
+const parseConditionalDraw = (stripped: string): number | null => {
+  const match = stripped.match(CONDITIONAL_DRAW_RE)
+  return match ? Number(match[1]) : null
+}
+
 const parseDeckToSupport = (stripped: string): number | null => {
   const match = stripped.match(DECK_TO_SUPPORT_RE)
   return match ? Number(match[1]) : null
@@ -228,6 +237,14 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 2 },
       },
       { kind: 'support-to-trash', amount: 1 },
+    ],
+    'ST5-019': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      { kind: 'draw', amount: 1 },
     ],
   }
   const exactEffects = exactStarterEffects[card.cardNumber]
@@ -333,6 +350,24 @@ export const convertOfficialCardEffects = (
           {
             kind: 'draw',
             amount: drawAmount,
+          },
+        ],
+      }
+    }
+
+    const conditionalDrawAmount = parseConditionalDraw(
+      stripEffectText(sourceText),
+    )
+
+    if (conditionalDrawAmount !== null) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'draw',
+            amount: conditionalDrawAmount,
           },
         ],
       }
@@ -479,6 +514,42 @@ export const convertOfficialCardEffects = (
           {
             kind: 'trash-to-battle',
             amount: Number(trashToBattleMatch[1]),
+          },
+        ],
+      }
+    }
+
+    const returnToHandMatch = sourceText.match(
+      /Return\s+(\d+)\s+(?:LV\.(\d+)\s+)?(?:([RYGBPKN])\s+)?Cookie\s+(?:from\s+your\s+battle\s+area\s+)?to\s+your\s+hand/i,
+    )
+    if (returnToHandMatch) {
+      const effect: ReturnToHandEffect = {
+        kind: 'return-to-hand',
+        side: /from\s+your\s+battle\s+area/i.test(sourceText) ? 'self' : 'opponent',
+      }
+      if (returnToHandMatch[2]) effect.minLevel = Number(returnToHandMatch[2])
+      const hpMatch = sourceText.match(/remaining HP is (\d+) or more/i)
+      if (hpMatch) effect.remainingHp = Number(hpMatch[1])
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [effect],
+      }
+    }
+
+    const randomDiscardMatch = sourceText.match(
+      /Place\s+(\d+)\s+random\s+card(?:s)?\s+from\s+your\s+opponent['']s\s+hand\s+into\s+the\s+trash/i,
+    )
+    if (randomDiscardMatch) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'opponent-random-discard' as const,
+            count: Number(randomDiscardMatch[1]),
           },
         ],
       }
@@ -659,12 +730,13 @@ export const convertOfficialStageAbility = (
   const activation = parseOfficialCardText(activationText ?? '')
   if (!placement || !activation) return undefined
 
-  // 複合效果（含 Then）仍需硬編碼
+  // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
     'ST3-022': [
       { kind: 'support-to-hand', amount: 1 },
       { kind: 'draw', amount: 1 },
     ],
+    'ST5-022': [{ kind: 'draw', amount: 1 }],
   }
   const stageEffects = exactStageEffects[card.cardNumber]
   if (stageEffects) {

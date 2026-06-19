@@ -110,14 +110,16 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash'
+      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'return-to-hand' | 'opponent-random-discard'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
   effect.kind === 'gain-hp' ||
   effect.kind === 'modify-all-attack' ||
   effect.kind === 'opponent-discard-hand' ||
-  effect.kind === 'opponent-battle-to-trash'
+  effect.kind === 'opponent-battle-to-trash' ||
+  effect.kind === 'return-to-hand' ||
+  effect.kind === 'opponent-random-discard'
 
 export const isEffectTargeted = (
   effect: CardEffect,
@@ -734,6 +736,35 @@ export const executeCardEffect = (
   if (effect.kind === 'opponent-battle-to-trash') {
     // TODO: implement opponent battle-to-trash pending flow
     return { ...state }
+  }
+
+  if (effect.kind === 'return-to-hand') {
+    // TODO: implement return-to-hand pending flow
+    return { ...state }
+  }
+
+  if (effect.kind === 'opponent-random-discard') {
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    const targetHand = state.players[targetPlayerId].hand
+    if (targetHand.length === 0) return { ...state }
+    const discardCount = Math.min(effect.count, targetHand.length)
+    const shuffled = [...targetHand].sort(() => Math.random() - 0.5)
+    const discarded = shuffled.slice(0, discardCount)
+    const remaining = shuffled.slice(discardCount)
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        [targetPlayerId]: {
+          ...state.players[targetPlayerId],
+          hand: remaining,
+          discardPile: [
+            ...state.players[targetPlayerId].discardPile,
+            ...discarded,
+          ],
+        },
+      },
+    }
   }
 
   const targets = selectEffectTargets(

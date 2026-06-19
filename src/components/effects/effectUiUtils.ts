@@ -68,6 +68,19 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 1 張對手${cond}餅乾，送入棄牌區。`
   }
 
+  if (effect.kind === 'return-to-hand') {
+    const side = effect.side === 'self' ? '己方' : '對手'
+    const conds: string[] = []
+    if (effect.minLevel) conds.push(`LV.${effect.minLevel}`)
+    if (effect.remainingHp) conds.push(`剩餘 HP ${effect.remainingHp} 以上`)
+    const cond = conds.length > 0 ? `（${conds.join('、')}）` : ''
+    return `選擇 1 張${side}${cond}餅乾，返回手牌。`
+  }
+
+  if (effect.kind === 'opponent-random-discard') {
+    return `隨機棄置對手 ${effect.count} 張手牌。`
+  }
+
   const target =
     effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
   const count =
@@ -152,6 +165,15 @@ export const describeEffectResult = (
   if (effect.kind === 'opponent-battle-to-trash') {
     if (targetNames.length === 0) return '未選擇送入棄牌區的目標。'
     return `${targetNames.join('、')}已從戰鬥區送入棄牌區。`
+  }
+
+  if (effect.kind === 'return-to-hand') {
+    if (targetNames.length === 0) return '未選擇返回手牌的目標。'
+    return `${targetNames.join('、')}已返回手牌。`
+  }
+
+  if (effect.kind === 'opponent-random-discard') {
+    return `對手已隨機棄置 ${effect.count} 張手牌。`
   }
 
   if (targetNames.length === 0) {
