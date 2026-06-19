@@ -1,0 +1,899 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-06-19T13:05:39.905Z",
+    "totalAvailable": 2026,
+    "matchedAvailable": 22,
+    "importedCount": 22,
+    "filter": {
+      "categoryTitle": "Starter Deck PURPLE"
+    },
+    "imagesDownloaded": false
+  },
+  "cards": [
+    {
+      "sourceId": 45356,
+      "locale": "en",
+      "cardNumber": "ST5-001",
+      "baseCardNumber": "ST5-001",
+      "variant": null,
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place 1 of your opponent's LV.1 Cookies from their battle area or 1 stage card from their stage area into the trash."
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Yq1SXHlVbmlxQxF0o4-jJQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45357,
+      "locale": "en",
+      "cardNumber": "ST5-002",
+      "baseCardNumber": "ST5-002",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uq3Qg2vm2Imgc4Klx55MBg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45358,
+      "locale": "en",
+      "cardNumber": "ST5-003",
+      "baseCardNumber": "ST5-003",
+      "variant": null,
+      "name": "Fig Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 Deals 1 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5fwHByoJTp4JK12GZuiTrA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45360,
+      "locale": "en",
+      "cardNumber": "ST5-004",
+      "baseCardNumber": "ST5-004",
+      "variant": null,
+      "name": "Skater Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints, your opponent must place 1 card from their hand into the trash."
+      },
+      "attackText": "《{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kTnnMKvASOANhNnCxpUs-A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45361,
+      "locale": "en",
+      "cardNumber": "ST5-005",
+      "baseCardNumber": "ST5-005",
+      "variant": null,
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/rhhWWRDZxD0SBz6OzUJtbQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45362,
+      "locale": "en",
+      "cardNumber": "ST5-006",
+      "baseCardNumber": "ST5-006",
+      "variant": null,
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}{P}》 Place 1 of your opponent's LV.2 or lower Cookies from their battle area or 1 stage card from their stage area into the trash."
+      },
+      "attackText": "《{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/PY8ScMslslOMptQsKBe_Fw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45363,
+      "locale": "en",
+      "cardNumber": "ST5-007",
+      "baseCardNumber": "ST5-007",
+      "variant": null,
+      "name": "Yoga Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《{P}》 《Discard 1 card.》 \r\nPlace 1 of your opponent's LV.1 Cookies from their battle area or 1 stage card from their stage area into the trash."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ROGt-dUB9hfNeBRsl-EXYQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45364,
+      "locale": "en",
+      "cardNumber": "ST5-008",
+      "baseCardNumber": "ST5-008",
+      "variant": null,
+      "name": "Fairy Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 Deals 1 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6x_Xlrgg1OzkLIrqEbJ0XA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45366,
+      "locale": "en",
+      "cardNumber": "ST5-009",
+      "baseCardNumber": "ST5-009",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/s1CEuXDqBdDAfXRSZYXsow.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45367,
+      "locale": "en",
+      "cardNumber": "ST5-010",
+      "baseCardNumber": "ST5-010",
+      "variant": null,
+      "name": "Carol Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place 1 of your opponent's Cookies whose remaining HP is 2 or less into the trash."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/PnY4JB8sX5AT8BMNOPGiiw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45368,
+      "locale": "en",
+      "cardNumber": "ST5-011",
+      "baseCardNumber": "ST5-011",
+      "variant": null,
+      "name": "Tiger Lily Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GJZUfoiAWT0cNlxyxycjHw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45369,
+      "locale": "en",
+      "cardNumber": "ST5-012",
+      "baseCardNumber": "ST5-012",
+      "variant": null,
+      "name": "Clover Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}》 Deals 2 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VqZFNmB8L8vEzqoA8Av4MA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45371,
+      "locale": "en",
+      "cardNumber": "ST5-013",
+      "baseCardNumber": "ST5-013",
+      "variant": null,
+      "name": "Pilot Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《{P}》 《Place 1 {P} LV.1 Cookie from your battle area into the trash.》 During this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/QDtYVqMFzZJT_roGqNNPVQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45372,
+      "locale": "en",
+      "cardNumber": "ST5-014",
+      "baseCardNumber": "ST5-014",
+      "variant": null,
+      "name": "Pancake Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-iYWl3mcZWPg7B1Z0-GGYw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45373,
+      "locale": "en",
+      "cardNumber": "ST5-015",
+      "baseCardNumber": "ST5-015",
+      "variant": null,
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}{P}》 Place 1 of your opponent's Cookies from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7zskF3IjclERUyqOFsB97w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45374,
+      "locale": "en",
+      "cardNumber": "ST5-016",
+      "baseCardNumber": "ST5-016",
+      "variant": null,
+      "name": "BONUS Coin",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 If your opponent has 30 cards or more in their trash, you can draw up to 2 cards from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/3LUNtrHQ285t104y6A6tPg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45375,
+      "locale": "en",
+      "cardNumber": "ST5-017",
+      "baseCardNumber": "ST5-017",
+      "variant": null,
+      "name": "Violet Dragonspout",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}》 Place 1 random card from your opponent's hand into the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wJL3ep1lF-GLgyOFfEYjdg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45376,
+      "locale": "en",
+      "cardNumber": "ST5-018",
+      "baseCardNumber": "ST5-018",
+      "variant": null,
+      "name": "Dragonfly Candy Brooch",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}{P}》 Place 1 of your opponent's Cookies whose remaining HP is 4 or less into the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wCrHc3jm0_AgGc2Xbyq7DQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45377,
+      "locale": "en",
+      "cardNumber": "ST5-019",
+      "baseCardNumber": "ST5-019",
+      "variant": null,
+      "name": "Pastry Boomerang",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}》 If your opponent has 20 cards or more in their trash, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage. Then, you can draw 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mepoVoR1JKQzGn1gDpWQDw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45378,
+      "locale": "en",
+      "cardNumber": "ST5-020",
+      "baseCardNumber": "ST5-020",
+      "variant": null,
+      "name": "Forbidden Grimoire",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 《Place 1 {P} LV.1 Cookie from your battle area into the trash.》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ZOJG4HBcQITsZOy7bWbe6g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45379,
+      "locale": "en",
+      "cardNumber": "ST5-021",
+      "baseCardNumber": "ST5-021",
+      "variant": null,
+      "name": "Hidden Warpgate",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}》 Place 1 of your opponent's Cookies whose remaining HP is 2 or less into the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0yRHHyLJWxhBwKhgPsxafw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45380,
+      "locale": "en",
+      "cardNumber": "ST5-022",
+      "baseCardNumber": "ST5-022",
+      "variant": null,
+      "name": "Windswept Valley",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}》 Place in your stage area.\r\nWhen your opponent places a Cookie from their battle area into the trash by effect, 《rest this card.》 You can draw 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 213,
+        "title": "Starter Deck PURPLE",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/HOnEvlEd1Vv-HcXXh8RgMQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

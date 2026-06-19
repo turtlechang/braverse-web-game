@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
+  createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
+  createOfficialPurpleStarterDeck,
   createOfficialRedStarterDeck,
   createOfficialYellowStarterDeck,
+  OFFICIAL_BLUE_STARTER_DECK,
   OFFICIAL_GREEN_STARTER_DECK,
+  OFFICIAL_PURPLE_STARTER_DECK,
   OFFICIAL_RED_STARTER_DECK,
   OFFICIAL_YELLOW_STARTER_DECK,
   type StarterDeckEntry,
@@ -271,6 +275,172 @@ describe('official green starter deck', () => {
   })
 })
 
+describe('official blue starter deck', () => {
+  it('contains 22 card numbers and exactly 60 cards', () => {
+    expectStarterDeckRecipe(OFFICIAL_BLUE_STARTER_DECK, 22)
+  })
+
+  it('creates the official quantity for every card number', () => {
+    expectCreatedDeckMatchesRecipe(
+      createOfficialBlueStarterDeck('player-two'),
+      OFFICIAL_BLUE_STARTER_DECK,
+    )
+  })
+
+  it('creates blue cards from the official Starter Deck BLUE sample', () => {
+    const deck = createOfficialBlueStarterDeck('player-one')
+    const candyDiver = deck.find((card) => card.id === 'ST4-001')
+    const skatingQueen = deck.find((card) => card.id === 'ST4-014')
+    const sugarGlassDome = deck.find((card) => card.id === 'ST4-022')
+    const octoInk = deck.find((card) => card.id === 'ST4-020')
+    const fallenIce = deck.find((card) => card.id === 'ST4-021')
+
+    expect(candyDiver).toMatchObject({
+      name: 'Candy Diver Cookie',
+      type: 'cookie',
+      energyColor: 'wild',
+      attackEnergyCost: { neutral: 1 },
+    })
+    expect(skatingQueen).toMatchObject({
+      name: 'Skating Queen Cookie',
+      type: 'cookie',
+      flip: {
+        text: 'Draw up to 1 card from your deck.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    })
+    expect(sugarGlassDome).toMatchObject({
+      name: 'Sugar Glass Dome',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { blue: 2 },
+        cost: { blue: 1 },
+        effects: [{ kind: 'draw', amount: 1 }],
+        restSource: true,
+      },
+    })
+    expect(octoInk).toMatchObject({
+      name: 'Octo-Ink Spray',
+      type: 'trap',
+      trap: {
+        cost: { energy: { blue: 1 }, discardHand: 2 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -3,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    })
+    expect(fallenIce).toMatchObject({
+      name: 'Fallen Ice Statue',
+      type: 'trap',
+      trap: {
+        cost: { energy: { blue: 2 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'draw', amount: 1 },
+        ],
+      },
+    })
+  })
+
+  it('creates a demo game using the blue deck', () => {
+    const state = createDemoGame(undefined, 'blue')
+
+    for (const player of Object.values(state.players)) {
+      const cards = [
+        ...player.deck,
+        ...player.hand,
+        ...player.battleArea.map((cookie) => cookie.card),
+        ...player.battleArea.flatMap((cookie) => cookie.hpCards),
+      ]
+      expect(cards).toHaveLength(60)
+      expect(cards.filter((card) => card.id === 'ST4-001')).toHaveLength(4)
+      expect(cards.filter((card) => card.id === 'ST4-022')).toHaveLength(2)
+    }
+  })
+})
+
+describe('official purple starter deck', () => {
+  it('contains 22 card numbers and exactly 60 cards', () => {
+    expectStarterDeckRecipe(OFFICIAL_PURPLE_STARTER_DECK, 22)
+  })
+
+  it('creates the official quantity for every card number', () => {
+    expectCreatedDeckMatchesRecipe(
+      createOfficialPurpleStarterDeck('player-two'),
+      OFFICIAL_PURPLE_STARTER_DECK,
+    )
+  })
+
+  it('creates purple cards from the official Starter Deck PURPLE sample', () => {
+    const deck = createOfficialPurpleStarterDeck('player-one')
+    const gingerBright = deck.find((card) => card.id === 'ST5-002')
+    const skater = deck.find((card) => card.id === 'ST5-004')
+    const fig = deck.find((card) => card.id === 'ST5-003')
+    const fairy = deck.find((card) => card.id === 'ST5-008')
+    const windsweptValley = deck.find((card) => card.id === 'ST5-022')
+
+    expect(gingerBright).toMatchObject({
+      name: 'GingerBright',
+      type: 'cookie',
+      energyColor: 'wild',
+    })
+    expect(skater).toMatchObject({
+      name: 'Skater Cookie',
+      type: 'cookie',
+      skill: {
+        trigger: 'passive',
+        faint: true,
+        effects: [{ kind: 'opponent-discard-hand', count: 1 }],
+      },
+    })
+    expect(fig).toMatchObject({
+      name: 'Fig Cookie',
+      type: 'cookie',
+      flip: {
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    })
+    expect(fairy).toMatchObject({
+      name: 'Fairy Cookie',
+      type: 'cookie',
+      flip: {
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{ kind: 'gain-hp', amount: 1 }],
+      },
+    })
+    expect(windsweptValley).toMatchObject({
+      name: 'Windswept Valley',
+      type: 'stage',
+    })
+  })
+
+  it('creates a demo game using the purple deck', () => {
+    const state = createDemoGame(undefined, 'purple')
+
+    for (const player of Object.values(state.players)) {
+      const cards = [
+        ...player.deck,
+        ...player.hand,
+        ...player.battleArea.map((cookie) => cookie.card),
+        ...player.battleArea.flatMap((cookie) => cookie.hpCards),
+      ]
+      expect(cards).toHaveLength(60)
+      expect(cards.filter((card) => card.id === 'ST5-002')).toHaveLength(4)
+      expect(cards.filter((card) => card.id === 'ST5-022')).toHaveLength(2)
+    }
+  })
+})
+
 describe('different decks for player and AI', () => {
   it('supports separate deck choices for each side', () => {
     const state = createDemoGame(undefined, {
@@ -319,6 +489,8 @@ describe('official FLIP and TRAP abilities', () => {
       createOfficialRedStarterDeck,
       createOfficialYellowStarterDeck,
       createOfficialGreenStarterDeck,
+      createOfficialBlueStarterDeck,
+      createOfficialPurpleStarterDeck,
     ]) {
       const flipCards = createDeck('player-one').filter(
         (card) => card.officialType === 'flip',
@@ -332,20 +504,25 @@ describe('official FLIP and TRAP abilities', () => {
     }
   })
 
-  it('drives every starter-deck TRAP from attackText', () => {
+  it('drives every converted starter-deck TRAP from attackText', () => {
     for (const createDeck of [
       createOfficialRedStarterDeck,
       createOfficialYellowStarterDeck,
       createOfficialGreenStarterDeck,
+      createOfficialBlueStarterDeck,
     ]) {
-      const trapCards = createDeck('player-two').filter(
-        (card) => card.type === 'trap',
+      const convertedTraps = createDeck('player-two').filter(
+        (card) => card.type === 'trap' && card.trap,
       )
 
-      expect(trapCards.length).toBeGreaterThan(0)
-      expect(trapCards.every((card) => Boolean(card.trap?.text))).toBe(true)
+      expect(convertedTraps.length).toBeGreaterThan(0)
+      expect(convertedTraps.every((card) => Boolean(card.trap?.text))).toBe(
+        true,
+      )
       expect(
-        trapCards.every((card) => (card.trap?.effects.length ?? 0) > 0),
+        convertedTraps.every(
+          (card) => (card.trap?.effects.length ?? 0) > 0,
+        ),
       ).toBe(true)
     }
   })
@@ -353,9 +530,11 @@ describe('official FLIP and TRAP abilities', () => {
   it('parses FLIP costs and compound TRAP effects without card-number rules', () => {
     const red = createOfficialRedStarterDeck('player-one')
     const green = createOfficialGreenStarterDeck('player-one')
+    const blue = createOfficialBlueStarterDeck('player-one')
     const gainHpFlip = red.find((card) => card.id === 'ST1-001')
     const drawFlip = red.find((card) => card.id === 'ST1-013')
     const compoundTrap = green.find((card) => card.id === 'ST3-019')
+    const blueCompoundTrap = blue.find((card) => card.id === 'ST4-021')
 
     expect(gainHpFlip?.flip).toMatchObject({
       cost: { energy: {}, discardHand: 1 },
@@ -370,6 +549,13 @@ describe('official FLIP and TRAP abilities', () => {
       effects: [
         { kind: 'modify-attack', amount: -3 },
         { kind: 'support-to-trash', amount: 1 },
+      ],
+    })
+    expect(blueCompoundTrap?.trap).toMatchObject({
+      cost: { energy: { blue: 2 }, discardHand: 0 },
+      effects: [
+        { kind: 'modify-attack', amount: -2 },
+        { kind: 'draw', amount: 1 },
       ],
     })
   })

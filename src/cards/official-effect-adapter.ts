@@ -125,7 +125,7 @@ const isUnsupportedBracketCost = (text: string): boolean => {
 
 const COST_OR_MARKER_RE = /\{[A-Za-z0-9_]+\}/g
 const BRACKET_COST_RE = /(?:<|《)[^>》]*(?:>|》)/g
-const DRAW_ONLY_RE = /^Draw\s+(up to\s+)?(\d+)\s+card(?:s)?\s+from\s+your\s+deck\.?$/i
+const DRAW_ONLY_RE = /^(?:You can\s+)?Draw\s+(up to\s+)?(\d+)\s+card(?:s)?\s+from\s+your\s+deck\.?$/i
 const DECK_TO_SUPPORT_RE = /^Take\s+(\d+)\s+card(?:s)?\s+from\s+the\s+top\s+your\s+deck\s+and\s+place\s+(?:it|them)\s+in\s+your\s+support\s+area\s+as\s+active\.?$/i
 const BREAK_TO_TRASH_RE = /^(?:If\s+your\s+break\s+area\s+is\s+LV\.(\d+)\s+or\s+higher,\s+)?Select\s+up\s+to\s+(\d+)\s+LV\.(\d+)\s+card\s+from\s+your\s+break\s+area\s+and\s+place\s+it\s+in\s+the\s+trash\.?$/i
 
@@ -774,6 +774,12 @@ export const convertOfficialTrapAbility = (
   const deckToRestedSupport = text.match(
     /take the top card from your deck and place it in your support area as rested/i,
   )
+  const afterThen = text.split(/then/i).pop() ?? ''
+  const strippedAfterThen = stripEffectText(afterThen).replace(
+    /^[^A-Za-z]+/,
+    '',
+  )
+  const trapDrawAmount = parseSimpleDraw(strippedAfterThen)
 
   if (attackDecrease && target) {
     effects.push({
@@ -803,6 +809,13 @@ export const convertOfficialTrapAbility = (
     effects.push({
       kind: 'support-to-trash',
       amount: Number(supportToTrash[1]),
+    })
+  }
+
+  if (trapDrawAmount !== null) {
+    effects.push({
+      kind: 'draw',
+      amount: trapDrawAmount,
     })
   }
 

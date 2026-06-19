@@ -8,7 +8,7 @@
 
 目前以《綜合規則》Ver.1.2、《CRB 遊戲指南》240812 更新版、《CRB 說明書 P1》及《裁判指南》作為規則文件基線；專案裁定與仍待新版官方資料覆核的項目記錄於 `docs/rule-clarifications.md`。
 
-官方範例卡目前優先使用 `category_title` / `card_product_title` 為 `Starter Deck GREEN` 的綠色起始牌組資料；原有 `Starter Deck RED` 與 `Starter Deck YELLOW` 資料保留為紅色、黃色起始牌組。三套資料都可建立 60 張牌組，並以官方 JSON 的卡號、名稱、類型、攻擊文字、效果文字與圖片 URL 轉成 runtime `GameCard`。
+官方範例卡已匯入 `category_title` / `card_product_title` 為 `Starter Deck RED`、`Starter Deck YELLOW`、`Starter Deck GREEN`、`Starter Deck BLUE` 與 `Starter Deck PURPLE` 的五套起始牌組資料。五套資料都可建立 60 張牌組，並以官方 JSON 的卡號、名稱、類型、攻擊文字、效果文字與圖片 URL 轉成 runtime `GameCard`。
 
 專案開發流程已整理為 `.agents/skills/develop-braverse` Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟。
 
@@ -19,13 +19,17 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已建立紅色起始牌組：22 種卡號，合計 60 張。
 - 已建立黃色起始牌組：20 種卡號，合計 60 張；官方清單未包含 `ST2-017`。
 - 已建立綠色起始牌組：22 種卡號，合計 60 張。
+- 已建立藍色起始牌組：22 種卡號，合計 60 張。
+- 已建立紫色起始牌組：22 種卡號，合計 60 張。
 - 已加入黃色起始牌組官方樣本檔：`data/cards/official-starter-deck-yellow.en.json`。
 - 已加入綠色起始牌組官方樣本檔：`data/cards/official-starter-deck-green.en.json`。
-- 已新增明確 API：`createOfficialRedStarterDeck`、`createOfficialYellowStarterDeck`、`createOfficialGreenStarterDeck`、`OFFICIAL_RED_STARTER_DECK`、`OFFICIAL_YELLOW_STARTER_DECK`、`OFFICIAL_GREEN_STARTER_DECK`。
+- 已加入藍色起始牌組官方樣本檔：`data/cards/official-starter-deck-blue.en.json`。
+- 已加入紫色起始牌組官方樣本檔：`data/cards/official-starter-deck-purple.en.json`。
+- 已新增明確 API：`createOfficialRedStarterDeck`、`createOfficialYellowStarterDeck`、`createOfficialGreenStarterDeck`、`createOfficialBlueStarterDeck`、`createOfficialPurpleStarterDeck`、`OFFICIAL_RED_STARTER_DECK`、`OFFICIAL_YELLOW_STARTER_DECK`、`OFFICIAL_GREEN_STARTER_DECK`、`OFFICIAL_BLUE_STARTER_DECK`、`OFFICIAL_PURPLE_STARTER_DECK`。
 - `createOfficialStarterDeck` 與 `OFFICIAL_STARTER_DECK_RED` 仍保留為紅色起始牌組相容別名。
 - `ST3-010 Aloe Cookie` 的 deck-to-support 效果已完整支援：從牌庫頂取牌直立放入支援區、牌庫歸零觸發 Refresh；無候選時由正在 Refresh 的玩家敗北，對手獲勝。
 - FLIP 與 TRAP 以官方欄位驅動：`card_type=FLIP` 解析 `card_flip`，`card_type=TRAP` 解析 `card_attack_text`，不依卡號硬編碼。
-- 紅、黃、綠起始牌組的 FLIP 已支援棄手牌增加 HP、抽牌與逐張傷害暫停；TRAP 已支援攻擊回應、能量支付、攻擊降低、條件傷害、HP 下限、支援棄置及牌庫頂放入休息支援。
+- 紅、黃、綠、藍、紫五套起始牌組的 FLIP 已支援棄手牌增加 HP、抽牌與逐張傷害暫停；TRAP 已支援攻擊回應、能量支付、攻擊降低、條件傷害、HP 下限、支援棄置、牌庫頂放入休息支援及複合抽牌（ST4-021）。
 - 餅乾因暈倒或效果離開戰鬥區後，會依各玩家離場張數逐張詢問是否補位；玩家可選擇補餅乾或略過，雙方同批離場時由回合玩家先完成，再由非回合玩家執行，並在每張實際補位間依序處理 Refresh 與 OnPlay。
 - 新對局會隨機洗牌，並依序進行玩家選牌組、AI 隨機選牌組、猜拳、先後攻、自由／強制調度、補償抽牌與起始餅乾配置。
 - 桌面 UI 已完成減法改版：左側為窄型五階段列，右上只保留重置、牌組與暫停資訊；雙方場地固定為戰鬥區 55%、支援區 45%，戰鬥卡向中央分隔列靠攏，我方支援卡由左向右、對手由右向左排列並維持可辨識尺寸；對手名稱與先後攻資訊位於戰鬥區左下角。牌庫／場景／休息區改為數字牌堆與鄰近浮層，棄牌與完整牌組維持大型視窗。手牌選取後才抬升並顯示單一合法動作，可用空白處或 `Escape` 取消；攻擊、付款與目標選擇提示集中在中央分隔列。低於 900px 的頂部階段列、中央牌桌、底部工具列維持既有模式，最低支援 600x338。
@@ -35,9 +39,9 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 目前模型路由：依任務分五級——微任務（Flash/MiMo/M3/Pro）、中型實作（Qwen Plus/M2.7/Pro/MiMo Pro）、複雜跨模組（Pro/MiMo Pro/GLM-5.1/Qwen Max）、大型 PR 審查（Kimi Code/Pro/GLM-5.1/Qwen Max）、UI 視覺分析（MiMo/Qwen Plus/K2.6/MiMo Pro）；Qwen3.6 Plus 與 GLM-5 僅備援、MiniMax M3 標 3x usage；含省 token 策略（小任務、不重複派工、reasoning low/medium、快取提示）；另提供沙箱網路阻擋繞過方案（`opencode-go-sandbox.md` 標準流程、`scripts/opencode-go-direct-review.mjs` Node.js 直接 API 呼叫）。
 - 已加入 `develop-braverse` 專案 Skill，提供漸進式載入的開發流程、架構規則、驗證與 Git、opencode-go 派工參考。
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
-- 玩家於開局選擇紅色、黃色或綠色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
+- 玩家於開局選擇紅色、黃色、綠色、藍色或紫色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 與 1920×1080 亦未越界且無捲軸、無 console error。
-- 目前共有 381 項單元測試，涵蓋官方範例卡轉換、三色起始牌組、開局隨機牌組、FLIP／TRAP 官方文字轉換、ST3-002／ST3-005／ST3-015 支援卡送棄牌區技能代價、ST2-003 Wizard Cookie 傷害後的 break-to-trash 攻擊效果、官方標記、卡片詳情與結果提示排版、桌面 HUD 減法配置、手牌選取動作、付款不足時隱藏非法動作與資源浮層、FLIP 手牌分頁、逐張 HP、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、陷阱傷害續行與延後條件、跨回合 OnPlay 登場窗口、調度、種子洗牌、AI（含 faint 效果選擇）、Refresh、能量付款、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、場景完整合法性、When this Cookie faints、ST2-021 Pretzel Snare、ST2-001 Roguefort Cookie opponent-discard-hand、gain-hp 明確目標與 FLIP、typed GameCommand/PendingDecision pilot、統一 blocking pending guard、ST3-004 Vampire Cookie 複合 OnPlay 效果（damage + gain-hp）、ST3-017 Viney Vines support-to-trash 效果目標選取、AI 昏厥與補位優先順序，以及 getActingPlayerId pending controller selector；支援區左界手牌扇形響應式安全內距回歸；PhaseRail 下一步按鈕 grid row 回歸；對手手牌以上方中央為共同支點向下扇形展開（-25/-15/-5/5/15/25 度；右側層級較高；牌背 180 度；不越過支援區左界）。
+- 目前共有 391 項單元測試，涵蓋官方範例卡轉換、五色起始牌組（RED／YELLOW／GREEN／BLUE／PURPLE）、開局隨機牌組、FLIP／TRAP 官方文字轉換、ST3-002／ST3-005／ST3-015 支援卡送棄牌區技能代價、ST2-003 Wizard Cookie 傷害後的 break-to-trash 攻擊效果、官方標記、卡片詳情與結果提示排版、桌面 HUD 減法配置、手牌選取動作、付款不足時隱藏非法動作與資源浮層、FLIP 手牌分頁、逐張 HP、雙方依回合順序逐張選擇補位或略過、補位 OnPlay／Refresh、陷阱傷害續行與延後條件、跨回合 OnPlay 登場窗口、調度、種子洗牌、AI（含 faint 效果選擇）、Refresh、能量付款、物品/場景效果（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）、場景完整合法性、When this Cookie faints、ST2-021 Pretzel Snare、ST2-001 Roguefort Cookie opponent-discard-hand、gain-hp 明確目標與 FLIP、typed GameCommand/PendingDecision pilot、統一 blocking pending guard、ST3-004 Vampire Cookie 複合 OnPlay 效果（damage + gain-hp）、ST3-017 Viney Vines support-to-trash 效果目標選取、AI 昏厥與補位優先順序、Starter Deck BLUE／PURPLE 官方範例牌組匯入與張數驗證、ST4-021 複合陷阱（攻擊減傷 + 抽牌）解析，以及 getActingPlayerId pending controller selector；支援區左界手牌扇形響應式安全內距回歸；PhaseRail 下一步按鈕 grid row 回歸；對手手牌以上方中央為共同支點向下扇形展開（-25/-15/-5/5/15/25 度；右側層級較高；牌背 180 度；不越過支援區左界）。
 - App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；新增 src/game/commands.ts 的 typed GameCommand/PendingDecision pilot，涵蓋 faint-effect 與 opponent-hand-discard，UI 與 AI 已接入。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十四種桌機與窄視窗解析度（含 1920x1080、1907x868、1536x864、1538x578、798x698，最低至 600x338）維持 16:9、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區、左右資源區與手牌未超出畫布且互不遮蔽。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
@@ -53,7 +57,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已達成：最大化桌面版桌墊聚焦改版，移除固定右側 HUD，採窄型階段列、55/45 場地、資源牌堆浮層、中央操作指引與選取後才顯示的手牌合法動作；窄版同步維持 55/45 比例並調整卡牌排列。
 - 已達成：ST3-002／ST3-005／ST3-015 可從我方支援區直接選擇卡牌作為送入棄牌區的技能代價；同一張支援卡不可同時支付能量與特殊代價。
 - 已達成：ST2-003 Wizard Cookie 在攻擊傷害完成後、替補開始前，可選最多 1 張己方 LV.1 休息區卡牌移至棄牌區；玩家與 AI 均可完成結算。
-- 導入 category_title 等於 Starter Deck BLUE 與 Starter Deck PURPLE 的官方範例牌組並補測試。
+- 已達成：導入 `category_title` 為 `Starter Deck BLUE` 與 `Starter Deck PURPLE` 的官方範例牌組，補齊 22 種卡號×60 張牌組食譜，並新增對應官方樣本檔、建立函式與張數驗證測試。
 - 拖移卡牌暫不實作；未來若加入，拖放只負責輸入，仍須呼叫既有規則 API，且在 pending decision、確認式大卡與 AI 行動期間停用，並保留按鈕與鍵盤操作。
 - 待官方規則確認後才擴充 `CardEffect`；不得將待確認規則寫成已完成項目。
 - 持續補齊起始牌組以外的複合效果與完整事件優先權。
@@ -94,6 +98,8 @@ npm run cards:import:sample
 npm run cards:import:red-sample
 npm run cards:import:yellow-sample
 npm run cards:import:green-sample
+npm run cards:import:blue-sample
+npm run cards:import:purple-sample
 ```
 
-`cards:import:sample` 目前預設匯入綠色起始牌組；紅色、黃色與綠色也可使用明確腳本重新產生。
+`cards:import:sample` 目前預設匯入綠色起始牌組；紅色、黃色、綠色、藍色與紫色也可使用明確腳本重新產生。

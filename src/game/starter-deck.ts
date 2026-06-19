@@ -1,6 +1,8 @@
 import officialRedSample from '../../data/cards/official-sample.en.json'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
+import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.json'
+import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
@@ -13,7 +15,7 @@ import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { CardEffect, GameCard, PlayerId } from './types'
 
-export type DeckChoice = 'red' | 'yellow' | 'green'
+export type DeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
 
 export interface StarterDeckEntry {
   cardNumber: string
@@ -94,12 +96,64 @@ export const OFFICIAL_GREEN_STARTER_DECK: StarterDeckEntry[] = [
   { cardNumber: 'ST3-022', name: "Guardian Tree's Blessing", count: 2 },
 ]
 
+export const OFFICIAL_BLUE_STARTER_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'ST4-001', name: 'Candy Diver Cookie', count: 4 },
+  { cardNumber: 'ST4-002', name: 'Snow Sugar Cookie', count: 4 },
+  { cardNumber: 'ST4-003', name: 'Dr. Wasabi Cookie', count: 4 },
+  { cardNumber: 'ST4-004', name: 'Lobster Cookie', count: 2 },
+  { cardNumber: 'ST4-005', name: 'GingerBright', count: 4 },
+  { cardNumber: 'ST4-006', name: 'Peppermint Cookie', count: 4 },
+  { cardNumber: 'ST4-007', name: 'Sour Belt Cookie', count: 2 },
+  { cardNumber: 'ST4-008', name: 'Soda Cookie', count: 2 },
+  { cardNumber: 'ST4-009', name: 'Ice Candy Cookie', count: 4 },
+  { cardNumber: 'ST4-010', name: 'Squid Ink Cookie', count: 2 },
+  { cardNumber: 'ST4-011', name: 'GingerBrave', count: 4 },
+  { cardNumber: 'ST4-012', name: 'Werewolf Cookie', count: 2 },
+  { cardNumber: 'ST4-013', name: 'Captain Caviar Cookie', count: 2 },
+  { cardNumber: 'ST4-014', name: 'Skating Queen Cookie', count: 4 },
+  { cardNumber: 'ST4-015', name: 'Pirate Cookie', count: 2 },
+  { cardNumber: 'ST4-016', name: 'Bear Jelly Ice Cream', count: 2 },
+  { cardNumber: 'ST4-017', name: 'Emergency Lifebuoy', count: 2 },
+  { cardNumber: 'ST4-018', name: 'Lucky Pearls', count: 2 },
+  { cardNumber: 'ST4-019', name: 'Sugar Crystal Lamp', count: 2 },
+  { cardNumber: 'ST4-020', name: 'Octo-Ink Spray', count: 2 },
+  { cardNumber: 'ST4-021', name: 'Fallen Ice Statue', count: 2 },
+  { cardNumber: 'ST4-022', name: 'Sugar Glass Dome', count: 2 },
+]
+
+export const OFFICIAL_PURPLE_STARTER_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'ST5-001', name: 'Madeleine Cookie', count: 2 },
+  { cardNumber: 'ST5-002', name: 'GingerBright', count: 4 },
+  { cardNumber: 'ST5-003', name: 'Fig Cookie', count: 4 },
+  { cardNumber: 'ST5-004', name: 'Skater Cookie', count: 2 },
+  { cardNumber: 'ST5-005', name: 'Cream Puff Cookie', count: 4 },
+  { cardNumber: 'ST5-006', name: 'String Gummy Cookie', count: 2 },
+  { cardNumber: 'ST5-007', name: 'Yoga Cookie', count: 2 },
+  { cardNumber: 'ST5-008', name: 'Fairy Cookie', count: 4 },
+  { cardNumber: 'ST5-009', name: 'GingerBrave', count: 4 },
+  { cardNumber: 'ST5-010', name: 'Carol Cookie', count: 2 },
+  { cardNumber: 'ST5-011', name: 'Tiger Lily Cookie', count: 4 },
+  { cardNumber: 'ST5-012', name: 'Clover Cookie', count: 4 },
+  { cardNumber: 'ST5-013', name: 'Pilot Cookie', count: 2 },
+  { cardNumber: 'ST5-014', name: 'Pancake Cookie', count: 4 },
+  { cardNumber: 'ST5-015', name: 'Rye Cookie', count: 2 },
+  { cardNumber: 'ST5-016', name: 'BONUS Coin', count: 2 },
+  { cardNumber: 'ST5-017', name: 'Violet Dragonspout', count: 2 },
+  { cardNumber: 'ST5-018', name: 'Dragonfly Candy Brooch', count: 2 },
+  { cardNumber: 'ST5-019', name: 'Pastry Boomerang', count: 2 },
+  { cardNumber: 'ST5-020', name: 'Forbidden Grimoire', count: 2 },
+  { cardNumber: 'ST5-021', name: 'Hidden Warpgate', count: 2 },
+  { cardNumber: 'ST5-022', name: 'Windswept Valley', count: 2 },
+]
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<DeckChoice, StarterDeckEntry[]> = {
   red: OFFICIAL_RED_STARTER_DECK,
   yellow: OFFICIAL_YELLOW_STARTER_DECK,
   green: OFFICIAL_GREEN_STARTER_DECK,
+  blue: OFFICIAL_BLUE_STARTER_DECK,
+  purple: OFFICIAL_PURPLE_STARTER_DECK,
 }
 
 const getEnergyColor = (
@@ -253,6 +307,24 @@ export const createOfficialGreenStarterDeck = (
     officialGreenSample.cards as OfficialCardRecord[],
   )
 
+export const createOfficialBlueStarterDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    OFFICIAL_BLUE_STARTER_DECK,
+    officialBlueSample.cards as OfficialCardRecord[],
+  )
+
+export const createOfficialPurpleStarterDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    OFFICIAL_PURPLE_STARTER_DECK,
+    officialPurpleSample.cards as OfficialCardRecord[],
+  )
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
@@ -262,4 +334,6 @@ export const DECK_CREATORS: Record<
   red: createOfficialRedStarterDeck,
   yellow: createOfficialYellowStarterDeck,
   green: createOfficialGreenStarterDeck,
+  blue: createOfficialBlueStarterDeck,
+  purple: createOfficialPurpleStarterDeck,
 }

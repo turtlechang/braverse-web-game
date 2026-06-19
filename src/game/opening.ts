@@ -1,6 +1,12 @@
 import type { DeckChoice } from './starter-deck'
 
-const OPENING_DECKS: readonly DeckChoice[] = ['red', 'yellow', 'green']
+const OPENING_DECKS: readonly DeckChoice[] = [
+  'red',
+  'yellow',
+  'green',
+  'blue',
+  'purple',
+]
 
 export const chooseRandomDeck = (
   random: () => number = Math.random,
