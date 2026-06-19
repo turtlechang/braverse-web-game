@@ -767,7 +767,7 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('does not expose cookie discard-hand costs before skill payment supports them', () => {
+    it('exposes cookie discard-hand costs so payment can be handled by game logic', () => {
       const card = makeCard({
         type: 'cookie',
         skill: {
@@ -780,7 +780,11 @@ describe('Starter Deck RED official effect adapter', () => {
       expect(convertOfficialCardEffects(card)).toMatchObject({
         status: 'supported',
       })
-      expect(convertOfficialCookieSkill(card)).toBeUndefined()
+      expect(convertOfficialCookieSkill(card)).toMatchObject({
+        trigger: 'activate',
+        cost: { discardHand: 1 },
+        effects: [{ kind: 'draw', amount: 1 }],
+      })
     })
 
     it('does not drop unsupported special costs from item abilities', () => {

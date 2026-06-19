@@ -205,6 +205,13 @@ export interface OpponentDiscardHandEffect {
   count: number
 }
 
+export interface OpponentBattleToTrashEffect {
+  kind: 'opponent-battle-to-trash'
+  maxLevel?: number
+  minLevel?: number
+  remainingHp?: number
+}
+
 export type CardEffect =
   | DamageEffect
   | ModifyAttackEffect
@@ -222,6 +229,7 @@ export type CardEffect =
   | TrashToBattleEffect
   | SupportToHandEffect
   | OpponentDiscardHandEffect
+  | OpponentBattleToTrashEffect
 
 export type TargetedCardEffect =
   | DamageEffect

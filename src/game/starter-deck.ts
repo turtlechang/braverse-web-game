@@ -238,7 +238,13 @@ const createCard = (
               { kind: 'break-to-trash', max: 1, exactLevel: 1 },
             ] satisfies CardEffect[],
           }
-        : {}),
+        : source.cardNumber === 'ST4-015'
+          ? {
+              attackEffects: [
+                { kind: 'draw', amount: 1 },
+              ] satisfies CardEffect[],
+            }
+          : {}),
       ...(skill ? { skill } : {}),
       ...(flip ? { flip } : {}),
     }

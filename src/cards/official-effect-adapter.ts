@@ -115,6 +115,14 @@ const isUnsupportedBracketCost = (text: string): boolean => {
       continue
     }
 
+    if (
+      /Place\s+.+Cookie\s+from\s+your\s+battle\s+area\s+into\s+the\s+trash/i.test(
+        inner,
+      )
+    ) {
+      continue
+    }
+
     if (/(?:Place|Take|Discard)/i.test(inner)) {
       return true
     }
@@ -493,6 +501,26 @@ export const convertOfficialCardEffects = (
       }
     }
 
+    const battleToTrashMatch = sourceText.match(
+      /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+Cookies?\s+(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
+    )
+    if (battleToTrashMatch) {
+      const hpMatch = sourceText.match(/remaining HP is (\d+) or less/i)
+      const lvMatch = sourceText.match(/LV\.(\d+) or lower/i)
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'opponent-battle-to-trash' as const,
+            ...(hpMatch ? { remainingHp: Number(hpMatch[1]) } : {}),
+            ...(lvMatch ? { maxLevel: Number(lvMatch[1]) } : {}),
+          } satisfies CardEffect as CardEffect,
+        ],
+      }
+    }
+
     const supportToHandMatch = sourceText.match(
       /Select\s+(\d+)\s+card\s+from\s+your\s+support\s+area\s+and\s+place\s+it\s+in\s+your\s+hand/i,
     )
@@ -819,6 +847,17 @@ export const convertOfficialTrapAbility = (
     })
   }
 
+  const battleToTrash = text.match(
+    /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+Cookies?\s+(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
+  )
+  if (battleToTrash) {
+    const trapHpMatch = text.match(/remaining HP is (\d+) or less/i)
+    effects.push({
+      kind: 'opponent-battle-to-trash' as const,
+      ...(trapHpMatch ? { remainingHp: Number(trapHpMatch[1]) } : {}),
+    } satisfies CardEffect as CardEffect)
+  }
+
   if (deckToRestedSupport) {
     effects.push({
       kind: 'deck-to-support',
@@ -852,8 +891,7 @@ export const convertOfficialCookieSkill = (
 
   if (
     conversion.status !== 'supported' ||
-    !parsed ||
-    cost.discardHand > 0
+    !parsed
   ) {
     return undefined
   }

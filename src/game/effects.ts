@@ -110,13 +110,14 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand'
+      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
   effect.kind === 'gain-hp' ||
   effect.kind === 'modify-all-attack' ||
-  effect.kind === 'opponent-discard-hand'
+  effect.kind === 'opponent-discard-hand' ||
+  effect.kind === 'opponent-battle-to-trash'
 
 export const isEffectTargeted = (
   effect: CardEffect,
@@ -728,6 +729,11 @@ export const executeCardEffect = (
         effectText: effect.kind,
       },
     }
+  }
+
+  if (effect.kind === 'opponent-battle-to-trash') {
+    // TODO: implement opponent battle-to-trash pending flow
+    return { ...state }
   }
 
   const targets = selectEffectTargets(
