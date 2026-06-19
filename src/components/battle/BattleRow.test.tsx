@@ -5,6 +5,7 @@ import {
   createStageUsageDemoState,
 } from '../../game/demo'
 import { BattleRow, type BattleRowProps } from './BattleRow'
+import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
 
 const createProps = (
   overrides: Record<string, unknown> = {},
@@ -33,6 +34,69 @@ const createProps = (
     ...overrides,
   } as BattleRowProps
 }
+
+describe('opponent hand fan pure functions', () => {
+  it('count=1: angle=0, safetyInset=2, safetyRatio=0, fanZIndex=0, arcSpan=0', () => {
+    const r = computeOpponentFan(1, 0)
+    expect(r.opponentAngle).toBe(0)
+    expect(r.safetyInset).toBe(2)
+    expect(r.safetyRatio).toBe(0)
+    expect(r.fanZIndex).toBe(0)
+    expect(r.arcSpan).toBe(0)
+  })
+
+  it('symmetric angles ±25° for count=3', () => {
+    const r0 = computeOpponentFan(3, 0)
+    const r1 = computeOpponentFan(3, 1)
+    const r2 = computeOpponentFan(3, 2)
+    expect(r0.opponentAngle).toBeCloseTo(-25, 0)
+    expect(r2.opponentAngle).toBeCloseTo(25, 0)
+    expect(r1.opponentAngle).toBe(0)
+  })
+
+  it('count=2: arcSpan=50, maxAngle=25, opponentAngle=-25', () => {
+    const r0 = computeOpponentFan(2, 0)
+    expect(r0.arcSpan).toBe(50)
+    expect(r0.maxAngle).toBe(25)
+    expect(r0.opponentAngle).toBeCloseTo(-25, 0)
+  })
+
+  it('count=5: maxAngle=25, leftOverhang≈61', () => {
+    const r = computeOpponentFan(5, 0)
+    expect(r.maxAngle).toBe(25)
+    expect(r.leftOverhang).toBeCloseTo(61, 0)
+    expect(r.safetyInset).toBeCloseTo(63, 0)
+  })
+
+  it('fanZIndex monotonically decreases with index (index 0 highest, last index 0)', () => {
+    for (const count of [2, 3, 4, 5, 6, 7, 10]) {
+      const values = Array.from({ length: count }, (_, i) =>
+        computeOpponentFan(count, i).fanZIndex,
+      )
+      expect(values[0]).toBe(count - 1)
+      for (let i = 1; i < count; i++) {
+        expect(values[i]).toBeLessThan(values[i - 1])
+      }
+      expect(values[count - 1]).toBe(0)
+    }
+  })
+
+  it('fanZIndex=0 for count=1', () => {
+    expect(computeOpponentFan(1, 0).fanZIndex).toBe(0)
+  })
+
+  it('interface no longer exposes handOffsetFraction, fanTrackRatio, arcYRatio', () => {
+    const r = computeOpponentFan(3, 1)
+    expect((r as unknown as Record<string, unknown>).handOffsetFraction).toBeUndefined()
+    expect((r as unknown as Record<string, unknown>).fanTrackRatio).toBeUndefined()
+    expect((r as unknown as Record<string, unknown>).arcYRatio).toBeUndefined()
+  })
+
+  it('CARD_W=112, CARD_H=156', () => {
+    expect(CARD_W).toBe(112)
+    expect(CARD_H).toBe(156)
+  })
+})
 
 describe('BattleRow desktop interactions', () => {
   it('keeps legal hand actions hidden until the card is selected', () => {
@@ -185,5 +249,382 @@ describe('BattleRow desktop interactions', () => {
 
     expect(markup).toContain('支付技能能量')
     expect(markup).toContain('作為技能代價')
+  })
+
+  it('renders opponent hand cards in field-stack with opponent-hand-card class, concealed, no is-selected', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 3 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    expect(markup).toContain('opponent-hand-card')
+    expect(markup).toContain('card-back.png')
+    const topHandArea = markup.match(/hand-fan top-hand[\s\S]*?(?=<\/section>)/)
+    expect(topHandArea).not.toBeNull()
+    expect(topHandArea![0]).not.toContain('is-selected')
+    expect(topHandArea![0]).not.toContain('hand-card-actions')
+  })
+
+  it('opponent hand section never emits is-selected class', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 2 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+          selectedHandCardId: opponentHand[0].instanceId,
+        })}
+      />,
+    )
+    const topHandArea = markup.match(/hand-fan top-hand[\s\S]*?(?=<\/section>)/)
+    expect(topHandArea).not.toBeNull()
+    expect(topHandArea![0]).not.toContain('is-selected')
+  })
+
+  it('sets --safety-ratio on .hand-fan.top-hand container (fanTrackRatio removed)', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 3 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    expect(markup).toContain('--safety-ratio')
+    expect(markup).not.toContain('--fan-track-ratio')
+    expect(markup).not.toContain('--hand-offset-fraction')
+    expect(markup).not.toContain('--arc-y-ratio')
+  })
+
+  it('renders .single-card class when opponent has exactly 1 hand card', () => {
+    const game = createItemUsageDemoState(true)
+    const singleCard = [{
+      id: 'opp-single',
+      instanceId: 'opp-single',
+      name: '單張',
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }]
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: singleCard,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    expect(markup).toContain('single-card')
+  })
+
+  it('renders no top-hand div when opponent has 0 hand cards', () => {
+    const game = createItemUsageDemoState(true)
+    const gameWithEmptyHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: [],
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithEmptyHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    expect(markup).not.toContain('class="hand-fan top-hand"')
+  })
+
+  it('top-hand is rendered inside .field-stack as child element', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 2 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    const fieldStackOpen = markup.indexOf('<div class="field-stack"')
+    const utilityZonesOpen = markup.indexOf('<div class="utility-zones"')
+    expect(fieldStackOpen).toBeGreaterThan(-1)
+    expect(utilityZonesOpen).toBeGreaterThan(-1)
+    const fieldStackContent = markup.slice(fieldStackOpen, utilityZonesOpen)
+    expect(fieldStackContent).toContain('top-hand')
+  })
+
+  it('renders opponent hand CardFace with opponent-oriented-card class for 180deg rotation', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 3 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    expect(markup).toContain('opponent-oriented-card')
+  })
+
+  it('opponent hand cards set --opponent-angle and --fan-z-index custom properties, no obsolete vars', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 3 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    expect(markup).toContain('--opponent-angle')
+    expect(markup).toContain('--fan-z-index')
+    expect(markup).not.toContain('--hand-offset-fraction')
+    expect(markup).not.toContain('--arc-y-ratio')
+  })
+
+  it('opponent hand fanZIndex renders decreasing values in markup (index 0 highest)', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 6 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    // fanZIndex values: index 0 → 5, index 1 → 4, ..., index 5 → 0
+    const zIndexMatches = markup.match(/--fan-z-index:\s*(\d+)/g)
+    expect(zIndexMatches).not.toBeNull()
+    const values = zIndexMatches!.map((m) => parseInt((m.match(/\d+/) ?? ['0'])[0], 10))
+    expect(values).toHaveLength(6)
+    expect(values[0]).toBe(5)
+    for (let i = 1; i < values.length; i++) {
+      expect(values[i]).toBeLessThan(values[i - 1])
+    }
+    expect(values[values.length - 1]).toBe(0)
+  })
+
+  it('opponent hand wrappers do NOT set conflicting inline left/top/transform-origin (CSS contract)', () => {
+    const game = createItemUsageDemoState(true)
+    const opponentHand = Array.from({ length: 3 }, (_, i) => ({
+      id: `opp-${i}`,
+      instanceId: `opp-${i}`,
+      name: `對手牌${i}`,
+      type: 'cookie' as const,
+      hp: 3,
+      attack: 2,
+      speed: 1,
+      energyCost: { red: 1 },
+      skill: undefined,
+    }))
+    const gameWithOppHand = {
+      ...game,
+      players: {
+        ...game.players,
+        'player-two': {
+          ...game.players['player-two'],
+          hand: opponentHand,
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: gameWithOppHand,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+    // Each opponent-hand-card wrapper should be a div with hand-card-wrap opponent-hand-card class
+    // Extract style blocks of opponent-hand-card wrappers
+    const cardDivs = markup.match(/<div class="hand-card-wrap opponent-hand-card[^"]*" style="[^"]*--opponent-angle[^"]*"/g)
+    expect(cardDivs).not.toBeNull()
+    for (const div of cardDivs!) {
+      // Should NOT contain inline left:, top:, bottom:, or transform-origin:
+      expect(div).not.toMatch(/\bleft\s*:/)
+      expect(div).not.toMatch(/\btop\s*:/)
+      expect(div).not.toMatch(/\bbottom\s*:/)
+      expect(div).not.toMatch(/\btransform-origin\s*:/)
+    }
   })
 })

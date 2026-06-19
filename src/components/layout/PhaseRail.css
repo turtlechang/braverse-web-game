@@ -16,6 +16,7 @@
 }
 
 .brand-mark {
+  grid-row: 1;
   padding-inline: 4px;
 }
 
@@ -36,6 +37,7 @@
 }
 
 .turn-indicator {
+  grid-row: 2;
   display: grid;
   gap: 2px;
   padding: 7px 6px 7px 9px;
@@ -64,6 +66,7 @@
 }
 
 .phase-rail ol {
+  grid-row: 3;
   min-height: 0;
   display: grid;
   grid-template-rows: repeat(5, minmax(0, 1fr));
@@ -121,6 +124,7 @@
 }
 
 .next-phase-button {
+  grid-row: 4;
   min-height: 68px;
   display: grid;
   grid-template-columns: 1fr 16px;
@@ -164,6 +168,7 @@
 }
 
 .turn-counter {
+  grid-row: 5;
   color: rgba(255, 255, 255, 0.42);
   font-size: 0.58rem;
   font-weight: 900;
@@ -231,6 +236,14 @@
 
   .brand-mark {
     display: none;
+  }
+
+  .brand-mark,
+  .turn-indicator,
+  .phase-rail ol,
+  .next-phase-button,
+  .turn-counter {
+    grid-row: 1;
   }
 
   .turn-indicator {
