@@ -71,7 +71,7 @@ export function OpeningSetupModal({
         <p>{message}</p>
         {step === 'deck-selection' && (
           <div className="setup-deck-grid">
-            {(['red', 'yellow', 'green'] as const).map((deck) => (
+            {(['red', 'yellow', 'green', 'blue', 'purple'] as const).map((deck) => (
               <button
                 type="button"
                 key={deck}

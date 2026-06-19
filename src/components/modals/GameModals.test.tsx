@@ -17,7 +17,7 @@ const createHandCard = (index: number): GameCard => ({
 })
 
 describe('OpeningSetupModal', () => {
-  it('starts by asking the player to choose one of the three decks', () => {
+  it('starts by asking the player to choose one of the five decks', () => {
     const markup = renderToStaticMarkup(
       <OpeningSetupModal
         step="deck-selection"
@@ -36,6 +36,8 @@ describe('OpeningSetupModal', () => {
     expect(markup).toContain('紅色起始牌組')
     expect(markup).toContain('黃色起始牌組')
     expect(markup).toContain('綠色起始牌組')
+    expect(markup).toContain('藍色起始牌組')
+    expect(markup).toContain('紫色起始牌組')
     expect(markup).not.toContain('剪刀')
   })
 })
