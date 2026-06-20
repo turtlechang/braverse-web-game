@@ -1,0 +1,124 @@
+.optional-cost-attack-modal {
+  width: min(520px, 100%);
+}
+
+.optional-cost-attack-text {
+  color: #bbdaf3;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.optional-cost-attack-cost {
+  color: #ffe675;
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
+.inspect-deck-modal {
+  width: min(620px, 100%);
+}
+
+.inspect-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.inspect-deck-grid > button {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(174, 220, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(3, 20, 53, 0.52);
+  color: #fff;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.inspect-deck-grid > button.is-selected {
+  border-color: #fff17c;
+  box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.28);
+}
+
+.inspect-deck-grid .card-face {
+  width: 88px;
+}
+
+.inspect-deck-sort {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(113, 233, 255, 0.22);
+}
+
+.inspect-deck-sort strong {
+  color: #71e9ff;
+  font-size: 0.78rem;
+}
+
+.inspect-deck-sort-list {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.inspect-deck-sort-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.3);
+}
+
+.inspect-deck-sort-row span {
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.inspect-deck-sort-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.inspect-deck-sort-actions button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(113, 233, 255, 0.5);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.6);
+  color: #fff;
+  cursor: pointer;
+}
+
+.inspect-deck-sort-actions button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.inspect-deck-sort-actions svg {
+  width: 18px;
+}
+
+@media (max-width: 680px) {
+  .inspect-deck-modal {
+    width: min(360px, 100%);
+  }
+
+  .inspect-deck-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 8px;
+  }
+
+  .inspect-deck-grid .card-face {
+    width: 70px;
+  }
+}

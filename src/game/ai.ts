@@ -322,6 +322,17 @@ const resolveAiSkill = (
     return null
   }
 
+  const discardHandIds = skill.cost.discardHand > 0
+    ? player.hand.slice(0, skill.cost.discardHand).map((card) => card.instanceId)
+    : []
+
+  if (
+    skill.cost.discardHand > 0 &&
+    discardHandIds.length < skill.cost.discardHand
+  ) {
+    return null
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: source.card.instanceId,
@@ -338,6 +349,7 @@ const resolveAiSkill = (
     trigger,
     paymentIds,
     costSupportToTrashIds,
+    discardHandIds,
   )
   const effectSelections: AiEffectSelection[] = []
 

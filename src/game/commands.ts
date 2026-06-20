@@ -86,6 +86,10 @@ export type GameCommand =
 export const getPendingDecision = (
   state: GameState,
 ): PendingDecision | null => {
+  if (state.status !== 'playing') {
+    return null
+  }
+
   if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
     const faint = state.pendingFaintEffects[0]
     const { min, max } = getFaintEffectMinMax(faint.effect)

@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { executeCardEffect, resolveInspectDeck } from './effects'
 import { createDemoGame } from './demo'
 import { continueInspectDeckAfterRefresh } from './inspect-deck'
-import type { GameCard } from './types'
+import { refreshDeck } from './refresh'
+import { getPendingDecision } from './commands'
+import type {
+  CookieCard,
+  GameCard,
+  GameState,
+  PlayerState,
+} from './types'
 
 const testCookie = (id: string, level = 1): GameCard => ({
   id,
@@ -269,5 +276,256 @@ describe('inspect-deck', () => {
     expect(result.status).toBe('finished')
     expect(result.result?.loserId).toBe('player-one')
     expect(result.result?.reason).toBe('refresh-unavailable')
+  })
+})
+
+const buildInspectDeckTestState = (
+  deckSize: number,
+  breakLevel: number,
+): GameState => {
+  const battleCookie: CookieCard = {
+    id: 'bc1', instanceId: 'bc1-inst', name: 'BC1',
+    type: 'cookie', level: 1, hp: 1, attack: 0, attackCost: 0,
+  }
+  const deckCards: GameCard[] = Array.from({ length: deckSize }, (_, i) => ({
+    id: `top-deck-${i}`, instanceId: `top-deck-${i}-inst`, name: `TopDeck${i}`,
+    type: 'cookie', level: 1, hp: 1, attack: 0, attackCost: 0,
+  }))
+  const refreshCookie: CookieCard = {
+    id: 'refresh-me', instanceId: 'refresh-me-inst', name: 'RefreshCookie',
+    type: 'cookie', level: 2, hp: 1, attack: 0, attackCost: 0,
+  }
+  const discardOthers: GameCard[] = Array.from({ length: 7 }, (_, i) => ({
+    id: `discard-other-${i}`, instanceId: `discard-other-${i}-inst`, name: `DiscOth${i}`,
+    type: 'item',
+  }))
+  const breakCookies: CookieCard[] = Array.from({ length: breakLevel }, (_, i) => ({
+    id: `break-lv1-${i}`, instanceId: `break-lv1-${i}-inst`, name: `Break${i}`,
+    type: 'cookie', level: 1, hp: 1, attack: 0, attackCost: 0,
+  }))
+  const opponentCookie: CookieCard = {
+    id: 'opp', instanceId: 'opp-inst', name: 'Opponent',
+    type: 'cookie', level: 1, hp: 1, attack: 0, attackCost: 0,
+  }
+
+  const p1: PlayerState = {
+    id: 'player-one',
+    name: 'Player 1',
+    deck: deckCards,
+    hand: [],
+    battleArea: [
+      { card: battleCookie, hpCards: [testCookie('hp1')], rested: false, battleEntryId: 'bc1:battle:1' },
+    ],
+    supportArea: [],
+    breakArea: breakCookies,
+    discardPile: [refreshCookie, ...discardOthers],
+    stage: null,
+    hasMulliganed: true,
+    startingCookieSelected: true,
+    freeMulliganDecided: true,
+    forcedMulliganCount: 0,
+  }
+  const p2: PlayerState = {
+    id: 'player-two',
+    name: 'Player 2',
+    deck: [],
+    hand: [],
+    battleArea: [
+      { card: opponentCookie, hpCards: [testCookie('opp-hp')], rested: false, battleEntryId: 'opp:battle:1' },
+    ],
+    supportArea: [],
+    breakArea: [],
+    discardPile: [],
+    stage: null,
+    hasMulliganed: true,
+    startingCookieSelected: true,
+    freeMulliganDecided: true,
+    forcedMulliganCount: 0,
+  }
+
+  return {
+    players: { 'player-one': p1, 'player-two': p2 },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
+    pendingFaintEffects: undefined,
+    pendingOpponentHandDiscard: null,
+    pendingInspectDeck: null,
+    pendingOptionalCostAttack: undefined,
+  }
+}
+
+const identityShuffle = <T>(cards: T[]): T[] => [...cards]
+
+describe('inspect-deck integration', () => {
+  it('deck 0: executeCardEffect → pendingRefresh, identity refresh → 3 revealed from new deck, resolve picks 1 to hand', () => {
+    const state = buildInspectDeckTestState(0, 0)
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'bc1-inst' }
+    const result = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restToBottom: true,
+    }, [])
+    expect(result.pendingRefresh).toBeDefined()
+    expect(result.pendingRefresh!.playerId).toBe('player-one')
+    expect(result.pendingInspectDeck!.revealedCards).toHaveLength(0)
+
+    const refreshed = refreshDeck(result, 'player-one', 'refresh-me-inst', identityShuffle)
+    expect(refreshed.pendingRefresh).toBeNull()
+    expect(refreshed.pendingInspectDeck!.revealedCards).toHaveLength(3)
+    const revealed = refreshed.pendingInspectDeck!.revealedCards
+    const revealedIds = new Set(revealed.map((c) => c.instanceId))
+    const p1 = refreshed.players['player-one']
+    for (const card of p1.deck) {
+      expect(revealedIds.has(card.instanceId)).toBe(false)
+    }
+    for (const card of p1.hand) {
+      expect(revealedIds.has(card.instanceId)).toBe(false)
+    }
+
+    const pickedId = revealed[0].instanceId
+    const restOrder = [revealed[2].instanceId, revealed[1].instanceId]
+    const final = resolveInspectDeck(refreshed, 'player-one', pickedId, restOrder)
+    expect(final.pendingInspectDeck).toBeNull()
+    expect(final.players['player-one'].hand.map((c) => c.instanceId)).toContain(pickedId)
+    const bottom = final.players['player-one'].deck.slice(-2)
+    expect(bottom[0].instanceId).toBe(restOrder[0])
+    expect(bottom[1].instanceId).toBe(restOrder[1])
+  })
+
+  it('deck 1: executeCardEffect → pendingRefresh, identity refresh → 1 original + 2 new, resolve picks 1 to hand', () => {
+    const state = buildInspectDeckTestState(1, 0)
+    const expectedTopCard = state.players['player-one'].deck[0]
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'bc1-inst' }
+    const result = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restToBottom: true,
+    }, [])
+    expect(result.pendingRefresh).toBeDefined()
+    expect(result.pendingInspectDeck!.revealedCards).toHaveLength(1)
+    expect(result.pendingInspectDeck!.revealedCards[0].instanceId).toBe(expectedTopCard.instanceId)
+
+    const refreshed = refreshDeck(result, 'player-one', 'refresh-me-inst', identityShuffle)
+    expect(refreshed.pendingRefresh).toBeNull()
+    expect(refreshed.pendingInspectDeck!.revealedCards).toHaveLength(3)
+    const revealed = refreshed.pendingInspectDeck!.revealedCards
+    expect(revealed[0].instanceId).toBe(expectedTopCard.instanceId)
+    const revealedIds = new Set(revealed.map((c) => c.instanceId))
+    const p1 = refreshed.players['player-one']
+    for (const card of p1.deck) {
+      expect(revealedIds.has(card.instanceId)).toBe(false)
+    }
+    for (const card of p1.hand) {
+      expect(revealedIds.has(card.instanceId)).toBe(false)
+    }
+
+    const pickedId = revealed[0].instanceId
+    const restOrder = [revealed[2].instanceId, revealed[1].instanceId]
+    const final = resolveInspectDeck(refreshed, 'player-one', pickedId, restOrder)
+    expect(final.pendingInspectDeck).toBeNull()
+    expect(final.players['player-one'].hand.map((c) => c.instanceId)).toContain(pickedId)
+    const bottom = final.players['player-one'].deck.slice(-2)
+    expect(bottom[0].instanceId).toBe(restOrder[0])
+    expect(bottom[1].instanceId).toBe(restOrder[1])
+  })
+
+  it('deck 2: executeCardEffect → no pendingRefresh, identity refresh only via continuePath, resolve picks 1 to hand', () => {
+    const state = buildInspectDeckTestState(2, 0)
+    const expectedTopCards = [
+      state.players['player-one'].deck[0],
+      state.players['player-one'].deck[1],
+    ]
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'bc1-inst' }
+    const result = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restToBottom: true,
+    }, [])
+    expect(result.pendingRefresh).toBeDefined()
+    expect(result.pendingInspectDeck!.revealedCards).toHaveLength(2)
+    expect(result.pendingInspectDeck!.revealedCards[0].instanceId).toBe(expectedTopCards[0].instanceId)
+    expect(result.pendingInspectDeck!.revealedCards[1].instanceId).toBe(expectedTopCards[1].instanceId)
+
+    const refreshed = refreshDeck(result, 'player-one', 'refresh-me-inst', identityShuffle)
+    expect(refreshed.pendingRefresh).toBeNull()
+    expect(refreshed.pendingInspectDeck!.revealedCards).toHaveLength(3)
+    const revealed = refreshed.pendingInspectDeck!.revealedCards
+    expect(revealed[0].instanceId).toBe(expectedTopCards[0].instanceId)
+    expect(revealed[1].instanceId).toBe(expectedTopCards[1].instanceId)
+    const revealedIds = new Set(revealed.map((c) => c.instanceId))
+    const p1 = refreshed.players['player-one']
+    for (const card of p1.deck) {
+      expect(revealedIds.has(card.instanceId)).toBe(false)
+    }
+    for (const card of p1.hand) {
+      expect(revealedIds.has(card.instanceId)).toBe(false)
+    }
+
+    const pickedId = revealed[1].instanceId
+    const restOrder = [revealed[0].instanceId, revealed[2].instanceId]
+    const final = resolveInspectDeck(refreshed, 'player-one', pickedId, restOrder)
+    expect(final.pendingInspectDeck).toBeNull()
+    expect(final.players['player-one'].hand.map((c) => c.instanceId)).toContain(pickedId)
+    const bottom = final.players['player-one'].deck.slice(-2)
+    expect(bottom[0].instanceId).toBe(restOrder[0])
+    expect(bottom[1].instanceId).toBe(restOrder[1])
+  })
+
+  it('refresh with break-level-limit ends game, clears pendingInspectDeck/pendingOptionalCostAttack, no residual decisions', () => {
+    const base = buildInspectDeckTestState(0, 8)
+    const state: GameState = {
+      ...base,
+      pendingRefresh: { playerId: 'player-one', remainingDraws: 0 },
+      pendingInspectDeck: {
+        playerId: 'player-one',
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        revealedCards: [],
+        lookCount: 3,
+        pickCount: 1,
+      },
+      pendingOptionalCostAttack: {
+        playerId: 'player-one',
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [],
+        effectText: 'test-optional',
+      },
+      pendingOpponentHandDiscard: {
+        playerId: 'player-one',
+        count: 2,
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'rogue-cookie',
+        sourceCardName: 'Roguefort Cookie',
+        effectText: 'opponent-discard-hand',
+      },
+    }
+    const result = refreshDeck(state, 'player-one', 'refresh-me-inst', identityShuffle)
+    expect(result.status).toBe('finished')
+    expect(result.result?.reason).toBe('break-level-limit')
+    expect(result.pendingInspectDeck).toBeNull()
+    expect(result.pendingOptionalCostAttack).toBeUndefined()
+    expect(result.pendingOpponentHandDiscard).toBeNull()
+    expect(result.pendingRefresh).toBeNull()
+    expect(getPendingDecision(result)).toBeNull()
   })
 })

@@ -42,6 +42,8 @@ import {
   ResultModal,
   TrapResponseModal,
   OpeningSetupModal,
+  OptionalCostAttackModal,
+  InspectDeckModal,
   type OpeningSetupStep,
 } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
@@ -116,6 +118,14 @@ function App() {
     Boolean(match.game.pendingOnPlay) ||
     Boolean(match.game.pendingBattle) ||
     Boolean(match.game.pendingOpponentHandDiscard) ||
+    Boolean(
+      match.game.pendingInspectDeck &&
+        match.game.pendingInspectDeck.playerId === match.viewerPlayerId,
+    ) ||
+    Boolean(
+      match.game.pendingOptionalCostAttack &&
+        match.game.pendingOptionalCostAttack.playerId === match.viewerPlayerId,
+    ) ||
     faintActive ||
     ai.aiThinking ||
     match.aiControlsCurrentState
@@ -135,6 +145,33 @@ function App() {
 
   const currentJsxEffect = pending.currentEffect
   const playerHand = match.game.players[match.viewerPlayerId].hand
+
+  const pe = pending.pendingEffect
+  const showCancelSkill =
+    pe !== null &&
+    !pe.skillActivated &&
+    pe.sourceKind === 'cookie' &&
+    pe.trigger === 'activate'
+
+  const pendingInspect =
+    match.game.pendingInspectDeck &&
+    match.game.pendingInspectDeck.playerId === match.viewerPlayerId &&
+    !match.game.pendingRefresh
+      ? match.game.pendingInspectDeck
+      : null
+
+  const pendingOptionalCost =
+    match.game.pendingOptionalCostAttack &&
+    match.game.pendingOptionalCostAttack.playerId === match.viewerPlayerId
+      ? match.game.pendingOptionalCostAttack
+      : null
+
+  const opponentBattleCards = match.game.players[
+    match.opponentId
+  ].battleArea.map((cookie) => ({
+    card: cookie.card,
+    instanceId: cookie.card.instanceId,
+  }))
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -445,6 +482,7 @@ function App() {
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
         onSkip={pending.skipOptionalSkill}
+        onCancel={pending.cancelPendingSkill}
         candidateCards={pending.nonBattleEffectCandidateCards}
         onToggleCandidate={pending.toggleEffectTarget}
         costSupportCandidates={
@@ -454,6 +492,15 @@ function App() {
         }
         selectedCostSupportIds={pending.selectedSkillCostSupportToTrashIds}
         onToggleCostSupport={pending.toggleSkillCostSupport}
+        discardHandCandidates={
+          pending.pendingEffect && !pending.pendingEffect.skillActivated
+            ? pending.skillCostDiscardHandCandidates
+            : []
+        }
+        selectedDiscardHandIds={pending.selectedSkillDiscardHandIds}
+        onToggleDiscardHand={pending.toggleSkillDiscardHand}
+        discardHandCost={pending.discardHandCost}
+        showCancelSkill={showCancelSkill}
       />
 
       {match.setupStep && (
@@ -929,6 +976,62 @@ function App() {
           viewedDeck={match.deckConfig[dialogs.deckListOwner]}
           onSetDeckListOwner={dialogs.openDeckList}
           onClose={dialogs.closeDeckList}
+        />
+      )}
+
+      {pendingOptionalCost && (
+        <OptionalCostAttackModal
+          key={pendingOptionalCost.sourceInstanceId}
+          sourceCardName={pendingOptionalCost.sourceCardName}
+          effectText={pendingOptionalCost.effectText}
+          discardHandCost={pendingOptionalCost.cost.discardHand}
+          playerHand={match.game.players[match.viewerPlayerId].hand}
+          opponentBattleCards={opponentBattleCards}
+          onSkip={() => {
+            match.runAction(
+              (current) =>
+                applyGameCommand(current, {
+                  kind: 'resolve-optional-cost-attack',
+                  playerId: match.viewerPlayerId,
+                  action: 'skip',
+                }),
+              '已略過可選代價攻擊效果。',
+            )
+          }}
+          onPay={(discardIds, targetId) => {
+            match.runAction(
+              (current) =>
+                applyGameCommand(current, {
+                  kind: 'resolve-optional-cost-attack',
+                  playerId: match.viewerPlayerId,
+                  action: 'pay',
+                  discardCardIds: discardIds,
+                  targetIds: [targetId],
+                }),
+              '已支付可選代價攻擊效果。',
+            )
+          }}
+        />
+      )}
+
+      {pendingInspect && (
+        <InspectDeckModal
+          key={pendingInspect.sourceInstanceId}
+          sourceCardName={pendingInspect.sourceCardName}
+          revealedCards={pendingInspect.revealedCards}
+          pickCount={pendingInspect.pickCount}
+          onConfirm={(pickedId, restOrder) => {
+            match.runAction(
+              (current) =>
+                applyGameCommand(current, {
+                  kind: 'resolve-inspect-deck',
+                  playerId: match.viewerPlayerId,
+                  pickedCardId: pickedId,
+                  restOrder,
+                }),
+              `已選擇卡牌加入手牌，其餘放回牌庫底。`,
+            )
+          }}
         />
       )}
 

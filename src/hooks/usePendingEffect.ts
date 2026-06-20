@@ -208,6 +208,26 @@ export function usePendingEffect(params: {
     pendingEffect?.selectedCostSupportToTrashIds ?? [],
   )
 
+  const discardHandCost = pendingEffect?.skill.cost.discardHand ?? 0
+  const skillCostDiscardHandCandidates =
+    pendingEffect &&
+    discardHandCost > 0 &&
+    !pendingEffect.skillActivated
+      ? game.players[pendingEffect.context.sourcePlayerId].hand.filter(
+          (card) =>
+            pendingEffect.selectedDiscardHandIds.length < discardHandCost ||
+            pendingEffect.selectedDiscardHandIds.includes(
+              card.instanceId,
+            ),
+        )
+      : []
+  const skillDiscardHandTargetIds = new Set(
+    skillCostDiscardHandCandidates.map((card) => card.instanceId),
+  )
+  const selectedSkillDiscardHandIds = new Set(
+    pendingEffect?.selectedDiscardHandIds ?? [],
+  )
+
   useEffect(() => {
     if (pendingEffect || effectHistory.length === 0) return
 
@@ -226,7 +246,9 @@ export function usePendingEffect(params: {
 
     const viewerBlocks =
       (game.pendingRefresh?.playerId === viewerPlayerId) ||
-      (game.pendingOnPlay?.playerId === viewerPlayerId)
+      (game.pendingOnPlay?.playerId === viewerPlayerId) ||
+      (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
+      (game.pendingOptionalCostAttack?.playerId === viewerPlayerId)
     if (viewerBlocks) return
 
     const timer = window.setTimeout(() => {
@@ -239,6 +261,8 @@ export function usePendingEffect(params: {
     pendingEffect,
     game.pendingRefresh,
     game.pendingOnPlay,
+    game.pendingInspectDeck,
+    game.pendingOptionalCostAttack,
     game.status,
     viewerPlayerId,
   ])
@@ -306,6 +330,7 @@ export function usePendingEffect(params: {
       selectedTargetIds: [],
       selectedPaymentIds: [],
       selectedCostSupportToTrashIds: [],
+      selectedDiscardHandIds: [],
       skillActivated: false,
       optional,
       triggerLabel,
@@ -351,6 +376,7 @@ export function usePendingEffect(params: {
       selectedTargetIds: [],
       selectedPaymentIds: [],
       selectedCostSupportToTrashIds: [],
+      selectedDiscardHandIds: [],
       skillActivated: false,
       optional: false,
       triggerLabel,
@@ -401,6 +427,7 @@ export function usePendingEffect(params: {
         selectedTargetIds: [],
         selectedPaymentIds: [],
         selectedCostSupportToTrashIds: [],
+        selectedDiscardHandIds: [],
         skillActivated: true,
         optional: false,
         triggerLabel: '攻擊後續效果',
@@ -550,6 +577,44 @@ export function usePendingEffect(params: {
     setPendingEffect({ ...pendingEffect, selectedCostSupportToTrashIds })
   }
 
+  const toggleSkillDiscardHand = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+    const discardHandCost = pendingEffect.skill.cost.discardHand
+    if (discardHandCost <= 0) return
+    const player = game.players[pendingEffect.context.sourcePlayerId]
+    const ownsCard = player.hand.some(
+      (card) => card.instanceId === instanceId,
+    )
+    if (!ownsCard) return
+
+    const isSelected =
+      pendingEffect.selectedDiscardHandIds.includes(instanceId)
+    if (
+      !isSelected &&
+      pendingEffect.selectedDiscardHandIds.length >= discardHandCost
+    ) {
+      return
+    }
+    const selectedDiscardHandIds = isSelected
+      ? pendingEffect.selectedDiscardHandIds.filter((id) => id !== instanceId)
+      : [...pendingEffect.selectedDiscardHandIds, instanceId]
+
+    setPendingEffect({ ...pendingEffect, selectedDiscardHandIds })
+  }
+
+  const cancelPendingSkill = () => {
+    if (!pendingEffect) return
+    if (
+      pendingEffect.sourceKind !== 'cookie' ||
+      pendingEffect.trigger !== 'activate' ||
+      pendingEffect.skillActivated
+    ) {
+      return
+    }
+    setPendingEffect(null)
+    setMessage(`已取消${pendingEffect.sourceCard.name}的技能發動。`)
+  }
+
   const skipOptionalSkill = () => {
     if (
       pendingEffect &&
@@ -562,7 +627,9 @@ export function usePendingEffect(params: {
         nextEffectIndex < pendingEffect.effects.length
       const viewerMustAct =
         (game.pendingRefresh?.playerId === viewerPlayerId) ||
-        (game.pendingOnPlay?.playerId === viewerPlayerId)
+        (game.pendingOnPlay?.playerId === viewerPlayerId) ||
+        (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
+        (game.pendingOptionalCostAttack?.playerId === viewerPlayerId)
 
       if (hasNextEffect && viewerMustAct) {
         setPendingEffect(null)
@@ -571,6 +638,7 @@ export function usePendingEffect(params: {
           effectIndex: nextEffectIndex,
           selectedTargetIds: [],
           skillActivated: true,
+          selectedDiscardHandIds: [],
         })
         setMessage('已略過可選效果。')
         return
@@ -582,6 +650,7 @@ export function usePendingEffect(params: {
               ...pendingEffect,
               effectIndex: nextEffectIndex,
               selectedTargetIds: [],
+              selectedDiscardHandIds: [],
               skillActivated: true,
             }
           : null,
@@ -673,6 +742,7 @@ export function usePendingEffect(params: {
                 pendingEffect.trigger,
                 pendingEffect.selectedPaymentIds,
                 pendingEffect.selectedCostSupportToTrashIds,
+                pendingEffect.selectedDiscardHandIds,
               )
       const nextGame = executeCardEffect(
         activatedGame,
@@ -702,7 +772,9 @@ export function usePendingEffect(params: {
         nextEffectIndex < pendingEffect.effects.length
       const viewerMustAct =
         (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
-        (nextGame.pendingOnPlay?.playerId === viewerPlayerId)
+        (nextGame.pendingOnPlay?.playerId === viewerPlayerId) ||
+        (nextGame.pendingInspectDeck?.playerId === viewerPlayerId) ||
+        (nextGame.pendingOptionalCostAttack?.playerId === viewerPlayerId)
 
       if (hasNextEffect && viewerMustAct) {
         setGame(nextGame)
@@ -713,6 +785,7 @@ export function usePendingEffect(params: {
           ...pendingEffect,
           effectIndex: nextEffectIndex,
           selectedTargetIds: [],
+          selectedDiscardHandIds: [],
           skillActivated: true,
         })
 
@@ -750,6 +823,7 @@ export function usePendingEffect(params: {
               ...pendingEffect,
               effectIndex: nextEffectIndex,
               selectedTargetIds: [],
+              selectedDiscardHandIds: [],
               skillActivated: true,
             }
           : null,
@@ -800,8 +874,10 @@ export function usePendingEffect(params: {
     toggleEffectTarget,
     toggleSkillPayment,
     toggleSkillCostSupport,
+    toggleSkillDiscardHand,
     confirmEffect,
     skipOptionalSkill,
+    cancelPendingSkill,
     currentEffect,
     effectTargetCandidates,
     supportEffectCandidates,
@@ -811,6 +887,10 @@ export function usePendingEffect(params: {
     skillCostSupportCandidates,
     skillPaymentTargetIds,
     skillCostSupportTargetIds,
+    skillCostDiscardHandCandidates,
+    skillDiscardHandTargetIds,
+    selectedSkillDiscardHandIds,
+    discardHandCost,
     effectTargetIds,
     breakEffectTargetIds,
     supportEffectTargetIds,

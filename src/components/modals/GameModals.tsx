@@ -22,6 +22,8 @@ import {
 import { deckChoiceLabel } from '../gameUiLabels'
 import './GameModals.css'
 
+export { OptionalCostAttackModal, InspectDeckModal } from './PendingDecisionModals'
+
 export type OpeningSetupStep =
   | 'deck-selection'
   | 'rps'

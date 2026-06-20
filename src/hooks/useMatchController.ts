@@ -27,6 +27,9 @@ import {
 } from '../game'
 import {
   createAttackEffectDemoState,
+  createBlueActivateSkillDemoState,
+  createBlueInspectDeckDemoState,
+  createBlueOptionalCostAttackDemoState,
   createBreakToTrashDemoState,
   createFaintDamageDemoState,
   createFlipResponseDemoState,
@@ -117,6 +120,15 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return createSupportToTrashSkillDemoState()
     }
+    if (testStateConfig?.kind === 'blue-activate-skill') {
+      return createBlueActivateSkillDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'blue-optional-cost-attack') {
+      return createBlueOptionalCostAttackDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'blue-inspect-deck') {
+      return createBlueInspectDeckDemoState()
+    }
     return createDemoSetupGame('player-one')
   })
   const [setupStep, setSetupStep] = useState<
@@ -178,6 +190,19 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'support-to-trash-skill') {
       return '測試狀態：ST3-002 支援卡代價技能。'
+    }
+    if (testStateConfig?.kind === 'blue-activate-skill') {
+      return testStateConfig.payable
+        ? '測試狀態：Werewolf Cookie 可發動技能（手牌充足）。'
+        : '測試狀態：Werewolf Cookie 不可發動技能（手牌不足）。'
+    }
+    if (testStateConfig?.kind === 'blue-optional-cost-attack') {
+      return testStateConfig.payable
+        ? '測試狀態：Captain Caviar 可支付攻擊後續效果。'
+        : '測試狀態：Captain Caviar 不可支付攻擊後續效果。'
+    }
+    if (testStateConfig?.kind === 'blue-inspect-deck') {
+      return '測試狀態：Captain Caviar OnPlay 檢視牌庫頂 3 張。'
     }
     return '推進階段，開始這場對戰。'
   })

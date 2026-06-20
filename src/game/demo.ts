@@ -5,12 +5,14 @@ import {
   selectStartingCookie,
 } from './setup'
 import {
+  createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
   createOfficialYellowStarterDeck,
   DECK_CREATORS,
   type DeckChoice,
 } from './starter-deck'
 import type {
+  CardEffect,
   CookieCard,
   EnergyColor,
   GameCard,
@@ -38,6 +40,9 @@ export const parseTestStateConfig = (
   | { kind: 'opponent-discard-hand' }
   | { kind: 'attack-effect' }
   | { kind: 'support-to-trash-skill' }
+  | { kind: 'blue-activate-skill'; payable: boolean }
+  | { kind: 'blue-optional-cost-attack'; payable: boolean }
+  | { kind: 'blue-inspect-deck' }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -89,6 +94,21 @@ export const parseTestStateConfig = (
   }
   if (testState === 'st3-002-skill') {
     return { kind: 'support-to-trash-skill' }
+  }
+  if (testState === 'blue-activate-payable') {
+    return { kind: 'blue-activate-skill', payable: true }
+  }
+  if (testState === 'blue-activate-unpayable') {
+    return { kind: 'blue-activate-skill', payable: false }
+  }
+  if (testState === 'blue-attack-payable') {
+    return { kind: 'blue-optional-cost-attack', payable: true }
+  }
+  if (testState === 'blue-attack-unpayable') {
+    return { kind: 'blue-optional-cost-attack', payable: false }
+  }
+  if (testState === 'blue-inspect-deck') {
+    return { kind: 'blue-inspect-deck' }
   }
   return null
 }
@@ -1180,6 +1200,121 @@ export const createStageUsageDemoState = (payable: boolean): GameState => {
           },
         ],
       },
+    },
+  }
+}
+export const createBlueActivateSkillDemoState = (payable: boolean): GameState => {
+  const p1Deck = createOfficialBlueStarterDeck('player-one')
+  const p2Deck = createOfficialBlueStarterDeck('player-two')
+  const werewolf = p1Deck.find((c) => c.id === 'ST4-012') as CookieCard
+  const handCards = p1Deck.filter((c) => c.instanceId !== werewolf.instanceId && c.type !== 'cookie').slice(0, payable ? 3 : 0)
+  const defender = p2Deck.find((c) => c.type === 'cookie') as CookieCard
+  const usedP1 = new Set([werewolf.instanceId, ...handCards.map((c) => c.instanceId)])
+  const usedP2 = new Set([defender.instanceId])
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((c) => !usedP1.has(c.instanceId)),
+        hand: handCards,
+        battleArea: [{ card: werewolf, hpCards: [], rested: false, battleEntryId: `${werewolf.instanceId}:battle:1` }],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((c) => !usedP2.has(c.instanceId)),
+        battleArea: [{ card: defender, hpCards: [], rested: false, battleEntryId: `${defender.instanceId}:battle:2` }],
+      },
+    },
+    firstPlayerId: 'player-one', activePlayerId: 'player-one', turnNumber: 1, phase: 'main', status: 'playing', result: null,
+    supportPlacedThisTurn: false, skillUsesThisTurn: [], nextBattleEntrySequence: 3, attackModifiers: [], damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null, pendingBattle: null,
+  }
+}
+
+export const createBlueOptionalCostAttackDemoState = (payable: boolean): GameState => {
+  const p1Deck = createOfficialBlueStarterDeck('player-one')
+  const p2Deck = createOfficialBlueStarterDeck('player-two')
+  const caviar = p1Deck.find((c) => c.id === 'ST4-013') as CookieCard
+  const handCards = p1Deck.filter((c) => c.instanceId !== caviar.instanceId && c.type !== 'cookie').slice(0, payable ? 4 : 1)
+  const defender = p2Deck.find((c) => c.type === 'cookie') as CookieCard
+  const usedP1 = new Set([caviar.instanceId, ...handCards.map((c) => c.instanceId)])
+  const usedP2 = new Set([defender.instanceId])
+  const optEffect: CardEffect = {
+    kind: 'optional-cost-attack',
+    cost: { energy: {}, discardHand: 2 },
+    effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } }],
+    effectText: 'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
+  }
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((c) => !usedP1.has(c.instanceId)),
+        hand: handCards,
+        battleArea: [{ card: { ...caviar, attackEffects: [optEffect] }, hpCards: [], rested: true, battleEntryId: `${caviar.instanceId}:battle:1` }],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((c) => !usedP2.has(c.instanceId)),
+        battleArea: [{ card: defender, hpCards: [], rested: false, battleEntryId: `${defender.instanceId}:battle:2` }],
+      },
+    },
+    firstPlayerId: 'player-one', activePlayerId: 'player-one', turnNumber: 1, phase: 'main', status: 'playing', result: null,
+    supportPlacedThisTurn: false, skillUsesThisTurn: [], nextBattleEntrySequence: 3, attackModifiers: [], damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null,
+    pendingBattle: {
+      attackerPlayerId: 'player-one', defenderPlayerId: 'player-two',
+      attackerInstanceId: caviar.instanceId, targetInstanceId: defender.instanceId,
+      declaredDamage: 1, remainingDamage: 0, stage: 'attack-effect',
+      trapUsed: false, revealedHpCard: null, preventKnockoutTargetIds: [],
+      faintedColors: [], attackEffects: [optEffect], attackEffectIndex: 0,
+    },
+  }
+}
+
+export const createBlueInspectDeckDemoState = (): GameState => {
+  const p1Deck = createOfficialBlueStarterDeck('player-one')
+  const p2Deck = createOfficialBlueStarterDeck('player-two')
+  const caviar = p1Deck.find((c) => c.id === 'ST4-013') as CookieCard
+  const deckTop3 = p1Deck.filter((c) => c.instanceId !== caviar.instanceId).slice(0, 3)
+  const defender = p2Deck.find((c) => c.type === 'cookie') as CookieCard
+  const usedP1 = new Set([caviar.instanceId, ...deckTop3.map((c) => c.instanceId)])
+  const usedP2 = new Set([defender.instanceId])
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((c) => !usedP1.has(c.instanceId)),
+        battleArea: [{ card: caviar, hpCards: [], rested: false, battleEntryId: `${caviar.instanceId}:battle:1` }],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((c) => !usedP2.has(c.instanceId)),
+        battleArea: [{ card: defender, hpCards: [], rested: false, battleEntryId: `${defender.instanceId}:battle:2` }],
+      },
+    },
+    firstPlayerId: 'player-one', activePlayerId: 'player-one', turnNumber: 1, phase: 'main', status: 'playing', result: null,
+    supportPlacedThisTurn: false, skillUsesThisTurn: [], nextBattleEntrySequence: 3, attackModifiers: [], damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null, pendingBattle: null,
+    pendingInspectDeck: {
+      playerId: 'player-one',
+      sourceInstanceId: caviar.instanceId,
+      sourceCardName: 'Captain Caviar Cookie',
+      revealedCards: deckTop3,
+      lookCount: 3,
+      pickCount: 1,
     },
   }
 }

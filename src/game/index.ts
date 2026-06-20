@@ -16,6 +16,9 @@ export {
   validateBreakToTrashTargets,
 } from './effects'
 export {
+  createBlueActivateSkillDemoState,
+  createBlueInspectDeckDemoState,
+  createBlueOptionalCostAttackDemoState,
   createDemoGame,
   createDemoSetupGame,
   createItemUsageDemoState,

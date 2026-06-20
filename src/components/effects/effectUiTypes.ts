@@ -16,6 +16,7 @@ export interface PendingEffect {
   selectedTargetIds: string[]
   selectedPaymentIds: string[]
   selectedCostSupportToTrashIds: string[]
+  selectedDiscardHandIds: string[]
   skillActivated: boolean
   optional: boolean
   triggerLabel: string

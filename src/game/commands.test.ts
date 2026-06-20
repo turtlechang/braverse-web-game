@@ -70,6 +70,63 @@ describe('getPendingDecision', () => {
     expect(getPendingDecision(state)).toBeNull()
   })
 
+  it('returns null when state.status is finished', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      status: 'finished',
+      pendingInspectDeck: {
+        playerId: 'player-one',
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        revealedCards: [
+          createDemoGame().players['player-one'].deck[0],
+        ],
+        lookCount: 3,
+        pickCount: 1,
+      },
+    }
+    expect(getPendingDecision(state)).toBeNull()
+  })
+
+  it('returns null when state.status is finished even with pendingOptionalCostAttack', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      status: 'finished',
+      pendingOptionalCostAttack: {
+        playerId: 'player-two' as const,
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [],
+        effectText: 'test',
+      },
+    }
+    expect(getPendingDecision(state)).toBeNull()
+  })
+
+  it('returns null when state.status is setup', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      status: 'setup',
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one' as const,
+          sourceInstanceId: 'faint-cookie',
+          effect: {
+            kind: 'damage' as const,
+            amount: 1,
+            target: { side: 'opponent' as const, min: 0, max: 1 },
+          },
+          context: {
+            sourcePlayerId: 'player-one' as const,
+            sourceInstanceId: 'faint-cookie',
+          },
+        },
+      ],
+    }
+    expect(getPendingDecision(state)).toBeNull()
+  })
+
   it('returns faint-effect decision with metadata', () => {
     const state: GameState = {
       ...createDemoGame(),

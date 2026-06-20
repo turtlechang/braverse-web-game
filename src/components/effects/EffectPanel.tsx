@@ -13,11 +13,17 @@ export interface EffectPanelProps {
   effectHistory: string[]
   onConfirm: () => void
   onSkip: () => void
+  onCancel?: () => void
   candidateCards?: GameCard[]
   onToggleCandidate?: (instanceId: string) => void
   costSupportCandidates?: GameCard[]
   selectedCostSupportIds?: Set<string>
   onToggleCostSupport?: (instanceId: string) => void
+  discardHandCandidates?: GameCard[]
+  selectedDiscardHandIds?: Set<string>
+  onToggleDiscardHand?: (instanceId: string) => void
+  discardHandCost?: number
+  showCancelSkill?: boolean
 }
 
 function EffectPanelContent({
@@ -26,11 +32,17 @@ function EffectPanelContent({
   effectHistory,
   onConfirm,
   onSkip,
+  onCancel,
   candidateCards = [],
   onToggleCandidate,
   costSupportCandidates = [],
   selectedCostSupportIds = new Set<string>(),
   onToggleCostSupport,
+  discardHandCandidates = [],
+  selectedDiscardHandIds = new Set<string>(),
+  onToggleDiscardHand,
+  discardHandCost = 0,
+  showCancelSkill = false,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
@@ -81,6 +93,12 @@ function EffectPanelContent({
                 {supportToTrashCost} 張支援區代價
               </small>
             )}
+            {discardHandCost > 0 && (
+              <small>
+                已選 {pendingEffect.selectedDiscardHandIds.length}／
+                {discardHandCost} 張手牌代價
+              </small>
+            )}
           </div>
         )}
         <div className="effect-instruction">
@@ -101,6 +119,27 @@ function EffectPanelContent({
                   }
                   key={card.instanceId}
                   onClick={() => onToggleCostSupport?.(card.instanceId)}
+                >
+                  {card.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {discardHandCandidates.length > 0 && !pendingEffect.skillActivated && (
+          <>
+            <small>選擇要作為代價棄置的手牌</small>
+            <div className="effect-candidates">
+              {discardHandCandidates.map((card) => (
+                <button
+                  type="button"
+                  className={
+                    selectedDiscardHandIds.has(card.instanceId)
+                      ? 'is-selected'
+                      : ''
+                  }
+                  key={card.instanceId}
+                  onClick={() => onToggleDiscardHand?.(card.instanceId)}
                 >
                   {card.name}
                 </button>
@@ -138,7 +177,9 @@ function EffectPanelContent({
             (!pendingEffect.skillActivated &&
               (pendingEffect.selectedPaymentIds.length !== totalEnergyCost ||
                 pendingEffect.selectedCostSupportToTrashIds.length !==
-                  supportToTrashCost)) ||
+                  supportToTrashCost ||
+                pendingEffect.selectedDiscardHandIds.length !==
+                  discardHandCost)) ||
             (Boolean(selectionLimits) &&
               (pendingEffect.selectedTargetIds.length <
                 selectionLimits!.min ||
@@ -150,6 +191,15 @@ function EffectPanelContent({
           <Check aria-hidden="true" />
           確認效果
         </button>
+        {showCancelSkill && (
+          <button
+            className="skip-effect"
+            type="button"
+            onClick={onCancel}
+          >
+            取消技能
+          </button>
+        )}
         {(pendingEffect.optional && !pendingEffect.skillActivated) ||
         ('optional' in currentEffect && currentEffect.optional) ? (
           <button

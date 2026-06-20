@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  createBlueActivateSkillDemoState,
+  createBlueInspectDeckDemoState,
+  createBlueOptionalCostAttackDemoState,
   createBreakToTrashDemoState,
   createReplacementChoiceDemoState,
   createSupportToTrashSkillDemoState,
@@ -9,6 +12,7 @@ import {
 } from './demo'
 import { getTrapCandidates } from './battle'
 import { isEffectConditionMet } from './effects'
+import { canActivateCookieSkill } from './skills'
 
 describe('isLocalhost', () => {
   it('allows localhost', () => {
@@ -201,5 +205,151 @@ describe('createTrapResponseDemoState', () => {
   it('creates no trap candidates when support cannot pay the cost', () => {
     const state = createTrapResponseDemoState(false)
     expect(getTrapCandidates(state, 'player-one')).toEqual([])
+  })
+})
+
+describe('createBlueActivateSkillDemoState', () => {
+  it('payable: ST4-012 in battle with hand cards ready to activate', () => {
+    const state = createBlueActivateSkillDemoState(true)
+    const p1 = state.players['player-one']
+    expect(p1.battleArea[0].card.id).toBe('ST4-012')
+    expect(p1.hand.length).toBeGreaterThanOrEqual(1)
+    expect(state.phase).toBe('main')
+    expect(canActivateCookieSkill(state, 'player-one', p1.battleArea[0].card.instanceId, 'activate')).toBe(true)
+  })
+
+  it('unpayable: empty hand returns false from canActivateCookieSkill', () => {
+    const state = createBlueActivateSkillDemoState(false)
+    const p1 = state.players['player-one']
+    expect(p1.hand).toHaveLength(0)
+    expect(canActivateCookieSkill(state, 'player-one', p1.battleArea[0].card.instanceId, 'activate')).toBe(false)
+  })
+})
+
+describe('createBlueOptionalCostAttackDemoState', () => {
+  it('payable: pendingBattle at attack-effect with optional-cost-attack', () => {
+    const state = createBlueOptionalCostAttackDemoState(true)
+    expect(state.pendingBattle).toBeDefined()
+    expect(state.pendingBattle!.stage).toBe('attack-effect')
+    expect(state.pendingBattle!.attackEffects[0].kind).toBe('optional-cost-attack')
+    expect(state.players['player-one'].hand.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('unpayable: hand has less than 2 cards', () => {
+    const state = createBlueOptionalCostAttackDemoState(false)
+    expect(state.players['player-one'].hand.length).toBeLessThan(2)
+  })
+})
+
+describe('createBlueInspectDeckDemoState', () => {
+  it('has pendingInspectDeck with 3 revealed cards', () => {
+    const state = createBlueInspectDeckDemoState()
+    expect(state.pendingInspectDeck).toBeDefined()
+    expect(state.pendingInspectDeck!.revealedCards).toHaveLength(3)
+    expect(state.pendingInspectDeck!.lookCount).toBe(3)
+    expect(state.pendingInspectDeck!.pickCount).toBe(1)
+    expect(state.pendingInspectDeck!.playerId).toBe('player-one')
+  })
+
+  it('deck excludes revealed cards', () => {
+    const state = createBlueInspectDeckDemoState()
+    const deckIds = new Set(state.players['player-one'].deck.map((c) => c.instanceId))
+    for (const c of state.pendingInspectDeck!.revealedCards) {
+      expect(deckIds.has(c.instanceId)).toBe(false)
+    }
+  })
+})
+
+describe('parseTestStateConfig blue states', () => {
+  it('blue-activate-payable', () => {
+    expect(parseTestStateConfig('?test-state=blue-activate-payable', 'localhost')).toEqual({ kind: 'blue-activate-skill', payable: true })
+  })
+  it('blue-activate-unpayable', () => {
+    expect(parseTestStateConfig('?test-state=blue-activate-unpayable', 'localhost')).toEqual({ kind: 'blue-activate-skill', payable: false })
+  })
+  it('blue-attack-payable', () => {
+    expect(parseTestStateConfig('?test-state=blue-attack-payable', 'localhost')).toEqual({ kind: 'blue-optional-cost-attack', payable: true })
+  })
+  it('blue-attack-unpayable', () => {
+    expect(parseTestStateConfig('?test-state=blue-attack-unpayable', 'localhost')).toEqual({ kind: 'blue-optional-cost-attack', payable: false })
+  })
+  it('blue-inspect-deck', () => {
+    expect(parseTestStateConfig('?test-state=blue-inspect-deck', 'localhost')).toEqual({ kind: 'blue-inspect-deck' })
+  })
+})
+
+describe('createBlueActivateSkillDemoState', () => {
+  it('payable: Werewolf in battle with hand cards for discard cost', () => {
+    const state = createBlueActivateSkillDemoState(true)
+    const p1 = state.players['player-one']
+    expect(state.phase).toBe('main')
+    expect(state.activePlayerId).toBe('player-one')
+    expect(p1.battleArea[0].card.id).toBe('ST4-012')
+    expect(p1.hand.length).toBeGreaterThanOrEqual(1)
+    expect(canActivateCookieSkill(state, 'player-one', p1.battleArea[0].card.instanceId, 'activate')).toBe(true)
+  })
+  it('unpayable: empty hand, activate skill returns false', () => {
+    const state = createBlueActivateSkillDemoState(false)
+    const p1 = state.players['player-one']
+    expect(p1.hand).toHaveLength(0)
+    expect(canActivateCookieSkill(state, 'player-one', p1.battleArea[0].card.instanceId, 'activate')).toBe(false)
+  })
+})
+
+describe('createBlueOptionalCostAttackDemoState', () => {
+  it('payable: attacker has 4 hand cards, pendingBattle at attack-effect', () => {
+    const state = createBlueOptionalCostAttackDemoState(true)
+    expect(state.pendingBattle).toBeDefined()
+    expect(state.pendingBattle!.stage).toBe('attack-effect')
+    expect(state.pendingBattle!.attackEffects[0].kind).toBe('optional-cost-attack')
+    expect(state.players['player-one'].hand.length).toBeGreaterThanOrEqual(2)
+  })
+  it('unpayable: hand has less than 2 cards', () => {
+    const state = createBlueOptionalCostAttackDemoState(false)
+    expect(state.players['player-one'].hand.length).toBeLessThan(2)
+  })
+})
+
+describe('createBlueInspectDeckDemoState', () => {
+  it('pendingInspectDeck with 3 revealed cards', () => {
+    const state = createBlueInspectDeckDemoState()
+    expect(state.pendingInspectDeck).toBeDefined()
+    expect(state.pendingInspectDeck!.revealedCards).toHaveLength(3)
+    expect(state.pendingInspectDeck!.lookCount).toBe(3)
+    expect(state.pendingInspectDeck!.pickCount).toBe(1)
+    expect(state.pendingInspectDeck!.playerId).toBe('player-one')
+  })
+  it('deck does not contain revealed cards', () => {
+    const state = createBlueInspectDeckDemoState()
+    const deckIds = new Set(state.players['player-one'].deck.map((c) => c.instanceId))
+    for (const revealed of state.pendingInspectDeck!.revealedCards) {
+      expect(deckIds.has(revealed.instanceId)).toBe(false)
+    }
+  })
+})
+
+describe('parseTestStateConfig blue states', () => {
+  it('returns blue-activate-skill payable', () => {
+    const r = parseTestStateConfig('?test-state=blue-activate-payable', 'localhost')
+    expect(r).toEqual({ kind: 'blue-activate-skill', payable: true })
+  })
+  it('returns blue-activate-skill unpayable', () => {
+    const r = parseTestStateConfig('?test-state=blue-activate-unpayable', 'localhost')
+    expect(r).toEqual({ kind: 'blue-activate-skill', payable: false })
+  })
+  it('returns blue-optional-cost-attack payable', () => {
+    const r = parseTestStateConfig('?test-state=blue-attack-payable', 'localhost')
+    expect(r).toEqual({ kind: 'blue-optional-cost-attack', payable: true })
+  })
+  it('returns blue-optional-cost-attack unpayable', () => {
+    const r = parseTestStateConfig('?test-state=blue-attack-unpayable', 'localhost')
+    expect(r).toEqual({ kind: 'blue-optional-cost-attack', payable: false })
+  })
+  it('returns blue-inspect-deck', () => {
+    const r = parseTestStateConfig('?test-state=blue-inspect-deck', 'localhost')
+    expect(r).toEqual({ kind: 'blue-inspect-deck' })
+  })
+  it('returns null for non-localhost', () => {
+    expect(parseTestStateConfig('?test-state=blue-inspect-deck', 'example.com')).toBeNull()
   })
 })
