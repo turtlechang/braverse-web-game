@@ -12,7 +12,6 @@ import {
   type DeckChoice,
 } from './starter-deck'
 import type {
-  CardEffect,
   CookieCard,
   EnergyColor,
   GameCard,
@@ -1239,16 +1238,25 @@ export const createBlueOptionalCostAttackDemoState = (payable: boolean): GameSta
   const p1Deck = createOfficialBlueStarterDeck('player-one')
   const p2Deck = createOfficialBlueStarterDeck('player-two')
   const caviar = p1Deck.find((c) => c.id === 'ST4-013') as CookieCard
-  const handCards = p1Deck.filter((c) => c.instanceId !== caviar.instanceId && c.type !== 'cookie').slice(0, payable ? 4 : 1)
+  const costCards = p1Deck
+    .filter((c) => c.instanceId !== caviar.instanceId && c.type !== 'cookie')
+    .slice(0, payable ? 2 : 1)
+  const deployableCookie = p1Deck.find(
+    (c) => c.instanceId !== caviar.instanceId && c.type === 'cookie',
+  )
+  const handCards = payable && deployableCookie
+    ? [...costCards, deployableCookie]
+    : costCards
   const defender = p2Deck.find((c) => c.type === 'cookie') as CookieCard
+  const defenderHpCards = p2Deck
+    .filter((c) => c.instanceId !== defender.instanceId)
+    .slice(0, 2)
   const usedP1 = new Set([caviar.instanceId, ...handCards.map((c) => c.instanceId)])
-  const usedP2 = new Set([defender.instanceId])
-  const optEffect: CardEffect = {
-    kind: 'optional-cost-attack',
-    cost: { energy: {}, discardHand: 2 },
-    effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } }],
-    effectText: 'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
-  }
+  const usedP2 = new Set([
+    defender.instanceId,
+    ...defenderHpCards.map((c) => c.instanceId),
+  ])
+  const attackEffects = caviar.attackEffects ?? []
   return {
     players: {
       'player-one': {
@@ -1257,14 +1265,14 @@ export const createBlueOptionalCostAttackDemoState = (payable: boolean): GameSta
         ...createTestPlayerState(),
         deck: p1Deck.filter((c) => !usedP1.has(c.instanceId)),
         hand: handCards,
-        battleArea: [{ card: { ...caviar, attackEffects: [optEffect] }, hpCards: [], rested: true, battleEntryId: `${caviar.instanceId}:battle:1` }],
+        battleArea: [{ card: caviar, hpCards: [], rested: true, battleEntryId: `${caviar.instanceId}:battle:1` }],
       },
       'player-two': {
         id: 'player-two',
         name: 'AI 對手',
         ...createTestPlayerState(),
         deck: p2Deck.filter((c) => !usedP2.has(c.instanceId)),
-        battleArea: [{ card: defender, hpCards: [], rested: false, battleEntryId: `${defender.instanceId}:battle:2` }],
+        battleArea: [{ card: defender, hpCards: defenderHpCards, rested: false, battleEntryId: `${defender.instanceId}:battle:2` }],
       },
     },
     firstPlayerId: 'player-one', activePlayerId: 'player-one', turnNumber: 1, phase: 'main', status: 'playing', result: null,
@@ -1275,7 +1283,7 @@ export const createBlueOptionalCostAttackDemoState = (payable: boolean): GameSta
       attackerInstanceId: caviar.instanceId, targetInstanceId: defender.instanceId,
       declaredDamage: 1, remainingDamage: 0, stage: 'attack-effect',
       trapUsed: false, revealedHpCard: null, preventKnockoutTargetIds: [],
-      faintedColors: [], attackEffects: [optEffect], attackEffectIndex: 0,
+      faintedColors: [], attackEffects, attackEffectIndex: 0,
     },
   }
 }

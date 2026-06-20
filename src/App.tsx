@@ -483,7 +483,10 @@ function App() {
         onConfirm={pending.confirmEffect}
         onSkip={pending.skipOptionalSkill}
         onCancel={pending.cancelPendingSkill}
-        candidateCards={pending.nonBattleEffectCandidateCards}
+        candidateCards={[
+          ...pending.effectTargetCandidates.map((c) => c.card),
+          ...pending.nonBattleEffectCandidateCards,
+        ]}
         onToggleCandidate={pending.toggleEffectTarget}
         costSupportCandidates={
           pending.pendingEffect && !pending.pendingEffect.skillActivated

@@ -233,6 +233,10 @@ describe('createBlueOptionalCostAttackDemoState', () => {
     expect(state.pendingBattle!.stage).toBe('attack-effect')
     expect(state.pendingBattle!.attackEffects[0].kind).toBe('optional-cost-attack')
     expect(state.players['player-one'].hand.length).toBeGreaterThanOrEqual(2)
+    expect(
+      state.players['player-one'].hand.some((card) => card.type === 'cookie'),
+    ).toBe(true)
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
   })
 
   it('unpayable: hand has less than 2 cards', () => {

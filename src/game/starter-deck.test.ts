@@ -573,6 +573,32 @@ describe('ST4-012 and ST4-013 card skills', () => {
     ])
   })
 
+  it('ST4-013 Captain Caviar keeps its optional attack follow-up in the runtime deck', () => {
+    const deck = createOfficialBlueStarterDeck('player-one')
+    const caviar = deck.find((card) => card.id === 'ST4-013')
+
+    expect(caviar?.type).toBe('cookie')
+    if (!caviar || caviar.type !== 'cookie') {
+      throw new Error('ST4-013 should be a runtime cookie card.')
+    }
+
+    expect(caviar.attackEffects).toEqual([
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+        effectText:
+          'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
+      },
+    ])
+  })
+
   it('ST4-012 Werewolf Cookie skill has discardHand cost and modify-attack effect', () => {
     const deck = createOfficialBlueStarterDeck('player-one')
     const werewolf = deck.find((card) => card.id === 'ST4-012')

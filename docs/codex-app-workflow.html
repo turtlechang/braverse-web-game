@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Braverse Codex App 工作流</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --paper: #ffffff;
+      --ink: #172033;
+      --muted: #657083;
+      --line: #d9dfeb;
+      --blue: #2563eb;
+      --blue-soft: #eaf1ff;
+      --green: #0f9f6e;
+      --green-soft: #e8f8f1;
+      --amber: #b7791f;
+      --amber-soft: #fff4dc;
+      --red: #c2413a;
+      --red-soft: #fff0ef;
+      --shadow: 0 18px 50px rgba(23, 32, 51, 0.08);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 34rem),
+        linear-gradient(180deg, #fbfcff 0%, var(--bg) 48%, #eef2f8 100%);
+      color: var(--ink);
+      font-family: "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 42px 0 64px;
+    }
+
+    .hero {
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(217, 223, 235, 0.8);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      padding: clamp(28px, 5vw, 58px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -80px -140px auto;
+      width: 340px;
+      height: 340px;
+      background: radial-gradient(circle, rgba(15, 159, 110, 0.17), transparent 68%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--green);
+      background: var(--green-soft);
+      border: 1px solid rgba(15, 159, 110, 0.22);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      font-size: clamp(38px, 7vw, 72px);
+      line-height: 1.02;
+      letter-spacing: -0.06em;
+      margin: 0 0 18px;
+    }
+
+    .hero p {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(18px, 2vw, 23px);
+      color: var(--muted);
+    }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      padding: 12px 16px;
+      background: var(--ink);
+      color: #fff;
+      font-weight: 800;
+      min-height: 44px;
+    }
+
+    .button.secondary {
+      background: var(--blue-soft);
+      color: var(--blue);
+      border: 1px solid rgba(37, 99, 235, 0.16);
+    }
+
+    section {
+      margin-top: 28px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 12px 34px rgba(23, 32, 51, 0.05);
+      padding: clamp(22px, 3vw, 34px);
+    }
+
+    h2 {
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.12;
+      letter-spacing: -0.035em;
+      margin: 0 0 10px;
+    }
+
+    .section-lead {
+      color: var(--muted);
+      margin: 0 0 22px;
+      max-width: 860px;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .status-card {
+      min-height: 144px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      padding: 18px;
+      background: linear-gradient(180deg, #fff, #fbfcff);
+    }
+
+    .status-card .icon {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 900;
+      margin-bottom: 12px;
+    }
+
+    .status-card strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .status-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .workflow-map {
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .workflow-svg {
+      width: 100%;
+      min-width: 940px;
+      height: auto;
+      display: block;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      counter-reset: step;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      background: #fbfcff;
+      position: relative;
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 17px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: #f4f7fc;
+      color: #34405a;
+      font-size: 14px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    code {
+      background: #eef3ff;
+      color: #1f4eb7;
+      padding: 2px 6px;
+      border-radius: 7px;
+      font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.93em;
+    }
+
+    .workflow-files {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .file-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fbfcff;
+      padding: 20px;
+    }
+
+    .file-card h3 {
+      margin: 0 0 12px;
+      font-size: 19px;
+    }
+
+    .file-card ul,
+    .plain-list {
+      margin: 10px 0 0;
+      padding-left: 22px;
+    }
+
+    .file-card li,
+    .plain-list li {
+      margin: 7px 0;
+    }
+
+    .dont-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .dont-card {
+      background: var(--red-soft);
+      border: 1px solid rgba(194, 65, 58, 0.22);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .dont-card strong {
+      color: var(--red);
+      display: block;
+      margin-bottom: 6px;
+      font-size: 18px;
+    }
+
+    .checklist {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .check-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: #fbfcff;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .check-item span {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 900;
+    }
+
+    .note {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: var(--amber-soft);
+      border: 1px solid rgba(183, 121, 31, 0.26);
+      color: #6b4b12;
+    }
+
+    footer {
+      color: var(--muted);
+      text-align: center;
+      padding: 24px 0 0;
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .status-grid,
+      .timeline,
+      .workflow-files,
+      .dont-grid,
+      .checklist {
+        grid-template-columns: 1fr;
+      }
+
+      th {
+        display: none;
+      }
+
+      table,
+      tbody,
+      tr,
+      td {
+        display: block;
+        width: 100%;
+      }
+
+      tr {
+        border-bottom: 1px solid var(--line);
+      }
+
+      tr:last-child {
+        border-bottom: 0;
+      }
+
+      td {
+        border-bottom: 0;
+        padding: 10px 14px;
+      }
+
+      td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 3px;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero,
+      section {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+
+      .quick-links {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="eyebrow">目前版本：已上線</div>
+      <h1>Braverse Codex App 工作流</h1>
+      <p>白話講：你提出需求，Codex 先拆解與檢查規則，OpenCode Go 負責改檔，GitHub 自動檢查有沒有壞，Vercel 幫你做可點開的網頁成品與正式站。</p>
+      <div class="quick-links" aria-label="快速連結">
+        <a class="button" href="https://braverse-web-game.vercel.app/">打開正式網站</a>
+        <a class="button secondary" href="#daily">看平常怎麼用</a>
+        <a class="button secondary" href="#trouble">紅燈怎麼辦</a>
+      </div>
+    </header>
+
+    <section aria-labelledby="status-title">
+      <h2 id="status-title">目前狀態</h2>
+      <p class="section-lead">這些是現在已經完成、可以用的工作流能力。</p>
+      <div class="status-grid">
+        <article class="status-card">
+          <div class="icon">✓</div>
+          <strong>正式網站</strong>
+          <span><a href="https://braverse-web-game.vercel.app/">braverse-web-game.vercel.app</a></span>
+        </article>
+        <article class="status-card">
+          <div class="icon">✓</div>
+          <strong>GitHub CI</strong>
+          <span>PR 與 main push 會自動跑測試、Lint、Build。</span>
+        </article>
+        <article class="status-card">
+          <div class="icon">✓</div>
+          <strong>Vercel Preview</strong>
+          <span>每個 PR 會有可點開的預覽網址。</span>
+        </article>
+        <article class="status-card">
+          <div class="icon">✓</div>
+          <strong>main 分支保護</strong>
+          <span>不能直接亂推 main，要走 PR 與 CI。</span>
+        </article>
+        <article class="status-card">
+          <div class="icon">334</div>
+          <strong>單元測試</strong>
+          <span>README 目前記錄 334 項單元測試。</span>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="flow-title">
+      <h2 id="flow-title">一張圖看懂整條線</h2>
+      <p class="section-lead">這張圖的重點是：Codex 不直接把壞掉的東西丟上正式站。每次改動都要先經過 PR、CI、Preview，再合併到 main。</p>
+      <div class="workflow-map" role="img" aria-label="Braverse CI/CD 工作流流程圖">
+        <svg class="workflow-svg" viewBox="0 0 1120 430" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto">
+              <path d="M2 2 L10 6 L2 10 Z" fill="#2563eb"/>
+            </marker>
+            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#172033" flood-opacity="0.12"/>
+            </filter>
+          </defs>
+
+          <rect x="20" y="24" width="1080" height="382" rx="28" fill="#f8fbff" stroke="#d9dfeb"/>
+          <text x="560" y="62" text-anchor="middle" fill="#172033" font-size="24" font-weight="800">從需求到正式網站</text>
+
+          <g filter="url(#shadow)">
+            <rect x="52" y="105" width="140" height="76" rx="18" fill="#ffffff" stroke="#d9dfeb"/>
+            <text x="122" y="137" text-anchor="middle" fill="#172033" font-size="17" font-weight="800">需求</text>
+            <text x="122" y="160" text-anchor="middle" fill="#657083" font-size="13">你說想改什麼</text>
+
+            <rect x="238" y="105" width="150" height="76" rx="18" fill="#eaf1ff" stroke="#bdd0ff"/>
+            <text x="313" y="137" text-anchor="middle" fill="#1f4eb7" font-size="17" font-weight="800">Codex</text>
+            <text x="313" y="160" text-anchor="middle" fill="#657083" font-size="13">分析、拆任務</text>
+
+            <rect x="434" y="105" width="150" height="76" rx="18" fill="#fff" stroke="#d9dfeb"/>
+            <text x="509" y="137" text-anchor="middle" fill="#172033" font-size="17" font-weight="800">OpenCode Go</text>
+            <text x="509" y="160" text-anchor="middle" fill="#657083" font-size="13">新增或修改檔案</text>
+
+            <rect x="630" y="105" width="150" height="76" rx="18" fill="#e8f8f1" stroke="#b6ead4"/>
+            <text x="705" y="137" text-anchor="middle" fill="#0f7b57" font-size="17" font-weight="800">本機驗證</text>
+            <text x="705" y="160" text-anchor="middle" fill="#657083" font-size="13">test / lint / build</text>
+
+            <rect x="826" y="105" width="150" height="76" rx="18" fill="#ffffff" stroke="#d9dfeb"/>
+            <text x="901" y="137" text-anchor="middle" fill="#172033" font-size="17" font-weight="800">Pull Request</text>
+            <text x="901" y="160" text-anchor="middle" fill="#657083" font-size="13">集中審查變更</text>
+          </g>
+
+          <g stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#arrow)">
+            <path d="M195 143 H232"/>
+            <path d="M391 143 H428"/>
+            <path d="M587 143 H624"/>
+            <path d="M783 143 H820"/>
+          </g>
+
+          <g filter="url(#shadow)">
+            <rect x="150" y="250" width="170" height="82" rx="18" fill="#ffffff" stroke="#d9dfeb"/>
+            <text x="235" y="282" text-anchor="middle" fill="#172033" font-size="17" font-weight="800">GitHub Actions</text>
+            <text x="235" y="306" text-anchor="middle" fill="#657083" font-size="13">雲端再跑 CI</text>
+
+            <rect x="380" y="250" width="170" height="82" rx="18" fill="#fff4dc" stroke="#f3d28c"/>
+            <text x="465" y="282" text-anchor="middle" fill="#8a5a12" font-size="17" font-weight="800">Vercel Preview</text>
+            <text x="465" y="306" text-anchor="middle" fill="#657083" font-size="13">先看網頁成品</text>
+
+            <rect x="610" y="250" width="150" height="82" rx="18" fill="#ffffff" stroke="#d9dfeb"/>
+            <text x="685" y="282" text-anchor="middle" fill="#172033" font-size="17" font-weight="800">Review</text>
+            <text x="685" y="306" text-anchor="middle" fill="#657083" font-size="13">人確認沒問題</text>
+
+            <rect x="820" y="250" width="150" height="82" rx="18" fill="#e8f8f1" stroke="#b6ead4"/>
+            <text x="895" y="282" text-anchor="middle" fill="#0f7b57" font-size="17" font-weight="800">Merge main</text>
+            <text x="895" y="306" text-anchor="middle" fill="#657083" font-size="13">正式合併</text>
+          </g>
+
+          <g stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#arrow)">
+            <path d="M901 184 C901 226 235 210 235 244"/>
+            <path d="M325 291 H374"/>
+            <path d="M555 291 H604"/>
+            <path d="M765 291 H814"/>
+            <path d="M895 246 C895 218 985 218 985 184"/>
+          </g>
+
+          <rect x="954" y="105" width="120" height="76" rx="18" fill="#e8f8f1" stroke="#b6ead4" filter="url(#shadow)"/>
+          <text x="1014" y="137" text-anchor="middle" fill="#0f7b57" font-size="17" font-weight="800">正式站</text>
+          <text x="1014" y="160" text-anchor="middle" fill="#657083" font-size="13">Production</text>
+        </svg>
+      </div>
+    </section>
+
+    <section aria-labelledby="roles-title">
+      <h2 id="roles-title">誰負責什麼</h2>
+      <p class="section-lead">把每個角色想成流水線上的關卡。每個關卡只做自己該做的事，問題會比較好追。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>角色</th>
+            <th>白話說明</th>
+            <th>它不該做什麼</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="角色"><strong>使用者</strong></td>
+            <td data-label="白話說明">提出需求、看 Preview、決定要不要合併。</td>
+            <td data-label="不該做什麼">不要直接把未檢查的東西推進 main。</td>
+          </tr>
+          <tr>
+            <td data-label="角色"><strong>Codex</strong></td>
+            <td data-label="白話說明">像指揮官：先讀規則、拆任務、驗證結果、帶你走流程。</td>
+            <td data-label="不該做什麼">一般情況不直接改專案檔，除非你明確同意例外。</td>
+          </tr>
+          <tr>
+            <td data-label="角色"><strong>OpenCode Go</strong></td>
+            <td data-label="白話說明">像施工團隊：依 Codex 指令新增、修改檔案。</td>
+            <td data-label="不該做什麼">不擅自還原你的其他修改，不提交密鑰。</td>
+          </tr>
+          <tr>
+            <td data-label="角色"><strong>GitHub Actions</strong></td>
+            <td data-label="白話說明">像自動驗收員：每個 PR 跑測試、Lint、Build。</td>
+            <td data-label="不該做什麼">不部署、不保存 Vercel Token。</td>
+          </tr>
+          <tr>
+            <td data-label="角色"><strong>Vercel</strong></td>
+            <td data-label="白話說明">像展示間與正式門市：PR 給 Preview，main 更新正式站。</td>
+            <td data-label="不該做什麼">不取代 GitHub CI 的品質檢查。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="daily" aria-labelledby="daily-title">
+      <h2 id="daily-title">平常怎麼用</h2>
+      <p class="section-lead">你每天真正需要記住的是這五步。</p>
+      <div class="timeline">
+        <article class="step">
+          <strong>開新需求</strong>
+          <span>跟 Codex 說你要改什麼。Codex 先確認目標、風險與完成標準。</span>
+        </article>
+        <article class="step">
+          <strong>開 PR</strong>
+          <span>改完後推分支，建立 Pull Request，不直接推 main。</span>
+        </article>
+        <article class="step">
+          <strong>看兩個燈</strong>
+          <span>GitHub CI 要綠燈，Vercel Preview 要能打開。</span>
+        </article>
+        <article class="step">
+          <strong>看網頁成品</strong>
+          <span>在 Preview 直接玩或檢查畫面，確認不是只看程式碼。</span>
+        </article>
+        <article class="step">
+          <strong>合併 main</strong>
+          <span>確認後合併，Vercel 自動更新正式網站。</span>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="workflow-files-title">
+      <h2 id="workflow-files-title">兩份 workflow 在做什麼</h2>
+      <p class="section-lead">這兩份檔案是 GitHub Actions 的設定。它們只做驗證，不做部署。</p>
+      <div class="workflow-files">
+        <article class="file-card">
+          <h3><code>.github/workflows/ci.yml</code></h3>
+          <p>這是每次 PR 與 main push 自動跑的基本檢查。</p>
+          <ul>
+            <li>觸發時機：所有 PR、push 到 <code>main</code></li>
+            <li>Node.js：22</li>
+            <li>權限：<code>contents: read</code></li>
+            <li>指令：<code>npm ci</code>、<code>npm test</code>、<code>npm run lint</code>、<code>npm run build</code></li>
+          </ul>
+        </article>
+        <article class="file-card">
+          <h3><code>.github/workflows/ai-browser-validation.yml</code></h3>
+          <p>這是需要更完整瀏覽器驗證時，手動按下去跑的檢查。</p>
+          <ul>
+            <li>觸發時機：手動 <code>workflow_dispatch</code></li>
+            <li>先執行：<code>npm run build</code></li>
+            <li>安裝：<code>npx playwright install chromium --with-deps</code></li>
+            <li>驗證：<code>npm run test:ai:browser</code></li>
+            <li>失敗時：上傳 <code>test-results/</code>，保留 7 天</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="trouble" aria-labelledby="trouble-title">
+      <h2 id="trouble-title">紅燈怎麼辦</h2>
+      <p class="section-lead">紅燈不是壞事，它是在阻止問題進正式站。照這張表處理就好。</p>
+      <table>
+        <thead>
+          <tr>
+            <th>看到什麼</th>
+            <th>代表什麼</th>
+            <th>下一步</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="看到什麼"><strong>CI failed</strong></td>
+            <td data-label="代表什麼">測試、Lint 或 Build 有一關沒過。</td>
+            <td data-label="下一步">打開失敗步驟，看錯誤訊息；先修本機，再 push 更新 PR。</td>
+          </tr>
+          <tr>
+            <td data-label="看到什麼"><strong>Preview protected / Authentication Required</strong></td>
+            <td data-label="代表什麼">Vercel Preview 有登入保護。</td>
+            <td data-label="下一步">用已登入 Vercel 且有權限的瀏覽器開啟；這不等於部署失敗。</td>
+          </tr>
+          <tr>
+            <td data-label="看到什麼"><strong>Vercel build failed</strong></td>
+            <td data-label="代表什麼">Vercel 建置環境跑不過。</td>
+            <td data-label="下一步">看 Vercel Deployments 的 build log，通常是 Node 版本、install 或 build 指令問題。</td>
+          </tr>
+          <tr>
+            <td data-label="看到什麼"><strong>AI browser validation failed</strong></td>
+            <td data-label="代表什麼">完整瀏覽器對戰驗證有問題。</td>
+            <td data-label="下一步">下載 GitHub Actions 的 <code>test-results</code> artifact，看截圖與報告。</td>
+          </tr>
+          <tr>
+            <td data-label="看到什麼"><strong>main 不能直接 push</strong></td>
+            <td data-label="代表什麼">分支保護正在正常工作。</td>
+            <td data-label="下一步">建立分支與 PR，等 CI 綠燈後再合併。</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="dont-title">
+      <h2 id="dont-title">三個不要</h2>
+      <p class="section-lead">這三件事最容易讓流程變亂，請固定避免。</p>
+      <div class="dont-grid">
+        <article class="dont-card">
+          <strong>不要放 Vercel Token</strong>
+          <span>GitHub Actions 不負責部署，所以不需要 <code>VERCEL_TOKEN</code>、<code>VERCEL_ORG_ID</code>、<code>VERCEL_PROJECT_ID</code>。</span>
+        </article>
+        <article class="dont-card">
+          <strong>不要直接 push main</strong>
+          <span>正式站更新要走 PR，讓 CI 與 Preview 先擋問題。</span>
+        </article>
+        <article class="dont-card">
+          <strong>不要提交產物</strong>
+          <span><code>test-results/</code>、<code>dist/</code>、<code>node_modules/</code> 都不要進 Git。</span>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="checklist-title">
+      <h2 id="checklist-title">最後檢查清單</h2>
+      <p class="section-lead">每次準備合併前，看這張清單。</p>
+      <div class="checklist">
+        <div class="check-item"><span>✓</span><div>PR 的 <code>Test, Lint & Build</code> 是綠色。</div></div>
+        <div class="check-item"><span>✓</span><div>Vercel Preview 能打開，畫面與操作正常。</div></div>
+        <div class="check-item"><span>✓</span><div>README 或文件若有變更，內容沒有宣稱未完成事項已完成。</div></div>
+        <div class="check-item"><span>✓</span><div>沒有把密鑰、<code>dist/</code>、<code>test-results/</code>、<code>node_modules/</code> 放進 commit。</div></div>
+        <div class="check-item"><span>✓</span><div>需要完整對戰驗證時，手動跑 <code>AI Browser Validation</code>。</div></div>
+        <div class="check-item"><span>✓</span><div>合併後確認正式網站仍能載入。</div></div>
+      </div>
+      <div class="note">
+        一句話記法：<strong>先 PR，看綠燈，看 Preview，再合併。</strong>正式網站交給 Vercel 自動更新。
+      </div>
+    </section>
+
+    <footer>
+      產生日期：2026-06-16。此頁是給人看的流程說明，不取代 <code>README.md</code>、<code>AGENTS.md</code> 或 GitHub Actions 設定檔。
+    </footer>
+  </main>
+</body>
+</html>

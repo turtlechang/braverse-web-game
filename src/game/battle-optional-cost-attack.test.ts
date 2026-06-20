@@ -7,9 +7,11 @@ import {
   resolveNextDamage,
   beginAttack,
 } from './battle'
+import { deployCookie } from './actions'
 import type { GameState } from './types'
 import { createBattleState, declareAttack } from './test-helpers/battle-helpers'
 import type { GameCard } from './types'
+import { createOfficialBlueStarterDeck } from './starter-deck'
 
 const handCookie = (id: string): GameCard => ({
   id,
@@ -31,6 +33,61 @@ const advanceToAttackEffect = (state: GameState): GameState => {
 }
 
 describe('optional-cost-attack', () => {
+  it('reaches the pending decision through a real ST4-013 attack', () => {
+    let state = createBattleState()
+    const caviar = createOfficialBlueStarterDeck('player-two').find(
+      (card) => card.id === 'ST4-013',
+    )
+    if (!caviar || caviar.type !== 'cookie') {
+      throw new Error('ST4-013 should be a runtime cookie card.')
+    }
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: caviar,
+    }
+    state.players['player-two'].supportArea[0].card.energyColor = 'blue'
+    const costCardOne = handCookie('hc1')
+    const costCardTwo = handCookie('hc2')
+    const deployableCookie = handCookie('deployable-cookie')
+    state.players['player-two'].hand = [
+      costCardOne,
+      costCardTwo,
+      deployableCookie,
+    ]
+
+    state = beginAttack(
+      state,
+      caviar.instanceId,
+      'defender',
+      ['p2-support'],
+    )
+    state = advanceToAttackEffect(state)
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingOptionalCostAttack).toMatchObject({
+      playerId: 'player-two',
+      sourceInstanceId: caviar.instanceId,
+      cost: { discardHand: 2 },
+    })
+
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [costCardOne.instanceId, costCardTwo.instanceId],
+      ['defender'],
+    )
+    expect(state.pendingBattle).toBeNull()
+    expect(state.pendingOptionalCostAttack).toBeNull()
+
+    state = deployCookie(state, deployableCookie.instanceId)
+    expect(
+      state.players['player-two'].battleArea.map(
+        (cookie) => cookie.card.instanceId,
+      ),
+    ).toContain(deployableCookie.instanceId)
+  })
+
   it('creates pendingOptionalCostAttack even when hand has fewer cards than cost', () => {
     let state = createBattleState()
     state.players['player-two'].hand = []
@@ -148,6 +205,7 @@ describe('optional-cost-attack', () => {
     expect(state.players['player-two'].discardPile.map((c) => c.instanceId)).toEqual(
       expect.arrayContaining([hc1.instanceId, hc2.instanceId]),
     )
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
     expect(state.pendingBattle).toBeNull()
   })
 

@@ -84,6 +84,7 @@ export function useAiTurn(params: {
     aiActionTimerRef.current = timer
 
     return () => {
+      setAiThinking(false)
       if (aiThinkingTimerRef.current !== null) {
         window.clearTimeout(aiThinkingTimerRef.current)
         aiThinkingTimerRef.current = null

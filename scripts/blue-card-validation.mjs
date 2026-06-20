@@ -91,13 +91,28 @@ try {
     // Collect console and page errors
     const consoleErrors = []
     const pageErrors = []
+    const failedResponses = []
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
-        consoleErrors.push(msg.text())
+        const location = msg.location()
+        if (
+          location.url?.endsWith('/favicon.ico') &&
+          msg.text().includes('404')
+        ) {
+          return
+        }
+        consoleErrors.push(
+          location.url ? `${msg.text()} (${location.url})` : msg.text(),
+        )
       }
     })
     page.on('pageerror', (err) => {
       pageErrors.push(err.message)
+    })
+    page.on('response', (response) => {
+      if (response.status() >= 400) {
+        failedResponses.push(`${response.status()} ${response.url()}`)
+      }
     })
 
     // --- ST4-012 activate skill (payable) ---
@@ -123,17 +138,25 @@ try {
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
 
-      // Select a hand card for discard
-      const handCards = p.locator('.bottom-hand .hand-card')
-      const handCardCount = await handCards.count()
-      assert.ok(handCardCount >= 1, `應有手牌可選，實際 ${handCardCount}`)
-      await handCards.first().click()
+      // Select a discard hand candidate inside the effect panel
+      const discardCandidates = effectPanel.locator('.effect-candidates-discard-hand button')
+      const candidateCount = await discardCandidates.count()
+      assert.ok(candidateCount >= 1, `應有手牌代價候選可選，實際 ${candidateCount}`)
+      await discardCandidates.first().click()
       await p.waitForTimeout(200)
 
-      // Cancel the skill (press Escape or click cancel button)
-      const cancelButton = effectPanel.locator('button', { hasText: /略過|取消/ })
+      // Select target if present (e.g., modify-attack self-target)
+      const targetCandidates = effectPanel.locator('.effect-candidates-target button')
+      const targetCount = await targetCandidates.count()
+      if (targetCount > 0) {
+        await targetCandidates.first().click()
+        await p.waitForTimeout(200)
+      }
+
+      // Cancel the skill
+      const cancelButton = effectPanel.locator('button', { hasText: /取消技能/ })
       if (await cancelButton.count() > 0) {
-        await cancelButton.click()
+        await cancelButton.click({ force: true })
       } else {
         await p.keyboard.press('Escape')
       }
@@ -149,17 +172,21 @@ try {
       // Re-open skill and confirm this time
       await skillButton.click()
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
-      await handCards.first().click()
+      await discardCandidates.first().click()
       await p.waitForTimeout(200)
+      if (targetCount > 0) {
+        await targetCandidates.first().click()
+        await p.waitForTimeout(200)
+      }
 
       // Confirm
-      const confirmButton = effectPanel.locator('button', { hasText: /確認/ })
+      const confirmButton = effectPanel.locator('button', { hasText: /確認效果/ })
       await confirmButton.waitFor({ state: 'visible' })
       assert.ok(
         !(await confirmButton.isDisabled()),
-        '選擇手牌後確認按鈕不應停用',
+        '選擇手牌與目標後確認按鈕不應停用',
       )
-      await confirmButton.click()
+      await confirmButton.click({ force: true })
       await p.waitForTimeout(500)
 
       // Effect panel closes after confirmation
@@ -187,8 +214,18 @@ try {
       await p.goto(`${baseUrl}?test-state=blue-attack-payable`, { waitUntil: 'networkidle' })
       await p.waitForTimeout(500)
 
+      // Diagnostic: screenshot before assertion
+      const diagPath = resolve(screenshotDir, `blue-card-${vpLabel}-optional-cost.png`)
+      await p.screenshot({ path: diagPath })
+      console.log(`    診斷截圖：${diagPath}`)
+
+      // Check if modal exists at all
+      const modalCount = await p.locator('.optional-cost-attack-modal').count()
+      const backdropCount = await p.locator('.modal-backdrop').count()
+      console.log(`    optional-cost-attack-modal count: ${modalCount}, modal-backdrop count: ${backdropCount}`)
+
       // Should see the optional cost attack modal
-      const decisionModal = p.locator('.decision-modal')
+      const decisionModal = p.locator('.optional-cost-attack-modal')
       await decisionModal.waitFor({ state: 'visible', timeout: 5000 })
 
       const modalText = await decisionModal.innerText()
@@ -198,8 +235,60 @@ try {
       )
 
       // Should have "Skip" and "Pay" options
-      const skipButton = decisionModal.getByRole('button', { name: /略過|Skip/i })
-      assert.ok(await skipButton.count() > 0 || true, '應有略過選項')
+      const skipButton = decisionModal.getByRole('button', { name: /略過/i })
+      assert.ok(await skipButton.count() > 0, '應有略過選項')
+      const handBefore = await p.locator('.bottom-hand .hand-card-wrap').count()
+      const defenderHpBefore = await p
+        .locator('.top-field .combat-card-wrap .card-badges span')
+        .first()
+        .innerText()
+      assert.ok(defenderHpBefore.includes('HP 2/'), `支付前對手應有 2 HP，實際：${defenderHpBefore}`)
+
+      await decisionModal.getByRole('button', { name: /支付/i }).click()
+      const optionGroups = decisionModal.locator('.modal-card-options')
+      const discardOptions = optionGroups.nth(0).locator('button')
+      await discardOptions.nth(0).click()
+      await discardOptions.nth(1).click()
+      await optionGroups.nth(1).locator('button').first().click()
+      const confirmButton = decisionModal.getByRole('button', { name: /^確認$/ })
+      assert.ok(!(await confirmButton.isDisabled()), '選滿 2 張手牌與目標後確認按鈕應啟用')
+      await confirmButton.click()
+      await decisionModal.waitFor({ state: 'hidden', timeout: 5000 })
+
+      assert.strictEqual(
+        await p.locator('.bottom-hand .hand-card-wrap').count(),
+        handBefore - 2,
+        '支付後應棄置 2 張手牌',
+      )
+      const defenderHpAfter = await p
+        .locator('.top-field .combat-card-wrap .card-badges span')
+        .first()
+        .innerText()
+      assert.ok(defenderHpAfter.includes('HP 1/'), `支付後對手應受到 1 點傷害，實際：${defenderHpAfter}`)
+
+      const remainingHandCard = p.locator('.bottom-hand .hand-card-wrap').first()
+      await remainingHandCard.locator('.hand-card').click()
+      const deployButton = remainingHandCard.locator('.hand-card-action', {
+        hasText: '登場',
+      })
+      if (!(await deployButton.isVisible().catch(() => false))) {
+        console.log(`    效果後手牌：${await remainingHandCard.innerText()}`)
+        console.log(`    效果後狀態：${await p.locator('.table-divider').innerText()}`)
+        console.log(`    效果後 modal：${await p.locator('.modal-backdrop').count()}`)
+        const postEffectPath = resolve(
+          screenshotDir,
+          `blue-card-${vpLabel}-post-effect-lock.png`,
+        )
+        await p.screenshot({ path: postEffectPath })
+        console.log(`    效果後診斷截圖：${postEffectPath}`)
+      }
+      await deployButton.waitFor({ state: 'visible', timeout: 3000 })
+      await deployButton.click()
+      assert.strictEqual(
+        await p.locator('.bottom-field .combat-card-wrap').count(),
+        2,
+        'ST4-013 效果完成後，剩餘手牌餅乾應能登場',
+      )
     })
 
     // --- ST4-013 optional-cost-attack (unpayable) ---
@@ -208,10 +297,10 @@ try {
       await p.waitForTimeout(500)
 
       // The decision modal may appear with "Pay" disabled or auto-skip
-      const decisionModal = p.locator('.decision-modal')
+      const decisionModal = p.locator('.optional-cost-attack-modal')
       const modalExists = await decisionModal.count() > 0
       if (modalExists) {
-        const payButton = decisionModal.getByRole('button', { name: /支付|Pay/i })
+        const payButton = decisionModal.getByRole('button', { name: /支付/i })
         if (await payButton.count() > 0) {
           assert.ok(
             await payButton.isDisabled(),
@@ -227,11 +316,11 @@ try {
       await p.waitForTimeout(500)
 
       // Should see the inspect-deck modal
-      const inspectModal = p.locator('.inspect-deck-modal, .decision-modal')
+      const inspectModal = p.locator('.inspect-deck-modal')
       await inspectModal.waitFor({ state: 'visible', timeout: 5000 })
 
       // Should show card options to pick
-      const cardOptions = inspectModal.locator('.modal-card-options > button')
+      const cardOptions = inspectModal.locator('.inspect-deck-grid > button')
       const cardCount = await cardOptions.count()
       assert.ok(cardCount >= 3, `檢視牌庫視窗應顯示至少 3 張可選卡牌，實際 ${cardCount}`)
 
@@ -252,7 +341,7 @@ try {
       assert.strictEqual(
         consoleErrors.length,
         0,
-        `不應有 console error：${JSON.stringify(consoleErrors)}`,
+        `不應有 console error：${JSON.stringify(consoleErrors)}；失敗資源：${JSON.stringify(failedResponses)}`,
       )
       assert.strictEqual(
         pageErrors.length,

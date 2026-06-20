@@ -5,7 +5,10 @@ import { act } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
-import { createItemUsageDemoState } from '../game/demo'
+import {
+  createBlueOptionalCostAttackDemoState,
+  createItemUsageDemoState,
+} from '../game/demo'
 import { usePendingEffect } from './usePendingEffect'
 import type { CookieCard, GameCard, GameState } from '../game'
 
@@ -448,5 +451,49 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
     expect(captured!.pendingEffect?.selectedTargetIds).not.toContain(supportId)
 
     await act(() => root.unmount())
+  })
+})
+
+describe('usePendingEffect optional-cost-attack', () => {
+  it('asks the rules layer to create the pending decision from a real attack effect', async () => {
+    vi.useFakeTimers()
+    const gameState = createBlueOptionalCostAttackDemoState(true)
+    gameState.pendingOptionalCostAttack = null
+    const setGameMock = vi.fn()
+
+    function TestHarness() {
+      usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.runAllTimers())
+
+    expect(setGameMock).toHaveBeenCalledTimes(1)
+    const updateGame = setGameMock.mock.calls[0][0] as (
+      state: GameState,
+    ) => GameState
+    const nextState = updateGame(gameState)
+    expect(nextState.pendingOptionalCostAttack).toMatchObject({
+      playerId: 'player-one',
+      cost: { discardHand: 2 },
+    })
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
   })
 })

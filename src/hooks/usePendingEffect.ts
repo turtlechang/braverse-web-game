@@ -392,6 +392,7 @@ export function usePendingEffect(params: {
       !battle ||
       battle.stage !== 'attack-effect' ||
       battle.attackerPlayerId !== viewerPlayerId ||
+      game.pendingOptionalCostAttack ||
       pendingEffect ||
       faintActive
     ) {
@@ -404,6 +405,27 @@ export function usePendingEffect(params: {
     const currentAttackEffect =
       battle.attackEffects[battle.attackEffectIndex]
     if (!sourceCard || !currentAttackEffect) return
+
+    if (currentAttackEffect.kind === 'optional-cost-attack') {
+      const timer = window.setTimeout(() => {
+        setGame((current) => {
+          const currentBattle = current.pendingBattle
+          if (
+            current.pendingOptionalCostAttack ||
+            !currentBattle ||
+            currentBattle.stage !== 'attack-effect' ||
+            currentBattle.attackerPlayerId !== viewerPlayerId ||
+            currentBattle.attackerInstanceId !== battle.attackerInstanceId ||
+            currentBattle.attackEffectIndex !== battle.attackEffectIndex
+          ) {
+            return current
+          }
+          return resolveAttackEffect(current, viewerPlayerId, [])
+        })
+        setMessage(`${sourceCard.name}等待決定是否支付攻擊後續效果代價。`)
+      }, 0)
+      return () => window.clearTimeout(timer)
+    }
 
     const timer = window.setTimeout(() => {
       setPendingEffect({
@@ -439,6 +461,7 @@ export function usePendingEffect(params: {
   }, [
     game,
     viewerPlayerId,
+    setGame,
     pendingEffect,
     faintActive,
     setMessage,

@@ -238,6 +238,24 @@ const createCard = (
               { kind: 'break-to-trash', max: 1, exactLevel: 1 },
             ] satisfies CardEffect[],
           }
+        : source.cardNumber === 'ST4-013'
+          ? {
+              attackEffects: [
+                {
+                  kind: 'optional-cost-attack',
+                  cost: { energy: {}, discardHand: 2 },
+                  effects: [
+                    {
+                      kind: 'damage',
+                      amount: 1,
+                      target: { side: 'opponent', min: 1, max: 1 },
+                    },
+                  ],
+                  effectText:
+                    'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
+                },
+              ] satisfies CardEffect[],
+            }
         : source.cardNumber === 'ST4-015'
           ? {
               attackEffects: [

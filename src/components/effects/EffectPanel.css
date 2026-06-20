@@ -4,12 +4,14 @@
   right: 18px;
   top: 94px;
   width: min(330px, calc(100vw - 36px));
+  max-height: calc(100vh - 112px);
   padding: 18px;
   border: 1px solid rgba(113, 236, 255, 0.72);
   border-radius: 8px;
   background: rgba(3, 20, 53, 0.95);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(12px);
+  overflow-y: auto;
 }
 
 .effect-panel.is-complete {
@@ -132,5 +134,6 @@
     top: 136px;
     right: 8px;
     width: min(300px, calc(100vw - 16px));
+    max-height: calc(100vh - 154px);
   }
 }

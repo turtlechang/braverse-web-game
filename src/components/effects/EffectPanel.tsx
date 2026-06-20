@@ -108,7 +108,7 @@ function EffectPanelContent({
         {costSupportCandidates.length > 0 && !pendingEffect.skillActivated && (
           <>
             <small>選擇要作為代價棄置的支援區卡牌</small>
-            <div className="effect-candidates">
+            <div className="effect-candidates effect-candidates-cost-support">
               {costSupportCandidates.map((card) => (
                 <button
                   type="button"
@@ -129,7 +129,7 @@ function EffectPanelContent({
         {discardHandCandidates.length > 0 && !pendingEffect.skillActivated && (
           <>
             <small>選擇要作為代價棄置的手牌</small>
-            <div className="effect-candidates">
+            <div className="effect-candidates effect-candidates-discard-hand">
               {discardHandCandidates.map((card) => (
                 <button
                   type="button"
@@ -148,7 +148,7 @@ function EffectPanelContent({
           </>
         )}
         {candidateCards.length > 0 && (
-          <div className="effect-candidates">
+          <div className="effect-candidates effect-candidates-target">
             {candidateCards.map((card) => (
               <button
                 type="button"
