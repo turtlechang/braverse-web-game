@@ -241,7 +241,9 @@ export const convertOfficialCardEffects = (
     'ST4-004': [
       { kind: 'set-active' as const, supportCount: 1 } satisfies CardEffect as CardEffect,
     ],
-    'ST4-013': [{ kind: 'draw', amount: 1 }],
+    'ST4-013': [
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restToBottom: true },
+    ],
     'ST5-019': [
       {
         kind: 'damage',

@@ -308,6 +308,25 @@ describe('getActingPlayerId', () => {
     getActingPlayerId(state)
     expect(state).toEqual(frozen)
   })
+
+  it('returns pendingRefresh playerId when both pendingRefresh and pendingInspectDeck exist', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingRefresh: {
+        playerId: 'player-two',
+        remainingDraws: 0,
+      },
+      pendingInspectDeck: {
+        playerId: 'player-one',
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        revealedCards: [],
+        lookCount: 3,
+        pickCount: 1,
+      },
+    }
+    expect(getActingPlayerId(state)).toBe('player-two')
+  })
 })
 
 describe('isPlayerControllingState', () => {
@@ -353,5 +372,37 @@ describe('isPlayerControllingState', () => {
       },
     }
     expect(isPlayerControllingState(state, 'player-one')).toBe(true)
+  })
+
+  it('returns true for player with pendingOptionalCostAttack', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [],
+        effectText: 'test',
+      },
+    }
+    expect(isPlayerControllingState(state, 'player-two')).toBe(true)
+    expect(isPlayerControllingState(state, 'player-one')).toBe(false)
+  })
+
+  it('returns true for player with pendingInspectDeck', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingInspectDeck: {
+        playerId: 'player-one',
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        revealedCards: [],
+        lookCount: 3,
+        pickCount: 1,
+      },
+    }
+    expect(isPlayerControllingState(state, 'player-one')).toBe(true)
+    expect(isPlayerControllingState(state, 'player-two')).toBe(false)
   })
 })

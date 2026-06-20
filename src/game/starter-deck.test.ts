@@ -560,3 +560,36 @@ describe('official FLIP and TRAP abilities', () => {
     })
   })
 })
+
+describe('ST4-012 and ST4-013 card skills', () => {
+  it('ST4-013 Captain Caviar OnPlay is inspect-deck effect', () => {
+    const deck = createOfficialBlueStarterDeck('player-one')
+    const caviar = deck.find((card) => card.id === 'ST4-013')
+    expect(caviar).toBeDefined()
+    expect(caviar!.skill).toBeDefined()
+    expect(caviar!.skill!.trigger).toBe('on-play')
+    expect(caviar!.skill!.effects).toEqual([
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restToBottom: true },
+    ])
+  })
+
+  it('ST4-012 Werewolf Cookie skill has discardHand cost and modify-attack effect', () => {
+    const deck = createOfficialBlueStarterDeck('player-one')
+    const werewolf = deck.find((card) => card.id === 'ST4-012')
+    expect(werewolf).toBeDefined()
+    expect(werewolf!.skill).toBeDefined()
+    expect(werewolf!.skill!.trigger).toBe('activate')
+    expect(werewolf!.skill!.oncePerTurn).toBe(true)
+    expect(werewolf!.skill!.yourTurn).toBe(false)
+    expect(werewolf!.skill!.restSource).toBe(false)
+    expect(werewolf!.skill!.cost).toEqual({ energy: {}, discardHand: 1 })
+    expect(werewolf!.skill!.effects).toEqual([
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ])
+  })
+})

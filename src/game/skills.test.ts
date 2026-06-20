@@ -512,3 +512,162 @@ describe('cookie skill activation', () => {
     ).toBe(false)
   })
 })
+
+describe('activate skill with discardHand cost', () => {
+  const discardHandSkill = (
+    discardHand: number,
+    effects: CardSkill['effects'] = [],
+  ): CardSkill => ({
+    trigger: 'activate',
+    oncePerTurn: false,
+    yourTurn: false,
+    restSource: false,
+    cost: { energy: {}, discardHand },
+    text: 'test',
+    effects,
+  })
+
+  const withDiscardHandSkill = (
+    state: GameState,
+    discardHand: number,
+    effects: CardSkill['effects'] = [],
+  ): GameState =>
+    withSkill(
+      advancePhase(advancePhase(state)),
+      'player-one',
+      discardHandSkill(discardHand, effects),
+    )
+
+  it('rejects when hand has fewer cards than discardHand cost', () => {
+    const state = withDiscardHandSkill(createDemoGame(), 1)
+    const stateWithEmptyHand: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': { ...state.players['player-one'], hand: [] },
+      },
+    }
+    const sourceId =
+      stateWithEmptyHand.players['player-one'].battleArea[0].card.instanceId
+    expect(
+      canActivateCookieSkill(
+        stateWithEmptyHand,
+        'player-one',
+        sourceId,
+        'activate',
+      ),
+    ).toBe(false)
+  })
+
+  it('allows when hand has enough cards for discardHand cost', () => {
+    const state = withDiscardHandSkill(createDemoGame(), 1)
+    const player = state.players['player-one']
+    expect(player.hand.length).toBeGreaterThanOrEqual(1)
+    const sourceId = player.battleArea[0].card.instanceId
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'activate'),
+    ).toBe(true)
+  })
+
+  it('discards specified hand cards when paying discardHand cost', () => {
+    const baseState = withDiscardHandSkill(createDemoGame(), 1, [
+      { kind: 'draw', amount: 1 },
+    ])
+    const handCardToDiscard =
+      baseState.players['player-one'].hand[0]
+    const sourceId =
+      baseState.players['player-one'].battleArea[0].card.instanceId
+    const result = activateCookieSkill(
+      baseState,
+      'player-one',
+      sourceId,
+      'activate',
+      [],
+      [],
+      [handCardToDiscard.instanceId],
+    )
+    expect(
+      result.players['player-one'].hand.map((c) => c.instanceId),
+    ).not.toContain(handCardToDiscard.instanceId)
+    expect(
+      result.players['player-one'].discardPile.map((c) => c.instanceId),
+    ).toContain(handCardToDiscard.instanceId)
+  })
+
+  it('rejects wrong discardHand count', () => {
+    const baseState = withDiscardHandSkill(createDemoGame(), 2, [
+      { kind: 'draw', amount: 1 },
+    ])
+    const player = baseState.players['player-one']
+    const sourceId = player.battleArea[0].card.instanceId
+    expect(() =>
+      activateCookieSkill(
+        baseState,
+        'player-one',
+        sourceId,
+        'activate',
+        [],
+        [],
+        [player.hand[0].instanceId],
+      ),
+    ).toThrow('必須棄置 2 張手牌作為技能代價')
+  })
+
+  it('rejects discardHandIds not in hand', () => {
+    const baseState = withDiscardHandSkill(createDemoGame(), 1, [
+      { kind: 'draw', amount: 1 },
+    ])
+    const sourceId =
+      baseState.players['player-one'].battleArea[0].card.instanceId
+    expect(() =>
+      activateCookieSkill(
+        baseState,
+        'player-one',
+        sourceId,
+        'activate',
+        [],
+        [],
+        ['non-existent-id'],
+      ),
+    ).toThrow('只能選擇自己的手牌作為代價')
+  })
+
+  it('rejects discardHandIds when cost does not require discardHand', () => {
+    const baseState = withDiscardHandSkill(createDemoGame(), 0, [
+      { kind: 'draw', amount: 1 },
+    ])
+    const player = baseState.players['player-one']
+    const sourceId = player.battleArea[0].card.instanceId
+    expect(() =>
+      activateCookieSkill(
+        baseState,
+        'player-one',
+        sourceId,
+        'activate',
+        [],
+        [],
+        [player.hand[0].instanceId],
+      ),
+    ).toThrow('此技能不需要棄手牌代價')
+  })
+
+  it('rejects duplicate discardHandIds', () => {
+    const baseState = withDiscardHandSkill(createDemoGame(), 2, [
+      { kind: 'draw', amount: 1 },
+    ])
+    const player = baseState.players['player-one']
+    const sourceId = player.battleArea[0].card.instanceId
+    const handCardId = player.hand[0].instanceId
+    expect(() =>
+      activateCookieSkill(
+        baseState,
+        'player-one',
+        sourceId,
+        'activate',
+        [],
+        [],
+        [handCardId, handCardId],
+      ),
+    ).toThrow('不能重複選擇同一張手牌作為代價。')
+  })
+})

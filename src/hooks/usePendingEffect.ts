@@ -78,7 +78,9 @@ export function usePendingEffect(params: {
         ? currentEffect.kind === 'break-to-trash' ||
           currentEffect.kind === 'support-to-trash' ||
           currentEffect.kind === 'support-to-hand' ||
-          currentEffect.kind === 'trash-to-battle'
+          currentEffect.kind === 'trash-to-battle' ||
+          currentEffect.kind === 'inspect-deck' ||
+          currentEffect.kind === 'optional-cost-attack'
           ? null
           : currentEffect.target
         : null
@@ -487,6 +489,9 @@ export function usePendingEffect(params: {
           ? currentEffect.kind === 'gain-hp'
             ? currentEffect.target?.max ?? 0
             : 0
+          : currentEffect.kind === 'inspect-deck' ||
+              currentEffect.kind === 'optional-cost-attack'
+            ? 0
           : currentEffect.target.max
 
     const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)

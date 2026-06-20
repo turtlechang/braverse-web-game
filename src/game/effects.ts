@@ -216,7 +216,9 @@ export const isEffectConditionMet = (
     effect.kind === 'battle-to-support' ||
     effect.kind === 'support-to-trash' ||
     effect.kind === 'trash-to-battle' ||
-    effect.kind === 'support-to-hand'
+    effect.kind === 'support-to-hand' ||
+    effect.kind === 'inspect-deck' ||
+    effect.kind === 'optional-cost-attack'
   ) {
     return true
   }
@@ -794,6 +796,57 @@ export const executeCardEffect = (
     }
   }
 
+  if (effect.kind === 'inspect-deck') {
+    const player = state.players[context.sourcePlayerId]
+    const deckCards = player.deck.slice(0, effect.lookCount)
+    const remainingDeck = player.deck.slice(effect.lookCount)
+    const updatedPlayer = { ...player, deck: remainingDeck }
+    const nextState = updatePlayer(state, updatedPlayer)
+
+    if (deckCards.length < effect.lookCount && !nextState.pendingRefresh) {
+      const candidates = getRefreshCandidates(nextState, context.sourcePlayerId)
+      if (candidates.length === 0) {
+        return finishWithDefeat(nextState, context.sourcePlayerId, 'refresh-unavailable')
+      }
+      return {
+        ...nextState,
+        pendingRefresh: { playerId: context.sourcePlayerId, remainingDraws: 0 },
+        pendingInspectDeck: {
+          playerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId,
+          sourceCardName:
+            state.players[context.sourcePlayerId].battleArea.find(
+              (c) => c.card.instanceId === context.sourceInstanceId,
+            )?.card.name ?? 'Unknown',
+          revealedCards: deckCards,
+          lookCount: effect.lookCount,
+          pickCount: effect.pickCount,
+        },
+      }
+    }
+
+    return {
+      ...nextState,
+      pendingInspectDeck: {
+        playerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName:
+          state.players[context.sourcePlayerId].battleArea.find(
+            (c) => c.card.instanceId === context.sourceInstanceId,
+          )?.card.name ?? 'Unknown',
+        revealedCards: deckCards,
+        lookCount: effect.lookCount,
+        pickCount: effect.pickCount,
+      },
+    }
+  }
+
+  if (
+    effect.kind === 'optional-cost-attack'
+  ) {
+    return state
+  }
+
   const targets = selectEffectTargets(
     state,
     context,
@@ -949,4 +1002,48 @@ export const resolveOpponentHandDiscard = (
     },
     pendingOpponentHandDiscard: null,
   })
+}
+
+export const resolveInspectDeck = (
+  state: GameState,
+  playerId: PlayerId,
+  pickedCardId: string,
+  restOrder: string[],
+): GameState => {
+  const pending = state.pendingInspectDeck
+  if (!pending || pending.playerId !== playerId) {
+    throw new GameRuleError('目前沒有待處理的牌庫檢視效果。')
+  }
+  const revealedIds = pending.revealedCards.map((c) => c.instanceId)
+  const pickedCard = pending.revealedCards.find((c) => c.instanceId === pickedCardId)
+  if (!pickedCard) {
+    throw new GameRuleError('選取的卡牌不在檢視清單中。')
+  }
+  const allIds = [pickedCardId, ...restOrder]
+  if (new Set(allIds).size !== allIds.length) {
+    throw new GameRuleError('不能重複選取同一張卡牌。')
+  }
+  const expectedRest = revealedIds.filter((id) => id !== pickedCardId)
+  const restSet = new Set(restOrder)
+  const hasAllRest = expectedRest.every((id) => restSet.has(id))
+  if (!hasAllRest || restOrder.length !== expectedRest.length) {
+    throw new GameRuleError('剩餘牌順序必須包含所有未選取的檢視卡牌。')
+  }
+  if (allIds.length !== revealedIds.length) {
+    throw new GameRuleError('必須涵蓋所有檢視的卡牌。')
+  }
+  const restCards = restOrder.map((id) => pending.revealedCards.find((c) => c.instanceId === id)!)
+  const player = state.players[playerId]
+  return {
+    ...state,
+    pendingInspectDeck: null,
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...player,
+        hand: [...player.hand, pickedCard],
+        deck: [...player.deck, ...restCards],
+      },
+    },
+  }
 }

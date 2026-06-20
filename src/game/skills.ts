@@ -72,6 +72,8 @@ export const canActivateCookieSkill = (
     state.pendingRefresh ||
     state.pendingBattle ||
     state.pendingOpponentHandDiscard ||
+    state.pendingInspectDeck ||
+    state.pendingOptionalCostAttack ||
     (state.pendingFaintEffects && state.pendingFaintEffects.length > 0)
   ) {
     return false
@@ -113,6 +115,10 @@ export const canActivateCookieSkill = (
     return false
   }
 
+  if (skill.cost.discardHand > 0 && player.hand.length < skill.cost.discardHand) {
+    return false
+  }
+
   const energyPayment = selectEnergyPayment(
     skill.cost.energy,
     player.supportArea,
@@ -133,6 +139,7 @@ export const activateCookieSkill = (
   trigger: SkillTrigger,
   paymentIds: string[],
   costSupportToTrashIds: string[] = [],
+  discardHandIds: string[] = [],
 ): GameState => {
   if (
     !canActivateCookieSkill(state, playerId, sourceInstanceId, trigger)
@@ -150,6 +157,11 @@ export const activateCookieSkill = (
   }
 
   validatePayment(source.card.skill, player.supportArea, paymentIds)
+
+  const uniqueDiscardHandIds = [...new Set(discardHandIds)]
+  if (uniqueDiscardHandIds.length !== discardHandIds.length) {
+    throw new GameRuleError('不能重複選擇同一張手牌作為代價。')
+  }
 
   const cost = source.card.skill.cost
   const uniqueCostSupportToTrashIds = [...new Set(costSupportToTrashIds)]
@@ -172,6 +184,22 @@ export const activateCookieSkill = (
     throw new GameRuleError('此技能不需要支付支援區卡牌代價。')
   }
 
+  if (cost.discardHand > 0) {
+    if (uniqueDiscardHandIds.length !== cost.discardHand) {
+      throw new GameRuleError(
+        `必須棄置 ${cost.discardHand} 張手牌作為技能代價。`,
+      )
+    }
+    const allInHand = uniqueDiscardHandIds.every((id) =>
+      player.hand.some((card) => card.instanceId === id),
+    )
+    if (!allInHand) {
+      throw new GameRuleError('只能選擇自己的手牌作為代價。')
+    }
+  } else if (uniqueDiscardHandIds.length > 0) {
+    throw new GameRuleError('此技能不需要棄手牌代價。')
+  }
+
   const paymentSet = new Set(paymentIds)
   const costSupportSet = new Set(uniqueCostSupportToTrashIds)
 
@@ -184,6 +212,10 @@ export const activateCookieSkill = (
 
   const trashedCards = player.supportArea.filter((support) =>
     costSupportSet.has(support.card.instanceId),
+  )
+
+  const discardedCards = player.hand.filter((card) =>
+    uniqueDiscardHandIds.includes(card.instanceId),
   )
 
   return {
@@ -206,9 +238,13 @@ export const activateCookieSkill = (
               ? { ...support, rested: true }
               : support,
           ),
+        hand: player.hand.filter(
+          (card) => !uniqueDiscardHandIds.includes(card.instanceId),
+        ),
         discardPile: [
           ...player.discardPile,
           ...trashedCards.map((support) => support.card),
+          ...discardedCards,
         ],
       },
     },

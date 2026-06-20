@@ -1,4 +1,4 @@
-import type { GameCard } from '../game'
+import type { CardEffect, GameCard } from '../game'
 import {
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
@@ -93,6 +93,25 @@ export const convertOfficialCardToGameCard = (
       }
     }
 
+    const hardcodedAttackEffects: Partial<Record<string, CardEffect[]>> = {
+      'ST4-013': [
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, discardHand: 2 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 1, max: 1 },
+            },
+          ],
+          effectText:
+            'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
+        },
+      ],
+    }
+    const resolvedAttackEffects = hardcodedAttackEffects[card.cardNumber]
+
     const gameCard: GameCard = {
       id: card.baseCardNumber,
       instanceId: createInstanceId(card, instanceSuffix),
@@ -110,6 +129,7 @@ export const convertOfficialCardToGameCard = (
       ...effectData,
       ...(skill ? { skill } : {}),
       ...(flip ? { flip } : {}),
+      ...(resolvedAttackEffects ? { attackEffects: resolvedAttackEffects } : {}),
     }
 
     return {

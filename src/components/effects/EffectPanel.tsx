@@ -46,7 +46,9 @@ function EffectPanelContent({
             currentEffect.target &&
             !currentEffect.target.sourceOnly
           ? currentEffect.target
-        : currentEffect && !isEffectUntargeted(currentEffect)
+        : currentEffect && !isEffectUntargeted(currentEffect) &&
+            currentEffect.kind !== 'inspect-deck' &&
+            currentEffect.kind !== 'optional-cost-attack'
           ? currentEffect.target
           : null
 

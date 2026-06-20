@@ -422,4 +422,129 @@ describe('applyGameCommand', () => {
     })
     expect(state).toEqual(frozen)
   })
+
+  it('returns inspect-deck decision when pendingInspectDeck exists', () => {
+    const base = createDemoGame()
+    const state: GameState = {
+      ...base,
+      pendingInspectDeck: {
+        playerId: 'player-two' as const,
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        revealedCards: [
+          base.players['player-two'].deck[0],
+          base.players['player-two'].deck[1],
+          base.players['player-two'].deck[2],
+        ],
+        lookCount: 3,
+        pickCount: 1,
+      },
+    }
+    const decision = getPendingDecision(state)
+    expect(decision).toBeDefined()
+    expect(decision!.kind).toBe('inspect-deck')
+  })
+
+  it('returns null for inspect-deck when pendingRefresh also exists', () => {
+    const base = createDemoGame()
+    const state: GameState = {
+      ...base,
+      pendingRefresh: {
+        playerId: 'player-two',
+        remainingDraws: 2,
+      },
+      pendingInspectDeck: {
+        playerId: 'player-two' as const,
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        revealedCards: [
+          base.players['player-two'].deck[0],
+          base.players['player-two'].deck[1],
+          base.players['player-two'].deck[2],
+        ],
+        lookCount: 3,
+        pickCount: 1,
+      },
+    }
+    expect(getPendingDecision(state)).toBeNull()
+  })
+
+  it('returns optional-cost-attack decision when pendingOptionalCostAttack exists', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingOptionalCostAttack: {
+        playerId: 'player-two' as const,
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [],
+        effectText: 'test',
+      },
+    }
+    const decision = getPendingDecision(state)
+    expect(decision).toBeDefined()
+    expect(decision!.kind).toBe('optional-cost-attack')
+  })
+
+  it('applyGameCommand dispatches resolve-inspect-deck', () => {
+    const state = createDemoGame()
+    const deck = state.players['player-two'].deck
+    const withPending: GameState = {
+      ...state,
+      pendingInspectDeck: {
+        playerId: 'player-two' as const,
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        revealedCards: [deck[0], deck[1], deck[2]],
+        lookCount: 3,
+        pickCount: 1,
+      },
+    }
+    const result = applyGameCommand(withPending, {
+      kind: 'resolve-inspect-deck',
+      playerId: 'player-two',
+      pickedCardId: deck[0].instanceId,
+      restOrder: [deck[1].instanceId, deck[2].instanceId],
+    })
+    expect(result.pendingInspectDeck).toBeNull()
+    expect(result.players['player-two'].hand.map((c) => c.instanceId)).toContain(
+      deck[0].instanceId,
+    )
+  })
+
+  it('applyGameCommand dispatches resolve-optional-cost-attack', () => {
+    const state = createDemoGame()
+    const withPending: GameState = {
+      ...state,
+      pendingBattle: {
+        attackerPlayerId: 'player-two' as const,
+        defenderPlayerId: 'player-one' as const,
+        attackerInstanceId: 'attacker-inst',
+        targetInstanceId: 'target-inst',
+        declaredDamage: 0,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      pendingOptionalCostAttack: {
+        playerId: 'player-two' as const,
+        sourceInstanceId: 'test-source',
+        sourceCardName: 'Test',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [],
+        effectText: 'test',
+      },
+    }
+    const result = applyGameCommand(withPending, {
+      kind: 'resolve-optional-cost-attack',
+      playerId: 'player-two',
+      action: 'skip',
+    })
+    expect(result.pendingOptionalCostAttack).toBeNull()
+  })
 })

@@ -85,6 +85,14 @@ export const describeEffect = (effect: CardEffect) => {
     return `將此餅乾與 ${effect.supportCount} 張支援卡設為直立狀態。`
   }
 
+  if (effect.kind === 'inspect-deck') {
+    return `查看牌庫頂 ${effect.lookCount} 張，選擇 ${effect.pickCount} 張加入手牌，其餘放回牌庫底。`
+  }
+
+  if (effect.kind === 'optional-cost-attack') {
+    return effect.effectText
+  }
+
   const target =
     effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
   const count =
@@ -195,6 +203,10 @@ export const describeEffectResult = (
 
   if (effect.kind === 'prevent-knockout') {
     return `${names}在本次戰鬥中受到 HP 下限保護。`
+  }
+
+  if (effect.kind === 'inspect-deck' || effect.kind === 'optional-cost-attack') {
+    return '效果已處理。'
   }
 
   const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount

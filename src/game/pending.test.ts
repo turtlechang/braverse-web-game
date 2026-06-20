@@ -137,5 +137,33 @@ describe('hasBlockingPending', () => {
         },
       }),
     ).toBe(true)
+
+    expect(
+      hasBlockingPending({
+        ...base,
+        pendingInspectDeck: {
+          playerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test',
+          revealedCards: [],
+          lookCount: 3,
+          pickCount: 1,
+        },
+      }),
+    ).toBe(true)
+
+    expect(
+      hasBlockingPending({
+        ...base,
+        pendingOptionalCostAttack: {
+          playerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test',
+          cost: { energy: {}, discardHand: 2 },
+          effects: [],
+          effectText: 'test',
+        },
+      }),
+    ).toBe(true)
   })
 })

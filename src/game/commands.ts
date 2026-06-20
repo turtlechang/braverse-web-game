@@ -1,7 +1,7 @@
 import { GameRuleError } from './errors'
-import { getFaintEffectMinMax, resolveFaintEffect } from './battle'
-import { resolveOpponentHandDiscard } from './effects'
-import type { GameState, PlayerId } from './types'
+import { getFaintEffectMinMax, resolveFaintEffect, resolveOptionalCostAttack } from './battle'
+import { resolveInspectDeck, resolveOpponentHandDiscard } from './effects'
+import type { AbilityCost, CardEffect, GameState, PlayerId } from './types'
 
 export interface FaintEffectDecision {
   kind: 'faint-effect'
@@ -22,7 +22,33 @@ export interface OpponentHandDiscardDecision {
   count: number
 }
 
-export type PendingDecision = FaintEffectDecision | OpponentHandDiscardDecision
+export interface InspectDeckDecision {
+  kind: 'inspect-deck'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  lookCount: number
+  pickCount: number
+  revealedCardIds: string[]
+}
+
+export interface OptionalCostAttackDecision {
+  kind: 'optional-cost-attack'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  cost: AbilityCost
+  effects: CardEffect[]
+  effectText: string
+}
+
+export type PendingDecision =
+  | FaintEffectDecision
+  | OpponentHandDiscardDecision
+  | InspectDeckDecision
+  | OptionalCostAttackDecision
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -36,9 +62,26 @@ export interface ResolveOpponentHandDiscardCommand {
   cardIds: string[]
 }
 
+export interface ResolveInspectDeckCommand {
+  kind: 'resolve-inspect-deck'
+  playerId: PlayerId
+  pickedCardId: string
+  restOrder: string[]
+}
+
+export interface ResolveOptionalCostAttackCommand {
+  kind: 'resolve-optional-cost-attack'
+  playerId: PlayerId
+  action: 'skip' | 'pay'
+  discardCardIds?: string[]
+  targetIds?: string[]
+}
+
 export type GameCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
+  | ResolveInspectDeckCommand
+  | ResolveOptionalCostAttackCommand
 
 export const getPendingDecision = (
   state: GameState,
@@ -69,7 +112,42 @@ export const getPendingDecision = (
     }
   }
 
+  if (state.pendingInspectDeck && !state.pendingRefresh) {
+    const pending = state.pendingInspectDeck
+    return {
+      kind: 'inspect-deck',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      lookCount: pending.lookCount,
+      pickCount: pending.pickCount,
+      revealedCardIds: pending.revealedCards.map((c) => c.instanceId),
+    }
+  }
+
+  if (state.pendingOptionalCostAttack) {
+    const pending = state.pendingOptionalCostAttack
+    return {
+      kind: 'optional-cost-attack',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      cost: pending.cost,
+      effects: pending.effects,
+      effectText: pending.effectText,
+    }
+  }
+
   return null
+}
+
+const cmdToDecisionKind: Record<string, string> = {
+  'resolve-faint-effect': 'faint-effect',
+  'resolve-opponent-hand-discard': 'opponent-hand-discard',
+  'resolve-inspect-deck': 'inspect-deck',
+  'resolve-optional-cost-attack': 'optional-cost-attack',
 }
 
 export const applyGameCommand = (
@@ -82,7 +160,7 @@ export const applyGameCommand = (
     throw new GameRuleError('目前沒有待處理的決策。')
   }
 
-  if (decision.kind !== (command.kind === 'resolve-faint-effect' ? 'faint-effect' : 'opponent-hand-discard')) {
+  if (decision.kind !== cmdToDecisionKind[command.kind]) {
     throw new GameRuleError('指令種類與目前待處理的決策不相符。')
   }
 
@@ -95,5 +173,12 @@ export const applyGameCommand = (
       return resolveFaintEffect(state, command.targetIds)
     case 'resolve-opponent-hand-discard':
       return resolveOpponentHandDiscard(state, command.playerId, command.cardIds)
+    case 'resolve-inspect-deck':
+      return resolveInspectDeck(state, command.playerId, command.pickedCardId, command.restOrder)
+    case 'resolve-optional-cost-attack':
+      return resolveOptionalCostAttack(
+        state, command.playerId, command.action,
+        command.discardCardIds ?? [], command.targetIds ?? [],
+      )
   }
 }

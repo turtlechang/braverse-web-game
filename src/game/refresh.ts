@@ -6,6 +6,7 @@ import {
   updatePlayer,
 } from './helpers'
 import { continuePendingReplacements } from './replacement'
+import { continueInspectDeckAfterRefresh } from './inspect-deck'
 import type {
   CookieCard,
   GameState,
@@ -157,8 +158,9 @@ export const refreshDeck = (
     }
   }
 
-  return continuePendingReplacements({
+  const refreshedState = continueInspectDeckAfterRefresh({
     ...replenishedState,
     pendingRefresh: null,
   })
+  return continuePendingReplacements(refreshedState)
 }

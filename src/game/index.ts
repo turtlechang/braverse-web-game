@@ -11,6 +11,7 @@ export {
   isEffectTargeted,
   isEffectUntargeted,
   resolveOpponentHandDiscard,
+  resolveInspectDeck,
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './effects'
@@ -64,6 +65,7 @@ export {
   resolveFaintEffect,
   resolveFlip,
   resolveNextDamage,
+  resolveOptionalCostAttack,
   skipTrap,
 } from './battle'
 export type { PlayTrapOptions, ResolveFlipOptions } from './battle'
@@ -184,10 +186,14 @@ export {
 export type {
   FaintEffectDecision,
   GameCommand,
+  InspectDeckDecision,
   OpponentHandDiscardDecision,
+  OptionalCostAttackDecision,
   PendingDecision,
   ResolveFaintEffectCommand,
+  ResolveInspectDeckCommand,
   ResolveOpponentHandDiscardCommand,
+  ResolveOptionalCostAttackCommand,
 } from './commands'
 export type {
   AiActionType,

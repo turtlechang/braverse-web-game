@@ -4,6 +4,7 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  isEffectTargeted,
   selectEffectTargets,
 } from './effects'
 import {
@@ -58,6 +59,14 @@ const assertNoBlockingDecision = (state: GameState) => {
 
   if (state.pendingOpponentHandDiscard) {
     throw new GameRuleError('必須先處理對手棄牌。')
+  }
+
+  if (state.pendingInspectDeck) {
+    throw new GameRuleError('必須先完成牌庫檢視。')
+  }
+
+  if (state.pendingOptionalCostAttack) {
+    throw new GameRuleError('必須先處理攻擊後續可選代價。')
   }
 }
 
@@ -675,6 +684,23 @@ export const resolveAttackEffect = (
     return finishBattle(state)
   }
 
+  if (effect.kind === 'optional-cost-attack') {
+    const sourceCard = state.players[playerId].battleArea.find(
+      (c) => c.card.instanceId === battle.attackerInstanceId,
+    )?.card
+    return {
+      ...state,
+      pendingOptionalCostAttack: {
+        playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+        sourceCardName: sourceCard?.name ?? 'Unknown',
+        cost: effect.cost,
+        effects: effect.effects,
+        effectText: effect.effectText,
+      },
+    }
+  }
+
   const nextState = executeCardEffect(
     state,
     {
@@ -708,6 +734,81 @@ export const resolveAttackEffect = (
       attackEffectIndex,
     },
   })
+}
+
+export const resolveOptionalCostAttack = (
+  state: GameState,
+  playerId: PlayerId,
+  action: 'skip' | 'pay',
+  discardCardIds: string[] = [],
+  targetIds: string[] = [],
+): GameState => {
+  const pending = state.pendingOptionalCostAttack
+  if (!pending || pending.playerId !== playerId) {
+    throw new GameRuleError('目前沒有待處理的攻擊後續可選代價效果。')
+  }
+  if (action === 'skip') {
+    const battle = requirePendingBattle(state)
+    const nextIndex = battle.attackEffectIndex + 1
+    const clearedState: GameState = { ...state, pendingOptionalCostAttack: null }
+    if (nextIndex < battle.attackEffects.length) {
+      return { ...clearedState, pendingBattle: { ...battle, attackEffectIndex: nextIndex, stage: 'attack-effect' } }
+    }
+    return finishBattle({ ...clearedState, pendingBattle: { ...battle, attackEffectIndex: nextIndex } })
+  }
+  const player = state.players[playerId]
+  const uniqueDiscardIds = [...new Set(discardCardIds)]
+  if (uniqueDiscardIds.length !== pending.cost.discardHand) {
+    throw new GameRuleError(`必須棄置 ${pending.cost.discardHand} 張手牌作為代價。`)
+  }
+  const allInHand = uniqueDiscardIds.every((id) => player.hand.some((card) => card.instanceId === id))
+  if (!allInHand) {
+    throw new GameRuleError('只能選擇自己的手牌作為代價。')
+  }
+  const hasTargetedEffect = pending.effects.some((e) => isEffectTargeted(e))
+  if (hasTargetedEffect) {
+    const uniqueTargetIds = [...new Set(targetIds)]
+    if (uniqueTargetIds.length !== targetIds.length) {
+      throw new GameRuleError('不能重複選取效果目標。')
+    }
+    if (uniqueTargetIds.length !== 1) {
+      throw new GameRuleError('必須選擇恰好一個效果目標。')
+    }
+    const opponentId = getOpponentId(playerId)
+    const inOpponentBattle = uniqueTargetIds.every((id) =>
+      state.players[opponentId].battleArea.some((c) => c.card.instanceId === id),
+    )
+    if (!inOpponentBattle) {
+      throw new GameRuleError('目標必須在對手戰鬥區。')
+    }
+  }
+  const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
+  let nextState: GameState = {
+    ...state,
+    pendingOptionalCostAttack: null,
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...player,
+        hand: player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+        discardPile: [...player.discardPile, ...discardedCards],
+      },
+    },
+  }
+  const context = { sourcePlayerId: playerId, sourceInstanceId: pending.sourceInstanceId }
+  for (const effect of pending.effects) {
+    if (nextState.status !== 'playing') break
+    nextState = executeCardEffect(nextState, context, effect, targetIds)
+  }
+  if (nextState.status !== 'playing') {
+    return { ...nextState, pendingBattle: null }
+  }
+  const battle = requirePendingBattle(nextState)
+  const nextIndex = battle.attackEffectIndex + 1
+  if (nextIndex < battle.attackEffects.length) {
+    return { ...nextState, pendingBattle: { ...battle, attackEffectIndex: nextIndex, stage: 'attack-effect' } }
+  }
+  return finishBattle({ ...nextState, pendingBattle: { ...battle, attackEffectIndex: nextIndex } })
 }
 
 export const resolveNextDamage = (state: GameState): GameState => {
@@ -974,11 +1075,27 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
   let nextState = state
   let guard = 0
 
-  while ((nextState.pendingBattle || (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0)) && guard < 100) {
+  while ((nextState.pendingBattle || nextState.pendingOptionalCostAttack || (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0)) && guard < 100) {
     guard += 1
 
     if (nextState.status !== 'playing') {
       break
+    }
+
+    if (nextState.pendingOptionalCostAttack) {
+      const pending = nextState.pendingOptionalCostAttack
+      const hand = nextState.players[pending.playerId].hand
+      const canPayHand = hand.length >= pending.cost.discardHand
+      const opponentId = pending.playerId === 'player-one' ? 'player-two' : 'player-one'
+      const opponentHasCookie = nextState.players[opponentId].battleArea.length > 0
+      if (canPayHand && opponentHasCookie) {
+        const discardIds = hand.slice(0, pending.cost.discardHand).map((c) => c.instanceId)
+        const targetIds = [nextState.players[opponentId].battleArea[0].card.instanceId]
+        nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, targetIds)
+      } else {
+        nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'skip')
+      }
+      continue
     }
 
     if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
@@ -1010,6 +1127,10 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       })
     } else if (battle.stage === 'attack-effect') {
       const effect = battle.attackEffects[battle.attackEffectIndex]
+      if (effect?.kind === 'optional-cost-attack') {
+        nextState = resolveAttackEffect(nextState, battle.attackerPlayerId, [])
+        continue
+      }
       const targetIds =
         effect?.kind === 'break-to-trash'
           ? getBreakToTrashCandidates(

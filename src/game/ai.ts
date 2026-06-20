@@ -80,6 +80,8 @@ export type AiActionType =
   | 'resolve-attack-effect'
   | 'resolve-flip'
   | 'resolve-faint'
+  | 'resolve-inspect-deck'
+  | 'resolve-optional-cost-attack'
   | 'error'
 
 export interface AiEffectSelection {
@@ -155,6 +157,13 @@ const chooseEffectTargets = (
     return candidates
       .slice(0, count)
       .map((card) => card.instanceId)
+  }
+
+  if (
+    effect.kind === 'inspect-deck' ||
+    effect.kind === 'optional-cost-attack'
+  ) {
+    return []
   }
 
   const candidates = getEffectTargetCandidates(
@@ -243,6 +252,8 @@ const resolveAiCardAbility = (
       effect.kind !== 'support-to-trash' &&
       effect.kind !== 'support-to-hand' &&
       effect.kind !== 'trash-to-battle' &&
+      effect.kind !== 'inspect-deck' &&
+      effect.kind !== 'optional-cost-attack' &&
       targetIds.length < effect.target.min
     ) {
       return null
@@ -387,6 +398,8 @@ const resolveAiSkill = (
       effect.kind !== 'support-to-trash' &&
       effect.kind !== 'support-to-hand' &&
       effect.kind !== 'trash-to-battle' &&
+      effect.kind !== 'inspect-deck' &&
+      effect.kind !== 'optional-cost-attack' &&
       targetIds.length < effect.target.min
     ) {
       return null
@@ -507,6 +520,72 @@ export const takeAiStep = (
         }),
         action: 'idle',
         description: `${state.players[playerId].name}棄置 ${pendingDecision.count} 張手牌。`,
+      }
+    }
+
+    if (
+      pendingDecision?.kind === 'inspect-deck' &&
+      !state.pendingRefresh
+    ) {
+      if (pendingDecision.playerId !== playerId) {
+        return {
+          state,
+          action: 'idle',
+          description: `等待 ${state.players[pendingDecision.playerId].name} 處理牌庫檢視。`,
+        }
+      }
+      const pickedCardId = pendingDecision.revealedCardIds[0]
+      const restOrder = pendingDecision.revealedCardIds.slice(1)
+      return {
+        state: applyGameCommand(state, {
+          kind: 'resolve-inspect-deck',
+          playerId,
+          pickedCardId,
+          restOrder,
+        }),
+        action: 'resolve-inspect-deck',
+        description: `${state.players[playerId].name}從檢視牌中選取卡片。`,
+      }
+    }
+
+    if (
+      pendingDecision?.kind === 'optional-cost-attack' &&
+      !state.pendingRefresh
+    ) {
+      if (pendingDecision.playerId !== playerId) {
+        return {
+          state,
+          action: 'idle',
+          description: `等待 ${state.players[pendingDecision.playerId].name} 決定是否支付代價。`,
+        }
+      }
+      const hand = state.players[playerId].hand
+      const canPay = hand.length >= pendingDecision.cost.discardHand
+      const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+      const hasTarget = state.players[opponentId].battleArea.length > 0
+      if (canPay && hasTarget) {
+        const discardIds = hand.slice(0, pendingDecision.cost.discardHand).map((c) => c.instanceId)
+        const targetIds = [state.players[opponentId].battleArea[0].card.instanceId]
+        return {
+          state: applyGameCommand(state, {
+            kind: 'resolve-optional-cost-attack',
+            playerId,
+            action: 'pay',
+            discardCardIds: discardIds,
+            targetIds,
+          }),
+          action: 'resolve-optional-cost-attack',
+          description: `${state.players[playerId].name}支付棄手牌代價發動攻擊後續效果。`,
+        }
+      }
+      return {
+        state: applyGameCommand(state, {
+          kind: 'resolve-optional-cost-attack',
+          playerId,
+          action: 'skip',
+        }),
+        action: 'resolve-optional-cost-attack',
+        description: `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
       }
     }
 

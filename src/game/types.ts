@@ -218,6 +218,20 @@ export interface SetActiveEffect {
   supportCount: number
 }
 
+export interface InspectDeckEffect {
+  kind: 'inspect-deck'
+  lookCount: number
+  pickCount: number
+  restToBottom: true
+}
+
+export interface OptionalCostAttackEffect {
+  kind: 'optional-cost-attack'
+  cost: AbilityCost
+  effects: CardEffect[]
+  effectText: string
+}
+
 export interface ReturnToHandEffect {
   kind: 'return-to-hand'
   side: 'self' | 'opponent'
@@ -253,6 +267,8 @@ export type CardEffect =
   | ReturnToHandEffect
   | OpponentRandomDiscardEffect
   | SetActiveEffect
+  | InspectDeckEffect
+  | OptionalCostAttackEffect
 
 export type TargetedCardEffect =
   | DamageEffect
@@ -408,6 +424,22 @@ export interface GameState {
   pendingBattle?: PendingBattle | null
   pendingFaintEffects?: PendingFaintEffect[]
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
+  pendingInspectDeck?: {
+    playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
+    revealedCards: GameCard[]
+    lookCount: number
+    pickCount: number
+  } | null
+  pendingOptionalCostAttack?: {
+    playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
+    cost: AbilityCost
+    effects: CardEffect[]
+    effectText: string
+  } | null
 }
 
 export type PendingBattleStage =
