@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  beginAttack,
+  createOfficialRedStarterDeck,
   getTrapCandidates,
   playTrap,
   resolveFlip,
   resolveNextDamage,
+  type CookieCard,
   type GameCard,
+  type GameState,
 } from '.'
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
 
@@ -271,5 +275,124 @@ describe('TRAP response window', () => {
         (support) => support.card.instanceId === 'p1-deck-a',
       ),
     ).toMatchObject({ rested: true })
+  })
+
+  it('skips attack damage when official ST1-021 trap knocks out official ST1-013 attacker', () => {
+    const p1Deck = createOfficialRedStarterDeck('player-one')
+    const p2Deck = createOfficialRedStarterDeck('player-two')
+
+    const defenderCard = p1Deck.find((c) => c.id === 'ST1-014') as CookieCard
+    const attackerCard = p2Deck.find((c) => c.id === 'ST1-013') as CookieCard
+    const trapCard = p1Deck.find((c) => c.id === 'ST1-021')!
+
+    expect(defenderCard).toBeDefined()
+    expect(attackerCard).toBeDefined()
+    expect(trapCard).toBeDefined()
+    expect(attackerCard.hp).toBe(1)
+    expect(attackerCard.flip).toBeDefined()
+    expect(trapCard.trap?.effects[0]).toMatchObject({
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', remainingHp: 1 },
+    })
+
+    const defenderHpCards = Array.from({ length: 6 }, (_, i) =>
+      item(`defender-hp-${i}`, 'red'),
+    )
+    const attackerHpCards = [item('attacker-hp-0', 'red')]
+
+    const state: GameState = {
+      players: {
+        'player-one': {
+          id: 'player-one',
+          name: 'P1',
+          deck: [item('p1-deck-a'), item('p1-deck-b')],
+          hand: [trapCard, cookie('p1-replacement')],
+          battleArea: [
+            {
+              card: defenderCard,
+              hpCards: defenderHpCards,
+              rested: false,
+              battleEntryId: 'defender:battle:1',
+            },
+          ],
+          supportArea: [
+            { card: item('p1-support-a', 'red'), rested: false },
+            { card: item('p1-support-b', 'red'), rested: false },
+          ],
+          breakArea: [],
+          discardPile: [],
+          stage: null,
+          hasMulliganed: false,
+          startingCookieSelected: true,
+        },
+        'player-two': {
+          id: 'player-two',
+          name: 'P2',
+          deck: [item('p2-deck-a')],
+          hand: [cookie('p2-replacement')],
+          battleArea: [
+            {
+              card: attackerCard,
+              hpCards: attackerHpCards,
+              rested: false,
+              battleEntryId: 'attacker:battle:2',
+            },
+          ],
+          supportArea: [
+            { card: item('p2-support', 'red'), rested: false },
+          ],
+          breakArea: [],
+          discardPile: [],
+          stage: null,
+          hasMulliganed: false,
+          startingCookieSelected: true,
+        },
+      },
+      firstPlayerId: 'player-one',
+      activePlayerId: 'player-two',
+      turnNumber: 2,
+      phase: 'main',
+      status: 'playing',
+      result: null,
+      supportPlacedThisTurn: false,
+      skillUsesThisTurn: [],
+      nextBattleEntrySequence: 3,
+      attackModifiers: [],
+      damageReceivedModifiers: [],
+      pendingReplacement: null,
+      departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+      pendingRefresh: null,
+      pendingBattle: null,
+    }
+
+    let battleState = beginAttack(
+      state,
+      attackerCard.instanceId,
+      defenderCard.instanceId,
+      ['p2-support'],
+    )
+
+    battleState = playTrap(battleState, 'player-one', {
+      trapInstanceId: trapCard.instanceId,
+      paymentIds: ['p1-support-a', 'p1-support-b'],
+      targetIds: [attackerCard.instanceId],
+    })
+
+    expect(battleState.pendingBattle).toMatchObject({
+      stage: 'damage',
+      damagePlayerId: 'player-two',
+      damageTargetInstanceId: attackerCard.instanceId,
+      remainingDamage: 1,
+    })
+    expect(battleState.pendingBattle?.suspendedAttackDamage).toBeDefined()
+
+    battleState = resolveNextDamage(battleState)
+
+    expect(battleState.pendingBattle).toBeNull()
+    expect(battleState.players['player-two'].battleArea).toHaveLength(0)
+    expect(
+      battleState.players['player-one'].battleArea[0].hpCards.length,
+    ).toBe(6)
   })
 })
