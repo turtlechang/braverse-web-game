@@ -1,0 +1,140 @@
+import { getFaintEffectCandidates } from '../battle'
+import { applyGameCommand, getPendingDecision } from '../commands'
+import type { GameState, PlayerId } from '../types'
+import type { AiDecision } from './types'
+
+export const handleAiPendingDecision = (
+  state: GameState,
+  playerId: PlayerId,
+): AiDecision | null => {
+  const pendingDecision = getPendingDecision(state)
+
+  if (
+    pendingDecision?.kind === 'faint-effect' &&
+    !state.pendingRefresh &&
+    !state.pendingOnPlay
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇昏厥效果目標。`,
+      }
+    }
+    const candidates = getFaintEffectCandidates(state)
+    const ordered = [...candidates].sort(
+      (left, right) => left.hpCards.length - right.hpCards.length,
+    )
+    const targetIds =
+      candidates.length >= pendingDecision.min
+        ? ordered
+            .slice(0, pendingDecision.max)
+            .map((cookie) => cookie.card.instanceId)
+        : []
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-faint-effect',
+        playerId,
+        targetIds,
+      }),
+      action: 'resolve-faint',
+      description:
+        targetIds.length > 0
+          ? `${state.players[playerId].name}發動對${ordered[0].card.name}的昏厥效果。`
+          : `${state.players[playerId].name}略過昏厥效果。`,
+    }
+  }
+
+  if (
+    pendingDecision?.kind === 'opponent-hand-discard' &&
+    !state.pendingRefresh &&
+    !state.pendingBattle &&
+    !state.pendingReplacement
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇棄置手牌。`,
+      }
+    }
+    const discardIds = state.players[playerId].hand
+      .slice(0, pendingDecision.count)
+      .map((card) => card.instanceId)
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-opponent-hand-discard',
+        playerId,
+        cardIds: discardIds,
+      }),
+      action: 'idle',
+      description: `${state.players[playerId].name}棄置 ${pendingDecision.count} 張手牌。`,
+    }
+  }
+
+  if (pendingDecision?.kind === 'inspect-deck' && !state.pendingRefresh) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 處理牌庫檢視。`,
+      }
+    }
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-inspect-deck',
+        playerId,
+        pickedCardId: pendingDecision.revealedCardIds[0],
+        restOrder: pendingDecision.revealedCardIds.slice(1),
+      }),
+      action: 'resolve-inspect-deck',
+      description: `${state.players[playerId].name}從檢視牌中選取卡片。`,
+    }
+  }
+
+  if (
+    pendingDecision?.kind === 'optional-cost-attack' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 決定是否支付代價。`,
+      }
+    }
+    const hand = state.players[playerId].hand
+    const canPay = hand.length >= pendingDecision.cost.discardHand
+    const opponentId =
+      playerId === 'player-one' ? 'player-two' : 'player-one'
+    const hasTarget = state.players[opponentId].battleArea.length > 0
+    if (canPay && hasTarget) {
+      return {
+        state: applyGameCommand(state, {
+          kind: 'resolve-optional-cost-attack',
+          playerId,
+          action: 'pay',
+          discardCardIds: hand
+            .slice(0, pendingDecision.cost.discardHand)
+            .map((card) => card.instanceId),
+          targetIds: [
+            state.players[opponentId].battleArea[0].card.instanceId,
+          ],
+        }),
+        action: 'resolve-optional-cost-attack',
+        description: `${state.players[playerId].name}支付棄手牌代價發動攻擊後續效果。`,
+      }
+    }
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-optional-cost-attack',
+        playerId,
+        action: 'skip',
+      }),
+      action: 'resolve-optional-cost-attack',
+      description: `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
+    }
+  }
+
+  return null
+}

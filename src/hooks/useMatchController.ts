@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId, PlayerState, SupportCard } from '../game'
+import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, SupportCard } from '../game'
 import {
   advancePhase,
-  beginAttack,
-  chooseRandomDeck,
   createDemoSetupGame,
-  drawMulliganCompensation,
-  forceMulliganOpeningHand,
-  getAttackEnergyCost,
   getCurrentReplacementTask,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
@@ -17,12 +12,8 @@ import {
   getTrapCandidates,
   getTrapTargetCandidates,
   isPlayerControllingState,
-  keepOpeningHand,
-  mulliganOpeningHand,
   selectEnergyPayment,
-  selectStartingCookie,
   skipTrap,
-  validateEnergyPayment,
   type DeckChoice,
 } from '../game'
 import {
@@ -42,6 +33,9 @@ import {
   createTrapResponseDemoState,
   parseTestStateConfig,
 } from '../game/demo'
+import { useMatchSetup } from './useMatchSetup'
+import { useMatchAnimations } from './useMatchAnimations'
+import { useBattleActions, type RunGameAction } from './useBattleActions'
 
 type TestStateConfig = ReturnType<typeof parseTestStateConfig>
 
@@ -52,39 +46,6 @@ export function useMatchController(params: {
   testStateConfig: TestStateConfig | null
 }) {
   const { testStateConfig } = params
-
-  const processAiOpeningHand = useCallback(
-    (initialState: GameState): GameState => {
-      let nextState = initialState
-      const aiId: PlayerId = 'player-two'
-      const playerId: PlayerId = 'player-one'
-
-      if (
-        !nextState.players[aiId].hand.some(
-          (card) => card.type === 'cookie',
-        )
-      ) {
-        nextState = mulliganOpeningHand(nextState, aiId)
-      } else {
-        nextState = keepOpeningHand(nextState, aiId)
-      }
-
-      let guard = 0
-      while (
-        !nextState.players[aiId].hand.some(
-          (card) => card.type === 'cookie',
-        ) &&
-        guard < 100
-      ) {
-        nextState = forceMulliganOpeningHand(nextState, aiId)
-        nextState = drawMulliganCompensation(nextState, playerId)
-        guard += 1
-      }
-
-      return nextState
-    },
-    [],
-  )
 
   const [game, setGame] = useState(() => {
     if (testStateConfig?.kind === 'break-to-trash') {
@@ -131,30 +92,6 @@ export function useMatchController(params: {
     }
     return createDemoSetupGame('player-one')
   })
-  const [setupStep, setSetupStep] = useState<
-    | 'deck-selection'
-    | 'rps'
-    | 'choose-order'
-    | 'mulligan'
-    | 'starting-cookie'
-    | null
-  >(testStateConfig === null ? 'deck-selection' : null)
-  const [setupMessage, setSetupMessage] = useState(
-    '請選擇本次對戰使用的牌組。',
-  )
-  const [deckConfig, setDeckConfig] = useState<{
-    player: DeckChoice
-    ai: DeckChoice
-  }>({
-    player: 'red',
-    ai: 'red',
-  })
-  const [selectedAttackerId, setSelectedAttackerId] = useState<string | null>(
-    null,
-  )
-  const [selectedAttackPaymentIds, setSelectedAttackPaymentIds] = useState<
-    string[]
-  >([])
   const [message, setMessage] = useState(() => {
     if (testStateConfig?.kind === 'break-to-trash') {
       return testStateConfig.level === 1
@@ -206,10 +143,27 @@ export function useMatchController(params: {
     }
     return '推進階段，開始這場對戰。'
   })
-  const [attackShakeId, setAttackShakeId] = useState<string | null>(null)
-  const [damageFlashId, setDamageFlashId] = useState<string | null>(null)
-  const [faintAnimIds, setFaintAnimIds] = useState<Set<string>>(new Set())
-  const [drawAnimIds, setDrawAnimIds] = useState<Set<string>>(new Set())
+  const setup = useMatchSetup({
+    game,
+    setGame,
+    setMessage,
+    enabled: testStateConfig === null,
+  })
+  const {
+    setupStep,
+    setSetupStep,
+    setupMessage,
+    setSetupMessage,
+    deckConfig,
+    setDeckConfig,
+    handleDeckSelection,
+    handleRps,
+    beginOrderedSetup,
+    handlePlayerMulligan,
+    handleStartingCookie,
+    resetSetup,
+  } = setup
+  const animations = useMatchAnimations()
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
@@ -225,244 +179,25 @@ export function useMatchController(params: {
   const opponentId = opponentOfId(viewerPlayerId)
   const activePlayer = game.players[game.activePlayerId]
 
-  const selectedAttacker = activePlayer.battleArea.find(
-    (cookie: CookieInBattle) => cookie.card.instanceId === selectedAttackerId,
-  )
-  const selectedAttackCost = selectedAttacker
-    ? getAttackEnergyCost(selectedAttacker.card)
-    : {}
-  const attackPaymentValidation = selectedAttacker
-    ? validateEnergyPayment(
-        selectedAttackCost,
-        activePlayer.supportArea,
-        selectedAttackPaymentIds,
-      )
-    : { valid: false, reason: '尚未選擇攻擊餅乾。' }
-
-  const clearAttacker = useCallback(() => {
-    setSelectedAttackerId(null)
-    setSelectedAttackPaymentIds([])
-  }, [])
-
-  const runAction = (
-    action: (current: GameState) => GameState,
-    successMessage: string,
-    onSuccess?: (nextGame: GameState) => void,
-  ) => {
+  const runAction: RunGameAction = (action, successMessage, onSuccess) => {
     try {
       const nextGame = action(game)
       const prevGame = game
       setGame(nextGame)
       setMessage(successMessage)
-
-      // 攻擊動畫：宣告攻擊進入 damage 階段
-      if (
-        (!prevGame.pendingBattle && nextGame.pendingBattle) ||
-        (prevGame.pendingBattle &&
-          nextGame.pendingBattle &&
-          prevGame.pendingBattle.stage !== 'damage' &&
-          nextGame.pendingBattle.stage === 'damage')
-      ) {
-        setAttackShakeId(nextGame.pendingBattle!.attackerInstanceId)
-        window.setTimeout(() => setAttackShakeId(null), 500)
-      }
-
-      // 傷害閃爍：damage 階段 remainingDamage 減少
-      if (
-        prevGame.pendingBattle &&
-        nextGame.pendingBattle &&
-        prevGame.pendingBattle.remainingDamage >
-          nextGame.pendingBattle.remainingDamage
-      ) {
-        const targetId =
-          nextGame.pendingBattle.damageTargetInstanceId ??
-          nextGame.pendingBattle.targetInstanceId
-        setDamageFlashId(targetId)
-        window.setTimeout(() => setDamageFlashId(null), 600)
-      }
-
-      // 昏厥動畫：餅乾從戰鬥區消失
-      const prevBattleIds = new Set(
-        Object.values(prevGame.players).flatMap((p: PlayerState) =>
-          p.battleArea.map((c: CookieInBattle) => c.card.instanceId),
-        ),
-      )
-      const nextBattleIds = new Set(
-        Object.values(nextGame.players).flatMap((p: PlayerState) =>
-          p.battleArea.map((c: CookieInBattle) => c.card.instanceId),
-        ),
-      )
-      const faintedIds = [...prevBattleIds].filter(
-        (id) => !nextBattleIds.has(id),
-      )
-      if (faintedIds.length > 0) {
-        setFaintAnimIds(new Set(faintedIds))
-        window.setTimeout(() => setFaintAnimIds(new Set()), 800)
-      }
-
-      // 抽牌動畫：手牌增加
-      for (const pid of ['player-one', 'player-two'] as const) {
-        const prevHand = prevGame.players[pid].hand
-        const nextHand = nextGame.players[pid].hand
-        if (nextHand.length > prevHand.length) {
-          const newIds = nextHand
-            .filter(
-              (card: GameCard) =>
-                !prevHand.some((p: GameCard) => p.instanceId === card.instanceId),
-            )
-            .map((card: GameCard) => card.instanceId)
-          if (newIds.length > 0) {
-            setDrawAnimIds(new Set(newIds))
-            window.setTimeout(() => setDrawAnimIds(new Set()), 700)
-          }
-        }
-      }
+      animations.observeTransition(prevGame, nextGame)
 
       onSuccess?.(nextGame)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : '動作無法執行。')
     }
   }
+  const battleActions = useBattleActions({ game, runAction })
 
   const handleAdvancePhase = () => {
     runAction(advancePhase, '階段已推進。')
-    setSelectedAttackerId(null)
-    setSelectedAttackPaymentIds([])
+    battleActions.clearAttacker()
     setSelectedFaintTargetIds([])
-  }
-
-  const handleAttackTarget = (targetInstanceId: string) => {
-    if (!selectedAttackerId || !attackPaymentValidation.valid) return
-
-    const attacker = activePlayer.battleArea.find(
-      (cookie: CookieInBattle) => cookie.card.instanceId === selectedAttackerId,
-    )
-
-    runAction(
-      (current) =>
-        beginAttack(
-          current,
-          selectedAttackerId,
-          targetInstanceId,
-          selectedAttackPaymentIds,
-        ),
-      `${attacker?.card.name ?? '餅乾'}已宣告攻擊。`,
-      () => {
-        setSelectedAttackerId(null)
-        setSelectedAttackPaymentIds([])
-      },
-    )
-  }
-
-  const toggleAttackPayment = (instanceId: string) => {
-    setSelectedAttackPaymentIds((current) =>
-      current.includes(instanceId)
-        ? current.filter((id) => id !== instanceId)
-        : [...current, instanceId],
-    )
-  }
-
-  const beginOrderedSetup = useCallback(
-    (firstPlayerId: PlayerId) => {
-      let nextGame = createDemoSetupGame(firstPlayerId, deckConfig)
-      if (firstPlayerId === 'player-two') {
-        nextGame = processAiOpeningHand(nextGame)
-      }
-      setGame(nextGame)
-      setSetupStep('mulligan')
-      setSetupMessage(
-        firstPlayerId === 'player-one'
-          ? '你是先攻玩家，請先決定是否更換全部手牌。'
-          : 'AI 已完成調度，現在輪到你決定是否更換全部手牌。',
-      )
-    },
-    [deckConfig, processAiOpeningHand],
-  )
-
-  const handleRps = useCallback(
-    (choice: 'rock' | 'paper' | 'scissors') => {
-      const choices = ['rock', 'paper', 'scissors'] as const
-      const aiChoice = choices[Math.floor(Math.random() * choices.length)]
-      if (choice === aiChoice) {
-        setSetupMessage('本次猜拳平手，請再選一次。')
-        return
-      }
-
-      const playerWins =
-        (choice === 'rock' && aiChoice === 'scissors') ||
-        (choice === 'paper' && aiChoice === 'rock') ||
-        (choice === 'scissors' && aiChoice === 'paper')
-
-      if (playerWins) {
-        setSetupStep('choose-order')
-        setSetupMessage('你猜拳獲勝，可以選擇先攻或後攻。')
-        return
-      }
-
-      setSetupMessage('AI 猜拳獲勝並選擇先攻。')
-      beginOrderedSetup('player-two')
-    },
-    [beginOrderedSetup],
-  )
-
-  const handleDeckSelection = useCallback((playerDeck: DeckChoice) => {
-    const aiDeck = chooseRandomDeck()
-    setDeckConfig({ player: playerDeck, ai: aiDeck })
-    setSetupStep('rps')
-    setSetupMessage(
-      `我方使用${playerDeck === 'red' ? '紅色' : playerDeck === 'yellow' ? '黃色' : '綠色'}牌組，AI 隨機選擇${aiDeck === 'red' ? '紅色' : aiDeck === 'yellow' ? '黃色' : '綠色'}牌組。請猜拳決定先後攻選擇權。`,
-    )
-  }, [])
-
-  const handlePlayerMulligan = (replaceAll: boolean) => {
-    let nextGame = replaceAll
-      ? mulliganOpeningHand(game, 'player-one')
-      : keepOpeningHand(game, 'player-one')
-    let forcedCount = 0
-
-    while (
-      !nextGame.players['player-one'].hand.some(
-        (card) => card.type === 'cookie',
-      ) &&
-      forcedCount < 100
-    ) {
-      nextGame = forceMulliganOpeningHand(nextGame, 'player-one')
-      nextGame = drawMulliganCompensation(nextGame, 'player-two')
-      forcedCount += 1
-    }
-
-    if (nextGame.firstPlayerId === 'player-one') {
-      nextGame = processAiOpeningHand(nextGame)
-    }
-
-    setGame(nextGame)
-    setSetupStep('starting-cookie')
-    setSetupMessage(
-      forcedCount > 0
-        ? `已完成 ${forcedCount} 次強制調度；AI 每次均接受補償抽牌。請選擇起始餅乾。`
-        : '雙方調度完成，請選擇一張餅乾作為起始餅乾。',
-    )
-  }
-
-  const handleStartingCookie = (instanceId: string) => {
-    let nextGame = selectStartingCookie(game, 'player-one', instanceId)
-    const aiCookie = nextGame.players['player-two'].hand.find(
-      (card) => card.type === 'cookie',
-    )
-    if (!aiCookie) {
-      setSetupMessage('AI 沒有可放置的起始餅乾。')
-      return
-    }
-    nextGame = selectStartingCookie(
-      nextGame,
-      'player-two',
-      aiCookie.instanceId,
-    )
-    setGame(nextGame)
-    setSetupStep(null)
-    setMessage(
-      `${nextGame.players[nextGame.firstPlayerId].name}先攻，正式進入第一回合。`,
-    )
   }
 
   // Derived state
@@ -619,21 +354,16 @@ export function useMatchController(params: {
   const resetMatchState = useCallback(
     (nextConfig: { player: DeckChoice; ai: DeckChoice }) => {
       setGame(createDemoSetupGame('player-one', nextConfig))
-      setSetupStep('deck-selection')
-      setSetupMessage('請選擇本次對戰使用的牌組。')
-      setSelectedAttackerId(null)
-      setSelectedAttackPaymentIds([])
+      resetSetup()
+      battleActions.clearAttacker()
       setSelectedFaintTargetIds([])
-      setAttackShakeId(null)
-      setDamageFlashId(null)
-      setFaintAnimIds(new Set())
-      setDrawAnimIds(new Set())
+      animations.resetAnimations()
       setSelectedTrapId(null)
       setTrapSelectNoTarget(false)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
     },
-    [],
+    [animations, battleActions, resetSetup],
   )
 
   return {
@@ -645,10 +375,10 @@ export function useMatchController(params: {
     setSetupMessage,
     deckConfig,
     setDeckConfig,
-    selectedAttackerId,
-    setSelectedAttackerId,
-    selectedAttackPaymentIds,
-    setSelectedAttackPaymentIds,
+    selectedAttackerId: battleActions.selectedAttackerId,
+    setSelectedAttackerId: battleActions.setSelectedAttackerId,
+    selectedAttackPaymentIds: battleActions.selectedAttackPaymentIds,
+    setSelectedAttackPaymentIds: battleActions.setSelectedAttackPaymentIds,
     message,
     setMessage,
     handleDeckSelection,
@@ -658,15 +388,15 @@ export function useMatchController(params: {
     handleStartingCookie,
     runAction,
     handleAdvancePhase,
-    handleAttackTarget,
-    toggleAttackPayment,
-    clearAttacker,
+    handleAttackTarget: battleActions.handleAttackTarget,
+    toggleAttackPayment: battleActions.toggleAttackPayment,
+    clearAttacker: battleActions.clearAttacker,
     activePlayer,
     viewerPlayerId,
     opponentId,
-    selectedAttacker,
-    selectedAttackCost,
-    attackPaymentValidation,
+    selectedAttacker: battleActions.selectedAttacker,
+    selectedAttackCost: battleActions.selectedAttackCost,
+    attackPaymentValidation: battleActions.attackPaymentValidation,
     // Trap
     selectedTrapId,
     setSelectedTrapId,
@@ -695,10 +425,10 @@ export function useMatchController(params: {
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
     // Animation
-    attackShakeId,
-    damageFlashId,
-    faintAnimIds,
-    drawAnimIds,
+    attackShakeId: animations.attackShakeId,
+    damageFlashId: animations.damageFlashId,
+    faintAnimIds: animations.faintAnimIds,
+    drawAnimIds: animations.drawAnimIds,
     // Derived
     pendingPlayer,
     pendingOptions,
