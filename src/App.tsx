@@ -44,6 +44,7 @@ import {
   OpeningSetupModal,
   OptionalCostAttackModal,
   InspectDeckModal,
+  DrawUpToSelector,
   type OpeningSetupStep,
 } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
@@ -125,6 +126,10 @@ function App() {
     Boolean(
       match.game.pendingOptionalCostAttack &&
         match.game.pendingOptionalCostAttack.playerId === match.viewerPlayerId,
+    ) ||
+    Boolean(
+      match.game.pendingDrawUpTo &&
+        match.game.pendingDrawUpTo.playerId === match.viewerPlayerId,
     ) ||
     faintActive ||
     ai.aiThinking ||
@@ -542,13 +547,27 @@ function App() {
             targetCards={match.selectedTrapTargets.map(
               (target) => target.card,
             )}
+            discardHandCards={match.selectedTrapDiscardCandidates}
+            discardHandCost={match.selectedTrapDiscardCost}
+            selectedDiscardHandIds={match.selectedTrapDiscardIds}
             onSelectTrap={(id) => {
               match.setSelectedTrapId(id)
+              match.setSelectedTrapDiscardIds([])
               match.setTrapSelectNoTarget(false)
             }}
+            onToggleDiscardHand={(id) =>
+              match.setSelectedTrapDiscardIds((current) =>
+                current.includes(id)
+                  ? current.filter((cardId) => cardId !== id)
+                  : current.length < match.selectedTrapDiscardCost
+                    ? [...current, id]
+                    : current,
+              )
+            }
             onInspectCard={(card) => dialogs.openCardDetail(card)}
             onSkip={() => {
               match.setSelectedTrapId(null)
+              match.setSelectedTrapDiscardIds([])
               match.runAction(
                 (current) => skipTrap(current, match.viewerPlayerId),
                 '未發動陷阱，進入傷害結算。',
@@ -564,6 +583,7 @@ function App() {
                 confirmLabel: '確認發動',
                 onConfirm: () => {
                   match.setSelectedTrapId(null)
+                  match.setSelectedTrapDiscardIds([])
                   match.setTrapSelectNoTarget(false)
                   match.runAction(
                     (current) => {
@@ -578,6 +598,7 @@ function App() {
                           ),
                           supportTrashIds:
                             match.selectedTrapSupportTrashIds,
+                          discardHandIds: match.selectedTrapDiscardIds,
                         },
                       )
                       return testStateConfig
@@ -814,6 +835,51 @@ function App() {
                   確認棄置 ({match.selectedOpponentDiscardIds.length})
                 </button>
               </div>
+            </section>
+          </div>
+        )}
+
+      {match.game.pendingDrawUpTo &&
+        match.game.pendingDrawUpTo.playerId ===
+          match.viewerPlayerId &&
+        !pending.pendingEffect && (
+          <div
+            className="modal-backdrop"
+            role="presentation"
+            style={{ pointerEvents: 'none' }}
+          >
+            <section
+              className="faint-response-modal draw-up-to-modal"
+              role="dialog"
+              style={{ pointerEvents: 'auto' }}
+            >
+              <h2>
+                {match.game.pendingDrawUpTo.sourceCardName}{' '}
+                抽牌選擇
+              </h2>
+              <p className="faint-effect-text">
+                可以從牌庫抽取最多 {match.game.pendingDrawUpTo.max} 張牌。
+              </p>
+              <p className="faint-target-hint">
+                選擇要抽取的牌數（0 到 {match.game.pendingDrawUpTo.max}）。
+              </p>
+              <DrawUpToSelector
+                max={match.game.pendingDrawUpTo.max}
+                deckSize={match.game.players[match.viewerPlayerId].deck.length}
+                onConfirm={(drawCount) => {
+                  match.runAction(
+                    (current) =>
+                      applyGameCommand(current, {
+                        kind: 'resolve-draw-up-to',
+                        playerId: match.viewerPlayerId,
+                        drawCount,
+                      }),
+                    drawCount === 0
+                      ? '已選擇不抽牌。'
+                      : `已從牌庫抽取 ${drawCount} 張牌。`,
+                  )
+                }}
+              />
             </section>
           </div>
         )}

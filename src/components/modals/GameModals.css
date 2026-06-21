@@ -53,6 +53,10 @@
   width: min(560px, 100%);
 }
 
+.trap-response-modal {
+  width: min(640px, 100%);
+}
+
 .card-pile-modal > span,
 .battle-response-modal > span {
   color: #71e9ff;
@@ -343,6 +347,12 @@
 
 .battle-response-summary strong {
   color: #71e9ff;
+}
+
+.battle-response-summary .trap-discard-options {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  margin-top: 0;
 }
 
 .modal-actions {

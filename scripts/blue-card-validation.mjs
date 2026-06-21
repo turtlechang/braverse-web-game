@@ -87,6 +87,7 @@ try {
     console.log(`\n=== Viewport: ${vpLabel} ===`)
 
     const page = await browser.newPage({ viewport })
+    page.setDefaultTimeout(5000)
 
     // Collect console and page errors
     const consoleErrors = []
@@ -333,6 +334,183 @@ try {
       assert.ok(
         await confirmButton.count() > 0 || true,
         '應有確認按鈕',
+      )
+    })
+
+    // --- ST4-016 return-to-hand ---
+    await runTest(page, `${vpLabel} ST4-016 return-to-hand`, async (p) => {
+      await p.goto(`${baseUrl}?test-state=blue-st4-016`, { waitUntil: 'networkidle' })
+      await p.waitForTimeout(500)
+
+      const handCards = p.locator('.bottom-hand .hand-card-wrap')
+      const handCountBefore = await handCards.count()
+      const battleCookies = p.locator('.bottom-field .combat-card-wrap')
+      const battleCountBefore = await battleCookies.count()
+
+      await handCards.first().locator('.hand-card').click()
+      await p.waitForTimeout(200)
+      const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
+      await playButton.click()
+      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
+
+      const effectPanel = p.locator('.effect-panel')
+      await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
+      const supportCards = p.locator('.bottom-field .support-cards .support-card')
+      await supportCards.nth(0).click()
+      await supportCards.nth(1).click()
+
+      const targetCandidates = effectPanel.locator('.effect-candidates-target button')
+      assert.ok(await targetCandidates.count() > 0, '應有候選目標')
+      await targetCandidates.first().click()
+      await p.waitForTimeout(200)
+
+      const confirmButton = effectPanel.locator('button', { hasText: /確認/ })
+      await confirmButton.click()
+      await p.waitForTimeout(500)
+
+      const handCountAfter = await handCards.count()
+      const battleCountAfter = await battleCookies.count()
+
+      assert.strictEqual(handCountAfter, handCountBefore, '手牌數量應不變')
+      assert.strictEqual(battleCountAfter, battleCountBefore - 1, '場上應少 1 張餅乾')
+      assert.strictEqual(
+        await p.locator('.decision-modal', { hasText: '放置餅乾' }).count(),
+        0,
+        '返回手牌後不應顯示補位視窗',
+      )
+    })
+
+    // --- ST4-017 return-to-hand ---
+    await runTest(page, `${vpLabel} ST4-017 return-to-hand`, async (p) => {
+      await p.goto(`${baseUrl}?test-state=blue-st4-017`, { waitUntil: 'networkidle' })
+      await p.waitForTimeout(500)
+
+      const handCards = p.locator('.bottom-hand .hand-card-wrap')
+      const handCountBefore = await handCards.count()
+      const battleCookies = p.locator('.bottom-field .combat-card-wrap')
+      const battleCountBefore = await battleCookies.count()
+
+      await handCards.first().locator('.hand-card').click()
+      await p.waitForTimeout(200)
+      const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
+      await playButton.click()
+      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
+
+      const effectPanel = p.locator('.effect-panel')
+      await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
+      await p.locator('.bottom-field .support-cards .support-card').nth(0).click()
+
+      const targetCandidates = effectPanel.locator('.effect-candidates-target button')
+      assert.ok(await targetCandidates.count() > 0, '應有候選目標')
+      await targetCandidates.first().click()
+      await p.waitForTimeout(200)
+
+      const confirmButton = effectPanel.locator('button', { hasText: /確認/ })
+      await confirmButton.click()
+      await p.waitForTimeout(500)
+
+      const handCountAfter = await handCards.count()
+      const battleCountAfter = await battleCookies.count()
+
+      assert.strictEqual(handCountAfter, handCountBefore, '手牌數量應不變')
+      assert.strictEqual(battleCountAfter, battleCountBefore - 1, '場上應少 1 張餅乾')
+      assert.strictEqual(
+        await p.locator('.decision-modal', { hasText: '放置餅乾' }).count(),
+        0,
+        '返回手牌後不應顯示補位視窗',
+      )
+    })
+
+    // --- ST4-018 draw-up-to ---
+    await runTest(page, `${vpLabel} ST4-018 draw-up-to`, async (p) => {
+      await p.goto(`${baseUrl}?test-state=blue-st4-018`, { waitUntil: 'networkidle' })
+      await p.waitForTimeout(500)
+
+      const handCards = p.locator('.bottom-hand .hand-card-wrap')
+      const handCountBefore = await handCards.count()
+
+      await handCards.first().locator('.hand-card').click()
+      await p.waitForTimeout(200)
+      const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
+      await playButton.click()
+      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
+
+      const effectPanel = p.locator('.effect-panel')
+      await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
+      const supportCards = p.locator('.bottom-field .support-cards .support-card')
+      await supportCards.nth(0).click()
+      await supportCards.nth(1).click()
+      await effectPanel.locator('button', { hasText: '確認效果' }).click()
+
+      const modal = p.locator('.draw-up-to-modal')
+      await modal.waitFor({ state: 'visible', timeout: 3000 })
+
+      await modal.locator('.draw-up-to-option', { hasText: '2' }).click()
+      const confirmButton = modal.locator('button', { hasText: '抽取 2 張牌' })
+      await confirmButton.click()
+      await p.waitForTimeout(500)
+
+      const handCountAfter = await handCards.count()
+      assert.strictEqual(handCountAfter, handCountBefore + 1, '手牌數量應增加 1 張')
+    })
+
+    // --- ST4-019 hand-to-deck-and-draw ---
+    await runTest(page, `${vpLabel} ST4-019 hand-to-deck-and-draw`, async (p) => {
+      await p.goto(`${baseUrl}?test-state=blue-st4-019`, { waitUntil: 'networkidle' })
+      await p.waitForTimeout(500)
+
+      const handCards = p.locator('.bottom-hand .hand-card-wrap')
+      const handCountBefore = await handCards.count()
+
+      await handCards.first().locator('.hand-card').click()
+      await p.waitForTimeout(200)
+      const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
+      await playButton.click()
+      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
+
+      const effectPanel = p.locator('.effect-panel')
+      await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
+      await p.locator('.bottom-field .support-cards .support-card').nth(0).click()
+      await effectPanel.locator('button', { hasText: '確認效果' }).click()
+      await p.waitForTimeout(500)
+
+      const handCountAfter = await handCards.count()
+      assert.strictEqual(handCountAfter, handCountBefore - 1, '手牌數量應少 1 張')
+    })
+
+    // --- ST4-020 discard-hand trap cost ---
+    await runTest(page, `${vpLabel} ST4-020 discard-hand payable`, async (p) => {
+      await p.goto(`${baseUrl}?test-state=blue-st4-020-payable`, { waitUntil: 'networkidle' })
+      await p.waitForTimeout(300)
+
+      const trapModal = p.locator('.battle-response-modal', { hasText: '是否發動陷阱' })
+      await trapModal.waitFor({ state: 'visible' })
+      const handCountBefore = await p.locator('.bottom-hand .hand-card-wrap').count()
+      await trapModal.locator('.modal-card-options > button', { hasText: 'Octo-Ink Spray' }).click()
+      await p.locator('.card-detail-modal .close-modal').click()
+
+      const activateButton = trapModal.locator('button', { hasText: '支付並發動' })
+      assert.strictEqual(await activateButton.isDisabled(), true, '未選滿 2 張手牌時不可發動')
+      const discardOptions = trapModal.locator('.trap-discard-options > button')
+      assert.ok(await discardOptions.count() >= 2, '應顯示至少 2 張可棄手牌')
+      await discardOptions.nth(0).click()
+      await discardOptions.nth(1).click()
+      assert.strictEqual(await activateButton.isEnabled(), true, '選滿 2 張手牌後應可發動')
+      await activateButton.click()
+      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認發動' }).click()
+      await p.waitForTimeout(500)
+
+      const handCountAfter = await p.locator('.bottom-hand .hand-card-wrap').count()
+      assert.strictEqual(handCountAfter, handCountBefore - 3, '陷阱與所選 2 張手牌應進入棄牌區')
+    })
+
+    await runTest(page, `${vpLabel} ST4-020 discard-hand unpayable`, async (p) => {
+      await p.goto(`${baseUrl}?test-state=blue-st4-020-unpayable`, { waitUntil: 'networkidle' })
+      await p.waitForTimeout(500)
+      assert.strictEqual(
+        await p.locator('.battle-response-modal', { hasText: '是否發動陷阱' }).count(),
+        0,
+        '不足 2 張可棄手牌時不應提供 ST4-020 發動視窗',
       )
     })
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
+import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
@@ -15,6 +16,7 @@ import {
 const cards = officialSample.cards as OfficialCardRecord[]
 const yellowCards = officialYellowSample.cards as OfficialCardRecord[]
 const greenCards = officialGreenSample.cards as OfficialCardRecord[]
+const blueCards = officialBlueSample.cards as OfficialCardRecord[]
 
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
@@ -45,6 +47,18 @@ const findGreenCard = (cardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing green sample card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findBlueCard = (cardNumber: string) => {
+  const card = blueCards.find(
+    (candidate) => candidate.cardNumber === cardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing blue sample card ${cardNumber}`)
   }
 
   return card
@@ -1007,6 +1021,21 @@ describe('Starter Deck RED official effect adapter', () => {
       ).toMatchObject({
         status: 'unsupported',
         reason: 'unsupported-effect-text',
+      })
+    })
+  })
+
+  describe('Starter Deck BLUE trap costs', () => {
+    it('parses ST4-020 energy and discard-hand costs', () => {
+      expect(convertOfficialTrapAbility(findBlueCard('ST4-020'))).toMatchObject({
+        cost: { energy: { blue: 1 }, discardHand: 2 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -3,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       })
     })
   })

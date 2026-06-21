@@ -47,6 +47,43 @@
   width: 88px;
 }
 
+.draw-up-to-selector {
+  margin-top: 16px;
+}
+
+.draw-up-to-options {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.draw-up-to-option {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(174, 220, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.52);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.draw-up-to-option:hover {
+  border-color: rgba(174, 220, 255, 0.6);
+  background: rgba(3, 20, 53, 0.7);
+}
+
+.draw-up-to-option.is-selected {
+  border-color: #fff17c;
+  box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.28);
+  background: rgba(255, 241, 124, 0.15);
+}
+
 .inspect-deck-sort {
   margin-top: 24px;
   padding-top: 18px;

@@ -1,5 +1,6 @@
 import { playItem } from './card-abilities'
 import { getPendingDecision } from './commands'
+import { createSeededShuffle } from './helpers'
 import {
   executeCardEffect,
   getBreakToTrashCandidates,
@@ -99,6 +100,8 @@ const chooseEffectTargets = (
     return []
   }
 
+  if (!effect.target) return []
+
   const candidates = getEffectTargetCandidates(
     state,
     context,
@@ -130,6 +133,8 @@ const chooseEffectTargets = (
       (left, right) => left.hpCards.length - right.hpCards.length,
     )
   }
+
+  if (!effect.target) return []
 
   const count = Math.min(effect.target.max, ordered.length)
   if (count < effect.target.min) {
@@ -169,6 +174,11 @@ const resolveAiCardAbility = (
     paymentIds,
   )
   const effectSelections: AiEffectSelection[] = []
+  const shuffleSeed = [...card.instanceId].reduce(
+    (seed, character) => Math.imul(seed ^ character.charCodeAt(0), 16777619),
+    state.turnNumber,
+  )
+  const shuffle = createSeededShuffle(shuffleSeed)
   for (const effect of effects) {
     const targetIds = chooseEffectTargets(nextState, context, effect)
     if (
@@ -187,11 +197,12 @@ const resolveAiCardAbility = (
       effect.kind !== 'trash-to-battle' &&
       effect.kind !== 'inspect-deck' &&
       effect.kind !== 'optional-cost-attack' &&
+      effect.target &&
       targetIds.length < effect.target.min
     ) {
       return null
     }
-    nextState = executeCardEffect(nextState, context, effect, targetIds)
+    nextState = executeCardEffect(nextState, context, effect, targetIds, shuffle)
     effectSelections.push({
       sourceInstanceId: card.instanceId,
       paymentIds,
@@ -345,6 +356,7 @@ const resolveAiSkill = (
       effect.kind !== 'trash-to-battle' &&
       effect.kind !== 'inspect-deck' &&
       effect.kind !== 'optional-cost-attack' &&
+      effect.target &&
       targetIds.length < effect.target.min
     ) {
       return null

@@ -115,6 +115,10 @@ export const handleAiPendingBattle = (
             .slice(0, supportTrashEffect.amount)
             .map((support) => support.card.instanceId)
         : []
+    const discardHandIds = state.players[playerId].hand
+      .filter((card) => card.instanceId !== trapCard.instanceId)
+      .slice(0, trapCard.trap.cost.discardHand)
+      .map((card) => card.instanceId)
 
     if (
       supportTrashEffect?.kind === 'support-to-trash' &&
@@ -133,6 +137,7 @@ export const handleAiPendingBattle = (
         paymentIds,
         targetIds,
         supportTrashIds,
+        discardHandIds,
       }),
       action: 'play-trap',
       revealedCard: trapCard,

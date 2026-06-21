@@ -22,7 +22,7 @@ import {
 import { deckChoiceLabel } from '../gameUiLabels'
 import './GameModals.css'
 
-export { OptionalCostAttackModal, InspectDeckModal } from './PendingDecisionModals'
+export { OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
 
 export type OpeningSetupStep =
   | 'deck-selection'
@@ -322,7 +322,11 @@ export interface TrapResponseModalProps {
   selectedTrapId: string | null
   paymentCards: GameCard[]
   targetCards: GameCard[]
+  discardHandCards: GameCard[]
+  discardHandCost: number
+  selectedDiscardHandIds: string[]
   onSelectTrap: (instanceId: string) => void
+  onToggleDiscardHand: (instanceId: string) => void
   onConfirm: () => void
   onSkip: () => void
   onInspectCard?: (card: GameCard) => void
@@ -336,7 +340,11 @@ export function TrapResponseModal({
   selectedTrapId,
   paymentCards,
   targetCards,
+  discardHandCards,
+  discardHandCost,
+  selectedDiscardHandIds,
   onSelectTrap,
+  onToggleDiscardHand,
   onConfirm,
   onSkip,
   onInspectCard,
@@ -346,7 +354,10 @@ export function TrapResponseModal({
 }: TrapResponseModalProps) {
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="battle-response-modal" role="alertdialog">
+      <section
+        className="battle-response-modal trap-response-modal"
+        role="alertdialog"
+      >
         <span>攻擊宣告回應</span>
         <h2>是否發動陷阱？</h2>
         <p>每次攻擊最多發動一張陷阱。選擇卡牌後會顯示付款與目標。</p>
@@ -372,6 +383,31 @@ export function TrapResponseModal({
             <span>{paymentCards.map((card) => card.name).join('、') || '不需能量'}</span>
             <strong>效果目標</strong>
             <span>{targetCards.map((card) => card.name).join('、') || '不需目標'}</span>
+            {discardHandCost > 0 && (
+              <>
+                <strong>選擇 {discardHandCost} 張手牌棄置</strong>
+                <div className="modal-card-options compact trap-discard-options">
+                  {discardHandCards.map((card) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedDiscardHandIds.includes(card.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      key={card.instanceId}
+                      onClick={() => onToggleDiscardHand(card.instanceId)}
+                    >
+                      <CardFace card={card} />
+                      <span>{card.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <span>
+                  已選 {selectedDiscardHandIds.length}／{discardHandCost}
+                </span>
+              </>
+            )}
             {allowEmptyTarget && (
               <label className="trap-target-toggle">
                 <input
@@ -386,7 +422,14 @@ export function TrapResponseModal({
         )}
         <div className="modal-actions">
           <button type="button" onClick={onSkip}>不發動</button>
-          <button type="button" disabled={!selectedTrapId} onClick={onConfirm}>
+          <button
+            type="button"
+            disabled={
+              !selectedTrapId ||
+              selectedDiscardHandIds.length !== discardHandCost
+            }
+            onClick={onConfirm}
+          >
             支付並發動
           </button>
         </div>

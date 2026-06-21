@@ -192,6 +192,9 @@ export const getTrapCandidates = (
       card.type === 'trap' &&
       Boolean(card.trap) &&
       isTrapConditionMet(state, playerId, card.trap!) &&
+      player.hand.filter(
+        (handCard) => handCard.instanceId !== card.instanceId,
+      ).length >= card.trap!.cost.discardHand &&
       selectEnergyPayment(card.trap!.cost.energy, player.supportArea) !== null,
   )
 }
@@ -262,6 +265,7 @@ export interface PlayTrapOptions {
   paymentIds: string[]
   targetIds: string[]
   supportTrashIds?: string[]
+  discardHandIds?: string[]
 }
 
 export const playTrap = (
@@ -304,16 +308,39 @@ export const playTrap = (
 
   validateTrapTargets(state, playerId, trap.effects, options.targetIds)
 
+  const discardHandIds = options.discardHandIds ?? []
+  const uniqueDiscardHandIds = [...new Set(discardHandIds)]
+  if (
+    uniqueDiscardHandIds.length !== discardHandIds.length ||
+    uniqueDiscardHandIds.length !== trap.cost.discardHand
+  ) {
+    throw new GameRuleError(
+      `必須棄置 ${trap.cost.discardHand} 張手牌支付陷阱代價。`,
+    )
+  }
+  const discardedHandCards = player.hand.filter(
+    (card) =>
+      card.instanceId !== trapCard.instanceId &&
+      uniqueDiscardHandIds.includes(card.instanceId),
+  )
+  if (discardedHandCards.length !== trap.cost.discardHand) {
+    throw new GameRuleError('只能選擇陷阱卡以外的自己手牌支付代價。')
+  }
+
   const paymentSet = new Set(options.paymentIds)
   let updatedPlayer: PlayerState = {
     ...player,
-    hand: player.hand.filter((_, index) => index !== trapIndex),
+    hand: player.hand.filter(
+      (card, index) =>
+        index !== trapIndex &&
+        !uniqueDiscardHandIds.includes(card.instanceId),
+    ),
     supportArea: player.supportArea.map((support) =>
       paymentSet.has(support.card.instanceId)
         ? { ...support, rested: true }
         : support,
     ),
-    discardPile: [...player.discardPile, trapCard],
+    discardPile: [...player.discardPile, trapCard, ...discardedHandCards],
   }
 
   const supportToTrash = trap.effects.find(

@@ -244,6 +244,26 @@ export const convertOfficialCardEffects = (
     'ST4-013': [
       { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restToBottom: true },
     ],
+    'ST4-016': [
+      {
+        kind: 'return-to-hand',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          energyColor: 'blue',
+          minRemainingHp: 3,
+        },
+      },
+    ],
+    'ST4-017': [
+      {
+        kind: 'return-to-hand',
+        target: { side: 'self', min: 1, max: 1, maxLevel: 1 },
+      },
+    ],
+    'ST4-018': [{ kind: 'draw-up-to', max: 2 }],
+    'ST4-019': [{ kind: 'hand-to-deck-and-draw' }],
     'ST5-019': [
       {
         kind: 'damage',
@@ -531,11 +551,15 @@ export const convertOfficialCardEffects = (
     if (returnToHandMatch) {
       const effect: ReturnToHandEffect = {
         kind: 'return-to-hand',
-        side: /from\s+your\s+battle\s+area/i.test(sourceText) ? 'self' : 'opponent',
+        target: {
+          side: /from\s+your\s+battle\s+area/i.test(sourceText) ? 'self' : 'opponent',
+          min: Number(returnToHandMatch[1]),
+          max: Number(returnToHandMatch[1]),
+        },
       }
-      if (returnToHandMatch[2]) effect.minLevel = Number(returnToHandMatch[2])
+      if (returnToHandMatch[2]) effect.target.minLevel = Number(returnToHandMatch[2])
       const hpMatch = sourceText.match(/remaining HP is (\d+) or more/i)
-      if (hpMatch) effect.remainingHp = Number(hpMatch[1])
+      if (hpMatch) effect.target.minRemainingHp = Number(hpMatch[1])
       return {
         status: 'supported',
         cardNumber: card.cardNumber,

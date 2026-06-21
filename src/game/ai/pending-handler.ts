@@ -136,5 +136,29 @@ export const handleAiPendingDecision = (
     }
   }
 
+  if (
+    pendingDecision?.kind === 'draw-up-to' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇抽牌數量。`,
+      }
+    }
+    const player = state.players[playerId]
+    const drawCount = Math.min(pendingDecision.max, player.deck.length)
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-draw-up-to',
+        playerId,
+        drawCount,
+      }),
+      action: 'idle',
+      description: `${state.players[playerId].name}從牌庫抽取 ${drawCount} 張牌。`,
+    }
+  }
+
   return null
 }

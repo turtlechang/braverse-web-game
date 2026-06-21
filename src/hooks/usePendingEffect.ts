@@ -248,7 +248,8 @@ export function usePendingEffect(params: {
       (game.pendingRefresh?.playerId === viewerPlayerId) ||
       (game.pendingOnPlay?.playerId === viewerPlayerId) ||
       (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
-      (game.pendingOptionalCostAttack?.playerId === viewerPlayerId)
+      (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
+      (game.pendingDrawUpTo?.playerId === viewerPlayerId)
     if (viewerBlocks) return
 
     const timer = window.setTimeout(() => {
@@ -263,6 +264,7 @@ export function usePendingEffect(params: {
     game.pendingOnPlay,
     game.pendingInspectDeck,
     game.pendingOptionalCostAttack,
+    game.pendingDrawUpTo,
     game.status,
     viewerPlayerId,
   ])
@@ -542,7 +544,7 @@ export function usePendingEffect(params: {
           : currentEffect.kind === 'inspect-deck' ||
               currentEffect.kind === 'optional-cost-attack'
             ? 0
-          : currentEffect.target.max
+          : currentEffect.target?.max ?? 0
 
     const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
     const selectedTargetIds = isSelected
@@ -652,7 +654,8 @@ export function usePendingEffect(params: {
         (game.pendingRefresh?.playerId === viewerPlayerId) ||
         (game.pendingOnPlay?.playerId === viewerPlayerId) ||
         (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
-        (game.pendingOptionalCostAttack?.playerId === viewerPlayerId)
+        (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
+        (game.pendingDrawUpTo?.playerId === viewerPlayerId)
 
       if (hasNextEffect && viewerMustAct) {
         setPendingEffect(null)
@@ -797,7 +800,8 @@ export function usePendingEffect(params: {
         (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
         (nextGame.pendingOnPlay?.playerId === viewerPlayerId) ||
         (nextGame.pendingInspectDeck?.playerId === viewerPlayerId) ||
-        (nextGame.pendingOptionalCostAttack?.playerId === viewerPlayerId)
+        (nextGame.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
+        (nextGame.pendingDrawUpTo?.playerId === viewerPlayerId)
 
       if (hasNextEffect && viewerMustAct) {
         setGame(nextGame)

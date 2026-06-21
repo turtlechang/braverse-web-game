@@ -92,8 +92,10 @@ export interface EffectTargetSelector {
   excludeSource?: boolean
   sourceOnly?: boolean
   remainingHp?: number
+  minRemainingHp?: number
   minLevel?: number
   maxLevel?: number
+  energyColor?: EnergyColor
 }
 
 export interface BreakLevelCondition {
@@ -134,6 +136,15 @@ export interface ModifyDamageReceivedEffect {
 export interface DrawEffect {
   kind: 'draw'
   amount: number
+}
+
+export interface DrawUpToEffect {
+  kind: 'draw-up-to'
+  max: number
+}
+
+export interface HandToDeckAndDrawEffect {
+  kind: 'hand-to-deck-and-draw'
 }
 
 export interface DeckToSupportEffect {
@@ -234,11 +245,7 @@ export interface OptionalCostAttackEffect {
 
 export interface ReturnToHandEffect {
   kind: 'return-to-hand'
-  side: 'self' | 'opponent'
-  minLevel?: number
-  maxLevel?: number
-  remainingHp?: number
-  energyColor?: EnergyColor
+  target: EffectTargetSelector
 }
 
 export interface OpponentRandomDiscardEffect {
@@ -251,6 +258,8 @@ export type CardEffect =
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
   | DrawEffect
+  | DrawUpToEffect
+  | HandToDeckAndDrawEffect
   | DeckToSupportEffect
   | BreakToTrashEffect
   | GainHpEffect
@@ -278,6 +287,7 @@ export type TargetedCardEffect =
   | DisableFlipEffect
   | ViewHpEffect
   | BattleToSupportEffect
+  | ReturnToHandEffect
 
 export interface AbilityCost {
   energy: EnergyCost
@@ -416,6 +426,13 @@ export interface GameState {
   pendingOnPlay?: {
     playerId: PlayerId
     sourceInstanceId: string
+  } | null
+  pendingDrawUpTo?: {
+    playerId: PlayerId
+    max: number
+    sourcePlayerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
   } | null
   pendingRefresh: {
     playerId: PlayerId

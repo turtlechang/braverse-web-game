@@ -31,6 +31,8 @@ import {
   createStageUsageDemoState,
   createSupportToTrashSkillDemoState,
   createTrapResponseDemoState,
+  createBlueSt4DemoState,
+  createBlueSt4TrapDemoState,
   parseTestStateConfig,
 } from '../game/demo'
 import { useMatchSetup } from './useMatchSetup'
@@ -90,6 +92,21 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'blue-inspect-deck') {
       return createBlueInspectDeckDemoState()
     }
+    if (testStateConfig?.kind === 'blue-st4-016') {
+      return createBlueSt4DemoState('ST4-016')
+    }
+    if (testStateConfig?.kind === 'blue-st4-017') {
+      return createBlueSt4DemoState('ST4-017')
+    }
+    if (testStateConfig?.kind === 'blue-st4-018') {
+      return createBlueSt4DemoState('ST4-018')
+    }
+    if (testStateConfig?.kind === 'blue-st4-019') {
+      return createBlueSt4DemoState('ST4-019')
+    }
+    if (testStateConfig?.kind === 'blue-st4-020') {
+      return createBlueSt4TrapDemoState(testStateConfig.payable)
+    }
     return createDemoSetupGame('player-one')
   })
   const [message, setMessage] = useState(() => {
@@ -141,6 +158,23 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'blue-inspect-deck') {
       return '測試狀態：Captain Caviar OnPlay 檢視牌庫頂 3 張。'
     }
+    if (testStateConfig?.kind === 'blue-st4-016') {
+      return '測試狀態：ST4-016 回收我方 1 張剩餘 HP3+ 的藍色餅乾。'
+    }
+    if (testStateConfig?.kind === 'blue-st4-017') {
+      return '測試狀態：ST4-017 回收我方 1 張 LV.1 餅乾。'
+    }
+    if (testStateConfig?.kind === 'blue-st4-018') {
+      return '測試狀態：ST4-018 抽最多 2 張牌。'
+    }
+    if (testStateConfig?.kind === 'blue-st4-019') {
+      return '測試狀態：ST4-019 洗回手牌並重抽相同數量。'
+    }
+    if (testStateConfig?.kind === 'blue-st4-020') {
+      return testStateConfig.payable
+        ? '測試狀態：ST4-020 選擇並棄置 2 張手牌。'
+        : '測試狀態：ST4-020 手牌不足，不能發動。'
+    }
     return '推進階段，開始這場對戰。'
   })
   const setup = useMatchSetup({
@@ -165,6 +199,9 @@ export function useMatchController(params: {
   } = setup
   const animations = useMatchAnimations()
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapDiscardIds, setSelectedTrapDiscardIds] = useState<
+    string[]
+  >([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
@@ -247,6 +284,12 @@ export function useMatchController(params: {
         selectedTrap.trap.cost.energy,
         game.players[viewerPlayerId].supportArea,
       ) ?? []
+    : []
+  const selectedTrapDiscardCost = selectedTrap?.trap?.cost.discardHand ?? 0
+  const selectedTrapDiscardCandidates = selectedTrap
+    ? game.players[viewerPlayerId].hand.filter(
+        (card) => card.instanceId !== selectedTrap.instanceId,
+      )
     : []
   const trapAllowEmptyTarget =
     selectedTrap?.trap?.effects.some(
@@ -334,6 +377,7 @@ export function useMatchController(params: {
 
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
+      setSelectedTrapDiscardIds([])
       setGame((current: GameState) => {
         const currentBattle = current.pendingBattle
         if (
@@ -359,6 +403,7 @@ export function useMatchController(params: {
       setSelectedFaintTargetIds([])
       animations.resetAnimations()
       setSelectedTrapId(null)
+      setSelectedTrapDiscardIds([])
       setTrapSelectNoTarget(false)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
@@ -400,11 +445,15 @@ export function useMatchController(params: {
     // Trap
     selectedTrapId,
     setSelectedTrapId,
+    selectedTrapDiscardIds,
+    setSelectedTrapDiscardIds,
     trapSelectNoTarget,
     setTrapSelectNoTarget,
     playerTrapCandidates,
     selectedTrap,
     selectedTrapPaymentIds,
+    selectedTrapDiscardCost,
+    selectedTrapDiscardCandidates,
     trapAllowEmptyTarget,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,

@@ -1,6 +1,6 @@
 import { GameRuleError } from './errors'
 import { getFaintEffectMinMax, resolveFaintEffect, resolveOptionalCostAttack } from './battle'
-import { resolveInspectDeck, resolveOpponentHandDiscard } from './effects'
+import { resolveDrawUpTo, resolveInspectDeck, resolveOpponentHandDiscard } from './effects'
 import type { AbilityCost, CardEffect, GameState, PlayerId } from './types'
 
 export interface FaintEffectDecision {
@@ -44,11 +44,21 @@ export interface OptionalCostAttackDecision {
   effectText: string
 }
 
+export interface DrawUpToDecision {
+  kind: 'draw-up-to'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  max: number
+}
+
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
   | InspectDeckDecision
   | OptionalCostAttackDecision
+  | DrawUpToDecision
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -77,11 +87,18 @@ export interface ResolveOptionalCostAttackCommand {
   targetIds?: string[]
 }
 
+export interface ResolveDrawUpToCommand {
+  kind: 'resolve-draw-up-to'
+  playerId: PlayerId
+  drawCount: number
+}
+
 export type GameCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
   | ResolveInspectDeckCommand
   | ResolveOptionalCostAttackCommand
+  | ResolveDrawUpToCommand
 
 export const getPendingDecision = (
   state: GameState,
@@ -144,6 +161,18 @@ export const getPendingDecision = (
     }
   }
 
+  if (state.pendingDrawUpTo && !state.pendingRefresh) {
+    const pending = state.pendingDrawUpTo
+    return {
+      kind: 'draw-up-to',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      max: pending.max,
+    }
+  }
+
   return null
 }
 
@@ -152,6 +181,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-opponent-hand-discard': 'opponent-hand-discard',
   'resolve-inspect-deck': 'inspect-deck',
   'resolve-optional-cost-attack': 'optional-cost-attack',
+  'resolve-draw-up-to': 'draw-up-to',
 }
 
 export const applyGameCommand = (
@@ -184,5 +214,7 @@ export const applyGameCommand = (
         state, command.playerId, command.action,
         command.discardCardIds ?? [], command.targetIds ?? [],
       )
+    case 'resolve-draw-up-to':
+      return resolveDrawUpTo(state, command.playerId, command.drawCount)
   }
 }

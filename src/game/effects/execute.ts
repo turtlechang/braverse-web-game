@@ -1,5 +1,5 @@
 import { GameRuleError } from '../errors'
-import { drawCards, getOpponentId, updatePlayer } from '../helpers'
+import { defaultShuffle, drawCards, getOpponentId, updatePlayer } from '../helpers'
 import { recordCookieDepartures } from '../replacement'
 import { getRefreshCandidates } from '../refresh'
 import type {
@@ -10,6 +10,7 @@ import type {
   GameState,
   PlayerId,
   PlayerState,
+  Shuffle,
 } from '../types'
 import {
   finishWithDefeat,
@@ -165,6 +166,7 @@ export const executeCardEffect = (
   context: EffectContext,
   effect: CardEffect,
   selectedTargetIds: string[],
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   if (state.status !== 'playing') {
     throw new GameRuleError('只有進行中的遊戲可以執行卡牌效果。')
@@ -206,6 +208,53 @@ export const executeCardEffect = (
         playerId: context.sourcePlayerId,
         remainingDraws,
       },
+    }
+  }
+
+  if (effect.kind === 'draw-up-to') {
+    const sourcePlayer = state.players[context.sourcePlayerId]
+    const battleCard = sourcePlayer.battleArea.find(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    )
+    const handCard = sourcePlayer.hand.find(
+      (card) => card.instanceId === context.sourceInstanceId,
+    )
+    const discardCard = sourcePlayer.discardPile.find(
+      (card) => card.instanceId === context.sourceInstanceId,
+    )
+    return {
+      ...state,
+      pendingDrawUpTo: {
+        playerId: context.sourcePlayerId,
+        max: effect.max,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName:
+          battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? 'Unknown',
+      },
+    }
+  }
+
+  if (effect.kind === 'hand-to-deck-and-draw') {
+    const playerId = context.sourcePlayerId
+    const player = state.players[playerId]
+    const drawCount = player.hand.length
+    const shuffledDeck = shuffle([...player.deck, ...player.hand])
+    const updatedState = updatePlayer(state, {
+      ...player,
+      hand: shuffledDeck.slice(0, drawCount),
+      deck: shuffledDeck.slice(drawCount),
+    })
+
+    if (updatedState.players[playerId].deck.length > 0) {
+      return resolveBasicVictory(updatedState)
+    }
+    if (getRefreshCandidates(updatedState, playerId).length === 0) {
+      return finishWithDefeat(updatedState, playerId, 'refresh-unavailable')
+    }
+    return {
+      ...updatedState,
+      pendingRefresh: { playerId, remainingDraws: 0 },
     }
   }
 
@@ -475,8 +524,34 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'return-to-hand') {
-    // TODO: implement return-to-hand pending flow
-    return { ...state }
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    if (candidates.length < effect.target.min && selectedTargetIds.length === 0) {
+      return { ...state }
+    }
+    const selected = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const targetPlayer = state.players[targetPlayerId]
+    if (targetPlayer.battleArea.length - selected.length < 1) {
+      throw new GameRuleError('返回手牌後，戰鬥區必須至少保留 1 張餅乾。')
+    }
+    const selectedIds = new Set(selected.map((cookie) => cookie.card.instanceId))
+    const updatedState = updatePlayer(state, {
+      ...targetPlayer,
+      battleArea: targetPlayer.battleArea.filter(
+        (cookie) => !selectedIds.has(cookie.card.instanceId),
+      ),
+      hand: [...targetPlayer.hand, ...selected.map((cookie) => cookie.card)],
+      discardPile: [
+        ...targetPlayer.discardPile,
+        ...selected.flatMap((cookie) => cookie.hpCards),
+      ],
+    })
+    return updatedState
   }
 
   if (effect.kind === 'opponent-random-discard') {

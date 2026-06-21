@@ -283,6 +283,8 @@ describe('item and stage actions', () => {
     state.players['player-one'].hand = [item]
     const targetCookie = state.players['player-one'].battleArea[0]
 
+    expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(true)
+
     const paid = playItem(state, 'player-one', item.instanceId, [
       'pay-1',
       'pay-2',
@@ -347,6 +349,32 @@ describe('item and stage actions', () => {
     )
     expect(next.attackModifiers).toHaveLength(1)
     expect(next.attackModifiers[0].amount).toBe(3)
+  })
+
+  it('rejects item usage when no valid targets exist for its effects', () => {
+    const item: GameCard = {
+      id: 'item',
+      instanceId: 'item-1',
+      name: 'Item',
+      type: 'item',
+      item: {
+        cost: { red: 1 },
+        text: 'item',
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1 },
+          },
+        ],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].hand = [item]
+    state.players['player-one'].battleArea = []
+
+    expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(false)
   })
 })
 

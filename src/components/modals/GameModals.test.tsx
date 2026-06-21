@@ -7,6 +7,7 @@ import {
   FlipResponseModal,
   OpeningSetupModal,
   ResultModal,
+  TrapResponseModal,
 } from './GameModals'
 
 const createHandCard = (index: number): GameCard => ({
@@ -14,6 +15,43 @@ const createHandCard = (index: number): GameCard => ({
   instanceId: `test-hand-${index}`,
   name: `測試手牌 ${index}`,
   type: 'item',
+})
+
+describe('TrapResponseModal', () => {
+  it('shows discard-hand candidates and blocks activation until the cost is selected', () => {
+    const trap: GameCard = {
+      id: 'ST4-020',
+      instanceId: 'st4-020-test',
+      name: 'Octo-Ink Spray',
+      type: 'trap',
+      trap: {
+        text: 'Discard 2 cards.',
+        cost: { energy: { blue: 1 }, discardHand: 2 },
+        effects: [],
+      },
+    }
+    const hand = [createHandCard(1), createHandCard(2), createHandCard(3)]
+    const markup = renderToStaticMarkup(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={hand}
+        discardHandCost={2}
+        selectedDiscardHandIds={[hand[0].instanceId]}
+        onSelectTrap={() => undefined}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('選擇 2 張手牌棄置')
+    expect(markup).toContain('已選 1／2')
+    expect(markup).toContain('測試手牌 1')
+    expect(markup).toContain('disabled=""')
+  })
 })
 
 describe('OpeningSetupModal', () => {

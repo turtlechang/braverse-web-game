@@ -49,6 +49,20 @@ const matchesSelector = (
     return false
   }
 
+  if (
+    selector.minRemainingHp !== undefined &&
+    cookie.hpCards.length < selector.minRemainingHp
+  ) {
+    return false
+  }
+
+  if (
+    selector.energyColor !== undefined &&
+    cookie.card.energyColor !== selector.energyColor
+  ) {
+    return false
+  }
+
   return (
     (selector.minLevel === undefined ||
       cookie.card.level >= selector.minLevel) &&
@@ -100,7 +114,7 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'return-to-hand' | 'opponent-random-discard' | 'set-active'
+      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -108,8 +122,9 @@ export const isEffectUntargeted = (
   effect.kind === 'modify-all-attack' ||
   effect.kind === 'opponent-discard-hand' ||
   effect.kind === 'opponent-battle-to-trash' ||
-  effect.kind === 'return-to-hand' ||
   effect.kind === 'opponent-random-discard' ||
+  effect.kind === 'hand-to-deck-and-draw' ||
+  effect.kind === 'draw-up-to' ||
   effect.kind === 'set-active'
 
 export const isEffectTargeted = (
@@ -121,7 +136,8 @@ export const isEffectTargeted = (
   effect.kind === 'prevent-knockout' ||
   effect.kind === 'disable-flip' ||
   effect.kind === 'view-hp' ||
-  effect.kind === 'battle-to-support'
+  effect.kind === 'battle-to-support' ||
+  effect.kind === 'return-to-hand'
 
 export const getSupportEffectCandidates = (
   state: GameState,
@@ -208,7 +224,8 @@ export const isEffectConditionMet = (
     effect.kind === 'trash-to-battle' ||
     effect.kind === 'support-to-hand' ||
     effect.kind === 'inspect-deck' ||
-    effect.kind === 'optional-cost-attack'
+    effect.kind === 'optional-cost-attack' ||
+    effect.kind === 'return-to-hand'
   ) {
     return true
   }

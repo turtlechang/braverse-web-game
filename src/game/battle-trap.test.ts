@@ -13,6 +13,66 @@ import {
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
 
 describe('TRAP response window', () => {
+  const discardCostTrap = (): GameCard => ({
+    id: 'ST4-020',
+    instanceId: 'st4-020-test',
+    name: 'Octo-Ink Spray',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: '《{B}》《Discard 2 cards.》 Select up to 1 opponent Cookie.',
+      cost: { energy: {}, discardHand: 2 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+  })
+
+  it('does not offer a trap when its discard-hand cost cannot be paid', () => {
+    const trap = discardCostTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, item('only-discard')]
+    state = declareAttack(state)
+
+    expect(getTrapCandidates(state, 'player-one')).toEqual([])
+  })
+
+  it('requires the player to choose exactly two hand cards for ST4-020', () => {
+    const trap = discardCostTrap()
+    const discardA = item('discard-a')
+    const discardB = item('discard-b')
+    const keep = item('keep')
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, discardA, discardB, keep]
+    state = declareAttack(state)
+
+    expect(() =>
+      playTrap(state, 'player-one', {
+        trapInstanceId: trap.instanceId,
+        paymentIds: [],
+        targetIds: ['attacker'],
+        discardHandIds: [],
+      }),
+    ).toThrow('必須棄置 2 張手牌')
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: ['attacker'],
+      discardHandIds: [discardA.instanceId, discardB.instanceId],
+    })
+
+    expect(result.players['player-one'].hand).toEqual([keep])
+    expect(result.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([trap, discardA, discardB]),
+    )
+  })
+
   it('only offers traps whose energy color and quantity can be paid', () => {
     const trap: GameCard = {
       id: 'yellow-trap',

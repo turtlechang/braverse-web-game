@@ -2,6 +2,7 @@ import { GameRuleError } from './errors'
 import { selectEnergyPayment, validateEnergyPayment } from './energy'
 import {
   getEffectTargetCandidates,
+  getTargetPlayerId,
   isEffectConditionMet,
   isEffectTargeted,
 } from './effects'
@@ -77,7 +78,38 @@ export const canPlayItem = (
     const card = state.players[playerId].hand.find(
       (candidate) => candidate.instanceId === instanceId,
     )
-    return Boolean(card && getItemAbility(card))
+    if (!card) return false
+    const ability = getItemAbility(card)
+    if (!ability) return false
+    const context = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: instanceId,
+    }
+    return ability.effects.some((effect) => {
+      if (!isEffectConditionMet(state, context, effect)) return false
+      if (effect.kind === 'return-to-hand') {
+        const targetPlayer = state.players[
+          getTargetPlayerId(context, effect.target)
+        ]
+        return (
+          targetPlayer.battleArea.length > effect.target.min &&
+          getEffectTargetCandidates(state, context, effect.target).length >=
+            effect.target.min
+        )
+      }
+      if (effect.kind === 'gain-hp' && effect.target) {
+        if (effect.target.sourceOnly || effect.target.min === 0) return true
+        return (
+          getEffectTargetCandidates(state, context, effect.target).length >=
+          effect.target.min
+        )
+      }
+      if (!isEffectTargeted(effect) || !effect.target || effect.target.min === 0) return true
+      return (
+        getEffectTargetCandidates(state, context, effect.target).length >=
+        effect.target.min
+      )
+    })
   } catch {
     return false
   }
@@ -186,7 +218,7 @@ export const canActivateStage = (
           effect.target.min
         )
       }
-      if (!isEffectTargeted(effect) || effect.target.min === 0) return true
+      if (!isEffectTargeted(effect) || !effect.target || effect.target.min === 0) return true
       return (
         getEffectTargetCandidates(state, context, effect.target).length >=
         effect.target.min

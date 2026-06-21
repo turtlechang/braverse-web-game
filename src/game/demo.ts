@@ -42,6 +42,11 @@ export const parseTestStateConfig = (
   | { kind: 'blue-activate-skill'; payable: boolean }
   | { kind: 'blue-optional-cost-attack'; payable: boolean }
   | { kind: 'blue-inspect-deck' }
+  | { kind: 'blue-st4-016' }
+  | { kind: 'blue-st4-017' }
+  | { kind: 'blue-st4-018' }
+  | { kind: 'blue-st4-019' }
+  | { kind: 'blue-st4-020'; payable: boolean }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -108,6 +113,20 @@ export const parseTestStateConfig = (
   }
   if (testState === 'blue-inspect-deck') {
     return { kind: 'blue-inspect-deck' }
+  }
+  if (
+    testState === 'blue-st4-016' ||
+    testState === 'blue-st4-017' ||
+    testState === 'blue-st4-018' ||
+    testState === 'blue-st4-019'
+  ) {
+    return { kind: testState }
+  }
+  if (testState === 'blue-st4-020-payable') {
+    return { kind: 'blue-st4-020', payable: true }
+  }
+  if (testState === 'blue-st4-020-unpayable') {
+    return { kind: 'blue-st4-020', payable: false }
   }
   return null
 }
@@ -1323,6 +1342,192 @@ export const createBlueInspectDeckDemoState = (): GameState => {
       revealedCards: deckTop3,
       lookCount: 3,
       pickCount: 1,
+    },
+  }
+}
+
+export const createBlueSt4DemoState = (
+  cardId: 'ST4-016' | 'ST4-017' | 'ST4-018' | 'ST4-019',
+): GameState => {
+  const p1Deck = createOfficialBlueStarterDeck('player-one')
+  const p2Deck = createOfficialBlueStarterDeck('player-two')
+  const item = p1Deck.find((card) => card.id === cardId)!
+  const battleCookie = p1Deck.find(
+    (card): card is CookieCard =>
+      card.type === 'cookie' &&
+      (cardId !== 'ST4-017' || card.level === 1) &&
+      card.energyColor === 'blue',
+  )!
+  const opponentCookie = p2Deck.find(
+    (card): card is CookieCard => card.type === 'cookie',
+  )!
+  const retainedCookie =
+    cardId === 'ST4-016' || cardId === 'ST4-017'
+      ? p1Deck.find(
+          (card): card is CookieCard =>
+            card.type === 'cookie' &&
+            card.instanceId !== battleCookie.instanceId,
+        )
+      : undefined
+  const paymentCount = cardId === 'ST4-016' || cardId === 'ST4-018' ? 2 : 1
+  const reserved = new Set([
+    item.instanceId,
+    battleCookie.instanceId,
+    ...(retainedCookie ? [retainedCookie.instanceId] : []),
+  ])
+  const hpCards = p1Deck
+    .filter((card) => !reserved.has(card.instanceId))
+    .slice(0, 3)
+  hpCards.forEach((card) => reserved.add(card.instanceId))
+  const supportCards = p1Deck
+    .filter((card) => !reserved.has(card.instanceId) && card.energyColor === 'blue')
+    .slice(0, paymentCount)
+  supportCards.forEach((card) => reserved.add(card.instanceId))
+  const extraHand = p1Deck
+    .filter((card) => !reserved.has(card.instanceId))
+    .slice(0, cardId === 'ST4-019' ? 3 : 0)
+  extraHand.forEach((card) => reserved.add(card.instanceId))
+  const usedP2 = new Set([opponentCookie.instanceId])
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        hand: [item, ...extraHand],
+        deck: p1Deck.filter((card) => !reserved.has(card.instanceId)),
+        battleArea: [
+          {
+            card: battleCookie,
+            hpCards,
+            rested: false,
+            battleEntryId: `${battleCookie.instanceId}:battle:1`,
+          },
+          ...(retainedCookie
+            ? [{
+                card: retainedCookie,
+                hpCards: [],
+                rested: false,
+                battleEntryId: `${retainedCookie.instanceId}:battle:3`,
+              }]
+            : []),
+        ],
+        supportArea: supportCards.map((card) => ({ card, rested: false })),
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((card) => !usedP2.has(card.instanceId)),
+        battleArea: [{
+          card: opponentCookie,
+          hpCards: [],
+          rested: false,
+          battleEntryId: `${opponentCookie.instanceId}:battle:2`,
+        }],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 2,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+}
+
+export const createBlueSt4TrapDemoState = (payable: boolean): GameState => {
+  const p1Deck = createOfficialBlueStarterDeck('player-one')
+  const p2Deck = createOfficialBlueStarterDeck('player-two')
+  const trap = p1Deck.find((card) => card.id === 'ST4-020')!
+  const defender = p1Deck.find(
+    (card): card is CookieCard => card.type === 'cookie',
+  )!
+  const attacker = p2Deck.find(
+    (card): card is CookieCard => card.type === 'cookie',
+  )!
+  const usedP1 = new Set([trap.instanceId, defender.instanceId])
+  const support = p1Deck.find(
+    (card) =>
+      !usedP1.has(card.instanceId) &&
+      (card.energyColor === 'blue' || card.energyColor === 'wild'),
+  )!
+  usedP1.add(support.instanceId)
+  const discardCandidates = p1Deck
+    .filter((card) => !usedP1.has(card.instanceId))
+    .slice(0, payable ? 3 : 1)
+  discardCandidates.forEach((card) => usedP1.add(card.instanceId))
+  const usedP2 = new Set([attacker.instanceId])
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((card) => !usedP1.has(card.instanceId)),
+        hand: [trap, ...discardCandidates],
+        battleArea: [{
+          card: defender,
+          hpCards: [],
+          rested: false,
+          battleEntryId: `${defender.instanceId}:battle:1`,
+        }],
+        supportArea: [{ card: support, rested: false }],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((card) => !usedP2.has(card.instanceId)),
+        battleArea: [{
+          card: attacker,
+          hpCards: [],
+          rested: false,
+          battleEntryId: `${attacker.instanceId}:battle:2`,
+        }],
+      },
+    },
+    firstPlayerId: 'player-two',
+    activePlayerId: 'player-two',
+    turnNumber: 2,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingRefresh: null,
+    pendingBattle: {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: defender.instanceId,
+      declaredDamage: attacker.attack,
+      remainingDamage: attacker.attack,
+      stage: 'trap',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
     },
   }
 }

@@ -12,6 +12,7 @@ export {
   isEffectUntargeted,
   resolveOpponentHandDiscard,
   resolveInspectDeck,
+  resolveDrawUpTo,
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './effects'
@@ -140,6 +141,7 @@ export type {
   DeckToSupportEffect,
   DefeatReason,
   DrawEffect,
+  DrawUpToEffect,
   EffectCondition,
   EffectContext,
   EffectDuration,
@@ -192,11 +194,13 @@ export type {
   InspectDeckDecision,
   OpponentHandDiscardDecision,
   OptionalCostAttackDecision,
+  DrawUpToDecision,
   PendingDecision,
   ResolveFaintEffectCommand,
   ResolveInspectDeckCommand,
   ResolveOpponentHandDiscardCommand,
   ResolveOptionalCostAttackCommand,
+  ResolveDrawUpToCommand,
 } from './commands'
 export type {
   AiActionType,

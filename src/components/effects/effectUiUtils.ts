@@ -15,6 +15,14 @@ export const describeEffect = (effect: CardEffect) => {
     return `從牌庫抽 ${effect.amount} 張牌。`
   }
 
+  if (effect.kind === 'draw-up-to') {
+    return `可以從牌庫抽最多 ${effect.max} 張牌。`
+  }
+
+  if (effect.kind === 'hand-to-deck-and-draw') {
+    return '將全部手牌洗回牌庫，再抽取相同張數。'
+  }
+
   if (effect.kind === 'deck-to-support') {
     return `從牌庫頂取 ${effect.amount} 張卡，直立放入支援區。`
   }
@@ -69,10 +77,14 @@ export const describeEffect = (effect: CardEffect) => {
   }
 
   if (effect.kind === 'return-to-hand') {
-    const side = effect.side === 'self' ? '己方' : '對手'
+    const side = effect.target.side === 'self' ? '己方' : '對手'
     const conds: string[] = []
-    if (effect.minLevel) conds.push(`LV.${effect.minLevel}`)
-    if (effect.remainingHp) conds.push(`剩餘 HP ${effect.remainingHp} 以上`)
+    if (effect.target.minLevel) conds.push(`LV.${effect.target.minLevel}`)
+    if (effect.target.maxLevel) conds.push(`LV.${effect.target.maxLevel} 以下`)
+    if (effect.target.energyColor) conds.push(`${effect.target.energyColor}色`)
+    if (effect.target.minRemainingHp) {
+      conds.push(`剩餘 HP ${effect.target.minRemainingHp} 以上`)
+    }
     const cond = conds.length > 0 ? `（${conds.join('、')}）` : ''
     return `選擇 1 張${side}${cond}餅乾，返回手牌。`
   }
@@ -120,6 +132,14 @@ export const describeEffectResult = (
 ) => {
   if (effect.kind === 'draw') {
     return `從牌庫抽了 ${effect.amount} 張牌。`
+  }
+
+  if (effect.kind === 'draw-up-to') {
+    return `已選擇要抽取的牌數（最多 ${effect.max} 張）。`
+  }
+
+  if (effect.kind === 'hand-to-deck-and-draw') {
+    return '已將全部手牌洗回牌庫並重抽相同張數。'
   }
 
   if (effect.kind === 'deck-to-support') {

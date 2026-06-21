@@ -4,6 +4,47 @@ import type { GameCard } from '../../game'
 import { CardFace } from '../cards/CardVisuals'
 import './PendingDecisionModals.css'
 
+export interface DrawUpToSelectorProps {
+  max: number
+  deckSize: number
+  onConfirm: (drawCount: number) => void
+}
+
+export function DrawUpToSelector({
+  max,
+  deckSize,
+  onConfirm,
+}: DrawUpToSelectorProps) {
+  const [drawCount, setDrawCount] = useState(0)
+  const effectiveMax = Math.min(max, deckSize)
+
+  return (
+    <div className="draw-up-to-selector">
+      <div className="draw-up-to-options">
+        {Array.from({ length: effectiveMax + 1 }, (_, i) => (
+          <button
+            key={i}
+            type="button"
+            className={`draw-up-to-option ${drawCount === i ? 'is-selected' : ''}`}
+            onClick={() => setDrawCount(i)}
+          >
+            {i}
+          </button>
+        ))}
+      </div>
+      <div className="faint-modal-actions">
+        <button
+          type="button"
+          className="modal-button primary"
+          onClick={() => onConfirm(drawCount)}
+        >
+          {drawCount === 0 ? '略過抽牌' : `抽取 ${drawCount} 張牌`}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export interface OptionalCostAttackModalProps {
   sourceCardName: string
   effectText: string

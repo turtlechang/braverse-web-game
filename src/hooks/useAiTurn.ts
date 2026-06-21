@@ -20,6 +20,7 @@ export function useAiTurn(params: {
   pendingEffect: unknown | null
   faintActive: boolean
   deckConfig: { player: DeckChoice; ai: DeckChoice }
+  maxConsecutiveActions?: number
 }) {
   const {
     game,
@@ -30,6 +31,7 @@ export function useAiTurn(params: {
     pendingEffect,
     faintActive,
     deckConfig,
+    maxConsecutiveActions = 200,
   } = params
 
   const [aiThinking, setAiThinking] = useState(false)
@@ -40,12 +42,17 @@ export function useAiTurn(params: {
     useState<AiDecision | null>(null)
   const aiThinkingTimerRef = useRef<number | null>(null)
   const aiActionTimerRef = useRef<number | null>(null)
+  const consecutiveAiActionCountRef = useRef(0)
 
   useEffect(() => {
+    if (!aiControlsCurrentState) {
+      consecutiveAiActionCountRef.current = 0
+      return
+    }
+
     if (
       showPause ||
       game.status !== 'playing' ||
-      !aiControlsCurrentState ||
       pendingEffect ||
       faintActive ||
       pendingAiDecision
@@ -53,7 +60,10 @@ export function useAiTurn(params: {
       return
     }
 
-    if (aiActionCount >= 200) {
+    if (consecutiveAiActionCountRef.current >= maxConsecutiveActions) {
+      setMessage(
+        `AI 停止：連續自動操作已達 ${maxConsecutiveActions} 步安全上限。`,
+      )
       return
     }
 
@@ -79,6 +89,7 @@ export function useAiTurn(params: {
 
       setGame(decision.state)
       setMessage(`AI：${decision.description}`)
+      consecutiveAiActionCountRef.current += 1
       setAiActionCount((count) => count + 1)
     }, 450) as unknown) as number
     aiActionTimerRef.current = timer
@@ -99,6 +110,7 @@ export function useAiTurn(params: {
     aiControlsCurrentState,
     faintActive,
     game,
+    maxConsecutiveActions,
     pendingEffect,
     pendingAiDecision,
     showPause,
@@ -119,12 +131,14 @@ export function useAiTurn(params: {
     setAiActionCount(0)
     setSimulationResults(null)
     setPendingAiDecision(null)
+    consecutiveAiActionCountRef.current = 0
   }, [])
 
   const confirmAiDecision = useCallback(() => {
     if (!pendingAiDecision) return
     setGame(pendingAiDecision.state)
     setMessage(`AI：${pendingAiDecision.description}`)
+    consecutiveAiActionCountRef.current += 1
     setAiActionCount((count) => count + 1)
     setPendingAiDecision(null)
   }, [pendingAiDecision, setGame, setMessage])
