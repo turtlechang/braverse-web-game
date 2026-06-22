@@ -11,6 +11,7 @@ import {
   getRefreshCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
+  getTrashBattleCookieCostCandidates,
   isPlayerControllingState,
   selectEnergyPayment,
   skipTrap,
@@ -202,6 +203,8 @@ export function useMatchController(params: {
   const [selectedTrapDiscardIds, setSelectedTrapDiscardIds] = useState<
     string[]
   >([])
+  const [selectedTrapTrashBattleCookieIds, setSelectedTrapTrashBattleCookieIds] =
+    useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
@@ -286,6 +289,14 @@ export function useMatchController(params: {
       ) ?? []
     : []
   const selectedTrapDiscardCost = selectedTrap?.trap?.cost.discardHand ?? 0
+  const selectedTrapTrashBattleCookieCost =
+    selectedTrap?.trap?.cost.trashBattleCookie?.count ?? 0
+  const selectedTrapTrashBattleCookieCandidates = selectedTrap?.trap
+    ? getTrashBattleCookieCostCandidates(
+        selectedTrap.trap.cost,
+        game.players[viewerPlayerId].battleArea,
+      )
+    : []
   const selectedTrapDiscardCandidates = selectedTrap
     ? game.players[viewerPlayerId].hand.filter(
         (card) => card.instanceId !== selectedTrap.instanceId,
@@ -447,6 +458,8 @@ export function useMatchController(params: {
     setSelectedTrapId,
     selectedTrapDiscardIds,
     setSelectedTrapDiscardIds,
+    selectedTrapTrashBattleCookieIds,
+    setSelectedTrapTrashBattleCookieIds,
     trapSelectNoTarget,
     setTrapSelectNoTarget,
     playerTrapCandidates,
@@ -454,6 +467,8 @@ export function useMatchController(params: {
     selectedTrapPaymentIds,
     selectedTrapDiscardCost,
     selectedTrapDiscardCandidates,
+    selectedTrapTrashBattleCookieCost,
+    selectedTrapTrashBattleCookieCandidates,
     trapAllowEmptyTarget,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,

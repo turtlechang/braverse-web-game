@@ -44,7 +44,7 @@ const matchesSelector = (
 
   if (
     selector.remainingHp !== undefined &&
-    cookie.hpCards.length !== selector.remainingHp
+    cookie.hpCards.length > selector.remainingHp
   ) {
     return false
   }
@@ -137,7 +137,8 @@ export const isEffectTargeted = (
   effect.kind === 'disable-flip' ||
   effect.kind === 'view-hp' ||
   effect.kind === 'battle-to-support' ||
-  effect.kind === 'return-to-hand'
+  effect.kind === 'return-to-hand' ||
+  effect.kind === 'field-to-trash'
 
 export const getSupportEffectCandidates = (
   state: GameState,
@@ -192,24 +193,33 @@ export const isEffectConditionMet = (
   context: EffectContext,
   effect: CardEffect,
 ): boolean => {
+  const condition = 'condition' in effect ? effect.condition : undefined
+
+  if (condition?.kind === 'opponent-trash-count-at-least') {
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    return state.players[opponentId].discardPile.length >= condition.count
+  }
+
+  if (condition?.kind === 'break-level-at-least') {
+    return getBreakAreaLevel(state, context.sourcePlayerId) >= condition.level
+  }
+
   if (effect.kind === 'modify-all-attack') {
-    return (
-      !effect.condition ||
-      effect.condition.kind !== 'break-level-at-least' ||
-      getBreakAreaLevel(state, context.sourcePlayerId) >=
-        effect.condition.level
-    )
+    return true
+  }
+
+  if (effect.kind === 'field-to-trash') {
+    return true
+  }
+
+  if (effect.kind === 'draw' || effect.kind === 'draw-up-to') {
+    return true
   }
 
   if (isEffectUntargeted(effect)) return true
 
   if (effect.kind === 'break-to-trash') {
-    return (
-      !effect.condition ||
-      effect.condition.kind !== 'break-level-at-least' ||
-      getBreakAreaLevel(state, context.sourcePlayerId) >=
-        effect.condition.level
-    )
+    return true
   }
 
   if (effect.kind === 'prevent-knockout') {
@@ -230,9 +240,5 @@ export const isEffectConditionMet = (
     return true
   }
 
-  return (
-    effect.condition?.kind !== 'break-level-at-least' ||
-    getBreakAreaLevel(state, context.sourcePlayerId) >=
-      effect.condition.level
-  )
+  return true
 }

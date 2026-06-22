@@ -1,4 +1,4 @@
-﻿import { Sparkles, Swords } from 'lucide-react'
+import { Sparkles, Swords } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import './App.css'
 import {
@@ -11,6 +11,7 @@ import {
   placeSupportCard,
   playStage,
   playTrap,
+  getRefreshCandidates,
   refreshDeck,
   replaceDefeatedCookie,
   resolveBattleAutomatically,
@@ -33,6 +34,7 @@ import { phaseLabels, deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
 import {
   DecisionModal,
+  DiscardRevealModal,
   CardDetailModal,
   CardRevealModal,
   CardPileModal,
@@ -130,6 +132,10 @@ function App() {
     Boolean(
       match.game.pendingDrawUpTo &&
         match.game.pendingDrawUpTo.playerId === match.viewerPlayerId,
+    ) ||
+    Boolean(
+      match.game.pendingStageTrigger &&
+        match.game.pendingStageTrigger.playerId === match.viewerPlayerId,
     ) ||
     faintActive ||
     ai.aiThinking ||
@@ -318,6 +324,8 @@ function App() {
           selectedSkillCostSupportIds={
             pending.selectedSkillCostSupportToTrashIds
           }
+          selectedSkillTrashBattleCookieIds={pending.selectedSkillTrashBattleCookieIds}
+          skillTrashBattleCookieTargetIds={pending.skillTrashBattleCookieTargetIds}
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
           attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
@@ -346,6 +354,7 @@ function App() {
           }
           onSkillPayment={pending.toggleSkillPayment}
           onSkillCostSupport={pending.toggleSkillCostSupport}
+          onSkillTrashBattleCookie={pending.toggleSkillTrashBattleCookie}
           onAttackPayment={match.toggleAttackPayment}
           onActivateSkill={(instanceId) => {
             const card = match.activePlayer.battleArea.find(
@@ -550,9 +559,15 @@ function App() {
             discardHandCards={match.selectedTrapDiscardCandidates}
             discardHandCost={match.selectedTrapDiscardCost}
             selectedDiscardHandIds={match.selectedTrapDiscardIds}
+            battleCookieCostCards={match.selectedTrapTrashBattleCookieCandidates.map(
+              (cookie) => cookie.card,
+            )}
+            battleCookieCost={match.selectedTrapTrashBattleCookieCost}
+            selectedBattleCookieIds={match.selectedTrapTrashBattleCookieIds}
             onSelectTrap={(id) => {
               match.setSelectedTrapId(id)
               match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapTrashBattleCookieIds([])
               match.setTrapSelectNoTarget(false)
             }}
             onToggleDiscardHand={(id) =>
@@ -564,10 +579,20 @@ function App() {
                     : current,
               )
             }
+            onToggleBattleCookie={(id) =>
+              match.setSelectedTrapTrashBattleCookieIds((current) =>
+                current.includes(id)
+                  ? current.filter((cardId) => cardId !== id)
+                  : current.length < match.selectedTrapTrashBattleCookieCost
+                    ? [...current, id]
+                    : current,
+              )
+            }
             onInspectCard={(card) => dialogs.openCardDetail(card)}
             onSkip={() => {
               match.setSelectedTrapId(null)
               match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapTrashBattleCookieIds([])
               match.runAction(
                 (current) => skipTrap(current, match.viewerPlayerId),
                 '未發動陷阱，進入傷害結算。',
@@ -584,6 +609,7 @@ function App() {
                 onConfirm: () => {
                   match.setSelectedTrapId(null)
                   match.setSelectedTrapDiscardIds([])
+                  match.setSelectedTrapTrashBattleCookieIds([])
                   match.setTrapSelectNoTarget(false)
                   match.runAction(
                     (current) => {
@@ -599,6 +625,8 @@ function App() {
                           supportTrashIds:
                             match.selectedTrapSupportTrashIds,
                           discardHandIds: match.selectedTrapDiscardIds,
+                          trashBattleCookieIds:
+                            match.selectedTrapTrashBattleCookieIds,
                         },
                       )
                       return testStateConfig
@@ -884,6 +912,74 @@ function App() {
           </div>
         )}
 
+      {match.game.pendingStageTrigger &&
+        match.game.pendingStageTrigger.playerId ===
+          match.viewerPlayerId &&
+        !pending.pendingEffect && (
+          <div
+            className="modal-backdrop"
+            role="presentation"
+            style={{ pointerEvents: 'none' }}
+          >
+            <section
+              className="faint-response-modal"
+              role="dialog"
+              style={{ pointerEvents: 'auto' }}
+            >
+              <h2>{match.game.pendingStageTrigger.sourceCardName} 效果</h2>
+              <p className="faint-effect-text">
+                {match.game.pendingStageTrigger.effectText}
+              </p>
+              <p className="faint-target-hint">
+                是否發動效果抽 1 張牌？
+              </p>
+              <div className="faint-modal-actions">
+                <button
+                  type="button"
+                  className="modal-button"
+                  onClick={() => {
+                    match.runAction(
+                      (current) =>
+                        applyGameCommand(current, {
+                          kind: 'resolve-stage-trigger',
+                          playerId: match.viewerPlayerId,
+                          action: 'skip',
+                        }),
+                      '已略過場景效果。',
+                    )
+                  }}
+                >
+                  略過
+                </button>
+                <button
+                  type="button"
+                  className="modal-button primary"
+                  disabled={
+                    match.game.players[match.viewerPlayerId].deck.length === 0 &&
+                    getRefreshCandidates(
+                      match.game,
+                      match.viewerPlayerId,
+                    ).length === 0
+                  }
+                  onClick={() => {
+                    match.runAction(
+                      (current) =>
+                        applyGameCommand(current, {
+                          kind: 'resolve-stage-trigger',
+                          playerId: match.viewerPlayerId,
+                          action: 'activate',
+                        }),
+                      '已發動場景效果抽 1 張牌。',
+                    )
+                  }}
+                >
+                  發動
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+
       {match.pendingPlayer &&
         match.pendingPlayer.id !== 'player-two' && (
           <DecisionModal
@@ -993,6 +1089,13 @@ function App() {
           onConfirm={ai.confirmAiDecision}
         />
       )}
+
+      {ai.pendingAiDecision?.revealedCards?.length ? (
+        <DiscardRevealModal
+          cards={ai.pendingAiDecision.revealedCards}
+          onConfirm={ai.confirmAiDecision}
+        />
+      ) : null}
 
       {dialogs.inspectedCard && (
         <CardDetailModal

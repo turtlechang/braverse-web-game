@@ -33,6 +33,98 @@ describe('TRAP response window', () => {
     },
   })
 
+  const purpleCookieCostTrap = (): GameCard => ({
+    id: 'ST5-020',
+    instanceId: 'st5-020-test',
+    name: 'Forbidden Grimoire',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: 'Place 1 purple LV.1 Cookie from your battle area into the trash.',
+      cost: {
+        energy: {},
+        discardHand: 0,
+        trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
+      },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+  })
+
+  it('requires and pays the ST5-020 purple LV.1 battle-cookie cost', () => {
+    const trap = purpleCookieCostTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, ...state.players['player-one'].hand]
+    state = declareAttack(state)
+
+    expect(getTrapCandidates(state, 'player-one')).toEqual([])
+
+    state.players['player-one'].battleArea[0].card.energyColor = 'purple'
+    expect(getTrapCandidates(state, 'player-one')).toEqual([trap])
+    expect(() =>
+      playTrap(state, 'player-one', {
+        trapInstanceId: trap.instanceId,
+        paymentIds: [],
+        targetIds: ['attacker'],
+      }),
+    ).toThrow('戰鬥區餅乾')
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: ['attacker'],
+      trashBattleCookieIds: ['defender'],
+    })
+
+    expect(result.players['player-one'].battleArea).toHaveLength(0)
+    expect(result.players['player-one'].discardPile.map((card) => card.instanceId)).toEqual(
+      expect.arrayContaining(['defender', 'defender-hp-a', 'defender-hp-b', 'defender-hp-c']),
+    )
+    expect(result.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+  })
+
+  it('lets ST5-021 select and trash the attacking Cookie', () => {
+    const trap: GameCard = {
+      id: 'ST5-021',
+      instanceId: 'st5-021-test',
+      name: 'Hidden Warpgate',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: 'Place 1 opponent Cookie whose remaining HP is 2 or less into the trash.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'field-to-trash',
+            target: { side: 'opponent', min: 1, max: 1, remainingHp: 2 },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, ...state.players['player-one'].hand]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: ['attacker'],
+    })
+
+    expect(result.players['player-two'].battleArea).toHaveLength(0)
+    expect(result.players['player-two'].discardPile.map((card) => card.instanceId)).toEqual(
+      expect.arrayContaining(['attacker', 'attacker-hp']),
+    )
+  })
+
   it('does not offer a trap when its discard-hand cost cannot be paid', () => {
     const trap = discardCostTrap()
     let state = createBattleState()

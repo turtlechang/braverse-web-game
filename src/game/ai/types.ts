@@ -20,6 +20,7 @@ export type AiActionType =
   | 'resolve-faint'
   | 'resolve-inspect-deck'
   | 'resolve-optional-cost-attack'
+  | 'resolve-stage-trigger'
   | 'error'
 
 export interface AiEffectSelection {
@@ -34,6 +35,7 @@ export interface AiDecision {
   action: AiActionType
   description: string
   revealedCard?: GameCard
+  revealedCards?: GameCard[]
   effectSelections?: AiEffectSelection[]
   error?: string
 }

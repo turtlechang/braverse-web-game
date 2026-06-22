@@ -407,7 +407,7 @@ describe('official purple starter deck', () => {
       type: 'cookie',
       flip: {
         cost: { energy: {}, discardHand: 0 },
-        effects: [{ kind: 'draw', amount: 1 }],
+        effects: [{ kind: 'draw-up-to', max: 1 }],
       },
     })
     expect(fairy).toMatchObject({

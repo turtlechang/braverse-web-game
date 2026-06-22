@@ -317,6 +317,41 @@ export function CardRevealModal({
   )
 }
 
+export interface DiscardRevealModalProps {
+  cards: GameCard[]
+  onConfirm: () => void
+}
+
+export function DiscardRevealModal({
+  cards,
+  onConfirm,
+}: DiscardRevealModalProps) {
+  return (
+    <div className="modal-backdrop card-reveal-backdrop" role="presentation">
+      <section
+        className="card-reveal-modal discard-reveal-modal"
+        role="alertdialog"
+        aria-labelledby="discard-reveal-title"
+      >
+        <span>公開資訊</span>
+        <h2 id="discard-reveal-title">對手棄置的卡牌</h2>
+        <div className="discard-reveal-cards">
+          {cards.map((card) => (
+            <article key={card.instanceId}>
+              <CardFace card={card} />
+              <strong>{card.name}</strong>
+            </article>
+          ))}
+        </div>
+        <p>對手因卡牌效果棄置以上 {cards.length} 張卡牌。</p>
+        <button type="button" className="reveal-confirm" onClick={onConfirm}>
+          確認並繼續
+        </button>
+      </section>
+    </div>
+  )
+}
+
 export interface TrapResponseModalProps {
   cards: GameCard[]
   selectedTrapId: string | null
@@ -325,8 +360,12 @@ export interface TrapResponseModalProps {
   discardHandCards: GameCard[]
   discardHandCost: number
   selectedDiscardHandIds: string[]
+  battleCookieCostCards?: GameCard[]
+  battleCookieCost?: number
+  selectedBattleCookieIds?: string[]
   onSelectTrap: (instanceId: string) => void
   onToggleDiscardHand: (instanceId: string) => void
+  onToggleBattleCookie?: (instanceId: string) => void
   onConfirm: () => void
   onSkip: () => void
   onInspectCard?: (card: GameCard) => void
@@ -343,8 +382,12 @@ export function TrapResponseModal({
   discardHandCards,
   discardHandCost,
   selectedDiscardHandIds,
+  battleCookieCostCards = [],
+  battleCookieCost = 0,
+  selectedBattleCookieIds = [],
   onSelectTrap,
   onToggleDiscardHand,
+  onToggleBattleCookie,
   onConfirm,
   onSkip,
   onInspectCard,
@@ -408,6 +451,31 @@ export function TrapResponseModal({
                 </span>
               </>
             )}
+            {battleCookieCost > 0 && (
+              <>
+                <strong>選擇 {battleCookieCost} 張戰鬥區餅乾送入棄牌區</strong>
+                <div className="modal-card-options compact">
+                  {battleCookieCostCards.map((card) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedBattleCookieIds.includes(card.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      key={card.instanceId}
+                      onClick={() => onToggleBattleCookie?.(card.instanceId)}
+                    >
+                      <CardFace card={card} />
+                      <span>{card.name}</span>
+                    </button>
+                  ))}
+                </div>
+                <span>
+                  已選 {selectedBattleCookieIds.length}／{battleCookieCost}
+                </span>
+              </>
+            )}
             {allowEmptyTarget && (
               <label className="trap-target-toggle">
                 <input
@@ -426,7 +494,8 @@ export function TrapResponseModal({
             type="button"
             disabled={
               !selectedTrapId ||
-              selectedDiscardHandIds.length !== discardHandCost
+              selectedDiscardHandIds.length !== discardHandCost ||
+              selectedBattleCookieIds.length !== battleCookieCost
             }
             onClick={onConfirm}
           >

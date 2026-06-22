@@ -195,7 +195,7 @@ export const canActivateStage = (
     assertMainAction(state, playerId)
     const stage = state.players[playerId].stage
     const ability = stage?.card.stageAbility
-    if (!stage || stage.rested || !ability) return false
+    if (!stage || stage.rested || !ability || ability.triggered) return false
     if (
       selectEnergyPayment(
         ability.cost,

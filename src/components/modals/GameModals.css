@@ -173,6 +173,27 @@
   width: 190px;
 }
 
+.discard-reveal-modal {
+  width: min(760px, 100%);
+}
+
+.discard-reveal-cards {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 16px;
+}
+
+.discard-reveal-cards article {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.discard-reveal-cards .card-face {
+  width: min(150px, 100%);
+}
+
 .minimize-reveal {
   position: absolute;
   top: 12px;

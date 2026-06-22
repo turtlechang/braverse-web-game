@@ -65,6 +65,24 @@ export const recordCookieDepartures = (
   }
 }
 
+export const clearDepartedCookieModifiers = (state: GameState): GameState => {
+  const livingCookieIds = new Set(
+    Object.values(state.players).flatMap((player) =>
+      player.battleArea.map((cookie) => cookie.card.instanceId),
+    ),
+  )
+
+  return {
+    ...state,
+    attackModifiers: state.attackModifiers.filter((modifier) =>
+      livingCookieIds.has(modifier.targetInstanceId),
+    ),
+    damageReceivedModifiers: state.damageReceivedModifiers.filter((modifier) =>
+      livingCookieIds.has(modifier.targetInstanceId),
+    ),
+  }
+}
+
 export const continuePendingReplacements = (
   state: GameState,
 ): GameState => {

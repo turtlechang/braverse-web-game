@@ -97,6 +97,7 @@ export const resolveBreakLevelVictory = (
         pendingInspectDeck: null,
         pendingOptionalCostAttack: undefined,
         pendingOpponentHandDiscard: null,
+        pendingStageTrigger: null,
         result,
       }
     : state
@@ -121,6 +122,7 @@ export const resolveBasicVictory = (state: GameState): GameState => {
         pendingInspectDeck: null,
         pendingOptionalCostAttack: undefined,
         pendingOpponentHandDiscard: null,
+        pendingStageTrigger: null,
         result,
       }
     : state
@@ -145,6 +147,7 @@ export const finishWithDefeat = (
   pendingInspectDeck: null,
   pendingOptionalCostAttack: undefined,
   pendingOpponentHandDiscard: null,
+  pendingStageTrigger: null,
   result: {
     loserId,
     winnerId: getOpponentId(loserId),

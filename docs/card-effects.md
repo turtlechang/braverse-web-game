@@ -8,6 +8,10 @@
 - `modify-attack`：增加或減少攻擊傷害
 - `modify-damage-received`：增加或減少承受的攻擊傷害
 - `draw`：從效果來源玩家的牌庫抽牌，不需選擇目標；牌庫耗盡時進入 pending Refresh
+- `draw-up-to`：由玩家選擇抽 0～N 張，逐張沿用 Refresh 流程
+- `field-to-trash`：將符合等級或剩餘 HP 上限的餅乾移至棄牌區；卡牌文字允許時也可選場景
+- `opponent-battle-to-trash`：將符合條件的對手戰鬥區餅乾移至棄牌區
+- `opponent-random-discard`：隨機選擇對手手牌棄置，但保留其餘手牌原順序
 - `deck-to-support`：從效果來源玩家牌庫頂取牌，直立即 rested=false 放入支援區，不需選擇目標；牌庫耗盡時進入 pending Refresh（remainingDraws=0）
 - `gain-hp`：FLIP 結算時從牌庫頂增加實體 HP 卡
 - `prevent-knockout`：本次戰鬥中使指定餅乾 HP 不會降至 0
@@ -43,7 +47,11 @@
 | 攻擊修正 | `modify-attack` | 增加或減少攻擊傷害，回合結束移除 |
 | 全體攻擊修正 | `modify-all-attack` | 增加或減少己方所有餅乾攻擊傷害，回合結束移除 |
 | 承受傷害修正 | `modify-damage-received` | 增加或減少承受的攻擊傷害，回合結束移除 |
-| 純抽牌 | `draw` | 從牌庫抽 N 張，牌庫耗盡觸發 pending Refresh；僅接受等價於「Draw N card(s) from your deck」或「Draw up to N card(s) from your deck」的文字（須移除時機／費用標記），不接受含 Then、If you did、view HP、support area 等複合文字 |
+| 純抽牌 | `draw` | 從牌庫抽固定 N 張，牌庫耗盡觸發 pending Refresh |
+| 可選抽牌 | `draw-up-to` | 玩家選擇抽 0～N 張；選擇大於 0 時沿用逐張抽牌與 Refresh 流程 |
+| 場上卡→棄牌區 | `field-to-trash` | 依陣營、等級與剩餘 HP 上限篩選餅乾，文字允許時也可選場景；餅乾屬非昏厥離場，仍會清理修正並建立補位 |
+| 對手戰鬥區→棄牌區 | `opponent-battle-to-trash` | 移除符合條件的對手戰鬥區餅乾，屬非昏厥離場 |
+| 對手隨機棄牌 | `opponent-random-discard` | 透過注入式洗牌決定棄置卡，剩餘手牌維持原順序 |
 | 牌庫頂→支援區 | `deck-to-support` | 從牌庫頂取 N 張直立放入支援區（例：ST3-010 Aloe Cookie）；牌庫耗盡觸發 pending Refresh（remainingDraws=0）。僅接受等價於「Take N card(s) from the top your deck and place it/them in your support area as active」的文字 |
 | 休息區→棄牌區 | `break-to-trash` | 從效果來源玩家休息區選最多 N 張 LV.X 卡移至棄牌區；不需選擇目標時玩家可選 0 張確認。移動後以 resolveBasicVictory 檢查勝負。僅接受等價於「Select up to N LV.X card(s) from your break area and place it/them in the trash」的文字，不接受 Then/FLIP/額外子效果 |
 | 增加 HP | `gain-hp` | 目前供起始牌組 FLIP 使用，從牌庫頂補入 HP 卡 |
@@ -83,7 +91,7 @@
 
 - 規則已確認每次攻擊的陷阱步驟只能回應一次：使用 1 張陷阱，或發動 1 個「當對手的餅乾攻擊時」效果，兩者擇一。
 - `card_type=TRAP` 僅解析官方 `card_attack_text`。
-- 原型每次攻擊最多發動 1 張，支援三副起始牌組內的攻擊修正、條件傷害、HP 下限、支援棄置與牌庫頂放入休息支援。
+- 原型每次攻擊最多發動 1 張，支援五副起始牌組內的攻擊修正、條件傷害、HP 下限、支援／戰鬥區餅乾代價、場上卡移除與牌庫頂放入休息支援。
 
 ### 已實作：起始牌組物品與場景
 

@@ -1,6 +1,11 @@
 import { GameRuleError } from './errors'
 import { getFaintEffectMinMax, resolveFaintEffect, resolveOptionalCostAttack } from './battle'
-import { resolveDrawUpTo, resolveInspectDeck, resolveOpponentHandDiscard } from './effects'
+import {
+  executeCardEffect,
+  resolveDrawUpTo,
+  resolveInspectDeck,
+  resolveOpponentHandDiscard,
+} from './effects'
 import type { AbilityCost, CardEffect, GameState, PlayerId } from './types'
 
 export interface FaintEffectDecision {
@@ -53,12 +58,22 @@ export interface DrawUpToDecision {
   max: number
 }
 
+export interface StageTriggerDecision {
+  kind: 'stage-trigger'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  effectText: string
+}
+
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
   | InspectDeckDecision
   | OptionalCostAttackDecision
   | DrawUpToDecision
+  | StageTriggerDecision
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -93,12 +108,19 @@ export interface ResolveDrawUpToCommand {
   drawCount: number
 }
 
+export interface ResolveStageTriggerCommand {
+  kind: 'resolve-stage-trigger'
+  playerId: PlayerId
+  action: 'activate' | 'skip'
+}
+
 export type GameCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
   | ResolveInspectDeckCommand
   | ResolveOptionalCostAttackCommand
   | ResolveDrawUpToCommand
+  | ResolveStageTriggerCommand
 
 export const getPendingDecision = (
   state: GameState,
@@ -173,6 +195,18 @@ export const getPendingDecision = (
     }
   }
 
+  if (state.pendingStageTrigger) {
+    const pending = state.pendingStageTrigger
+    return {
+      kind: 'stage-trigger',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      effectText: pending.effectText,
+    }
+  }
+
   return null
 }
 
@@ -182,6 +216,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-inspect-deck': 'inspect-deck',
   'resolve-optional-cost-attack': 'optional-cost-attack',
   'resolve-draw-up-to': 'draw-up-to',
+  'resolve-stage-trigger': 'stage-trigger',
 }
 
 export const applyGameCommand = (
@@ -216,5 +251,49 @@ export const applyGameCommand = (
       )
     case 'resolve-draw-up-to':
       return resolveDrawUpTo(state, command.playerId, command.drawCount)
+    case 'resolve-stage-trigger': {
+      const pending = state.pendingStageTrigger
+      if (!pending) throw new GameRuleError('沒有待處理的場景觸發。')
+      if (pending.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要執行場景觸發的玩家。')
+      }
+      if (command.action === 'skip') {
+        return { ...state, pendingStageTrigger: null }
+      }
+      const playerId = pending.playerId
+      const player = state.players[playerId]
+      const stage = player.stage
+      const ability = stage?.card.stageAbility
+      if (
+        !stage ||
+        stage.card.instanceId !== pending.sourceInstanceId ||
+        !ability?.triggered
+      ) {
+        throw new GameRuleError('觸發來源場景已不存在或不相符。')
+      }
+
+      let nextState: GameState = {
+        ...state,
+        pendingStageTrigger: null,
+        players: {
+          ...state.players,
+          [playerId]: {
+            ...player,
+            stage: {
+              ...stage,
+              rested: ability.restSource ? true : stage.rested,
+            },
+          },
+        },
+      }
+      const context = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: stage.card.instanceId,
+      }
+      for (const effect of ability.effects) {
+        nextState = executeCardEffect(nextState, context, effect, [])
+      }
+      return nextState
+    }
   }
 }

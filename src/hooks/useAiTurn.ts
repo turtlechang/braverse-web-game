@@ -81,9 +81,13 @@ export function useAiTurn(params: {
         return
       }
 
-      if (decision.revealedCard) {
+      if (decision.revealedCard || decision.revealedCards?.length) {
         setPendingAiDecision(decision)
-        setMessage(`AI 公開${decision.revealedCard.name}，等待確認。`)
+        setMessage(
+          decision.revealedCards?.length
+            ? `AI 棄置 ${decision.revealedCards.length} 張卡牌，等待公開確認。`
+            : `AI 公開${decision.revealedCard!.name}，等待確認。`,
+        )
         return
       }
 

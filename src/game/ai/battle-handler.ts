@@ -9,6 +9,7 @@ import {
 } from '../battle'
 import { getBreakToTrashCandidates } from '../effects'
 import { selectEnergyPayment } from '../energy'
+import { getTrashBattleCookieCostCandidates } from '../skills'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 
@@ -119,6 +120,12 @@ export const handleAiPendingBattle = (
       .filter((card) => card.instanceId !== trapCard.instanceId)
       .slice(0, trapCard.trap.cost.discardHand)
       .map((card) => card.instanceId)
+    const trashBattleCookieIds = getTrashBattleCookieCostCandidates(
+      trapCard.trap.cost,
+      state.players[playerId].battleArea,
+    )
+      .slice(0, trapCard.trap.cost.trashBattleCookie?.count ?? 0)
+      .map((cookie) => cookie.card.instanceId)
 
     if (
       supportTrashEffect?.kind === 'support-to-trash' &&
@@ -138,6 +145,7 @@ export const handleAiPendingBattle = (
         targetIds,
         supportTrashIds,
         discardHandIds,
+        trashBattleCookieIds,
       }),
       action: 'play-trap',
       revealedCard: trapCard,

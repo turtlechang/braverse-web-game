@@ -38,6 +38,10 @@ const assertActiveGame = (state: GameState) => {
   if (state.pendingOpponentHandDiscard) {
     throw new GameRuleError('必須先處理對手棄牌。')
   }
+
+  if (state.pendingStageTrigger) {
+    throw new GameRuleError('必須先處理場景觸發效果。')
+  }
 }
 
 const resolveDeckExhaustion = (

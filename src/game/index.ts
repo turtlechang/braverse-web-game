@@ -106,6 +106,8 @@ export {
   activateCookieSkill,
   canActivateCookieSkill,
   canPayEnergyCost,
+  canPayTrashBattleCookieCost,
+  getTrashBattleCookieCostCandidates,
   skipCookieOnPlay,
 } from './skills'
 export {
@@ -149,6 +151,7 @@ export type {
   EffectTargetSide,
   EnergyColor,
   EnergyCost,
+  FieldToTrashEffect,
   GameCard,
   GameResult,
   GameState,
@@ -161,6 +164,7 @@ export type {
   OpponentBattleToTrashEffect,
   OpponentDiscardHandEffect,
   OpponentRandomDiscardEffect,
+  OpponentTrashCountAtLeastCondition,
   PendingFaintEffect,
   PendingOpponentHandDiscard,
   PlayerId,
@@ -195,12 +199,14 @@ export type {
   OpponentHandDiscardDecision,
   OptionalCostAttackDecision,
   DrawUpToDecision,
+  StageTriggerDecision,
   PendingDecision,
   ResolveFaintEffectCommand,
   ResolveInspectDeckCommand,
   ResolveOpponentHandDiscardCommand,
   ResolveOptionalCostAttackCommand,
   ResolveDrawUpToCommand,
+  ResolveStageTriggerCommand,
 } from './commands'
 export type {
   AiActionType,

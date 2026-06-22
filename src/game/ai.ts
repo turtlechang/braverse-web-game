@@ -6,6 +6,7 @@ import {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getSupportEffectCandidates,
+  getTargetPlayerId,
   getTrashCookieCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
@@ -72,6 +73,27 @@ const chooseEffectTargets = (
     return getTrashCookieCandidates(state, context)
       .slice(0, effect.amount)
       .map((card) => card.instanceId)
+  }
+
+  if (effect.kind === 'field-to-trash') {
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const targetPlayer = state.players[targetPlayerId]
+    const battleCandidates = targetPlayer.battleArea.filter((cookie) => {
+      if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
+      if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
+      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
+      return true
+    })
+    if (battleCandidates.length > 0) {
+      const ordered = [...battleCandidates].sort(
+        (left, right) => left.hpCards.length - right.hpCards.length,
+      )
+      return [ordered[0].card.instanceId]
+    }
+    if (effect.allowStage && targetPlayer.stage) {
+      return [targetPlayer.stage.card.instanceId]
+    }
+    return []
   }
 
   if (effect.kind === 'gain-hp' && effect.target) {
@@ -277,6 +299,25 @@ const resolveAiSkill = (
     return null
   }
 
+  const trashBattleCookieIds = skill.cost.trashBattleCookie
+    ? player.battleArea
+        .filter((cookie) => {
+          if (skill.cost.trashBattleCookie!.level !== undefined && cookie.card.level !== skill.cost.trashBattleCookie!.level) return false
+          if (skill.cost.trashBattleCookie!.energyColor !== undefined && cookie.card.energyColor !== skill.cost.trashBattleCookie!.energyColor) return false
+          return true
+        })
+        .sort((left, right) => left.hpCards.length - right.hpCards.length)
+        .slice(0, skill.cost.trashBattleCookie!.count)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+
+  if (
+    skill.cost.trashBattleCookie &&
+    trashBattleCookieIds.length < skill.cost.trashBattleCookie.count
+  ) {
+    return null
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: source.card.instanceId,
@@ -294,6 +335,7 @@ const resolveAiSkill = (
     paymentIds,
     costSupportToTrashIds,
     discardHandIds,
+    trashBattleCookieIds,
   )
   const effectSelections: AiEffectSelection[] = []
 
@@ -356,6 +398,7 @@ const resolveAiSkill = (
       effect.kind !== 'trash-to-battle' &&
       effect.kind !== 'inspect-deck' &&
       effect.kind !== 'optional-cost-attack' &&
+      effect.kind !== 'field-to-trash' &&
       effect.target &&
       targetIds.length < effect.target.min
     ) {

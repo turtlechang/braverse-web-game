@@ -469,7 +469,7 @@ describe('cookie skill activation', () => {
         ['red-1'],
         ['red-1'],
       ),
-    ).toThrow('同一張支援卡不能同時支付兩種費用。')
+    ).toThrow('同一張卡不能同時支付兩種費用。')
   })
 
   it('requires separate support cards for energy and trash costs before activation', () => {

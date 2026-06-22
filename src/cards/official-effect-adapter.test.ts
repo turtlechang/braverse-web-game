@@ -3,10 +3,12 @@ import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.json'
+import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
   convertOfficialCookieSkill,
+  convertOfficialFlipAbility,
   convertOfficialItemAbility,
   convertOfficialStageAbility,
   convertOfficialTrapAbility,
@@ -17,6 +19,7 @@ const cards = officialSample.cards as OfficialCardRecord[]
 const yellowCards = officialYellowSample.cards as OfficialCardRecord[]
 const greenCards = officialGreenSample.cards as OfficialCardRecord[]
 const blueCards = officialBlueSample.cards as OfficialCardRecord[]
+const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
 
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
@@ -59,6 +62,18 @@ const findBlueCard = (cardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing blue sample card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findPurpleCard = (cardNumber: string) => {
+  const card = purpleCards.find(
+    (candidate) => candidate.cardNumber === cardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing purple sample card ${cardNumber}`)
   }
 
   return card
@@ -1036,7 +1051,210 @@ describe('Starter Deck RED official effect adapter', () => {
             target: { side: 'opponent', min: 0, max: 1 },
           },
         ],
+    })
+  })
+
+  describe('Starter Deck PURPLE official effect adapter', () => {
+    it('imports all 22 distinct starter deck cards', () => {
+      expect(purpleCards).toHaveLength(22)
+      expect(new Set(purpleCards.map((card) => card.cardNumber)).size).toBe(22)
+      expect(
+        purpleCards.every(
+          (card) => card.product.title === 'Starter Deck PURPLE',
+        ),
+      ).toBe(true)
+    })
+
+    it('ST5-001 Madeleine Cookie converts to field-to-trash with allowStage', () => {
+      expect(convertOfficialCookieSkill(findPurpleCard('ST5-001'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          {
+            kind: 'field-to-trash',
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+            allowStage: true,
+          },
+        ],
+      })
+    })
+
+    it('ST5-003 Fig Cookie converts to flip draw up to 1', () => {
+      expect(convertOfficialFlipAbility(findPurpleCard('ST5-003'))).toMatchObject({
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      })
+    })
+
+    it('ST5-004 Skater Cookie converts to faint opponent-discard-hand', () => {
+      expect(convertOfficialCookieSkill(findPurpleCard('ST5-004'))).toMatchObject({
+        faint: true,
+        effects: [{ kind: 'opponent-discard-hand', count: 1 }],
+      })
+    })
+
+    it('ST5-006 String Gummy Cookie converts to field-to-trash with allowStage', () => {
+      expect(convertOfficialCookieSkill(findPurpleCard('ST5-006'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          {
+            kind: 'field-to-trash',
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 2 },
+            allowStage: true,
+          },
+        ],
+      })
+    })
+
+    it('ST5-007 Yoga Cookie converts to activate field-to-trash', () => {
+      const result = convertOfficialCookieSkill(findPurpleCard('ST5-007'))
+      expect(result).toMatchObject({
+        trigger: 'activate',
+        effects: [
+          {
+            kind: 'field-to-trash',
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+            allowStage: true,
+          },
+        ],
+      })
+      expect(result?.cost.discardHand).toBe(1)
+    })
+
+    it('ST5-008 Fairy Cookie converts to flip gain-hp', () => {
+      expect(convertOfficialFlipAbility(findPurpleCard('ST5-008'))).toMatchObject({
+        effects: [{ kind: 'gain-hp', amount: 1 }],
+      })
+    })
+
+    it('ST5-010 Carol Cookie converts to field-to-trash with remainingHp', () => {
+      expect(convertOfficialCookieSkill(findPurpleCard('ST5-010'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          {
+            kind: 'field-to-trash',
+            target: { side: 'opponent', min: 1, max: 1, remainingHp: 2 },
+          },
+        ],
+      })
+    })
+
+    it('ST5-013 Pilot Cookie converts to modify-attack with trashBattleCookie cost', () => {
+      const result = convertOfficialCookieSkill(findPurpleCard('ST5-013'))
+      expect(result).toMatchObject({
+        trigger: 'activate',
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      })
+      expect(result?.cost.trashBattleCookie).toEqual({
+        count: 1,
+        level: 1,
+        energyColor: 'purple',
+      })
+    })
+
+    it('ST5-015 Rye Cookie converts to field-to-trash without conditions', () => {
+      expect(convertOfficialCookieSkill(findPurpleCard('ST5-015'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          {
+            kind: 'field-to-trash',
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+      })
+    })
+
+    it('ST5-016 BONUS Coin converts to conditional draw-up-to', () => {
+      expect(convertOfficialItemAbility(findPurpleCard('ST5-016'))).toMatchObject({
+        effects: [
+          {
+            kind: 'draw-up-to',
+            max: 2,
+            condition: { kind: 'opponent-trash-count-at-least', count: 30 },
+          },
+        ],
+      })
+    })
+
+    it('ST5-017 Violet Dragonspout converts to opponent-random-discard', () => {
+      expect(convertOfficialItemAbility(findPurpleCard('ST5-017'))).toMatchObject({
+        effects: [{ kind: 'opponent-random-discard', count: 1 }],
+      })
+    })
+
+    it('ST5-018 Dragonfly Candy Brooch converts to field-to-trash with remainingHp', () => {
+      expect(convertOfficialItemAbility(findPurpleCard('ST5-018'))).toMatchObject({
+        effects: [
+          {
+            kind: 'field-to-trash',
+            target: { side: 'opponent', min: 1, max: 1, remainingHp: 4 },
+          },
+        ],
+      })
+    })
+
+    it('ST5-019 Pastry Boomerang converts to damage + draw', () => {
+      expect(convertOfficialItemAbility(findPurpleCard('ST5-019'))).toMatchObject({
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'opponent-trash-count-at-least', count: 20 },
+          },
+          {
+            kind: 'draw-up-to',
+            max: 1,
+            condition: { kind: 'opponent-trash-count-at-least', count: 20 },
+          },
+        ],
+      })
+    })
+
+    it('ST5-020 Forbidden Grimoire converts to trap with modify-attack', () => {
+      const result = convertOfficialTrapAbility(findPurpleCard('ST5-020'))
+      expect(result).toBeDefined()
+      expect(result?.effects).toContainEqual(
+        expect.objectContaining({
+          kind: 'modify-attack',
+          amount: -3,
+        }),
+      )
+      expect(result?.cost.trashBattleCookie).toEqual({
+        count: 1,
+        level: 1,
+        energyColor: 'purple',
+      })
+    })
+
+    it('ST5-021 Hidden Warpgate converts to trap with field-to-trash', () => {
+      const result = convertOfficialTrapAbility(findPurpleCard('ST5-021'))
+      expect(result).toBeDefined()
+      expect(result?.effects).toContainEqual(
+        expect.objectContaining({
+          kind: 'field-to-trash',
+          target: expect.objectContaining({
+            side: 'opponent',
+            min: 1,
+            max: 1,
+            remainingHp: 2,
+          }),
+        }),
+      )
+    })
+
+    it('ST5-022 Windswept Valley converts to stage with draw', () => {
+      expect(convertOfficialStageAbility(findPurpleCard('ST5-022'))).toMatchObject({
+        effects: [{ kind: 'draw', amount: 1 }],
+        restSource: true,
+        triggered: true,
       })
     })
   })
+})
 })

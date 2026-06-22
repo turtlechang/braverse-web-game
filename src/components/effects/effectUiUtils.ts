@@ -120,6 +120,10 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇${count}${target}，該次戰鬥中 HP 不會降到 0。`
   }
 
+  if (effect.kind === 'field-to-trash') {
+    return `選擇${count}${target}，送入棄牌區。`
+  }
+
   const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount
   return effect.kind === 'modify-attack'
     ? `選擇${count}${target}，攻擊傷害 ${value}。`
@@ -227,6 +231,10 @@ export const describeEffectResult = (
 
   if (effect.kind === 'inspect-deck' || effect.kind === 'optional-cost-attack') {
     return '效果已處理。'
+  }
+
+  if (effect.kind === 'field-to-trash') {
+    return `${names}已送入棄牌區。`
   }
 
   const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount

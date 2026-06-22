@@ -1,6 +1,9 @@
 import { GameRuleError } from '../errors'
 import { defaultShuffle, drawCards, getOpponentId, updatePlayer } from '../helpers'
-import { recordCookieDepartures } from '../replacement'
+import {
+  clearDepartedCookieModifiers,
+  recordCookieDepartures,
+} from '../replacement'
 import { getRefreshCandidates } from '../refresh'
 import type {
   CardEffect,
@@ -25,6 +28,30 @@ import {
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './targeting'
+
+const checkWindsweptValleyTrigger = (
+  state: GameState,
+  actorPlayerId: PlayerId,
+  cookieOwnerId: PlayerId,
+): GameState => {
+  if (state.pendingStageTrigger) return state
+  if (actorPlayerId !== cookieOwnerId) return state
+  const stageOwnerId = getOpponentId(actorPlayerId)
+  const stageOwner = state.players[stageOwnerId]
+  const stage = stageOwner.stage
+  if (!stage) return state
+  if (stage.card.id !== 'ST5-022') return state
+  if (stage.rested) return state
+  return {
+    ...state,
+    pendingStageTrigger: {
+      playerId: stageOwnerId,
+      sourceInstanceId: stage.card.instanceId,
+      sourceCardName: stage.card.name,
+      effectText: 'When your opponent places a Cookie from their battle area into the trash by effect, rest this card. You can draw 1 card from your deck.',
+    },
+  }
+}
 
 const assertCondition = (
   state: GameState,
@@ -86,20 +113,11 @@ const resolveDamageOutcome = (
   departedCount: number,
   departedCookieCards: CookieCard[],
 ): GameState => {
-  const livingCookieIds = new Set(
-    Object.values(state.players).flatMap((player) =>
-      player.battleArea.map((cookie) => cookie.card.instanceId),
-    ),
+  const updatedState = recordCookieDepartures(
+    clearDepartedCookieModifiers(state),
+    damagedPlayerId,
+    departedCount,
   )
-  const updatedState = recordCookieDepartures({
-    ...state,
-    attackModifiers: state.attackModifiers.filter((modifier) =>
-      livingCookieIds.has(modifier.targetInstanceId),
-    ),
-    damageReceivedModifiers: state.damageReceivedModifiers.filter(
-      (modifier) => livingCookieIds.has(modifier.targetInstanceId),
-    ),
-  }, damagedPlayerId, departedCount)
 
   const departedCookies = departedCookieCards
 
@@ -147,6 +165,19 @@ const resolveDamageOutcome = (
     ? faintState
     : resolveBreakLevelVictory(faintState)
 }
+
+const resolveNonFaintDepartureOutcome = (
+  state: GameState,
+  playerId: PlayerId,
+  departedCount: number,
+): GameState =>
+  resolveBreakLevelVictory(
+    recordCookieDepartures(
+      clearDepartedCookieModifiers(state),
+      playerId,
+      departedCount,
+    ),
+  )
 
 const getExpirationTurn = (
   state: GameState,
@@ -519,8 +550,105 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'opponent-battle-to-trash') {
-    // TODO: implement opponent battle-to-trash pending flow
-    return { ...state }
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    const targetPlayer = state.players[targetPlayerId]
+    const candidates = targetPlayer.battleArea.filter((cookie) => {
+      if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
+      if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+      if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
+      return true
+    })
+    if (candidates.length === 0 && selectedTargetIds.length === 0) return { ...state }
+    if (
+      selectedTargetIds.length !== 1 ||
+      new Set(selectedTargetIds).size !== selectedTargetIds.length
+    ) {
+      throw new GameRuleError('選擇的效果目標數量不合法。')
+    }
+
+    const selectedIds = new Set(selectedTargetIds)
+    const selected = candidates.filter((c) => selectedIds.has(c.card.instanceId))
+    if (selected.length === 0) throw new GameRuleError('選擇的卡牌不是合法目標。')
+
+    const movedIds = new Set(selected.map((c) => c.card.instanceId))
+    const movedCards = selected.map((c) => c.card)
+    const hpCards = selected.flatMap((c) => c.hpCards)
+    const updatedPlayer: PlayerState = {
+      ...targetPlayer,
+      battleArea: targetPlayer.battleArea.filter((c) => !movedIds.has(c.card.instanceId)),
+      discardPile: [...targetPlayer.discardPile, ...movedCards, ...hpCards],
+    }
+    const nextState = updatePlayer(state, updatedPlayer)
+    const departedCount = selected.length
+    const afterDeparture = resolveNonFaintDepartureOutcome(
+      nextState,
+      targetPlayerId,
+      departedCount,
+    )
+    return checkWindsweptValleyTrigger(
+      afterDeparture,
+      context.sourcePlayerId,
+      targetPlayerId,
+    )
+  }
+
+  if (effect.kind === 'field-to-trash') {
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const targetPlayer = state.players[targetPlayerId]
+
+    const battleCandidates = targetPlayer.battleArea.filter((cookie) => {
+      if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
+      if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
+      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
+      return true
+    })
+
+    const hasStageOption = effect.allowStage && targetPlayer.stage !== null
+    const hasBattleOption = battleCandidates.length > 0
+
+    if (!hasBattleOption && !hasStageOption && selectedTargetIds.length === 0) {
+      return { ...state }
+    }
+    const uniqueIds = new Set(selectedTargetIds)
+    if (
+      uniqueIds.size !== selectedTargetIds.length ||
+      selectedTargetIds.length < effect.target.min ||
+      selectedTargetIds.length > effect.target.max
+    ) {
+      throw new GameRuleError('選擇的效果目標數量不合法。')
+    }
+
+    const selectedId = selectedTargetIds[0]
+    const isStageTarget = selectedId === targetPlayer.stage?.card.instanceId
+
+    if (isStageTarget) {
+      if (!hasStageOption) throw new GameRuleError('對手沒有場景卡可移除。')
+      const stageCard = targetPlayer.stage!.card
+      const updatedPlayer: PlayerState = {
+        ...targetPlayer,
+        stage: null,
+        discardPile: [...targetPlayer.discardPile, stageCard],
+      }
+      return updatePlayer(state, updatedPlayer)
+    }
+
+    const selectedCookie = battleCandidates.find((c) => c.card.instanceId === selectedId)
+    if (!selectedCookie) throw new GameRuleError('選擇的卡牌不是合法目標。')
+
+    const movedIds = new Set([selectedCookie.card.instanceId])
+    const hpCards = selectedCookie.hpCards
+    const updatedPlayer: PlayerState = {
+      ...targetPlayer,
+      battleArea: targetPlayer.battleArea.filter((c) => !movedIds.has(c.card.instanceId)),
+      discardPile: [...targetPlayer.discardPile, selectedCookie.card, ...hpCards],
+    }
+    const nextState = updatePlayer(state, updatedPlayer)
+    const afterDeparture = resolveNonFaintDepartureOutcome(nextState, targetPlayerId, 1)
+    return checkWindsweptValleyTrigger(
+      afterDeparture,
+      context.sourcePlayerId,
+      targetPlayerId,
+    )
   }
 
   if (effect.kind === 'return-to-hand') {
@@ -559,9 +687,12 @@ export const executeCardEffect = (
     const targetHand = state.players[targetPlayerId].hand
     if (targetHand.length === 0) return { ...state }
     const discardCount = Math.min(effect.count, targetHand.length)
-    const shuffled = [...targetHand].sort(() => Math.random() - 0.5)
+    const shuffled = shuffle([...targetHand])
     const discarded = shuffled.slice(0, discardCount)
-    const remaining = shuffled.slice(discardCount)
+    const discardedIds = new Set(discarded.map((card) => card.instanceId))
+    const remaining = targetHand.filter(
+      (card) => !discardedIds.has(card.instanceId),
+    )
     return {
       ...state,
       players: {

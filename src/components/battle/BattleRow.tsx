@@ -30,6 +30,8 @@ export interface BattleRowProps {
   skillPaymentTargetIds?: Set<string>
   skillCostSupportTargetIds?: Set<string>
   selectedSkillCostSupportIds?: Set<string>
+  selectedSkillTrashBattleCookieIds?: Set<string>
+  skillTrashBattleCookieTargetIds?: Set<string>
   selectedAttackPaymentIds: Set<string>
   attackPaymentValid: boolean
   interactionLocked: boolean
@@ -44,6 +46,7 @@ export interface BattleRowProps {
   onEffectTarget?: (instanceId: string) => void
   onSkillPayment?: (instanceId: string) => void
   onSkillCostSupport?: (instanceId: string) => void
+  onSkillTrashBattleCookie?: (instanceId: string) => void
   onAttackPayment?: (instanceId: string) => void
   onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
@@ -69,6 +72,8 @@ export function BattleRow({
   skillPaymentTargetIds = new Set<string>(),
   skillCostSupportTargetIds = new Set<string>(),
   selectedSkillCostSupportIds = new Set<string>(),
+  selectedSkillTrashBattleCookieIds = new Set<string>(),
+  skillTrashBattleCookieTargetIds = new Set<string>(),
   selectedAttackPaymentIds,
   attackPaymentValid,
   interactionLocked,
@@ -83,6 +88,7 @@ export function BattleRow({
   onEffectTarget,
   onSkillPayment,
   onSkillCostSupport,
+  onSkillTrashBattleCookie,
   onAttackPayment,
   onActivateSkill,
   onPlaceSupport,
@@ -345,12 +351,20 @@ export function BattleRow({
                     rested={cookie.rested}
                     selected={
                       selectedAttackerId === cookie.card.instanceId ||
-                      selectedEffectTargetIds.has(cookie.card.instanceId)
+                      selectedEffectTargetIds.has(cookie.card.instanceId) ||
+                      selectedSkillTrashBattleCookieIds.has(cookie.card.instanceId)
                     }
-                    targetable={canSelectEffectTarget}
+                    targetable={
+                      canSelectEffectTarget ||
+                      skillTrashBattleCookieTargetIds.has(
+                        cookie.card.instanceId,
+                      )
+                    }
                     onClick={
                       canSelectEffectTarget
                         ? () => onEffectTarget?.(cookie.card.instanceId)
+                        : skillTrashBattleCookieTargetIds.has(cookie.card.instanceId)
+                          ? () => onSkillTrashBattleCookie?.(cookie.card.instanceId)
                         : canTarget
                         ? () => onAttackTarget?.(cookie.card.instanceId)
                         : canSelectAttack

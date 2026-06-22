@@ -41,6 +41,7 @@ export interface CardAbility {
 export interface StageAbility extends CardAbility {
   placementCost: EnergyCost
   restSource: boolean
+  triggered?: boolean
 }
 
 export interface BaseCard {
@@ -103,7 +104,14 @@ export interface BreakLevelCondition {
   level: number
 }
 
-export type EffectCondition = BreakLevelCondition
+export interface OpponentTrashCountAtLeastCondition {
+  kind: 'opponent-trash-count-at-least'
+  count: number
+}
+
+export type EffectCondition =
+  | BreakLevelCondition
+  | OpponentTrashCountAtLeastCondition
 
 export interface DamageEffect {
   kind: 'damage'
@@ -136,11 +144,13 @@ export interface ModifyDamageReceivedEffect {
 export interface DrawEffect {
   kind: 'draw'
   amount: number
+  condition?: EffectCondition
 }
 
 export interface DrawUpToEffect {
   kind: 'draw-up-to'
   max: number
+  condition?: EffectCondition
 }
 
 export interface HandToDeckAndDrawEffect {
@@ -221,7 +231,14 @@ export interface OpponentBattleToTrashEffect {
   maxLevel?: number
   minLevel?: number
   remainingHp?: number
+}
+
+export interface FieldToTrashEffect {
+  kind: 'field-to-trash'
+  target: EffectTargetSelector
   allowStage?: boolean
+  stageLevel?: number
+  condition?: EffectCondition
 }
 
 export interface SetActiveEffect {
@@ -273,6 +290,7 @@ export type CardEffect =
   | SupportToHandEffect
   | OpponentDiscardHandEffect
   | OpponentBattleToTrashEffect
+  | FieldToTrashEffect
   | ReturnToHandEffect
   | OpponentRandomDiscardEffect
   | SetActiveEffect
@@ -288,11 +306,17 @@ export type TargetedCardEffect =
   | ViewHpEffect
   | BattleToSupportEffect
   | ReturnToHandEffect
+  | FieldToTrashEffect
 
 export interface AbilityCost {
   energy: EnergyCost
   discardHand: number
   supportToTrash?: number
+  trashBattleCookie?: {
+    count: number
+    level?: number
+    energyColor?: EnergyColor
+  }
 }
 
 export interface FlipAbility {
@@ -455,6 +479,12 @@ export interface GameState {
     sourceCardName: string
     cost: AbilityCost
     effects: CardEffect[]
+    effectText: string
+  } | null
+  pendingStageTrigger?: {
+    playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
     effectText: string
   } | null
 }

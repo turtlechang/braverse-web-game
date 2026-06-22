@@ -149,6 +149,17 @@ const parseAbilityCost = (text: string): AbilityCost => {
   const supportToTrashMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
   )
+  const trashBattleMatch = text.match(
+    /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?LV\.(\d+)\s+Cookie\s+from\s+your\s+battle\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
+  )
+  const costColors = {
+    R: 'red',
+    Y: 'yellow',
+    G: 'green',
+    B: 'blue',
+    P: 'purple',
+    K: 'black',
+  } as const
 
   return {
     energy: parsed?.cost ?? {},
@@ -156,6 +167,20 @@ const parseAbilityCost = (text: string): AbilityCost => {
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
+    ...(trashBattleMatch ? {
+      trashBattleCookie: {
+        count: Number(trashBattleMatch[1]),
+        level: Number(trashBattleMatch[3]),
+        ...(trashBattleMatch[2]
+          ? {
+              energyColor:
+                costColors[
+                  trashBattleMatch[2].toUpperCase() as keyof typeof costColors
+                ],
+            }
+          : {}),
+      },
+    } : {}),
   }
 }
 
@@ -269,8 +294,73 @@ export const convertOfficialCardEffects = (
         kind: 'damage',
         amount: 1,
         target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'opponent-trash-count-at-least', count: 20 },
       },
-      { kind: 'draw', amount: 1 },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'opponent-trash-count-at-least', count: 20 },
+      },
+    ],
+    'ST5-001': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+        allowStage: true,
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-006': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 2 },
+        allowStage: true,
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-007': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+        allowStage: true,
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-010': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, remainingHp: 2 },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-013': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-015': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1 },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-016': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'opponent-trash-count-at-least', count: 30 },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-018': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, remainingHp: 4 },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'ST5-021': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, remainingHp: 2 },
+      } satisfies CardEffect as CardEffect,
     ],
   }
   const exactEffects = exactStarterEffects[card.cardNumber]
@@ -764,7 +854,7 @@ export const convertOfficialStageAbility = (
   const [placementText, activationText] = card.attackText.split(/\{mob\}/i)
   const placement = parseOfficialCardText(placementText)
   const activation = parseOfficialCardText(activationText ?? '')
-  if (!placement || !activation) return undefined
+  if (!placement) return undefined
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
@@ -778,12 +868,17 @@ export const convertOfficialStageAbility = (
   if (stageEffects) {
     return {
       placementCost: placement.cost,
-      cost: activation.cost,
+      cost: activation?.cost ?? {},
       text: card.attackText,
       effects: stageEffects,
-      restSource: /Rest this card/i.test(activationText ?? ''),
+      restSource:
+        card.cardNumber === 'ST5-022' ||
+        /Rest this card/i.test(activationText ?? ''),
+      ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
     }
   }
+
+  if (!activation) return undefined
 
   // 通用化解析：使用 activation 部分作為效果文字
   const conversion = convertOfficialCardEffects({
@@ -820,7 +915,9 @@ export const convertOfficialFlipAbility = (
     return {
       text: card.flipText,
       cost: parseAbilityCost(card.flipText),
-      effects: [{ kind: 'draw', amount: drawAmount }],
+      effects: card.cardNumber === 'ST5-003'
+        ? [{ kind: 'draw-up-to', max: drawAmount }]
+        : [{ kind: 'draw', amount: drawAmount }],
     }
   }
 
@@ -956,13 +1053,21 @@ export const convertOfficialTrapAbility = (
   }
 
   const battleToTrash = text.match(
-    /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+(?:LV\.(\d+)(?:\s+or\s+lower)?\s+)?Cookies?\s+(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
+    /Place\s+(\d+)\s+of\s+your\s+opponent['']s\s+(?:LV\.(\d+)(?:\s+or\s+lower)?\s+)?Cookies?\s+(?:whose\s+remaining\s+HP\s+is\s+\d+\s+or\s+less\s+)?(?:from\s+their\s+battle\s+area\s+)?into\s+the\s+trash/i,
   )
   if (battleToTrash) {
     const trapHpMatch = text.match(/remaining HP is (\d+) or less/i)
     effects.push({
-      kind: 'opponent-battle-to-trash' as const,
-      ...(trapHpMatch ? { remainingHp: Number(trapHpMatch[1]) } : {}),
+      kind: 'field-to-trash',
+      target: {
+        side: 'opponent',
+        min: Number(battleToTrash[1]),
+        max: Number(battleToTrash[1]),
+        ...(battleToTrash[2]
+          ? { maxLevel: Number(battleToTrash[2]) }
+          : {}),
+        ...(trapHpMatch ? { remainingHp: Number(trapHpMatch[1]) } : {}),
+      },
     } satisfies CardEffect as CardEffect)
   }
 

@@ -1,5 +1,6 @@
 import { getFaintEffectCandidates } from '../battle'
 import { applyGameCommand, getPendingDecision } from '../commands'
+import { getRefreshCandidates } from '../refresh'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 
@@ -47,9 +48,7 @@ export const handleAiPendingDecision = (
 
   if (
     pendingDecision?.kind === 'opponent-hand-discard' &&
-    !state.pendingRefresh &&
-    !state.pendingBattle &&
-    !state.pendingReplacement
+    !state.pendingRefresh
   ) {
     if (pendingDecision.playerId !== playerId) {
       return {
@@ -58,9 +57,11 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇棄置手牌。`,
       }
     }
-    const discardIds = state.players[playerId].hand
-      .slice(0, pendingDecision.count)
-      .map((card) => card.instanceId)
+    const discardedCards = state.players[playerId].hand.slice(
+      0,
+      pendingDecision.count,
+    )
+    const discardIds = discardedCards.map((card) => card.instanceId)
     return {
       state: applyGameCommand(state, {
         kind: 'resolve-opponent-hand-discard',
@@ -68,6 +69,7 @@ export const handleAiPendingDecision = (
         cardIds: discardIds,
       }),
       action: 'idle',
+      revealedCards: discardedCards,
       description: `${state.players[playerId].name}棄置 ${pendingDecision.count} 張手牌。`,
     }
   }
@@ -157,6 +159,33 @@ export const handleAiPendingDecision = (
       }),
       action: 'idle',
       description: `${state.players[playerId].name}從牌庫抽取 ${drawCount} 張牌。`,
+    }
+  }
+
+  if (
+    pendingDecision?.kind === 'stage-trigger' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 決定是否發動場景效果。`,
+      }
+    }
+    const player = state.players[playerId]
+    const canDraw =
+      player.deck.length > 0 || getRefreshCandidates(state, playerId).length > 0
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-stage-trigger',
+        playerId,
+        action: canDraw ? 'activate' : 'skip',
+      }),
+      action: 'resolve-stage-trigger',
+      description: canDraw
+        ? `${state.players[playerId].name}發動${pendingDecision.sourceCardName}效果抽 1 張牌。`
+        : `${state.players[playerId].name}略過${pendingDecision.sourceCardName}效果。`,
     }
   }
 

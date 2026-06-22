@@ -3,7 +3,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
-import { createDemoGame } from '../game'
+import { createDemoGame, type GameState } from '../game'
 import { useAiTurn } from './useAiTurn'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -97,6 +97,65 @@ describe('useAiTurn', () => {
     ))
     await act(() => vi.advanceTimersByTime(450))
     expect(captured!.aiActionCount).toBe(2)
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
+  })
+
+  it('waits for confirmation before applying an AI multi-card discard', async () => {
+    vi.useFakeTimers()
+    const baseGame = createDemoGame()
+    const hand = baseGame.players['player-two'].hand.slice(0, 3)
+    const game: GameState = {
+      ...baseGame,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      players: {
+        ...baseGame.players,
+        'player-two': {
+          ...baseGame.players['player-two'],
+          hand,
+        },
+      },
+      pendingOpponentHandDiscard: {
+        playerId: 'player-two',
+        count: 2,
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'discard-source',
+        sourceCardName: 'Discard Source',
+        effectText: 'opponent-discard-hand',
+      },
+    }
+    const setGame = vi.fn()
+    const setMessage = vi.fn()
+    let captured: ReturnType<typeof useAiTurn> | null = null
+
+    function TestHarness() {
+      captured = useAiTurn({
+        game,
+        setGame,
+        setMessage,
+        showPause: false,
+        aiControlsCurrentState: true,
+        pendingEffect: null,
+        faintActive: false,
+        deckConfig: { player: 'red', ai: 'red' },
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.advanceTimersByTime(450))
+
+    expect(setGame).not.toHaveBeenCalled()
+    expect(captured!.pendingAiDecision?.revealedCards).toEqual(hand.slice(0, 2))
+
+    await act(() => captured!.confirmAiDecision())
+    expect(setGame).toHaveBeenCalledWith(
+      expect.objectContaining({ pendingOpponentHandDiscard: null }),
+    )
 
     await act(() => root.unmount())
     vi.useRealTimers()

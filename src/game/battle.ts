@@ -14,9 +14,14 @@ import {
 } from './energy'
 import { getOpponentId } from './helpers'
 import {
+  clearDepartedCookieModifiers,
   finalizePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
+import {
+  canPayTrashBattleCookieCost,
+  payTrashBattleCookieCost,
+} from './skills'
 import { canAttack } from './turn'
 import type {
   CardEffect,
@@ -195,7 +200,8 @@ export const getTrapCandidates = (
       player.hand.filter(
         (handCard) => handCard.instanceId !== card.instanceId,
       ).length >= card.trap!.cost.discardHand &&
-      selectEnergyPayment(card.trap!.cost.energy, player.supportArea) !== null,
+      selectEnergyPayment(card.trap!.cost.energy, player.supportArea) !== null &&
+      canPayTrashBattleCookieCost(card.trap!.cost, player.battleArea),
   )
 }
 
@@ -209,7 +215,8 @@ const validateTrapTargets = (
     (effect) =>
       effect.kind === 'damage' ||
       effect.kind === 'modify-attack' ||
-      effect.kind === 'prevent-knockout',
+      effect.kind === 'prevent-knockout' ||
+      effect.kind === 'field-to-trash',
   )
   if (targetEffects.length === 0) {
     if (targetIds.length > 0) {
@@ -266,6 +273,7 @@ export interface PlayTrapOptions {
   targetIds: string[]
   supportTrashIds?: string[]
   discardHandIds?: string[]
+  trashBattleCookieIds?: string[]
 }
 
 export const playTrap = (
@@ -354,6 +362,13 @@ export const playTrap = (
     )
   }
 
+  const trashBattlePayment = payTrashBattleCookieCost(
+    updatedPlayer,
+    trap.cost,
+    options.trashBattleCookieIds ?? [],
+  )
+  updatedPlayer = trashBattlePayment.player
+
   let nextState: GameState = {
     ...state,
     players: {
@@ -374,6 +389,14 @@ export const playTrap = (
           }
         : {}),
     },
+  }
+
+  if (trashBattlePayment.departedCount > 0) {
+    nextState = recordCookieDepartures(
+      clearDepartedCookieModifiers(nextState),
+      playerId,
+      trashBattlePayment.departedCount,
+    )
   }
 
   const context = {
@@ -1200,7 +1223,8 @@ export const getTrapTargetCandidates = (
     (effect) =>
       effect.kind === 'damage' ||
       effect.kind === 'modify-attack' ||
-      effect.kind === 'prevent-knockout',
+      effect.kind === 'prevent-knockout' ||
+      effect.kind === 'field-to-trash',
   )
   return targetEffect
     ? getEffectTargetCandidates(

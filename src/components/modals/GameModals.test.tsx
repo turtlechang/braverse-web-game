@@ -4,6 +4,7 @@ import type { CookieCard, GameCard } from '../../game'
 import {
   CardDetailModal,
   DecisionModal,
+  DiscardRevealModal,
   FlipResponseModal,
   OpeningSetupModal,
   ResultModal,
@@ -15,6 +16,23 @@ const createHandCard = (index: number): GameCard => ({
   instanceId: `test-hand-${index}`,
   name: `測試手牌 ${index}`,
   type: 'item',
+})
+
+describe('DiscardRevealModal', () => {
+  it('shows every card discarded by an opponent effect in one window', () => {
+    const cards = [createHandCard(1), createHandCard(2)]
+    const markup = renderToStaticMarkup(
+      <DiscardRevealModal
+        cards={cards}
+        onConfirm={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('對手棄置的卡牌')
+    expect(markup).toContain('測試手牌 1')
+    expect(markup).toContain('測試手牌 2')
+    expect(markup).toContain('確認並繼續')
+  })
 })
 
 describe('TrapResponseModal', () => {
