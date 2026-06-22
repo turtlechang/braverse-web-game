@@ -165,9 +165,43 @@ export function DecisionModal({
   onSelect,
   onSkipReplacement,
 }: DecisionModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (!isRefresh && minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>放置餅乾</strong>
+          <small>
+            {playerName}尚可補 {replacementCount ?? 1} 張
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
-      <section className="decision-modal" role="alertdialog">
+      <section
+        className={`decision-modal ${!isRefresh ? 'minimizable-decision-modal' : ''}`}
+        role="alertdialog"
+      >
+        {!isRefresh && (
+          <button
+            type="button"
+            className="minimize-reveal"
+            onClick={() => setMinimized(true)}
+            title="縮小放置餅乾提示"
+          >
+            <Minimize2 aria-hidden="true" />
+            縮小
+          </button>
+        )}
         <div className="modal-title">
           {isRefresh ? '牌庫 Refresh' : '放置餅乾'}
         </div>
@@ -326,6 +360,25 @@ export function DiscardRevealModal({
   cards,
   onConfirm,
 }: DiscardRevealModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        {cards[0] && <CardFace card={cards[0]} />}
+        <span>
+          <strong>對手棄置 {cards.length} 張卡牌</strong>
+          <small>公開資訊待確認</small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
   return (
     <div className="modal-backdrop card-reveal-backdrop" role="presentation">
       <section
@@ -333,6 +386,15 @@ export function DiscardRevealModal({
         role="alertdialog"
         aria-labelledby="discard-reveal-title"
       >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小棄牌展示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
         <span>公開資訊</span>
         <h2 id="discard-reveal-title">對手棄置的卡牌</h2>
         <div className="discard-reveal-cards">

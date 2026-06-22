@@ -4,6 +4,7 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getTargetPlayerId,
   isEffectTargeted,
   selectEffectTargets,
 } from './effects'
@@ -177,6 +178,35 @@ const isTrapConditionMet = (
   return true
 }
 
+const hasRequiredTrapTargets = (
+  state: GameState,
+  playerId: PlayerId,
+  card: GameCard,
+): boolean => {
+  const context = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: card.instanceId,
+  }
+
+  return card.trap!.effects.every((effect) => {
+    if (!isEffectTargeted(effect) || effect.target.min === 0) return true
+
+    const battleCandidateCount = getEffectTargetCandidates(
+      state,
+      context,
+      effect.target,
+    ).length
+    const stageCandidateCount =
+      effect.kind === 'field-to-trash' &&
+      effect.allowStage &&
+      state.players[getTargetPlayerId(context, effect.target)].stage !== null
+        ? 1
+        : 0
+
+    return battleCandidateCount + stageCandidateCount >= effect.target.min
+  })
+}
+
 export const getTrapCandidates = (
   state: GameState,
   playerId: PlayerId,
@@ -197,6 +227,7 @@ export const getTrapCandidates = (
       card.type === 'trap' &&
       Boolean(card.trap) &&
       isTrapConditionMet(state, playerId, card.trap!) &&
+      hasRequiredTrapTargets(state, playerId, card) &&
       player.hand.filter(
         (handCard) => handCard.instanceId !== card.instanceId,
       ).length >= card.trap!.cost.discardHand &&

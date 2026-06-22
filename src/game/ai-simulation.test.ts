@@ -68,6 +68,19 @@ describe('AI match simulation', () => {
     expect(outcomeSignatures.size).toBeGreaterThan(1)
   })
 
+  it.each([6, 19, 29, 33])(
+    'completes purple mirror match for regression seed %i',
+    (seed) => {
+      const result = simulateAiMatch(
+        createDemoGame(seed, { player: 'purple', ai: 'purple' }),
+      )
+
+      expect(result.stuck, result.error ?? '').toBe(false)
+      expect(result.state.status).toBe('finished')
+      expect(result.actions).toBeLessThan(500)
+    },
+  )
+
   it('can move from the first active phase without mutating input', () => {
     const state = createDemoGame()
     const snapshot = structuredClone(state)

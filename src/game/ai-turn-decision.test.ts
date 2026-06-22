@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  activateCookieSkill,
   createDemoGame,
+  createOfficialPurpleStarterDeck,
+  executeCardEffect,
+  finalizePendingReplacements,
+  getActingPlayerId,
+  replaceDefeatedCookie,
   selectAiEnergyPayment,
   simulateAiMatch,
   takeAiStep,
@@ -289,6 +295,74 @@ describe('simple AI opponent', () => {
     expect(decision.action).toBe('replace-cookie')
     expect(decision.state.pendingOnPlay).toBeNull()
     expect(decision.effectSelections).toHaveLength(1)
+  })
+
+  it('resumes AI after player replacement ST5-010 removes an AI Cookie', () => {
+    const base = createDemoGame(7, { player: 'purple', ai: 'purple' })
+    const purpleDeck = createOfficialPurpleStarterDeck('player-one')
+    const carol = purpleDeck.find((card) => card.id === 'ST5-010')!
+    const supportCard = purpleDeck.find(
+      (card) => card.instanceId !== carol.instanceId,
+    )!
+    const aiTarget = base.players['player-two'].battleArea[0]
+    let state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-one', remaining: 1 }],
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [],
+          hand: [carol],
+          supportArea: [{ card: supportCard, rested: false }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            { ...aiTarget, hpCards: aiTarget.hpCards.slice(0, 2) },
+          ],
+        },
+      },
+    }
+
+    state = replaceDefeatedCookie(state, carol.instanceId)
+    state = activateCookieSkill(
+      state,
+      'player-one',
+      carol.instanceId,
+      'on-play',
+      [supportCard.instanceId],
+    )
+    state = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: carol.instanceId },
+      carol.skill!.effects[0],
+      [aiTarget.card.instanceId],
+    )
+    state = finalizePendingReplacements(state)
+
+    expect(getActingPlayerId(state)).toBe('player-two')
+    expect(state.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-two', remaining: 1 }],
+    })
+
+    const actions: string[] = []
+    for (let step = 0; step < 8 && getActingPlayerId(state) === 'player-two'; step += 1) {
+      const decision = takeAiStep(state, 'player-two')
+      expect(decision.action, decision.description).not.toBe('error')
+      expect(decision.state, decision.description).not.toBe(state)
+      actions.push(decision.action)
+      state = decision.state
+    }
+
+    expect(actions).toContain('replace-cookie')
+    expect(state.pendingReplacement).toBeNull()
+    expect(state.pendingOnPlay).toBeNull()
+    expect(state.pendingBattle).toBeNull()
   })
 
   it('skips an optional replacement when no legal Cookie is available', () => {

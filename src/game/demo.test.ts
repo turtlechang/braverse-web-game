@@ -3,8 +3,10 @@ import {
   createBlueActivateSkillDemoState,
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
+  createAiDiscardRevealDemoState,
   createBreakToTrashDemoState,
   createReplacementChoiceDemoState,
+  createSt5010OnPlayDemoState,
   createSupportToTrashSkillDemoState,
   createTrapResponseDemoState,
   isLocalhost,
@@ -79,6 +81,22 @@ describe('parseTestStateConfig', () => {
     expect(result).toEqual({ kind: 'support-to-trash-skill' })
   })
 
+  it('returns ST5-010 OnPlay config on localhost', () => {
+    const result = parseTestStateConfig(
+      '?test-state=st5-010-on-play',
+      'localhost',
+    )
+    expect(result).toEqual({ kind: 'st5-010-on-play' })
+  })
+
+  it('returns AI discard reveal config on localhost', () => {
+    const result = parseTestStateConfig(
+      '?test-state=ai-discard-reveal',
+      'localhost',
+    )
+    expect(result).toEqual({ kind: 'ai-discard-reveal' })
+  })
+
   it('returns null when localhost but unknown test-state', () => {
     const result = parseTestStateConfig('?test-state=foo', 'localhost')
     expect(result).toBeNull()
@@ -116,6 +134,36 @@ describe('createSupportToTrashSkillDemoState', () => {
     expect(player.supportArea).toHaveLength(2)
     expect(opponent.battleArea).toHaveLength(1)
     expect(opponent.supportArea).toHaveLength(2)
+  })
+})
+
+describe('createSt5010OnPlayDemoState', () => {
+  it('uses official Carol Cookie for a player replacement during the AI turn', () => {
+    const state = createSt5010OnPlayDemoState()
+    const player = state.players['player-one']
+    const opponent = state.players['player-two']
+
+    expect(state.activePlayerId).toBe('player-two')
+    expect(state.phase).toBe('main')
+    expect(state.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+    expect(player.hand.map((card) => card.id)).toContain('ST5-010')
+    expect(player.supportArea[0].card.energyColor).toBe('purple')
+    expect(opponent.battleArea[0].hpCards).toHaveLength(2)
+    expect(opponent.hand.some((card) => card.type === 'cookie')).toBe(true)
+  })
+})
+
+describe('createAiDiscardRevealDemoState', () => {
+  it('waits for AI to discard multiple cards for public confirmation', () => {
+    const state = createAiDiscardRevealDemoState()
+
+    expect(state.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-two',
+      count: 2,
+    })
+    expect(state.players['player-two'].hand).toHaveLength(2)
   })
 })
 

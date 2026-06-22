@@ -254,6 +254,18 @@
   color: #ffe675;
 }
 
+.minimizable-decision-modal {
+  position: relative;
+}
+
+.minimizable-decision-modal .modal-title {
+  padding-inline: 82px;
+}
+
+.decision-reveal-dock {
+  grid-template-columns: 1fr 24px;
+}
+
 .setup-hand {
   justify-content: flex-start;
 }

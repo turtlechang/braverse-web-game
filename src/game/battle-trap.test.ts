@@ -57,6 +57,24 @@ describe('TRAP response window', () => {
     },
   })
 
+  const hiddenWarpgateTrap = (): GameCard => ({
+    id: 'ST5-021',
+    instanceId: 'st5-021-test',
+    name: 'Hidden Warpgate',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: 'Place 1 opponent Cookie whose remaining HP is 2 or less into the trash.',
+      cost: { energy: {}, discardHand: 0 },
+      effects: [
+        {
+          kind: 'field-to-trash',
+          target: { side: 'opponent', min: 1, max: 1, remainingHp: 2 },
+        },
+      ],
+    },
+  })
+
   it('requires and pays the ST5-020 purple LV.1 battle-cookie cost', () => {
     const trap = purpleCookieCostTrap()
     let state = createBattleState()
@@ -92,26 +110,12 @@ describe('TRAP response window', () => {
   })
 
   it('lets ST5-021 select and trash the attacking Cookie', () => {
-    const trap: GameCard = {
-      id: 'ST5-021',
-      instanceId: 'st5-021-test',
-      name: 'Hidden Warpgate',
-      type: 'trap',
-      officialType: 'trap',
-      trap: {
-        text: 'Place 1 opponent Cookie whose remaining HP is 2 or less into the trash.',
-        cost: { energy: {}, discardHand: 0 },
-        effects: [
-          {
-            kind: 'field-to-trash',
-            target: { side: 'opponent', min: 1, max: 1, remainingHp: 2 },
-          },
-        ],
-      },
-    }
+    const trap = hiddenWarpgateTrap()
     let state = createBattleState()
     state.players['player-one'].hand = [trap, ...state.players['player-one'].hand]
     state = declareAttack(state)
+
+    expect(getTrapCandidates(state, 'player-one')).toContain(trap)
 
     const result = playTrap(state, 'player-one', {
       trapInstanceId: trap.instanceId,
@@ -123,6 +127,20 @@ describe('TRAP response window', () => {
     expect(result.players['player-two'].discardPile.map((card) => card.instanceId)).toEqual(
       expect.arrayContaining(['attacker', 'attacker-hp']),
     )
+  })
+
+  it('does not offer ST5-021 when no opposing Cookie has 2 or less remaining HP', () => {
+    const trap = hiddenWarpgateTrap()
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].hpCards = [
+      item('attacker-hp-a'),
+      item('attacker-hp-b'),
+      item('attacker-hp-c'),
+    ]
+    state.players['player-one'].hand = [trap, ...state.players['player-one'].hand]
+    state = declareAttack(state)
+
+    expect(getTrapCandidates(state, 'player-one')).not.toContain(trap)
   })
 
   it('does not offer a trap when its discard-hand cost cannot be paid', () => {

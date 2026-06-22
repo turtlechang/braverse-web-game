@@ -19,6 +19,7 @@ import {
 } from '../game'
 import {
   createAttackEffectDemoState,
+  createAiDiscardRevealDemoState,
   createBlueActivateSkillDemoState,
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
@@ -28,6 +29,7 @@ import {
   createItemUsageDemoState,
   createPretzelSnareDemoState,
   createReplacementChoiceDemoState,
+  createSt5010OnPlayDemoState,
   createOpponentDiscardHandDemoState,
   createStageUsageDemoState,
   createSupportToTrashSkillDemoState,
@@ -62,6 +64,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'replacement-choice') {
       return createReplacementChoiceDemoState()
+    }
+    if (testStateConfig?.kind === 'st5-010-on-play') {
+      return createSt5010OnPlayDemoState()
+    }
+    if (testStateConfig?.kind === 'ai-discard-reveal') {
+      return createAiDiscardRevealDemoState()
     }
     if (testStateConfig?.kind === 'item-usage') {
       return createItemUsageDemoState(testStateConfig.payable)
@@ -118,6 +126,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'replacement-choice') {
       return '測試狀態：選擇是否補餅乾。'
+    }
+    if (testStateConfig?.kind === 'st5-010-on-play') {
+      return '測試狀態：ST5-010 補位登場後，AI 必須繼續操作。'
+    }
+    if (testStateConfig?.kind === 'ai-discard-reveal') {
+      return '測試狀態：AI 效果棄牌公開確認。'
     }
     if (testStateConfig?.kind === 'item-usage') {
       return testStateConfig.payable

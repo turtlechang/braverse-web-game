@@ -7,6 +7,7 @@ import {
 import {
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
+  createOfficialPurpleStarterDeck,
   createOfficialYellowStarterDeck,
   DECK_CREATORS,
   type DeckChoice,
@@ -32,6 +33,8 @@ export const parseTestStateConfig = (
   | { kind: 'trap-response'; payable: boolean }
   | { kind: 'flip-response' }
   | { kind: 'replacement-choice' }
+  | { kind: 'st5-010-on-play' }
+  | { kind: 'ai-discard-reveal' }
   | { kind: 'item-usage'; payable: boolean }
   | { kind: 'stage-usage'; payable: boolean }
   | { kind: 'faint-damage' }
@@ -68,6 +71,12 @@ export const parseTestStateConfig = (
   }
   if (testState === 'replacement-choice') {
     return { kind: 'replacement-choice' }
+  }
+  if (testState === 'st5-010-on-play') {
+    return { kind: 'st5-010-on-play' }
+  }
+  if (testState === 'ai-discard-reveal') {
+    return { kind: 'ai-discard-reveal' }
   }
   if (testState === 'item-payable') {
     return { kind: 'item-usage', payable: true }
@@ -1342,6 +1351,110 @@ export const createBlueInspectDeckDemoState = (): GameState => {
       revealedCards: deckTop3,
       lookCount: 3,
       pickCount: 1,
+    },
+  }
+}
+
+export const createSt5010OnPlayDemoState = (): GameState => {
+  const p1Deck = createOfficialPurpleStarterDeck('player-one')
+  const p2Deck = createOfficialPurpleStarterDeck('player-two')
+  const carol = p1Deck.find(
+    (card): card is CookieCard => card.id === 'ST5-010',
+  )!
+  const support = p1Deck.find(
+    (card) =>
+      card.instanceId !== carol.instanceId &&
+      card.energyColor === 'purple',
+  )!
+  const target = p2Deck.find(
+    (card): card is CookieCard => card.type === 'cookie',
+  )!
+  const replacement = p2Deck.find(
+    (card): card is CookieCard =>
+      card.type === 'cookie' && card.instanceId !== target.instanceId,
+  )!
+  const usedP1 = new Set([carol.instanceId, support.instanceId])
+  const usedP2 = new Set([target.instanceId, replacement.instanceId])
+  const targetHpCards = p2Deck
+    .filter((card) => !usedP2.has(card.instanceId))
+    .slice(0, 2)
+  targetHpCards.forEach((card) => usedP2.add(card.instanceId))
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: p1Deck.filter((card) => !usedP1.has(card.instanceId)),
+        hand: [carol],
+        supportArea: [{ card: support, rested: false }],
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: p2Deck.filter((card) => !usedP2.has(card.instanceId)),
+        hand: [replacement],
+        battleArea: [
+          {
+            card: target,
+            hpCards: targetHpCards,
+            rested: false,
+            battleEntryId: `${target.instanceId}:battle:1`,
+          },
+        ],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-two',
+    turnNumber: 2,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 2,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    pendingReplacement: {
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    },
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+}
+
+export const createAiDiscardRevealDemoState = (): GameState => {
+  const base = createDemoGame(7, { player: 'purple', ai: 'purple' })
+  const ai = base.players['player-two']
+  const hand = ai.hand.slice(0, 2)
+  const handIds = new Set(hand.map((card) => card.instanceId))
+
+  return {
+    ...base,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    players: {
+      ...base.players,
+      'player-two': {
+        ...ai,
+        hand,
+        deck: ai.deck.filter((card) => !handIds.has(card.instanceId)),
+      },
+    },
+    pendingOpponentHandDiscard: {
+      playerId: 'player-two',
+      count: 2,
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'ai-discard-reveal-source',
+      sourceCardName: '公開棄牌測試',
+      effectText: 'opponent-discard-hand',
     },
   }
 }

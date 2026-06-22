@@ -1,5 +1,9 @@
+/// @vitest-environment jsdom
+
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { CookieCard, GameCard } from '../../game'
 import {
   CardDetailModal,
@@ -11,12 +15,26 @@ import {
   TrapResponseModal,
 } from './GameModals'
 
+;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
+
 const createHandCard = (index: number): GameCard => ({
   id: `TEST-${index}`,
   instanceId: `test-hand-${index}`,
   name: `測試手牌 ${index}`,
   type: 'item',
 })
+
+const findButton = (container: HTMLElement, label: string) =>
+  [...container.querySelectorAll('button')].find((button) =>
+    button.textContent?.includes(label),
+  )
+
+const click = async (button: HTMLButtonElement | undefined) => {
+  expect(button).toBeDefined()
+  await act(() => {
+    button!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
 
 describe('DiscardRevealModal', () => {
   it('shows every card discarded by an opponent effect in one window', () => {
@@ -32,6 +50,32 @@ describe('DiscardRevealModal', () => {
     expect(markup).toContain('測試手牌 1')
     expect(markup).toContain('測試手牌 2')
     expect(markup).toContain('確認並繼續')
+  })
+
+  it('minimizes to a dock and restores without confirming', async () => {
+    const cards = [createHandCard(1), createHandCard(2)]
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DiscardRevealModal cards={cards} onConfirm={onConfirm} />,
+    ))
+
+    await click(findButton(container, '縮小'))
+    expect(container.querySelector('.discard-reveal-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '對手棄置 2 張卡牌',
+    )
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    await click(
+      container.querySelector<HTMLButtonElement>('.card-reveal-dock') ??
+        undefined,
+    )
+    expect(container.querySelector('.discard-reveal-modal')).not.toBeNull()
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
   })
 })
 
@@ -238,6 +282,43 @@ describe('DecisionModal', () => {
 
     expect(markup).toContain('必須選擇一張餅乾放入休息區')
     expect(markup).not.toContain('不補餅乾')
+    expect(markup).not.toContain('縮小')
+  })
+
+  it('minimizes replacement choice and restores without choosing', async () => {
+    const onSelect = vi.fn()
+    const onSkipReplacement = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DecisionModal
+        isRefresh={false}
+        playerName="玩家"
+        replacementCount={2}
+        options={[createHandCard(1), createHandCard(2)]}
+        isOptionDisabled={() => false}
+        onSelect={onSelect}
+        onSkipReplacement={onSkipReplacement}
+      />,
+    ))
+
+    await click(findButton(container, '縮小'))
+    expect(container.querySelector('.decision-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '玩家尚可補 2 張',
+    )
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(onSkipReplacement).not.toHaveBeenCalled()
+
+    await click(
+      container.querySelector<HTMLButtonElement>('.card-reveal-dock') ??
+        undefined,
+    )
+    expect(container.querySelector('.decision-modal')).not.toBeNull()
+    expect(onSelect).not.toHaveBeenCalled()
+    expect(onSkipReplacement).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
   })
 })
 
