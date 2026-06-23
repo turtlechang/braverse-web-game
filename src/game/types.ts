@@ -431,6 +431,15 @@ export interface PendingOpponentHandDiscard {
   effectText: string
 }
 
+export interface PendingOpponentRandomDiscard {
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  effect: OpponentRandomDiscardEffect
+  discardedCards: GameCard[]
+}
+
 export interface GameState {
   players: Record<PlayerId, PlayerState>
   firstPlayerId: PlayerId
@@ -465,6 +474,7 @@ export interface GameState {
   pendingBattle?: PendingBattle | null
   pendingFaintEffects?: PendingFaintEffect[]
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
+  pendingOpponentRandomDiscard?: PendingOpponentRandomDiscard | null
   pendingInspectDeck?: {
     playerId: PlayerId
     sourceInstanceId: string

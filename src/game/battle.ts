@@ -67,6 +67,10 @@ const assertNoBlockingDecision = (state: GameState) => {
     throw new GameRuleError('必須先處理對手棄牌。')
   }
 
+  if (state.pendingOpponentRandomDiscard) {
+    throw new GameRuleError('必須先確認隨機棄牌。')
+  }
+
   if (state.pendingInspectDeck) {
     throw new GameRuleError('必須先完成牌庫檢視。')
   }

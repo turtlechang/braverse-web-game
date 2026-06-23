@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyGameCommand,
   executeCardEffect,
   isEffectConditionMet,
   resolveDrawUpTo,
@@ -185,7 +186,15 @@ describe('ST5-016 BONUS Coin conditional draw', () => {
       (cards) => [...cards].reverse(),
     )
 
-    expect(result.players['player-two'].discardPile.map((card) => card.instanceId)).toEqual(['c'])
-    expect(result.players['player-two'].hand.map((card) => card.instanceId)).toEqual(['a', 'b'])
+    expect(result.pendingOpponentRandomDiscard).toBeDefined()
+    expect(result.pendingOpponentRandomDiscard?.discardedCards.map((c) => c.instanceId)).toEqual(['c'])
+
+    const resolved = applyGameCommand(result, {
+      kind: 'resolve-opponent-random-discard',
+      playerId: 'player-two',
+    })
+
+    expect(resolved.players['player-two'].discardPile.map((card) => card.instanceId)).toEqual(['c'])
+    expect(resolved.players['player-two'].hand.map((card) => card.instanceId)).toEqual(['a', 'b'])
   })
 })

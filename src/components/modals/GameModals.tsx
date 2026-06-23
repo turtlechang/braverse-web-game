@@ -319,7 +319,7 @@ export function CardRevealModal({
         <CardFace card={card} />
         <span>
           <strong>{card.name}</strong>
-          <small>效果待確認</small>
+          <small>公開資訊待確認</small>
         </span>
         <Maximize2 aria-hidden="true" />
       </button>
@@ -353,11 +353,13 @@ export function CardRevealModal({
 
 export interface DiscardRevealModalProps {
   cards: GameCard[]
+  sourceCardName?: string
   onConfirm: () => void
 }
 
 export function DiscardRevealModal({
   cards,
+  sourceCardName,
   onConfirm,
 }: DiscardRevealModalProps) {
   const [minimized, setMinimized] = useState(false)
@@ -371,7 +373,10 @@ export function DiscardRevealModal({
       >
         {cards[0] && <CardFace card={cards[0]} />}
         <span>
-          <strong>對手棄置 {cards.length} 張卡牌</strong>
+          <strong>
+            {sourceCardName ? `${sourceCardName} 發動` : '對手棄置'}{' '}
+            {cards.length} 張卡牌
+          </strong>
           <small>公開資訊待確認</small>
         </span>
         <Maximize2 aria-hidden="true" />
@@ -396,7 +401,11 @@ export function DiscardRevealModal({
           縮小
         </button>
         <span>公開資訊</span>
-        <h2 id="discard-reveal-title">對手棄置的卡牌</h2>
+        <h2 id="discard-reveal-title">
+          {sourceCardName
+            ? `${sourceCardName} 效果發動`
+            : '對手棄置的卡牌'}
+        </h2>
         <div className="discard-reveal-cards">
           {cards.map((card) => (
             <article key={card.instanceId}>
@@ -405,7 +414,12 @@ export function DiscardRevealModal({
             </article>
           ))}
         </div>
-        <p>對手因卡牌效果棄置以上 {cards.length} 張卡牌。</p>
+        <p>
+          {sourceCardName
+            ? `對手因 ${sourceCardName} 效果隨機棄置以上`
+            : '對手因卡牌效果棄置以上'}{' '}
+          {cards.length} 張卡牌。
+        </p>
         <button type="button" className="reveal-confirm" onClick={onConfirm}>
           確認並繼續
         </button>

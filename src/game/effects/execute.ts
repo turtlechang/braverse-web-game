@@ -29,6 +29,16 @@ import {
   validateBreakToTrashTargets,
 } from './targeting'
 
+const findSourceCard = (state: GameState, context: EffectContext) => {
+  const player = state.players[context.sourcePlayerId]
+  return (
+    player.battleArea.find((c) => c.card.instanceId === context.sourceInstanceId)?.card ??
+    player.supportArea.find((s) => s.card.instanceId === context.sourceInstanceId)?.card ??
+    player.hand.find((c) => c.instanceId === context.sourceInstanceId) ??
+    player.discardPile.find((c) => c.instanceId === context.sourceInstanceId)
+  )
+}
+
 const checkWindsweptValleyTrigger = (
   state: GameState,
   actorPlayerId: PlayerId,
@@ -541,9 +551,7 @@ export const executeCardEffect = (
         count: effect.count,
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
-        sourceCardName: state.players[context.sourcePlayerId].battleArea.find(
-          (c) => c.card.instanceId === context.sourceInstanceId,
-        )?.card.name ?? 'Unknown',
+        sourceCardName: findSourceCard(state, context)?.name ?? 'Unknown',
         effectText: effect.kind,
       },
     }
@@ -689,22 +697,15 @@ export const executeCardEffect = (
     const discardCount = Math.min(effect.count, targetHand.length)
     const shuffled = shuffle([...targetHand])
     const discarded = shuffled.slice(0, discardCount)
-    const discardedIds = new Set(discarded.map((card) => card.instanceId))
-    const remaining = targetHand.filter(
-      (card) => !discardedIds.has(card.instanceId),
-    )
     return {
       ...state,
-      players: {
-        ...state.players,
-        [targetPlayerId]: {
-          ...state.players[targetPlayerId],
-          hand: remaining,
-          discardPile: [
-            ...state.players[targetPlayerId].discardPile,
-            ...discarded,
-          ],
-        },
+      pendingOpponentRandomDiscard: {
+        playerId: targetPlayerId,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName: findSourceCard(state, context)?.name ?? 'Unknown',
+        effect,
+        discardedCards: discarded,
       },
     }
   }
@@ -753,10 +754,7 @@ export const executeCardEffect = (
         pendingInspectDeck: {
           playerId: context.sourcePlayerId,
           sourceInstanceId: context.sourceInstanceId,
-          sourceCardName:
-            state.players[context.sourcePlayerId].battleArea.find(
-              (c) => c.card.instanceId === context.sourceInstanceId,
-            )?.card.name ?? 'Unknown',
+          sourceCardName: findSourceCard(state, context)?.name ?? 'Unknown',
           revealedCards: deckCards,
           lookCount: effect.lookCount,
           pickCount: effect.pickCount,
@@ -769,10 +767,7 @@ export const executeCardEffect = (
       pendingInspectDeck: {
         playerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
-        sourceCardName:
-          state.players[context.sourcePlayerId].battleArea.find(
-            (c) => c.card.instanceId === context.sourceInstanceId,
-          )?.card.name ?? 'Unknown',
+        sourceCardName: findSourceCard(state, context)?.name ?? 'Unknown',
         revealedCards: deckCards,
         lookCount: effect.lookCount,
         pickCount: effect.pickCount,

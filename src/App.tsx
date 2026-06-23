@@ -13,11 +13,9 @@ import {
   playTrap,
   getRefreshCandidates,
   refreshDeck,
-  replaceDefeatedCookie,
   resolveBattleAutomatically,
   resolveFlip,
   selectEnergyPayment,
-  skipDefeatedCookieReplacement,
   skipTrap,
   type DeckChoice,
   type GameCard,
@@ -95,7 +93,8 @@ function App() {
     setMessage: match.setMessage,
     showPause: dialogs.showPause,
     aiControlsCurrentState: match.aiControlsCurrentState,
-    pendingEffect: pending.pendingEffect,
+    pendingEffect:
+      pending.pendingEffect ?? match.game.pendingOpponentRandomDiscard,
     faintActive: pending.faintActive,
     deckConfig: match.deckConfig,
   })
@@ -121,6 +120,7 @@ function App() {
     Boolean(match.game.pendingOnPlay) ||
     Boolean(match.game.pendingBattle) ||
     Boolean(match.game.pendingOpponentHandDiscard) ||
+    Boolean(match.game.pendingOpponentRandomDiscard) ||
     Boolean(
       match.game.pendingInspectDeck &&
         match.game.pendingInspectDeck.playerId === match.viewerPlayerId,
@@ -148,6 +148,7 @@ function App() {
     Boolean(match.game.pendingReplacement) ||
     Boolean(match.game.pendingOnPlay) ||
     Boolean(match.game.pendingRefresh) ||
+    Boolean(match.game.pendingOpponentRandomDiscard) ||
     Boolean(
       match.game.pendingFaintEffects &&
         match.game.pendingFaintEffects.length > 0,
@@ -998,7 +999,11 @@ function App() {
                 : () =>
                     match.runAction(
                       (current) =>
-                        skipDefeatedCookieReplacement(current),
+                        applyGameCommand(current, {
+                          kind: 'resolve-replacement',
+                          playerId: match.pendingPlayer!.id,
+                          action: 'skip',
+                        }),
                       '已選擇不補餅乾。',
                     )
             }
@@ -1035,7 +1040,12 @@ function App() {
               } else {
                 match.runAction(
                   (current) =>
-                    replaceDefeatedCookie(current, instanceId),
+                    applyGameCommand(current, {
+                      kind: 'resolve-replacement',
+                      playerId: match.pendingPlayer!.id,
+                      action: 'replace',
+                      cookieInstanceId: instanceId,
+                    }),
                   '已補充新的戰鬥區餅乾。',
                   (nextGame) => {
                     if (nextGame.pendingRefresh) return
@@ -1207,6 +1217,23 @@ function App() {
         />
       )}
 
+      {match.game.pendingOpponentRandomDiscard && (
+        <DiscardRevealModal
+          key={match.game.pendingOpponentRandomDiscard.sourceInstanceId}
+          cards={match.game.pendingOpponentRandomDiscard.discardedCards}
+          sourceCardName={match.game.pendingOpponentRandomDiscard.sourceCardName}
+          onConfirm={() => {
+            match.runAction(
+              (current) =>
+                applyGameCommand(current, {
+                  kind: 'resolve-opponent-random-discard',
+                  playerId: match.game.pendingOpponentRandomDiscard!.playerId,
+                }),
+              `對手隨機棄置了 ${match.game.pendingOpponentRandomDiscard?.discardedCards.length} 張卡牌。`,
+            )
+          }}
+        />
+      )}
       {match.game.result && (
         <ResultModal
           winnerName={

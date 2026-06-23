@@ -38,9 +38,28 @@ describe('getPendingDecision', () => {
     expect(getPendingDecision(state)).toBeNull()
   })
 
-  it('returns null when only pendingReplacement exists', () => {
+  it('returns replacement decision when only pendingReplacement exists', () => {
     const state: GameState = {
       ...createDemoGame(),
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-one', remaining: 1 }],
+      },
+    }
+    const decision = getPendingDecision(state)
+    expect(decision).toEqual({
+      kind: 'replacement',
+      playerId: 'player-one',
+      remaining: 1,
+    })
+  })
+
+  it('returns null when pendingReplacement exists with pendingRefresh', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingRefresh: {
+        playerId: 'player-one',
+        remainingDraws: 1,
+      },
       pendingReplacement: {
         tasks: [{ playerId: 'player-one', remaining: 1 }],
       },
@@ -48,9 +67,30 @@ describe('getPendingDecision', () => {
     expect(getPendingDecision(state)).toBeNull()
   })
 
-  it('returns null when only pendingOnPlay exists', () => {
+  it('returns on-play decision when only pendingOnPlay exists', () => {
     const state: GameState = {
       ...createDemoGame(),
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: 'cookie-1',
+      },
+    }
+    const decision = getPendingDecision(state)
+    expect(decision).toEqual({
+      kind: 'on-play',
+      playerId: 'player-one',
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'cookie-1',
+    })
+  })
+
+  it('returns null when pendingOnPlay exists with pendingRefresh', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingRefresh: {
+        playerId: 'player-one',
+        remainingDraws: 1,
+      },
       pendingOnPlay: {
         playerId: 'player-one',
         sourceInstanceId: 'cookie-1',
@@ -148,13 +188,14 @@ describe('getPendingDecision', () => {
     }
 
     const decision = getPendingDecision(state)
-    expect(decision).not.toBeNull()
-    expect(decision!.kind).toBe('faint-effect')
-    expect(decision!.playerId).toBe('player-one')
-    expect(decision!.sourcePlayerId).toBe('player-one')
-    expect(decision!.sourceInstanceId).toBe('faint-cookie')
-    expect(decision!).toHaveProperty('min', 0)
-    expect(decision!).toHaveProperty('max', 1)
+    expect(decision).toMatchObject({
+      kind: 'faint-effect',
+      playerId: 'player-one',
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'faint-cookie',
+      min: 0,
+      max: 1,
+    })
   })
 
   it('returns faint-effect with min>0 metadata', () => {
@@ -200,14 +241,15 @@ describe('getPendingDecision', () => {
     }
 
     const decision = getPendingDecision(state)
-    expect(decision).not.toBeNull()
-    expect(decision!.kind).toBe('opponent-hand-discard')
-    expect(decision!.playerId).toBe('player-two')
-    expect(decision!.sourcePlayerId).toBe('player-one')
-    expect(decision!.sourceInstanceId).toBe('rogue-cookie')
-    expect(decision!).toHaveProperty('sourceCardName', 'Roguefort Cookie')
-    expect(decision!).toHaveProperty('effectText')
-    expect(decision!).toHaveProperty('count', 2)
+    expect(decision).toMatchObject({
+      kind: 'opponent-hand-discard',
+      playerId: 'player-two',
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'rogue-cookie',
+      sourceCardName: 'Roguefort Cookie',
+      count: 2,
+    })
+    expect(decision).toHaveProperty('effectText')
   })
 
   it('faint takes priority over opponent discard when both exist', () => {
@@ -603,5 +645,36 @@ describe('applyGameCommand', () => {
       action: 'skip',
     })
     expect(result.pendingOptionalCostAttack).toBeNull()
+  })
+
+  it('applyGameCommand dispatches resolve-replacement skip', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-one', remaining: 1 }],
+      },
+    }
+    const result = applyGameCommand(state, {
+      kind: 'resolve-replacement',
+      playerId: 'player-one',
+      action: 'skip',
+    })
+    expect(result.pendingReplacement).toBeNull()
+  })
+
+  it('applyGameCommand dispatches resolve-on-play skip', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: 'cookie-1',
+      },
+    }
+    const result = applyGameCommand(state, {
+      kind: 'resolve-on-play',
+      playerId: 'player-one',
+      action: 'skip',
+    })
+    expect(result.pendingOnPlay).toBeNull()
   })
 })

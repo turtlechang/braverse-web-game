@@ -39,6 +39,10 @@ const assertActiveGame = (state: GameState) => {
     throw new GameRuleError('必須先處理對手棄牌。')
   }
 
+  if (state.pendingOpponentRandomDiscard) {
+    throw new GameRuleError('必須先確認隨機棄牌。')
+  }
+
   if (state.pendingStageTrigger) {
     throw new GameRuleError('必須先處理場景觸發效果。')
   }
@@ -180,6 +184,10 @@ export const replaceDefeatedCookie = (
     throw new GameRuleError('必須先處理對手棄牌。')
   }
 
+  if (state.pendingOpponentRandomDiscard) {
+    throw new GameRuleError('必須先確認隨機棄牌。')
+  }
+
   const playerId = currentTask.playerId
   const player = state.players[playerId]
 
@@ -253,6 +261,10 @@ export const skipDefeatedCookieReplacement = (
 
   if (state.pendingOpponentHandDiscard) {
     throw new GameRuleError('必須先處理對手棄牌。')
+  }
+
+  if (state.pendingOpponentRandomDiscard) {
+    throw new GameRuleError('必須先確認隨機棄牌。')
   }
 
   const playerId = currentTask.playerId

@@ -568,12 +568,12 @@ export function BattleRow({
             const count = player.hand.length
             const center = (count - 1) / 2
             const offset = index - center
-            const baseStep = count <= 1 ? 0 : Math.max(20, Math.min(30, 150 / count))
+            const baseStep = count <= 1 ? 0 : Math.max(10, Math.min(18, 72 / count))
             const fanX = offset * baseStep
             const maxNorm = (count - 1) / 2 || 1
             const normOffset = offset / maxNorm
-            const fanY = normOffset * normOffset * 50
-            const angleStep = count <= 1 ? 0 : Math.min(12, 60 / count)
+            const fanY = normOffset * normOffset * 40
+            const angleStep = count <= 1 ? 0 : Math.min(10, 50 / count)
             const fanRotation = offset * angleStep
 
             return (

@@ -1,4 +1,8 @@
 import { GameRuleError } from './errors'
+import {
+  replaceDefeatedCookie,
+  skipDefeatedCookieReplacement,
+} from './actions'
 import { getFaintEffectMinMax, resolveFaintEffect, resolveOptionalCostAttack } from './battle'
 import {
   executeCardEffect,
@@ -6,6 +10,8 @@ import {
   resolveInspectDeck,
   resolveOpponentHandDiscard,
 } from './effects'
+import { getCurrentReplacementTask } from './replacement'
+import { skipCookieOnPlay } from './skills'
 import type { AbilityCost, CardEffect, GameState, PlayerId } from './types'
 
 export interface FaintEffectDecision {
@@ -25,6 +31,15 @@ export interface OpponentHandDiscardDecision {
   sourceCardName: string
   effectText: string
   count: number
+}
+
+export interface OpponentRandomDiscardDecision {
+  kind: 'opponent-random-discard'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  discardedCardIds: string[]
 }
 
 export interface InspectDeckDecision {
@@ -67,13 +82,30 @@ export interface StageTriggerDecision {
   effectText: string
 }
 
+export interface ReplacementDecision {
+  kind: 'replacement'
+  playerId: PlayerId
+  remaining: number
+}
+
+export interface OnPlayDecision {
+  kind: 'on-play'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+}
+
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
+  | OpponentRandomDiscardDecision
   | InspectDeckDecision
   | OptionalCostAttackDecision
   | DrawUpToDecision
   | StageTriggerDecision
+  | ReplacementDecision
+  | OnPlayDecision
+
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -85,6 +117,11 @@ export interface ResolveOpponentHandDiscardCommand {
   kind: 'resolve-opponent-hand-discard'
   playerId: PlayerId
   cardIds: string[]
+}
+
+export interface ResolveOpponentRandomDiscardCommand {
+  kind: 'resolve-opponent-random-discard'
+  playerId: PlayerId
 }
 
 export interface ResolveInspectDeckCommand {
@@ -114,13 +151,30 @@ export interface ResolveStageTriggerCommand {
   action: 'activate' | 'skip'
 }
 
+export interface ResolveReplacementCommand {
+  kind: 'resolve-replacement'
+  playerId: PlayerId
+  action: 'skip' | 'replace'
+  cookieInstanceId?: string
+}
+
+export interface ResolveOnPlayCommand {
+  kind: 'resolve-on-play'
+  playerId: PlayerId
+  action: 'skip'
+}
+
 export type GameCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
+  | ResolveOpponentRandomDiscardCommand
   | ResolveInspectDeckCommand
   | ResolveOptionalCostAttackCommand
   | ResolveDrawUpToCommand
   | ResolveStageTriggerCommand
+  | ResolveReplacementCommand
+  | ResolveOnPlayCommand
+
 
 export const getPendingDecision = (
   state: GameState,
@@ -152,6 +206,18 @@ export const getPendingDecision = (
       sourceCardName: pending.sourceCardName,
       effectText: pending.effectText,
       count: pending.count,
+    }
+  }
+
+  if (state.pendingOpponentRandomDiscard) {
+    const pending = state.pendingOpponentRandomDiscard
+    return {
+      kind: 'opponent-random-discard',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      discardedCardIds: pending.discardedCards.map((c) => c.instanceId),
     }
   }
 
@@ -207,17 +273,40 @@ export const getPendingDecision = (
     }
   }
 
+  if (state.pendingOnPlay && !state.pendingRefresh) {
+    const pending = state.pendingOnPlay
+    return {
+      kind: 'on-play',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+    }
+  }
+
+  const replacementTask = getCurrentReplacementTask(state)
+  if (replacementTask && !state.pendingRefresh) {
+    return {
+      kind: 'replacement',
+      playerId: replacementTask.playerId,
+      remaining: replacementTask.remaining,
+    }
+  }
+
   return null
 }
 
 const cmdToDecisionKind: Record<string, string> = {
   'resolve-faint-effect': 'faint-effect',
   'resolve-opponent-hand-discard': 'opponent-hand-discard',
+  'resolve-opponent-random-discard': 'opponent-random-discard',
   'resolve-inspect-deck': 'inspect-deck',
   'resolve-optional-cost-attack': 'optional-cost-attack',
   'resolve-draw-up-to': 'draw-up-to',
   'resolve-stage-trigger': 'stage-trigger',
+  'resolve-replacement': 'replacement',
+  'resolve-on-play': 'on-play',
 }
+
 
 export const applyGameCommand = (
   state: GameState,
@@ -242,6 +331,31 @@ export const applyGameCommand = (
       return resolveFaintEffect(state, command.targetIds)
     case 'resolve-opponent-hand-discard':
       return resolveOpponentHandDiscard(state, command.playerId, command.cardIds)
+    case 'resolve-opponent-random-discard': {
+      const pending = state.pendingOpponentRandomDiscard
+      if (!pending) throw new GameRuleError('沒有待處理的隨機棄牌效果。')
+      const targetPlayerId = pending.playerId
+      const discarded = pending.discardedCards
+      const discardedIds = new Set(discarded.map((c) => c.instanceId))
+      const remaining = state.players[targetPlayerId].hand.filter(
+        (c) => !discardedIds.has(c.instanceId),
+      )
+      return {
+        ...state,
+        pendingOpponentRandomDiscard: null,
+        players: {
+          ...state.players,
+          [targetPlayerId]: {
+            ...state.players[targetPlayerId],
+            hand: remaining,
+            discardPile: [
+              ...state.players[targetPlayerId].discardPile,
+              ...discarded,
+            ],
+          },
+        },
+      }
+    }
     case 'resolve-inspect-deck':
       return resolveInspectDeck(state, command.playerId, command.pickedCardId, command.restOrder)
     case 'resolve-optional-cost-attack':
@@ -294,6 +408,29 @@ export const applyGameCommand = (
         nextState = executeCardEffect(nextState, context, effect, [])
       }
       return nextState
+    }
+    case 'resolve-replacement': {
+      if (command.action === 'skip') {
+        return skipDefeatedCookieReplacement(state)
+      }
+      if (!command.cookieInstanceId) {
+        throw new GameRuleError('補位必須指定餅乾。')
+      }
+      return replaceDefeatedCookie(state, command.cookieInstanceId)
+    }
+    case 'resolve-on-play': {
+      if (command.action !== 'skip') {
+        throw new GameRuleError('OnPlay 啟動仍須走技能流程。')
+      }
+      const pending = state.pendingOnPlay
+      if (!pending) {
+        throw new GameRuleError('沒有待處理的 OnPlay 窗口。')
+      }
+      return skipCookieOnPlay(
+        state,
+        pending.playerId,
+        pending.sourceInstanceId,
+      )
     }
   }
 }

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import css from './BattleRow.css?raw'
 
+describe('player hand layout styles', () => {
+  it('anchors the bottom hand above the support zone', () => {
+    expect(css).toContain('.bottom-field .bottom-hand,')
+    expect(css).toContain('bottom: 45%;')
+  })
+})
+
 describe('player hand hover styles', () => {
   it('keeps the fan transform while lifting 8px and scaling slightly', () => {
     const hoverRule = css.match(

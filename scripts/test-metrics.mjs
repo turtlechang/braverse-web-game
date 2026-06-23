@@ -90,10 +90,18 @@ try {
       const rect = shell.getBoundingClientRect()
       const bottomFieldRect = bottomField.getBoundingClientRect()
       const bottomHandRect = bottomHand.getBoundingClientRect()
+      const bottomSupport = document.querySelector(
+        '.bottom-field .support-zone',
+      )
+      const bottomSupportRect = bottomSupport?.getBoundingClientRect()
       return {
         shellBottom: rect.bottom,
         bottomFieldBottom: bottomFieldRect.bottom,
         bottomHandBottom: bottomHandRect.bottom,
+        bottomSupportTop: bottomSupportRect?.top ?? 0,
+        handAboveSupport:
+          bottomSupportRect == null ||
+          bottomHandRect.bottom <= bottomSupportRect.top + 1,
       }
     })
     console.log(`Viewport: ${viewport.width}x${viewport.height}`)
@@ -102,6 +110,7 @@ try {
     console.log(`  bottomHandBottom:  ${metrics.bottomHandBottom}`)
     console.log(`  Field Ok:          ${metrics.bottomFieldBottom <= metrics.shellBottom + 1}`)
     console.log(`  Hand Ok:           ${metrics.bottomHandBottom <= metrics.shellBottom + 1}`)
+    console.log(`  Hand above support:${metrics.handAboveSupport} (hand ${metrics.bottomHandBottom}, support top ${metrics.bottomSupportTop})`)
   }
 
   await browser.close()

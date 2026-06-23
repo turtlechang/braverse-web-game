@@ -7,6 +7,7 @@
   grid-template-columns: 82px minmax(0, 1fr) 82px;
   gap: 8px;
   align-items: stretch;
+  --side-dock-width: 82px;
 }
 
 .top-field .break-zone {
@@ -632,15 +633,44 @@
   top: 8px;
 }
 
-.bottom-hand {
-  bottom: 8px;
+.bottom-field .bottom-hand,
+.bottom-field .hand-fan.bottom-hand {
+  bottom: 45%;
+  right: calc(var(--side-dock-width) + 16px);
+  left: auto;
+  width: min(500px, calc(100% - var(--side-dock-width) - 32px));
+  box-sizing: border-box;
 }
 
-.hand-fan.bottom-hand {
-  right: 16px;
-  left: auto;
-  width: min(500px, calc(100% - 32px));
-  box-sizing: border-box;
+@container game-shell (max-height: 800px) {
+  .bottom-field .hand-fan.bottom-hand {
+    height: 110px;
+  }
+
+  .bottom-field .hand-card-wrap {
+    transform-origin: center 130px;
+  }
+}
+
+@container game-shell (max-height: 650px) {
+  .bottom-field .hand-fan.bottom-hand {
+    height: 72px;
+    width: min(320px, calc(100% - var(--side-dock-width) - 48px));
+  }
+
+  .bottom-field .hand-card-wrap {
+    transform-origin: center 72px;
+  }
+
+  .bottom-field .hand-card {
+    width: 68px;
+  }
+}
+
+@container game-shell (max-width: 1100px) and (max-height: 700px) {
+  .bottom-field .hand-fan.bottom-hand {
+    width: min(260px, calc(100% - var(--side-dock-width) - 48px));
+  }
 }
 
 .hand-card-wrap {
@@ -832,6 +862,7 @@
   .battle-row {
     grid-template-columns: 72px minmax(0, 1fr) 72px;
     gap: 6px;
+    --side-dock-width: 72px;
   }
 
   .combat-slots {
@@ -905,6 +936,7 @@
   .battle-row {
     grid-template-columns: 72px minmax(0, 1fr) 72px;
     gap: 6px;
+    --side-dock-width: 72px;
   }
 
   .combat-slots {
@@ -920,6 +952,12 @@
     left: auto;
     width: min(500px, calc(100% - 32px));
     box-sizing: border-box;
+  }
+}
+
+@container game-shell (min-width: 900px) and (max-height: 800px) {
+  .card-face.support-card {
+    width: 62px;
   }
 }
 
@@ -954,11 +992,18 @@
 
 }
 
+@container game-shell (min-width: 900px) and (max-height: 620px) {
+  .card-face.support-card {
+    width: 58px;
+  }
+}
+
 @container game-shell (max-width: 900px) {
   .battle-row {
     min-height: 0;
     grid-template-columns: 58px minmax(0, 1fr) 58px;
     gap: 4px;
+    --side-dock-width: 58px;
   }
 
   .field-stack,
@@ -1148,15 +1193,10 @@
     left: auto;
     width: min(500px, calc(100% - 32px));
     box-sizing: border-box;
-    bottom: 4px;
   }
 
   .top-hand {
     top: 4px;
-  }
-
-  .bottom-hand {
-    bottom: 4px;
   }
 
   .hand-card-actions {
@@ -1177,6 +1217,7 @@
   .battle-row {
     grid-template-columns: 46px minmax(0, 1fr) 46px;
     gap: 3px;
+    --side-dock-width: 46px;
   }
 
   .field-stack,
@@ -1259,16 +1300,16 @@
     height: 72px;
   }
 
-  .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
-    box-sizing: border-box;
-    bottom: 2px;
+  .bottom-field .hand-fan.bottom-hand {
+    height: 48px;
+    right: calc(var(--side-dock-width) + 22px);
+    width: min(92px, calc(100% - var(--side-dock-width) - 32px));
+    overflow: hidden;
   }
 
-  .bottom-hand {
-    bottom: 2px;
+  .bottom-field .hand-card-wrap {
+    transform-origin: center 48px;
+    scale: 0.78;
   }
 
   .top-hand {

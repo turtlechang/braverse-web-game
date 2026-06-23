@@ -74,6 +74,27 @@ export const handleAiPendingDecision = (
     }
   }
 
+  if (
+    pendingDecision?.kind === 'opponent-random-discard' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 確認隨機棄牌。`,
+      }
+    }
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-opponent-random-discard',
+        playerId,
+      }),
+      action: 'idle',
+      description: `${state.players[playerId].name} 確認隨機棄牌。`,
+    }
+  }
+
   if (pendingDecision?.kind === 'inspect-deck' && !state.pendingRefresh) {
     if (pendingDecision.playerId !== playerId) {
       return {

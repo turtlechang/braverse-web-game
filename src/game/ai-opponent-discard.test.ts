@@ -97,4 +97,30 @@ describe('AI opponent hand discard decision', () => {
     )
     expect(decision.revealedCards).toEqual([handCards[0]])
   })
+
+  it('AI resolves a pending random discard without getting stuck', () => {
+    const state = createDemoGame()
+    const discardedCard = state.players['player-two'].hand[0]
+    const discardState: GameState = {
+      ...state,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingOpponentRandomDiscard: {
+        playerId: 'player-two',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'st5-017-source',
+        sourceCardName: 'Violet Dragonspout',
+        effect: { kind: 'opponent-random-discard', count: 1 },
+        discardedCards: [discardedCard],
+      },
+    }
+
+    const decision = takeAiStep(discardState, 'player-two')
+
+    expect(decision.state).not.toBe(discardState)
+    expect(decision.state.pendingOpponentRandomDiscard).toBeNull()
+    expect(
+      decision.state.players['player-two'].discardPile.at(-1)?.instanceId,
+    ).toBe(discardedCard.instanceId)
+  })
 })

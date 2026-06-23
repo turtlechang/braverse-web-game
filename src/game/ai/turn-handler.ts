@@ -1,8 +1,6 @@
 import {
   deployCookie,
   placeSupportCard,
-  replaceDefeatedCookie,
-  skipDefeatedCookieReplacement,
 } from '../actions'
 import {
   activateStage,
@@ -10,6 +8,7 @@ import {
   playStage,
 } from '../card-abilities'
 import { beginAttack } from '../battle'
+import { applyGameCommand } from '../commands'
 import { executeCardEffect } from '../effects'
 import { getAttackEnergyCost, selectEnergyPayment } from '../energy'
 import { getRefreshCandidates, refreshDeck } from '../refresh'
@@ -83,12 +82,21 @@ export const handleAiTurnState = (
     const replacement = strategy.chooseReplacement(state, playerId)
     if (!replacement) {
       return {
-        state: skipDefeatedCookieReplacement(state),
+        state: applyGameCommand(state, {
+          kind: 'resolve-replacement',
+          playerId,
+          action: 'skip',
+        }),
         action: 'skip-replacement',
         description: `${state.players[playerId].name}選擇不補餅乾。`,
       }
     }
-    const replacedState = replaceDefeatedCookie(state, replacement.instanceId)
+    const replacedState = applyGameCommand(state, {
+      kind: 'resolve-replacement',
+      playerId,
+      action: 'replace',
+      cookieInstanceId: replacement.instanceId,
+    })
     const replaced = replacedState.players[playerId].battleArea.find(
       (cookie) => cookie.card.instanceId === replacement.instanceId,
     )

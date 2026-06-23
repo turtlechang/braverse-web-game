@@ -209,6 +209,9 @@ try {
       const handCards = [
         ...document.querySelectorAll('.hand-fan .hand-card'),
       ].map((element) => element.getBoundingClientRect())
+      const bottomHandCards = [
+        ...document.querySelectorAll('.bottom-hand .hand-card'),
+      ].map((element) => element.getBoundingClientRect())
       const battleCards = [
         ...document.querySelectorAll('.combat-card-wrap'),
       ].map((element) => element.getBoundingClientRect())
@@ -224,7 +227,7 @@ try {
               Math.max(handCard.top, battleCard.top) + 1,
         ),
       )
-      const handOverlapsSideZone = handCards.some((handCard) =>
+      const handOverlapsSideZone = bottomHandCards.some((handCard) =>
         sideZones.some(
           (sideZone) =>
             Math.min(handCard.right, sideZone.right) >
@@ -325,10 +328,10 @@ try {
           topCombatCardRect.top + topCombatCardRect.height / 2,
         compactHudValid:
           rect.width >= 900 ||
-          (phaseRailRect.top >= rect.top - 1 &&
+          (matchToolbarRect.top >= rect.top - 1 &&
+            matchToolbarRect.bottom <= phaseRailRect.top + 1 &&
             phaseRailRect.bottom <= tableAreaRect.top + 1 &&
-            tableAreaRect.bottom <= matchToolbarRect.top + 1 &&
-            matchToolbarRect.bottom <= rect.bottom + 1),
+            tableAreaRect.bottom <= rect.bottom + 1),
         compactHudRects: {
           shell: { top: rect.top, bottom: rect.bottom, width: rect.width },
           phase: { top: phaseRailRect.top, bottom: phaseRailRect.bottom },
@@ -745,8 +748,8 @@ try {
       const revealDock = page.locator('.card-reveal-dock')
       await revealDock.waitFor({ state: 'visible' })
       assert.ok(
-        (await revealDock.innerText()).includes('效果待確認'),
-        '縮小物品展示後應顯示效果待確認標籤',
+        /效果待確認|公開資訊待確認/.test(await revealDock.innerText()),
+        '縮小物品展示後應顯示待確認標籤',
       )
       await revealDock.click()
       await revealModal.getByRole('button', { name: '確認使用' }).click()

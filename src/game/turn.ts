@@ -30,6 +30,10 @@ const assertPlaying = (state: GameState) => {
   if (state.pendingOpponentHandDiscard) {
     throw new GameRuleError('必須先處理對手棄牌。')
   }
+
+  if (state.pendingOpponentRandomDiscard) {
+    throw new GameRuleError('必須先確認隨機棄牌。')
+  }
 }
 
 const activateCurrentPlayer = (state: GameState): GameState => {

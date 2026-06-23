@@ -141,6 +141,20 @@ describe('hasBlockingPending', () => {
     expect(
       hasBlockingPending({
         ...base,
+        pendingOpponentRandomDiscard: {
+          playerId: 'player-two',
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'random-discard-source',
+          sourceCardName: 'Violet Dragonspout',
+          effect: { kind: 'opponent-random-discard', count: 1 },
+          discardedCards: [],
+        },
+      }),
+    ).toBe(true)
+
+    expect(
+      hasBlockingPending({
+        ...base,
         pendingInspectDeck: {
           playerId: 'player-one',
           sourceInstanceId: 'test-source',

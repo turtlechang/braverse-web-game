@@ -151,6 +151,7 @@ export const canActivateCookieSkill = (
     state.pendingRefresh ||
     state.pendingBattle ||
     state.pendingOpponentHandDiscard ||
+    state.pendingOpponentRandomDiscard ||
     state.pendingInspectDeck ||
     state.pendingOptionalCostAttack ||
     state.pendingStageTrigger ||
