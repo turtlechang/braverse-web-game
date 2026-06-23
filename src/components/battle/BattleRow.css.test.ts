@@ -9,13 +9,13 @@ describe('player hand layout styles', () => {
 })
 
 describe('player hand hover styles', () => {
-  it('keeps the fan transform while lifting 8px and scaling slightly', () => {
+  it('straightens the fan rotation and lifts 20px on hover', () => {
     const hoverRule = css.match(
       /\.bottom-hand \.hand-card-wrap:hover,[\s\S]*?\n}/,
     )?.[0]
 
     expect(hoverRule).toContain(
-      'translateX(calc(-50% + var(--fan-x))) translateY(calc(var(--fan-y) - 8px)) rotate(var(--fan-rotation)) scale(1.02)',
+      'translateX(calc(-50% + var(--fan-x))) translateY(-20px) rotate(0deg) scale(1.05)',
     )
     expect(css).toContain(
       'translateX(calc(-50% + var(--fan-x))) translateY(-28px) rotate(0deg) scale(1.07)',

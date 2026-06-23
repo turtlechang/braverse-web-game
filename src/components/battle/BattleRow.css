@@ -713,7 +713,7 @@
 .bottom-hand .hand-card-wrap:focus-within {
   z-index: 50;
   filter: brightness(1.08);
-  transform: translateX(calc(-50% + var(--fan-x))) translateY(calc(var(--fan-y) - 8px)) rotate(var(--fan-rotation)) scale(1.02);
+  transform: translateX(calc(-50% + var(--fan-x))) translateY(-20px) rotate(0deg) scale(1.05);
 }
 
 .bottom-hand .hand-card-wrap.is-selected {
