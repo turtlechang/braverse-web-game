@@ -19,7 +19,7 @@ describe('desktop battle HUD', () => {
 
     expect(markup).toContain('phase-rail')
     expect(markup).toContain('主要階段')
-    expect(markup).toContain('下一步')
+    expect(markup).toContain('結束主要階段')
     expect(markup).not.toContain('rail-ai-status')
     expect(markup).not.toContain('執行 20 場 AI 驗證')
   })

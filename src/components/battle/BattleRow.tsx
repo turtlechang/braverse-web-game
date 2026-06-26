@@ -1,4 +1,4 @@
-import { Layers3 } from 'lucide-react'
+import { Layers3, Heart, Swords } from 'lucide-react'
 import {
   canActivateCookieSkill,
   canActivateStage,
@@ -58,6 +58,8 @@ export interface BattleRowProps {
   onToggleResource?: (kind: BattleResourceKind) => void
   onInspectCard: (card: import('../../game').GameCard) => void
   onInspectDiscard: (playerId: PlayerId) => void
+  onHoverCard?: (card: import('../../game').GameCard | null) => void
+  onFocusCard?: (card: import('../../game').GameCard | null) => void
 }
 
 export function BattleRow({
@@ -100,6 +102,8 @@ export function BattleRow({
   onToggleResource,
   onInspectCard,
   onInspectDiscard,
+  onHoverCard,
+  onFocusCard,
 }: BattleRowProps) {
   const player = game.players[playerId]
   const isActivePlayer = game.activePlayerId === playerId
@@ -112,7 +116,7 @@ export function BattleRow({
       <span className="zone-watermark">支援區</span>
       <strong className="support-count">支援 {player.supportArea.length} 張</strong>
       <div className="support-cards">
-        {player.supportArea.map((support) => {
+        {player.supportArea.map((support, supportIndex) => {
           const supportId = support.card.instanceId
           const canSelectSkillCost =
             skillCostSupportTargetIds.has(supportId)
@@ -122,20 +126,25 @@ export function BattleRow({
             selectedSkillCostSupportIds.has(supportId)
 
           return (
-            <CardFace
-              card={support.card}
-              className="support-card"
-              rested={
-                support.rested ||
-                selectedSkillPaymentIds.has(supportId) ||
-                selectedAttackPaymentIds.has(supportId)
-              }
-              selected={
-                selectedForSkillCost ||
-                selectedSkillPaymentIds.has(supportId) ||
-                selectedAttackPaymentIds.has(supportId)
-              }
-              targetable={
+            <div
+              key={supportId}
+              className="support-card-wrap"
+              style={{ '--support-index': isOpponent ? player.supportArea.length - 1 - supportIndex : supportIndex } as React.CSSProperties}
+            >
+              <CardFace
+                card={support.card}
+                className="support-card"
+                rested={
+                  support.rested ||
+                  selectedSkillPaymentIds.has(supportId) ||
+                  selectedAttackPaymentIds.has(supportId)
+                }
+                selected={
+                  selectedForSkillCost ||
+                  selectedSkillPaymentIds.has(supportId) ||
+                  selectedAttackPaymentIds.has(supportId)
+                }
+                targetable={
                 canSelectSkillCost ||
                 canSelectSkillPayment ||
                 (canOperate &&
@@ -164,6 +173,7 @@ export function BattleRow({
                       : () => onInspectCard(support.card)
               }
             />
+            </div>
           )
         })}
         {player.supportArea.length === 0 && (
@@ -189,6 +199,7 @@ export function BattleRow({
           type="button"
           aria-label={`${player.name}休息區摘要`}
           aria-expanded={openResourceKind === 'break'}
+          title={`休息區 LV.${getBreakAreaLevel(game, playerId)} · ${player.breakArea.length} 張`}
           onClick={() => toggleResource('break')}
         >
           <div className="mini-break-stack" aria-hidden="true">
@@ -301,7 +312,7 @@ export function BattleRow({
               {game.firstPlayerId === playerId ? '先攻' : '後攻'}
             </b>
             <small>
-              {isActivePlayer ? '行動中' : '等待'} · 手牌 {player.hand.length}
+              {isActivePlayer ? '行動中' : '等待'} · 手牌 {player.hand.length} · 牌庫 {player.deck.length} · 棄牌 {player.discardPile.length} · 休息 LV.{getBreakAreaLevel(game, playerId)}
             </small>
           </div>
           <span className="zone-watermark">戰鬥區</span>
@@ -345,6 +356,10 @@ export function BattleRow({
                 <div
                   className={`combat-card-wrap ${animClasses}`}
                   key={cookie.card.instanceId}
+                  onMouseEnter={() => onHoverCard?.(cookie.card)}
+                  onMouseLeave={() => onHoverCard?.(null)}
+                  onFocus={() => onFocusCard?.(cookie.card)}
+                  onBlur={() => onFocusCard?.(null)}
                 >
                   <CardFace
                     card={cookie.card}
@@ -373,9 +388,9 @@ export function BattleRow({
                     }
                   />
                   <div className="card-badges">
-                    <span>HP {cookie.hpCards.length}/{cookie.card.hp}</span>
-                    <span>
-                      ATK {getEffectiveAttack(game, cookie.card.instanceId)}
+                    <span className="badge-hp"><Heart size={12} aria-hidden="true" /> {cookie.hpCards.length}/{cookie.card.hp}</span>
+                    <span className="badge-atk">
+                      <Swords size={12} aria-hidden="true" /> {getEffectiveAttack(game, cookie.card.instanceId)}
                     </span>
                   </div>
                   <div
@@ -426,6 +441,7 @@ export function BattleRow({
             type="button"
             aria-label={`${player.name}牌庫 ${player.deck.length} 張`}
             aria-expanded={openResourceKind === 'deck'}
+            title={`牌庫剩餘 ${player.deck.length} 張`}
             onClick={() => toggleResource('deck')}
           >
             <div className="mini-deck" />
@@ -450,6 +466,7 @@ export function BattleRow({
             type="button"
             aria-label={`${player.name}場景區`}
             aria-expanded={openResourceKind === 'stage'}
+            title={player.stage ? `${player.stage.card.name} ${player.stage.rested ? '(已橫置)' : '(活躍)'}` : '場景區空'}
             onClick={() => toggleResource('stage')}
           >
             {player.stage ? (
@@ -503,6 +520,7 @@ export function BattleRow({
           className="discard-zone resource-summary"
           type="button"
           disabled={player.discardPile.length === 0}
+          title={`棄牌區 ${player.discardPile.length} 張`}
           onClick={() => onInspectDiscard(playerId)}
         >
           <span>棄牌區</span>

@@ -14,17 +14,17 @@ describe('PhaseRail CSS grid-row assignments', () => {
     expect(phaseRailCss).toMatch(/\.phase-rail\s+ol\s*\{[^}]*grid-row\s*:\s*3[^}]*\}/)
   })
 
-  it('next-phase-button specifies grid-row: 4 in base rules', () => {
-    expect(phaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*4[^}]*\}/)
+  it('next-phase-button specifies grid-row: 5 in base rules', () => {
+    expect(phaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*5[^}]*\}/)
   })
 
-  it('turn-counter specifies grid-row: 5 in base rules', () => {
-    expect(phaseRailCss).toMatch(/\.turn-counter\s*\{[^}]*grid-row\s*:\s*5[^}]*\}/)
+  it('turn-counter specifies grid-row: 6 in base rules', () => {
+    expect(phaseRailCss).toMatch(/\.turn-counter\s*\{[^}]*grid-row\s*:\s*6[^}]*\}/)
   })
 
-  it('max-width:900px block resets grid-row to 1 for all five children', () => {
+  it('max-width:900px block resets grid-row to 1 for all six children', () => {
     expect(phaseRailCss).toMatch(
-      /\.brand-mark\s*,\s*\.turn-indicator\s*,\s*\.phase-rail\s+ol\s*,\s*\.next-phase-button\s*,\s*\.turn-counter\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
+      /\.brand-mark\s*,\s*\.turn-indicator\s*,\s*\.phase-rail\s+ol\s*,\s*\.phase-hint\s*,\s*\.next-phase-button\s*,\s*\.turn-counter\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
     )
   })
 })
