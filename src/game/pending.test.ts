@@ -41,6 +41,7 @@ const createState = (): GameState => ({
   nextBattleEntrySequence: 1,
   attackModifiers: [],
   damageReceivedModifiers: [],
+  skipAttackUntilTurn: {},
   pendingReplacement: null,
   departedCookieCounts: {
     'player-one': 0,

@@ -8,6 +8,7 @@ import {
   skipTrap,
 } from '../battle'
 import { getBreakToTrashCandidates } from '../effects'
+import { getEffectTargetCandidates } from '../effects/targeting'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
 import type { GameState, PlayerId } from '../types'
@@ -31,9 +32,9 @@ export const handleAiPendingBattle = (
     battle.attackerPlayerId === playerId
   ) {
     const effect = battle.attackEffects[battle.attackEffectIndex]
-    const targetIds =
-      effect?.kind === 'break-to-trash'
-        ? getBreakToTrashCandidates(
+    let targetIds: string[] = []
+    if (effect?.kind === 'break-to-trash') {
+      targetIds = getBreakToTrashCandidates(
             state,
             {
               sourcePlayerId: playerId,
@@ -43,7 +44,16 @@ export const handleAiPendingBattle = (
           )
             .slice(0, effect.max)
             .map((card) => card.instanceId)
-        : []
+    } else if (effect && 'target' in effect && effect.target) {
+      const context = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+      }
+      const candidates = getEffectTargetCandidates(state, context, effect.target)
+      targetIds = candidates
+        .slice(0, effect.target.max)
+        .map((cookie) => cookie.card.instanceId)
+    }
     return {
       state: resolveAttackEffect(state, playerId, targetIds),
       action: 'resolve-attack-effect',

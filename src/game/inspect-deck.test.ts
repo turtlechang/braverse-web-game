@@ -357,6 +357,7 @@ const buildInspectDeckTestState = (
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
     pendingOnPlay: null,

@@ -124,6 +124,10 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇${count}${target}，送入棄牌區。`
   }
 
+  if (effect.kind === 'skip-attack') {
+    return `選擇${count}${target}，下回合無法攻擊。`
+  }
+
   const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount
   return effect.kind === 'modify-attack'
     ? `選擇${count}${target}，攻擊傷害 ${value}。`
@@ -235,6 +239,10 @@ export const describeEffectResult = (
 
   if (effect.kind === 'field-to-trash') {
     return `${names}已送入棄牌區。`
+  }
+
+  if (effect.kind === 'skip-attack') {
+    return `${names}下回合無法攻擊。`
   }
 
   const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount

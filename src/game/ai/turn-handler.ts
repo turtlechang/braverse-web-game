@@ -289,6 +289,10 @@ export const handleAiTurnState = (
     if (canAttack(state)) {
       const target = strategy.chooseAttackTarget(state, playerId)
       for (const attacker of player.battleArea) {
+        const skipExpiration = state.skipAttackUntilTurn[attacker.card.instanceId]
+        if (skipExpiration !== undefined && state.turnNumber <= skipExpiration) {
+          continue
+        }
         const paymentIds = selectEnergyPayment(
           getAttackEnergyCost(attacker.card),
           player.supportArea,

@@ -316,6 +316,7 @@ export const createBreakToTrashDemoState = (
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,
@@ -375,6 +376,7 @@ export const createAttackEffectDemoState = (): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
     pendingRefresh: null,
@@ -464,6 +466,7 @@ export const createSupportToTrashSkillDemoState = (): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
     pendingRefresh: null,
@@ -553,6 +556,7 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,
@@ -650,6 +654,7 @@ export const createFlipResponseDemoState = (): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,
@@ -738,6 +743,7 @@ export const createReplacementChoiceDemoState = (): GameState => {
     pendingReplacement: {
       tasks: [{ playerId: 'player-one', remaining: 1 }],
     },
+    skipAttackUntilTurn: {},
     departedCookieCounts: {
       'player-one': 0,
       'player-two': 0,
@@ -803,6 +809,7 @@ const baseTestState = (
   attackModifiers: [],
   damageReceivedModifiers: [],
   flipDisabledUntilTurn: {},
+  skipAttackUntilTurn: {},
   pendingReplacement: null,
   departedCookieCounts: {
     'player-one': 0,
@@ -954,6 +961,7 @@ export const createOpponentDiscardHandDemoState = (): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
     pendingOpponentHandDiscard: {
@@ -1102,6 +1110,7 @@ export const createPretzelSnareDemoState = (attack: number): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
     pendingRefresh: null,
@@ -1258,7 +1267,8 @@ export const createBlueActivateSkillDemoState = (payable: boolean): GameState =>
     },
     firstPlayerId: 'player-one', activePlayerId: 'player-one', turnNumber: 1, phase: 'main', status: 'playing', result: null,
     supportPlacedThisTurn: false, skillUsesThisTurn: [], nextBattleEntrySequence: 3, attackModifiers: [], damageReceivedModifiers: [],
-    flipDisabledUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null, pendingBattle: null,
+    flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null, pendingBattle: null,
   }
 }
 
@@ -1305,7 +1315,8 @@ export const createBlueOptionalCostAttackDemoState = (payable: boolean): GameSta
     },
     firstPlayerId: 'player-one', activePlayerId: 'player-one', turnNumber: 1, phase: 'main', status: 'playing', result: null,
     supportPlacedThisTurn: false, skillUsesThisTurn: [], nextBattleEntrySequence: 3, attackModifiers: [], damageReceivedModifiers: [],
-    flipDisabledUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null,
+    flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null,
     pendingBattle: {
       attackerPlayerId: 'player-one', defenderPlayerId: 'player-two',
       attackerInstanceId: caviar.instanceId, targetInstanceId: defender.instanceId,
@@ -1343,7 +1354,8 @@ export const createBlueInspectDeckDemoState = (): GameState => {
     },
     firstPlayerId: 'player-one', activePlayerId: 'player-one', turnNumber: 1, phase: 'main', status: 'playing', result: null,
     supportPlacedThisTurn: false, skillUsesThisTurn: [], nextBattleEntrySequence: 3, attackModifiers: [], damageReceivedModifiers: [],
-    flipDisabledUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null, pendingBattle: null,
+    flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {}, pendingReplacement: null, departedCookieCounts: { 'player-one': 0, 'player-two': 0 }, pendingRefresh: null, pendingBattle: null,
     pendingInspectDeck: {
       playerId: 'player-one',
       sourceInstanceId: caviar.instanceId,
@@ -1420,6 +1432,7 @@ export const createSt5010OnPlayDemoState = (): GameState => {
     pendingReplacement: {
       tasks: [{ playerId: 'player-one', remaining: 1 }],
     },
+    skipAttackUntilTurn: {},
     departedCookieCounts: {
       'player-one': 0,
       'player-two': 0,
@@ -1553,6 +1566,7 @@ export const createBlueSt4DemoState = (
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
     pendingRefresh: null,
@@ -1624,6 +1638,7 @@ export const createBlueSt4TrapDemoState = (payable: boolean): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
     pendingRefresh: null,

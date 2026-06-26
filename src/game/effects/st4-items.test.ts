@@ -102,6 +102,7 @@ const createTestGameState = (
   nextBattleEntrySequence: 3,
   attackModifiers: [],
   damageReceivedModifiers: [],
+  skipAttackUntilTurn: {},
   pendingReplacement: null,
   departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
   pendingRefresh: null,

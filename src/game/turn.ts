@@ -182,6 +182,11 @@ export const advancePhase = (state: GameState): GameState => {
             ([, turn]) => turn > state.turnNumber,
           ),
         ),
+        skipAttackUntilTurn: Object.fromEntries(
+          Object.entries(endPhaseState.skipAttackUntilTurn ?? {}).filter(
+            ([, turn]) => turn > state.turnNumber,
+          ),
+        ),
         activePlayerId: getOpponentId(state.activePlayerId),
         turnNumber: state.turnNumber + 1,
         phase: 'active',

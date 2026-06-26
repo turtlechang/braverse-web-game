@@ -872,6 +872,21 @@ export const executeCardEffect = (
     )
   }
 
+  if (effect.kind === 'skip-attack') {
+    const expirationTurn = effect.duration === 'this-turn'
+      ? state.turnNumber
+      : state.turnNumber + 1
+    return {
+      ...state,
+      skipAttackUntilTurn: {
+        ...state.skipAttackUntilTurn,
+        ...Object.fromEntries(
+          targets.map((target) => [target.card.instanceId, expirationTurn]),
+        ),
+      },
+    }
+  }
+
   const modifiers = targets.map((target) => ({
     sourceInstanceId: context.sourceInstanceId,
     targetInstanceId: target.card.instanceId,

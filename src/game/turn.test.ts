@@ -58,6 +58,7 @@ const createTurnState = (): GameState => {
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
+    skipAttackUntilTurn: {},
     pendingReplacement: null,
     departedCookieCounts: {
       'player-one': 0,

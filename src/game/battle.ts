@@ -98,6 +98,11 @@ export const beginAttack = (
     throw new GameRuleError('找不到可攻擊的餅乾。')
   }
 
+  const skipExpiration = state.skipAttackUntilTurn[attackerInstanceId]
+  if (skipExpiration !== undefined && state.turnNumber <= skipExpiration) {
+    throw new GameRuleError('此餅乾本回合無法攻擊。')
+  }
+
   const defenderPlayerId = getOpponentId(state.activePlayerId)
   const defender = state.players[defenderPlayerId]
   if (

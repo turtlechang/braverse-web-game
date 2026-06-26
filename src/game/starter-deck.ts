@@ -262,6 +262,21 @@ const createCard = (
                 { kind: 'draw', amount: 1 },
               ] satisfies CardEffect[],
             }
+        : source.cardNumber === 'ST2-015'
+          ? {
+              attackEffects: [
+                {
+                  kind: 'skip-attack',
+                  duration: 'opponent-next-turn',
+                  target: {
+                    side: 'opponent',
+                    min: 0,
+                    max: 1,
+                    maxLevel: 1,
+                  },
+                },
+              ] satisfies CardEffect[],
+            }
           : {}),
       ...(skill ? { skill } : {}),
       ...(flip ? { flip } : {}),

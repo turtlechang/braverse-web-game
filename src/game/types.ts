@@ -270,6 +270,12 @@ export interface OpponentRandomDiscardEffect {
   count: number
 }
 
+export interface SkipAttackEffect {
+  kind: 'skip-attack'
+  duration: EffectDuration
+  target: EffectTargetSelector
+}
+
 export type CardEffect =
   | DamageEffect
   | ModifyAttackEffect
@@ -293,6 +299,7 @@ export type CardEffect =
   | FieldToTrashEffect
   | ReturnToHandEffect
   | OpponentRandomDiscardEffect
+  | SkipAttackEffect
   | SetActiveEffect
   | InspectDeckEffect
   | OptionalCostAttackEffect
@@ -307,6 +314,7 @@ export type TargetedCardEffect =
   | BattleToSupportEffect
   | ReturnToHandEffect
   | FieldToTrashEffect
+  | SkipAttackEffect
 
 export interface AbilityCost {
   energy: EnergyCost
@@ -445,6 +453,7 @@ export interface GameState {
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   flipDisabledUntilTurn?: Record<string, number>
+  skipAttackUntilTurn: Record<string, number>
   pendingReplacement: PendingReplacement | null
   departedCookieCounts: Record<PlayerId, number>
   pendingOnPlay?: {
