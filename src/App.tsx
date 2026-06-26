@@ -32,6 +32,7 @@ import {
 } from './components/panels/GameStatusPanels'
 import { phaseLabels, deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
+import { StatusToast, CardPreviewPanel } from './components/panels/InteractionOverlays'
 import {
   DecisionModal,
   DiscardRevealModal,
@@ -66,6 +67,7 @@ function App() {
   const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
     null,
   )
+  const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [pendingReveal, setPendingReveal] = useState<{
     card: GameCard
     title: string
@@ -230,6 +232,8 @@ function App() {
         onPause={dialogs.openPause}
       />
 
+      <StatusToast message={match.message} />
+
       <PhaseRail
         phase={match.game.phase}
         turnNumber={match.game.turnNumber}
@@ -273,6 +277,8 @@ function App() {
           onEffectTarget={pending.toggleEffectTarget}
           onInspectCard={dialogs.openCardDetail}
           onInspectDiscard={dialogs.openDiscardPile}
+          onHoverCard={setHoveredCard}
+          onFocusCard={setHoveredCard}
           onToggleResource={(kind) =>
             dialogs.toggleResourcePopover(match.opponentId, kind)
           }
@@ -305,7 +311,6 @@ function App() {
                 `${match.activePlayer.name} · ${phaseLabels[match.game.phase]}`
               )}
             </strong>
-            <small className="battle-status-message">{match.message}</small>
           </div>
           <span />
         </div>
@@ -464,8 +469,12 @@ function App() {
           }
           onInspectCard={dialogs.openCardDetail}
           onInspectDiscard={dialogs.openDiscardPile}
+          onHoverCard={setHoveredCard}
+          onFocusCard={setHoveredCard}
         />
       </section>
+
+      <CardPreviewPanel card={hoveredCard} position="bottom" />
 
       {match.selectedAttacker && !pending.pendingEffect && (
         <AttackPaymentPanel

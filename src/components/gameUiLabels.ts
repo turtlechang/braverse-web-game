@@ -8,6 +8,14 @@ export const phaseLabels: Record<TurnPhase, string> = {
   end: '結束階段',
 }
 
+export const phaseAdvanceLabels: Record<TurnPhase, string> = {
+  active: '自動活躍中',
+  draw: '自動抽牌中',
+  support: '略過支援階段',
+  main: '結束主要階段',
+  end: '結束回合',
+}
+
 export const deckChoiceLabel: Record<DeckChoice, string> = {
   red: '紅色',
   yellow: '黃色',

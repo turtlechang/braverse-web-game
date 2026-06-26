@@ -162,7 +162,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(24px, 3.2vw, 52px);
+  gap: 100px;
   padding: 10px 76px 8px;
 }
 
@@ -176,15 +176,16 @@
 
 .combat-card-wrap {
   position: relative;
-  width: 124px;
-  height: 171px;
-  padding-bottom: 44px;
+  width: 155px;
+  height: 215px;
+  padding-bottom: 38px;
 }
 
 .combat-card-wrap > .card-face {
   position: absolute;
   top: 0;
   left: 0;
+  width: 155px;
   transform-origin: center;
 }
 
@@ -193,26 +194,61 @@
   z-index: 2;
   left: 50%;
   bottom: -3px;
-  width: 124px;
-  height: 40px;
+  width: 155px;
+  height: 38px;
   transform: translateX(-50%);
 }
 
 .hp-card-stack .hp-card {
   position: absolute;
-  left: calc(var(--hp-index, 0) * 13px);
+  left: calc(var(--hp-index, 0) * 17px);
   bottom: 0;
-  width: 36px;
+  width: 46px;
   border-width: 1px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.38);
 }
 
 .hp-card-stack .hp-card:nth-child(1) { left: 0; }
-.hp-card-stack .hp-card:nth-child(2) { left: 15px; }
-.hp-card-stack .hp-card:nth-child(3) { left: 30px; }
-.hp-card-stack .hp-card:nth-child(4) { left: 45px; }
-.hp-card-stack .hp-card:nth-child(5) { left: 60px; }
-.hp-card-stack .hp-card:nth-child(n + 6) { left: 75px; }
+.hp-card-stack .hp-card:nth-child(2) { left: 22px; }
+.hp-card-stack .hp-card:nth-child(3) { left: 44px; }
+.hp-card-stack .hp-card:nth-child(4) { left: 66px; }
+.hp-card-stack .hp-card:nth-child(5) { left: 88px; }
+.hp-card-stack .hp-card:nth-child(n + 6) { left: 110px; }
+
+.card-badges {
+  position: absolute;
+  z-index: 4;
+  bottom: 40px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 3px;
+  pointer-events: none;
+}
+
+.card-badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.badge-hp {
+  background: rgba(20, 20, 20, 0.9);
+  color: #fff;
+  border-left: 3px solid #ff4444;
+}
+
+.badge-atk {
+  background: rgba(20, 20, 20, 0.9);
+  color: #ffcc33;
+  border-right: 3px solid #ffcc33;
+}
 
 .target-hint {
   position: absolute;
@@ -255,7 +291,6 @@
 }
 
 .support-zone {
-  overflow: hidden;
 }
 
 .support-count {
@@ -276,21 +311,43 @@
   position: relative;
   z-index: 1;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 7px 68px;
+  padding: 7px 12px;
   overflow: hidden;
 }
 
 .top-field .support-cards {
-  flex-direction: row-reverse;
+  direction: rtl;
 }
 
 .card-face.support-card {
-  width: 68px;
-  flex: 0 0 auto;
+  position: absolute;
+  bottom: 4px;
+  left: calc(var(--support-index, 0) * 28px + 10px);
+  width: 108px;
+  flex: none;
+  transform-origin: center bottom;
+}
+
+.card-face.support-card.is-rested {
+  transform: rotate(90deg) scale(0.82);
+  left: calc(var(--support-index, 0) * 28px + 20px);
+  bottom: 60px;
+}
+
+.top-field .card-face.support-card {
+  left: auto;
+  right: calc(var(--support-index, 0) * 28px + 10px);
+  bottom: 30px;
+  transform-origin: center bottom;
+  transform: scale(0.9);
+  opacity: 0.8;
+}
+
+.top-field .card-face.support-card.is-rested {
+  right: calc(var(--support-index, 0) * 28px + 20px);
+  bottom: 80px;
+  transform: rotate(-90deg) scale(0.8);
+  opacity: 0.8;
 }
 
 .side-zones,
@@ -679,6 +736,16 @@
   transform-origin: center;
 }
 
+.hand-card-wrap:not(.is-actionable) {
+  opacity: 0.55;
+  filter: saturate(0.5);
+  pointer-events: auto;
+}
+
+.hand-card-wrap.is-actionable {
+  opacity: 1;
+}
+
 .bottom-hand .hand-card-wrap:hover,
 .bottom-hand .hand-card-wrap:focus-within {
   z-index: 50;
@@ -733,29 +800,46 @@
 
 @container game-shell (min-width: 1500px) and (min-height: 850px) {
   .combat-card-wrap {
-    width: 150px;
-    height: 207px;
-    padding-bottom: 52px;
+    width: 175px;
+    height: 243px;
+    padding-bottom: 44px;
   }
 
   .combat-card-wrap > .card-face {
-    width: 150px;
+    width: 175px;
   }
 
   .hp-card-stack {
-    width: 150px;
-    height: 50px;
+    width: 175px;
+    height: 44px;
   }
 
   .hp-card-stack .hp-card {
     width: 42px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 19px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 38px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 57px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 76px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 95px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 22px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 44px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 66px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 88px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 110px; }
+
+  .card-face.support-card {
+    width: 120px;
+  }
+
+  .hand-card {
+    width: 132px;
+  }
+
+  .top-hand {
+    --opponent-card-width: 132px;
+  }
+
+  .hand-fan {
+    width: min(640px, 54%);
+    height: 180px;
+  }
 
   .card-face.support-card {
     width: 82px;
@@ -792,26 +876,26 @@
 
 @container game-shell (max-height: 800px) {
   .combat-card-wrap {
-    width: 104px;
-    height: 143px;
-    padding-bottom: 38px;
+    width: 140px;
+    height: 194px;
+    padding-bottom: 34px;
   }
 
   .combat-card-wrap > .card-face {
-    width: 104px;
+    width: 140px;
   }
 
   .hp-card-stack {
-    width: 104px;
-    height: 35px;
+    width: 140px;
+    height: 32px;
   }
 
   .hp-card-stack .hp-card {
-    width: 31px;
+    width: 34px;
   }
 
   .card-face.support-card {
-    width: 56px;
+    width: 92px;
   }
 
   .hand-card {
@@ -835,32 +919,32 @@
   }
 
   .combat-slots {
-    gap: 22px;
+    gap: 100px;
     padding: 6px 60px;
   }
 
   .combat-card-wrap {
-    width: 78px;
-    height: 108px;
-    padding-bottom: 28px;
+    width: 110px;
+    height: 152px;
+    padding-bottom: 26px;
   }
 
   .combat-card-wrap > .card-face,
   .hand-card {
-    width: 78px;
+    width: 110px;
   }
 
   .top-hand {
-    --opponent-card-width: 78px;
+    --opponent-card-width: 110px;
   }
 
   .hp-card-stack {
-    width: 78px;
-    height: 27px;
+    width: 110px;
+    height: 24px;
   }
 
   .hp-card-stack .hp-card {
-    width: 25px;
+    width: 28px;
   }
 
   .support-cards {
@@ -868,7 +952,7 @@
   }
 
   .card-face.support-card {
-    width: 48px;
+    width: 80px;
   }
 
   .row-meta {
@@ -925,18 +1009,18 @@
 
 @container game-shell (max-height: 620px) {
   .combat-card-wrap {
-    width: 68px;
-    height: 94px;
-    padding-bottom: 24px;
+    width: 96px;
+    height: 133px;
+    padding-bottom: 22px;
   }
 
   .combat-card-wrap > .card-face,
   .hand-card {
-    width: 68px;
+    width: 96px;
   }
 
   .top-hand {
-    --opponent-card-width: 68px;
+    --opponent-card-width: 96px;
   }
 
   .support-cards {
@@ -945,7 +1029,7 @@
 
   .card-face.support-card,
   .stage-card {
-    width: 44px;
+    width: 70px;
   }
 
   .hand-fan {
@@ -978,7 +1062,7 @@
   }
 
   .combat-slots {
-    gap: 12px;
+    gap: 100px;
     padding: 4px 38px;
   }
 
@@ -991,34 +1075,34 @@
   }
 
   .combat-card-wrap {
-    width: 58px;
-    height: 80px;
-    padding-bottom: 20px;
+    width: 80px;
+    height: 111px;
+    padding-bottom: 18px;
   }
 
   .combat-card-wrap > .card-face,
   .hand-card {
-    width: 58px;
+    width: 80px;
   }
 
   .top-hand {
-    --opponent-card-width: 58px;
+    --opponent-card-width: 80px;
   }
 
   .hp-card-stack {
-    width: 58px;
-    height: 20px;
+    width: 80px;
+    height: 18px;
   }
 
   .hp-card-stack .hp-card {
-    width: 18px;
+    width: 20px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 8px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 16px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 24px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 32px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 40px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 12px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 24px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 36px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 48px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 60px; }
 
   .row-meta {
     top: 2px;
@@ -1059,7 +1143,7 @@
   }
 
   .card-face.support-card {
-    width: 44px;
+    width: 64px;
   }
 
   .support-count,
@@ -1205,7 +1289,7 @@
   }
 
   .combat-slots {
-    gap: 8px;
+    gap: 100px;
     padding: 2px 30px;
   }
 
@@ -1248,7 +1332,7 @@
 
   .stage-card,
   .card-face.support-card {
-    width: 28px;
+    width: 54px;
   }
 
   .hand-fan {
