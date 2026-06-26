@@ -235,6 +235,22 @@ export const convertOfficialCardEffects = (
 
   const exactStarterEffects: Partial<Record<string, CardEffect[]>> = {
     // 複合效果（含 Then）仍需硬編碼，因通用解析器不處理 Then
+    'ST1-002': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+        condition: { kind: 'break-level-at-least', level: 6 },
+      },
+    ],
+    'ST1-017': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, remainingHp: 1, minLevel: 2 },
+      },
+    ],
     'ST2-018': [
       { kind: 'draw', amount: 1 },
       {
