@@ -207,6 +207,13 @@ describe('Starter Deck RED official effect adapter', () => {
       status: 'supported',
       effects: [
         {
+          kind: 'damage',
+          amount: 1,
+          target: {
+            side: 'opponent',
+            min: 1,
+            max: 1,
+          },
           condition: {
             kind: 'break-level-at-least',
             level: 6,
@@ -235,7 +242,6 @@ describe('Starter Deck RED official effect adapter', () => {
         'ST1-009',
         'ST1-010',
         'ST1-016',
-        'ST1-017',
         'ST1-018',
         'ST1-019',
         'ST1-020',
