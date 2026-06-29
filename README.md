@@ -10,7 +10,7 @@
 
 官方範例卡已匯入 `category_title` / `card_product_title` 為 `Starter Deck RED`、`Starter Deck YELLOW`、`Starter Deck GREEN`、`Starter Deck BLUE` 與 `Starter Deck PURPLE` 的五套起始牌組資料。五套資料都可建立 60 張牌組，並以官方 JSON 的卡號、名稱、類型、攻擊文字、效果文字與圖片 URL 轉成 runtime `GameCard`。
 
-專案開發流程已整理為 `.agents/skills/develop-braverse` Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟。
+專案開發流程已整理為 `.agents/skills/develop-braverse` Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟。工作流模板另拆為 `.agents/skills/braverse-workflow`，讓 `AGENTS.md` 保留硬規則，任務分類、驗證分級、派工提示與提交前檢查改由 Skill references 漸進式載入。
 
 CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `npm test`、`npm run lint`、`npm run build` 與手動 Playwright AI 瀏覽器驗證，不負責部署。Vercel 監聽 PR 與 push 後自動產生 Preview 部署與正式部署。GitHub Secrets 不保存 Vercel Token，所有 Vercel 連線設定在 Vercel Dashboard 完成。
 
@@ -36,8 +36,9 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已加入 `scripts/opencode-go.cmd` 與專案模型設定，使用獨立 runtime 目錄及 `OPENCODE_GO_API_KEY` 環境變數進行派工，不提交認證資料。
 - Codex 受限網路環境執行 OpenCode Go 時，需以核准的外部網路權限啟動派工；`ConnectionRefused` 且 Token 為 0 代表尚未進入模型推理。
 - OpenCode Go 只讀審查改用 `scripts/opencode-go-review.cmd` 與受限步數的 `review-fast` agent，限制讀檔範圍與工具迭代，避免多檔案 `plan` 審查超過呼叫端 timeout。
-- 目前模型路由：依任務分五級——微任務（Flash/MiMo/M3/Pro）、中型實作（Qwen Plus/M2.7/Pro/MiMo Pro）、複雜跨模組（Pro/MiMo Pro/GLM-5.1/Qwen Max）、大型 PR 審查（Kimi Code/Pro/GLM-5.1/Qwen Max）、UI 視覺分析（MiMo/Qwen Plus/K2.6/MiMo Pro）；Qwen3.6 Plus 與 GLM-5 僅備援、MiniMax M3 標 3x usage；含省 token 策略（小任務、不重複派工、reasoning low/medium、快取提示）；另提供沙箱網路阻擋繞過方案（`opencode-go-sandbox.md` 標準流程、`scripts/opencode-go-direct-review.mjs` Node.js 直接 API 呼叫）。
 - 已加入 `develop-braverse` 專案 Skill，提供漸進式載入的開發流程、架構規則、驗證與 Git、opencode-go 派工參考。
+- 已加入 `braverse-workflow` 專案 Skill，提供 Braverse 任務分類、固定開場模板、OpenCode Go / subagent 派工模板、驗證分級與 pre-commit review 清單。
+- `AGENTS.md` 已瘦身為硬性規範入口；模型路由長表、驗證矩陣、歷史回歸細節改由 `.agents/skills/braverse-workflow/references/` 與 `.agents/skills/develop-braverse/references/` 承接。
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局選擇紅色、黃色、綠色、藍色或紫色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 與 1920×1080 亦未越界且無捲軸、無 console error。
@@ -70,6 +71,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已完成 Vercel Dashboard 匯入 GitHub repo：Framework Preset Vite、Build Command `npm run build`、Output Directory `dist`、Install Command `npm ci`、Node.js Version 22。
 - 不啟用 main branch protection（個人開發者，不要求 CI 通過 + review）。
 - 待用第一支 PR 驗證 Vercel Preview 網址可正常載入並操作對局。
+- 後續新 Braverse 任務優先用 `braverse-workflow` 模板開短 thread，依任務類型選擇驗證層級，再視需要載入 `develop-braverse` 的規則、派工或 Git 參考。
 
 ## 開發指令
 

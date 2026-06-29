@@ -1,0 +1,4 @@
+﻿interface:
+  display_name: "Braverse Workflow"
+  short_description: "Braverse 任務模板、驗證分級、派工與提交檢查"
+  default_prompt: "Use $braverse-workflow to classify a Braverse task, choose validation, and prepare a focused handoff."

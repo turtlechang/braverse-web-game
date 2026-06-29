@@ -99,9 +99,9 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 ### 測試
 
 - 修改任何規則邏輯時，**同步新增或更新對應的 `.test.ts`**。
-  - 目前共有 604 項單元測試；ST5 紫色起始牌組已完整支援，包含跨餅乾／場景的 `field-to-trash`、可選抽牌、對手棄牌區門檻、紫色 LV.1 戰鬥區餅乾代價、陷阱付款與目標、非昏厥離場補位、隨機棄牌不改變剩餘手牌順序、ST5-004 昏厥後由 AI 先完成強制棄牌再進入補位，並在同一公開視窗展示 AI 因效果棄置的全部卡牌；Windswept Valley 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。陷阱具有必選目標但目前沒有足量合法目標時，必須由 `getTrapCandidates` 排除，避免玩家 UI 與 AI 誤判可發動；紫色固定種子 6、19、29、33 為回歸範圍。UI 與 AI 共用相同合法目標及付款規則。
-- Playwright 種子 1–20 驗證：AI 必須在種子 1–20 皆能正常結束對局，不出現卡住或無限迴圈；瀏覽器另驗證 1920x1080、1907x868、1600x900、1536x864、1536x694、1538x578、1440x960、1366x768、1280x720、1024x576、900x506、798x698、768x432、625x351、600x338 維持 16:9、無垂直捲軸；雙方場地維持戰鬥區 55%、支援區 45%，並覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取／取消、資源浮層與鍵盤操作；900px 以下切換為頂部階段列、中央牌桌、底部工具列，主要遊戲區域全部位於畫布內，玩家場地／支援區／手牌與左右資源區未超出畫布且互不遮蔽，戰鬥卡橫置不改變卡牌容器、戰鬥區、支援區或玩家場地尺寸、確認式大卡縮小／返回，以及既有 break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）。
-- 已知驗證限制：完整 `npm run test:ai:browser` 目前會在 1920×1080 的玩家手牌覆蓋支援區斷言失敗；相同座標已在未修改的 `aa6ef61` 重現，屬既有版面基線問題。藍牌專項瀏覽器驗證於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標及決策流程；修正版面前不得宣稱完整 Playwright 全綠。
+- 目前單元測試數、ST5 紫色起始牌組回歸範圍、Playwright 解析度矩陣與已知瀏覽器限制，維護於 `README.md` 與 `.agents/skills/braverse-workflow/references/verification-levels.md`；避免在每次任務中重複載入完整歷史清單。
+- AI 完整對戰驗證仍以固定種子範圍確認可正常結束，不得用特製種子或硬編碼起始卡掩蓋規則或 AI 問題。
+- 完整 `npm run test:ai:browser` 目前有既有 1920×1080 版面基線限制；修正版面前不得宣稱完整 Playwright 全綠。
 - UI 互動或付款流程有變更時，除單元測試外，必須以瀏覽器實際操作至少驗證合法與不合法兩條路徑。
 - demo／`test-state` 僅能作為局部驗證；回報時必須明確標示「僅 demo，尚未證明正式狀態已修改」。只有真實牌組資料、正式狀態流程與瀏覽器操作均通過後，才能宣稱正式功能完成。
 - 測試總數或瀏覽器驗證結果改變時，同步更新本文件與 `README.md`，不可保留過期數字。
@@ -207,42 +207,14 @@ Codex App 在此專案中擔任**指揮官**角色，職責範圍僅限於：
 
 ## opencode-go 派工策略
 
-由 Codex 派工時依本節規則透過 `--model` 選擇：
+由 Codex 派工時先讀 `.agents/skills/braverse-workflow/references/delegation-template.md`；需要完整模型路由、沙箱網路處理或 review-fast agent 細節時，再讀 `.agents/skills/develop-braverse/references/delegation.md`。
 
 - **預設優先派工**：使用者已同意將本專案原始碼內容傳送至 OpenCode Go 外部 API。凡 OpenCode Go 可可靠完成的唯讀審查、測試補強、文件更新、簡單重構、CRUD 與一般實作，預設先派給 OpenCode Go，以降低 Codex GPT 額度消耗；Codex 主線負責需求拆解、規則裁決、跨模組整合、高風險修改與最終驗證。
 - **平台核准仍優先**：上述同意是專案偏好，不取代 Codex 執行環境的安全審查或外部網路核准；若工具要求再次核准，仍須依平台流程處理，不得繞過。
 - **避免重複耗用**：同一子任務原則上只派工一次；結果完整即可直接整合，不再用另一個 GPT／OpenCode 模型重做。只有結果不完整、測試失敗或重大疑點時才依升級機制追加派工。
-- **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。若出現 `Error: Session not found` / `In a restricted Codex environment`，參考 `develop-braverse/references/opencode-go-sandbox.md` 的標準流程處理。
+- **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。若出現 `Error: Session not found` / `In a restricted Codex environment`，參考 `.agents/skills/develop-braverse/references/opencode-go-sandbox.md` 的標準流程處理。
 - **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個檔案。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
-
-### 分級路由表
-
-| 任務分級 | 優先 | 備援一 | 備援二 | 備援三 |
-|---|---|---|---|---|
-| 微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀審查） | `opencode-go/deepseek-v4-flash` | `opencode-go/mimo-v2.5` | `opencode-go/minimax-m3` | `opencode-go/deepseek-v4-pro` |
-| 中型一般實作（多數 CRUD、一般功能、中等測試、文件更新） | `opencode-go/qwen3.7-plus` | `opencode-go/minimax-m2.7` | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` |
-| 複雜跨模組實作（規則引擎、React UI、AI 決策、整合、測試套件、完整驗證鏈） | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
-| 大型 PR 審查（多檔案跨模組） | `opencode-go/kimi-k2.7-code` | `opencode-go/deepseek-v4-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
-| UI 截圖／視覺分析 | `opencode-go/mimo-v2.5` | `opencode-go/qwen3.7-plus` | `opencode-go/kimi-k2.6` | `opencode-go/mimo-v2.5-pro` |
-
-### 模型使用限制
-
-- **Qwen3.6 Plus**：僅作為 Qwen3.7 Plus 服務異常時的降級備援，不作一般程式碼首選。
-- **GLM-5**：僅作為 GLM-5.1 服務異常時的降級備援。
-- **Kimi K2.6**：不作一般程式碼首選；僅用於 UI 截圖／視覺分析備援鏈。
-- **Qwen3.7 Max**：僅在前級模型（DeepSeek V4 Pro、MiMo V2.5 Pro、GLM-5.1）皆失敗或任務極高複雜度時使用。
-- **MiniMax M3**：OpenCode Go 中繼資料名稱標示 **3x usage**，代表用量計算可能有倍率，實際成本應依 OpenCode Go 當期帳務規則確認，不可只看每百萬 token 標價；僅用於微任務備援鏈。
-- **使用者明確指定模式或模型** → 優先採用使用者指定。
-
-### 省 token 規則
-
-1. **任務拆分**：先拆成小任務，提供明確檔案清單與驗收條件，避免一次性龐大提示。
-2. **不重複派工**：同一子任務不平行重複派工；結果可用直接整合。
-3. **Flash 升級條件**：Flash 失敗一次、任務範圍意外擴大、漏改、或測試失敗時，直接升級至 Pro，不得連續重抽 Flash。
-4. **逾時判斷**：先分辨逾時原因——token=0 代表網路／連線問題（檢查權限與沙箱），token>0 代表模型已在背景執行（用 `session list` 檢查）。
-5. **Reasoning effort**：支援 reasoning effort 的模型一般使用 `low` 或 `medium`；僅在複雜規則推理、架構設計或疑難除錯時使用 `high`。
-6. **限制輸出**：提示詞中明確要求簡潔回答，限制不必要的長篇說明。
-7. **快取命中**：利用固定提示模板與檔案順序，提高 API 端快取命中率，降低重複 token 消耗。
+- **模型與成本細節**：完整分級路由表、模型限制、省 token 規則與逾時判斷維護於 `.agents/skills/develop-braverse/references/delegation.md`，避免根目錄規範過厚。
 
 ## 禁止提交
 
