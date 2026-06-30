@@ -129,3 +129,9 @@
 ### 尚未實作：一般移動與持續型條件效果
 
 - 起始牌組 FLIP 的 HP 增加已支援；其他任意卡牌移動與持續型條件效果尚未支援。
+## BS1 Brave Beginning Phase 1/2 effect adapter notes
+
+- Phase 1 已建立 `official-brave-beginning-bs1.en.json` 的轉接盤點測試：99 筆資料、78 個 base card number，類型分布為 cookie 72、flip 12、item 6、trap 6、stage 3。
+- Phase 2 先支援可直接映射到既有規則引擎的 BS1 文字：OnPlay/Activate/FLIP 的棄手牌代價傷害、`Return this Cookie to your hand`、faint 後 `break-to-trash`、支援區送棄牌區代價、`deck-to-support`、`set-active`，以及 `When your turn ends` 的 endPhase 判定。
+- `convertOfficialCardEffects` 現在可用 `baseCardNumber` 處理 BS1 變體卡號，例如 `BS1-002@1`，但一般卡號仍優先使用 `cardNumber`，避免測試用假卡或舊資料被 base 欄位誤覆蓋。
+- Phase 3 仍需另行處理高風險 BS1 效果：攻擊重新指定、全場/全對手傷害、依休息區或支援區數量變動的效果、從休息區登場、HP 送棄牌區代價、以及「本回合支援區減少」等需要新增狀態追蹤的條件。

@@ -4,6 +4,7 @@ import officialYellowSample from '../../data/cards/official-starter-deck-yellow.
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.json'
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
+import officialBraveBeginning from '../../data/cards/official-brave-beginning-bs1.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
@@ -20,6 +21,7 @@ const yellowCards = officialYellowSample.cards as OfficialCardRecord[]
 const greenCards = officialGreenSample.cards as OfficialCardRecord[]
 const blueCards = officialBlueSample.cards as OfficialCardRecord[]
 const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
+const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
 
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
@@ -74,6 +76,18 @@ const findPurpleCard = (cardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing purple sample card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findBraveBeginningCard = (baseCardNumber: string) => {
+  const card = braveBeginningCards.find(
+    (candidate) => candidate.baseCardNumber === baseCardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing Brave Beginning sample card ${baseCardNumber}`)
   }
 
   return card
@@ -1260,6 +1274,120 @@ describe('Starter Deck RED official effect adapter', () => {
         restSource: true,
         triggered: true,
       })
+    })
+  })
+
+  describe('Brave Beginning BS1 adapter Phase 1 and 2 coverage', () => {
+    it('imports the BS1 sample with expected record and base-card counts', () => {
+      const uniqueBaseCards = new Set(
+        braveBeginningCards.map((card) => card.baseCardNumber),
+      )
+      const typeCounts = braveBeginningCards.reduce<Record<string, number>>(
+        (counts, card) => ({
+          ...counts,
+          [card.type]: (counts[card.type] ?? 0) + 1,
+        }),
+        {},
+      )
+
+      expect(braveBeginningCards).toHaveLength(99)
+      expect(uniqueBaseCards.size).toBe(78)
+      expect(typeCounts).toMatchObject({
+        cookie: 72,
+        flip: 12,
+        item: 6,
+        trap: 6,
+        stage: 3,
+      })
+    })
+
+    it('BS1-001 converts OnPlay discard cost into opponent damage', () => {
+      const skill = convertOfficialCookieSkill(findBraveBeginningCard('BS1-001'))
+
+      expect(skill).toMatchObject({
+        trigger: 'on-play',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
+    })
+
+    it('BS1-002 converts FLIP discard cost damage for base and variants', () => {
+      const baseFlip = convertOfficialFlipAbility(
+        findBraveBeginningCard('BS1-002'),
+      )
+      const variant = braveBeginningCards.find(
+        (card) => card.cardNumber === 'BS1-002@1',
+      )
+
+      expect(baseFlip).toMatchObject({
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
+      expect(variant).toBeDefined()
+      expect(convertOfficialFlipAbility(variant as OfficialCardRecord))
+        .toMatchObject(baseFlip ?? {})
+    })
+
+    it('BS1-004 converts activate return-this-cookie-to-hand', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-004')))
+        .toMatchObject({
+          trigger: 'activate',
+          cost: { energy: { red: 2 }, discardHand: 0 },
+          effects: [
+            {
+              kind: 'return-to-hand',
+              target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            },
+          ],
+        })
+    })
+
+    it('BS1-035 converts faint break-to-trash wording', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-035')))
+        .toMatchObject({
+          trigger: 'passive',
+          faint: true,
+          effects: [{ kind: 'break-to-trash', max: 1, exactLevel: 1 }],
+        })
+    })
+
+    it('BS1-063 converts support-to-trash cost into deck-to-support active', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-063')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { supportToTrash: 1 },
+          effects: [{ kind: 'deck-to-support', amount: 1 }],
+        })
+    })
+
+    it('BS1-066 converts end-of-turn support activation', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-066')))
+        .toMatchObject({
+          trigger: 'passive',
+          endPhase: true,
+          effects: [{ kind: 'set-active', supportCount: 1 }],
+        })
+    })
+
+    it('BS1-073 converts support-to-trash cost into set-active', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-073')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { supportToTrash: 1 },
+          effects: [{ kind: 'set-active', supportCount: 1 }],
+        })
     })
   })
 })

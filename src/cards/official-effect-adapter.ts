@@ -135,8 +135,8 @@ const isUnsupportedBracketCost = (text: string): boolean => {
 const COST_OR_MARKER_RE = /\{[A-Za-z0-9_]+\}/g
 const BRACKET_COST_RE = /(?:<|《)[^>》]*(?:>|》)/g
 const DRAW_ONLY_RE = /^(?:You can\s+)?Draw\s+(up to\s+)?(\d+)\s+card(?:s)?\s+from\s+your\s+deck\.?$/i
-const DECK_TO_SUPPORT_RE = /^Take\s+(\d+)\s+card(?:s)?\s+from\s+the\s+top\s+your\s+deck\s+and\s+place\s+(?:it|them)\s+in\s+your\s+support\s+area\s+as\s+active\.?$/i
-const BREAK_TO_TRASH_RE = /^(?:If\s+your\s+break\s+area\s+is\s+LV\.(\d+)\s+or\s+higher,\s+)?Select\s+up\s+to\s+(\d+)\s+LV\.(\d+)\s+card\s+from\s+your\s+break\s+area\s+and\s+place\s+it\s+in\s+the\s+trash\.?$/i
+const DECK_TO_SUPPORT_RE = /^Take\s+(\d+)\s+card(?:s)?\s+from\s+the\s+top(?:\s+of)?\s+your\s+deck\s+and\s+place\s+(?:it|them)\s+in\s+your\s+support\s+area\s+as\s+active\.?$/i
+const BREAK_TO_TRASH_RE = /^(?:If\s+your\s+break\s+area\s+is\s+LV\.(\d+)\s+or\s+higher,\s+)?Select\s+up\s+to\s+(\d+)\s+LV\.(\d+)\s+(?:card|Cookie)\s+(?:in|from)\s+your\s+break\s+area(?:\s+and|\.)\s+place\s+(?:it|that Cookie)\s+in\s+the\s+trash\.?$/i
 
 const stripEffectText = (text: string): string =>
   text.replace(COST_OR_MARKER_RE, '').replace(BRACKET_COST_RE, '').replace(/\s+/g, ' ').trim()
@@ -209,7 +209,8 @@ interface ParsedBreakToTrash {
 }
 
 const parseBreakToTrash = (stripped: string): ParsedBreakToTrash | null => {
-  const match = stripped.match(BREAK_TO_TRASH_RE)
+  const normalized = stripped.replace(/^When this Cookie faints,\s*/i, '')
+  const match = normalized.match(BREAK_TO_TRASH_RE)
   return match
     ? {
         max: Number(match[2]),
@@ -223,6 +224,9 @@ export const convertOfficialCardEffects = (
   card: OfficialCardRecord,
 ): OfficialEffectConversion => {
   const sourceText = getEffectText(card)
+  const cardKey = card.cardNumber.includes('@')
+    ? card.baseCardNumber || card.cardNumber.split('@')[0]
+    : card.cardNumber
 
   if (!sourceText) {
     return {
@@ -379,7 +383,7 @@ export const convertOfficialCardEffects = (
       } satisfies CardEffect as CardEffect,
     ],
   }
-  const exactEffects = exactStarterEffects[card.cardNumber]
+  const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
     return {
       status: 'supported',
@@ -430,6 +434,28 @@ export const convertOfficialCardEffects = (
             amount: drawMatch,
           },
         ],
+      }
+    }
+    const breakToTrashParsed = parseBreakToTrash(stripEffectText(sourceText))
+    if (breakToTrashParsed) {
+      const effect: CardEffect = {
+        kind: 'break-to-trash',
+        max: breakToTrashParsed.max,
+        exactLevel: breakToTrashParsed.exactLevel,
+      }
+
+      if (breakToTrashParsed.conditionLevel) {
+        effect.condition = {
+          kind: 'break-level-at-least',
+          level: breakToTrashParsed.conditionLevel,
+        }
+      }
+
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [effect],
       }
     }
   }
@@ -674,6 +700,25 @@ export const convertOfficialCardEffects = (
       }
     }
 
+    if (/Return\s+this\s+Cookie\s+to\s+your\s+hand/i.test(sourceText)) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'return-to-hand',
+            target: {
+              side: 'self',
+              min: 1,
+              max: 1,
+              sourceOnly: true,
+            },
+          },
+        ],
+      }
+    }
+
     const randomDiscardMatch = sourceText.match(
       /Place\s+(\d+)\s+random\s+card(?:s)?\s+from\s+your\s+opponent['']s\s+hand\s+into\s+the\s+trash/i,
     )
@@ -746,6 +791,23 @@ export const convertOfficialCardEffects = (
           {
             kind: 'support-to-hand',
             amount: Number(supportToHandMatch[1]),
+          },
+        ],
+      }
+    }
+
+    const setSupportActiveMatch = sourceText.match(
+      /set\s+(?:up to\s+)?(\d+)\s+(?:of\s+)?card\s+from\s+your\s+support\s+area\s+as\s+active/i,
+    )
+    if (setSupportActiveMatch) {
+      return {
+        status: 'supported',
+        cardNumber: card.cardNumber,
+        sourceText,
+        effects: [
+          {
+            kind: 'set-active',
+            supportCount: Number(setSupportActiveMatch[1]),
           },
         ],
       }
@@ -934,6 +996,22 @@ export const convertOfficialFlipAbility = (
       effects: card.cardNumber === 'ST5-003'
         ? [{ kind: 'draw-up-to', max: drawAmount }]
         : [{ kind: 'draw', amount: drawAmount }],
+    }
+  }
+
+  const target = parseTarget(card.flipText)
+  const damageMatch = card.flipText.match(/receives?\s+(\d+)\s+damage/i)
+  if (target && damageMatch) {
+    return {
+      text: card.flipText,
+      cost: parseAbilityCost(card.flipText),
+      effects: [
+        {
+          kind: 'damage',
+          amount: Number(damageMatch[1]),
+          target,
+        },
+      ],
     }
   }
 
@@ -1138,6 +1216,8 @@ export const convertOfficialCookieSkill = (
     text: conversion.sourceText,
     effects: conversion.effects,
     faint: /When this Cookie faints/i.test(card.skill.text),
-    endPhase: /(?:at the )?end of (?:your|this) turn/i.test(card.skill.text),
+    endPhase: /(?:at the )?end of (?:your|this) turn|your turn ends/i.test(
+      card.skill.text,
+    ),
   }
 }
