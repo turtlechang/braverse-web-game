@@ -16,6 +16,7 @@ import type {
 import { OFFICIAL_DECK_RECIPES } from '../../game'
 import type { CustomDeck } from '../../game/custom-deck'
 import { loadCustomDecks } from '../../game/custom-deck'
+import { getCardPoolEntry } from '../../game/card-pool'
 import {
   CardFace,
   CardEffectText,
@@ -899,6 +900,7 @@ export function PauseModal({
 export interface DeckListModalProps {
   deckListOwner: 'player' | 'ai'
   viewedDeck: DeckChoice
+  customDeck?: CustomDeck | null
   onSetDeckListOwner: (owner: 'player' | 'ai') => void
   onClose: () => void
 }
@@ -906,9 +908,13 @@ export interface DeckListModalProps {
 export function DeckListModal({
   deckListOwner,
   viewedDeck,
+  customDeck,
   onSetDeckListOwner,
   onClose,
 }: DeckListModalProps) {
+  const showCustomDeck = viewedDeck === 'custom' && customDeck
+  const officialRecipe = viewedDeck === 'custom' ? null : OFFICIAL_DECK_RECIPES[viewedDeck]
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="deck-list-modal" role="dialog">
@@ -921,7 +927,11 @@ export function DeckListModal({
           <X aria-hidden="true" />
         </button>
         <div className="deck-reference-image">
-          {viewedDeck === 'red' ? (
+          {showCustomDeck ? (
+            <div className="deck-reference-placeholder">
+              自訂牌組使用卡池資料，請參考右側卡牌清單。
+            </div>
+          ) : viewedDeck === 'red' ? (
             <img
               src="/reference/starter-deck-red.webp"
               alt="官方紅色起始牌組套餐組合表"
@@ -952,20 +962,49 @@ export function DeckListModal({
               查看 AI 牌組
             </button>
           </div>
-          <h2>{deckChoiceLabel[viewedDeck]}起始牌組</h2>
-          <p>
-            共 {OFFICIAL_DECK_RECIPES[viewedDeck].length} 種卡、
-            {OFFICIAL_DECK_RECIPES[viewedDeck].reduce((sum, e) => sum + e.count, 0)} 張。
-          </p>
-          <div className="deck-list-table">
-            {OFFICIAL_DECK_RECIPES[viewedDeck].map((entry) => (
-              <div key={entry.cardNumber}>
-                <code>{entry.cardNumber}</code>
-                <span>{entry.name}</span>
-                <strong>{entry.count}</strong>
+          <h2>
+            {showCustomDeck
+              ? customDeck.name
+              : `${deckChoiceLabel[viewedDeck]}起始牌組`}
+          </h2>
+          {showCustomDeck ? (
+            <>
+              <p>
+                共 {customDeck.entries.length} 種卡、
+                {customDeck.entries.reduce((sum, e) => sum + e.count, 0)} 張。
+              </p>
+              <div className="deck-list-table">
+                {customDeck.entries.map((entry) => {
+                  const poolEntry = getCardPoolEntry(entry.cardNumber)
+                  return (
+                    <div key={entry.cardNumber}>
+                      <code>{entry.cardNumber}</code>
+                      <span>{poolEntry?.name ?? entry.cardNumber}</span>
+                      <strong>{entry.count}</strong>
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
+            </>
+          ) : officialRecipe ? (
+            <>
+              <p>
+                共 {officialRecipe.length} 種卡、
+                {officialRecipe.reduce((sum, e) => sum + e.count, 0)} 張。
+              </p>
+              <div className="deck-list-table">
+                {officialRecipe.map((entry) => (
+                  <div key={entry.cardNumber}>
+                    <code>{entry.cardNumber}</code>
+                    <span>{entry.name}</span>
+                    <strong>{entry.count}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p>目前沒有可顯示的牌組清單。</p>
+          )}
         </div>
       </section>
     </div>

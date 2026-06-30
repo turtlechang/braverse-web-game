@@ -1,5 +1,5 @@
 import { Sparkles, Swords } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import {
   canActivateStage,
@@ -55,6 +55,13 @@ import { useMatchDialogs } from './hooks/useMatchDialogs'
 import { usePendingEffect } from './hooks/usePendingEffect'
 import { useAiTurn } from './hooks/useAiTurn'
 import { useMatchController } from './hooks/useMatchController'
+import { MainMenu } from './components/MainMenu'
+import { DeckEditorModal } from './components/modals/DeckEditorModal'
+import {
+  loadCustomDecks,
+  validateCustomDeck,
+  type CustomDeck,
+} from './game/custom-deck'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 
@@ -64,6 +71,18 @@ const testStateConfig = parseTestStateConfig(
 )
 
 function App() {
+  const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
+    testStateConfig ? 'battle' : 'menu',
+  )
+  const [savedDecks, setSavedDecks] = useState<CustomDeck[]>(() =>
+    testStateConfig ? [] : loadCustomDecks(),
+  )
+  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(() =>
+    savedDecks[0]?.id ?? null,
+  )
+  const [editingDeck, setEditingDeck] = useState<CustomDeck | null>(null)
+  const [showDeckEditor, setShowDeckEditor] = useState(false)
+  const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
   const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
     null,
   )
@@ -103,6 +122,54 @@ function App() {
   })
 
   const faintActive = pending.faintActive
+  const selectedCustomDeck = useMemo(
+    () => savedDecks.find((deck) => deck.id === selectedDeckId) ?? null,
+    [savedDecks, selectedDeckId],
+  )
+  const selectedDeckValidation = useMemo(
+    () =>
+      selectedCustomDeck
+        ? validateCustomDeck(selectedCustomDeck.entries)
+        : null,
+    [selectedCustomDeck],
+  )
+
+  const refreshSavedDecks = () => {
+    const decks = loadCustomDecks()
+    setSavedDecks(decks)
+    setSelectedDeckId((current) =>
+      current && decks.some((deck) => deck.id === current)
+        ? current
+        : decks[0]?.id ?? null,
+    )
+  }
+
+  const handleDeckEditorSave = (deck: CustomDeck) => {
+    refreshSavedDecks()
+    setSelectedDeckId(deck.id)
+    setEditingDeck(null)
+    setShowDeckEditor(false)
+    setBattleEntryError(null)
+  }
+
+  const startBattleFromMenu = () => {
+    if (!selectedCustomDeck || !selectedDeckValidation) {
+      setBattleEntryError('尚未選擇合法牌組，無法進入對戰。')
+      return
+    }
+    if (!selectedDeckValidation.isValid) {
+      setBattleEntryError('目前牌組不合法，請先修正後再開始對戰。')
+      return
+    }
+
+    setSelectedHandCardId(null)
+    dialogs.closeResourcePopover()
+    pending.resetEffectContext()
+    ai.resetAiCounts()
+    match.handleDeckSelection('custom', selectedCustomDeck)
+    setBattleEntryError(null)
+    setScreen('battle')
+  }
 
   const resetGame = (
     nextConfig: { player: DeckChoice; ai: DeckChoice },
@@ -114,6 +181,9 @@ function App() {
     pending.resetEffectContext()
     ai.resetAiCounts()
     match.setMessage(nextMessage)
+    if (!testStateConfig) {
+      setScreen('menu')
+    }
   }
 
   const interactionLocked =
@@ -216,6 +286,44 @@ function App() {
     playerHand.some((card) => card.instanceId === selectedHandCardId)
       ? selectedHandCardId
       : null
+
+  if (screen === 'menu') {
+    return (
+      <>
+        <MainMenu
+          decks={savedDecks}
+          selectedDeckId={selectedDeckId}
+          selectedValidation={selectedDeckValidation}
+          battleError={battleEntryError}
+          onSelectDeck={(deckId) => {
+            setSelectedDeckId(deckId)
+            setBattleEntryError(null)
+          }}
+          onStartBattle={startBattleFromMenu}
+          onCreateDeck={() => {
+            setEditingDeck(null)
+            setShowDeckEditor(true)
+          }}
+          onEditDeck={(deck) => {
+            setEditingDeck(deck)
+            setShowDeckEditor(true)
+          }}
+          onRefreshDecks={refreshSavedDecks}
+        />
+        {showDeckEditor && (
+          <DeckEditorModal
+            initialDeck={editingDeck ?? undefined}
+            onSave={handleDeckEditorSave}
+            onClose={() => {
+              setShowDeckEditor(false)
+              setEditingDeck(null)
+              refreshSavedDecks()
+            }}
+          />
+        )}
+      </>
+    )
+  }
 
   return (
     <main className="game-shell">
@@ -1155,6 +1263,7 @@ function App() {
         <DeckListModal
           deckListOwner={dialogs.deckListOwner}
           viewedDeck={match.deckConfig[dialogs.deckListOwner]}
+          customDeck={match.selectedCustomDeck}
           onSetDeckListOwner={dialogs.openDeckList}
           onClose={dialogs.closeDeckList}
         />

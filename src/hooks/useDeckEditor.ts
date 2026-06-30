@@ -35,7 +35,7 @@ export interface DeckEditorDerived {
   getFilteredPool: () => CardPoolEntry[]
   getDeckTotalCount: () => number
   getDeckTotalCards: () => number
-  deckValidation: { valid: boolean; errors: string[] }
+  deckValidation: ReturnType<typeof validateCustomDeck>
 }
 
 export function useDeckEditor(): DeckEditorState &

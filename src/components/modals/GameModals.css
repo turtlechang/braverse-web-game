@@ -1016,6 +1016,23 @@
   font-size: 0.78rem;
 }
 
+.deck-editor-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px 0;
+}
+
+.deck-editor-stats span {
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 230, 117, 0.22);
+  border-radius: 4px;
+  background: rgba(255, 230, 117, 0.07);
+  color: #ffe675;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
 .deck-editor-deck-list {
   flex: 1;
   overflow-y: auto;
@@ -1274,6 +1291,149 @@
   font-weight: 700;
   color: #ffe674;
   font-size: 0.9rem;
+}
+
+.deck-editor-io-bar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 16px 0;
+}
+
+.deck-editor-io-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border: 1px solid rgba(113, 233, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(3, 20, 53, 0.4);
+  color: #bbdaf3;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.deck-editor-io-btn:hover {
+  background: rgba(40, 100, 180, 0.35);
+}
+
+.deck-editor-io-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.deck-editor-status {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.9);
+  border: 1px solid rgba(113, 233, 255, 0.4);
+  color: #71e9ff;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  z-index: 20;
+  animation: deck-editor-status-in 0.2s ease-out;
+}
+
+@keyframes deck-editor-status-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.deck-editor-import-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 10, 30, 0.75);
+  z-index: 30;
+  border-radius: 8px;
+}
+
+.deck-editor-import-dialog {
+  width: min(440px, 90%);
+  padding: 24px;
+  border: 1px solid rgba(113, 233, 255, 0.45);
+  border-radius: 8px;
+  background: #0b1d3e;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.deck-editor-import-title {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.deck-editor-import-hint {
+  margin: 0 0 12px;
+  color: #6a8bb0;
+  font-size: 0.78rem;
+}
+
+.deck-editor-import-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid rgba(113, 233, 255, 0.25);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.6);
+  color: #bbdaf3;
+  font-family: monospace;
+  font-size: 0.75rem;
+  resize: vertical;
+}
+
+.deck-editor-import-textarea::placeholder {
+  color: #4a6a8a;
+}
+
+.deck-editor-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.deck-editor-import-cancel,
+.deck-editor-import-confirm {
+  padding: 7px 18px;
+  border-radius: 5px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.deck-editor-import-cancel {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #bbdaf3;
+}
+
+.deck-editor-import-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.deck-editor-import-confirm {
+  border: 1px solid #ffe675;
+  background: linear-gradient(#27b8dd, #0875bd);
+  color: #fff;
+}
+
+.deck-editor-import-confirm:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.5;
 }
 
 @media (max-width: 800px) {

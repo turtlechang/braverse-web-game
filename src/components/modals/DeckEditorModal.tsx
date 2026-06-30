@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Plus, Minus, Trash2, Save } from 'lucide-react'
+import { X, Plus, Minus, Trash2, Save, Upload, Download } from 'lucide-react'
 import type { CustomDeck } from '../../game/custom-deck'
 import {
-  DECK_SIZE_MIN,
-  DECK_SIZE_MAX,
+  DECK_SIZE_REQUIRED,
+  MAX_FLIP_CARDS,
   MAX_COPIES_PER_CARD,
   loadCustomDecks,
   saveCustomDecks,
+  exportDeck,
+  importDeck,
 } from '../../game/custom-deck'
 import { getCardPoolEntry, type CardPoolEntry } from '../../game/card-pool'
 import { useDeckEditor } from '../../hooks/useDeckEditor'
@@ -86,8 +88,15 @@ export function DeckEditorModal({
   onClose,
 }: DeckEditorModalProps) {
   const editor = useDeckEditor()
+  const { loadDeck } = editor
   const [tooltipCard, setTooltipCard] = useState<string | null>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (initialDeck) {
+      loadDeck(initialDeck)
+    }
+  }, [initialDeck, loadDeck])
 
   useEffect(() => {
     if (!tooltipCard) return
@@ -125,7 +134,59 @@ export function DeckEditorModal({
     onSave(deck)
   }, [editor, initialDeck, onSave])
 
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const statusTimeout = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  const showStatus = (msg: string) => {
+    setStatusMsg(msg)
+    clearTimeout(statusTimeout.current)
+    statusTimeout.current = setTimeout(() => setStatusMsg(null), 2500)
+  }
+
+  const handleExport = useCallback(() => {
+    if (editor.deckEntries.length === 0) {
+      showStatus('牌組是空的，無可匯出')
+      return
+    }
+    const now = new Date().toISOString()
+    const deck: CustomDeck = {
+      id: `export-${Date.now()}`,
+      name: editor.deckName || '未命名牌組',
+      entries: editor.deckEntries,
+      createdAt: now,
+      updatedAt: now,
+    }
+    const json = exportDeck(deck)
+    navigator.clipboard.writeText(json).then(
+      () => showStatus('已複製牌組資料到剪貼簿'),
+      () => showStatus('複製失敗，請手動選取文字'),
+    )
+  }, [editor])
+
+  const handleImport = useCallback(() => {
+    const result = importDeck(importText)
+    if (result.error) {
+      showStatus(result.error)
+      return
+    }
+    if (result.deck) {
+      editor.setDeckName(result.deck.name)
+      editor.clearDeck()
+      for (const entry of result.deck.entries) {
+        for (let i = 0; i < entry.count; i++) {
+          editor.addCard(entry.cardNumber)
+        }
+      }
+      setShowImportDialog(false)
+      setImportText('')
+      showStatus(`已匯入牌組「${result.deck.name}」`)
+    }
+  }, [editor, importText])
+
   const filteredPool = editor.getFilteredPool()
+  const deckStats = editor.deckValidation.stats
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -280,9 +341,23 @@ export function DeckEditorModal({
             />
             <div className="deck-editor-deck-header">
               <span>
-                {editor.getDeckTotalCount()} / {DECK_SIZE_MIN}~{DECK_SIZE_MAX} 張
+                {deckStats.totalCards} / {DECK_SIZE_REQUIRED} 張
                 （{editor.getDeckTotalCards()} 種）
               </span>
+            </div>
+            <div className="deck-editor-stats">
+              <span>FLIP：{deckStats.flipCards} / {MAX_FLIP_CARDS}</span>
+              <span>餅乾卡：{deckStats.cookieCards}</span>
+            </div>
+            <div className="deck-editor-io-bar">
+              <button type="button" className="deck-editor-io-btn" onClick={handleExport}>
+                <Download aria-hidden="true" />
+                匯出
+              </button>
+              <button type="button" className="deck-editor-io-btn" onClick={() => setShowImportDialog(true)}>
+                <Upload aria-hidden="true" />
+                匯入
+              </button>
             </div>
             <div className="deck-editor-deck-list">
               {editor.deckEntries.map((entry) => {
@@ -372,6 +447,42 @@ export function DeckEditorModal({
             )}
           </div>
         </div>
+        {statusMsg && <div className="deck-editor-status">{statusMsg}</div>}
+        {showImportDialog && (
+          <div className="deck-editor-import-overlay">
+            <div className="deck-editor-import-dialog">
+              <span className="deck-editor-import-title">匯入牌組</span>
+              <p className="deck-editor-import-hint">貼上牌組 JSON 資料</p>
+              <textarea
+                className="deck-editor-import-textarea"
+                rows={10}
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder='{"name":"我的牌組","entries":[{"cardNumber":"ST4-001","count":2}]}'
+              />
+              <div className="deck-editor-import-actions">
+                <button
+                  type="button"
+                  className="deck-editor-import-cancel"
+                  onClick={() => {
+                    setShowImportDialog(false)
+                    setImportText('')
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  className="deck-editor-import-confirm"
+                  disabled={!importText.trim()}
+                  onClick={handleImport}
+                >
+                  匯入
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   )

@@ -1,0 +1,157 @@
+import { AlertTriangle, Pencil, Play, RefreshCw } from 'lucide-react'
+import type { DeckValidationResult } from '../game/custom-deck'
+import type { CustomDeck } from '../game/custom-deck'
+import { validateCustomDeck } from '../game/custom-deck'
+
+interface MainMenuProps {
+  decks: CustomDeck[]
+  selectedDeckId: string | null
+  selectedValidation: DeckValidationResult | null
+  battleError: string | null
+  onSelectDeck: (deckId: string) => void
+  onStartBattle: () => void
+  onCreateDeck: () => void
+  onEditDeck: (deck: CustomDeck) => void
+  onRefreshDecks: () => void
+}
+
+const formatUpdatedAt = (value: string) =>
+  new Intl.DateTimeFormat('zh-TW', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
+
+export function MainMenu({
+  decks,
+  selectedDeckId,
+  selectedValidation,
+  battleError,
+  onSelectDeck,
+  onStartBattle,
+  onCreateDeck,
+  onEditDeck,
+  onRefreshDecks,
+}: MainMenuProps) {
+  const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
+
+  return (
+    <main className="main-menu-shell">
+      <section className="main-menu-panel" aria-labelledby="main-menu-title">
+        <div className="main-menu-heading">
+          <span>CookieRun Braverse</span>
+          <h1 id="main-menu-title">薑餅人對戰卡牌</h1>
+          <p>選擇一副合法牌組後開始對戰；AI 會在開戰前從五色起始牌組中隨機選擇。</p>
+        </div>
+
+        <div className="main-menu-actions">
+          <button
+            type="button"
+            className="main-menu-primary"
+            onClick={onStartBattle}
+          >
+            <Play aria-hidden="true" />
+            對戰入口
+          </button>
+          <button type="button" onClick={onCreateDeck}>
+            <Pencil aria-hidden="true" />
+            牌組編輯器
+          </button>
+          <button type="button" onClick={onRefreshDecks}>
+            <RefreshCw aria-hidden="true" />
+            重新讀取
+          </button>
+        </div>
+
+        <div className="main-menu-status-grid">
+          <section className="main-menu-status">
+            <span>目前玩家牌組</span>
+            <strong>{selectedDeck?.name ?? '尚未選擇牌組'}</strong>
+            {selectedValidation ? (
+              <div className="main-menu-stat-row">
+                <span>{selectedValidation.stats.totalCards} / 60 張</span>
+                <span>FLIP {selectedValidation.stats.flipCards} / 16</span>
+                <span>餅乾卡 {selectedValidation.stats.cookieCards}</span>
+              </div>
+            ) : (
+              <p>請先建立或選擇一副自訂牌組。</p>
+            )}
+          </section>
+
+          <section className="main-menu-status">
+            <span>AI 對手牌組</span>
+            <strong>五色起始牌組隨機</strong>
+            <p>紅色、黃色、綠色、藍色、紫色會在進入對戰時決定。</p>
+          </section>
+        </div>
+
+        {(battleError || selectedValidation?.errors.length) && (
+          <div className="main-menu-errors" role="alert">
+            <AlertTriangle aria-hidden="true" />
+            <div>
+              <strong>{battleError ?? '目前牌組尚未合法'}</strong>
+              <ul>
+                {(selectedValidation?.errors ?? []).map((error) => (
+                  <li key={error}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        <section className="main-menu-decks" aria-label="已儲存牌組">
+          <div className="main-menu-section-title">
+            <span>已儲存牌組</span>
+            <button type="button" onClick={onCreateDeck}>
+              新增牌組
+            </button>
+          </div>
+          {decks.length === 0 ? (
+            <div className="main-menu-empty">
+              尚未有自訂牌組。請進入牌組編輯器建立第一副牌組。
+            </div>
+          ) : (
+            <div className="main-menu-deck-list">
+              {decks.map((deck) => {
+                const validation = validateCustomDeck(deck.entries)
+                return (
+                  <article
+                    key={deck.id}
+                    className={
+                      deck.id === selectedDeckId
+                        ? 'main-menu-deck-card is-selected'
+                        : 'main-menu-deck-card'
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="main-menu-deck-select"
+                      onClick={() => onSelectDeck(deck.id)}
+                    >
+                      <strong>{deck.name}</strong>
+                      <span>{validation.isValid ? '合法' : '需調整'}</span>
+                    </button>
+                    <div className="main-menu-deck-meta">
+                      <span>{validation.stats.totalCards} 張</span>
+                      <span>FLIP {validation.stats.flipCards}</span>
+                      <span>餅乾 {validation.stats.cookieCards}</span>
+                      <span>{formatUpdatedAt(deck.updatedAt)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="main-menu-edit-deck"
+                      onClick={() => onEditDeck(deck)}
+                    >
+                      編輯
+                    </button>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      </section>
+    </main>
+  )
+}
