@@ -1,0 +1,4178 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-06-30T06:48:39.929Z",
+    "filter": {
+      "categoryTitle": "BOOSTER PACK [BRAVE BEGINNING]",
+      "series": "BS2"
+    },
+    "importedCount": 104,
+    "imagesDownloaded": false
+  },
+  "cards": [
+    {
+      "sourceId": 44155,
+      "locale": "en",
+      "cardNumber": "BS2-001",
+      "baseCardNumber": "BS2-001",
+      "variant": null,
+      "name": "Muscle Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}》 Deals 2 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Nsb5PYrWhwmkmCY4x_0UNw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44156,
+      "locale": "en",
+      "cardNumber": "BS2-002",
+      "baseCardNumber": "BS2-002",
+      "variant": null,
+      "name": "Macaron Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{R}》 Place up to 1 of your opponent's stage cards in the trash."
+      },
+      "attackText": "《{R}{R}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ecFC25IOsLrycfXOq0ujHA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44158,
+      "locale": "en",
+      "cardNumber": "BS2-003@1",
+      "baseCardNumber": "BS2-003",
+      "variant": "1",
+      "name": "Rebel Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{R}{R}》 Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "《{R}{R}{R}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/2l97v53F00BYvHYkUzVhgA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44157,
+      "locale": "en",
+      "cardNumber": "BS2-003",
+      "baseCardNumber": "BS2-003",
+      "variant": null,
+      "name": "Rebel Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{R}{R}》 Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "《{R}{R}{R}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/J2eZ21F5zirk0uZDLGGRyg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44159,
+      "locale": "en",
+      "cardNumber": "BS2-004",
+      "baseCardNumber": "BS2-004",
+      "variant": null,
+      "name": "Cherry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}》 Deals 1 damage. Then, 《can be used as {R}.》 If one of your opponent's Cookies is LV.1, deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ezZE5Ug9vXUf-z4NvsWOng.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44160,
+      "locale": "en",
+      "cardNumber": "BS2-005",
+      "baseCardNumber": "BS2-005",
+      "variant": null,
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 1,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8Rncu_GRacYAKiwNyfCtQA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44161,
+      "locale": "en",
+      "cardNumber": "BS2-006",
+      "baseCardNumber": "BS2-006",
+      "variant": null,
+      "name": "Prickly Cacti Gloves",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "COMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}》 Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. Then, select 1 of your Cookies and place 2 of their HP cards in the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lZtHiJ-HDMyR_zStDm2hFg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44162,
+      "locale": "en",
+      "cardNumber": "BS2-007",
+      "baseCardNumber": "BS2-007",
+      "variant": null,
+      "name": "Prickly Cactus Bat",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}》 《Discard 1 {R} card.》 Select up to 1 of your opponent's LV.1 Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/MrO6ksCuGjBh1qHkIOg3ug.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44163,
+      "locale": "en",
+      "cardNumber": "BS2-008",
+      "baseCardNumber": "BS2-008",
+      "variant": null,
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/MXPE5kpWF6Ti1j5ACVMRVA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44164,
+      "locale": "en",
+      "cardNumber": "BS2-009",
+      "baseCardNumber": "BS2-009",
+      "variant": null,
+      "name": "Carrot Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}》 Deals 2 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/CAvjKPMMDWVmlTcXKl4XmA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44165,
+      "locale": "en",
+      "cardNumber": "BS2-010",
+      "baseCardNumber": "BS2-010",
+      "variant": null,
+      "name": "Vampire Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}》 Deals 1 damage. Then, 《can be used as {Y}.》 If one of your opponent's Cookies is LV.1, deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/prSi_EOkMnB400jAKScOaQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44167,
+      "locale": "en",
+      "cardNumber": "BS2-011@1",
+      "baseCardNumber": "BS2-011",
+      "variant": "1",
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{mob} 《{Y}{Y}》 Select {Y} Cookies from your break area until their total LV. sum reaches LV.3. Return those Cookies to your hand and place this Cookie into your break area."
+      },
+      "attackText": "《{Y}{Y}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/H4-rUGW7OfdW5FRQuKFYBQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44166,
+      "locale": "en",
+      "cardNumber": "BS2-011",
+      "baseCardNumber": "BS2-011",
+      "variant": null,
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{mob} 《{Y}{Y}》 Select {Y} Cookies from your break area until their total LV. sum reaches LV.3. Return those Cookies to your hand and place this Cookie into your break area."
+      },
+      "attackText": "《{Y}{Y}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/QNEdYeScFGvCIkuDj2jcxQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44168,
+      "locale": "en",
+      "cardNumber": "BS2-012",
+      "baseCardNumber": "BS2-012",
+      "variant": null,
+      "name": "Onion Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{Y}》 Place up to 1 of your opponent's stage cards in the trash."
+      },
+      "attackText": "《{Y}{Y}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BZ4Bp8qcM6cz9Xkf6bpNzw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44169,
+      "locale": "en",
+      "cardNumber": "BS2-013",
+      "baseCardNumber": "BS2-013",
+      "variant": null,
+      "name": "Wind-Up Pocket Watch",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}》 Place 1 Cookie from your battle area into your break area, then play up to 1 LV.1 Cookie from your break area.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/tH2Rc5Tc3Vu9GW3AzFjRTA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44170,
+      "locale": "en",
+      "cardNumber": "BS2-014",
+      "baseCardNumber": "BS2-014",
+      "variant": null,
+      "name": "Erratic Yakgwa Robot",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, you can return 1 LV.1 Cookie from your break area to your hand. If you did, place 1 Cookie from your hand into your break area.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/s0g6jSRSsr3Dyjmt42Zyow.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44172,
+      "locale": "en",
+      "cardNumber": "BS2-015@1",
+      "baseCardNumber": "BS2-015",
+      "variant": "1",
+      "name": "Lemon Thyme Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mob} 《{G}{G}{G}{G}》 《Place this Cookie in the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. Then, take 1 card from the top of your deck and place it in your support area as rested."
+      },
+      "attackText": "《{G}{G}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LJKxH8UHsLTqtjzL-NzVWQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44171,
+      "locale": "en",
+      "cardNumber": "BS2-015",
+      "baseCardNumber": "BS2-015",
+      "variant": null,
+      "name": "Lemon Thyme Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mob} 《{G}{G}{G}{G}》 《Place this Cookie in the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. Then, take 1 card from the top of your deck and place it in your support area as rested."
+      },
+      "attackText": "《{G}{G}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/opCUK8i6kBdlZcU-3aC5LQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44173,
+      "locale": "en",
+      "cardNumber": "BS2-016",
+      "baseCardNumber": "BS2-016",
+      "variant": null,
+      "name": "Mustard Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 1,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/myS_7nqXLXvwn2axs3AYdg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44174,
+      "locale": "en",
+      "cardNumber": "BS2-017",
+      "baseCardNumber": "BS2-017",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}》 Deals 1 damage. Then, 《can be used as {G}.》 If one of your opponent's Cookies is LV.1, deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hurnyXYHPDhm10Kfb-QkGQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44175,
+      "locale": "en",
+      "cardNumber": "BS2-018",
+      "baseCardNumber": "BS2-018",
+      "variant": null,
+      "name": "Candlelight Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{G}》 Place up to 1 of your opponent's stage cards in the trash."
+      },
+      "attackText": "《{G}{G}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/07eMDxO2zY5WxMGviF2i8A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44176,
+      "locale": "en",
+      "cardNumber": "BS2-019",
+      "baseCardNumber": "BS2-019",
+      "variant": null,
+      "name": "Cheesecake Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}》 Deals 2 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/RaH1oweqFSKd9eH1-o-2xg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44177,
+      "locale": "en",
+      "cardNumber": "BS2-020",
+      "baseCardNumber": "BS2-020",
+      "variant": null,
+      "name": "Carrot Jelly Stew",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}》 Select up to 1 of your {G} Cookies. Place 1 of their attached HP cards in your support area as rested.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Y_o5ufA4E_0UDmNRoFFbcg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44178,
+      "locale": "en",
+      "cardNumber": "BS2-021",
+      "baseCardNumber": "BS2-021",
+      "variant": null,
+      "name": "Carrot Farm Scarecrow",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, return 1 card from your support area to your hand. If you did, place 1 card from your hand into your support area as rested.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6tD1wS_-fSmvQCW3wd-e1w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44180,
+      "locale": "en",
+      "cardNumber": "BS2-022@1",
+      "baseCardNumber": "BS2-022",
+      "variant": "1",
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET SUPER RARE",
+      "level": 3,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{ap} This Cookie takes no damage from effects until the start of the player's next turn."
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TMIQKlEa5fXXlw1zGkeH4g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44179,
+      "locale": "en",
+      "cardNumber": "BS2-022",
+      "baseCardNumber": "BS2-022",
+      "variant": null,
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 3,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{ap} This Cookie takes no damage from effects until the start of the player's next turn."
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6mOixxZzqatRDXctoNqI6A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44181,
+      "locale": "en",
+      "cardNumber": "BS2-023",
+      "baseCardNumber": "BS2-023",
+      "variant": null,
+      "name": "DJ Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GpbpIEnTlqAaWEMBe7EHLw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44182,
+      "locale": "en",
+      "cardNumber": "BS2-024",
+      "baseCardNumber": "BS2-024",
+      "variant": null,
+      "name": "Strawberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 1,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8EzxM7Qeaq7E8DIXsqsixA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44183,
+      "locale": "en",
+      "cardNumber": "BS2-025",
+      "baseCardNumber": "BS2-025",
+      "variant": null,
+      "name": "Mango Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints, you can draw 1 card from your deck. If you did, discard 1 card from your hand."
+      },
+      "attackText": "《{B}{B}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/2gFHKN-KjmfO7idN-0TZ6w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44185,
+      "locale": "en",
+      "cardNumber": "BS2-026@1",
+      "baseCardNumber": "BS2-026",
+      "variant": "1",
+      "name": "Mocha Ray Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{bl} 《{B}》 (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)"
+      },
+      "attackText": "《{B}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Kj6A4Z3gByJq28hCqEKm0w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44184,
+      "locale": "en",
+      "cardNumber": "BS2-026",
+      "baseCardNumber": "BS2-026",
+      "variant": null,
+      "name": "Mocha Ray Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{bl} 《{B}》 (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)"
+      },
+      "attackText": "《{B}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kl_2c1rkfBMWvBlXhCGW-w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44187,
+      "locale": "en",
+      "cardNumber": "BS2-027@1",
+      "baseCardNumber": "BS2-027",
+      "variant": "1",
+      "name": "Cotton Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Discard 2 cards.》 Select up to 2 of your Cookies. Those Cookies gain +1 HP."
+      },
+      "attackText": "《{B}{B}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_kPhs4c5Ld8R3FmFa4iYiA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44186,
+      "locale": "en",
+      "cardNumber": "BS2-027",
+      "baseCardNumber": "BS2-027",
+      "variant": null,
+      "name": "Cotton Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Discard 2 cards.》 Select up to 2 of your Cookies. Those Cookies gain +1 HP."
+      },
+      "attackText": "《{B}{B}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5MoysRGbHhVbme7A3yxD8w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44189,
+      "locale": "en",
+      "cardNumber": "BS2-028@1",
+      "baseCardNumber": "BS2-028",
+      "variant": "1",
+      "name": "Pond Dino Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Discard 1 card.》 During this turn, your opponent cannot activate {bl}."
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/a_SL3QrSkW6BjEWxefP9tA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44188,
+      "locale": "en",
+      "cardNumber": "BS2-028",
+      "baseCardNumber": "BS2-028",
+      "variant": null,
+      "name": "Pond Dino Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Discard 1 card.》 During this turn, your opponent cannot activate {bl}."
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UHfjO53gSejLBWQBqbmIwQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44191,
+      "locale": "en",
+      "cardNumber": "BS2-029@1",
+      "baseCardNumber": "BS2-029",
+      "variant": "1",
+      "name": "Sea Fairy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Discard 1 card.》 Select up to 1 Cookie that is LV.2 or lower from your battle area and return them to your hand."
+      },
+      "attackText": "《{B}{B}{B}{B}》 Deals 4 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_3roZhb4_qaucrUZwWkCCQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44190,
+      "locale": "en",
+      "cardNumber": "BS2-029",
+      "baseCardNumber": "BS2-029",
+      "variant": null,
+      "name": "Sea Fairy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Discard 1 card.》 Select up to 1 Cookie that is LV.2 or lower from your battle area and return them to your hand."
+      },
+      "attackText": "《{B}{B}{B}{B}》 Deals 4 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mL8M1J_t1h1AdgzdO-rVKg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44195,
+      "locale": "en",
+      "cardNumber": "BS2-030",
+      "baseCardNumber": "BS2-030",
+      "variant": null,
+      "name": "Gumball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}{N}》 Deals 4 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hcvjAoG78JvSeITNV1BRwA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44197,
+      "locale": "en",
+      "cardNumber": "BS2-031@1",
+      "baseCardNumber": "BS2-031",
+      "variant": "1",
+      "name": "Black Raisin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mt} {ap} 《Discard 3 cards.》 Select up to 2 of your opponent's Cookies. Deals 2 damage to 1 of the Cookies and 1 damage to the other."
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/NjrzU9nhNvnwkOQGwTjhDQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44196,
+      "locale": "en",
+      "cardNumber": "BS2-031",
+      "baseCardNumber": "BS2-031",
+      "variant": null,
+      "name": "Black Raisin Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mt} {ap} 《Discard 3 cards.》 Select up to 2 of your opponent's Cookies. Deals 2 damage to 1 of the Cookies and 1 damage to the other."
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/dCkC36XwPy-ii9K2faZ7DQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44198,
+      "locale": "en",
+      "cardNumber": "BS2-032",
+      "baseCardNumber": "BS2-032",
+      "variant": null,
+      "name": "Blueberry Pie Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/eeS7A8kDbpfw6OEVsOqsDQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44199,
+      "locale": "en",
+      "cardNumber": "BS2-033",
+      "baseCardNumber": "BS2-033",
+      "variant": null,
+      "name": "Sorbet Shark Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《Discard 1 card.》 Set this Cookie as active."
+      },
+      "attackText": "《{B}{B}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8bZ-zKvOxP1CCpeel0AcUg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44201,
+      "locale": "en",
+      "cardNumber": "BS2-034@1",
+      "baseCardNumber": "BS2-034",
+      "variant": "1",
+      "name": "Frost Queen Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 3,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": "If your break area is LV.4 or higher, you can draw up to 2 cards from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/EKj9HdYPopcuaNRJFV3hbA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44200,
+      "locale": "en",
+      "cardNumber": "BS2-034",
+      "baseCardNumber": "BS2-034",
+      "variant": null,
+      "name": "Frost Queen Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 3,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": "If your break area is LV.4 or higher, you can draw up to 2 cards from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/dQE8GTATu6LKgmLcgR1Iow.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44202,
+      "locale": "en",
+      "cardNumber": "BS2-035",
+      "baseCardNumber": "BS2-035",
+      "variant": null,
+      "name": "Salt Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8dq_62rK3BOhT3Kwccki4g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44204,
+      "locale": "en",
+      "cardNumber": "BS2-036@1",
+      "baseCardNumber": "BS2-036",
+      "variant": "1",
+      "name": "Sherbet Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 2,
+      "hp": 5,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Select 1 LV.1 Cookie from your battle area and return them to the bottom of your deck.》 You can draw 1 card from your deck."
+      },
+      "attackText": "《{B}{B}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WYcB1j1TjyPtCqnp3DA7eg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44203,
+      "locale": "en",
+      "cardNumber": "BS2-036",
+      "baseCardNumber": "BS2-036",
+      "variant": null,
+      "name": "Sherbet Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 2,
+      "hp": 5,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Select 1 LV.1 Cookie from your battle area and return them to the bottom of your deck.》 You can draw 1 card from your deck."
+      },
+      "attackText": "《{B}{B}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/akTYuuoo7bTVL9Ehc3LFdg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44205,
+      "locale": "en",
+      "cardNumber": "BS2-037",
+      "baseCardNumber": "BS2-037",
+      "variant": null,
+      "name": "Chocolate Bonbon Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}{B}{B}》 Deals 3 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xcFDHzda0YOL4D2EGmfWQw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44207,
+      "locale": "en",
+      "cardNumber": "BS2-038",
+      "baseCardNumber": "BS2-038",
+      "variant": null,
+      "name": "Sparkling Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-zq7N3EonBCWEq3HbCa7GQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44208,
+      "locale": "en",
+      "cardNumber": "BS2-039",
+      "baseCardNumber": "BS2-039",
+      "variant": null,
+      "name": "Avocado Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mob} {t1} 《{B}》 《Discard 2 cards.》 Select up to 2 of your Cookies. During this turn, those Cookies deal +1 attack damage."
+      },
+      "attackText": "《{B}{B}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5SP8T4d_wmYIyM5AWnUeHg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44210,
+      "locale": "en",
+      "cardNumber": "BS2-040@1",
+      "baseCardNumber": "BS2-040",
+      "variant": "1",
+      "name": "Aloe Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints, view the top 3 cards of your deck. Out of the 3 cards, select 1 {B} card, show it to your opponent, and place that card in your hand. Then, return the remaining cards to the bottom of your deck in any order."
+      },
+      "attackText": "《{B}{B}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UtN1iKXjve13aM9OOnTESw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44209,
+      "locale": "en",
+      "cardNumber": "BS2-040",
+      "baseCardNumber": "BS2-040",
+      "variant": null,
+      "name": "Aloe Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints, view the top 3 cards of your deck. Out of the 3 cards, select 1 {B} card, show it to your opponent, and place that card in your hand. Then, return the remaining cards to the bottom of your deck in any order."
+      },
+      "attackText": "《{B}{B}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_bdZ-WvU9WiRo0Rm-0fX1A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44211,
+      "locale": "en",
+      "cardNumber": "BS2-041",
+      "baseCardNumber": "BS2-041",
+      "variant": null,
+      "name": "Eggnog Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/rc8w7M1Oh_4g6IfI7CkDUQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44212,
+      "locale": "en",
+      "cardNumber": "BS2-042",
+      "baseCardNumber": "BS2-042",
+      "variant": null,
+      "name": "Milk Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/XA9O1ysDoHWbUFt0Wr-LOQ.webp",
+      "officialUpdatedAt": "2026-03-27T06:11:39.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44213,
+      "locale": "en",
+      "cardNumber": "BS2-043",
+      "baseCardNumber": "BS2-043",
+      "variant": null,
+      "name": "Captain Ice Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints, 《discard 2 cards.》 Select up to 2 of your opponent's Cookies. Deals 1 damage to each of those Cookies."
+      },
+      "attackText": "《{B}{B}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wUNWgJvXClMJoZpYYmr4Kw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44214,
+      "locale": "en",
+      "cardNumber": "BS2-044",
+      "baseCardNumber": "BS2-044",
+      "variant": null,
+      "name": "Tiramisu Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}》 Deals 1 damage. Then, 《can be used as {B}.》 If one of your opponent's Cookies is LV.1, deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ZOd2pZ0SwrhXoHepceT2ZA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44216,
+      "locale": "en",
+      "cardNumber": "BS2-045@1",
+      "baseCardNumber": "BS2-045",
+      "variant": "1",
+      "name": "Parfait Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}》 Deals 1 damage. Then, if there are 6 cards or less in your hand, you can draw 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mh5b7vxj_V3zP-CEA37dog.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44215,
+      "locale": "en",
+      "cardNumber": "BS2-045",
+      "baseCardNumber": "BS2-045",
+      "variant": null,
+      "name": "Parfait Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}》 Deals 1 damage. Then, if there are 6 cards or less in your hand, you can draw 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/OkwdChy8a4soKhHd5fWisg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44218,
+      "locale": "en",
+      "cardNumber": "BS2-046",
+      "baseCardNumber": "BS2-046",
+      "variant": null,
+      "name": "Caramel Arrow Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{B}》 Place up to 1 of your opponent's stage cards in the trash."
+      },
+      "attackText": "《{B}{B}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/pvsAbfbJLsWQU4ZazTVK4w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44219,
+      "locale": "en",
+      "cardNumber": "BS2-047",
+      "baseCardNumber": "BS2-047",
+      "variant": null,
+      "name": "Diving Goggles",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}{B}{B}》 《Discard 3 cards.》 Select up to 2 of your opponent's Cookies. Deals 2 damage to each of those Cookies.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/AuwS2c2BKLJL3HqkerdWwA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44220,
+      "locale": "en",
+      "cardNumber": "BS2-048",
+      "baseCardNumber": "BS2-048",
+      "variant": null,
+      "name": "Jellied Jellyfish Potion",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}》 Draw up to 1 card for each of your opponent's Cookies that fainted during this turn.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/eZPmQhcV8jv4gQQBkNZmOA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44221,
+      "locale": "en",
+      "cardNumber": "BS2-049",
+      "baseCardNumber": "BS2-049",
+      "variant": null,
+      "name": "Salt Crystal Trident",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}》 During this battle, if 1 of your {B} Cookies faints, you can draw up to 3 cards from your deck and discard 1 card from your hand.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/j6E7sv_QOD8F5raenneQlQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44222,
+      "locale": "en",
+      "cardNumber": "BS2-050",
+      "baseCardNumber": "BS2-050",
+      "variant": null,
+      "name": "Hermit Crab's Shell",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}{B}{B}》 《Discard 1 card.》 Select up to 1 of your opponent's Cookies whose remaining HP is 3 or less and place them at the bottom of the deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/bIfSrUt-luQFwjG1xuC3cg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44223,
+      "locale": "en",
+      "cardNumber": "BS2-051",
+      "baseCardNumber": "BS2-051",
+      "variant": null,
+      "name": "Whipped Snowcream Village",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{B}{B}》 Place in your stage area.\r\n{mob} 《Card Rests.》 《Discard 1 card.》 Select up to 1 of your Cookies. During this turn, that Cookie deals +1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/CM8yKWqjXYHM8CKL2r8nFQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44224,
+      "locale": "en",
+      "cardNumber": "BS2-052",
+      "baseCardNumber": "BS2-052",
+      "variant": null,
+      "name": "Kumiho Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/55Mtpdctk4x4Kk_TMoawOg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44225,
+      "locale": "en",
+      "cardNumber": "BS2-053",
+      "baseCardNumber": "BS2-053",
+      "variant": null,
+      "name": "Ninja Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LEWAgB35Lb7moMjUkmu1NA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44226,
+      "locale": "en",
+      "cardNumber": "BS2-054",
+      "baseCardNumber": "BS2-054",
+      "variant": null,
+      "name": "Dino-Sour Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 1,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hgfE7DaftDf3M6vOS0l5Hw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44228,
+      "locale": "en",
+      "cardNumber": "BS2-055@1",
+      "baseCardNumber": "BS2-055",
+      "variant": "1",
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place all LV.2 or lower Cookies from both battle areas into the trash."
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/irXQmzAJ3iJlzHdrpmyx0g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44227,
+      "locale": "en",
+      "cardNumber": "BS2-055",
+      "baseCardNumber": "BS2-055",
+      "variant": null,
+      "name": "Poison Mushroom Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place all LV.2 or lower Cookies from both battle areas into the trash."
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ebU68c8QqSAV5JnwQVopEQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44229,
+      "locale": "en",
+      "cardNumber": "BS2-056",
+      "baseCardNumber": "BS2-056",
+      "variant": null,
+      "name": "Raspberry Mousse Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 Deals 1 damage.",
+      "flipText": "《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-TekQQpSs7uzh2mV1v6BWw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44230,
+      "locale": "en",
+      "cardNumber": "BS2-057",
+      "baseCardNumber": "BS2-057",
+      "variant": null,
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place up to 1 of your opponent's stage cards in the trash."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8RQKaSDUEtjvgtwOYxCokg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44232,
+      "locale": "en",
+      "cardNumber": "BS2-058@1",
+      "baseCardNumber": "BS2-058",
+      "variant": "1",
+      "name": "Wind Archer Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place up to 1 of your opponent's LV.3 Cookies from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}{P}{P}》 Deals 4 damage. Then, if there are 15 cards or more in your trash, deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0pCcR1u4J_43cEBGEzmUAA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44231,
+      "locale": "en",
+      "cardNumber": "BS2-058",
+      "baseCardNumber": "BS2-058",
+      "variant": null,
+      "name": "Wind Archer Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place up to 1 of your opponent's LV.3 Cookies from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}{P}{P}》 Deals 4 damage. Then, if there are 15 cards or more in your trash, deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/iUBloIXNZv9yWyBN8LQDHA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44233,
+      "locale": "en",
+      "cardNumber": "BS2-059",
+      "baseCardNumber": "BS2-059",
+      "variant": null,
+      "name": "Cherry Blossom Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WW2bsLfBX-TI4m1q39XvTw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44234,
+      "locale": "en",
+      "cardNumber": "BS2-060",
+      "baseCardNumber": "BS2-060",
+      "variant": null,
+      "name": "Beet Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints and your opponent has 20 cards or more in their trash, you can draw 1 card from your deck."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/POVP5gz3rs-uJlLwd6B_OA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44236,
+      "locale": "en",
+      "cardNumber": "BS2-061@1",
+      "baseCardNumber": "BS2-061",
+      "variant": "1",
+      "name": "Hydrangea Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": null,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} Select up to 3 cards from your trash that do not have FLIP. Return those cards to your deck and shuffle it."
+      },
+      "attackText": "《{P}{P}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Ktq3mxv7v03Gne5UYNtGwQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44235,
+      "locale": "en",
+      "cardNumber": "BS2-061",
+      "baseCardNumber": "BS2-061",
+      "variant": null,
+      "name": "Hydrangea Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} Select up to 3 cards from your trash that do not have FLIP. Return those cards to your deck and shuffle it."
+      },
+      "attackText": "《{P}{P}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/yIweW8mjIKm-t9ohsoHlHQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44238,
+      "locale": "en",
+      "cardNumber": "BS2-062@1",
+      "baseCardNumber": "BS2-062",
+      "variant": "1",
+      "name": "Starfruit Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Other than this Cookie, you can place 1 {P} Cookie that is LV.2 or lower from your battle area into the trash. If you did, place up to 1 of your opponent's Cookies that is LV.2 or lower from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/KByBwJtW840Cu_3zM3c9xw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44237,
+      "locale": "en",
+      "cardNumber": "BS2-062",
+      "baseCardNumber": "BS2-062",
+      "variant": null,
+      "name": "Starfruit Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Other than this Cookie, you can place 1 {P} Cookie that is LV.2 or lower from your battle area into the trash. If you did, place up to 1 of your opponent's Cookies that is LV.2 or lower from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VBw3je6MrKdCHvet66hgMQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44240,
+      "locale": "en",
+      "cardNumber": "BS2-063@1",
+      "baseCardNumber": "BS2-063",
+      "variant": "1",
+      "name": "Space Doughnut",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": "《Discard 1 card.》 If your break area is LV.3 or higher, place either 1 of your opponent's Cookies that is LV.2 or lower from their battle area or 1 stage card from their stage area into the trash.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LG1-iLMG93u0AWj10la-mA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44239,
+      "locale": "en",
+      "cardNumber": "BS2-063",
+      "baseCardNumber": "BS2-063",
+      "variant": null,
+      "name": "Space Doughnut",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 3,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": "《Discard 1 card.》 If your break area is LV.3 or higher, place either 1 of your opponent's Cookies that is LV.2 or lower from their battle area or 1 stage card from their stage area into the trash.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/nby1J6S19sGMjK1XNFWSBw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44241,
+      "locale": "en",
+      "cardNumber": "BS2-064",
+      "baseCardNumber": "BS2-064",
+      "variant": null,
+      "name": "Alchemist Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} Place up to 1 of your opponent's Cookies whose remaining HP is 2 or less from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/suqeVc5J8uvTTitiIrUamg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44242,
+      "locale": "en",
+      "cardNumber": "BS2-065",
+      "baseCardNumber": "BS2-065",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{P}》 Place up to 1 of your opponent's stage cards in the trash."
+      },
+      "attackText": "《{P}{P}{P}{P}》 Deals 4 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/-Jq9_avMPdHNH-0-xcuXCg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44243,
+      "locale": "en",
+      "cardNumber": "BS2-066",
+      "baseCardNumber": "BS2-066",
+      "variant": null,
+      "name": "Rose Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/3igDK5Mscv_dpdqWqwHa2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44245,
+      "locale": "en",
+      "cardNumber": "BS2-067@1",
+      "baseCardNumber": "BS2-067",
+      "variant": "1",
+      "name": "Angel Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{bl} 《{P}》 (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)"
+      },
+      "attackText": "《{P}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8MJFQS06N8Ev0hPYZvphvA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44244,
+      "locale": "en",
+      "cardNumber": "BS2-067",
+      "baseCardNumber": "BS2-067",
+      "variant": null,
+      "name": "Angel Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{bl} 《{P}》 (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)"
+      },
+      "attackText": "《{P}{N}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VAHwScQIdlZz8dtWXR_fEw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44247,
+      "locale": "en",
+      "cardNumber": "BS2-068@1",
+      "baseCardNumber": "BS2-068",
+      "variant": "1",
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 5,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Discard 1 card.》 Return up to 1 {P} card from your trash to your hand."
+      },
+      "attackText": "《{P}{P}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/R3OMRPcjhDQi-N-FaTBScA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44246,
+      "locale": "en",
+      "cardNumber": "BS2-068",
+      "baseCardNumber": "BS2-068",
+      "variant": null,
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 5,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Discard 1 card.》 Return up to 1 {P} card from your trash to your hand."
+      },
+      "attackText": "《{P}{P}{N}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/R3uVf10nqdLY34LYOw4rhA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44249,
+      "locale": "en",
+      "cardNumber": "BS2-069@1",
+      "baseCardNumber": "BS2-069",
+      "variant": "1",
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Discard 1 card.》 Place up to 1 of your opponent's LV.1 Cookies from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7qKTNkFNoA-L0qCqkw4png.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44248,
+      "locale": "en",
+      "cardNumber": "BS2-069",
+      "baseCardNumber": "BS2-069",
+      "variant": null,
+      "name": "Clotted Cream Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《Discard 1 card.》 Place up to 1 of your opponent's LV.1 Cookies from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GfnMDZReb7tmjnazHeM0GA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44250,
+      "locale": "en",
+      "cardNumber": "BS2-070",
+      "baseCardNumber": "BS2-070",
+      "variant": null,
+      "name": "Kiwi Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}》 Deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ZsixpY6fmcSsxh3Y0I_IPA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44252,
+      "locale": "en",
+      "cardNumber": "BS2-071@1",
+      "baseCardNumber": "BS2-071",
+      "variant": "1",
+      "name": "Twizzly Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{mob} 《{P}》 《Place this Cookie in the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/jow9oy0OEYdsTLxpvY7_9A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44251,
+      "locale": "en",
+      "cardNumber": "BS2-071",
+      "baseCardNumber": "BS2-071",
+      "variant": null,
+      "name": "Twizzly Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{mob} 《{P}》 《Place this Cookie in the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/9xhpjIlfgZvOjeg0GvsmPA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44254,
+      "locale": "en",
+      "cardNumber": "BS2-072",
+      "baseCardNumber": "BS2-072",
+      "variant": null,
+      "name": "Pastry Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}{P}》 Deals 3 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/M-pdvsFFDM2a5KKzjz0HhQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44257,
+      "locale": "en",
+      "cardNumber": "BS2-073@1",
+      "baseCardNumber": "BS2-073",
+      "variant": "1",
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "If there are 15 cards or more in your trash, this Cookie deals +2 attack damage."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ktwJgp7np6m3U9gz-FzrBw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44256,
+      "locale": "en",
+      "cardNumber": "BS2-073",
+      "baseCardNumber": "BS2-073",
+      "variant": null,
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "If there are 15 cards or more in your trash, this Cookie deals +2 attack damage."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/aryXMVgSUFZ9SuoJP3G-6g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44258,
+      "locale": "en",
+      "cardNumber": "BS2-074",
+      "baseCardNumber": "BS2-074",
+      "variant": null,
+      "name": "Pink Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "When this Cookie faints, place up to 1 of your opponent's LV.1 Cookies from their battle area into the trash."
+      },
+      "attackText": "《{P}{P}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/HVa-_Z7181oR10fneMVJAg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44259,
+      "locale": "en",
+      "cardNumber": "BS2-075",
+      "baseCardNumber": "BS2-075",
+      "variant": null,
+      "name": "White Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 Deals 1 damage. Then, 《can be used as {P}.》 If one of your opponent's Cookies is LV.1, deals 3 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/t833U5HeF_QJrkt97JK3Qg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44260,
+      "locale": "en",
+      "cardNumber": "BS2-076",
+      "baseCardNumber": "BS2-076",
+      "variant": null,
+      "name": "Hero Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "MIX",
+      "color": null,
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{N}{N}{N}》 Deals 4 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/S3T9fBRUf7WVWrzgpL_iRw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44261,
+      "locale": "en",
+      "cardNumber": "BS2-077",
+      "baseCardNumber": "BS2-077",
+      "variant": null,
+      "name": "Forbidden Incantation",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}》 《Place 1 of your {P} LV.1 Cookies from your battle area into the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wwT3WTzTNXjaimdyoZOpBA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44262,
+      "locale": "en",
+      "cardNumber": "BS2-078",
+      "baseCardNumber": "BS2-078",
+      "variant": null,
+      "name": "Dragon's Breath",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}{P}》 Place 1 Cookie that is LV.2 or lower from your battle area into the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wwDT3pdxIxXyFaABkqKppA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44263,
+      "locale": "en",
+      "cardNumber": "BS2-079",
+      "baseCardNumber": "BS2-079",
+      "variant": null,
+      "name": "Yew Village Scroll",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, select up to 5 cards from your trash that do not have FLIP. Return those cards to your deck and shuffle it.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/vqSuZWGJC7jXhrYlXvBOYQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44264,
+      "locale": "en",
+      "cardNumber": "BS2-080",
+      "baseCardNumber": "BS2-080",
+      "variant": null,
+      "name": "Abandoned Cloud Nest",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}{P}》 If there are 15 cards or more in your trash, select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -3 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ihOk5THzbnZNwLkRHOri5g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44266,
+      "locale": "en",
+      "cardNumber": "BS2-081",
+      "baseCardNumber": "BS2-081",
+      "variant": null,
+      "name": "Blue Dragon's Eye",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 Place in your stage area.\r\n{mob} 《{P}》 《Place this card in the trash.》 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 211,
+        "title": "BOOSTER PACK [BRAVE BEGINNING]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0Lti9Y33p1lfoYc_BIIsUw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:21.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

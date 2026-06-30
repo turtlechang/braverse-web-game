@@ -12,6 +12,7 @@
     "cards:import:green-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck GREEN\" --output data/cards/official-starter-deck-green.en.json --limit 100",
     "cards:import:blue-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck BLUE\" --output data/cards/official-starter-deck-blue.en.json --limit 100",
     "cards:import:purple-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck PURPLE\" --output data/cards/official-starter-deck-purple.en.json --limit 100",
+    "cards:import:brave-beginning": "node scripts/import-brave-beginning.mjs",
     "lint": "eslint .",
     "test": "vitest run --exclude scripts/opencode-go-benchmark.test.js",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",
