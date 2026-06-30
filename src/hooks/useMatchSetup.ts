@@ -12,12 +12,19 @@ import {
   type GameState,
   type PlayerId,
 } from '../game'
+import type { CustomDeck } from '../game/custom-deck'
 
 export const formatDeckSelectionMessage = (
   playerDeck: DeckChoice,
-  aiDeck: DeckChoice,
-) =>
-  `我方使用${deckChoiceLabel[playerDeck]}牌組，AI 隨機選擇${deckChoiceLabel[aiDeck]}牌組。請猜拳決定先後攻選擇權。`
+  aiDeck: Exclude<DeckChoice, 'custom'>,
+  customDeckName?: string,
+) => {
+  const playerLabel =
+    playerDeck === 'custom' && customDeckName
+      ? `自訂「${customDeckName}」`
+      : deckChoiceLabel[playerDeck]
+  return `我方使用${playerLabel}牌組，AI 隨機選擇${deckChoiceLabel[aiDeck]}牌組。請猜拳決定先後攻選擇權。`
+}
 
 export type MatchSetupStep =
   | 'deck-selection'
@@ -32,7 +39,7 @@ interface UseMatchSetupParams {
   setGame: Dispatch<SetStateAction<GameState>>
   setMessage: Dispatch<SetStateAction<string>>
   enabled: boolean
-  chooseDeck?: () => DeckChoice
+  chooseDeck?: () => Exclude<DeckChoice, 'custom'>
 }
 
 export function useMatchSetup({
@@ -50,11 +57,13 @@ export function useMatchSetup({
   )
   const [deckConfig, setDeckConfig] = useState<{
     player: DeckChoice
-    ai: DeckChoice
+    ai: Exclude<DeckChoice, 'custom'>
   }>({
     player: 'red',
     ai: 'red',
   })
+  const [selectedCustomDeck, setSelectedCustomDeck] =
+    useState<CustomDeck | null>(null)
 
   const processAiOpeningHand = useCallback(
     (initialState: GameState): GameState => {
@@ -84,18 +93,26 @@ export function useMatchSetup({
   )
 
   const handleDeckSelection = useCallback(
-    (playerDeck: DeckChoice) => {
+    (playerDeck: DeckChoice, customDeck?: CustomDeck) => {
       const aiDeck = chooseDeck()
       setDeckConfig({ player: playerDeck, ai: aiDeck })
+      setSelectedCustomDeck(customDeck ?? null)
       setSetupStep('rps')
-      setSetupMessage(formatDeckSelectionMessage(playerDeck, aiDeck))
+      setSetupMessage(
+        formatDeckSelectionMessage(playerDeck, aiDeck, customDeck?.name),
+      )
     },
     [chooseDeck],
   )
 
   const beginOrderedSetup = useCallback(
     (firstPlayerId: PlayerId) => {
-      let nextGame = createDemoSetupGame(firstPlayerId, deckConfig)
+      let nextGame = createDemoSetupGame(
+        firstPlayerId,
+        deckConfig,
+        undefined,
+        deckConfig.player === 'custom' ? selectedCustomDeck ?? undefined : undefined,
+      )
       if (firstPlayerId === 'player-two') {
         nextGame = processAiOpeningHand(nextGame)
       }
@@ -107,7 +124,7 @@ export function useMatchSetup({
           : 'AI 已完成調度，現在輪到你決定是否更換全部手牌。',
       )
     },
-    [deckConfig, processAiOpeningHand, setGame],
+    [deckConfig, processAiOpeningHand, selectedCustomDeck, setGame],
   )
 
   const handleRps = useCallback(
@@ -196,6 +213,7 @@ export function useMatchSetup({
   const resetSetup = useCallback(() => {
     setSetupStep('deck-selection')
     setSetupMessage('請選擇本次對戰使用的牌組。')
+    setSelectedCustomDeck(null)
   }, [])
 
   return {
@@ -205,6 +223,7 @@ export function useMatchSetup({
     setSetupMessage,
     deckConfig,
     setDeckConfig,
+    selectedCustomDeck,
     handleDeckSelection,
     handleRps,
     beginOrderedSetup,

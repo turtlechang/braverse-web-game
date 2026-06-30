@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -14,12 +14,15 @@ import type {
   PlayerId,
 } from '../../game'
 import { OFFICIAL_DECK_RECIPES } from '../../game'
+import type { CustomDeck } from '../../game/custom-deck'
+import { loadCustomDecks } from '../../game/custom-deck'
 import {
   CardFace,
   CardEffectText,
   EnergyCostIcons,
 } from '../cards/CardVisuals'
 import { deckChoiceLabel } from '../gameUiLabels'
+import { DeckEditorModal } from './DeckEditorModal'
 import './GameModals.css'
 
 export { OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
@@ -36,7 +39,7 @@ export interface OpeningSetupModalProps {
   message: string
   hand: GameCard[]
   deckConfig: { player: DeckChoice; ai: DeckChoice }
-  onSelectDeck: (deck: DeckChoice) => void
+  onSelectDeck: (deck: DeckChoice, customDeck?: CustomDeck) => void
   onRps: (choice: 'rock' | 'paper' | 'scissors') => void
   onChooseFirstPlayer: (playerFirst: boolean) => void
   onMulligan: (replaceAll: boolean) => void
@@ -54,6 +57,11 @@ export function OpeningSetupModal({
   onMulligan,
   onSelectStartingCookie,
 }: OpeningSetupModalProps) {
+  const [showDeckEditor, setShowDeckEditor] = useState(false)
+  const [savedCustomDeck, setSavedCustomDeck] = useState<CustomDeck | null>(
+    null,
+  )
+
   const title =
     step === 'deck-selection'
       ? '選擇牌組'
@@ -65,6 +73,27 @@ export function OpeningSetupModal({
           ? '第一次調度'
           : '放置起始餅乾'
 
+  const handleDeckEditorSave = useCallback(
+    (deck: CustomDeck) => {
+      setSavedCustomDeck(deck)
+      setShowDeckEditor(false)
+      onSelectDeck('custom', deck)
+    },
+    [onSelectDeck],
+  )
+
+  const savedDecks = loadCustomDecks()
+
+  if (showDeckEditor) {
+    return (
+      <DeckEditorModal
+        initialDeck={savedCustomDeck ?? undefined}
+        onSave={handleDeckEditorSave}
+        onClose={() => setShowDeckEditor(false)}
+      />
+    )
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="opening-setup-modal" role="alertdialog">
@@ -72,18 +101,48 @@ export function OpeningSetupModal({
         <h2>{title}</h2>
         <p>{message}</p>
         {step === 'deck-selection' && (
-          <div className="setup-deck-grid">
-            {(['red', 'yellow', 'green', 'blue', 'purple'] as const).map((deck) => (
+          <>
+            <div className="setup-deck-grid">
+              {(['red', 'yellow', 'green', 'blue', 'purple'] as const).map((deck) => (
+                <button
+                  type="button"
+                  key={deck}
+                  onClick={() => onSelectDeck(deck)}
+                >
+                  <strong>{deckChoiceLabel[deck]}起始牌組</strong>
+                  <span>選擇此牌組</span>
+                </button>
+              ))}
               <button
                 type="button"
-                key={deck}
-                onClick={() => onSelectDeck(deck)}
+                className="setup-deck-custom-btn"
+                onClick={() => setShowDeckEditor(true)}
               >
-                <strong>{deckChoiceLabel[deck]}起始牌組</strong>
-                <span>選擇此牌組</span>
+                <strong>{deckChoiceLabel.custom}牌組</strong>
+                <span>建立或編輯牌組</span>
               </button>
-            ))}
-          </div>
+            </div>
+            {savedDecks.length > 0 && (
+              <div className="setup-saved-custom-decks">
+                <span>已儲存的自訂牌組</span>
+                <div className="setup-saved-deck-list">
+                  {savedDecks.map((deck) => (
+                    <button
+                      type="button"
+                      key={deck.id}
+                      className="setup-saved-deck-btn"
+                      onClick={() => onSelectDeck('custom', deck)}
+                    >
+                      <strong>{deck.name}</strong>
+                      <span>
+                        {deck.entries.reduce((s, e) => s + e.count, 0)} 張
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
         {step === 'rps' && (
           <>

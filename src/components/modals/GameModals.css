@@ -126,6 +126,51 @@
   font-size: 0.78rem;
 }
 
+.setup-deck-custom-btn {
+  border-color: #ffe674 !important;
+  background: linear-gradient(145deg, #1a3a6b, #2a6aaa) !important;
+}
+
+.setup-saved-custom-decks {
+  margin-top: 20px;
+}
+
+.setup-saved-custom-decks > span {
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.setup-saved-deck-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.setup-saved-deck-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 231, 116, 0.4);
+  border-radius: 6px;
+  background: rgba(26, 58, 107, 0.7);
+  color: #fff;
+  cursor: pointer;
+}
+
+.setup-saved-deck-btn strong {
+  color: #ffe675;
+  font-size: 0.85rem;
+}
+
+.setup-saved-deck-btn span {
+  color: #b9ddf5;
+  font-size: 0.7rem;
+}
+
 .setup-matchup {
   display: flex;
   gap: 18px;
@@ -839,4 +884,406 @@
 .faint-modal-actions .modal-button.primary {
   background: #132038;
   color: #f7f4ee;
+}
+
+.deck-editor-modal {
+  position: relative;
+  width: min(1200px, 100%);
+  max-height: calc(100vh - 48px);
+  border: 2px solid rgba(105, 220, 255, 0.68);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  color: #fff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.54);
+}
+
+.deck-editor-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+.deck-editor-pool,
+.deck-editor-deck {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.deck-editor-pool {
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.deck-editor-section-label {
+  display: block;
+  padding: 14px 18px 0;
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.deck-editor-search {
+  margin: 10px 16px 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(113, 233, 255, 0.35);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.6);
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.deck-editor-search::placeholder {
+  color: #6a8bb0;
+}
+
+.deck-editor-filters {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 0;
+  flex-wrap: wrap;
+}
+
+.deck-editor-filters select {
+  flex: 1;
+  min-width: 100px;
+  padding: 5px 8px;
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  border-radius: 4px;
+  background: rgba(3, 20, 53, 0.5);
+  color: #bbdaf3;
+  font-size: 0.75rem;
+}
+
+.deck-editor-pool-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 120px);
+  gap: 2px;
+  justify-content: start;
+  align-content: start;
+}
+
+.deck-editor-pool-card {
+  position: relative;
+}
+
+.deck-editor-pool-card.at-max {
+  opacity: 0.4;
+}
+
+.deck-editor-pool-card-btn {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.deck-editor-pool-card-btn:hover {
+  outline: 2px solid rgba(113, 233, 255, 0.6);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+.deck-editor-deck {
+  padding: 0 0 16px;
+}
+
+.deck-editor-name-input {
+  display: block;
+  margin: 10px 16px 0;
+  padding: 8px 12px;
+  width: calc(100% - 32px);
+  border: 1px solid rgba(255, 231, 116, 0.4);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.6);
+  color: #ffe674;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.deck-editor-name-input::placeholder {
+  color: #8a7a40;
+}
+
+.deck-editor-deck-header {
+  padding: 6px 16px 0;
+  color: #bbdaf3;
+  font-size: 0.78rem;
+}
+
+.deck-editor-deck-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px;
+}
+
+.deck-editor-deck-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.76rem;
+}
+
+.deck-editor-deck-thumb {
+  width: 34px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.deck-editor-deck-thumb-fallback {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(113, 233, 255, 0.2);
+  background: rgba(3, 20, 53, 0.6);
+  color: #71e9ff;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.deck-editor-deck-entry-number {
+  color: #71e9ff;
+  min-width: 62px;
+  flex-shrink: 0;
+}
+
+.deck-editor-deck-entry-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-editor-deck-entry-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.deck-editor-count-btn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(113, 233, 255, 0.3);
+  border-radius: 3px;
+  background: rgba(3, 20, 53, 0.5);
+  color: #71e9ff;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0;
+}
+
+.deck-editor-count-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.deck-editor-count-btn:hover:not(:disabled) {
+  background: rgba(40, 120, 200, 0.4);
+}
+
+.deck-editor-count-btn:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.deck-editor-deck-entry-count {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 700;
+  color: #ffe674;
+}
+
+.deck-editor-deck-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px 0;
+}
+
+.deck-editor-clear-btn,
+.deck-editor-save-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-weight: 900;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.deck-editor-clear-btn {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(4, 34, 75, 0.8);
+  color: #fff;
+}
+
+.deck-editor-clear-btn:hover {
+  background: rgba(4, 34, 75, 1);
+}
+
+.deck-editor-save-btn {
+  border: 1px solid #ffe675;
+  background: linear-gradient(#27b8dd, #0875bd);
+  color: #fff;
+}
+
+.deck-editor-save-btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.deck-editor-errors {
+  padding: 8px 16px 0;
+}
+
+.deck-editor-error {
+  padding: 4px 0;
+  color: #ff8a8a;
+  font-size: 0.75rem;
+}
+
+.deck-editor-empty {
+  grid-column: 1 / -1;
+  padding: 24px;
+  text-align: center;
+  color: #6a8bb0;
+  font-size: 0.85rem;
+}
+
+.card-pool-img {
+  width: 120px;
+  height: 168px;
+  object-fit: cover;
+  border-radius: 3px;
+  display: block;
+}
+
+.card-pool-img-fallback {
+  width: 120px;
+  height: 168px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(113, 233, 255, 0.2);
+  border-radius: 3px;
+  background: rgba(3, 20, 53, 0.6);
+  color: #71e9ff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.card-pool-img-fallback small {
+  display: block;
+  color: #ffe674;
+  font-size: 0.6rem;
+}
+
+.deck-editor-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid rgba(113, 233, 255, 0.5);
+  border-radius: 6px;
+  background: #0b2a5e;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+}
+
+.deck-editor-tooltip-header {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+}
+
+.deck-editor-tooltip-number {
+  color: #71e9ff;
+  font-weight: 700;
+}
+
+.deck-editor-tooltip-name {
+  color: #bbdaf3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.deck-editor-tooltip-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.deck-editor-tooltip-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(113, 233, 255, 0.4);
+  border-radius: 4px;
+  background: rgba(40, 120, 200, 0.3);
+  color: #71e9ff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.deck-editor-tooltip-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.deck-editor-tooltip-btn:hover:not(:disabled) {
+  background: rgba(40, 120, 200, 0.6);
+}
+
+.deck-editor-tooltip-btn:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.deck-editor-tooltip-count {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+  color: #ffe674;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 800px) {
+  .deck-editor-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .deck-editor-pool {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  }
 }

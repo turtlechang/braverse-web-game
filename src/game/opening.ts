@@ -1,6 +1,6 @@
 import type { DeckChoice } from './starter-deck'
 
-const OPENING_DECKS: readonly DeckChoice[] = [
+const AI_DECKS: readonly Exclude<DeckChoice, 'custom'>[] = [
   'red',
   'yellow',
   'green',
@@ -10,11 +10,11 @@ const OPENING_DECKS: readonly DeckChoice[] = [
 
 export const chooseRandomDeck = (
   random: () => number = Math.random,
-): DeckChoice => {
+): Exclude<DeckChoice, 'custom'> => {
   const value = Math.max(0, Math.min(random(), 1))
   const index = Math.min(
-    Math.floor(value * OPENING_DECKS.length),
-    OPENING_DECKS.length - 1,
+    Math.floor(value * AI_DECKS.length),
+    AI_DECKS.length - 1,
   )
-  return OPENING_DECKS[index]
+  return AI_DECKS[index]
 }

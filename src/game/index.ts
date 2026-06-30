@@ -41,6 +41,8 @@ export {
   createOfficialRedStarterDeck,
   createOfficialStarterDeck,
   createOfficialYellowStarterDeck,
+  createCard,
+  createDeckForChoice,
   DECK_CREATORS,
   OFFICIAL_BLUE_STARTER_DECK,
   OFFICIAL_DECK_RECIPES,
@@ -51,6 +53,23 @@ export {
   OFFICIAL_YELLOW_STARTER_DECK,
 } from './starter-deck'
 export type { DeckChoice, StarterDeckEntry } from './starter-deck'
+export {
+  getAllCardPoolEntries,
+  getCardPoolEntry,
+  getCardPoolEntriesByColor,
+  getCardPoolEntriesByType,
+} from './card-pool'
+export type { CardPoolEntry } from './card-pool'
+export {
+  createDeckFromCustomDeck,
+  loadCustomDecks,
+  saveCustomDecks,
+  validateCustomDeck,
+  DECK_SIZE_MIN,
+  DECK_SIZE_MAX,
+  MAX_COPIES_PER_CARD,
+} from './custom-deck'
+export type { CustomDeck, CustomDeckEntry } from './custom-deck'
 export { chooseRandomDeck } from './opening'
 export {
   selectAiEnergyPayment,

@@ -15,7 +15,7 @@ import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { CardEffect, GameCard, PlayerId } from './types'
 
-export type DeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+export type DeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple' | 'custom'
 
 export interface StarterDeckEntry {
   cardNumber: string
@@ -154,7 +154,7 @@ export const OFFICIAL_DECK_RECIPES: Record<DeckChoice, StarterDeckEntry[]> = {
   green: OFFICIAL_GREEN_STARTER_DECK,
   blue: OFFICIAL_BLUE_STARTER_DECK,
   purple: OFFICIAL_PURPLE_STARTER_DECK,
-}
+} as Record<DeckChoice, StarterDeckEntry[]>
 
 const getEnergyColor = (
   source: OfficialCardRecord,
@@ -173,7 +173,7 @@ const getEnergyColor = (
     : undefined
 }
 
-const createCard = (
+export const createCard = (
   source: OfficialCardRecord,
   playerId: PlayerId,
   copyNumber: number,
@@ -360,4 +360,9 @@ export const DECK_CREATORS: Record<
   green: createOfficialGreenStarterDeck,
   blue: createOfficialBlueStarterDeck,
   purple: createOfficialPurpleStarterDeck,
-}
+} as Record<DeckChoice, (playerId: PlayerId) => GameCard[]>
+
+export const createDeckForChoice = (
+  choice: DeckChoice,
+  playerId: PlayerId,
+): GameCard[] => DECK_CREATORS[choice](playerId)

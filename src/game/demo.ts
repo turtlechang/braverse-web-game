@@ -13,6 +13,10 @@ import {
   type DeckChoice,
 } from './starter-deck'
 import type {
+  CustomDeck,
+} from './custom-deck'
+import { createDeckFromCustomDeck } from './custom-deck'
+import type {
   CookieCard,
   EnergyColor,
   GameCard,
@@ -186,17 +190,23 @@ export const createDemoSetupGame = (
   firstPlayerId: 'player-one' | 'player-two',
   deck: DeckConfig = 'red',
   seed?: number,
+  playerCustomDeck?: CustomDeck,
 ): GameState => {
   const playerChoice = typeof deck === 'string' ? deck : deck.player
   const aiChoice = typeof deck === 'string' ? deck : deck.ai
   const shuffle =
     seed === undefined ? defaultShuffle : createSeededShuffle(seed)
 
+  const playerDeck =
+    playerChoice === 'custom' && playerCustomDeck
+      ? createDeckFromCustomDeck(playerCustomDeck, 'player-one')
+      : DECK_CREATORS[playerChoice === 'custom' ? 'red' : playerChoice]('player-one')
+
   return createGame(
     {
       id: 'player-one',
       name: '玩家',
-      deck: DECK_CREATORS[playerChoice]('player-one'),
+      deck: playerDeck,
     },
     {
       id: 'player-two',

@@ -22,4 +22,5 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   green: '綠色',
   blue: '藍色',
   purple: '紫色',
+  custom: '自訂',
 }
