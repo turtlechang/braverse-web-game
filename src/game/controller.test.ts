@@ -251,7 +251,7 @@ describe('getActingPlayerId', () => {
     expect(getActingPlayerId(state)).toBe('player-two')
   })
 
-  it('returns defenderPlayerId for pendingBattle attack-effect stage', () => {
+  it('returns attackerPlayerId for pendingBattle attack-effect stage', () => {
     const state: GameState = {
       ...createDemoGame(),
       pendingBattle: {
@@ -270,7 +270,7 @@ describe('getActingPlayerId', () => {
         attackEffectIndex: 0,
       },
     }
-    expect(getActingPlayerId(state)).toBe('player-two')
+    expect(getActingPlayerId(state)).toBe('player-one')
   })
 
   it('pendingBattle takes priority over activePlayerId', () => {
