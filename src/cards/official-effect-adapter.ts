@@ -1468,5 +1468,8 @@ export const convertOfficialCookieSkill = (
     endPhase: /(?:at the )?end of (?:your|this) turn|your turn ends/i.test(
       card.skill.text,
     ),
+    afterDamage: /(?:after|when)\s+(?:receiving|taking)\s+damage/i.test(
+      card.skill.text,
+    ),
   }
 }

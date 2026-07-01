@@ -1,3 +1,4 @@
+import { collectAfterDamageEffectsFromIds } from './afterDamage'
 import { GameRuleError } from './errors'
 import {
   executeCardEffect,
@@ -764,6 +765,14 @@ const battleParticipantExists = (
     ),
   )
 
+const collectAfterDamageEffects = (
+  state: GameState,
+  battle: PendingBattle,
+): GameState => {
+  const damagedIds = battle.damagedInstanceIds ?? []
+  return collectAfterDamageEffectsFromIds(state, damagedIds)
+}
+
 const finishDamageSequence = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   if (battle.suspendedAttackDamage !== undefined) {
@@ -802,7 +811,8 @@ const finishDamageSequence = (state: GameState): GameState => {
     }
   }
 
-  return finishBattle(state)
+  const afterDamageState = collectAfterDamageEffects(state, battle)
+  return finishBattle(afterDamageState)
 }
 
 export const resolveAttackEffect = (
@@ -1036,6 +1046,10 @@ export const resolveNextDamage = (state: GameState): GameState => {
       ...battle,
       remainingDamage: battle.remainingDamage - 1,
       revealedHpCard,
+      damagedInstanceIds: [
+        ...(battle.damagedInstanceIds ?? []),
+        damageTargetInstanceId,
+      ],
       stage:
         revealedHpCard.flip &&
         state.flipDisabledUntilTurn?.[target.card.instanceId] !==
@@ -1214,7 +1228,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
   let nextState = state
   let guard = 0
 
-  while ((nextState.pendingBattle || nextState.pendingOptionalCostAttack || (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0)) && guard < 100) {
+  while ((nextState.pendingBattle || nextState.pendingOptionalCostAttack || (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) || (nextState.pendingAfterDamageEffects && nextState.pendingAfterDamageEffects.length > 0)) && guard < 100) {
     guard += 1
 
     if (nextState.status !== 'playing') {
@@ -1253,6 +1267,22 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         nextState = resolveFaintEffect(nextState, targetIds)
       } else {
         nextState = resolveFaintEffect(nextState, [])
+      }
+      continue
+    }
+
+    if (nextState.pendingAfterDamageEffects && nextState.pendingAfterDamageEffects.length > 0) {
+      const pending = nextState.pendingAfterDamageEffects[0]
+      if (
+        pending.effect.kind === 'damage' ||
+        pending.effect.kind === 'modify-attack' ||
+        pending.effect.kind === 'modify-damage-received'
+      ) {
+        const candidates = getAfterDamageEffectCandidates(nextState)
+        const targetIds = candidates.length > 0 ? [candidates[0].card.instanceId] : []
+        nextState = resolveNextAfterDamageEffect(nextState, targetIds)
+      } else {
+        nextState = resolveNextAfterDamageEffect(nextState, [])
       }
       continue
     }
@@ -1392,6 +1422,88 @@ export const resolveFaintEffect = (
 
   if (nextState.status !== 'playing') {
     return nextState
+  }
+
+  return nextState
+}
+
+export const getAfterDamageEffectCandidates = (
+  state: GameState,
+): CookieInBattle[] => {
+  const pending = state.pendingAfterDamageEffects?.[0]
+  if (
+    !pending ||
+    (pending.effect.kind !== 'damage' &&
+      pending.effect.kind !== 'modify-attack' &&
+      pending.effect.kind !== 'modify-damage-received')
+  ) {
+    return []
+  }
+  return getEffectTargetCandidates(state, pending.context, pending.effect.target)
+}
+
+export const getAfterDamageEffectMinMax = (
+  effect: CardEffect,
+): { min: number; max: number } => {
+  if (
+    effect.kind === 'damage' ||
+    effect.kind === 'modify-attack' ||
+    effect.kind === 'modify-damage-received'
+  ) {
+    return { min: effect.target.min ?? 0, max: effect.target.max ?? 1 }
+  }
+  return { min: 0, max: 0 }
+}
+
+export const resolveNextAfterDamageEffect = (
+  state: GameState,
+  targetIds: string[],
+): GameState => {
+  const effects = state.pendingAfterDamageEffects
+  if (!effects || effects.length === 0) {
+    throw new GameRuleError('目前沒有待處理的受傷後效果。')
+  }
+
+  const pending = effects[0]
+  const remaining = effects.slice(1)
+  let nextState: GameState = {
+    ...state,
+    pendingAfterDamageEffects: remaining.length > 0 ? remaining : undefined,
+  }
+
+  if (
+    pending.effect.kind === 'damage' ||
+    pending.effect.kind === 'modify-attack' ||
+    pending.effect.kind === 'modify-damage-received'
+  ) {
+    if (targetIds.length > 0) {
+      selectEffectTargets(nextState, pending.context, pending.effect.target, targetIds)
+      nextState = executeCardEffect(
+        nextState,
+        pending.context,
+        pending.effect,
+        targetIds,
+      )
+    } else if (pending.effect.target.min > 0) {
+      throw new GameRuleError('受傷後效果目標數量不足。')
+    }
+  }
+
+  if (nextState.status !== 'playing') {
+    return nextState
+  }
+
+  const sourceCookie = nextState.players[pending.context.sourcePlayerId]?.battleArea.find(
+    (c) => c.card.instanceId === pending.context.sourceInstanceId,
+  )
+  if (sourceCookie?.card.skill?.oncePerTurn) {
+    const useKey = sourceCookie.battleEntryId ?? sourceCookie.card.instanceId
+    if (!nextState.skillUsesThisTurn.includes(useKey)) {
+      nextState = {
+        ...nextState,
+        skillUsesThisTurn: [...nextState.skillUsesThisTurn, useKey],
+      }
+    }
   }
 
   return nextState

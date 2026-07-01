@@ -65,6 +65,25 @@ function EffectPanelContent({
           ? currentEffect.target
           : null
 
+  const hasCostPhase =
+    !pendingEffect?.skillActivated &&
+    (totalEnergyCost > 0 || supportAreaCost > 0 || discardHandCost > 0)
+
+  const energyPaid = pendingEffect?.selectedPaymentIds.length === totalEnergyCost
+  const supportPaid =
+    supportAreaCost === 0 ||
+    pendingEffect?.selectedCostSupportToTrashIds.length === supportAreaCost
+  const discardPaid =
+    discardHandCost === 0 ||
+    pendingEffect?.selectedDiscardHandIds.length === discardHandCost
+  const costReady = !hasCostPhase || (energyPaid && supportPaid && discardPaid)
+
+  const targetReady =
+    !selectionLimits ||
+    (pendingEffect &&
+      pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
+      pendingEffect.selectedTargetIds.length <= selectionLimits.max)
+
   if (pendingEffect && currentEffect) {
     return (
       <>
@@ -80,6 +99,19 @@ function EffectPanelContent({
             text={pendingEffect.sourceCard.effectText ?? ''}
           />
         </p>
+
+        {hasCostPhase && (
+          <div className="phase-progress">
+            <span className={`phase-step${energyPaid && supportPaid && discardPaid ? ' is-done' : ' is-active'}`}>
+              1 費用
+            </span>
+            <span className="phase-divider" />
+            <span className={`phase-step${costReady ? ' is-active' : ''}`}>
+              2 目標
+            </span>
+          </div>
+        )}
+
         {!pendingEffect.skillActivated && (
           <div className="skill-cost">
             <strong>技能費用</strong>
@@ -102,10 +134,6 @@ function EffectPanelContent({
             )}
           </div>
         )}
-        <div className="effect-instruction">
-          <Sparkles aria-hidden="true" />
-          <span>{describeEffect(currentEffect)}</span>
-        </div>
         {costSupportCandidates.length > 0 && !pendingEffect.skillActivated && (
           <>
             <small>選擇要作為代價棄置的支援區卡牌</small>
@@ -148,6 +176,10 @@ function EffectPanelContent({
             </div>
           </>
         )}
+        <div className="effect-instruction">
+          <Sparkles aria-hidden="true" />
+          <span>{describeEffect(currentEffect)}</span>
+        </div>
         {candidateCards.length > 0 && (
           <div className="effect-candidates effect-candidates-target">
             {candidateCards.map((card) => (
@@ -174,19 +206,7 @@ function EffectPanelContent({
         )}
         <button
           type="button"
-          disabled={
-            (!pendingEffect.skillActivated &&
-              (pendingEffect.selectedPaymentIds.length !== totalEnergyCost ||
-                pendingEffect.selectedCostSupportToTrashIds.length !==
-                  supportAreaCost ||
-                pendingEffect.selectedDiscardHandIds.length !==
-                  discardHandCost)) ||
-            (Boolean(selectionLimits) &&
-              (pendingEffect.selectedTargetIds.length <
-                selectionLimits!.min ||
-              pendingEffect.selectedTargetIds.length >
-                selectionLimits!.max))
-          }
+          disabled={!costReady || !targetReady}
           onClick={onConfirm}
         >
           <Check aria-hidden="true" />

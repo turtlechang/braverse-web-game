@@ -231,15 +231,13 @@ export const handleAiTurnState = (
       }
     }
 
-    if (!canAttack(state)) {
-      for (const card of player.hand) {
-        const itemDecision = strategy.resolveCardAbility(
-          state,
-          playerId,
-          card,
-        )
-        if (itemDecision) return itemDecision
-      }
+    for (const card of player.hand) {
+      const itemDecision = strategy.resolveCardAbility(
+        state,
+        playerId,
+        card,
+      )
+      if (itemDecision) return itemDecision
     }
 
     if (player.battleArea.length < 2) {
@@ -312,6 +310,22 @@ export const handleAiTurnState = (
       state: advancePhase(state),
       action: 'advance-phase',
       description: `${player.name}結束主要階段。`,
+    }
+  }
+
+  if (state.phase === 'end') {
+    const advanced = advancePhase(state)
+    if (advanced.phase === 'end' && advanced.activePlayerId === state.activePlayerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `${player.name}等待結算結束階段效果。`,
+      }
+    }
+    return {
+      state: advanced,
+      action: 'advance-phase',
+      description: `${player.name}結束回合。`,
     }
   }
 

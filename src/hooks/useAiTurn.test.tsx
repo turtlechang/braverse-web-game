@@ -25,6 +25,7 @@ describe('useAiTurn', () => {
         aiControlsCurrentState: aiControls,
         pendingEffect: null,
         faintActive: false,
+        afterDamageActive: false,
         deckConfig: { player: 'red', ai: 'red' },
       })
       return null
@@ -68,6 +69,7 @@ describe('useAiTurn', () => {
         aiControlsCurrentState: aiControls,
         pendingEffect: null,
         faintActive: false,
+        afterDamageActive: false,
         deckConfig: { player: 'red', ai: 'red' },
         maxConsecutiveActions: 1,
       })
@@ -139,6 +141,7 @@ describe('useAiTurn', () => {
         aiControlsCurrentState: true,
         pendingEffect: null,
         faintActive: false,
+        afterDamageActive: false,
         deckConfig: { player: 'red', ai: 'red' },
       })
       return null

@@ -19,6 +19,7 @@ export function useAiTurn(params: {
   aiControlsCurrentState: boolean
   pendingEffect: unknown | null
   faintActive: boolean
+  afterDamageActive: boolean
   deckConfig: { player: DeckChoice; ai: DeckChoice }
   maxConsecutiveActions?: number
 }) {
@@ -30,6 +31,7 @@ export function useAiTurn(params: {
     aiControlsCurrentState,
     pendingEffect,
     faintActive,
+    afterDamageActive,
     deckConfig,
     maxConsecutiveActions = 200,
   } = params
@@ -55,6 +57,7 @@ export function useAiTurn(params: {
       game.status !== 'playing' ||
       pendingEffect ||
       faintActive ||
+      afterDamageActive ||
       pendingAiDecision
     ) {
       return
@@ -113,6 +116,7 @@ export function useAiTurn(params: {
     aiActionCount,
     aiControlsCurrentState,
     faintActive,
+    afterDamageActive,
     game,
     maxConsecutiveActions,
     pendingEffect,

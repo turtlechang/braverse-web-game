@@ -1,0 +1,73 @@
+import { executeCardEffect } from './effects/execute'
+import { getEffectTargetCandidates } from './effects/targeting'
+import type { GameState, PlayerId } from './types'
+
+export const collectAfterDamageEffectsFromIds = (
+  state: GameState,
+  damagedInstanceIds: string[],
+): GameState => {
+  if (damagedInstanceIds.length === 0) return state
+
+  let result = state
+  const uniqueDamagedIds = [...new Set(damagedInstanceIds)]
+
+  for (const instanceId of uniqueDamagedIds) {
+    for (const playerId of ['player-one', 'player-two'] as PlayerId[]) {
+      const player = result.players[playerId]
+      const cookie = player.battleArea.find(
+        (c) => c.card.instanceId === instanceId,
+      )
+      if (!cookie) continue
+      const skill = cookie.card.skill
+      if (!skill || !skill.afterDamage) continue
+      if (
+        skill.oncePerTurn &&
+        result.skillUsesThisTurn.includes(cookie.battleEntryId ?? cookie.card.instanceId)
+      ) {
+        continue
+      }
+
+      for (const effect of skill.effects) {
+        if (effect.kind === 'damage' || effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
+          const context = {
+            sourcePlayerId: playerId,
+            sourceInstanceId: cookie.card.instanceId,
+          }
+          const candidates = getEffectTargetCandidates(result, context, effect.target)
+          if (candidates.length > 0) {
+            result = {
+              ...result,
+              pendingAfterDamageEffects: [
+                ...(result.pendingAfterDamageEffects ?? []),
+                {
+                  sourcePlayerId: playerId,
+                  sourceInstanceId: cookie.card.instanceId,
+                  effect,
+                  context,
+                },
+              ],
+            }
+          }
+        } else {
+          const context = {
+            sourcePlayerId: playerId,
+            sourceInstanceId: cookie.card.instanceId,
+          }
+          result = executeCardEffect(result, context, effect, [])
+        }
+
+        if (skill.oncePerTurn) {
+          const useKey = cookie.battleEntryId ?? cookie.card.instanceId
+          if (!result.skillUsesThisTurn.includes(useKey)) {
+            result = {
+              ...result,
+              skillUsesThisTurn: [...result.skillUsesThisTurn, useKey],
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return result
+}

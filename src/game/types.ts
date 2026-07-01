@@ -30,6 +30,7 @@ export interface CardSkill {
   effects: CardEffect[]
   faint?: boolean
   endPhase?: boolean
+  afterDamage?: boolean
 }
 
 export interface CardAbility {
@@ -501,6 +502,13 @@ export interface PendingFaintEffect {
   context: EffectContext
 }
 
+export interface PendingAfterDamageEffect {
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  effect: CardEffect
+  context: EffectContext
+}
+
 export interface PendingReplacement {
   tasks: ReplacementTask[]
 }
@@ -547,6 +555,7 @@ export interface GameState {
   } | null
   pendingBattle?: PendingBattle | null
   pendingFaintEffects?: PendingFaintEffect[]
+  pendingAfterDamageEffects?: PendingAfterDamageEffect[]
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
   pendingInspectDeck?: {
     playerId: PlayerId
@@ -596,6 +605,7 @@ export interface PendingBattle {
   damagePlayerId?: PlayerId
   damageTargetInstanceId?: string
   suspendedAttackDamage?: number
+  damagedInstanceIds?: string[]
   delayedTrap?: {
     playerId: PlayerId
     color: EnergyColor

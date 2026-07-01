@@ -121,6 +121,99 @@
   width: 18px;
 }
 
+.effect-panel .phase-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 12px 0 8px;
+  padding: 0;
+}
+
+.effect-panel .phase-step {
+  padding: 4px 12px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.68rem;
+  font-weight: 800;
+  transition: background 0.2s, color 0.2s;
+}
+
+.effect-panel .phase-step.is-active {
+  background: rgba(113, 236, 255, 0.2);
+  color: #71e9ff;
+}
+
+.effect-panel .phase-step.is-done {
+  background: rgba(108, 225, 108, 0.15);
+  color: rgba(108, 225, 108, 0.7);
+}
+
+.effect-panel .phase-divider {
+  width: 20px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.effect-panel .cost-summary {
+  margin: 8px 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(108, 225, 108, 0.08);
+}
+
+.effect-panel .cost-summary small {
+  color: rgba(108, 225, 108, 0.8);
+  font-size: 0.7rem;
+}
+
+.effect-panel .effect-candidates {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 6px 0;
+}
+
+.effect-panel .effect-candidates button {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.effect-panel .effect-candidates button:hover {
+  border-color: rgba(113, 236, 255, 0.4);
+  background: rgba(113, 236, 255, 0.08);
+}
+
+.effect-panel .effect-candidates button.is-selected {
+  border-color: #ffe66e;
+  background: rgba(255, 230, 110, 0.15);
+  color: #ffe66e;
+}
+
+.effect-panel .effect-candidates-effect-target button {
+  min-height: 42px;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.effect-panel .effect-candidates-effect-target button.is-selected {
+  border-color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+}
+
 .effect-panel ol {
   max-height: 112px;
   margin: 12px 0 0;

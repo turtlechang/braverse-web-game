@@ -12,7 +12,7 @@ import {
   isEffectConditionMet,
   isEffectUntargeted,
 } from './effects'
-import { selectEnergyPayment } from './energy'
+import { getAttackEnergyCost, selectEnergyPayment } from './energy'
 import {
   finalizePendingReplacements,
   getCurrentReplacementTask,
@@ -318,6 +318,21 @@ const resolveAiSkill = (
     trashBattleCookieIds.length < skill.cost.trashBattleCookie.count
   ) {
     return null
+  }
+
+  if (costSupportToTrashIds.length > 0) {
+    const remainingSupportAfterSkillCost = player.supportArea.filter(
+      (support) =>
+        !paymentIds.includes(support.card.instanceId) &&
+        !costSupportToTrashIds.includes(support.card.instanceId),
+    )
+    const canStillAttackAfterSkill = player.battleArea.some((cookie) => {
+      const attackCost = getAttackEnergyCost(cookie.card)
+      return selectEnergyPayment(attackCost, remainingSupportAfterSkillCost)
+    })
+    if (!canStillAttackAfterSkill) {
+      return null
+    }
   }
 
   const context = {

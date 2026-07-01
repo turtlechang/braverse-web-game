@@ -18,6 +18,7 @@ export type AiActionType =
   | 'resolve-attack-effect'
   | 'resolve-flip'
   | 'resolve-faint'
+  | 'resolve-after-damage'
   | 'resolve-inspect-deck'
   | 'resolve-optional-cost-attack'
   | 'resolve-stage-trigger'

@@ -109,6 +109,11 @@ function App() {
     selectedFaintTargetIds: match.selectedFaintTargetIds,
     faintMinMax: { min: match.faintMin, max: match.faintMax },
     setSelectedFaintTargetIds: match.setSelectedFaintTargetIds,
+    hasAfterDamage: match.hasAfterDamage,
+    afterDamageTargetIds: match.afterDamageTargetIds,
+    selectedAfterDamageTargetIds: match.selectedAfterDamageTargetIds,
+    afterDamageMinMax: { min: match.afterDamageMin, max: match.afterDamageMax },
+    setSelectedAfterDamageTargetIds: match.setSelectedAfterDamageTargetIds,
   })
   const ai = useAiTurn({
     game: match.game,
@@ -118,6 +123,7 @@ function App() {
     aiControlsCurrentState: match.aiControlsCurrentState,
     pendingEffect: pending.pendingEffect,
     faintActive: pending.faintActive,
+    afterDamageActive: pending.afterDamageActive,
     deckConfig: match.deckConfig,
   })
 
@@ -233,7 +239,7 @@ function App() {
   const showCancelSkill =
     pe !== null &&
     !pe.skillActivated &&
-    pe.sourceKind === 'cookie' &&
+    (pe.sourceKind === 'cookie' || pe.sourceKind === 'item') &&
     pe.trigger === 'activate'
 
   const pendingInspect =
@@ -874,6 +880,78 @@ function App() {
                 match.selectedFaintTargetIds.length === 0
                   ? '確認略過'
                   : `確認 (${match.selectedFaintTargetIds.length})`}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {pending.afterDamageActive && match.afterDamageSourceCard && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          style={{ pointerEvents: 'none' }}
+        >
+          <section
+            className="faint-response-modal"
+            role="dialog"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <h2>{match.afterDamageSourceCard.name} 發動受傷後效果</h2>
+            <p className="faint-effect-text">
+              {match.afterDamageSourceCard.effectText ??
+                match.afterDamageSourceCard.skill?.text ??
+                '受傷後效果'}
+            </p>
+            <p className="faint-target-hint">
+              {match.afterDamageMin === 0
+                ? `選擇最多 ${match.afterDamageMax} 個對手餅乾作為目標，或略過。`
+                : `選擇 ${match.afterDamageMin} 個對手餅乾作為目標。`}
+            </p>
+            <div className="faint-modal-actions">
+              {match.afterDamageMin === 0 && (
+                <button
+                  type="button"
+                  className="modal-button"
+                  onClick={() => {
+                    match.setSelectedAfterDamageTargetIds([])
+                    match.runAction(
+                      (current) => applyGameCommand(current, {
+                        kind: 'resolve-after-damage-effect',
+                        playerId: match.viewerPlayerId,
+                        targetIds: [],
+                      }),
+                      `${match.afterDamageSourceCard!.name}略過受傷後效果。`,
+                    )
+                  }}
+                >
+                  略過
+                </button>
+              )}
+              <button
+                type="button"
+                className="modal-button primary"
+                disabled={
+                  match.selectedAfterDamageTargetIds.length === 0 &&
+                  match.afterDamageMin !== 0
+                }
+                onClick={() => {
+                  const targets = match.selectedAfterDamageTargetIds
+                  match.setSelectedAfterDamageTargetIds([])
+                  match.runAction(
+                    (current) => applyGameCommand(current, {
+                      kind: 'resolve-after-damage-effect',
+                      playerId: match.viewerPlayerId,
+                      targetIds: targets,
+                    }),
+                    `${match.afterDamageSourceCard!.name}發動對${match.afterDamageCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的受傷後效果。`,
+                  )
+                }}
+              >
+                {match.afterDamageMin === 0 &&
+                match.selectedAfterDamageTargetIds.length === 0
+                  ? '確認略過'
+                  : `確認 (${match.selectedAfterDamageTargetIds.length})`}
               </button>
             </div>
           </section>

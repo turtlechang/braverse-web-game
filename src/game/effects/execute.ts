@@ -1,3 +1,4 @@
+import { collectAfterDamageEffectsFromIds } from '../afterDamage'
 import { GameRuleError } from '../errors'
 import { defaultShuffle, drawCards, getOpponentId, updatePlayer } from '../helpers'
 import {
@@ -332,7 +333,7 @@ export const executeCardEffect = (
       )
       .map((target) => target.card)
 
-    return resolveDamageOutcome(
+    const damageState = resolveDamageOutcome(
       {
         ...state,
         players: {
@@ -344,6 +345,8 @@ export const executeCardEffect = (
       departedCount,
       departedCookieCards,
     )
+    const damagedInstanceIds = targets.map((t) => t.card.instanceId)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
   }
 
   if (effect.kind === 'redirect-attack') {
@@ -950,7 +953,7 @@ export const executeCardEffect = (
       ))
       .map((target) => target.card)
 
-    return resolveDamageOutcome(
+    const damageState = resolveDamageOutcome(
       {
         ...state,
         players: {
@@ -962,6 +965,8 @@ export const executeCardEffect = (
       departedCount,
       departedCookieCards,
     )
+    const damagedInstanceIds = targets.map((t) => t.card.instanceId)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
   }
 
   if (effect.kind === 'prevent-knockout') {

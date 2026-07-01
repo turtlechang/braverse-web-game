@@ -78,6 +78,8 @@ export {
 } from './ai'
 export {
   beginAttack,
+  getAfterDamageEffectCandidates,
+  getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   getTrapCandidates,
@@ -87,6 +89,7 @@ export {
   resolveBattleAutomatically,
   resolveFaintEffect,
   resolveFlip,
+  resolveNextAfterDamageEffect,
   resolveNextDamage,
   resolveOptionalCostAttack,
   skipTrap,

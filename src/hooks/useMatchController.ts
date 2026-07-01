@@ -4,6 +4,8 @@ import {
   advancePhase,
   createDemoSetupGame,
   getCurrentReplacementTask,
+  getAfterDamageEffectCandidates,
+  getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   hasBlockingPending,
@@ -289,6 +291,45 @@ export function useMatchController(params: {
     ? getFaintEffectMinMax(pendingFaint.effect)
     : { min: 0, max: 0 }
 
+  const [selectedAfterDamageTargetIds, setSelectedAfterDamageTargetIds] =
+    useState<string[]>([])
+  const pendingAfterDamage =
+    game.pendingAfterDamageEffects && game.pendingAfterDamageEffects.length > 0
+      ? game.pendingAfterDamageEffects[0]
+      : null
+  const afterDamageSourceCard = pendingAfterDamage
+    ? (() => {
+        for (const player of Object.values(game.players) as PlayerState[]) {
+          const found =
+            player.breakArea.find(
+              (cookie: CookieCard) =>
+                cookie.instanceId === pendingAfterDamage.sourceInstanceId,
+            ) ??
+            player.battleArea.find(
+              (cookie: CookieInBattle) =>
+                cookie.card.instanceId === pendingAfterDamage.sourceInstanceId,
+            )?.card
+          if (found) return found
+        }
+        return null
+      })()
+    : null
+  const afterDamageCandidates =
+    pendingAfterDamage &&
+    pendingAfterDamage.sourcePlayerId === viewerPlayerId
+      ? getAfterDamageEffectCandidates(game)
+      : []
+  const afterDamageTargetIds = new Set(
+    afterDamageCandidates.map((cookie) => cookie.card.instanceId),
+  )
+  const hasAfterDamage =
+    Boolean(
+      pendingAfterDamage && pendingAfterDamage.sourcePlayerId === viewerPlayerId,
+    )
+  const afterDamageMinMax = pendingAfterDamage
+    ? getAfterDamageEffectMinMax(pendingAfterDamage.effect)
+    : { min: 0, max: 0 }
+
   const playerTrapCandidates =
     game.pendingBattle?.stage === 'trap' &&
     game.pendingBattle.defenderPlayerId === viewerPlayerId
@@ -501,6 +542,16 @@ export function useMatchController(params: {
     hasFaint,
     faintMin: faintMinMax.min,
     faintMax: faintMinMax.max,
+    // After-damage
+    selectedAfterDamageTargetIds,
+    setSelectedAfterDamageTargetIds,
+    pendingAfterDamage,
+    afterDamageSourceCard,
+    afterDamageCandidates,
+    afterDamageTargetIds,
+    hasAfterDamage,
+    afterDamageMin: afterDamageMinMax.min,
+    afterDamageMax: afterDamageMinMax.max,
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,

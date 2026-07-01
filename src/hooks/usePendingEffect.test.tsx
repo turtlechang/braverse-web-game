@@ -101,6 +101,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -178,6 +183,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -210,7 +220,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
     await act(() => root.unmount())
   })
 
-  it('does not allow cancel when sourceKind is not cookie', async () => {
+  it('allows cancel when sourceKind is item', async () => {
     const baseGame = createItemUsageDemoState(true)
     const itemCard: GameCard = {
       id: 'test-item',
@@ -250,6 +260,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -279,7 +294,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       captured!.cancelPendingSkill()
     })
 
-    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.pendingEffect).toBeNull()
 
     await act(() => root.unmount())
   })
@@ -301,6 +316,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -408,6 +428,11 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -474,6 +499,11 @@ describe('usePendingEffect optional-cost-attack', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       return null
     }

@@ -108,9 +108,7 @@ describe('simple AI opponent', () => {
         },
         'player-two': {
           ...state.players['player-two'],
-          hand: state.players['player-two'].hand.filter(
-            (card) => card.type !== 'cookie',
-          ),
+          hand: [],
           battleArea: [attacker],
           supportArea: Array.from(
             { length: attacker.card.attackCost },

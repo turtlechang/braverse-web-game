@@ -45,6 +45,11 @@ export function usePendingEffect(params: {
   selectedFaintTargetIds: string[]
   faintMinMax: { min: number; max: number }
   setSelectedFaintTargetIds: React.Dispatch<React.SetStateAction<string[]>>
+  hasAfterDamage: boolean
+  afterDamageTargetIds: Set<string>
+  selectedAfterDamageTargetIds: string[]
+  afterDamageMinMax: { min: number; max: number }
+  setSelectedAfterDamageTargetIds: React.Dispatch<React.SetStateAction<string[]>>
 }) {
   const {
     game,
@@ -58,6 +63,11 @@ export function usePendingEffect(params: {
     selectedFaintTargetIds,
     faintMinMax,
     setSelectedFaintTargetIds,
+    hasAfterDamage,
+    afterDamageTargetIds,
+    selectedAfterDamageTargetIds,
+    afterDamageMinMax,
+    setSelectedAfterDamageTargetIds,
   } = params
 
   const [pendingEffect, setPendingEffect] =
@@ -67,6 +77,7 @@ export function usePendingEffect(params: {
   const [effectHistory, setEffectHistory] = useState<string[]>([])
 
   const faintActive = hasFaint && !pendingEffect
+  const afterDamageActive = hasAfterDamage && !pendingEffect
 
   const currentEffect =
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
@@ -152,10 +163,12 @@ export function usePendingEffect(params: {
 
   const effectTargetIds = faintActive
     ? faintTargetIds
-    : new Set([
-        ...effectTargetCandidates.map((cookie) => cookie.card.instanceId),
-        ...fieldToTrashStageCandidate.map((c) => c.instanceId),
-      ])
+    : afterDamageActive
+      ? afterDamageTargetIds
+      : new Set([
+          ...effectTargetCandidates.map((cookie) => cookie.card.instanceId),
+          ...fieldToTrashStageCandidate.map((c) => c.instanceId),
+        ])
 
   const breakEffectTargetIds = faintActive
     ? new Set<string>()
@@ -167,9 +180,11 @@ export function usePendingEffect(params: {
         supportEffectCandidates.map((support) => support.card.instanceId),
       )
 
-  const selectedEffectTargetIds = faintActive
+  const selectedEffectTargetIds: Set<string> = faintActive
     ? new Set(selectedFaintTargetIds)
-    : new Set(pendingEffect?.selectedTargetIds ?? [])
+    : afterDamageActive
+      ? new Set(selectedAfterDamageTargetIds)
+      : new Set(pendingEffect?.selectedTargetIds ?? [])
 
   const selectedSkillPaymentIds = new Set(
     pendingEffect?.selectedPaymentIds ?? [],
@@ -248,10 +263,11 @@ export function usePendingEffect(params: {
     !pendingEffect.skillActivated
       ? game.players[pendingEffect.context.sourcePlayerId].hand.filter(
           (card) =>
-            pendingEffect.selectedDiscardHandIds.length < discardHandCost ||
-            pendingEffect.selectedDiscardHandIds.includes(
-              card.instanceId,
-            ),
+            card.instanceId !== pendingEffect.sourceCard.instanceId &&
+            (pendingEffect.selectedDiscardHandIds.length < discardHandCost ||
+              pendingEffect.selectedDiscardHandIds.includes(
+                card.instanceId,
+              )),
         )
       : []
   const skillDiscardHandTargetIds = new Set(
@@ -297,7 +313,10 @@ export function usePendingEffect(params: {
       (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
       (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
       (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
-      (game.pendingStageTrigger?.playerId === viewerPlayerId)
+      (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
+      (game.pendingAfterDamageEffects &&
+        game.pendingAfterDamageEffects.length > 0 &&
+        game.pendingAfterDamageEffects[0].sourcePlayerId === viewerPlayerId)
     if (viewerBlocks) return
 
     const timer = window.setTimeout(() => {
@@ -314,6 +333,7 @@ export function usePendingEffect(params: {
     game.pendingOptionalCostAttack,
     game.pendingDrawUpTo,
     game.pendingStageTrigger,
+    game.pendingAfterDamageEffects,
     game.status,
     viewerPlayerId,
   ])
@@ -572,6 +592,18 @@ export function usePendingEffect(params: {
       return
     }
 
+    if (afterDamageActive) {
+      if (!afterDamageTargetIds.has(instanceId)) return
+      setSelectedAfterDamageTargetIds((current) =>
+        current.includes(instanceId)
+          ? current.filter((id) => id !== instanceId)
+          : current.length < afterDamageMinMax.max
+            ? [...current, instanceId]
+            : current,
+      )
+      return
+    }
+
     if (
       !pendingEffect ||
       !currentEffect ||
@@ -719,7 +751,7 @@ export function usePendingEffect(params: {
   const cancelPendingSkill = () => {
     if (!pendingEffect) return
     if (
-      pendingEffect.sourceKind !== 'cookie' ||
+      (pendingEffect.sourceKind !== 'cookie' && pendingEffect.sourceKind !== 'item') ||
       pendingEffect.trigger !== 'activate' ||
       pendingEffect.skillActivated
     ) {
@@ -745,7 +777,10 @@ export function usePendingEffect(params: {
         (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
         (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
         (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
-        (game.pendingStageTrigger?.playerId === viewerPlayerId)
+        (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
+        (game.pendingAfterDamageEffects &&
+          game.pendingAfterDamageEffects.length > 0 &&
+          game.pendingAfterDamageEffects[0].sourcePlayerId === viewerPlayerId)
 
       if (hasNextEffect && viewerMustAct) {
         setPendingEffect(null)
@@ -914,7 +949,10 @@ export function usePendingEffect(params: {
         (nextGame.pendingInspectDeck?.playerId === viewerPlayerId) ||
         (nextGame.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
         (nextGame.pendingDrawUpTo?.playerId === viewerPlayerId) ||
-        (nextGame.pendingStageTrigger?.playerId === viewerPlayerId)
+        (nextGame.pendingStageTrigger?.playerId === viewerPlayerId) ||
+        (nextGame.pendingAfterDamageEffects &&
+          nextGame.pendingAfterDamageEffects.length > 0 &&
+          nextGame.pendingAfterDamageEffects[0].sourcePlayerId === viewerPlayerId)
 
       if (hasNextEffect && viewerMustAct) {
         setGame(nextGame)
@@ -1043,5 +1081,6 @@ export function usePendingEffect(params: {
     selectedSkillTrashBattleCookieIds,
     skillTrashBattleCookieTargetIds,
     faintActive,
+    afterDamageActive,
   } as const
 }
