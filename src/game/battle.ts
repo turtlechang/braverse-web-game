@@ -6,6 +6,7 @@ import {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
+  isEffectConditionMet,
   isEffectTargeted,
   selectEffectTargets,
 } from './effects'
@@ -850,12 +851,28 @@ export const resolveAttackEffect = (
     }
   }
 
+  const effectContext = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: battle.attackerInstanceId,
+  }
+  if (!isEffectConditionMet(state, effectContext, effect)) {
+    const attackEffectIndex = battle.attackEffectIndex + 1
+    if (attackEffectIndex < battle.attackEffects.length) {
+      return {
+        ...state,
+        pendingBattle: {
+          ...battle,
+          attackEffectIndex,
+          stage: 'attack-effect',
+        },
+      }
+    }
+    return finishBattle(state)
+  }
+
   const nextState = executeCardEffect(
     state,
-    {
-      sourcePlayerId: playerId,
-      sourceInstanceId: battle.attackerInstanceId,
-    },
+    effectContext,
     effect,
     selectedTargetIds,
   )

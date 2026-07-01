@@ -131,7 +131,7 @@ export function usePendingEffect(params: {
     pendingEffect &&
     currentEffect &&
     currentEffect.kind === 'field-to-trash' &&
-    currentEffect.allowStage
+    (currentEffect.allowStage || currentEffect.stageOnly)
       ? (() => {
           const targetPlayerId =
             currentEffect.target.side === 'self'

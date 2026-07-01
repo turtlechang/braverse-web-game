@@ -154,4 +154,12 @@ npm run cards:import:purple-sample
   - BS2-003 Rebel Cookie: OnPlay 支付 {R}{R}，選擇對手 0～1 隻餅乾造成 2 點傷害
   - BS2-004 Cherry Cookie: 攻擊後效果若對手有 LV.1 餅乾，造成 3 點傷害（條件觸發）
 - 新增 `FieldToTrashEffect.stageOnly` 選項，限制只能選擇場景卡；新增 `OpponentHasCookieWithLevelCondition` 條件類型。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 645 項單元測試通過，build 仍只有 Vite chunk size 警告。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 646 項單元測試通過，build 仍只有 Vite chunk size 警告。
+
+# 2026-07-01 BS1/BS2 adapter UI/AI/attack-effect integration
+
+- 修正 UI `usePendingEffect.ts` 處理 `stageOnly`，場景卡現在會正確加入可選目標。
+- 修正 AI `ai.ts` 的 `field-to-trash` 目標選擇，`stageOnly` 時只選場景卡，不再先挑戰鬥區餅乾。
+- 修正 `battle.ts` 的 attack-effect 流程，條件不成立時自然跳過效果而非丟錯。
+- 新增 `battle-attack-effect.test.ts` 回歸測試確認條件觸發效果在條件不成立時正確跳過。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 646 項單元測試通過。

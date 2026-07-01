@@ -79,6 +79,13 @@ const chooseEffectTargets = (
   if (effect.kind === 'field-to-trash') {
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
+    const stageOnly = effect.stageOnly ?? false
+    if (stageOnly) {
+      if (targetPlayer.stage) {
+        return [targetPlayer.stage.card.instanceId]
+      }
+      return []
+    }
     const battleCandidates = targetPlayer.battleArea.filter((cookie) => {
       if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
       if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false

@@ -36,4 +36,30 @@ describe('post-attack effects', () => {
       state.players['player-two'].discardPile.map((card) => card.instanceId),
     ).toContain('break-level-one')
   })
+
+  it('skips conditional attack effect when condition is not met', () => {
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+      },
+    ]
+
+    state = skipTrap(declareAttack(state), 'player-one')
+    state = resolveNextDamage(state)
+    state = resolveNextDamage(state)
+    state = resolveNextDamage(state)
+
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackEffectIndex: 0,
+    })
+
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingBattle).toBeNull()
+  })
 })
