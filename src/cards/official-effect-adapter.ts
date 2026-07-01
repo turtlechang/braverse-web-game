@@ -457,6 +457,81 @@ export const convertOfficialCardEffects = (
     ],
     'BS1-074': [{ kind: 'draw', amount: 1 }],
     'BS1-075': [{ kind: 'place-source-to-support', rested: true }],
+    'BS1-001': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS1-003': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+    ],
+    'BS1-004': [
+      {
+        kind: 'return-to-hand',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS1-008': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, excludeSource: true },
+      },
+    ],
+    'BS1-012': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'break-level-at-least', level: 9 },
+      },
+    ],
+    'BS1-014': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS1-016': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'hand-count-at-most', count: 4 },
+      },
+    ],
+    'BS1-017': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, excludeSource: true },
+      },
+    ],
+    'BS2-002': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1 },
+        allowStage: true,
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-003': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+    ],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -1186,6 +1261,13 @@ export const convertOfficialAttackEffects = (
     ],
     'BS1-070': [
       { kind: 'support-to-hand', amount: 1, maxLevel: 1 },
+    ],
+    'BS2-004': [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      },
     ],
   }
 

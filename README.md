@@ -135,3 +135,22 @@ npm run cards:import:purple-sample
 
 - 修正 `getActingPlayerId` 在 `pendingBattle.stage === "attack-effect"` 時改回傳攻擊方，避免 AI 攻擊後續效果被錯誤指派給防守方，造成前端停在無法操作的 AI 主要階段。
 - 新增 AI 回歸測試確認 AI 作為攻擊方時會結算 attack-effect，並新增 `usePendingEffect` hook 測試確認玩家確認需棄手牌的傷害技能後會清除效果面板並排入對手補位。
+
+# 2026-07-01 BS1/BS2 red cookie skills implementation
+
+- 已完成 BS1/BS2 系列所有紅色餅乾卡的技能與攻擊後效果實作：
+  - BS1-001 Goblin Cookie: OnPlay 棄 1 張手牌，選擇對手 1 隻餅乾造成 1 點傷害
+  - BS1-003 Dark Choco Cookie: Activate Once per turn 支付 {R}，棄 1 張手牌，選擇對手 1 隻餅乾造成 1 點傷害
+  - BS1-004 Lilac Cookie: Activate 支付 {R}{R}，將此餅乾回手
+  - BS1-005 Roll Cake Cookie: 攻擊後效果選擇對手 1 隻餅乾造成 1 點傷害（已有）
+  - BS1-006 Mala Sauce Cookie: after-damage 效果（已有）
+  - BS1-008 Pomegranate Cookie: Activate Once per turn 支付 {R}，選擇己方 1 隻餅乾，本回合 +1 攻擊傷害
+  - BS1-012 Wildberry Cookie: 被動效果若休息區有 LV.9，+2 攻擊傷害
+  - BS1-013 GingerBrave: 攻擊後效果棄 1 張手牌（已有）
+  - BS1-014 GingerBrave: Activate Once per turn 支付 {R}{R}，本回合 +1 攻擊傷害
+  - BS1-016 Choco Ball Cookie: When Faint 若手牌 ≤ 4 張，選擇對手 1 隻餅乾造成 1 點傷害
+  - BS1-017 Croissant Cookie: OnPlay 支付 {R}{R}，選擇己方 1 隻餅乾，本回合 +2 攻擊傷害
+  - BS2-002 Macaron Cookie: OnPlay 支付 {R}，將對手 1 張場地卡送入棄牌區
+  - BS2-003 Rebel Cookie: OnPlay 支付 {R}{R}，選擇對手 1 隻餅乾造成 2 點傷害
+  - BS2-004 Cherry Cookie: 攻擊後效果若對手有 LV.1 餅乾，造成 3 點傷害
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 642 項單元測試通過，build 仍只有 Vite chunk size 警告。
