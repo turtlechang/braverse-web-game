@@ -468,7 +468,7 @@ export const convertOfficialCardEffects = (
       {
         kind: 'damage',
         amount: 1,
-        target: { side: 'opponent', min: 1, max: 1 },
+        target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
     'BS1-004': [
@@ -522,14 +522,14 @@ export const convertOfficialCardEffects = (
       {
         kind: 'field-to-trash',
         target: { side: 'opponent', min: 0, max: 1 },
-        allowStage: true,
+        stageOnly: true,
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-003': [
       {
         kind: 'damage',
         amount: 2,
-        target: { side: 'opponent', min: 1, max: 1 },
+        target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
   }
@@ -1266,7 +1266,8 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'damage',
         amount: 3,
-        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
       },
     ],
   }

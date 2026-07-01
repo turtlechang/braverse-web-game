@@ -224,6 +224,13 @@ export const isEffectConditionMet = (
     return getBreakAreaLevel(state, context.sourcePlayerId) >= condition.level
   }
 
+  if (condition?.kind === 'opponent-has-cookie-with-level') {
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    return state.players[opponentId].battleArea.some(
+      (cookie) => cookie.card.level === condition.level,
+    )
+  }
+
   if (effect.kind === 'damage-all' || effect.kind === 'modify-all-attack') {
     return true
   }

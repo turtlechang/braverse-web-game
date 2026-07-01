@@ -734,14 +734,15 @@ export const executeCardEffect = (
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
 
-    const battleCandidates = targetPlayer.battleArea.filter((cookie) => {
+    const stageOnly = effect.stageOnly ?? false
+    const battleCandidates = stageOnly ? [] : targetPlayer.battleArea.filter((cookie) => {
       if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
       if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
       if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
       return true
     })
 
-    const hasStageOption = effect.allowStage && targetPlayer.stage !== null
+    const hasStageOption = (effect.allowStage || stageOnly) && targetPlayer.stage !== null
     const hasBattleOption = battleCandidates.length > 0
 
     if (!hasBattleOption && !hasStageOption && selectedTargetIds.length === 0) {
@@ -768,6 +769,10 @@ export const executeCardEffect = (
         discardPile: [...targetPlayer.discardPile, stageCard],
       }
       return updatePlayer(state, updatedPlayer)
+    }
+
+    if (stageOnly) {
+      throw new GameRuleError('此效果只能選擇場景卡。')
     }
 
     const selectedCookie = battleCandidates.find((c) => c.card.instanceId === selectedId)

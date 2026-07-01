@@ -150,7 +150,8 @@ npm run cards:import:purple-sample
   - BS1-014 GingerBrave: Activate Once per turn 支付 {R}{R}，本回合 +1 攻擊傷害
   - BS1-016 Choco Ball Cookie: When Faint 若手牌 ≤ 4 張，選擇對手 1 隻餅乾造成 1 點傷害
   - BS1-017 Croissant Cookie: OnPlay 支付 {R}{R}，選擇己方 1 隻餅乾，本回合 +2 攻擊傷害
-  - BS2-002 Macaron Cookie: OnPlay 支付 {R}，將對手 1 張場地卡送入棄牌區
-  - BS2-003 Rebel Cookie: OnPlay 支付 {R}{R}，選擇對手 1 隻餅乾造成 2 點傷害
-  - BS2-004 Cherry Cookie: 攻擊後效果若對手有 LV.1 餅乾，造成 3 點傷害
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 642 項單元測試通過，build 仍只有 Vite chunk size 警告。
+  - BS2-002 Macaron Cookie: OnPlay 支付 {R}，將對手場景卡送入棄牌區（stageOnly 限制）
+  - BS2-003 Rebel Cookie: OnPlay 支付 {R}{R}，選擇對手 0～1 隻餅乾造成 2 點傷害
+  - BS2-004 Cherry Cookie: 攻擊後效果若對手有 LV.1 餅乾，造成 3 點傷害（條件觸發）
+- 新增 `FieldToTrashEffect.stageOnly` 選項，限制只能選擇場景卡；新增 `OpponentHasCookieWithLevelCondition` 條件類型。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 645 項單元測試通過，build 仍只有 Vite chunk size 警告。

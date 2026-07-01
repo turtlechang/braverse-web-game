@@ -5,6 +5,7 @@ import officialGreenSample from '../../data/cards/official-starter-deck-green.en
 import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.json'
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
 import officialBraveBeginning from '../../data/cards/official-brave-beginning-bs1.en.json'
+import officialBraveBeginningBS2 from '../../data/cards/official-brave-beginning-bs2.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
@@ -23,6 +24,7 @@ const greenCards = officialGreenSample.cards as OfficialCardRecord[]
 const blueCards = officialBlueSample.cards as OfficialCardRecord[]
 const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
 const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
+const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRecord[]
 
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
@@ -89,6 +91,18 @@ const findBraveBeginningCard = (baseCardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing Brave Beginning sample card ${baseCardNumber}`)
+  }
+
+  return card
+}
+
+const findBraveBeginningBS2Card = (baseCardNumber: string) => {
+  const card = braveBeginningBS2Cards.find(
+    (candidate) => candidate.baseCardNumber === baseCardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing Brave Beginning BS2 sample card ${baseCardNumber}`)
   }
 
   return card
@@ -1599,6 +1613,50 @@ describe('Starter Deck RED official effect adapter', () => {
             },
           ],
         })
+    })
+  })
+
+  describe('Brave Beginning BS2 red cookie adapter coverage', () => {
+    it('BS2-002 Macaron Cookie converts to stageOnly field-to-trash', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-002')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { energy: { red: 1 } },
+          effects: [
+            {
+              kind: 'field-to-trash',
+              target: { side: 'opponent', min: 0, max: 1 },
+              stageOnly: true,
+            },
+          ],
+        })
+    })
+
+    it('BS2-003 Rebel Cookie converts to optional damage', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-003')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { energy: { red: 2 } },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 2,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        })
+    })
+
+    it('BS2-004 Cherry Cookie converts to conditional attack damage', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningBS2Card('BS2-004')))
+        .toEqual([
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ])
     })
   })
 })

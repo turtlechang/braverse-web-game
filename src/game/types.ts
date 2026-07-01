@@ -124,12 +124,18 @@ export interface SupportAreaDecreasedThisTurnCondition {
   kind: 'support-area-decreased-this-turn'
 }
 
+export interface OpponentHasCookieWithLevelCondition {
+  kind: 'opponent-has-cookie-with-level'
+  level: number
+}
+
 export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
   | SupportCountAtLeastCondition
   | HandCountAtMostCondition
   | SupportAreaDecreasedThisTurnCondition
+  | OpponentHasCookieWithLevelCondition
 
 export interface DamageEffect {
   kind: 'damage'
@@ -302,6 +308,7 @@ export interface FieldToTrashEffect {
   kind: 'field-to-trash'
   target: EffectTargetSelector
   allowStage?: boolean
+  stageOnly?: boolean
   stageLevel?: number
   condition?: EffectCondition
 }
