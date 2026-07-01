@@ -165,14 +165,21 @@ const isTrapConditionMet = (
 ): boolean => {
   const battle = requirePendingBattle(state)
 
-  if (!trap.condition) return true
+  const condition = trap.condition
+  if (!condition) return true
 
-  if (trap.condition.kind === 'break-level-at-least') {
-    return getBreakAreaLevel(state, playerId) >= trap.condition.level
+  if (condition.kind === 'break-level-at-least') {
+    return getBreakAreaLevel(state, playerId) >= condition.level
   }
 
-  if (trap.condition.kind === 'attacker-attack-more-than') {
-    return battle.declaredDamage > trap.condition.amount
+  if (condition.kind === 'attacker-attack-more-than') {
+    return battle.declaredDamage > condition.amount
+  }
+
+  if (condition.kind === 'self-cookie-hp-equals') {
+    return state.players[playerId].battleArea.some(
+      (cookie) => cookie.hpCards.length === condition.amount,
+    )
   }
 
   return true
@@ -230,8 +237,11 @@ export const getTrapCandidates = (
       hasRequiredTrapTargets(state, playerId, card) &&
       player.hand.filter(
         (handCard) => handCard.instanceId !== card.instanceId,
-      ).length >= card.trap!.cost.discardHand &&
-      selectEnergyPayment(card.trap!.cost.energy, player.supportArea) !== null &&
+      ).length >= (card.trap!.cost.discardHand ?? 0) &&
+      selectEnergyPayment(
+        card.trap!.cost.energy ?? card.trap!.cost,
+        player.supportArea,
+      ) !== null &&
       canPayTrashBattleCookieCost(card.trap!.cost, player.battleArea),
   )
 }
@@ -247,7 +257,8 @@ const validateTrapTargets = (
       effect.kind === 'damage' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
-      effect.kind === 'field-to-trash',
+      effect.kind === 'field-to-trash' ||
+      effect.kind === 'redirect-attack',
   )
   if (targetEffects.length === 0) {
     if (targetIds.length > 0) {
@@ -298,6 +309,17 @@ const moveSupportsToTrash = (
   }
 }
 
+const markSupportAreaDecreased = (
+  state: GameState,
+  playerId: PlayerId,
+): GameState => ({
+  ...state,
+  supportAreaDecreasedThisTurn: {
+    ...(state.supportAreaDecreasedThisTurn ?? {}),
+    [playerId]: true,
+  },
+})
+
 export interface PlayTrapOptions {
   trapInstanceId: string
   paymentIds: string[]
@@ -337,7 +359,7 @@ export const playTrap = (
   }
 
   const paymentValidation = validateEnergyPayment(
-    trap.cost.energy,
+    trap.cost.energy ?? trap.cost,
     player.supportArea,
     options.paymentIds,
   )
@@ -351,10 +373,10 @@ export const playTrap = (
   const uniqueDiscardHandIds = [...new Set(discardHandIds)]
   if (
     uniqueDiscardHandIds.length !== discardHandIds.length ||
-    uniqueDiscardHandIds.length !== trap.cost.discardHand
+    uniqueDiscardHandIds.length !== (trap.cost.discardHand ?? 0)
   ) {
     throw new GameRuleError(
-      `必須棄置 ${trap.cost.discardHand} 張手牌支付陷阱代價。`,
+      `必須棄置 ${trap.cost.discardHand ?? 0} 張手牌支付陷阱代價。`,
     )
   }
   const discardedHandCards = player.hand.filter(
@@ -362,7 +384,7 @@ export const playTrap = (
       card.instanceId !== trapCard.instanceId &&
       uniqueDiscardHandIds.includes(card.instanceId),
   )
-  if (discardedHandCards.length !== trap.cost.discardHand) {
+  if (discardedHandCards.length !== (trap.cost.discardHand ?? 0)) {
     throw new GameRuleError('只能選擇陷阱卡以外的自己手牌支付代價。')
   }
 
@@ -430,6 +452,10 @@ export const playTrap = (
     )
   }
 
+  if (supportToTrash?.kind === 'support-to-trash') {
+    nextState = markSupportAreaDecreased(nextState, playerId)
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: trapCard.instanceId,
@@ -464,6 +490,38 @@ export const playTrap = (
             ],
           },
         }
+      }
+      continue
+    }
+
+    if (effect.kind === 'redirect-attack') {
+      const targets = selectEffectTargets(
+        nextState,
+        context,
+        effect.target,
+        options.targetIds,
+      )
+      const redirectTarget = targets[0]
+      const activeBattle = requirePendingBattle(nextState)
+      if (!redirectTarget) {
+        throw new GameRuleError('必須選擇改變攻擊目標的餅乾。')
+      }
+      if (redirectTarget.card.instanceId === activeBattle.targetInstanceId) {
+        throw new GameRuleError('改變攻擊目標必須選擇不同的我方餅乾。')
+      }
+      const redirectedDamage = getAttackDamageAgainst(
+        nextState,
+        activeBattle.attackerInstanceId,
+        redirectTarget.card.instanceId,
+      )
+      nextState = {
+        ...nextState,
+        pendingBattle: {
+          ...activeBattle,
+          targetInstanceId: redirectTarget.card.instanceId,
+          declaredDamage: redirectedDamage,
+          remainingDamage: redirectedDamage,
+        },
       }
       continue
     }
@@ -839,8 +897,8 @@ export const resolveOptionalCostAttack = (
   }
   const player = state.players[playerId]
   const uniqueDiscardIds = [...new Set(discardCardIds)]
-  if (uniqueDiscardIds.length !== pending.cost.discardHand) {
-    throw new GameRuleError(`必須棄置 ${pending.cost.discardHand} 張手牌作為代價。`)
+  if (uniqueDiscardIds.length !== (pending.cost.discardHand ?? 0)) {
+    throw new GameRuleError(`必須棄置 ${pending.cost.discardHand ?? 0} 張手牌作為代價。`)
   }
   const allInHand = uniqueDiscardIds.every((id) => player.hand.some((card) => card.instanceId === id))
   if (!allInHand) {
@@ -1051,9 +1109,9 @@ export const resolveFlip = (
   if (options.activate) {
     const player = nextState.players[playerId]
     const discardIds = [...new Set(options.discardHandIds ?? [])]
-    if (discardIds.length !== revealed.flip.cost.discardHand) {
+    if (discardIds.length !== (revealed.flip.cost.discardHand ?? 0)) {
       throw new GameRuleError(
-        `必須棄置 ${revealed.flip.cost.discardHand} 張手牌支付 FLIP 代價。`,
+        `必須棄置 ${revealed.flip.cost.discardHand ?? 0} 張手牌支付 FLIP 代價。`,
       )
     }
     const discarded = player.hand.filter((card) =>
@@ -1166,11 +1224,11 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
     if (nextState.pendingOptionalCostAttack) {
       const pending = nextState.pendingOptionalCostAttack
       const hand = nextState.players[pending.playerId].hand
-      const canPayHand = hand.length >= pending.cost.discardHand
+      const canPayHand = hand.length >= (pending.cost.discardHand ?? 0)
       const opponentId = pending.playerId === 'player-one' ? 'player-two' : 'player-one'
       const opponentHasCookie = nextState.players[opponentId].battleArea.length > 0
       if (canPayHand && opponentHasCookie) {
-        const discardIds = hand.slice(0, pending.cost.discardHand).map((c) => c.instanceId)
+        const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
         const targetIds = [nextState.players[opponentId].battleArea[0].card.instanceId]
         nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, targetIds)
       } else {
@@ -1255,7 +1313,8 @@ export const getTrapTargetCandidates = (
       effect.kind === 'damage' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
-      effect.kind === 'field-to-trash',
+      effect.kind === 'field-to-trash' ||
+      effect.kind === 'redirect-attack',
   )
   return targetEffect
     ? getEffectTargetCandidates(

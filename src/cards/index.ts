@@ -5,6 +5,7 @@ export {
 export {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
+  convertOfficialAttackEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
   convertOfficialItemAbility,

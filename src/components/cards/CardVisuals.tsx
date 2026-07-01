@@ -61,13 +61,13 @@ export function EnergyIcon({ energy }: { energy: EnergyKey }) {
 export function SkillCost({ skill }: { skill: CardSkill }) {
   return (
     <span className="skill-cost-text">
-      <EnergyCostIcons cost={skill.cost.energy} />
+      <EnergyCostIcons cost={skill.cost.energy ?? skill.cost} />
       {skill.cost.supportToTrash && (
         <span className="support-to-trash-cost">
           + 棄置 {skill.cost.supportToTrash} 張支援區卡牌
         </span>
       )}
-      {skill.cost.discardHand > 0 && (
+      {(skill.cost.discardHand ?? 0) > 0 && (
         <span className="discard-hand-cost">
           + 棄置 {skill.cost.discardHand} 張手牌
         </span>

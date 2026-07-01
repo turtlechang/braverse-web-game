@@ -1274,7 +1274,7 @@ function App() {
           key={pendingOptionalCost.sourceInstanceId}
           sourceCardName={pendingOptionalCost.sourceCardName}
           effectText={pendingOptionalCost.effectText}
-          discardHandCost={pendingOptionalCost.cost.discardHand}
+          discardHandCost={pendingOptionalCost.cost.discardHand ?? 0}
           playerHand={match.game.players[match.viewerPlayerId].hand}
           opponentBattleCards={opponentBattleCards}
           onSkip={() => {

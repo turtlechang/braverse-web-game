@@ -53,7 +53,8 @@ export type {
 export const selectAiEnergyPayment = (
   skill: CardSkill,
   supportArea: SupportCard[],
-): string[] | null => selectEnergyPayment(skill.cost.energy, supportArea)
+): string[] | null =>
+  selectEnergyPayment(skill.cost.energy ?? skill.cost, supportArea)
 
 const chooseEffectTargets = (
   state: GameState,
@@ -176,7 +177,7 @@ const resolveAiCardAbility = (
   const ability = card.item
   if (!ability) return null
   const paymentIds = selectEnergyPayment(
-    ability.cost,
+    ability.cost.energy ?? ability.cost,
     state.players[playerId].supportArea,
   )
   if (!paymentIds) return null
@@ -288,13 +289,14 @@ const resolveAiSkill = (
     return null
   }
 
-  const discardHandIds = skill.cost.discardHand > 0
-    ? player.hand.slice(0, skill.cost.discardHand).map((card) => card.instanceId)
+  const discardHandCost = skill.cost.discardHand ?? 0
+  const discardHandIds = discardHandCost > 0
+    ? player.hand.slice(0, discardHandCost).map((card) => card.instanceId)
     : []
 
   if (
-    skill.cost.discardHand > 0 &&
-    discardHandIds.length < skill.cost.discardHand
+    discardHandCost > 0 &&
+    discardHandIds.length < discardHandCost
   ) {
     return null
   }

@@ -102,7 +102,13 @@ export function usePendingEffect(params: {
     currentEffect &&
     (currentEffect.kind === 'support-to-trash' ||
       currentEffect.kind === 'support-to-hand')
-      ? getSupportEffectCandidates(game, pendingEffect.context)
+      ? getSupportEffectCandidates(game, pendingEffect.context).filter(
+          (support) =>
+            currentEffect.kind !== 'support-to-hand' ||
+            currentEffect.maxLevel === undefined ||
+            (support.card.type === 'cookie' &&
+              support.card.level <= currentEffect.maxLevel),
+        )
       : []
 
   const trashCookieCandidates =
@@ -173,11 +179,13 @@ export function usePendingEffect(params: {
     ? game.players[pendingEffect.context.sourcePlayerId].supportArea
     : []
   const skillEnergyCostTotal = pendingEffect
-    ? getEnergyCostTotal(pendingEffect.skill.cost.energy)
+    ? getEnergyCostTotal(
+        pendingEffect.skill.cost.energy ?? pendingEffect.skill.cost,
+      )
     : 0
   const skillEnergyPaymentValid = pendingEffect
     ? validateEnergyPayment(
-        pendingEffect.skill.cost.energy,
+        pendingEffect.skill.cost.energy ?? pendingEffect.skill.cost,
         pendingSupportArea,
         pendingEffect.selectedPaymentIds,
       ).valid
@@ -203,9 +211,12 @@ export function usePendingEffect(params: {
 
   const supportToTrashCost =
     pendingEffect?.skill.cost.supportToTrash ?? 0
+  const supportToHandCost =
+    pendingEffect?.skill.cost.supportToHand ?? 0
+  const supportAreaCost = supportToTrashCost + supportToHandCost
   const skillCostSupportCandidates =
     pendingEffect &&
-    supportToTrashCost > 0 &&
+    supportAreaCost > 0 &&
     skillEnergyPaymentValid
       ? getSupportEffectCandidates(game, pendingEffect.context).filter(
           (support) =>
@@ -213,7 +224,7 @@ export function usePendingEffect(params: {
               support.card.instanceId,
             ) &&
             (pendingEffect.selectedCostSupportToTrashIds.length <
-              supportToTrashCost ||
+              supportAreaCost ||
               pendingEffect.selectedCostSupportToTrashIds.includes(
                 support.card.instanceId,
               )),
@@ -407,7 +418,7 @@ export function usePendingEffect(params: {
         oncePerTurn: false,
         yourTurn: true,
         restSource: sourceKind === 'stage',
-        cost: { energy: ability.cost, discardHand: 0 },
+        cost: ability.cost,
         text: ability.text,
         effects,
       },
@@ -629,7 +640,9 @@ export function usePendingEffect(params: {
       return
     }
 
-    const max = pendingEffect.skill.cost.supportToTrash ?? 0
+    const max =
+      (pendingEffect.skill.cost.supportToTrash ?? 0) +
+      (pendingEffect.skill.cost.supportToHand ?? 0)
     const isSelected =
       pendingEffect.selectedCostSupportToTrashIds.includes(instanceId)
     const selectedCostSupportToTrashIds = isSelected
@@ -645,7 +658,7 @@ export function usePendingEffect(params: {
 
   const toggleSkillDiscardHand = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
-    const discardHandCost = pendingEffect.skill.cost.discardHand
+    const discardHandCost = pendingEffect.skill.cost.discardHand ?? 0
     if (discardHandCost <= 0) return
     const player = game.players[pendingEffect.context.sourcePlayerId]
     const ownsCard = player.hand.some(
@@ -833,12 +846,31 @@ export function usePendingEffect(params: {
               pendingEffect.context.sourcePlayerId,
               pendingEffect.sourceCard.instanceId,
               pendingEffect.selectedPaymentIds,
+              pendingEffect.sourceKind === 'item'
+                ? pendingEffect.skill.cost.supportToTrash
+                  ? pendingEffect.selectedCostSupportToTrashIds
+                  : []
+                : [],
+              pendingEffect.sourceKind === 'item' &&
+                pendingEffect.skill.cost.supportToHand
+                ? pendingEffect.selectedCostSupportToTrashIds
+                : [],
+              pendingEffect.selectedDiscardHandIds,
+              pendingEffect.selectedTargetIds,
             )
           : pendingEffect.sourceKind === 'stage'
             ? activateStage(
                 game,
                 pendingEffect.context.sourcePlayerId,
                 pendingEffect.selectedPaymentIds,
+                pendingEffect.skill.cost.supportToTrash
+                  ? pendingEffect.selectedCostSupportToTrashIds
+                  : [],
+                pendingEffect.skill.cost.supportToHand
+                  ? pendingEffect.selectedCostSupportToTrashIds
+                  : [],
+                pendingEffect.selectedDiscardHandIds,
+                pendingEffect.selectedTargetIds,
               )
             : activateCookieSkill(
                 game,

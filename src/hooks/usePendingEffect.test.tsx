@@ -338,7 +338,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
     const isConfirmDisabled =
       !captured!.pendingEffect!.skillActivated &&
       (captured!.pendingEffect!.selectedPaymentIds.length !==
-        captured!.pendingEffect!.skill.cost.energy.red ||
+        (captured!.pendingEffect!.skill.cost.energy ?? {}).red ||
         captured!.pendingEffect!.selectedDiscardHandIds.length !==
           captured!.discardHandCost)
 
@@ -354,7 +354,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
     const isConfirmDisabledAfterSelection =
       !captured!.pendingEffect!.skillActivated &&
       (captured!.pendingEffect!.selectedPaymentIds.length !==
-        captured!.pendingEffect!.skill.cost.energy.red ||
+        (captured!.pendingEffect!.skill.cost.energy ?? {}).red ||
         captured!.pendingEffect!.selectedDiscardHandIds.length !==
           captured!.discardHandCost)
 

@@ -497,14 +497,15 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
     breakLevel += card.level
     if (breakLevel >= 5) break
   }
-  const requiredColor = Object.keys(trap.trap!.cost.energy)[0] as
+  const requiredColor = Object.keys(trap.trap!.cost.energy ?? trap.trap!.cost)[0] as
     | 'red'
     | 'yellow'
     | 'green'
     | 'blue'
     | 'purple'
     | 'black'
-  const requiredCount = trap.trap!.cost.energy[requiredColor] ?? 0
+  const requiredCount =
+    (trap.trap!.cost.energy ?? trap.trap!.cost)[requiredColor] ?? 0
   const supports = p1Deck
     .filter(
       (card) =>
@@ -1049,8 +1050,11 @@ export const createPretzelSnareDemoState = (attack: number): GameState => {
   const p2Deck = createOfficialYellowStarterDeck('player-two')
   const attacker = p2Deck.find((card) => card.type === 'cookie') as CookieCard
 
-  const requiredColor = Object.keys(trap.trap!.cost.energy)[0] as 'yellow'
-  const requiredCount = trap.trap!.cost.energy[requiredColor] ?? 0
+  const requiredColor = Object.keys(
+    trap.trap!.cost.energy ?? trap.trap!.cost,
+  )[0] as 'yellow'
+  const requiredCount =
+    (trap.trap!.cost.energy ?? trap.trap!.cost)[requiredColor] ?? 0
   const supports = p1Deck
     .filter(
       (card) =>

@@ -299,7 +299,7 @@ export function useMatchController(params: {
   )
   const selectedTrapPaymentIds = selectedTrap?.trap
     ? selectEnergyPayment(
-        selectedTrap.trap.cost.energy,
+        selectedTrap.trap.cost.energy ?? selectedTrap.trap.cost,
         game.players[viewerPlayerId].supportArea,
       ) ?? []
     : []

@@ -5,6 +5,7 @@ import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.j
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
 import {
   convertOfficialCardEffects,
+  convertOfficialAttackEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
   convertOfficialItemAbility,
@@ -179,6 +180,7 @@ export const createCard = (
   copyNumber: number,
 ): GameCard => {
   const effectConversion = convertOfficialCardEffects(source)
+  const attackEffects = convertOfficialAttackEffects(source)
   const skill = convertOfficialCookieSkill(source)
   const flip = convertOfficialFlipAbility(source)
   const trap = convertOfficialTrapAbility(source)
@@ -232,37 +234,7 @@ export const createCard = (
       attackCost: parsedAttack?.totalCost ?? 0,
       attackEnergyCost: parsedAttack?.cost ?? {},
       attackText: source.attackText ?? undefined,
-      ...(source.cardNumber === 'ST2-003'
-        ? {
-            attackEffects: [
-              { kind: 'break-to-trash', max: 1, exactLevel: 1 },
-            ] satisfies CardEffect[],
-          }
-        : source.cardNumber === 'ST4-013'
-          ? {
-              attackEffects: [
-                {
-                  kind: 'optional-cost-attack',
-                  cost: { energy: {}, discardHand: 2 },
-                  effects: [
-                    {
-                      kind: 'damage',
-                      amount: 1,
-                      target: { side: 'opponent', min: 1, max: 1 },
-                    },
-                  ],
-                  effectText:
-                    'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
-                },
-              ] satisfies CardEffect[],
-            }
-        : source.cardNumber === 'ST4-015'
-          ? {
-              attackEffects: [
-                { kind: 'draw', amount: 1 },
-              ] satisfies CardEffect[],
-            }
-          : {}),
+      ...(attackEffects ? { attackEffects: attackEffects satisfies CardEffect[] } : {}),
       ...(skill ? { skill } : {}),
       ...(flip ? { flip } : {}),
     }

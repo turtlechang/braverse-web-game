@@ -106,7 +106,7 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
-    const canPay = hand.length >= pendingDecision.cost.discardHand
+    const canPay = hand.length >= (pendingDecision.cost.discardHand ?? 0)
     const opponentId =
       playerId === 'player-one' ? 'player-two' : 'player-one'
     const hasTarget = state.players[opponentId].battleArea.length > 0
@@ -117,7 +117,7 @@ export const handleAiPendingDecision = (
           playerId,
           action: 'pay',
           discardCardIds: hand
-            .slice(0, pendingDecision.cost.discardHand)
+            .slice(0, pendingDecision.cost.discardHand ?? 0)
             .map((card) => card.instanceId),
           targetIds: [
             state.players[opponentId].battleArea[0].card.instanceId,

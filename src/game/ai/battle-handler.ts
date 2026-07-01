@@ -97,7 +97,7 @@ export const handleAiPendingBattle = (
     }
     const paymentIds =
       selectEnergyPayment(
-        trapCard.trap.cost.energy,
+        trapCard.trap.cost.energy ?? trapCard.trap.cost,
         state.players[playerId].supportArea,
       ) ?? []
     const targetIds = getTrapTargetCandidates(
@@ -118,7 +118,7 @@ export const handleAiPendingBattle = (
         : []
     const discardHandIds = state.players[playerId].hand
       .filter((card) => card.instanceId !== trapCard.instanceId)
-      .slice(0, trapCard.trap.cost.discardHand)
+      .slice(0, trapCard.trap.cost.discardHand ?? 0)
       .map((card) => card.instanceId)
     const trashBattleCookieIds = getTrashBattleCookieCostCandidates(
       trapCard.trap.cost,

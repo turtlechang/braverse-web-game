@@ -46,7 +46,8 @@ function EffectPanelContent({
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
-  const supportToTrashCost = skill?.cost.supportToTrash ?? 0
+  const supportAreaCost =
+    (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
   const selectionLimits =
     currentEffect?.kind === 'break-to-trash'
       ? { min: 0, max: currentEffect.max }
@@ -87,10 +88,10 @@ function EffectPanelContent({
               已選 {pendingEffect.selectedPaymentIds.length}／
               {totalEnergyCost} 張能量支援卡
             </small>
-            {supportToTrashCost > 0 && (
+            {supportAreaCost > 0 && (
               <small>
                 已選 {pendingEffect.selectedCostSupportToTrashIds.length}／
-                {supportToTrashCost} 張支援區代價
+                {supportAreaCost} 張支援區代價
               </small>
             )}
             {discardHandCost > 0 && (
@@ -177,7 +178,7 @@ function EffectPanelContent({
             (!pendingEffect.skillActivated &&
               (pendingEffect.selectedPaymentIds.length !== totalEnergyCost ||
                 pendingEffect.selectedCostSupportToTrashIds.length !==
-                  supportToTrashCost ||
+                  supportAreaCost ||
                 pendingEffect.selectedDiscardHandIds.length !==
                   discardHandCost)) ||
             (Boolean(selectionLimits) &&

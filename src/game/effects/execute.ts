@@ -192,6 +192,48 @@ const getExpirationTurn = (
     : state.turnNumber + 1
 }
 
+const markSupportAreaDecreased = (
+  state: GameState,
+  playerId: PlayerId,
+): GameState => ({
+  ...state,
+  supportAreaDecreasedThisTurn: {
+    ...(state.supportAreaDecreasedThisTurn ?? {}),
+    [playerId]: true,
+  },
+})
+
+const getBreakCount = (
+  state: GameState,
+  playerId: PlayerId,
+  options: {
+    minBreakLevel?: number
+    exactBreakLevel?: number
+    breakEnergyColor?: CookieCard['energyColor']
+  },
+): number =>
+  state.players[playerId].breakArea.filter((card) => {
+    if (
+      options.exactBreakLevel !== undefined &&
+      card.level !== options.exactBreakLevel
+    ) {
+      return false
+    }
+    if (
+      options.minBreakLevel !== undefined &&
+      card.level < options.minBreakLevel
+    ) {
+      return false
+    }
+    if (
+      options.breakEnergyColor !== undefined &&
+      card.energyColor !== options.breakEnergyColor
+    ) {
+      return false
+    }
+    return true
+  }).length
+
 export const executeCardEffect = (
   state: GameState,
   context: EffectContext,
@@ -264,6 +306,75 @@ export const executeCardEffect = (
           battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? 'Unknown',
       },
     }
+  }
+
+  if (effect.kind === 'damage-all') {
+    const targetPlayerId =
+      effect.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    const targetPlayer = state.players[targetPlayerId]
+    const previousBattleAreaCount = targetPlayer.battleArea.length
+    const targets = targetPlayer.battleArea
+    const damagedPlayer = targets.reduce(
+      (player, target) =>
+        damagePlayerCookie(player, target.card.instanceId, effect.amount),
+      targetPlayer,
+    )
+    const departedCount =
+      previousBattleAreaCount - damagedPlayer.battleArea.length
+    const departedCookieCards = targets
+      .filter(
+        (target) =>
+          !damagedPlayer.battleArea.some(
+            (cookie) => cookie.card.instanceId === target.card.instanceId,
+          ),
+      )
+      .map((target) => target.card)
+
+    return resolveDamageOutcome(
+      {
+        ...state,
+        players: {
+          ...state.players,
+          [targetPlayerId]: damagedPlayer,
+        },
+      },
+      targetPlayerId,
+      departedCount,
+      departedCookieCards,
+    )
+  }
+
+  if (effect.kind === 'redirect-attack') {
+    return { ...state }
+  }
+
+  if (effect.kind === 'place-source-to-support') {
+    const player = state.players[context.sourcePlayerId]
+    const sourceFromDiscard = player.discardPile.find(
+      (card) => card.instanceId === context.sourceInstanceId,
+    )
+    const sourceFromHand = player.hand.find(
+      (card) => card.instanceId === context.sourceInstanceId,
+    )
+    const source = sourceFromDiscard ?? sourceFromHand
+    if (!source) {
+      throw new GameRuleError('找不到可放入支援區的來源卡。')
+    }
+    return updatePlayer(state, {
+      ...player,
+      hand: player.hand.filter(
+        (card) => card.instanceId !== context.sourceInstanceId,
+      ),
+      discardPile: player.discardPile.filter(
+        (card) => card.instanceId !== context.sourceInstanceId,
+      ),
+      supportArea: [
+        ...player.supportArea,
+        { card: source, rested: effect.rested ?? false },
+      ],
+    })
   }
 
   if (effect.kind === 'hand-to-deck-and-draw') {
@@ -415,7 +526,7 @@ export const executeCardEffect = (
     if (selected.length !== effect.amount) {
       throw new GameRuleError('只能選擇自己的支援區卡牌。')
     }
-    return updatePlayer(state, {
+    return markSupportAreaDecreased(updatePlayer(state, {
       ...player,
       supportArea: player.supportArea.filter(
         (support) => !uniqueIds.includes(support.card.instanceId),
@@ -424,7 +535,7 @@ export const executeCardEffect = (
         ...player.discardPile,
         ...selected.map((support) => support.card),
       ],
-    })
+    }), context.sourcePlayerId)
   }
 
   if (effect.kind === 'support-to-hand') {
@@ -433,19 +544,23 @@ export const executeCardEffect = (
     if (uniqueIds.length !== effect.amount) {
       throw new GameRuleError(`必須選擇 ${effect.amount} 張支援卡。`)
     }
-    const selected = player.supportArea.filter((support) =>
-      uniqueIds.includes(support.card.instanceId),
+    const selected = player.supportArea.filter(
+      (support) =>
+        uniqueIds.includes(support.card.instanceId) &&
+        (effect.maxLevel === undefined ||
+          (support.card.type === 'cookie' &&
+            support.card.level <= effect.maxLevel)),
     )
     if (selected.length !== effect.amount) {
       throw new GameRuleError('選擇的卡片不在支援區。')
     }
-    return updatePlayer(state, {
+    return markSupportAreaDecreased(updatePlayer(state, {
       ...player,
       supportArea: player.supportArea.filter(
         (support) => !uniqueIds.includes(support.card.instanceId),
       ),
       hand: [...player.hand, ...selected.map((support) => support.card)],
-    })
+    }), context.sourcePlayerId)
   }
 
   if (effect.kind === 'modify-all-attack') {
@@ -542,6 +657,26 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: state.players[context.sourcePlayerId].battleArea.find(
+          (c) => c.card.instanceId === context.sourceInstanceId,
+        )?.card.name ?? 'Unknown',
+        effectText: effect.kind,
+      },
+    }
+  }
+
+  if (effect.kind === 'discard-hand') {
+    const player = state.players[context.sourcePlayerId]
+    if (player.hand.length < effect.count) {
+      return { ...state }
+    }
+    return {
+      ...state,
+      pendingOpponentHandDiscard: {
+        playerId: context.sourcePlayerId,
+        count: effect.count,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName: player.battleArea.find(
           (c) => c.card.instanceId === context.sourceInstanceId,
         )?.card.name ?? 'Unknown',
         effectText: effect.kind,
@@ -794,12 +929,17 @@ export const executeCardEffect = (
   )
   const targetPlayerId = getTargetPlayerId(context, effect.target)
 
-  if (effect.kind === 'damage') {
+  if (effect.kind === 'damage' || effect.kind === 'damage-by-break-count') {
+    const amount =
+      effect.kind === 'damage'
+        ? effect.amount
+        : getBreakCount(state, context.sourcePlayerId, effect) *
+          effect.perCount
     const previousBattleAreaCount =
       state.players[targetPlayerId].battleArea.length
     const damagedPlayer = targets.reduce(
       (player, target) =>
-        damagePlayerCookie(player, target.card.instanceId, effect.amount),
+        damagePlayerCookie(player, target.card.instanceId, amount),
       state.players[targetPlayerId],
     )
 
@@ -875,11 +1015,16 @@ export const executeCardEffect = (
   const modifiers = targets.map((target) => ({
     sourceInstanceId: context.sourceInstanceId,
     targetInstanceId: target.card.instanceId,
-    amount: effect.amount,
+    amount:
+      effect.kind === 'modify-attack-by-break-count'
+        ? getBreakCount(state, context.sourcePlayerId, effect) *
+          effect.perCount
+        : effect.amount,
     expiresAfterTurn: getExpirationTurn(state, effect.duration),
   }))
 
-  return effect.kind === 'modify-attack'
+  return effect.kind === 'modify-attack' ||
+    effect.kind === 'modify-attack-by-break-count'
     ? {
         ...state,
         attackModifiers: [...state.attackModifiers, ...modifiers],

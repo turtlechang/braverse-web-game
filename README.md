@@ -115,4 +115,10 @@ npm run cards:import:purple-sample
 
 - 已完成 Brave Beginning BS1 Phase 1/2：`data/cards/official-brave-beginning-bs1.en.json` 建立 adapter 盤點測試，覆蓋 99 筆資料、78 個 base card number、cookie/flip/item/trap/stage 類型分布。
 - BS1 Phase 2 先支援可映射到既有規則引擎的效果文字：棄手牌代價傷害、FLIP 傷害、`return-to-hand`、faint 後 `break-to-trash`、支援區送棄牌區代價、`deck-to-support`、`set-active` 與 `When your turn ends` endPhase 判定；變體卡號如 `BS1-002@1` 會用 `baseCardNumber` 套用共用轉接。
-- 目前共有 619 項單元測試通過。BS1 尚未完成的高風險效果列入後續 Phase 3：攻擊重新指定、全場/全對手傷害、依休息區或支援區數量變動、從休息區登場、HP 送棄牌區代價，以及「本回合支援區減少」狀態追蹤。
+- 目前共有 634 項單元測試通過。BS1 Phase 3/4/5 已補上攻擊後續效果、非餅乾卡費用與 pending flow 基礎：`damage-all`、`damage-by-break-count`、`modify-attack-by-break-count`、`discard-hand`、`redirect-attack`、`place-source-to-support`、HP 送垃圾桶費用、支援區回手費用，以及「本回合支援區減少」狀態追蹤。
+
+# 2026-07-01 BS1 non-cookie effect verification
+
+- 已再次確認並實作 BS1 物品卡、陷阱卡、場景卡：BS1-022/023/048/049/074/075、BS1-024/025/050/051/076/077、BS1-026/052/078 均有 adapter coverage；新增 `src/game/effects-bs1-non-cookie.test.ts` 驗證支援區回手費用、來源物品進支援區、BS1-078 支援區減少條件與 BS1-050 redirect 陷阱。
+- `CardAbility.cost` 向後相容舊 EnergyCost 形狀，同時支援 AbilityCost 的非能量費用；UI pending flow 會把物品／場景的棄手牌、支援區費用與 HP 費用送入規則層。
+- 已執行 `npm test`、`npm run lint`、`npm run build`；build 仍只有 Vite chunk size 警告。

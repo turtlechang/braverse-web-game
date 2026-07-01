@@ -193,7 +193,7 @@ export const handleAiTurnState = (
       const stage = player.stage!
       const ability = stage.card.stageAbility!
       const paymentIds = selectEnergyPayment(
-        ability.cost,
+        ability.cost.energy ?? ability.cost,
         player.supportArea,
       )
       if (paymentIds) {

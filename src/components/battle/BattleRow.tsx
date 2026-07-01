@@ -559,7 +559,7 @@ export function BattleRow({
               Boolean(
                 card.item &&
                   selectEnergyPayment(
-                    card.item.cost,
+                    card.item.cost.energy ?? card.item.cost,
                     player.supportArea,
                   ),
               )

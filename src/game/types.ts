@@ -33,7 +33,7 @@ export interface CardSkill {
 }
 
 export interface CardAbility {
-  cost: EnergyCost
+  cost: AbilityCost
   text: string
   effects: CardEffect[]
 }
@@ -109,14 +109,58 @@ export interface OpponentTrashCountAtLeastCondition {
   count: number
 }
 
+export interface SupportCountAtLeastCondition {
+  kind: 'support-count-at-least'
+  count: number
+}
+
+export interface HandCountAtMostCondition {
+  kind: 'hand-count-at-most'
+  count: number
+}
+
+export interface SupportAreaDecreasedThisTurnCondition {
+  kind: 'support-area-decreased-this-turn'
+}
+
 export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
+  | SupportCountAtLeastCondition
+  | HandCountAtMostCondition
+  | SupportAreaDecreasedThisTurnCondition
 
 export interface DamageEffect {
   kind: 'damage'
   amount: number
   target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+export interface DamageAllEffect {
+  kind: 'damage-all'
+  amount: number
+  side: EffectTargetSide
+  condition?: EffectCondition
+}
+
+export interface DamageByBreakCountEffect {
+  kind: 'damage-by-break-count'
+  target: EffectTargetSelector
+  perCount: number
+  minBreakLevel?: number
+  breakEnergyColor?: EnergyColor
+  condition?: EffectCondition
+}
+
+export interface ModifyAttackByBreakCountEffect {
+  kind: 'modify-attack-by-break-count'
+  target: EffectTargetSelector
+  duration: EffectDuration
+  perCount: number
+  minBreakLevel?: number
+  exactBreakLevel?: number
+  breakEnergyColor?: EnergyColor
   condition?: EffectCondition
 }
 
@@ -161,6 +205,7 @@ export interface DeckToSupportEffect {
   kind: 'deck-to-support'
   amount: number
   rested?: boolean
+  condition?: EffectCondition
 }
 
 export interface BreakToTrashEffect {
@@ -174,11 +219,22 @@ export interface GainHpEffect {
   kind: 'gain-hp'
   amount: number
   target?: EffectTargetSelector
+  condition?: EffectCondition
 }
 
 export interface PreventKnockoutEffect {
   kind: 'prevent-knockout'
   target: EffectTargetSelector
+}
+
+export interface RedirectAttackEffect {
+  kind: 'redirect-attack'
+  target: EffectTargetSelector
+}
+
+export interface PlaceSourceToSupportEffect {
+  kind: 'place-source-to-support'
+  rested?: boolean
 }
 
 export interface SupportToTrashEffect {
@@ -219,11 +275,19 @@ export interface TrashToBattleEffect {
 export interface SupportToHandEffect {
   kind: 'support-to-hand'
   amount: number
+  maxLevel?: number
+  condition?: EffectCondition
 }
 
 export interface OpponentDiscardHandEffect {
   kind: 'opponent-discard-hand'
   count: number
+}
+
+export interface DiscardHandEffect {
+  kind: 'discard-hand'
+  count: number
+  condition?: EffectCondition
 }
 
 export interface OpponentBattleToTrashEffect {
@@ -244,6 +308,7 @@ export interface FieldToTrashEffect {
 export interface SetActiveEffect {
   kind: 'set-active'
   supportCount: number
+  condition?: EffectCondition
 }
 
 export interface InspectDeckEffect {
@@ -272,6 +337,9 @@ export interface OpponentRandomDiscardEffect {
 
 export type CardEffect =
   | DamageEffect
+  | DamageAllEffect
+  | DamageByBreakCountEffect
+  | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
   | DrawEffect
@@ -281,6 +349,8 @@ export type CardEffect =
   | BreakToTrashEffect
   | GainHpEffect
   | PreventKnockoutEffect
+  | RedirectAttackEffect
+  | PlaceSourceToSupportEffect
   | SupportToTrashEffect
   | DisableFlipEffect
   | ViewHpEffect
@@ -289,6 +359,7 @@ export type CardEffect =
   | TrashToBattleEffect
   | SupportToHandEffect
   | OpponentDiscardHandEffect
+  | DiscardHandEffect
   | OpponentBattleToTrashEffect
   | FieldToTrashEffect
   | ReturnToHandEffect
@@ -299,6 +370,8 @@ export type CardEffect =
 
 export type TargetedCardEffect =
   | DamageEffect
+  | DamageByBreakCountEffect
+  | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
   | PreventKnockoutEffect
@@ -307,16 +380,22 @@ export type TargetedCardEffect =
   | BattleToSupportEffect
   | ReturnToHandEffect
   | FieldToTrashEffect
+  | RedirectAttackEffect
 
-export interface AbilityCost {
-  energy: EnergyCost
-  discardHand: number
+export type AbilityCost = EnergyCost & {
+  energy?: EnergyCost
+  discardHand?: number
   supportToTrash?: number
-  trashBattleCookie?: {
-    count: number
-    level?: number
-    energyColor?: EnergyColor
+  supportToHand?: number
+  hpToTrash?: {
+    amount?: number
+    untilRemainingHp?: number
   }
+  trashBattleCookie?: {
+      count: number
+      level?: number
+      energyColor?: EnergyColor
+    }
 }
 
 export interface FlipAbility {
@@ -337,6 +416,10 @@ export type TrapCondition =
   | {
       kind: 'friendly-color-fainted-this-battle'
       color: EnergyColor
+    }
+  | {
+      kind: 'self-cookie-hp-equals'
+      amount: number
     }
 
 export interface TrapAbility {
@@ -487,6 +570,7 @@ export interface GameState {
     sourceCardName: string
     effectText: string
   } | null
+  supportAreaDecreasedThisTurn?: Partial<Record<PlayerId, boolean>>
 }
 
 export type PendingBattleStage =

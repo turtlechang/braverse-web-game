@@ -84,13 +84,27 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
 }
 
 const parseCondition = (text: string): EffectCondition | undefined => {
-  const match = text.match(/break area is LV\.(\d+) or higher/i)
+  const breakLevelMatch = text.match(/break area is LV\.(\d+) or higher/i)
+  if (breakLevelMatch) {
+    return {
+      kind: 'break-level-at-least',
+      level: Number(breakLevelMatch[1]),
+    }
+  }
 
-  return match
-    ? {
-        kind: 'break-level-at-least',
-        level: Number(match[1]),
-      }
+  const supportCountMatch = text.match(
+    /support area contains? (\d+) or more cards/i,
+  )
+  if (supportCountMatch) {
+    return {
+      kind: 'support-count-at-least',
+      count: Number(supportCountMatch[1]),
+    }
+  }
+
+  const handCountMatch = text.match(/(\d+) cards? or less in your hand/i)
+  return handCountMatch
+    ? { kind: 'hand-count-at-most', count: Number(handCountMatch[1]) }
     : undefined
 }
 
@@ -382,6 +396,67 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 1, max: 1, remainingHp: 2 },
       } satisfies CardEffect as CardEffect,
     ],
+    'BS1-029': [
+      {
+        kind: 'draw',
+        amount: 1,
+        condition: { kind: 'break-level-at-least', level: 3 },
+      },
+      {
+        kind: 'discard-hand',
+        count: 1,
+        condition: { kind: 'break-level-at-least', level: 3 },
+      },
+    ],
+    'BS1-053': [
+      {
+        kind: 'support-to-hand',
+        amount: 1,
+        condition: { kind: 'hand-count-at-most', count: 6 },
+      },
+      {
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'hand-count-at-most', count: 6 },
+      },
+    ],
+    'BS1-022': [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS1-023': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    'BS1-048': [
+      {
+        kind: 'modify-attack-by-break-count',
+        perCount: 1,
+        exactBreakLevel: 1,
+        breakEnergyColor: 'yellow',
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    'BS1-049': [
+      {
+        kind: 'damage-by-break-count',
+        perCount: 1,
+        minBreakLevel: 2,
+        breakEnergyColor: 'yellow',
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+    ],
+    'BS1-074': [{ kind: 'draw', amount: 1 }],
+    'BS1-075': [{ kind: 'place-source-to-support', rested: true }],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -908,18 +983,36 @@ export const convertOfficialItemAbility = (
 ): CardAbility | undefined => {
   if (card.type !== 'item' || !card.attackText) return undefined
   const conversion = convertOfficialCardEffects(card)
-  const parsed = parseOfficialCardText(card.attackText)
-  const cost = parseAbilityCost(card.attackText)
-  if (
-    conversion.status !== 'supported' ||
-    !parsed ||
-    cost.discardHand > 0 ||
-    Boolean(cost.supportToTrash)
-  ) {
+  if (conversion.status !== 'supported') {
     return undefined
   }
+  const parsed = parseOfficialCardText(card.attackText)
+  if (!parsed) return undefined
+  const exactCosts: Partial<Record<string, AbilityCost>> = {
+    'BS1-022': { energy: { red: 3 }, discardHand: 1 },
+    'BS1-023': {
+      energy: { red: 1 },
+      discardHand: 0,
+      hpToTrash: { untilRemainingHp: 1 },
+    },
+    'BS1-048': { energy: { yellow: 3 }, discardHand: 0 },
+    'BS1-049': { energy: { yellow: 2 }, discardHand: 0 },
+    'BS1-074': {
+      energy: { green: 1 },
+      discardHand: 0,
+      supportToHand: 1,
+    },
+    'BS1-075': { energy: { green: 2 }, discardHand: 0 },
+  }
+  const parsedCost = parseAbilityCost(card.attackText)
+  const hasSpecialCost =
+    (parsedCost.discardHand ?? 0) > 0 ||
+    Boolean(parsedCost.supportToTrash) ||
+    Boolean(parsedCost.supportToHand) ||
+    Boolean(parsedCost.hpToTrash) ||
+    Boolean(parsedCost.trashBattleCookie)
   return {
-    cost: parsed.cost,
+    cost: exactCosts[card.cardNumber] ?? (hasSpecialCost ? parsedCost : parsed.cost),
     text: card.attackText,
     effects: conversion.effects,
   }
@@ -941,12 +1034,45 @@ export const convertOfficialStageAbility = (
       { kind: 'draw', amount: 1 },
     ],
     'ST5-022': [{ kind: 'draw', amount: 1 }],
+    'BS1-026': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    'BS1-052': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1 },
+      },
+    ],
+    'BS1-078': [
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        condition: { kind: 'support-area-decreased-this-turn' },
+      },
+    ],
+  }
+  const exactStageCosts: Partial<Record<string, AbilityCost>> = {
+    'BS1-026': {
+      energy: {},
+      discardHand: 0,
+      hpToTrash: { amount: 1 },
+    },
+    'BS1-052': { energy: { yellow: 2 }, discardHand: 0 },
+    'BS1-078': { energy: {}, discardHand: 0 },
   }
   const stageEffects = exactStageEffects[card.cardNumber]
   if (stageEffects) {
     return {
       placementCost: placement.cost,
-      cost: activation?.cost ?? {},
+      cost:
+        exactStageCosts[card.cardNumber] ??
+        (activation?.cost ?? {}),
       text: card.attackText,
       effects: stageEffects,
       restSource:
@@ -978,6 +1104,93 @@ export const convertOfficialStageAbility = (
 export const convertOfficialCardEffectSet = (
   cards: OfficialCardRecord[],
 ): OfficialEffectConversion[] => cards.map(convertOfficialCardEffects)
+
+export const convertOfficialAttackEffects = (
+  card: OfficialCardRecord,
+): CardEffect[] | undefined => {
+  if (
+    (card.type !== 'cookie' && card.type !== 'flip') ||
+    !card.attackText ||
+    !/\bThen\b/i.test(card.attackText)
+  ) {
+    return undefined
+  }
+
+  const cardKey = card.cardNumber.includes('@')
+    ? card.baseCardNumber || card.cardNumber.split('@')[0]
+    : card.cardNumber
+  const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    'ST2-003': [{ kind: 'break-to-trash', max: 1, exactLevel: 1 }],
+    'ST4-013': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+        effectText:
+          'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
+      },
+    ],
+    'ST4-015': [{ kind: 'draw', amount: 1 }],
+    'BS1-005': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS1-013': [{ kind: 'discard-hand', count: 1 }],
+    'BS1-028': [
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        condition: { kind: 'break-level-at-least', level: 5 },
+      },
+    ],
+    'BS1-033': [
+      {
+        kind: 'damage-by-break-count',
+        perCount: 1,
+        minBreakLevel: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS1-039': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'opponent-next-turn',
+        target: { side: 'opponent', min: 0, max: 2 },
+      },
+    ],
+    'BS1-044': [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+    ],
+    'BS1-064': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, excludeSource: true },
+        condition: { kind: 'support-count-at-least', count: 7 },
+      },
+    ],
+    'BS1-070': [
+      { kind: 'support-to-hand', amount: 1, maxLevel: 1 },
+    ],
+  }
+
+  return exactAttackEffects[cardKey]
+}
 
 export const convertOfficialFlipAbility = (
   card: OfficialCardRecord,
@@ -1056,6 +1269,14 @@ const parseTrapCondition = (
     }
   }
 
+  const selfHpEquals = text.match(/If\s+1\s+of\s+your\s+Cookies\s+has\s+(\d+)\s+HP/i)
+  if (selfHpEquals) {
+    return {
+      kind: 'self-cookie-hp-equals',
+      amount: Number(selfHpEquals[1]),
+    }
+  }
+
   const faintedColor = text.match(
     /any of your \{([RYGBPK])\} Cookies fainted during this battle/i,
   )
@@ -1107,6 +1328,11 @@ export const convertOfficialTrapAbility = (
     '',
   )
   const trapDrawAmount = parseSimpleDraw(strippedAfterThen)
+  const redirectAttack =
+    /Redirect your opponent's attack to a different Cookie of your own/i.test(text)
+  const setActive = text.match(
+    /set\s+(?:up to\s+)?(\d+)\s+of\s+card\s+from\s+your\s+support\s+area\s+as\s+active/i,
+  )
 
   if (attackDecrease && target) {
     effects.push({
@@ -1129,6 +1355,13 @@ export const convertOfficialTrapAbility = (
     effects.push({
       kind: 'prevent-knockout',
       target,
+    })
+  }
+
+  if (redirectAttack) {
+    effects.push({
+      kind: 'redirect-attack',
+      target: { side: 'self', min: 1, max: 1 },
     })
   }
 
@@ -1170,6 +1403,22 @@ export const convertOfficialTrapAbility = (
       kind: 'deck-to-support',
       amount: 1,
       rested: true,
+    })
+  }
+
+  const gainHp = text.match(/gains?\s+\+(\d+)\s+HP/i)
+  if (gainHp && target) {
+    effects.push({
+      kind: 'gain-hp',
+      amount: Number(gainHp[1]),
+      target,
+    })
+  }
+
+  if (setActive) {
+    effects.push({
+      kind: 'set-active',
+      supportCount: Number(setActive[1]),
     })
   }
 
