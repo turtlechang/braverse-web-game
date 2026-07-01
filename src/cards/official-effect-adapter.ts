@@ -41,7 +41,7 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
 
 const parseTarget = (text: string): EffectTargetSelector | null => {
   const match = text.match(
-    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?\s+Cookies/i,
+    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?\s+(?:LV\.(\d+)\s+)?Cookies/i,
   )
 
   if (match) {
@@ -55,6 +55,10 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
 
     if (match[4]) {
       target.excludeSource = true
+    }
+
+    if (match[5]) {
+      target.maxLevel = Number(match[5])
     }
 
     const remainingHpMatch = text.match(/remaining HP is (\d+)/i)
@@ -158,7 +162,7 @@ const stripEffectText = (text: string): string =>
 const parseAbilityCost = (text: string): AbilityCost => {
   const parsed = parseOfficialCardText(text)
   const discardMatch = text.match(
-    /(?:<|《)\s*Discard\s+(\d+)\s+card(?:s)?\.\s*(?:>|》)/i,
+    /(?:<|《)\s*Discard\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?card(?:s)?\.\s*(?:>|》)/i,
   )
   const supportToTrashMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
@@ -178,6 +182,9 @@ const parseAbilityCost = (text: string): AbilityCost => {
   return {
     energy: parsed?.cost ?? {},
     discardHand: discardMatch ? Number(discardMatch[1]) : 0,
+    discardHandColor: discardMatch?.[2]
+      ? costColors[discardMatch[2].toUpperCase() as keyof typeof costColors]
+      : undefined,
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
@@ -530,6 +537,18 @@ export const convertOfficialCardEffects = (
         kind: 'damage',
         amount: 2,
         target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS2-006': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'hp-to-trash',
+        amount: 2,
+        target: { side: 'self', min: 1, max: 1 },
       },
     ],
   }
@@ -1078,6 +1097,7 @@ export const convertOfficialItemAbility = (
       supportToHand: 1,
     },
     'BS1-075': { energy: { green: 2 }, discardHand: 0 },
+    'BS2-006': { energy: { red: 2 }, discardHand: 0 },
   }
   const parsedCost = parseAbilityCost(card.attackText)
   const hasSpecialCost =

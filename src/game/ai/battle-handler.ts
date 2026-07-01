@@ -116,8 +116,13 @@ export const handleAiPendingBattle = (
             .slice(0, supportTrashEffect.amount)
             .map((support) => support.card.instanceId)
         : []
+    const discardHandColor = trapCard.trap.cost.discardHandColor
     const discardHandIds = state.players[playerId].hand
-      .filter((card) => card.instanceId !== trapCard.instanceId)
+      .filter(
+        (card) =>
+          card.instanceId !== trapCard.instanceId &&
+          (!discardHandColor || card.energyColor === discardHandColor),
+      )
       .slice(0, trapCard.trap.cost.discardHand ?? 0)
       .map((card) => card.instanceId)
     const trashBattleCookieIds = getTrashBattleCookieCostCandidates(

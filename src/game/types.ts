@@ -343,6 +343,12 @@ export interface OpponentRandomDiscardEffect {
   count: number
 }
 
+export interface HpToTrashEffect {
+  kind: 'hp-to-trash'
+  amount: number
+  target: EffectTargetSelector
+}
+
 export type CardEffect =
   | DamageEffect
   | DamageAllEffect
@@ -372,6 +378,7 @@ export type CardEffect =
   | FieldToTrashEffect
   | ReturnToHandEffect
   | OpponentRandomDiscardEffect
+  | HpToTrashEffect
   | SetActiveEffect
   | InspectDeckEffect
   | OptionalCostAttackEffect
@@ -389,10 +396,12 @@ export type TargetedCardEffect =
   | ReturnToHandEffect
   | FieldToTrashEffect
   | RedirectAttackEffect
+  | HpToTrashEffect
 
 export type AbilityCost = EnergyCost & {
   energy?: EnergyCost
   discardHand?: number
+  discardHandColor?: EnergyColor
   supportToTrash?: number
   supportToHand?: number
   hpToTrash?: {

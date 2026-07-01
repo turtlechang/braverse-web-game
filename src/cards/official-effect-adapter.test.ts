@@ -1658,6 +1658,39 @@ describe('Starter Deck RED official effect adapter', () => {
           },
         ])
     })
+
+    it('BS2-006 Prickly Cacti Gloves converts to damage + hp-to-trash', () => {
+      expect(convertOfficialItemAbility(findBraveBeginningBS2Card('BS2-006')))
+        .toMatchObject({
+          cost: { energy: { red: 2 }, discardHand: 0 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 2,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+            {
+              kind: 'hp-to-trash',
+              amount: 2,
+              target: { side: 'self', min: 1, max: 1 },
+            },
+          ],
+        })
+    })
+
+    it('BS2-007 Prickly Cactus Bat converts to trap with red discard cost', () => {
+      const result = convertOfficialTrapAbility(findBraveBeginningBS2Card('BS2-007'))
+      expect(result).toMatchObject({
+        cost: { energy: { red: 1 }, discardHand: 1, discardHandColor: 'red' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          },
+        ],
+      })
+    })
   })
 })
 })

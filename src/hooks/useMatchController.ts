@@ -355,7 +355,10 @@ export function useMatchController(params: {
     : []
   const selectedTrapDiscardCandidates = selectedTrap
     ? game.players[viewerPlayerId].hand.filter(
-        (card) => card.instanceId !== selectedTrap.instanceId,
+        (card) =>
+          card.instanceId !== selectedTrap.instanceId &&
+          (!selectedTrap.trap?.cost.discardHandColor ||
+            card.energyColor === selectedTrap.trap.cost.discardHandColor),
       )
     : []
   const trapAllowEmptyTarget =

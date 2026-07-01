@@ -3,6 +3,7 @@ import {
   activateStage,
   createDemoGame,
   executeCardEffect,
+  getTrapCandidates,
   playItem,
   playTrap,
   type CardEffect,
@@ -220,5 +221,401 @@ describe('BS1 non-cookie effect execution', () => {
       redirectTarget.instanceId,
     )
     expect(redirected.pendingBattle?.stage).toBe('damage')
+  })
+
+  it('BS2-006 hp-to-trash removes HP cards without FLIP trigger', () => {
+    const base = asMainPhase(createDemoGame())
+    const selfCookie: CookieCard = {
+      id: 'self-cookie',
+      instanceId: 'self-cookie',
+      name: 'Self Cookie',
+      type: 'cookie',
+      level: 2,
+      hp: 3,
+      attack: 1,
+      attackCost: 0,
+    }
+    const hpCards: GameCard[] = [
+      {
+        id: 'hp-1',
+        instanceId: 'hp-1',
+        name: 'HP Card 1',
+        type: 'cookie',
+        level: 1,
+        hp: 1,
+        attack: 0,
+        attackCost: 0,
+      },
+      {
+        id: 'hp-2',
+        instanceId: 'hp-2',
+        name: 'HP Card 2',
+        type: 'cookie',
+        level: 1,
+        hp: 1,
+        attack: 0,
+        attackCost: 0,
+      },
+      {
+        id: 'hp-3',
+        instanceId: 'hp-3',
+        name: 'HP Card 3',
+        type: 'cookie',
+        level: 1,
+        hp: 1,
+        attack: 0,
+        attackCost: 0,
+      },
+    ]
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            {
+              card: selfCookie,
+              hpCards,
+              rested: false,
+            },
+          ],
+        },
+      },
+    }
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'item-id' },
+      {
+        kind: 'hp-to-trash',
+        amount: 2,
+        target: { side: 'self', min: 1, max: 1 },
+      },
+      ['self-cookie'],
+    )
+
+    const cookie = resolved.players['player-one'].battleArea[0]
+    expect(cookie.hpCards).toHaveLength(1)
+    expect(cookie.hpCards[0].instanceId).toBe('hp-1')
+    expect(resolved.players['player-one'].discardPile).toHaveLength(2)
+  })
+
+  it('BS2-006 hp-to-trash at 0 HP sends cookie to break area', () => {
+    const base = asMainPhase(createDemoGame())
+    const selfCookie: CookieCard = {
+      id: 'self-cookie',
+      instanceId: 'self-cookie',
+      name: 'Self Cookie',
+      type: 'cookie',
+      level: 1,
+      hp: 2,
+      attack: 1,
+      attackCost: 0,
+    }
+    const hpCards: GameCard[] = [
+      {
+        id: 'hp-1',
+        instanceId: 'hp-1',
+        name: 'HP Card 1',
+        type: 'cookie',
+        level: 1,
+        hp: 1,
+        attack: 0,
+        attackCost: 0,
+      },
+      {
+        id: 'hp-2',
+        instanceId: 'hp-2',
+        name: 'HP Card 2',
+        type: 'cookie',
+        level: 1,
+        hp: 1,
+        attack: 0,
+        attackCost: 0,
+      },
+    ]
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            {
+              card: selfCookie,
+              hpCards,
+              rested: false,
+            },
+          ],
+        },
+      },
+    }
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'item-id' },
+      {
+        kind: 'hp-to-trash',
+        amount: 2,
+        target: { side: 'self', min: 1, max: 1 },
+      },
+      ['self-cookie'],
+    )
+
+    expect(resolved.players['player-one'].battleArea).toHaveLength(0)
+    expect(resolved.players['player-one'].breakArea).toHaveLength(1)
+    expect(resolved.players['player-one'].breakArea[0].instanceId).toBe(
+      'self-cookie',
+    )
+    expect(resolved.players['player-one'].discardPile).toHaveLength(2)
+  })
+
+  it('BS2-007 trap with discardHandColor rejects non-red hand card', () => {
+    const base = createDemoGame()
+    const lv1Cookie: CookieCard = {
+      ...base.players['player-two'].battleArea[0].card,
+      level: 1,
+    }
+    const defenderCookie = {
+      ...base.players['player-two'].battleArea[0],
+      card: lv1Cookie,
+    }
+    const trap: GameCard = {
+      id: 'BS2-007',
+      instanceId: 'bs2-007',
+      name: 'Prickly Cactus Bat',
+      type: 'trap',
+      trap: {
+        text: 'BS2-007',
+        cost: { energy: { red: 1 }, discardHand: 1, discardHandColor: 'red' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          },
+        ],
+      },
+    }
+    const blueCard: GameCard = {
+      id: 'blue-card',
+      instanceId: 'blue-card',
+      name: 'Blue Card',
+      type: 'item',
+      energyColor: 'blue',
+    }
+    const state: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId:
+          base.players['player-one'].battleArea[0].card.instanceId,
+        targetInstanceId: defenderCookie.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          hand: [trap, blueCard],
+          battleArea: [defenderCookie],
+        },
+      },
+    }
+
+    expect(() =>
+      playTrap(state, 'player-two', {
+        trapInstanceId: trap.instanceId,
+        paymentIds: [],
+        targetIds: [defenderCookie.card.instanceId],
+        discardHandIds: [blueCard.instanceId],
+      }),
+    ).toThrow(GameRuleError)
+  })
+
+  it('BS2-007 trap with discardHandColor accepts red hand card', () => {
+    const base = createDemoGame()
+    const lv1Cookie: CookieCard = {
+      ...base.players['player-two'].battleArea[0].card,
+      level: 1,
+    }
+    const defenderCookie = {
+      ...base.players['player-two'].battleArea[0],
+      card: lv1Cookie,
+    }
+    const targetCookie: CookieCard = {
+      id: 'target-cookie',
+      instanceId: 'target-cookie',
+      name: 'Target Cookie',
+      type: 'cookie',
+      level: 1,
+      hp: 3,
+      attack: 1,
+      attackCost: 0,
+    }
+    const trap: GameCard = {
+      id: 'BS2-007',
+      instanceId: 'bs2-007',
+      name: 'Prickly Cactus Bat',
+      type: 'trap',
+      trap: {
+        text: 'BS2-007',
+        cost: { energy: { red: 1 }, discardHand: 1, discardHandColor: 'red' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          },
+        ],
+      },
+    }
+    const redCard: GameCard = {
+      id: 'red-card',
+      instanceId: 'red-card',
+      name: 'Red Card',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const redSupport: GameCard = {
+      id: 'red-support',
+      instanceId: 'red-support',
+      name: 'Red Support',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const state: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId:
+          base.players['player-one'].battleArea[0].card.instanceId,
+        targetInstanceId: defenderCookie.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            {
+              card: targetCookie,
+              hpCards: base.players['player-one'].deck.slice(0, 3),
+              rested: false,
+            },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          hand: [trap, redCard],
+          supportArea: [{ card: redSupport, rested: false }],
+          battleArea: [defenderCookie],
+        },
+      },
+    }
+
+    const result = playTrap(state, 'player-two', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [redSupport.instanceId],
+      targetIds: [targetCookie.instanceId],
+      discardHandIds: [redCard.instanceId],
+    })
+
+    expect(result.pendingBattle?.trapUsed).toBe(true)
+    expect(result.pendingBattle?.stage).toBe('damage')
+    expect(result.pendingBattle?.remainingDamage).toBe(2)
+  })
+
+  it('BS2-007 getTrapCandidates filters by discardHandColor', () => {
+    const base = createDemoGame()
+    const lv1Cookie: CookieCard = {
+      ...base.players['player-two'].battleArea[0].card,
+      level: 1,
+    }
+    const defenderCookie = {
+      ...base.players['player-two'].battleArea[0],
+      card: lv1Cookie,
+    }
+    const trap: GameCard = {
+      id: 'BS2-007',
+      instanceId: 'bs2-007',
+      name: 'Prickly Cactus Bat',
+      type: 'trap',
+      trap: {
+        text: 'BS2-007',
+        cost: { energy: { red: 1 }, discardHand: 1, discardHandColor: 'red' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          },
+        ],
+      },
+    }
+    const blueCard: GameCard = {
+      id: 'blue-card',
+      instanceId: 'blue-card',
+      name: 'Blue Card',
+      type: 'item',
+      energyColor: 'blue',
+    }
+    const redSupport: GameCard = {
+      id: 'red-support',
+      instanceId: 'red-support',
+      name: 'Red Support',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const state: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId:
+          base.players['player-one'].battleArea[0].card.instanceId,
+        targetInstanceId: defenderCookie.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          hand: [trap, blueCard],
+          supportArea: [{ card: redSupport, rested: false }],
+          battleArea: [defenderCookie],
+        },
+      },
+    }
+
+    const candidates = getTrapCandidates(state, 'player-two')
+    expect(candidates).toHaveLength(0)
   })
 })

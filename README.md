@@ -117,7 +117,7 @@ npm run cards:import:purple-sample
 
 - 已完成 Brave Beginning BS1 Phase 1/2：`data/cards/official-brave-beginning-bs1.en.json` 建立 adapter 盤點測試，覆蓋 99 筆資料、78 個 base card number、cookie/flip/item/trap/stage 類型分布。
 - BS1 Phase 2 先支援可映射到既有規則引擎的效果文字：棄手牌代價傷害、FLIP 傷害、`return-to-hand`、faint 後 `break-to-trash`、支援區送棄牌區代價、`deck-to-support`、`set-active` 與 `When your turn ends` endPhase 判定；變體卡號如 `BS1-002@1` 會用 `baseCardNumber` 套用共用轉接。
-- 目前共有 642 項單元測試通過。BS1 Phase 3/4/5 已補上攻擊後續效果、非餅乾卡費用與 pending flow 基礎：`damage-all`、`damage-by-break-count`、`modify-attack-by-break-count`、`discard-hand`、`redirect-attack`、`place-source-to-support`、HP 送垃圾桶費用、支援區回手費用，以及「本回合支援區減少」狀態追蹤。
+- 目前共有 653 項單元測試通過。BS1 Phase 3/4/5 已補上攻擊後續效果、非餅乾卡費用與 pending flow 基礎：`damage-all`、`damage-by-break-count`、`modify-attack-by-break-count`、`discard-hand`、`redirect-attack`、`place-source-to-support`、HP 送垃圾桶費用、支援區回手費用，以及「本回合支援區減少」狀態追蹤。
 
 # 2026-07-01 BS1 non-cookie effect verification
 
@@ -136,9 +136,9 @@ npm run cards:import:purple-sample
 - 修正 `getActingPlayerId` 在 `pendingBattle.stage === "attack-effect"` 時改回傳攻擊方，避免 AI 攻擊後續效果被錯誤指派給防守方，造成前端停在無法操作的 AI 主要階段。
 - 新增 AI 回歸測試確認 AI 作為攻擊方時會結算 attack-effect，並新增 `usePendingEffect` hook 測試確認玩家確認需棄手牌的傷害技能後會清除效果面板並排入對手補位。
 
-# 2026-07-01 BS1/BS2 red cookie skills implementation
+# 2026-07-01 BS1/BS2 red card skills/effects implementation
 
-- 已完成 BS1/BS2 系列所有紅色餅乾卡的技能與攻擊後效果實作：
+- 已完成 BS1/BS2 系列所有紅色卡牌的技能與攻擊後效果實作：
   - BS1-001 Goblin Cookie: OnPlay 棄 1 張手牌，選擇對手 1 隻餅乾造成 1 點傷害
   - BS1-003 Dark Choco Cookie: Activate Once per turn 支付 {R}，棄 1 張手牌，選擇對手 1 隻餅乾造成 1 點傷害
   - BS1-004 Lilac Cookie: Activate 支付 {R}{R}，將此餅乾回手
@@ -153,8 +153,10 @@ npm run cards:import:purple-sample
   - BS2-002 Macaron Cookie: OnPlay 支付 {R}，將對手場景卡送入棄牌區（stageOnly 限制）
   - BS2-003 Rebel Cookie: OnPlay 支付 {R}{R}，選擇對手 0～1 隻餅乾造成 2 點傷害
   - BS2-004 Cherry Cookie: 攻擊後效果若對手有 LV.1 餅乾，造成 3 點傷害（條件觸發）
+  - BS2-006 Prickly Cacti Gloves: ITEM 支付 {R}{R}，選擇對手 0～1 隻餅乾造成 2 點傷害，再選擇己方 1 隻餅乾將 2 張 HP 卡送入棄牌區（hp-to-trash 非傷害，不觸發 FLIP/afterDamage，HP 歸 0 進入休息區）
+  - BS2-007 Prickly Cactus Bat: TRAP 支付 {R} 並棄 1 張紅色手牌，選擇對手 LV.1 餅乾造成 2 點傷害（discardHandColor 限制紅色手牌）
 - 新增 `FieldToTrashEffect.stageOnly` 選項，限制只能選擇場景卡；新增 `OpponentHasCookieWithLevelCondition` 條件類型。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 646 項單元測試通過，build 仍只有 Vite chunk size 警告。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 653 項單元測試通過，build 仍只有 Vite chunk size 警告。
 
 # 2026-07-01 BS1/BS2 adapter UI/AI/attack-effect integration
 
@@ -162,4 +164,15 @@ npm run cards:import:purple-sample
 - 修正 AI `ai.ts` 的 `field-to-trash` 目標選擇，`stageOnly` 時只選場景卡，不再先挑戰鬥區餅乾。
 - 修正 `battle.ts` 的 attack-effect 流程，條件不成立時自然跳過效果而非丟錯。
 - 新增 `battle-attack-effect.test.ts` 回歸測試確認條件觸發效果在條件不成立時正確跳過。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 646 項單元測試通過。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 653 項單元測試通過。
+
+# 2026-07-02 BS2 red non-cookie effects implementation
+
+- 已完成 BS2-006 Prickly Cacti Gloves（ITEM）與 BS2-007 Prickly Cactus Bat（TRAP）的效果實作。
+- BS2-006：支付 {R}{R}，先對對手最多 1 隻餅乾造成 2 點傷害，再選擇己方 1 隻餅乾將 2 張 HP 卡送入棄牌區（`hp-to-trash` 效果）。HP-to-trash 非傷害，不觸發 FLIP/afterDamage；HP 歸 0 時餅乾進入休息區並沿用離場/補位/勝負流程。
+- BS2-007：支付 {R} 並棄 1 張紅色手牌（`discardHandColor: 'red'`），對對手 LV.1 餅乾造成 2 點傷害。規則層與 UI 均會拒絕非紅色手牌支付。
+- 新增 `HpToTrashEffect`（`kind: 'hp-to-trash'`）與 `AbilityCost.discardHandColor`，分別處理 HP-to-trash 效果與手牌顏色限制。
+- `parseTarget` 正規表達式擴充支援 `LV.X` 級等篩選（如 `your opponent's LV.1 Cookies`）。
+- 新增 adapter tests 與規則層 tests：BS2-006/007 轉換、hp-to-trash 移除 HP 卡、HP 歸 0 進休息區、紅色手牌驗證與 getTrapCandidates 顏色過濾。
+- 修正 UI `useMatchController.ts` 的 `selectedTrapDiscardCandidates`，依陷阱的 `discardHandColor` 過濾手牌候選，僅顯示符合顏色限制的卡牌，避免玩家選到規則層會拒絕的手牌。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 653 項單元測試通過，build 仍只有 Vite chunk size 警告。

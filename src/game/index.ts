@@ -180,6 +180,7 @@ export type {
   GameStatus,
   FlipAbility,
   GainHpEffect,
+  HpToTrashEffect,
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
   NonCookieCard,

@@ -66,6 +66,7 @@
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 目前支援 Break Area 最低等級檢測 |
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |
+| HP 送棄牌區 | `hp-to-trash` | 選擇己方 1 隻餅乾，將指定數量的 HP 卡送入棄牌區；非傷害不觸發 FLIP/afterDamage，HP 歸 0 時餅乾進入休息區並沿用離場/補位/勝負流程 |
 
 無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw`、`deck-to-support`、`modify-all-attack`、`trash-to-battle`、`support-to-hand` 與 `opponent-discard-hand`）。
 
@@ -125,6 +126,7 @@
 ### 部分實作：特殊代價（非能量／非 Rest this card）
 
 - 起始牌組 FLIP 的棄 1 張手牌、ST3-002／ST3-005／ST3-015 的支援區卡牌送棄牌區技能代價，以及 ST3-019 的支援區卡牌移至棄牌區已支援；其他特殊代價仍維持 unsupported。
+- BS1/BS2 紅色非角色卡（BS2-006 hp-to-trash、BS2-007 discardHandColor）已完整支援；UI 的陷阱手牌候選清單現在會依 `discardHandColor` 過濾，僅顯示符合顏色限制的手牌。
 
 ### 尚未實作：一般移動與持續型條件效果
 
@@ -134,4 +136,4 @@
 - Phase 1 已建立 `official-brave-beginning-bs1.en.json` 的轉接盤點測試：99 筆資料、78 個 base card number，類型分布為 cookie 72、flip 12、item 6、trap 6、stage 3。
 - Phase 2 先支援可直接映射到既有規則引擎的 BS1 文字：OnPlay/Activate/FLIP 的棄手牌代價傷害、`Return this Cookie to your hand`、faint 後 `break-to-trash`、支援區送棄牌區代價、`deck-to-support`、`set-active`，以及 `When your turn ends` 的 endPhase 判定。
 - `convertOfficialCardEffects` 現在可用 `baseCardNumber` 處理 BS1 變體卡號，例如 `BS1-002@1`，但一般卡號仍優先使用 `cardNumber`，避免測試用假卡或舊資料被 base 欄位誤覆蓋。
-- Phase 3 仍需另行處理高風險 BS1 效果：攻擊重新指定、全場/全對手傷害、依休息區或支援區數量變動的效果、從休息區登場、HP 送棄牌區代價、以及「本回合支援區減少」等需要新增狀態追蹤的條件。
+- Phase 3 仍需另行處理高風險 BS1 效果：攻擊重新指定、全場/全對手傷害、依休息區或支援區數量變動的效果、從休息區登場、以及「本回合支援區減少」等需要新增狀態追蹤的條件。HP 送棄牌區代價（`hp-to-trash`）已支援。

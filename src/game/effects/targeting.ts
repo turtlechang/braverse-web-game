@@ -144,7 +144,8 @@ export const isEffectTargeted = (
   effect.kind === 'battle-to-support' ||
   effect.kind === 'return-to-hand' ||
   effect.kind === 'field-to-trash' ||
-  effect.kind === 'redirect-attack'
+  effect.kind === 'redirect-attack' ||
+  effect.kind === 'hp-to-trash'
 
 export const getSupportEffectCandidates = (
   state: GameState,

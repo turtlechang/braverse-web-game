@@ -238,7 +238,10 @@ export const getTrapCandidates = (
       isTrapConditionMet(state, playerId, card.trap!) &&
       hasRequiredTrapTargets(state, playerId, card) &&
       player.hand.filter(
-        (handCard) => handCard.instanceId !== card.instanceId,
+        (handCard) =>
+          handCard.instanceId !== card.instanceId &&
+          (!card.trap!.cost.discardHandColor ||
+            handCard.energyColor === card.trap!.cost.discardHandColor),
       ).length >= (card.trap!.cost.discardHand ?? 0) &&
       selectEnergyPayment(
         card.trap!.cost.energy ?? card.trap!.cost,
@@ -388,6 +391,16 @@ export const playTrap = (
   )
   if (discardedHandCards.length !== (trap.cost.discardHand ?? 0)) {
     throw new GameRuleError('只能選擇陷阱卡以外的自己手牌支付代價。')
+  }
+  if (trap.cost.discardHandColor) {
+    const invalidDiscard = discardedHandCards.find(
+      (card) => card.energyColor !== trap.cost.discardHandColor,
+    )
+    if (invalidDiscard) {
+      throw new GameRuleError(
+        `棄手牌費用必須選擇 ${trap.cost.discardHandColor} 能量顏色的手牌。`,
+      )
+    }
   }
 
   const paymentSet = new Set(options.paymentIds)

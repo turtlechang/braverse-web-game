@@ -794,6 +794,72 @@ export const executeCardEffect = (
     )
   }
 
+  if (effect.kind === 'hp-to-trash') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) {
+      return { ...state }
+    }
+    const target = targets[0]
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const player = state.players[targetPlayerId]
+    const targetIndex = player.battleArea.findIndex(
+      (cookie) => cookie.card.instanceId === target.card.instanceId,
+    )
+
+    const removeCount = Math.min(effect.amount, target.hpCards.length)
+    const removedHpCards = target.hpCards.slice(-removeCount)
+    const remainingHpCards = target.hpCards.slice(
+      0,
+      Math.max(0, target.hpCards.length - removeCount),
+    )
+
+    let updatedPlayer: PlayerState
+    let departedCount = 0
+
+    if (remainingHpCards.length === 0) {
+      departedCount = 1
+      updatedPlayer = {
+        ...player,
+        battleArea: player.battleArea.filter(
+          (_, index) => index !== targetIndex,
+        ),
+        breakArea: [...player.breakArea, target.card],
+        discardPile: [...player.discardPile, ...removedHpCards],
+      }
+    } else {
+      updatedPlayer = {
+        ...player,
+        battleArea: player.battleArea.map((cookie, index) =>
+          index === targetIndex
+            ? { ...cookie, hpCards: remainingHpCards }
+            : cookie,
+        ),
+        discardPile: [...player.discardPile, ...removedHpCards],
+      }
+    }
+
+    const nextState: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        [targetPlayerId]: updatedPlayer,
+      },
+    }
+
+    if (departedCount > 0) {
+      return resolveDamageOutcome(nextState, targetPlayerId, departedCount, [
+        target.card,
+      ])
+    }
+
+    return nextState
+  }
+
   if (effect.kind === 'return-to-hand') {
     const candidates = getEffectTargetCandidates(state, context, effect.target)
     if (candidates.length < effect.target.min && selectedTargetIds.length === 0) {

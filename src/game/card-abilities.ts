@@ -126,9 +126,14 @@ const canPayAbilityCost = (
   const supportCost =
     (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
 
+  const availableDiscardCount = cost.discardHandColor
+    ? player.hand.filter((card) => card.energyColor === cost.discardHandColor)
+        .length
+    : player.hand.length
+
   return (
     remainingSupportCount >= supportCost &&
-    player.hand.length >= (cost.discardHand ?? 0) &&
+    availableDiscardCount >= (cost.discardHand ?? 0) &&
     (!cost.hpToTrash ||
       getHpToTrashCostCandidates(cost, player.battleArea).length > 0)
   )
@@ -200,6 +205,16 @@ const payAbilityCost = (
   )
   if (discardedHandCards.length !== discardHandIds.length) {
     throw new GameRuleError('選擇的棄手牌費用不合法。')
+  }
+  if (cost.discardHandColor) {
+    const invalidDiscard = discardedHandCards.find(
+      (card) => card.energyColor !== cost.discardHandColor,
+    )
+    if (invalidDiscard) {
+      throw new GameRuleError(
+        `棄手牌費用必須選擇 ${cost.discardHandColor} 能量顏色的手牌。`,
+      )
+    }
   }
   if (cost.hpToTrash && hpToTrashTargetIds.length !== 1) {
     throw new GameRuleError('必須選擇 1 張餅乾支付 HP 費用。')
