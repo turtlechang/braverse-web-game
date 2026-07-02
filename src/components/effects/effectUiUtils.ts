@@ -66,6 +66,15 @@ export const describeEffect = (effect: CardEffect) => {
     return `查看牌庫頂 ${effect.lookCount} 張，選 ${effect.pickCount} 張。`
   }
   if (effect.kind === 'optional-cost-attack') return effect.effectText
+  if (effect.kind === 'trash-to-support') {
+    return `從棄牌區選擇 ${effect.amount} 張餅乾放入支援區。`
+  }
+  if (effect.kind === 'disable-block') {
+    return '本回合對手不能發動 {bl}。'
+  }
+  if (effect.kind === 'hp-to-trash') {
+    return `選擇 ${effect.amount} 張 HP 卡放入垃圾桶。`
+  }
 
   const { target, count } = targetText(effect)
   if (effect.kind === 'damage') {
@@ -140,6 +149,7 @@ export const describeEffectResult = (
   if (effect.kind === 'disable-flip') return `${names} 本回合不能發動 FLIP。`
   if (effect.kind === 'view-hp') return `已查看 ${names} 的 HP。`
   if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`
+  if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
 
   const amount = effect.amount
   return effect.kind === 'modify-attack'

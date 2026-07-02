@@ -13,6 +13,7 @@ import type {
   GameCard,
   PlayerId,
 } from '../../game'
+import type { CookieInBattle } from '../../game'
 import { OFFICIAL_DECK_RECIPES } from '../../game'
 import type { CustomDeck } from '../../game/custom-deck'
 import { loadCustomDecks } from '../../game/custom-deck'
@@ -622,6 +623,77 @@ export function TrapResponseModal({
             onClick={onConfirm}
           >
             支付並發動
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+export interface BlockerResponseModalProps {
+  blockerCards: CookieInBattle[]
+  selectedBlockerId: string | null
+  paymentCards: GameCard[]
+  onSelectBlocker: (instanceId: string) => void
+  onConfirm: () => void
+  onSkip: () => void
+  onInspectCard?: (card: GameCard) => void
+}
+
+export function BlockerResponseModal({
+  blockerCards,
+  selectedBlockerId,
+  paymentCards,
+  onSelectBlocker,
+  onConfirm,
+  onSkip,
+  onInspectCard,
+}: BlockerResponseModalProps) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal blocker-response-modal"
+        role="alertdialog"
+      >
+        <span>攻擊宣告回應</span>
+        <h2>是否使用 Blocker 阻擋？</h2>
+        <p>選擇要阻擋攻擊的餅乾，攻擊將轉移至該餅乾。</p>
+        <div className="modal-card-options">
+          {blockerCards.map((cookie) => (
+            <button
+              type="button"
+              className={
+                selectedBlockerId === cookie.card.instanceId ? 'is-selected' : ''
+              }
+              key={cookie.card.instanceId}
+              onClick={() => {
+                onSelectBlocker(cookie.card.instanceId)
+                onInspectCard?.(cookie.card)
+              }}
+            >
+              <CardFace card={cookie.card} />
+              <span>{cookie.card.name}</span>
+            </button>
+          ))}
+        </div>
+        {selectedBlockerId && (
+          <div className="battle-response-summary">
+            <strong>付款支援卡</strong>
+            <span>
+              {paymentCards.map((card) => card.name).join('、') || '不需能量'}
+            </span>
+          </div>
+        )}
+        <div className="modal-actions">
+          <button type="button" onClick={onSkip}>
+            不使用
+          </button>
+          <button
+            type="button"
+            disabled={!selectedBlockerId}
+            onClick={onConfirm}
+          >
+            使用 Blocker
           </button>
         </div>
       </section>

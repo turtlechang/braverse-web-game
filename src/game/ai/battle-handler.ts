@@ -1,7 +1,9 @@
 import {
   getTrapCandidates,
   getTrapTargetCandidates,
+  getBlockerCandidates,
   playTrap,
+  playBlocker,
   resolveAttackEffect,
   resolveFlip,
   resolveNextDamage,
@@ -88,73 +90,93 @@ export const handleAiPendingBattle = (
 
   if (battle.stage === 'trap' && battle.defenderPlayerId === playerId) {
     const trapCard = getTrapCandidates(state, playerId)[0]
-    if (!trapCard?.trap) {
+    if (trapCard?.trap) {
+      const paymentIds =
+        selectEnergyPayment(
+          trapCard.trap.cost.energy ?? trapCard.trap.cost,
+          state.players[playerId].supportArea,
+        ) ?? []
+      const targetIds = getTrapTargetCandidates(
+        state,
+        playerId,
+        trapCard.instanceId,
+      )
+        .slice(0, 1)
+        .map((target) => target.card.instanceId)
+      const supportTrashEffect = trapCard.trap.effects.find(
+        (effect) => effect.kind === 'support-to-trash',
+      )
+      const supportTrashIds =
+        supportTrashEffect?.kind === 'support-to-trash'
+          ? state.players[playerId].supportArea
+              .slice(0, supportTrashEffect.amount)
+              .map((support) => support.card.instanceId)
+          : []
+      const discardHandColor = trapCard.trap.cost.discardHandColor
+      const discardHandIds = state.players[playerId].hand
+        .filter(
+          (card) =>
+            card.instanceId !== trapCard.instanceId &&
+            (!discardHandColor || card.energyColor === discardHandColor),
+        )
+        .slice(0, trapCard.trap.cost.discardHand ?? 0)
+        .map((card) => card.instanceId)
+      const trashBattleCookieIds = getTrashBattleCookieCostCandidates(
+        trapCard.trap.cost,
+        state.players[playerId].battleArea,
+      )
+        .slice(0, trapCard.trap.cost.trashBattleCookie?.count ?? 0)
+        .map((cookie) => cookie.card.instanceId)
+
+      if (
+        supportTrashEffect?.kind === 'support-to-trash' &&
+        supportTrashIds.length < supportTrashEffect.amount
+      ) {
+        return {
+          state: skipTrap(state, playerId),
+          action: 'play-trap',
+          description: `${state.players[playerId].name}無法支付陷阱後續代價。`,
+        }
+      }
+
       return {
-        state: skipTrap(state, playerId),
+        state: playTrap(state, playerId, {
+          trapInstanceId: trapCard.instanceId,
+          paymentIds,
+          targetIds,
+          supportTrashIds,
+          discardHandIds,
+          trashBattleCookieIds,
+        }),
         action: 'play-trap',
-        description: `${state.players[playerId].name}未發動陷阱。`,
+        revealedCard: trapCard,
+        description: `${state.players[playerId].name}發動${trapCard.name}。`,
       }
     }
-    const paymentIds =
-      selectEnergyPayment(
-        trapCard.trap.cost.energy ?? trapCard.trap.cost,
-        state.players[playerId].supportArea,
-      ) ?? []
-    const targetIds = getTrapTargetCandidates(
-      state,
-      playerId,
-      trapCard.instanceId,
-    )
-      .slice(0, 1)
-      .map((target) => target.card.instanceId)
-    const supportTrashEffect = trapCard.trap.effects.find(
-      (effect) => effect.kind === 'support-to-trash',
-    )
-    const supportTrashIds =
-      supportTrashEffect?.kind === 'support-to-trash'
-        ? state.players[playerId].supportArea
-            .slice(0, supportTrashEffect.amount)
-            .map((support) => support.card.instanceId)
-        : []
-    const discardHandColor = trapCard.trap.cost.discardHandColor
-    const discardHandIds = state.players[playerId].hand
-      .filter(
-        (card) =>
-          card.instanceId !== trapCard.instanceId &&
-          (!discardHandColor || card.energyColor === discardHandColor),
-      )
-      .slice(0, trapCard.trap.cost.discardHand ?? 0)
-      .map((card) => card.instanceId)
-    const trashBattleCookieIds = getTrashBattleCookieCostCandidates(
-      trapCard.trap.cost,
-      state.players[playerId].battleArea,
-    )
-      .slice(0, trapCard.trap.cost.trashBattleCookie?.count ?? 0)
-      .map((cookie) => cookie.card.instanceId)
 
-    if (
-      supportTrashEffect?.kind === 'support-to-trash' &&
-      supportTrashIds.length < supportTrashEffect.amount
-    ) {
+    const blockerCandidates = getBlockerCandidates(state, playerId)
+    if (blockerCandidates.length > 0) {
+      const blocker = blockerCandidates[0]
+      const skill = blocker.card.skill!
+      const paymentIds =
+        selectEnergyPayment(
+          skill.cost.energy ?? skill.cost,
+          state.players[playerId].supportArea,
+        ) ?? []
       return {
-        state: skipTrap(state, playerId),
-        action: 'play-trap',
-        description: `${state.players[playerId].name}無法支付陷阱後續代價。`,
+        state: playBlocker(state, playerId, {
+          sourceInstanceId: blocker.card.instanceId,
+          paymentIds,
+        }),
+        action: 'play-blocker',
+        description: `${state.players[playerId].name}使用${blocker.card.name}阻擋攻擊。`,
       }
     }
 
     return {
-      state: playTrap(state, playerId, {
-        trapInstanceId: trapCard.instanceId,
-        paymentIds,
-        targetIds,
-        supportTrashIds,
-        discardHandIds,
-        trashBattleCookieIds,
-      }),
+      state: skipTrap(state, playerId),
       action: 'play-trap',
-      revealedCard: trapCard,
-      description: `${state.players[playerId].name}發動${trapCard.name}。`,
+      description: `${state.players[playerId].name}未發動陷阱。`,
     }
   }
 

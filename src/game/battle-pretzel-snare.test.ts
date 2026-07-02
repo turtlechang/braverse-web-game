@@ -174,6 +174,6 @@ describe('ST2-021 Pretzel Snare condition + damage', () => {
       trapInstanceId: pretzelSnare.instanceId,
       paymentIds: ['p1-yellow-a'],
       targetIds: ['attacker'],
-    })).toThrow('支付無效')
+    })).toThrow('Invalid trap payment:')
   })
 })

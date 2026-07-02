@@ -127,6 +127,7 @@ export const isEffectUntargeted = (
   effect.kind === 'opponent-battle-to-trash' ||
   effect.kind === 'opponent-random-discard' ||
   effect.kind === 'hand-to-deck-and-draw' ||
+  effect.kind === 'disable-block' ||
   effect.kind === 'draw-up-to' ||
   effect.kind === 'set-active'
 
@@ -160,6 +161,14 @@ export const getTrashCookieCandidates = (
     (card): card is CookieCard =>
       card.type === 'cookie' &&
       state.players[context.sourcePlayerId].battleArea.length < 2,
+  )
+
+export const getTrashToSupportCandidates = (
+  state: GameState,
+  context: EffectContext,
+): CookieCard[] =>
+  state.players[context.sourcePlayerId].discardPile.filter(
+    (card): card is CookieCard => card.type === 'cookie',
   )
 
 export const getBreakToTrashCandidates = (
@@ -260,6 +269,7 @@ export const isEffectConditionMet = (
     effect.kind === 'battle-to-support' ||
     effect.kind === 'support-to-trash' ||
     effect.kind === 'trash-to-battle' ||
+    effect.kind === 'trash-to-support' ||
     effect.kind === 'support-to-hand' ||
     effect.kind === 'redirect-attack' ||
     effect.kind === 'inspect-deck' ||

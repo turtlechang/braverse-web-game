@@ -18,7 +18,7 @@ export type EnergyColor =
 
 export type EnergyCost = Partial<Record<EnergyColor | 'neutral', number>>
 
-export type SkillTrigger = 'activate' | 'on-play' | 'passive'
+export type SkillTrigger = 'activate' | 'on-play' | 'passive' | 'block'
 
 export interface CardSkill {
   trigger: SkillTrigger
@@ -255,6 +255,12 @@ export interface DisableFlipEffect {
   target: EffectTargetSelector
 }
 
+export interface DisableBlockEffect {
+  kind: 'disable-block'
+  duration: 'this-turn'
+  side: 'opponent'
+}
+
 export interface ViewHpEffect {
   kind: 'view-hp'
   target: EffectTargetSelector
@@ -349,6 +355,12 @@ export interface HpToTrashEffect {
   target: EffectTargetSelector
 }
 
+export interface TrashToSupportEffect {
+  kind: 'trash-to-support'
+  amount: number
+  rested?: boolean
+}
+
 export type CardEffect =
   | DamageEffect
   | DamageAllEffect
@@ -367,6 +379,7 @@ export type CardEffect =
   | PlaceSourceToSupportEffect
   | SupportToTrashEffect
   | DisableFlipEffect
+  | DisableBlockEffect
   | ViewHpEffect
   | ModifyAllAttackEffect
   | BattleToSupportEffect
@@ -379,6 +392,7 @@ export type CardEffect =
   | ReturnToHandEffect
   | OpponentRandomDiscardEffect
   | HpToTrashEffect
+  | TrashToSupportEffect
   | SetActiveEffect
   | InspectDeckEffect
   | OptionalCostAttackEffect
@@ -437,6 +451,10 @@ export type TrapCondition =
   | {
       kind: 'self-cookie-hp-equals'
       amount: number
+    }
+  | {
+      kind: 'opponent-trash-count-at-least'
+      count: number
     }
 
 export interface TrapAbility {
@@ -552,6 +570,7 @@ export interface GameState {
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   flipDisabledUntilTurn?: Record<string, number>
+  blockDisabledUntilTurn?: Partial<Record<PlayerId, number>>
   pendingReplacement: PendingReplacement | null
   departedCookieCounts: Record<PlayerId, number>
   pendingOnPlay?: {
@@ -564,6 +583,7 @@ export interface GameState {
     sourcePlayerId: PlayerId
     sourceInstanceId: string
     sourceCardName: string
+    effectText?: string
   } | null
   pendingRefresh: {
     playerId: PlayerId

@@ -18,6 +18,7 @@ import {
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashCookieCandidates,
+  getTrashToSupportCandidates,
   isEffectConditionMet,
   isEffectUntargeted,
   playItem,
@@ -91,8 +92,10 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'support-to-trash' ||
           currentEffect.kind === 'support-to-hand' ||
           currentEffect.kind === 'trash-to-battle' ||
+          currentEffect.kind === 'trash-to-support' ||
           currentEffect.kind === 'inspect-deck' ||
-          currentEffect.kind === 'optional-cost-attack'
+          currentEffect.kind === 'optional-cost-attack' ||
+          currentEffect.kind === 'disable-block'
           ? null
           : currentEffect.target
         : null
@@ -123,8 +126,12 @@ export function usePendingEffect(params: {
       : []
 
   const trashCookieCandidates =
-    pendingEffect && currentEffect?.kind === 'trash-to-battle'
-      ? getTrashCookieCandidates(game, pendingEffect.context)
+    pendingEffect &&
+    (currentEffect?.kind === 'trash-to-battle' ||
+      currentEffect?.kind === 'trash-to-support')
+      ? currentEffect.kind === 'trash-to-battle'
+        ? getTrashCookieCandidates(game, pendingEffect.context)
+        : getTrashToSupportCandidates(game, pendingEffect.context)
       : []
 
   const fieldToTrashStageCandidate =
@@ -179,6 +186,10 @@ export function usePendingEffect(params: {
     : new Set(
         supportEffectCandidates.map((support) => support.card.instanceId),
       )
+
+  const trashEffectTargetIds = faintActive
+    ? new Set<string>()
+    : new Set(trashCookieCandidates.map((card) => card.instanceId))
 
   const selectedEffectTargetIds: Set<string> = faintActive
     ? new Set(selectedFaintTargetIds)
@@ -609,7 +620,8 @@ export function usePendingEffect(params: {
       !currentEffect ||
       (!effectTargetIds.has(instanceId) &&
         !breakEffectTargetIds.has(instanceId) &&
-        !supportEffectTargetIds.has(instanceId))
+        !supportEffectTargetIds.has(instanceId) &&
+        !trashEffectTargetIds.has(instanceId))
     ) {
       return
     }
@@ -619,14 +631,16 @@ export function usePendingEffect(params: {
         ? currentEffect.max
         : currentEffect.kind === 'support-to-trash' ||
             currentEffect.kind === 'support-to-hand' ||
-            currentEffect.kind === 'trash-to-battle'
+            currentEffect.kind === 'trash-to-battle' ||
+            currentEffect.kind === 'trash-to-support'
           ? currentEffect.amount
         : isEffectUntargeted(currentEffect)
           ? currentEffect.kind === 'gain-hp'
             ? currentEffect.target?.max ?? 0
             : 0
           : currentEffect.kind === 'inspect-deck' ||
-              currentEffect.kind === 'optional-cost-attack'
+              currentEffect.kind === 'optional-cost-attack' ||
+              currentEffect.kind === 'disable-block'
             ? 0
           : currentEffect.target?.max ?? 0
 
@@ -844,7 +858,8 @@ export function usePendingEffect(params: {
                   (support) => support.card.instanceId === instanceId,
                 )?.card.name ?? instanceId,
             )
-          : currentEffect.kind === 'trash-to-battle'
+          : currentEffect.kind === 'trash-to-battle' ||
+              currentEffect.kind === 'trash-to-support'
             ? pendingEffect.selectedTargetIds.map(
                 (instanceId) =>
                   trashCookieCandidates.find(
@@ -891,7 +906,6 @@ export function usePendingEffect(params: {
                 ? pendingEffect.selectedCostSupportToTrashIds
                 : [],
               pendingEffect.selectedDiscardHandIds,
-              pendingEffect.selectedTargetIds,
             )
           : pendingEffect.sourceKind === 'stage'
             ? activateStage(
@@ -905,7 +919,6 @@ export function usePendingEffect(params: {
                   ? pendingEffect.selectedCostSupportToTrashIds
                   : [],
                 pendingEffect.selectedDiscardHandIds,
-                pendingEffect.selectedTargetIds,
               )
             : activateCookieSkill(
                 game,

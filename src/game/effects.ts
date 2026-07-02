@@ -4,6 +4,7 @@ export {
   getTargetPlayerId,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
+  getTrashToSupportCandidates,
   isEffectConditionMet,
   isEffectTargeted,
   isEffectUntargeted,

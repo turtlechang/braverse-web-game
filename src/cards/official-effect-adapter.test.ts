@@ -1358,6 +1358,30 @@ describe('Starter Deck RED official effect adapter', () => {
         .toMatchObject(baseFlip ?? {})
     })
 
+    it('BS1 Draw up to FLIP cards convert to optional draw decisions', () => {
+      for (const cardNumber of ['BS1-015', 'BS1-030', 'BS1-055', 'BS1-069']) {
+        expect(convertOfficialFlipAbility(findBraveBeginningCard(cardNumber)))
+          .toMatchObject({
+            effects: [{ kind: 'draw-up-to', max: 1 }],
+          })
+      }
+    })
+
+    it('BS1 blocker Cookies convert to block redirect skills', () => {
+      for (const cardNumber of ['BS1-009', 'BS1-031', 'BS1-062']) {
+        expect(convertOfficialCookieSkill(findBraveBeginningCard(cardNumber)))
+          .toMatchObject({
+            trigger: 'block',
+            effects: [
+              {
+                kind: 'redirect-attack',
+                target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+              },
+            ],
+          })
+      }
+    })
+
     it('BS1-004 converts activate return-this-cookie-to-hand', () => {
       expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-004')))
         .toMatchObject({
@@ -1690,6 +1714,49 @@ describe('Starter Deck RED official effect adapter', () => {
           },
         ],
       })
+    })
+
+    it('BS2 blocker and anti-block Cookies convert to block effects', () => {
+      for (const cardNumber of ['BS2-026', 'BS2-067']) {
+        expect(convertOfficialCookieSkill(findBraveBeginningBS2Card(cardNumber)))
+          .toMatchObject({
+            trigger: 'block',
+            effects: [{ kind: 'redirect-attack' }],
+          })
+      }
+
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-028')))
+        .toMatchObject({
+          trigger: 'activate',
+          cost: { discardHand: 1 },
+          effects: [
+            {
+              kind: 'disable-block',
+              duration: 'this-turn',
+              side: 'opponent',
+            },
+          ],
+        })
+    })
+
+    it('BS2 Draw up to FLIP cards convert to optional draw decisions', () => {
+      for (const cardNumber of ['BS2-001', 'BS2-009', 'BS2-037', 'BS2-072']) {
+        expect(convertOfficialFlipAbility(findBraveBeginningBS2Card(cardNumber)))
+          .toMatchObject({
+            effects: [{ kind: 'draw-up-to', max: 1 }],
+          })
+      }
+
+      expect(convertOfficialFlipAbility(findBraveBeginningBS2Card('BS2-034')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'draw-up-to',
+              max: 2,
+              condition: { kind: 'break-level-at-least', level: 4 },
+            },
+          ],
+        })
     })
   })
 })

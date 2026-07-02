@@ -8,6 +8,7 @@ import {
   getSupportEffectCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
+  getTrashToSupportCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectUntargeted,
@@ -76,6 +77,12 @@ const chooseEffectTargets = (
       .map((card) => card.instanceId)
   }
 
+  if (effect.kind === 'trash-to-support') {
+    return getTrashToSupportCandidates(state, context)
+      .slice(0, effect.amount)
+      .map((card) => card.instanceId)
+  }
+
   if (effect.kind === 'field-to-trash') {
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
@@ -125,7 +132,8 @@ const chooseEffectTargets = (
 
   if (
     effect.kind === 'inspect-deck' ||
-    effect.kind === 'optional-cost-attack'
+    effect.kind === 'optional-cost-attack' ||
+    effect.kind === 'disable-block'
   ) {
     return []
   }
@@ -188,6 +196,7 @@ const resolveAiCardAbility = (
     state.players[playerId].supportArea,
   )
   if (!paymentIds) return null
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: card.instanceId,
@@ -196,6 +205,21 @@ const resolveAiCardAbility = (
     isEffectConditionMet(state, context, effect),
   )
   if (effects.length === 0) return null
+
+  const hasModifyAttack = effects.some(
+    (effect) => effect.kind === 'modify-attack',
+  )
+  if (hasModifyAttack) {
+    const player = state.players[playerId]
+    const remainingSupportsAfterItem = player.supportArea.filter(
+      (support) => !paymentIds.includes(support.card.instanceId),
+    )
+    const canAttackAfterItem = player.battleArea.some((cookie) => {
+      const attackCost = getAttackEnergyCost(cookie.card)
+      return selectEnergyPayment(attackCost, remainingSupportsAfterItem)
+    })
+    if (!canAttackAfterItem) return null
+  }
 
   let nextState = playItem(
     state,
@@ -214,7 +238,8 @@ const resolveAiCardAbility = (
     if (
       (effect.kind === 'support-to-trash' ||
         effect.kind === 'support-to-hand' ||
-        effect.kind === 'trash-to-battle') &&
+        effect.kind === 'trash-to-battle' ||
+        effect.kind === 'trash-to-support') &&
       targetIds.length < effect.amount
     ) {
       return null
@@ -225,8 +250,10 @@ const resolveAiCardAbility = (
       effect.kind !== 'support-to-trash' &&
       effect.kind !== 'support-to-hand' &&
       effect.kind !== 'trash-to-battle' &&
+      effect.kind !== 'trash-to-support' &&
       effect.kind !== 'inspect-deck' &&
       effect.kind !== 'optional-cost-attack' &&
+      effect.kind !== 'disable-block' &&
       effect.target &&
       targetIds.length < effect.target.min
     ) {
@@ -410,7 +437,8 @@ const resolveAiSkill = (
     if (
       (effect.kind === 'support-to-trash' ||
         effect.kind === 'support-to-hand' ||
-        effect.kind === 'trash-to-battle') &&
+        effect.kind === 'trash-to-battle' ||
+        effect.kind === 'trash-to-support') &&
       targetIds.length < effect.amount
     ) {
       return null
@@ -420,9 +448,11 @@ const resolveAiSkill = (
       effect.kind !== 'support-to-trash' &&
       effect.kind !== 'support-to-hand' &&
       effect.kind !== 'trash-to-battle' &&
+      effect.kind !== 'trash-to-support' &&
       effect.kind !== 'inspect-deck' &&
       effect.kind !== 'optional-cost-attack' &&
       effect.kind !== 'field-to-trash' &&
+      effect.kind !== 'disable-block' &&
       effect.target &&
       targetIds.length < effect.target.min
     ) {

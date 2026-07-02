@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   activateStage,
+  createCard,
   createDemoGame,
   executeCardEffect,
+  getBlockerCandidates,
+  getCardPoolEntry,
   getTrapCandidates,
+  playBlocker,
   playItem,
   playTrap,
   type CardEffect,
@@ -221,6 +225,221 @@ describe('BS1 non-cookie effect execution', () => {
       redirectTarget.instanceId,
     )
     expect(redirected.pendingBattle?.stage).toBe('damage')
+  })
+
+  it('redirects an attack with a payable blocker Cookie', () => {
+    const base = createDemoGame()
+    const defenderCookie = base.players['player-two'].battleArea[0]
+    const blocker: CookieCard = {
+      ...defenderCookie.card,
+      instanceId: 'blocker-cookie',
+      skill: {
+        trigger: 'block',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { red: 1 }, discardHand: 0 },
+        text: '{bl}',
+        effects: [
+          {
+            kind: 'redirect-attack',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      },
+    }
+    const support: GameCard = {
+      id: 'block-support',
+      instanceId: 'block-support',
+      name: 'block-support',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const state: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId:
+          base.players['player-one'].battleArea[0].card.instanceId,
+        targetInstanceId: defenderCookie.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            defenderCookie,
+            {
+              card: blocker,
+              hpCards: base.players['player-two'].deck.slice(0, 2),
+              rested: false,
+              battleEntryId: 'blocker-cookie:battle',
+            },
+          ],
+          supportArea: [{ card: support, rested: false }],
+        },
+      },
+    }
+
+    expect(getBlockerCandidates(state, 'player-two').map((cookie) =>
+      cookie.card.instanceId,
+    )).toEqual(['blocker-cookie'])
+
+    const redirected = playBlocker(state, 'player-two', {
+      sourceInstanceId: blocker.instanceId,
+      paymentIds: [support.instanceId],
+    })
+
+    expect(redirected.pendingBattle?.targetInstanceId).toBe(blocker.instanceId)
+    expect(redirected.pendingBattle?.stage).toBe('damage')
+    expect(redirected.players['player-two'].supportArea[0].rested).toBe(true)
+  })
+
+  it('prevents blocker activation while disable-block is active', () => {
+    const base = createDemoGame()
+    const defenderCookie = base.players['player-two'].battleArea[0]
+    const blocker: CookieCard = {
+      ...defenderCookie.card,
+      instanceId: 'disabled-blocker',
+      skill: {
+        trigger: 'block',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: '{bl}',
+        effects: [
+          {
+            kind: 'redirect-attack',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      blockDisabledUntilTurn: { 'player-two': base.turnNumber },
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId:
+          base.players['player-one'].battleArea[0].card.instanceId,
+        targetInstanceId: defenderCookie.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            defenderCookie,
+            {
+              card: blocker,
+              hpCards: base.players['player-two'].deck.slice(0, 2),
+              rested: false,
+              battleEntryId: 'disabled-blocker:battle',
+            },
+          ],
+        },
+      },
+    }
+
+    expect(getBlockerCandidates(state, 'player-two')).toEqual([])
+    expect(() =>
+      playBlocker(state, 'player-two', {
+        sourceInstanceId: blocker.instanceId,
+        paymentIds: [],
+      }),
+    ).toThrow(GameRuleError)
+  })
+
+  it('BS1-009 from official card adapter has block trigger and redirect-attack effect', () => {
+    const poolEntry = getCardPoolEntry('BS1-009')
+    expect(poolEntry).toBeDefined()
+    const card = createCard(poolEntry!, 'player-one', 1)
+    expect(card.type).toBe('cookie')
+    expect(card.skill).toBeDefined()
+    expect(card.skill!.trigger).toBe('block')
+    expect(card.skill!.effects).toEqual([
+      {
+        kind: 'redirect-attack',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ])
+  })
+
+  it('BS1-009 from official card adapter works as blocker in battle', () => {
+    const poolEntry = getCardPoolEntry('BS1-009')
+    const blockerCard = createCard(poolEntry!, 'player-two', 1) as CookieCard
+    const base = createDemoGame()
+    const defenderCookie = base.players['player-two'].battleArea[0]
+    const supportPool = getCardPoolEntry('ST1-016')
+    const support = createCard(supportPool!, 'player-two', 1)
+    const state: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId:
+          base.players['player-one'].battleArea[0].card.instanceId,
+        targetInstanceId: defenderCookie.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            defenderCookie,
+            {
+              card: blockerCard,
+              hpCards: base.players['player-two'].deck.slice(0, 3),
+              rested: false,
+              battleEntryId: `${blockerCard.instanceId}:battle:99`,
+            },
+          ],
+          supportArea: [{ card: support, rested: false }],
+        },
+      },
+    }
+
+    const candidates = getBlockerCandidates(state, 'player-two')
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0].card.instanceId).toBe(blockerCard.instanceId)
+
+    const redirected = playBlocker(state, 'player-two', {
+      sourceInstanceId: blockerCard.instanceId,
+      paymentIds: [support.instanceId],
+    })
+    expect(redirected.pendingBattle?.targetInstanceId).toBe(blockerCard.instanceId)
+    expect(redirected.pendingBattle?.stage).toBe('damage')
+    expect(redirected.players['player-two'].supportArea[0].rested).toBe(true)
   })
 
   it('BS2-006 hp-to-trash removes HP cards without FLIP trigger', () => {

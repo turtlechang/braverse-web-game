@@ -40,8 +40,8 @@ const expectCreatedDeckMatchesRecipe = (
 }
 
 describe('official red starter deck', () => {
-  it('contains 22 card numbers and exactly 60 cards', () => {
-    expectStarterDeckRecipe(OFFICIAL_RED_STARTER_DECK, 22)
+  it('contains 23 card numbers and exactly 60 cards', () => {
+    expectStarterDeckRecipe(OFFICIAL_RED_STARTER_DECK, 23)
   })
 
   it('creates the official quantity for every card number', () => {
@@ -62,7 +62,7 @@ describe('official red starter deck', () => {
         ...player.battleArea.flatMap((cookie) => cookie.hpCards),
       ]
       expect(cards).toHaveLength(60)
-      expect(cards.filter((card) => card.id === 'ST1-001')).toHaveLength(4)
+      expect(cards.filter((card) => card.id === 'ST1-001')).toHaveLength(2)
       expect(cards.filter((card) => card.id === 'ST1-022')).toHaveLength(2)
     }
   })
@@ -307,7 +307,7 @@ describe('official blue starter deck', () => {
       flip: {
         text: 'Draw up to 1 card from your deck.',
         cost: { energy: {}, discardHand: 0 },
-        effects: [{ kind: 'draw', amount: 1 }],
+        effects: [{ kind: 'draw-up-to', max: 1 }],
       },
     })
     expect(sugarGlassDome).toMatchObject({
@@ -463,7 +463,7 @@ describe('different decks for player and AI', () => {
 
     expect(playerCards).toHaveLength(60)
     expect(aiCards).toHaveLength(60)
-    expect(playerCards.filter((card) => card.id === 'ST1-001')).toHaveLength(4)
+    expect(playerCards.filter((card) => card.id === 'ST1-001')).toHaveLength(2)
     expect(aiCards.filter((card) => card.id === 'ST2-001')).toHaveLength(2)
     expect(aiCards.filter((card) => card.id === 'ST1-001')).toHaveLength(0)
   })
@@ -542,7 +542,7 @@ describe('official FLIP and TRAP abilities', () => {
     })
     expect(drawFlip?.flip).toMatchObject({
       cost: { energy: {}, discardHand: 0 },
-      effects: [{ kind: 'draw', amount: 1 }],
+      effects: [{ kind: 'draw-up-to', max: 1 }],
     })
     expect(compoundTrap?.trap).toMatchObject({
       cost: { energy: { green: 1 }, discardHand: 0 },

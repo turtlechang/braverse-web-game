@@ -6,6 +6,7 @@ export {
   getEffectTargetCandidates,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
+  getTrashToSupportCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectTargeted,
@@ -82,8 +83,11 @@ export {
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
+  getBlockerCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
+  isBlockDisabled,
+  playBlocker,
   playTrap,
   resolveAttackEffect,
   resolveBattleAutomatically,
@@ -94,7 +98,7 @@ export {
   resolveOptionalCostAttack,
   skipTrap,
 } from './battle'
-export type { PlayTrapOptions, ResolveFlipOptions } from './battle'
+export type { PlayBlockerOptions, PlayTrapOptions, ResolveFlipOptions } from './battle'
 export {
   attackCookie,
   deployCookie,
@@ -209,6 +213,7 @@ export type {
   TargetedCardEffect,
   TrapAbility,
   TrapCondition,
+  TrashToSupportEffect,
   TurnPhase,
 } from './types'
 export {

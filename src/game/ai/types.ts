@@ -14,6 +14,7 @@ export type AiActionType =
   | 'activate-stage'
   | 'attack'
   | 'play-trap'
+  | 'play-blocker'
   | 'resolve-damage'
   | 'resolve-attack-effect'
   | 'resolve-flip'

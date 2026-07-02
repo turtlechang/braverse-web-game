@@ -210,7 +210,8 @@ export const handleAiTurnState = (
           )
           if (
             (effect.kind === 'support-to-hand' ||
-              effect.kind === 'support-to-trash') &&
+              effect.kind === 'support-to-trash' ||
+              effect.kind === 'trash-to-support') &&
             targetIds.length < effect.amount
           ) {
             break

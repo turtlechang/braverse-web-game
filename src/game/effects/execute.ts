@@ -25,6 +25,7 @@ import {
   getEffectTargetCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
+  getTrashToSupportCandidates,
   isEffectConditionMet,
   selectEffectTargets,
   validateBreakToTrashTargets,
@@ -296,6 +297,18 @@ export const executeCardEffect = (
     const discardCard = sourcePlayer.discardPile.find(
       (card) => card.instanceId === context.sourceInstanceId,
     )
+    const supportCard = sourcePlayer.supportArea.find(
+      (card) => card.card.instanceId === context.sourceInstanceId,
+    )
+    const sourceCard = battleCard?.card ?? handCard ?? discardCard ?? supportCard?.card
+    const effectText =
+      sourceCard && 'effectText' in sourceCard
+        ? sourceCard.effectText
+        : undefined
+    const itemText =
+      sourceCard && 'item' in sourceCard && sourceCard.item
+        ? sourceCard.item.text
+        : undefined
     return {
       ...state,
       pendingDrawUpTo: {
@@ -304,7 +317,8 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName:
-          battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? 'Unknown',
+          battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? supportCard?.card.name ?? 'Unknown',
+        effectText: effectText ?? itemText,
       },
     }
   }
@@ -644,6 +658,37 @@ export const executeCardEffect = (
             }
           : updated.pendingRefresh,
     }
+  }
+
+  if (effect.kind === 'trash-to-support') {
+    const player = state.players[context.sourcePlayerId]
+    const cookieCandidates = getTrashToSupportCandidates(state, context)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== effect.amount) {
+      throw new GameRuleError(`必須選擇 ${effect.amount} 張棄牌區餅乾。`)
+    }
+    const selected = uniqueIds.map((id) =>
+      cookieCandidates.find((card) => card.instanceId === id),
+    )
+    if (selected.some((card) => !card)) {
+      throw new GameRuleError('選擇的餅乾不在棄牌區。')
+    }
+    const selectedIds = new Set(uniqueIds)
+    const cookies = selected as CookieCard[]
+    const updated = updatePlayer(state, {
+      ...player,
+      discardPile: player.discardPile.filter(
+        (card) => !selectedIds.has(card.instanceId),
+      ),
+      supportArea: [
+        ...player.supportArea,
+        ...cookies.map((card) => ({
+          card,
+          rested: effect.rested ?? false,
+        })),
+      ],
+    })
+    return updated
   }
 
   if (effect.kind === 'opponent-discard-hand') {
@@ -990,8 +1035,19 @@ export const executeCardEffect = (
   }
 
   if (
-    effect.kind === 'optional-cost-attack'
+    effect.kind === 'optional-cost-attack' ||
+    effect.kind === 'disable-block'
   ) {
+    if (effect.kind === 'disable-block') {
+      const opponentId = context.sourcePlayerId === 'player-one' ? 'player-two' : 'player-one'
+      return {
+        ...state,
+        blockDisabledUntilTurn: {
+          ...(state.blockDisabledUntilTurn ?? {}),
+          [opponentId]: state.turnNumber,
+        },
+      }
+    }
     return state
   }
 

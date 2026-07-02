@@ -11,6 +11,7 @@ import {
   placeSupportCard,
   playStage,
   playTrap,
+  playBlocker,
   getRefreshCandidates,
   refreshDeck,
   replaceDefeatedCookie,
@@ -44,6 +45,7 @@ import {
   DeckListModal,
   ResultModal,
   TrapResponseModal,
+  BlockerResponseModal,
   OpeningSetupModal,
   OptionalCostAttackModal,
   InspectDeckModal,
@@ -769,6 +771,44 @@ function App() {
           />
         )}
 
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerTrapCandidates.length === 0 &&
+        match.playerBlockerCandidates.length > 0 && (
+          <BlockerResponseModal
+            blockerCards={match.playerBlockerCandidates}
+            selectedBlockerId={match.selectedBlockerId}
+            paymentCards={match.game.players[
+              match.viewerPlayerId
+            ].supportArea
+              .filter((support) =>
+                match.selectedBlockerPaymentIds.includes(
+                  support.card.instanceId,
+                ),
+              )
+              .map((support) => support.card)}
+            onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
+            onConfirm={() => {
+              if (!match.selectedBlockerId) return
+              match.runAction(
+                (current) =>
+                  playBlocker(current, match.viewerPlayerId, {
+                    sourceInstanceId: match.selectedBlockerId!,
+                    paymentIds: match.selectedBlockerPaymentIds,
+                  }),
+                '已使用 Blocker 阻擋攻擊。',
+              )
+            }}
+            onSkip={() => {
+              match.setSelectedBlockerId(null)
+              match.runAction(
+                (current) => skipTrap(current, match.viewerPlayerId),
+                '未使用 Blocker，進入傷害結算。',
+              )
+            }}
+          />
+        )}
+
       {match.game.pendingBattle?.stage === 'flip' &&
         (match.game.pendingBattle.damagePlayerId ??
           match.game.pendingBattle.defenderPlayerId) ===
@@ -1065,7 +1105,29 @@ function App() {
       {match.game.pendingDrawUpTo &&
         match.game.pendingDrawUpTo.playerId ===
           match.viewerPlayerId &&
-        !pending.pendingEffect && (
+        !pending.pendingEffect && (() => {
+          const drawUpTo = match.game.pendingDrawUpTo
+          const sourceCard = Object.values(match.game.players)
+            .flatMap((p) => p.battleArea)
+            .find((c) => c.card.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInHand = match.game.players[match.viewerPlayerId].hand
+            .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInDiscard = match.game.players[match.viewerPlayerId].discardPile
+            .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInSupport = match.game.players[match.viewerPlayerId].supportArea
+            .find((c) => c.card.instanceId === drawUpTo.sourceInstanceId)
+          const effectText = drawUpTo.effectText
+            ?? sourceCard?.card.effectText
+            ?? sourceInHand?.effectText
+            ?? sourceInDiscard?.effectText
+            ?? sourceInSupport?.card.effectText
+            ?? (sourceInHand && 'item' in sourceInHand && sourceInHand.item
+              ? sourceInHand.item.text
+              : undefined)
+            ?? (sourceInDiscard && 'item' in sourceInDiscard && sourceInDiscard.item
+              ? sourceInDiscard.item.text
+              : undefined)
+          return (
           <div
             className="modal-backdrop"
             role="presentation"
@@ -1076,18 +1138,30 @@ function App() {
               role="dialog"
               style={{ pointerEvents: 'auto' }}
             >
-              <h2>
-                {match.game.pendingDrawUpTo.sourceCardName}{' '}
-                抽牌選擇
-              </h2>
-              <p className="faint-effect-text">
-                可以從牌庫抽取最多 {match.game.pendingDrawUpTo.max} 張牌。
-              </p>
+              <span className="draw-up-to-source-label">效果來源</span>
+              <div className="draw-up-to-source-card">
+                {(sourceCard || sourceInHand || sourceInDiscard || sourceInSupport) && (
+                  <CardFace
+                    card={
+                      sourceCard?.card ?? sourceInHand ?? sourceInDiscard ?? sourceInSupport!.card
+                    }
+                  />
+                )}
+                <div className="draw-up-to-source-info">
+                  <h2>{drawUpTo.sourceCardName}</h2>
+                  {effectText && (
+                    <p className="faint-effect-text draw-up-to-effect">
+                      {effectText}
+                    </p>
+                  )}
+                </div>
+              </div>
               <p className="faint-target-hint">
-                選擇要抽取的牌數（0 到 {match.game.pendingDrawUpTo.max}）。
+                可以從牌庫抽取最多 {drawUpTo.max} 張牌。
+                選擇要抽取的牌數。
               </p>
               <DrawUpToSelector
-                max={match.game.pendingDrawUpTo.max}
+                max={drawUpTo.max}
                 deckSize={match.game.players[match.viewerPlayerId].deck.length}
                 onConfirm={(drawCount) => {
                   match.runAction(
@@ -1105,7 +1179,8 @@ function App() {
               />
             </section>
           </div>
-        )}
+          )
+        })()}
 
       {match.game.pendingStageTrigger &&
         match.game.pendingStageTrigger.playerId ===

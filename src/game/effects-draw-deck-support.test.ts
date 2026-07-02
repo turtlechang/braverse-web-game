@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
   executeCardEffect,
+  getTrashToSupportCandidates,
   isEffectUntargeted,
   type CardEffect,
 } from '.'
@@ -304,6 +305,117 @@ describe('deck-to-support effect', () => {
   it('isEffectUntargeted returns false for support-to-trash, trash-to-battle and support-to-hand', () => {
     expect(isEffectUntargeted({ kind: 'support-to-trash', amount: 1 })).toBe(false)
     expect(isEffectUntargeted({ kind: 'trash-to-battle', amount: 1 })).toBe(false)
+    expect(isEffectUntargeted({ kind: 'trash-to-support', amount: 1 })).toBe(false)
     expect(isEffectUntargeted({ kind: 'support-to-hand', amount: 1 })).toBe(false)
+  })
+})
+
+describe('trash-to-support effect', () => {
+  const trashSupportContext = {
+    sourcePlayerId: 'player-one' as const,
+    sourceInstanceId: 'player-one-trash-support-source',
+  }
+
+  const createStateWithDiscardCookies = () => {
+    const state = createDemoGame()
+    const player = state.players['player-one']
+    const sourceCookie = player.battleArea[0].card
+    const firstCookie = {
+      ...sourceCookie,
+      instanceId: 'discard-cookie-1',
+    }
+    const secondCookie = {
+      ...sourceCookie,
+      instanceId: 'discard-cookie-2',
+    }
+    const nonCookie = {
+      id: 'discard-item-1',
+      instanceId: 'discard-item-1',
+      name: 'discard item',
+      type: 'item' as const,
+    }
+
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          discardPile: [firstCookie, nonCookie, secondCookie],
+        },
+      },
+    }
+  }
+
+  it('moves selected discard pile cookies to support area', () => {
+    const state = createStateWithDiscardCookies()
+    const player = state.players['player-one']
+    const effect: CardEffect = { kind: 'trash-to-support', amount: 1 }
+    const targetId = player.discardPile[0].instanceId
+
+    const next = executeCardEffect(
+      state,
+      trashSupportContext,
+      effect,
+      [targetId],
+    )
+
+    expect(next.players['player-one'].discardPile.map((card) => card.instanceId))
+      .not.toContain(targetId)
+    expect(next.players['player-one'].supportArea.at(-1)?.card.instanceId)
+      .toBe(targetId)
+    expect(next.players['player-one'].supportArea.at(-1)?.rested).toBe(false)
+  })
+
+  it('moves multiple selected discard pile cookies to support area as rested', () => {
+    const state = createStateWithDiscardCookies()
+    const player = state.players['player-one']
+    const targetIds = [
+      player.discardPile[0].instanceId,
+      player.discardPile[2].instanceId,
+    ]
+    const effect: CardEffect = {
+      kind: 'trash-to-support',
+      amount: 2,
+      rested: true,
+    }
+
+    const next = executeCardEffect(
+      state,
+      trashSupportContext,
+      effect,
+      targetIds,
+    )
+
+    expect(next.players['player-one'].discardPile.map((card) => card.instanceId))
+      .not.toEqual(expect.arrayContaining(targetIds))
+    const addedSupports = next.players['player-one'].supportArea.slice(
+      player.supportArea.length,
+    )
+    expect(addedSupports.map((support) => support.card.instanceId))
+      .toEqual(targetIds)
+    expect(addedSupports.every((support) => support.rested)).toBe(true)
+  })
+
+  it('throws when trash-to-support receives no selected cookie', () => {
+    const state = createStateWithDiscardCookies()
+    const effect: CardEffect = { kind: 'trash-to-support', amount: 1 }
+
+    expect(() =>
+      executeCardEffect(state, trashSupportContext, effect, []),
+    ).toThrow()
+  })
+
+  it('lists only discard pile cookies as trash-to-support candidates', () => {
+    const state = createStateWithDiscardCookies()
+    const candidates = getTrashToSupportCandidates(
+      state,
+      trashSupportContext,
+    )
+
+    expect(candidates.map((card) => card.instanceId)).toEqual([
+      'discard-cookie-1',
+      'discard-cookie-2',
+    ])
   })
 })

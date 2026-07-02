@@ -6,6 +6,7 @@ import {
   getCurrentReplacementTask,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
+  getBlockerCandidates,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   hasBlockingPending,
@@ -22,6 +23,7 @@ import {
 import {
   createAttackEffectDemoState,
   createAiDiscardRevealDemoState,
+  createBlockerResponseDemoState,
   createBlueActivateSkillDemoState,
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
@@ -60,6 +62,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'trap-response') {
       return createTrapResponseDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'blocker-response') {
+      return createBlockerResponseDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'flip-response') {
       return createFlipResponseDemoState()
@@ -153,6 +158,11 @@ export function useMatchController(params: {
         ? '測試狀態：Pretzel Snare 可支付（攻擊 5）。'
         : '測試狀態：Pretzel Snare 不可支付（攻擊 4）。'
     }
+    if (testStateConfig?.kind === 'blocker-response') {
+      return testStateConfig.payable
+        ? '測試狀態：Blocker 可支付（有足夠能量）。'
+        : '測試狀態：Blocker 不可支付（能量不足）。'
+    }
     if (testStateConfig?.kind === 'opponent-discard-hand') {
       return '測試狀態：Roguefort Cookie OnPlay 對手棄牌。'
     }
@@ -223,6 +233,7 @@ export function useMatchController(params: {
   const [selectedTrapTrashBattleCookieIds, setSelectedTrapTrashBattleCookieIds] =
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
+  const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
   >([])
@@ -386,6 +397,21 @@ export function useMatchController(params: {
           .map((support: SupportCard) => support.card.instanceId)
       : []
 
+  const playerBlockerCandidates =
+    game.pendingBattle?.stage === 'trap' &&
+    game.pendingBattle.defenderPlayerId === viewerPlayerId
+      ? getBlockerCandidates(game, viewerPlayerId)
+      : []
+  const selectedBlocker = playerBlockerCandidates.find(
+    (cookie) => cookie.card.instanceId === selectedBlockerId,
+  )
+  const selectedBlockerPaymentIds = selectedBlocker?.card.skill
+    ? selectEnergyPayment(
+        selectedBlocker.card.skill.cost.energy ?? selectedBlocker.card.skill.cost,
+        game.players[viewerPlayerId].supportArea,
+      ) ?? []
+    : []
+
   const replacementTask = getCurrentReplacementTask(game)
 
   const aiControlsCurrentState: boolean =
@@ -440,7 +466,8 @@ export function useMatchController(params: {
     if (
       battle?.stage !== 'trap' ||
       battle.defenderPlayerId !== viewerPlayerId ||
-      getTrapCandidates(game, viewerPlayerId).length > 0
+      getTrapCandidates(game, viewerPlayerId).length > 0 ||
+      getBlockerCandidates(game, viewerPlayerId).length > 0
     ) {
       return
     }
@@ -453,7 +480,8 @@ export function useMatchController(params: {
         if (
           currentBattle?.stage !== 'trap' ||
           currentBattle.defenderPlayerId !== viewerPlayerId ||
-          getTrapCandidates(current, viewerPlayerId).length > 0
+          getTrapCandidates(current, viewerPlayerId).length > 0 ||
+          getBlockerCandidates(current, viewerPlayerId).length > 0
         ) {
           return current
         }
@@ -477,6 +505,7 @@ export function useMatchController(params: {
       setTrapSelectNoTarget(false)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedBlockerId(null)
     },
     [animations, battleActions, resetSetup],
   )
@@ -532,6 +561,11 @@ export function useMatchController(params: {
     trapAllowEmptyTarget,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
+    // Blocker
+    selectedBlockerId,
+    setSelectedBlockerId,
+    playerBlockerCandidates,
+    selectedBlockerPaymentIds,
     // Flip
     selectedFlipDiscardIds,
     setSelectedFlipDiscardIds,

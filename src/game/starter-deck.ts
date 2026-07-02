@@ -15,6 +15,7 @@ import {
 import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { CardEffect, GameCard, PlayerId } from './types'
+import { getCardPoolEntry } from './card-pool'
 
 export type DeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple' | 'custom'
 
@@ -25,7 +26,7 @@ export interface StarterDeckEntry {
 }
 
 export const OFFICIAL_RED_STARTER_DECK: StarterDeckEntry[] = [
-  { cardNumber: 'ST1-001', name: 'Princess Cookie', count: 4 },
+  { cardNumber: 'ST1-001', name: 'Princess Cookie', count: 2 },
   { cardNumber: 'ST1-002', name: 'Ninja Cookie', count: 2 },
   { cardNumber: 'ST1-003', name: 'Dino-Sour Cookie', count: 2 },
   { cardNumber: 'ST1-004', name: 'Carrot Cookie', count: 4 },
@@ -47,6 +48,7 @@ export const OFFICIAL_RED_STARTER_DECK: StarterDeckEntry[] = [
   { cardNumber: 'ST1-020', name: 'Overhydrated Dough Swamp', count: 2 },
   { cardNumber: 'ST1-021', name: 'Ouch-Inducing Star Jelly', count: 2 },
   { cardNumber: 'ST1-022', name: 'Burning Jelly Volcano', count: 2 },
+  { cardNumber: 'BS1-009', name: 'Affogato Cookie', count: 2 },
 ]
 
 export const OFFICIAL_YELLOW_STARTER_DECK: StarterDeckEntry[] = [
@@ -265,7 +267,9 @@ const createOfficialStarterDeckFromRecipe = (
   )
 
   return recipe.flatMap((entry) => {
-    const source = recordsByNumber.get(entry.cardNumber)
+    const source =
+      recordsByNumber.get(entry.cardNumber) ??
+      (getCardPoolEntry(entry.cardNumber) as OfficialCardRecord | undefined)
     if (!source) {
       throw new Error(`Missing official sample card ${entry.cardNumber}`)
     }
