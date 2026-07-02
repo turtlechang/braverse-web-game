@@ -37,6 +37,7 @@ import {
   createOpponentDiscardHandDemoState,
   createStageUsageDemoState,
   createSupportToTrashSkillDemoState,
+  createTrapAndBlockerDemoState,
   createTrapResponseDemoState,
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
@@ -65,6 +66,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'blocker-response') {
       return createBlockerResponseDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'trap-and-blocker-response') {
+      return createTrapAndBlockerDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'flip-response') {
       return createFlipResponseDemoState()
@@ -163,6 +167,11 @@ export function useMatchController(params: {
         ? '測試狀態：Blocker 可支付（有足夠能量）。'
         : '測試狀態：Blocker 不可支付（能量不足）。'
     }
+    if (testStateConfig?.kind === 'trap-and-blocker-response') {
+      return testStateConfig.payable
+        ? '測試狀態：陷阱與 Blocker 同時可支付，選擇回應方式。'
+        : '測試狀態：陷阱與 Blocker 同時不可支付。'
+    }
     if (testStateConfig?.kind === 'opponent-discard-hand') {
       return '測試狀態：Roguefort Cookie OnPlay 對手棄牌。'
     }
@@ -233,6 +242,7 @@ export function useMatchController(params: {
   const [selectedTrapTrashBattleCookieIds, setSelectedTrapTrashBattleCookieIds] =
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
+  const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
@@ -503,6 +513,7 @@ export function useMatchController(params: {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
       setTrapSelectNoTarget(false)
+      setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
       setSelectedBlockerId(null)
@@ -566,6 +577,8 @@ export function useMatchController(params: {
     setSelectedBlockerId,
     playerBlockerCandidates,
     selectedBlockerPaymentIds,
+    pendingResponseMode,
+    setPendingResponseMode,
     // Flip
     selectedFlipDiscardIds,
     setSelectedFlipDiscardIds,

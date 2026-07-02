@@ -630,6 +630,80 @@ export function TrapResponseModal({
   )
 }
 
+export interface AttackResponseModalProps {
+  trapCards: GameCard[]
+  blockerCards: CookieInBattle[]
+  onSelectTrap?: (instanceId: string) => void
+  onSelectBlocker?: (instanceId: string) => void
+  onSkip: () => void
+  onInspectCard?: (card: GameCard) => void
+}
+
+export function AttackResponseModal({
+  trapCards,
+  blockerCards,
+  onSelectTrap,
+  onSelectBlocker,
+  onSkip,
+  onInspectCard,
+}: AttackResponseModalProps) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal attack-response-modal"
+        role="alertdialog"
+      >
+        <span>攻擊宣告回應</span>
+        <h2>選擇回應方式</h2>
+        <p>每次攻擊只能發動一種回應，請選擇使用陷阱卡或 Blocker。</p>
+        {trapCards.length > 0 && (
+          <>
+            <strong>陷阱卡</strong>
+            <div className="modal-card-options">
+              {trapCards.map((card) => (
+                <button
+                  type="button"
+                  key={card.instanceId}
+                  onClick={() => {
+                    onSelectTrap?.(card.instanceId)
+                    onInspectCard?.(card)
+                  }}
+                >
+                  <CardFace card={card} />
+                  <span>{card.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {blockerCards.length > 0 && (
+          <>
+            <strong>Blocker</strong>
+            <div className="modal-card-options">
+              {blockerCards.map((cookie) => (
+                <button
+                  type="button"
+                  key={cookie.card.instanceId}
+                  onClick={() => {
+                    onSelectBlocker?.(cookie.card.instanceId)
+                    onInspectCard?.(cookie.card)
+                  }}
+                >
+                  <CardFace card={cookie.card} />
+                  <span>{cookie.card.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        <div className="modal-actions">
+          <button type="button" onClick={onSkip}>不發動</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export interface BlockerResponseModalProps {
   blockerCards: CookieInBattle[]
   selectedBlockerId: string | null

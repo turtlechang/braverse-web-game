@@ -45,6 +45,7 @@ import {
   DeckListModal,
   ResultModal,
   TrapResponseModal,
+  AttackResponseModal,
   BlockerResponseModal,
   OpeningSetupModal,
   OptionalCostAttackModal,
@@ -665,7 +666,38 @@ function App() {
 
       {match.game.pendingBattle?.stage === 'trap' &&
         match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
-        match.playerTrapCandidates.length > 0 && (
+        match.playerTrapCandidates.length > 0 &&
+        match.playerBlockerCandidates.length > 0 &&
+        match.pendingResponseMode === null && (
+          <AttackResponseModal
+            trapCards={match.playerTrapCandidates}
+            blockerCards={match.playerBlockerCandidates}
+            onSelectTrap={(id) => {
+              match.setPendingResponseMode('trap')
+              match.setSelectedTrapId(id)
+              match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapTrashBattleCookieIds([])
+              match.setTrapSelectNoTarget(false)
+            }}
+            onSelectBlocker={(id) => {
+              match.setPendingResponseMode('blocker')
+              match.setSelectedBlockerId(id)
+            }}
+            onSkip={() => {
+              match.runAction(
+                (current) => skipTrap(current, match.viewerPlayerId),
+                '未發動回應，進入傷害結算。',
+              )
+            }}
+            onInspectCard={(card) => dialogs.openCardDetail(card)}
+          />
+        )}
+
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerTrapCandidates.length > 0 &&
+        (match.playerBlockerCandidates.length === 0 ||
+          match.pendingResponseMode === 'trap') && (
           <TrapResponseModal
             cards={match.playerTrapCandidates}
             selectedTrapId={match.selectedTrapId}
@@ -718,6 +750,7 @@ function App() {
               match.setSelectedTrapId(null)
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
+              match.setPendingResponseMode(null)
               match.runAction(
                 (current) => skipTrap(current, match.viewerPlayerId),
                 '未發動陷阱，進入傷害結算。',
@@ -736,6 +769,7 @@ function App() {
                   match.setSelectedTrapDiscardIds([])
                   match.setSelectedTrapTrashBattleCookieIds([])
                   match.setTrapSelectNoTarget(false)
+                  match.setPendingResponseMode(null)
                   match.runAction(
                     (current) => {
                       const afterTrap = playTrap(
@@ -801,6 +835,46 @@ function App() {
             }}
             onSkip={() => {
               match.setSelectedBlockerId(null)
+              match.runAction(
+                (current) => skipTrap(current, match.viewerPlayerId),
+                '未使用 Blocker，進入傷害結算。',
+              )
+            }}
+          />
+        )}
+
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerTrapCandidates.length > 0 &&
+        match.playerBlockerCandidates.length > 0 &&
+        match.pendingResponseMode === 'blocker' && (
+          <BlockerResponseModal
+            blockerCards={match.playerBlockerCandidates}
+            selectedBlockerId={match.selectedBlockerId}
+            paymentCards={match.game.players[
+              match.viewerPlayerId
+            ].supportArea
+              .filter((support) =>
+                match.selectedBlockerPaymentIds.includes(
+                  support.card.instanceId,
+                ),
+              )
+              .map((support) => support.card)}
+            onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
+            onConfirm={() => {
+              if (!match.selectedBlockerId) return
+              match.runAction(
+                (current) =>
+                  playBlocker(current, match.viewerPlayerId, {
+                    sourceInstanceId: match.selectedBlockerId!,
+                    paymentIds: match.selectedBlockerPaymentIds,
+                  }),
+                '已使用 Blocker 阻擋攻擊。',
+              )
+            }}
+            onSkip={() => {
+              match.setSelectedBlockerId(null)
+              match.setPendingResponseMode(null)
               match.runAction(
                 (current) => skipTrap(current, match.viewerPlayerId),
                 '未使用 Blocker，進入傷害結算。',
