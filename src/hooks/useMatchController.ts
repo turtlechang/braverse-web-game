@@ -4,6 +4,9 @@ import {
   advancePhase,
   createDemoSetupGame,
   getCurrentReplacementTask,
+  getAfterDamageEffectCandidates,
+  getAfterDamageEffectMinMax,
+  getBlockerCandidates,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   hasBlockingPending,
@@ -20,6 +23,7 @@ import {
 import {
   createAttackEffectDemoState,
   createAiDiscardRevealDemoState,
+  createBlockerResponseDemoState,
   createBlueActivateSkillDemoState,
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
@@ -33,6 +37,7 @@ import {
   createOpponentDiscardHandDemoState,
   createStageUsageDemoState,
   createSupportToTrashSkillDemoState,
+  createTrapAndBlockerDemoState,
   createTrapResponseDemoState,
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
@@ -58,6 +63,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'trap-response') {
       return createTrapResponseDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'blocker-response') {
+      return createBlockerResponseDemoState(testStateConfig.payable)
+    }
+    if (testStateConfig?.kind === 'trap-and-blocker-response') {
+      return createTrapAndBlockerDemoState(testStateConfig.payable)
     }
     if (testStateConfig?.kind === 'flip-response') {
       return createFlipResponseDemoState()
@@ -151,6 +162,16 @@ export function useMatchController(params: {
         ? '測試狀態：Pretzel Snare 可支付（攻擊 5）。'
         : '測試狀態：Pretzel Snare 不可支付（攻擊 4）。'
     }
+    if (testStateConfig?.kind === 'blocker-response') {
+      return testStateConfig.payable
+        ? '測試狀態：Blocker 可支付（有足夠能量）。'
+        : '測試狀態：Blocker 不可支付（能量不足）。'
+    }
+    if (testStateConfig?.kind === 'trap-and-blocker-response') {
+      return testStateConfig.payable
+        ? '測試狀態：陷阱與 Blocker 同時可支付，選擇回應方式。'
+        : '測試狀態：陷阱與 Blocker 同時不可支付。'
+    }
     if (testStateConfig?.kind === 'opponent-discard-hand') {
       return '測試狀態：Roguefort Cookie OnPlay 對手棄牌。'
     }
@@ -205,6 +226,7 @@ export function useMatchController(params: {
     setSetupMessage,
     deckConfig,
     setDeckConfig,
+    selectedCustomDeck,
     handleDeckSelection,
     handleRps,
     beginOrderedSetup,
@@ -220,6 +242,8 @@ export function useMatchController(params: {
   const [selectedTrapTrashBattleCookieIds, setSelectedTrapTrashBattleCookieIds] =
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
+  const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
+  const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
   >([])
@@ -288,6 +312,45 @@ export function useMatchController(params: {
     ? getFaintEffectMinMax(pendingFaint.effect)
     : { min: 0, max: 0 }
 
+  const [selectedAfterDamageTargetIds, setSelectedAfterDamageTargetIds] =
+    useState<string[]>([])
+  const pendingAfterDamage =
+    game.pendingAfterDamageEffects && game.pendingAfterDamageEffects.length > 0
+      ? game.pendingAfterDamageEffects[0]
+      : null
+  const afterDamageSourceCard = pendingAfterDamage
+    ? (() => {
+        for (const player of Object.values(game.players) as PlayerState[]) {
+          const found =
+            player.breakArea.find(
+              (cookie: CookieCard) =>
+                cookie.instanceId === pendingAfterDamage.sourceInstanceId,
+            ) ??
+            player.battleArea.find(
+              (cookie: CookieInBattle) =>
+                cookie.card.instanceId === pendingAfterDamage.sourceInstanceId,
+            )?.card
+          if (found) return found
+        }
+        return null
+      })()
+    : null
+  const afterDamageCandidates =
+    pendingAfterDamage &&
+    pendingAfterDamage.sourcePlayerId === viewerPlayerId
+      ? getAfterDamageEffectCandidates(game)
+      : []
+  const afterDamageTargetIds = new Set(
+    afterDamageCandidates.map((cookie) => cookie.card.instanceId),
+  )
+  const hasAfterDamage =
+    Boolean(
+      pendingAfterDamage && pendingAfterDamage.sourcePlayerId === viewerPlayerId,
+    )
+  const afterDamageMinMax = pendingAfterDamage
+    ? getAfterDamageEffectMinMax(pendingAfterDamage.effect)
+    : { min: 0, max: 0 }
+
   const playerTrapCandidates =
     game.pendingBattle?.stage === 'trap' &&
     game.pendingBattle.defenderPlayerId === viewerPlayerId
@@ -298,7 +361,7 @@ export function useMatchController(params: {
   )
   const selectedTrapPaymentIds = selectedTrap?.trap
     ? selectEnergyPayment(
-        selectedTrap.trap.cost.energy,
+        selectedTrap.trap.cost.energy ?? selectedTrap.trap.cost,
         game.players[viewerPlayerId].supportArea,
       ) ?? []
     : []
@@ -313,7 +376,10 @@ export function useMatchController(params: {
     : []
   const selectedTrapDiscardCandidates = selectedTrap
     ? game.players[viewerPlayerId].hand.filter(
-        (card) => card.instanceId !== selectedTrap.instanceId,
+        (card) =>
+          card.instanceId !== selectedTrap.instanceId &&
+          (!selectedTrap.trap?.cost.discardHandColor ||
+            card.energyColor === selectedTrap.trap.cost.discardHandColor),
       )
     : []
   const trapAllowEmptyTarget =
@@ -340,6 +406,21 @@ export function useMatchController(params: {
           .slice(0, 1)
           .map((support: SupportCard) => support.card.instanceId)
       : []
+
+  const playerBlockerCandidates =
+    game.pendingBattle?.stage === 'trap' &&
+    game.pendingBattle.defenderPlayerId === viewerPlayerId
+      ? getBlockerCandidates(game, viewerPlayerId)
+      : []
+  const selectedBlocker = playerBlockerCandidates.find(
+    (cookie) => cookie.card.instanceId === selectedBlockerId,
+  )
+  const selectedBlockerPaymentIds = selectedBlocker?.card.skill
+    ? selectEnergyPayment(
+        selectedBlocker.card.skill.cost.energy ?? selectedBlocker.card.skill.cost,
+        game.players[viewerPlayerId].supportArea,
+      ) ?? []
+    : []
 
   const replacementTask = getCurrentReplacementTask(game)
 
@@ -395,7 +476,8 @@ export function useMatchController(params: {
     if (
       battle?.stage !== 'trap' ||
       battle.defenderPlayerId !== viewerPlayerId ||
-      getTrapCandidates(game, viewerPlayerId).length > 0
+      getTrapCandidates(game, viewerPlayerId).length > 0 ||
+      getBlockerCandidates(game, viewerPlayerId).length > 0
     ) {
       return
     }
@@ -408,7 +490,8 @@ export function useMatchController(params: {
         if (
           currentBattle?.stage !== 'trap' ||
           currentBattle.defenderPlayerId !== viewerPlayerId ||
-          getTrapCandidates(current, viewerPlayerId).length > 0
+          getTrapCandidates(current, viewerPlayerId).length > 0 ||
+          getBlockerCandidates(current, viewerPlayerId).length > 0
         ) {
           return current
         }
@@ -430,8 +513,10 @@ export function useMatchController(params: {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
       setTrapSelectNoTarget(false)
+      setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedBlockerId(null)
     },
     [animations, battleActions, resetSetup],
   )
@@ -444,6 +529,7 @@ export function useMatchController(params: {
     setupMessage,
     setSetupMessage,
     deckConfig,
+    selectedCustomDeck,
     setDeckConfig,
     selectedAttackerId: battleActions.selectedAttackerId,
     setSelectedAttackerId: battleActions.setSelectedAttackerId,
@@ -486,6 +572,13 @@ export function useMatchController(params: {
     trapAllowEmptyTarget,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
+    // Blocker
+    selectedBlockerId,
+    setSelectedBlockerId,
+    playerBlockerCandidates,
+    selectedBlockerPaymentIds,
+    pendingResponseMode,
+    setPendingResponseMode,
     // Flip
     selectedFlipDiscardIds,
     setSelectedFlipDiscardIds,
@@ -499,6 +592,16 @@ export function useMatchController(params: {
     hasFaint,
     faintMin: faintMinMax.min,
     faintMax: faintMinMax.max,
+    // After-damage
+    selectedAfterDamageTargetIds,
+    setSelectedAfterDamageTargetIds,
+    pendingAfterDamage,
+    afterDamageSourceCard,
+    afterDamageCandidates,
+    afterDamageTargetIds,
+    hasAfterDamage,
+    afterDamageMin: afterDamageMinMax.min,
+    afterDamageMax: afterDamageMinMax.max,
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,

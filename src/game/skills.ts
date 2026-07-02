@@ -26,7 +26,7 @@ const getSkillUseKey = (
 export const canPayEnergyCost = (
   cost: AbilityCost,
   supports: SupportCard[],
-): boolean => selectEnergyPayment(cost.energy, supports) !== null
+): boolean => selectEnergyPayment(cost.energy ?? cost, supports) !== null
 
 export const canPaySupportToTrashCost = (
   cost: AbilityCost,
@@ -120,7 +120,7 @@ const validatePayment = (
   paymentIds: string[],
 ) => {
   const validation = validateEnergyPayment(
-    skill.cost.energy,
+    skill.cost.energy ?? skill.cost,
     supports,
     paymentIds,
   )
@@ -154,7 +154,8 @@ export const canActivateCookieSkill = (
     state.pendingInspectDeck ||
     state.pendingOptionalCostAttack ||
     state.pendingStageTrigger ||
-    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0)
+    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
+    (state.pendingAfterDamageEffects && state.pendingAfterDamageEffects.length > 0)
   ) {
     return false
   }
@@ -195,12 +196,15 @@ export const canActivateCookieSkill = (
     return false
   }
 
-  if (skill.cost.discardHand > 0 && player.hand.length < skill.cost.discardHand) {
+  if (
+    (skill.cost.discardHand ?? 0) > 0 &&
+    player.hand.length < (skill.cost.discardHand ?? 0)
+  ) {
     return false
   }
 
   const energyPayment = selectEnergyPayment(
-    skill.cost.energy,
+    skill.cost.energy ?? skill.cost,
     player.supportArea,
   )
   if (!energyPayment) return false
@@ -273,10 +277,10 @@ export const activateCookieSkill = (
     throw new GameRuleError('此技能不需要支付支援區卡牌代價。')
   }
 
-  if (cost.discardHand > 0) {
-    if (uniqueDiscardHandIds.length !== cost.discardHand) {
+  if ((cost.discardHand ?? 0) > 0) {
+    if (uniqueDiscardHandIds.length !== (cost.discardHand ?? 0)) {
       throw new GameRuleError(
-        `必須棄置 ${cost.discardHand} 張手牌作為技能代價。`,
+        `必須棄置 ${cost.discardHand ?? 0} 張手牌作為技能代價。`,
       )
     }
     const allInHand = uniqueDiscardHandIds.every((id) =>

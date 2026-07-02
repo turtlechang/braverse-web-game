@@ -46,13 +46,15 @@ function EffectPanelContent({
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
-  const supportToTrashCost = skill?.cost.supportToTrash ?? 0
+  const supportAreaCost =
+    (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
   const selectionLimits =
     currentEffect?.kind === 'break-to-trash'
       ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'support-to-trash' ||
           currentEffect?.kind === 'support-to-hand' ||
-          currentEffect?.kind === 'trash-to-battle'
+          currentEffect?.kind === 'trash-to-battle' ||
+          currentEffect?.kind === 'trash-to-support'
         ? { min: currentEffect.amount, max: currentEffect.amount }
         : currentEffect?.kind === 'gain-hp' &&
             currentEffect.target &&
@@ -60,9 +62,29 @@ function EffectPanelContent({
           ? currentEffect.target
         : currentEffect && !isEffectUntargeted(currentEffect) &&
             currentEffect.kind !== 'inspect-deck' &&
-            currentEffect.kind !== 'optional-cost-attack'
+            currentEffect.kind !== 'optional-cost-attack' &&
+            currentEffect.kind !== 'disable-block'
           ? currentEffect.target
           : null
+
+  const hasCostPhase =
+    !pendingEffect?.skillActivated &&
+    (totalEnergyCost > 0 || supportAreaCost > 0 || discardHandCost > 0)
+
+  const energyPaid = pendingEffect?.selectedPaymentIds.length === totalEnergyCost
+  const supportPaid =
+    supportAreaCost === 0 ||
+    pendingEffect?.selectedCostSupportToTrashIds.length === supportAreaCost
+  const discardPaid =
+    discardHandCost === 0 ||
+    pendingEffect?.selectedDiscardHandIds.length === discardHandCost
+  const costReady = !hasCostPhase || (energyPaid && supportPaid && discardPaid)
+
+  const targetReady =
+    !selectionLimits ||
+    (pendingEffect &&
+      pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
+      pendingEffect.selectedTargetIds.length <= selectionLimits.max)
 
   if (pendingEffect && currentEffect) {
     return (
@@ -79,6 +101,19 @@ function EffectPanelContent({
             text={pendingEffect.sourceCard.effectText ?? ''}
           />
         </p>
+
+        {hasCostPhase && (
+          <div className="phase-progress">
+            <span className={`phase-step${energyPaid && supportPaid && discardPaid ? ' is-done' : ' is-active'}`}>
+              1 費用
+            </span>
+            <span className="phase-divider" />
+            <span className={`phase-step${costReady ? ' is-active' : ''}`}>
+              2 目標
+            </span>
+          </div>
+        )}
+
         {!pendingEffect.skillActivated && (
           <div className="skill-cost">
             <strong>技能費用</strong>
@@ -87,10 +122,10 @@ function EffectPanelContent({
               已選 {pendingEffect.selectedPaymentIds.length}／
               {totalEnergyCost} 張能量支援卡
             </small>
-            {supportToTrashCost > 0 && (
+            {supportAreaCost > 0 && (
               <small>
                 已選 {pendingEffect.selectedCostSupportToTrashIds.length}／
-                {supportToTrashCost} 張支援區代價
+                {supportAreaCost} 張支援區代價
               </small>
             )}
             {discardHandCost > 0 && (
@@ -101,10 +136,6 @@ function EffectPanelContent({
             )}
           </div>
         )}
-        <div className="effect-instruction">
-          <Sparkles aria-hidden="true" />
-          <span>{describeEffect(currentEffect)}</span>
-        </div>
         {costSupportCandidates.length > 0 && !pendingEffect.skillActivated && (
           <>
             <small>選擇要作為代價棄置的支援區卡牌</small>
@@ -147,6 +178,10 @@ function EffectPanelContent({
             </div>
           </>
         )}
+        <div className="effect-instruction">
+          <Sparkles aria-hidden="true" />
+          <span>{describeEffect(currentEffect)}</span>
+        </div>
         {candidateCards.length > 0 && (
           <div className="effect-candidates effect-candidates-target">
             {candidateCards.map((card) => (
@@ -173,19 +208,7 @@ function EffectPanelContent({
         )}
         <button
           type="button"
-          disabled={
-            (!pendingEffect.skillActivated &&
-              (pendingEffect.selectedPaymentIds.length !== totalEnergyCost ||
-                pendingEffect.selectedCostSupportToTrashIds.length !==
-                  supportToTrashCost ||
-                pendingEffect.selectedDiscardHandIds.length !==
-                  discardHandCost)) ||
-            (Boolean(selectionLimits) &&
-              (pendingEffect.selectedTargetIds.length <
-                selectionLimits!.min ||
-              pendingEffect.selectedTargetIds.length >
-                selectionLimits!.max))
-          }
+          disabled={!costReady || !targetReady}
           onClick={onConfirm}
         >
           <Check aria-hidden="true" />

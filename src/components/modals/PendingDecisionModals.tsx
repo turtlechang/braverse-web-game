@@ -28,7 +28,14 @@ export function DrawUpToSelector({
             className={`draw-up-to-option ${drawCount === i ? 'is-selected' : ''}`}
             onClick={() => setDrawCount(i)}
           >
-            {i}
+            <span className="draw-up-to-option-label">
+              {i === 0 ? '不抽' : `抽 ${i} 張`}
+            </span>
+            {i > 0 && (
+              <span className="draw-up-to-option-hint">
+                從牌庫頂抽取
+              </span>
+            )}
           </button>
         ))}
       </div>

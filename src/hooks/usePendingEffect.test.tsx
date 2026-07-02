@@ -32,6 +32,32 @@ const createTestCookieWithDiscardHandSkill = (): CookieCard => ({
   },
 })
 
+const createTestDamageCookieWithDiscardHandSkill = (): CookieCard => ({
+  id: 'test-discard-damage-cookie',
+  instanceId: 'test-discard-damage-cookie-1',
+  name: 'Discard Damage Cookie',
+  type: 'cookie',
+  level: 2,
+  hp: 4,
+  attack: 2,
+  attackCost: 1,
+  skill: {
+    trigger: 'activate',
+    oncePerTurn: false,
+    yourTurn: true,
+    restSource: false,
+    cost: { energy: { red: 1 }, discardHand: 1 },
+    text: 'Discard 1 card. Deal 3 damage.',
+    effects: [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+  },
+})
+
 const createTestSupportCard = (
   instanceId: string,
   color: 'red' | 'yellow' | 'green' | 'blue' | 'purple' | 'wild' = 'red',
@@ -80,6 +106,58 @@ function createDiscardHandSkillGameState(): GameState {
   }
 }
 
+function createDiscardHandDamageSkillGameState(): GameState {
+  const baseGame = createItemUsageDemoState(true)
+  const cookie = createTestDamageCookieWithDiscardHandSkill()
+  const support = createTestSupportCard('energy-support-1', 'red')
+  const handCard = createTestHandCard('hand-card-1')
+  const targetCookie: CookieCard = {
+    id: 'target-cookie',
+    instanceId: 'target-cookie-1',
+    name: 'Target Cookie',
+    type: 'cookie',
+    level: 1,
+    hp: 1,
+    attack: 1,
+    attackCost: 0,
+  }
+
+  return {
+    ...baseGame,
+    phase: 'main',
+    activePlayerId: 'player-one',
+    status: 'playing',
+    players: {
+      ...baseGame.players,
+      'player-one': {
+        ...baseGame.players['player-one'],
+        hand: [handCard],
+        battleArea: [
+          {
+            card: cookie,
+            hpCards: [],
+            rested: false,
+            battleEntryId: `${cookie.instanceId}:battle:1`,
+          },
+        ],
+        supportArea: [{ card: support, rested: false }],
+      },
+      'player-two': {
+        ...baseGame.players['player-two'],
+        hand: [],
+        battleArea: [
+          {
+            card: targetCookie,
+            hpCards: [createTestHandCard('target-hp-1')],
+            rested: false,
+            battleEntryId: `${targetCookie.instanceId}:battle:2`,
+          },
+        ],
+      },
+    },
+  }
+}
+
 describe('usePendingEffect cancelPendingSkill', () => {
   it('clears pendingEffect without modifying GameState when canceling activate cookie skill', async () => {
     const gameState = createDiscardHandSkillGameState()
@@ -101,6 +179,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -178,6 +261,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -210,7 +298,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
     await act(() => root.unmount())
   })
 
-  it('does not allow cancel when sourceKind is not cookie', async () => {
+  it('allows cancel when sourceKind is item', async () => {
     const baseGame = createItemUsageDemoState(true)
     const itemCard: GameCard = {
       id: 'test-item',
@@ -250,6 +338,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -279,7 +372,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       captured!.cancelPendingSkill()
     })
 
-    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.pendingEffect).toBeNull()
 
     await act(() => root.unmount())
   })
@@ -301,6 +394,11 @@ describe('usePendingEffect cancelPendingSkill', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -338,7 +436,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
     const isConfirmDisabled =
       !captured!.pendingEffect!.skillActivated &&
       (captured!.pendingEffect!.selectedPaymentIds.length !==
-        captured!.pendingEffect!.skill.cost.energy.red ||
+        (captured!.pendingEffect!.skill.cost.energy ?? {}).red ||
         captured!.pendingEffect!.selectedDiscardHandIds.length !==
           captured!.discardHandCost)
 
@@ -354,11 +452,80 @@ describe('usePendingEffect cancelPendingSkill', () => {
     const isConfirmDisabledAfterSelection =
       !captured!.pendingEffect!.skillActivated &&
       (captured!.pendingEffect!.selectedPaymentIds.length !==
-        captured!.pendingEffect!.skill.cost.energy.red ||
+        (captured!.pendingEffect!.skill.cost.energy ?? {}).red ||
         captured!.pendingEffect!.selectedDiscardHandIds.length !==
           captured!.discardHandCost)
 
     expect(isConfirmDisabledAfterSelection).toBe(false)
+
+    await act(() => root.unmount())
+  })
+
+  it('confirms a discard-hand damage skill and queues defeated Cookie replacement', async () => {
+    const gameState = createDiscardHandDamageSkillGameState()
+    const setGameMock = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    const cookie = gameState.players['player-one'].battleArea[0].card
+    await act(() => {
+      captured!.beginCookieSkill(
+        gameState,
+        cookie,
+        'player-one',
+        'activate',
+        'Activate',
+        false,
+      )
+    })
+
+    await act(() => {
+      captured!.toggleSkillPayment('energy-support-1')
+    })
+    await act(() => {
+      captured!.toggleSkillDiscardHand('hand-card-1')
+    })
+    await act(() => {
+      captured!.toggleEffectTarget('target-cookie-1')
+    })
+
+    await act(() => {
+      captured!.confirmEffect()
+    })
+
+    expect(captured!.pendingEffect).toBeNull()
+    expect(setGameMock).toHaveBeenCalledTimes(1)
+    expect(setGameMock.mock.calls[0][0]).toMatchObject({
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
+    })
 
     await act(() => root.unmount())
   })
@@ -408,6 +575,11 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       captured = pending
       return null
@@ -474,6 +646,11 @@ describe('usePendingEffect optional-cost-attack', () => {
         selectedFaintTargetIds: [],
         faintMinMax: { min: 0, max: 0 },
         setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
       })
       return null
     }

@@ -1,3 +1,4 @@
+﻿import { collectAfterDamageEffectsFromIds } from './afterDamage'
 import { GameRuleError } from './errors'
 import {
   executeCardEffect,
@@ -5,6 +6,7 @@ import {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
+  isEffectConditionMet,
   isEffectTargeted,
   selectEffectTargets,
 } from './effects'
@@ -40,7 +42,7 @@ import { getBreakAreaLevel } from './victory'
 
 const requirePendingBattle = (state: GameState): PendingBattle => {
   if (!state.pendingBattle) {
-    throw new GameRuleError('目前沒有等待處理的戰鬥。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   return state.pendingBattle
@@ -48,31 +50,31 @@ const requirePendingBattle = (state: GameState): PendingBattle => {
 
 const assertNoBlockingDecision = (state: GameState) => {
   if (state.pendingBattle) {
-    throw new GameRuleError('必須先完成目前的戰鬥。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   if (state.pendingReplacement) {
-    throw new GameRuleError('必須先補充戰鬥區餅乾。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   if (state.pendingRefresh) {
-    throw new GameRuleError('必須先完成牌庫 Refresh。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
-    throw new GameRuleError('必須先處理昏厥效果。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   if (state.pendingOpponentHandDiscard) {
-    throw new GameRuleError('必須先處理對手棄牌。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   if (state.pendingInspectDeck) {
-    throw new GameRuleError('必須先完成牌庫檢視。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   if (state.pendingOptionalCostAttack) {
-    throw new GameRuleError('必須先處理攻擊後續可選代價。')
+    throw new GameRuleError('Invalid battle action.')
   }
 }
 
@@ -85,7 +87,7 @@ export const beginAttack = (
   assertNoBlockingDecision(state)
 
   if (!canAttack(state)) {
-    throw new GameRuleError('目前不能宣告攻擊。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const attackerPlayer = state.players[state.activePlayerId]
@@ -95,7 +97,7 @@ export const beginAttack = (
   const attacker = attackerPlayer.battleArea[attackerIndex]
 
   if (!attacker || attacker.rested) {
-    throw new GameRuleError('找不到可攻擊的餅乾。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const defenderPlayerId = getOpponentId(state.activePlayerId)
@@ -105,7 +107,7 @@ export const beginAttack = (
       (cookie) => cookie.card.instanceId === targetInstanceId,
     )
   ) {
-    throw new GameRuleError('找不到攻擊目標。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const paymentValidation = validateEnergyPayment(
@@ -114,7 +116,7 @@ export const beginAttack = (
     supportPaymentIds,
   )
   if (!paymentValidation.valid) {
-    throw new GameRuleError(`攻擊支付無效：${paymentValidation.reason}`)
+    throw new GameRuleError(`Invalid attack payment: ${paymentValidation.reason}`)
   }
 
   const paymentSet = new Set(supportPaymentIds)
@@ -165,14 +167,25 @@ const isTrapConditionMet = (
 ): boolean => {
   const battle = requirePendingBattle(state)
 
-  if (!trap.condition) return true
+  const condition = trap.condition
+  if (!condition) return true
 
-  if (trap.condition.kind === 'break-level-at-least') {
-    return getBreakAreaLevel(state, playerId) >= trap.condition.level
+  if (condition.kind === 'break-level-at-least') {
+    return getBreakAreaLevel(state, playerId) >= condition.level
   }
 
-  if (trap.condition.kind === 'attacker-attack-more-than') {
-    return battle.declaredDamage > trap.condition.amount
+  if (condition.kind === 'attacker-attack-more-than') {
+    return battle.declaredDamage > condition.amount
+  }
+
+  if (condition.kind === 'self-cookie-hp-equals') {
+    return state.players[playerId].battleArea.some(
+      (cookie) => cookie.hpCards.length === condition.amount,
+    )
+  }
+
+  if (condition.kind === 'opponent-trash-count-at-least') {
+    return state.players[playerId].discardPile.length >= condition.count
   }
 
   return true
@@ -229,11 +242,52 @@ export const getTrapCandidates = (
       isTrapConditionMet(state, playerId, card.trap!) &&
       hasRequiredTrapTargets(state, playerId, card) &&
       player.hand.filter(
-        (handCard) => handCard.instanceId !== card.instanceId,
-      ).length >= card.trap!.cost.discardHand &&
-      selectEnergyPayment(card.trap!.cost.energy, player.supportArea) !== null &&
+        (handCard) =>
+          handCard.instanceId !== card.instanceId &&
+          (!card.trap!.cost.discardHandColor ||
+            handCard.energyColor === card.trap!.cost.discardHandColor),
+      ).length >= (card.trap!.cost.discardHand ?? 0) &&
+      selectEnergyPayment(
+        card.trap!.cost.energy ?? card.trap!.cost,
+        player.supportArea,
+      ) !== null &&
       canPayTrashBattleCookieCost(card.trap!.cost, player.battleArea),
   )
+}
+
+export const isBlockDisabled = (
+  state: GameState,
+  playerId: PlayerId,
+): boolean => state.blockDisabledUntilTurn?.[playerId] === state.turnNumber
+
+export const getBlockerCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+): CookieInBattle[] => {
+  const battle = state.pendingBattle
+  if (
+    !battle ||
+    battle.stage !== 'trap' ||
+    battle.defenderPlayerId !== playerId ||
+    isBlockDisabled(state, playerId)
+  ) {
+    return []
+  }
+
+  return state.players[playerId].battleArea.filter((cookie) => {
+    const skill = cookie.card.skill
+    if (!skill || skill.trigger !== 'block') return false
+    if (cookie.card.instanceId === battle.targetInstanceId) return false
+    if (!skill.effects.some((effect) => effect.kind === 'redirect-attack')) {
+      return false
+    }
+    return (
+      selectEnergyPayment(
+        skill.cost.energy ?? skill.cost,
+        state.players[playerId].supportArea,
+      ) !== null
+    )
+  })
 }
 
 const validateTrapTargets = (
@@ -247,11 +301,12 @@ const validateTrapTargets = (
       effect.kind === 'damage' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
-      effect.kind === 'field-to-trash',
+      effect.kind === 'field-to-trash' ||
+      effect.kind === 'redirect-attack',
   )
   if (targetEffects.length === 0) {
     if (targetIds.length > 0) {
-      throw new GameRuleError('這張陷阱不需要選擇餅乾目標。')
+    throw new GameRuleError('Invalid battle action.')
     }
     return
   }
@@ -276,14 +331,14 @@ const moveSupportsToTrash = (
 ): PlayerState => {
   const uniqueIds = [...new Set(selectedIds)]
   if (uniqueIds.length !== amount) {
-    throw new GameRuleError(`必須選擇 ${amount} 張支援卡送入棄牌區。`)
+    throw new GameRuleError(`Must select exactly ${amount} support cards to trash.`)
   }
 
   const selected = player.supportArea.filter((support) =>
     uniqueIds.includes(support.card.instanceId),
   )
   if (selected.length !== amount) {
-    throw new GameRuleError('只能選擇自己的支援區卡牌。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   return {
@@ -298,6 +353,17 @@ const moveSupportsToTrash = (
   }
 }
 
+const markSupportAreaDecreased = (
+  state: GameState,
+  playerId: PlayerId,
+): GameState => ({
+  ...state,
+  supportAreaDecreasedThisTurn: {
+    ...(state.supportAreaDecreasedThisTurn ?? {}),
+    [playerId]: true,
+  },
+})
+
 export interface PlayTrapOptions {
   trapInstanceId: string
   paymentIds: string[]
@@ -305,6 +371,79 @@ export interface PlayTrapOptions {
   supportTrashIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
+}
+
+export interface PlayBlockerOptions {
+  sourceInstanceId: string
+  paymentIds: string[]
+}
+
+export const playBlocker = (
+  state: GameState,
+  playerId: PlayerId,
+  options: PlayBlockerOptions,
+): GameState => {
+  const battle = requirePendingBattle(state)
+  if (battle.stage !== 'trap' || battle.defenderPlayerId !== playerId) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  if (isBlockDisabled(state, playerId)) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  const player = state.players[playerId]
+  const sourceIndex = player.battleArea.findIndex(
+    (cookie) => cookie.card.instanceId === options.sourceInstanceId,
+  )
+  const source = player.battleArea[sourceIndex]
+  const skill = source?.card.skill
+
+  if (!source || !skill || skill.trigger !== 'block') {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  if (source.card.instanceId === battle.targetInstanceId) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  const paymentValidation = validateEnergyPayment(
+    skill.cost.energy ?? skill.cost,
+    player.supportArea,
+    options.paymentIds,
+  )
+  if (!paymentValidation.valid) {
+    throw new GameRuleError(`Invalid {bl} payment: ${paymentValidation.reason}`)
+  }
+
+  const paymentSet = new Set(options.paymentIds)
+  const redirectedDamage = getAttackDamageAgainst(
+    state,
+    battle.attackerInstanceId,
+    source.card.instanceId,
+  )
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...player,
+        supportArea: player.supportArea.map((support) =>
+          paymentSet.has(support.card.instanceId)
+            ? { ...support, rested: true }
+            : support,
+        ),
+      },
+    },
+    pendingBattle: {
+      ...battle,
+      targetInstanceId: source.card.instanceId,
+      declaredDamage: redirectedDamage,
+      remainingDamage: redirectedDamage,
+      stage: 'damage',
+    },
+  }
 }
 
 export const playTrap = (
@@ -318,7 +457,7 @@ export const playTrap = (
     battle.trapUsed ||
     battle.defenderPlayerId !== playerId
   ) {
-    throw new GameRuleError('目前不能發動陷阱。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const player = state.players[playerId]
@@ -329,20 +468,20 @@ export const playTrap = (
   const trap = trapCard?.trap
 
   if (!trapCard || trapCard.type !== 'trap' || !trap) {
-    throw new GameRuleError('找不到可發動的陷阱卡。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   if (!isTrapConditionMet(state, playerId, trap)) {
-    throw new GameRuleError('尚未滿足陷阱的發動條件。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const paymentValidation = validateEnergyPayment(
-    trap.cost.energy,
+    trap.cost.energy ?? trap.cost,
     player.supportArea,
     options.paymentIds,
   )
   if (!paymentValidation.valid) {
-    throw new GameRuleError(`陷阱支付無效：${paymentValidation.reason}`)
+    throw new GameRuleError(`Invalid trap payment: ${paymentValidation.reason}`)
   }
 
   validateTrapTargets(state, playerId, trap.effects, options.targetIds)
@@ -351,10 +490,10 @@ export const playTrap = (
   const uniqueDiscardHandIds = [...new Set(discardHandIds)]
   if (
     uniqueDiscardHandIds.length !== discardHandIds.length ||
-    uniqueDiscardHandIds.length !== trap.cost.discardHand
+    uniqueDiscardHandIds.length !== (trap.cost.discardHand ?? 0)
   ) {
     throw new GameRuleError(
-      `必須棄置 ${trap.cost.discardHand} 張手牌支付陷阱代價。`,
+      `Must discard exactly ${trap.cost.discardHand ?? 0} cards from hand.`,
     )
   }
   const discardedHandCards = player.hand.filter(
@@ -362,8 +501,18 @@ export const playTrap = (
       card.instanceId !== trapCard.instanceId &&
       uniqueDiscardHandIds.includes(card.instanceId),
   )
-  if (discardedHandCards.length !== trap.cost.discardHand) {
-    throw new GameRuleError('只能選擇陷阱卡以外的自己手牌支付代價。')
+  if (discardedHandCards.length !== (trap.cost.discardHand ?? 0)) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  if (trap.cost.discardHandColor) {
+    const invalidDiscard = discardedHandCards.find(
+      (card) => card.energyColor !== trap.cost.discardHandColor,
+    )
+    if (invalidDiscard) {
+      throw new GameRuleError(
+        `Discarded cards must be ${trap.cost.discardHandColor} energy color.`,
+      )
+    }
   }
 
   const paymentSet = new Set(options.paymentIds)
@@ -430,6 +579,10 @@ export const playTrap = (
     )
   }
 
+  if (supportToTrash?.kind === 'support-to-trash') {
+    nextState = markSupportAreaDecreased(nextState, playerId)
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: trapCard.instanceId,
@@ -468,6 +621,38 @@ export const playTrap = (
       continue
     }
 
+    if (effect.kind === 'redirect-attack') {
+      const targets = selectEffectTargets(
+        nextState,
+        context,
+        effect.target,
+        options.targetIds,
+      )
+      const redirectTarget = targets[0]
+      const activeBattle = requirePendingBattle(nextState)
+      if (!redirectTarget) {
+    throw new GameRuleError('Invalid battle action.')
+      }
+      if (redirectTarget.card.instanceId === activeBattle.targetInstanceId) {
+    throw new GameRuleError('Invalid battle action.')
+      }
+      const redirectedDamage = getAttackDamageAgainst(
+        nextState,
+        activeBattle.attackerInstanceId,
+        redirectTarget.card.instanceId,
+      )
+      nextState = {
+        ...nextState,
+        pendingBattle: {
+          ...activeBattle,
+          targetInstanceId: redirectTarget.card.instanceId,
+          declaredDamage: redirectedDamage,
+          remainingDamage: redirectedDamage,
+        },
+      }
+      continue
+    }
+
     if (effect.kind === 'damage') {
       const targets = selectEffectTargets(
         nextState,
@@ -486,7 +671,7 @@ export const playTrap = (
         ),
       )?.id
       if (!target || !targetPlayerId) {
-        throw new GameRuleError('找不到陷阱傷害目標。')
+    throw new GameRuleError('Invalid battle action.')
       }
       const activeBattle = requirePendingBattle(nextState)
       nextState = {
@@ -560,7 +745,7 @@ export const skipTrap = (state: GameState, playerId: PlayerId): GameState => {
     battle.stage !== 'trap' ||
     battle.defenderPlayerId !== playerId
   ) {
-    throw new GameRuleError('目前沒有可略過的陷阱回應。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const attackerExists = battleParticipantExists(
@@ -706,6 +891,14 @@ const battleParticipantExists = (
     ),
   )
 
+const collectAfterDamageEffects = (
+  state: GameState,
+  battle: PendingBattle,
+): GameState => {
+  const damagedIds = battle.damagedInstanceIds ?? []
+  return collectAfterDamageEffectsFromIds(state, damagedIds)
+}
+
 const finishDamageSequence = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   if (battle.suspendedAttackDamage !== undefined) {
@@ -744,7 +937,8 @@ const finishDamageSequence = (state: GameState): GameState => {
     }
   }
 
-  return finishBattle(state)
+  const afterDamageState = collectAfterDamageEffects(state, battle)
+  return finishBattle(afterDamageState)
 }
 
 export const resolveAttackEffect = (
@@ -757,7 +951,7 @@ export const resolveAttackEffect = (
     battle.stage !== 'attack-effect' ||
     battle.attackerPlayerId !== playerId
   ) {
-    throw new GameRuleError('目前沒有可處理的攻擊後續效果。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const effect = battle.attackEffects[battle.attackEffectIndex]
@@ -782,12 +976,28 @@ export const resolveAttackEffect = (
     }
   }
 
+  const effectContext = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: battle.attackerInstanceId,
+  }
+  if (!isEffectConditionMet(state, effectContext, effect)) {
+    const attackEffectIndex = battle.attackEffectIndex + 1
+    if (attackEffectIndex < battle.attackEffects.length) {
+      return {
+        ...state,
+        pendingBattle: {
+          ...battle,
+          attackEffectIndex,
+          stage: 'attack-effect',
+        },
+      }
+    }
+    return finishBattle(state)
+  }
+
   const nextState = executeCardEffect(
     state,
-    {
-      sourcePlayerId: playerId,
-      sourceInstanceId: battle.attackerInstanceId,
-    },
+    effectContext,
     effect,
     selectedTargetIds,
   )
@@ -826,7 +1036,7 @@ export const resolveOptionalCostAttack = (
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
-    throw new GameRuleError('目前沒有待處理的攻擊後續可選代價效果。')
+    throw new GameRuleError('Invalid battle action.')
   }
   if (action === 'skip') {
     const battle = requirePendingBattle(state)
@@ -839,28 +1049,28 @@ export const resolveOptionalCostAttack = (
   }
   const player = state.players[playerId]
   const uniqueDiscardIds = [...new Set(discardCardIds)]
-  if (uniqueDiscardIds.length !== pending.cost.discardHand) {
-    throw new GameRuleError(`必須棄置 ${pending.cost.discardHand} 張手牌作為代價。`)
+  if (uniqueDiscardIds.length !== (pending.cost.discardHand ?? 0)) {
+    throw new GameRuleError(`Must discard exactly ${pending.cost.discardHand ?? 0} cards for this effect.`)
   }
   const allInHand = uniqueDiscardIds.every((id) => player.hand.some((card) => card.instanceId === id))
   if (!allInHand) {
-    throw new GameRuleError('只能選擇自己的手牌作為代價。')
+    throw new GameRuleError('Invalid battle action.')
   }
   const hasTargetedEffect = pending.effects.some((e) => isEffectTargeted(e))
   if (hasTargetedEffect) {
     const uniqueTargetIds = [...new Set(targetIds)]
     if (uniqueTargetIds.length !== targetIds.length) {
-      throw new GameRuleError('不能重複選取效果目標。')
+    throw new GameRuleError('Invalid battle action.')
     }
     if (uniqueTargetIds.length !== 1) {
-      throw new GameRuleError('必須選擇恰好一個效果目標。')
+    throw new GameRuleError('Invalid battle action.')
     }
     const opponentId = getOpponentId(playerId)
     const inOpponentBattle = uniqueTargetIds.every((id) =>
       state.players[opponentId].battleArea.some((c) => c.card.instanceId === id),
     )
     if (!inOpponentBattle) {
-      throw new GameRuleError('目標必須在對手戰鬥區。')
+    throw new GameRuleError('Invalid battle action.')
     }
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
@@ -894,12 +1104,12 @@ export const resolveOptionalCostAttack = (
 
 export const resolveNextDamage = (state: GameState): GameState => {
   if (state.pendingRefresh) {
-    throw new GameRuleError('必須先完成牌庫 Refresh。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const battle = requirePendingBattle(state)
   if (battle.stage !== 'damage') {
-    throw new GameRuleError('目前不能翻開下一張 HP 卡。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const attackerExists = battleParticipantExists(
@@ -978,6 +1188,10 @@ export const resolveNextDamage = (state: GameState): GameState => {
       ...battle,
       remainingDamage: battle.remainingDamage - 1,
       revealedHpCard,
+      damagedInstanceIds: [
+        ...(battle.damagedInstanceIds ?? []),
+        damageTargetInstanceId,
+      ],
       stage:
         revealedHpCard.flip &&
         state.flipDisabledUntilTurn?.[target.card.instanceId] !==
@@ -1044,23 +1258,23 @@ export const resolveFlip = (
     (battle.damagePlayerId ?? battle.defenderPlayerId) !== playerId ||
     !revealed?.flip
   ) {
-    throw new GameRuleError('目前沒有可處理的 FLIP 效果。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   let nextState = state
   if (options.activate) {
     const player = nextState.players[playerId]
     const discardIds = [...new Set(options.discardHandIds ?? [])]
-    if (discardIds.length !== revealed.flip.cost.discardHand) {
+    if (discardIds.length !== (revealed.flip.cost.discardHand ?? 0)) {
       throw new GameRuleError(
-        `必須棄置 ${revealed.flip.cost.discardHand} 張手牌支付 FLIP 代價。`,
+        `Must discard exactly ${revealed.flip.cost.discardHand ?? 0} cards for FLIP activation.`,
       )
     }
     const discarded = player.hand.filter((card) =>
       discardIds.includes(card.instanceId),
     )
     if (discarded.length !== discardIds.length) {
-      throw new GameRuleError('只能棄置自己的手牌。')
+    throw new GameRuleError('Invalid battle action.')
     }
     nextState = {
       ...nextState,
@@ -1086,7 +1300,7 @@ export const resolveFlip = (
         )
         const target = owner.battleArea[targetIndex]
         if (!target || owner.deck.length < effect.amount) {
-          throw new GameRuleError('牌庫張數不足，無法增加 HP。')
+    throw new GameRuleError('Invalid battle action.')
         }
         const gainedCards = owner.deck.slice(0, effect.amount)
         nextState = {
@@ -1156,7 +1370,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
   let nextState = state
   let guard = 0
 
-  while ((nextState.pendingBattle || nextState.pendingOptionalCostAttack || (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0)) && guard < 100) {
+  while ((nextState.pendingBattle || nextState.pendingOptionalCostAttack || (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) || (nextState.pendingAfterDamageEffects && nextState.pendingAfterDamageEffects.length > 0)) && guard < 100) {
     guard += 1
 
     if (nextState.status !== 'playing') {
@@ -1166,11 +1380,11 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
     if (nextState.pendingOptionalCostAttack) {
       const pending = nextState.pendingOptionalCostAttack
       const hand = nextState.players[pending.playerId].hand
-      const canPayHand = hand.length >= pending.cost.discardHand
+      const canPayHand = hand.length >= (pending.cost.discardHand ?? 0)
       const opponentId = pending.playerId === 'player-one' ? 'player-two' : 'player-one'
       const opponentHasCookie = nextState.players[opponentId].battleArea.length > 0
       if (canPayHand && opponentHasCookie) {
-        const discardIds = hand.slice(0, pending.cost.discardHand).map((c) => c.instanceId)
+        const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
         const targetIds = [nextState.players[opponentId].battleArea[0].card.instanceId]
         nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, targetIds)
       } else {
@@ -1195,6 +1409,22 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         nextState = resolveFaintEffect(nextState, targetIds)
       } else {
         nextState = resolveFaintEffect(nextState, [])
+      }
+      continue
+    }
+
+    if (nextState.pendingAfterDamageEffects && nextState.pendingAfterDamageEffects.length > 0) {
+      const pending = nextState.pendingAfterDamageEffects[0]
+      if (
+        pending.effect.kind === 'damage' ||
+        pending.effect.kind === 'modify-attack' ||
+        pending.effect.kind === 'modify-damage-received'
+      ) {
+        const candidates = getAfterDamageEffectCandidates(nextState)
+        const targetIds = candidates.length > 0 ? [candidates[0].card.instanceId] : []
+        nextState = resolveNextAfterDamageEffect(nextState, targetIds)
+      } else {
+        nextState = resolveNextAfterDamageEffect(nextState, [])
       }
       continue
     }
@@ -1236,7 +1466,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
   }
 
   if (guard >= 100) {
-    throw new GameRuleError('戰鬥結算超過安全上限。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   return nextState
@@ -1255,7 +1485,8 @@ export const getTrapTargetCandidates = (
       effect.kind === 'damage' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
-      effect.kind === 'field-to-trash',
+      effect.kind === 'field-to-trash' ||
+      effect.kind === 'redirect-attack',
   )
   return targetEffect
     ? getEffectTargetCandidates(
@@ -1303,7 +1534,7 @@ export const resolveFaintEffect = (
 ): GameState => {
   const faints = state.pendingFaintEffects
   if (!faints || faints.length === 0) {
-    throw new GameRuleError('目前沒有待處理的昏厥效果。')
+    throw new GameRuleError('Invalid battle action.')
   }
 
   const faint = faints[0]
@@ -1327,12 +1558,94 @@ export const resolveFaintEffect = (
         targetIds,
       )
     } else if (faint.effect.target.min > 0) {
-      throw new GameRuleError('昏厥效果目標數量不足。')
+    throw new GameRuleError('Invalid battle action.')
     }
   }
 
   if (nextState.status !== 'playing') {
     return nextState
+  }
+
+  return nextState
+}
+
+export const getAfterDamageEffectCandidates = (
+  state: GameState,
+): CookieInBattle[] => {
+  const pending = state.pendingAfterDamageEffects?.[0]
+  if (
+    !pending ||
+    (pending.effect.kind !== 'damage' &&
+      pending.effect.kind !== 'modify-attack' &&
+      pending.effect.kind !== 'modify-damage-received')
+  ) {
+    return []
+  }
+  return getEffectTargetCandidates(state, pending.context, pending.effect.target)
+}
+
+export const getAfterDamageEffectMinMax = (
+  effect: CardEffect,
+): { min: number; max: number } => {
+  if (
+    effect.kind === 'damage' ||
+    effect.kind === 'modify-attack' ||
+    effect.kind === 'modify-damage-received'
+  ) {
+    return { min: effect.target.min ?? 0, max: effect.target.max ?? 1 }
+  }
+  return { min: 0, max: 0 }
+}
+
+export const resolveNextAfterDamageEffect = (
+  state: GameState,
+  targetIds: string[],
+): GameState => {
+  const effects = state.pendingAfterDamageEffects
+  if (!effects || effects.length === 0) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  const pending = effects[0]
+  const remaining = effects.slice(1)
+  let nextState: GameState = {
+    ...state,
+    pendingAfterDamageEffects: remaining.length > 0 ? remaining : undefined,
+  }
+
+  if (
+    pending.effect.kind === 'damage' ||
+    pending.effect.kind === 'modify-attack' ||
+    pending.effect.kind === 'modify-damage-received'
+  ) {
+    if (targetIds.length > 0) {
+      selectEffectTargets(nextState, pending.context, pending.effect.target, targetIds)
+      nextState = executeCardEffect(
+        nextState,
+        pending.context,
+        pending.effect,
+        targetIds,
+      )
+    } else if (pending.effect.target.min > 0) {
+    throw new GameRuleError('Invalid battle action.')
+    }
+  }
+
+  if (nextState.status !== 'playing') {
+    return nextState
+  }
+
+  const sourceCookie = nextState.players[pending.context.sourcePlayerId]?.battleArea.find(
+    (c) => c.card.instanceId === pending.context.sourceInstanceId,
+  )
+  if (sourceCookie?.card.skill?.oncePerTurn) {
+    const useKey = sourceCookie.battleEntryId ?? sourceCookie.card.instanceId
+    if (!nextState.skillUsesThisTurn.includes(useKey)) {
+      nextState = {
+        ...nextState,
+        skillUsesThisTurn: [...nextState.skillUsesThisTurn, useKey],
+      }
+    }
   }
 
   return nextState

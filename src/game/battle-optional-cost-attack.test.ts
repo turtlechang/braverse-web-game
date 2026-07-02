@@ -240,7 +240,7 @@ describe('optional-cost-attack', () => {
     }
     expect(() =>
       resolveOptionalCostAttack(state, 'player-two', 'pay', [handCookie('hc1').instanceId], []),
-    ).toThrow('必須棄置 2 張手牌作為代價')
+    ).toThrow('Must discard exactly 2 cards for this effect.')
   })
 
   it('rejects pay with duplicate discardCardIds', () => {
@@ -275,7 +275,7 @@ describe('optional-cost-attack', () => {
     }
     expect(() =>
       resolveOptionalCostAttack(state, 'player-two', 'pay', [hc.instanceId, hc.instanceId], []),
-    ).toThrow('必須棄置 2 張手牌作為代價')
+    ).toThrow('Must discard exactly 2 cards for this effect.')
   })
 
   it('rejects pay when discardCardIds contain cards not in own hand', () => {
@@ -310,7 +310,7 @@ describe('optional-cost-attack', () => {
     }
     expect(() =>
       resolveOptionalCostAttack(state, 'player-two', 'pay', ['hc1-instance', 'not-in-hand'], []),
-    ).toThrow('只能選擇自己的手牌作為代價')
+    ).toThrow('Invalid battle action.')
   })
 
   it('rejects pay with empty targetIds when effects require targeting', () => {
@@ -349,7 +349,7 @@ describe('optional-cost-attack', () => {
     }
     expect(() =>
       resolveOptionalCostAttack(state, 'player-two', 'pay', [hc1.instanceId, hc2.instanceId], []),
-    ).toThrow('必須選擇恰好一個效果目標')
+    ).toThrow('Invalid battle action.')
   })
 
   it('rejects pay with multiple targetIds when effects require exactly one', () => {
@@ -388,7 +388,7 @@ describe('optional-cost-attack', () => {
     }
     expect(() =>
       resolveOptionalCostAttack(state, 'player-two', 'pay', [hc1.instanceId, hc2.instanceId], [defenderId, 'extra-id']),
-    ).toThrow('必須選擇恰好一個效果目標')
+    ).toThrow('Invalid battle action.')
   })
 
   it('rejects pay when target is not in opponent battleArea', () => {
@@ -426,7 +426,7 @@ describe('optional-cost-attack', () => {
     }
     expect(() =>
       resolveOptionalCostAttack(state, 'player-two', 'pay', [hc1.instanceId, hc2.instanceId], ['attacker']),
-    ).toThrow('目標必須在對手戰鬥區')
+    ).toThrow('Invalid battle action.')
   })
 
   it('rejects pay with duplicate targetIds', () => {
@@ -465,7 +465,7 @@ describe('optional-cost-attack', () => {
     }
     expect(() =>
       resolveOptionalCostAttack(state, 'player-two', 'pay', [hc1.instanceId, hc2.instanceId], [defenderId, defenderId]),
-    ).toThrow('不能重複選取效果目標')
+    ).toThrow('Invalid battle action.')
   })
 
   it('state is unchanged after failed pay validation', () => {

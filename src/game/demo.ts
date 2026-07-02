@@ -13,6 +13,10 @@ import {
   type DeckChoice,
 } from './starter-deck'
 import type {
+  CustomDeck,
+} from './custom-deck'
+import { createDeckFromCustomDeck } from './custom-deck'
+import type {
   CookieCard,
   EnergyColor,
   GameCard,
@@ -31,6 +35,8 @@ export const parseTestStateConfig = (
 ):
   | { kind: 'break-to-trash'; level: 1 | 2 }
   | { kind: 'trap-response'; payable: boolean }
+  | { kind: 'blocker-response'; payable: boolean }
+  | { kind: 'trap-and-blocker-response'; payable: boolean }
   | { kind: 'flip-response' }
   | { kind: 'replacement-choice' }
   | { kind: 'st5-010-on-play' }
@@ -65,6 +71,18 @@ export const parseTestStateConfig = (
   }
   if (testState === 'trap-unpayable') {
     return { kind: 'trap-response', payable: false }
+  }
+  if (testState === 'blocker-payable') {
+    return { kind: 'blocker-response', payable: true }
+  }
+  if (testState === 'blocker-unpayable') {
+    return { kind: 'blocker-response', payable: false }
+  }
+  if (testState === 'trap-and-blocker-payable') {
+    return { kind: 'trap-and-blocker-response', payable: true }
+  }
+  if (testState === 'trap-and-blocker-unpayable') {
+    return { kind: 'trap-and-blocker-response', payable: false }
   }
   if (testState === 'flip-response') {
     return { kind: 'flip-response' }
@@ -186,17 +204,23 @@ export const createDemoSetupGame = (
   firstPlayerId: 'player-one' | 'player-two',
   deck: DeckConfig = 'red',
   seed?: number,
+  playerCustomDeck?: CustomDeck,
 ): GameState => {
   const playerChoice = typeof deck === 'string' ? deck : deck.player
   const aiChoice = typeof deck === 'string' ? deck : deck.ai
   const shuffle =
     seed === undefined ? defaultShuffle : createSeededShuffle(seed)
 
+  const playerDeck =
+    playerChoice === 'custom' && playerCustomDeck
+      ? createDeckFromCustomDeck(playerCustomDeck, 'player-one')
+      : DECK_CREATORS[playerChoice === 'custom' ? 'red' : playerChoice]('player-one')
+
   return createGame(
     {
       id: 'player-one',
       name: '玩家',
-      deck: DECK_CREATORS[playerChoice]('player-one'),
+      deck: playerDeck,
     },
     {
       id: 'player-two',
@@ -487,14 +511,15 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
     breakLevel += card.level
     if (breakLevel >= 5) break
   }
-  const requiredColor = Object.keys(trap.trap!.cost.energy)[0] as
+  const requiredColor = Object.keys(trap.trap!.cost.energy ?? trap.trap!.cost)[0] as
     | 'red'
     | 'yellow'
     | 'green'
     | 'blue'
     | 'purple'
     | 'black'
-  const requiredCount = trap.trap!.cost.energy[requiredColor] ?? 0
+  const requiredCount =
+    (trap.trap!.cost.energy ?? trap.trap!.cost)[requiredColor] ?? 0
   const supports = p1Deck
     .filter(
       (card) =>
@@ -550,6 +575,304 @@ export const createTrapResponseDemoState = (payable: boolean): GameState => {
     supportPlacedThisTurn: false,
     skillUsesThisTurn: [],
     nextBattleEntrySequence: 3,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+
+  return {
+    ...state,
+    pendingBattle: {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: defender.instanceId,
+      declaredDamage: attacker.attack,
+      remainingDamage: attacker.attack,
+      stage: 'trap',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
+    },
+  }
+}
+
+export const createBlockerResponseDemoState = (payable: boolean): GameState => {
+  const p1Deck = createOfficialYellowStarterDeck('player-one')
+  const p2Deck = createOfficialYellowStarterDeck('player-two')
+  const defender = p1Deck.find((card) => card.type === 'cookie') as CookieCard
+  const attacker = p2Deck.find((card) => card.type === 'cookie') as CookieCard
+
+  const blockerCookie: CookieCard = {
+    ...defender,
+    instanceId: 'blocker-cookie-demo',
+    id: 'BS1-009',
+    name: 'Affogato Cookie',
+    level: 1,
+    hp: 3,
+    attack: 1,
+    attackCost: 2,
+    energyColor: 'red',
+    skill: {
+      trigger: 'block',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: { red: 1 }, discardHand: 0, trashBattleCookie: undefined },
+      text: '{bl} 《{R}》',
+      effects: [
+        {
+          kind: 'redirect-attack',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    },
+    attackEffects: [],
+    effectText: '',
+    trap: undefined,
+    flip: undefined,
+  }
+
+  const supports = p1Deck
+    .filter(
+      (card) =>
+        card.type !== 'cookie' &&
+        card.instanceId !== defender.instanceId &&
+        (card.energyColor === 'red' || card.energyColor === 'wild'),
+    )
+    .slice(0, 1)
+
+  const breakArea: CookieCard[] = []
+  let breakLevel = 0
+  for (const card of p1Deck) {
+    if (card.type !== 'cookie' || card.instanceId === defender.instanceId) {
+      continue
+    }
+    breakArea.push(card)
+    breakLevel += card.level
+    if (breakLevel >= 5) break
+  }
+
+  const p1: PlayerState = {
+    id: 'player-one',
+    name: '玩家',
+    ...createTestPlayerState(),
+    hand: [],
+    battleArea: [
+      {
+        card: defender,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${defender.instanceId}:battle:1`,
+      },
+      {
+        card: blockerCookie,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${blockerCookie.instanceId}:battle:2`,
+      },
+    ],
+    supportArea: payable
+      ? supports.map((card) => ({ card, rested: false }))
+      : [],
+    breakArea,
+  }
+  const p2: PlayerState = {
+    id: 'player-two',
+    name: 'AI 對手',
+    ...createTestPlayerState(),
+    battleArea: [
+      {
+        card: attacker,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${attacker.instanceId}:battle:3`,
+      },
+    ],
+  }
+  const state: GameState = {
+    players: { 'player-one': p1, 'player-two': p2 },
+    firstPlayerId: 'player-two',
+    activePlayerId: 'player-two',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 4,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+
+  return {
+    ...state,
+    pendingBattle: {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: defender.instanceId,
+      declaredDamage: attacker.attack,
+      remainingDamage: attacker.attack,
+      stage: 'trap',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
+    },
+  }
+}
+
+export const createTrapAndBlockerDemoState = (payable: boolean): GameState => {
+  const p1Deck = createOfficialYellowStarterDeck('player-one')
+  const p2Deck = createOfficialYellowStarterDeck('player-two')
+  const trap = p1Deck.find((card) => card.id === 'ST2-020')!
+  const defender = p1Deck.find((card) => card.type === 'cookie') as CookieCard
+  const attacker = p2Deck.find((card) => card.type === 'cookie') as CookieCard
+
+  const blockerCookie: CookieCard = {
+    ...defender,
+    instanceId: 'blocker-cookie-demo',
+    id: 'BS1-009',
+    name: 'Affogato Cookie',
+    level: 1,
+    hp: 3,
+    attack: 1,
+    attackCost: 2,
+    energyColor: 'red',
+    skill: {
+      trigger: 'block',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: { red: 1 }, discardHand: 0, trashBattleCookie: undefined },
+      text: '{bl} 《{R}》',
+      effects: [
+        {
+          kind: 'redirect-attack',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    },
+    attackEffects: [],
+    effectText: '',
+    trap: undefined,
+    flip: undefined,
+  }
+
+  const requiredColor = Object.keys(trap.trap!.cost.energy ?? trap.trap!.cost)[0] as
+    | 'red'
+    | 'yellow'
+    | 'green'
+    | 'blue'
+    | 'purple'
+    | 'black'
+  const requiredCount =
+    (trap.trap!.cost.energy ?? trap.trap!.cost)[requiredColor] ?? 0
+  const trapSupports = p1Deck
+    .filter(
+      (card) =>
+        card.type !== 'cookie' &&
+        card.instanceId !== trap.instanceId &&
+        (card.energyColor === requiredColor || card.energyColor === 'wild'),
+    )
+    .slice(0, requiredCount)
+
+  const blockerSupports = p1Deck
+    .filter(
+      (card) =>
+        card.type !== 'cookie' &&
+        card.instanceId !== trap.instanceId &&
+        card.instanceId !== blockerCookie.instanceId &&
+        (card.energyColor === 'red' || card.energyColor === 'wild'),
+    )
+    .slice(0, 1)
+
+  const allSupports = [...trapSupports, ...blockerSupports]
+
+  const breakArea: CookieCard[] = []
+  let breakLevel = 0
+  for (const card of p1Deck) {
+    if (
+      card.type !== 'cookie' ||
+      card.instanceId === defender.instanceId ||
+      card.instanceId === blockerCookie.instanceId
+    ) {
+      continue
+    }
+    breakArea.push(card)
+    breakLevel += card.level
+    if (breakLevel >= 5) break
+  }
+
+  const p1: PlayerState = {
+    id: 'player-one',
+    name: '玩家',
+    ...createTestPlayerState(),
+    hand: [trap],
+    battleArea: [
+      {
+        card: defender,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${defender.instanceId}:battle:1`,
+      },
+      {
+        card: blockerCookie,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${blockerCookie.instanceId}:battle:2`,
+      },
+    ],
+    supportArea: payable
+      ? allSupports.map((card) => ({ card, rested: false }))
+      : [],
+    breakArea,
+  }
+  const p2: PlayerState = {
+    id: 'player-two',
+    name: 'AI 對手',
+    ...createTestPlayerState(),
+    battleArea: [
+      {
+        card: attacker,
+        hpCards: [],
+        rested: false,
+        battleEntryId: `${attacker.instanceId}:battle:3`,
+      },
+    ],
+  }
+  const state: GameState = {
+    players: { 'player-one': p1, 'player-two': p2 },
+    firstPlayerId: 'player-two',
+    activePlayerId: 'player-two',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 4,
     attackModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
@@ -1039,8 +1362,11 @@ export const createPretzelSnareDemoState = (attack: number): GameState => {
   const p2Deck = createOfficialYellowStarterDeck('player-two')
   const attacker = p2Deck.find((card) => card.type === 'cookie') as CookieCard
 
-  const requiredColor = Object.keys(trap.trap!.cost.energy)[0] as 'yellow'
-  const requiredCount = trap.trap!.cost.energy[requiredColor] ?? 0
+  const requiredColor = Object.keys(
+    trap.trap!.cost.energy ?? trap.trap!.cost,
+  )[0] as 'yellow'
+  const requiredCount =
+    (trap.trap!.cost.energy ?? trap.trap!.cost)[requiredColor] ?? 0
   const supports = p1Deck
     .filter(
       (card) =>

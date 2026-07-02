@@ -114,16 +114,20 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'modify-all-attack' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
   effect.kind === 'gain-hp' ||
+  effect.kind === 'damage-all' ||
   effect.kind === 'modify-all-attack' ||
+  effect.kind === 'place-source-to-support' ||
+  effect.kind === 'discard-hand' ||
   effect.kind === 'opponent-discard-hand' ||
   effect.kind === 'opponent-battle-to-trash' ||
   effect.kind === 'opponent-random-discard' ||
   effect.kind === 'hand-to-deck-and-draw' ||
+  effect.kind === 'disable-block' ||
   effect.kind === 'draw-up-to' ||
   effect.kind === 'set-active'
 
@@ -131,6 +135,8 @@ export const isEffectTargeted = (
   effect: CardEffect,
 ): effect is TargetedCardEffect =>
   effect.kind === 'damage' ||
+  effect.kind === 'damage-by-break-count' ||
+  effect.kind === 'modify-attack-by-break-count' ||
   effect.kind === 'modify-attack' ||
   effect.kind === 'modify-damage-received' ||
   effect.kind === 'prevent-knockout' ||
@@ -138,7 +144,9 @@ export const isEffectTargeted = (
   effect.kind === 'view-hp' ||
   effect.kind === 'battle-to-support' ||
   effect.kind === 'return-to-hand' ||
-  effect.kind === 'field-to-trash'
+  effect.kind === 'field-to-trash' ||
+  effect.kind === 'redirect-attack' ||
+  effect.kind === 'hp-to-trash'
 
 export const getSupportEffectCandidates = (
   state: GameState,
@@ -153,6 +161,14 @@ export const getTrashCookieCandidates = (
     (card): card is CookieCard =>
       card.type === 'cookie' &&
       state.players[context.sourcePlayerId].battleArea.length < 2,
+  )
+
+export const getTrashToSupportCandidates = (
+  state: GameState,
+  context: EffectContext,
+): CookieCard[] =>
+  state.players[context.sourcePlayerId].discardPile.filter(
+    (card): card is CookieCard => card.type === 'cookie',
   )
 
 export const getBreakToTrashCandidates = (
@@ -200,11 +216,32 @@ export const isEffectConditionMet = (
     return state.players[opponentId].discardPile.length >= condition.count
   }
 
+  if (condition?.kind === 'support-count-at-least') {
+    return state.players[context.sourcePlayerId].supportArea.length >= condition.count
+  }
+
+  if (condition?.kind === 'hand-count-at-most') {
+    return state.players[context.sourcePlayerId].hand.length <= condition.count
+  }
+
+  if (condition?.kind === 'support-area-decreased-this-turn') {
+    return Boolean(
+      state.supportAreaDecreasedThisTurn?.[context.sourcePlayerId],
+    )
+  }
+
   if (condition?.kind === 'break-level-at-least') {
     return getBreakAreaLevel(state, context.sourcePlayerId) >= condition.level
   }
 
-  if (effect.kind === 'modify-all-attack') {
+  if (condition?.kind === 'opponent-has-cookie-with-level') {
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    return state.players[opponentId].battleArea.some(
+      (cookie) => cookie.card.level === condition.level,
+    )
+  }
+
+  if (effect.kind === 'damage-all' || effect.kind === 'modify-all-attack') {
     return true
   }
 
@@ -232,7 +269,9 @@ export const isEffectConditionMet = (
     effect.kind === 'battle-to-support' ||
     effect.kind === 'support-to-trash' ||
     effect.kind === 'trash-to-battle' ||
+    effect.kind === 'trash-to-support' ||
     effect.kind === 'support-to-hand' ||
+    effect.kind === 'redirect-attack' ||
     effect.kind === 'inspect-deck' ||
     effect.kind === 'optional-cost-attack' ||
     effect.kind === 'return-to-hand'

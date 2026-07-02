@@ -182,10 +182,16 @@ export const advancePhase = (state: GameState): GameState => {
             ([, turn]) => turn > state.turnNumber,
           ),
         ),
+        blockDisabledUntilTurn: Object.fromEntries(
+          Object.entries(endPhaseState.blockDisabledUntilTurn ?? {}).filter(
+            ([, turn]) => turn > state.turnNumber,
+          ),
+        ),
         activePlayerId: getOpponentId(state.activePlayerId),
         turnNumber: state.turnNumber + 1,
         phase: 'active',
         supportPlacedThisTurn: false,
+        supportAreaDecreasedThisTurn: {},
         skillUsesThisTurn: [],
       }
     }

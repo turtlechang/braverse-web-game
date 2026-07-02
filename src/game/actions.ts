@@ -35,6 +35,10 @@ const assertActiveGame = (state: GameState) => {
     throw new GameRuleError('必須先處理昏厥效果。')
   }
 
+  if (state.pendingAfterDamageEffects && state.pendingAfterDamageEffects.length > 0) {
+    throw new GameRuleError('必須先處理受傷後效果。')
+  }
+
   if (state.pendingOpponentHandDiscard) {
     throw new GameRuleError('必須先處理對手棄牌。')
   }

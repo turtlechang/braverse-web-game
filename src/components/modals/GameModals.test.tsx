@@ -14,6 +14,7 @@ import {
   ResultModal,
   TrapResponseModal,
 } from './GameModals'
+import { DeckEditorModal } from './DeckEditorModal'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -139,6 +140,35 @@ describe('OpeningSetupModal', () => {
     expect(markup).toContain('藍色起始牌組')
     expect(markup).toContain('紫色起始牌組')
     expect(markup).not.toContain('剪刀')
+  })
+})
+
+describe('DeckEditorModal', () => {
+  it('loads the existing deck when editing from the main menu', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DeckEditorModal
+        initialDeck={{
+          id: 'existing-deck',
+          name: '既有牌組',
+          entries: [{ cardNumber: 'ST1-001', count: 4 }],
+          createdAt: '2026-06-30T00:00:00.000Z',
+          updatedAt: '2026-06-30T00:00:00.000Z',
+        }}
+        onSave={() => undefined}
+        onClose={() => undefined}
+      />,
+    ))
+
+    expect(
+      container.querySelector<HTMLInputElement>('.deck-editor-name-input')
+        ?.value,
+    ).toBe('既有牌組')
+    expect(container.textContent).toContain('ST1-001')
+    expect(container.textContent).toContain('4')
+
+    await act(() => root.unmount())
   })
 })
 

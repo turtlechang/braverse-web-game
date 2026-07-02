@@ -8,11 +8,19 @@ import {
 } from './effects'
 import { findCardIndex, updatePlayer } from './helpers'
 import { hasBlockingPending } from './pending'
+import {
+  clearDepartedCookieModifiers,
+  recordCookieDepartures,
+} from './replacement'
 import type {
+  AbilityCost,
   CardAbility,
+  CookieInBattle,
+  EnergyCost,
   GameCard,
   GameState,
   PlayerId,
+  PlayerState,
   StageAbility,
 } from './types'
 
@@ -27,14 +35,14 @@ const assertMainAction = (state: GameState, playerId: PlayerId) => {
   }
 }
 
-const validateAbilityPayment = (
+const validateEnergyCostPayment = (
   state: GameState,
   playerId: PlayerId,
-  ability: CardAbility,
+  cost: EnergyCost,
   paymentIds: string[],
 ) => {
   const validation = validateEnergyPayment(
-    ability.cost,
+    cost,
     state.players[playerId].supportArea,
     paymentIds,
   )
@@ -42,6 +50,13 @@ const validateAbilityPayment = (
     throw new GameRuleError(`能量付款不合法：${validation.reason}`)
   }
 }
+
+const validateAbilityPayment = (
+  state: GameState,
+  playerId: PlayerId,
+  cost: AbilityCost,
+  paymentIds: string[],
+) => validateEnergyCostPayment(state, playerId, cost.energy ?? cost, paymentIds)
 
 const restPayments = (
   state: GameState,
@@ -60,6 +75,247 @@ const restPayments = (
   })
 }
 
+export interface AbilityPaymentOptions {
+  paymentIds: string[]
+  supportToTrashIds?: string[]
+  supportToHandIds?: string[]
+  discardHandIds?: string[]
+  hpToTrashTargetIds?: string[]
+}
+
+const markSupportAreaDecreased = (
+  state: GameState,
+  playerId: PlayerId,
+): GameState => ({
+  ...state,
+  supportAreaDecreasedThisTurn: {
+    ...(state.supportAreaDecreasedThisTurn ?? {}),
+    [playerId]: true,
+  },
+})
+
+const getHpToTrashCostCandidates = (
+  cost: AbilityCost,
+  battleArea: CookieInBattle[],
+): CookieInBattle[] => {
+  if (!cost.hpToTrash) return []
+  return battleArea.filter((cookie) => {
+    if (cookie.hpCards.length === 0) return false
+    return cost.hpToTrash?.untilRemainingHp === undefined
+      ? true
+      : cookie.hpCards.length > cost.hpToTrash.untilRemainingHp
+  })
+}
+
+const canPayAbilityCost = (
+  state: GameState,
+  playerId: PlayerId,
+  cost: AbilityCost,
+): boolean => {
+  const player = state.players[playerId]
+  const energyPayment = selectEnergyPayment(
+    cost.energy ?? cost,
+    player.supportArea,
+  )
+  if (!energyPayment) return false
+
+  const energyPaymentSet = new Set(energyPayment)
+  const remainingSupportCount = player.supportArea.filter(
+    (support) => !energyPaymentSet.has(support.card.instanceId),
+  ).length
+  const supportCost =
+    (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
+
+  const availableDiscardCount = cost.discardHandColor
+    ? player.hand.filter((card) => card.energyColor === cost.discardHandColor)
+        .length
+    : player.hand.length
+
+  return (
+    remainingSupportCount >= supportCost &&
+    availableDiscardCount >= (cost.discardHand ?? 0) &&
+    (!cost.hpToTrash ||
+      getHpToTrashCostCandidates(cost, player.battleArea).length > 0)
+  )
+}
+
+const payAbilityCost = (
+  state: GameState,
+  playerId: PlayerId,
+  cost: AbilityCost,
+  options: AbilityPaymentOptions,
+): GameState => {
+  validateAbilityPayment(state, playerId, cost, options.paymentIds)
+
+  const player = state.players[playerId]
+  const supportToTrashIds = [...new Set(options.supportToTrashIds ?? [])]
+  const supportToHandIds = [...new Set(options.supportToHandIds ?? [])]
+  const discardHandIds = [...new Set(options.discardHandIds ?? [])]
+  const hpToTrashTargetIds = [...new Set(options.hpToTrashTargetIds ?? [])]
+
+  if (supportToTrashIds.length !== (options.supportToTrashIds ?? []).length) {
+    throw new GameRuleError('支援區垃圾桶費用不能重複選同一張卡。')
+  }
+  if (supportToHandIds.length !== (options.supportToHandIds ?? []).length) {
+    throw new GameRuleError('支援區回手費用不能重複選同一張卡。')
+  }
+  if (discardHandIds.length !== (options.discardHandIds ?? []).length) {
+    throw new GameRuleError('棄手牌費用不能重複選同一張卡。')
+  }
+  if (hpToTrashTargetIds.length !== (options.hpToTrashTargetIds ?? []).length) {
+    throw new GameRuleError('HP 費用不能重複選同一張餅乾。')
+  }
+  if (supportToTrashIds.length !== (cost.supportToTrash ?? 0)) {
+    throw new GameRuleError(`必須將 ${cost.supportToTrash ?? 0} 張支援區卡放入垃圾桶。`)
+  }
+  if (supportToHandIds.length !== (cost.supportToHand ?? 0)) {
+    throw new GameRuleError(`必須將 ${cost.supportToHand ?? 0} 張支援區卡返回手牌。`)
+  }
+  if (discardHandIds.length !== (cost.discardHand ?? 0)) {
+    throw new GameRuleError(`必須棄掉 ${cost.discardHand ?? 0} 張手牌。`)
+  }
+
+  const paymentSet = new Set(options.paymentIds)
+  const supportToTrashSet = new Set(supportToTrashIds)
+  const supportToHandSet = new Set(supportToHandIds)
+  if (
+    options.paymentIds.some(
+      (id) => supportToTrashSet.has(id) || supportToHandSet.has(id),
+    ) ||
+    supportToTrashIds.some((id) => supportToHandSet.has(id))
+  ) {
+    throw new GameRuleError('同一張支援區卡不能同時支付多種費用。')
+  }
+
+  const selectedSupportToTrash = player.supportArea.filter((support) =>
+    supportToTrashSet.has(support.card.instanceId),
+  )
+  const selectedSupportToHand = player.supportArea.filter((support) =>
+    supportToHandSet.has(support.card.instanceId),
+  )
+  if (selectedSupportToTrash.length !== supportToTrashIds.length) {
+    throw new GameRuleError('選擇的支援區垃圾桶費用不合法。')
+  }
+  if (selectedSupportToHand.length !== supportToHandIds.length) {
+    throw new GameRuleError('選擇的支援區回手費用不合法。')
+  }
+
+  const discardedHandCards = player.hand.filter((card) =>
+    discardHandIds.includes(card.instanceId),
+  )
+  if (discardedHandCards.length !== discardHandIds.length) {
+    throw new GameRuleError('選擇的棄手牌費用不合法。')
+  }
+  if (cost.discardHandColor) {
+    const invalidDiscard = discardedHandCards.find(
+      (card) => card.energyColor !== cost.discardHandColor,
+    )
+    if (invalidDiscard) {
+      throw new GameRuleError(
+        `棄手牌費用必須選擇 ${cost.discardHandColor} 能量顏色的手牌。`,
+      )
+    }
+  }
+  if (cost.hpToTrash && hpToTrashTargetIds.length !== 1) {
+    throw new GameRuleError('必須選擇 1 張餅乾支付 HP 費用。')
+  }
+  if (!cost.hpToTrash && hpToTrashTargetIds.length > 0) {
+    throw new GameRuleError('此能力不需要支付 HP 費用。')
+  }
+
+  let updatedPlayer: PlayerState = {
+    ...player,
+    supportArea: player.supportArea
+      .filter(
+        (support) =>
+          !supportToTrashSet.has(support.card.instanceId) &&
+          !supportToHandSet.has(support.card.instanceId),
+      )
+      .map((support) =>
+        paymentSet.has(support.card.instanceId)
+          ? { ...support, rested: true }
+          : support,
+      ),
+    hand: [
+      ...player.hand.filter(
+        (card) => !discardHandIds.includes(card.instanceId),
+      ),
+      ...selectedSupportToHand.map((support) => support.card),
+    ],
+    discardPile: [
+      ...player.discardPile,
+      ...selectedSupportToTrash.map((support) => support.card),
+      ...discardedHandCards,
+    ],
+  }
+
+  let departedCount = 0
+  if (cost.hpToTrash) {
+    const target = getHpToTrashCostCandidates(
+      cost,
+      updatedPlayer.battleArea,
+    ).find((cookie) => cookie.card.instanceId === hpToTrashTargetIds[0])
+    if (!target) {
+      throw new GameRuleError('選擇的 HP 費用餅乾不合法。')
+    }
+
+    const targetIndex = updatedPlayer.battleArea.findIndex(
+      (cookie) => cookie.card.instanceId === target.card.instanceId,
+    )
+    const removeCount =
+      cost.hpToTrash.untilRemainingHp !== undefined
+        ? target.hpCards.length - cost.hpToTrash.untilRemainingHp
+        : (cost.hpToTrash.amount ?? 1)
+    const removedHpCards = target.hpCards.slice(-removeCount)
+    const remainingHpCards = target.hpCards.slice(
+      0,
+      Math.max(0, target.hpCards.length - removeCount),
+    )
+
+    if (remainingHpCards.length === 0) {
+      departedCount = 1
+      updatedPlayer = {
+        ...updatedPlayer,
+        battleArea: updatedPlayer.battleArea.filter(
+          (_, index) => index !== targetIndex,
+        ),
+        breakArea: [...updatedPlayer.breakArea, target.card],
+        discardPile: [...updatedPlayer.discardPile, ...removedHpCards],
+      }
+    } else {
+      updatedPlayer = {
+        ...updatedPlayer,
+        battleArea: updatedPlayer.battleArea.map((cookie, index) =>
+          index === targetIndex
+            ? { ...cookie, hpCards: remainingHpCards }
+            : cookie,
+        ),
+        discardPile: [...updatedPlayer.discardPile, ...removedHpCards],
+      }
+    }
+  }
+
+  let nextState: GameState = {
+    ...state,
+    players: {
+      ...state.players,
+      [playerId]: updatedPlayer,
+    },
+  }
+
+  if (supportToTrashIds.length > 0 || supportToHandIds.length > 0) {
+    nextState = markSupportAreaDecreased(nextState, playerId)
+  }
+
+  return departedCount > 0
+    ? recordCookieDepartures(
+        clearDepartedCookieModifiers(nextState),
+        playerId,
+        departedCount,
+      )
+    : nextState
+}
+
 export const getItemAbility = (card: GameCard): CardAbility | null =>
   card.type === 'item' ? card.item ?? null : null
 
@@ -67,6 +323,48 @@ export const getStageAbility = (
   card: GameCard,
 ): StageAbility | null =>
   card.type === 'stage' ? card.stageAbility ?? null : null
+
+const hasUsableEffect = (
+  state: GameState,
+  playerId: PlayerId,
+  sourceInstanceId: string,
+  ability: CardAbility,
+): boolean => {
+  const context = {
+    sourcePlayerId: playerId,
+    sourceInstanceId,
+  }
+
+  return ability.effects.some((effect) => {
+    if (!isEffectConditionMet(state, context, effect)) return false
+    if (effect.kind === 'return-to-hand') {
+      const targetPlayer = state.players[
+        getTargetPlayerId(context, effect.target)
+      ]
+      return (
+        targetPlayer.battleArea.length > effect.target.min &&
+        getEffectTargetCandidates(state, context, effect.target).length >=
+          effect.target.min
+      )
+    }
+    if (effect.kind === 'gain-hp' && effect.target) {
+      if (effect.target.sourceOnly || effect.target.min === 0) return true
+      return (
+        getEffectTargetCandidates(state, context, effect.target).length >=
+        effect.target.min
+      )
+    }
+    if (
+      !isEffectTargeted(effect) ||
+      !effect.target ||
+      effect.target.min === 0
+    ) return true
+    return (
+      getEffectTargetCandidates(state, context, effect.target).length >=
+      effect.target.min
+    )
+  })
+}
 
 export const canPlayItem = (
   state: GameState,
@@ -78,38 +376,13 @@ export const canPlayItem = (
     const card = state.players[playerId].hand.find(
       (candidate) => candidate.instanceId === instanceId,
     )
-    if (!card) return false
-    const ability = getItemAbility(card)
-    if (!ability) return false
-    const context = {
-      sourcePlayerId: playerId,
-      sourceInstanceId: instanceId,
-    }
-    return ability.effects.some((effect) => {
-      if (!isEffectConditionMet(state, context, effect)) return false
-      if (effect.kind === 'return-to-hand') {
-        const targetPlayer = state.players[
-          getTargetPlayerId(context, effect.target)
-        ]
-        return (
-          targetPlayer.battleArea.length > effect.target.min &&
-          getEffectTargetCandidates(state, context, effect.target).length >=
-            effect.target.min
-        )
-      }
-      if (effect.kind === 'gain-hp' && effect.target) {
-        if (effect.target.sourceOnly || effect.target.min === 0) return true
-        return (
-          getEffectTargetCandidates(state, context, effect.target).length >=
-          effect.target.min
-        )
-      }
-      if (!isEffectTargeted(effect) || !effect.target || effect.target.min === 0) return true
-      return (
-        getEffectTargetCandidates(state, context, effect.target).length >=
-        effect.target.min
-      )
-    })
+    const ability = card && getItemAbility(card)
+    return Boolean(
+      card &&
+        ability &&
+        canPayAbilityCost(state, playerId, ability.cost) &&
+        hasUsableEffect(state, playerId, instanceId, ability),
+    )
   } catch {
     return false
   }
@@ -120,6 +393,10 @@ export const playItem = (
   playerId: PlayerId,
   instanceId: string,
   paymentIds: string[],
+  supportToTrashIds: string[] = [],
+  supportToHandIds: string[] = [],
+  discardHandIds: string[] = [],
+  hpToTrashTargetIds: string[] = [],
 ): GameState => {
   assertMainAction(state, playerId)
   const player = state.players[playerId]
@@ -127,15 +404,29 @@ export const playItem = (
   const card = player.hand[cardIndex]
   const ability = card && getItemAbility(card)
   if (!card || !ability) {
-    throw new GameRuleError('選擇的卡片不是可使用的物品卡。')
+    throw new GameRuleError('這張卡不能作為物品使用。')
   }
-  validateAbilityPayment(state, playerId, ability, paymentIds)
-  const paidState = restPayments(state, playerId, paymentIds)
+  if (discardHandIds.includes(instanceId)) {
+    throw new GameRuleError('物品卡本身不能作為自己的棄手牌費用。')
+  }
+
+  const paidState = payAbilityCost(state, playerId, ability.cost, {
+    paymentIds,
+    supportToTrashIds,
+    supportToHandIds,
+    discardHandIds,
+    hpToTrashTargetIds,
+  })
   const paidPlayer = paidState.players[playerId]
+
   return updatePlayer(paidState, {
     ...paidPlayer,
-    hand: paidPlayer.hand.filter((_, index) => index !== cardIndex),
-    discardPile: [...paidPlayer.discardPile, card],
+    hand: paidPlayer.hand.filter((cardInHand) => cardInHand.instanceId !== instanceId),
+    discardPile: paidPlayer.discardPile.some(
+      (discarded) => discarded.instanceId === card.instanceId,
+    )
+      ? paidPlayer.discardPile
+      : [...paidPlayer.discardPile, card],
   })
 }
 
@@ -167,14 +458,10 @@ export const playStage = (
   const card = player.hand[cardIndex]
   const ability = card && getStageAbility(card)
   if (!card || !ability) {
-    throw new GameRuleError('選擇的卡片不是可放置的場景卡。')
+    throw new GameRuleError('這張卡不能放置為場景。')
   }
-  validateAbilityPayment(
-    state,
-    playerId,
-    { ...ability, cost: ability.placementCost },
-    paymentIds,
-  )
+
+  validateEnergyCostPayment(state, playerId, ability.placementCost, paymentIds)
   const paidState = restPayments(state, playerId, paymentIds)
   const paidPlayer = paidState.players[playerId]
   return updatePlayer(paidState, {
@@ -196,34 +483,10 @@ export const canActivateStage = (
     const stage = state.players[playerId].stage
     const ability = stage?.card.stageAbility
     if (!stage || stage.rested || !ability || ability.triggered) return false
-    if (
-      selectEnergyPayment(
-        ability.cost,
-        state.players[playerId].supportArea,
-      ) === null
-    ) {
-      return false
-    }
-
-    const context = {
-      sourcePlayerId: playerId,
-      sourceInstanceId: stage.card.instanceId,
-    }
-    return ability.effects.some((effect) => {
-      if (!isEffectConditionMet(state, context, effect)) return false
-      if (effect.kind === 'gain-hp' && effect.target) {
-        if (effect.target.sourceOnly || effect.target.min === 0) return true
-        return (
-          getEffectTargetCandidates(state, context, effect.target).length >=
-          effect.target.min
-        )
-      }
-      if (!isEffectTargeted(effect) || !effect.target || effect.target.min === 0) return true
-      return (
-        getEffectTargetCandidates(state, context, effect.target).length >=
-        effect.target.min
-      )
-    })
+    return (
+      canPayAbilityCost(state, playerId, ability.cost) &&
+      hasUsableEffect(state, playerId, stage.card.instanceId, ability)
+    )
   } catch {
     return false
   }
@@ -233,6 +496,10 @@ export const activateStage = (
   state: GameState,
   playerId: PlayerId,
   paymentIds: string[],
+  supportToTrashIds: string[] = [],
+  supportToHandIds: string[] = [],
+  discardHandIds: string[] = [],
+  hpToTrashTargetIds: string[] = [],
 ): GameState => {
   if (!canActivateStage(state, playerId)) {
     throw new GameRuleError('目前無法啟動場景卡。')
@@ -240,8 +507,13 @@ export const activateStage = (
   const player = state.players[playerId]
   const stage = player.stage!
   const ability = stage.card.stageAbility!
-  validateAbilityPayment(state, playerId, ability, paymentIds)
-  const paidState = restPayments(state, playerId, paymentIds)
+  const paidState = payAbilityCost(state, playerId, ability.cost, {
+    paymentIds,
+    supportToTrashIds,
+    supportToHandIds,
+    discardHandIds,
+    hpToTrashTargetIds,
+  })
   const paidPlayer = paidState.players[playerId]
   return updatePlayer(paidState, {
     ...paidPlayer,

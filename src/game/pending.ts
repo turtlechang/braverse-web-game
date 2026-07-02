@@ -7,6 +7,7 @@ export const hasBlockingPending = (state: GameState): boolean =>
       state.pendingRefresh ||
       state.pendingBattle ||
       (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
+      (state.pendingAfterDamageEffects && state.pendingAfterDamageEffects.length > 0) ||
       state.pendingOpponentHandDiscard ||
       state.pendingInspectDeck ||
       state.pendingOptionalCostAttack ||

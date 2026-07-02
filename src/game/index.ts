@@ -6,6 +6,7 @@ export {
   getEffectTargetCandidates,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
+  getTrashToSupportCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectTargeted,
@@ -41,6 +42,8 @@ export {
   createOfficialRedStarterDeck,
   createOfficialStarterDeck,
   createOfficialYellowStarterDeck,
+  createCard,
+  createDeckForChoice,
   DECK_CREATORS,
   OFFICIAL_BLUE_STARTER_DECK,
   OFFICIAL_DECK_RECIPES,
@@ -51,6 +54,23 @@ export {
   OFFICIAL_YELLOW_STARTER_DECK,
 } from './starter-deck'
 export type { DeckChoice, StarterDeckEntry } from './starter-deck'
+export {
+  getAllCardPoolEntries,
+  getCardPoolEntry,
+  getCardPoolEntriesByColor,
+  getCardPoolEntriesByType,
+} from './card-pool'
+export type { CardPoolEntry } from './card-pool'
+export {
+  createDeckFromCustomDeck,
+  loadCustomDecks,
+  saveCustomDecks,
+  validateCustomDeck,
+  DECK_SIZE_MIN,
+  DECK_SIZE_MAX,
+  MAX_COPIES_PER_CARD,
+} from './custom-deck'
+export type { CustomDeck, CustomDeckEntry } from './custom-deck'
 export { chooseRandomDeck } from './opening'
 export {
   selectAiEnergyPayment,
@@ -59,20 +79,26 @@ export {
 } from './ai'
 export {
   beginAttack,
+  getAfterDamageEffectCandidates,
+  getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
+  getBlockerCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
+  isBlockDisabled,
+  playBlocker,
   playTrap,
   resolveAttackEffect,
   resolveBattleAutomatically,
   resolveFaintEffect,
   resolveFlip,
+  resolveNextAfterDamageEffect,
   resolveNextDamage,
   resolveOptionalCostAttack,
   skipTrap,
 } from './battle'
-export type { PlayTrapOptions, ResolveFlipOptions } from './battle'
+export type { PlayBlockerOptions, PlayTrapOptions, ResolveFlipOptions } from './battle'
 export {
   attackCookie,
   deployCookie,
@@ -158,6 +184,7 @@ export type {
   GameStatus,
   FlipAbility,
   GainHpEffect,
+  HpToTrashEffect,
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
   NonCookieCard,
@@ -186,6 +213,7 @@ export type {
   TargetedCardEffect,
   TrapAbility,
   TrapCondition,
+  TrashToSupportEffect,
   TurnPhase,
 } from './types'
 export {

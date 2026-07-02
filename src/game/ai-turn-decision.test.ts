@@ -65,6 +65,38 @@ describe('simple AI opponent', () => {
     )
   })
 
+  it('creates a draw-up-to decision after activating an optional FLIP draw', () => {
+    const base = createFlipResponseDemoState()
+    const playerId =
+      base.pendingBattle?.damagePlayerId ??
+      base.pendingBattle?.defenderPlayerId
+    expect(playerId).toBeDefined()
+    const revealedCard = {
+      ...base.pendingBattle!.revealedHpCard!,
+      flip: {
+        text: 'Draw up to 1 card from your deck.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw-up-to' as const, max: 1 }],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      pendingBattle: {
+        ...base.pendingBattle!,
+        revealedHpCard: revealedCard,
+      },
+    }
+
+    const decision = takeAiStep(state, playerId)
+
+    expect(decision.action).toBe('resolve-flip')
+    expect(decision.state.pendingDrawUpTo).toMatchObject({
+      playerId,
+      max: 1,
+      sourceInstanceId: revealedCard.instanceId,
+    })
+  })
+
   it('places one support card during the support phase', () => {
     const state = asAiTurn(createDemoGame(), 'support')
     const decision = takeAiStep(state)
@@ -108,9 +140,7 @@ describe('simple AI opponent', () => {
         },
         'player-two': {
           ...state.players['player-two'],
-          hand: state.players['player-two'].hand.filter(
-            (card) => card.type !== 'cookie',
-          ),
+          hand: [],
           battleArea: [attacker],
           supportArea: Array.from(
             { length: attacker.card.attackCost },
@@ -297,6 +327,58 @@ describe('simple AI opponent', () => {
     expect(decision.effectSelections).toHaveLength(1)
   })
 
+  it('selects a discard pile cookie for trash-to-support OnPlay', () => {
+    const base = createDemoGame()
+    const source = base.players['player-two'].battleArea[0]
+    const discardCookie = {
+      ...base.players['player-two'].hand.find((card) => card.type === 'cookie')!,
+      instanceId: 'ai-discard-cookie',
+    }
+    const sourceWithSkill = {
+      ...source,
+      card: {
+        ...source.card,
+        skill: {
+          trigger: 'on-play' as const,
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: { energy: {}, discardHand: 0 },
+          text: 'Choose 1 Cookie from your trash and place it in your support area.',
+          effects: [{ kind: 'trash-to-support' as const, amount: 1 }],
+        },
+      },
+    }
+    const state: GameState = {
+      ...base,
+      pendingOnPlay: {
+        playerId: 'player-two',
+        sourceInstanceId: source.card.instanceId,
+      },
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [sourceWithSkill],
+          discardPile: [discardCookie],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('activate-skill')
+    expect(decision.error).toBeUndefined()
+    expect(decision.effectSelections?.[0]?.targetIds).toEqual([
+      'ai-discard-cookie',
+    ])
+    expect(
+      decision.state.players['player-two'].supportArea.at(-1)?.card
+        .instanceId,
+    ).toBe('ai-discard-cookie')
+    expect(decision.state.pendingOnPlay).toBeNull()
+  })
+
   it('resumes AI after player replacement ST5-010 removes an AI Cookie', () => {
     const base = createDemoGame(7, { player: 'purple', ai: 'purple' })
     const purpleDeck = createOfficialPurpleStarterDeck('player-one')
@@ -363,6 +445,45 @@ describe('simple AI opponent', () => {
     expect(state.pendingReplacement).toBeNull()
     expect(state.pendingOnPlay).toBeNull()
     expect(state.pendingBattle).toBeNull()
+  })
+
+  it('resolves an AI attack effect while the AI is the attacker', () => {
+    const base = createDemoGame()
+    const attacker = base.players['player-two'].battleArea[0]
+    const target = base.players['player-one'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: attacker.card.instanceId,
+        targetInstanceId: target.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        attackEffectIndex: 0,
+      },
+    }
+
+    expect(getActingPlayerId(state)).toBe('player-two')
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('resolve-attack-effect')
+    expect(decision.state).not.toBe(state)
   })
 
   it('skips an optional replacement when no legal Cookie is available', () => {

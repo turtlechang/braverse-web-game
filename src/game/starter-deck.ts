@@ -5,6 +5,7 @@ import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.j
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
 import {
   convertOfficialCardEffects,
+  convertOfficialAttackEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
   convertOfficialItemAbility,
@@ -14,8 +15,9 @@ import {
 import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { CardEffect, GameCard, PlayerId } from './types'
+import { getCardPoolEntry } from './card-pool'
 
-export type DeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+export type DeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple' | 'custom'
 
 export interface StarterDeckEntry {
   cardNumber: string
@@ -24,7 +26,7 @@ export interface StarterDeckEntry {
 }
 
 export const OFFICIAL_RED_STARTER_DECK: StarterDeckEntry[] = [
-  { cardNumber: 'ST1-001', name: 'Princess Cookie', count: 4 },
+  { cardNumber: 'ST1-001', name: 'Princess Cookie', count: 2 },
   { cardNumber: 'ST1-002', name: 'Ninja Cookie', count: 2 },
   { cardNumber: 'ST1-003', name: 'Dino-Sour Cookie', count: 2 },
   { cardNumber: 'ST1-004', name: 'Carrot Cookie', count: 4 },
@@ -46,6 +48,7 @@ export const OFFICIAL_RED_STARTER_DECK: StarterDeckEntry[] = [
   { cardNumber: 'ST1-020', name: 'Overhydrated Dough Swamp', count: 2 },
   { cardNumber: 'ST1-021', name: 'Ouch-Inducing Star Jelly', count: 2 },
   { cardNumber: 'ST1-022', name: 'Burning Jelly Volcano', count: 2 },
+  { cardNumber: 'BS1-009', name: 'Affogato Cookie', count: 2 },
 ]
 
 export const OFFICIAL_YELLOW_STARTER_DECK: StarterDeckEntry[] = [
@@ -154,7 +157,7 @@ export const OFFICIAL_DECK_RECIPES: Record<DeckChoice, StarterDeckEntry[]> = {
   green: OFFICIAL_GREEN_STARTER_DECK,
   blue: OFFICIAL_BLUE_STARTER_DECK,
   purple: OFFICIAL_PURPLE_STARTER_DECK,
-}
+} as Record<DeckChoice, StarterDeckEntry[]>
 
 const getEnergyColor = (
   source: OfficialCardRecord,
@@ -173,12 +176,13 @@ const getEnergyColor = (
     : undefined
 }
 
-const createCard = (
+export const createCard = (
   source: OfficialCardRecord,
   playerId: PlayerId,
   copyNumber: number,
 ): GameCard => {
   const effectConversion = convertOfficialCardEffects(source)
+  const attackEffects = convertOfficialAttackEffects(source)
   const skill = convertOfficialCookieSkill(source)
   const flip = convertOfficialFlipAbility(source)
   const trap = convertOfficialTrapAbility(source)
@@ -232,37 +236,7 @@ const createCard = (
       attackCost: parsedAttack?.totalCost ?? 0,
       attackEnergyCost: parsedAttack?.cost ?? {},
       attackText: source.attackText ?? undefined,
-      ...(source.cardNumber === 'ST2-003'
-        ? {
-            attackEffects: [
-              { kind: 'break-to-trash', max: 1, exactLevel: 1 },
-            ] satisfies CardEffect[],
-          }
-        : source.cardNumber === 'ST4-013'
-          ? {
-              attackEffects: [
-                {
-                  kind: 'optional-cost-attack',
-                  cost: { energy: {}, discardHand: 2 },
-                  effects: [
-                    {
-                      kind: 'damage',
-                      amount: 1,
-                      target: { side: 'opponent', min: 1, max: 1 },
-                    },
-                  ],
-                  effectText:
-                    'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
-                },
-              ] satisfies CardEffect[],
-            }
-        : source.cardNumber === 'ST4-015'
-          ? {
-              attackEffects: [
-                { kind: 'draw', amount: 1 },
-              ] satisfies CardEffect[],
-            }
-          : {}),
+      ...(attackEffects ? { attackEffects: attackEffects satisfies CardEffect[] } : {}),
       ...(skill ? { skill } : {}),
       ...(flip ? { flip } : {}),
     }
@@ -293,7 +267,9 @@ const createOfficialStarterDeckFromRecipe = (
   )
 
   return recipe.flatMap((entry) => {
-    const source = recordsByNumber.get(entry.cardNumber)
+    const source =
+      recordsByNumber.get(entry.cardNumber) ??
+      (getCardPoolEntry(entry.cardNumber) as OfficialCardRecord | undefined)
     if (!source) {
       throw new Error(`Missing official sample card ${entry.cardNumber}`)
     }
@@ -360,4 +336,9 @@ export const DECK_CREATORS: Record<
   green: createOfficialGreenStarterDeck,
   blue: createOfficialBlueStarterDeck,
   purple: createOfficialPurpleStarterDeck,
-}
+} as Record<DeckChoice, (playerId: PlayerId) => GameCard[]>
+
+export const createDeckForChoice = (
+  choice: DeckChoice,
+  playerId: PlayerId,
+): GameCard[] => DECK_CREATORS[choice](playerId)

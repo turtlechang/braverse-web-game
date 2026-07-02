@@ -189,7 +189,7 @@
       "level": 2,
       "hp": 3,
       "energyType": "MIX",
-      "color": null,
+      "color": "RED",
       "skill": {
         "name": null,
         "text": null
@@ -229,7 +229,7 @@
       "level": 2,
       "hp": 4,
       "energyType": "MIX",
-      "color": null,
+      "color": "RED",
       "skill": {
         "name": null,
         "text": null
@@ -429,7 +429,7 @@
       "level": 1,
       "hp": 2,
       "energyType": "MIX",
-      "color": null,
+      "color": "RED",
       "skill": {
         "name": null,
         "text": null
@@ -469,7 +469,7 @@
       "level": 1,
       "hp": 3,
       "energyType": "MIX",
-      "color": null,
+      "color": "RED",
       "skill": {
         "name": null,
         "text": null
@@ -549,7 +549,7 @@
       "level": 3,
       "hp": 6,
       "energyType": "MIX",
-      "color": null,
+      "color": "RED",
       "skill": {
         "name": null,
         "text": null

@@ -1,5 +1,5 @@
 import { Sparkles, Swords } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import {
   canActivateStage,
@@ -11,6 +11,7 @@ import {
   placeSupportCard,
   playStage,
   playTrap,
+  playBlocker,
   getRefreshCandidates,
   refreshDeck,
   replaceDefeatedCookie,
@@ -44,6 +45,8 @@ import {
   DeckListModal,
   ResultModal,
   TrapResponseModal,
+  AttackResponseModal,
+  BlockerResponseModal,
   OpeningSetupModal,
   OptionalCostAttackModal,
   InspectDeckModal,
@@ -55,6 +58,13 @@ import { useMatchDialogs } from './hooks/useMatchDialogs'
 import { usePendingEffect } from './hooks/usePendingEffect'
 import { useAiTurn } from './hooks/useAiTurn'
 import { useMatchController } from './hooks/useMatchController'
+import { MainMenu } from './components/MainMenu'
+import { DeckEditorModal } from './components/modals/DeckEditorModal'
+import {
+  loadCustomDecks,
+  validateCustomDeck,
+  type CustomDeck,
+} from './game/custom-deck'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 
@@ -64,6 +74,18 @@ const testStateConfig = parseTestStateConfig(
 )
 
 function App() {
+  const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
+    testStateConfig ? 'battle' : 'menu',
+  )
+  const [savedDecks, setSavedDecks] = useState<CustomDeck[]>(() =>
+    testStateConfig ? [] : loadCustomDecks(),
+  )
+  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(() =>
+    savedDecks[0]?.id ?? null,
+  )
+  const [editingDeck, setEditingDeck] = useState<CustomDeck | null>(null)
+  const [showDeckEditor, setShowDeckEditor] = useState(false)
+  const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
   const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
     null,
   )
@@ -90,6 +112,11 @@ function App() {
     selectedFaintTargetIds: match.selectedFaintTargetIds,
     faintMinMax: { min: match.faintMin, max: match.faintMax },
     setSelectedFaintTargetIds: match.setSelectedFaintTargetIds,
+    hasAfterDamage: match.hasAfterDamage,
+    afterDamageTargetIds: match.afterDamageTargetIds,
+    selectedAfterDamageTargetIds: match.selectedAfterDamageTargetIds,
+    afterDamageMinMax: { min: match.afterDamageMin, max: match.afterDamageMax },
+    setSelectedAfterDamageTargetIds: match.setSelectedAfterDamageTargetIds,
   })
   const ai = useAiTurn({
     game: match.game,
@@ -99,10 +126,59 @@ function App() {
     aiControlsCurrentState: match.aiControlsCurrentState,
     pendingEffect: pending.pendingEffect,
     faintActive: pending.faintActive,
+    afterDamageActive: pending.afterDamageActive,
     deckConfig: match.deckConfig,
   })
 
   const faintActive = pending.faintActive
+  const selectedCustomDeck = useMemo(
+    () => savedDecks.find((deck) => deck.id === selectedDeckId) ?? null,
+    [savedDecks, selectedDeckId],
+  )
+  const selectedDeckValidation = useMemo(
+    () =>
+      selectedCustomDeck
+        ? validateCustomDeck(selectedCustomDeck.entries)
+        : null,
+    [selectedCustomDeck],
+  )
+
+  const refreshSavedDecks = () => {
+    const decks = loadCustomDecks()
+    setSavedDecks(decks)
+    setSelectedDeckId((current) =>
+      current && decks.some((deck) => deck.id === current)
+        ? current
+        : decks[0]?.id ?? null,
+    )
+  }
+
+  const handleDeckEditorSave = (deck: CustomDeck) => {
+    refreshSavedDecks()
+    setSelectedDeckId(deck.id)
+    setEditingDeck(null)
+    setShowDeckEditor(false)
+    setBattleEntryError(null)
+  }
+
+  const startBattleFromMenu = () => {
+    if (!selectedCustomDeck || !selectedDeckValidation) {
+      setBattleEntryError('尚未選擇合法牌組，無法進入對戰。')
+      return
+    }
+    if (!selectedDeckValidation.isValid) {
+      setBattleEntryError('目前牌組不合法，請先修正後再開始對戰。')
+      return
+    }
+
+    setSelectedHandCardId(null)
+    dialogs.closeResourcePopover()
+    pending.resetEffectContext()
+    ai.resetAiCounts()
+    match.handleDeckSelection('custom', selectedCustomDeck)
+    setBattleEntryError(null)
+    setScreen('battle')
+  }
 
   const resetGame = (
     nextConfig: { player: DeckChoice; ai: DeckChoice },
@@ -114,6 +190,9 @@ function App() {
     pending.resetEffectContext()
     ai.resetAiCounts()
     match.setMessage(nextMessage)
+    if (!testStateConfig) {
+      setScreen('menu')
+    }
   }
 
   const interactionLocked =
@@ -163,7 +242,7 @@ function App() {
   const showCancelSkill =
     pe !== null &&
     !pe.skillActivated &&
-    pe.sourceKind === 'cookie' &&
+    (pe.sourceKind === 'cookie' || pe.sourceKind === 'item') &&
     pe.trigger === 'activate'
 
   const pendingInspect =
@@ -216,6 +295,44 @@ function App() {
     playerHand.some((card) => card.instanceId === selectedHandCardId)
       ? selectedHandCardId
       : null
+
+  if (screen === 'menu') {
+    return (
+      <>
+        <MainMenu
+          decks={savedDecks}
+          selectedDeckId={selectedDeckId}
+          selectedValidation={selectedDeckValidation}
+          battleError={battleEntryError}
+          onSelectDeck={(deckId) => {
+            setSelectedDeckId(deckId)
+            setBattleEntryError(null)
+          }}
+          onStartBattle={startBattleFromMenu}
+          onCreateDeck={() => {
+            setEditingDeck(null)
+            setShowDeckEditor(true)
+          }}
+          onEditDeck={(deck) => {
+            setEditingDeck(deck)
+            setShowDeckEditor(true)
+          }}
+          onRefreshDecks={refreshSavedDecks}
+        />
+        {showDeckEditor && (
+          <DeckEditorModal
+            initialDeck={editingDeck ?? undefined}
+            onSave={handleDeckEditorSave}
+            onClose={() => {
+              setShowDeckEditor(false)
+              setEditingDeck(null)
+              refreshSavedDecks()
+            }}
+          />
+        )}
+      </>
+    )
+  }
 
   return (
     <main className="game-shell">
@@ -549,7 +666,38 @@ function App() {
 
       {match.game.pendingBattle?.stage === 'trap' &&
         match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
-        match.playerTrapCandidates.length > 0 && (
+        match.playerTrapCandidates.length > 0 &&
+        match.playerBlockerCandidates.length > 0 &&
+        match.pendingResponseMode === null && (
+          <AttackResponseModal
+            trapCards={match.playerTrapCandidates}
+            blockerCards={match.playerBlockerCandidates}
+            onSelectTrap={(id) => {
+              match.setPendingResponseMode('trap')
+              match.setSelectedTrapId(id)
+              match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapTrashBattleCookieIds([])
+              match.setTrapSelectNoTarget(false)
+            }}
+            onSelectBlocker={(id) => {
+              match.setPendingResponseMode('blocker')
+              match.setSelectedBlockerId(id)
+            }}
+            onSkip={() => {
+              match.runAction(
+                (current) => skipTrap(current, match.viewerPlayerId),
+                '未發動回應，進入傷害結算。',
+              )
+            }}
+            onInspectCard={(card) => dialogs.openCardDetail(card)}
+          />
+        )}
+
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerTrapCandidates.length > 0 &&
+        (match.playerBlockerCandidates.length === 0 ||
+          match.pendingResponseMode === 'trap') && (
           <TrapResponseModal
             cards={match.playerTrapCandidates}
             selectedTrapId={match.selectedTrapId}
@@ -602,6 +750,7 @@ function App() {
               match.setSelectedTrapId(null)
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
+              match.setPendingResponseMode(null)
               match.runAction(
                 (current) => skipTrap(current, match.viewerPlayerId),
                 '未發動陷阱，進入傷害結算。',
@@ -620,6 +769,7 @@ function App() {
                   match.setSelectedTrapDiscardIds([])
                   match.setSelectedTrapTrashBattleCookieIds([])
                   match.setTrapSelectNoTarget(false)
+                  match.setPendingResponseMode(null)
                   match.runAction(
                     (current) => {
                       const afterTrap = playTrap(
@@ -652,6 +802,84 @@ function App() {
             onToggleEmptyTarget={() =>
               match.setTrapSelectNoTarget((v) => !v)
             }
+          />
+        )}
+
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerTrapCandidates.length === 0 &&
+        match.playerBlockerCandidates.length > 0 && (
+          <BlockerResponseModal
+            blockerCards={match.playerBlockerCandidates}
+            selectedBlockerId={match.selectedBlockerId}
+            paymentCards={match.game.players[
+              match.viewerPlayerId
+            ].supportArea
+              .filter((support) =>
+                match.selectedBlockerPaymentIds.includes(
+                  support.card.instanceId,
+                ),
+              )
+              .map((support) => support.card)}
+            onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
+            onConfirm={() => {
+              if (!match.selectedBlockerId) return
+              match.runAction(
+                (current) =>
+                  playBlocker(current, match.viewerPlayerId, {
+                    sourceInstanceId: match.selectedBlockerId!,
+                    paymentIds: match.selectedBlockerPaymentIds,
+                  }),
+                '已使用 Blocker 阻擋攻擊。',
+              )
+            }}
+            onSkip={() => {
+              match.setSelectedBlockerId(null)
+              match.runAction(
+                (current) => skipTrap(current, match.viewerPlayerId),
+                '未使用 Blocker，進入傷害結算。',
+              )
+            }}
+          />
+        )}
+
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerTrapCandidates.length > 0 &&
+        match.playerBlockerCandidates.length > 0 &&
+        match.pendingResponseMode === 'blocker' && (
+          <BlockerResponseModal
+            blockerCards={match.playerBlockerCandidates}
+            selectedBlockerId={match.selectedBlockerId}
+            paymentCards={match.game.players[
+              match.viewerPlayerId
+            ].supportArea
+              .filter((support) =>
+                match.selectedBlockerPaymentIds.includes(
+                  support.card.instanceId,
+                ),
+              )
+              .map((support) => support.card)}
+            onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
+            onConfirm={() => {
+              if (!match.selectedBlockerId) return
+              match.runAction(
+                (current) =>
+                  playBlocker(current, match.viewerPlayerId, {
+                    sourceInstanceId: match.selectedBlockerId!,
+                    paymentIds: match.selectedBlockerPaymentIds,
+                  }),
+                '已使用 Blocker 阻擋攻擊。',
+              )
+            }}
+            onSkip={() => {
+              match.setSelectedBlockerId(null)
+              match.setPendingResponseMode(null)
+              match.runAction(
+                (current) => skipTrap(current, match.viewerPlayerId),
+                '未使用 Blocker，進入傷害結算。',
+              )
+            }}
           />
         )}
 
@@ -772,6 +1000,78 @@ function App() {
         </div>
       )}
 
+      {pending.afterDamageActive && match.afterDamageSourceCard && (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          style={{ pointerEvents: 'none' }}
+        >
+          <section
+            className="faint-response-modal"
+            role="dialog"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <h2>{match.afterDamageSourceCard.name} 發動受傷後效果</h2>
+            <p className="faint-effect-text">
+              {match.afterDamageSourceCard.effectText ??
+                match.afterDamageSourceCard.skill?.text ??
+                '受傷後效果'}
+            </p>
+            <p className="faint-target-hint">
+              {match.afterDamageMin === 0
+                ? `選擇最多 ${match.afterDamageMax} 個對手餅乾作為目標，或略過。`
+                : `選擇 ${match.afterDamageMin} 個對手餅乾作為目標。`}
+            </p>
+            <div className="faint-modal-actions">
+              {match.afterDamageMin === 0 && (
+                <button
+                  type="button"
+                  className="modal-button"
+                  onClick={() => {
+                    match.setSelectedAfterDamageTargetIds([])
+                    match.runAction(
+                      (current) => applyGameCommand(current, {
+                        kind: 'resolve-after-damage-effect',
+                        playerId: match.viewerPlayerId,
+                        targetIds: [],
+                      }),
+                      `${match.afterDamageSourceCard!.name}略過受傷後效果。`,
+                    )
+                  }}
+                >
+                  略過
+                </button>
+              )}
+              <button
+                type="button"
+                className="modal-button primary"
+                disabled={
+                  match.selectedAfterDamageTargetIds.length === 0 &&
+                  match.afterDamageMin !== 0
+                }
+                onClick={() => {
+                  const targets = match.selectedAfterDamageTargetIds
+                  match.setSelectedAfterDamageTargetIds([])
+                  match.runAction(
+                    (current) => applyGameCommand(current, {
+                      kind: 'resolve-after-damage-effect',
+                      playerId: match.viewerPlayerId,
+                      targetIds: targets,
+                    }),
+                    `${match.afterDamageSourceCard!.name}發動對${match.afterDamageCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的受傷後效果。`,
+                  )
+                }}
+              >
+                {match.afterDamageMin === 0 &&
+                match.selectedAfterDamageTargetIds.length === 0
+                  ? '確認略過'
+                  : `確認 (${match.selectedAfterDamageTargetIds.length})`}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {match.game.pendingOpponentHandDiscard &&
         match.game.pendingOpponentHandDiscard.playerId ===
           match.viewerPlayerId &&
@@ -879,7 +1179,29 @@ function App() {
       {match.game.pendingDrawUpTo &&
         match.game.pendingDrawUpTo.playerId ===
           match.viewerPlayerId &&
-        !pending.pendingEffect && (
+        !pending.pendingEffect && (() => {
+          const drawUpTo = match.game.pendingDrawUpTo
+          const sourceCard = Object.values(match.game.players)
+            .flatMap((p) => p.battleArea)
+            .find((c) => c.card.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInHand = match.game.players[match.viewerPlayerId].hand
+            .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInDiscard = match.game.players[match.viewerPlayerId].discardPile
+            .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
+          const sourceInSupport = match.game.players[match.viewerPlayerId].supportArea
+            .find((c) => c.card.instanceId === drawUpTo.sourceInstanceId)
+          const effectText = drawUpTo.effectText
+            ?? sourceCard?.card.effectText
+            ?? sourceInHand?.effectText
+            ?? sourceInDiscard?.effectText
+            ?? sourceInSupport?.card.effectText
+            ?? (sourceInHand && 'item' in sourceInHand && sourceInHand.item
+              ? sourceInHand.item.text
+              : undefined)
+            ?? (sourceInDiscard && 'item' in sourceInDiscard && sourceInDiscard.item
+              ? sourceInDiscard.item.text
+              : undefined)
+          return (
           <div
             className="modal-backdrop"
             role="presentation"
@@ -890,18 +1212,30 @@ function App() {
               role="dialog"
               style={{ pointerEvents: 'auto' }}
             >
-              <h2>
-                {match.game.pendingDrawUpTo.sourceCardName}{' '}
-                抽牌選擇
-              </h2>
-              <p className="faint-effect-text">
-                可以從牌庫抽取最多 {match.game.pendingDrawUpTo.max} 張牌。
-              </p>
+              <span className="draw-up-to-source-label">效果來源</span>
+              <div className="draw-up-to-source-card">
+                {(sourceCard || sourceInHand || sourceInDiscard || sourceInSupport) && (
+                  <CardFace
+                    card={
+                      sourceCard?.card ?? sourceInHand ?? sourceInDiscard ?? sourceInSupport!.card
+                    }
+                  />
+                )}
+                <div className="draw-up-to-source-info">
+                  <h2>{drawUpTo.sourceCardName}</h2>
+                  {effectText && (
+                    <p className="faint-effect-text draw-up-to-effect">
+                      {effectText}
+                    </p>
+                  )}
+                </div>
+              </div>
               <p className="faint-target-hint">
-                選擇要抽取的牌數（0 到 {match.game.pendingDrawUpTo.max}）。
+                可以從牌庫抽取最多 {drawUpTo.max} 張牌。
+                選擇要抽取的牌數。
               </p>
               <DrawUpToSelector
-                max={match.game.pendingDrawUpTo.max}
+                max={drawUpTo.max}
                 deckSize={match.game.players[match.viewerPlayerId].deck.length}
                 onConfirm={(drawCount) => {
                   match.runAction(
@@ -919,7 +1253,8 @@ function App() {
               />
             </section>
           </div>
-        )}
+          )
+        })()}
 
       {match.game.pendingStageTrigger &&
         match.game.pendingStageTrigger.playerId ===
@@ -1155,6 +1490,7 @@ function App() {
         <DeckListModal
           deckListOwner={dialogs.deckListOwner}
           viewedDeck={match.deckConfig[dialogs.deckListOwner]}
+          customDeck={match.selectedCustomDeck}
           onSetDeckListOwner={dialogs.openDeckList}
           onClose={dialogs.closeDeckList}
         />
@@ -1165,7 +1501,7 @@ function App() {
           key={pendingOptionalCost.sourceInstanceId}
           sourceCardName={pendingOptionalCost.sourceCardName}
           effectText={pendingOptionalCost.effectText}
-          discardHandCost={pendingOptionalCost.cost.discardHand}
+          discardHandCost={pendingOptionalCost.cost.discardHand ?? 0}
           playerHand={match.game.players[match.viewerPlayerId].hand}
           opponentBattleCards={opponentBattleCards}
           onSkip={() => {

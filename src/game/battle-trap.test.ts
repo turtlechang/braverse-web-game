@@ -168,7 +168,7 @@ describe('TRAP response window', () => {
         targetIds: ['attacker'],
         discardHandIds: [],
       }),
-    ).toThrow('必須棄置 2 張手牌')
+    ).toThrow('Must discard exactly 2 cards from hand.')
 
     const result = playTrap(state, 'player-one', {
       trapInstanceId: trap.instanceId,
@@ -266,7 +266,7 @@ describe('TRAP response window', () => {
         paymentIds: [],
         targetIds: [],
       }),
-    ).toThrow('目前不能發動陷阱')
+    ).toThrow('Invalid battle action.')
   })
 
   it('skips attack damage when a trap knocks out the attacker', () => {

@@ -25,6 +25,9 @@ export const getActingPlayerId = (state: GameState): PlayerId => {
     if (battle.stage === 'flip') {
       return battle.damagePlayerId ?? battle.defenderPlayerId
     }
+    if (battle.stage === 'attack-effect') {
+      return battle.attackerPlayerId
+    }
     return battle.defenderPlayerId
   }
 

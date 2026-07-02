@@ -1,4 +1,7 @@
-import { getFaintEffectCandidates } from '../battle'
+import {
+  getAfterDamageEffectCandidates,
+  getFaintEffectCandidates,
+} from '../battle'
 import { applyGameCommand, getPendingDecision } from '../commands'
 import { getRefreshCandidates } from '../refresh'
 import type { GameState, PlayerId } from '../types'
@@ -43,6 +46,42 @@ export const handleAiPendingDecision = (
         targetIds.length > 0
           ? `${state.players[playerId].name}發動對${ordered[0].card.name}的昏厥效果。`
           : `${state.players[playerId].name}略過昏厥效果。`,
+    }
+  }
+
+  if (
+    pendingDecision?.kind === 'after-damage-effect' &&
+    !state.pendingRefresh &&
+    !state.pendingOnPlay
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇受傷後效果目標。`,
+      }
+    }
+    const candidates = getAfterDamageEffectCandidates(state)
+    const ordered = [...candidates].sort(
+      (left, right) => left.hpCards.length - right.hpCards.length,
+    )
+    const targetIds =
+      candidates.length >= pendingDecision.min
+        ? ordered
+            .slice(0, pendingDecision.max)
+            .map((cookie) => cookie.card.instanceId)
+        : []
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-after-damage-effect',
+        playerId,
+        targetIds,
+      }),
+      action: 'resolve-after-damage',
+      description:
+        targetIds.length > 0
+          ? `${state.players[playerId].name}發動對${ordered[0].card.name}的受傷後效果。`
+          : `${state.players[playerId].name}略過受傷後效果。`,
     }
   }
 
@@ -106,7 +145,7 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
-    const canPay = hand.length >= pendingDecision.cost.discardHand
+    const canPay = hand.length >= (pendingDecision.cost.discardHand ?? 0)
     const opponentId =
       playerId === 'player-one' ? 'player-two' : 'player-one'
     const hasTarget = state.players[opponentId].battleArea.length > 0
@@ -117,7 +156,7 @@ export const handleAiPendingDecision = (
           playerId,
           action: 'pay',
           discardCardIds: hand
-            .slice(0, pendingDecision.cost.discardHand)
+            .slice(0, pendingDecision.cost.discardHand ?? 0)
             .map((card) => card.instanceId),
           targetIds: [
             state.players[opponentId].battleArea[0].card.instanceId,

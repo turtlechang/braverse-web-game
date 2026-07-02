@@ -193,7 +193,7 @@ export const handleAiTurnState = (
       const stage = player.stage!
       const ability = stage.card.stageAbility!
       const paymentIds = selectEnergyPayment(
-        ability.cost,
+        ability.cost.energy ?? ability.cost,
         player.supportArea,
       )
       if (paymentIds) {
@@ -210,7 +210,8 @@ export const handleAiTurnState = (
           )
           if (
             (effect.kind === 'support-to-hand' ||
-              effect.kind === 'support-to-trash') &&
+              effect.kind === 'support-to-trash' ||
+              effect.kind === 'trash-to-support') &&
             targetIds.length < effect.amount
           ) {
             break
@@ -231,15 +232,13 @@ export const handleAiTurnState = (
       }
     }
 
-    if (!canAttack(state)) {
-      for (const card of player.hand) {
-        const itemDecision = strategy.resolveCardAbility(
-          state,
-          playerId,
-          card,
-        )
-        if (itemDecision) return itemDecision
-      }
+    for (const card of player.hand) {
+      const itemDecision = strategy.resolveCardAbility(
+        state,
+        playerId,
+        card,
+      )
+      if (itemDecision) return itemDecision
     }
 
     if (player.battleArea.length < 2) {
@@ -312,6 +311,22 @@ export const handleAiTurnState = (
       state: advancePhase(state),
       action: 'advance-phase',
       description: `${player.name}結束主要階段。`,
+    }
+  }
+
+  if (state.phase === 'end') {
+    const advanced = advancePhase(state)
+    if (advanced.phase === 'end' && advanced.activePlayerId === state.activePlayerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `${player.name}等待結算結束階段效果。`,
+      }
+    }
+    return {
+      state: advanced,
+      action: 'advance-phase',
+      description: `${player.name}結束回合。`,
     }
   }
 

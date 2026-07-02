@@ -18,7 +18,7 @@ export type EnergyColor =
 
 export type EnergyCost = Partial<Record<EnergyColor | 'neutral', number>>
 
-export type SkillTrigger = 'activate' | 'on-play' | 'passive'
+export type SkillTrigger = 'activate' | 'on-play' | 'passive' | 'block'
 
 export interface CardSkill {
   trigger: SkillTrigger
@@ -30,10 +30,11 @@ export interface CardSkill {
   effects: CardEffect[]
   faint?: boolean
   endPhase?: boolean
+  afterDamage?: boolean
 }
 
 export interface CardAbility {
-  cost: EnergyCost
+  cost: AbilityCost
   text: string
   effects: CardEffect[]
 }
@@ -109,14 +110,64 @@ export interface OpponentTrashCountAtLeastCondition {
   count: number
 }
 
+export interface SupportCountAtLeastCondition {
+  kind: 'support-count-at-least'
+  count: number
+}
+
+export interface HandCountAtMostCondition {
+  kind: 'hand-count-at-most'
+  count: number
+}
+
+export interface SupportAreaDecreasedThisTurnCondition {
+  kind: 'support-area-decreased-this-turn'
+}
+
+export interface OpponentHasCookieWithLevelCondition {
+  kind: 'opponent-has-cookie-with-level'
+  level: number
+}
+
 export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
+  | SupportCountAtLeastCondition
+  | HandCountAtMostCondition
+  | SupportAreaDecreasedThisTurnCondition
+  | OpponentHasCookieWithLevelCondition
 
 export interface DamageEffect {
   kind: 'damage'
   amount: number
   target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+export interface DamageAllEffect {
+  kind: 'damage-all'
+  amount: number
+  side: EffectTargetSide
+  condition?: EffectCondition
+}
+
+export interface DamageByBreakCountEffect {
+  kind: 'damage-by-break-count'
+  target: EffectTargetSelector
+  perCount: number
+  minBreakLevel?: number
+  breakEnergyColor?: EnergyColor
+  condition?: EffectCondition
+}
+
+export interface ModifyAttackByBreakCountEffect {
+  kind: 'modify-attack-by-break-count'
+  target: EffectTargetSelector
+  duration: EffectDuration
+  perCount: number
+  minBreakLevel?: number
+  exactBreakLevel?: number
+  breakEnergyColor?: EnergyColor
   condition?: EffectCondition
 }
 
@@ -161,6 +212,7 @@ export interface DeckToSupportEffect {
   kind: 'deck-to-support'
   amount: number
   rested?: boolean
+  condition?: EffectCondition
 }
 
 export interface BreakToTrashEffect {
@@ -174,11 +226,22 @@ export interface GainHpEffect {
   kind: 'gain-hp'
   amount: number
   target?: EffectTargetSelector
+  condition?: EffectCondition
 }
 
 export interface PreventKnockoutEffect {
   kind: 'prevent-knockout'
   target: EffectTargetSelector
+}
+
+export interface RedirectAttackEffect {
+  kind: 'redirect-attack'
+  target: EffectTargetSelector
+}
+
+export interface PlaceSourceToSupportEffect {
+  kind: 'place-source-to-support'
+  rested?: boolean
 }
 
 export interface SupportToTrashEffect {
@@ -190,6 +253,12 @@ export interface DisableFlipEffect {
   kind: 'disable-flip'
   duration: 'this-turn'
   target: EffectTargetSelector
+}
+
+export interface DisableBlockEffect {
+  kind: 'disable-block'
+  duration: 'this-turn'
+  side: 'opponent'
 }
 
 export interface ViewHpEffect {
@@ -219,11 +288,19 @@ export interface TrashToBattleEffect {
 export interface SupportToHandEffect {
   kind: 'support-to-hand'
   amount: number
+  maxLevel?: number
+  condition?: EffectCondition
 }
 
 export interface OpponentDiscardHandEffect {
   kind: 'opponent-discard-hand'
   count: number
+}
+
+export interface DiscardHandEffect {
+  kind: 'discard-hand'
+  count: number
+  condition?: EffectCondition
 }
 
 export interface OpponentBattleToTrashEffect {
@@ -237,6 +314,7 @@ export interface FieldToTrashEffect {
   kind: 'field-to-trash'
   target: EffectTargetSelector
   allowStage?: boolean
+  stageOnly?: boolean
   stageLevel?: number
   condition?: EffectCondition
 }
@@ -244,6 +322,7 @@ export interface FieldToTrashEffect {
 export interface SetActiveEffect {
   kind: 'set-active'
   supportCount: number
+  condition?: EffectCondition
 }
 
 export interface InspectDeckEffect {
@@ -270,8 +349,23 @@ export interface OpponentRandomDiscardEffect {
   count: number
 }
 
+export interface HpToTrashEffect {
+  kind: 'hp-to-trash'
+  amount: number
+  target: EffectTargetSelector
+}
+
+export interface TrashToSupportEffect {
+  kind: 'trash-to-support'
+  amount: number
+  rested?: boolean
+}
+
 export type CardEffect =
   | DamageEffect
+  | DamageAllEffect
+  | DamageByBreakCountEffect
+  | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
   | DrawEffect
@@ -281,24 +375,32 @@ export type CardEffect =
   | BreakToTrashEffect
   | GainHpEffect
   | PreventKnockoutEffect
+  | RedirectAttackEffect
+  | PlaceSourceToSupportEffect
   | SupportToTrashEffect
   | DisableFlipEffect
+  | DisableBlockEffect
   | ViewHpEffect
   | ModifyAllAttackEffect
   | BattleToSupportEffect
   | TrashToBattleEffect
   | SupportToHandEffect
   | OpponentDiscardHandEffect
+  | DiscardHandEffect
   | OpponentBattleToTrashEffect
   | FieldToTrashEffect
   | ReturnToHandEffect
   | OpponentRandomDiscardEffect
+  | HpToTrashEffect
+  | TrashToSupportEffect
   | SetActiveEffect
   | InspectDeckEffect
   | OptionalCostAttackEffect
 
 export type TargetedCardEffect =
   | DamageEffect
+  | DamageByBreakCountEffect
+  | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
   | PreventKnockoutEffect
@@ -307,16 +409,24 @@ export type TargetedCardEffect =
   | BattleToSupportEffect
   | ReturnToHandEffect
   | FieldToTrashEffect
+  | RedirectAttackEffect
+  | HpToTrashEffect
 
-export interface AbilityCost {
-  energy: EnergyCost
-  discardHand: number
+export type AbilityCost = EnergyCost & {
+  energy?: EnergyCost
+  discardHand?: number
+  discardHandColor?: EnergyColor
   supportToTrash?: number
-  trashBattleCookie?: {
-    count: number
-    level?: number
-    energyColor?: EnergyColor
+  supportToHand?: number
+  hpToTrash?: {
+    amount?: number
+    untilRemainingHp?: number
   }
+  trashBattleCookie?: {
+      count: number
+      level?: number
+      energyColor?: EnergyColor
+    }
 }
 
 export interface FlipAbility {
@@ -337,6 +447,14 @@ export type TrapCondition =
   | {
       kind: 'friendly-color-fainted-this-battle'
       color: EnergyColor
+    }
+  | {
+      kind: 'self-cookie-hp-equals'
+      amount: number
+    }
+  | {
+      kind: 'opponent-trash-count-at-least'
+      count: number
     }
 
 export interface TrapAbility {
@@ -418,6 +536,13 @@ export interface PendingFaintEffect {
   context: EffectContext
 }
 
+export interface PendingAfterDamageEffect {
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  effect: CardEffect
+  context: EffectContext
+}
+
 export interface PendingReplacement {
   tasks: ReplacementTask[]
 }
@@ -445,6 +570,7 @@ export interface GameState {
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   flipDisabledUntilTurn?: Record<string, number>
+  blockDisabledUntilTurn?: Partial<Record<PlayerId, number>>
   pendingReplacement: PendingReplacement | null
   departedCookieCounts: Record<PlayerId, number>
   pendingOnPlay?: {
@@ -457,6 +583,7 @@ export interface GameState {
     sourcePlayerId: PlayerId
     sourceInstanceId: string
     sourceCardName: string
+    effectText?: string
   } | null
   pendingRefresh: {
     playerId: PlayerId
@@ -464,6 +591,7 @@ export interface GameState {
   } | null
   pendingBattle?: PendingBattle | null
   pendingFaintEffects?: PendingFaintEffect[]
+  pendingAfterDamageEffects?: PendingAfterDamageEffect[]
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
   pendingInspectDeck?: {
     playerId: PlayerId
@@ -487,6 +615,7 @@ export interface GameState {
     sourceCardName: string
     effectText: string
   } | null
+  supportAreaDecreasedThisTurn?: Partial<Record<PlayerId, boolean>>
 }
 
 export type PendingBattleStage =
@@ -512,6 +641,7 @@ export interface PendingBattle {
   damagePlayerId?: PlayerId
   damageTargetInstanceId?: string
   suspendedAttackDamage?: number
+  damagedInstanceIds?: string[]
   delayedTrap?: {
     playerId: PlayerId
     color: EnergyColor

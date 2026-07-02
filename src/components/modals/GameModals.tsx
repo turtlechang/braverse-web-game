@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,13 +13,18 @@ import type {
   GameCard,
   PlayerId,
 } from '../../game'
+import type { CookieInBattle } from '../../game'
 import { OFFICIAL_DECK_RECIPES } from '../../game'
+import type { CustomDeck } from '../../game/custom-deck'
+import { loadCustomDecks } from '../../game/custom-deck'
+import { getCardPoolEntry } from '../../game/card-pool'
 import {
   CardFace,
   CardEffectText,
   EnergyCostIcons,
 } from '../cards/CardVisuals'
 import { deckChoiceLabel } from '../gameUiLabels'
+import { DeckEditorModal } from './DeckEditorModal'
 import './GameModals.css'
 
 export { OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
@@ -36,7 +41,7 @@ export interface OpeningSetupModalProps {
   message: string
   hand: GameCard[]
   deckConfig: { player: DeckChoice; ai: DeckChoice }
-  onSelectDeck: (deck: DeckChoice) => void
+  onSelectDeck: (deck: DeckChoice, customDeck?: CustomDeck) => void
   onRps: (choice: 'rock' | 'paper' | 'scissors') => void
   onChooseFirstPlayer: (playerFirst: boolean) => void
   onMulligan: (replaceAll: boolean) => void
@@ -54,6 +59,11 @@ export function OpeningSetupModal({
   onMulligan,
   onSelectStartingCookie,
 }: OpeningSetupModalProps) {
+  const [showDeckEditor, setShowDeckEditor] = useState(false)
+  const [savedCustomDeck, setSavedCustomDeck] = useState<CustomDeck | null>(
+    null,
+  )
+
   const title =
     step === 'deck-selection'
       ? '選擇牌組'
@@ -65,6 +75,27 @@ export function OpeningSetupModal({
           ? '第一次調度'
           : '放置起始餅乾'
 
+  const handleDeckEditorSave = useCallback(
+    (deck: CustomDeck) => {
+      setSavedCustomDeck(deck)
+      setShowDeckEditor(false)
+      onSelectDeck('custom', deck)
+    },
+    [onSelectDeck],
+  )
+
+  const savedDecks = loadCustomDecks()
+
+  if (showDeckEditor) {
+    return (
+      <DeckEditorModal
+        initialDeck={savedCustomDeck ?? undefined}
+        onSave={handleDeckEditorSave}
+        onClose={() => setShowDeckEditor(false)}
+      />
+    )
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="opening-setup-modal" role="alertdialog">
@@ -72,18 +103,48 @@ export function OpeningSetupModal({
         <h2>{title}</h2>
         <p>{message}</p>
         {step === 'deck-selection' && (
-          <div className="setup-deck-grid">
-            {(['red', 'yellow', 'green', 'blue', 'purple'] as const).map((deck) => (
+          <>
+            <div className="setup-deck-grid">
+              {(['red', 'yellow', 'green', 'blue', 'purple'] as const).map((deck) => (
+                <button
+                  type="button"
+                  key={deck}
+                  onClick={() => onSelectDeck(deck)}
+                >
+                  <strong>{deckChoiceLabel[deck]}起始牌組</strong>
+                  <span>選擇此牌組</span>
+                </button>
+              ))}
               <button
                 type="button"
-                key={deck}
-                onClick={() => onSelectDeck(deck)}
+                className="setup-deck-custom-btn"
+                onClick={() => setShowDeckEditor(true)}
               >
-                <strong>{deckChoiceLabel[deck]}起始牌組</strong>
-                <span>選擇此牌組</span>
+                <strong>{deckChoiceLabel.custom}牌組</strong>
+                <span>建立或編輯牌組</span>
               </button>
-            ))}
-          </div>
+            </div>
+            {savedDecks.length > 0 && (
+              <div className="setup-saved-custom-decks">
+                <span>已儲存的自訂牌組</span>
+                <div className="setup-saved-deck-list">
+                  {savedDecks.map((deck) => (
+                    <button
+                      type="button"
+                      key={deck.id}
+                      className="setup-saved-deck-btn"
+                      onClick={() => onSelectDeck('custom', deck)}
+                    >
+                      <strong>{deck.name}</strong>
+                      <span>
+                        {deck.entries.reduce((s, e) => s + e.count, 0)} 張
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
         {step === 'rps' && (
           <>
@@ -569,6 +630,151 @@ export function TrapResponseModal({
   )
 }
 
+export interface AttackResponseModalProps {
+  trapCards: GameCard[]
+  blockerCards: CookieInBattle[]
+  onSelectTrap?: (instanceId: string) => void
+  onSelectBlocker?: (instanceId: string) => void
+  onSkip: () => void
+  onInspectCard?: (card: GameCard) => void
+}
+
+export function AttackResponseModal({
+  trapCards,
+  blockerCards,
+  onSelectTrap,
+  onSelectBlocker,
+  onSkip,
+  onInspectCard,
+}: AttackResponseModalProps) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal attack-response-modal"
+        role="alertdialog"
+      >
+        <span>攻擊宣告回應</span>
+        <h2>選擇回應方式</h2>
+        <p>每次攻擊只能發動一種回應，請選擇使用陷阱卡或 Blocker。</p>
+        {trapCards.length > 0 && (
+          <>
+            <strong>陷阱卡</strong>
+            <div className="modal-card-options">
+              {trapCards.map((card) => (
+                <button
+                  type="button"
+                  key={card.instanceId}
+                  onClick={() => {
+                    onSelectTrap?.(card.instanceId)
+                    onInspectCard?.(card)
+                  }}
+                >
+                  <CardFace card={card} />
+                  <span>{card.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {blockerCards.length > 0 && (
+          <>
+            <strong>Blocker</strong>
+            <div className="modal-card-options">
+              {blockerCards.map((cookie) => (
+                <button
+                  type="button"
+                  key={cookie.card.instanceId}
+                  onClick={() => {
+                    onSelectBlocker?.(cookie.card.instanceId)
+                    onInspectCard?.(cookie.card)
+                  }}
+                >
+                  <CardFace card={cookie.card} />
+                  <span>{cookie.card.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        <div className="modal-actions">
+          <button type="button" onClick={onSkip}>不發動</button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+export interface BlockerResponseModalProps {
+  blockerCards: CookieInBattle[]
+  selectedBlockerId: string | null
+  paymentCards: GameCard[]
+  onSelectBlocker: (instanceId: string) => void
+  onConfirm: () => void
+  onSkip: () => void
+  onInspectCard?: (card: GameCard) => void
+}
+
+export function BlockerResponseModal({
+  blockerCards,
+  selectedBlockerId,
+  paymentCards,
+  onSelectBlocker,
+  onConfirm,
+  onSkip,
+  onInspectCard,
+}: BlockerResponseModalProps) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal blocker-response-modal"
+        role="alertdialog"
+      >
+        <span>攻擊宣告回應</span>
+        <h2>是否使用 Blocker 阻擋？</h2>
+        <p>選擇要阻擋攻擊的餅乾，攻擊將轉移至該餅乾。</p>
+        <div className="modal-card-options">
+          {blockerCards.map((cookie) => (
+            <button
+              type="button"
+              className={
+                selectedBlockerId === cookie.card.instanceId ? 'is-selected' : ''
+              }
+              key={cookie.card.instanceId}
+              onClick={() => {
+                onSelectBlocker(cookie.card.instanceId)
+                onInspectCard?.(cookie.card)
+              }}
+            >
+              <CardFace card={cookie.card} />
+              <span>{cookie.card.name}</span>
+            </button>
+          ))}
+        </div>
+        {selectedBlockerId && (
+          <div className="battle-response-summary">
+            <strong>付款支援卡</strong>
+            <span>
+              {paymentCards.map((card) => card.name).join('、') || '不需能量'}
+            </span>
+          </div>
+        )}
+        <div className="modal-actions">
+          <button type="button" onClick={onSkip}>
+            不使用
+          </button>
+          <button
+            type="button"
+            disabled={!selectedBlockerId}
+            onClick={onConfirm}
+          >
+            使用 Blocker
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export interface FlipResponseModalProps {
   card: GameCard
   hand: GameCard[]
@@ -840,6 +1046,7 @@ export function PauseModal({
 export interface DeckListModalProps {
   deckListOwner: 'player' | 'ai'
   viewedDeck: DeckChoice
+  customDeck?: CustomDeck | null
   onSetDeckListOwner: (owner: 'player' | 'ai') => void
   onClose: () => void
 }
@@ -847,9 +1054,13 @@ export interface DeckListModalProps {
 export function DeckListModal({
   deckListOwner,
   viewedDeck,
+  customDeck,
   onSetDeckListOwner,
   onClose,
 }: DeckListModalProps) {
+  const showCustomDeck = viewedDeck === 'custom' && customDeck
+  const officialRecipe = viewedDeck === 'custom' ? null : OFFICIAL_DECK_RECIPES[viewedDeck]
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="deck-list-modal" role="dialog">
@@ -862,7 +1073,11 @@ export function DeckListModal({
           <X aria-hidden="true" />
         </button>
         <div className="deck-reference-image">
-          {viewedDeck === 'red' ? (
+          {showCustomDeck ? (
+            <div className="deck-reference-placeholder">
+              自訂牌組使用卡池資料，請參考右側卡牌清單。
+            </div>
+          ) : viewedDeck === 'red' ? (
             <img
               src="/reference/starter-deck-red.webp"
               alt="官方紅色起始牌組套餐組合表"
@@ -893,20 +1108,49 @@ export function DeckListModal({
               查看 AI 牌組
             </button>
           </div>
-          <h2>{deckChoiceLabel[viewedDeck]}起始牌組</h2>
-          <p>
-            共 {OFFICIAL_DECK_RECIPES[viewedDeck].length} 種卡、
-            {OFFICIAL_DECK_RECIPES[viewedDeck].reduce((sum, e) => sum + e.count, 0)} 張。
-          </p>
-          <div className="deck-list-table">
-            {OFFICIAL_DECK_RECIPES[viewedDeck].map((entry) => (
-              <div key={entry.cardNumber}>
-                <code>{entry.cardNumber}</code>
-                <span>{entry.name}</span>
-                <strong>{entry.count}</strong>
+          <h2>
+            {showCustomDeck
+              ? customDeck.name
+              : `${deckChoiceLabel[viewedDeck]}起始牌組`}
+          </h2>
+          {showCustomDeck ? (
+            <>
+              <p>
+                共 {customDeck.entries.length} 種卡、
+                {customDeck.entries.reduce((sum, e) => sum + e.count, 0)} 張。
+              </p>
+              <div className="deck-list-table">
+                {customDeck.entries.map((entry) => {
+                  const poolEntry = getCardPoolEntry(entry.cardNumber)
+                  return (
+                    <div key={entry.cardNumber}>
+                      <code>{entry.cardNumber}</code>
+                      <span>{poolEntry?.name ?? entry.cardNumber}</span>
+                      <strong>{entry.count}</strong>
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
+            </>
+          ) : officialRecipe ? (
+            <>
+              <p>
+                共 {officialRecipe.length} 種卡、
+                {officialRecipe.reduce((sum, e) => sum + e.count, 0)} 張。
+              </p>
+              <div className="deck-list-table">
+                {officialRecipe.map((entry) => (
+                  <div key={entry.cardNumber}>
+                    <code>{entry.cardNumber}</code>
+                    <span>{entry.name}</span>
+                    <strong>{entry.count}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p>目前沒有可顯示的牌組清單。</p>
+          )}
         </div>
       </section>
     </div>

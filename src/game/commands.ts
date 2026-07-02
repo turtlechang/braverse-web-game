@@ -1,5 +1,11 @@
 import { GameRuleError } from './errors'
-import { getFaintEffectMinMax, resolveFaintEffect, resolveOptionalCostAttack } from './battle'
+import {
+  getAfterDamageEffectMinMax,
+  getFaintEffectMinMax,
+  resolveFaintEffect,
+  resolveNextAfterDamageEffect,
+  resolveOptionalCostAttack,
+} from './battle'
 import {
   executeCardEffect,
   resolveDrawUpTo,
@@ -67,6 +73,15 @@ export interface StageTriggerDecision {
   effectText: string
 }
 
+export interface AfterDamageEffectDecision {
+  kind: 'after-damage-effect'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  min: number
+  max: number
+}
+
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
@@ -74,6 +89,7 @@ export type PendingDecision =
   | OptionalCostAttackDecision
   | DrawUpToDecision
   | StageTriggerDecision
+  | AfterDamageEffectDecision
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -114,6 +130,12 @@ export interface ResolveStageTriggerCommand {
   action: 'activate' | 'skip'
 }
 
+export interface ResolveAfterDamageEffectCommand {
+  kind: 'resolve-after-damage-effect'
+  playerId: PlayerId
+  targetIds: string[]
+}
+
 export type GameCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
@@ -121,6 +143,7 @@ export type GameCommand =
   | ResolveOptionalCostAttackCommand
   | ResolveDrawUpToCommand
   | ResolveStageTriggerCommand
+  | ResolveAfterDamageEffectCommand
 
 export const getPendingDecision = (
   state: GameState,
@@ -137,6 +160,19 @@ export const getPendingDecision = (
       playerId: faint.sourcePlayerId,
       sourcePlayerId: faint.sourcePlayerId,
       sourceInstanceId: faint.sourceInstanceId,
+      min,
+      max,
+    }
+  }
+
+  if (state.pendingAfterDamageEffects && state.pendingAfterDamageEffects.length > 0) {
+    const pending = state.pendingAfterDamageEffects[0]
+    const { min, max } = getAfterDamageEffectMinMax(pending.effect)
+    return {
+      kind: 'after-damage-effect',
+      playerId: pending.sourcePlayerId,
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
       min,
       max,
     }
@@ -217,6 +253,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-optional-cost-attack': 'optional-cost-attack',
   'resolve-draw-up-to': 'draw-up-to',
   'resolve-stage-trigger': 'stage-trigger',
+  'resolve-after-damage-effect': 'after-damage-effect',
 }
 
 export const applyGameCommand = (
@@ -295,5 +332,7 @@ export const applyGameCommand = (
       }
       return nextState
     }
+    case 'resolve-after-damage-effect':
+      return resolveNextAfterDamageEffect(state, command.targetIds)
   }
 }

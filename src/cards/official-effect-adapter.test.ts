@@ -4,9 +4,12 @@ import officialYellowSample from '../../data/cards/official-starter-deck-yellow.
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.json'
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
+import officialBraveBeginning from '../../data/cards/official-brave-beginning-bs1.en.json'
+import officialBraveBeginningBS2 from '../../data/cards/official-brave-beginning-bs2.en.json'
 import {
   convertOfficialCardEffects,
   convertOfficialCardEffectSet,
+  convertOfficialAttackEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
   convertOfficialItemAbility,
@@ -20,6 +23,8 @@ const yellowCards = officialYellowSample.cards as OfficialCardRecord[]
 const greenCards = officialGreenSample.cards as OfficialCardRecord[]
 const blueCards = officialBlueSample.cards as OfficialCardRecord[]
 const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
+const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
+const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRecord[]
 
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
@@ -74,6 +79,30 @@ const findPurpleCard = (cardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing purple sample card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findBraveBeginningCard = (baseCardNumber: string) => {
+  const card = braveBeginningCards.find(
+    (candidate) => candidate.baseCardNumber === baseCardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing Brave Beginning sample card ${baseCardNumber}`)
+  }
+
+  return card
+}
+
+const findBraveBeginningBS2Card = (baseCardNumber: string) => {
+  const card = braveBeginningBS2Cards.find(
+    (candidate) => candidate.baseCardNumber === baseCardNumber,
+  )
+
+  if (!card) {
+    throw new Error(`Missing Brave Beginning BS2 sample card ${baseCardNumber}`)
   }
 
   return card
@@ -822,7 +851,7 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('does not drop unsupported special costs from item abilities', () => {
+    it('keeps supported discard-hand costs on item abilities', () => {
       const card = makeCard({
         type: 'item',
         attackText:
@@ -832,7 +861,10 @@ describe('Starter Deck RED official effect adapter', () => {
       expect(convertOfficialCardEffects(card)).toMatchObject({
         status: 'supported',
       })
-      expect(convertOfficialItemAbility(card)).toBeUndefined()
+      expect(convertOfficialItemAbility(card)).toMatchObject({
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{ kind: 'draw', amount: 1 }],
+      })
     })
 
     it('rejects draw text from flip card type', () => {
@@ -1260,6 +1292,471 @@ describe('Starter Deck RED official effect adapter', () => {
         restSource: true,
         triggered: true,
       })
+    })
+  })
+
+  describe('Brave Beginning BS1 adapter Phase 1 and 2 coverage', () => {
+    it('imports the BS1 sample with expected record and base-card counts', () => {
+      const uniqueBaseCards = new Set(
+        braveBeginningCards.map((card) => card.baseCardNumber),
+      )
+      const typeCounts = braveBeginningCards.reduce<Record<string, number>>(
+        (counts, card) => ({
+          ...counts,
+          [card.type]: (counts[card.type] ?? 0) + 1,
+        }),
+        {},
+      )
+
+      expect(braveBeginningCards).toHaveLength(99)
+      expect(uniqueBaseCards.size).toBe(78)
+      expect(typeCounts).toMatchObject({
+        cookie: 72,
+        flip: 12,
+        item: 6,
+        trap: 6,
+        stage: 3,
+      })
+    })
+
+    it('BS1-001 converts OnPlay discard cost into opponent damage', () => {
+      const skill = convertOfficialCookieSkill(findBraveBeginningCard('BS1-001'))
+
+      expect(skill).toMatchObject({
+        trigger: 'on-play',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
+    })
+
+    it('BS1-002 converts FLIP discard cost damage for base and variants', () => {
+      const baseFlip = convertOfficialFlipAbility(
+        findBraveBeginningCard('BS1-002'),
+      )
+      const variant = braveBeginningCards.find(
+        (card) => card.cardNumber === 'BS1-002@1',
+      )
+
+      expect(baseFlip).toMatchObject({
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
+      expect(variant).toBeDefined()
+      expect(convertOfficialFlipAbility(variant as OfficialCardRecord))
+        .toMatchObject(baseFlip ?? {})
+    })
+
+    it('BS1 Draw up to FLIP cards convert to optional draw decisions', () => {
+      for (const cardNumber of ['BS1-015', 'BS1-030', 'BS1-055', 'BS1-069']) {
+        expect(convertOfficialFlipAbility(findBraveBeginningCard(cardNumber)))
+          .toMatchObject({
+            effects: [{ kind: 'draw-up-to', max: 1 }],
+          })
+      }
+    })
+
+    it('BS1 blocker Cookies convert to block redirect skills', () => {
+      for (const cardNumber of ['BS1-009', 'BS1-031', 'BS1-062']) {
+        expect(convertOfficialCookieSkill(findBraveBeginningCard(cardNumber)))
+          .toMatchObject({
+            trigger: 'block',
+            effects: [
+              {
+                kind: 'redirect-attack',
+                target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+              },
+            ],
+          })
+      }
+    })
+
+    it('BS1-004 converts activate return-this-cookie-to-hand', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-004')))
+        .toMatchObject({
+          trigger: 'activate',
+          cost: { energy: { red: 2 }, discardHand: 0 },
+          effects: [
+            {
+              kind: 'return-to-hand',
+              target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            },
+          ],
+        })
+    })
+
+    it('BS1-035 converts faint break-to-trash wording', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-035')))
+        .toMatchObject({
+          trigger: 'passive',
+          faint: true,
+          effects: [{ kind: 'break-to-trash', max: 1, exactLevel: 1 }],
+        })
+    })
+
+    it('BS1-063 converts support-to-trash cost into deck-to-support active', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-063')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { supportToTrash: 1 },
+          effects: [{ kind: 'deck-to-support', amount: 1 }],
+        })
+    })
+
+    it('BS1-066 converts end-of-turn support activation', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-066')))
+        .toMatchObject({
+          trigger: 'passive',
+          endPhase: true,
+          effects: [{ kind: 'set-active', supportCount: 1 }],
+        })
+    })
+
+    it('BS1-073 converts support-to-trash cost into set-active', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-073')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { supportToTrash: 1 },
+          effects: [{ kind: 'set-active', supportCount: 1 }],
+        })
+    })
+  })
+
+  describe('Brave Beginning BS1 adapter Phase 3 coverage', () => {
+    it('converts BS1 attack follow-up damage and hand discard effects', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-005')))
+        .toEqual([
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ])
+
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-013')))
+        .toEqual([{ kind: 'discard-hand', count: 1 }])
+    })
+
+    it('converts BS1 conditional and variable attack follow-up effects', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-028')))
+        .toEqual([
+          {
+            kind: 'damage-all',
+            amount: 1,
+            side: 'opponent',
+            condition: { kind: 'break-level-at-least', level: 5 },
+          },
+        ])
+
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-033')))
+        .toEqual([
+          {
+            kind: 'damage-by-break-count',
+            perCount: 1,
+            minBreakLevel: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ])
+    })
+
+    it('converts BS1 multi-target attack debuff and support follow-up effects', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-039')))
+        .toEqual([
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'opponent-next-turn',
+            target: { side: 'opponent', min: 0, max: 2 },
+          },
+        ])
+
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-064')))
+        .toEqual([
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, excludeSource: true },
+            condition: { kind: 'support-count-at-least', count: 7 },
+          },
+        ])
+
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-070')))
+        .toEqual([{ kind: 'support-to-hand', amount: 1, maxLevel: 1 }])
+    })
+
+    it('converts BS1 conditional skill text into reusable effects', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-029')))
+        .toMatchObject({
+          trigger: 'on-play',
+          effects: [
+            {
+              kind: 'draw',
+              amount: 1,
+              condition: { kind: 'break-level-at-least', level: 3 },
+            },
+            {
+              kind: 'discard-hand',
+              count: 1,
+              condition: { kind: 'break-level-at-least', level: 3 },
+            },
+          ],
+        })
+
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-053')))
+        .toMatchObject({
+          trigger: 'activate',
+          effects: [
+            {
+              kind: 'support-to-hand',
+              amount: 1,
+              condition: { kind: 'hand-count-at-most', count: 6 },
+            },
+            {
+              kind: 'deck-to-support',
+              amount: 1,
+              rested: true,
+              condition: { kind: 'hand-count-at-most', count: 6 },
+            },
+          ],
+        })
+    })
+  })
+
+  describe('Brave Beginning BS1 non-cookie adapter coverage', () => {
+    it('converts BS1 item abilities with non-energy costs and variable effects', () => {
+      expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-022')))
+        .toMatchObject({
+          cost: { energy: { red: 3 }, discardHand: 1 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 3,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        })
+      expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-023')))
+        .toMatchObject({
+          cost: { energy: { red: 1 }, hpToTrash: { untilRemainingHp: 1 } },
+          effects: [{ kind: 'modify-attack', amount: 2 }],
+        })
+      expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-048')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'modify-attack-by-break-count',
+              exactBreakLevel: 1,
+              breakEnergyColor: 'yellow',
+            },
+          ],
+        })
+      expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-049')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'damage-by-break-count',
+              minBreakLevel: 2,
+              breakEnergyColor: 'yellow',
+            },
+          ],
+        })
+      expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-074')))
+        .toMatchObject({
+          cost: { energy: { green: 1 }, supportToHand: 1 },
+          effects: [{ kind: 'draw', amount: 1 }],
+        })
+      expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-075')))
+        .toMatchObject({
+          effects: [{ kind: 'place-source-to-support', rested: true }],
+        })
+    })
+
+    it('converts BS1 trap conditions and follow-up effects', () => {
+      expect(convertOfficialTrapAbility(findBraveBeginningCard('BS1-024')))
+        .toMatchObject({
+          condition: { kind: 'self-cookie-hp-equals', amount: 1 },
+          effects: [{ kind: 'modify-attack', amount: -4 }],
+        })
+      expect(convertOfficialTrapAbility(findBraveBeginningCard('BS1-025')))
+        .toMatchObject({
+          condition: { kind: 'self-cookie-hp-equals', amount: 1 },
+          effects: [{ kind: 'damage', amount: 1 }],
+        })
+      expect(convertOfficialTrapAbility(findBraveBeginningCard('BS1-050')))
+        .toMatchObject({
+          effects: [{ kind: 'redirect-attack' }],
+        })
+      expect(convertOfficialTrapAbility(findBraveBeginningCard('BS1-051')))
+        .toMatchObject({
+          effects: [{ kind: 'gain-hp', amount: 1 }],
+        })
+      expect(convertOfficialTrapAbility(findBraveBeginningCard('BS1-076')))
+        .toMatchObject({
+          effects: [
+            { kind: 'damage', amount: 1 },
+            { kind: 'support-to-trash', amount: 1 },
+          ],
+        })
+      expect(convertOfficialTrapAbility(findBraveBeginningCard('BS1-077')))
+        .toMatchObject({
+          effects: [
+            { kind: 'modify-attack', amount: -3 },
+            { kind: 'set-active', supportCount: 1 },
+          ],
+        })
+    })
+
+    it('converts BS1 stage activation costs and conditions', () => {
+      expect(convertOfficialStageAbility(findBraveBeginningCard('BS1-026')))
+        .toMatchObject({
+          cost: { hpToTrash: { amount: 1 } },
+          effects: [{ kind: 'modify-attack', amount: 1 }],
+        })
+      expect(convertOfficialStageAbility(findBraveBeginningCard('BS1-052')))
+        .toMatchObject({
+          cost: { energy: { yellow: 2 } },
+          effects: [{ kind: 'gain-hp', amount: 1 }],
+        })
+      expect(convertOfficialStageAbility(findBraveBeginningCard('BS1-078')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'set-active',
+              condition: { kind: 'support-area-decreased-this-turn' },
+            },
+          ],
+        })
+    })
+  })
+
+  describe('Brave Beginning BS2 red cookie adapter coverage', () => {
+    it('BS2-002 Macaron Cookie converts to stageOnly field-to-trash', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-002')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { energy: { red: 1 } },
+          effects: [
+            {
+              kind: 'field-to-trash',
+              target: { side: 'opponent', min: 0, max: 1 },
+              stageOnly: true,
+            },
+          ],
+        })
+    })
+
+    it('BS2-003 Rebel Cookie converts to optional damage', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-003')))
+        .toMatchObject({
+          trigger: 'on-play',
+          cost: { energy: { red: 2 } },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 2,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        })
+    })
+
+    it('BS2-004 Cherry Cookie converts to conditional attack damage', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningBS2Card('BS2-004')))
+        .toEqual([
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ])
+    })
+
+    it('BS2-006 Prickly Cacti Gloves converts to damage + hp-to-trash', () => {
+      expect(convertOfficialItemAbility(findBraveBeginningBS2Card('BS2-006')))
+        .toMatchObject({
+          cost: { energy: { red: 2 }, discardHand: 0 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 2,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+            {
+              kind: 'hp-to-trash',
+              amount: 2,
+              target: { side: 'self', min: 1, max: 1 },
+            },
+          ],
+        })
+    })
+
+    it('BS2-007 Prickly Cactus Bat converts to trap with red discard cost', () => {
+      const result = convertOfficialTrapAbility(findBraveBeginningBS2Card('BS2-007'))
+      expect(result).toMatchObject({
+        cost: { energy: { red: 1 }, discardHand: 1, discardHandColor: 'red' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          },
+        ],
+      })
+    })
+
+    it('BS2 blocker and anti-block Cookies convert to block effects', () => {
+      for (const cardNumber of ['BS2-026', 'BS2-067']) {
+        expect(convertOfficialCookieSkill(findBraveBeginningBS2Card(cardNumber)))
+          .toMatchObject({
+            trigger: 'block',
+            effects: [{ kind: 'redirect-attack' }],
+          })
+      }
+
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-028')))
+        .toMatchObject({
+          trigger: 'activate',
+          cost: { discardHand: 1 },
+          effects: [
+            {
+              kind: 'disable-block',
+              duration: 'this-turn',
+              side: 'opponent',
+            },
+          ],
+        })
+    })
+
+    it('BS2 Draw up to FLIP cards convert to optional draw decisions', () => {
+      for (const cardNumber of ['BS2-001', 'BS2-009', 'BS2-037', 'BS2-072']) {
+        expect(convertOfficialFlipAbility(findBraveBeginningBS2Card(cardNumber)))
+          .toMatchObject({
+            effects: [{ kind: 'draw-up-to', max: 1 }],
+          })
+      }
+
+      expect(convertOfficialFlipAbility(findBraveBeginningBS2Card('BS2-034')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'draw-up-to',
+              max: 2,
+              condition: { kind: 'break-level-at-least', level: 4 },
+            },
+          ],
+        })
     })
   })
 })

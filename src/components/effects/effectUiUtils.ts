@@ -5,240 +5,154 @@ export const getSkillLabels = (skill: CardSkill) => [
     ? 'Activate 啟動'
     : skill.trigger === 'on-play'
       ? 'OnPlay 登場'
-      : 'Skill 技能',
-  ...(skill.oncePerTurn ? ['Once per turn 一回合一次'] : []),
-  ...(skill.yourTurn ? ['Your Turn 自己的回合'] : []),
+      : 'Skill',
+  ...(skill.oncePerTurn ? ['每回合一次'] : []),
+  ...(skill.yourTurn ? ['你的回合'] : []),
 ]
 
-export const describeEffect = (effect: CardEffect) => {
-  if (effect.kind === 'draw') {
-    return `從牌庫抽 ${effect.amount} 張牌。`
-  }
-
-  if (effect.kind === 'draw-up-to') {
-    return `可以從牌庫抽最多 ${effect.max} 張牌。`
-  }
-
-  if (effect.kind === 'hand-to-deck-and-draw') {
-    return '將全部手牌洗回牌庫，再抽取相同張數。'
-  }
-
-  if (effect.kind === 'deck-to-support') {
-    return `從牌庫頂取 ${effect.amount} 張卡，直立放入支援區。`
-  }
-
-  if (effect.kind === 'break-to-trash') {
-    return `從休息區選擇最多 ${effect.max} 張 LV.${effect.exactLevel} 卡，移至棄牌區。`
-  }
-
-  if (effect.kind === 'gain-hp') {
-    return `該餅乾增加 ${effect.amount} HP。`
-  }
-
-  if (effect.kind === 'support-to-trash') {
-    return `將 ${effect.amount} 張支援卡送入棄牌區。`
-  }
-
-  if (effect.kind === 'support-to-hand') {
-    return `選擇 ${effect.amount} 張支援卡返回手牌。`
-  }
-
-  if (effect.kind === 'trash-to-battle') {
-    return `從棄牌區選擇 ${effect.amount} 張餅乾登場。`
-  }
-
-  if (effect.kind === 'modify-all-attack') {
-    return `目前戰鬥區所有己方餅乾攻擊傷害 +${effect.amount}。`
-  }
-
-  if (effect.kind === 'disable-flip') {
-    return '選擇最多 1 張對手餅乾，本回合不能發動其 HP FLIP。'
-  }
-
-  if (effect.kind === 'view-hp') {
-    return '選擇最多 1 張己方餅乾，查看其所有 HP 卡。'
-  }
-
-  if (effect.kind === 'battle-to-support') {
-    return '選擇 1 張符合等級的己方餅乾，直立放入支援區。'
-  }
-
-  if (effect.kind === 'opponent-discard-hand') {
-    return `對手必須棄置 ${effect.count} 張手牌。`
-  }
-
-  if (effect.kind === 'opponent-battle-to-trash') {
-    const conds: string[] = []
-    if (effect.maxLevel) conds.push(`LV.${effect.maxLevel} 以下`)
-    if (effect.minLevel) conds.push(`LV.${effect.minLevel}`)
-    if (effect.remainingHp) conds.push(`剩餘 HP ${effect.remainingHp} 以下`)
-    const cond = conds.length > 0 ? `（${conds.join('、')}）` : ''
-    return `選擇 1 張對手${cond}餅乾，送入棄牌區。`
-  }
-
-  if (effect.kind === 'return-to-hand') {
-    const side = effect.target.side === 'self' ? '己方' : '對手'
-    const conds: string[] = []
-    if (effect.target.minLevel) conds.push(`LV.${effect.target.minLevel}`)
-    if (effect.target.maxLevel) conds.push(`LV.${effect.target.maxLevel} 以下`)
-    if (effect.target.energyColor) conds.push(`${effect.target.energyColor}色`)
-    if (effect.target.minRemainingHp) {
-      conds.push(`剩餘 HP ${effect.target.minRemainingHp} 以上`)
-    }
-    const cond = conds.length > 0 ? `（${conds.join('、')}）` : ''
-    return `選擇 1 張${side}${cond}餅乾，返回手牌。`
-  }
-
-  if (effect.kind === 'opponent-random-discard') {
-    return `隨機棄置對手 ${effect.count} 張手牌。`
-  }
-
-  if (effect.kind === 'set-active') {
-    return `將此餅乾與 ${effect.supportCount} 張支援卡設為直立狀態。`
-  }
-
-  if (effect.kind === 'inspect-deck') {
-    return `查看牌庫頂 ${effect.lookCount} 張，選擇 ${effect.pickCount} 張加入手牌，其餘放回牌庫底。`
-  }
-
-  if (effect.kind === 'optional-cost-attack') {
-    return effect.effectText
-  }
-
-  const target =
-    effect.target.side === 'self' ? '我方餅乾' : '對手餅乾'
-  const count =
+const targetText = (
+  effect: Extract<CardEffect, { target: unknown }>,
+): { target: string; count: string } => ({
+  target: effect.target.side === 'self' ? '我方餅乾' : '對手餅乾',
+  count:
     effect.target.min === effect.target.max
-      ? `${effect.target.max} 個`
-      : `最多 ${effect.target.max} 個`
+      ? `${effect.target.max} 張`
+      : `最多 ${effect.target.max} 張`,
+})
 
+export const describeEffect = (effect: CardEffect) => {
+  if (effect.kind === 'draw') return `抽 ${effect.amount} 張牌。`
+  if (effect.kind === 'draw-up-to') return `最多抽 ${effect.max} 張牌。`
+  if (effect.kind === 'hand-to-deck-and-draw') return '將手牌洗回牌庫後抽同樣張數。'
+  if (effect.kind === 'deck-to-support') {
+    return `從牌庫頂放 ${effect.amount} 張到支援區。`
+  }
+  if (effect.kind === 'break-to-trash') {
+    return `從 break 區選最多 ${effect.max} 張 LV.${effect.exactLevel} 放入垃圾桶。`
+  }
+  if (effect.kind === 'gain-hp') return `獲得 ${effect.amount} HP。`
+  if (effect.kind === 'support-to-trash') {
+    return `將 ${effect.amount} 張支援區卡放入垃圾桶。`
+  }
+  if (effect.kind === 'support-to-hand') {
+    return `將 ${effect.amount} 張支援區卡返回手牌。`
+  }
+  if (effect.kind === 'trash-to-battle') {
+    return `從垃圾桶選 ${effect.amount} 張餅乾登場。`
+  }
+  if (effect.kind === 'modify-all-attack') {
+    return `全體${effect.side === 'self' ? '我方' : '對手'}餅乾攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}。`
+  }
+  if (effect.kind === 'damage-all') {
+    return `所有${effect.side === 'self' ? '我方' : '對手'}餅乾受到 ${effect.amount} 傷害。`
+  }
+  if (effect.kind === 'discard-hand') return `棄掉 ${effect.count} 張手牌。`
+  if (effect.kind === 'opponent-discard-hand') {
+    return `對手棄掉 ${effect.count} 張手牌。`
+  }
+  if (effect.kind === 'opponent-random-discard') {
+    return `對手隨機棄掉 ${effect.count} 張手牌。`
+  }
+  if (effect.kind === 'opponent-battle-to-trash') {
+    return '將符合條件的對手餅乾放入垃圾桶。'
+  }
+  if (effect.kind === 'place-source-to-support') {
+    return '將這張卡放入支援區。'
+  }
+  if (effect.kind === 'set-active') {
+    return `將最多 ${effect.supportCount} 張支援區卡設為活躍。`
+  }
+  if (effect.kind === 'inspect-deck') {
+    return `查看牌庫頂 ${effect.lookCount} 張，選 ${effect.pickCount} 張。`
+  }
+  if (effect.kind === 'optional-cost-attack') return effect.effectText
+  if (effect.kind === 'trash-to-support') {
+    return `從棄牌區選擇 ${effect.amount} 張餅乾放入支援區。`
+  }
+  if (effect.kind === 'disable-block') {
+    return '本回合對手不能發動 {bl}。'
+  }
+  if (effect.kind === 'hp-to-trash') {
+    return `選擇 ${effect.amount} 張 HP 卡放入垃圾桶。`
+  }
+
+  const { target, count } = targetText(effect)
   if (effect.kind === 'damage') {
-    return `選擇${count}${target}，造成 ${effect.amount} 點效果傷害。`
+    return `選擇 ${count}${target}，造成 ${effect.amount} 傷害。`
   }
-
+  if (effect.kind === 'damage-by-break-count') {
+    return `選擇 ${count}${target}，依 break 區條件造成傷害。`
+  }
+  if (effect.kind === 'modify-attack-by-break-count') {
+    return `選擇 ${count}${target}，依 break 區條件調整攻擊傷害。`
+  }
+  if (effect.kind === 'redirect-attack') {
+    return `選擇 ${count}${target}，將本次攻擊改向該餅乾。`
+  }
   if (effect.kind === 'prevent-knockout') {
-    return `選擇${count}${target}，該次戰鬥中 HP 不會降到 0。`
+    return `選擇 ${count}${target}，本次戰鬥 HP 不會降到 0。`
   }
-
   if (effect.kind === 'field-to-trash') {
-    return `選擇${count}${target}，送入棄牌區。`
+    return `選擇 ${count}${target}或場景，放入垃圾桶。`
+  }
+  if (effect.kind === 'return-to-hand') {
+    return `選擇 ${count}${target}返回手牌。`
+  }
+  if (effect.kind === 'disable-flip') {
+    return `選擇 ${count}${target}，本回合不能發動 FLIP。`
+  }
+  if (effect.kind === 'view-hp') return `查看 ${count}${target}的 HP。`
+  if (effect.kind === 'battle-to-support') {
+    return `選擇 ${count}${target}放入支援區。`
   }
 
-  const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount
+  const amount = effect.amount
   return effect.kind === 'modify-attack'
-    ? `選擇${count}${target}，攻擊傷害 ${value}。`
-    : `選擇${count}${target}，受到的攻擊傷害 ${value}。`
+    ? `選擇 ${count}${target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+    : `選擇 ${count}${target}，受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
 }
 
 export const describeEffectResult = (
   effect: CardEffect,
   targetNames: string[],
 ) => {
-  if (effect.kind === 'draw') {
-    return `從牌庫抽了 ${effect.amount} 張牌。`
-  }
+  const names = targetNames.length > 0 ? targetNames.join('、') : '效果'
 
-  if (effect.kind === 'draw-up-to') {
-    return `已選擇要抽取的牌數（最多 ${effect.max} 張）。`
+  if (effect.kind === 'draw') return `抽了 ${effect.amount} 張牌。`
+  if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
+  if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
+  if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
+  if (effect.kind === 'break-to-trash') return 'break 區卡已放入垃圾桶。'
+  if (effect.kind === 'gain-hp') return `${names} 獲得 ${effect.amount} HP。`
+  if (effect.kind === 'support-to-trash') return '支援區卡已放入垃圾桶。'
+  if (effect.kind === 'support-to-hand') return '支援區卡已返回手牌。'
+  if (effect.kind === 'trash-to-battle') return '垃圾桶餅乾已登場。'
+  if (effect.kind === 'damage-all') return '全體傷害已結算。'
+  if (effect.kind === 'modify-all-attack') return '全體攻擊修正已套用。'
+  if (effect.kind === 'discard-hand') return '已建立棄手牌決策。'
+  if (effect.kind === 'opponent-discard-hand') return '已要求對手棄手牌。'
+  if (effect.kind === 'opponent-random-discard') return '對手已隨機棄手牌。'
+  if (effect.kind === 'opponent-battle-to-trash') return '對手餅乾已放入垃圾桶。'
+  if (effect.kind === 'place-source-to-support') return '已放入支援區。'
+  if (effect.kind === 'set-active') return '支援區卡已設為活躍。'
+  if (effect.kind === 'inspect-deck') return '已查看牌庫。'
+  if (effect.kind === 'optional-cost-attack') return '攻擊後續效果已處理。'
+  if (effect.kind === 'damage') return `${names} 受到 ${effect.amount} 傷害。`
+  if (effect.kind === 'damage-by-break-count') return `${names} 受到 break 計算傷害。`
+  if (effect.kind === 'modify-attack-by-break-count') {
+    return `${names} 依 break 區條件調整攻擊傷害。`
   }
+  if (effect.kind === 'redirect-attack') return `本次攻擊已改向 ${names}。`
+  if (effect.kind === 'prevent-knockout') return `${names} 已受到保護。`
+  if (effect.kind === 'field-to-trash') return `${names} 已放入垃圾桶。`
+  if (effect.kind === 'return-to-hand') return `${names} 已返回手牌。`
+  if (effect.kind === 'disable-flip') return `${names} 本回合不能發動 FLIP。`
+  if (effect.kind === 'view-hp') return `已查看 ${names} 的 HP。`
+  if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`
+  if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
 
-  if (effect.kind === 'hand-to-deck-and-draw') {
-    return '已將全部手牌洗回牌庫並重抽相同張數。'
-  }
-
-  if (effect.kind === 'deck-to-support') {
-    return `從牌庫頂取了 ${effect.amount} 張卡，直立放入支援區。`
-  }
-
-  if (effect.kind === 'break-to-trash') {
-    if (targetNames.length === 0) {
-      return '效果已確認，本次沒有選擇休息區目標。'
-    }
-    const names = targetNames.join('、')
-    return `${names}已從休息區移至棄牌區。`
-  }
-
-  if (effect.kind === 'gain-hp') {
-    return `餅乾增加了 ${effect.amount} HP。`
-  }
-
-  if (effect.kind === 'support-to-trash') {
-    return `${effect.amount} 張支援卡已移至棄牌區。`
-  }
-
-  if (effect.kind === 'support-to-hand') {
-    return `${effect.amount} 張支援卡已返回手牌。`
-  }
-
-  if (effect.kind === 'trash-to-battle') {
-    return `${targetNames.join('、')}已從棄牌區登場。`
-  }
-
-  if (effect.kind === 'modify-all-attack') {
-    return `目前戰鬥區所有己方餅乾攻擊傷害 +${effect.amount}。`
-  }
-
-  if (effect.kind === 'disable-flip') {
-    return targetNames.length > 0
-      ? `${targetNames.join('、')}本回合不能發動 HP FLIP。`
-      : '未選擇 FLIP 封鎖目標。'
-  }
-
-  if (effect.kind === 'view-hp') {
-    return targetNames.length > 0
-      ? `已查看${targetNames.join('、')}的 HP 卡。`
-      : '未選擇查看 HP。'
-  }
-
-  if (effect.kind === 'battle-to-support') {
-    return `${targetNames.join('、')}已移至支援區。`
-  }
-
-  if (effect.kind === 'opponent-discard-hand') {
-    return `對手已棄置 ${effect.count} 張手牌。`
-  }
-
-  if (effect.kind === 'opponent-battle-to-trash') {
-    if (targetNames.length === 0) return '未選擇送入棄牌區的目標。'
-    return `${targetNames.join('、')}已從戰鬥區送入棄牌區。`
-  }
-
-  if (effect.kind === 'return-to-hand') {
-    if (targetNames.length === 0) return '未選擇返回手牌的目標。'
-    return `${targetNames.join('、')}已返回手牌。`
-  }
-
-  if (effect.kind === 'opponent-random-discard') {
-    return `對手已隨機棄置 ${effect.count} 張手牌。`
-  }
-
-  if (effect.kind === 'set-active') {
-    return `此餅乾與 ${effect.supportCount} 張支援卡已設為直立狀態。`
-  }
-
-  if (targetNames.length === 0) {
-    return '效果已確認，本次沒有選擇目標。'
-  }
-
-  const names = targetNames.join('、')
-  if (effect.kind === 'damage') {
-    return `${names}受到 ${effect.amount} 點效果傷害。`
-  }
-
-  if (effect.kind === 'prevent-knockout') {
-    return `${names}在本次戰鬥中受到 HP 下限保護。`
-  }
-
-  if (effect.kind === 'inspect-deck' || effect.kind === 'optional-cost-attack') {
-    return '效果已處理。'
-  }
-
-  if (effect.kind === 'field-to-trash') {
-    return `${names}已送入棄牌區。`
-  }
-
-  const value = effect.amount > 0 ? `+${effect.amount}` : effect.amount
+  const amount = effect.amount
   return effect.kind === 'modify-attack'
-    ? `${names}獲得攻擊傷害 ${value} 修正。`
-    : `${names}獲得受到攻擊傷害 ${value} 修正。`
+    ? `${names} 攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+    : `${names} 受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
 }
