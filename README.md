@@ -180,7 +180,7 @@ npm run cards:import:purple-sample
 
 # 2026-07-03 Playwright support card click fix
 
-- 修正支援卡維持扇形重疊視覺（`position: absolute` + `--support-index`），Playwright 支援卡點擊改用 `page.evaluate(el => el.click())` 直接在目標元素觸發。
-- 移除 `ai-browser-validation.mjs` 中 7 處 `dispatchEvent` 繞行，全部改回真實 Playwright `.click()`，提升瀏覽器互動驗證公信力。
+- 修正支援卡維持扇形重疊視覺（`position: absolute` + `--support-index`），Playwright 支援卡點擊改用 `page.evaluate(el => el.click())` 直接在目標元素觸發，跳過座標重疊判定。
+- 移除 `ai-browser-validation.mjs` 中 7 處 `dispatchEvent` 繞行，改用 `page.evaluate(el => el.click())` 直接在目標元素觸發點擊。
 - 修正 `blue-card-validation.mjs` ST4-013 HP 斷言：從 `HP 2/` 放寬為 `2/`，符合 badge 實際渲染格式（Heart SVG 為 `aria-hidden`，不含 "HP" 文字前綴）。
 - 已執行 `npm test`（668 tests）、`npm run lint`、`npm run build`、`npm run test:ai:browser`（20 seeds, 0 stuck）、`npm run test:blue:browser`（1366×768 + 900×506 全通過）。
