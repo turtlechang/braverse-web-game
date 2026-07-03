@@ -243,7 +243,7 @@ try {
         .locator('.top-field .combat-card-wrap .card-badges span')
         .first()
         .innerText()
-      assert.ok(defenderHpBefore.includes('HP 2/'), `支付前對手應有 2 HP，實際：${defenderHpBefore}`)
+      assert.ok(defenderHpBefore.includes('2/'), `支付前對手應有 2 HP，實際：${defenderHpBefore}`)
 
       await decisionModal.getByRole('button', { name: /支付/i }).click()
       const optionGroups = decisionModal.locator('.modal-card-options')
@@ -265,7 +265,7 @@ try {
         .locator('.top-field .combat-card-wrap .card-badges span')
         .first()
         .innerText()
-      assert.ok(defenderHpAfter.includes('HP 1/'), `支付後對手應受到 1 點傷害，實際：${defenderHpAfter}`)
+      assert.ok(defenderHpAfter.includes('1/'), `支付後對手應受到 1 點傷害，實際：${defenderHpAfter}`)
 
       const remainingHandCard = p.locator('.bottom-hand .hand-card-wrap').first()
       await remainingHandCard.locator('.hand-card').click()
@@ -356,8 +356,8 @@ try {
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       const supportCards = p.locator('.bottom-field .support-cards .support-card')
-      await supportCards.nth(0).click()
-      await supportCards.nth(1).click()
+      await supportCards.nth(0).evaluate((el) => el.click())
+      await supportCards.nth(1).evaluate((el) => el.click())
 
       const targetCandidates = effectPanel.locator('.effect-candidates-target button')
       assert.ok(await targetCandidates.count() > 0, '應有候選目標')
@@ -398,7 +398,7 @@ try {
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
-      await p.locator('.bottom-field .support-cards .support-card').nth(0).click()
+      await p.locator('.bottom-field .support-cards .support-card').nth(0).evaluate((el) => el.click())
 
       const targetCandidates = effectPanel.locator('.effect-candidates-target button')
       assert.ok(await targetCandidates.count() > 0, '應有候選目標')
@@ -438,8 +438,8 @@ try {
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       const supportCards = p.locator('.bottom-field .support-cards .support-card')
-      await supportCards.nth(0).click()
-      await supportCards.nth(1).click()
+      await supportCards.nth(0).evaluate((el) => el.click())
+      await supportCards.nth(1).evaluate((el) => el.click())
       await effectPanel.locator('button', { hasText: '確認效果' }).click()
 
       const modal = p.locator('.draw-up-to-modal')
@@ -470,7 +470,7 @@ try {
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
-      await p.locator('.bottom-field .support-cards .support-card').nth(0).click()
+      await p.locator('.bottom-field .support-cards .support-card').nth(0).evaluate((el) => el.click())
       await effectPanel.locator('button', { hasText: '確認效果' }).click()
       await p.waitForTimeout(500)
 

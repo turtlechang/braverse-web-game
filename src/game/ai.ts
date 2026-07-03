@@ -111,6 +111,23 @@ const chooseEffectTargets = (
     return []
   }
 
+  if (effect.kind === 'return-to-hand') {
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const targetPlayer = state.players[targetPlayerId]
+    const candidates = targetPlayer.battleArea.filter((cookie) => {
+      if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
+      if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
+      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
+      return true
+    })
+    const maxReturn = Math.min(effect.target.max, candidates.length, targetPlayer.battleArea.length - 1)
+    if (maxReturn < effect.target.min) return []
+    const ordered = [...candidates].sort(
+      (left, right) => left.hpCards.length - right.hpCards.length,
+    )
+    return ordered.slice(0, maxReturn).map((cookie) => cookie.card.instanceId)
+  }
+
   if (effect.kind === 'gain-hp' && effect.target) {
     if (effect.target.sourceOnly) return []
     return getEffectTargetCandidates(state, context, effect.target)
