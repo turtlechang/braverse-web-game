@@ -42,11 +42,11 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - `AGENTS.md` 已瘦身為硬性規範入口；模型路由長表、驗證矩陣、歷史回歸細節改由 `.agents/skills/braverse-workflow/references/` 與 `.agents/skills/develop-braverse/references/` 承接。
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局選擇紅色、黃色、綠色、藍色或紫色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
-- 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 與 1920×1080 亦未越界且無捲軸、無 console error。
-  - 目前共有 658 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
+- 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
+  - 目前共有 668 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand/PendingDecision pilot 持續涵蓋 faint-effect 與 opponent-hand-discard，UI 與 AI 已接入。
-- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十四種桌機與窄視窗解析度（含 1920x1080、1907x868、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區、左右資源區與手牌未超出畫布且互不遮蔽。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
-- 目前完整 `npm run test:ai:browser` 會在 1920×1080 的「玩家手牌不得覆蓋支援區」既有版面斷言失敗；相同座標已在未修改的 `aa6ef61` 基線重現，因此不是 controller／AI／effects 重構造成，也不是 ST5 引入的回歸。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。完整版面基線需另案修正。
+- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
+- `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡重疊問題以 dispatchEvent 繞行。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
 
@@ -67,6 +67,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已達成：BS1-006 Mala Sauce Cookie 受傷後效果，新增 `src/game/afterDamage.ts` 共用收集模組與 `src/game/effects-bs1-after-damage.test.ts`；戰鬥傷害與效果傷害都會在餅乾仍留在戰鬥區時觸發後續傷害，並支援 once-per-turn 登記、玩家／AI pending decision 與 UI 目標選擇。
 - 已達成：修復 `pendingBattle.stage === "attack-effect"` 控制權判定，攻擊後續效果現在由攻擊方處理；AI 作為攻擊方時會自動結算 attack-effect，不再停在 AI 主要階段等待玩家無法操作的 pending battle。同步補上玩家確認棄手牌傷害技能後排入補位的 hook 回歸測試。
 - 已達成：玩家手牌 hover 保留原扇形位置與角度，僅上移 8px、縮放至 1.02；ST5-021 無合法必選目標時不再列入陷阱候選，並以紫色對紫色固定種子 6、19、29、33 鎖定 AI 不再卡住。
+- 待實作：App.tsx（1575 行）容器元件拆分。已分析候選：`BattleScreen`（~1235 行 battle shell）、`FaintEffectModal`、`AfterDamageEffectModal`、`OpponentHandDiscardModal`、`DrawUpToModal`、`StageTriggerModal` 等 inline JSX modal，以及 PlayerBattleRow 的 ~150 行 callback handlers。
 - 拖移卡牌暫不實作；未來若加入，拖放只負責輸入，仍須呼叫既有規則 API，且在 pending decision、確認式大卡與 AI 行動期間停用，並保留按鈕與鍵盤操作。
 - 待官方規則確認後才擴充 `CardEffect`；不得將待確認規則寫成已完成項目。
 - 持續補齊起始牌組以外的複合效果與完整事件優先權。
@@ -117,7 +118,7 @@ npm run cards:import:purple-sample
 
 - 已完成 Brave Beginning BS1 Phase 1/2：`data/cards/official-brave-beginning-bs1.en.json` 建立 adapter 盤點測試，覆蓋 99 筆資料、78 個 base card number、cookie/flip/item/trap/stage 類型分布。
 - BS1 Phase 2 先支援可映射到既有規則引擎的效果文字：棄手牌代價傷害、FLIP 傷害、`return-to-hand`、faint 後 `break-to-trash`、支援區送棄牌區代價、`deck-to-support`、`set-active` 與 `When your turn ends` endPhase 判定；變體卡號如 `BS1-002@1` 會用 `baseCardNumber` 套用共用轉接。
-- 目前共有 658 項單元測試通過。BS1 Phase 3/4/5 已補上攻擊後續效果、非餅乾卡費用與 pending flow 基礎：`damage-all`、`damage-by-break-count`、`modify-attack-by-break-count`、`discard-hand`、`redirect-attack`、`place-source-to-support`、HP 送垃圾桶費用、支援區回手費用，以及「本回合支援區減少」狀態追蹤。
+- 目前共有 668 項單元測試通過。BS1 Phase 3/4/5 已補上攻擊後續效果、非餅乾卡費用與 pending flow 基礎：`damage-all`、`damage-by-break-count`、`modify-attack-by-break-count`、`discard-hand`、`redirect-attack`、`place-source-to-support`、HP 送垃圾桶費用、支援區回手費用，以及「本回合支援區減少」狀態追蹤。
 
 # 2026-07-01 BS1 non-cookie effect verification
 
@@ -129,7 +130,7 @@ npm run cards:import:purple-sample
 
 - 已完成 BS1-006 Mala Sauce Cookie 的 after-damage 流程：新增 `src/game/afterDamage.ts` 收集受傷後效果，戰鬥傷害與 `executeCardEffect` 的效果傷害都會在來源餅乾仍留在戰鬥區時建立 pending after-damage effect。
 - `resolveNextAfterDamageEffect`、typed `GameCommand/PendingDecision`、AI pending handler、`useMatchController` 與 `usePendingEffect` 已接入 after-damage 目標選擇；once-per-turn 使用紀錄會在效果收集或結算時登記，避免同一場上實體重複觸發。
-- 新增 `src/game/effects-bs1-after-damage.test.ts` 覆蓋戰鬥傷害、效果傷害、昏厥不觸發、once-per-turn 登記與官方文字 `afterDamage` 解析；已執行 `npm test`、`npm run lint`、`npm run build`，目前 658 項單元測試通過，build 仍只有 Vite chunk size 警告。
+- 新增 `src/game/effects-bs1-after-damage.test.ts` 覆蓋戰鬥傷害、效果傷害、昏厥不觸發、once-per-turn 登記與官方文字 `afterDamage` 解析；已執行 `npm test`、`npm run lint`、`npm run build`，目前 668 項單元測試通過，build 仍只有 Vite chunk size 警告。
 
 # 2026-07-01 attack-effect control verification
 
@@ -156,7 +157,7 @@ npm run cards:import:purple-sample
   - BS2-006 Prickly Cacti Gloves: ITEM 支付 {R}{R}，選擇對手 0～1 隻餅乾造成 2 點傷害，再選擇己方 1 隻餅乾將 2 張 HP 卡送入棄牌區（hp-to-trash 非傷害，不觸發 FLIP/afterDamage，HP 歸 0 進入休息區）
   - BS2-007 Prickly Cactus Bat: TRAP 支付 {R} 並棄 1 張紅色手牌，選擇對手 LV.1 餅乾造成 2 點傷害（discardHandColor 限制紅色手牌）
 - 新增 `FieldToTrashEffect.stageOnly` 選項，限制只能選擇場景卡；新增 `OpponentHasCookieWithLevelCondition` 條件類型。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 658 項單元測試通過，build 仍只有 Vite chunk size 警告。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 668 項單元測試通過，build 仍只有 Vite chunk size 警告。
 
 # 2026-07-01 BS1/BS2 adapter UI/AI/attack-effect integration
 
@@ -164,7 +165,7 @@ npm run cards:import:purple-sample
 - 修正 AI `ai.ts` 的 `field-to-trash` 目標選擇，`stageOnly` 時只選場景卡，不再先挑戰鬥區餅乾。
 - 修正 `battle.ts` 的 attack-effect 流程，條件不成立時自然跳過效果而非丟錯。
 - 新增 `battle-attack-effect.test.ts` 回歸測試確認條件觸發效果在條件不成立時正確跳過。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 658 項單元測試通過。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 668 項單元測試通過。
 
 # 2026-07-02 BS2 red non-cookie effects implementation
 
@@ -175,4 +176,4 @@ npm run cards:import:purple-sample
 - `parseTarget` 正規表達式擴充支援 `LV.X` 級等篩選（如 `your opponent's LV.1 Cookies`）。
 - 新增 adapter tests 與規則層 tests：BS2-006/007 轉換、hp-to-trash 移除 HP 卡、HP 歸 0 進休息區、紅色手牌驗證與 getTrapCandidates 顏色過濾。
 - 修正 UI `useMatchController.ts` 的 `selectedTrapDiscardCandidates`，依陷阱的 `discardHandColor` 過濾手牌候選，僅顯示符合顏色限制的卡牌，避免玩家選到規則層會拒絕的手牌。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 658 項單元測試通過，build 仍只有 Vite chunk size 警告。
+- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 668 項單元測試通過，build 仍只有 Vite chunk size 警告。
