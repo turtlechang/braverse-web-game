@@ -12,13 +12,24 @@ export const isPlayerControllingState = (
 
 export const getActingPlayerId = (state: GameState): PlayerId => {
   const pendingDecision = getPendingDecision(state)
+  const replacementTask = getCurrentReplacementTask(state)
+  if (
+    replacementTask &&
+    (
+      !pendingDecision ||
+      pendingDecision.kind === 'faint-effect' ||
+      pendingDecision.kind === 'effect-order'
+    )
+  ) {
+    if (state.pendingRefresh) return state.pendingRefresh.playerId
+    if (state.pendingOnPlay) return state.pendingOnPlay.playerId
+    return replacementTask.playerId
+  }
+
   if (pendingDecision) return pendingDecision.playerId
 
   if (state.pendingRefresh) return state.pendingRefresh.playerId
   if (state.pendingOnPlay) return state.pendingOnPlay.playerId
-
-  const replacementTask = getCurrentReplacementTask(state)
-  if (replacementTask) return replacementTask.playerId
 
   if (state.pendingBattle) {
     const battle = state.pendingBattle

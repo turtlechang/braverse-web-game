@@ -1089,6 +1089,19 @@ describe('Starter Deck RED official effect adapter', () => {
             target: { side: 'opponent', min: 0, max: 1 },
           },
         ],
+      })
+    })
+
+    it('ST4-007 Sour Belt Cookie conditional draw includes hand-count-at-most condition', () => {
+      const skill = convertOfficialCookieSkill(findBlueCard('ST4-007'))
+      expect(skill).toBeDefined()
+      expect(skill!.effects).toEqual([
+        {
+          kind: 'draw',
+          amount: 1,
+          condition: { kind: 'hand-count-at-most', count: 6 },
+        },
+      ])
     })
   })
 
@@ -1758,6 +1771,19 @@ describe('Starter Deck RED official effect adapter', () => {
           ],
         })
     })
+
+    it('BS2-049 Salt Crystal Trident converts to conditional draw trap with blue-faint condition', () => {
+      expect(convertOfficialTrapAbility(findBraveBeginningBS2Card('BS2-049')))
+        .toMatchObject({
+          condition: {
+            kind: 'friendly-color-fainted-this-battle',
+            color: 'blue',
+          },
+          effects: [
+            { kind: 'draw-up-to', max: 3 },
+            { kind: 'discard-hand', count: 1 },
+          ],
+        })
+    })
   })
-})
 })

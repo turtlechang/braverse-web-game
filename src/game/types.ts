@@ -330,6 +330,7 @@ export interface InspectDeckEffect {
   lookCount: number
   pickCount: number
   restToBottom: true
+  filterColor?: EnergyColor
 }
 
 export interface OptionalCostAttackEffect {
@@ -341,6 +342,11 @@ export interface OptionalCostAttackEffect {
 
 export interface ReturnToHandEffect {
   kind: 'return-to-hand'
+  target: EffectTargetSelector
+}
+
+export interface ReturnToDeckBottomEffect {
+  kind: 'return-to-deck-bottom'
   target: EffectTargetSelector
 }
 
@@ -390,6 +396,7 @@ export type CardEffect =
   | OpponentBattleToTrashEffect
   | FieldToTrashEffect
   | ReturnToHandEffect
+  | ReturnToDeckBottomEffect
   | OpponentRandomDiscardEffect
   | HpToTrashEffect
   | TrashToSupportEffect
@@ -408,6 +415,7 @@ export type TargetedCardEffect =
   | ViewHpEffect
   | BattleToSupportEffect
   | ReturnToHandEffect
+  | ReturnToDeckBottomEffect
   | FieldToTrashEffect
   | RedirectAttackEffect
   | HpToTrashEffect
@@ -481,6 +489,7 @@ export interface DamageReceivedModifier {
 export interface EffectContext {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
+  sourceCardName?: string
 }
 
 export interface SupportCard {
@@ -532,6 +541,7 @@ export interface ReplacementTask {
 export interface PendingFaintEffect {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
+  sourceCardName?: string
   effect: CardEffect
   context: EffectContext
 }
@@ -539,8 +549,30 @@ export interface PendingFaintEffect {
 export interface PendingAfterDamageEffect {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
+  sourceCardName?: string
   effect: CardEffect
   context: EffectContext
+}
+
+export type PendingEffectOrderKind =
+  | 'faint-effect'
+  | 'after-damage-effect'
+  | 'draw-up-to'
+  | 'inspect-deck'
+  | 'stage-trigger'
+
+export interface PendingEffectOrderItem {
+  id: string
+  kind: PendingEffectOrderKind
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+}
+
+export interface PendingEffectOrder {
+  playerId: PlayerId
+  items: PendingEffectOrderItem[]
+  resolvedOrder?: string[]
 }
 
 export interface PendingReplacement {
@@ -584,6 +616,8 @@ export interface GameState {
     sourceInstanceId: string
     sourceCardName: string
     effectText?: string
+    afterEffects?: CardEffect[]
+    afterEffectContext?: EffectContext
   } | null
   pendingRefresh: {
     playerId: PlayerId
@@ -592,6 +626,7 @@ export interface GameState {
   pendingBattle?: PendingBattle | null
   pendingFaintEffects?: PendingFaintEffect[]
   pendingAfterDamageEffects?: PendingAfterDamageEffect[]
+  pendingEffectOrder?: PendingEffectOrder | null
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
   pendingInspectDeck?: {
     playerId: PlayerId
@@ -600,6 +635,7 @@ export interface GameState {
     revealedCards: GameCard[]
     lookCount: number
     pickCount: number
+    filterColor?: EnergyColor
   } | null
   pendingOptionalCostAttack?: {
     playerId: PlayerId
@@ -644,6 +680,8 @@ export interface PendingBattle {
   damagedInstanceIds?: string[]
   delayedTrap?: {
     playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
     color: EnergyColor
     effects: CardEffect[]
   }

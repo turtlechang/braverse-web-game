@@ -14,7 +14,52 @@ export const handleAiPendingDecision = (
   const pendingDecision = getPendingDecision(state)
 
   if (
+    state.pendingReplacement &&
+    (
+      pendingDecision?.kind === 'faint-effect' ||
+      pendingDecision?.kind === 'effect-order'
+    )
+  ) {
+    return null
+  }
+
+  if (pendingDecision?.kind === 'effect-order') {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 決定同時觸發效果順序。`,
+      }
+    }
+
+    const orderedIds = pendingDecision.items
+      .slice()
+      .sort((left, right) => {
+        const priority = {
+          'draw-up-to': 0,
+          'inspect-deck': 1,
+          'faint-effect': 2,
+          'after-damage-effect': 3,
+          'stage-trigger': 4,
+        } as const
+        return priority[left.kind] - priority[right.kind]
+      })
+      .map((item) => item.id)
+
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-effect-order',
+        playerId,
+        orderedIds,
+      }),
+      action: 'resolve-effect-order',
+      description: `${state.players[playerId].name}決定同時觸發效果順序。`,
+    }
+  }
+
+  if (
     pendingDecision?.kind === 'faint-effect' &&
+    !state.pendingReplacement &&
     !state.pendingRefresh &&
     !state.pendingOnPlay
   ) {
@@ -121,12 +166,27 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 處理牌庫檢視。`,
       }
     }
+    const allIds = pendingDecision.revealedCardIds
+    let pickedId: string | null = allIds[0]
+    let restIds = allIds.slice(1)
+    if (pendingDecision.filterColor) {
+      const matching = state.pendingInspectDeck?.revealedCards.find(
+        (c) => c.energyColor === pendingDecision.filterColor,
+      )
+      if (matching) {
+        pickedId = matching.instanceId
+        restIds = allIds.filter((id) => id !== matching.instanceId)
+      } else {
+        pickedId = null
+        restIds = [...allIds]
+      }
+    }
     return {
       state: applyGameCommand(state, {
         kind: 'resolve-inspect-deck',
         playerId,
-        pickedCardId: pendingDecision.revealedCardIds[0],
-        restOrder: pendingDecision.revealedCardIds.slice(1),
+        pickedCardId: pickedId,
+        restOrder: restIds,
       }),
       action: 'resolve-inspect-deck',
       description: `${state.players[playerId].name}從檢視牌中選取卡片。`,

@@ -98,6 +98,9 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'return-to-hand') {
     return `選擇 ${count}${target}返回手牌。`
   }
+  if (effect.kind === 'return-to-deck-bottom') {
+    return `選擇 ${count}${target}返回牌庫底。`
+  }
   if (effect.kind === 'disable-flip') {
     return `選擇 ${count}${target}，本回合不能發動 FLIP。`
   }
@@ -146,6 +149,7 @@ export const describeEffectResult = (
   if (effect.kind === 'prevent-knockout') return `${names} 已受到保護。`
   if (effect.kind === 'field-to-trash') return `${names} 已放入垃圾桶。`
   if (effect.kind === 'return-to-hand') return `${names} 已返回手牌。`
+  if (effect.kind === 'return-to-deck-bottom') return `${names} 已返回牌庫底。`
   if (effect.kind === 'disable-flip') return `${names} 本回合不能發動 FLIP。`
   if (effect.kind === 'view-hp') return `已查看 ${names} 的 HP。`
   if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`

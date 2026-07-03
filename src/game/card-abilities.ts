@@ -347,6 +347,16 @@ const hasUsableEffect = (
           effect.target.min
       )
     }
+    if (effect.kind === 'return-to-deck-bottom') {
+      const targetPlayer = state.players[
+        getTargetPlayerId(context, effect.target)
+      ]
+      return (
+        targetPlayer.battleArea.length > effect.target.min &&
+        getEffectTargetCandidates(state, context, effect.target).length >=
+          effect.target.min
+      )
+    }
     if (effect.kind === 'gain-hp' && effect.target) {
       if (effect.target.sourceOnly || effect.target.min === 0) return true
       return (

@@ -144,6 +144,7 @@ export const isEffectTargeted = (
   effect.kind === 'view-hp' ||
   effect.kind === 'battle-to-support' ||
   effect.kind === 'return-to-hand' ||
+  effect.kind === 'return-to-deck-bottom' ||
   effect.kind === 'field-to-trash' ||
   effect.kind === 'redirect-attack' ||
   effect.kind === 'hp-to-trash'

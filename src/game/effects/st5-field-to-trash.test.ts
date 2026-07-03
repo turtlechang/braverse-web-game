@@ -203,6 +203,52 @@ describe('field-to-trash', () => {
     ).toThrow('合法目標')
   })
 
+  it('removes only stage card when stageOnly (BS2-046)', () => {
+    const stageCard: GameCard = {
+      id: 'stage-1',
+      instanceId: 'stage-1',
+      name: 'Test Stage',
+      type: 'stage',
+    }
+    const lv1 = createBattleCookie('opp-lv1', 1, 3, 'blue')
+    let state = createTestGameState([], [lv1], { card: stageCard, rested: false })
+
+    const effect: CardEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'opponent', min: 0, max: 1 },
+      stageOnly: true,
+    }
+    state = executeCardEffect(state, context, effect, ['stage-1'])
+
+    expect(state.players['player-two'].stage).toBeNull()
+    expect(state.players['player-two'].battleArea).toHaveLength(1)
+    expect(
+      state.players['player-two'].discardPile.some(
+        (c) => c.instanceId === 'stage-1',
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects battle cookie target when stageOnly', () => {
+    const stageCard: GameCard = {
+      id: 'stage-1',
+      instanceId: 'stage-1',
+      name: 'Test Stage',
+      type: 'stage',
+    }
+    const lv1 = createBattleCookie('opp-lv1', 1, 3, 'blue')
+    const state = createTestGameState([], [lv1], { card: stageCard, rested: false })
+
+    const effect: CardEffect = {
+      kind: 'field-to-trash',
+      target: { side: 'opponent', min: 0, max: 1 },
+      stageOnly: true,
+    }
+    expect(() =>
+      executeCardEffect(state, context, effect, ['opp-lv1']),
+    ).toThrow('場景卡')
+  })
+
   it('returns unchanged when no valid targets', () => {
     const lv2 = createBattleCookie('opp-lv2', 2, 4, 'purple')
     let state = createTestGameState([], [lv2])
@@ -302,5 +348,84 @@ describe('field-to-trash', () => {
     expect(finalizePendingReplacements(result).pendingReplacement).toMatchObject({
       tasks: [{ playerId: 'player-two', remaining: 1 }],
     })
+  })
+})
+
+describe('return-to-deck-bottom', () => {
+  const context: EffectContext = {
+    sourcePlayerId: 'player-one',
+    sourceInstanceId: 'bs2-036',
+  }
+
+  it('returns LV.1 cookie to deck bottom and keeps it in deck', () => {
+    const lv1 = createBattleCookie('self-lv1', 1, 3, 'blue')
+    const lv2 = createBattleCookie('self-lv2', 2, 4, 'blue')
+    const deckCard = createTestCookie('deck-1', 1, 3, 'blue')
+    let state = createTestGameState([lv1, lv2], [])
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [deckCard],
+        },
+      },
+    }
+
+    const effect: CardEffect = {
+      kind: 'return-to-deck-bottom',
+      target: { side: 'self', min: 1, max: 1, maxLevel: 1 },
+    }
+    state = executeCardEffect(state, context, effect, ['self-lv1'])
+
+    const p1 = state.players['player-one']
+    expect(p1.battleArea).toHaveLength(1)
+    expect(p1.battleArea[0].card.instanceId).toBe('self-lv2')
+    expect(p1.deck).toHaveLength(2)
+    expect(p1.deck[0].instanceId).toBe('deck-1')
+    expect(p1.deck[1].instanceId).toBe('self-lv1')
+  })
+
+  it('discards HP cards to discard pile', () => {
+    const lv1 = createBattleCookie('self-lv1', 1, 3, 'blue')
+    const lv2 = createBattleCookie('self-lv2', 2, 4, 'blue')
+    let state = createTestGameState([lv1, lv2], [])
+
+    const effect: CardEffect = {
+      kind: 'return-to-deck-bottom',
+      target: { side: 'self', min: 1, max: 1, maxLevel: 1 },
+    }
+    state = executeCardEffect(state, context, effect, ['self-lv1'])
+
+    const p1 = state.players['player-one']
+    expect(p1.discardPile.some((c) => c.instanceId === 'self-lv1-hp-0')).toBe(true)
+    expect(p1.discardPile.some((c) => c.instanceId === 'self-lv1-hp-1')).toBe(true)
+    expect(p1.discardPile.some((c) => c.instanceId === 'self-lv1-hp-2')).toBe(true)
+  })
+
+  it('returns unchanged when no valid targets', () => {
+    const lv2 = createBattleCookie('self-lv2', 2, 4, 'blue')
+    const state = createTestGameState([lv2], [])
+
+    const effect: CardEffect = {
+      kind: 'return-to-deck-bottom',
+      target: { side: 'self', min: 1, max: 1, maxLevel: 1 },
+    }
+    const result = executeCardEffect(state, context, effect, [])
+    expect(result.players['player-one'].battleArea).toHaveLength(1)
+  })
+
+  it('rejects when return would leave battle area empty', () => {
+    const lv1 = createBattleCookie('self-lv1', 1, 3, 'blue')
+    const state = createTestGameState([lv1], [])
+
+    const effect: CardEffect = {
+      kind: 'return-to-deck-bottom',
+      target: { side: 'self', min: 1, max: 1, maxLevel: 1 },
+    }
+    expect(() =>
+      executeCardEffect(state, context, effect, ['self-lv1']),
+    ).toThrow('戰鬥區必須至少保留')
   })
 })

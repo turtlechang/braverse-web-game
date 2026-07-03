@@ -86,10 +86,18 @@ export const clearDepartedCookieModifiers = (state: GameState): GameState => {
 export const continuePendingReplacements = (
   state: GameState,
 ): GameState => {
-  if (
-    state.status !== 'playing' ||
-    hasBlockingPending({ ...state, pendingReplacement: null })
-  ) {
+  if (state.status !== 'playing') {
+    return state
+  }
+
+  // 排除 pendingFaintEffects 後檢查是否有其他阻塞性狀態
+  // 根據規則：餅乾昏厥後應先補位，再處理昏厥效果
+  const tempState = {
+    ...state,
+    pendingReplacement: null,
+    pendingFaintEffects: [],
+  }
+  if (hasBlockingPending(tempState)) {
     return state
   }
 

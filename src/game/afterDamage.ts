@@ -1,4 +1,3 @@
-import { executeCardEffect } from './effects/execute'
 import { getEffectTargetCandidates } from './effects/targeting'
 import type { GameState, PlayerId } from './types'
 
@@ -27,12 +26,14 @@ export const collectAfterDamageEffectsFromIds = (
         continue
       }
 
+      const context = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: cookie.card.instanceId,
+        sourceCardName: cookie.card.name,
+      }
+
       for (const effect of skill.effects) {
         if (effect.kind === 'damage' || effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
-          const context = {
-            sourcePlayerId: playerId,
-            sourceInstanceId: cookie.card.instanceId,
-          }
           const candidates = getEffectTargetCandidates(result, context, effect.target)
           if (candidates.length > 0) {
             result = {
@@ -42,6 +43,7 @@ export const collectAfterDamageEffectsFromIds = (
                 {
                   sourcePlayerId: playerId,
                   sourceInstanceId: cookie.card.instanceId,
+                  sourceCardName: cookie.card.name,
                   effect,
                   context,
                 },
@@ -49,11 +51,19 @@ export const collectAfterDamageEffectsFromIds = (
             }
           }
         } else {
-          const context = {
-            sourcePlayerId: playerId,
-            sourceInstanceId: cookie.card.instanceId,
+          result = {
+            ...result,
+            pendingAfterDamageEffects: [
+              ...(result.pendingAfterDamageEffects ?? []),
+              {
+                sourcePlayerId: playerId,
+                sourceInstanceId: cookie.card.instanceId,
+                sourceCardName: cookie.card.name,
+                effect,
+                context,
+              },
+            ],
           }
-          result = executeCardEffect(result, context, effect, [])
         }
 
         if (skill.oncePerTurn) {

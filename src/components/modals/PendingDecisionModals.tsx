@@ -1,8 +1,62 @@
 import { useState, useCallback } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import type { GameCard } from '../../game'
+import type { EnergyColor, GameCard, PendingEffectOrderItem } from '../../game'
 import { CardFace } from '../cards/CardVisuals'
 import './PendingDecisionModals.css'
+
+const effectOrderLabels: Record<PendingEffectOrderItem['kind'], string> = {
+  'faint-effect': '昏厥效果',
+  'after-damage-effect': '受傷後效果',
+  'draw-up-to': '抽牌效果',
+  'inspect-deck': '檢視牌庫',
+  'stage-trigger': '場景效果',
+}
+
+export interface EffectOrderModalProps {
+  items: PendingEffectOrderItem[]
+  onConfirm: (orderedIds: string[]) => void
+}
+
+export function EffectOrderModal({
+  items,
+  onConfirm,
+}: EffectOrderModalProps) {
+  const chooseFirst = (firstId: string) => {
+    onConfirm([
+      firstId,
+      ...items
+        .filter((item) => item.id !== firstId)
+        .map((item) => item.id),
+    ])
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal effect-order-modal"
+        role="alertdialog"
+      >
+        <span>同時觸發</span>
+        <h2>選擇效果處理順序</h2>
+        <p className="faint-effect-text">
+          這些效果屬於同一位玩家，請選擇要先處理的效果。
+        </p>
+        <div className="modal-card-options">
+          {items.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => chooseFirst(item.id)}
+            >
+              <strong>{item.sourceCardName}</strong>
+              <span>{effectOrderLabels[item.kind]}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
 
 export interface DrawUpToSelectorProps {
   max: number
@@ -205,13 +259,15 @@ export interface InspectDeckModalProps {
   sourceCardName: string
   revealedCards: GameCard[]
   pickCount: number
-  onConfirm: (pickedId: string, restOrder: string[]) => void
+  filterColor?: EnergyColor
+  onConfirm: (pickedId: string | null, restOrder: string[]) => void
 }
 
 export function InspectDeckModal({
   sourceCardName,
   revealedCards,
   pickCount,
+  filterColor,
   onConfirm,
 }: InspectDeckModalProps) {
   const [pickedId, setPickedId] = useState<string | null>(null)
@@ -233,6 +289,10 @@ export function InspectDeckModal({
 
   const nonPickedOrder = restOrder.filter((id) => id !== pickedId)
 
+  const hasNoMatchingColor =
+    filterColor != null &&
+    revealedCards.every((c) => c.energyColor !== filterColor)
+
   const moveUp = (index: number) => {
     if (index <= 0 || !pickedId) return
     const fullOrder = [...nonPickedOrder]
@@ -250,6 +310,10 @@ export function InspectDeckModal({
   }
 
   const handleConfirm = () => {
+    if (hasNoMatchingColor) {
+      onConfirm(null, restOrder)
+      return
+    }
     if (!pickedId) return
     const finalRest = restOrder.filter((id) => id !== pickedId)
     onConfirm(pickedId, finalRest)
@@ -266,21 +330,30 @@ export function InspectDeckModal({
         <p>
           查看 {revealedCards.length} 張牌，選擇 {pickCount} 張加入手牌，其餘以指定順序放回牌庫底。
         </p>
+        {hasNoMatchingColor && (
+          <p className="inspect-deck-no-match">
+            沒有符合 {filterColor} 顏色的卡牌，將全部放回牌庫底。
+          </p>
+        )}
         <div className="inspect-deck-grid">
-          {revealedCards.map((card) => (
-            <button
-              type="button"
-              key={card.instanceId}
-              className={
-                pickedId === card.instanceId ? 'is-selected' : ''
-              }
-              onClick={() => handlePick(card.instanceId)}
-              aria-label={`選擇${card.name}`}
-            >
-              <CardFace card={card} />
-              <span>{card.name}</span>
-            </button>
-          ))}
+          {revealedCards.map((card) => {
+            const isDisabled = filterColor != null && card.energyColor !== filterColor
+            return (
+              <button
+                type="button"
+                key={card.instanceId}
+                className={
+                  pickedId === card.instanceId ? 'is-selected' : ''
+                }
+                disabled={isDisabled}
+                onClick={() => handlePick(card.instanceId)}
+                aria-label={`選擇${card.name}`}
+              >
+                <CardFace card={card} />
+                <span>{card.name}</span>
+              </button>
+            )
+          })}
         </div>
         {pickedId && nonPickedOrder.length > 0 && (
           <div className="inspect-deck-sort">
@@ -322,10 +395,10 @@ export function InspectDeckModal({
         <div className="modal-actions">
           <button
             type="button"
-            disabled={!pickedId}
+            disabled={!pickedId && !hasNoMatchingColor}
             onClick={handleConfirm}
           >
-            確認並放回
+            {hasNoMatchingColor ? '確認並放回' : '確認並放回'}
           </button>
         </div>
       </section>

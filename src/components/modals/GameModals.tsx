@@ -27,7 +27,7 @@ import { deckChoiceLabel } from '../gameUiLabels'
 import { DeckEditorModal } from './DeckEditorModal'
 import './GameModals.css'
 
-export { OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
+export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
 
 export type OpeningSetupStep =
   | 'deck-selection'
