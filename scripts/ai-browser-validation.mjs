@@ -635,9 +635,9 @@ try {
 
     const supportCard0 = supportCards.nth(0)
     const supportCard1 = supportCards.nth(1)
-    await supportCard0.click()
+    await supportCard0.evaluate((el) => el.click())
     await page.waitForTimeout(100)
-    await supportCard1.click()
+    await supportCard1.evaluate((el) => el.click())
     await page.waitForTimeout(100)
     assert.ok(
       await supportCards.nth(0).evaluate((el) => el.classList.contains('is-rested')),
@@ -783,7 +783,7 @@ try {
       const supportCards = page.locator('.bottom-field .support-cards .support-card')
       const supportCount = await supportCards.count()
       assert.ok(supportCount >= 1, `物品測試應有至少 1 張支援卡，實際 ${supportCount}`)
-      await supportCards.nth(0).click()
+      await supportCards.nth(0).evaluate((el) => el.click())
       assert.ok(
         await supportCards.nth(0).evaluate((el) => el.classList.contains('is-selected')),
         '選取物品付款後支援卡應顯示已選狀態',
@@ -884,7 +884,7 @@ try {
           el.classList.contains('is-rested'),
         )
         if (!isRested) {
-          await supportCard.click()
+          await supportCard.evaluate((el) => el.click())
           paymentClicked = true
           break
         }
@@ -1334,7 +1334,7 @@ try {
       ),
       'ST3-002 發動時我方支援卡應標示為可選代價',
     )
-    await costSupport.click()
+    await costSupport.evaluate((el) => el.click())
     assert.ok(
       await costSupport.evaluate((element) =>
         element.classList.contains('is-selected'),

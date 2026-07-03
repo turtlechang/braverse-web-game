@@ -313,17 +313,16 @@
   height: 100%;
   padding: 7px 12px;
   overflow: hidden;
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
 }
 
 .top-field .support-cards {
-  flex-direction: row-reverse;
+  direction: rtl;
 }
 
 .card-face.support-card {
-  position: relative;
+  position: absolute;
+  bottom: 4px;
+  left: calc(var(--support-index, 0) * 28px + 10px);
   width: 108px;
   flex: none;
   transform-origin: center bottom;
@@ -331,15 +330,22 @@
 
 .card-face.support-card.is-rested {
   transform: rotate(90deg) scale(0.82);
+  left: calc(var(--support-index, 0) * 28px + 20px);
+  bottom: 60px;
 }
 
 .top-field .card-face.support-card {
+  left: auto;
+  right: calc(var(--support-index, 0) * 28px + 10px);
+  bottom: 30px;
   transform-origin: center bottom;
   transform: scale(0.9);
   opacity: 0.8;
 }
 
 .top-field .card-face.support-card.is-rested {
+  right: calc(var(--support-index, 0) * 28px + 20px);
+  bottom: 80px;
   transform: rotate(-90deg) scale(0.8);
   opacity: 0.8;
 }

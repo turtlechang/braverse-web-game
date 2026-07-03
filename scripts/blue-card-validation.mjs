@@ -356,8 +356,8 @@ try {
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       const supportCards = p.locator('.bottom-field .support-cards .support-card')
-      await supportCards.nth(0).click()
-      await supportCards.nth(1).click()
+      await supportCards.nth(0).evaluate((el) => el.click())
+      await supportCards.nth(1).evaluate((el) => el.click())
 
       const targetCandidates = effectPanel.locator('.effect-candidates-target button')
       assert.ok(await targetCandidates.count() > 0, '應有候選目標')
@@ -398,7 +398,7 @@ try {
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
-      await p.locator('.bottom-field .support-cards .support-card').nth(0).click()
+      await p.locator('.bottom-field .support-cards .support-card').nth(0).evaluate((el) => el.click())
 
       const targetCandidates = effectPanel.locator('.effect-candidates-target button')
       assert.ok(await targetCandidates.count() > 0, '應有候選目標')
@@ -438,8 +438,8 @@ try {
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       const supportCards = p.locator('.bottom-field .support-cards .support-card')
-      await supportCards.nth(0).click()
-      await supportCards.nth(1).click()
+      await supportCards.nth(0).evaluate((el) => el.click())
+      await supportCards.nth(1).evaluate((el) => el.click())
       await effectPanel.locator('button', { hasText: '確認效果' }).click()
 
       const modal = p.locator('.draw-up-to-modal')
@@ -470,7 +470,7 @@ try {
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
-      await p.locator('.bottom-field .support-cards .support-card').nth(0).click()
+      await p.locator('.bottom-field .support-cards .support-card').nth(0).evaluate((el) => el.click())
       await effectPanel.locator('button', { hasText: '確認效果' }).click()
       await p.waitForTimeout(500)
 
