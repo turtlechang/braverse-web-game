@@ -243,7 +243,7 @@ try {
         .locator('.top-field .combat-card-wrap .card-badges span')
         .first()
         .innerText()
-      assert.ok(defenderHpBefore.includes('HP 2/'), `支付前對手應有 2 HP，實際：${defenderHpBefore}`)
+      assert.ok(defenderHpBefore.includes('2/'), `支付前對手應有 2 HP，實際：${defenderHpBefore}`)
 
       await decisionModal.getByRole('button', { name: /支付/i }).click()
       const optionGroups = decisionModal.locator('.modal-card-options')
@@ -265,7 +265,7 @@ try {
         .locator('.top-field .combat-card-wrap .card-badges span')
         .first()
         .innerText()
-      assert.ok(defenderHpAfter.includes('HP 1/'), `支付後對手應受到 1 點傷害，實際：${defenderHpAfter}`)
+      assert.ok(defenderHpAfter.includes('1/'), `支付後對手應受到 1 點傷害，實際：${defenderHpAfter}`)
 
       const remainingHandCard = p.locator('.bottom-hand .hand-card-wrap').first()
       await remainingHandCard.locator('.hand-card').click()

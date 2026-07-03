@@ -46,7 +46,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
   - 目前共有 668 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand/PendingDecision pilot 持續涵蓋 faint-effect 與 opponent-hand-discard，UI 與 AI 已接入。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
-- `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡重疊問題以 dispatchEvent 繞行。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
+- `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡改用 flex 排列消除重疊，全部使用真實 Playwright `.click()` 驗證。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
 
@@ -177,3 +177,10 @@ npm run cards:import:purple-sample
 - 新增 adapter tests 與規則層 tests：BS2-006/007 轉換、hp-to-trash 移除 HP 卡、HP 歸 0 進休息區、紅色手牌驗證與 getTrapCandidates 顏色過濾。
 - 修正 UI `useMatchController.ts` 的 `selectedTrapDiscardCandidates`，依陷阱的 `discardHandColor` 過濾手牌候選，僅顯示符合顏色限制的卡牌，避免玩家選到規則層會拒絕的手牌。
 - 已執行 `npm test`、`npm run lint`、`npm run build`，目前 668 項單元測試通過，build 仍只有 Vite chunk size 警告。
+
+# 2026-07-03 Playwright support card click fix
+
+- 修正支援卡 CSS 佈局：從 `position: absolute` 搭配 28px 間距（108px 卡寬造成 80px 重疊）改為 `display: flex; gap: 4px`，消除卡圖子元素攔截 Playwright 點擊的問題。
+- 移除 `ai-browser-validation.mjs` 中 7 處 `dispatchEvent` 繞行，全部改回真實 Playwright `.click()`，提升瀏覽器互動驗證公信力。
+- 修正 `blue-card-validation.mjs` ST4-013 HP 斷言：從 `HP 2/` 放寬為 `2/`，符合 badge 實際渲染格式（Heart SVG 為 `aria-hidden`，不含 "HP" 文字前綴）。
+- 已執行 `npm test`（668 tests）、`npm run lint`、`npm run build`、`npm run test:ai:browser`（20 seeds, 0 stuck）、`npm run test:blue:browser`（1366×768 + 900×506 全通過）。

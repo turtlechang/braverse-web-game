@@ -635,17 +635,9 @@ try {
 
     const supportCard0 = supportCards.nth(0)
     const supportCard1 = supportCards.nth(1)
-    await supportCard0.evaluate((el) => {
-      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
+    await supportCard0.click()
     await page.waitForTimeout(100)
-    await supportCard1.evaluate((el) => {
-      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
+    await supportCard1.click()
     await page.waitForTimeout(100)
     assert.ok(
       await supportCards.nth(0).evaluate((el) => el.classList.contains('is-rested')),
@@ -671,11 +663,7 @@ try {
       )
       assert.ok(isSelected, '點選後休息區卡牌應進入已選狀態')
 
-      await confirmButton.evaluate((el) => {
-        el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-        el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      })
+      await confirmButton.click()
 
       const statusMessage = page.locator('.battle-status-message')
       await statusMessage.filter({ hasText: /放入垃圾桶|移至棄牌區/ }).waitFor()
@@ -699,11 +687,7 @@ try {
       )
       assert.ok(!isTargetable, 'LV.2 休息區卡牌不應標示為效果目標')
 
-      await confirmButton.evaluate((el) => {
-        el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-        el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      })
+      await confirmButton.click()
 
       const statusMessage = page.locator('.battle-status-message')
       await statusMessage.filter({ hasText: /放入垃圾桶|沒有選擇休息區目標/ }).waitFor()
@@ -799,11 +783,7 @@ try {
       const supportCards = page.locator('.bottom-field .support-cards .support-card')
       const supportCount = await supportCards.count()
       assert.ok(supportCount >= 1, `物品測試應有至少 1 張支援卡，實際 ${supportCount}`)
-      await supportCards.nth(0).evaluate((el) => {
-        el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-        el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      })
+      await supportCards.nth(0).click()
       assert.ok(
         await supportCards.nth(0).evaluate((el) => el.classList.contains('is-selected')),
         '選取物品付款後支援卡應顯示已選狀態',
@@ -904,11 +884,7 @@ try {
           el.classList.contains('is-rested'),
         )
         if (!isRested) {
-          await supportCard.evaluate((el) => {
-            el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-            el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-            el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-          })
+          await supportCard.click()
           paymentClicked = true
           break
         }
@@ -1358,11 +1334,7 @@ try {
       ),
       'ST3-002 發動時我方支援卡應標示為可選代價',
     )
-    await costSupport.evaluate((el) => {
-      el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
-      el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
+    await costSupport.click()
     assert.ok(
       await costSupport.evaluate((element) =>
         element.classList.contains('is-selected'),
