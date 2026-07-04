@@ -105,8 +105,18 @@ export function useDeckEditor(): DeckEditorState &
     const all = getAllCardPoolEntries()
 
     return all.filter((entry) => {
-      if (filterColor && entry.color?.toLowerCase() !== filterColor.toLowerCase()) {
-        return false
+      if (filterColor) {
+        const entryColor = entry.color?.toLowerCase()
+        const isWild = !entryColor || entryColor === 'wild'
+        if (filterColor.toLowerCase() === 'wild') {
+          if (!isWild) {
+            return false
+          }
+        } else {
+          if (!isWild && entryColor !== filterColor.toLowerCase()) {
+            return false
+          }
+        }
       }
       if (filterType && entry.type !== filterType) {
         return false

@@ -75,10 +75,22 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'hp-to-trash') {
     return `選擇 ${effect.amount} 張 HP 卡放入垃圾桶。`
   }
+  if (effect.kind === 'draw-up-to-then-discard') {
+    return `最多抽 ${effect.max} 張牌，然後棄 ${effect.discardCount} 張。`
+  }
+  if (effect.kind === 'draw-up-to-opponent-fainted-this-turn') {
+    return `依對手本回合昏厥餅乾數，最多各抽 ${effect.amountPerFainted} 張。`
+  }
+  if (effect.kind === 'prevent-effect-damage') {
+    return '此餅乾不受效果傷害。'
+  }
 
-  const { target, count } = targetText(effect)
+  const { target, count } = targetText(effect as Extract<CardEffect, { target: unknown }>)
   if (effect.kind === 'damage') {
     return `選擇 ${count}${target}，造成 ${effect.amount} 傷害。`
+  }
+  if (effect.kind === 'split-damage') {
+    return `選擇 ${count}${target}，第一個目標造成 ${effect.primaryAmount} 傷害，第二個目標造成 ${effect.secondaryAmount} 傷害。`
   }
   if (effect.kind === 'damage-by-break-count') {
     return `選擇 ${count}${target}，依 break 區條件造成傷害。`
@@ -109,10 +121,14 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${count}${target}放入支援區。`
   }
 
-  const amount = effect.amount
-  return effect.kind === 'modify-attack'
-    ? `選擇 ${count}${target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
-    : `選擇 ${count}${target}，受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+  if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
+    const amount = effect.amount
+    return effect.kind === 'modify-attack'
+      ? `選擇 ${count}${target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      : `選擇 ${count}${target}，受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+  }
+
+  return `效果已處理。`
 }
 
 export const describeEffectResult = (
@@ -155,8 +171,12 @@ export const describeEffectResult = (
   if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`
   if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
 
-  const amount = effect.amount
-  return effect.kind === 'modify-attack'
-    ? `${names} 攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
-    : `${names} 受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+  if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
+    const amount = effect.amount
+    return effect.kind === 'modify-attack'
+      ? `${names} 攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      : `${names} 受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+  }
+
+  return `效果已處理。`
 }

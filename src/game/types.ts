@@ -144,6 +144,14 @@ export interface DamageEffect {
   condition?: EffectCondition
 }
 
+export interface SplitDamageEffect {
+  kind: 'split-damage'
+  primaryAmount: number
+  secondaryAmount: number
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
 export interface DamageAllEffect {
   kind: 'damage-all'
   amount: number
@@ -204,6 +212,21 @@ export interface DrawUpToEffect {
   condition?: EffectCondition
 }
 
+export interface DrawUpToThenDiscardEffect {
+  kind: 'draw-up-to-then-discard'
+  max: number
+  discardCount: number
+  condition?: EffectCondition
+  target?: EffectTargetSelector
+}
+
+export interface DrawUpToOpponentFaintedThisTurnEffect {
+  kind: 'draw-up-to-opponent-fainted-this-turn'
+  amountPerFainted: number
+  condition?: EffectCondition
+  target?: EffectTargetSelector
+}
+
 export interface HandToDeckAndDrawEffect {
   kind: 'hand-to-deck-and-draw'
 }
@@ -259,6 +282,12 @@ export interface DisableBlockEffect {
   kind: 'disable-block'
   duration: 'this-turn'
   side: 'opponent'
+}
+
+export interface PreventEffectDamageEffect {
+  kind: 'prevent-effect-damage'
+  duration: 'until-source-next-turn'
+  target: EffectTargetSelector
 }
 
 export interface ViewHpEffect {
@@ -369,6 +398,7 @@ export interface TrashToSupportEffect {
 
 export type CardEffect =
   | DamageEffect
+  | SplitDamageEffect
   | DamageAllEffect
   | DamageByBreakCountEffect
   | ModifyAttackByBreakCountEffect
@@ -376,6 +406,8 @@ export type CardEffect =
   | ModifyDamageReceivedEffect
   | DrawEffect
   | DrawUpToEffect
+  | DrawUpToThenDiscardEffect
+  | DrawUpToOpponentFaintedThisTurnEffect
   | HandToDeckAndDrawEffect
   | DeckToSupportEffect
   | BreakToTrashEffect
@@ -386,6 +418,7 @@ export type CardEffect =
   | SupportToTrashEffect
   | DisableFlipEffect
   | DisableBlockEffect
+  | PreventEffectDamageEffect
   | ViewHpEffect
   | ModifyAllAttackEffect
   | BattleToSupportEffect
@@ -406,11 +439,13 @@ export type CardEffect =
 
 export type TargetedCardEffect =
   | DamageEffect
+  | SplitDamageEffect
   | DamageByBreakCountEffect
   | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
   | ModifyDamageReceivedEffect
   | PreventKnockoutEffect
+  | PreventEffectDamageEffect
   | DisableFlipEffect
   | ViewHpEffect
   | BattleToSupportEffect
@@ -628,7 +663,10 @@ export interface GameState {
     effectText?: string
     afterEffects?: CardEffect[]
     afterEffectContext?: EffectContext
+    afterEffectsRequireDraw?: boolean
   } | null
+  effectDamagePreventedUntilTurn?: Record<string, number>
+  cookiesFaintedThisTurn?: Record<PlayerId, number>
   pendingRefresh: {
     playerId: PlayerId
     remainingDraws: number

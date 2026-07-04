@@ -35,7 +35,7 @@ const assertPlaying = (state: GameState) => {
 const activateCurrentPlayer = (state: GameState): GameState => {
   const player = state.players[state.activePlayerId]
 
-  return updatePlayer(state, {
+  const activatedState = updatePlayer(state, {
     ...player,
     battleArea: player.battleArea.map((cookie) => ({
       ...cookie,
@@ -47,6 +47,15 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     })),
     stage: player.stage ? { ...player.stage, rested: false } : null,
   })
+
+  return {
+    ...activatedState,
+    cookiesFaintedThisTurn: {
+      ...(activatedState.cookiesFaintedThisTurn ?? {}),
+      [state.activePlayerId]: 0,
+      [getOpponentId(state.activePlayerId)]: 0,
+    } as Record<PlayerId, number>,
+  }
 }
 
 const getEndPhaseSkills = (

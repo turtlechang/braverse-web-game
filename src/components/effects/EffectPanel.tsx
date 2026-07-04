@@ -1,7 +1,7 @@
 import { Check, Sparkles } from 'lucide-react'
 import type { CardEffect, CardSkill, GameCard } from '../../game'
 import { isEffectUntargeted } from '../../game'
-import { CardEffectText, SkillCost } from '../cards/CardVisuals'
+import { CardEffectText, CardFace, SkillCost } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
 import { describeEffect, getSkillLabels } from './effectUiUtils'
 import type { PendingEffect } from './effectUiTypes'
@@ -96,6 +96,13 @@ function EffectPanelContent({
             <span key={label}>{label}</span>
           ))}
         </div>
+        <div className="effect-source-card">
+          <CardFace card={pendingEffect.sourceCard} />
+          <div>
+            <span>{pendingEffect.sourceCard.id}</span>
+            <strong>{pendingEffect.sourceCard.name}</strong>
+          </div>
+        </div>
         <p>
           <CardEffectText
             text={pendingEffect.sourceCard.effectText ?? ''}
@@ -151,7 +158,8 @@ function EffectPanelContent({
                   key={card.instanceId}
                   onClick={() => onToggleCostSupport?.(card.instanceId)}
                 >
-                  {card.name}
+                  <CardFace card={card} selected={selectedCostSupportIds.has(card.instanceId)} />
+                  <span>{card.name}</span>
                 </button>
               ))}
             </div>
@@ -172,7 +180,8 @@ function EffectPanelContent({
                   key={card.instanceId}
                   onClick={() => onToggleDiscardHand?.(card.instanceId)}
                 >
-                  {card.name}
+                  <CardFace card={card} selected={selectedDiscardHandIds.has(card.instanceId)} />
+                  <span>{card.name}</span>
                 </button>
               ))}
             </div>
@@ -195,7 +204,11 @@ function EffectPanelContent({
                 key={card.instanceId}
                 onClick={() => onToggleCandidate?.(card.instanceId)}
               >
-                {card.name}
+                <CardFace
+                  card={card}
+                  selected={pendingEffect.selectedTargetIds.includes(card.instanceId)}
+                />
+                <span>{card.name}</span>
               </button>
             ))}
           </div>
