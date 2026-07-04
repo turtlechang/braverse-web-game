@@ -4,11 +4,13 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import type { CookieCard, GameCard } from '../../game'
+import type { CookieCard, CookieInBattle, GameCard } from '../../game'
 import {
+  AttackResponseModal,
   CardDetailModal,
   DecisionModal,
   DiscardRevealModal,
+  FaintEffectResponseModal,
   FlipResponseModal,
   OpeningSetupModal,
   ResultModal,
@@ -23,6 +25,21 @@ const createHandCard = (index: number): GameCard => ({
   instanceId: `test-hand-${index}`,
   name: `測試手牌 ${index}`,
   type: 'item',
+})
+
+const createBattleCookie = (index: number): CookieInBattle => ({
+  card: {
+    id: `COOKIE-${index}`,
+    instanceId: `test-cookie-${index}`,
+    name: `測試餅乾 ${index}`,
+    type: 'cookie',
+    level: 1,
+    hp: 2,
+    attack: 1,
+    attackCost: 1,
+  },
+  hpCards: [],
+  rested: false,
 })
 
 const findButton = (container: HTMLElement, label: string) =>
@@ -81,6 +98,47 @@ describe('DiscardRevealModal', () => {
 })
 
 describe('TrapResponseModal', () => {
+  it('selects a trap without opening a separate card detail modal', async () => {
+    const trap: GameCard = {
+      id: 'ST4-020',
+      instanceId: 'st4-020-test',
+      name: 'Octo-Ink Spray',
+      type: 'trap',
+      trap: {
+        text: 'Discard 2 cards. Select up to 1 opposing Cookie.',
+        cost: { energy: { blue: 1 }, discardHand: 2 },
+        effects: [],
+      },
+    }
+    const onSelectTrap = vi.fn()
+    const onInspectCard = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={null}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        onSelectTrap={onSelectTrap}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        onInspectCard={onInspectCard}
+      />,
+    ))
+
+    await click(findButton(container, 'Octo-Ink Spray'))
+
+    expect(onSelectTrap).toHaveBeenCalledWith(trap.instanceId)
+    expect(onInspectCard).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+  })
+
   it('shows discard-hand candidates and blocks activation until the cost is selected', () => {
     const trap: GameCard = {
       id: 'ST4-020',
@@ -113,7 +171,141 @@ describe('TrapResponseModal', () => {
     expect(markup).toContain('選擇 2 張手牌棄置')
     expect(markup).toContain('已選 1／2')
     expect(markup).toContain('測試手牌 1')
+    expect(markup).toContain('Discard 2 cards.')
     expect(markup).toContain('disabled=""')
+  })
+
+  it('returns to response selection without skipping the attack response', async () => {
+    const trap: GameCard = {
+      id: 'ST4-020',
+      instanceId: 'st4-020-test',
+      name: 'Octo-Ink Spray',
+      type: 'trap',
+    }
+    const onBack = vi.fn()
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        onSelectTrap={() => undefined}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={onSkip}
+        onBack={onBack}
+      />,
+    ))
+
+    await click(findButton(container, '返回'))
+
+    expect(onBack).toHaveBeenCalledOnce()
+    expect(onSkip).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('AttackResponseModal', () => {
+  it('minimizes and restores the response choice prompt', async () => {
+    const trap = createHandCard(1)
+    const blocker = createBattleCookie(1)
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <AttackResponseModal
+        trapCards={[trap]}
+        blockerCards={[blocker]}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    await click(findButton(container, '縮小'))
+    expect(container.querySelector('.attack-response-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '陷阱 1 張',
+    )
+
+    await click(
+      container.querySelector<HTMLButtonElement>('.card-reveal-dock') ??
+        undefined,
+    )
+    expect(container.querySelector('.attack-response-modal')).not.toBeNull()
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('FaintEffectResponseModal', () => {
+  const aloeCard: CookieCard = {
+    id: 'BS2-040',
+    instanceId: 'test-aloe',
+    name: 'Aloe Cookie',
+    type: 'cookie',
+    level: 1,
+    hp: 2,
+    attack: 2,
+    attackCost: 2,
+    effectText:
+      'When this Cookie faints, view the top 3 cards of your deck. Out of the 3 cards, select 1 {B} card, show it to your opponent, and place that card in your hand. Then, return the remaining cards to the bottom of your deck in any order.',
+  }
+
+  it('treats untargeted faint effects as mandatory resolution instead of skip', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={0}
+        maxTargets={0}
+        selectedTargetCount={0}
+        onConfirm={onConfirm}
+      />,
+    ))
+
+    expect(container.querySelector('.battle-response-modal')).not.toBeNull()
+    expect(container.textContent).toContain('確認結算')
+    expect(container.textContent).not.toContain('略過')
+
+    await click(findButton(container, '確認結算'))
+    expect(onConfirm).toHaveBeenCalledOnce()
+
+    await act(() => root.unmount())
+  })
+
+  it('minimizes and restores the faint effect prompt', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={0}
+        maxTargets={0}
+        selectedTargetCount={0}
+        onConfirm={() => undefined}
+      />,
+    ))
+
+    await click(findButton(container, '縮小'))
+    expect(container.querySelector('.faint-response-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '昏厥效果待結算',
+    )
+
+    await click(
+      container.querySelector<HTMLButtonElement>('.card-reveal-dock') ??
+        undefined,
+    )
+    expect(container.querySelector('.faint-response-modal')).not.toBeNull()
+
+    await act(() => root.unmount())
   })
 })
 

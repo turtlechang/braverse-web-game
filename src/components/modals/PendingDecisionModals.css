@@ -18,6 +18,14 @@
   width: min(620px, 100%);
 }
 
+.draw-up-to-modal {
+  width: min(620px, 100%);
+}
+
+.hand-discard-modal {
+  width: min(720px, 100%);
+}
+
 .inspect-deck-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -55,11 +63,11 @@
   display: inline-block;
   padding: 2px 10px;
   border-radius: 10px;
-  background: rgba(105, 220, 255, 0.18);
-  color: #5a8aaa;
+  background: rgba(113, 233, 255, 0.14);
+  color: #71e9ff;
   font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 800;
+  letter-spacing: 0;
   margin-bottom: 10px;
 }
 
@@ -68,9 +76,8 @@
   align-items: flex-start;
   gap: 14px;
   padding: 12px;
-  border: 1px solid rgba(105, 220, 255, 0.35);
-  border-radius: 8px;
-  background: rgba(105, 220, 255, 0.06);
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  background: rgba(3, 20, 53, 0.45);
   margin-bottom: 14px;
   text-align: left;
 }
@@ -95,13 +102,13 @@
   margin: 0;
   font-size: 0.8rem;
   line-height: 1.5;
-  color: #5a6a8a;
+  color: #bbdaf3;
 }
 
 .draw-up-to-modal .faint-target-hint {
   margin-bottom: 12px;
   font-size: 0.88rem;
-  color: #3a5a7a;
+  color: #bbdaf3;
 }
 
 .draw-up-to-options {
@@ -113,6 +120,7 @@
 
 .draw-up-to-option {
   min-width: 90px;
+  min-height: 108px;
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
@@ -148,6 +156,23 @@
   font-size: 0.68rem;
   color: rgba(180, 200, 220, 0.7);
   font-weight: 400;
+}
+
+.draw-up-to-actions {
+  justify-content: center;
+}
+
+.hand-discard-options {
+  justify-content: flex-start;
+  padding-bottom: 6px;
+}
+
+.hand-discard-options .card-face {
+  width: 96px;
+}
+
+.hand-discard-actions {
+  justify-content: center;
 }
 
 .draw-up-to-option.is-selected .draw-up-to-option-label {

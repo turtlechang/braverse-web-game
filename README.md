@@ -4,7 +4,7 @@
 
 ## 開發背景
 
-本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。三副起始牌組共 10 張物品卡與 2 張場景卡已完整支援，含費用支付、主階段動作、場景替換橫置啟動、複合效果暫停與 OnPlay/Refresh/補位銜接，AI 以 deterministic 策略使用。桌機 UI 採滿版桌墊聚焦 HUD，以窄型五階段列、中央操作指引、55/45 戰鬥／支援區與按需展開的資源牌堆降低周邊資訊干擾；FLIP、物品與陷阱會以可縮小的確認式大卡暫停展示。App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；src/game/commands.ts 的 typed GameCommand 已從 pilot 擴充為全覆蓋指令層（8 種決策指令 + 24 種玩家動作指令），applyGameCommand 會在 GameState.commandLog 記錄每筆指令，src/game/replay.ts 提供 replayCommands/replayCommandLog 重播能力。桌面 MatchToolbar 已移至 PhaseRail 上方；雙方手牌採支援區邊界內的扇形呈現，我方右側切齊、對手左側切齊，動態調整間距、弧度與 z-index；我方 hover 保留扇形位置與角度，僅提供輕微上移提示。
+本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。三副起始牌組共 10 張物品卡與 2 張場景卡已完整支援，含費用支付、主階段動作、場景替換橫置啟動、複合效果暫停與 OnPlay/Refresh/補位銜接，AI 以 deterministic 策略使用。桌機 UI 採滿版桌墊聚焦 HUD，以窄型五階段列、中央操作指引、55/45 戰鬥／支援區與按需展開的資源牌堆降低周邊資訊干擾；FLIP、物品、陷阱、昏厥效果、抽牌決策與棄手牌決策會以可縮小的深色置中提示框暫停展示。App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；src/game/commands.ts 的 typed GameCommand 已從 pilot 擴充為全覆蓋指令層（8 種決策指令 + 24 種玩家動作指令），applyGameCommand 會在 GameState.commandLog 記錄每筆指令，src/game/replay.ts 提供 replayCommands/replayCommandLog 重播能力。桌面 MatchToolbar 已移至 PhaseRail 上方；雙方手牌採支援區邊界內的扇形呈現，我方右側切齊、對手左側切齊，動態調整間距、弧度與 z-index；我方 hover 保留扇形位置與角度，僅提供輕微上移提示。
 
 目前以《綜合規則》Ver.1.2、《CRB 遊戲指南》240812 更新版、《CRB 說明書 P1》及《裁判指南》作為規則文件基線；專案裁定與仍待新版官方資料覆核的項目記錄於 `docs/rule-clarifications.md`。
 
@@ -49,6 +49,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
+- 昏厥效果、`draw-up-to` 抽牌決策與後續棄手牌決策已改用與攻擊宣告回應一致的深色置中提示框與可縮小 dock。BS2-040 Aloe Cookie 的強制昏厥效果以「確認結算」進入檢視牌庫流程，不再呈現略過語意；BS2-049 Salt Crystal Trident 會先在同一套提示框選擇抽牌數，抽牌後再切到棄置手牌選擇 UI。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
 
@@ -61,6 +62,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已達成：修復 `isEffectUntargeted` 錯誤標記 `support-to-trash`、`trash-to-battle`、`support-to-hand` 為無目標，避免 AI 與 UI 在這些效果上出錯；擴充 `gain-hp` 效果支援非 FLIP 技能路徑（ST3-001 Muscle Cookie、ST2-004 Macaron Cookie）；新增 UI 動畫回饋（攻擊抖動、抽牌滑入、傷害閃爍、昏厥縮小）與 PhaseRail 回合指示器，提升真人玩家輪流操作體驗。
 - 已達成：修正 ST3-004 Vampire Cookie 複合 OnPlay 效果（{ap} cost GGGN，Select up to 1 opponent Cookie receives 2 damage, Then this Cookie gains +1 HP），於 official-effect-adapter 的 exactStarterEffects 新增 damage + gain-hp 明確轉換；修正 ST3-017 Viney Vines 攻擊效果第二段 support-to-trash 支援卡候選無法選取問題，於 usePendingEffect 新增 supportEffectTargetIds 供 toggleEffectTarget 接受支援卡目標。
 - 已達成：開局牌組選擇與 AI 隨機牌組、猜拳先後攻、玩家活躍／抽牌自動推進、支援放置後自動進主要階段、頂部 HUD、滿版無捲軸桌機畫布、公開卡牌詳情，以及可縮小的 FLIP／物品／陷阱確認式大卡。
+- 已達成：效果決策提示框統一化，Aloe Cookie 昏厥強制效果、BS2-049 抽牌與後續棄手牌選擇皆使用深色置中可縮小 modal，避免淺色浮窗遮擋牌桌與「略過」語意誤導。
 - 已達成：主選單、對戰入口與牌組編輯器整合；玩家自訂牌組需通過 60 張、同卡 4 張、至少 1 張餅乾、FLIP 不超過 16 張檢查後才能開始對戰，AI 牌組在進入對戰前從五色起始牌組隨機決定。
 - 已達成：最大化桌面版桌墊聚焦改版，移除固定右側 HUD，採窄型階段列、55/45 場地、資源牌堆浮層、中央操作指引與選取後才顯示的手牌合法動作；窄版同步維持 55/45 比例並調整卡牌排列。
 - 已達成：ST3-002／ST3-005／ST3-015 可從我方支援區直接選擇卡牌作為送入棄牌區的技能代價；同一張支援卡不可同時支付能量與特殊代價。

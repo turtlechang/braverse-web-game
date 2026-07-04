@@ -5,6 +5,8 @@ import { act } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import type { CookieCard, GameCard } from '../../game'
 import {
+  DrawUpToResponseModal,
+  HandDiscardResponseModal,
   OptionalCostAttackModal,
   InspectDeckModal,
 } from './PendingDecisionModals'
@@ -41,6 +43,213 @@ function findButtonByText(
     btn.textContent?.includes(text),
   )
 }
+
+describe('DrawUpToResponseModal', () => {
+  const tridentCard: GameCard = {
+    id: 'BS2-049',
+    instanceId: 'test-bs2-049',
+    name: 'Salt Crystal Trident',
+    type: 'trap',
+    effectText:
+      '《{B}》 During this battle, if 1 of your {B} Cookies faints, you can draw up to 3 cards from your deck and discard 1 card from your hand.',
+  }
+
+  it('uses the battle response modal style instead of the faint floating prompt', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DrawUpToResponseModal
+          sourceCardName="Salt Crystal Trident"
+          sourceCard={tridentCard}
+          effectText={tridentCard.effectText}
+          max={3}
+          deckSize={47}
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.battle-response-modal.draw-up-to-modal')).not.toBeNull()
+    expect(container.querySelector('.faint-response-modal')).toBeNull()
+    expect(container.textContent).toContain('抽牌效果')
+    expect(container.textContent).toContain('抽 3 張')
+
+    await act(() => {
+      findButtonByText(container, '抽 3 張')!.click()
+    })
+    await act(() => {
+      findButtonByText(container, '抽取 3 張牌')!.click()
+    })
+
+    expect(onConfirm).toHaveBeenCalledWith(3)
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('minimizes and restores the draw-up-to prompt', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DrawUpToResponseModal
+          sourceCardName="Salt Crystal Trident"
+          sourceCard={tridentCard}
+          effectText={tridentCard.effectText}
+          max={3}
+          deckSize={2}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '縮小')!.click()
+    })
+
+    expect(container.querySelector('.draw-up-to-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '最多抽 2 張牌',
+    )
+
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.card-reveal-dock')!.click()
+    })
+
+    expect(container.querySelector('.draw-up-to-modal')).not.toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+})
+
+describe('HandDiscardResponseModal', () => {
+  const tridentCard: GameCard = {
+    id: 'BS2-049',
+    instanceId: 'test-bs2-049',
+    name: 'Salt Crystal Trident',
+    type: 'trap',
+    effectText:
+      '《{B}》 During this battle, if 1 of your {B} Cookies faints, you can draw up to 3 cards from your deck and discard 1 card from your hand.',
+  }
+
+  it('uses the same battle response modal style for the discard step', async () => {
+    const onToggleCard = vi.fn()
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Salt Crystal Trident"
+          sourceCard={tridentCard}
+          effectText={tridentCard.effectText}
+          hand={[createHandCard(1), createHandCard(2)]}
+          requiredCount={1}
+          selectedIds={[]}
+          onToggleCard={onToggleCard}
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.battle-response-modal.hand-discard-modal')).not.toBeNull()
+    expect(container.querySelector('.faint-response-modal')).toBeNull()
+    expect(container.textContent).toContain('棄置手牌')
+    expect(findButtonByText(container, '確認棄置')!.disabled).toBe(true)
+
+    await act(() => {
+      findButtonByText(container, '測試手牌 1')!.click()
+    })
+
+    expect(onToggleCard).toHaveBeenCalledWith('test-hand-1')
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('confirms after the required hand card count is selected', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Salt Crystal Trident"
+          sourceCard={tridentCard}
+          effectText={tridentCard.effectText}
+          hand={[createHandCard(1), createHandCard(2)]}
+          requiredCount={1}
+          selectedIds={['test-hand-1']}
+          onToggleCard={() => undefined}
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    const confirm = findButtonByText(container, '確認棄置')
+    expect(confirm!.disabled).toBe(false)
+
+    await act(() => {
+      confirm!.click()
+    })
+
+    expect(onConfirm).toHaveBeenCalledOnce()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('minimizes and restores the hand discard prompt', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Salt Crystal Trident"
+          sourceCard={tridentCard}
+          effectText={tridentCard.effectText}
+          hand={[createHandCard(1)]}
+          requiredCount={1}
+          selectedIds={[]}
+          onToggleCard={() => undefined}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '縮小')!.click()
+    })
+
+    expect(container.querySelector('.hand-discard-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '已選擇 0/1 張手牌',
+    )
+
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.card-reveal-dock')!.click()
+    })
+
+    expect(container.querySelector('.hand-discard-modal')).not.toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+})
 
 describe('OptionalCostAttackModal', () => {
   it('calls onPay with exact discard IDs and target ID after full flow', async () => {
