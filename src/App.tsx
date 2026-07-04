@@ -51,6 +51,7 @@ import {
   OptionalCostAttackModal,
   InspectDeckModal,
   DrawUpToSelector,
+  EffectOrderModal,
   type OpeningSetupStep,
 } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
@@ -215,6 +216,11 @@ function App() {
         match.game.pendingDrawUpTo.playerId === match.viewerPlayerId,
     ) ||
     Boolean(
+      match.game.pendingEffectOrder &&
+        !match.game.pendingEffectOrder.resolvedOrder &&
+        match.game.pendingEffectOrder.playerId === match.viewerPlayerId,
+    ) ||
+    Boolean(
       match.game.pendingStageTrigger &&
         match.game.pendingStageTrigger.playerId === match.viewerPlayerId,
     ) ||
@@ -248,14 +254,32 @@ function App() {
   const pendingInspect =
     match.game.pendingInspectDeck &&
     match.game.pendingInspectDeck.playerId === match.viewerPlayerId &&
-    !match.game.pendingRefresh
+    !match.game.pendingRefresh &&
+    !(
+      match.game.pendingEffectOrder &&
+      !match.game.pendingEffectOrder.resolvedOrder
+    )
       ? match.game.pendingInspectDeck
       : null
 
   const pendingOptionalCost =
     match.game.pendingOptionalCostAttack &&
-    match.game.pendingOptionalCostAttack.playerId === match.viewerPlayerId
+    match.game.pendingOptionalCostAttack.playerId === match.viewerPlayerId &&
+    !(
+      match.game.pendingEffectOrder &&
+      !match.game.pendingEffectOrder.resolvedOrder
+    )
       ? match.game.pendingOptionalCostAttack
+      : null
+
+  const pendingEffectOrder =
+    match.game.pendingEffectOrder &&
+    !match.game.pendingEffectOrder.resolvedOrder &&
+    match.game.pendingEffectOrder.playerId === match.viewerPlayerId &&
+    !match.game.pendingReplacement &&
+    !match.game.pendingRefresh &&
+    !match.game.pendingOnPlay
+      ? match.game.pendingEffectOrder
       : null
 
   const opponentBattleCards = match.game.players[
@@ -946,9 +970,11 @@ function App() {
                 '昏厥效果'}
             </p>
             <p className="faint-target-hint">
-              {match.faintMin === 0
-                ? `選擇最多 ${match.faintMax} 個對手餅乾作為目標，或略過。`
-                : `選擇 ${match.faintMin} 個對手餅乾作為目標。`}
+              {match.faintMin === 0 && match.faintMax === 0
+                ? '無可選擇的目標，請略過。'
+                : match.faintMin === 0
+                  ? `選擇最多 ${match.faintMax} 個對手餅乾作為目標，或略過。`
+                  : `選擇 ${match.faintMin} 個對手餅乾作為目標。`}
             </p>
             <div className="faint-modal-actions">
               {match.faintMin === 0 && (
@@ -1088,7 +1114,10 @@ function App() {
             >
               <h2>
                 {match.game.pendingOpponentHandDiscard.sourceCardName}{' '}
-                要求棄置手牌
+                {match.game.pendingOpponentHandDiscard.sourcePlayerId ===
+                  match.viewerPlayerId
+                  ? '要求你棄置手牌'
+                  : '要求棄置手牌'}
               </h2>
               <p className="faint-effect-text">
                 {(() => {
@@ -1105,7 +1134,10 @@ function App() {
                   return (
                     source?.card.effectText ??
                     source?.card.skill?.text ??
-                    '對手必須棄置手牌'
+                    (match.game.pendingOpponentHandDiscard!.sourcePlayerId ===
+                    match.viewerPlayerId
+                      ? '你必須棄置手牌'
+                      : '對手必須棄置手牌')
                   )
                 })()}
               </p>
@@ -1141,7 +1173,7 @@ function App() {
                         )
                       }
                     >
-                      <CardFace card={card} />
+                      <CardFace card={card} selected={match.selectedOpponentDiscardIds.includes(card.instanceId)} />
                       <span>{card.name}</span>
                     </button>
                   ),
@@ -1179,6 +1211,7 @@ function App() {
       {match.game.pendingDrawUpTo &&
         match.game.pendingDrawUpTo.playerId ===
           match.viewerPlayerId &&
+        !pendingEffectOrder &&
         !pending.pendingEffect && (() => {
           const drawUpTo = match.game.pendingDrawUpTo
           const sourceCard = Object.values(match.game.players)
@@ -1259,6 +1292,7 @@ function App() {
       {match.game.pendingStageTrigger &&
         match.game.pendingStageTrigger.playerId ===
           match.viewerPlayerId &&
+        !pendingEffectOrder &&
         !pending.pendingEffect && (
           <div
             className="modal-backdrop"
@@ -1496,6 +1530,23 @@ function App() {
         />
       )}
 
+      {pendingEffectOrder && !pending.pendingEffect && (
+        <EffectOrderModal
+          items={pendingEffectOrder.items}
+          onConfirm={(orderedIds) => {
+            match.runAction(
+              (current) =>
+                applyGameCommand(current, {
+                  kind: 'resolve-effect-order',
+                  playerId: match.viewerPlayerId,
+                  orderedIds,
+                }),
+              '已決定同時觸發效果的處理順序。',
+            )
+          }}
+        />
+      )}
+
       {pendingOptionalCost && (
         <OptionalCostAttackModal
           key={pendingOptionalCost.sourceInstanceId}
@@ -1537,6 +1588,7 @@ function App() {
           sourceCardName={pendingInspect.sourceCardName}
           revealedCards={pendingInspect.revealedCards}
           pickCount={pendingInspect.pickCount}
+          filterColor={pendingInspect.filterColor}
           onConfirm={(pickedId, restOrder) => {
             match.runAction(
               (current) =>
@@ -1546,7 +1598,9 @@ function App() {
                   pickedCardId: pickedId,
                   restOrder,
                 }),
-              `已選擇卡牌加入手牌，其餘放回牌庫底。`,
+              pickedId !== null
+                ? `已選擇卡牌加入手牌，其餘放回牌庫底。`
+                : `沒有符合顏色的卡牌，全部放回牌庫底。`,
             )
           }}
         />

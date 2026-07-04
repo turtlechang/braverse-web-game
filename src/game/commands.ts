@@ -12,7 +12,14 @@ import {
   resolveInspectDeck,
   resolveOpponentHandDiscard,
 } from './effects'
-import type { AbilityCost, CardEffect, GameState, PlayerId } from './types'
+import type {
+  AbilityCost,
+  CardEffect,
+  EnergyColor,
+  GameState,
+  PendingEffectOrderItem,
+  PlayerId,
+} from './types'
 
 export interface FaintEffectDecision {
   kind: 'faint-effect'
@@ -42,6 +49,7 @@ export interface InspectDeckDecision {
   lookCount: number
   pickCount: number
   revealedCardIds: string[]
+  filterColor?: EnergyColor
 }
 
 export interface OptionalCostAttackDecision {
@@ -82,6 +90,14 @@ export interface AfterDamageEffectDecision {
   max: number
 }
 
+export interface EffectOrderDecision {
+  kind: 'effect-order'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  items: PendingEffectOrderItem[]
+}
+
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
@@ -90,6 +106,7 @@ export type PendingDecision =
   | DrawUpToDecision
   | StageTriggerDecision
   | AfterDamageEffectDecision
+  | EffectOrderDecision
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -106,7 +123,7 @@ export interface ResolveOpponentHandDiscardCommand {
 export interface ResolveInspectDeckCommand {
   kind: 'resolve-inspect-deck'
   playerId: PlayerId
-  pickedCardId: string
+  pickedCardId: string | null
   restOrder: string[]
 }
 
@@ -136,6 +153,12 @@ export interface ResolveAfterDamageEffectCommand {
   targetIds: string[]
 }
 
+export interface ResolveEffectOrderCommand {
+  kind: 'resolve-effect-order'
+  playerId: PlayerId
+  orderedIds: string[]
+}
+
 export type GameCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
@@ -144,6 +167,76 @@ export type GameCommand =
   | ResolveDrawUpToCommand
   | ResolveStageTriggerCommand
   | ResolveAfterDamageEffectCommand
+  | ResolveEffectOrderCommand
+
+const isEffectOrderItemActive = (
+  state: GameState,
+  item: PendingEffectOrderItem,
+): boolean => {
+  if (item.kind === 'faint-effect') {
+    return Boolean(
+      state.pendingFaintEffects?.some(
+        (pending) => pending.sourceInstanceId === item.sourceInstanceId,
+      ) ||
+        state.pendingInspectDeck?.sourceInstanceId === item.sourceInstanceId ||
+        state.pendingDrawUpTo?.sourceInstanceId === item.sourceInstanceId ||
+        state.pendingStageTrigger?.sourceInstanceId === item.sourceInstanceId ||
+        state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId,
+    )
+  }
+  if (item.kind === 'after-damage-effect') {
+    return Boolean(
+      state.pendingAfterDamageEffects?.some(
+        (pending) => pending.sourceInstanceId === item.sourceInstanceId,
+      ) ||
+        state.pendingInspectDeck?.sourceInstanceId === item.sourceInstanceId ||
+        state.pendingDrawUpTo?.sourceInstanceId === item.sourceInstanceId ||
+        state.pendingStageTrigger?.sourceInstanceId === item.sourceInstanceId,
+    )
+  }
+  if (item.kind === 'draw-up-to') {
+    return (
+      state.pendingDrawUpTo?.sourceInstanceId === item.sourceInstanceId ||
+      state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId
+    )
+  }
+  if (item.kind === 'inspect-deck') {
+    return state.pendingInspectDeck?.sourceInstanceId === item.sourceInstanceId
+  }
+  if (item.kind === 'stage-trigger') {
+    return state.pendingStageTrigger?.sourceInstanceId === item.sourceInstanceId
+  }
+  return false
+}
+
+const getOrderedEffectItem = (
+  state: GameState,
+): PendingEffectOrderItem | null => {
+  const order = state.pendingEffectOrder
+  if (!order?.resolvedOrder) return null
+
+  for (const id of order.resolvedOrder) {
+    const item = order.items.find((candidate) => candidate.id === id)
+    if (item && isEffectOrderItemActive(state, item)) {
+      return item
+    }
+  }
+
+  return null
+}
+
+const isAllowedByEffectOrder = (
+  orderedItem: PendingEffectOrderItem | null,
+  kind: PendingEffectOrderItem['kind'],
+  sourceInstanceId: string,
+): boolean =>
+  !orderedItem ||
+  orderedItem.kind === kind ||
+  (
+    (orderedItem.kind === 'after-damage-effect' ||
+      orderedItem.kind === 'faint-effect') &&
+    orderedItem.sourceInstanceId === sourceInstanceId
+  )
 
 export const getPendingDecision = (
   state: GameState,
@@ -152,7 +245,27 @@ export const getPendingDecision = (
     return null
   }
 
-  if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
+  if (state.pendingEffectOrder && !state.pendingEffectOrder.resolvedOrder) {
+    return {
+      kind: 'effect-order',
+      playerId: state.pendingEffectOrder.playerId,
+      sourcePlayerId: state.pendingEffectOrder.playerId,
+      sourceInstanceId: state.pendingEffectOrder.items[0]?.sourceInstanceId ?? '',
+      items: state.pendingEffectOrder.items,
+    }
+  }
+
+  const orderedItem = getOrderedEffectItem(state)
+
+  if (
+    state.pendingFaintEffects &&
+    state.pendingFaintEffects.length > 0 &&
+    isAllowedByEffectOrder(
+      orderedItem,
+      'faint-effect',
+      state.pendingFaintEffects[0].sourceInstanceId,
+    )
+  ) {
     const faint = state.pendingFaintEffects[0]
     const { min, max } = getFaintEffectMinMax(faint.effect)
     return {
@@ -165,7 +278,15 @@ export const getPendingDecision = (
     }
   }
 
-  if (state.pendingAfterDamageEffects && state.pendingAfterDamageEffects.length > 0) {
+  if (
+    state.pendingAfterDamageEffects &&
+    state.pendingAfterDamageEffects.length > 0 &&
+    isAllowedByEffectOrder(
+      orderedItem,
+      'after-damage-effect',
+      state.pendingAfterDamageEffects[0].sourceInstanceId,
+    )
+  ) {
     const pending = state.pendingAfterDamageEffects[0]
     const { min, max } = getAfterDamageEffectMinMax(pending.effect)
     return {
@@ -191,7 +312,15 @@ export const getPendingDecision = (
     }
   }
 
-  if (state.pendingInspectDeck && !state.pendingRefresh) {
+  if (
+    state.pendingInspectDeck &&
+    !state.pendingRefresh &&
+    isAllowedByEffectOrder(
+      orderedItem,
+      'inspect-deck',
+      state.pendingInspectDeck.sourceInstanceId,
+    )
+  ) {
     const pending = state.pendingInspectDeck
     return {
       kind: 'inspect-deck',
@@ -202,6 +331,7 @@ export const getPendingDecision = (
       lookCount: pending.lookCount,
       pickCount: pending.pickCount,
       revealedCardIds: pending.revealedCards.map((c) => c.instanceId),
+      filterColor: pending.filterColor,
     }
   }
 
@@ -219,7 +349,15 @@ export const getPendingDecision = (
     }
   }
 
-  if (state.pendingDrawUpTo && !state.pendingRefresh) {
+  if (
+    state.pendingDrawUpTo &&
+    !state.pendingRefresh &&
+    isAllowedByEffectOrder(
+      orderedItem,
+      'draw-up-to',
+      state.pendingDrawUpTo.sourceInstanceId,
+    )
+  ) {
     const pending = state.pendingDrawUpTo
     return {
       kind: 'draw-up-to',
@@ -231,7 +369,14 @@ export const getPendingDecision = (
     }
   }
 
-  if (state.pendingStageTrigger) {
+  if (
+    state.pendingStageTrigger &&
+    isAllowedByEffectOrder(
+      orderedItem,
+      'stage-trigger',
+      state.pendingStageTrigger.sourceInstanceId,
+    )
+  ) {
     const pending = state.pendingStageTrigger
     return {
       kind: 'stage-trigger',
@@ -254,6 +399,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-draw-up-to': 'draw-up-to',
   'resolve-stage-trigger': 'stage-trigger',
   'resolve-after-damage-effect': 'after-damage-effect',
+  'resolve-effect-order': 'effect-order',
 }
 
 export const applyGameCommand = (
@@ -275,6 +421,31 @@ export const applyGameCommand = (
   }
 
   switch (command.kind) {
+    case 'resolve-effect-order': {
+      const pending = state.pendingEffectOrder
+      if (!pending || pending.playerId !== command.playerId) {
+        throw new GameRuleError('Invalid effect order decision.')
+      }
+
+      const expectedIds = pending.items.map((item) => item.id).sort()
+      const orderedIds = [...command.orderedIds]
+      const uniqueIds = [...new Set(orderedIds)]
+      if (
+        uniqueIds.length !== orderedIds.length ||
+        orderedIds.length !== expectedIds.length ||
+        uniqueIds.sort().join('|') !== expectedIds.join('|')
+      ) {
+        throw new GameRuleError('Invalid effect order decision.')
+      }
+
+      return {
+        ...state,
+        pendingEffectOrder: {
+          ...pending,
+          resolvedOrder: orderedIds,
+        },
+      }
+    }
     case 'resolve-faint-effect':
       return resolveFaintEffect(state, command.targetIds)
     case 'resolve-opponent-hand-discard':

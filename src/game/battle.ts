@@ -34,6 +34,7 @@ import type {
   GameCard,
   GameState,
   PendingBattle,
+  PendingEffectOrderItem,
   PlayerId,
   PlayerState,
   TrapAbility,
@@ -186,6 +187,10 @@ const isTrapConditionMet = (
 
   if (condition.kind === 'opponent-trash-count-at-least') {
     return state.players[playerId].discardPile.length >= condition.count
+  }
+
+  if (condition.kind === 'friendly-color-fainted-this-battle') {
+    return true
   }
 
   return true
@@ -563,6 +568,8 @@ export const playTrap = (
         ? {
             delayedTrap: {
               playerId,
+              sourceInstanceId: trapCard.instanceId,
+              sourceCardName: trapCard.name,
               color: trap.condition.color,
               effects: trap.effects,
             },
@@ -826,6 +833,7 @@ const removeFaintedCookie = (
         const context = {
           sourcePlayerId: playerId,
           sourceInstanceId: target.card.instanceId,
+          sourceCardName: target.card.name,
         }
         const candidates = getEffectTargetCandidates(nextState, context, effect.target)
         if (candidates.length > 0) {
@@ -836,6 +844,7 @@ const removeFaintedCookie = (
               {
                 sourcePlayerId: playerId,
                 sourceInstanceId: target.card.instanceId,
+                sourceCardName: target.card.name,
                 effect,
                 context,
               },
@@ -846,8 +855,21 @@ const removeFaintedCookie = (
         const context = {
           sourcePlayerId: playerId,
           sourceInstanceId: target.card.instanceId,
+          sourceCardName: target.card.name,
         }
-        nextState = executeCardEffect(nextState, context, effect, [])
+        nextState = {
+          ...nextState,
+          pendingFaintEffects: [
+            ...(nextState.pendingFaintEffects ?? []),
+            {
+              sourcePlayerId: playerId,
+              sourceInstanceId: target.card.instanceId,
+              sourceCardName: target.card.name,
+              effect,
+              context,
+            },
+          ],
+        }
       }
     }
   }
@@ -862,21 +884,36 @@ const finishBattle = (state: GameState): GameState => {
     battle.delayedTrap &&
     battle.faintedColors.includes(battle.delayedTrap.color)
   ) {
-    for (const effect of battle.delayedTrap.effects) {
+    const context = {
+      sourcePlayerId: battle.delayedTrap.playerId,
+      sourceInstanceId: battle.delayedTrap.sourceInstanceId,
+      sourceCardName: battle.delayedTrap.sourceCardName,
+    }
+    for (let i = 0; i < battle.delayedTrap.effects.length; i += 1) {
+      const effect = battle.delayedTrap.effects[i]
       completedState = executeCardEffect(
         completedState,
-        {
-          sourcePlayerId: battle.delayedTrap.playerId,
-          sourceInstanceId: 'delayed-trap',
-        },
+        context,
         effect,
         [],
       )
+      const remainingEffects = battle.delayedTrap.effects.slice(i + 1)
+      if (completedState.pendingDrawUpTo && remainingEffects.length > 0) {
+        completedState = {
+          ...completedState,
+          pendingDrawUpTo: {
+            ...completedState.pendingDrawUpTo,
+            afterEffects: remainingEffects,
+            afterEffectContext: context,
+          },
+        }
+        break
+      }
     }
   }
 
   return finalizePendingReplacements({
-    ...completedState,
+    ...buildPendingEffectOrder(completedState),
     pendingBattle: null,
   })
 }
@@ -897,6 +934,105 @@ const collectAfterDamageEffects = (
 ): GameState => {
   const damagedIds = battle.damagedInstanceIds ?? []
   return collectAfterDamageEffectsFromIds(state, damagedIds)
+}
+
+const findSourceCardName = (
+  state: GameState,
+  playerId: PlayerId,
+  sourceInstanceId: string,
+): string => {
+  const player = state.players[playerId]
+  const battleCard = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === sourceInstanceId,
+  )?.card
+  const handCard = player.hand.find(
+    (card) => card.instanceId === sourceInstanceId,
+  )
+  const discardCard = player.discardPile.find(
+    (card) => card.instanceId === sourceInstanceId,
+  )
+  const supportCard = player.supportArea.find(
+    (support) => support.card.instanceId === sourceInstanceId,
+  )?.card
+  return battleCard?.name ?? handCard?.name ?? discardCard?.name ?? supportCard?.name ?? 'Unknown'
+}
+
+const buildPendingEffectOrder = (
+  state: GameState,
+): GameState => {
+  if (state.pendingEffectOrder) return state
+
+  const items: PendingEffectOrderItem[] = []
+  const faint = state.pendingFaintEffects?.[0]
+  if (faint) {
+    items.push({
+      id: `faint-effect:${faint.sourceInstanceId}`,
+      kind: 'faint-effect',
+      sourcePlayerId: faint.sourcePlayerId,
+      sourceInstanceId: faint.sourceInstanceId,
+      sourceCardName: faint.sourceCardName ??
+        findSourceCardName(state, faint.sourcePlayerId, faint.sourceInstanceId),
+    })
+  }
+
+  const afterDamage = state.pendingAfterDamageEffects?.[0]
+  if (afterDamage) {
+    items.push({
+      id: `after-damage-effect:${afterDamage.sourceInstanceId}`,
+      kind: 'after-damage-effect',
+      sourcePlayerId: afterDamage.sourcePlayerId,
+      sourceInstanceId: afterDamage.sourceInstanceId,
+      sourceCardName: afterDamage.sourceCardName ??
+        findSourceCardName(state, afterDamage.sourcePlayerId, afterDamage.sourceInstanceId),
+    })
+  }
+
+  if (state.pendingDrawUpTo) {
+    const pending = state.pendingDrawUpTo
+    items.push({
+      id: `draw-up-to:${pending.sourceInstanceId}`,
+      kind: 'draw-up-to',
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+    })
+  }
+
+  if (state.pendingInspectDeck) {
+    const pending = state.pendingInspectDeck
+    items.push({
+      id: `inspect-deck:${pending.sourceInstanceId}`,
+      kind: 'inspect-deck',
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+    })
+  }
+
+  if (state.pendingStageTrigger) {
+    const pending = state.pendingStageTrigger
+    items.push({
+      id: `stage-trigger:${pending.sourceInstanceId}`,
+      kind: 'stage-trigger',
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+    })
+  }
+
+  if (items.length < 2) return state
+  const firstPlayerId = items[0].sourcePlayerId
+  if (!items.every((item) => item.sourcePlayerId === firstPlayerId)) {
+    return state
+  }
+
+  return {
+    ...state,
+    pendingEffectOrder: {
+      playerId: firstPlayerId,
+      items,
+    },
+  }
 }
 
 const finishDamageSequence = (state: GameState): GameState => {
@@ -1148,6 +1284,13 @@ export const resolveNextDamage = (state: GameState): GameState => {
       damageTargetInstanceId,
     )
     if (afterFaint.pendingFaintEffects && afterFaint.pendingFaintEffects.length > 0) {
+      const activeBattle = requirePendingBattle(afterFaint)
+      if (
+        !battleParticipantExists(afterFaint, activeBattle.attackerInstanceId) ||
+        !battleParticipantExists(afterFaint, activeBattle.targetInstanceId)
+      ) {
+        return finishBattle(afterFaint)
+      }
       return afterFaint
     }
     return finishDamageSequence(afterFaint)
@@ -1233,6 +1376,13 @@ export const resolveNextDamage = (state: GameState): GameState => {
   )
 
   if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
+    const activeBattle = requirePendingBattle(nextState)
+    if (
+      !battleParticipantExists(nextState, activeBattle.attackerInstanceId) ||
+      !battleParticipantExists(nextState, activeBattle.targetInstanceId)
+    ) {
+      return finishBattle(nextState)
+    }
     return nextState
   }
 
@@ -1322,13 +1472,18 @@ export const resolveFlip = (
           },
         }
       } else {
+        const resolvedEffect: CardEffect =
+          effect.kind === 'draw-up-to'
+            ? { kind: 'draw', amount: effect.max }
+            : effect
         nextState = executeCardEffect(
           nextState,
           {
             sourcePlayerId: playerId,
             sourceInstanceId: revealed.instanceId,
+            sourceCardName: revealed.name,
           },
-          effect,
+          resolvedEffect,
           [],
         )
       }
@@ -1560,6 +1715,13 @@ export const resolveFaintEffect = (
     } else if (faint.effect.target.min > 0) {
     throw new GameRuleError('Invalid battle action.')
     }
+  } else {
+    nextState = executeCardEffect(
+      nextState,
+      faint.context,
+      faint.effect,
+      [],
+    )
   }
 
   if (nextState.status !== 'playing') {
@@ -1629,6 +1791,13 @@ export const resolveNextAfterDamageEffect = (
     } else if (pending.effect.target.min > 0) {
     throw new GameRuleError('Invalid battle action.')
     }
+  } else {
+    nextState = executeCardEffect(
+      nextState,
+      pending.context,
+      pending.effect,
+      [],
+    )
   }
 
   if (nextState.status !== 'playing') {

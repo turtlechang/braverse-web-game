@@ -38,6 +38,31 @@ describe('getActingPlayerId', () => {
     expect(getActingPlayerId(state)).toBe('player-one')
   })
 
+  it('returns replacementTask playerId before pendingFaintEffects', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'faint-cookie',
+          effect: {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'faint-cookie',
+          },
+        },
+      ],
+    }
+    expect(getActingPlayerId(state)).toBe('player-two')
+  })
+
   it('returns pendingDecision playerId for opponent-hand-discard', () => {
     const state: GameState = {
       ...createDemoGame(),
@@ -88,6 +113,20 @@ describe('getActingPlayerId', () => {
       },
     }
     expect(getActingPlayerId(state)).toBe('player-two')
+  })
+
+  it('returns pendingRefresh playerId before replacementTask', () => {
+    const state: GameState = {
+      ...createDemoGame(),
+      pendingRefresh: {
+        playerId: 'player-one',
+        remainingDraws: 1,
+      },
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
+    }
+    expect(getActingPlayerId(state)).toBe('player-one')
   })
 
   it('returns pendingOnPlay playerId when no higher priority pending', () => {

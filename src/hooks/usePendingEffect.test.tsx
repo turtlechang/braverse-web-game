@@ -243,6 +243,46 @@ describe('usePendingEffect cancelPendingSkill', () => {
     await act(() => root.unmount())
   })
 
+  it('does not activate faint targeting while replacement is pending', async () => {
+    const gameState: GameState = {
+      ...createItemUsageDemoState(true),
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-one', remaining: 1 }],
+      },
+    }
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: () => {},
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: true,
+        faintTargetIds: new Set(['target-cookie']),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 1 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    expect(captured!.faintActive).toBe(false)
+
+    await act(() => root.unmount())
+  })
+
   it('does not call skipCookieOnPlay when canceling activate skill', async () => {
     const gameState = createDiscardHandSkillGameState()
     const setGameMock = vi.fn()

@@ -670,4 +670,141 @@ describe('activate skill with discardHand cost', () => {
       ),
     ).toThrow('不能重複選擇同一張手牌作為代價。')
   })
+
+  it('canActivateCookieSkill returns false when no valid targets exist for min:1 effect', () => {
+    let state = createDemoGame()
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text: 'test',
+      effects: [
+        {
+          kind: 'return-to-hand',
+          target: { side: 'opponent', min: 1, max: 1, maxLevel: 2 },
+        },
+      ],
+      faint: false,
+      endPhase: false,
+      afterDamage: false,
+    }
+    state = withSkill(state, 'player-one', skill)
+    state.players['player-two'].battleArea = []
+    state = advancePhase(state)
+    state = advancePhase(state)
+    const sourceId = state.players['player-one'].battleArea[0].card.instanceId
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'activate'),
+    ).toBe(false)
+  })
+
+  it('canActivateCookieSkill returns true when valid targets exist for min:1 effect', () => {
+    let state = createDemoGame()
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text: 'test',
+      effects: [
+        {
+          kind: 'return-to-hand',
+          target: { side: 'opponent', min: 1, max: 1, maxLevel: 2 },
+        },
+      ],
+      faint: false,
+      endPhase: false,
+      afterDamage: false,
+    }
+    state = withSkill(state, 'player-one', skill)
+    state.players['player-two'].battleArea = [
+      {
+        card: {
+          id: 'opp-1',
+          instanceId: 'opp-1',
+          name: 'opp',
+          type: 'cookie',
+          level: 1,
+          hp: 3,
+          attack: 1,
+          attackCost: 1,
+          energyColor: 'red',
+        },
+        hpCards: [],
+        rested: false,
+      },
+    ]
+    state = advancePhase(state)
+    state = advancePhase(state)
+    const sourceId = state.players['player-one'].battleArea[0].card.instanceId
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'activate'),
+    ).toBe(true)
+  })
+
+  it('canActivateCookieSkill respects hand-count-at-most conditions', () => {
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text:
+        'If there are 6 cards or less in your hand, you can draw 1 card from your deck.',
+      effects: [
+        {
+          kind: 'draw',
+          amount: 1,
+          condition: { kind: 'hand-count-at-most', count: 6 },
+        },
+      ],
+      faint: false,
+      endPhase: false,
+      afterDamage: false,
+    }
+    let state = withSkill(createDemoGame(), 'player-one', skill)
+    state = advancePhase(state)
+    state = advancePhase(state)
+    const sourceId = state.players['player-one'].battleArea[0].card.instanceId
+    const sevenCardHand = Array.from({ length: 7 }, (_, index) => ({
+      id: `hand-${index}`,
+      instanceId: `hand-${index}`,
+      name: `hand-${index}`,
+      type: 'item' as const,
+      energyColor: 'red' as const,
+    }))
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: sevenCardHand,
+        },
+      },
+    }
+
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'activate'),
+    ).toBe(false)
+
+    const sixCardState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: sevenCardHand.slice(0, 6),
+        },
+      },
+    }
+
+    expect(
+      canActivateCookieSkill(sixCardState, 'player-one', sourceId, 'activate'),
+    ).toBe(true)
+  })
 })

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   refreshDeck,
-  resolveDrawUpTo,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
@@ -47,21 +46,11 @@ describe('pending battle and FLIP', () => {
 
     state = resolveFlip(state, 'player-one', { activate: true })
 
-    expect(state.pendingDrawUpTo).toMatchObject({
-      playerId: 'player-one',
-      max: 1,
-    })
-    expect(state.players['player-one'].hand).not.toContainEqual(
-      expect.objectContaining({ instanceId: 'p1-deck-a' }),
-    )
-    expect(state.players['player-one'].discardPile).toContain(flipCard)
-
-    state = resolveDrawUpTo(state, 'player-one', 1)
-
+    expect(state.pendingDrawUpTo ?? null).toBeNull()
     expect(state.players['player-one'].hand).toContainEqual(
       expect.objectContaining({ instanceId: 'p1-deck-a' }),
     )
-    expect(state.pendingDrawUpTo ?? null).toBeNull()
+    expect(state.players['player-one'].discardPile).toContain(flipCard)
   })
 
   it('can skip a FLIP effect without creating its draw decision', () => {
@@ -159,13 +148,8 @@ describe('pending battle and FLIP', () => {
     ]
     state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
     state = resolveFlip(state, 'player-one', { activate: true })
-    expect(state.pendingDrawUpTo).toMatchObject({
-      playerId: 'player-one',
-      max: 1,
-    })
 
-    state = resolveDrawUpTo(state, 'player-one', 1)
-
+    expect(state.pendingDrawUpTo ?? null).toBeNull()
     expect(state.pendingRefresh).toEqual({
       playerId: 'player-one',
       remainingDraws: 0,
@@ -179,5 +163,28 @@ describe('pending battle and FLIP', () => {
       (cards) => [...cards],
     )
     expect(state.pendingBattle?.stage).toBe('damage')
+  })
+
+  it('FLIP draw-up-to executes directly without creating pending state', () => {
+    const flipCard: GameCard = {
+      ...cookie('name-flip'),
+      name: 'Test FLIP Card',
+      officialType: 'flip',
+      flip: {
+        text: 'Draw up to 1 card from your deck.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].deck = [item('draw-card')]
+    state.players['player-one'].discardPile = [cookie('refresh-cookie')]
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+    state = resolveFlip(state, 'player-one', { activate: true })
+    expect(state.pendingDrawUpTo ?? null).toBeNull()
+    expect(state.players['player-one'].hand).toContainEqual(
+      expect.objectContaining({ instanceId: 'draw-card' }),
+    )
   })
 })

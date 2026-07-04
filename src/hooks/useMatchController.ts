@@ -9,6 +9,7 @@ import {
   getBlockerCandidates,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
+  getPendingDecision,
   hasBlockingPending,
   getReplacementCandidates,
   getRefreshCandidates,
@@ -311,6 +312,7 @@ export function useMatchController(params: {
   const faintMinMax = pendingFaint
     ? getFaintEffectMinMax(pendingFaint.effect)
     : { min: 0, max: 0 }
+  const currentPendingDecision = getPendingDecision(game)
 
   const [selectedAfterDamageTargetIds, setSelectedAfterDamageTargetIds] =
     useState<string[]>([])
@@ -345,7 +347,9 @@ export function useMatchController(params: {
   )
   const hasAfterDamage =
     Boolean(
-      pendingAfterDamage && pendingAfterDamage.sourcePlayerId === viewerPlayerId,
+      pendingAfterDamage &&
+      pendingAfterDamage.sourcePlayerId === viewerPlayerId &&
+      currentPendingDecision?.kind === 'after-damage-effect',
     )
   const afterDamageMinMax = pendingAfterDamage
     ? getAfterDamageEffectMinMax(pendingAfterDamage.effect)
@@ -429,7 +433,7 @@ export function useMatchController(params: {
 
   const pendingPlayerId =
     game.pendingRefresh?.playerId ??
-    (!game.pendingOnPlay ? replacementTask?.playerId : undefined)
+    (!game.pendingOnPlay && !game.pendingDrawUpTo ? replacementTask?.playerId : undefined)
   const pendingPlayer = pendingPlayerId
     ? game.players[pendingPlayerId]
     : null

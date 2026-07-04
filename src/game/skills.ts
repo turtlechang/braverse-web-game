@@ -3,6 +3,11 @@ import {
   selectEnergyPayment,
   validateEnergyPayment,
 } from './energy'
+import {
+  getEffectTargetCandidates,
+  isEffectConditionMet,
+  isEffectTargeted,
+} from './effects/targeting'
 import type {
   AbilityCost,
   CardSkill,
@@ -219,6 +224,19 @@ export const canActivateCookieSkill = (
 
   if (!canPayTrashBattleCookieCost(skill.cost, player.battleArea)) {
     return false
+  }
+
+  const context = { sourcePlayerId: playerId, sourceInstanceId }
+  for (const effect of skill.effects) {
+    if (!isEffectConditionMet(state, context, effect)) {
+      return false
+    }
+    if (isEffectTargeted(effect) && effect.target.min > 0) {
+      const candidates = getEffectTargetCandidates(state, context, effect.target)
+      if (candidates.length < effect.target.min) {
+        return false
+      }
+    }
   }
 
   return true

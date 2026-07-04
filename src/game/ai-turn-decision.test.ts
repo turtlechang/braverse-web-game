@@ -11,6 +11,7 @@ import {
   simulateAiMatch,
   takeAiStep,
   type CardSkill,
+  type CookieCard,
   type GameCard,
   type GameState,
 } from '.'
@@ -90,11 +91,7 @@ describe('simple AI opponent', () => {
     const decision = takeAiStep(state, playerId)
 
     expect(decision.action).toBe('resolve-flip')
-    expect(decision.state.pendingDrawUpTo).toMatchObject({
-      playerId,
-      max: 1,
-      sourceInstanceId: revealedCard.instanceId,
-    })
+    expect(decision.state.pendingDrawUpTo ?? null).toBeNull()
   })
 
   it('places one support card during the support phase', () => {
@@ -116,6 +113,64 @@ describe('simple AI opponent', () => {
     expect(
       decision.state.players['player-two'].battleArea,
     ).toHaveLength(2)
+  })
+
+  it('handles replacement before resolving its own pending faint effect', () => {
+    const base = asAiTurn(createDemoGame(), 'main')
+    const replacement: CookieCard = {
+      id: 'ai-replacement',
+      instanceId: 'ai-replacement',
+      name: 'AI Replacement',
+      type: 'cookie',
+      level: 1,
+      hp: 1,
+      attack: 1,
+      attackCost: 1,
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          hand: [replacement],
+          deck: [
+            createSupport('ai-replacement-hp').card,
+            createSupport('ai-spare-deck-card').card,
+          ],
+          battleArea: [],
+        },
+      },
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'ai-fainted-cookie',
+          sourceCardName: 'AI Fainted Cookie',
+          effect: {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          context: {
+            sourcePlayerId: 'player-two',
+            sourceInstanceId: 'ai-fainted-cookie',
+            sourceCardName: 'AI Fainted Cookie',
+          },
+        },
+      ],
+    }
+
+    const decision = takeAiStep(state)
+
+    expect(decision.action).toBe('replace-cookie')
+    expect(decision.state.pendingReplacement).toBeNull()
+    expect(decision.state.pendingFaintEffects).toHaveLength(1)
+    expect(
+      decision.state.players['player-two'].battleArea[0].card.instanceId,
+    ).toBe('ai-replacement')
   })
 
   it('attacks the lowest remaining HP target with available support', () => {

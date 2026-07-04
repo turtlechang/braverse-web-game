@@ -3,6 +3,7 @@ import type { GameState, PlayerId } from '../types'
 import { drawCards, updatePlayer } from '../helpers'
 import { getRefreshCandidates } from '../refresh'
 import { finishWithDefeat, resolveBasicVictory } from '../victory'
+import { executeCardEffect } from './execute'
 
 export const resolveDrawUpTo = (
   state: GameState,
@@ -21,6 +22,7 @@ export const resolveDrawUpTo = (
     throw new GameRuleError(`抽牌數量必須在 0 到 ${state.pendingDrawUpTo.max} 之間。`)
   }
 
+  const pending = state.pendingDrawUpTo
   const player = state.players[playerId]
   const actualDraw = Math.min(player.deck.length, drawCount)
   const updatedPlayer = drawCards(player, actualDraw)
@@ -41,6 +43,26 @@ export const resolveDrawUpTo = (
         playerId,
         remainingDraws: drawCount - actualDraw,
       },
+    }
+  }
+
+  if (pending.afterEffects && pending.afterEffectContext) {
+    for (const effect of pending.afterEffects) {
+      updatedState = executeCardEffect(
+        updatedState,
+        pending.afterEffectContext,
+        effect,
+        [],
+      )
+      if (
+        updatedState.pendingDrawUpTo ||
+        updatedState.pendingOpponentHandDiscard ||
+        updatedState.pendingInspectDeck ||
+        updatedState.pendingOptionalCostAttack ||
+        updatedState.pendingStageTrigger
+      ) {
+        break
+      }
     }
   }
 

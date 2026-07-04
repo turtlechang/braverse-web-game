@@ -77,7 +77,12 @@ export function usePendingEffect(params: {
     useState<PendingEffect | null>(null)
   const [effectHistory, setEffectHistory] = useState<string[]>([])
 
-  const faintActive = hasFaint && !pendingEffect
+  const faintActive =
+    hasFaint &&
+    !pendingEffect &&
+    !game.pendingReplacement &&
+    !game.pendingRefresh &&
+    !game.pendingOnPlay
   const afterDamageActive = hasAfterDamage && !pendingEffect
 
   const currentEffect =
@@ -104,11 +109,13 @@ export function usePendingEffect(params: {
     pendingEffect &&
     currentEffect &&
     currentTargetSelector
-      ? getEffectTargetCandidates(
-          game,
-          pendingEffect.context,
-          currentTargetSelector,
-        )
+      ? (currentEffect.kind === 'field-to-trash' && currentEffect.stageOnly)
+          ? []
+          : getEffectTargetCandidates(
+              game,
+              pendingEffect.context,
+              currentTargetSelector,
+            )
       : []
 
   const supportEffectCandidates =

@@ -27,7 +27,7 @@ import { deckChoiceLabel } from '../gameUiLabels'
 import { DeckEditorModal } from './DeckEditorModal'
 import './GameModals.css'
 
-export { OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
+export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
 
 export type OpeningSetupStep =
   | 'deck-selection'
@@ -518,12 +518,43 @@ export function TrapResponseModal({
   emptyTargetActive,
   onToggleEmptyTarget,
 }: TrapResponseModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>攻擊宣告回應</strong>
+          <small>
+            {selectedTrapId
+              ? `已選擇 ${cards.find((c) => c.instanceId === selectedTrapId)?.name ?? ''}`
+              : `可發動 ${cards.length} 張陷阱`}
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section
-        className="battle-response-modal trap-response-modal"
+        className="battle-response-modal trap-response-modal minimizable-decision-modal"
         role="alertdialog"
       >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小攻擊宣告回應"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
         <span>攻擊宣告回應</span>
         <h2>是否發動陷阱？</h2>
         <p>每次攻擊最多發動一張陷阱。選擇卡牌後會顯示付款與目標。</p>
@@ -538,7 +569,7 @@ export function TrapResponseModal({
                 onInspectCard?.(card)
               }}
             >
-              <CardFace card={card} />
+              <CardFace card={card} selected={selectedTrapId === card.instanceId} />
               <span>{card.name}</span>
             </button>
           ))}
@@ -564,7 +595,7 @@ export function TrapResponseModal({
                       key={card.instanceId}
                       onClick={() => onToggleDiscardHand(card.instanceId)}
                     >
-                      <CardFace card={card} />
+                      <CardFace card={card} selected={selectedDiscardHandIds.includes(card.instanceId)} />
                       <span>{card.name}</span>
                     </button>
                   ))}
@@ -589,7 +620,7 @@ export function TrapResponseModal({
                       key={card.instanceId}
                       onClick={() => onToggleBattleCookie?.(card.instanceId)}
                     >
-                      <CardFace card={card} />
+                      <CardFace card={card} selected={selectedBattleCookieIds.includes(card.instanceId)} />
                       <span>{card.name}</span>
                     </button>
                   ))}
@@ -689,7 +720,7 @@ export function AttackResponseModal({
                     onInspectCard?.(cookie.card)
                   }}
                 >
-                  <CardFace card={cookie.card} />
+              <CardFace card={cookie.card} />
                   <span>{cookie.card.name}</span>
                 </button>
               ))}
@@ -871,7 +902,7 @@ export function FlipResponseModal({
                     key={handCard.instanceId}
                     onClick={() => onToggleDiscard(handCard.instanceId)}
                   >
-                    <CardFace card={handCard} />
+                    <CardFace card={handCard} selected={selectedDiscardIds.includes(handCard.instanceId)} />
                     <span>{handCard.name}</span>
                   </button>
                 ))}

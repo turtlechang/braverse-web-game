@@ -55,7 +55,7 @@ export const resolveOpponentHandDiscard = (
 export const resolveInspectDeck = (
   state: GameState,
   playerId: PlayerId,
-  pickedCardId: string,
+  pickedCardId: string | null,
   restOrder: string[],
 ): GameState => {
   const pending = state.pendingInspectDeck
@@ -63,9 +63,37 @@ export const resolveInspectDeck = (
     throw new GameRuleError('目前沒有待處理的牌庫檢視效果。')
   }
   const revealedIds = pending.revealedCards.map((c) => c.instanceId)
+
+  if (pickedCardId === null) {
+    if (restOrder.length !== revealedIds.length) {
+      throw new GameRuleError('必須涵蓋所有檢視的卡牌。')
+    }
+    const restSet = new Set(restOrder)
+    const hasAll = revealedIds.every((id) => restSet.has(id))
+    if (!hasAll || restOrder.length !== revealedIds.length) {
+      throw new GameRuleError('剩餘牌順序必須包含所有檢視的卡牌。')
+    }
+    const restCards = restOrder.map((id) => pending.revealedCards.find((c) => c.instanceId === id)!)
+    const player = state.players[playerId]
+    return {
+      ...state,
+      pendingInspectDeck: null,
+      players: {
+        ...state.players,
+        [playerId]: {
+          ...player,
+          deck: [...player.deck, ...restCards],
+        },
+      },
+    }
+  }
+
   const pickedCard = pending.revealedCards.find((c) => c.instanceId === pickedCardId)
   if (!pickedCard) {
     throw new GameRuleError('選取的卡牌不在檢視清單中。')
+  }
+  if (pending.filterColor && pickedCard.energyColor !== pending.filterColor) {
+    throw new GameRuleError(`只能選擇顏色為 ${pending.filterColor} 的卡牌。`)
   }
   const allIds = [pickedCardId, ...restOrder]
   if (new Set(allIds).size !== allIds.length) {

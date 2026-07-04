@@ -131,6 +131,7 @@ const resolveDamageOutcome = (
         const context = {
           sourcePlayerId: damagedPlayerId,
           sourceInstanceId: cookie.instanceId,
+          sourceCardName: cookie.name,
         }
         if (
           effect.kind === 'damage' ||
@@ -150,6 +151,7 @@ const resolveDamageOutcome = (
                 {
                   sourcePlayerId: damagedPlayerId,
                   sourceInstanceId: cookie.instanceId,
+                  sourceCardName: cookie.name,
                   effect,
                   context,
                 },
@@ -157,7 +159,19 @@ const resolveDamageOutcome = (
             }
           }
         } else {
-          faintState = executeCardEffect(faintState, context, effect, [])
+          faintState = {
+            ...faintState,
+            pendingFaintEffects: [
+              ...(faintState.pendingFaintEffects ?? []),
+              {
+                sourcePlayerId: damagedPlayerId,
+                sourceInstanceId: cookie.instanceId,
+                sourceCardName: cookie.name,
+                effect,
+                context,
+              },
+            ],
+          }
         }
       }
     }
@@ -309,6 +323,9 @@ export const executeCardEffect = (
       sourceCard && 'item' in sourceCard && sourceCard.item
         ? sourceCard.item.text
         : undefined
+    const sourceCardName =
+      context.sourceCardName ??
+      battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? supportCard?.card.name ?? 'Unknown'
     return {
       ...state,
       pendingDrawUpTo: {
@@ -316,8 +333,7 @@ export const executeCardEffect = (
         max: effect.max,
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
-        sourceCardName:
-          battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? supportCard?.card.name ?? 'Unknown',
+        sourceCardName,
         effectText: effectText ?? itemText,
       },
     }
@@ -704,9 +720,10 @@ export const executeCardEffect = (
         count: effect.count,
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
-        sourceCardName: state.players[context.sourcePlayerId].battleArea.find(
-          (c) => c.card.instanceId === context.sourceInstanceId,
-        )?.card.name ?? 'Unknown',
+        sourceCardName: context.sourceCardName ??
+          state.players[context.sourcePlayerId].battleArea.find(
+            (c) => c.card.instanceId === context.sourceInstanceId,
+          )?.card.name ?? 'Unknown',
         effectText: effect.kind,
       },
     }
@@ -724,9 +741,10 @@ export const executeCardEffect = (
         count: effect.count,
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
-        sourceCardName: player.battleArea.find(
-          (c) => c.card.instanceId === context.sourceInstanceId,
-        )?.card.name ?? 'Unknown',
+        sourceCardName: context.sourceCardName ??
+          player.battleArea.find(
+            (c) => c.card.instanceId === context.sourceInstanceId,
+          )?.card.name ?? 'Unknown',
         effectText: effect.kind,
       },
     }
@@ -936,6 +954,39 @@ export const executeCardEffect = (
     return updatedState
   }
 
+  if (effect.kind === 'return-to-deck-bottom') {
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    if (candidates.length < effect.target.min && selectedTargetIds.length === 0) {
+      return { ...state }
+    }
+    const selected = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const targetPlayer = state.players[targetPlayerId]
+    if (targetPlayer.battleArea.length - selected.length < 1) {
+      throw new GameRuleError('返回牌庫底後，戰鬥區必須至少保留 1 張餅乾。')
+    }
+    const selectedIds = new Set(selected.map((cookie) => cookie.card.instanceId))
+    const returnedCards = selected.map((cookie) => cookie.card)
+    const hpCardsToDiscard = selected.flatMap((cookie) => cookie.hpCards)
+    const updatedState = updatePlayer(state, {
+      ...targetPlayer,
+      battleArea: targetPlayer.battleArea.filter(
+        (cookie) => !selectedIds.has(cookie.card.instanceId),
+      ),
+      deck: [...targetPlayer.deck, ...returnedCards],
+      discardPile: [
+        ...targetPlayer.discardPile,
+        ...hpCardsToDiscard,
+      ],
+    })
+    return updatedState
+  }
+
   if (effect.kind === 'opponent-random-discard') {
     const targetPlayerId = getOpponentId(context.sourcePlayerId)
     const targetHand = state.players[targetPlayerId].hand
@@ -995,6 +1046,12 @@ export const executeCardEffect = (
     const remainingDeck = player.deck.slice(effect.lookCount)
     const updatedPlayer = { ...player, deck: remainingDeck }
     const nextState = updatePlayer(state, updatedPlayer)
+    const sourceCardName =
+      context.sourceCardName ??
+      state.players[context.sourcePlayerId].battleArea.find(
+        (c) => c.card.instanceId === context.sourceInstanceId,
+      )?.card.name ??
+      'Unknown'
 
     if (deckCards.length < effect.lookCount && !nextState.pendingRefresh) {
       const candidates = getRefreshCandidates(nextState, context.sourcePlayerId)
@@ -1007,13 +1064,11 @@ export const executeCardEffect = (
         pendingInspectDeck: {
           playerId: context.sourcePlayerId,
           sourceInstanceId: context.sourceInstanceId,
-          sourceCardName:
-            state.players[context.sourcePlayerId].battleArea.find(
-              (c) => c.card.instanceId === context.sourceInstanceId,
-            )?.card.name ?? 'Unknown',
+          sourceCardName,
           revealedCards: deckCards,
           lookCount: effect.lookCount,
           pickCount: effect.pickCount,
+          filterColor: effect.filterColor,
         },
       }
     }
@@ -1023,13 +1078,11 @@ export const executeCardEffect = (
       pendingInspectDeck: {
         playerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
-        sourceCardName:
-          state.players[context.sourcePlayerId].battleArea.find(
-            (c) => c.card.instanceId === context.sourceInstanceId,
-          )?.card.name ?? 'Unknown',
+        sourceCardName,
         revealedCards: deckCards,
         lookCount: effect.lookCount,
         pickCount: effect.pickCount,
+        filterColor: effect.filterColor,
       },
     }
   }

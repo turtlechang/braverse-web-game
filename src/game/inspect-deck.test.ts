@@ -529,3 +529,118 @@ describe('inspect-deck integration', () => {
     expect(getPendingDecision(result)).toBeNull()
   })
 })
+
+describe('inspect-deck with filterColor', () => {
+  const coloredCookie = (
+    id: string,
+    color: GameCard['energyColor'],
+  ): GameCard => ({
+    id,
+    instanceId: `${id}-inst`,
+    name: id,
+    type: 'cookie',
+    level: 1,
+    hp: 1,
+    attack: 0,
+    attackCost: 0,
+    energyColor: color,
+  })
+
+  const createDeckState = (deckCards: GameCard[]): GameState => {
+    const base = createDemoGame()
+    return {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: deckCards,
+          hand: [],
+        },
+      },
+    }
+  }
+
+  it('creates pendingInspectDeck with filterColor', () => {
+    const state = createDemoGame()
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'test-source' }
+    const result = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restToBottom: true,
+      filterColor: 'blue',
+    }, [])
+    expect(result.pendingInspectDeck).toBeDefined()
+    expect(result.pendingInspectDeck!.filterColor).toBe('blue')
+  })
+
+  it('resolveInspectDeck accepts matching color card', () => {
+    const blue1 = coloredCookie('blue1', 'blue')
+    const red1 = coloredCookie('red1', 'red')
+    const green1 = coloredCookie('green1', 'green')
+    const state = createDeckState([blue1, red1, green1])
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'test-source' }
+    const withPending = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restToBottom: true,
+      filterColor: 'blue',
+    }, [])
+    const pending = withPending.pendingInspectDeck!
+    expect(pending.revealedCards).toHaveLength(3)
+    const pickedCard = pending.revealedCards.find((c) => c.energyColor === 'blue')!
+    const restOrder = pending.revealedCards
+      .filter((c) => c.instanceId !== pickedCard.instanceId)
+      .map((c) => c.instanceId)
+    const result = resolveInspectDeck(withPending, 'player-one', pickedCard.instanceId, restOrder)
+    expect(result.pendingInspectDeck).toBeNull()
+    expect(result.players['player-one'].hand).toContainEqual(pickedCard)
+  })
+
+  it('resolveInspectDeck rejects non-matching color card', () => {
+    const blue1 = coloredCookie('blue1', 'blue')
+    const red1 = coloredCookie('red1', 'red')
+    const green1 = coloredCookie('green1', 'green')
+    const state = createDeckState([blue1, red1, green1])
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'test-source' }
+    const withPending = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restToBottom: true,
+      filterColor: 'blue',
+    }, [])
+    const pending = withPending.pendingInspectDeck!
+    const nonBlueCard = pending.revealedCards.find((c) => c.energyColor !== 'blue')!
+    const restOrder = pending.revealedCards
+      .filter((c) => c.instanceId !== nonBlueCard.instanceId)
+      .map((c) => c.instanceId)
+    expect(() => resolveInspectDeck(withPending, 'player-one', nonBlueCard.instanceId, restOrder))
+      .toThrow('只能選擇顏色為 blue 的卡牌。')
+  })
+
+  it('resolveInspectDeck returns all to deck bottom when no matching color', () => {
+    const red1 = coloredCookie('red1', 'red')
+    const red2 = coloredCookie('red2', 'red')
+    const red3 = coloredCookie('red3', 'red')
+    const state = createDeckState([red1, red2, red3])
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'test-source' }
+    const withPending = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restToBottom: true,
+      filterColor: 'blue',
+    }, [])
+    const pending = withPending.pendingInspectDeck!
+    expect(pending.revealedCards.every((c) => c.energyColor !== 'blue')).toBe(true)
+    const allIds = pending.revealedCards.map((c) => c.instanceId)
+    const result = resolveInspectDeck(withPending, 'player-one', null, allIds)
+    expect(result.pendingInspectDeck).toBeNull()
+    expect(result.players['player-one'].hand).toHaveLength(0)
+    expect(result.players['player-one'].deck).toHaveLength(3)
+    expect(result.players['player-one'].deck.map((c) => c.instanceId)).toEqual(allIds)
+  })
+})

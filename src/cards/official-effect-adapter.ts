@@ -629,8 +629,27 @@ export const convertOfficialCardEffects = (
     'BS2-029': [
       {
         kind: 'return-to-hand',
-        target: { side: 'self', min: 0, max: 1, maxLevel: 2 },
+        target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
       },
+    ],
+    'BS2-031': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 1, max: 2 },
+      } satisfies CardEffect as CardEffect,
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-047': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 1, max: 2 },
+      } satisfies CardEffect as CardEffect,
     ],
     'BS2-039': [
       {
@@ -639,6 +658,9 @@ export const convertOfficialCardEffects = (
         duration: 'this-turn',
         target: { side: 'self', min: 1, max: 2 },
       },
+    ],
+    'BS2-040': [
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restToBottom: true, filterColor: 'blue' },
     ],
     'BS2-043': [
       {
@@ -653,6 +675,13 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
         stageOnly: true,
       } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-036': [
+      {
+        kind: 'return-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, maxLevel: 1 },
+      } satisfies CardEffect as CardEffect,
+      { kind: 'draw', amount: 1 },
     ],
     // === BS1/BS2 紫色餅乾卡技能 ===
     'BS2-057': [
@@ -867,6 +896,7 @@ export const convertOfficialCardEffects = (
           {
             kind: 'draw',
             amount: conditionalDrawAmount,
+            condition: parseCondition(sourceText),
           },
         ],
       }
@@ -1687,7 +1717,7 @@ const parseTrapCondition = (
   }
 
   const faintedColor = text.match(
-    /any of your \{([RYGBPK])\} Cookies fainted during this battle/i,
+    /(?:any|if\s+\d+)\s+of\s+your\s+\{([RYGBPK])\}\s+Cookies?\s+(?:fainted|faints)/i,
   )
   const colors = {
     R: 'red',
@@ -1786,6 +1816,16 @@ export const convertOfficialTrapAbility = (
       kind: 'draw',
       amount: trapDrawAmount,
     })
+  }
+
+  const trapDrawUpToAndDiscard = text.match(
+    /draw\s+up\s+to\s+(\d+)\s+card(?:s)?\s+from\s+your\s+deck\s+and\s+discard\s+(\d+)\s+card(?:s)?\s+from\s+your\s+hand/i,
+  )
+  if (trapDrawUpToAndDiscard && effects.length === 0) {
+    effects.push(
+      { kind: 'draw-up-to', max: Number(trapDrawUpToAndDiscard[1]) },
+      { kind: 'discard-hand', count: Number(trapDrawUpToAndDiscard[2]) },
+    )
   }
 
   const battleToTrash = text.match(

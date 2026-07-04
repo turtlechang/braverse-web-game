@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   beginAttack,
+  applyGameCommand,
   createOfficialRedStarterDeck,
+  getPendingDecision,
   getTrapCandidates,
   playTrap,
+  resolveDrawUpTo,
   resolveFlip,
   resolveNextDamage,
   type CookieCard,
@@ -445,6 +448,200 @@ describe('TRAP response window', () => {
         (support) => support.card.instanceId === 'p1-deck-a',
       ),
     ).toMatchObject({ rested: true })
+  })
+
+  it('prompts a BS2-049-like faint trap and resolves draw before discard', () => {
+    const trap: GameCard = {
+      id: 'BS2-049',
+      instanceId: 'bs2-049-test',
+      name: 'Salt Crystal Trident',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text:
+          'If 1 of your {B} Cookies faints during this battle, draw up to 3 cards from your deck and discard 1 card from your hand.',
+        cost: { energy: { blue: 1 }, discardHand: 0 },
+        condition: {
+          kind: 'friendly-color-fainted-this-battle',
+          color: 'blue',
+        },
+        effects: [
+          { kind: 'draw-up-to', max: 3 },
+          { kind: 'discard-hand', count: 1 },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0] = {
+      ...state.players['player-one'].battleArea[0],
+      card: {
+        ...state.players['player-one'].battleArea[0].card,
+        energyColor: 'blue',
+      },
+      hpCards: [item('last-blue-hp')],
+    }
+    state.players['player-one'].deck = [
+      item('draw-1'),
+      item('draw-2'),
+      item('draw-3'),
+    ]
+    state.players['player-one'].hand = [
+      trap,
+      item('discard-option-a'),
+      item('discard-option-b'),
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-support-blue', 'blue'), rested: false },
+    ]
+
+    state = declareAttack(state)
+
+    expect(getTrapCandidates(state, 'player-one')).toContainEqual(trap)
+
+    state = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-support-blue'],
+      targetIds: [],
+    })
+    state = resolveNextDamage(state)
+    state = resolveNextDamage(state)
+
+    expect(state.pendingDrawUpTo).toMatchObject({
+      playerId: 'player-one',
+      max: 3,
+      sourceCardName: 'Salt Crystal Trident',
+    })
+    expect(state.pendingOpponentHandDiscard ?? null).toBeNull()
+
+    state = resolveDrawUpTo(state, 'player-one', 2)
+
+    expect(state.pendingDrawUpTo ?? null).toBeNull()
+    expect(state.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-one',
+      count: 1,
+      sourceCardName: 'Salt Crystal Trident',
+    })
+    expect(state.players['player-one'].hand).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: 'draw-1' }),
+        expect.objectContaining({ instanceId: 'draw-2' }),
+      ]),
+    )
+  })
+
+  it('lets the same player order simultaneous BS2-040 and BS2-049 effects', () => {
+    const trap: GameCard = {
+      id: 'BS2-049',
+      instanceId: 'bs2-049-order',
+      name: 'Salt Crystal Trident',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text:
+          'If 1 of your {B} Cookies faints during this battle, draw up to 3 cards from your deck and discard 1 card from your hand.',
+        cost: { energy: { blue: 1 }, discardHand: 0 },
+        condition: {
+          kind: 'friendly-color-fainted-this-battle',
+          color: 'blue',
+        },
+        effects: [
+          { kind: 'draw-up-to', max: 3 },
+          { kind: 'discard-hand', count: 1 },
+        ],
+      },
+    }
+    const aloe: CookieCard = {
+      ...cookie('bs2-040-order', 1, 2),
+      id: 'BS2-040',
+      instanceId: 'defender',
+      name: 'Aloe Cookie',
+      energyColor: 'blue',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text:
+          'When this Cookie faints, view the top 3 cards of your deck. Select 1 {B} card.',
+        effects: [
+          {
+            kind: 'inspect-deck',
+            lookCount: 3,
+            pickCount: 1,
+            restToBottom: true,
+            filterColor: 'blue',
+          },
+        ],
+        faint: true,
+      },
+    }
+
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0] = {
+      card: aloe,
+      hpCards: [item('aloe-last-hp')],
+      rested: false,
+      battleEntryId: 'aloe:battle:1',
+    }
+    state.players['player-one'].deck = [
+      item('top-blue', 'blue'),
+      item('top-red', 'red'),
+      item('top-blue-2', 'blue'),
+      item('after-top', 'blue'),
+    ]
+    state.players['player-one'].hand = [
+      trap,
+      item('discard-option-a'),
+      item('discard-option-b'),
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-support-blue', 'blue'), rested: false },
+    ]
+
+    state = declareAttack(state)
+    state = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-support-blue'],
+      targetIds: [],
+    })
+    state = resolveNextDamage(state)
+
+    const orderDecision = getPendingDecision(state)
+    expect(orderDecision).toMatchObject({
+      kind: 'effect-order',
+      playerId: 'player-one',
+    })
+    if (orderDecision?.kind !== 'effect-order') {
+      throw new Error('Expected effect-order decision')
+    }
+    expect(orderDecision.items.map((item) => item.kind)).toEqual(
+      expect.arrayContaining(['faint-effect', 'draw-up-to']),
+    )
+
+    const faintFirstIds = [
+      orderDecision.items.find((item) => item.kind === 'faint-effect')!.id,
+      orderDecision.items.find((item) => item.kind === 'draw-up-to')!.id,
+    ]
+    const faintFirst = applyGameCommand(state, {
+      kind: 'resolve-effect-order',
+      playerId: 'player-one',
+      orderedIds: faintFirstIds,
+    })
+    expect(getPendingDecision(faintFirst)?.kind).toBe('faint-effect')
+    const afterFaint = applyGameCommand(faintFirst, {
+      kind: 'resolve-faint-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(getPendingDecision(afterFaint)?.kind).toBe('inspect-deck')
+
+    const drawFirst = applyGameCommand(state, {
+      kind: 'resolve-effect-order',
+      playerId: 'player-one',
+      orderedIds: [...faintFirstIds].reverse(),
+    })
+    expect(getPendingDecision(drawFirst)?.kind).toBe('draw-up-to')
   })
 
   it('skips attack damage when official ST1-021 trap knocks out official ST1-013 attacker', () => {
