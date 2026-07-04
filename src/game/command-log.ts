@@ -105,6 +105,6 @@ export const describeCommand = (
     case 'resolve-effect-order':
       return `${actor} 決定了效果的結算順序`
     default:
-      return `${actor} 執行了 ${command.kind}`
+      return `${actor} 執行了 ${(command as GameCommand).kind}`
   }
 }
