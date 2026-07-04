@@ -4,7 +4,7 @@ import { getLegalTurnCommands } from '../legal-actions'
 import type { GameState, PlayerId } from '../types'
 import type { AiActionType, AiDecision } from './types'
 
-const commandActionTypes: Record<
+export const commandActionTypes: Record<
   PlayerActionCommand['kind'],
   AiActionType
 > = {
@@ -47,7 +47,7 @@ const findCardName = (state: GameState, instanceId: string): string => {
   return instanceId
 }
 
-const describeCommand = (
+export const describeCommand = (
   state: GameState,
   playerId: PlayerId,
   command: PlayerActionCommand,

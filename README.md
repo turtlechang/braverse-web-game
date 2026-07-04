@@ -45,7 +45,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局選擇紅色、黃色、綠色、藍色或紫色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
-  - 目前共有 732 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
+  - 目前共有 742 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
@@ -72,7 +72,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 待實作：App.tsx（1575 行）容器元件拆分。已分析候選：`BattleScreen`（~1235 行 battle shell）、`FaintEffectModal`、`AfterDamageEffectModal`、`OpponentHandDiscardModal`、`DrawUpToModal`、`StageTriggerModal` 等 inline JSX modal，以及 PlayerBattleRow 的 ~150 行 callback handlers。
 - 待實作：UI 與 AI 逐步改走 `applyGameCommand` 指令層（目前 UI 主要動作與 `usePendingEffect` 多段效果流程仍直接呼叫規則函式），完成後實際對局的 `commandLog` 才是完整重播來源；對局種子統一注入後可支援「複製對局紀錄」回報格式。
 - 已達成：AI 等級分級第一版（Lv.1 隨機／Lv.2 現行啟發式掛名）與主選單 AI 牌組、等級選擇；設計文件見 `docs/ai-levels.md`。
-- 待實作：Lv.3 評估式 AI（動作打分、勝率矩陣回歸）與 `PlayerView` 視角過濾器（Lv.3 前置，未來線上對戰 state snapshot 共用）。
+- 已達成：`PlayerView` 視角過濾器（`src/game/player-view.ts`，對手手牌／雙方牌庫／雙方 HP 卡皆只留張數）與 Lv.3 評估式 AI（`src/game/ai/evaluated-turn-handler.ts`，對候選動作套用 `evaluatePlayerView` 打分取最高分，攻擊採預期傷害加成，其餘強制流程委派 Lv.2）；主選單等級選擇加入 Lv.3。20 場種子模擬中 Lv.3 對 Lv.1 勝率 ≥ 65%。
+- 待實作：Lv.4／Lv.5（回合規劃與對抗性 AI），觀察 Lv.3 上線後的實際對戰體感再決定是否投入；`PlayerView` 未來預計重用於線上對戰 state snapshot。
 - 拖移卡牌暫不實作；未來若加入，拖放只負責輸入，仍須呼叫既有規則 API，且在 pending decision、確認式大卡與 AI 行動期間停用，並保留按鈕與鍵盤操作。
 - 待官方規則確認後才擴充 `CardEffect`；不得將待確認規則寫成已完成項目。
 - 持續補齊起始牌組以外的複合效果與完整事件優先權。
@@ -182,6 +183,16 @@ npm run cards:import:purple-sample
 - 新增 adapter tests 與規則層 tests：BS2-006/007 轉換、hp-to-trash 移除 HP 卡、HP 歸 0 進休息區、紅色手牌驗證與 getTrapCandidates 顏色過濾。
 - 修正 UI `useMatchController.ts` 的 `selectedTrapDiscardCandidates`，依陷阱的 `discardHandColor` 過濾手牌候選，僅顯示符合顏色限制的卡牌，避免玩家選到規則層會拒絕的手牌。
 - 已執行 `npm test`、`npm run lint`、`npm run build`，目前 692 項單元測試通過，build 仍只有 Vite chunk size 警告。
+
+# 2026-07-04 Phase 4b：PlayerView 視角過濾器 + Lv.3 評估式 AI
+
+- **PlayerView 視角過濾器**：新增 `src/game/player-view.ts` 的 `createPlayerView(state, playerId)`，把 `GameState` 過濾成單一玩家可見資訊——對手手牌只留張數、雙方牌庫只留張數、雙方戰鬥區餅乾的 HP 卡只留張數（連持有者自己都看不到內容），支援區／Break 區／棄牌區／場景等公開資訊原樣保留。用型別而非紀律保證 AI 不作弊，未來線上對戰的 state snapshot 可直接重用。
+- **Lv.3 評估式 AI**：新增 `src/game/ai/evaluated-turn-handler.ts`。支援／主要階段對 `getLegalTurnCommands` 枚舉的候選指令逐一套用後以 `evaluatePlayerView`（只吃 `PlayerView`）打分，另枚舉技能與物品候選，取最高分執行；攻擊指令因套用後戰局停在待回應階段，改用「預期傷害／斬殺」期望值加成計分而非套用後評分。非自由選擇的局面（Refresh、補位、OnPlay、戰鬥回應、非行動回合）委派給 Lv.2 的 handler，不重複實作。
+- **等級分派擴充**：`AiLevel` 由 `1 | 2` 擴充為 `1 | 2 | 3`；`takeAiStep`／`simulateAiMatch` 對 Lv.3 的分派與既有 Lv.1/Lv.2 路徑並存，不影響預設行為。
+- **主選單**：AI 等級下拉新增「Lv.3 評估戰局」選項。
+- **測試**：新增 `player-view.test.ts`（3 項，驗證隱藏資訊已過濾、公開資訊保留）、`ai-level3.test.ts`（6 項，含評分方向正確性、結束對局勝負極值、Lv.3 對局可正常結束、**Lv.3 對 Lv.1 的 20 場種子模擬勝率 ≥ 65%**、同局面決策可重現）、MainMenu 新增 Lv.3 選項測試（1 項）；共 742 項單元測試通過。
+- `docs/ai-levels.md` 更新為 Lv.1–3 已實作、Lv.4–5 設計稿，補上 Lv.3 實作細節與測試策略。
+- 已執行 `npm test`（742 項）、`npm run lint`、`npm run build`。
 
 # 2026-07-04 Phase 4：AI 等級分級第一版（Lv.1／Lv.2）
 

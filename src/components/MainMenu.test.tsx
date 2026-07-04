@@ -158,12 +158,26 @@ describe('MainMenu AI opponent options', () => {
       selects[0].dispatchEvent(new Event('change', { bubbles: true }))
     })
     await act(() => {
-      selects[1].value = '1'
+      selects[1].value = '3'
       selects[1].dispatchEvent(new Event('change', { bubbles: true }))
     })
 
     expect(onSelectAiDeck).toHaveBeenCalledWith('purple')
-    expect(onSelectAiLevel).toHaveBeenCalledWith(1)
+    expect(onSelectAiLevel).toHaveBeenCalledWith(3)
+
+    await act(() => root.unmount())
+  })
+
+  it('offers Lv.3 as a selectable option', async () => {
+    const { container, root } = await renderMenu([validDeck], {}, {
+      aiLevel: 3,
+    })
+
+    const levelSelect = container.querySelectorAll<HTMLSelectElement>(
+      '.main-menu-ai-options select',
+    )[1]
+    expect(levelSelect.value).toBe('3')
+    expect(container.textContent).toContain('評估戰局')
 
     await act(() => root.unmount())
   })
