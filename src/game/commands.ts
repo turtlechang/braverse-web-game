@@ -2,23 +2,53 @@ import { GameRuleError } from './errors'
 import {
   getAfterDamageEffectMinMax,
   getFaintEffectMinMax,
+  playBlocker,
+  playTrap,
+  resolveAttackEffect,
+  resolveBattleAutomatically,
   resolveFaintEffect,
+  resolveFlip,
   resolveNextAfterDamageEffect,
+  resolveNextDamage,
   resolveOptionalCostAttack,
+  skipTrap,
 } from './battle'
 import {
   executeCardEffect,
+  isEffectConditionMet,
   resolveDrawUpTo,
   resolveInspectDeck,
   resolveOpponentHandDiscard,
 } from './effects'
+import {
+  attackCookie,
+  deployCookie,
+  placeSupportCard,
+  replaceDefeatedCookie,
+  skipDefeatedCookieReplacement,
+} from './actions'
+import { advancePhase } from './turn'
+import { activateCookieSkill, skipCookieOnPlay } from './skills'
+import { activateStage, playItem, playStage } from './card-abilities'
+import { refreshDeck } from './refresh'
+import { getCurrentReplacementTask } from './replacement'
+import {
+  drawMulliganCompensation,
+  forceMulliganOpeningHand,
+  keepOpeningHand,
+  mulliganOpeningHand,
+  selectStartingCookie,
+} from './setup'
 import type {
   AbilityCost,
   CardEffect,
+  CommandLogEntry,
+  EffectContext,
   EnergyColor,
   GameState,
   PendingEffectOrderItem,
   PlayerId,
+  Shuffle,
 } from './types'
 
 export interface FaintEffectDecision {
@@ -159,7 +189,7 @@ export interface ResolveEffectOrderCommand {
   orderedIds: string[]
 }
 
-export type GameCommand =
+export type PendingDecisionCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
   | ResolveInspectDeckCommand
@@ -168,6 +198,204 @@ export type GameCommand =
   | ResolveStageTriggerCommand
   | ResolveAfterDamageEffectCommand
   | ResolveEffectOrderCommand
+
+export interface KeepOpeningHandCommand {
+  kind: 'keep-opening-hand'
+  playerId: PlayerId
+}
+
+export interface MulliganOpeningHandCommand {
+  kind: 'mulligan-opening-hand'
+  playerId: PlayerId
+}
+
+export interface ForceMulliganOpeningHandCommand {
+  kind: 'force-mulligan-opening-hand'
+  playerId: PlayerId
+}
+
+export interface DrawMulliganCompensationCommand {
+  kind: 'draw-mulligan-compensation'
+  playerId: PlayerId
+}
+
+export interface SelectStartingCookieCommand {
+  kind: 'select-starting-cookie'
+  playerId: PlayerId
+  instanceId: string
+}
+
+export interface AdvancePhaseCommand {
+  kind: 'advance-phase'
+  playerId: PlayerId
+}
+
+export interface PlaceSupportCommand {
+  kind: 'place-support'
+  playerId: PlayerId
+  instanceId: string
+}
+
+export interface DeployCookieCommand {
+  kind: 'deploy-cookie'
+  playerId: PlayerId
+  instanceId: string
+}
+
+export interface AttackCommand {
+  kind: 'attack'
+  playerId: PlayerId
+  attackerInstanceId: string
+  targetInstanceId: string
+  supportPaymentIds: string[]
+}
+
+export interface ActivateSkillCommand {
+  kind: 'activate-skill'
+  playerId: PlayerId
+  sourceInstanceId: string
+  trigger: 'activate' | 'on-play'
+  paymentIds: string[]
+  costSupportToTrashIds?: string[]
+  discardHandIds?: string[]
+  trashBattleCookieIds?: string[]
+  effectTargets?: string[][]
+}
+
+export interface SkipOnPlayCommand {
+  kind: 'skip-on-play'
+  playerId: PlayerId
+  sourceInstanceId: string
+}
+
+export interface PlayItemCommand {
+  kind: 'play-item'
+  playerId: PlayerId
+  instanceId: string
+  paymentIds: string[]
+  supportToTrashIds?: string[]
+  supportToHandIds?: string[]
+  discardHandIds?: string[]
+  hpToTrashTargetIds?: string[]
+  effectTargets?: string[][]
+}
+
+export interface PlayStageCommand {
+  kind: 'play-stage'
+  playerId: PlayerId
+  instanceId: string
+  paymentIds: string[]
+}
+
+export interface ActivateStageCommand {
+  kind: 'activate-stage'
+  playerId: PlayerId
+  paymentIds: string[]
+  supportToTrashIds?: string[]
+  supportToHandIds?: string[]
+  discardHandIds?: string[]
+  hpToTrashTargetIds?: string[]
+  effectTargets?: string[][]
+}
+
+export interface ReplaceCookieCommand {
+  kind: 'replace-cookie'
+  playerId: PlayerId
+  instanceId: string
+}
+
+export interface SkipReplacementCommand {
+  kind: 'skip-replacement'
+  playerId: PlayerId
+}
+
+export interface RefreshDeckCommand {
+  kind: 'refresh-deck'
+  playerId: PlayerId
+  cookieInstanceId: string
+}
+
+export interface PlayTrapCommand {
+  kind: 'play-trap'
+  playerId: PlayerId
+  trapInstanceId: string
+  paymentIds: string[]
+  targetIds: string[]
+  supportTrashIds?: string[]
+  discardHandIds?: string[]
+  trashBattleCookieIds?: string[]
+}
+
+export interface SkipTrapCommand {
+  kind: 'skip-trap'
+  playerId: PlayerId
+}
+
+export interface PlayBlockerCommand {
+  kind: 'play-blocker'
+  playerId: PlayerId
+  sourceInstanceId: string
+  paymentIds: string[]
+}
+
+export interface ResolveFlipCommand {
+  kind: 'resolve-flip'
+  playerId: PlayerId
+  activate: boolean
+  discardHandIds?: string[]
+}
+
+export interface ResolveAttackEffectCommand {
+  kind: 'resolve-attack-effect'
+  playerId: PlayerId
+  targetIds: string[]
+}
+
+export interface ResolveNextDamageCommand {
+  kind: 'resolve-next-damage'
+  playerId: PlayerId
+}
+
+export interface ResolveBattleCommand {
+  kind: 'resolve-battle'
+  playerId: PlayerId
+}
+
+export type PlayerActionCommand =
+  | KeepOpeningHandCommand
+  | MulliganOpeningHandCommand
+  | ForceMulliganOpeningHandCommand
+  | DrawMulliganCompensationCommand
+  | SelectStartingCookieCommand
+  | AdvancePhaseCommand
+  | PlaceSupportCommand
+  | DeployCookieCommand
+  | AttackCommand
+  | ActivateSkillCommand
+  | SkipOnPlayCommand
+  | PlayItemCommand
+  | PlayStageCommand
+  | ActivateStageCommand
+  | ReplaceCookieCommand
+  | SkipReplacementCommand
+  | RefreshDeckCommand
+  | PlayTrapCommand
+  | SkipTrapCommand
+  | PlayBlockerCommand
+  | ResolveFlipCommand
+  | ResolveAttackEffectCommand
+  | ResolveNextDamageCommand
+  | ResolveBattleCommand
+
+export type GameCommand = PendingDecisionCommand | PlayerActionCommand
+
+export interface ApplyGameCommandOptions {
+  /**
+   * 洗牌來源。重播時必須傳入與原對局相同種子的
+   * createSeededShuffle，否則調度／Refresh 的牌序不會一致。
+   */
+  shuffle?: Shuffle
+}
 
 const isEffectOrderItemActive = (
   state: GameState,
@@ -402,9 +630,41 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-effect-order': 'effect-order',
 }
 
+const isPendingDecisionCommand = (
+  command: GameCommand,
+): command is PendingDecisionCommand => command.kind in cmdToDecisionKind
+
+const appendCommandLogEntry = (
+  previous: GameState,
+  next: GameState,
+  command: GameCommand,
+): GameState => {
+  const log = next.commandLog ?? []
+  const entry: CommandLogEntry = {
+    id: log.length + 1,
+    turnNumber: previous.turnNumber,
+    phase: previous.phase,
+    playerId: command.playerId,
+    commandKind: command.kind,
+    payload: { ...command },
+  }
+  return { ...next, commandLog: [...log, entry] }
+}
+
 export const applyGameCommand = (
   state: GameState,
   command: GameCommand,
+  options: ApplyGameCommandOptions = {},
+): GameState => {
+  const next = isPendingDecisionCommand(command)
+    ? applyPendingDecisionCommand(state, command)
+    : applyPlayerActionCommand(state, command, options)
+  return appendCommandLogEntry(state, next, command)
+}
+
+const applyPendingDecisionCommand = (
+  state: GameState,
+  command: PendingDecisionCommand,
 ): GameState => {
   const decision = getPendingDecision(state)
 
@@ -505,5 +765,232 @@ export const applyGameCommand = (
     }
     case 'resolve-after-damage-effect':
       return resolveNextAfterDamageEffect(state, command.targetIds)
+  }
+}
+
+const requireActivePlayer = (state: GameState, playerId: PlayerId) => {
+  if (state.activePlayerId !== playerId) {
+    throw new GameRuleError('不是目前的回合玩家。')
+  }
+}
+
+const assertNoPendingDecision = (state: GameState) => {
+  if (getPendingDecision(state)) {
+    throw new GameRuleError('必須先處理待處理的決策。')
+  }
+}
+
+const executeAbilityEffects = (
+  state: GameState,
+  context: EffectContext,
+  effects: readonly CardEffect[],
+  effectTargets: string[][] | undefined,
+  shuffle?: Shuffle,
+): GameState => {
+  let nextState = state
+  for (let index = 0; index < effects.length; index += 1) {
+    if (nextState.status !== 'playing') break
+    const effect = effects[index]
+    if (!isEffectConditionMet(nextState, context, effect)) continue
+    nextState = executeCardEffect(
+      nextState,
+      context,
+      effect,
+      effectTargets?.[index] ?? [],
+      shuffle,
+    )
+    if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+  }
+  return nextState
+}
+
+const applyPlayerActionCommand = (
+  state: GameState,
+  command: PlayerActionCommand,
+  options: ApplyGameCommandOptions,
+): GameState => {
+  assertNoPendingDecision(state)
+
+  switch (command.kind) {
+    case 'keep-opening-hand':
+      return keepOpeningHand(state, command.playerId)
+    case 'mulligan-opening-hand':
+      return mulliganOpeningHand(state, command.playerId, options.shuffle)
+    case 'force-mulligan-opening-hand':
+      return forceMulliganOpeningHand(state, command.playerId, options.shuffle)
+    case 'draw-mulligan-compensation':
+      return drawMulliganCompensation(state, command.playerId)
+    case 'select-starting-cookie':
+      return selectStartingCookie(state, command.playerId, command.instanceId)
+    case 'advance-phase':
+      requireActivePlayer(state, command.playerId)
+      return advancePhase(state)
+    case 'place-support':
+      requireActivePlayer(state, command.playerId)
+      return placeSupportCard(state, command.instanceId)
+    case 'deploy-cookie':
+      requireActivePlayer(state, command.playerId)
+      return deployCookie(state, command.instanceId)
+    case 'attack':
+      requireActivePlayer(state, command.playerId)
+      return attackCookie(
+        state,
+        command.attackerInstanceId,
+        command.targetInstanceId,
+        command.supportPaymentIds,
+      )
+    case 'activate-skill': {
+      const source = state.players[command.playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === command.sourceInstanceId,
+      )
+      const skill = source?.card.skill
+      const activated = activateCookieSkill(
+        state,
+        command.playerId,
+        command.sourceInstanceId,
+        command.trigger,
+        command.paymentIds,
+        command.costSupportToTrashIds ?? [],
+        command.discardHandIds ?? [],
+        command.trashBattleCookieIds ?? [],
+      )
+      const context: EffectContext = {
+        sourcePlayerId: command.playerId,
+        sourceInstanceId: command.sourceInstanceId,
+        sourceCardName: source?.card.name,
+      }
+      return executeAbilityEffects(
+        activated,
+        context,
+        skill?.effects ?? [],
+        command.effectTargets,
+        options.shuffle,
+      )
+    }
+    case 'skip-on-play':
+      return skipCookieOnPlay(state, command.playerId, command.sourceInstanceId)
+    case 'play-item': {
+      const card = state.players[command.playerId].hand.find(
+        (handCard) => handCard.instanceId === command.instanceId,
+      )
+      const played = playItem(
+        state,
+        command.playerId,
+        command.instanceId,
+        command.paymentIds,
+        command.supportToTrashIds ?? [],
+        command.supportToHandIds ?? [],
+        command.discardHandIds ?? [],
+        command.hpToTrashTargetIds ?? [],
+      )
+      const context: EffectContext = {
+        sourcePlayerId: command.playerId,
+        sourceInstanceId: command.instanceId,
+        sourceCardName: card?.name,
+      }
+      return executeAbilityEffects(
+        played,
+        context,
+        card?.item?.effects ?? [],
+        command.effectTargets,
+        options.shuffle,
+      )
+    }
+    case 'play-stage':
+      return playStage(
+        state,
+        command.playerId,
+        command.instanceId,
+        command.paymentIds,
+      )
+    case 'activate-stage': {
+      const stage = state.players[command.playerId].stage
+      const activated = activateStage(
+        state,
+        command.playerId,
+        command.paymentIds,
+        command.supportToTrashIds ?? [],
+        command.supportToHandIds ?? [],
+        command.discardHandIds ?? [],
+        command.hpToTrashTargetIds ?? [],
+      )
+      const context: EffectContext = {
+        sourcePlayerId: command.playerId,
+        sourceInstanceId: stage?.card.instanceId ?? '',
+        sourceCardName: stage?.card.name,
+      }
+      return executeAbilityEffects(
+        activated,
+        context,
+        stage?.card.stageAbility?.effects ?? [],
+        command.effectTargets,
+        options.shuffle,
+      )
+    }
+    case 'replace-cookie': {
+      const task = getCurrentReplacementTask(state)
+      if (!task || task.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要補位的玩家。')
+      }
+      return replaceDefeatedCookie(state, command.instanceId)
+    }
+    case 'skip-replacement': {
+      const task = getCurrentReplacementTask(state)
+      if (!task || task.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要補位的玩家。')
+      }
+      return skipDefeatedCookieReplacement(state)
+    }
+    case 'refresh-deck':
+      return refreshDeck(
+        state,
+        command.playerId,
+        command.cookieInstanceId,
+        options.shuffle,
+      )
+    case 'play-trap':
+      return playTrap(state, command.playerId, {
+        trapInstanceId: command.trapInstanceId,
+        paymentIds: command.paymentIds,
+        targetIds: command.targetIds,
+        supportTrashIds: command.supportTrashIds,
+        discardHandIds: command.discardHandIds,
+        trashBattleCookieIds: command.trashBattleCookieIds,
+      })
+    case 'skip-trap':
+      return skipTrap(state, command.playerId)
+    case 'play-blocker':
+      return playBlocker(state, command.playerId, {
+        sourceInstanceId: command.sourceInstanceId,
+        paymentIds: command.paymentIds,
+      })
+    case 'resolve-flip':
+      return resolveFlip(state, command.playerId, {
+        activate: command.activate,
+        discardHandIds: command.discardHandIds,
+      })
+    case 'resolve-attack-effect':
+      return resolveAttackEffect(state, command.playerId, command.targetIds)
+    case 'resolve-next-damage': {
+      const battle = state.pendingBattle
+      if (
+        !battle ||
+        (battle.damagePlayerId ?? battle.defenderPlayerId) !== command.playerId
+      ) {
+        throw new GameRuleError('不是目前需要結算傷害的玩家。')
+      }
+      return resolveNextDamage(state)
+    }
+    case 'resolve-battle': {
+      const battle = state.pendingBattle
+      if (
+        !battle ||
+        (battle.attackerPlayerId !== command.playerId &&
+          battle.defenderPlayerId !== command.playerId)
+      ) {
+        throw new GameRuleError('目前沒有可自動結算的戰鬥。')
+      }
+      return resolveBattleAutomatically(state)
+    }
   }
 }

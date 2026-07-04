@@ -4,7 +4,7 @@
 
 ## 開發背景
 
-本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。三副起始牌組共 10 張物品卡與 2 張場景卡已完整支援，含費用支付、主階段動作、場景替換橫置啟動、複合效果暫停與 OnPlay/Refresh/補位銜接，AI 以 deterministic 策略使用。桌機 UI 採滿版桌墊聚焦 HUD，以窄型五階段列、中央操作指引、55/45 戰鬥／支援區與按需展開的資源牌堆降低周邊資訊干擾；FLIP、物品與陷阱會以可縮小的確認式大卡暫停展示。App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；新增 src/game/commands.ts 的 typed GameCommand/PendingDecision pilot，涵蓋 faint-effect 與 opponent-hand-discard，UI 與 AI 已接入。桌面 MatchToolbar 已移至 PhaseRail 上方；雙方手牌採支援區邊界內的扇形呈現，我方右側切齊、對手左側切齊，動態調整間距、弧度與 z-index；我方 hover 保留扇形位置與角度，僅提供輕微上移提示。
+本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。三副起始牌組共 10 張物品卡與 2 張場景卡已完整支援，含費用支付、主階段動作、場景替換橫置啟動、複合效果暫停與 OnPlay/Refresh/補位銜接，AI 以 deterministic 策略使用。桌機 UI 採滿版桌墊聚焦 HUD，以窄型五階段列、中央操作指引、55/45 戰鬥／支援區與按需展開的資源牌堆降低周邊資訊干擾；FLIP、物品與陷阱會以可縮小的確認式大卡暫停展示。App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；src/game/commands.ts 的 typed GameCommand 已從 pilot 擴充為全覆蓋指令層（8 種決策指令 + 24 種玩家動作指令），applyGameCommand 會在 GameState.commandLog 記錄每筆指令，src/game/replay.ts 提供 replayCommands/replayCommandLog 重播能力。桌面 MatchToolbar 已移至 PhaseRail 上方；雙方手牌採支援區邊界內的扇形呈現，我方右側切齊、對手左側切齊，動態調整間距、弧度與 z-index；我方 hover 保留扇形位置與角度，僅提供輕微上移提示。
 
 目前以《綜合規則》Ver.1.2、《CRB 遊戲指南》240812 更新版、《CRB 說明書 P1》及《裁判指南》作為規則文件基線；專案裁定與仍待新版官方資料覆核的項目記錄於 `docs/rule-clarifications.md`。
 
@@ -33,6 +33,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 餅乾因暈倒或效果離開戰鬥區後，會依各玩家離場張數逐張詢問是否補位；玩家可選擇補餅乾或略過，雙方同批離場時由回合玩家先完成，再由非回合玩家執行，並在每張實際補位間依序處理 Refresh 與 OnPlay。
 - 新對局會隨機洗牌，並依序進行玩家選牌組、AI 隨機選牌組、猜拳、先後攻、自由／強制調度、補償抽牌與起始餅乾配置。
 - 已新增主選單與對戰入口流程：玩家需先選擇一副合法自訂牌組才能進入對戰；合法性檢查集中於 `src/game/custom-deck.ts`，規則為剛好 60 張、同卡號最多 4 張、至少 1 張餅乾卡、FLIP 不超過 16 張且不限制單一顏色。牌組編輯器即時顯示總張數、FLIP 張數、餅乾卡數量與錯誤原因；AI 對手仍在對戰開始前由五色起始牌組隨機決定。
+- 主選單牌組卡片支援刪除（含確認）與複製；「需調整」標籤 hover 顯示不合法原因。牌組儲存改為含 `version` 欄位的格式並自動遷移舊陣列格式，損壞資料不會讓已存牌組消失整批。
+- 牌組編輯器卡池單擊直接加入 1 張、右下角顯示已選張數徽章、右上角 info 鈕開啟詳細與加減控制；達 4 張上限的卡片保留在卡池並以禁用樣式呈現。
 - 桌面 UI 已完成減法改版：左側為窄型五階段列，右上只保留重置、牌組與暫停資訊；雙方場地固定為戰鬥區 55%、支援區 45%，戰鬥卡向中央分隔列靠攏，我方支援卡由左向右、對手由右向左排列並維持可辨識尺寸；對手名稱與先後攻資訊位於戰鬥區左下角。牌庫／場景／休息區改為數字牌堆與鄰近浮層，棄牌與完整牌組維持大型視窗。手牌選取後才抬升並顯示單一合法動作，可用空白處或 `Escape` 取消；攻擊、付款與目標選擇提示集中在中央分隔列。低於 900px 的頂部階段列、中央牌桌、底部工具列維持既有模式，最低支援 600x338。
 - 已加入 `scripts/opencode-go.cmd` 與專案模型設定，使用獨立 runtime 目錄及 `OPENCODE_GO_API_KEY` 環境變數進行派工，不提交認證資料。
 - Codex 受限網路環境執行 OpenCode Go 時，需以核准的外部網路權限啟動派工；`ConnectionRefused` 且 Token 為 0 代表尚未進入模型推理。
@@ -43,8 +45,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局選擇紅色、黃色、綠色、藍色或紫色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
-  - 目前共有 692 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
-- App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand/PendingDecision pilot 持續涵蓋 faint-effect 與 opponent-hand-discard，UI 與 AI 已接入。
+  - 目前共有 718 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
+- App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
@@ -68,6 +70,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已達成：修復 `pendingBattle.stage === "attack-effect"` 控制權判定，攻擊後續效果現在由攻擊方處理；AI 作為攻擊方時會自動結算 attack-effect，不再停在 AI 主要階段等待玩家無法操作的 pending battle。同步補上玩家確認棄手牌傷害技能後排入補位的 hook 回歸測試。
 - 已達成：玩家手牌 hover 保留原扇形位置與角度，僅上移 8px、縮放至 1.02；ST5-021 無合法必選目標時不再列入陷阱候選，並以紫色對紫色固定種子 6、19、29、33 鎖定 AI 不再卡住。
 - 待實作：App.tsx（1575 行）容器元件拆分。已分析候選：`BattleScreen`（~1235 行 battle shell）、`FaintEffectModal`、`AfterDamageEffectModal`、`OpponentHandDiscardModal`、`DrawUpToModal`、`StageTriggerModal` 等 inline JSX modal，以及 PlayerBattleRow 的 ~150 行 callback handlers。
+- 待實作：UI 與 AI 逐步改走 `applyGameCommand` 指令層（目前 UI 主要動作與 `usePendingEffect` 多段效果流程仍直接呼叫規則函式），完成後實際對局的 `commandLog` 才是完整重播來源；對局種子統一注入後可支援「複製對局紀錄」回報格式。
+- 待實作：AI 等級分級（Lv.1 隨機／Lv.2 現行啟發式掛名）與主選單 AI 牌組選擇，依 `docs/game-commands.md` 的指令層為基礎。
 - 拖移卡牌暫不實作；未來若加入，拖放只負責輸入，仍須呼叫既有規則 API，且在 pending decision、確認式大卡與 AI 行動期間停用，並保留按鈕與鍵盤操作。
 - 待官方規則確認後才擴充 `CardEffect`；不得將待確認規則寫成已完成項目。
 - 持續補齊起始牌組以外的複合效果與完整事件優先權。
@@ -177,6 +181,16 @@ npm run cards:import:purple-sample
 - 新增 adapter tests 與規則層 tests：BS2-006/007 轉換、hp-to-trash 移除 HP 卡、HP 歸 0 進休息區、紅色手牌驗證與 getTrapCandidates 顏色過濾。
 - 修正 UI `useMatchController.ts` 的 `selectedTrapDiscardCandidates`，依陷阱的 `discardHandColor` 過濾手牌候選，僅顯示符合顏色限制的卡牌，避免玩家選到規則層會拒絕的手牌。
 - 已執行 `npm test`、`npm run lint`、`npm run build`，目前 692 項單元測試通過，build 仍只有 Vite chunk size 警告。
+
+# 2026-07-04 Phase 1/3 收尾：指令層全覆蓋 + 牌組管理補完
+
+- **Phase 3 牌組管理**：`custom-deck.ts` 儲存格式加入 `version: 1` 欄位（`parseCustomDeckStorage` 自動遷移舊陣列格式、過濾損壞紀錄）；新增 `deleteCustomDeck`、`duplicateCustomDeck`、`createCustomDeckId`。主選單牌組卡片新增「複製」與「刪除」（含 confirm）按鈕；「需調整」標籤 hover 顯示完整不合法原因。
+- **牌組編輯器操作簡化**：卡池單擊直接 +1（原需點卡→tooltip→按加號三步）；新增張數徽章與 info 鈕（開啟原 tooltip 詳細/加減控制）；達 4 張上限的卡不再從卡池消失，改為禁用樣式。
+- **Phase 1 指令層全覆蓋**：`GameCommand` 由 8 種決策指令擴充為 8 決策 + 24 玩家動作指令（開局調度／選起始餅乾、advance-phase、place-support、deploy-cookie、attack、activate-skill、play-item、play-stage、activate-stage、skip-on-play、replace-cookie、skip-replacement、refresh-deck、play-trap、skip-trap、play-blocker、resolve-flip、resolve-attack-effect、resolve-next-damage、resolve-battle）。內部僅委派既有規則函式，規則實作零修改；`applyGameCommand` 增加行動者驗證（回合玩家／補位玩家／受傷方）與「有待處理決策時拒絕動作指令」守門。
+- **指令紀錄與重播**：`GameState.commandLog` 記錄每筆指令（流水號、回合、階段、玩家、payload）；新增 `src/game/replay.ts`（`replayCommands`／`replayCommandLog`／`commandFromLogEntry`）。`ApplyGameCommandOptions.shuffle` 支援注入種子洗牌以確保調度／Refresh 重播一致。
+- **黃金重播測試**：`src/game/replay.test.ts` 以固定種子 + 指令序列驅動含調度、支援、登場、攻擊的三回合腳本對局，驗證重播終局 JSON 完全一致；`commands-actions.test.ts` 覆蓋行動者驗證、階段限制、決策阻擋與種子調度重現。
+- `docs/game-commands.md` 已從 pilot 說明改寫為全覆蓋指令層文件（含 24 種動作指令對照表與驗證順序）。
+- 已執行 `npm test`（718 項，新增 26 項）、`npm run lint`、`npm run build`；build 仍只有 Vite chunk size 警告。UI 遷移指令層與 AI 分級列入下一步計畫。
 
 # 2026-07-03 Playwright support card click fix
 

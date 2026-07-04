@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X, Plus, Minus, Trash2, Save, Upload, Download } from 'lucide-react'
+import { X, Plus, Minus, Trash2, Save, Upload, Download, Info } from 'lucide-react'
 import type { CustomDeck } from '../../game/custom-deck'
 import {
   DECK_SIZE_REQUIRED,
@@ -275,13 +275,28 @@ export function DeckEditorModal({
                     <button
                       type="button"
                       className="deck-editor-pool-card-btn"
+                      title={`${entry.cardNumber} ${entry.name}（點擊加入 1 張）`}
+                      disabled={atMax}
+                      onClick={() => editor.addCard(entry.cardNumber)}
+                    >
+                      <CardPoolImage entry={entry} />
+                    </button>
+                    {currentCount > 0 && (
+                      <span className="deck-editor-pool-count" aria-hidden="true">
+                        {currentCount}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="deck-editor-pool-info-btn"
+                      title="卡片詳細與數量調整"
                       onClick={() =>
                         setTooltipCard(
                           tooltipCard === entry.cardNumber ? null : entry.cardNumber,
                         )
                       }
                     >
-                      <CardPoolImage entry={entry} />
+                      <Info aria-hidden="true" />
                     </button>
                     {tooltipCard === entry.cardNumber && (
                       <div className="deck-editor-tooltip" ref={tooltipRef}>
