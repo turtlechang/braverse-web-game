@@ -265,6 +265,26 @@ button {
   grid-column: 1 / -1;
 }
 
+.main-menu-deck-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.main-menu-deck-actions svg {
+  width: 14px;
+  height: 14px;
+}
+
+.main-menu-delete-deck {
+  border-color: rgba(255, 139, 116, 0.42);
+  color: #ffd4ca;
+}
+
+.main-menu-delete-deck:hover {
+  background: rgba(138, 40, 28, 0.66);
+}
+
 .main-menu-empty {
   display: grid;
   place-items: center;

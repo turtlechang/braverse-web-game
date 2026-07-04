@@ -35,18 +35,89 @@ export interface DeckValidationResult {
 
 export const getCustomDeckStorageKey = (): string => 'braverse-custom-decks'
 
+export const CUSTOM_DECK_STORAGE_VERSION = 1
+
+interface CustomDeckStorage {
+  version: number
+  decks: CustomDeck[]
+}
+
+const isCustomDeckShape = (value: unknown): value is CustomDeck => {
+  if (typeof value !== 'object' || value === null) return false
+  const deck = value as Partial<CustomDeck>
+  return (
+    typeof deck.id === 'string' &&
+    typeof deck.name === 'string' &&
+    Array.isArray(deck.entries)
+  )
+}
+
+export const parseCustomDeckStorage = (raw: string): CustomDeck[] => {
+  const parsed: unknown = JSON.parse(raw)
+
+  if (Array.isArray(parsed)) {
+    return parsed.filter(isCustomDeckShape)
+  }
+
+  if (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    (parsed as CustomDeckStorage).version === CUSTOM_DECK_STORAGE_VERSION &&
+    Array.isArray((parsed as CustomDeckStorage).decks)
+  ) {
+    return (parsed as CustomDeckStorage).decks.filter(isCustomDeckShape)
+  }
+
+  return []
+}
+
 export const loadCustomDecks = (): CustomDeck[] => {
   try {
     const raw = localStorage.getItem(getCustomDeckStorageKey())
     if (!raw) return []
-    return JSON.parse(raw) as CustomDeck[]
+    return parseCustomDeckStorage(raw)
   } catch {
     return []
   }
 }
 
 export const saveCustomDecks = (decks: CustomDeck[]): void => {
-  localStorage.setItem(getCustomDeckStorageKey(), JSON.stringify(decks))
+  const storage: CustomDeckStorage = {
+    version: CUSTOM_DECK_STORAGE_VERSION,
+    decks,
+  }
+  localStorage.setItem(getCustomDeckStorageKey(), JSON.stringify(storage))
+}
+
+export const createCustomDeckId = (): string =>
+  `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+export const deleteCustomDeck = (deckId: string): CustomDeck[] => {
+  const decks = loadCustomDecks().filter((deck) => deck.id !== deckId)
+  saveCustomDecks(decks)
+  return decks
+}
+
+export const duplicateCustomDeck = (
+  deckId: string,
+): { decks: CustomDeck[]; newDeck: CustomDeck | null } => {
+  const decks = loadCustomDecks()
+  const source = decks.find((deck) => deck.id === deckId)
+  if (!source) {
+    return { decks, newDeck: null }
+  }
+
+  const now = new Date().toISOString()
+  const newDeck: CustomDeck = {
+    id: createCustomDeckId(),
+    name: `${source.name}（複製）`,
+    entries: source.entries.map((entry) => ({ ...entry })),
+    createdAt: now,
+    updatedAt: now,
+  }
+  const updated = [...decks, newDeck]
+  saveCustomDecks(updated)
+  return { decks: updated, newDeck }
 }
 
 export const validateCustomDeck = (

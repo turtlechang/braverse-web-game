@@ -1,4 +1,4 @@
-import { AlertTriangle, Pencil, Play, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Copy, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
 import { validateCustomDeck } from '../game/custom-deck'
@@ -12,6 +12,8 @@ interface MainMenuProps {
   onStartBattle: () => void
   onCreateDeck: () => void
   onEditDeck: (deck: CustomDeck) => void
+  onDuplicateDeck: (deck: CustomDeck) => void
+  onDeleteDeck: (deck: CustomDeck) => void
   onRefreshDecks: () => void
 }
 
@@ -32,6 +34,8 @@ export function MainMenu({
   onStartBattle,
   onCreateDeck,
   onEditDeck,
+  onDuplicateDeck,
+  onDeleteDeck,
   onRefreshDecks,
 }: MainMenuProps) {
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
@@ -130,7 +134,15 @@ export function MainMenu({
                       onClick={() => onSelectDeck(deck.id)}
                     >
                       <strong>{deck.name}</strong>
-                      <span>{validation.isValid ? '合法' : '需調整'}</span>
+                      <span
+                        title={
+                          validation.isValid
+                            ? undefined
+                            : validation.errors.join('\n')
+                        }
+                      >
+                        {validation.isValid ? '合法' : '需調整'}
+                      </span>
                     </button>
                     <div className="main-menu-deck-meta">
                       <span>{validation.stats.totalCards} 張</span>
@@ -138,13 +150,32 @@ export function MainMenu({
                       <span>餅乾 {validation.stats.cookieCards}</span>
                       <span>{formatUpdatedAt(deck.updatedAt)}</span>
                     </div>
-                    <button
-                      type="button"
-                      className="main-menu-edit-deck"
-                      onClick={() => onEditDeck(deck)}
-                    >
-                      編輯
-                    </button>
+                    <div className="main-menu-deck-actions">
+                      <button
+                        type="button"
+                        className="main-menu-edit-deck"
+                        onClick={() => onEditDeck(deck)}
+                      >
+                        編輯
+                      </button>
+                      <button
+                        type="button"
+                        className="main-menu-edit-deck"
+                        title="建立一份相同內容的新牌組"
+                        onClick={() => onDuplicateDeck(deck)}
+                      >
+                        <Copy aria-hidden="true" />
+                        複製
+                      </button>
+                      <button
+                        type="button"
+                        className="main-menu-edit-deck main-menu-delete-deck"
+                        onClick={() => onDeleteDeck(deck)}
+                      >
+                        <Trash2 aria-hidden="true" />
+                        刪除
+                      </button>
+                    </div>
                   </article>
                 )
               })}

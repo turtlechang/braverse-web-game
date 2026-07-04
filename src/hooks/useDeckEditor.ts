@@ -103,7 +103,6 @@ export function useDeckEditor(): DeckEditorState &
 
   const getFilteredPool = useCallback((): CardPoolEntry[] => {
     const all = getAllCardPoolEntries()
-    const entryMap = new Map(deckEntries.map((e) => [e.cardNumber, e.count]))
 
     return all.filter((entry) => {
       if (filterColor && entry.color?.toLowerCase() !== filterColor.toLowerCase()) {
@@ -130,13 +129,9 @@ export function useDeckEditor(): DeckEditorState &
           return false
         }
       }
-      const currentCount = entryMap.get(entry.cardNumber) ?? 0
-      if (currentCount >= MAX_COPIES_PER_CARD) {
-        return false
-      }
       return true
     })
-  }, [deckEntries, searchText, filterColor, filterType, filterRarity, filterSeries])
+  }, [searchText, filterColor, filterType, filterRarity, filterSeries])
 
   const getDeckTotalCount = useCallback((): number => {
     return deckEntries.reduce((sum, e) => sum + e.count, 0)

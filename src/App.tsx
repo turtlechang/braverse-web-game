@@ -62,6 +62,8 @@ import { useMatchController } from './hooks/useMatchController'
 import { MainMenu } from './components/MainMenu'
 import { DeckEditorModal } from './components/modals/DeckEditorModal'
 import {
+  deleteCustomDeck,
+  duplicateCustomDeck,
   loadCustomDecks,
   validateCustomDeck,
   type CustomDeck,
@@ -340,6 +342,28 @@ function App() {
           onEditDeck={(deck) => {
             setEditingDeck(deck)
             setShowDeckEditor(true)
+          }}
+          onDuplicateDeck={(deck) => {
+            const { decks, newDeck } = duplicateCustomDeck(deck.id)
+            setSavedDecks(decks)
+            if (newDeck) {
+              setSelectedDeckId(newDeck.id)
+            }
+          }}
+          onDeleteDeck={(deck) => {
+            if (
+              !window.confirm(
+                `確定要刪除牌組「${deck.name}」嗎？此動作無法復原。`,
+              )
+            ) {
+              return
+            }
+            const decks = deleteCustomDeck(deck.id)
+            setSavedDecks(decks)
+            setSelectedDeckId((current) =>
+              current === deck.id ? decks[0]?.id ?? null : current,
+            )
+            setBattleEntryError(null)
           }}
           onRefreshDecks={refreshSavedDecks}
         />

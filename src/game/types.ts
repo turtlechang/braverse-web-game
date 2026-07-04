@@ -588,6 +588,15 @@ export interface PendingOpponentHandDiscard {
   effectText: string
 }
 
+export interface CommandLogEntry {
+  id: number
+  turnNumber: number
+  phase: TurnPhase
+  playerId: PlayerId
+  commandKind: string
+  payload: Record<string, unknown>
+}
+
 export interface GameState {
   players: Record<PlayerId, PlayerState>
   firstPlayerId: PlayerId
@@ -596,6 +605,7 @@ export interface GameState {
   phase: TurnPhase
   status: GameStatus
   result: GameResult | null
+  commandLog?: CommandLogEntry[]
   supportPlacedThisTurn: boolean
   skillUsesThisTurn: string[]
   nextBattleEntrySequence: number
