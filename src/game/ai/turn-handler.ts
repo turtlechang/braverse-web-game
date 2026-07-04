@@ -10,6 +10,7 @@ import {
   playStage,
 } from '../card-abilities'
 import { beginAttack } from '../battle'
+import { appendCommandLogEntry } from '../commands'
 import { executeCardEffect } from '../effects'
 import { getAttackEnergyCost, selectEnergyPayment } from '../energy'
 import { getRefreshCandidates, refreshDeck } from '../refresh'
@@ -72,7 +73,15 @@ export const handleAiTurnState = (
       }
     }
     return {
-      state: refreshDeck(state, playerId, candidate.instanceId),
+      state: appendCommandLogEntry(
+        state,
+        refreshDeck(state, playerId, candidate.instanceId),
+        {
+          kind: 'refresh-deck',
+          playerId,
+          cookieInstanceId: candidate.instanceId,
+        },
+      ),
       action: 'refresh',
       description: `${state.players[playerId].name}使用${candidate.name}完成 Refresh。`,
     }
@@ -83,12 +92,20 @@ export const handleAiTurnState = (
     const replacement = strategy.chooseReplacement(state, playerId)
     if (!replacement) {
       return {
-        state: skipDefeatedCookieReplacement(state),
+        state: appendCommandLogEntry(
+          state,
+          skipDefeatedCookieReplacement(state),
+          { kind: 'skip-replacement', playerId },
+        ),
         action: 'skip-replacement',
         description: `${state.players[playerId].name}選擇不補餅乾。`,
       }
     }
-    const replacedState = replaceDefeatedCookie(state, replacement.instanceId)
+    const replacedState = appendCommandLogEntry(
+      state,
+      replaceDefeatedCookie(state, replacement.instanceId),
+      { kind: 'replace-cookie', playerId, instanceId: replacement.instanceId },
+    )
     const replaced = replacedState.players[playerId].battleArea.find(
       (cookie) => cookie.card.instanceId === replacement.instanceId,
     )
@@ -100,10 +117,18 @@ export const handleAiTurnState = (
       state:
         onPlay?.state ??
         (replacedState.pendingOnPlay && !replacedState.pendingRefresh
-          ? skipCookieOnPlay(
+          ? appendCommandLogEntry(
               replacedState,
-              playerId,
-              replacement.instanceId,
+              skipCookieOnPlay(
+                replacedState,
+                playerId,
+                replacement.instanceId,
+              ),
+              {
+                kind: 'skip-on-play',
+                playerId,
+                sourceInstanceId: replacement.instanceId,
+              },
             )
           : replacedState),
       action: 'replace-cookie',
@@ -122,10 +147,18 @@ export const handleAiTurnState = (
       : null
     return (
       onPlay ?? {
-        state: skipCookieOnPlay(
+        state: appendCommandLogEntry(
           state,
-          playerId,
-          state.pendingOnPlay.sourceInstanceId,
+          skipCookieOnPlay(
+            state,
+            playerId,
+            state.pendingOnPlay.sourceInstanceId,
+          ),
+          {
+            kind: 'skip-on-play',
+            playerId,
+            sourceInstanceId: state.pendingOnPlay.sourceInstanceId,
+          },
         ),
         action: 'idle',
         description: `${state.players[playerId].name}未發動登場效果。`,
@@ -147,7 +180,11 @@ export const handleAiTurnState = (
 
   if (state.phase === 'active' || state.phase === 'draw') {
     return {
-      state: advancePhase(state),
+      state: appendCommandLogEntry(
+        state,
+        advancePhase(state),
+        { kind: 'advance-phase', playerId },
+      ),
       action: 'advance-phase',
       description: `${state.players[playerId].name}推進回合階段。`,
     }
@@ -159,13 +196,21 @@ export const handleAiTurnState = (
       const supportCard =
         player.hand.find((card) => card.type !== 'cookie') ?? player.hand[0]
       return {
-        state: placeSupportCard(state, supportCard.instanceId),
+        state: appendCommandLogEntry(
+          state,
+          placeSupportCard(state, supportCard.instanceId),
+          { kind: 'place-support', playerId, instanceId: supportCard.instanceId },
+        ),
         action: 'place-support',
         description: `${player.name}將${supportCard.name}配置到支援區。`,
       }
     }
     return {
-      state: advancePhase(state),
+      state: appendCommandLogEntry(
+        state,
+        advancePhase(state),
+        { kind: 'advance-phase', playerId },
+      ),
       action: 'advance-phase',
       description: `${player.name}進入主要階段。`,
     }
@@ -182,7 +227,16 @@ export const handleAiTurnState = (
       )
       if (paymentIds) {
         return {
-          state: playStage(state, playerId, stageCard.instanceId, paymentIds),
+          state: appendCommandLogEntry(
+            state,
+            playStage(state, playerId, stageCard.instanceId, paymentIds),
+            {
+              kind: 'play-stage',
+              playerId,
+              instanceId: stageCard.instanceId,
+              paymentIds,
+            },
+          ),
           action: 'play-stage',
           description: `${player.name}放置${stageCard.name}。`,
         }
@@ -225,7 +279,11 @@ export const handleAiTurnState = (
           if (nextState.pendingRefresh) break
         }
         return {
-          state: finalizePendingReplacements(nextState),
+          state: appendCommandLogEntry(
+            state,
+            finalizePendingReplacements(nextState),
+            { kind: 'activate-stage', playerId, paymentIds },
+          ),
           action: 'activate-stage',
           description: `${player.name}啟動${stage.card.name}。`,
         }
@@ -244,7 +302,11 @@ export const handleAiTurnState = (
     if (player.battleArea.length < 2) {
       const deployable = player.hand.find((card) => card.type === 'cookie')
       if (deployable) {
-        const deployedState = deployCookie(state, deployable.instanceId)
+        const deployedState = appendCommandLogEntry(
+          state,
+          deployCookie(state, deployable.instanceId),
+          { kind: 'deploy-cookie', playerId, instanceId: deployable.instanceId },
+        )
         const deployed = deployedState.players[playerId].battleArea.find(
           (cookie) => cookie.card.instanceId === deployable.instanceId,
         )
@@ -260,10 +322,18 @@ export const handleAiTurnState = (
           state:
             onPlay?.state ??
             (deployedState.pendingOnPlay
-              ? skipCookieOnPlay(
+              ? appendCommandLogEntry(
                   deployedState,
-                  playerId,
-                  deployable.instanceId,
+                  skipCookieOnPlay(
+                    deployedState,
+                    playerId,
+                    deployable.instanceId,
+                  ),
+                  {
+                    kind: 'skip-on-play',
+                    playerId,
+                    sourceInstanceId: deployable.instanceId,
+                  },
                 )
               : deployedState),
           action: 'deploy-cookie',
@@ -294,11 +364,21 @@ export const handleAiTurnState = (
         )
         if (target && !attacker.rested && paymentIds) {
           return {
-            state: beginAttack(
+            state: appendCommandLogEntry(
               state,
-              attacker.card.instanceId,
-              target.card.instanceId,
-              paymentIds,
+              beginAttack(
+                state,
+                attacker.card.instanceId,
+                target.card.instanceId,
+                paymentIds,
+              ),
+              {
+                kind: 'attack',
+                playerId,
+                attackerInstanceId: attacker.card.instanceId,
+                targetInstanceId: target.card.instanceId,
+                supportPaymentIds: paymentIds,
+              },
             ),
             action: 'attack',
             description: `${player.name}以${attacker.card.name}攻擊${target.card.name}。`,
@@ -308,7 +388,11 @@ export const handleAiTurnState = (
     }
 
     return {
-      state: advancePhase(state),
+      state: appendCommandLogEntry(
+        state,
+        advancePhase(state),
+        { kind: 'advance-phase', playerId },
+      ),
       action: 'advance-phase',
       description: `${player.name}結束主要階段。`,
     }
@@ -324,14 +408,22 @@ export const handleAiTurnState = (
       }
     }
     return {
-      state: advanced,
+      state: appendCommandLogEntry(
+        state,
+        advanced,
+        { kind: 'advance-phase', playerId },
+      ),
       action: 'advance-phase',
       description: `${player.name}結束回合。`,
     }
   }
 
   return {
-    state: advancePhase(state),
+    state: appendCommandLogEntry(
+      state,
+      advancePhase(state),
+      { kind: 'advance-phase', playerId },
+    ),
     action: 'advance-phase',
     description: `${player.name}結束回合。`,
   }

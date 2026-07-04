@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, SupportCard } from '../game'
 import {
-  advancePhase,
+  applyGameCommand,
   createDemoSetupGame,
   getCurrentReplacementTask,
   getAfterDamageEffectCandidates,
@@ -18,7 +18,6 @@ import {
   getTrashBattleCookieCostCandidates,
   isPlayerControllingState,
   selectEnergyPayment,
-  skipTrap,
   type DeckChoice,
 } from '../game'
 import {
@@ -274,7 +273,14 @@ export function useMatchController(params: {
   const battleActions = useBattleActions({ game, runAction })
 
   const handleAdvancePhase = () => {
-    runAction(advancePhase, '階段已推進。')
+    runAction(
+      (current) =>
+        applyGameCommand(current, {
+          kind: 'advance-phase',
+          playerId: viewerPlayerId,
+        }),
+      '階段已推進。',
+    )
     battleActions.clearAttacker()
     setSelectedFaintTargetIds([])
   }
@@ -462,7 +468,10 @@ export function useMatchController(params: {
         ) {
           return current
         }
-        return advancePhase(current)
+        return applyGameCommand(current, {
+          kind: 'advance-phase',
+          playerId: viewerPlayerId,
+        })
       })
       setMessage(
         game.phase === 'active'
@@ -499,7 +508,10 @@ export function useMatchController(params: {
         ) {
           return current
         }
-        return skipTrap(current, viewerPlayerId)
+        return applyGameCommand(current, {
+          kind: 'skip-trap',
+          playerId: viewerPlayerId,
+        })
       })
     }, 0)
 

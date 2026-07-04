@@ -9,6 +9,7 @@ import {
   resolveNextDamage,
   skipTrap,
 } from '../battle'
+import { appendCommandLogEntry } from '../commands'
 import { getBreakToTrashCandidates } from '../effects'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
@@ -47,7 +48,11 @@ export const handleAiPendingBattle = (
             .map((card) => card.instanceId)
         : []
     return {
-      state: resolveAttackEffect(state, playerId, targetIds),
+      state: appendCommandLogEntry(
+        state,
+        resolveAttackEffect(state, playerId, targetIds),
+        { kind: 'resolve-attack-effect', playerId, targetIds },
+      ),
       action: 'resolve-attack-effect',
       description:
         targetIds.length > 0
@@ -57,8 +62,13 @@ export const handleAiPendingBattle = (
   }
 
   if (battle.stage === 'damage') {
+    const damagePlayerId = battle.damagePlayerId ?? battle.defenderPlayerId
     return {
-      state: resolveNextDamage(state),
+      state: appendCommandLogEntry(
+        state,
+        resolveNextDamage(state),
+        { kind: 'resolve-next-damage', playerId: damagePlayerId },
+      ),
       action: 'resolve-damage',
       description: '依序翻開並結算下一張 HP 卡。',
     }
@@ -76,10 +86,19 @@ export const handleAiPendingBattle = (
     const canActivate =
       Boolean(revealed?.flip) && discardHandIds.length === discardCount
     return {
-      state: resolveFlip(state, playerId, {
-        activate: canActivate,
-        discardHandIds,
-      }),
+      state: appendCommandLogEntry(
+        state,
+        resolveFlip(state, playerId, {
+          activate: canActivate,
+          discardHandIds,
+        }),
+        {
+          kind: 'resolve-flip',
+          playerId,
+          activate: canActivate,
+          discardHandIds,
+        },
+      ),
       action: 'resolve-flip',
       revealedCard: revealed ?? undefined,
       description: canActivate
@@ -133,21 +152,38 @@ export const handleAiPendingBattle = (
         supportTrashIds.length < supportTrashEffect.amount
       ) {
         return {
-          state: skipTrap(state, playerId),
+          state: appendCommandLogEntry(
+            state,
+            skipTrap(state, playerId),
+            { kind: 'skip-trap', playerId },
+          ),
           action: 'play-trap',
           description: `${state.players[playerId].name}無法支付陷阱後續代價。`,
         }
       }
 
       return {
-        state: playTrap(state, playerId, {
-          trapInstanceId: trapCard.instanceId,
-          paymentIds,
-          targetIds,
-          supportTrashIds,
-          discardHandIds,
-          trashBattleCookieIds,
-        }),
+        state: appendCommandLogEntry(
+          state,
+          playTrap(state, playerId, {
+            trapInstanceId: trapCard.instanceId,
+            paymentIds,
+            targetIds,
+            supportTrashIds,
+            discardHandIds,
+            trashBattleCookieIds,
+          }),
+          {
+            kind: 'play-trap',
+            playerId,
+            trapInstanceId: trapCard.instanceId,
+            paymentIds,
+            targetIds,
+            supportTrashIds,
+            discardHandIds,
+            trashBattleCookieIds,
+          },
+        ),
         action: 'play-trap',
         revealedCard: trapCard,
         description: `${state.players[playerId].name}發動${trapCard.name}。`,
@@ -164,17 +200,30 @@ export const handleAiPendingBattle = (
           state.players[playerId].supportArea,
         ) ?? []
       return {
-        state: playBlocker(state, playerId, {
-          sourceInstanceId: blocker.card.instanceId,
-          paymentIds,
-        }),
+        state: appendCommandLogEntry(
+          state,
+          playBlocker(state, playerId, {
+            sourceInstanceId: blocker.card.instanceId,
+            paymentIds,
+          }),
+          {
+            kind: 'play-blocker',
+            playerId,
+            sourceInstanceId: blocker.card.instanceId,
+            paymentIds,
+          },
+        ),
         action: 'play-blocker',
         description: `${state.players[playerId].name}使用${blocker.card.name}阻擋攻擊。`,
       }
     }
 
     return {
-      state: skipTrap(state, playerId),
+      state: appendCommandLogEntry(
+        state,
+        skipTrap(state, playerId),
+        { kind: 'skip-trap', playerId },
+      ),
       action: 'play-trap',
       description: `${state.players[playerId].name}未發動陷阱。`,
     }

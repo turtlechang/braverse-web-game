@@ -1,13 +1,9 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
 import { deckChoiceLabel } from '../components/gameUiLabels'
 import {
+  applyGameCommand,
   chooseRandomDeck,
   createDemoSetupGame,
-  drawMulliganCompensation,
-  forceMulliganOpeningHand,
-  keepOpeningHand,
-  mulliganOpeningHand,
-  selectStartingCookie,
   type DeckChoice,
   type GameState,
   type PlayerId,
@@ -76,9 +72,15 @@ export function useMatchSetup({
       const playerId: PlayerId = 'player-one'
 
       if (!nextState.players[aiId].hand.some((card) => card.type === 'cookie')) {
-        nextState = mulliganOpeningHand(nextState, aiId)
+        nextState = applyGameCommand(nextState, {
+          kind: 'mulligan-opening-hand',
+          playerId: aiId,
+        })
       } else {
-        nextState = keepOpeningHand(nextState, aiId)
+        nextState = applyGameCommand(nextState, {
+          kind: 'keep-opening-hand',
+          playerId: aiId,
+        })
       }
 
       let guard = 0
@@ -86,8 +88,14 @@ export function useMatchSetup({
         !nextState.players[aiId].hand.some((card) => card.type === 'cookie') &&
         guard < 100
       ) {
-        nextState = forceMulliganOpeningHand(nextState, aiId)
-        nextState = drawMulliganCompensation(nextState, playerId)
+        nextState = applyGameCommand(nextState, {
+          kind: 'force-mulligan-opening-hand',
+          playerId: aiId,
+        })
+        nextState = applyGameCommand(nextState, {
+          kind: 'draw-mulligan-compensation',
+          playerId,
+        })
         guard += 1
       }
 
@@ -168,9 +176,10 @@ export function useMatchSetup({
 
   const handlePlayerMulligan = useCallback(
     (replaceAll: boolean) => {
-      let nextGame = replaceAll
-        ? mulliganOpeningHand(game, 'player-one')
-        : keepOpeningHand(game, 'player-one')
+      let nextGame = applyGameCommand(game, {
+        kind: replaceAll ? 'mulligan-opening-hand' : 'keep-opening-hand',
+        playerId: 'player-one',
+      })
       let forcedCount = 0
 
       while (
@@ -179,8 +188,14 @@ export function useMatchSetup({
         ) &&
         forcedCount < 100
       ) {
-        nextGame = forceMulliganOpeningHand(nextGame, 'player-one')
-        nextGame = drawMulliganCompensation(nextGame, 'player-two')
+        nextGame = applyGameCommand(nextGame, {
+          kind: 'force-mulligan-opening-hand',
+          playerId: 'player-one',
+        })
+        nextGame = applyGameCommand(nextGame, {
+          kind: 'draw-mulligan-compensation',
+          playerId: 'player-two',
+        })
         forcedCount += 1
       }
 
@@ -201,7 +216,11 @@ export function useMatchSetup({
 
   const handleStartingCookie = useCallback(
     (instanceId: string) => {
-      let nextGame = selectStartingCookie(game, 'player-one', instanceId)
+      let nextGame = applyGameCommand(game, {
+        kind: 'select-starting-cookie',
+        playerId: 'player-one',
+        instanceId,
+      })
       const aiCookie = nextGame.players['player-two'].hand.find(
         (card) => card.type === 'cookie',
       )
@@ -209,11 +228,11 @@ export function useMatchSetup({
         setSetupMessage('AI 沒有可放置的起始餅乾。')
         return
       }
-      nextGame = selectStartingCookie(
-        nextGame,
-        'player-two',
-        aiCookie.instanceId,
-      )
+      nextGame = applyGameCommand(nextGame, {
+        kind: 'select-starting-cookie',
+        playerId: 'player-two',
+        instanceId: aiCookie.instanceId,
+      })
       setGame(nextGame)
       setSetupStep(null)
       setMessage(

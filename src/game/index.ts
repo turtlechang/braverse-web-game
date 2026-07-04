@@ -234,6 +234,7 @@ export type {
   TurnPhase,
 } from './types'
 export {
+  appendCommandLogEntry,
   applyGameCommand,
   getPendingDecision,
 } from './commands'

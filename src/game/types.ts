@@ -630,6 +630,7 @@ export interface CommandLogEntry {
   playerId: PlayerId
   commandKind: string
   payload: Record<string, unknown>
+  summary?: string
 }
 
 export interface GameState {

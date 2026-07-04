@@ -1,0 +1,125 @@
+.battle-log-toggle {
+  position: absolute;
+  z-index: 30;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(129, 224, 255, 0.45);
+  border-radius: 999px;
+  color: #e8f8ff;
+  background: rgba(2, 18, 49, 0.78);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.battle-log-toggle:hover {
+  background: rgba(2, 27, 66, 0.9);
+}
+
+.battle-log-count {
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(129, 224, 255, 0.28);
+  font-size: 0.6rem;
+  font-style: normal;
+}
+
+.battle-log-sidebar {
+  position: absolute;
+  z-index: 32;
+  top: 46px;
+  right: 10px;
+  bottom: 12px;
+  width: min(280px, 32vw);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border: 1px solid rgba(129, 224, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(2, 16, 45, 0.92);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.battle-log-sidebar header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(129, 224, 255, 0.25);
+  color: #e8f8ff;
+  font-size: 0.7rem;
+}
+
+.battle-log-sidebar header button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: none;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.battle-log-sidebar header button:hover {
+  background: rgba(129, 224, 255, 0.18);
+}
+
+.battle-log-list {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.battle-log-entry {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid rgba(138, 212, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.battle-log-entry p {
+  margin: 0;
+  color: #e8f8ff;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.battle-log-meta {
+  color: rgba(219, 239, 255, 0.6);
+  font-size: 0.56rem;
+}
+
+.battle-log-empty {
+  color: rgba(219, 239, 255, 0.6);
+  font-size: 0.68rem;
+  text-align: center;
+  padding: 12px 0;
+}
+
+@container game-shell (max-width: 900px) {
+  .battle-log-toggle span {
+    display: none;
+  }
+
+  .battle-log-sidebar {
+    width: min(240px, 70vw);
+  }
+}
