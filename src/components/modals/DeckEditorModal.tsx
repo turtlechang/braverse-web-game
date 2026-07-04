@@ -51,6 +51,7 @@ const COLOR_OPTIONS = [
   { value: 'blue', label: '藍色' },
   { value: 'purple', label: '紫色' },
   { value: 'black', label: '黑色' },
+  { value: 'wild', label: '萬用' },
 ]
 
 const TYPE_OPTIONS = [

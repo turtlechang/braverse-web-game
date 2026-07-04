@@ -26,7 +26,6 @@ import {
 import { BattleRow } from './components/battle/BattleRow'
 import { PhaseRail } from './components/layout/PhaseRail'
 import { MatchToolbar } from './components/layout/MatchToolbar'
-import { CardFace } from './components/cards/CardVisuals'
 import {
   AttackPaymentPanel,
   SimulationReport,
@@ -46,11 +45,13 @@ import {
   ResultModal,
   TrapResponseModal,
   AttackResponseModal,
+  FaintEffectResponseModal,
   BlockerResponseModal,
   OpeningSetupModal,
   OptionalCostAttackModal,
   InspectDeckModal,
-  DrawUpToSelector,
+  DrawUpToResponseModal,
+  HandDiscardResponseModal,
   EffectOrderModal,
   type OpeningSetupStep,
 } from './components/modals/GameModals'
@@ -96,13 +97,6 @@ function App() {
     null,
   )
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
-  const [pendingReveal, setPendingReveal] = useState<{
-    card: GameCard
-    title: string
-    description?: string
-    confirmLabel?: string
-    onConfirm: () => void
-  } | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
@@ -207,7 +201,6 @@ function App() {
   }
 
   const interactionLocked =
-    Boolean(pendingReveal) ||
     Boolean(ai.pendingAiDecision) ||
     Boolean(pending.pendingEffect) ||
     Boolean(match.game.pendingOnPlay) ||
@@ -580,19 +573,12 @@ function App() {
               (candidate) => candidate.instanceId === instanceId,
             )
             if (card?.item) {
-              setPendingReveal({
+              pending.beginCardAbility(
                 card,
-                title: '物品卡使用宣告',
-                description: card.item.text,
-                confirmLabel: '確認使用',
-                onConfirm: () =>
-                  pending.beginCardAbility(
-                    card,
-                    card.item!,
-                    'item',
-                    '使用物品',
-                  ),
-              })
+                card.item,
+                'item',
+                '使用物品',
+              )
             }
           }}
           onPlayStage={(instanceId) => {
@@ -749,7 +735,6 @@ function App() {
                 '未發動回應，進入傷害結算。',
               )
             }}
-            onInspectCard={(card) => dialogs.openCardDetail(card)}
           />
         )}
 
@@ -805,7 +790,17 @@ function App() {
                     : current,
               )
             }
-            onInspectCard={(card) => dialogs.openCardDetail(card)}
+            onBack={
+              match.playerBlockerCandidates.length > 0
+                ? () => {
+                    match.setSelectedTrapId(null)
+                    match.setSelectedTrapDiscardIds([])
+                    match.setSelectedTrapTrashBattleCookieIds([])
+                    match.setTrapSelectNoTarget(false)
+                    match.setPendingResponseMode(null)
+                  }
+                : undefined
+            }
             onSkip={() => {
               match.setSelectedTrapId(null)
               match.setSelectedTrapDiscardIds([])
@@ -819,43 +814,34 @@ function App() {
             onConfirm={() => {
               if (!match.selectedTrap) return
               const trap = match.selectedTrap
-              setPendingReveal({
-                card: trap,
-                title: '陷阱卡發動宣告',
-                description: trap.trap?.text ?? trap.effectText,
-                confirmLabel: '確認發動',
-                onConfirm: () => {
-                  match.setSelectedTrapId(null)
-                  match.setSelectedTrapDiscardIds([])
-                  match.setSelectedTrapTrashBattleCookieIds([])
-                  match.setTrapSelectNoTarget(false)
-                  match.setPendingResponseMode(null)
-                  match.runAction(
-                    (current) => {
-                      const afterTrap = playTrap(
-                        current,
-                        match.viewerPlayerId,
-                        {
-                          trapInstanceId: trap.instanceId,
-                          paymentIds: match.selectedTrapPaymentIds,
-                          targetIds: match.selectedTrapTargets.map(
-                            (target) => target.card.instanceId,
-                          ),
-                          supportTrashIds:
-                            match.selectedTrapSupportTrashIds,
-                          discardHandIds: match.selectedTrapDiscardIds,
-                          trashBattleCookieIds:
-                            match.selectedTrapTrashBattleCookieIds,
-                        },
-                      )
-                      return testStateConfig
-                        ? resolveBattleAutomatically(afterTrap)
-                        : afterTrap
+              match.setSelectedTrapId(null)
+              match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapTrashBattleCookieIds([])
+              match.setTrapSelectNoTarget(false)
+              match.setPendingResponseMode(null)
+              match.runAction(
+                (current) => {
+                  const afterTrap = playTrap(
+                    current,
+                    match.viewerPlayerId,
+                    {
+                      trapInstanceId: trap.instanceId,
+                      paymentIds: match.selectedTrapPaymentIds,
+                      targetIds: match.selectedTrapTargets.map(
+                        (target) => target.card.instanceId,
+                      ),
+                      supportTrashIds: match.selectedTrapSupportTrashIds,
+                      discardHandIds: match.selectedTrapDiscardIds,
+                      trashBattleCookieIds:
+                        match.selectedTrapTrashBattleCookieIds,
                     },
-                    `已發動${trap.name}。`,
                   )
+                  return testStateConfig
+                    ? resolveBattleAutomatically(afterTrap)
+                    : afterTrap
                 },
-              })
+                `已發動${trap.name}。`,
+              )
             }}
             allowEmptyTarget={match.trapAllowEmptyTarget}
             emptyTargetActive={match.trapSelectNoTarget}
@@ -940,6 +926,10 @@ function App() {
                 '未使用 Blocker，進入傷害結算。',
               )
             }}
+            onBack={() => {
+              match.setSelectedBlockerId(null)
+              match.setPendingResponseMode(null)
+            }}
           />
         )}
 
@@ -989,77 +979,35 @@ function App() {
         )}
 
       {faintActive && match.faintSourceCard && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          style={{ pointerEvents: 'none' }}
-        >
-          <section
-            className="faint-response-modal"
-            role="dialog"
-            style={{ pointerEvents: 'auto' }}
-          >
-            <h2>{match.faintSourceCard.name} 發動昏厥效果</h2>
-            <p className="faint-effect-text">
-              {match.faintSourceCard.effectText ??
-                match.faintSourceCard.skill?.text ??
-                '昏厥效果'}
-            </p>
-            <p className="faint-target-hint">
-              {match.faintMin === 0 && match.faintMax === 0
-                ? '無可選擇的目標，請略過。'
-                : match.faintMin === 0
-                  ? `選擇最多 ${match.faintMax} 個對手餅乾作為目標，或略過。`
-                  : `選擇 ${match.faintMin} 個對手餅乾作為目標。`}
-            </p>
-            <div className="faint-modal-actions">
-              {match.faintMin === 0 && (
-                <button
-                  type="button"
-                  className="modal-button"
-                  onClick={() => {
-                    match.setSelectedFaintTargetIds([])
-                    match.runAction(
-                      (current) => applyGameCommand(current, {
-                        kind: 'resolve-faint-effect',
-                        playerId: match.viewerPlayerId,
-                        targetIds: [],
-                      }),
-                      `${match.faintSourceCard!.name}略過昏厥效果。`,
-                    )
-                  }}
-                >
-                  略過
-                </button>
-              )}
-              <button
-                type="button"
-                className="modal-button primary"
-                disabled={
-                  match.selectedFaintTargetIds.length === 0 &&
-                  match.faintMin !== 0
-                }
-                onClick={() => {
-                  const targets = match.selectedFaintTargetIds
-                  match.setSelectedFaintTargetIds([])
-                  match.runAction(
-                    (current) => applyGameCommand(current, {
-                      kind: 'resolve-faint-effect',
-                      playerId: match.viewerPlayerId,
-                      targetIds: targets,
-                    }),
-                    `${match.faintSourceCard!.name}發動對${match.faintCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的昏厥效果。`,
-                  )
-                }}
-              >
-                {match.faintMin === 0 &&
-                match.selectedFaintTargetIds.length === 0
-                  ? '確認略過'
-                  : `確認 (${match.selectedFaintTargetIds.length})`}
-              </button>
-            </div>
-          </section>
-        </div>
+        <FaintEffectResponseModal
+          card={match.faintSourceCard}
+          minTargets={match.faintMin}
+          maxTargets={match.faintMax}
+          selectedTargetCount={match.selectedFaintTargetIds.length}
+          selectedTargetName={
+            match.faintCandidates.find(
+              (candidate) =>
+                candidate.card.instanceId === match.selectedFaintTargetIds[0],
+            )?.card.name
+          }
+          onConfirm={() => {
+            const targets = match.selectedFaintTargetIds
+            const targetName = match.faintCandidates.find(
+              (candidate) => candidate.card.instanceId === targets[0],
+            )?.card.name
+            match.setSelectedFaintTargetIds([])
+            match.runAction(
+              (current) => applyGameCommand(current, {
+                kind: 'resolve-faint-effect',
+                playerId: match.viewerPlayerId,
+                targetIds: targets,
+              }),
+              targets.length === 0
+                ? `${match.faintSourceCard!.name}已結算昏厥效果。`
+                : `${match.faintSourceCard!.name}發動對${targetName ?? '目標'}的昏厥效果。`,
+            )
+          }}
+        />
       )}
 
       {pending.afterDamageActive && match.afterDamageSourceCard && (
@@ -1137,112 +1085,60 @@ function App() {
       {match.game.pendingOpponentHandDiscard &&
         match.game.pendingOpponentHandDiscard.playerId ===
           match.viewerPlayerId &&
-        !pending.pendingEffect && (
-          <div
-            className="modal-backdrop"
-            role="presentation"
-            style={{ pointerEvents: 'none' }}
-          >
-            <section
-              className="faint-response-modal"
-              role="dialog"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <h2>
-                {match.game.pendingOpponentHandDiscard.sourceCardName}{' '}
-                {match.game.pendingOpponentHandDiscard.sourcePlayerId ===
-                  match.viewerPlayerId
-                  ? '要求你棄置手牌'
-                  : '要求棄置手牌'}
-              </h2>
-              <p className="faint-effect-text">
-                {(() => {
-                  const source = Object.values(
-                    match.game.players,
-                  )
-                    .flatMap((p) => p.battleArea)
-                    .find(
-                      (c) =>
-                        c.card.instanceId ===
-                        match.game.pendingOpponentHandDiscard
-                          ?.sourceInstanceId,
-                    )
-                  return (
-                    source?.card.effectText ??
-                    source?.card.skill?.text ??
-                    (match.game.pendingOpponentHandDiscard!.sourcePlayerId ===
-                    match.viewerPlayerId
-                      ? '你必須棄置手牌'
-                      : '對手必須棄置手牌')
-                  )
-                })()}
-              </p>
-              <p className="faint-target-hint">
-                必須選擇{' '}
-                {match.game.pendingOpponentHandDiscard.count} 張手牌棄置。
-              </p>
-              <div className="modal-card-options">
-                {match.game.players[match.viewerPlayerId].hand.map(
-                  (card) => (
-                    <button
-                      type="button"
-                      key={card.instanceId}
-                      className={
-                        match.selectedOpponentDiscardIds.includes(
-                          card.instanceId,
-                        )
-                          ? 'is-selected'
-                          : ''
-                      }
-                      onClick={() =>
-                        match.setSelectedOpponentDiscardIds(
-                          (current) =>
-                            current.includes(card.instanceId)
-                              ? current.filter(
-                                  (id) => id !== card.instanceId,
-                                )
-                              : current.length <
-                                  (match.game.pendingOpponentHandDiscard
-                                    ?.count ?? 1)
-                                ? [...current, card.instanceId]
-                                : current,
-                        )
-                      }
-                    >
-                      <CardFace card={card} selected={match.selectedOpponentDiscardIds.includes(card.instanceId)} />
-                      <span>{card.name}</span>
-                    </button>
-                  ),
-                )}
-              </div>
-              <div className="faint-modal-actions">
-                <button
-                  type="button"
-                  className="modal-button primary"
-                  disabled={
-                    match.selectedOpponentDiscardIds.length !==
-                    match.game.pendingOpponentHandDiscard.count
-                  }
-                  onClick={() => {
-                    const ids = match.selectedOpponentDiscardIds
-                    match.setSelectedOpponentDiscardIds([])
-                    match.runAction(
-                      (current) =>
-                        applyGameCommand(current, {
-                          kind: 'resolve-opponent-hand-discard',
-                          playerId: match.viewerPlayerId,
-                          cardIds: ids,
-                        }),
-                      `已棄置 ${ids.length} 張手牌。`,
-                    )
-                  }}
-                >
-                  確認棄置 ({match.selectedOpponentDiscardIds.length})
-                </button>
-              </div>
-            </section>
-          </div>
-        )}
+        !pending.pendingEffect && (() => {
+          const handDiscard = match.game.pendingOpponentHandDiscard
+          const sourceCard = Object.values(match.game.players)
+            .flatMap((player) => [
+              ...player.battleArea.map((entry) => entry.card),
+              ...player.hand,
+              ...player.discardPile,
+              ...player.supportArea.map((entry) => entry.card),
+              ...(player.stage ? [player.stage.card] : []),
+            ])
+            .find((card) => card.instanceId === handDiscard.sourceInstanceId)
+          const effectText =
+            sourceCard?.effectText ??
+            sourceCard?.skill?.text ??
+            sourceCard?.trap?.text ??
+            sourceCard?.item?.text ??
+            (handDiscard.effectText !== 'discard-hand' &&
+            handDiscard.effectText !== 'opponent-discard-hand'
+              ? handDiscard.effectText
+              : undefined)
+
+          return (
+            <HandDiscardResponseModal
+              sourceCardName={handDiscard.sourceCardName}
+              sourceCard={sourceCard}
+              effectText={effectText}
+              hand={match.game.players[match.viewerPlayerId].hand}
+              requiredCount={handDiscard.count}
+              selectedIds={match.selectedOpponentDiscardIds}
+              onToggleCard={(instanceId) =>
+                match.setSelectedOpponentDiscardIds((current) =>
+                  current.includes(instanceId)
+                    ? current.filter((id) => id !== instanceId)
+                    : current.length < handDiscard.count
+                      ? [...current, instanceId]
+                      : current,
+                )
+              }
+              onConfirm={() => {
+                const ids = match.selectedOpponentDiscardIds
+                match.setSelectedOpponentDiscardIds([])
+                match.runAction(
+                  (current) =>
+                    applyGameCommand(current, {
+                      kind: 'resolve-opponent-hand-discard',
+                      playerId: match.viewerPlayerId,
+                      cardIds: ids,
+                    }),
+                  `已棄置 ${ids.length} 張手牌。`,
+                )
+              }}
+            />
+          )
+        })()}
 
       {match.game.pendingDrawUpTo &&
         match.game.pendingDrawUpTo.playerId ===
@@ -1259,6 +1155,11 @@ function App() {
             .find((c) => c.instanceId === drawUpTo.sourceInstanceId)
           const sourceInSupport = match.game.players[match.viewerPlayerId].supportArea
             .find((c) => c.card.instanceId === drawUpTo.sourceInstanceId)
+          const sourceDisplayCard =
+            sourceCard?.card ??
+            sourceInHand ??
+            sourceInDiscard ??
+            sourceInSupport?.card
           const effectText = drawUpTo.effectText
             ?? sourceCard?.card.effectText
             ?? sourceInHand?.effectText
@@ -1271,57 +1172,26 @@ function App() {
               ? sourceInDiscard.item.text
               : undefined)
           return (
-          <div
-            className="modal-backdrop"
-            role="presentation"
-            style={{ pointerEvents: 'none' }}
-          >
-            <section
-              className="faint-response-modal draw-up-to-modal"
-              role="dialog"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <span className="draw-up-to-source-label">效果來源</span>
-              <div className="draw-up-to-source-card">
-                {(sourceCard || sourceInHand || sourceInDiscard || sourceInSupport) && (
-                  <CardFace
-                    card={
-                      sourceCard?.card ?? sourceInHand ?? sourceInDiscard ?? sourceInSupport!.card
-                    }
-                  />
-                )}
-                <div className="draw-up-to-source-info">
-                  <h2>{drawUpTo.sourceCardName}</h2>
-                  {effectText && (
-                    <p className="faint-effect-text draw-up-to-effect">
-                      {effectText}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <p className="faint-target-hint">
-                可以從牌庫抽取最多 {drawUpTo.max} 張牌。
-                選擇要抽取的牌數。
-              </p>
-              <DrawUpToSelector
-                max={drawUpTo.max}
-                deckSize={match.game.players[match.viewerPlayerId].deck.length}
-                onConfirm={(drawCount) => {
-                  match.runAction(
-                    (current) =>
-                      applyGameCommand(current, {
-                        kind: 'resolve-draw-up-to',
-                        playerId: match.viewerPlayerId,
-                        drawCount,
-                      }),
-                    drawCount === 0
-                      ? '已選擇不抽牌。'
-                      : `已從牌庫抽取 ${drawCount} 張牌。`,
-                  )
-                }}
-              />
-            </section>
-          </div>
+            <DrawUpToResponseModal
+              sourceCardName={drawUpTo.sourceCardName}
+              sourceCard={sourceDisplayCard}
+              effectText={effectText}
+              max={drawUpTo.max}
+              deckSize={match.game.players[match.viewerPlayerId].deck.length}
+              onConfirm={(drawCount) => {
+                match.runAction(
+                  (current) =>
+                    applyGameCommand(current, {
+                      kind: 'resolve-draw-up-to',
+                      playerId: match.viewerPlayerId,
+                      drawCount,
+                    }),
+                  drawCount === 0
+                    ? '已選擇不抽牌。'
+                    : `已從牌庫抽取 ${drawCount} 張牌。`,
+                )
+              }}
+            />
           )
         })()}
 
@@ -1476,20 +1346,6 @@ function App() {
             }}
           />
         )}
-
-      {pendingReveal && (
-        <CardRevealModal
-          card={pendingReveal.card}
-          title={pendingReveal.title}
-          description={pendingReveal.description}
-          confirmLabel={pendingReveal.confirmLabel}
-          onConfirm={() => {
-            const confirm = pendingReveal.onConfirm
-            setPendingReveal(null)
-            confirm()
-          }}
-        />
-      )}
 
       {ai.pendingAiDecision?.revealedCard && (
         <CardRevealModal

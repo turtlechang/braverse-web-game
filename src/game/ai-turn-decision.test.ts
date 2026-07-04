@@ -91,7 +91,13 @@ describe('simple AI opponent', () => {
     const decision = takeAiStep(state, playerId)
 
     expect(decision.action).toBe('resolve-flip')
-    expect(decision.state.pendingDrawUpTo ?? null).toBeNull()
+    expect(decision.state.pendingDrawUpTo).toEqual({
+      playerId: 'player-one',
+      max: 1,
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'player-one-ST1-001-1',
+      sourceCardName: 'Princess Cookie',
+    })
   })
 
   it('places one support card during the support phase', () => {

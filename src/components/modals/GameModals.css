@@ -258,6 +258,25 @@
   width: 15px;
 }
 
+.return-response {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(113, 233, 255, 0.6);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.82);
+  color: #fff;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.return-response svg {
+  width: 15px;
+}
+
 .reveal-confirm {
   min-width: 170px;
   min-height: 42px;
@@ -425,6 +444,42 @@
 
 .battle-response-summary strong {
   color: #71e9ff;
+}
+
+.trap-selected-card-detail {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.trap-selected-card-detail .card-face {
+  width: 90px;
+}
+
+.trap-selected-card-detail span {
+  display: block;
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.trap-selected-card-detail strong {
+  display: block;
+  margin-top: 3px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.trap-selected-card-detail p {
+  margin: 8px 0 0;
+  color: #bbdaf3;
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .battle-response-summary .trap-discard-options {
@@ -884,6 +939,61 @@
 .faint-modal-actions .modal-button.primary {
   background: #132038;
   color: #f7f4ee;
+}
+
+.battle-response-modal.faint-response-modal {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: min(620px, 100%);
+  background: linear-gradient(135deg, #071c44, #123f82);
+  color: #fff;
+  text-align: left;
+}
+
+.battle-response-modal.faint-response-modal h2 {
+  margin: 4px 0 14px;
+  color: #fff;
+}
+
+.battle-response-modal.faint-response-modal .faint-target-hint {
+  margin: 16px 0 0;
+  color: #bbdaf3;
+}
+
+.faint-effect-card-detail {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  background: rgba(3, 20, 53, 0.45);
+}
+
+.faint-effect-card-detail .card-face {
+  width: 104px;
+}
+
+.faint-effect-card-detail span {
+  display: block;
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.faint-effect-card-detail strong {
+  display: block;
+  margin-top: 3px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.faint-effect-card-detail p {
+  margin: 8px 0 0;
+  color: #bbdaf3;
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 .deck-editor-modal {

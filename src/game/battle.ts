@@ -817,6 +817,10 @@ const removeFaintedCookie = (
         ...battle,
         faintedColors: addFaintedColor(battle.faintedColors, target.card),
       },
+      cookiesFaintedThisTurn: {
+        ...(state.cookiesFaintedThisTurn ?? {}),
+        [playerId]: (state.cookiesFaintedThisTurn?.[playerId] ?? 0) + 1,
+      } as Record<PlayerId, number>,
     },
     playerId,
     1,
@@ -1471,11 +1475,22 @@ export const resolveFlip = (
             },
           },
         }
+      } else if (effect.kind === 'draw-up-to') {
+        const context = {
+          sourcePlayerId: playerId,
+          sourceInstanceId: revealed.instanceId,
+          sourceCardName: revealed.name,
+        }
+        if (!isEffectConditionMet(nextState, context, effect)) {
+          continue
+        }
+        nextState = executeCardEffect(
+          nextState,
+          context,
+          effect,
+          [],
+        )
       } else {
-        const resolvedEffect: CardEffect =
-          effect.kind === 'draw-up-to'
-            ? { kind: 'draw', amount: effect.max }
-            : effect
         nextState = executeCardEffect(
           nextState,
           {
@@ -1483,7 +1498,7 @@ export const resolveFlip = (
             sourceInstanceId: revealed.instanceId,
             sourceCardName: revealed.name,
           },
-          resolvedEffect,
+          effect,
           [],
         )
       }

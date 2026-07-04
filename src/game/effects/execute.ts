@@ -1087,6 +1087,47 @@ export const executeCardEffect = (
     }
   }
 
+  if (effect.kind === 'draw-up-to-opponent-fainted-this-turn') {
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    const faintedCount = state.cookiesFaintedThisTurn?.[opponentId] ?? 0
+    const drawMax = faintedCount * effect.amountPerFainted
+    if (drawMax <= 0) {
+      return state
+    }
+    return {
+      ...state,
+      pendingDrawUpTo: {
+        playerId: context.sourcePlayerId,
+        max: drawMax,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName: context.sourceCardName ?? 'Unknown',
+      },
+    }
+  }
+
+  if (effect.kind === 'prevent-effect-damage') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    const expirationTurn =
+      effect.duration === 'until-source-next-turn'
+        ? state.turnNumber + 1
+        : state.turnNumber
+    return {
+      ...state,
+      effectDamagePreventedUntilTurn: {
+        ...(state.effectDamagePreventedUntilTurn ?? {}),
+        ...Object.fromEntries(
+          targets.map((target) => [target.card.instanceId, expirationTurn]),
+        ),
+      },
+    }
+  }
+
   if (
     effect.kind === 'optional-cost-attack' ||
     effect.kind === 'disable-block'
@@ -1102,6 +1143,10 @@ export const executeCardEffect = (
       }
     }
     return state
+  }
+
+  if (!effect.target) {
+    throw new GameRuleError('此效果需要目標。')
   }
 
   const targets = selectEffectTargets(
@@ -1125,6 +1170,53 @@ export const executeCardEffect = (
         damagePlayerCookie(player, target.card.instanceId, amount),
       state.players[targetPlayerId],
     )
+
+    const departedCount = previousBattleAreaCount - damagedPlayer.battleArea.length
+    const departedCookieCards = targets
+      .filter((target) => !damagedPlayer.battleArea.some(
+        (cookie) => cookie.card.instanceId === target.card.instanceId,
+      ))
+      .map((target) => target.card)
+
+    const damageState = resolveDamageOutcome(
+      {
+        ...state,
+        players: {
+          ...state.players,
+          [targetPlayerId]: damagedPlayer,
+        },
+      },
+      targetPlayerId,
+      departedCount,
+      departedCookieCards,
+    )
+    const damagedInstanceIds = targets.map((t) => t.card.instanceId)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
+  }
+
+  if (effect.kind === 'split-damage') {
+    const previousBattleAreaCount =
+      state.players[targetPlayerId].battleArea.length
+    let damagedPlayer = state.players[targetPlayerId]
+    
+    if (targets.length === 1) {
+      damagedPlayer = damagePlayerCookie(
+        damagedPlayer,
+        targets[0].card.instanceId,
+        effect.primaryAmount,
+      )
+    } else if (targets.length === 2) {
+      damagedPlayer = damagePlayerCookie(
+        damagedPlayer,
+        targets[0].card.instanceId,
+        effect.primaryAmount,
+      )
+      damagedPlayer = damagePlayerCookie(
+        damagedPlayer,
+        targets[1].card.instanceId,
+        effect.secondaryAmount,
+      )
+    }
 
     const departedCount = previousBattleAreaCount - damagedPlayer.battleArea.length
     const departedCookieCards = targets
@@ -1204,8 +1296,10 @@ export const executeCardEffect = (
       effect.kind === 'modify-attack-by-break-count'
         ? getBreakCount(state, context.sourcePlayerId, effect) *
           effect.perCount
-        : effect.amount,
-    expiresAfterTurn: getExpirationTurn(state, effect.duration),
+        : effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received'
+          ? effect.amount
+          : 0,
+    expiresAfterTurn: 'duration' in effect ? getExpirationTurn(state, effect.duration) : null,
   }))
 
   return effect.kind === 'modify-attack' ||

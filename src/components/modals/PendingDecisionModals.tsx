@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
 import type { EnergyColor, GameCard, PendingEffectOrderItem } from '../../game'
-import { CardFace } from '../cards/CardVisuals'
+import { CardEffectText, CardFace } from '../cards/CardVisuals'
 import './PendingDecisionModals.css'
 
 const effectOrderLabels: Record<PendingEffectOrderItem['kind'], string> = {
@@ -93,15 +93,192 @@ export function DrawUpToSelector({
           </button>
         ))}
       </div>
-      <div className="faint-modal-actions">
+      <div className="modal-actions draw-up-to-actions">
         <button
           type="button"
-          className="modal-button primary"
           onClick={() => onConfirm(drawCount)}
         >
           {drawCount === 0 ? '略過抽牌' : `抽取 ${drawCount} 張牌`}
         </button>
       </div>
+    </div>
+  )
+}
+
+export interface DrawUpToResponseModalProps {
+  sourceCardName: string
+  sourceCard?: GameCard
+  effectText?: string
+  max: number
+  deckSize: number
+  onConfirm: (drawCount: number) => void
+}
+
+export function DrawUpToResponseModal({
+  sourceCardName,
+  sourceCard,
+  effectText,
+  max,
+  deckSize,
+  onConfirm,
+}: DrawUpToResponseModalProps) {
+  const [minimized, setMinimized] = useState(false)
+  const effectiveMax = Math.min(max, deckSize)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>{sourceCardName}</strong>
+          <small>最多抽 {effectiveMax} 張牌</small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal draw-up-to-modal"
+        role="alertdialog"
+      >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小抽牌效果提示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <span>抽牌效果</span>
+        <h2>{sourceCardName}</h2>
+        <div className="draw-up-to-source-card">
+          {sourceCard && <CardFace card={sourceCard} />}
+          <div className="draw-up-to-source-info">
+            <span className="draw-up-to-source-label">效果來源</span>
+            {effectText && (
+              <p className="faint-effect-text draw-up-to-effect">
+                <CardEffectText text={effectText} />
+              </p>
+            )}
+          </div>
+        </div>
+        <p className="faint-target-hint">
+          可以從牌庫抽取最多 {max} 張牌。選擇要抽取的牌數。
+        </p>
+        <DrawUpToSelector
+          max={max}
+          deckSize={deckSize}
+          onConfirm={onConfirm}
+        />
+      </section>
+    </div>
+  )
+}
+
+export interface HandDiscardResponseModalProps {
+  sourceCardName: string
+  sourceCard?: GameCard
+  effectText?: string
+  hand: GameCard[]
+  requiredCount: number
+  selectedIds: string[]
+  onToggleCard: (instanceId: string) => void
+  onConfirm: () => void
+}
+
+export function HandDiscardResponseModal({
+  sourceCardName,
+  sourceCard,
+  effectText,
+  hand,
+  requiredCount,
+  selectedIds,
+  onToggleCard,
+  onConfirm,
+}: HandDiscardResponseModalProps) {
+  const [minimized, setMinimized] = useState(false)
+  const canConfirm = selectedIds.length === requiredCount
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>{sourceCardName}</strong>
+          <small>
+            已選擇 {selectedIds.length}/{requiredCount} 張手牌
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal hand-discard-modal"
+        role="alertdialog"
+      >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小棄置手牌提示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <span>棄置手牌</span>
+        <h2>{sourceCardName} 要求你棄置手牌</h2>
+        <div className="draw-up-to-source-card hand-discard-source-card">
+          {sourceCard && <CardFace card={sourceCard} />}
+          <div className="draw-up-to-source-info">
+            <span className="draw-up-to-source-label">效果來源</span>
+            {effectText && (
+              <p className="faint-effect-text draw-up-to-effect">
+                <CardEffectText text={effectText} />
+              </p>
+            )}
+          </div>
+        </div>
+        <p className="faint-target-hint">
+          必須選擇 {requiredCount} 張手牌棄置。
+        </p>
+        <div className="modal-card-options hand-discard-options">
+          {hand.map((card) => (
+            <button
+              type="button"
+              key={card.instanceId}
+              className={
+                selectedIds.includes(card.instanceId) ? 'is-selected' : ''
+              }
+              onClick={() => onToggleCard(card.instanceId)}
+            >
+              <CardFace
+                card={card}
+                selected={selectedIds.includes(card.instanceId)}
+              />
+              <span>{card.name}</span>
+            </button>
+          ))}
+        </div>
+        <div className="modal-actions hand-discard-actions">
+          <button type="button" disabled={!canConfirm} onClick={onConfirm}>
+            確認棄置 ({selectedIds.length})
+          </button>
+        </div>
+      </section>
     </div>
   )
 }

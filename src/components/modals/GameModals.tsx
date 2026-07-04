@@ -27,7 +27,7 @@ import { deckChoiceLabel } from '../gameUiLabels'
 import { DeckEditorModal } from './DeckEditorModal'
 import './GameModals.css'
 
-export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, DrawUpToSelector } from './PendingDecisionModals'
+export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, DrawUpToResponseModal, HandDiscardResponseModal } from './PendingDecisionModals'
 
 export type OpeningSetupStep =
   | 'deck-selection'
@@ -492,6 +492,7 @@ export interface TrapResponseModalProps {
   onConfirm: () => void
   onSkip: () => void
   onInspectCard?: (card: GameCard) => void
+  onBack?: () => void
   allowEmptyTarget?: boolean
   emptyTargetActive?: boolean
   onToggleEmptyTarget?: () => void
@@ -513,12 +514,14 @@ export function TrapResponseModal({
   onToggleBattleCookie,
   onConfirm,
   onSkip,
-  onInspectCard,
+  onBack,
   allowEmptyTarget,
   emptyTargetActive,
   onToggleEmptyTarget,
 }: TrapResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
+  const selectedTrap = cards.find((card) => card.instanceId === selectedTrapId)
+  const selectedTrapText = selectedTrap?.trap?.text ?? selectedTrap?.effectText
 
   if (minimized) {
     return (
@@ -555,6 +558,17 @@ export function TrapResponseModal({
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
+        {onBack && (
+          <button
+            type="button"
+            className="return-response"
+            onClick={onBack}
+            title="返回選擇回應方式"
+          >
+            <ChevronLeft aria-hidden="true" />
+            返回
+          </button>
+        )}
         <span>攻擊宣告回應</span>
         <h2>是否發動陷阱？</h2>
         <p>每次攻擊最多發動一張陷阱。選擇卡牌後會顯示付款與目標。</p>
@@ -564,10 +578,7 @@ export function TrapResponseModal({
               type="button"
               className={selectedTrapId === card.instanceId ? 'is-selected' : ''}
               key={card.instanceId}
-              onClick={() => {
-                onSelectTrap(card.instanceId)
-                onInspectCard?.(card)
-              }}
+              onClick={() => onSelectTrap(card.instanceId)}
             >
               <CardFace card={card} selected={selectedTrapId === card.instanceId} />
               <span>{card.name}</span>
@@ -576,6 +587,20 @@ export function TrapResponseModal({
         </div>
         {selectedTrapId && (
           <div className="battle-response-summary">
+            {selectedTrap && (
+              <div className="trap-selected-card-detail">
+                <CardFace card={selectedTrap} />
+                <div>
+                  <span>{selectedTrap.id}</span>
+                  <strong>{selectedTrap.name}</strong>
+                  {selectedTrapText && (
+                    <p>
+                      <CardEffectText text={selectedTrapText} />
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
             <strong>付款支援卡</strong>
             <span>{paymentCards.map((card) => card.name).join('、') || '不需能量'}</span>
             <strong>效果目標</strong>
@@ -676,14 +701,42 @@ export function AttackResponseModal({
   onSelectTrap,
   onSelectBlocker,
   onSkip,
-  onInspectCard,
 }: AttackResponseModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>攻擊宣告回應</strong>
+          <small>
+            陷阱 {trapCards.length} 張 · Blocker {blockerCards.length} 張
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section
         className="battle-response-modal attack-response-modal"
         role="alertdialog"
       >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小攻擊宣告回應"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
         <span>攻擊宣告回應</span>
         <h2>選擇回應方式</h2>
         <p>每次攻擊只能發動一種回應，請選擇使用陷阱卡或 Blocker。</p>
@@ -695,10 +748,7 @@ export function AttackResponseModal({
                 <button
                   type="button"
                   key={card.instanceId}
-                  onClick={() => {
-                    onSelectTrap?.(card.instanceId)
-                    onInspectCard?.(card)
-                  }}
+                  onClick={() => onSelectTrap?.(card.instanceId)}
                 >
                   <CardFace card={card} />
                   <span>{card.name}</span>
@@ -715,10 +765,7 @@ export function AttackResponseModal({
                 <button
                   type="button"
                   key={cookie.card.instanceId}
-                  onClick={() => {
-                    onSelectBlocker?.(cookie.card.instanceId)
-                    onInspectCard?.(cookie.card)
-                  }}
+                  onClick={() => onSelectBlocker?.(cookie.card.instanceId)}
                 >
               <CardFace card={cookie.card} />
                   <span>{cookie.card.name}</span>
@@ -735,6 +782,103 @@ export function AttackResponseModal({
   )
 }
 
+export interface FaintEffectResponseModalProps {
+  card: GameCard
+  minTargets: number
+  maxTargets: number
+  selectedTargetCount: number
+  selectedTargetName?: string
+  onConfirm: () => void
+}
+
+export function FaintEffectResponseModal({
+  card,
+  minTargets,
+  maxTargets,
+  selectedTargetCount,
+  selectedTargetName,
+  onConfirm,
+}: FaintEffectResponseModalProps) {
+  const [minimized, setMinimized] = useState(false)
+  const hasTargetChoice = maxTargets > 0
+  const canConfirm = selectedTargetCount >= minTargets
+  const targetHint = !hasTargetChoice
+    ? '此效果沒有目標選擇，確認後會繼續結算效果。'
+    : minTargets === 0
+      ? `可選擇最多 ${maxTargets} 個對手餅乾作為目標，也可以不選擇目標。`
+      : `必須選擇 ${minTargets} 個對手餅乾作為目標。`
+  const confirmLabel = !hasTargetChoice
+    ? '確認結算'
+    : selectedTargetCount === 0
+      ? '不選擇目標'
+      : `確認 (${selectedTargetCount})`
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>{card.name}</strong>
+          <small>
+            {hasTargetChoice
+              ? `已選擇 ${selectedTargetCount}/${maxTargets} 個目標`
+              : '昏厥效果待結算'}
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal faint-response-modal"
+        role="alertdialog"
+      >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小昏厥效果提示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <span>昏厥效果</span>
+        <h2>{card.name} 發動昏厥效果</h2>
+        <div className="faint-effect-card-detail">
+          <CardFace card={card} />
+          <div>
+            <span>{card.id}</span>
+            <strong>{card.name}</strong>
+            <p>
+              <CardEffectText
+                text={card.effectText ?? card.skill?.text ?? '昏厥效果'}
+              />
+            </p>
+          </div>
+        </div>
+        <p className="faint-target-hint">{targetHint}</p>
+        {selectedTargetName && (
+          <div className="battle-response-summary">
+            <strong>效果目標</strong>
+            <span>{selectedTargetName}</span>
+          </div>
+        )}
+        <div className="modal-actions">
+          <button type="button" disabled={!canConfirm} onClick={onConfirm}>
+            {confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export interface BlockerResponseModalProps {
   blockerCards: CookieInBattle[]
   selectedBlockerId: string | null
@@ -743,6 +887,7 @@ export interface BlockerResponseModalProps {
   onConfirm: () => void
   onSkip: () => void
   onInspectCard?: (card: GameCard) => void
+  onBack?: () => void
 }
 
 export function BlockerResponseModal({
@@ -752,14 +897,60 @@ export function BlockerResponseModal({
   onSelectBlocker,
   onConfirm,
   onSkip,
-  onInspectCard,
+  onBack,
 }: BlockerResponseModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>Blocker 回應</strong>
+          <small>
+            {selectedBlockerId
+              ? `已選擇 ${
+                  blockerCards.find(
+                    (cookie) => cookie.card.instanceId === selectedBlockerId,
+                  )?.card.name ?? ''
+                }`
+              : `可使用 ${blockerCards.length} 張`}
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section
         className="battle-response-modal blocker-response-modal"
         role="alertdialog"
       >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小 Blocker 回應"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        {onBack && (
+          <button
+            type="button"
+            className="return-response"
+            onClick={onBack}
+            title="返回選擇回應方式"
+          >
+            <ChevronLeft aria-hidden="true" />
+            返回
+          </button>
+        )}
         <span>攻擊宣告回應</span>
         <h2>是否使用 Blocker 阻擋？</h2>
         <p>選擇要阻擋攻擊的餅乾，攻擊將轉移至該餅乾。</p>
@@ -771,10 +962,7 @@ export function BlockerResponseModal({
                 selectedBlockerId === cookie.card.instanceId ? 'is-selected' : ''
               }
               key={cookie.card.instanceId}
-              onClick={() => {
-                onSelectBlocker(cookie.card.instanceId)
-                onInspectCard?.(cookie.card)
-              }}
+              onClick={() => onSelectBlocker(cookie.card.instanceId)}
             >
               <CardFace card={cookie.card} />
               <span>{cookie.card.name}</span>

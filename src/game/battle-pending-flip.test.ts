@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   refreshDeck,
+  resolveDrawUpTo,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
@@ -46,10 +47,13 @@ describe('pending battle and FLIP', () => {
 
     state = resolveFlip(state, 'player-one', { activate: true })
 
-    expect(state.pendingDrawUpTo ?? null).toBeNull()
-    expect(state.players['player-one'].hand).toContainEqual(
-      expect.objectContaining({ instanceId: 'p1-deck-a' }),
-    )
+    expect(state.pendingDrawUpTo).toEqual({
+      playerId: 'player-one',
+      max: 1,
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'draw-flip',
+      sourceCardName: 'draw-flip',
+    })
     expect(state.players['player-one'].discardPile).toContain(flipCard)
   })
 
@@ -149,7 +153,16 @@ describe('pending battle and FLIP', () => {
     state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
     state = resolveFlip(state, 'player-one', { activate: true })
 
-    expect(state.pendingDrawUpTo ?? null).toBeNull()
+    expect(state.pendingDrawUpTo).toEqual({
+      playerId: 'player-one',
+      max: 1,
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'refresh-flip',
+      sourceCardName: 'refresh-flip',
+    })
+    expect(state.pendingRefresh).toBeNull()
+
+    state = resolveDrawUpTo(state, 'player-one', 1)
     expect(state.pendingRefresh).toEqual({
       playerId: 'player-one',
       remainingDraws: 0,
@@ -165,7 +178,7 @@ describe('pending battle and FLIP', () => {
     expect(state.pendingBattle?.stage).toBe('damage')
   })
 
-  it('FLIP draw-up-to executes directly without creating pending state', () => {
+  it('FLIP draw-up-to creates pending decision for player to choose draw count', () => {
     const flipCard: GameCard = {
       ...cookie('name-flip'),
       name: 'Test FLIP Card',
@@ -182,9 +195,12 @@ describe('pending battle and FLIP', () => {
     state.players['player-one'].battleArea[0].hpCards = [flipCard]
     state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
     state = resolveFlip(state, 'player-one', { activate: true })
-    expect(state.pendingDrawUpTo ?? null).toBeNull()
-    expect(state.players['player-one'].hand).toContainEqual(
-      expect.objectContaining({ instanceId: 'draw-card' }),
-    )
+    expect(state.pendingDrawUpTo).toEqual({
+      playerId: 'player-one',
+      max: 1,
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'name-flip',
+      sourceCardName: 'Test FLIP Card',
+    })
   })
 })

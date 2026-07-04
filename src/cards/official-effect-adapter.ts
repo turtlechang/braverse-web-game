@@ -619,11 +619,31 @@ export const convertOfficialCardEffects = (
       },
     ],
     // === BS1/BS2 藍色餅乾卡技能 ===
+    'BS2-022': [
+      {
+        kind: 'prevent-effect-damage',
+        duration: 'until-source-next-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS2-025': [
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 1,
+        discardCount: 1,
+      },
+    ],
     'BS2-027': [
       {
         kind: 'gain-hp',
         amount: 1,
         target: { side: 'self', min: 1, max: 2 },
+      },
+    ],
+    'BS2-033': [
+      {
+        kind: 'set-active',
+        supportCount: 0,
       },
     ],
     'BS2-029': [
@@ -634,14 +654,10 @@ export const convertOfficialCardEffects = (
     ],
     'BS2-031': [
       {
-        kind: 'damage',
-        amount: 2,
+        kind: 'split-damage',
+        primaryAmount: 2,
+        secondaryAmount: 1,
         target: { side: 'opponent', min: 1, max: 2 },
-      } satisfies CardEffect as CardEffect,
-      {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 0, max: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-047': [
@@ -716,6 +732,12 @@ export const convertOfficialCardEffects = (
         kind: 'opponent-battle-to-trash',
         maxLevel: 1,
       } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-048': [
+      {
+        kind: 'draw-up-to-opponent-fainted-this-turn',
+        amountPerFainted: 1,
+      },
     ],
     'BS2-074': [
       {
@@ -1300,6 +1322,7 @@ export const convertOfficialItemAbility = (
     },
     'BS1-075': { energy: { green: 2 }, discardHand: 0 },
     'BS2-006': { energy: { red: 2 }, discardHand: 0 },
+    'BS2-048': { energy: { blue: 1 }, discardHand: 0 },
   }
   const parsedCost = parseAbilityCost(card.attackText)
   const hasSpecialCost =
@@ -1869,6 +1892,28 @@ export const convertOfficialTrapAbility = (
       kind: 'set-active',
       supportCount: Number(setActive[1]),
     })
+  }
+
+  const exactTrapEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
+    'BS2-050': {
+      effects: [
+        {
+          kind: 'return-to-deck-bottom',
+          target: { side: 'opponent', min: 1, max: 1, remainingHp: 3 },
+        },
+      ],
+      cost: { energy: { blue: 3 }, discardHand: 1 },
+    },
+  }
+
+  const exactTrap = exactTrapEffects[card.cardNumber]
+  if (exactTrap) {
+    return {
+      text,
+      cost: exactTrap.cost ?? parseAbilityCost(text),
+      condition,
+      effects: exactTrap.effects,
+    }
   }
 
   if (effects.length === 0) {
