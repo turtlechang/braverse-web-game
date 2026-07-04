@@ -201,7 +201,7 @@ export function OptionalCostAttackModal({
                   }
                   onClick={() => toggleDiscard(card.instanceId)}
                 >
-                  <CardFace card={card} />
+                  <CardFace card={card} selected={selectedDiscardIds.includes(card.instanceId)} />
                   <span>{card.name}</span>
                 </button>
               ))}
@@ -220,7 +220,7 @@ export function OptionalCostAttackModal({
                   }
                   onClick={() => toggleTarget(entry.instanceId)}
                 >
-                  <CardFace card={entry.card} />
+                  <CardFace card={entry.card} selected={selectedTargetId === entry.instanceId} />
                   <span>{entry.card.name}</span>
                 </button>
               ))}

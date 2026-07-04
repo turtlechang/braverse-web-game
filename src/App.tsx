@@ -1114,7 +1114,10 @@ function App() {
             >
               <h2>
                 {match.game.pendingOpponentHandDiscard.sourceCardName}{' '}
-                要求棄置手牌
+                {match.game.pendingOpponentHandDiscard.sourcePlayerId ===
+                  match.viewerPlayerId
+                  ? '要求你棄置手牌'
+                  : '要求棄置手牌'}
               </h2>
               <p className="faint-effect-text">
                 {(() => {
@@ -1131,7 +1134,10 @@ function App() {
                   return (
                     source?.card.effectText ??
                     source?.card.skill?.text ??
-                    '對手必須棄置手牌'
+                    (match.game.pendingOpponentHandDiscard!.sourcePlayerId ===
+                    match.viewerPlayerId
+                      ? '你必須棄置手牌'
+                      : '對手必須棄置手牌')
                   )
                 })()}
               </p>
@@ -1167,7 +1173,7 @@ function App() {
                         )
                       }
                     >
-                      <CardFace card={card} />
+                      <CardFace card={card} selected={match.selectedOpponentDiscardIds.includes(card.instanceId)} />
                       <span>{card.name}</span>
                     </button>
                   ),
