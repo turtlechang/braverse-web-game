@@ -129,6 +129,11 @@ export interface OpponentHasCookieWithLevelCondition {
   level: number
 }
 
+export interface TrashCountAtLeastCondition {
+  kind: 'trash-count-at-least'
+  count: number
+}
+
 export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
@@ -136,6 +141,7 @@ export type EffectCondition =
   | HandCountAtMostCondition
   | SupportAreaDecreasedThisTurnCondition
   | OpponentHasCookieWithLevelCondition
+  | TrashCountAtLeastCondition
 
 export interface DamageEffect {
   kind: 'damage'
@@ -241,7 +247,8 @@ export interface DeckToSupportEffect {
 export interface BreakToTrashEffect {
   kind: 'break-to-trash'
   max: number
-  exactLevel: number
+  exactLevel?: number
+  maxLevel?: number
   condition?: EffectCondition
 }
 
@@ -346,6 +353,19 @@ export interface FieldToTrashEffect {
   stageOnly?: boolean
   stageLevel?: number
   condition?: EffectCondition
+  autoSelect?: boolean
+}
+
+export interface FieldToTrashAllEffect {
+  kind: 'field-to-trash-all'
+  maxLevel?: number
+  minLevel?: number
+}
+
+export interface DisableAttackEffect {
+  kind: 'disable-attack'
+  duration: EffectDuration
+  target: EffectTargetSelector
 }
 
 export interface SetActiveEffect {
@@ -396,6 +416,50 @@ export interface TrashToSupportEffect {
   rested?: boolean
 }
 
+export interface TrashToHandEffect {
+  kind: 'trash-to-hand'
+  max: number
+  energyColor?: EnergyColor
+}
+
+export interface TrashToDeckEffect {
+  kind: 'trash-to-deck'
+  max: number
+  excludeFlip?: boolean
+}
+
+export interface HpToSupportEffect {
+  kind: 'hp-to-support'
+  amount: number
+  target: EffectTargetSelector
+  rested?: boolean
+}
+
+export interface BreakToBattleEffect {
+  kind: 'break-to-battle'
+  amount: number
+  exactLevel?: number
+  maxLevel?: number
+  energyColor?: EnergyColor
+}
+
+export interface BattleToBreakEffect {
+  kind: 'battle-to-break'
+  target: EffectTargetSelector
+}
+
+export interface BreakToHandBySumEffect {
+  kind: 'break-to-hand-by-level-sum'
+  targetSum: number
+  energyColor?: EnergyColor
+}
+
+export interface FlipToSupportEffect {
+  kind: 'flip-to-support'
+  rested?: boolean
+  condition?: EffectCondition
+}
+
 export type CardEffect =
   | DamageEffect
   | SplitDamageEffect
@@ -436,6 +500,15 @@ export type CardEffect =
   | SetActiveEffect
   | InspectDeckEffect
   | OptionalCostAttackEffect
+  | FieldToTrashAllEffect
+  | DisableAttackEffect
+  | TrashToHandEffect
+  | TrashToDeckEffect
+  | HpToSupportEffect
+  | BreakToBattleEffect
+  | BattleToBreakEffect
+  | BreakToHandBySumEffect
+  | FlipToSupportEffect
 
 export type TargetedCardEffect =
   | DamageEffect
@@ -454,6 +527,9 @@ export type TargetedCardEffect =
   | FieldToTrashEffect
   | RedirectAttackEffect
   | HpToTrashEffect
+  | DisableAttackEffect
+  | HpToSupportEffect
+  | BattleToBreakEffect
 
 export type AbilityCost = EnergyCost & {
   energy?: EnergyCost
@@ -469,7 +545,9 @@ export type AbilityCost = EnergyCost & {
       count: number
       level?: number
       energyColor?: EnergyColor
+      sourceOnly?: boolean
     }
+  selfToBreakArea?: boolean
 }
 
 export interface FlipAbility {
@@ -648,6 +726,7 @@ export interface GameState {
   attackModifiers: AttackModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   flipDisabledUntilTurn?: Record<string, number>
+  attackDisabledUntilTurn?: Record<string, number>
   blockDisabledUntilTurn?: Partial<Record<PlayerId, number>>
   pendingReplacement: PendingReplacement | null
   departedCookieCounts: Record<PlayerId, number>

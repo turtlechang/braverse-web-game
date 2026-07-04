@@ -1786,4 +1786,289 @@ describe('Starter Deck RED official effect adapter', () => {
         })
     })
   })
+
+  describe('previously-unsupported cards now convert successfully', () => {
+    it('ST2-015 Hero Cookie attack-then damage plus disable-attack', () => {
+      expect(convertOfficialAttackEffects(findYellowCard('ST2-015')))
+        .toMatchObject([
+          { kind: 'damage', amount: 3, target: { side: 'opponent', max: 1 } },
+          {
+            kind: 'disable-attack',
+            duration: 'opponent-next-turn',
+            target: { side: 'opponent', maxLevel: 1 },
+          },
+        ])
+    })
+
+    it('ST4-010 Squid Ink Cookie faints into an optional draw', () => {
+      expect(convertOfficialCookieSkill(findBlueCard('ST4-010'))).toMatchObject({
+        faint: true,
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      })
+    })
+
+    it('BS1-056 Moon Rabbit Cookie battle-to-support as active', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-056')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'battle-to-support',
+              target: { side: 'self', maxLevel: 2, excludeSource: true },
+            },
+          ],
+        })
+    })
+
+    it('BS1-058 Poison Mushroom Cookie faints into a support sacrifice plus both-side damage', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-058')))
+        .toMatchObject({
+          faint: true,
+          effects: [
+            { kind: 'support-to-trash', amount: 1 },
+            { kind: 'damage-all', amount: 1, side: 'self' },
+            { kind: 'damage-all', amount: 1, side: 'opponent' },
+          ],
+        })
+    })
+
+    it('BS2-015 Lemon Thyme Cookie sacrifices itself via sourceOnly trashBattleCookie cost', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-015')))
+        .toMatchObject({
+          trigger: 'activate',
+          cost: { trashBattleCookie: { count: 1, sourceOnly: true } },
+          effects: [
+            { kind: 'damage', amount: 2 },
+            { kind: 'deck-to-support', amount: 1, rested: true },
+          ],
+        })
+    })
+
+    it('BS2-018 / BS2-012 place an opponent stage card into the trash', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-018')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'field-to-trash',
+              stageOnly: true,
+              target: { side: 'opponent' },
+            },
+          ],
+        })
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-012')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'field-to-trash',
+              stageOnly: true,
+              target: { side: 'opponent' },
+            },
+          ],
+        })
+    })
+
+    it('BS2-055 Poison Mushroom Cookie trashes low-level cookies from both battle areas', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-055')))
+        .toMatchObject({
+          effects: [{ kind: 'field-to-trash-all', maxLevel: 2 }],
+        })
+    })
+
+    it('BS2-060 Beet Cookie faints into a conditional draw', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-060')))
+        .toMatchObject({
+          faint: true,
+          effects: [
+            {
+              kind: 'draw',
+              amount: 1,
+              condition: { kind: 'opponent-trash-count-at-least', count: 20 },
+            },
+          ],
+        })
+    })
+
+    it('BS2-061 Hydrangea Cookie returns non-FLIP trash cards to the deck', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-061')))
+        .toMatchObject({
+          effects: [{ kind: 'trash-to-deck', max: 3, excludeFlip: true }],
+        })
+    })
+
+    it('BS2-062 Starfruit Cookie chains a self sacrifice into an opponent battle-to-trash', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-062')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'field-to-trash',
+              target: { side: 'self', energyColor: 'purple', maxLevel: 2 },
+            },
+            { kind: 'opponent-battle-to-trash', maxLevel: 2 },
+          ],
+        })
+    })
+
+    it('BS2-068 Cream Unicorn Cookie returns a purple trash card to hand', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-068')))
+        .toMatchObject({
+          cost: { discardHand: 1 },
+          effects: [
+            { kind: 'trash-to-hand', max: 1, energyColor: 'purple' },
+          ],
+        })
+    })
+
+    it('BS2-071 Twizzly Gummy Cookie sacrifices itself for a small damage effect', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-071')))
+        .toMatchObject({
+          trigger: 'activate',
+          cost: { trashBattleCookie: { count: 1, sourceOnly: true } },
+          effects: [{ kind: 'damage', amount: 1 }],
+        })
+    })
+
+    it('BS2-073 Peperoncino Cookie gains persistent attack from its own trash count', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-073')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'modify-attack',
+              amount: 2,
+              duration: 'persistent',
+              condition: { kind: 'trash-count-at-least', count: 15 },
+            },
+          ],
+        })
+    })
+
+    it('BS1-036 Snake Fruit Cookie plays a LV.1 yellow cookie from the break area', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-036')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'break-to-battle',
+              amount: 1,
+              exactLevel: 1,
+              energyColor: 'yellow',
+            },
+          ],
+        })
+    })
+
+    it('BS1-037 Timekeeper Cookie trashes a LV.2-or-lower cookie from the break area', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-037')))
+        .toMatchObject({
+          cost: { discardHand: 1 },
+          effects: [{ kind: 'break-to-trash', max: 1, maxLevel: 2 }],
+        })
+    })
+
+    it('BS1-038 Cinnamon Cookie sacrifices itself to the break area for a damage effect', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-038')))
+        .toMatchObject({
+          trigger: 'activate',
+          cost: { selfToBreakArea: true },
+          effects: [{ kind: 'damage', amount: 1 }],
+        })
+    })
+
+    it('BS2-011 Blackberry Cookie sums break-area levels back to hand and sacrifices itself to break', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-011')))
+        .toMatchObject({
+          cost: { selfToBreakArea: true },
+          effects: [
+            {
+              kind: 'break-to-hand-by-level-sum',
+              targetSum: 3,
+              energyColor: 'yellow',
+            },
+          ],
+        })
+    })
+
+    it('BS2-020 Carrot Jelly Stew moves an attached HP card to the support area', () => {
+      expect(convertOfficialItemAbility(findBraveBeginningBS2Card('BS2-020')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'hp-to-support',
+              amount: 1,
+              target: { side: 'self', energyColor: 'green' },
+            },
+          ],
+        })
+    })
+
+    it('BS2-077 Forbidden Incantation pays a trashBattleCookie cost for damage', () => {
+      expect(convertOfficialItemAbility(findBraveBeginningBS2Card('BS2-077')))
+        .toMatchObject({
+          cost: {
+            trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
+          },
+          effects: [{ kind: 'damage', amount: 2 }],
+        })
+    })
+
+    it('BS2-078 Dragon\'s Breath trashes one of your own LV.2-or-lower cookies', () => {
+      expect(convertOfficialItemAbility(findBraveBeginningBS2Card('BS2-078')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'field-to-trash',
+              target: { side: 'self', maxLevel: 2 },
+            },
+          ],
+        })
+    })
+
+    it('BS2-013 Wind-Up Pocket Watch benches a cookie to break then plays a LV.1 from break', () => {
+      expect(convertOfficialItemAbility(findBraveBeginningBS2Card('BS2-013')))
+        .toMatchObject({
+          effects: [
+            { kind: 'battle-to-break', target: { side: 'self' } },
+            { kind: 'break-to-battle', amount: 1, exactLevel: 1 },
+          ],
+        })
+    })
+
+    it('BS1-067 Churro Cookie flips into the support area when conditions are met', () => {
+      expect(convertOfficialFlipAbility(findBraveBeginningCard('BS1-067')))
+        .toMatchObject({
+          cost: { discardHand: 1 },
+          effects: [
+            {
+              kind: 'flip-to-support',
+              rested: true,
+              condition: { kind: 'support-count-at-least', count: 4 },
+            },
+          ],
+        })
+    })
+
+    it('BS2-063 Space Doughnut auto-selects an opponent cookie or stage card to trash', () => {
+      expect(convertOfficialFlipAbility(findBraveBeginningBS2Card('BS2-063')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'field-to-trash',
+              allowStage: true,
+              autoSelect: true,
+              condition: { kind: 'break-level-at-least', level: 3 },
+            },
+          ],
+        })
+    })
+
+    it('BS1-040 Earl Grey Cookie gains HP conditionally on FLIP', () => {
+      expect(convertOfficialFlipAbility(findBraveBeginningCard('BS1-040')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'gain-hp',
+              amount: 2,
+              condition: { kind: 'break-level-at-least', level: 6 },
+            },
+          ],
+        })
+    })
+  })
 })

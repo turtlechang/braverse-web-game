@@ -745,6 +745,136 @@ export const convertOfficialCardEffects = (
         maxLevel: 1,
       } satisfies CardEffect as CardEffect,
     ],
+    // === 補齊尚未實作的餅乾／物品卡效果 ===
+    'ST4-010': [{ kind: 'draw-up-to', max: 1 }],
+    'BS1-056': [
+      {
+        kind: 'battle-to-support',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          maxLevel: 2,
+        },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS1-058': [
+      { kind: 'support-to-trash', amount: 1 },
+      { kind: 'damage-all', amount: 1, side: 'self' },
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
+    'BS2-015': [
+      { kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } },
+      { kind: 'deck-to-support', amount: 1, rested: true },
+    ],
+    'BS2-018': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1 },
+        stageOnly: true,
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-055': [
+      { kind: 'field-to-trash-all', maxLevel: 2 } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-060': [
+      {
+        kind: 'draw',
+        amount: 1,
+        condition: { kind: 'opponent-trash-count-at-least', count: 20 },
+      },
+    ],
+    'BS2-061': [
+      { kind: 'trash-to-deck', max: 3, excludeFlip: true } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-062': [
+      {
+        kind: 'field-to-trash',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'purple',
+          maxLevel: 2,
+        },
+      } satisfies CardEffect as CardEffect,
+      {
+        kind: 'opponent-battle-to-trash',
+        maxLevel: 2,
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-068': [
+      { kind: 'trash-to-hand', max: 1, energyColor: 'purple' } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-071': [
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS2-073': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'trash-count-at-least', count: 15 },
+      },
+    ],
+    'BS1-036': [
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 1,
+        energyColor: 'yellow',
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS1-037': [
+      { kind: 'break-to-trash', max: 1, maxLevel: 2 },
+    ],
+    'BS1-038': [
+      { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS2-011': [
+      {
+        kind: 'break-to-hand-by-level-sum',
+        targetSum: 3,
+        energyColor: 'yellow',
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-012': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1 },
+        stageOnly: true,
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-020': [
+      {
+        kind: 'hp-to-support',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, energyColor: 'green' },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-077': [
+      { kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } },
+    ],
+    'BS2-078': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
+      } satisfies CardEffect as CardEffect,
+    ],
+    'BS2-013': [
+      {
+        kind: 'battle-to-break',
+        target: { side: 'self', min: 1, max: 1 },
+      } satisfies CardEffect as CardEffect,
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 1,
+      } satisfies CardEffect as CardEffect,
+    ],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -1323,6 +1453,11 @@ export const convertOfficialItemAbility = (
     'BS1-075': { energy: { green: 2 }, discardHand: 0 },
     'BS2-006': { energy: { red: 2 }, discardHand: 0 },
     'BS2-048': { energy: { blue: 1 }, discardHand: 0 },
+    'BS2-077': {
+      energy: { purple: 2 },
+      discardHand: 0,
+      trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
+    },
   }
   const parsedCost = parseAbilityCost(card.attackText)
   const hasSpecialCost =
@@ -1459,6 +1594,18 @@ export const convertOfficialAttackEffects = (
     : card.cardNumber
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
     'ST2-003': [{ kind: 'break-to-trash', max: 1, exactLevel: 1 }],
+    'ST2-015': [
+      {
+        kind: 'damage',
+        amount: 3,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      {
+        kind: 'disable-attack',
+        duration: 'opponent-next-turn',
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      } satisfies CardEffect as CardEffect,
+    ],
     'ST4-013': [
       {
         kind: 'optional-cost-attack',
@@ -1599,6 +1746,10 @@ export const convertOfficialFlipAbility = (
     return undefined
   }
 
+  const cardKey = card.cardNumber.includes('@')
+    ? card.baseCardNumber || card.cardNumber.split('@')[0]
+    : card.cardNumber
+
   const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
     'BS1-040': {
       effects: [
@@ -1624,12 +1775,23 @@ export const convertOfficialFlipAbility = (
         {
           kind: 'field-to-trash',
           target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 },
+          allowStage: true,
+          autoSelect: true,
           condition: { kind: 'break-level-at-least', level: 3 },
         } satisfies CardEffect as CardEffect,
       ],
     },
+    'BS1-067': {
+      effects: [
+        {
+          kind: 'flip-to-support',
+          rested: true,
+          condition: { kind: 'support-count-at-least', count: 4 },
+        } satisfies CardEffect as CardEffect,
+      ],
+    },
   }
-  const exactFlip = exactFlipEffects[card.cardNumber]
+  const exactFlip = exactFlipEffects[cardKey]
   if (exactFlip) {
     return {
       text: card.flipText,
@@ -1928,6 +2090,29 @@ export const convertOfficialTrapAbility = (
   }
 }
 
+const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
+  'BS2-015': {
+    energy: { green: 4 },
+    discardHand: 0,
+    trashBattleCookie: { count: 1, sourceOnly: true },
+  },
+  'BS1-038': {
+    energy: { yellow: 2 },
+    discardHand: 0,
+    selfToBreakArea: true,
+  },
+  'BS2-011': {
+    energy: { yellow: 2 },
+    discardHand: 0,
+    selfToBreakArea: true,
+  },
+  'BS2-071': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashBattleCookie: { count: 1, sourceOnly: true },
+  },
+}
+
 export const convertOfficialCookieSkill = (
   card: OfficialCardRecord,
 ): CardSkill | undefined => {
@@ -1935,8 +2120,11 @@ export const convertOfficialCookieSkill = (
     return undefined
   }
 
+  const cardKey = card.cardNumber.includes('@')
+    ? card.baseCardNumber || card.cardNumber.split('@')[0]
+    : card.cardNumber
   const conversion = convertOfficialCardEffects(card)
-  const cost = parseAbilityCost(card.skill.text)
+  const cost = exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
   const parsed = parseOfficialCardText(card.skill.text)
 
   if (

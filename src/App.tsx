@@ -504,6 +504,11 @@ function App() {
         candidateCards={[
           ...pending.effectTargetCandidates.map((c) => c.card),
           ...pending.nonBattleEffectCandidateCards,
+          ...pending.breakToTrashCandidates,
+          ...pending.breakToBattleCandidates,
+          ...pending.breakToHandBySumCandidates,
+          ...pending.trashToHandCandidates,
+          ...pending.trashToDeckCandidates,
         ]}
         onToggleCandidate={pending.toggleEffectTarget}
         costSupportCandidates={

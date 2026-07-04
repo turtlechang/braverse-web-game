@@ -49,9 +49,13 @@ function EffectPanelContent({
   const supportAreaCost =
     (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
   const selectionLimits =
-    currentEffect?.kind === 'break-to-trash'
+    currentEffect?.kind === 'break-to-trash' ||
+      currentEffect?.kind === 'trash-to-hand' ||
+      currentEffect?.kind === 'trash-to-deck'
       ? { min: 0, max: currentEffect.max }
-      : currentEffect?.kind === 'support-to-trash' ||
+      : currentEffect?.kind === 'break-to-battle'
+        ? { min: 0, max: currentEffect.amount }
+        : currentEffect?.kind === 'support-to-trash' ||
           currentEffect?.kind === 'support-to-hand' ||
           currentEffect?.kind === 'trash-to-battle' ||
           currentEffect?.kind === 'trash-to-support'
@@ -63,7 +67,8 @@ function EffectPanelContent({
         : currentEffect && !isEffectUntargeted(currentEffect) &&
             currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
-            currentEffect.kind !== 'disable-block'
+            currentEffect.kind !== 'disable-block' &&
+            currentEffect.kind !== 'flip-to-support'
           ? currentEffect.target
           : null
 

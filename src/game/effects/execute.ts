@@ -22,9 +22,13 @@ import {
   resolveBreakLevelVictory,
 } from '../victory'
 import {
+  getBreakToBattleCandidates,
+  getBreakToHandBySumCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
+  getTrashToDeckCandidates,
+  getTrashToHandCandidates,
   getTrashToSupportCandidates,
   isEffectConditionMet,
   selectEffectTargets,
@@ -380,6 +384,10 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'redirect-attack') {
+    return { ...state }
+  }
+
+  if (effect.kind === 'flip-to-support') {
     return { ...state }
   }
 
@@ -808,19 +816,24 @@ export const executeCardEffect = (
     const hasStageOption = (effect.allowStage || stageOnly) && targetPlayer.stage !== null
     const hasBattleOption = battleCandidates.length > 0
 
-    if (!hasBattleOption && !hasStageOption && selectedTargetIds.length === 0) {
+    const effectiveTargetIds =
+      effect.autoSelect && selectedTargetIds.length === 0 && (hasBattleOption || hasStageOption)
+        ? [hasStageOption ? targetPlayer.stage!.card.instanceId : battleCandidates[0].card.instanceId]
+        : selectedTargetIds
+
+    if (!hasBattleOption && !hasStageOption && effectiveTargetIds.length === 0) {
       return { ...state }
     }
-    const uniqueIds = new Set(selectedTargetIds)
+    const uniqueIds = new Set(effectiveTargetIds)
     if (
-      uniqueIds.size !== selectedTargetIds.length ||
-      selectedTargetIds.length < effect.target.min ||
-      selectedTargetIds.length > effect.target.max
+      uniqueIds.size !== effectiveTargetIds.length ||
+      effectiveTargetIds.length < effect.target.min ||
+      effectiveTargetIds.length > effect.target.max
     ) {
       throw new GameRuleError('選擇的效果目標數量不合法。')
     }
 
-    const selectedId = selectedTargetIds[0]
+    const selectedId = effectiveTargetIds[0]
     const isStageTarget = selectedId === targetPlayer.stage?.card.instanceId
 
     if (isStageTarget) {
@@ -855,6 +868,281 @@ export const executeCardEffect = (
       context.sourcePlayerId,
       targetPlayerId,
     )
+  }
+
+  if (effect.kind === 'field-to-trash-all') {
+    const playerIds: PlayerId[] = ['player-one', 'player-two']
+    let nextState = state
+    for (const playerId of playerIds) {
+      const player = nextState.players[playerId]
+      const matching = player.battleArea.filter((cookie) => {
+        if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
+        if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+        return true
+      })
+      if (matching.length === 0) continue
+      const movedIds = new Set(matching.map((c) => c.card.instanceId))
+      const hpCards = matching.flatMap((c) => c.hpCards)
+      const updatedPlayer: PlayerState = {
+        ...player,
+        battleArea: player.battleArea.filter((c) => !movedIds.has(c.card.instanceId)),
+        discardPile: [
+          ...player.discardPile,
+          ...matching.map((c) => c.card),
+          ...hpCards,
+        ],
+      }
+      nextState = updatePlayer(nextState, updatedPlayer)
+      nextState = resolveNonFaintDepartureOutcome(nextState, playerId, matching.length)
+      if (playerId !== context.sourcePlayerId) {
+        nextState = checkWindsweptValleyTrigger(nextState, context.sourcePlayerId, playerId)
+      }
+    }
+    return nextState
+  }
+
+  if (effect.kind === 'disable-attack') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) {
+      return { ...state }
+    }
+    const expirationTurn = getExpirationTurn(state, effect.duration) ?? state.turnNumber
+    return {
+      ...state,
+      attackDisabledUntilTurn: {
+        ...(state.attackDisabledUntilTurn ?? {}),
+        ...Object.fromEntries(
+          targets.map((target) => [target.card.instanceId, expirationTurn]),
+        ),
+      },
+    }
+  }
+
+  if (effect.kind === 'trash-to-hand') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getTrashToHandCandidates(state, context, effect)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length > effect.max) {
+      throw new GameRuleError(`最多只能選擇 ${effect.max} 張棄牌區卡牌。`)
+    }
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的卡牌不在棄牌區的合法範圍內。')
+    }
+    const selectedSet = new Set(uniqueIds)
+    const selected = player.discardPile.filter((card) =>
+      selectedSet.has(card.instanceId),
+    )
+    return updatePlayer(state, {
+      ...player,
+      discardPile: player.discardPile.filter(
+        (card) => !selectedSet.has(card.instanceId),
+      ),
+      hand: [...player.hand, ...selected],
+    })
+  }
+
+  if (effect.kind === 'trash-to-deck') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getTrashToDeckCandidates(state, context, effect)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length > effect.max) {
+      throw new GameRuleError(`最多只能選擇 ${effect.max} 張棄牌區卡牌。`)
+    }
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的卡牌不在棄牌區的合法範圍內。')
+    }
+    const selectedSet = new Set(uniqueIds)
+    const selected = player.discardPile.filter((card) =>
+      selectedSet.has(card.instanceId),
+    )
+    return updatePlayer(state, {
+      ...player,
+      discardPile: player.discardPile.filter(
+        (card) => !selectedSet.has(card.instanceId),
+      ),
+      deck: shuffle([...player.deck, ...selected]),
+    })
+  }
+
+  if (effect.kind === 'hp-to-support') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) {
+      return { ...state }
+    }
+    const target = targets[0]
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const player = state.players[targetPlayerId]
+    const targetIndex = player.battleArea.findIndex(
+      (cookie) => cookie.card.instanceId === target.card.instanceId,
+    )
+    const removeCount = Math.min(effect.amount, target.hpCards.length)
+    if (removeCount === 0) {
+      return { ...state }
+    }
+    const removedHpCards = target.hpCards.slice(-removeCount)
+    const remainingHpCards = target.hpCards.slice(
+      0,
+      Math.max(0, target.hpCards.length - removeCount),
+    )
+
+    if (remainingHpCards.length === 0) {
+      const updatedPlayer: PlayerState = {
+        ...player,
+        battleArea: player.battleArea.filter(
+          (_, index) => index !== targetIndex,
+        ),
+        breakArea: [...player.breakArea, target.card],
+        supportArea: [
+          ...player.supportArea,
+          ...removedHpCards.map((card) => ({ card, rested: effect.rested ?? false })),
+        ],
+      }
+      return resolveDamageOutcome(
+        updatePlayer(state, updatedPlayer),
+        targetPlayerId,
+        1,
+        [target.card],
+      )
+    }
+
+    const updatedPlayer: PlayerState = {
+      ...player,
+      battleArea: player.battleArea.map((cookie, index) =>
+        index === targetIndex
+          ? { ...cookie, hpCards: remainingHpCards }
+          : cookie,
+      ),
+      supportArea: [
+        ...player.supportArea,
+        ...removedHpCards.map((card) => ({ card, rested: effect.rested ?? false })),
+      ],
+    }
+    return updatePlayer(state, updatedPlayer)
+  }
+
+  if (effect.kind === 'break-to-battle') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getBreakToBattleCandidates(state, context, effect)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length > effect.amount) {
+      throw new GameRuleError(`最多只能選擇 ${effect.amount} 張 break 區餅乾。`)
+    }
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的餅乾不符合 break 區登場條件。')
+    }
+    const cookie = candidates.find((card) => card.instanceId === uniqueIds[0])!
+    const availableHpCards = player.deck.slice(0, cookie.hp)
+    const updated = updatePlayer(state, {
+      ...player,
+      deck: player.deck.slice(cookie.hp),
+      breakArea: player.breakArea.filter(
+        (card) => card.instanceId !== cookie.instanceId,
+      ),
+      battleArea: [
+        ...player.battleArea,
+        {
+          card: cookie,
+          hpCards: availableHpCards,
+          rested: false,
+          battleEntryId: `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`,
+        },
+      ],
+    })
+    const exhausted = updated.players[context.sourcePlayerId].deck.length === 0
+    if (
+      exhausted &&
+      getRefreshCandidates(updated, context.sourcePlayerId).length === 0
+    ) {
+      return finishWithDefeat(updated, context.sourcePlayerId, 'refresh-unavailable')
+    }
+    return {
+      ...updated,
+      nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+      pendingOnPlay:
+        cookie.skill?.trigger === 'on-play'
+          ? { playerId: context.sourcePlayerId, sourceInstanceId: cookie.instanceId }
+          : null,
+      pendingRefresh: exhausted
+        ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
+        : updated.pendingRefresh,
+    }
+  }
+
+  if (effect.kind === 'battle-to-break') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) {
+      return { ...state }
+    }
+    const targetPlayerId = getTargetPlayerId(context, effect.target)
+    const player = state.players[targetPlayerId]
+    const movedIds = new Set(targets.map((target) => target.card.instanceId))
+    const hpCards = targets.flatMap((target) => target.hpCards)
+    const updatedPlayer: PlayerState = {
+      ...player,
+      battleArea: player.battleArea.filter(
+        (cookie) => !movedIds.has(cookie.card.instanceId),
+      ),
+      breakArea: [...player.breakArea, ...targets.map((target) => target.card)],
+      discardPile: [...player.discardPile, ...hpCards],
+    }
+    return resolveNonFaintDepartureOutcome(
+      updatePlayer(state, updatedPlayer),
+      targetPlayerId,
+      targets.length,
+    )
+  }
+
+  if (effect.kind === 'break-to-hand-by-level-sum') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getBreakToHandBySumCandidates(state, context, effect)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的卡牌不在 break 區的合法範圍內。')
+    }
+    const selectedSet = new Set(uniqueIds)
+    const selected = candidates.filter((card) => selectedSet.has(card.instanceId))
+    const levelSum = selected.reduce((sum, card) => sum + card.level, 0)
+    if (levelSum !== effect.targetSum) {
+      throw new GameRuleError(`選擇的餅乾等級總和必須恰好為 ${effect.targetSum}。`)
+    }
+    return updatePlayer(state, {
+      ...player,
+      breakArea: player.breakArea.filter(
+        (card) => !selectedSet.has(card.instanceId),
+      ),
+      hand: [...player.hand, ...selected],
+    })
   }
 
   if (effect.kind === 'hp-to-trash') {

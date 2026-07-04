@@ -101,6 +101,12 @@ export const beginAttack = (
     throw new GameRuleError('Invalid battle action.')
   }
 
+  if (
+    state.attackDisabledUntilTurn?.[attackerInstanceId] === state.turnNumber
+  ) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
   const defenderPlayerId = getOpponentId(state.activePlayerId)
   const defender = state.players[defenderPlayerId]
   if (
@@ -1416,6 +1422,7 @@ export const resolveFlip = (
   }
 
   let nextState = state
+  let flipToSupportChoice: { rested: boolean } | null = null
   if (options.activate) {
     const player = nextState.players[playerId]
     const discardIds = [...new Set(options.discardHandIds ?? [])]
@@ -1445,6 +1452,15 @@ export const resolveFlip = (
     }
 
     for (const effect of revealed.flip.effects) {
+      const context = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: revealed.instanceId,
+        sourceCardName: revealed.name,
+      }
+      if (!isEffectConditionMet(nextState, context, effect)) {
+        continue
+      }
+
       if (effect.kind === 'gain-hp') {
         const owner = nextState.players[playerId]
         const targetIndex = owner.battleArea.findIndex(
@@ -1475,29 +1491,12 @@ export const resolveFlip = (
             },
           },
         }
-      } else if (effect.kind === 'draw-up-to') {
-        const context = {
-          sourcePlayerId: playerId,
-          sourceInstanceId: revealed.instanceId,
-          sourceCardName: revealed.name,
-        }
-        if (!isEffectConditionMet(nextState, context, effect)) {
-          continue
-        }
-        nextState = executeCardEffect(
-          nextState,
-          context,
-          effect,
-          [],
-        )
+      } else if (effect.kind === 'flip-to-support') {
+        flipToSupportChoice = { rested: effect.rested ?? true }
       } else {
         nextState = executeCardEffect(
           nextState,
-          {
-            sourcePlayerId: playerId,
-            sourceInstanceId: revealed.instanceId,
-            sourceCardName: revealed.name,
-          },
+          context,
           effect,
           [],
         )
@@ -1510,10 +1509,18 @@ export const resolveFlip = (
     ...nextState,
     players: {
       ...nextState.players,
-      [playerId]: {
-        ...player,
-        discardPile: [...player.discardPile, revealed],
-      },
+      [playerId]: flipToSupportChoice
+        ? {
+            ...player,
+            supportArea: [
+              ...player.supportArea,
+              { card: revealed, rested: flipToSupportChoice.rested },
+            ],
+          }
+        : {
+            ...player,
+            discardPile: [...player.discardPile, revealed],
+          },
     },
     pendingBattle: {
       ...requirePendingBattle(nextState),

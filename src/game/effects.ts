@@ -1,9 +1,13 @@
 export {
+  getBreakToBattleCandidates,
+  getBreakToHandBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
+  getTrashToDeckCandidates,
+  getTrashToHandCandidates,
   getTrashToSupportCandidates,
   isEffectConditionMet,
   isEffectTargeted,

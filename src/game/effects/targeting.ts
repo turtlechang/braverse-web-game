@@ -9,6 +9,8 @@ import type {
   DrawEffect,
   EffectContext,
   EffectTargetSelector,
+  EnergyColor,
+  GameCard,
   GameState,
   PlayerId,
   TargetedCardEffect,
@@ -114,7 +116,7 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-battle-to-trash' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -129,7 +131,10 @@ export const isEffectUntargeted = (
   effect.kind === 'hand-to-deck-and-draw' ||
   effect.kind === 'disable-block' ||
   effect.kind === 'draw-up-to' ||
-  effect.kind === 'set-active'
+  effect.kind === 'set-active' ||
+  effect.kind === 'field-to-trash-all' ||
+  effect.kind === 'break-to-battle' ||
+  effect.kind === 'break-to-hand-by-level-sum'
 
 export const isEffectTargeted = (
   effect: CardEffect,
@@ -147,7 +152,10 @@ export const isEffectTargeted = (
   effect.kind === 'return-to-deck-bottom' ||
   effect.kind === 'field-to-trash' ||
   effect.kind === 'redirect-attack' ||
-  effect.kind === 'hp-to-trash'
+  effect.kind === 'hp-to-trash' ||
+  effect.kind === 'disable-attack' ||
+  effect.kind === 'hp-to-support' ||
+  effect.kind === 'battle-to-break'
 
 export const getSupportEffectCandidates = (
   state: GameState,
@@ -177,8 +185,66 @@ export const getBreakToTrashCandidates = (
   context: EffectContext,
   effect: BreakToTrashEffect,
 ): CookieCard[] =>
+  state.players[context.sourcePlayerId].breakArea.filter((card) => {
+    if (effect.exactLevel !== undefined && card.level !== effect.exactLevel) {
+      return false
+    }
+    if (effect.maxLevel !== undefined && card.level > effect.maxLevel) {
+      return false
+    }
+    return true
+  })
+
+export const getTrashToHandCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: { energyColor?: EnergyColor },
+): GameCard[] =>
+  state.players[context.sourcePlayerId].discardPile.filter(
+    (card) =>
+      effect.energyColor === undefined ||
+      card.energyColor === effect.energyColor,
+  )
+
+export const getTrashToDeckCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: { excludeFlip?: boolean },
+): GameCard[] =>
+  state.players[context.sourcePlayerId].discardPile.filter(
+    (card) => !effect.excludeFlip || !card.flip,
+  )
+
+export const getBreakToBattleCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: { exactLevel?: number; maxLevel?: number; energyColor?: EnergyColor },
+): CookieCard[] =>
+  state.players[context.sourcePlayerId].breakArea.filter((card) => {
+    if (effect.exactLevel !== undefined && card.level !== effect.exactLevel) {
+      return false
+    }
+    if (effect.maxLevel !== undefined && card.level > effect.maxLevel) {
+      return false
+    }
+    if (
+      effect.energyColor !== undefined &&
+      card.energyColor !== effect.energyColor
+    ) {
+      return false
+    }
+    return true
+  })
+
+export const getBreakToHandBySumCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: { energyColor?: EnergyColor },
+): CookieCard[] =>
   state.players[context.sourcePlayerId].breakArea.filter(
-    (card) => card.level === effect.exactLevel,
+    (card) =>
+      effect.energyColor === undefined ||
+      card.energyColor === effect.energyColor,
   )
 
 export const validateBreakToTrashTargets = (
@@ -215,6 +281,13 @@ export const isEffectConditionMet = (
   if (condition?.kind === 'opponent-trash-count-at-least') {
     const opponentId = getOpponentId(context.sourcePlayerId)
     return state.players[opponentId].discardPile.length >= condition.count
+  }
+
+  if (condition?.kind === 'trash-count-at-least') {
+    return (
+      state.players[context.sourcePlayerId].discardPile.length >=
+      condition.count
+    )
   }
 
   if (condition?.kind === 'support-count-at-least') {
