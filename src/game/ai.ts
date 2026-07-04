@@ -42,6 +42,7 @@ import { handleAiPendingDecision } from './ai/pending-handler'
 import { handleAiPendingBattle } from './ai/battle-handler'
 import { dispatchAiStep } from './ai/dispatcher'
 import { handleAiRandomTurnState } from './ai/random-turn-handler'
+import { handleAiEvaluatedTurnState } from './ai/evaluated-turn-handler'
 import {
   handleAiTurnState,
   type AiTurnStrategy,
@@ -586,8 +587,11 @@ export const takeAiStep = (
               currentPlayerId,
               createStepRandom(options.seed ?? 1, current),
             )
-        : (current: GameState, currentPlayerId: PlayerId) =>
-            handleAiTurnState(current, currentPlayerId, aiTurnStrategy)
+        : level === 3
+          ? (current: GameState, currentPlayerId: PlayerId) =>
+              handleAiEvaluatedTurnState(current, currentPlayerId, aiTurnStrategy)
+          : (current: GameState, currentPlayerId: PlayerId) =>
+              handleAiTurnState(current, currentPlayerId, aiTurnStrategy)
 
     const decision =
       dispatchAiStep(state, playerId, [

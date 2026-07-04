@@ -1,9 +1,9 @@
 import type { CardEffect, GameCard, GameState, PlayerId } from '../types'
 
-export type AiLevel = 1 | 2
+export type AiLevel = 1 | 2 | 3
 
 export interface AiStepOptions {
-  /** AI 等級；預設 2（現行啟發式）。1 為隨機合法操作。 */
+  /** AI 等級；預設 2（現行啟發式）。1 為隨機合法操作，3 為評估式打分。 */
   level?: AiLevel
   /** Lv.1 隨機性的種子；相同種子與局面必產生相同決策。 */
   seed?: number

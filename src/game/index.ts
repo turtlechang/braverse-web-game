@@ -29,6 +29,12 @@ export {
 export type { DeckConfig } from './demo'
 export { createSeededRandom, createSeededShuffle } from './helpers'
 export { getLegalTurnCommands } from './legal-actions'
+export { createPlayerView } from './player-view'
+export type {
+  CookieInBattleView,
+  PlayerSideView,
+  PlayerView,
+} from './player-view'
 export {
   getAttackEnergyCost,
   getEnergyCostTotal,
@@ -292,3 +298,4 @@ export type {
   AiStepOptions,
   SimulateAiMatchOptions,
 } from './ai'
+export { evaluatePlayerView } from './ai/evaluated-turn-handler'

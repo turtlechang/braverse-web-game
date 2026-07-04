@@ -18,6 +18,7 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
   { value: 1, label: 'Lv.1 隨機出招', hint: '從合法動作中隨機挑選，不主動使用技能。' },
   { value: 2, label: 'Lv.2 基礎戰術', hint: '會出牌、用技能並攻擊較脆弱的目標。' },
+  { value: 3, label: 'Lv.3 評估戰局', hint: '對每個可行動作評分後選擇最佳選項，會優先斬殺。' },
 ]
 
 interface MainMenuProps {
@@ -131,7 +132,7 @@ export function MainMenu({
                 <select
                   value={aiLevel}
                   onChange={(event) =>
-                    onSelectAiLevel(event.target.value === '1' ? 1 : 2)
+                    onSelectAiLevel(Number(event.target.value) as AiLevel)
                   }
                 >
                   {AI_LEVEL_OPTIONS.map((option) => (
