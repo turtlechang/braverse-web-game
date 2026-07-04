@@ -59,7 +59,8 @@ import { useMatchDialogs } from './hooks/useMatchDialogs'
 import { usePendingEffect } from './hooks/usePendingEffect'
 import { useAiTurn } from './hooks/useAiTurn'
 import { useMatchController } from './hooks/useMatchController'
-import { MainMenu } from './components/MainMenu'
+import { MainMenu, type AiDeckChoice } from './components/MainMenu'
+import type { AiLevel } from './game'
 import { DeckEditorModal } from './components/modals/DeckEditorModal'
 import {
   deleteCustomDeck,
@@ -89,6 +90,8 @@ function App() {
   const [editingDeck, setEditingDeck] = useState<CustomDeck | null>(null)
   const [showDeckEditor, setShowDeckEditor] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
+  const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('random')
+  const [aiLevel, setAiLevel] = useState<AiLevel>(2)
   const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
     null,
   )
@@ -131,6 +134,7 @@ function App() {
     faintActive: pending.faintActive,
     afterDamageActive: pending.afterDamageActive,
     deckConfig: match.deckConfig,
+    aiLevel,
   })
 
   const faintActive = pending.faintActive
@@ -178,7 +182,11 @@ function App() {
     dialogs.closeResourcePopover()
     pending.resetEffectContext()
     ai.resetAiCounts()
-    match.handleDeckSelection('custom', selectedCustomDeck)
+    match.handleDeckSelection(
+      'custom',
+      selectedCustomDeck,
+      aiDeckChoice === 'random' ? undefined : aiDeckChoice,
+    )
     setBattleEntryError(null)
     setScreen('battle')
   }
@@ -330,6 +338,10 @@ function App() {
           selectedDeckId={selectedDeckId}
           selectedValidation={selectedDeckValidation}
           battleError={battleEntryError}
+          aiDeckChoice={aiDeckChoice}
+          aiLevel={aiLevel}
+          onSelectAiDeck={setAiDeckChoice}
+          onSelectAiLevel={setAiLevel}
           onSelectDeck={(deckId) => {
             setSelectedDeckId(deckId)
             setBattleEntryError(null)

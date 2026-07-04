@@ -27,7 +27,8 @@ export {
   createStageUsageDemoState,
 } from './demo'
 export type { DeckConfig } from './demo'
-export { createSeededShuffle } from './helpers'
+export { createSeededRandom, createSeededShuffle } from './helpers'
+export { getLegalTurnCommands } from './legal-actions'
 export {
   getAttackEnergyCost,
   getEnergyCostTotal,
@@ -283,7 +284,11 @@ export {
 export type {
   AiActionType,
   AiDecision,
+  AiDecisionReason,
   AiEffectSelection,
+  AiLevel,
   AiMatchMetrics,
   AiMatchResult,
+  AiStepOptions,
+  SimulateAiMatchOptions,
 } from './ai'

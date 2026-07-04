@@ -3,7 +3,8 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
-import { MainMenu } from './MainMenu'
+import { MainMenu, type AiDeckChoice } from './MainMenu'
+import type { AiLevel } from '../game'
 import type { CustomDeck } from '../game/custom-deck'
 import { OFFICIAL_RED_STARTER_DECK } from '../game/starter-deck'
 
@@ -30,7 +31,10 @@ const renderMenu = async (
   handlers: Partial<{
     onDuplicateDeck: (deck: CustomDeck) => void
     onDeleteDeck: (deck: CustomDeck) => void
+    onSelectAiDeck: (choice: AiDeckChoice) => void
+    onSelectAiLevel: (level: AiLevel) => void
   }> = {},
+  aiOptions: { aiDeckChoice?: AiDeckChoice; aiLevel?: AiLevel } = {},
 ) => {
   const container = document.createElement('div')
   const root = createRoot(container)
@@ -41,6 +45,10 @@ const renderMenu = async (
         selectedDeckId={decks[0]?.id ?? null}
         selectedValidation={null}
         battleError={null}
+        aiDeckChoice={aiOptions.aiDeckChoice ?? 'random'}
+        aiLevel={aiOptions.aiLevel ?? 2}
+        onSelectAiDeck={handlers.onSelectAiDeck ?? (() => undefined)}
+        onSelectAiLevel={handlers.onSelectAiLevel ?? (() => undefined)}
         onSelectDeck={() => undefined}
         onStartBattle={() => undefined}
         onCreateDeck={() => undefined}
@@ -111,6 +119,51 @@ describe('MainMenu deck management', () => {
       .find((span) => span.textContent === '合法')
     expect(label).toBeDefined()
     expect(label!.getAttribute('title')).toBeNull()
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('MainMenu AI opponent options', () => {
+  it('renders deck and level selectors with current values', async () => {
+    const { container, root } = await renderMenu([validDeck], {}, {
+      aiDeckChoice: 'blue',
+      aiLevel: 1,
+    })
+
+    const selects = container.querySelectorAll<HTMLSelectElement>(
+      '.main-menu-ai-options select',
+    )
+    expect(selects).toHaveLength(2)
+    expect(selects[0].value).toBe('blue')
+    expect(selects[1].value).toBe('1')
+    expect(container.textContent).toContain('不主動使用技能')
+
+    await act(() => root.unmount())
+  })
+
+  it('invokes onSelectAiDeck and onSelectAiLevel on change', async () => {
+    const onSelectAiDeck = vi.fn()
+    const onSelectAiLevel = vi.fn()
+    const { container, root } = await renderMenu([validDeck], {
+      onSelectAiDeck,
+      onSelectAiLevel,
+    })
+
+    const selects = container.querySelectorAll<HTMLSelectElement>(
+      '.main-menu-ai-options select',
+    )
+    await act(() => {
+      selects[0].value = 'purple'
+      selects[0].dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await act(() => {
+      selects[1].value = '1'
+      selects[1].dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    expect(onSelectAiDeck).toHaveBeenCalledWith('purple')
+    expect(onSelectAiLevel).toHaveBeenCalledWith(1)
 
     await act(() => root.unmount())
   })

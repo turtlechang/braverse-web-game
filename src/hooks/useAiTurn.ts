@@ -5,7 +5,7 @@ import {
   simulateAiMatch,
   takeAiStep,
 } from '../game'
-import type { AiMatchResult } from '../game'
+import type { AiLevel, AiMatchResult } from '../game'
 import type { AiDecision } from '../game'
 import type { DeckChoice } from '../game'
 
@@ -21,6 +21,7 @@ export function useAiTurn(params: {
   faintActive: boolean
   afterDamageActive: boolean
   deckConfig: { player: DeckChoice; ai: DeckChoice }
+  aiLevel?: AiLevel
   maxConsecutiveActions?: number
 }) {
   const {
@@ -33,6 +34,7 @@ export function useAiTurn(params: {
     faintActive,
     afterDamageActive,
     deckConfig,
+    aiLevel = 2,
     maxConsecutiveActions = 200,
   } = params
 
@@ -76,7 +78,7 @@ export function useAiTurn(params: {
     ) as unknown) as number
     aiThinkingTimerRef.current = thinkingTimer
     const timer = (window.setTimeout(() => {
-      const decision = takeAiStep(game, 'player-two')
+      const decision = takeAiStep(game, 'player-two', { level: aiLevel })
       setAiThinking(false)
 
       if (decision.action === 'error' || decision.state === game) {
@@ -115,6 +117,7 @@ export function useAiTurn(params: {
   }, [
     aiActionCount,
     aiControlsCurrentState,
+    aiLevel,
     faintActive,
     afterDamageActive,
     game,
