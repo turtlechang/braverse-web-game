@@ -28,17 +28,20 @@ const fisherYatesShuffle = (
 export const defaultShuffle: Shuffle = (cards) =>
   fisherYatesShuffle(cards, Math.random)
 
-export const createSeededShuffle = (seed: number): Shuffle => {
+export const createSeededRandom = (seed: number): (() => number) => {
   let state = seed >>> 0
 
-  const nextRandom = () => {
+  return () => {
     state = (state + 0x6d2b79f5) >>> 0
     let value = state
     value = Math.imul(value ^ (value >>> 15), value | 1)
     value ^= value + Math.imul(value ^ (value >>> 7), value | 61)
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296
   }
+}
 
+export const createSeededShuffle = (seed: number): Shuffle => {
+  const nextRandom = createSeededRandom(seed)
   return (cards) => fisherYatesShuffle(cards, nextRandom)
 }
 

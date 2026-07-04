@@ -1,13 +1,34 @@
 import { AlertTriangle, Copy, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
+import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
 import { validateCustomDeck } from '../game/custom-deck'
+
+export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
+
+const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
+  { value: 'random', label: '隨機（五色起始）' },
+  { value: 'red', label: '紅色起始牌組' },
+  { value: 'yellow', label: '黃色起始牌組' },
+  { value: 'green', label: '綠色起始牌組' },
+  { value: 'blue', label: '藍色起始牌組' },
+  { value: 'purple', label: '紫色起始牌組' },
+]
+
+const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
+  { value: 1, label: 'Lv.1 隨機出招', hint: '從合法動作中隨機挑選，不主動使用技能。' },
+  { value: 2, label: 'Lv.2 基礎戰術', hint: '會出牌、用技能並攻擊較脆弱的目標。' },
+]
 
 interface MainMenuProps {
   decks: CustomDeck[]
   selectedDeckId: string | null
   selectedValidation: DeckValidationResult | null
   battleError: string | null
+  aiDeckChoice: AiDeckChoice
+  aiLevel: AiLevel
+  onSelectAiDeck: (choice: AiDeckChoice) => void
+  onSelectAiLevel: (level: AiLevel) => void
   onSelectDeck: (deckId: string) => void
   onStartBattle: () => void
   onCreateDeck: () => void
@@ -30,6 +51,10 @@ export function MainMenu({
   selectedDeckId,
   selectedValidation,
   battleError,
+  aiDeckChoice,
+  aiLevel,
+  onSelectAiDeck,
+  onSelectAiLevel,
   onSelectDeck,
   onStartBattle,
   onCreateDeck,
@@ -46,7 +71,7 @@ export function MainMenu({
         <div className="main-menu-heading">
           <span>CookieRun Braverse</span>
           <h1 id="main-menu-title">薑餅人對戰卡牌</h1>
-          <p>選擇一副合法牌組後開始對戰；AI 會在開戰前從五色起始牌組中隨機選擇。</p>
+          <p>選擇一副合法牌組後開始對戰；AI 對手的牌組與等級可在下方指定，或維持隨機。</p>
         </div>
 
         <div className="main-menu-actions">
@@ -84,9 +109,45 @@ export function MainMenu({
           </section>
 
           <section className="main-menu-status">
-            <span>AI 對手牌組</span>
-            <strong>五色起始牌組隨機</strong>
-            <p>紅色、黃色、綠色、藍色、紫色會在進入對戰時決定。</p>
+            <span>AI 對手</span>
+            <div className="main-menu-ai-options">
+              <label>
+                牌組
+                <select
+                  value={aiDeckChoice}
+                  onChange={(event) =>
+                    onSelectAiDeck(event.target.value as AiDeckChoice)
+                  }
+                >
+                  {AI_DECK_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                等級
+                <select
+                  value={aiLevel}
+                  onChange={(event) =>
+                    onSelectAiLevel(event.target.value === '1' ? 1 : 2)
+                  }
+                >
+                  {AI_LEVEL_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <p>
+              {
+                AI_LEVEL_OPTIONS.find((option) => option.value === aiLevel)
+                  ?.hint
+              }
+            </p>
           </section>
         </div>
 

@@ -1,6 +1,6 @@
 import { playItem } from './card-abilities'
 import { getPendingDecision } from './commands'
-import { createSeededShuffle } from './helpers'
+import { createSeededRandom, createSeededShuffle } from './helpers'
 import {
   executeCardEffect,
   getBreakToTrashCandidates,
@@ -32,12 +32,16 @@ import type {
 import type {
   AiDecision,
   AiEffectSelection,
+  AiLevel,
   AiMatchMetrics,
   AiMatchResult,
+  AiStepOptions,
+  SimulateAiMatchOptions,
 } from './ai/types'
 import { handleAiPendingDecision } from './ai/pending-handler'
 import { handleAiPendingBattle } from './ai/battle-handler'
 import { dispatchAiStep } from './ai/dispatcher'
+import { handleAiRandomTurnState } from './ai/random-turn-handler'
 import {
   handleAiTurnState,
   type AiTurnStrategy,
@@ -46,9 +50,13 @@ import {
 export type {
   AiActionType,
   AiDecision,
+  AiDecisionReason,
   AiEffectSelection,
+  AiLevel,
   AiMatchMetrics,
   AiMatchResult,
+  AiStepOptions,
+  SimulateAiMatchOptions,
 } from './ai/types'
 
 export const selectAiEnergyPayment = (
@@ -541,10 +549,26 @@ const aiTurnStrategy: AiTurnStrategy = {
   chooseAttackTarget,
 }
 
+const createStepRandom = (
+  seed: number,
+  state: GameState,
+): (() => number) => {
+  const entropy =
+    ((state.commandLog?.length ?? 0) * 2654435761) ^
+    (state.turnNumber * 97) ^
+    (state.players['player-one'].hand.length * 13) ^
+    (state.players['player-two'].hand.length * 31) ^
+    (state.players['player-one'].deck.length * 7) ^
+    (state.players['player-two'].deck.length * 3)
+  return createSeededRandom((seed ^ entropy) >>> 0)
+}
+
 export const takeAiStep = (
   state: GameState,
   playerId: PlayerId = 'player-two',
+  options: AiStepOptions = {},
 ): AiDecision => {
+  const level: AiLevel = options.level ?? 2
   try {
     if (state.status !== 'playing') {
       return {
@@ -554,18 +578,29 @@ export const takeAiStep = (
       }
     }
 
-    return (
+    const turnHandler =
+      level === 1
+        ? (current: GameState, currentPlayerId: PlayerId) =>
+            handleAiRandomTurnState(
+              current,
+              currentPlayerId,
+              createStepRandom(options.seed ?? 1, current),
+            )
+        : (current: GameState, currentPlayerId: PlayerId) =>
+            handleAiTurnState(current, currentPlayerId, aiTurnStrategy)
+
+    const decision =
       dispatchAiStep(state, playerId, [
         handleAiPendingDecision,
         handleAiPendingBattle,
-        (current, currentPlayerId) =>
-          handleAiTurnState(current, currentPlayerId, aiTurnStrategy),
+        turnHandler,
       ]) ?? {
         state,
-        action: 'idle',
+        action: 'idle' as const,
         description: `${state.players[playerId].name}等待行動。`,
       }
-    )
+
+    return decision.reason ? decision : { ...decision, reason: { level } }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'AI 執行失敗。'
@@ -581,6 +616,7 @@ export const takeAiStep = (
 export const simulateAiMatch = (
   initialState: GameState,
   maxActions = 500,
+  options: SimulateAiMatchOptions = {},
 ): AiMatchResult => {
   let state = initialState
   const logs: string[] = []
@@ -617,7 +653,10 @@ export const simulateAiMatch = (
             : state.activePlayerId
         : null) ??
       state.activePlayerId
-    const decision = takeAiStep(state, controller)
+    const decision = takeAiStep(state, controller, {
+      level: options.levels?.[controller] ?? 2,
+      seed: options.seed,
+    })
     logs.push(
       `#${actionCount + 1} T${state.turnNumber} ${decision.description}`,
     )

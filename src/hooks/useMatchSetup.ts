@@ -18,12 +18,16 @@ export const formatDeckSelectionMessage = (
   playerDeck: DeckChoice,
   aiDeck: Exclude<DeckChoice, 'custom'>,
   customDeckName?: string,
+  aiDeckWasChosen = false,
 ) => {
   const playerLabel =
     playerDeck === 'custom' && customDeckName
       ? `自訂「${customDeckName}」`
       : deckChoiceLabel[playerDeck]
-  return `我方使用${playerLabel}牌組，AI 隨機選擇${deckChoiceLabel[aiDeck]}牌組。請猜拳決定先後攻選擇權。`
+  const aiPhrase = aiDeckWasChosen
+    ? `AI 使用指定的${deckChoiceLabel[aiDeck]}牌組`
+    : `AI 隨機選擇${deckChoiceLabel[aiDeck]}牌組`
+  return `我方使用${playerLabel}牌組，${aiPhrase}。請猜拳決定先後攻選擇權。`
 }
 
 export type MatchSetupStep =
@@ -93,13 +97,22 @@ export function useMatchSetup({
   )
 
   const handleDeckSelection = useCallback(
-    (playerDeck: DeckChoice, customDeck?: CustomDeck) => {
-      const aiDeck = chooseDeck()
+    (
+      playerDeck: DeckChoice,
+      customDeck?: CustomDeck,
+      aiDeckChoice?: Exclude<DeckChoice, 'custom'>,
+    ) => {
+      const aiDeck = aiDeckChoice ?? chooseDeck()
       setDeckConfig({ player: playerDeck, ai: aiDeck })
       setSelectedCustomDeck(customDeck ?? null)
       setSetupStep('rps')
       setSetupMessage(
-        formatDeckSelectionMessage(playerDeck, aiDeck, customDeck?.name),
+        formatDeckSelectionMessage(
+          playerDeck,
+          aiDeck,
+          customDeck?.name,
+          aiDeckChoice !== undefined,
+        ),
       )
     },
     [chooseDeck],

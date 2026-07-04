@@ -156,6 +156,38 @@ button {
   gap: 8px;
 }
 
+.main-menu-ai-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.main-menu-ai-options label {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 140px;
+  color: #9fc3e8;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.main-menu-ai-options select {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid rgba(126, 231, 240, 0.28);
+  border-radius: 6px;
+  background: rgba(5, 21, 52, 0.62);
+  color: #eef9ff;
+  font-weight: 700;
+}
+
+.main-menu-status p {
+  margin: 0;
+  color: #9fc3e8;
+  font-size: 0.78rem;
+}
+
 .main-menu-stat-row span,
 .main-menu-deck-meta span {
   padding: 4px 8px;
