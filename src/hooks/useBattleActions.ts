@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import {
+  appendCommandLogEntry,
   beginAttack,
   getAttackEnergyCost,
   validateEnergyPayment,
@@ -59,11 +60,21 @@ export function useBattleActions({ game, runAction }: UseBattleActionsParams) {
 
       runAction(
         (current) =>
-          beginAttack(
+          appendCommandLogEntry(
             current,
-            selectedAttackerId,
-            targetInstanceId,
-            selectedAttackPaymentIds,
+            beginAttack(
+              current,
+              selectedAttackerId,
+              targetInstanceId,
+              selectedAttackPaymentIds,
+            ),
+            {
+              kind: 'attack',
+              playerId: current.activePlayerId,
+              attackerInstanceId: selectedAttackerId,
+              targetInstanceId,
+              supportPaymentIds: selectedAttackPaymentIds,
+            },
           ),
         `${selectedAttacker?.card.name ?? '餅乾'}已宣告攻擊。`,
         clearAttacker,

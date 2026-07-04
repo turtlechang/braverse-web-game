@@ -5,21 +5,10 @@ import {
   canActivateStage,
   canPlayItem,
   canPlayStage,
-  advancePhase,
   applyGameCommand,
-  deployCookie,
-  placeSupportCard,
-  playStage,
-  playTrap,
-  playBlocker,
   getRefreshCandidates,
-  refreshDeck,
-  replaceDefeatedCookie,
   resolveBattleAutomatically,
-  resolveFlip,
   selectEnergyPayment,
-  skipDefeatedCookieReplacement,
-  skipTrap,
   type DeckChoice,
   type GameCard,
 } from './game'
@@ -33,6 +22,7 @@ import {
 import { phaseLabels, deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
 import { StatusToast, CardPreviewPanel } from './components/panels/InteractionOverlays'
+import { BattleLogSidebar } from './components/panels/BattleLogSidebar'
 import {
   DecisionModal,
   DiscardRevealModal,
@@ -404,6 +394,8 @@ function App() {
 
       <StatusToast message={match.message} />
 
+      <BattleLogSidebar entries={match.game.commandLog ?? []} />
+
       <PhaseRail
         phase={match.game.phase}
         turnNumber={match.game.turnNumber}
@@ -523,7 +515,14 @@ function App() {
           onPlaceSupport={(instanceId) =>
             match.runAction(
               (current) =>
-                advancePhase(placeSupportCard(current, instanceId)),
+                applyGameCommand(
+                  applyGameCommand(current, {
+                    kind: 'place-support',
+                    playerId: match.activePlayer.id,
+                    instanceId,
+                  }),
+                  { kind: 'advance-phase', playerId: match.activePlayer.id },
+                ),
               '已將卡牌配置到支援區，進入主要階段。',
             )
           }
@@ -545,7 +544,12 @@ function App() {
           }}
           onDeployCookie={(instanceId) =>
             match.runAction(
-              (current) => deployCookie(current, instanceId),
+              (current) =>
+                applyGameCommand(current, {
+                  kind: 'deploy-cookie',
+                  playerId: match.activePlayer.id,
+                  instanceId,
+                }),
               '新餅乾已登場並配置 HP。',
               (nextGame) => {
                 if (nextGame.pendingRefresh) return
@@ -603,12 +607,12 @@ function App() {
             }
             match.runAction(
               (current) =>
-                playStage(
-                  current,
-                  match.activePlayer.id,
+                applyGameCommand(current, {
+                  kind: 'play-stage',
+                  playerId: match.activePlayer.id,
                   instanceId,
                   paymentIds,
-                ),
+                }),
               `${card.name}已放置到場景區。`,
             )
           }}
@@ -731,7 +735,11 @@ function App() {
             }}
             onSkip={() => {
               match.runAction(
-                (current) => skipTrap(current, match.viewerPlayerId),
+                (current) =>
+                  applyGameCommand(current, {
+                    kind: 'skip-trap',
+                    playerId: match.viewerPlayerId,
+                  }),
                 '未發動回應，進入傷害結算。',
               )
             }}
@@ -807,7 +815,11 @@ function App() {
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setPendingResponseMode(null)
               match.runAction(
-                (current) => skipTrap(current, match.viewerPlayerId),
+                (current) =>
+                  applyGameCommand(current, {
+                    kind: 'skip-trap',
+                    playerId: match.viewerPlayerId,
+                  }),
                 '未發動陷阱，進入傷害結算。',
               )
             }}
@@ -821,21 +833,19 @@ function App() {
               match.setPendingResponseMode(null)
               match.runAction(
                 (current) => {
-                  const afterTrap = playTrap(
-                    current,
-                    match.viewerPlayerId,
-                    {
-                      trapInstanceId: trap.instanceId,
-                      paymentIds: match.selectedTrapPaymentIds,
-                      targetIds: match.selectedTrapTargets.map(
-                        (target) => target.card.instanceId,
-                      ),
-                      supportTrashIds: match.selectedTrapSupportTrashIds,
-                      discardHandIds: match.selectedTrapDiscardIds,
-                      trashBattleCookieIds:
-                        match.selectedTrapTrashBattleCookieIds,
-                    },
-                  )
+                  const afterTrap = applyGameCommand(current, {
+                    kind: 'play-trap',
+                    playerId: match.viewerPlayerId,
+                    trapInstanceId: trap.instanceId,
+                    paymentIds: match.selectedTrapPaymentIds,
+                    targetIds: match.selectedTrapTargets.map(
+                      (target) => target.card.instanceId,
+                    ),
+                    supportTrashIds: match.selectedTrapSupportTrashIds,
+                    discardHandIds: match.selectedTrapDiscardIds,
+                    trashBattleCookieIds:
+                      match.selectedTrapTrashBattleCookieIds,
+                  })
                   return testStateConfig
                     ? resolveBattleAutomatically(afterTrap)
                     : afterTrap
@@ -872,7 +882,9 @@ function App() {
               if (!match.selectedBlockerId) return
               match.runAction(
                 (current) =>
-                  playBlocker(current, match.viewerPlayerId, {
+                  applyGameCommand(current, {
+                    kind: 'play-blocker',
+                    playerId: match.viewerPlayerId,
                     sourceInstanceId: match.selectedBlockerId!,
                     paymentIds: match.selectedBlockerPaymentIds,
                   }),
@@ -882,7 +894,11 @@ function App() {
             onSkip={() => {
               match.setSelectedBlockerId(null)
               match.runAction(
-                (current) => skipTrap(current, match.viewerPlayerId),
+                (current) =>
+                  applyGameCommand(current, {
+                    kind: 'skip-trap',
+                    playerId: match.viewerPlayerId,
+                  }),
                 '未使用 Blocker，進入傷害結算。',
               )
             }}
@@ -911,7 +927,9 @@ function App() {
               if (!match.selectedBlockerId) return
               match.runAction(
                 (current) =>
-                  playBlocker(current, match.viewerPlayerId, {
+                  applyGameCommand(current, {
+                    kind: 'play-blocker',
+                    playerId: match.viewerPlayerId,
                     sourceInstanceId: match.selectedBlockerId!,
                     paymentIds: match.selectedBlockerPaymentIds,
                   }),
@@ -922,7 +940,11 @@ function App() {
               match.setSelectedBlockerId(null)
               match.setPendingResponseMode(null)
               match.runAction(
-                (current) => skipTrap(current, match.viewerPlayerId),
+                (current) =>
+                  applyGameCommand(current, {
+                    kind: 'skip-trap',
+                    playerId: match.viewerPlayerId,
+                  }),
                 '未使用 Blocker，進入傷害結算。',
               )
             }}
@@ -958,7 +980,9 @@ function App() {
               match.setSelectedFlipDiscardIds([])
               match.runAction(
                 (current) =>
-                  resolveFlip(current, match.viewerPlayerId, {
+                  applyGameCommand(current, {
+                    kind: 'resolve-flip',
+                    playerId: match.viewerPlayerId,
                     activate: false,
                   }),
                 '未發動 FLIP，繼續傷害結算。',
@@ -968,7 +992,9 @@ function App() {
               match.setSelectedFlipDiscardIds([])
               match.runAction(
                 (current) =>
-                  resolveFlip(current, match.viewerPlayerId, {
+                  applyGameCommand(current, {
+                    kind: 'resolve-flip',
+                    playerId: match.viewerPlayerId,
                     activate: true,
                     discardHandIds: match.selectedFlipDiscardIds,
                   }),
@@ -1282,7 +1308,10 @@ function App() {
                 : () =>
                     match.runAction(
                       (current) =>
-                        skipDefeatedCookieReplacement(current),
+                        applyGameCommand(current, {
+                          kind: 'skip-replacement',
+                          playerId: match.pendingPlayer!.id,
+                        }),
                       '已選擇不補餅乾。',
                     )
             }
@@ -1290,11 +1319,11 @@ function App() {
               if (match.game.pendingRefresh) {
                 match.runAction(
                   (current) =>
-                    refreshDeck(
-                      current,
-                      match.pendingPlayer!.id,
-                      instanceId,
-                    ),
+                    applyGameCommand(current, {
+                      kind: 'refresh-deck',
+                      playerId: match.pendingPlayer!.id,
+                      cookieInstanceId: instanceId,
+                    }),
                   '牌庫 Refresh 已完成。',
                   (nextGame) => {
                     const onPlay = nextGame.pendingOnPlay
@@ -1319,7 +1348,11 @@ function App() {
               } else {
                 match.runAction(
                   (current) =>
-                    replaceDefeatedCookie(current, instanceId),
+                    applyGameCommand(current, {
+                      kind: 'replace-cookie',
+                      playerId: match.pendingPlayer!.id,
+                      instanceId,
+                    }),
                   '已補充新的戰鬥區餅乾。',
                   (nextGame) => {
                     if (nextGame.pendingRefresh) return

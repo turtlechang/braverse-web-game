@@ -9,6 +9,8 @@ import type {
 import {
   activateCookieSkill,
   activateStage,
+  appendCommandLogEntry,
+  applyGameCommand,
   canActivateCookieSkill,
   executeCardEffect,
   finalizePendingReplacements,
@@ -22,8 +24,6 @@ import {
   isEffectConditionMet,
   isEffectUntargeted,
   playItem,
-  resolveAttackEffect,
-  skipCookieOnPlay,
   validateEnergyPayment,
 } from '../game'
 import { describeEffectResult } from '../components/effects/effectUiUtils'
@@ -384,7 +384,11 @@ export function usePendingEffect(params: {
     if (availableEffects.length === 0) {
       if (trigger === 'on-play' && nextGame.pendingOnPlay) {
         setGame(
-          skipCookieOnPlay(nextGame, playerId, card.instanceId),
+          applyGameCommand(nextGame, {
+            kind: 'skip-on-play',
+            playerId,
+            sourceInstanceId: card.instanceId,
+          }),
         )
       }
       setMessage(`${card.name}的效果尚未滿足發動條件。`)
@@ -401,7 +405,11 @@ export function usePendingEffect(params: {
     ) {
       if (trigger === 'on-play' && nextGame.pendingOnPlay) {
         setGame(
-          skipCookieOnPlay(nextGame, playerId, card.instanceId),
+          applyGameCommand(nextGame, {
+            kind: 'skip-on-play',
+            playerId,
+            sourceInstanceId: card.instanceId,
+          }),
         )
       }
       setMessage(`${card.name}目前無法支付或發動技能。`)
@@ -511,7 +519,11 @@ export function usePendingEffect(params: {
           ) {
             return current
           }
-          return resolveAttackEffect(current, viewerPlayerId, [])
+          return applyGameCommand(current, {
+            kind: 'resolve-attack-effect',
+            playerId: viewerPlayerId,
+            targetIds: [],
+          })
         })
         setMessage(`${sourceCard.name}等待決定是否支付攻擊後續效果代價。`)
       }, 0)
@@ -836,11 +848,11 @@ export function usePendingEffect(params: {
     if (!pendingEffect?.optional) return
 
     setGame(
-      skipCookieOnPlay(
-        game,
-        pendingEffect.context.sourcePlayerId,
-        pendingEffect.sourceCard.instanceId,
-      ),
+      applyGameCommand(game, {
+        kind: 'skip-on-play',
+        playerId: pendingEffect.context.sourcePlayerId,
+        sourceInstanceId: pendingEffect.sourceCard.instanceId,
+      }),
     )
     setMessage(`${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`)
     setPendingEffect(null)
@@ -882,11 +894,11 @@ export function usePendingEffect(params: {
 
     try {
       if (pendingEffect.sourceKind === 'attack') {
-        const nextGame = resolveAttackEffect(
-          game,
-          pendingEffect.context.sourcePlayerId,
-          pendingEffect.selectedTargetIds,
-        )
+        const nextGame = applyGameCommand(game, {
+          kind: 'resolve-attack-effect',
+          playerId: pendingEffect.context.sourcePlayerId,
+          targetIds: pendingEffect.selectedTargetIds,
+        })
         const result = describeEffectResult(currentEffect, targetNames)
         setGame(nextGame)
         setMessage(result)
@@ -895,47 +907,83 @@ export function usePendingEffect(params: {
         return
       }
 
+      const paymentIds = pendingEffect.selectedPaymentIds
+      const supportToTrashIds = pendingEffect.skill.cost.supportToTrash
+        ? pendingEffect.selectedCostSupportToTrashIds
+        : []
+      const supportToHandIds = pendingEffect.skill.cost.supportToHand
+        ? pendingEffect.selectedCostSupportToTrashIds
+        : []
+      const discardHandIds = pendingEffect.selectedDiscardHandIds
+
+      // 技能/道具/場景效果是多步驟精靈(逐一支付代價、逐一選目標),
+      // 只有第一次呼叫才會真的執行代價扣除,因此指令紀錄只在此處補記一筆。
       const activatedGame = pendingEffect.skillActivated
         ? game
         : pendingEffect.sourceKind === 'item'
-          ? playItem(
+          ? appendCommandLogEntry(
               game,
-              pendingEffect.context.sourcePlayerId,
-              pendingEffect.sourceCard.instanceId,
-              pendingEffect.selectedPaymentIds,
-              pendingEffect.sourceKind === 'item'
-                ? pendingEffect.skill.cost.supportToTrash
-                  ? pendingEffect.selectedCostSupportToTrashIds
-                  : []
-                : [],
-              pendingEffect.sourceKind === 'item' &&
-                pendingEffect.skill.cost.supportToHand
-                ? pendingEffect.selectedCostSupportToTrashIds
-                : [],
-              pendingEffect.selectedDiscardHandIds,
-            )
-          : pendingEffect.sourceKind === 'stage'
-            ? activateStage(
-                game,
-                pendingEffect.context.sourcePlayerId,
-                pendingEffect.selectedPaymentIds,
-                pendingEffect.skill.cost.supportToTrash
-                  ? pendingEffect.selectedCostSupportToTrashIds
-                  : [],
-                pendingEffect.skill.cost.supportToHand
-                  ? pendingEffect.selectedCostSupportToTrashIds
-                  : [],
-                pendingEffect.selectedDiscardHandIds,
-              )
-            : activateCookieSkill(
+              playItem(
                 game,
                 pendingEffect.context.sourcePlayerId,
                 pendingEffect.sourceCard.instanceId,
-                pendingEffect.trigger,
-                pendingEffect.selectedPaymentIds,
-                pendingEffect.selectedCostSupportToTrashIds,
-                pendingEffect.selectedDiscardHandIds,
-                pendingEffect.selectedTrashBattleCookieIds,
+                paymentIds,
+                supportToTrashIds,
+                supportToHandIds,
+                discardHandIds,
+              ),
+              {
+                kind: 'play-item',
+                playerId: pendingEffect.context.sourcePlayerId,
+                instanceId: pendingEffect.sourceCard.instanceId,
+                paymentIds,
+                supportToTrashIds,
+                supportToHandIds,
+                discardHandIds,
+              },
+            )
+          : pendingEffect.sourceKind === 'stage'
+            ? appendCommandLogEntry(
+                game,
+                activateStage(
+                  game,
+                  pendingEffect.context.sourcePlayerId,
+                  paymentIds,
+                  supportToTrashIds,
+                  supportToHandIds,
+                  discardHandIds,
+                ),
+                {
+                  kind: 'activate-stage',
+                  playerId: pendingEffect.context.sourcePlayerId,
+                  paymentIds,
+                  supportToTrashIds,
+                  supportToHandIds,
+                  discardHandIds,
+                },
+              )
+            : appendCommandLogEntry(
+                game,
+                activateCookieSkill(
+                  game,
+                  pendingEffect.context.sourcePlayerId,
+                  pendingEffect.sourceCard.instanceId,
+                  pendingEffect.trigger,
+                  paymentIds,
+                  pendingEffect.selectedCostSupportToTrashIds,
+                  discardHandIds,
+                  pendingEffect.selectedTrashBattleCookieIds,
+                ),
+                {
+                  kind: 'activate-skill',
+                  playerId: pendingEffect.context.sourcePlayerId,
+                  sourceInstanceId: pendingEffect.sourceCard.instanceId,
+                  trigger: pendingEffect.trigger as 'activate' | 'on-play',
+                  paymentIds,
+                  costSupportToTrashIds: pendingEffect.selectedCostSupportToTrashIds,
+                  discardHandIds,
+                  trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+                },
               )
       const nextGame = executeCardEffect(
         activatedGame,

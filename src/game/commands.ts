@@ -32,6 +32,7 @@ import { activateCookieSkill, skipCookieOnPlay } from './skills'
 import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
 import { getCurrentReplacementTask } from './replacement'
+import { describeCommand } from './command-log'
 import {
   drawMulliganCompensation,
   forceMulliganOpeningHand,
@@ -634,7 +635,7 @@ const isPendingDecisionCommand = (
   command: GameCommand,
 ): command is PendingDecisionCommand => command.kind in cmdToDecisionKind
 
-const appendCommandLogEntry = (
+export const appendCommandLogEntry = (
   previous: GameState,
   next: GameState,
   command: GameCommand,
@@ -647,6 +648,7 @@ const appendCommandLogEntry = (
     playerId: command.playerId,
     commandKind: command.kind,
     payload: { ...command },
+    summary: describeCommand(previous, command),
   }
   return { ...next, commandLog: [...log, entry] }
 }

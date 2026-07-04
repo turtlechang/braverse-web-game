@@ -1,5 +1,5 @@
 import { playItem } from './card-abilities'
-import { getPendingDecision } from './commands'
+import { appendCommandLogEntry, getPendingDecision } from './commands'
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import {
   executeCardEffect,
@@ -264,11 +264,10 @@ const resolveAiCardAbility = (
     if (!canAttackAfterItem) return null
   }
 
-  let nextState = playItem(
+  let nextState = appendCommandLogEntry(
     state,
-    playerId,
-    card.instanceId,
-    paymentIds,
+    playItem(state, playerId, card.instanceId, paymentIds),
+    { kind: 'play-item', playerId, instanceId: card.instanceId, paymentIds },
   )
   const effectSelections: AiEffectSelection[] = []
   const shuffleSeed = [...card.instanceId].reduce(
@@ -421,15 +420,28 @@ const resolveAiSkill = (
   )
   if (effects.length === 0) return null
 
-  let nextState = activateCookieSkill(
+  let nextState = appendCommandLogEntry(
     state,
-    playerId,
-    source.card.instanceId,
-    trigger,
-    paymentIds,
-    costSupportToTrashIds,
-    discardHandIds,
-    trashBattleCookieIds,
+    activateCookieSkill(
+      state,
+      playerId,
+      source.card.instanceId,
+      trigger,
+      paymentIds,
+      costSupportToTrashIds,
+      discardHandIds,
+      trashBattleCookieIds,
+    ),
+    {
+      kind: 'activate-skill',
+      playerId,
+      sourceInstanceId: source.card.instanceId,
+      trigger,
+      paymentIds,
+      costSupportToTrashIds,
+      discardHandIds,
+      trashBattleCookieIds,
+    },
   )
   const effectSelections: AiEffectSelection[] = []
 
