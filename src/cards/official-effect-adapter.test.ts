@@ -394,6 +394,24 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
+    it('ST2-020 Winding Key Shield does not leak the break-area LV.5 condition into the target selector', () => {
+      const conversion = convertOfficialTrapAbility(findYellowCard('ST2-020'))
+      expect(conversion).toMatchObject({
+        cost: { energy: { yellow: 2 }, discardHand: 0 },
+        condition: { kind: 'break-level-at-least', level: 5 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -3,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
+      const effect = conversion?.effects[0]
+      expect(effect?.kind === 'modify-attack' ? effect.target.minLevel : undefined).toBeUndefined()
+    })
+
     it('ST2-011 faint damage targets opponent with min 0 max 1', () => {
       const conversion =
         convertOfficialCardEffects(findYellowCard('ST2-011'))

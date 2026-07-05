@@ -61,8 +61,9 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
       target.maxLevel = Number(match[5])
     }
 
-    const remainingHpMatch = text.match(/remaining HP is (\d+)/i)
-    const minimumLevelMatch = text.match(/LV\.(\d+) or higher/i)
+    const textAfterTarget = text.slice(match.index ?? 0)
+    const remainingHpMatch = textAfterTarget.match(/remaining HP is (\d+)/i)
+    const minimumLevelMatch = textAfterTarget.match(/LV\.(\d+) or higher/i)
 
     if (remainingHpMatch) {
       target.remainingHp = Number(remainingHpMatch[1])
