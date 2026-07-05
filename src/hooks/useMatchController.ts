@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, SupportCard } from '../game'
+import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, ReplacementTask, SupportCard } from '../game'
 import {
   applyGameCommand,
   createDemoSetupGame,
@@ -51,6 +51,23 @@ type TestStateConfig = ReturnType<typeof parseTestStateConfig>
 
 const opponentOfId = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
+
+export const getPendingChoicePlayerId = (
+  game: GameState,
+  replacementTask: ReplacementTask | null,
+): PlayerId | undefined => {
+  if (game.pendingRefresh) return game.pendingRefresh.playerId
+  if (game.pendingOnPlay) return undefined
+
+  const pendingDecision = getPendingDecision(game)
+  if (!replacementTask) return undefined
+
+  return !pendingDecision ||
+    pendingDecision.kind === 'faint-effect' ||
+    pendingDecision.kind === 'effect-order'
+    ? replacementTask.playerId
+    : undefined
+}
 
 export function useMatchController(params: {
   testStateConfig: TestStateConfig | null
@@ -437,9 +454,7 @@ export function useMatchController(params: {
   const aiControlsCurrentState: boolean =
     isPlayerControllingState(game, 'player-two')
 
-  const pendingPlayerId =
-    game.pendingRefresh?.playerId ??
-    (!game.pendingOnPlay && !game.pendingDrawUpTo ? replacementTask?.playerId : undefined)
+  const pendingPlayerId = getPendingChoicePlayerId(game, replacementTask)
   const pendingPlayer = pendingPlayerId
     ? game.players[pendingPlayerId]
     : null

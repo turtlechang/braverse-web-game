@@ -8,6 +8,7 @@ import {
   getTargetPlayerId,
   isEffectConditionMet,
   isEffectTargeted,
+  resolveDrawUpTo,
   selectEffectTargets,
 } from './effects'
 import {
@@ -1462,7 +1463,7 @@ export const resolveFlip = (
       discardIds.includes(card.instanceId),
     )
     if (discarded.length !== discardIds.length) {
-    throw new GameRuleError('Invalid battle action.')
+      throw new GameRuleError('Invalid battle action.')
     }
     nextState = {
       ...nextState,
@@ -1478,7 +1479,8 @@ export const resolveFlip = (
       },
     }
 
-    for (const effect of revealed.flip.effects) {
+    for (let i = 0; i < revealed.flip.effects.length; i += 1) {
+      const effect = revealed.flip.effects[i]
       const context = {
         sourcePlayerId: playerId,
         sourceInstanceId: revealed.instanceId,
@@ -1497,7 +1499,7 @@ export const resolveFlip = (
         )
         const target = owner.battleArea[targetIndex]
         if (!target || owner.deck.length < effect.amount) {
-    throw new GameRuleError('Invalid battle action.')
+          throw new GameRuleError('Invalid battle action.')
         }
         const gainedCards = owner.deck.slice(0, effect.amount)
         nextState = {
@@ -1527,6 +1529,24 @@ export const resolveFlip = (
           effect,
           [],
         )
+        if (nextState.pendingDrawUpTo) {
+          const remainingEffects = revealed.flip.effects.slice(i + 1)
+          if (remainingEffects.length > 0) {
+            nextState = {
+              ...nextState,
+              pendingDrawUpTo: {
+                ...nextState.pendingDrawUpTo,
+                afterEffects: remainingEffects,
+                afterEffectContext: context,
+              },
+            }
+          }
+
+          if (effect.kind === 'draw-up-to') {
+            nextState = resolveDrawUpTo(nextState, playerId, effect.max)
+          }
+          break
+        }
       }
     }
   }

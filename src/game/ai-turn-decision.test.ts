@@ -66,7 +66,7 @@ describe('simple AI opponent', () => {
     )
   })
 
-  it('creates a draw-up-to decision after activating an optional FLIP draw', () => {
+  it('draws immediately, without a pending decision, after activating an optional FLIP draw', () => {
     const base = createFlipResponseDemoState()
     const playerId =
       base.pendingBattle?.damagePlayerId ??
@@ -87,17 +87,15 @@ describe('simple AI opponent', () => {
         revealedHpCard: revealedCard,
       },
     }
+    const handSizeBefore = state.players['player-one'].hand.length
 
     const decision = takeAiStep(state, playerId)
 
     expect(decision.action).toBe('resolve-flip')
-    expect(decision.state.pendingDrawUpTo).toEqual({
-      playerId: 'player-one',
-      max: 1,
-      sourcePlayerId: 'player-one',
-      sourceInstanceId: 'player-one-ST1-001-1',
-      sourceCardName: 'Princess Cookie',
-    })
+    expect(decision.state.pendingDrawUpTo ?? null).toBeNull()
+    expect(decision.state.players['player-one'].hand).toHaveLength(
+      handSizeBefore + 1,
+    )
   })
 
   it('places one support card during the support phase', () => {
