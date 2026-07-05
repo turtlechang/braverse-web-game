@@ -213,7 +213,11 @@ const hasRequiredTrapTargets = (
   }
 
   return card.trap!.effects.every((effect) => {
-    if (!isEffectTargeted(effect) || effect.target.min === 0) return true
+    const isTargetedGainHp =
+      effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly
+    if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target || effect.target.min === 0) {
+      return true
+    }
 
     const battleCandidateCount = getEffectTargetCandidates(
       state,
@@ -313,7 +317,8 @@ const validateTrapTargets = (
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
-      effect.kind === 'redirect-attack',
+      effect.kind === 'redirect-attack' ||
+      (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
   if (targetEffects.length === 0) {
     if (targetIds.length > 0) {
@@ -323,13 +328,15 @@ const validateTrapTargets = (
   }
 
   for (const effect of targetEffects) {
+    const target = 'target' in effect ? effect.target : undefined
+    if (!target) continue
     selectEffectTargets(
       state,
       {
         sourcePlayerId: playerId,
         sourceInstanceId: 'pending-trap',
       },
-      effect.target,
+      target,
       targetIds,
     )
   }
@@ -707,7 +714,7 @@ export const playTrap = (
       effect,
       effect.kind === 'draw' ||
         effect.kind === 'deck-to-support' ||
-        effect.kind === 'gain-hp'
+        (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
         : options.targetIds,
     )
@@ -1683,16 +1690,19 @@ export const getTrapTargetCandidates = (
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
-      effect.kind === 'redirect-attack',
+      effect.kind === 'redirect-attack' ||
+      (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
-  return targetEffect
+  const target =
+    targetEffect && 'target' in targetEffect ? targetEffect.target : undefined
+  return target
     ? getEffectTargetCandidates(
         state,
         {
           sourcePlayerId: playerId,
           sourceInstanceId: card!.instanceId,
         },
-        targetEffect.target,
+        target,
       )
     : []
 }

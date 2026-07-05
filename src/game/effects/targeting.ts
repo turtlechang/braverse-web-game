@@ -46,6 +46,13 @@ const matchesSelector = (
   }
 
   if (
+    selector.excludeAttackTarget &&
+    cookie.card.instanceId === state.pendingBattle?.targetInstanceId
+  ) {
+    return false
+  }
+
+  if (
     selector.excludeSource &&
     cookie.card.instanceId === context.sourceInstanceId
   ) {
@@ -227,8 +234,11 @@ export const getBreakToBattleCandidates = (
   state: GameState,
   context: EffectContext,
   effect: { exactLevel?: number; maxLevel?: number; energyColor?: EnergyColor },
-): CookieCard[] =>
-  state.players[context.sourcePlayerId].breakArea.filter((card) => {
+): CookieCard[] => {
+  if (state.players[context.sourcePlayerId].battleArea.length >= 2) {
+    return []
+  }
+  return state.players[context.sourcePlayerId].breakArea.filter((card) => {
     if (effect.exactLevel !== undefined && card.level !== effect.exactLevel) {
       return false
     }
@@ -243,6 +253,7 @@ export const getBreakToBattleCandidates = (
     }
     return true
   })
+}
 
 export const getBreakToHandBySumCandidates = (
   state: GameState,

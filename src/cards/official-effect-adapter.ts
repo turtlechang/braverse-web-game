@@ -1994,7 +1994,7 @@ export const convertOfficialTrapAbility = (
   if (redirectAttack) {
     effects.push({
       kind: 'redirect-attack',
-      target: { side: 'self', min: 1, max: 1 },
+      target: { side: 'self', min: 1, max: 1, excludeAttackTarget: true },
     })
   }
 

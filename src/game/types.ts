@@ -99,6 +99,7 @@ export interface EffectTargetSelector {
   maxLevel?: number
   energyColor?: EnergyColor
   attackTargetOnly?: boolean
+  excludeAttackTarget?: boolean
 }
 
 export interface BreakLevelCondition {
