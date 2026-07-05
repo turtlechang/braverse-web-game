@@ -5,6 +5,8 @@ import {
 } from './energy'
 import {
   getBreakCount,
+  getBreakToBattleCandidates,
+  getBreakToHandBySumCandidates,
   getEffectTargetCandidates,
   isEffectConditionMet,
   isEffectTargeted,
@@ -248,6 +250,18 @@ export const canActivateCookieSkill = (
       (effect.kind === 'damage-by-break-count' ||
         effect.kind === 'modify-attack-by-break-count') &&
       getBreakCount(state, playerId, effect) <= 0
+    ) {
+      return false
+    }
+    if (
+      effect.kind === 'break-to-battle' &&
+      getBreakToBattleCandidates(state, context, effect).length === 0
+    ) {
+      return false
+    }
+    if (
+      effect.kind === 'break-to-hand-by-level-sum' &&
+      getBreakToHandBySumCandidates(state, context, effect).length === 0
     ) {
       return false
     }
