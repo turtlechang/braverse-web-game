@@ -1552,8 +1552,10 @@ export const executeCardEffect = (
     targetInstanceId: target.card.instanceId,
     amount:
       effect.kind === 'modify-attack-by-break-count'
-        ? getBreakCount(state, context.sourcePlayerId, effect) *
-          effect.perCount
+        ? Math.floor(
+            getBreakCount(state, context.sourcePlayerId, effect) /
+              (effect.groupSize ?? 1),
+          ) * effect.perCount
         : effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received'
           ? effect.amount
           : 0,

@@ -763,7 +763,7 @@ describe('Starter Deck RED official effect adapter', () => {
         placementCost: { green: 1 },
         effects: [
           { kind: 'support-to-hand', amount: 1 },
-          { kind: 'draw', amount: 1 },
+          { kind: 'draw-up-to', max: 1 },
         ],
         restSource: true,
       })
@@ -827,7 +827,7 @@ describe('Starter Deck RED official effect adapter', () => {
         ),
       ).toMatchObject({
         status: 'supported',
-        effects: [{ kind: 'draw', amount: 1 }],
+        effects: [{ kind: 'draw-up-to', max: 1 }],
       })
     })
 
@@ -1115,8 +1115,8 @@ describe('Starter Deck RED official effect adapter', () => {
       expect(skill).toBeDefined()
       expect(skill!.effects).toEqual([
         {
-          kind: 'draw',
-          amount: 1,
+          kind: 'draw-up-to',
+          max: 1,
           condition: { kind: 'hand-count-at-most', count: 6 },
         },
       ])
@@ -1319,7 +1319,7 @@ describe('Starter Deck RED official effect adapter', () => {
 
     it('ST5-022 Windswept Valley converts to stage with draw', () => {
       expect(convertOfficialStageAbility(findPurpleCard('ST5-022'))).toMatchObject({
-        effects: [{ kind: 'draw', amount: 1 }],
+        effects: [{ kind: 'draw-up-to', max: 1 }],
         restSource: true,
         triggered: true,
       })
@@ -1587,6 +1587,8 @@ describe('Starter Deck RED official effect adapter', () => {
           effects: [
             {
               kind: 'modify-attack-by-break-count',
+              perCount: 1,
+              groupSize: 2,
               exactBreakLevel: 1,
               breakEnergyColor: 'yellow',
             },
@@ -1605,7 +1607,7 @@ describe('Starter Deck RED official effect adapter', () => {
       expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-074')))
         .toMatchObject({
           cost: { energy: { green: 1 }, supportToHand: 1 },
-          effects: [{ kind: 'draw', amount: 1 }],
+          effects: [{ kind: 'draw-up-to', max: 1 }],
         })
       expect(convertOfficialItemAbility(findBraveBeginningCard('BS1-075')))
         .toMatchObject({
@@ -1667,6 +1669,15 @@ describe('Starter Deck RED official effect adapter', () => {
               condition: { kind: 'support-area-decreased-this-turn' },
             },
           ],
+        })
+    })
+
+    it('converts BS2-051 restSource despite "Card Rests." wording (not "Rest this card.")', () => {
+      expect(convertOfficialStageAbility(findBraveBeginningBS2Card('BS2-051')))
+        .toMatchObject({
+          cost: { discardHand: 1 },
+          effects: [{ kind: 'modify-attack', amount: 1 }],
+          restSource: true,
         })
     })
   })
@@ -1790,6 +1801,27 @@ describe('Starter Deck RED official effect adapter', () => {
         })
     })
 
+    it('BS2-036 Sherbet Cookie converts optional "You can draw" to draw-up-to, not mandatory draw', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-036')))
+        .toMatchObject({
+          effects: [
+            { kind: 'return-to-deck-bottom', target: { side: 'self', maxLevel: 1 } },
+            { kind: 'draw-up-to', max: 1 },
+          ],
+        })
+    })
+
+    it('BS2-045 Parfait Cookie attack-then draw is optional ("you can draw"), not mandatory', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningBS2Card('BS2-045')))
+        .toEqual([
+          {
+            kind: 'draw-up-to',
+            max: 1,
+            condition: { kind: 'hand-count-at-most', count: 6 },
+          },
+        ])
+    })
+
     it('BS2-049 Salt Crystal Trident converts to conditional draw trap with blue-faint condition', () => {
       expect(convertOfficialTrapAbility(findBraveBeginningBS2Card('BS2-049')))
         .toMatchObject({
@@ -1823,6 +1855,12 @@ describe('Starter Deck RED official effect adapter', () => {
         faint: true,
         effects: [{ kind: 'draw-up-to', max: 1 }],
       })
+    })
+
+    it('ST4-015 Pirate Cookie attack-then draw is optional ("you can draw"), not mandatory', () => {
+      expect(convertOfficialAttackEffects(findBlueCard('ST4-015'))).toEqual([
+        { kind: 'draw-up-to', max: 1 },
+      ])
     })
 
     it('BS1-056 Moon Rabbit Cookie battle-to-support as active', () => {
@@ -1891,14 +1929,26 @@ describe('Starter Deck RED official effect adapter', () => {
         })
     })
 
+    it('BS2-058 Wind Archer Cookie attack bonus checks its own trash, not the opponent\'s ("if there are 15 cards or more in your trash")', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningBS2Card('BS2-058')))
+        .toEqual([
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'trash-count-at-least', count: 15 },
+          },
+        ])
+    })
+
     it('BS2-060 Beet Cookie faints into a conditional draw', () => {
       expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-060')))
         .toMatchObject({
           faint: true,
           effects: [
             {
-              kind: 'draw',
-              amount: 1,
+              kind: 'draw-up-to',
+              max: 1,
               condition: { kind: 'opponent-trash-count-at-least', count: 20 },
             },
           ],

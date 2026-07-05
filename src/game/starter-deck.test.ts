@@ -251,7 +251,7 @@ describe('official green starter deck', () => {
         placementCost: { green: 1 },
         effects: [
           { kind: 'support-to-hand', amount: 1 },
-          { kind: 'draw', amount: 1 },
+          { kind: 'draw-up-to', max: 1 },
         ],
         restSource: true,
       },
@@ -316,7 +316,7 @@ describe('official blue starter deck', () => {
       stageAbility: {
         placementCost: { blue: 2 },
         cost: { blue: 1 },
-        effects: [{ kind: 'draw', amount: 1 }],
+        effects: [{ kind: 'draw-up-to', max: 1 }],
         restSource: true,
       },
     })
@@ -345,7 +345,7 @@ describe('official blue starter deck', () => {
             amount: -2,
             target: { side: 'opponent', min: 0, max: 1 },
           },
-          { kind: 'draw', amount: 1 },
+          { kind: 'draw-up-to', max: 1 },
         ],
       },
     })
@@ -555,7 +555,7 @@ describe('official FLIP and TRAP abilities', () => {
       cost: { energy: { blue: 2 }, discardHand: 0 },
       effects: [
         { kind: 'modify-attack', amount: -2 },
-        { kind: 'draw', amount: 1 },
+        { kind: 'draw-up-to', max: 1 },
       ],
     })
   })

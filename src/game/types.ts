@@ -187,6 +187,8 @@ export interface ModifyAttackByBreakCountEffect {
   target: EffectTargetSelector
   duration: EffectDuration
   perCount: number
+  /** 每滿 N 張休息區卡才套用一次 perCount，預設 1（即「for each」）；官方文字「for every N」時設為 N */
+  groupSize?: number
   minBreakLevel?: number
   exactBreakLevel?: number
   breakEnergyColor?: EnergyColor

@@ -27,6 +27,9 @@ export type OfficialEffectConversion =
       reason: 'no-effect-text' | 'unsupported-effect-text'
     }
 
+// 官方文字對「Rest this card.」的措辭不一致，BS2-051 用「Card Rests.」，需一併比對
+const RESTS_THIS_CARD_PATTERN = /Rest this card|Card Rests/i
+
 const getEffectText = (card: OfficialCardRecord): string | null => {
   if (card.type === 'cookie') {
     return card.skill.text
@@ -451,6 +454,7 @@ export const convertOfficialCardEffects = (
       {
         kind: 'modify-attack-by-break-count',
         perCount: 1,
+        groupSize: 2,
         exactBreakLevel: 1,
         breakEnergyColor: 'yellow',
         duration: 'this-turn',
@@ -466,7 +470,7 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 1, max: 1 },
       },
     ],
-    'BS1-074': [{ kind: 'draw', amount: 1 }],
+    'BS1-074': [{ kind: 'draw-up-to', max: 1 }],
     'BS1-075': [{ kind: 'place-source-to-support', rested: true }],
     'BS1-001': [
       {
@@ -701,7 +705,7 @@ export const convertOfficialCardEffects = (
         kind: 'return-to-deck-bottom',
         target: { side: 'self', min: 1, max: 1, maxLevel: 1 },
       } satisfies CardEffect as CardEffect,
-      { kind: 'draw', amount: 1 },
+      { kind: 'draw-up-to', max: 1 },
     ],
     // === BS1/BS2 紫色餅乾卡技能 ===
     'BS2-057': [
@@ -784,8 +788,8 @@ export const convertOfficialCardEffects = (
     ],
     'BS2-060': [
       {
-        kind: 'draw',
-        amount: 1,
+        kind: 'draw-up-to',
+        max: 1,
         condition: { kind: 'opponent-trash-count-at-least', count: 20 },
       },
     ],
@@ -948,17 +952,17 @@ export const convertOfficialCardEffects = (
         ],
       }
     }
-    const drawMatch = parseSimpleDraw(stripEffectText(sourceText))
+    const strippedFaintText = stripEffectText(sourceText)
+    const drawMatch = parseSimpleDraw(strippedFaintText)
     if (drawMatch !== null) {
       return {
         status: 'supported',
         cardNumber: card.cardNumber,
         sourceText,
         effects: [
-          {
-            kind: 'draw',
-            amount: drawMatch,
-          },
+          isOptionalDraw(strippedFaintText)
+            ? { kind: 'draw-up-to', max: drawMatch }
+            : { kind: 'draw', amount: drawMatch },
         ],
       }
     }
@@ -1023,7 +1027,8 @@ export const convertOfficialCardEffects = (
   }
 
   if (card.type !== 'flip') {
-    const drawAmount = parseSimpleDraw(stripEffectText(sourceText))
+    const strippedDrawText = stripEffectText(sourceText)
+    const drawAmount = parseSimpleDraw(strippedDrawText)
 
     if (drawAmount !== null) {
       return {
@@ -1031,10 +1036,9 @@ export const convertOfficialCardEffects = (
         cardNumber: card.cardNumber,
         sourceText,
         effects: [
-          {
-            kind: 'draw',
-            amount: drawAmount,
-          },
+          isOptionalDraw(strippedDrawText)
+            ? { kind: 'draw-up-to', max: drawAmount }
+            : { kind: 'draw', amount: drawAmount },
         ],
       }
     }
@@ -1043,6 +1047,7 @@ export const convertOfficialCardEffects = (
       stripEffectText(sourceText),
     )
 
+    // CONDITIONAL_DRAW_RE only matches "...you can draw...", so this is always optional
     if (conditionalDrawAmount !== null) {
       return {
         status: 'supported',
@@ -1050,8 +1055,8 @@ export const convertOfficialCardEffects = (
         sourceText,
         effects: [
           {
-            kind: 'draw',
-            amount: conditionalDrawAmount,
+            kind: 'draw-up-to',
+            max: conditionalDrawAmount,
             condition: parseCondition(sourceText),
           },
         ],
@@ -1490,9 +1495,9 @@ export const convertOfficialStageAbility = (
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
     'ST3-022': [
       { kind: 'support-to-hand', amount: 1 },
-      { kind: 'draw', amount: 1 },
+      { kind: 'draw-up-to', max: 1 },
     ],
-    'ST5-022': [{ kind: 'draw', amount: 1 }],
+    'ST5-022': [{ kind: 'draw-up-to', max: 1 }],
     'BS1-026': [
       {
         kind: 'modify-attack',
@@ -1554,7 +1559,7 @@ export const convertOfficialStageAbility = (
       effects: stageEffects,
       restSource:
         card.cardNumber === 'ST5-022' ||
-        /Rest this card/i.test(activationText ?? ''),
+        RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
       ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
     }
   }
@@ -1574,7 +1579,7 @@ export const convertOfficialStageAbility = (
     cost: activation.cost,
     text: card.attackText,
     effects: conversion.effects,
-    restSource: /Rest this card/i.test(activationText ?? ''),
+    restSource: RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
   }
 }
 
@@ -1625,7 +1630,7 @@ export const convertOfficialAttackEffects = (
           'Discard 2 cards from your hand to deal 1 damage to 1 opponent cookie.',
       },
     ],
-    'ST4-015': [{ kind: 'draw', amount: 1 }],
+    'ST4-015': [{ kind: 'draw-up-to', max: 1 }],
     'BS1-005': [
       {
         kind: 'damage',
@@ -1725,8 +1730,8 @@ export const convertOfficialAttackEffects = (
     ],
     'BS2-045': [
       {
-        kind: 'draw',
-        amount: 1,
+        kind: 'draw-up-to',
+        max: 1,
         condition: { kind: 'hand-count-at-most', count: 6 },
       },
     ],
@@ -1735,7 +1740,7 @@ export const convertOfficialAttackEffects = (
         kind: 'damage',
         amount: 1,
         target: { side: 'opponent', min: 0, max: 1 },
-        condition: { kind: 'opponent-trash-count-at-least', count: 15 },
+        condition: { kind: 'trash-count-at-least', count: 15 },
       },
     ],
     'BS2-075': [
@@ -2009,10 +2014,11 @@ export const convertOfficialTrapAbility = (
   }
 
   if (trapDrawAmount !== null) {
-    effects.push({
-      kind: 'draw',
-      amount: trapDrawAmount,
-    })
+    effects.push(
+      isOptionalDraw(strippedAfterThen)
+        ? { kind: 'draw-up-to', max: trapDrawAmount }
+        : { kind: 'draw', amount: trapDrawAmount },
+    )
   }
 
   const trapDrawUpToAndDiscard = text.match(
@@ -2158,7 +2164,7 @@ export const convertOfficialCookieSkill = (
             : 'passive',
     oncePerTurn: parsed.markers.includes('t1'),
     yourTurn: parsed.markers.includes('mt'),
-    restSource: /Rest this card/i.test(card.skill.text),
+    restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
     cost,
     text: conversion.sourceText,
     effects: conversion.effects,
