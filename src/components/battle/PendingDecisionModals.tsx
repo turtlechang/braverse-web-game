@@ -1,4 +1,10 @@
-import { applyGameCommand, getRefreshCandidates } from '../../game'
+import {
+  applyGameCommand,
+  getEffectTargetCandidates,
+  getEnergyCostTotal,
+  getRefreshCandidates,
+  isEffectTargeted,
+} from '../../game'
 import {
   DecisionModal,
   OptionalCostAttackModal,
@@ -47,12 +53,30 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       ? match.game.pendingEffectOrder
       : null
 
-  const opponentBattleCards = match.game.players[
-    match.opponentId
-  ].battleArea.map((cookie) => ({
-    card: cookie.card,
-    instanceId: cookie.card.instanceId,
-  }))
+  const optionalCostAttackTargetedEffect = pendingOptionalCost?.effects.find(
+    (effect) => isEffectTargeted(effect),
+  )
+  const opponentBattleCards = (
+    optionalCostAttackTargetedEffect
+      ? getEffectTargetCandidates(
+          match.game,
+          {
+            sourcePlayerId: match.viewerPlayerId,
+            sourceInstanceId: pendingOptionalCost!.sourceInstanceId,
+          },
+          optionalCostAttackTargetedEffect.target,
+        ).map((cookie) => cookie.card)
+      : match.game.players[match.opponentId].battleArea.map((cookie) => cookie.card)
+  ).map((card) => ({ card, instanceId: card.instanceId }))
+
+  const optionalCostAttackEnergyTotal = pendingOptionalCost
+    ? getEnergyCostTotal(pendingOptionalCost.cost.energy ?? {})
+    : 0
+  const optionalCostAttackSupportCandidates = match.game.players[
+    match.viewerPlayerId
+  ].supportArea
+    .filter((support) => !support.rested)
+    .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return (
     <>
@@ -351,7 +375,9 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           sourceCardName={pendingOptionalCost.sourceCardName}
           effectText={pendingOptionalCost.effectText}
           discardHandCost={pendingOptionalCost.cost.discardHand ?? 0}
+          energyCostTotal={optionalCostAttackEnergyTotal}
           playerHand={match.game.players[match.viewerPlayerId].hand}
+          supportCandidates={optionalCostAttackSupportCandidates}
           opponentBattleCards={opponentBattleCards}
           onSkip={() => {
             match.runAction(
@@ -364,7 +390,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               '已略過可選代價攻擊效果。',
             )
           }}
-          onPay={(discardIds, targetId) => {
+          onPay={(discardIds, targetId, paymentIds) => {
             match.runAction(
               (current) =>
                 applyGameCommand(current, {
@@ -372,7 +398,8 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                   playerId: match.viewerPlayerId,
                   action: 'pay',
                   discardCardIds: discardIds,
-                  targetIds: [targetId],
+                  targetIds: targetId ? [targetId] : [],
+                  paymentIds,
                 }),
               '已支付可選代價攻擊效果。',
             )

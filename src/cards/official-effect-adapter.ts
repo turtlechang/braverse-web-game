@@ -581,6 +581,7 @@ export const convertOfficialCardEffects = (
         kind: 'gain-hp',
         amount: 1,
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 3 },
       },
     ],
     // === BS1/BS2 綠色餅乾卡技能 ===
@@ -1656,9 +1657,17 @@ export const convertOfficialAttackEffects = (
     ],
     'BS1-044': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 2 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          },
+        ],
+        effectText:
+          'You can pay {Y}{Y} more to deal an additional 3 damage to the same Cookie.',
       },
     ],
     'BS1-064': [

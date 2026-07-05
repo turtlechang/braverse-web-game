@@ -98,6 +98,7 @@ export interface EffectTargetSelector {
   minLevel?: number
   maxLevel?: number
   energyColor?: EnergyColor
+  attackTargetOnly?: boolean
 }
 
 export interface BreakLevelCondition {
@@ -134,6 +135,11 @@ export interface TrashCountAtLeastCondition {
   count: number
 }
 
+export interface SourceHpLessThanCondition {
+  kind: 'source-hp-less-than'
+  amount: number
+}
+
 export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
@@ -142,6 +148,7 @@ export type EffectCondition =
   | SupportAreaDecreasedThisTurnCondition
   | OpponentHasCookieWithLevelCondition
   | TrashCountAtLeastCondition
+  | SourceHpLessThanCondition
 
 export interface DamageEffect {
   kind: 'damage'

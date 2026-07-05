@@ -29,10 +29,18 @@ const matchesSelector = (
   cookie: CookieInBattle,
   selector: EffectTargetSelector,
   context: EffectContext,
+  state: GameState,
 ): boolean => {
   if (
     selector.sourceOnly &&
     cookie.card.instanceId !== context.sourceInstanceId
+  ) {
+    return false
+  }
+
+  if (
+    selector.attackTargetOnly &&
+    cookie.card.instanceId !== state.pendingBattle?.targetInstanceId
   ) {
     return false
   }
@@ -79,7 +87,7 @@ export const getEffectTargetCandidates = (
   selector: EffectTargetSelector,
 ): CookieInBattle[] =>
   state.players[getTargetPlayerId(context, selector)].battleArea.filter(
-    (cookie) => matchesSelector(cookie, selector, context),
+    (cookie) => matchesSelector(cookie, selector, context, state),
   )
 
 export const selectEffectTargets = (
@@ -288,6 +296,13 @@ export const isEffectConditionMet = (
       state.players[context.sourcePlayerId].discardPile.length >=
       condition.count
     )
+  }
+
+  if (condition?.kind === 'source-hp-less-than') {
+    const source = state.players[context.sourcePlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    )
+    return source ? source.hpCards.length < condition.amount : false
   }
 
   if (condition?.kind === 'support-count-at-least') {

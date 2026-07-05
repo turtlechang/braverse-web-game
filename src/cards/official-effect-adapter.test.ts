@@ -2071,4 +2071,37 @@ describe('Starter Deck RED official effect adapter', () => {
         })
     })
   })
+
+  describe('BS1-044 Bell Pepper Cookie bug fixes', () => {
+    it('gain-hp skill only applies while this Cookie has less than 3 HP', () => {
+      expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-044')))
+        .toMatchObject({
+          effects: [
+            {
+              kind: 'gain-hp',
+              amount: 1,
+              target: { side: 'self', sourceOnly: true },
+              condition: { kind: 'source-hp-less-than', amount: 3 },
+            },
+          ],
+        })
+    })
+
+    it('attack bonus damage is an optional energy-cost effect restricted to the original attack target', () => {
+      expect(convertOfficialAttackEffects(findBraveBeginningCard('BS1-044')))
+        .toMatchObject([
+          {
+            kind: 'optional-cost-attack',
+            cost: { energy: { yellow: 2 } },
+            effects: [
+              {
+                kind: 'damage',
+                amount: 3,
+                target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+              },
+            ],
+          },
+        ])
+    })
+  })
 })

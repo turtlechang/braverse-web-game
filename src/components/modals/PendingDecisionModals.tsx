@@ -287,10 +287,12 @@ export interface OptionalCostAttackModalProps {
   sourceCardName: string
   effectText: string
   discardHandCost: number
+  energyCostTotal: number
   playerHand: GameCard[]
+  supportCandidates: { card: GameCard; instanceId: string }[]
   opponentBattleCards: { card: GameCard; instanceId: string }[]
   onSkip: () => void
-  onPay: (discardIds: string[], targetId: string) => void
+  onPay: (discardIds: string[], targetId: string, paymentIds: string[]) => void
 }
 
 type AttackPayStep = 'decision' | 'pay'
@@ -299,18 +301,24 @@ export function OptionalCostAttackModal({
   sourceCardName,
   effectText,
   discardHandCost,
+  energyCostTotal,
   playerHand,
+  supportCandidates,
   opponentBattleCards,
   onSkip,
   onPay,
 }: OptionalCostAttackModalProps) {
   const [step, setStep] = useState<AttackPayStep>('decision')
   const [selectedDiscardIds, setSelectedDiscardIds] = useState<string[]>([])
+  const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
+
+  const needsTarget = opponentBattleCards.length > 0
 
   const canPay =
     playerHand.length >= discardHandCost &&
-    opponentBattleCards.length >= 1
+    supportCandidates.length >= energyCostTotal &&
+    (!needsTarget || opponentBattleCards.length >= 1)
 
   const toggleDiscard = useCallback((instanceId: string) => {
     setSelectedDiscardIds((current) =>
@@ -322,16 +330,31 @@ export function OptionalCostAttackModal({
     )
   }, [discardHandCost])
 
+  const togglePayment = useCallback((instanceId: string) => {
+    setSelectedPaymentIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < energyCostTotal
+          ? [...current, instanceId]
+          : current,
+    )
+  }, [energyCostTotal])
+
   const toggleTarget = useCallback((instanceId: string) => {
     setSelectedTargetId((current) =>
       current === instanceId ? null : instanceId,
     )
   }, [])
 
+  const readyToConfirm =
+    selectedDiscardIds.length === discardHandCost &&
+    selectedPaymentIds.length === energyCostTotal &&
+    (!needsTarget || Boolean(selectedTargetId))
+
   const handlePay = useCallback(() => {
-    if (selectedDiscardIds.length !== discardHandCost || !selectedTargetId) return
-    onPay(selectedDiscardIds, selectedTargetId)
-  }, [selectedDiscardIds, selectedTargetId, discardHandCost, onPay])
+    if (!readyToConfirm) return
+    onPay(selectedDiscardIds, selectedTargetId ?? '', selectedPaymentIds)
+  }, [readyToConfirm, selectedDiscardIds, selectedTargetId, selectedPaymentIds, onPay])
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -343,7 +366,10 @@ export function OptionalCostAttackModal({
         <h2>{sourceCardName}</h2>
         <p className="optional-cost-attack-text">{effectText}</p>
         <p className="optional-cost-attack-cost">
-          代價：棄置 {discardHandCost} 張手牌
+          代價：
+          {discardHandCost > 0 && `棄置 ${discardHandCost} 張手牌`}
+          {discardHandCost > 0 && energyCostTotal > 0 && '、'}
+          {energyCostTotal > 0 && `支付 ${energyCostTotal} 張能量支援卡`}
         </p>
 
         {step === 'decision' && (
@@ -363,51 +389,85 @@ export function OptionalCostAttackModal({
 
         {step === 'pay' && (
           <>
-            <strong>
-              選擇 {discardHandCost} 張手牌棄置
-            </strong>
-            <div className="modal-card-options">
-              {playerHand.map((card) => (
-                <button
-                  type="button"
-                  key={card.instanceId}
-                  className={
-                    selectedDiscardIds.includes(card.instanceId)
-                      ? 'is-selected'
-                      : ''
-                  }
-                  onClick={() => toggleDiscard(card.instanceId)}
-                >
-                  <CardFace card={card} selected={selectedDiscardIds.includes(card.instanceId)} />
-                  <span>{card.name}</span>
-                </button>
-              ))}
-            </div>
+            {discardHandCost > 0 && (
+              <>
+                <strong>
+                  選擇 {discardHandCost} 張手牌棄置
+                </strong>
+                <div className="modal-card-options">
+                  {playerHand.map((card) => (
+                    <button
+                      type="button"
+                      key={card.instanceId}
+                      className={
+                        selectedDiscardIds.includes(card.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleDiscard(card.instanceId)}
+                    >
+                      <CardFace card={card} selected={selectedDiscardIds.includes(card.instanceId)} />
+                      <span>{card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
-            <strong>選擇 1 個對手餅乾作為目標</strong>
-            <div className="modal-card-options">
-              {opponentBattleCards.map((entry) => (
-                <button
-                  type="button"
-                  key={entry.instanceId}
-                  className={
-                    selectedTargetId === entry.instanceId
-                      ? 'is-selected'
-                      : ''
-                  }
-                  onClick={() => toggleTarget(entry.instanceId)}
-                >
-                  <CardFace card={entry.card} selected={selectedTargetId === entry.instanceId} />
-                  <span>{entry.card.name}</span>
-                </button>
-              ))}
-            </div>
+            {energyCostTotal > 0 && (
+              <>
+                <strong>
+                  選擇 {energyCostTotal} 張支援區能量卡作為代價
+                </strong>
+                <div className="modal-card-options">
+                  {supportCandidates.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedPaymentIds.includes(entry.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => togglePayment(entry.instanceId)}
+                    >
+                      <CardFace card={entry.card} selected={selectedPaymentIds.includes(entry.instanceId)} />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {needsTarget && (
+              <>
+                <strong>選擇 1 個對手餅乾作為目標</strong>
+                <div className="modal-card-options">
+                  {opponentBattleCards.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedTargetId === entry.instanceId
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleTarget(entry.instanceId)}
+                    >
+                      <CardFace card={entry.card} selected={selectedTargetId === entry.instanceId} />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
 
             <div className="modal-actions">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedDiscardIds([])
+                  setSelectedPaymentIds([])
                   setSelectedTargetId(null)
                   setStep('decision')
                 }}
@@ -416,10 +476,7 @@ export function OptionalCostAttackModal({
               </button>
               <button
                 type="button"
-                disabled={
-                  selectedDiscardIds.length !== discardHandCost ||
-                  !selectedTargetId
-                }
+                disabled={!readyToConfirm}
                 onClick={handlePay}
               >
                 確認

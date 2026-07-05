@@ -164,6 +164,7 @@ export interface ResolveOptionalCostAttackCommand {
   action: 'skip' | 'pay'
   discardCardIds?: string[]
   targetIds?: string[]
+  paymentIds?: string[]
 }
 
 export interface ResolveDrawUpToCommand {
@@ -718,6 +719,7 @@ const applyPendingDecisionCommand = (
       return resolveOptionalCostAttack(
         state, command.playerId, command.action,
         command.discardCardIds ?? [], command.targetIds ?? [],
+        command.paymentIds ?? [],
       )
     case 'resolve-draw-up-to':
       return resolveDrawUpTo(state, command.playerId, command.drawCount)

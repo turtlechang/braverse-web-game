@@ -271,6 +271,8 @@ describe('OptionalCostAttackModal', () => {
           sourceCardName="測試餅乾"
           effectText="支付代價後使用效果。"
           discardHandCost={2}
+          energyCostTotal={0}
+          supportCandidates={[]}
           playerHand={hand}
           opponentBattleCards={opponents}
           onSkip={onSkip}
@@ -321,6 +323,7 @@ describe('OptionalCostAttackModal', () => {
     expect(onPay).toHaveBeenCalledWith(
       ['test-hand-1', 'test-hand-2'],
       'cookie-2',
+      [],
     )
     expect(onSkip).not.toHaveBeenCalled()
 
@@ -339,6 +342,8 @@ describe('OptionalCostAttackModal', () => {
           sourceCardName="測試餅乾"
           effectText="支付代價後使用效果。"
           discardHandCost={2}
+          energyCostTotal={0}
+          supportCandidates={[]}
           playerHand={[createHandCard(1)]}
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
@@ -367,6 +372,8 @@ describe('OptionalCostAttackModal', () => {
           sourceCardName="測試餅乾"
           effectText="支付代價後使用效果。"
           discardHandCost={2}
+          energyCostTotal={0}
+          supportCandidates={[]}
           playerHand={[createHandCard(1), createHandCard(2)]}
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
@@ -409,6 +416,8 @@ describe('OptionalCostAttackModal', () => {
           sourceCardName="測試餅乾"
           effectText="支付代價後使用效果。"
           discardHandCost={2}
+          energyCostTotal={0}
+          supportCandidates={[]}
           playerHand={[createHandCard(1), createHandCard(2)]}
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
@@ -465,6 +474,8 @@ describe('OptionalCostAttackModal', () => {
           sourceCardName="測試餅乾"
           effectText="支付代價後使用效果。"
           discardHandCost={2}
+          energyCostTotal={0}
+          supportCandidates={[]}
           playerHand={[createHandCard(1), createHandCard(2)]}
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },

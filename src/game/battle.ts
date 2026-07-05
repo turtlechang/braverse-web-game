@@ -1179,6 +1179,7 @@ export const resolveOptionalCostAttack = (
   action: 'skip' | 'pay',
   discardCardIds: string[] = [],
   targetIds: string[] = [],
+  paymentIds: string[] = [],
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
@@ -1202,6 +1203,19 @@ export const resolveOptionalCostAttack = (
   if (!allInHand) {
     throw new GameRuleError('Invalid battle action.')
   }
+  const energyCost = pending.cost.energy ?? {}
+  const uniquePaymentIds = [...new Set(paymentIds)]
+  if (uniquePaymentIds.length !== paymentIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  const paymentValidation = validateEnergyPayment(
+    energyCost,
+    player.supportArea,
+    uniquePaymentIds,
+  )
+  if (!paymentValidation.valid) {
+    throw new GameRuleError(`Invalid attack effect payment: ${paymentValidation.reason}`)
+  }
   const hasTargetedEffect = pending.effects.some((e) => isEffectTargeted(e))
   if (hasTargetedEffect) {
     const uniqueTargetIds = [...new Set(targetIds)]
@@ -1220,6 +1234,7 @@ export const resolveOptionalCostAttack = (
     }
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
+  const paymentSet = new Set(uniquePaymentIds)
   let nextState: GameState = {
     ...state,
     pendingOptionalCostAttack: null,
@@ -1229,6 +1244,11 @@ export const resolveOptionalCostAttack = (
         ...player,
         hand: player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
         discardPile: [...player.discardPile, ...discardedCards],
+        supportArea: player.supportArea.map((support) =>
+          paymentSet.has(support.card.instanceId)
+            ? { ...support, rested: true }
+            : support,
+        ),
       },
     },
   }
