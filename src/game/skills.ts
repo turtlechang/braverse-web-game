@@ -4,6 +4,7 @@ import {
   validateEnergyPayment,
 } from './energy'
 import {
+  getBreakCount,
   getEffectTargetCandidates,
   isEffectConditionMet,
   isEffectTargeted,
@@ -241,6 +242,13 @@ export const canActivateCookieSkill = (
   const context = { sourcePlayerId: playerId, sourceInstanceId }
   for (const effect of skill.effects) {
     if (!isEffectConditionMet(state, context, effect)) {
+      return false
+    }
+    if (
+      (effect.kind === 'damage-by-break-count' ||
+        effect.kind === 'modify-attack-by-break-count') &&
+      getBreakCount(state, playerId, effect) <= 0
+    ) {
       return false
     }
     if (isEffectTargeted(effect) && effect.target.min > 0) {

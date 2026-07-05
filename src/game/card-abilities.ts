@@ -1,6 +1,7 @@
 import { GameRuleError } from './errors'
 import { selectEnergyPayment, validateEnergyPayment } from './energy'
 import {
+  getBreakCount,
   getEffectTargetCandidates,
   getTargetPlayerId,
   isEffectConditionMet,
@@ -359,6 +360,17 @@ const hasUsableEffect = (
     }
     if (effect.kind === 'gain-hp' && effect.target) {
       if (effect.target.sourceOnly || effect.target.min === 0) return true
+      return (
+        getEffectTargetCandidates(state, context, effect.target).length >=
+        effect.target.min
+      )
+    }
+    if (
+      effect.kind === 'damage-by-break-count' ||
+      effect.kind === 'modify-attack-by-break-count'
+    ) {
+      if (getBreakCount(state, playerId, effect) <= 0) return false
+      if (effect.target.min === 0) return true
       return (
         getEffectTargetCandidates(state, context, effect.target).length >=
         effect.target.min

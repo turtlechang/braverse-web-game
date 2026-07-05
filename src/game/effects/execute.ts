@@ -22,6 +22,7 @@ import {
   resolveBreakLevelVictory,
 } from '../victory'
 import {
+  getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
   getEffectTargetCandidates,
@@ -222,37 +223,6 @@ const markSupportAreaDecreased = (
     [playerId]: true,
   },
 })
-
-const getBreakCount = (
-  state: GameState,
-  playerId: PlayerId,
-  options: {
-    minBreakLevel?: number
-    exactBreakLevel?: number
-    breakEnergyColor?: CookieCard['energyColor']
-  },
-): number =>
-  state.players[playerId].breakArea.filter((card) => {
-    if (
-      options.exactBreakLevel !== undefined &&
-      card.level !== options.exactBreakLevel
-    ) {
-      return false
-    }
-    if (
-      options.minBreakLevel !== undefined &&
-      card.level < options.minBreakLevel
-    ) {
-      return false
-    }
-    if (
-      options.breakEnergyColor !== undefined &&
-      card.energyColor !== options.breakEnergyColor
-    ) {
-      return false
-    }
-    return true
-  }).length
 
 export const executeCardEffect = (
   state: GameState,
