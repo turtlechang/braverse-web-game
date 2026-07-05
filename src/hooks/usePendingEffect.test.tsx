@@ -417,6 +417,83 @@ describe('usePendingEffect cancelPendingSkill', () => {
     await act(() => root.unmount())
   })
 
+  it('allows cancel when sourceKind is stage', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const stageCard: GameCard = {
+      id: 'test-stage',
+      instanceId: 'test-stage-1',
+      name: '測試場景',
+      type: 'stage',
+      stageAbility: {
+        placementCost: {},
+        cost: { red: 1 },
+        text: '測試',
+        restSource: false,
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+
+    const state: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          stage: { card: stageCard, rested: false },
+        },
+      },
+    }
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: state,
+        setGame: () => {},
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    await act(() => {
+      captured!.beginCardAbility(
+        stageCard,
+        stageCard.stageAbility!,
+        'stage',
+        '啟動場景',
+      )
+    })
+
+    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.pendingEffect?.sourceKind).toBe('stage')
+
+    await act(() => {
+      captured!.cancelPendingSkill()
+    })
+
+    expect(captured!.pendingEffect).toBeNull()
+
+    await act(() => root.unmount())
+  })
+
   it('confirm is disabled when discardHand selection is insufficient', async () => {
     const gameState = createDiscardHandSkillGameState()
     let captured: ReturnType<typeof usePendingEffect> | null = null

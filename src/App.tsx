@@ -156,7 +156,7 @@ function App() {
   const showCancelSkill =
     pe !== null &&
     !pe.skillActivated &&
-    (pe.sourceKind === 'cookie' || pe.sourceKind === 'item') &&
+    (pe.sourceKind === 'cookie' || pe.sourceKind === 'item' || pe.sourceKind === 'stage') &&
     pe.trigger === 'activate'
 
   useEffect(() => {

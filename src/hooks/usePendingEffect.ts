@@ -826,7 +826,9 @@ export function usePendingEffect(params: {
   const cancelPendingSkill = () => {
     if (!pendingEffect) return
     if (
-      (pendingEffect.sourceKind !== 'cookie' && pendingEffect.sourceKind !== 'item') ||
+      (pendingEffect.sourceKind !== 'cookie' &&
+        pendingEffect.sourceKind !== 'item' &&
+        pendingEffect.sourceKind !== 'stage') ||
       pendingEffect.trigger !== 'activate' ||
       pendingEffect.skillActivated
     ) {
