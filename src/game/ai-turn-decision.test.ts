@@ -227,6 +227,76 @@ describe('simple AI opponent', () => {
     ).toBe(true)
   })
 
+  it('does not attack with a cookie disabled for the current turn, and does not error', () => {
+    let state = asAiTurn(createDemoGame(), 'main')
+    const attacker = state.players['player-two'].battleArea[0]
+    state = {
+      ...state,
+      attackDisabledUntilTurn: { [attacker.card.instanceId]: state.turnNumber },
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [],
+          battleArea: [attacker],
+          supportArea: Array.from(
+            { length: attacker.card.attackCost },
+            (_, index) => createSupport(`attack-${index}`),
+          ),
+        },
+      },
+    }
+
+    const decision = takeAiStep(state)
+
+    expect(decision.action).not.toBe('attack')
+    expect(decision.action).not.toBe('error')
+    expect(
+      decision.state.players['player-two'].battleArea[0].rested,
+    ).toBe(false)
+  })
+
+  it('skips a disabled attacker and attacks with another cookie instead', () => {
+    let state = asAiTurn(createDemoGame(), 'main')
+    const disabledAttacker = state.players['player-two'].battleArea[0]
+    const readyAttacker = {
+      ...disabledAttacker,
+      card: { ...disabledAttacker.card, instanceId: 'ready-attacker' },
+    }
+    const target = state.players['player-one'].battleArea[0]
+    state = {
+      ...state,
+      attackDisabledUntilTurn: {
+        [disabledAttacker.card.instanceId]: state.turnNumber,
+      },
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [],
+          battleArea: [disabledAttacker, readyAttacker],
+          supportArea: Array.from(
+            { length: readyAttacker.card.attackCost * 2 },
+            (_, index) => createSupport(`attack-${index}`),
+          ),
+        },
+      },
+    }
+
+    const decision = takeAiStep(state)
+
+    expect(decision.action).toBe('attack')
+    expect(decision.state.pendingBattle).toMatchObject({
+      attackerInstanceId: readyAttacker.card.instanceId,
+      targetInstanceId: target.card.instanceId,
+    })
+    expect(
+      decision.state.players['player-two'].battleArea.find(
+        (cookie) => cookie.card.instanceId === disabledAttacker.card.instanceId,
+      )?.rested,
+    ).toBe(false)
+  })
+
   it('selects colored and neutral skill payments deterministically', () => {
     const skill: CardSkill = {
       trigger: 'activate',
