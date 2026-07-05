@@ -495,6 +495,30 @@ export function useMatchController(params: {
       return
     }
 
+    const trapCardsInHand = game.players[viewerPlayerId].hand.filter(
+      (card) => card.type === 'trap' && Boolean(card.trap),
+    )
+    if (trapCardsInHand.length > 0) {
+      console.warn(
+        '[auto-skip-trap] 手上有陷阱卡但 getTrapCandidates 判定為 0，即將自動略過。診斷資訊：',
+        {
+          hand: trapCardsInHand.map((card) => ({
+            id: card.id,
+            cost: card.trap?.cost,
+            condition: card.trap?.condition,
+            effects: card.trap?.effects,
+          })),
+          breakArea: game.players[viewerPlayerId].breakArea.map(
+            (c) => ({ id: c.id, level: c.level }),
+          ),
+          supportArea: game.players[viewerPlayerId].supportArea.map(
+            (s) => ({ id: s.card.id, energyColor: s.card.energyColor, rested: s.rested }),
+          ),
+          declaredDamage: battle.declaredDamage,
+        },
+      )
+    }
+
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
