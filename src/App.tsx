@@ -156,7 +156,7 @@ function App() {
   const showCancelSkill =
     pe !== null &&
     !pe.skillActivated &&
-    (pe.sourceKind === 'cookie' || pe.sourceKind === 'item') &&
+    (pe.sourceKind === 'cookie' || pe.sourceKind === 'item' || pe.sourceKind === 'stage') &&
     pe.trigger === 'activate'
 
   useEffect(() => {
@@ -504,6 +504,11 @@ function App() {
         candidateCards={[
           ...pending.effectTargetCandidates.map((c) => c.card),
           ...pending.nonBattleEffectCandidateCards,
+          ...pending.breakToTrashCandidates,
+          ...pending.breakToBattleCandidates,
+          ...pending.breakToHandBySumCandidates,
+          ...pending.trashToHandCandidates,
+          ...pending.trashToDeckCandidates,
         ]}
         onToggleCandidate={pending.toggleEffectTarget}
         costSupportCandidates={

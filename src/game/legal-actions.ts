@@ -114,6 +114,12 @@ export const getLegalTurnCommands = (
       const opponent = state.players[getOpponentId(playerId)]
       for (const attacker of player.battleArea) {
         if (attacker.rested) continue
+        if (
+          state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
+          state.turnNumber
+        ) {
+          continue
+        }
         const paymentIds = selectEnergyPayment(
           getAttackEnergyCost(attacker.card),
           player.supportArea,

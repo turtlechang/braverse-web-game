@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, SupportCard } from '../game'
+import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, ReplacementTask, SupportCard } from '../game'
 import {
   applyGameCommand,
   createDemoSetupGame,
@@ -51,6 +51,23 @@ type TestStateConfig = ReturnType<typeof parseTestStateConfig>
 
 const opponentOfId = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
+
+export const getPendingChoicePlayerId = (
+  game: GameState,
+  replacementTask: ReplacementTask | null,
+): PlayerId | undefined => {
+  if (game.pendingRefresh) return game.pendingRefresh.playerId
+  if (game.pendingOnPlay) return undefined
+
+  const pendingDecision = getPendingDecision(game)
+  if (!replacementTask) return undefined
+
+  return !pendingDecision ||
+    pendingDecision.kind === 'faint-effect' ||
+    pendingDecision.kind === 'effect-order'
+    ? replacementTask.playerId
+    : undefined
+}
 
 export function useMatchController(params: {
   testStateConfig: TestStateConfig | null
@@ -437,9 +454,7 @@ export function useMatchController(params: {
   const aiControlsCurrentState: boolean =
     isPlayerControllingState(game, 'player-two')
 
-  const pendingPlayerId =
-    game.pendingRefresh?.playerId ??
-    (!game.pendingOnPlay && !game.pendingDrawUpTo ? replacementTask?.playerId : undefined)
+  const pendingPlayerId = getPendingChoicePlayerId(game, replacementTask)
   const pendingPlayer = pendingPlayerId
     ? game.players[pendingPlayerId]
     : null
@@ -495,6 +510,30 @@ export function useMatchController(params: {
       return
     }
 
+    const trapCardsInHand = game.players[viewerPlayerId].hand.filter(
+      (card) => card.type === 'trap' && Boolean(card.trap),
+    )
+    if (trapCardsInHand.length > 0) {
+      console.warn(
+        '[auto-skip-trap] 手上有陷阱卡但 getTrapCandidates 判定為 0，即將自動略過。診斷資訊：',
+        {
+          hand: trapCardsInHand.map((card) => ({
+            id: card.id,
+            cost: card.trap?.cost,
+            condition: card.trap?.condition,
+            effects: card.trap?.effects,
+          })),
+          breakArea: game.players[viewerPlayerId].breakArea.map(
+            (c) => ({ id: c.id, level: c.level }),
+          ),
+          supportArea: game.players[viewerPlayerId].supportArea.map(
+            (s) => ({ id: s.card.id, energyColor: s.card.energyColor, rested: s.rested }),
+          ),
+          declaredDamage: battle.declaredDamage,
+        },
+      )
+    }
+
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
@@ -535,6 +574,26 @@ export function useMatchController(params: {
       setSelectedBlockerId(null)
     },
     [animations, battleActions, resetSetup],
+  )
+
+  // loadScenarioState: loads a player-configured test scenario, skipping opening setup
+  const loadScenarioState = useCallback(
+    (scenarioState: GameState, scenarioMessage: string) => {
+      setGame(scenarioState)
+      setSetupStep(null)
+      setMessage(scenarioMessage)
+      battleActions.clearAttacker()
+      setSelectedFaintTargetIds([])
+      animations.resetAnimations()
+      setSelectedTrapId(null)
+      setSelectedTrapDiscardIds([])
+      setTrapSelectNoTarget(false)
+      setPendingResponseMode(null)
+      setSelectedFlipDiscardIds([])
+      setSelectedOpponentDiscardIds([])
+      setSelectedBlockerId(null)
+    },
+    [animations, battleActions, setSetupStep],
   )
 
   return {
@@ -633,5 +692,6 @@ export function useMatchController(params: {
     replacementTask,
     // Reset
     resetMatchState,
+    loadScenarioState,
   } as const
 }

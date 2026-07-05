@@ -84,6 +84,21 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'prevent-effect-damage') {
     return '此餅乾不受效果傷害。'
   }
+  if (effect.kind === 'field-to-trash-all') {
+    return '雙方符合條件的餅乾放入垃圾桶。'
+  }
+  if (effect.kind === 'trash-to-hand') {
+    return `從棄牌區選最多 ${effect.max} 張卡返回手牌。`
+  }
+  if (effect.kind === 'trash-to-deck') {
+    return `從棄牌區選最多 ${effect.max} 張卡洗回牌庫。`
+  }
+  if (effect.kind === 'break-to-battle') {
+    return `從 break 區選最多 ${effect.amount} 張餅乾登場。`
+  }
+  if (effect.kind === 'break-to-hand-by-level-sum') {
+    return `從 break 區選擇餅乾，等級總和需為 ${effect.targetSum}，返回手牌。`
+  }
 
   const { target, count } = targetText(effect as Extract<CardEffect, { target: unknown }>)
   if (effect.kind === 'damage') {
@@ -119,6 +134,15 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'view-hp') return `查看 ${count}${target}的 HP。`
   if (effect.kind === 'battle-to-support') {
     return `選擇 ${count}${target}放入支援區。`
+  }
+  if (effect.kind === 'battle-to-break') {
+    return `選擇 ${count}${target}放入 break 區。`
+  }
+  if (effect.kind === 'disable-attack') {
+    return `選擇 ${count}${target}，下回合不能攻擊。`
+  }
+  if (effect.kind === 'hp-to-support') {
+    return `選擇 ${count}${target}，將其 1 張 HP 卡放入支援區。`
   }
 
   if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
@@ -170,6 +194,14 @@ export const describeEffectResult = (
   if (effect.kind === 'view-hp') return `已查看 ${names} 的 HP。`
   if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`
   if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
+  if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入垃圾桶。'
+  if (effect.kind === 'trash-to-hand') return '棄牌區卡牌已返回手牌。'
+  if (effect.kind === 'trash-to-deck') return '棄牌區卡牌已洗回牌庫。'
+  if (effect.kind === 'break-to-battle') return 'break 區餅乾已登場。'
+  if (effect.kind === 'break-to-hand-by-level-sum') return 'break 區餅乾已返回手牌。'
+  if (effect.kind === 'battle-to-break') return `${names} 已放入 break 區。`
+  if (effect.kind === 'disable-attack') return `${names} 下回合不能攻擊。`
+  if (effect.kind === 'hp-to-support') return `${names} 的 HP 卡已放入支援區。`
 
   if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
     const amount = effect.amount

@@ -4,6 +4,9 @@ import {
   validateEnergyPayment,
 } from './energy'
 import {
+  getBreakCount,
+  getBreakToBattleCandidates,
+  getBreakToHandBySumCandidates,
   getEffectTargetCandidates,
   isEffectConditionMet,
   isEffectTargeted,
@@ -49,8 +52,14 @@ export const canPaySupportToTrashCost = (
 export const getTrashBattleCookieCostCandidates = (
   cost: AbilityCost,
   battleArea: CookieInBattle[],
+  sourceInstanceId?: string,
 ): CookieInBattle[] => {
   if (!cost.trashBattleCookie) return []
+  if (cost.trashBattleCookie.sourceOnly) {
+    return battleArea.filter(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+  }
   const { level, energyColor } = cost.trashBattleCookie
   return battleArea.filter((cookie) => {
     if (level !== undefined && cookie.card.level !== level) return false
@@ -62,18 +71,24 @@ export const getTrashBattleCookieCostCandidates = (
 export const canPayTrashBattleCookieCost = (
   cost: AbilityCost,
   battleArea: CookieInBattle[],
+  sourceInstanceId?: string,
 ): boolean =>
   !cost.trashBattleCookie ||
-  getTrashBattleCookieCostCandidates(cost, battleArea).length >=
+  getTrashBattleCookieCostCandidates(cost, battleArea, sourceInstanceId).length >=
     cost.trashBattleCookie.count
 
 export const payTrashBattleCookieCost = (
   player: PlayerState,
   cost: AbilityCost,
   selectedIds: string[],
+  sourceInstanceId?: string,
 ): { player: PlayerState; departedCount: number } => {
-  const uniqueIds = [...new Set(selectedIds)]
-  if (uniqueIds.length !== selectedIds.length) {
+  const effectiveIds =
+    cost.trashBattleCookie?.sourceOnly && sourceInstanceId
+      ? [sourceInstanceId]
+      : selectedIds
+  const uniqueIds = [...new Set(effectiveIds)]
+  if (uniqueIds.length !== effectiveIds.length) {
     throw new GameRuleError('不能重複選擇同一張戰鬥區餅乾作為代價。')
   }
 
@@ -91,7 +106,7 @@ export const payTrashBattleCookieCost = (
   }
 
   const candidateIds = new Set(
-    getTrashBattleCookieCostCandidates(cost, player.battleArea).map(
+    getTrashBattleCookieCostCandidates(cost, player.battleArea, sourceInstanceId).map(
       (cookie) => cookie.card.instanceId,
     ),
   )
@@ -222,13 +237,32 @@ export const canActivateCookieSkill = (
     return false
   }
 
-  if (!canPayTrashBattleCookieCost(skill.cost, player.battleArea)) {
+  if (!canPayTrashBattleCookieCost(skill.cost, player.battleArea, sourceInstanceId)) {
     return false
   }
 
   const context = { sourcePlayerId: playerId, sourceInstanceId }
   for (const effect of skill.effects) {
     if (!isEffectConditionMet(state, context, effect)) {
+      return false
+    }
+    if (
+      (effect.kind === 'damage-by-break-count' ||
+        effect.kind === 'modify-attack-by-break-count') &&
+      getBreakCount(state, playerId, effect) <= 0
+    ) {
+      return false
+    }
+    if (
+      effect.kind === 'break-to-battle' &&
+      getBreakToBattleCandidates(state, context, effect).length === 0
+    ) {
+      return false
+    }
+    if (
+      effect.kind === 'break-to-hand-by-level-sum' &&
+      getBreakToHandBySumCandidates(state, context, effect).length === 0
+    ) {
       return false
     }
     if (isEffectTargeted(effect) && effect.target.min > 0) {
@@ -315,8 +349,33 @@ export const activateCookieSkill = (
     player,
     cost,
     trashBattleCookieIds,
+    sourceInstanceId,
   )
-  const uniqueTrashBattleCookieIds = [...new Set(trashBattleCookieIds)]
+  const uniqueTrashBattleCookieIds = cost.trashBattleCookie?.sourceOnly
+    ? [sourceInstanceId]
+    : [...new Set(trashBattleCookieIds)]
+
+  let selfToBreakDepartedCount = 0
+  let playerAfterCosts = trashBattlePayment.player
+  if (cost.selfToBreakArea) {
+    const stillInBattle = playerAfterCosts.battleArea.find(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+    if (stillInBattle) {
+      playerAfterCosts = {
+        ...playerAfterCosts,
+        battleArea: playerAfterCosts.battleArea.filter(
+          (cookie) => cookie.card.instanceId !== sourceInstanceId,
+        ),
+        breakArea: [...playerAfterCosts.breakArea, stillInBattle.card],
+        discardPile: [
+          ...playerAfterCosts.discardPile,
+          ...stillInBattle.hpCards,
+        ],
+      }
+      selfToBreakDepartedCount = 1
+    }
+  }
 
   const paymentSet = new Set(paymentIds)
   const costSupportSet = new Set(uniqueCostSupportToTrashIds)
@@ -344,8 +403,8 @@ export const activateCookieSkill = (
     players: {
       ...state.players,
       [playerId]: {
-        ...trashBattlePayment.player,
-        battleArea: trashBattlePayment.player.battleArea
+        ...playerAfterCosts,
+        battleArea: playerAfterCosts.battleArea
           .map((cookie) =>
             cookie.card.instanceId === sourceInstanceId &&
             source.card.skill?.restSource
@@ -363,7 +422,7 @@ export const activateCookieSkill = (
           (card) => !uniqueDiscardHandIds.includes(card.instanceId),
         ),
         discardPile: [
-          ...trashBattlePayment.player.discardPile,
+          ...playerAfterCosts.discardPile,
           ...trashedCards.map((support) => support.card),
           ...discardedCards,
         ],
@@ -374,11 +433,14 @@ export const activateCookieSkill = (
       : state.skillUsesThisTurn,
   }
 
-  return trashBattlePayment.departedCount > 0
+  const totalDepartedCount =
+    trashBattlePayment.departedCount + selfToBreakDepartedCount
+
+  return totalDepartedCount > 0
     ? recordCookieDepartures(
         clearDepartedCookieModifiers(activatedState),
         playerId,
-        trashBattlePayment.departedCount,
+        totalDepartedCount,
       )
     : activatedState
 }

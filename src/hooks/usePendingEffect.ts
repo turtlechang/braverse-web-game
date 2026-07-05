@@ -15,11 +15,15 @@ import {
   executeCardEffect,
   finalizePendingReplacements,
   getEnergyCostTotal,
+  getBreakToBattleCandidates,
+  getBreakToHandBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashCookieCandidates,
+  getTrashToDeckCandidates,
+  getTrashToHandCandidates,
   getTrashToSupportCandidates,
   isEffectConditionMet,
   isEffectUntargeted,
@@ -98,6 +102,9 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'support-to-hand' ||
           currentEffect.kind === 'trash-to-battle' ||
           currentEffect.kind === 'trash-to-support' ||
+          currentEffect.kind === 'trash-to-hand' ||
+          currentEffect.kind === 'trash-to-deck' ||
+          currentEffect.kind === 'flip-to-support' ||
           currentEffect.kind === 'inspect-deck' ||
           currentEffect.kind === 'optional-cost-attack' ||
           currentEffect.kind === 'disable-block'
@@ -175,6 +182,26 @@ export function usePendingEffect(params: {
         )
       : []
 
+  const breakToBattleCandidates =
+    pendingEffect && currentEffect?.kind === 'break-to-battle'
+      ? getBreakToBattleCandidates(game, pendingEffect.context, currentEffect)
+      : []
+
+  const breakToHandBySumCandidates =
+    pendingEffect && currentEffect?.kind === 'break-to-hand-by-level-sum'
+      ? getBreakToHandBySumCandidates(game, pendingEffect.context, currentEffect)
+      : []
+
+  const trashToHandCandidates =
+    pendingEffect && currentEffect?.kind === 'trash-to-hand'
+      ? getTrashToHandCandidates(game, pendingEffect.context, currentEffect)
+      : []
+
+  const trashToDeckCandidates =
+    pendingEffect && currentEffect?.kind === 'trash-to-deck'
+      ? getTrashToDeckCandidates(game, pendingEffect.context, currentEffect)
+      : []
+
   const effectTargetIds = faintActive
     ? faintTargetIds
     : afterDamageActive
@@ -186,7 +213,11 @@ export function usePendingEffect(params: {
 
   const breakEffectTargetIds = faintActive
     ? new Set<string>()
-    : new Set(breakToTrashCandidates.map((card) => card.instanceId))
+    : new Set([
+        ...breakToTrashCandidates.map((card) => card.instanceId),
+        ...breakToBattleCandidates.map((card) => card.instanceId),
+        ...breakToHandBySumCandidates.map((card) => card.instanceId),
+      ])
 
   const supportEffectTargetIds = faintActive
     ? new Set<string>()
@@ -196,7 +227,11 @@ export function usePendingEffect(params: {
 
   const trashEffectTargetIds = faintActive
     ? new Set<string>()
-    : new Set(trashCookieCandidates.map((card) => card.instanceId))
+    : new Set([
+        ...trashCookieCandidates.map((card) => card.instanceId),
+        ...trashToHandCandidates.map((card) => card.instanceId),
+        ...trashToDeckCandidates.map((card) => card.instanceId),
+      ])
 
   const selectedEffectTargetIds: Set<string> = faintActive
     ? new Set(selectedFaintTargetIds)
@@ -305,6 +340,7 @@ export function usePendingEffect(params: {
       ? getTrashBattleCookieCostCandidates(
           pendingEffect.skill.cost,
           game.players[pendingEffect.context.sourcePlayerId].battleArea,
+          pendingEffect.context.sourceInstanceId,
         ).map((cookie) => cookie.card.instanceId)
       : [],
   )
@@ -646,12 +682,17 @@ export function usePendingEffect(params: {
     }
 
     const max =
-      currentEffect.kind === 'break-to-trash'
+      currentEffect.kind === 'break-to-trash' ||
+        currentEffect.kind === 'trash-to-hand' ||
+        currentEffect.kind === 'trash-to-deck'
         ? currentEffect.max
+        : currentEffect.kind === 'break-to-hand-by-level-sum'
+          ? Number.MAX_SAFE_INTEGER
         : currentEffect.kind === 'support-to-trash' ||
             currentEffect.kind === 'support-to-hand' ||
             currentEffect.kind === 'trash-to-battle' ||
-            currentEffect.kind === 'trash-to-support'
+            currentEffect.kind === 'trash-to-support' ||
+            currentEffect.kind === 'break-to-battle'
           ? currentEffect.amount
         : isEffectUntargeted(currentEffect)
           ? currentEffect.kind === 'gain-hp'
@@ -659,7 +700,8 @@ export function usePendingEffect(params: {
             : 0
           : currentEffect.kind === 'inspect-deck' ||
               currentEffect.kind === 'optional-cost-attack' ||
-              currentEffect.kind === 'disable-block'
+              currentEffect.kind === 'disable-block' ||
+              currentEffect.kind === 'flip-to-support'
             ? 0
           : currentEffect.target?.max ?? 0
 
@@ -784,7 +826,9 @@ export function usePendingEffect(params: {
   const cancelPendingSkill = () => {
     if (!pendingEffect) return
     if (
-      (pendingEffect.sourceKind !== 'cookie' && pendingEffect.sourceKind !== 'item') ||
+      (pendingEffect.sourceKind !== 'cookie' &&
+        pendingEffect.sourceKind !== 'item' &&
+        pendingEffect.sourceKind !== 'stage') ||
       pendingEffect.trigger !== 'activate' ||
       pendingEffect.skillActivated
     ) {
@@ -1133,6 +1177,10 @@ export function usePendingEffect(params: {
     trashCookieCandidates,
     nonBattleEffectCandidateCards,
     breakToTrashCandidates,
+    breakToBattleCandidates,
+    breakToHandBySumCandidates,
+    trashToHandCandidates,
+    trashToDeckCandidates,
     skillCostSupportCandidates,
     skillPaymentTargetIds,
     skillCostSupportTargetIds,

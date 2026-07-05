@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { MainMenu, type AiDeckChoice } from '../MainMenu'
 import { DeckEditorModal } from '../modals/DeckEditorModal'
+import { TestScenarioModal } from '../modals/TestScenarioModal'
 import {
   deleteCustomDeck,
   duplicateCustomDeck,
@@ -49,6 +50,7 @@ export function MenuScreen({
   )
   const [editingDeck, setEditingDeck] = useState<CustomDeck | null>(null)
   const [showDeckEditor, setShowDeckEditor] = useState(false)
+  const [showTestScenario, setShowTestScenario] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
   const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('random')
 
@@ -105,6 +107,17 @@ export function MenuScreen({
     onEnterBattle()
   }
 
+  const startTestScenario = (scenarioState: Parameters<typeof match.loadScenarioState>[0]) => {
+    setSelectedHandCardId(null)
+    dialogs.closeResourcePopover()
+    pending.resetEffectContext()
+    ai.resetAiCounts()
+    match.loadScenarioState(scenarioState, '測試對局已載入，可直接發動技能或攻擊。')
+    setShowTestScenario(false)
+    setBattleEntryError(null)
+    onEnterBattle()
+  }
+
   return (
     <>
       <MainMenu
@@ -121,6 +134,7 @@ export function MenuScreen({
           setBattleEntryError(null)
         }}
         onStartBattle={startBattleFromMenu}
+        onOpenTestScenario={() => setShowTestScenario(true)}
         onCreateDeck={() => {
           setEditingDeck(null)
           setShowDeckEditor(true)
@@ -162,6 +176,12 @@ export function MenuScreen({
             setEditingDeck(null)
             refreshSavedDecks()
           }}
+        />
+      )}
+      {showTestScenario && (
+        <TestScenarioModal
+          onClose={() => setShowTestScenario(false)}
+          onStart={startTestScenario}
         />
       )}
     </>

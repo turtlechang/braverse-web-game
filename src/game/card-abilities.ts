@@ -1,6 +1,9 @@
 import { GameRuleError } from './errors'
 import { selectEnergyPayment, validateEnergyPayment } from './energy'
 import {
+  getBreakCount,
+  getBreakToBattleCandidates,
+  getBreakToHandBySumCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
   isEffectConditionMet,
@@ -363,6 +366,23 @@ const hasUsableEffect = (
         getEffectTargetCandidates(state, context, effect.target).length >=
         effect.target.min
       )
+    }
+    if (
+      effect.kind === 'damage-by-break-count' ||
+      effect.kind === 'modify-attack-by-break-count'
+    ) {
+      if (getBreakCount(state, playerId, effect) <= 0) return false
+      if (effect.target.min === 0) return true
+      return (
+        getEffectTargetCandidates(state, context, effect.target).length >=
+        effect.target.min
+      )
+    }
+    if (effect.kind === 'break-to-battle') {
+      return getBreakToBattleCandidates(state, context, effect).length > 0
+    }
+    if (effect.kind === 'break-to-hand-by-level-sum') {
+      return getBreakToHandBySumCandidates(state, context, effect).length > 0
     }
     if (
       !isEffectTargeted(effect) ||

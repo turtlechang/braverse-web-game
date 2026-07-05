@@ -358,11 +358,18 @@ export const handleAiTurnState = (
     if (canAttack(state)) {
       const target = strategy.chooseAttackTarget(state, playerId)
       for (const attacker of player.battleArea) {
+        if (
+          attacker.rested ||
+          state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
+            state.turnNumber
+        ) {
+          continue
+        }
         const paymentIds = selectEnergyPayment(
           getAttackEnergyCost(attacker.card),
           player.supportArea,
         )
-        if (target && !attacker.rested && paymentIds) {
+        if (target && paymentIds) {
           return {
             state: appendCommandLogEntry(
               state,

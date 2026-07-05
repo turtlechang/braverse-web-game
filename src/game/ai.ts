@@ -176,7 +176,10 @@ const chooseEffectTargets = (
   if (
     effect.kind === 'inspect-deck' ||
     effect.kind === 'optional-cost-attack' ||
-    effect.kind === 'disable-block'
+    effect.kind === 'disable-block' ||
+    effect.kind === 'trash-to-hand' ||
+    effect.kind === 'trash-to-deck' ||
+    effect.kind === 'flip-to-support'
   ) {
     return []
   }
@@ -296,6 +299,9 @@ const resolveAiCardAbility = (
       effect.kind !== 'inspect-deck' &&
       effect.kind !== 'optional-cost-attack' &&
       effect.kind !== 'disable-block' &&
+      effect.kind !== 'trash-to-hand' &&
+      effect.kind !== 'trash-to-deck' &&
+      effect.kind !== 'flip-to-support' &&
       effect.target &&
       targetIds.length < effect.target.min
     ) {
@@ -508,6 +514,9 @@ const resolveAiSkill = (
       effect.kind !== 'optional-cost-attack' &&
       effect.kind !== 'field-to-trash' &&
       effect.kind !== 'disable-block' &&
+      effect.kind !== 'trash-to-hand' &&
+      effect.kind !== 'trash-to-deck' &&
+      effect.kind !== 'flip-to-support' &&
       effect.target &&
       targetIds.length < effect.target.min
     ) {

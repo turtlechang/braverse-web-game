@@ -8,6 +8,7 @@ import {
   getTargetPlayerId,
   isEffectConditionMet,
   isEffectTargeted,
+  resolveDrawUpTo,
   selectEffectTargets,
 } from './effects'
 import {
@@ -98,6 +99,12 @@ export const beginAttack = (
   const attacker = attackerPlayer.battleArea[attackerIndex]
 
   if (!attacker || attacker.rested) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  if (
+    state.attackDisabledUntilTurn?.[attackerInstanceId] === state.turnNumber
+  ) {
     throw new GameRuleError('Invalid battle action.')
   }
 
@@ -207,7 +214,11 @@ const hasRequiredTrapTargets = (
   }
 
   return card.trap!.effects.every((effect) => {
-    if (!isEffectTargeted(effect) || effect.target.min === 0) return true
+    const isTargetedGainHp =
+      effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly
+    if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target || effect.target.min === 0) {
+      return true
+    }
 
     const battleCandidateCount = getEffectTargetCandidates(
       state,
@@ -307,7 +318,8 @@ const validateTrapTargets = (
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
-      effect.kind === 'redirect-attack',
+      effect.kind === 'redirect-attack' ||
+      (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
   if (targetEffects.length === 0) {
     if (targetIds.length > 0) {
@@ -317,13 +329,15 @@ const validateTrapTargets = (
   }
 
   for (const effect of targetEffects) {
+    const target = 'target' in effect ? effect.target : undefined
+    if (!target) continue
     selectEffectTargets(
       state,
       {
         sourcePlayerId: playerId,
         sourceInstanceId: 'pending-trap',
       },
-      effect.target,
+      target,
       targetIds,
     )
   }
@@ -701,7 +715,7 @@ export const playTrap = (
       effect,
       effect.kind === 'draw' ||
         effect.kind === 'deck-to-support' ||
-        effect.kind === 'gain-hp'
+        (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
         : options.targetIds,
     )
@@ -1173,6 +1187,7 @@ export const resolveOptionalCostAttack = (
   action: 'skip' | 'pay',
   discardCardIds: string[] = [],
   targetIds: string[] = [],
+  paymentIds: string[] = [],
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
@@ -1196,6 +1211,19 @@ export const resolveOptionalCostAttack = (
   if (!allInHand) {
     throw new GameRuleError('Invalid battle action.')
   }
+  const energyCost = pending.cost.energy ?? {}
+  const uniquePaymentIds = [...new Set(paymentIds)]
+  if (uniquePaymentIds.length !== paymentIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  const paymentValidation = validateEnergyPayment(
+    energyCost,
+    player.supportArea,
+    uniquePaymentIds,
+  )
+  if (!paymentValidation.valid) {
+    throw new GameRuleError(`Invalid attack effect payment: ${paymentValidation.reason}`)
+  }
   const hasTargetedEffect = pending.effects.some((e) => isEffectTargeted(e))
   if (hasTargetedEffect) {
     const uniqueTargetIds = [...new Set(targetIds)]
@@ -1214,6 +1242,7 @@ export const resolveOptionalCostAttack = (
     }
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
+  const paymentSet = new Set(uniquePaymentIds)
   let nextState: GameState = {
     ...state,
     pendingOptionalCostAttack: null,
@@ -1223,6 +1252,11 @@ export const resolveOptionalCostAttack = (
         ...player,
         hand: player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
         discardPile: [...player.discardPile, ...discardedCards],
+        supportArea: player.supportArea.map((support) =>
+          paymentSet.has(support.card.instanceId)
+            ? { ...support, rested: true }
+            : support,
+        ),
       },
     },
   }
@@ -1416,6 +1450,7 @@ export const resolveFlip = (
   }
 
   let nextState = state
+  let flipToSupportChoice: { rested: boolean } | null = null
   if (options.activate) {
     const player = nextState.players[playerId]
     const discardIds = [...new Set(options.discardHandIds ?? [])]
@@ -1428,7 +1463,7 @@ export const resolveFlip = (
       discardIds.includes(card.instanceId),
     )
     if (discarded.length !== discardIds.length) {
-    throw new GameRuleError('Invalid battle action.')
+      throw new GameRuleError('Invalid battle action.')
     }
     nextState = {
       ...nextState,
@@ -1444,7 +1479,17 @@ export const resolveFlip = (
       },
     }
 
-    for (const effect of revealed.flip.effects) {
+    for (let i = 0; i < revealed.flip.effects.length; i += 1) {
+      const effect = revealed.flip.effects[i]
+      const context = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: revealed.instanceId,
+        sourceCardName: revealed.name,
+      }
+      if (!isEffectConditionMet(nextState, context, effect)) {
+        continue
+      }
+
       if (effect.kind === 'gain-hp') {
         const owner = nextState.players[playerId]
         const targetIndex = owner.battleArea.findIndex(
@@ -1454,7 +1499,7 @@ export const resolveFlip = (
         )
         const target = owner.battleArea[targetIndex]
         if (!target || owner.deck.length < effect.amount) {
-    throw new GameRuleError('Invalid battle action.')
+          throw new GameRuleError('Invalid battle action.')
         }
         const gainedCards = owner.deck.slice(0, effect.amount)
         nextState = {
@@ -1475,32 +1520,33 @@ export const resolveFlip = (
             },
           },
         }
-      } else if (effect.kind === 'draw-up-to') {
-        const context = {
-          sourcePlayerId: playerId,
-          sourceInstanceId: revealed.instanceId,
-          sourceCardName: revealed.name,
-        }
-        if (!isEffectConditionMet(nextState, context, effect)) {
-          continue
-        }
+      } else if (effect.kind === 'flip-to-support') {
+        flipToSupportChoice = { rested: effect.rested ?? true }
+      } else {
         nextState = executeCardEffect(
           nextState,
           context,
           effect,
           [],
         )
-      } else {
-        nextState = executeCardEffect(
-          nextState,
-          {
-            sourcePlayerId: playerId,
-            sourceInstanceId: revealed.instanceId,
-            sourceCardName: revealed.name,
-          },
-          effect,
-          [],
-        )
+        if (nextState.pendingDrawUpTo) {
+          const remainingEffects = revealed.flip.effects.slice(i + 1)
+          if (remainingEffects.length > 0) {
+            nextState = {
+              ...nextState,
+              pendingDrawUpTo: {
+                ...nextState.pendingDrawUpTo,
+                afterEffects: remainingEffects,
+                afterEffectContext: context,
+              },
+            }
+          }
+
+          if (effect.kind === 'draw-up-to') {
+            nextState = resolveDrawUpTo(nextState, playerId, effect.max)
+          }
+          break
+        }
       }
     }
   }
@@ -1510,10 +1556,18 @@ export const resolveFlip = (
     ...nextState,
     players: {
       ...nextState.players,
-      [playerId]: {
-        ...player,
-        discardPile: [...player.discardPile, revealed],
-      },
+      [playerId]: flipToSupportChoice
+        ? {
+            ...player,
+            supportArea: [
+              ...player.supportArea,
+              { card: revealed, rested: flipToSupportChoice.rested },
+            ],
+          }
+        : {
+            ...player,
+            discardPile: [...player.discardPile, revealed],
+          },
     },
     pendingBattle: {
       ...requirePendingBattle(nextState),
@@ -1656,16 +1710,19 @@ export const getTrapTargetCandidates = (
       effect.kind === 'modify-attack' ||
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
-      effect.kind === 'redirect-attack',
+      effect.kind === 'redirect-attack' ||
+      (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
-  return targetEffect
+  const target =
+    targetEffect && 'target' in targetEffect ? targetEffect.target : undefined
+  return target
     ? getEffectTargetCandidates(
         state,
         {
           sourcePlayerId: playerId,
           sourceInstanceId: card!.instanceId,
         },
-        targetEffect.target,
+        target,
       )
     : []
 }

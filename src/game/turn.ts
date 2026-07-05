@@ -191,6 +191,11 @@ export const advancePhase = (state: GameState): GameState => {
             ([, turn]) => turn > state.turnNumber,
           ),
         ),
+        attackDisabledUntilTurn: Object.fromEntries(
+          Object.entries(endPhaseState.attackDisabledUntilTurn ?? {}).filter(
+            ([, turn]) => turn > state.turnNumber,
+          ),
+        ),
         blockDisabledUntilTurn: Object.fromEntries(
           Object.entries(endPhaseState.blockDisabledUntilTurn ?? {}).filter(
             ([, turn]) => turn > state.turnNumber,
