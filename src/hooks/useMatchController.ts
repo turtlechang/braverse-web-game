@@ -576,6 +576,26 @@ export function useMatchController(params: {
     [animations, battleActions, resetSetup],
   )
 
+  // loadScenarioState: loads a player-configured test scenario, skipping opening setup
+  const loadScenarioState = useCallback(
+    (scenarioState: GameState, scenarioMessage: string) => {
+      setGame(scenarioState)
+      setSetupStep(null)
+      setMessage(scenarioMessage)
+      battleActions.clearAttacker()
+      setSelectedFaintTargetIds([])
+      animations.resetAnimations()
+      setSelectedTrapId(null)
+      setSelectedTrapDiscardIds([])
+      setTrapSelectNoTarget(false)
+      setPendingResponseMode(null)
+      setSelectedFlipDiscardIds([])
+      setSelectedOpponentDiscardIds([])
+      setSelectedBlockerId(null)
+    },
+    [animations, battleActions, setSetupStep],
+  )
+
   return {
     game,
     setGame,
@@ -672,5 +692,6 @@ export function useMatchController(params: {
     replacementTask,
     // Reset
     resetMatchState,
+    loadScenarioState,
   } as const
 }

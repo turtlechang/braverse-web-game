@@ -1602,3 +1602,120 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }
 }
+
+.test-scenario-modal {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border: 2px solid rgba(105, 220, 255, 0.68);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  color: #fff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.54);
+  padding: 28px;
+}
+
+.test-scenario-modal h2 {
+  margin: 0 0 8px;
+}
+
+.scenario-intro {
+  margin: 0 0 20px;
+  color: #bbdaf3;
+  font-size: 0.9rem;
+}
+
+.scenario-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.scenario-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.scenario-side-title {
+  margin: 0;
+}
+
+.scenario-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scenario-field-label {
+  font-size: 0.85rem;
+  color: #bbdaf3;
+}
+
+.scenario-battle-slot {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 8px;
+}
+
+.scenario-field-group input[type='text'],
+.scenario-field-group input[type='number'],
+.scenario-battle-slot input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(1, 8, 28, 0.4);
+  color: #fff;
+}
+
+.scenario-break-preview {
+  font-size: 0.8rem;
+  color: #9fd6ff;
+}
+
+.scenario-errors {
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 100, 100, 0.5);
+  background: rgba(255, 60, 60, 0.12);
+  color: #ffb4b4;
+}
+
+.scenario-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.scenario-cancel-btn {
+  padding: 10px 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: transparent;
+  color: #bbdaf3;
+}
+
+.scenario-cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.scenario-start-btn {
+  padding: 10px 18px;
+  border-radius: 6px;
+  border: 1px solid #ffe675;
+  background: linear-gradient(#27b8dd, #0875bd);
+  color: #fff;
+}
+
+@media (max-width: 800px) {
+  .scenario-layout {
+    grid-template-columns: 1fr;
+  }
+}

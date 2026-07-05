@@ -1,4 +1,4 @@
-import { AlertTriangle, Copy, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertTriangle, Copy, FlaskConical, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
 import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
@@ -32,6 +32,7 @@ interface MainMenuProps {
   onSelectAiLevel: (level: AiLevel) => void
   onSelectDeck: (deckId: string) => void
   onStartBattle: () => void
+  onOpenTestScenario: () => void
   onCreateDeck: () => void
   onEditDeck: (deck: CustomDeck) => void
   onDuplicateDeck: (deck: CustomDeck) => void
@@ -58,6 +59,7 @@ export function MainMenu({
   onSelectAiLevel,
   onSelectDeck,
   onStartBattle,
+  onOpenTestScenario,
   onCreateDeck,
   onEditDeck,
   onDuplicateDeck,
@@ -87,6 +89,10 @@ export function MainMenu({
           <button type="button" onClick={onCreateDeck}>
             <Pencil aria-hidden="true" />
             牌組編輯器
+          </button>
+          <button type="button" onClick={onOpenTestScenario}>
+            <FlaskConical aria-hidden="true" />
+            測試對局設定
           </button>
           <button type="button" onClick={onRefreshDecks}>
             <RefreshCw aria-hidden="true" />
