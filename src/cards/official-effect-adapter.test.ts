@@ -2091,7 +2091,7 @@ describe('Starter Deck RED official effect adapter', () => {
   })
 
   describe('BS1-044 Bell Pepper Cookie bug fixes', () => {
-    it('gain-hp skill only applies while this Cookie has less than 3 HP', () => {
+    it('gain-hp skill only applies while this Cookie has 3 HP or less', () => {
       expect(convertOfficialCookieSkill(findBraveBeginningCard('BS1-044')))
         .toMatchObject({
           effects: [
@@ -2099,7 +2099,7 @@ describe('Starter Deck RED official effect adapter', () => {
               kind: 'gain-hp',
               amount: 1,
               target: { side: 'self', sourceOnly: true },
-              condition: { kind: 'source-hp-less-than', amount: 3 },
+              condition: { kind: 'source-hp-less-than', amount: 4 },
             },
           ],
         })

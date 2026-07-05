@@ -582,7 +582,9 @@ export const convertOfficialCardEffects = (
         kind: 'gain-hp',
         amount: 1,
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-        condition: { kind: 'source-hp-less-than', amount: 3 },
+        // 官方繁中卡面文字為「HP 3 或以下」（含 3），英文資料庫的 "less than 3"
+        // 對應到嚴格小於 4，故此處用 amount: 4 表示 HP <= 3。
+        condition: { kind: 'source-hp-less-than', amount: 4 },
       },
     ],
     // === BS1/BS2 綠色餅乾卡技能 ===

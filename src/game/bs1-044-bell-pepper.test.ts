@@ -31,7 +31,7 @@ const makeCookie = (
 })
 
 describe('BS1-044 Bell Pepper Cookie', () => {
-  it('only gains +1 HP when its current HP is below 3', () => {
+  it('does not gain +1 HP once its current HP is 4 or higher', () => {
     const base = createDemoGame()
     const highHpCookie = makeCookie({ instanceId: 'bell-pepper-high' })
     const hpCards: GameCard[] = Array.from({ length: 5 }, (_, i) => ({
@@ -46,7 +46,7 @@ describe('BS1-044 Bell Pepper Cookie', () => {
         ...base.players,
         'player-one': {
           ...base.players['player-one'],
-          battleArea: [{ card: highHpCookie, hpCards, rested: false }],
+          battleArea: [{ card: highHpCookie, hpCards: hpCards.slice(0, 4), rested: false }],
         },
       },
     }
@@ -62,41 +62,50 @@ describe('BS1-044 Bell Pepper Cookie', () => {
           kind: 'gain-hp',
           amount: 1,
           target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-          condition: { kind: 'source-hp-less-than', amount: 3 },
+          condition: { kind: 'source-hp-less-than', amount: 4 },
         },
         [],
       ),
     ).toThrow(GameRuleError)
+  })
 
-    const lowHpCookie = makeCookie({ instanceId: 'bell-pepper-low' })
-    const lowState: GameState = {
+  it('gains +1 HP while its current HP is exactly 3 (HP 3 or below triggers)', () => {
+    const base = createDemoGame()
+    const hpCards: GameCard[] = Array.from({ length: 5 }, (_, i) => ({
+      id: `hp-${i}`,
+      instanceId: `hp-${i}`,
+      name: `HP ${i}`,
+      type: 'item',
+    }))
+    const fullHpCookie = makeCookie({ instanceId: 'bell-pepper-full' })
+    const fullState: GameState = {
       ...base,
       players: {
         ...base.players,
         'player-one': {
           ...base.players['player-one'],
           battleArea: [
-            { card: lowHpCookie, hpCards: hpCards.slice(0, 2), rested: false },
+            { card: fullHpCookie, hpCards: hpCards.slice(0, 3), rested: false },
           ],
         },
       },
     }
 
     const resolved = executeCardEffect(
-      lowState,
+      fullState,
       {
         sourcePlayerId: 'player-one',
-        sourceInstanceId: lowHpCookie.instanceId,
+        sourceInstanceId: fullHpCookie.instanceId,
       },
       {
         kind: 'gain-hp',
         amount: 1,
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-        condition: { kind: 'source-hp-less-than', amount: 3 },
+        condition: { kind: 'source-hp-less-than', amount: 4 },
       },
       [],
     )
-    expect(resolved.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
+    expect(resolved.players['player-one'].battleArea[0].hpCards).toHaveLength(4)
   })
 
   it('optional attack-then damage requires paying energy and can only hit the original attack target', () => {
