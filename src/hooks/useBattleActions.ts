@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react'
 import {
-  applyGameCommand,
   getAttackEnergyCost,
   validateEnergyPayment,
+  type GameCommand,
   type GameState,
 } from '../game'
 
@@ -12,12 +12,22 @@ export type RunGameAction = (
   onSuccess?: (nextGame: GameState) => void,
 ) => void
 
+/**
+ * 統一分派層：本地模式下等價於 runAction((current) => applyGameCommand(current, command), ...)；
+ * 線上模式改成把 command 送到伺服器，不在本地套用。
+ */
+export type DispatchGameCommand = (
+  command: GameCommand | GameCommand[],
+  successMessage: string,
+  onSuccess?: (nextGame: GameState) => void,
+) => void
+
 interface UseBattleActionsParams {
   game: GameState
-  runAction: RunGameAction
+  dispatch: DispatchGameCommand
 }
 
-export function useBattleActions({ game, runAction }: UseBattleActionsParams) {
+export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
   const [selectedAttackerId, setSelectedAttackerId] = useState<string | null>(
     null,
   )
@@ -57,15 +67,15 @@ export function useBattleActions({ game, runAction }: UseBattleActionsParams) {
     (targetInstanceId: string) => {
       if (!selectedAttackerId || !attackPaymentValidation.valid) return
 
-      runAction(
-        (current) =>
-          applyGameCommand(current, {
-            kind: 'declare-attack',
-            playerId: current.activePlayerId,
-            attackerInstanceId: selectedAttackerId,
-            targetInstanceId,
-            supportPaymentIds: selectedAttackPaymentIds,
-          }),
+      const command: GameCommand = {
+        kind: 'declare-attack',
+        playerId: game.activePlayerId,
+        attackerInstanceId: selectedAttackerId,
+        targetInstanceId,
+        supportPaymentIds: selectedAttackPaymentIds,
+      }
+      dispatch(
+        command,
         `${selectedAttacker?.card.name ?? '餅乾'}已宣告攻擊。`,
         clearAttacker,
       )
@@ -73,7 +83,8 @@ export function useBattleActions({ game, runAction }: UseBattleActionsParams) {
     [
       attackPaymentValidation.valid,
       clearAttacker,
-      runAction,
+      dispatch,
+      game.activePlayerId,
       selectedAttacker,
       selectedAttackerId,
       selectedAttackPaymentIds,

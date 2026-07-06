@@ -10,7 +10,21 @@ import {
   createItemUsageDemoState,
 } from '../game/demo'
 import { usePendingEffect } from './usePendingEffect'
-import type { CookieCard, GameCard, GameState } from '../game'
+import { applyGameCommand, type CookieCard, type GameCard, type GameState } from '../game'
+import type { DispatchGameCommand } from './useBattleActions'
+
+const createDispatch = (
+  game: GameState,
+  setGame: (value: GameState) => void,
+): DispatchGameCommand => (command, _successMessage, onSuccess) => {
+  const commands = Array.isArray(command) ? command : [command]
+  const nextGame = commands.reduce(
+    (state, cmd) => applyGameCommand(state, cmd),
+    game,
+  )
+  setGame(nextGame)
+  onSuccess?.(nextGame)
+}
 
 const createTestCookieWithDiscardHandSkill = (): CookieCard => ({
   id: 'test-discard-cookie',
@@ -170,6 +184,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       const pending = usePendingEffect({
         game: gameState,
         setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -256,6 +271,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       captured = usePendingEffect({
         game: gameState,
         setGame: () => {},
+        dispatch: createDispatch(gameState, () => {}),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -292,6 +308,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       const pending = usePendingEffect({
         game: gameState,
         setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -369,6 +386,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       const pending = usePendingEffect({
         game: state,
         setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -450,6 +468,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       const pending = usePendingEffect({
         game: state,
         setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -502,6 +521,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       const pending = usePendingEffect({
         game: gameState,
         setGame: () => {},
+        dispatch: createDispatch(gameState, () => {}),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -587,6 +607,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
       const pending = usePendingEffect({
         game: gameState,
         setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -683,6 +704,7 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
       const pending = usePendingEffect({
         game: state,
         setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},
@@ -754,6 +776,7 @@ describe('usePendingEffect optional-cost-attack', () => {
       usePendingEffect({
         game: gameState,
         setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
         viewerPlayerId: 'player-one',
         setMessage: () => {},
         clearAttacker: () => {},

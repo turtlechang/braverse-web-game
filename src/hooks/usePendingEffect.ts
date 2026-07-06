@@ -27,6 +27,7 @@ import {
 } from '../game'
 import { describeEffectResult } from '../components/effects/effectUiUtils'
 import type { PendingEffect } from '../components/effects/effectUiTypes'
+import type { DispatchGameCommand } from './useBattleActions'
 
 interface HpPileInfo {
   title: string
@@ -36,6 +37,7 @@ interface HpPileInfo {
 export function usePendingEffect(params: {
   game: GameState
   setGame: (value: GameState | ((prev: GameState) => GameState)) => void
+  dispatch: DispatchGameCommand
   viewerPlayerId: PlayerId
   setMessage: (value: string) => void
   clearAttacker: () => void
@@ -54,6 +56,7 @@ export function usePendingEffect(params: {
   const {
     game,
     setGame,
+    dispatch,
     viewerPlayerId,
     setMessage,
     clearAttacker,
@@ -886,14 +889,14 @@ export function usePendingEffect(params: {
 
     if (!pendingEffect?.optional) return
 
-    setGame(
-      applyGameCommand(game, {
+    dispatch(
+      {
         kind: 'skip-on-play',
         playerId: pendingEffect.context.sourcePlayerId,
         sourceInstanceId: pendingEffect.sourceCard.instanceId,
-      }),
+      },
+      `${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`,
     )
-    setMessage(`${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`)
     setPendingEffect(null)
   }
 
@@ -933,14 +936,15 @@ export function usePendingEffect(params: {
 
     try {
       if (pendingEffect.sourceKind === 'attack') {
-        const nextGame = applyGameCommand(game, {
-          kind: 'resolve-attack-effect',
-          playerId: pendingEffect.context.sourcePlayerId,
-          targetIds: pendingEffect.selectedTargetIds,
-        })
         const result = describeEffectResult(currentEffect, targetNames)
-        setGame(nextGame)
-        setMessage(result)
+        dispatch(
+          {
+            kind: 'resolve-attack-effect',
+            playerId: pendingEffect.context.sourcePlayerId,
+            targetIds: pendingEffect.selectedTargetIds,
+          },
+          result,
+        )
         setEffectHistory((history) => [result, ...history].slice(0, 4))
         setPendingEffect(null)
         return

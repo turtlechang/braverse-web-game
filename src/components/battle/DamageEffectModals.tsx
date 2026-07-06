@@ -1,4 +1,3 @@
-import { applyGameCommand } from '../../game'
 import { FaintEffectResponseModal } from '../modals/GameModals'
 import type { useMatchController } from '../../hooks/useMatchController'
 import type { usePendingEffect } from '../../hooks/usePendingEffect'
@@ -29,12 +28,12 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
               (candidate) => candidate.card.instanceId === targets[0],
             )?.card.name
             match.setSelectedFaintTargetIds([])
-            match.runAction(
-              (current) => applyGameCommand(current, {
+            match.dispatch(
+              {
                 kind: 'resolve-faint-effect',
                 playerId: match.viewerPlayerId,
                 targetIds: targets,
-              }),
+              },
               targets.length === 0
                 ? `${match.faintSourceCard!.name}已結算昏厥效果。`
                 : `${match.faintSourceCard!.name}發動對${targetName ?? '目標'}的昏厥效果。`,
@@ -72,12 +71,12 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
                   className="modal-button"
                   onClick={() => {
                     match.setSelectedAfterDamageTargetIds([])
-                    match.runAction(
-                      (current) => applyGameCommand(current, {
+                    match.dispatch(
+                      {
                         kind: 'resolve-after-damage-effect',
                         playerId: match.viewerPlayerId,
                         targetIds: [],
-                      }),
+                      },
                       `${match.afterDamageSourceCard!.name}略過受傷後效果。`,
                     )
                   }}
@@ -95,12 +94,12 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
                 onClick={() => {
                   const targets = match.selectedAfterDamageTargetIds
                   match.setSelectedAfterDamageTargetIds([])
-                  match.runAction(
-                    (current) => applyGameCommand(current, {
+                  match.dispatch(
+                    {
                       kind: 'resolve-after-damage-effect',
                       playerId: match.viewerPlayerId,
                       targetIds: targets,
-                    }),
+                    },
                     `${match.afterDamageSourceCard!.name}發動對${match.afterDamageCandidates.find((c) => c.card.instanceId === targets[0])?.card.name ?? '目標'}的受傷後效果。`,
                   )
                 }}

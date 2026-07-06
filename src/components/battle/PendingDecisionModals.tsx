@@ -1,5 +1,4 @@
 import {
-  applyGameCommand,
   getEffectTargetCandidates,
   getEnergyCostTotal,
   getRefreshCandidates,
@@ -124,13 +123,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               onConfirm={() => {
                 const ids = match.selectedOpponentDiscardIds
                 match.setSelectedOpponentDiscardIds([])
-                match.runAction(
-                  (current) =>
-                    applyGameCommand(current, {
-                      kind: 'resolve-opponent-hand-discard',
-                      playerId: match.viewerPlayerId,
-                      cardIds: ids,
-                    }),
+                match.dispatch(
+                  {
+                    kind: 'resolve-opponent-hand-discard',
+                    playerId: match.viewerPlayerId,
+                    cardIds: ids,
+                  },
                   `已棄置 ${ids.length} 張手牌。`,
                 )
               }}
@@ -177,13 +175,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               max={drawUpTo.max}
               deckSize={match.game.players[match.viewerPlayerId].deck.length}
               onConfirm={(drawCount) => {
-                match.runAction(
-                  (current) =>
-                    applyGameCommand(current, {
-                      kind: 'resolve-draw-up-to',
-                      playerId: match.viewerPlayerId,
-                      drawCount,
-                    }),
+                match.dispatch(
+                  {
+                    kind: 'resolve-draw-up-to',
+                    playerId: match.viewerPlayerId,
+                    drawCount,
+                  },
                   drawCount === 0
                     ? '已選擇不抽牌。'
                     : `已從牌庫抽取 ${drawCount} 張牌。`,
@@ -220,13 +217,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                   type="button"
                   className="modal-button"
                   onClick={() => {
-                    match.runAction(
-                      (current) =>
-                        applyGameCommand(current, {
-                          kind: 'resolve-stage-trigger',
-                          playerId: match.viewerPlayerId,
-                          action: 'skip',
-                        }),
+                    match.dispatch(
+                      {
+                        kind: 'resolve-stage-trigger',
+                        playerId: match.viewerPlayerId,
+                        action: 'skip',
+                      },
                       '已略過場景效果。',
                     )
                   }}
@@ -244,13 +240,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                     ).length === 0
                   }
                   onClick={() => {
-                    match.runAction(
-                      (current) =>
-                        applyGameCommand(current, {
-                          kind: 'resolve-stage-trigger',
-                          playerId: match.viewerPlayerId,
-                          action: 'activate',
-                        }),
+                    match.dispatch(
+                      {
+                        kind: 'resolve-stage-trigger',
+                        playerId: match.viewerPlayerId,
+                        action: 'activate',
+                      },
                       '已發動場景效果抽 1 張牌。',
                     )
                   }}
@@ -278,24 +273,22 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               match.game.pendingRefresh
                 ? undefined
                 : () =>
-                    match.runAction(
-                      (current) =>
-                        applyGameCommand(current, {
-                          kind: 'skip-replacement',
-                          playerId: match.pendingPlayer!.id,
-                        }),
+                    match.dispatch(
+                      {
+                        kind: 'skip-replacement',
+                        playerId: match.pendingPlayer!.id,
+                      },
                       '已選擇不補餅乾。',
                     )
             }
             onSelect={(instanceId) => {
               if (match.game.pendingRefresh) {
-                match.runAction(
-                  (current) =>
-                    applyGameCommand(current, {
-                      kind: 'refresh-deck',
-                      playerId: match.pendingPlayer!.id,
-                      cookieInstanceId: instanceId,
-                    }),
+                match.dispatch(
+                  {
+                    kind: 'refresh-deck',
+                    playerId: match.pendingPlayer!.id,
+                    cookieInstanceId: instanceId,
+                  },
                   '牌庫 Refresh 已完成。',
                   (nextGame) => {
                     const onPlay = nextGame.pendingOnPlay
@@ -318,13 +311,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                   },
                 )
               } else {
-                match.runAction(
-                  (current) =>
-                    applyGameCommand(current, {
-                      kind: 'replace-cookie',
-                      playerId: match.pendingPlayer!.id,
-                      instanceId,
-                    }),
+                match.dispatch(
+                  {
+                    kind: 'replace-cookie',
+                    playerId: match.pendingPlayer!.id,
+                    instanceId,
+                  },
                   '已補充新的戰鬥區餅乾。',
                   (nextGame) => {
                     if (nextGame.pendingRefresh) return
@@ -356,13 +348,12 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
         <EffectOrderModal
           items={pendingEffectOrder.items}
           onConfirm={(orderedIds) => {
-            match.runAction(
-              (current) =>
-                applyGameCommand(current, {
-                  kind: 'resolve-effect-order',
-                  playerId: match.viewerPlayerId,
-                  orderedIds,
-                }),
+            match.dispatch(
+              {
+                kind: 'resolve-effect-order',
+                playerId: match.viewerPlayerId,
+                orderedIds,
+              },
               '已決定同時觸發效果的處理順序。',
             )
           }}
@@ -380,27 +371,25 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           supportCandidates={optionalCostAttackSupportCandidates}
           opponentBattleCards={opponentBattleCards}
           onSkip={() => {
-            match.runAction(
-              (current) =>
-                applyGameCommand(current, {
-                  kind: 'resolve-optional-cost-attack',
-                  playerId: match.viewerPlayerId,
-                  action: 'skip',
-                }),
+            match.dispatch(
+              {
+                kind: 'resolve-optional-cost-attack',
+                playerId: match.viewerPlayerId,
+                action: 'skip',
+              },
               '已略過可選代價攻擊效果。',
             )
           }}
           onPay={(discardIds, targetId, paymentIds) => {
-            match.runAction(
-              (current) =>
-                applyGameCommand(current, {
-                  kind: 'resolve-optional-cost-attack',
-                  playerId: match.viewerPlayerId,
-                  action: 'pay',
-                  discardCardIds: discardIds,
-                  targetIds: targetId ? [targetId] : [],
-                  paymentIds,
-                }),
+            match.dispatch(
+              {
+                kind: 'resolve-optional-cost-attack',
+                playerId: match.viewerPlayerId,
+                action: 'pay',
+                discardCardIds: discardIds,
+                targetIds: targetId ? [targetId] : [],
+                paymentIds,
+              },
               '已支付可選代價攻擊效果。',
             )
           }}
@@ -415,14 +404,13 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           pickCount={pendingInspect.pickCount}
           filterColor={pendingInspect.filterColor}
           onConfirm={(pickedId, restOrder) => {
-            match.runAction(
-              (current) =>
-                applyGameCommand(current, {
-                  kind: 'resolve-inspect-deck',
-                  playerId: match.viewerPlayerId,
-                  pickedCardId: pickedId,
-                  restOrder,
-                }),
+            match.dispatch(
+              {
+                kind: 'resolve-inspect-deck',
+                playerId: match.viewerPlayerId,
+                pickedCardId: pickedId,
+                restOrder,
+              },
               pickedId !== null
                 ? `已選擇卡牌加入手牌，其餘放回牌庫底。`
                 : `沒有符合顏色的卡牌，全部放回牌庫底。`,
