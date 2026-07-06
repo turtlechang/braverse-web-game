@@ -122,103 +122,14 @@ npm run cards:import:purple-sample
 ```
 
 `cards:import:sample` 目前預設匯入綠色起始牌組；紅色、黃色、綠色、藍色與紫色也可使用明確腳本重新產生。
-# 2026-06-30 BS1 Phase 1/2 update
 
-- 已完成 Brave Beginning BS1 Phase 1/2：`data/cards/official-brave-beginning-bs1.en.json` 建立 adapter 盤點測試，覆蓋 99 筆資料、78 個 base card number、cookie/flip/item/trap/stage 類型分布。
-- BS1 Phase 2 先支援可映射到既有規則引擎的效果文字：棄手牌代價傷害、FLIP 傷害、`return-to-hand`、faint 後 `break-to-trash`、支援區送棄牌區代價、`deck-to-support`、`set-active` 與 `When your turn ends` endPhase 判定；變體卡號如 `BS1-002@1` 會用 `baseCardNumber` 套用共用轉接。
-- 目前共有 692 項單元測試通過。BS1 Phase 3/4/5 已補上攻擊後續效果、非餅乾卡費用與 pending flow 基礎：`damage-all`、`damage-by-break-count`、`modify-attack-by-break-count`、`discard-hand`、`redirect-attack`、`place-source-to-support`、HP 送垃圾桶費用、支援區回手費用，以及「本回合支援區減少」狀態追蹤。
+## 📝 更新日誌
 
-# 2026-07-01 BS1 non-cookie effect verification
-
-- 已再次確認並實作 BS1 物品卡、陷阱卡、場景卡：BS1-022/023/048/049/074/075、BS1-024/025/050/051/076/077、BS1-026/052/078 均有 adapter coverage；新增 `src/game/effects-bs1-non-cookie.test.ts` 驗證支援區回手費用、來源物品進支援區、BS1-078 支援區減少條件與 BS1-050 redirect 陷阱。
-- `CardAbility.cost` 向後相容舊 EnergyCost 形狀，同時支援 AbilityCost 的非能量費用；UI pending flow 會把物品／場景的棄手牌、支援區費用與 HP 費用送入規則層。
-- 已執行 `npm test`、`npm run lint`、`npm run build`；build 仍只有 Vite chunk size 警告。
-
-# 2026-07-01 BS1 after-damage verification
-
-- 已完成 BS1-006 Mala Sauce Cookie 的 after-damage 流程：新增 `src/game/afterDamage.ts` 收集受傷後效果，戰鬥傷害與 `executeCardEffect` 的效果傷害都會在來源餅乾仍留在戰鬥區時建立 pending after-damage effect。
-- `resolveNextAfterDamageEffect`、typed `GameCommand/PendingDecision`、AI pending handler、`useMatchController` 與 `usePendingEffect` 已接入 after-damage 目標選擇；once-per-turn 使用紀錄會在效果收集或結算時登記，避免同一場上實體重複觸發。
-- 新增 `src/game/effects-bs1-after-damage.test.ts` 覆蓋戰鬥傷害、效果傷害、昏厥不觸發、once-per-turn 登記與官方文字 `afterDamage` 解析；已執行 `npm test`、`npm run lint`、`npm run build`，目前 692 項單元測試通過，build 仍只有 Vite chunk size 警告。
-
-# 2026-07-01 attack-effect control verification
-
-- 修正 `getActingPlayerId` 在 `pendingBattle.stage === "attack-effect"` 時改回傳攻擊方，避免 AI 攻擊後續效果被錯誤指派給防守方，造成前端停在無法操作的 AI 主要階段。
-- 新增 AI 回歸測試確認 AI 作為攻擊方時會結算 attack-effect，並新增 `usePendingEffect` hook 測試確認玩家確認需棄手牌的傷害技能後會清除效果面板並排入對手補位。
-
-# 2026-07-01 BS1/BS2 red card skills/effects implementation
-
-- 已完成 BS1/BS2 系列所有紅色卡牌的技能與攻擊後效果實作：
-  - BS1-001 Goblin Cookie: OnPlay 棄 1 張手牌，選擇對手 1 隻餅乾造成 1 點傷害
-  - BS1-003 Dark Choco Cookie: Activate Once per turn 支付 {R}，棄 1 張手牌，選擇對手 1 隻餅乾造成 1 點傷害
-  - BS1-004 Lilac Cookie: Activate 支付 {R}{R}，將此餅乾回手
-  - BS1-005 Roll Cake Cookie: 攻擊後效果選擇對手 1 隻餅乾造成 1 點傷害（已有）
-  - BS1-006 Mala Sauce Cookie: after-damage 效果（已有）
-  - BS1-008 Pomegranate Cookie: Activate Once per turn 支付 {R}，選擇己方 1 隻餅乾，本回合 +1 攻擊傷害
-  - BS1-012 Wildberry Cookie: 被動效果若休息區有 LV.9，+2 攻擊傷害
-  - BS1-013 GingerBrave: 攻擊後效果棄 1 張手牌（已有）
-  - BS1-014 GingerBrave: Activate Once per turn 支付 {R}{R}，本回合 +1 攻擊傷害
-  - BS1-016 Choco Ball Cookie: When Faint 若手牌 ≤ 4 張，選擇對手 1 隻餅乾造成 1 點傷害
-  - BS1-017 Croissant Cookie: OnPlay 支付 {R}{R}，選擇己方 1 隻餅乾，本回合 +2 攻擊傷害
-  - BS2-002 Macaron Cookie: OnPlay 支付 {R}，將對手場景卡送入棄牌區（stageOnly 限制）
-  - BS2-003 Rebel Cookie: OnPlay 支付 {R}{R}，選擇對手 0～1 隻餅乾造成 2 點傷害
-  - BS2-004 Cherry Cookie: 攻擊後效果若對手有 LV.1 餅乾，造成 3 點傷害（條件觸發）
-  - BS2-006 Prickly Cacti Gloves: ITEM 支付 {R}{R}，選擇對手 0～1 隻餅乾造成 2 點傷害，再選擇己方 1 隻餅乾將 2 張 HP 卡送入棄牌區（hp-to-trash 非傷害，不觸發 FLIP/afterDamage，HP 歸 0 進入休息區）
-  - BS2-007 Prickly Cactus Bat: TRAP 支付 {R} 並棄 1 張紅色手牌，選擇對手 LV.1 餅乾造成 2 點傷害（discardHandColor 限制紅色手牌）
-- 新增 `FieldToTrashEffect.stageOnly` 選項，限制只能選擇場景卡；新增 `OpponentHasCookieWithLevelCondition` 條件類型。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 692 項單元測試通過，build 仍只有 Vite chunk size 警告。
-
-# 2026-07-01 BS1/BS2 adapter UI/AI/attack-effect integration
-
-- 修正 UI `usePendingEffect.ts` 處理 `stageOnly`，場景卡現在會正確加入可選目標。
-- 修正 AI `ai.ts` 的 `field-to-trash` 目標選擇，`stageOnly` 時只選場景卡，不再先挑戰鬥區餅乾。
-- 修正 `battle.ts` 的 attack-effect 流程，條件不成立時自然跳過效果而非丟錯。
-- 新增 `battle-attack-effect.test.ts` 回歸測試確認條件觸發效果在條件不成立時正確跳過。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 692 項單元測試通過。
-
-# 2026-07-02 BS2 red non-cookie effects implementation
-
-- 已完成 BS2-006 Prickly Cacti Gloves（ITEM）與 BS2-007 Prickly Cactus Bat（TRAP）的效果實作。
-- BS2-006：支付 {R}{R}，先對對手最多 1 隻餅乾造成 2 點傷害，再選擇己方 1 隻餅乾將 2 張 HP 卡送入棄牌區（`hp-to-trash` 效果）。HP-to-trash 非傷害，不觸發 FLIP/afterDamage；HP 歸 0 時餅乾進入休息區並沿用離場/補位/勝負流程。
-- BS2-007：支付 {R} 並棄 1 張紅色手牌（`discardHandColor: 'red'`），對對手 LV.1 餅乾造成 2 點傷害。規則層與 UI 均會拒絕非紅色手牌支付。
-- 新增 `HpToTrashEffect`（`kind: 'hp-to-trash'`）與 `AbilityCost.discardHandColor`，分別處理 HP-to-trash 效果與手牌顏色限制。
-- `parseTarget` 正規表達式擴充支援 `LV.X` 級等篩選（如 `your opponent's LV.1 Cookies`）。
-- 新增 adapter tests 與規則層 tests：BS2-006/007 轉換、hp-to-trash 移除 HP 卡、HP 歸 0 進休息區、紅色手牌驗證與 getTrapCandidates 顏色過濾。
-- 修正 UI `useMatchController.ts` 的 `selectedTrapDiscardCandidates`，依陷阱的 `discardHandColor` 過濾手牌候選，僅顯示符合顏色限制的卡牌，避免玩家選到規則層會拒絕的手牌。
-- 已執行 `npm test`、`npm run lint`、`npm run build`，目前 692 項單元測試通過，build 仍只有 Vite chunk size 警告。
-
-# 2026-07-04 Phase 4b：PlayerView 視角過濾器 + Lv.3 評估式 AI
-
-- **PlayerView 視角過濾器**：新增 `src/game/player-view.ts` 的 `createPlayerView(state, playerId)`，把 `GameState` 過濾成單一玩家可見資訊——對手手牌只留張數、雙方牌庫只留張數、雙方戰鬥區餅乾的 HP 卡只留張數（連持有者自己都看不到內容），支援區／Break 區／棄牌區／場景等公開資訊原樣保留。用型別而非紀律保證 AI 不作弊，未來線上對戰的 state snapshot 可直接重用。
-- **Lv.3 評估式 AI**：新增 `src/game/ai/evaluated-turn-handler.ts`。支援／主要階段對 `getLegalTurnCommands` 枚舉的候選指令逐一套用後以 `evaluatePlayerView`（只吃 `PlayerView`）打分，另枚舉技能與物品候選，取最高分執行；攻擊指令因套用後戰局停在待回應階段，改用「預期傷害／斬殺」期望值加成計分而非套用後評分。非自由選擇的局面（Refresh、補位、OnPlay、戰鬥回應、非行動回合）委派給 Lv.2 的 handler，不重複實作。
-- **等級分派擴充**：`AiLevel` 由 `1 | 2` 擴充為 `1 | 2 | 3`；`takeAiStep`／`simulateAiMatch` 對 Lv.3 的分派與既有 Lv.1/Lv.2 路徑並存，不影響預設行為。
-- **主選單**：AI 等級下拉新增「Lv.3 評估戰局」選項。
-- **測試**：新增 `player-view.test.ts`（3 項，驗證隱藏資訊已過濾、公開資訊保留）、`ai-level3.test.ts`（6 項，含評分方向正確性、結束對局勝負極值、Lv.3 對局可正常結束、**Lv.3 對 Lv.1 的 20 場種子模擬勝率 ≥ 65%**、同局面決策可重現）、MainMenu 新增 Lv.3 選項測試（1 項）；共 742 項單元測試通過。
-- `docs/ai-levels.md` 更新為 Lv.1–3 已實作、Lv.4–5 設計稿，補上 Lv.3 實作細節與測試策略。
-- 已執行 `npm test`（742 項）、`npm run lint`、`npm run build`。
-
-# 2026-07-04 Phase 4：AI 等級分級第一版（Lv.1／Lv.2）
-
-- **合法動作枚舉**：新增 `src/game/legal-actions.ts` 的 `getLegalTurnCommands(state, playerId)`，以 `PlayerActionCommand[]` 回傳目前保證合法的動作（Refresh、補位／略過、略過 OnPlay、支援放置、登場、場景放置、攻擊組合含自動能量支付、階段推進）；測試逐一驗證枚舉指令都能被 `applyGameCommand` 接受。
-- **Lv.1 隨機 AI**：`src/game/ai/random-turn-handler.ts` 以 `createSeededRandom(seed ^ 局面熵)` 從合法指令均勻挑選並經指令層執行——Lv.1 是 `applyGameCommand` 的第一個 AI 消費者，行動完整寫入 `commandLog`。不主動使用技能／物品／OnPlay；待處理決策與戰鬥回應沿用共用 handler。
-- **等級分派**：`takeAiStep(state, playerId, { level, seed })` 支援 Lv.1／Lv.2（預設 Lv.2，行為與既有完全一致）；`simulateAiMatch` 第三參數可對雙方分別指定等級；每個 `AiDecision` 附結構化 `reason`（等級、考慮指令數、選中指令種類）供除錯。
-- **主選單 AI 對手選項**：可指定 AI 牌組（隨機／五色起始）與等級（Lv.1 隨機出招／Lv.2 基礎戰術），`handleDeckSelection` 接受指定 AI 牌組並更新開局訊息；`useAiTurn` 依所選等級執行。
-- **測試**：`legal-actions.test.ts`（7 項）、`ai-level1.test.ts`（5 項，含相同種子決策序列重現、Lv.1 對 Lv.2 與 Lv.1 對 Lv.1 完賽）、MainMenu AI 選項元件測試（2 項）；共 732 項單元測試通過。
-- 新增 `docs/ai-levels.md`：Lv.1–5 設計、資訊邊界（防作弊）、測試策略與不建議先做項目；Lv.3 前置為 `PlayerView` 視角過濾器。
-- 已執行 `npm test`（732 項）、`npm run lint`、`npm run build`。
-
-# 2026-07-04 Phase 1/3 收尾：指令層全覆蓋 + 牌組管理補完
-
-- **Phase 3 牌組管理**：`custom-deck.ts` 儲存格式加入 `version: 1` 欄位（`parseCustomDeckStorage` 自動遷移舊陣列格式、過濾損壞紀錄）；新增 `deleteCustomDeck`、`duplicateCustomDeck`、`createCustomDeckId`。主選單牌組卡片新增「複製」與「刪除」（含 confirm）按鈕；「需調整」標籤 hover 顯示完整不合法原因。
-- **牌組編輯器操作簡化**：卡池單擊直接 +1（原需點卡→tooltip→按加號三步）；新增張數徽章與 info 鈕（開啟原 tooltip 詳細/加減控制）；達 4 張上限的卡不再從卡池消失，改為禁用樣式。
-- **Phase 1 指令層全覆蓋**：`GameCommand` 由 8 種決策指令擴充為 8 決策 + 24 玩家動作指令（開局調度／選起始餅乾、advance-phase、place-support、deploy-cookie、attack、activate-skill、play-item、play-stage、activate-stage、skip-on-play、replace-cookie、skip-replacement、refresh-deck、play-trap、skip-trap、play-blocker、resolve-flip、resolve-attack-effect、resolve-next-damage、resolve-battle）。內部僅委派既有規則函式，規則實作零修改；`applyGameCommand` 增加行動者驗證（回合玩家／補位玩家／受傷方）與「有待處理決策時拒絕動作指令」守門。
-- **指令紀錄與重播**：`GameState.commandLog` 記錄每筆指令（流水號、回合、階段、玩家、payload）；新增 `src/game/replay.ts`（`replayCommands`／`replayCommandLog`／`commandFromLogEntry`）。`ApplyGameCommandOptions.shuffle` 支援注入種子洗牌以確保調度／Refresh 重播一致。
-- **黃金重播測試**：`src/game/replay.test.ts` 以固定種子 + 指令序列驅動含調度、支援、登場、攻擊的三回合腳本對局，驗證重播終局 JSON 完全一致；`commands-actions.test.ts` 覆蓋行動者驗證、階段限制、決策阻擋與種子調度重現。
-- `docs/game-commands.md` 已從 pilot 說明改寫為全覆蓋指令層文件（含 24 種動作指令對照表與驗證順序）。
-- 已執行 `npm test`（718 項，新增 26 項）、`npm run lint`、`npm run build`；build 仍只有 Vite chunk size 警告。UI 遷移指令層與 AI 分級列入下一步計畫。
-
-# 2026-07-03 Playwright support card click fix
-
-- 修正支援卡維持扇形重疊視覺（`position: absolute` + `--support-index`），Playwright 支援卡點擊改用 `page.evaluate(el => el.click())` 直接在目標元素觸發，跳過座標重疊判定。
-- 移除 `ai-browser-validation.mjs` 中 7 處 `dispatchEvent` 繞行，改用 `page.evaluate(el => el.click())` 直接在目標元素觸發點擊。
-- 修正 `blue-card-validation.mjs` ST4-013 HP 斷言：從 `HP 2/` 放寬為 `2/`，符合 badge 實際渲染格式（Heart SVG 為 `aria-hidden`，不含 "HP" 文字前綴）。
-- 已執行 `npm test`（692 tests）、`npm run lint`、`npm run build`、`npm run test:ai:browser`（20 seeds, 0 stuck）、`npm run test:blue:browser`（1366×768 + 900×506 全通過）。
+| 日期 | 概要 |
+|---|---|
+| 2026-07-04 | 🧠 AI 分級 — 新增 Lv.1/Lv.2、`PlayerView` 視角過濾器與 Lv.3 評估式 AI |
+| 2026-07-04 | 🔗 指令層整合 — 擴充 `GameCommand`、加入 `commandLog` / replay，並補完牌組管理 |
+| 2026-07-03 | 🖱️ Playwright 驗證 — 修正支援卡點擊、藍牌驗證斷言與瀏覽器測試流程 |
+| 2026-07-02 | 🟥 BS2 紅牌 — 完成 BS2-006/007 非餅乾效果、HP-to-trash 與紅色手牌代價 |
+| 2026-07-01 | 🧩 BS1/BS2 效果 — 補齊紅色卡牌、非餅乾效果、after-damage 與 attack-effect 控制權 |
+| 2026-06-30 | 🃏 BS1 匯入 — 建立 Brave Beginning Phase 1/2 轉接與測試基線 |

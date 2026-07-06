@@ -59,5 +59,6 @@ AI、完整對戰、付款或 UI 互動改變時，先建置，再執行 Playwri
 1. 檢查完整 diff 與 `git status --short`。
 2. 排除 `node_modules/`、`dist/`、`test-results/`、密鑰與無關檔案。
 3. 功能完成或準備 commit 時，更新 `README.md` 的「開發背景」、「目前進度」與「下一步計畫」。
-4. 測試數量或瀏覽器驗證範圍改變時，同步更新 `AGENTS.md` 與 `README.md`。
-5. 僅在使用者要求時建立 commit；使用英文 commit 訊息，並只納入本次任務檔案。
+4. `README.md` 的「更新日誌」固定使用「日期 / 概要」Markdown 表格；同日期可合併為一列，概要保持精簡，不寫詳細實作清單。
+5. 測試數量或瀏覽器驗證範圍改變時，同步更新 `AGENTS.md` 與 `README.md`。
+6. 僅在使用者要求時建立 commit；使用英文 commit 訊息，並只納入本次任務檔案。
