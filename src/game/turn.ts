@@ -27,6 +27,10 @@ const assertPlaying = (state: GameState) => {
     throw new GameRuleError('必須先完成目前的戰鬥。')
   }
 
+  if (state.pendingAbilityEffect) {
+    throw new GameRuleError('必須先完成目前的技能/道具/場景效果。')
+  }
+
   if (state.pendingOpponentHandDiscard) {
     throw new GameRuleError('必須先處理對手棄牌。')
   }

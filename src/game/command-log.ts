@@ -35,16 +35,19 @@ export const describeCommand = (
 
   switch (command.kind) {
     case 'attack':
+    case 'declare-attack':
       return `${actor} 使用「${findCardName(state, command.attackerInstanceId)}」攻擊「${findCardName(state, command.targetInstanceId)}」`
     case 'deploy-cookie':
       return `${actor} 部署了「${findCardName(state, command.instanceId)}」`
     case 'place-support':
       return `${actor} 放置了支援卡「${findCardName(state, command.instanceId)}」`
     case 'play-item':
+    case 'begin-play-item':
       return `${actor} 使用了道具卡「${findCardName(state, command.instanceId)}」`
     case 'play-stage':
       return `${actor} 打出了場景卡「${findCardName(state, command.instanceId)}」`
     case 'activate-stage':
+    case 'begin-activate-stage':
       return `${actor} 發動了場景效果`
     case 'play-trap':
       return `${actor} 設置了陷阱卡「${findCardName(state, command.trapInstanceId)}」`
@@ -53,7 +56,10 @@ export const describeCommand = (
     case 'play-blocker':
       return `${actor} 使用了阻擋卡「${findCardName(state, command.sourceInstanceId)}」`
     case 'activate-skill':
+    case 'begin-activate-skill':
       return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的技能`
+    case 'resolve-ability-effect':
+      return `${actor} 決定了效果的目標`
     case 'skip-on-play':
       return `${actor} 選擇不發動「${findCardName(state, command.sourceInstanceId)}」的登場效果`
     case 'replace-cookie':

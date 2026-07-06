@@ -1,5 +1,6 @@
 import { GameRuleError } from './errors'
 import {
+  beginAttack,
   getAfterDamageEffectMinMax,
   getFaintEffectMinMax,
   playBlocker,
@@ -252,6 +253,18 @@ export interface AttackCommand {
   supportPaymentIds: string[]
 }
 
+/**
+ * 只執行 beginAttack（開戰不自動結算），供真人互動流程使用。
+ * `attack` 指令會自動 resolveBattleAutomatically，只適合 AI。
+ */
+export interface DeclareAttackCommand {
+  kind: 'declare-attack'
+  playerId: PlayerId
+  attackerInstanceId: string
+  targetInstanceId: string
+  supportPaymentIds: string[]
+}
+
 export interface ActivateSkillCommand {
   kind: 'activate-skill'
   playerId: PlayerId
@@ -262,6 +275,21 @@ export interface ActivateSkillCommand {
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
   effectTargets?: string[][]
+}
+
+/**
+ * 只支付代價、不執行效果，改為設定 pendingAbilityEffect 逐步等待目標選擇。
+ * 供真人互動流程使用（支援中途暫停恢復）；`activate-skill` 維持批次版本供 AI 使用。
+ */
+export interface BeginActivateSkillCommand {
+  kind: 'begin-activate-skill'
+  playerId: PlayerId
+  sourceInstanceId: string
+  trigger: 'activate' | 'on-play'
+  paymentIds: string[]
+  costSupportToTrashIds?: string[]
+  discardHandIds?: string[]
+  trashBattleCookieIds?: string[]
 }
 
 export interface SkipOnPlayCommand {
@@ -282,6 +310,17 @@ export interface PlayItemCommand {
   effectTargets?: string[][]
 }
 
+export interface BeginPlayItemCommand {
+  kind: 'begin-play-item'
+  playerId: PlayerId
+  instanceId: string
+  paymentIds: string[]
+  supportToTrashIds?: string[]
+  supportToHandIds?: string[]
+  discardHandIds?: string[]
+  hpToTrashTargetIds?: string[]
+}
+
 export interface PlayStageCommand {
   kind: 'play-stage'
   playerId: PlayerId
@@ -298,6 +337,26 @@ export interface ActivateStageCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   effectTargets?: string[][]
+}
+
+export interface BeginActivateStageCommand {
+  kind: 'begin-activate-stage'
+  playerId: PlayerId
+  paymentIds: string[]
+  supportToTrashIds?: string[]
+  supportToHandIds?: string[]
+  discardHandIds?: string[]
+  hpToTrashTargetIds?: string[]
+}
+
+/**
+ * 逐一解析 pendingAbilityEffect 目前的效果目標；中途若出現其他待處理決策
+ * （pendingRefresh/pendingOnPlay 等）會保留 pendingAbilityEffect 供之後恢復。
+ */
+export interface ResolveAbilityEffectCommand {
+  kind: 'resolve-ability-effect'
+  playerId: PlayerId
+  targetIds: string[]
 }
 
 export interface ReplaceCookieCommand {
@@ -373,11 +432,16 @@ export type PlayerActionCommand =
   | PlaceSupportCommand
   | DeployCookieCommand
   | AttackCommand
+  | DeclareAttackCommand
   | ActivateSkillCommand
+  | BeginActivateSkillCommand
   | SkipOnPlayCommand
   | PlayItemCommand
+  | BeginPlayItemCommand
   | PlayStageCommand
   | ActivateStageCommand
+  | BeginActivateStageCommand
+  | ResolveAbilityEffectCommand
   | ReplaceCookieCommand
   | SkipReplacementCommand
   | RefreshDeckCommand
@@ -808,6 +872,18 @@ const executeAbilityEffects = (
   return nextState
 }
 
+/**
+ * 與互動精靈（usePendingEffect.ts 的 beginCookieSkill/beginCardAbility）語意一致：
+ * 條件只在啟動當下過濾一次，之後逐步解析不再重新檢查（效果順序中若前一步改變盤面，
+ * 後續步驟仍照原本判定結果執行，不會臨時跳過或補上）。
+ */
+const filterActiveEffects = (
+  state: GameState,
+  context: EffectContext,
+  effects: readonly CardEffect[],
+): CardEffect[] =>
+  effects.filter((effect) => isEffectConditionMet(state, context, effect))
+
 const applyPlayerActionCommand = (
   state: GameState,
   command: PlayerActionCommand,
@@ -843,6 +919,14 @@ const applyPlayerActionCommand = (
         command.targetInstanceId,
         command.supportPaymentIds,
       )
+    case 'declare-attack':
+      requireActivePlayer(state, command.playerId)
+      return beginAttack(
+        state,
+        command.attackerInstanceId,
+        command.targetInstanceId,
+        command.supportPaymentIds,
+      )
     case 'activate-skill': {
       const source = state.players[command.playerId].battleArea.find(
         (cookie) => cookie.card.instanceId === command.sourceInstanceId,
@@ -870,6 +954,44 @@ const applyPlayerActionCommand = (
         command.effectTargets,
         options.shuffle,
       )
+    }
+    case 'begin-activate-skill': {
+      const source = state.players[command.playerId].battleArea.find(
+        (cookie) => cookie.card.instanceId === command.sourceInstanceId,
+      )
+      const skill = source?.card.skill
+      const activated = activateCookieSkill(
+        state,
+        command.playerId,
+        command.sourceInstanceId,
+        command.trigger,
+        command.paymentIds,
+        command.costSupportToTrashIds ?? [],
+        command.discardHandIds ?? [],
+        command.trashBattleCookieIds ?? [],
+      )
+      const context: EffectContext = {
+        sourcePlayerId: command.playerId,
+        sourceInstanceId: command.sourceInstanceId,
+        sourceCardName: source?.card.name,
+      }
+      const effects = filterActiveEffects(activated, context, skill?.effects ?? [])
+      if (activated.status !== 'playing' || effects.length === 0) {
+        return activated
+      }
+      return {
+        ...activated,
+        pendingAbilityEffect: {
+          playerId: command.playerId,
+          sourcePlayerId: command.playerId,
+          sourceInstanceId: command.sourceInstanceId,
+          sourceCardName: source?.card.name,
+          sourceKind: 'skill',
+          trigger: command.trigger,
+          effects,
+          effectIndex: 0,
+        },
+      }
     }
     case 'skip-on-play':
       return skipCookieOnPlay(state, command.playerId, command.sourceInstanceId)
@@ -899,6 +1021,42 @@ const applyPlayerActionCommand = (
         command.effectTargets,
         options.shuffle,
       )
+    }
+    case 'begin-play-item': {
+      const card = state.players[command.playerId].hand.find(
+        (handCard) => handCard.instanceId === command.instanceId,
+      )
+      const played = playItem(
+        state,
+        command.playerId,
+        command.instanceId,
+        command.paymentIds,
+        command.supportToTrashIds ?? [],
+        command.supportToHandIds ?? [],
+        command.discardHandIds ?? [],
+        command.hpToTrashTargetIds ?? [],
+      )
+      const context: EffectContext = {
+        sourcePlayerId: command.playerId,
+        sourceInstanceId: command.instanceId,
+        sourceCardName: card?.name,
+      }
+      const effects = filterActiveEffects(played, context, card?.item?.effects ?? [])
+      if (played.status !== 'playing' || effects.length === 0) {
+        return played
+      }
+      return {
+        ...played,
+        pendingAbilityEffect: {
+          playerId: command.playerId,
+          sourcePlayerId: command.playerId,
+          sourceInstanceId: command.instanceId,
+          sourceCardName: card?.name,
+          sourceKind: 'item',
+          effects,
+          effectIndex: 0,
+        },
+      }
     }
     case 'play-stage':
       return playStage(
@@ -930,6 +1088,81 @@ const applyPlayerActionCommand = (
         command.effectTargets,
         options.shuffle,
       )
+    }
+    case 'begin-activate-stage': {
+      const stage = state.players[command.playerId].stage
+      const activated = activateStage(
+        state,
+        command.playerId,
+        command.paymentIds,
+        command.supportToTrashIds ?? [],
+        command.supportToHandIds ?? [],
+        command.discardHandIds ?? [],
+        command.hpToTrashTargetIds ?? [],
+      )
+      const context: EffectContext = {
+        sourcePlayerId: command.playerId,
+        sourceInstanceId: stage?.card.instanceId ?? '',
+        sourceCardName: stage?.card.name,
+      }
+      const effects = filterActiveEffects(
+        activated,
+        context,
+        stage?.card.stageAbility?.effects ?? [],
+      )
+      if (activated.status !== 'playing' || effects.length === 0) {
+        return activated
+      }
+      return {
+        ...activated,
+        pendingAbilityEffect: {
+          playerId: command.playerId,
+          sourcePlayerId: command.playerId,
+          sourceInstanceId: stage?.card.instanceId ?? '',
+          sourceCardName: stage?.card.name,
+          sourceKind: 'stage',
+          effects,
+          effectIndex: 0,
+        },
+      }
+    }
+    case 'resolve-ability-effect': {
+      const pending = state.pendingAbilityEffect
+      if (!pending) {
+        throw new GameRuleError('目前沒有待處理的效果。')
+      }
+      if (pending.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要選擇效果目標的玩家。')
+      }
+      if (
+        state.pendingRefresh ||
+        state.pendingOnPlay ||
+        state.pendingReplacement ||
+        state.pendingBattle
+      ) {
+        throw new GameRuleError('必須先處理其他待處理的決策。')
+      }
+      const context: EffectContext = {
+        sourcePlayerId: pending.sourcePlayerId,
+        sourceInstanceId: pending.sourceInstanceId,
+        sourceCardName: pending.sourceCardName,
+      }
+      const effect = pending.effects[pending.effectIndex]
+      const resolved = executeCardEffect(
+        state,
+        context,
+        effect,
+        command.targetIds,
+        options.shuffle,
+      )
+      const nextIndex = pending.effectIndex + 1
+      if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
+        return { ...resolved, pendingAbilityEffect: undefined }
+      }
+      return {
+        ...resolved,
+        pendingAbilityEffect: { ...pending, effectIndex: nextIndex },
+      }
     }
     case 'replace-cookie': {
       const task = getCurrentReplacementTask(state)

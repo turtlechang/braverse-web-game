@@ -42,5 +42,7 @@ export const getActingPlayerId = (state: GameState): PlayerId => {
     return battle.defenderPlayerId
   }
 
+  if (state.pendingAbilityEffect) return state.pendingAbilityEffect.playerId
+
   return state.activePlayerId
 }
