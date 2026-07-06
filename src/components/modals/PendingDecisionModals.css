@@ -15,6 +15,7 @@
 }
 
 .inspect-deck-modal {
+  position: relative;
   width: min(620px, 100%);
 }
 
@@ -49,6 +50,12 @@
 .inspect-deck-grid > button.is-selected {
   border-color: #fff17c;
   box-shadow: 0 0 0 3px rgba(255, 241, 124, 0.28);
+}
+
+.inspect-deck-grid > button:disabled {
+  opacity: 0.42;
+  cursor: default;
+  filter: grayscale(0.45);
 }
 
 .inspect-deck-grid .card-face {

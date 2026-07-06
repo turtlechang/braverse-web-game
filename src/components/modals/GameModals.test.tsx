@@ -280,6 +280,27 @@ describe('FaintEffectResponseModal', () => {
     await act(() => root.unmount())
   })
 
+  it('does not block board target clicks while choosing faint targets', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={1}
+        maxTargets={1}
+        selectedTargetCount={0}
+        onConfirm={() => undefined}
+      />,
+    ))
+
+    const backdrop = container.querySelector<HTMLElement>('.modal-backdrop')
+    const modal = container.querySelector<HTMLElement>('.faint-response-modal')
+    expect(backdrop?.style.pointerEvents).toBe('none')
+    expect(modal?.style.pointerEvents).toBe('auto')
+
+    await act(() => root.unmount())
+  })
+
   it('minimizes and restores the faint effect prompt', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)

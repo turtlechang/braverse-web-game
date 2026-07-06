@@ -640,6 +640,78 @@ describe('InspectDeckModal', () => {
     container.remove()
   })
 
+  it('returns from a picked card to the card choice', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <InspectDeckModal
+          sourceCardName="檢視餅乾"
+          revealedCards={revealedCards}
+          pickCount={1}
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '牌A')!.click()
+    })
+
+    expect(findButtonByText(container, '確認並放回')!.disabled).toBe(false)
+
+    await act(() => {
+      findButtonByText(container, '返回')!.click()
+    })
+
+    expect(findButtonByText(container, '確認並放回')!.disabled).toBe(true)
+    expect(container.querySelector('.inspect-deck-grid .is-selected')).toBeNull()
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('minimizes and restores the inspect deck prompt', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <InspectDeckModal
+          sourceCardName="Aloe Cookie"
+          revealedCards={revealedCards}
+          pickCount={1}
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '縮小')!.click()
+    })
+
+    expect(container.querySelector('.inspect-deck-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '查看 3 張牌',
+    )
+
+    await act(() => {
+      ;(container.querySelector('.card-reveal-dock') as HTMLButtonElement).click()
+    })
+
+    expect(container.querySelector('.inspect-deck-modal')).not.toBeNull()
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('moveUp and moveDown reorder the remaining cards', async () => {
     const onConfirm = vi.fn()
     const container = document.createElement('div')

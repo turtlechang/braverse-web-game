@@ -835,10 +835,15 @@ export function FaintEffectResponseModal({
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      style={hasTargetChoice ? { pointerEvents: 'none' } : undefined}
+    >
       <section
         className="battle-response-modal faint-response-modal"
         role="alertdialog"
+        style={hasTargetChoice ? { pointerEvents: 'auto' } : undefined}
       >
         <button
           type="button"

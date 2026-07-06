@@ -504,6 +504,7 @@ export function InspectDeckModal({
   filterColor,
   onConfirm,
 }: InspectDeckModalProps) {
+  const [minimized, setMinimized] = useState(false)
   const [pickedId, setPickedId] = useState<string | null>(null)
   const [restOrder, setRestOrder] = useState<string[]>(
     () => revealedCards.map((c) => c.instanceId),
@@ -526,6 +527,11 @@ export function InspectDeckModal({
   const hasNoMatchingColor =
     filterColor != null &&
     revealedCards.every((c) => c.energyColor !== filterColor)
+
+  const resetPick = () => {
+    setPickedId(null)
+    setRestOrder(revealedCards.map((c) => c.instanceId))
+  }
 
   const moveUp = (index: number) => {
     if (index <= 0 || !pickedId) return
@@ -553,12 +559,41 @@ export function InspectDeckModal({
     onConfirm(pickedId, finalRest)
   }
 
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>{sourceCardName}</strong>
+          <small>
+            {pickedId
+              ? '已選 1 張，等待確認'
+              : `查看 ${revealedCards.length} 張牌`}
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
   return (
     <div className="modal-backdrop" role="presentation">
       <section
         className="battle-response-modal inspect-deck-modal"
         role="alertdialog"
       >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小牌庫檢視提示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
         <span>牌庫檢視</span>
         <h2>{sourceCardName}</h2>
         <p>
@@ -627,6 +662,14 @@ export function InspectDeckModal({
           </div>
         )}
         <div className="modal-actions">
+          {pickedId && (
+            <button
+              type="button"
+              onClick={resetPick}
+            >
+              返回
+            </button>
+          )}
           <button
             type="button"
             disabled={!pickedId && !hasNoMatchingColor}

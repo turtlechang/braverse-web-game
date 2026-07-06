@@ -49,9 +49,9 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局使用合法自訂牌組，AI 可隨機選擇五色起始牌組，或指定紅色、黃色、綠色、藍色、紫色起始牌組及第二彈紅色、黃色、豆子、藍色、紫色預設牌組；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
-  - 目前共有 935 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
+  - 目前共有 941 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程；AI 支援階段在有手牌且尚未放支援時會優先填能，並以 Lv.1/Lv.2/Lv.3 與多回合對局回歸測試鎖定。
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
-- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
+- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、牌庫檢視提示框縮小／返回、昏厥目標選擇縮小後點選、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
 - 昏厥效果、`draw-up-to` 抽牌決策與後續棄手牌決策已改用與攻擊宣告回應一致的深色置中提示框與可縮小 dock。BS2-040 Aloe Cookie 的強制昏厥效果以「確認結算」進入檢視牌庫流程，不再呈現略過語意；BS2-049 Salt Crystal Trident 會先在同一套提示框選擇抽牌數，抽牌後再切到棄置手牌選擇 UI。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
@@ -70,7 +70,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已達成：開局牌組選擇與 AI 隨機牌組、猜拳先後攻、玩家活躍／抽牌自動推進、支援放置後自動進主要階段、頂部 HUD、滿版無捲軸桌機畫布、公開卡牌詳情，以及可縮小的 FLIP／物品／陷阱確認式大卡。
 - 已達成：效果決策提示框統一化，Aloe Cookie 昏厥強制效果、BS2-049 抽牌與後續棄手牌選擇皆使用深色置中可縮小 modal，避免淺色浮窗遮擋牌桌與「略過」語意誤導。
 - 已達成：主選單、對戰入口與牌組編輯器整合；玩家自訂牌組需通過 60 張、同卡 4 張、至少 1 張餅乾、FLIP 不超過 16 張檢查後才能開始對戰，AI 牌組在進入對戰前可從五色起始牌組隨機決定，或指定五色起始／第二彈預設牌組。
-- 已達成：新增第二彈 AI 預設牌組（紅色、黃色、豆子、藍色、紫色），共用 BS1/BS2 官方卡池與既有牌組工廠，可從主選單 AI 對手牌組下拉選擇。
+- 已達成：新增第二彈 AI 預設牌組（紅色、黃色、豆子、藍色、紫色），共用 BS1/BS2 官方卡池與既有牌組工廠，可從主選單 AI 對手牌組下拉選擇；牌庫檢視提示框支援縮小／返回，並以瀏覽器流程確認可恢復、選牌、返回重選與確認放回。
 - 已達成：最大化桌面版桌墊聚焦改版，移除固定右側 HUD，採窄型階段列、55/45 場地、資源牌堆浮層、中央操作指引與選取後才顯示的手牌合法動作；窄版同步維持 55/45 比例並調整卡牌排列。
 - 已達成：ST3-002／ST3-005／ST3-015 可從我方支援區直接選擇卡牌作為送入棄牌區的技能代價；同一張支援卡不可同時支付能量與特殊代價。
 - 已達成：ST2-003 Wizard Cookie 在攻擊傷害完成後、替補開始前，可選最多 1 張己方 LV.1 休息區卡牌移至棄牌區；玩家與 AI 均可完成結算。
@@ -81,7 +81,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 待實作：App.tsx（1575 行）容器元件拆分。已分析候選：`BattleScreen`（~1235 行 battle shell）、`FaintEffectModal`、`AfterDamageEffectModal`、`OpponentHandDiscardModal`、`DrawUpToModal`、`StageTriggerModal` 等 inline JSX modal，以及 PlayerBattleRow 的 ~150 行 callback handlers。
 - 待實作：UI 與 AI 逐步改走 `applyGameCommand` 指令層（目前 UI 主要動作與 `usePendingEffect` 多段效果流程仍直接呼叫規則函式），完成後實際對局的 `commandLog` 才是完整重播來源；對局種子統一注入後可支援「複製對局紀錄」回報格式。
 - 已達成：AI 等級分級第一版（Lv.1 隨機／Lv.2 現行啟發式掛名）與主選單 AI 牌組、等級選擇；設計文件見 `docs/ai-levels.md`。
-- 已達成：`PlayerView` 視角過濾器（`src/game/player-view.ts`，對手手牌／雙方牌庫／雙方 HP 卡皆只留張數）與 Lv.3 評估式 AI（`src/game/ai/evaluated-turn-handler.ts`，對候選動作套用 `evaluatePlayerView` 打分取最高分，攻擊採預期傷害加成，其餘強制流程委派 Lv.2）；主選單等級選擇加入 Lv.3。20 場種子模擬中 Lv.3 對 Lv.1 勝率 ≥ 65%。
+- 已達成：`PlayerView` 視角過濾器（`src/game/player-view.ts`，對手手牌／雙方牌庫／雙方 HP 卡皆只留張數）與 Lv.3 評估式 AI（`src/game/ai/evaluated-turn-handler.ts`，對候選動作套用 `evaluatePlayerView` 打分取最高分，攻擊採預期傷害加成，其餘強制流程委派 Lv.2）；主選單等級選擇加入 Lv.3。Lv.1/Lv.2/Lv.3 支援階段皆會在有手牌時優先放支援；新版 Lv.1 基線下，20 場種子模擬中 Lv.3 對 Lv.1 勝率 ≥ 55%。
 - 待實作：Lv.4／Lv.5（回合規劃與對抗性 AI），觀察 Lv.3 上線後的實際對戰體感再決定是否投入；`PlayerView` 未來預計重用於線上對戰 state snapshot。
 - 拖移卡牌暫不實作；未來若加入，拖放只負責輸入，仍須呼叫既有規則 API，且在 pending decision、確認式大卡與 AI 行動期間停用，並保留按鈕與鍵盤操作。
 - 待官方規則確認後才擴充 `CardEffect`；不得將待確認規則寫成已完成項目。
@@ -134,7 +134,7 @@ npm run cards:import:purple-sample
 
 | 日期 | 概要 |
 |---|---|
-| 2026-07-07 | 🃏 AI 預設牌組 — 新增第二彈紅/黃/豆子/藍/紫 AI 牌組選項 |
+| 2026-07-07 | 🃏 AI 預設牌組 — 新增第二彈紅/黃/豆子/藍/紫 AI 牌組選項；補強牌庫檢視縮小／返回與 AI 支援階段填能回歸 |
 | 2026-07-06 | ✅ Phase 5 CI — 修正線上對戰 lint 失敗，維持 test/lint/build 通過 |
 | 2026-07-04 | 🧠 AI 分級 — 新增 Lv.1/Lv.2、`PlayerView` 視角過濾器與 Lv.3 評估式 AI |
 | 2026-07-04 | 🔗 指令層整合 — 擴充 `GameCommand`、加入 `commandLog` / replay，並補完牌組管理 |

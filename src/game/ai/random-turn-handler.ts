@@ -103,6 +103,23 @@ export const handleAiRandomTurnState = (
     }
   }
 
+  const supportCommand = commands.find(
+    (command) => command.kind === 'place-support',
+  )
+  if (state.phase === 'support' && supportCommand) {
+    const nextState = applyGameCommand(state, supportCommand)
+    return {
+      state: nextState,
+      action: commandActionTypes[supportCommand.kind],
+      description: describeCommand(state, playerId, supportCommand),
+      reason: {
+        level: 1,
+        consideredCommands: commands.length,
+        chosenCommandKind: supportCommand.kind,
+      },
+    }
+  }
+
   const index = Math.min(
     Math.floor(random() * commands.length),
     commands.length - 1,

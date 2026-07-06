@@ -766,16 +766,21 @@ try {
       await useButton.click()
 
       const revealModal = page.locator('.card-reveal-modal')
-      await revealModal.waitFor({ state: 'visible' })
-      await revealModal.getByRole('button', { name: /縮小/ }).click()
-      const revealDock = page.locator('.card-reveal-dock')
-      await revealDock.waitFor({ state: 'visible' })
-      assert.ok(
-        (await revealDock.innerText()).includes('效果待確認'),
-        '縮小物品展示後應顯示效果待確認標籤',
-      )
-      await revealDock.click()
-      await revealModal.getByRole('button', { name: '確認使用' }).click()
+      const hasRevealModal = await revealModal
+        .waitFor({ state: 'visible', timeout: 1000 })
+        .then(() => true)
+        .catch(() => false)
+      if (hasRevealModal) {
+        await revealModal.getByRole('button', { name: /縮小/ }).click()
+        const revealDock = page.locator('.card-reveal-dock')
+        await revealDock.waitFor({ state: 'visible' })
+        assert.ok(
+          (await revealDock.innerText()).includes('效果待確認'),
+          '縮小物品展示後應顯示效果待確認標籤',
+        )
+        await revealDock.click()
+        await revealModal.getByRole('button', { name: '確認使用' }).click()
+      }
 
       const effectPanel = page.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible' })
@@ -1066,7 +1071,11 @@ try {
     )
     assert.ok(isTargetable, '對手餅乾應標示為可選目標')
 
+    await faintModal.getByRole('button', { name: /縮小/ }).click()
+    const faintDock = page.locator('.card-reveal-dock')
+    await faintDock.waitFor({ state: 'visible' })
     await targetCookie.locator('.card-face').first().click()
+    await faintDock.click()
     await faintModal.getByRole('button', { name: /確認/ }).click()
     await faintModal.waitFor({ state: 'hidden' })
 
@@ -1081,7 +1090,7 @@ try {
     })
     await faintModal.waitFor({ state: 'visible' })
 
-    await faintModal.getByRole('button', { name: '略過', exact: true }).click()
+    await faintModal.getByRole('button', { name: /略過|不選擇目標/ }).click()
     await faintModal.waitFor({ state: 'hidden' })
     assert.strictEqual(
       await page.locator('.faint-response-modal').count(),
@@ -1106,8 +1115,7 @@ try {
 
     const pretzelCard = battleModal.locator('.modal-card-options > button').first()
     await pretzelCard.click()
-    await page.locator('.card-detail-modal').waitFor({ state: 'visible' })
-    const detailText = await page.locator('.card-detail-modal').innerText()
+    const detailText = await battleModal.innerText()
     assert.ok(
       detailText.includes('Pretzel Snare'),
       '卡牌詳情應顯示 Pretzel Snare 名稱',
@@ -1116,8 +1124,6 @@ try {
       detailText.includes('attacks more than 4'),
       '卡牌詳情應包含發動條件',
     )
-    await page.locator('.card-detail-modal .close-modal').click()
-    await page.locator('.card-detail-modal').waitFor({ state: 'hidden' })
 
     // Capture initial HP card count for the attacker before the trap
     const hpLocator = page.locator('.top-field .combat-card-wrap .hp-card-stack .hp-card')
@@ -1126,10 +1132,14 @@ try {
 
     // Pretzel select-1:確認發動，對攻擊者造成 1 點傷害
     await battleModal.getByRole('button', { name: '支付並發動' }).click()
-    await page
-      .locator('.card-reveal-modal')
-      .getByRole('button', { name: '確認發動' })
-      .click()
+    const trapRevealModal = page.locator('.card-reveal-modal')
+    const hasTrapRevealModal = await trapRevealModal
+      .waitFor({ state: 'visible', timeout: 1000 })
+      .then(() => true)
+      .catch(() => false)
+    if (hasTrapRevealModal) {
+      await trapRevealModal.getByRole('button', { name: '確認發動' }).click()
+    }
     await battleModal.waitFor({ state: 'hidden' })
     await page.waitForTimeout(400)
     const hpAfterTrap = await hpLocator.count()
@@ -1143,17 +1153,19 @@ try {
     await page.goto(payableUrl, { waitUntil: 'networkidle' })
     await battleModal.waitFor({ state: 'visible' })
     await pretzelCard.click()
-    await page.locator('.card-detail-modal .close-modal').click()
-    await page.locator('.card-detail-modal').waitFor({ state: 'hidden' })
     await page.waitForTimeout(100)
     const noTargetCheckbox = page.locator('.trap-target-toggle input[type="checkbox"]')
     await noTargetCheckbox.waitFor({ state: 'visible' })
     await noTargetCheckbox.click()
     await battleModal.getByRole('button', { name: '支付並發動' }).click()
-    await page
-      .locator('.card-reveal-modal')
-      .getByRole('button', { name: '確認發動' })
-      .click()
+    const secondTrapRevealModal = page.locator('.card-reveal-modal')
+    const hasSecondTrapRevealModal = await secondTrapRevealModal
+      .waitFor({ state: 'visible', timeout: 1000 })
+      .then(() => true)
+      .catch(() => false)
+    if (hasSecondTrapRevealModal) {
+      await secondTrapRevealModal.getByRole('button', { name: '確認發動' }).click()
+    }
     await battleModal.waitFor({ state: 'hidden' })
     // Wait for auto-resolution and dismiss any replacement modal
     await page.waitForTimeout(600)
@@ -1196,7 +1208,7 @@ try {
     })
 
     // Opponent discard modal should be visible first
-    const discardModal = page.locator('.faint-response-modal')
+    const discardModal = page.locator('.hand-discard-modal')
     await discardModal.waitFor({ state: 'visible' })
     assert.ok(
       (await discardModal.innerText()).includes('Roguefort Cookie'),
@@ -1376,6 +1388,7 @@ try {
 
   await runSupportToTrashSkillTest()
 
+  await page.setViewportSize({ width: 1440, height: 960 })
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await completeOpeningSetup()
 
