@@ -66,8 +66,16 @@ describe('ConnectionManager', () => {
       throw new Error('unexpected message')
     }
     expect(hostStart.seed).toBe(guestStart.seed)
-    // 對手手牌只看到張數,看不到內容。
-    expect(hostStart.view.opponent.handCount).toBeGreaterThan(0)
+    // 對手手牌長度不變,但內容被遮罩(看不到真實卡牌)。
+    const opponentHand = hostStart.state.players['player-two'].hand
+    expect(opponentHand.length).toBeGreaterThan(0)
+    expect(opponentHand.every((card) => card.name === '???')).toBe(true)
+    // 自己的手牌維持真實內容。
+    expect(
+      hostStart.state.players['player-one'].hand.every(
+        (card) => card.name !== '???',
+      ),
+    ).toBe(true)
   })
 
   it('加入不存在的房間會收到 room-join-error', () => {

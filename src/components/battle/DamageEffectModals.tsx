@@ -1,10 +1,12 @@
 import { FaintEffectResponseModal } from '../modals/GameModals'
-import type { useMatchController } from '../../hooks/useMatchController'
-import type { usePendingEffect } from '../../hooks/usePendingEffect'
+import type {
+  BattleUiMatchLike,
+  BattleUiPendingEffectLike,
+} from '../../hooks/battleUiContracts'
 
 export interface DamageEffectModalsProps {
-  match: ReturnType<typeof useMatchController>
-  pending: ReturnType<typeof usePendingEffect>
+  match: BattleUiMatchLike
+  pending: BattleUiPendingEffectLike
 }
 
 export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) {

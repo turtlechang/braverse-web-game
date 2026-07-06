@@ -1,4 +1,4 @@
-import { applyGameCommand, resolveBattleAutomatically } from '../../game'
+import type { GameCommand } from '../../game'
 import {
   AttackResponseModal,
   TrapResponseModal,
@@ -6,7 +6,7 @@ import {
   FlipResponseModal,
 } from '../modals/GameModals'
 import { parseTestStateConfig } from '../../game/demo'
-import type { useMatchController } from '../../hooks/useMatchController'
+import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
 
 const testStateConfig = parseTestStateConfig(
   window.location.search,
@@ -14,7 +14,7 @@ const testStateConfig = parseTestStateConfig(
 )
 
 export interface BattleResponseModalsProps {
-  match: ReturnType<typeof useMatchController>
+  match: BattleUiMatchLike
 }
 
 export function BattleResponseModals({ match }: BattleResponseModalsProps) {
@@ -129,25 +129,25 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setTrapSelectNoTarget(false)
               match.setPendingResponseMode(null)
-              match.runAction(
-                (current) => {
-                  const afterTrap = applyGameCommand(current, {
-                    kind: 'play-trap',
-                    playerId: match.viewerPlayerId,
-                    trapInstanceId: trap.instanceId,
-                    paymentIds: match.selectedTrapPaymentIds,
-                    targetIds: match.selectedTrapTargets.map(
-                      (target) => target.card.instanceId,
-                    ),
-                    supportTrashIds: match.selectedTrapSupportTrashIds,
-                    discardHandIds: match.selectedTrapDiscardIds,
-                    trashBattleCookieIds:
-                      match.selectedTrapTrashBattleCookieIds,
-                  })
-                  return testStateConfig
-                    ? resolveBattleAutomatically(afterTrap)
-                    : afterTrap
-                },
+              const playTrapCommand: GameCommand = {
+                kind: 'play-trap',
+                playerId: match.viewerPlayerId,
+                trapInstanceId: trap.instanceId,
+                paymentIds: match.selectedTrapPaymentIds,
+                targetIds: match.selectedTrapTargets.map(
+                  (target) => target.card.instanceId,
+                ),
+                supportTrashIds: match.selectedTrapSupportTrashIds,
+                discardHandIds: match.selectedTrapDiscardIds,
+                trashBattleCookieIds: match.selectedTrapTrashBattleCookieIds,
+              }
+              match.dispatch(
+                testStateConfig
+                  ? [
+                      playTrapCommand,
+                      { kind: 'resolve-battle', playerId: match.viewerPlayerId },
+                    ]
+                  : playTrapCommand,
                 `已發動${trap.name}。`,
               )
             }}

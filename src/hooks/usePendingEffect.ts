@@ -473,6 +473,28 @@ export function usePendingEffect(params: {
     [setGame, setMessage, clearAttacker, setPendingEffect],
   )
 
+  /**
+   * 補位(refresh-deck/replace-cookie)完成後,若剛好觸發了 OnPlay 技能,
+   * 呼叫 beginCookieSkill 開始那個技能的精靈。傳入的 state 必須是指令
+   * 套用後的最新結果(本地模式下同步可得)。線上模式沒有同步結果,改用
+   * 監看 game.pendingOnPlay 變化的 effect 主動觸發,此函式在那邊是no-op。
+   */
+  const handleOnPlayTrigger = (state: GameState) => {
+    const onPlay = state.pendingOnPlay
+    if (!onPlay) return
+    const card = state.players[onPlay.playerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === onPlay.sourceInstanceId,
+    )?.card
+    beginCookieSkill(
+      state,
+      card,
+      onPlay.playerId,
+      'on-play',
+      'OnPlay 登場觸發',
+      true,
+    )
+  }
+
   const beginCardAbility = (
     card: GameCard,
     ability: CardAbility,
@@ -1124,6 +1146,7 @@ export function usePendingEffect(params: {
     setEffectHistory,
     resetEffectContext,
     beginCookieSkill,
+    handleOnPlayTrigger,
     beginCardAbility,
     toggleEffectTarget,
     toggleSkillPayment,

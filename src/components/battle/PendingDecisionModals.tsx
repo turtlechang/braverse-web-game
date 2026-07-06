@@ -12,12 +12,14 @@ import {
   HandDiscardResponseModal,
   EffectOrderModal,
 } from '../modals/GameModals'
-import type { useMatchController } from '../../hooks/useMatchController'
-import type { usePendingEffect } from '../../hooks/usePendingEffect'
+import type {
+  BattleUiMatchLike,
+  BattleUiPendingEffectLike,
+} from '../../hooks/battleUiContracts'
 
 export interface PendingDecisionModalsProps {
-  match: ReturnType<typeof useMatchController>
-  pending: ReturnType<typeof usePendingEffect>
+  match: BattleUiMatchLike
+  pending: BattleUiPendingEffectLike
 }
 
 export function PendingDecisionModals({ match, pending }: PendingDecisionModalsProps) {
@@ -290,25 +292,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                     cookieInstanceId: instanceId,
                   },
                   '牌庫 Refresh 已完成。',
-                  (nextGame) => {
-                    const onPlay = nextGame.pendingOnPlay
-                    if (!onPlay) return
-                    const card = nextGame.players[
-                      onPlay.playerId
-                    ].battleArea.find(
-                      (cookie) =>
-                        cookie.card.instanceId ===
-                        onPlay.sourceInstanceId,
-                    )?.card
-                    pending.beginCookieSkill(
-                      nextGame,
-                      card,
-                      onPlay.playerId,
-                      'on-play',
-                      'OnPlay 登場觸發',
-                      true,
-                    )
-                  },
+                  (nextGame) => pending.handleOnPlayTrigger(nextGame),
                 )
               } else {
                 match.dispatch(
@@ -320,23 +304,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                   '已補充新的戰鬥區餅乾。',
                   (nextGame) => {
                     if (nextGame.pendingRefresh) return
-                    const onPlay = nextGame.pendingOnPlay
-                    if (!onPlay) return
-                    const card = nextGame.players[
-                      onPlay.playerId
-                    ].battleArea.find(
-                      (cookie) =>
-                        cookie.card.instanceId ===
-                        onPlay.sourceInstanceId,
-                    )?.card
-                    pending.beginCookieSkill(
-                      nextGame,
-                      card,
-                      onPlay.playerId,
-                      'on-play',
-                      'OnPlay 登場觸發',
-                      true,
-                    )
+                    pending.handleOnPlayTrigger(nextGame)
                   },
                 )
               }

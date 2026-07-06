@@ -4,8 +4,8 @@ import {
   applyGameCommand,
   createDeckFromCustomDeck,
   createGame,
-  createPlayerView,
   createSeededShuffle,
+  maskGameStateForViewer,
   validateCustomDeck,
   type CustomDeck,
   type GameCommand,
@@ -141,7 +141,10 @@ export class RoomStore {
 
 export const createRoomStore = (): RoomStore => new RoomStore()
 
-export const playerViewFor = (room: Room, playerId: PlayerId) => {
+export const maskedStateFor = (
+  room: Room,
+  playerId: PlayerId,
+): GameState | null => {
   if (!room.state) return null
-  return createPlayerView(room.state, playerId)
+  return maskGameStateForViewer(room.state, playerId)
 }

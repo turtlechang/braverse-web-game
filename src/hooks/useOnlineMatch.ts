@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   CustomDeck,
   GameCommand,
+  GameState,
   PlayerId,
-  PlayerView,
 } from '../game'
 import type { ClientMessage, ServerMessage } from '../net/onlineProtocol'
 
@@ -26,7 +26,7 @@ export function useOnlineMatch() {
   const [status, setStatus] = useState<OnlineMatchStatus>('idle')
   const [roomCode, setRoomCode] = useState<string | null>(null)
   const [viewerPlayerId, setViewerPlayerId] = useState<PlayerId | null>(null)
-  const [playerView, setPlayerView] = useState<PlayerView | null>(null)
+  const [maskedGame, setMaskedGame] = useState<GameState | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [matchEndedReason, setMatchEndedReason] = useState<
     'victory' | 'defeat' | 'opponent-disconnected' | null
@@ -66,11 +66,11 @@ export function useOnlineMatch() {
           break
         case 'match-start':
           setViewerPlayerId(message.viewerId)
-          setPlayerView(message.view)
+          setMaskedGame(message.state)
           setStatus('in-progress')
           break
         case 'state-update':
-          setPlayerView(message.view)
+          setMaskedGame(message.state)
           break
         case 'command-rejected':
           setErrorMessage(message.reason)
@@ -120,7 +120,7 @@ export function useOnlineMatch() {
     setStatus('idle')
     setRoomCode(null)
     setViewerPlayerId(null)
-    setPlayerView(null)
+    setMaskedGame(null)
     setErrorMessage(null)
     setMatchEndedReason(null)
   }, [send, closeSocket])
@@ -129,7 +129,7 @@ export function useOnlineMatch() {
     status,
     roomCode,
     viewerPlayerId,
-    playerView,
+    maskedGame,
     errorMessage,
     matchEndedReason,
     createRoom,

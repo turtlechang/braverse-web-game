@@ -1,6 +1,6 @@
 import type { CustomDeck, GameCommand, PlayerId } from '../../src/game'
 import type { ClientMessage, ServerMessage } from '../../src/net/onlineProtocol'
-import { RoomStore, playerViewFor, type Room } from './rooms'
+import { RoomStore, maskedStateFor, type Room } from './rooms'
 
 export interface SocketLike {
   send(data: string): void
@@ -102,13 +102,13 @@ export class ConnectionManager {
       type: 'match-start',
       seed: room.seed,
       viewerId: 'player-one',
-      view: playerViewFor(room, 'player-one')!,
+      state: maskedStateFor(room, 'player-one')!,
     })
     this.send(socket, {
       type: 'match-start',
       seed: room.seed,
       viewerId: 'player-two',
-      view: playerViewFor(room, 'player-two')!,
+      state: maskedStateFor(room, 'player-two')!,
     })
   }
 
@@ -127,11 +127,11 @@ export class ConnectionManager {
 
     this.sendToSlot(room, 'player-one', {
       type: 'state-update',
-      view: playerViewFor(room, 'player-one')!,
+      state: maskedStateFor(room, 'player-one')!,
     })
     this.sendToSlot(room, 'player-two', {
       type: 'state-update',
-      view: playerViewFor(room, 'player-two')!,
+      state: maskedStateFor(room, 'player-two')!,
     })
 
     const result = room.state?.result

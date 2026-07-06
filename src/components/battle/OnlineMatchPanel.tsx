@@ -1,13 +1,12 @@
 import { useState } from 'react'
-import type { CustomDeck, GameCommand } from '../../game'
+import type { CustomDeck } from '../../game'
 import { validateCustomDeck } from '../../game'
 import { useOnlineMatch } from '../../hooks/useOnlineMatch'
+import { OnlineBattleView } from './OnlineBattleView'
 
 /**
- * Phase 5 線上對戰入口。目前對局進行中的畫面仍是最小可用版本
- * （直接呈現 PlayerView JSON + 手動送出指令），完整戰場 UI
- * （沿用 BattleRow 等既有元件）留待後續里程碑,因為既有戰場元件
- * 是建構在完整 GameState 上,改吃 PlayerView 需要另外設計。
+ * Phase 5 線上對戰入口。對局進行中改用 OnlineBattleView 呈現真正的戰場
+ * （重用 BattleRow/EffectPanel 等本地既有元件）,取代先前的 JSON dump 版本。
  */
 export interface OnlineMatchPanelProps {
   decks: CustomDeck[]
@@ -20,8 +19,6 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
     decks[0]?.id ?? null,
   )
   const [joinCode, setJoinCode] = useState('')
-  const [rawCommand, setRawCommand] = useState('')
-  const [rawCommandError, setRawCommandError] = useState<string | null>(null)
 
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
   const selectedDeckValidation = selectedDeck
@@ -35,14 +32,21 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
     onClose()
   }
 
-  const submitRawCommand = () => {
-    try {
-      const command = JSON.parse(rawCommand) as GameCommand
-      online.sendCommand(command)
-      setRawCommandError(null)
-    } catch {
-      setRawCommandError('指令必須是合法的 JSON。')
-    }
+  if (
+    (online.status === 'in-progress' ||
+      (online.status === 'ended' && online.matchEndedReason !== 'opponent-disconnected')) &&
+    online.maskedGame &&
+    online.viewerPlayerId
+  ) {
+    return (
+      <OnlineBattleView
+        game={online.maskedGame}
+        viewerPlayerId={online.viewerPlayerId}
+        roomCode={online.roomCode}
+        sendCommand={online.sendCommand}
+        onLeave={handleClose}
+      />
+    )
   }
 
   return (
@@ -116,32 +120,12 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
           </p>
         )}
 
-        {online.status === 'in-progress' && online.playerView && (
-          <>
-            <p>
-              我的身分：{online.viewerPlayerId}｜房號：{online.roomCode}
-            </p>
-            <div>
-              <textarea
-                rows={4}
-                style={{ width: '100%' }}
-                value={rawCommand}
-                onChange={(event) => setRawCommand(event.target.value)}
-                placeholder='例如 {"kind":"keep-opening-hand","playerId":"player-one"}'
-              />
-              <button type="button" onClick={submitRawCommand}>
-                送出指令
-              </button>
-              {rawCommandError && <p style={{ color: '#e05252' }}>{rawCommandError}</p>}
-            </div>
-            <pre style={{ whiteSpace: 'pre-wrap', maxHeight: 400, overflow: 'auto' }}>
-              {JSON.stringify(online.playerView, null, 2)}
-            </pre>
-          </>
-        )}
-
         {online.status === 'ended' && (
-          <p>對局結束：{online.matchEndedReason}</p>
+          <p>
+            {online.matchEndedReason === 'opponent-disconnected'
+              ? '對手已離線，對局結束。'
+              : `對局結束：${online.matchEndedReason}`}
+          </p>
         )}
 
         {online.status === 'error' && (
