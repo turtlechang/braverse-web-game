@@ -615,6 +615,44 @@ describe('simple AI opponent', () => {
     expect(decision.state).not.toBe(state)
   })
 
+  it('selects a required target for an AI attack damage effect', () => {
+    const base = createDemoGame()
+    const attacker = base.players['player-two'].battleArea[0]
+    const target = base.players['player-one'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: attacker.card.instanceId,
+        targetInstanceId: target.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+        attackEffectIndex: 0,
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('resolve-attack-effect')
+    expect(decision.error).toBeUndefined()
+    expect(decision.state).not.toBe(state)
+  })
+
   it('skips an optional replacement when no legal Cookie is available', () => {
     const base = createDemoGame()
     const state: GameState = {

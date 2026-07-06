@@ -10,11 +10,65 @@ import {
   skipTrap,
 } from '../battle'
 import { appendCommandLogEntry } from '../commands'
-import { getBreakToTrashCandidates } from '../effects'
+import {
+  getBreakToTrashCandidates,
+  getEffectTargetCandidates,
+} from '../effects'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
-import type { GameState, PlayerId } from '../types'
+import type { CardEffect, EffectContext, GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
+
+const chooseAttackEffectTargets = (
+  state: GameState,
+  playerId: PlayerId,
+  battle: NonNullable<GameState['pendingBattle']>,
+  effect: CardEffect | undefined,
+): string[] => {
+  if (!effect) return []
+  const context: EffectContext = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: battle.attackerInstanceId,
+  }
+
+  if (effect.kind === 'break-to-trash') {
+    return getBreakToTrashCandidates(state, context, effect)
+      .slice(0, effect.max)
+      .map((card) => card.instanceId)
+  }
+
+  if (effect.kind === 'opponent-battle-to-trash') {
+    const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+    return state.players[opponentId].battleArea
+      .filter((cookie) => {
+        if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
+        if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+        if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
+        return true
+      })
+      .sort((left, right) => left.hpCards.length - right.hpCards.length)
+      .slice(0, 1)
+      .map((cookie) => cookie.card.instanceId)
+  }
+
+  if (!('target' in effect) || !effect.target) return []
+
+  const candidates = getEffectTargetCandidates(state, context, effect.target)
+  const ordered = [...candidates].sort((left, right) => {
+    if (effect.kind === 'damage') {
+      const leftLethal = left.hpCards.length <= effect.amount ? 0 : 1
+      const rightLethal = right.hpCards.length <= effect.amount ? 0 : 1
+      return (
+        leftLethal - rightLethal ||
+        left.hpCards.length - right.hpCards.length
+      )
+    }
+    return left.hpCards.length - right.hpCards.length
+  })
+  const count = Math.min(effect.target.max, ordered.length)
+  if (count < effect.target.min) return []
+  return ordered.slice(0, count).map((cookie) => cookie.card.instanceId)
+}
 
 export const handleAiPendingBattle = (
   state: GameState,
@@ -34,19 +88,12 @@ export const handleAiPendingBattle = (
     battle.attackerPlayerId === playerId
   ) {
     const effect = battle.attackEffects[battle.attackEffectIndex]
-    const targetIds =
-      effect?.kind === 'break-to-trash'
-        ? getBreakToTrashCandidates(
-            state,
-            {
-              sourcePlayerId: playerId,
-              sourceInstanceId: battle.attackerInstanceId,
-            },
-            effect,
-          )
-            .slice(0, effect.max)
-            .map((card) => card.instanceId)
-        : []
+    const targetIds = chooseAttackEffectTargets(
+      state,
+      playerId,
+      battle,
+      effect,
+    )
     return {
       state: appendCommandLogEntry(
         state,

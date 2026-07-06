@@ -542,6 +542,52 @@ describe('DecisionModal', () => {
 
     await act(() => root.unmount())
   })
+
+  it('selects a replacement option from the dialog', async () => {
+    const onSelect = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DecisionModal
+        isRefresh={false}
+        playerName="玩家"
+        replacementCount={1}
+        options={[createBattleCookie(1).card]}
+        isOptionDisabled={() => false}
+        onSelect={onSelect}
+        onSkipReplacement={() => undefined}
+      />,
+    ))
+
+    await click(findButton(container, '測試餅乾 1'))
+
+    expect(onSelect).toHaveBeenCalledWith('test-cookie-1')
+
+    await act(() => root.unmount())
+  })
+
+  it('skips replacement from the dialog', async () => {
+    const onSkipReplacement = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DecisionModal
+        isRefresh={false}
+        playerName="玩家"
+        replacementCount={1}
+        options={[createBattleCookie(1).card]}
+        isOptionDisabled={() => false}
+        onSelect={() => undefined}
+        onSkipReplacement={onSkipReplacement}
+      />,
+    ))
+
+    await click(findButton(container, '不補餅乾'))
+
+    expect(onSkipReplacement).toHaveBeenCalledTimes(1)
+
+    await act(() => root.unmount())
+  })
 })
 
 describe('FlipResponseModal', () => {

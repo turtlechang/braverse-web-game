@@ -129,7 +129,7 @@ describe('MainMenu deck management', () => {
 describe('MainMenu AI opponent options', () => {
   it('renders deck and level selectors with current values', async () => {
     const { container, root } = await renderMenu([validDeck], {}, {
-      aiDeckChoice: 'blue',
+      aiDeckChoice: 'bs2-blue',
       aiLevel: 1,
     })
 
@@ -137,9 +137,13 @@ describe('MainMenu AI opponent options', () => {
       '.main-menu-ai-options select',
     )
     expect(selects).toHaveLength(2)
-    expect(selects[0].value).toBe('blue')
+    expect(selects[0].value).toBe('bs2-blue')
     expect(selects[1].value).toBe('1')
     expect(container.textContent).toContain('不主動使用技能')
+    expect([...selects[0].options].map((option) => option.value)).toContain(
+      'bs2-purple',
+    )
+    expect(container.textContent).toContain('第二彈藍色牌組')
 
     await act(() => root.unmount())
   })
@@ -156,7 +160,7 @@ describe('MainMenu AI opponent options', () => {
       '.main-menu-ai-options select',
     )
     await act(() => {
-      selects[0].value = 'purple'
+      selects[0].value = 'bs2-purple'
       selects[0].dispatchEvent(new Event('change', { bubbles: true }))
     })
     await act(() => {
@@ -164,7 +168,7 @@ describe('MainMenu AI opponent options', () => {
       selects[1].dispatchEvent(new Event('change', { bubbles: true }))
     })
 
-    expect(onSelectAiDeck).toHaveBeenCalledWith('purple')
+    expect(onSelectAiDeck).toHaveBeenCalledWith('bs2-purple')
     expect(onSelectAiLevel).toHaveBeenCalledWith(3)
 
     await act(() => root.unmount())

@@ -13,6 +13,11 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'green', label: '綠色起始牌組' },
   { value: 'blue', label: '藍色起始牌組' },
   { value: 'purple', label: '紫色起始牌組' },
+  { value: 'bs2-red', label: '第二彈紅色牌組' },
+  { value: 'bs2-yellow', label: '第二彈黃色牌組' },
+  { value: 'bs2-bean', label: '第二彈豆子牌組' },
+  { value: 'bs2-blue', label: '第二彈藍色牌組' },
+  { value: 'bs2-purple', label: '第二彈紫色牌組' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [

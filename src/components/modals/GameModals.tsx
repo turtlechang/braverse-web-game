@@ -8,6 +8,7 @@ import {
   X,
 } from 'lucide-react'
 import type {
+  BuiltInDeckChoice,
   DeckChoice,
   DefeatReason,
   GameCard,
@@ -40,7 +41,7 @@ export interface OpeningSetupModalProps {
   step: OpeningSetupStep
   message: string
   hand: GameCard[]
-  deckConfig: { player: DeckChoice; ai: DeckChoice }
+  deckConfig: { player: DeckChoice; ai: BuiltInDeckChoice }
   onSelectDeck: (deck: DeckChoice, customDeck?: CustomDeck) => void
   onRps: (choice: 'rock' | 'paper' | 'scissors') => void
   onChooseFirstPlayer: (playerFirst: boolean) => void
@@ -1220,7 +1221,7 @@ export function CardDetailModal({
 export interface PauseModalProps {
   turnNumber: number
   phaseLabel: string
-  deckConfig: { player: DeckChoice; ai: DeckChoice }
+  deckConfig: { player: DeckChoice; ai: BuiltInDeckChoice }
   aiActionCount: number
   onRunSimulation: () => void
   onResume: () => void

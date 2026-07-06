@@ -10,6 +10,8 @@
 
 官方範例卡已匯入 `category_title` / `card_product_title` 為 `Starter Deck RED`、`Starter Deck YELLOW`、`Starter Deck GREEN`、`Starter Deck BLUE` 與 `Starter Deck PURPLE` 的五套起始牌組資料。五套資料都可建立 60 張牌組，並以官方 JSON 的卡號、名稱、類型、攻擊文字、效果文字與圖片 URL 轉成 runtime `GameCard`。
 
+BS1/BS2 官方卡池已可供自訂牌組與 AI 預設牌組共用；主選單 AI 對手除五色起始牌組外，也可指定第二彈紅色、黃色、豆子、藍色與紫色預設牌組。
+
 專案開發流程已整理為 `.agents/skills/develop-braverse` Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟。工作流模板另拆為 `.agents/skills/braverse-workflow`，讓 `AGENTS.md` 保留硬規則，任務分類、驗證分級、派工提示與提交前檢查改由 Skill references 漸進式載入。
 
 CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `npm test`、`npm run lint`、`npm run build` 與手動 Playwright AI 瀏覽器驗證，不負責部署。Vercel 監聽 PR 與 push 後自動產生 Preview 部署與正式部署。GitHub Secrets 不保存 Vercel Token，所有 Vercel 連線設定在 Vercel Dashboard 完成。
@@ -34,7 +36,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 紅、黃、綠、藍、紫五套起始牌組的 FLIP 已支援棄手牌增加 HP、抽牌與逐張傷害暫停；TRAP 已支援攻擊回應、能量支付、攻擊降低、條件傷害、HP 下限、支援棄置、牌庫頂放入休息支援及複合抽牌（ST4-021）。
 - 餅乾因暈倒或效果離開戰鬥區後，會依各玩家離場張數逐張詢問是否補位；玩家可選擇補餅乾或略過，雙方同批離場時由回合玩家先完成，再由非回合玩家執行，並在每張實際補位間依序處理 Refresh 與 OnPlay。
 - 新對局會隨機洗牌，並依序進行玩家選牌組、AI 隨機選牌組、猜拳、先後攻、自由／強制調度、補償抽牌與起始餅乾配置。
-- 已新增主選單與對戰入口流程：玩家需先選擇一副合法自訂牌組才能進入對戰；合法性檢查集中於 `src/game/custom-deck.ts`，規則為剛好 60 張、同卡號最多 4 張、至少 1 張餅乾卡、FLIP 不超過 16 張且不限制單一顏色。牌組編輯器即時顯示總張數、FLIP 張數、餅乾卡數量與錯誤原因；AI 對手仍在對戰開始前由五色起始牌組隨機決定。
+- 已新增主選單與對戰入口流程：玩家需先選擇一副合法自訂牌組才能進入對戰；合法性檢查集中於 `src/game/custom-deck.ts`，規則為剛好 60 張、同卡號最多 4 張、至少 1 張餅乾卡、FLIP 不超過 16 張且不限制單一顏色。牌組編輯器即時顯示總張數、FLIP 張數、餅乾卡數量與錯誤原因；AI 對手可維持五色起始牌組隨機，或指定五色起始牌組與第二彈預設牌組。
 - 主選單牌組卡片支援刪除（含確認）與複製；「需調整」標籤 hover 顯示不合法原因。牌組儲存改為含 `version` 欄位的格式並自動遷移舊陣列格式，損壞資料不會讓已存牌組消失整批。
 - 牌組編輯器卡池單擊直接加入 1 張、右下角顯示已選張數徽章、右上角 info 鈕開啟詳細與加減控制；達 4 張上限的卡片保留在卡池並以禁用樣式呈現。
 - 桌面 UI 已完成減法改版：左側為窄型五階段列，右上只保留重置、牌組與暫停資訊；雙方場地固定為戰鬥區 55%、支援區 45%，戰鬥卡向中央分隔列靠攏，我方支援卡由左向右、對手由右向左排列並維持可辨識尺寸；對手名稱與先後攻資訊位於戰鬥區左下角。牌庫／場景／休息區改為數字牌堆與鄰近浮層，棄牌與完整牌組維持大型視窗。手牌選取後才抬升並顯示單一合法動作，可用空白處或 `Escape` 取消；攻擊、付款與目標選擇提示集中在中央分隔列。低於 900px 的頂部階段列、中央牌桌、底部工具列維持既有模式，最低支援 600x338。
@@ -45,9 +47,9 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已加入 `braverse-workflow` 專案 Skill，提供 Braverse 任務分類、固定開場模板、OpenCode Go / subagent 派工模板、驗證分級與 pre-commit review 清單。
 - `AGENTS.md` 已瘦身為硬性規範入口；模型路由長表、驗證矩陣、歷史回歸細節改由 `.agents/skills/braverse-workflow/references/` 與 `.agents/skills/develop-braverse/references/` 承接。
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
-- 玩家於開局選擇紅色、黃色、綠色、藍色或紫色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
+- 玩家於開局使用合法自訂牌組，AI 可隨機選擇五色起始牌組，或指定紅色、黃色、綠色、藍色、紫色起始牌組及第二彈紅色、黃色、豆子、藍色、紫色預設牌組；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
-  - 目前共有 851 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
+  - 目前共有 935 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
@@ -67,7 +69,8 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已達成：修正 ST3-004 Vampire Cookie 複合 OnPlay 效果（{ap} cost GGGN，Select up to 1 opponent Cookie receives 2 damage, Then this Cookie gains +1 HP），於 official-effect-adapter 的 exactStarterEffects 新增 damage + gain-hp 明確轉換；修正 ST3-017 Viney Vines 攻擊效果第二段 support-to-trash 支援卡候選無法選取問題，於 usePendingEffect 新增 supportEffectTargetIds 供 toggleEffectTarget 接受支援卡目標。
 - 已達成：開局牌組選擇與 AI 隨機牌組、猜拳先後攻、玩家活躍／抽牌自動推進、支援放置後自動進主要階段、頂部 HUD、滿版無捲軸桌機畫布、公開卡牌詳情，以及可縮小的 FLIP／物品／陷阱確認式大卡。
 - 已達成：效果決策提示框統一化，Aloe Cookie 昏厥強制效果、BS2-049 抽牌與後續棄手牌選擇皆使用深色置中可縮小 modal，避免淺色浮窗遮擋牌桌與「略過」語意誤導。
-- 已達成：主選單、對戰入口與牌組編輯器整合；玩家自訂牌組需通過 60 張、同卡 4 張、至少 1 張餅乾、FLIP 不超過 16 張檢查後才能開始對戰，AI 牌組在進入對戰前從五色起始牌組隨機決定。
+- 已達成：主選單、對戰入口與牌組編輯器整合；玩家自訂牌組需通過 60 張、同卡 4 張、至少 1 張餅乾、FLIP 不超過 16 張檢查後才能開始對戰，AI 牌組在進入對戰前可從五色起始牌組隨機決定，或指定五色起始／第二彈預設牌組。
+- 已達成：新增第二彈 AI 預設牌組（紅色、黃色、豆子、藍色、紫色），共用 BS1/BS2 官方卡池與既有牌組工廠，可從主選單 AI 對手牌組下拉選擇。
 - 已達成：最大化桌面版桌墊聚焦改版，移除固定右側 HUD，採窄型階段列、55/45 場地、資源牌堆浮層、中央操作指引與選取後才顯示的手牌合法動作；窄版同步維持 55/45 比例並調整卡牌排列。
 - 已達成：ST3-002／ST3-005／ST3-015 可從我方支援區直接選擇卡牌作為送入棄牌區的技能代價；同一張支援卡不可同時支付能量與特殊代價。
 - 已達成：ST2-003 Wizard Cookie 在攻擊傷害完成後、替補開始前，可選最多 1 張己方 LV.1 休息區卡牌移至棄牌區；玩家與 AI 均可完成結算。
@@ -131,6 +134,7 @@ npm run cards:import:purple-sample
 
 | 日期 | 概要 |
 |---|---|
+| 2026-07-07 | 🃏 AI 預設牌組 — 新增第二彈紅/黃/豆子/藍/紫 AI 牌組選項 |
 | 2026-07-06 | ✅ Phase 5 CI — 修正線上對戰 lint 失敗，維持 test/lint/build 通過 |
 | 2026-07-04 | 🧠 AI 分級 — 新增 Lv.1/Lv.2、`PlayerView` 視角過濾器與 Lv.3 評估式 AI |
 | 2026-07-04 | 🔗 指令層整合 — 擴充 `GameCommand`、加入 `commandLog` / replay，並補完牌組管理 |

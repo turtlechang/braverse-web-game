@@ -760,6 +760,56 @@ describe('AI dispatch for ST4 effects', () => {
     expect(targetIds).toContain('blue-low')
   })
 
+  it('AI ignores return-to-hand targets that do not satisfy remaining HP requirements', () => {
+    const blueTooLow = createBattleCookie('blue-too-low', 2, 2, 'blue')
+    const blueValid = createBattleCookie('blue-valid', 3, 4, 'blue')
+    let state = createTestGameState([blueTooLow, blueValid], [], [
+      {
+        id: 'st4-016',
+        instanceId: 'st4-016',
+        name: 'Bear Jelly Ice Cream',
+        type: 'item',
+        energyColor: 'blue',
+        item: {
+          cost: { blue: 2 },
+          text: 'Return 1 {B} Cookie with 3+ HP to hand.',
+          effects: [
+            {
+              kind: 'return-to-hand',
+              target: {
+                side: 'self',
+                min: 1,
+                max: 1,
+                energyColor: 'blue',
+                minRemainingHp: 3,
+              },
+            },
+          ],
+        },
+      },
+    ])
+    state = {
+      ...state,
+      turnNumber: 1,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [
+            { card: { id: 'sup-b1', instanceId: 'sup-b1', name: 'sup-b1', type: 'item', energyColor: 'blue' }, rested: false },
+            { card: { id: 'sup-b2', instanceId: 'sup-b2', name: 'sup-b2', type: 'item', energyColor: 'blue' }, rested: false },
+          ],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-one')
+
+    expect(decision.action).toBe('play-item')
+    expect(decision.error).toBeUndefined()
+    expect(decision.effectSelections?.[0].targetIds).toEqual(['blue-valid'])
+  })
+
   it('AI handles draw-up-to by drawing max available', () => {
     const deckCards: GameCard[] = [
       { id: 'deck-1', instanceId: 'deck-1', name: 'deck-1', type: 'item' },

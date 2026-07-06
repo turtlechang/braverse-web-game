@@ -9,6 +9,7 @@ import {
   createOfficialGreenStarterDeck,
   createOfficialPurpleStarterDeck,
   createOfficialYellowStarterDeck,
+  type BuiltInDeckChoice,
   DECK_CREATORS,
   type DeckChoice,
 } from './starter-deck'
@@ -198,7 +199,9 @@ const ensureOpeningCookie = (
   return nextState
 }
 
-export type DeckConfig = DeckChoice | { player: DeckChoice; ai: DeckChoice }
+export type DeckConfig =
+  | DeckChoice
+  | { player: DeckChoice; ai: BuiltInDeckChoice }
 
 export const createDemoSetupGame = (
   firstPlayerId: 'player-one' | 'player-two',
@@ -207,14 +210,17 @@ export const createDemoSetupGame = (
   playerCustomDeck?: CustomDeck,
 ): GameState => {
   const playerChoice = typeof deck === 'string' ? deck : deck.player
-  const aiChoice = typeof deck === 'string' ? deck : deck.ai
+  const aiChoice =
+    typeof deck === 'string' ? (deck === 'custom' ? 'red' : deck) : deck.ai
+  const builtInPlayerChoice =
+    playerChoice === 'custom' ? 'red' : playerChoice
   const shuffle =
     seed === undefined ? defaultShuffle : createSeededShuffle(seed)
 
   const playerDeck =
     playerChoice === 'custom' && playerCustomDeck
       ? createDeckFromCustomDeck(playerCustomDeck, 'player-one')
-      : DECK_CREATORS[playerChoice === 'custom' ? 'red' : playerChoice]('player-one')
+      : DECK_CREATORS[builtInPlayerChoice]('player-one')
 
   return createGame(
     {

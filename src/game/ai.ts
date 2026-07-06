@@ -21,6 +21,7 @@ import {
 } from './replacement'
 import { activateCookieSkill, canActivateCookieSkill } from './skills'
 import type {
+  AbilityCost,
   CardEffect,
   CardSkill,
   CookieInBattle,
@@ -123,12 +124,7 @@ const chooseEffectTargets = (
   if (effect.kind === 'return-to-hand') {
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
-    const candidates = targetPlayer.battleArea.filter((cookie) => {
-      if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
-      if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
-      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
-      return true
-    })
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
     const maxReturn = Math.min(effect.target.max, candidates.length, targetPlayer.battleArea.length - 1)
     if (maxReturn < effect.target.min) return []
     const ordered = [...candidates].sort(
@@ -140,12 +136,7 @@ const chooseEffectTargets = (
   if (effect.kind === 'return-to-deck-bottom') {
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
-    const candidates = targetPlayer.battleArea.filter((cookie) => {
-      if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
-      if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
-      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
-      return true
-    })
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
     const maxReturn = Math.min(effect.target.max, candidates.length, targetPlayer.battleArea.length - 1)
     if (maxReturn < effect.target.min) return []
     const ordered = [...candidates].sort(
@@ -158,6 +149,21 @@ const chooseEffectTargets = (
     if (effect.target.sourceOnly) return []
     return getEffectTargetCandidates(state, context, effect.target)
       .slice(0, effect.target.max)
+      .map((cookie) => cookie.card.instanceId)
+  }
+
+  if (effect.kind === 'opponent-battle-to-trash') {
+    const opponentId =
+      context.sourcePlayerId === 'player-one' ? 'player-two' : 'player-one'
+    const candidates = state.players[opponentId].battleArea.filter((cookie) => {
+      if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
+      if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
+      if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
+      return true
+    })
+    return candidates
+      .sort((left, right) => left.hpCards.length - right.hpCards.length)
+      .slice(0, 1)
       .map((cookie) => cookie.card.instanceId)
   }
 
@@ -230,6 +236,88 @@ const chooseEffectTargets = (
     .map((cookie) => cookie.card.instanceId)
 }
 
+const chooseAbilityCostIds = (
+  state: GameState,
+  playerId: PlayerId,
+  cost: AbilityCost,
+  sourceInstanceId: string,
+) => {
+  const player = state.players[playerId]
+  const paymentIds = selectEnergyPayment(
+    cost.energy ?? cost,
+    player.supportArea,
+  )
+  if (!paymentIds) return null
+
+  const paymentSet = new Set(paymentIds)
+  const remainingSupports = player.supportArea.filter(
+    (support) => !paymentSet.has(support.card.instanceId),
+  )
+  const supportToTrashIds = remainingSupports
+    .slice(0, cost.supportToTrash ?? 0)
+    .map((support) => support.card.instanceId)
+  if (supportToTrashIds.length < (cost.supportToTrash ?? 0)) return null
+
+  const supportToTrashSet = new Set(supportToTrashIds)
+  const supportToHandIds = remainingSupports
+    .filter((support) => !supportToTrashSet.has(support.card.instanceId))
+    .slice(0, cost.supportToHand ?? 0)
+    .map((support) => support.card.instanceId)
+  if (supportToHandIds.length < (cost.supportToHand ?? 0)) return null
+
+  const discardHandIds = player.hand
+    .filter(
+      (card) =>
+        card.instanceId !== sourceInstanceId &&
+        (!cost.discardHandColor || card.energyColor === cost.discardHandColor),
+    )
+    .slice(0, cost.discardHand ?? 0)
+    .map((card) => card.instanceId)
+  if (discardHandIds.length < (cost.discardHand ?? 0)) return null
+
+  const hpToTrashTargetIds = cost.hpToTrash
+    ? player.battleArea
+        .filter((cookie) =>
+          cost.hpToTrash?.untilRemainingHp === undefined
+            ? cookie.hpCards.length > 0
+            : cookie.hpCards.length > cost.hpToTrash.untilRemainingHp,
+        )
+        .slice(0, 1)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+  if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
+
+  return {
+    paymentIds,
+    supportToTrashIds,
+    supportToHandIds,
+    discardHandIds,
+    hpToTrashTargetIds,
+  }
+}
+
+const hasEnoughHandAfterAbilityCost = (
+  state: GameState,
+  playerId: PlayerId,
+  sourceInstanceId: string,
+  costDiscardIds: string[],
+  effects: CardEffect[],
+) => {
+  const requiredDiscardCount = effects.reduce(
+    (count, effect) =>
+      effect.kind === 'discard-hand' ? count + effect.count : count,
+    0,
+  )
+  if (requiredDiscardCount === 0) return true
+
+  const remainingHandCount = state.players[playerId].hand.filter(
+    (card) =>
+      card.instanceId !== sourceInstanceId &&
+      !costDiscardIds.includes(card.instanceId),
+  ).length
+  return remainingHandCount >= requiredDiscardCount
+}
+
 const resolveAiCardAbility = (
   state: GameState,
   playerId: PlayerId,
@@ -237,11 +325,13 @@ const resolveAiCardAbility = (
 ): AiDecision | null => {
   const ability = card.item
   if (!ability) return null
-  const paymentIds = selectEnergyPayment(
-    ability.cost.energy ?? ability.cost,
-    state.players[playerId].supportArea,
+  const costIds = chooseAbilityCostIds(
+    state,
+    playerId,
+    ability.cost,
+    card.instanceId,
   )
-  if (!paymentIds) return null
+  if (!costIds) return null
 
   const context = {
     sourcePlayerId: playerId,
@@ -251,6 +341,17 @@ const resolveAiCardAbility = (
     isEffectConditionMet(state, context, effect),
   )
   if (effects.length === 0) return null
+  if (
+    !hasEnoughHandAfterAbilityCost(
+      state,
+      playerId,
+      card.instanceId,
+      costIds.discardHandIds,
+      effects,
+    )
+  ) {
+    return null
+  }
 
   const hasModifyAttack = effects.some(
     (effect) => effect.kind === 'modify-attack',
@@ -258,7 +359,7 @@ const resolveAiCardAbility = (
   if (hasModifyAttack) {
     const player = state.players[playerId]
     const remainingSupportsAfterItem = player.supportArea.filter(
-      (support) => !paymentIds.includes(support.card.instanceId),
+      (support) => !costIds.paymentIds.includes(support.card.instanceId),
     )
     const canAttackAfterItem = player.battleArea.some((cookie) => {
       const attackCost = getAttackEnergyCost(cookie.card)
@@ -269,8 +370,22 @@ const resolveAiCardAbility = (
 
   let nextState = appendCommandLogEntry(
     state,
-    playItem(state, playerId, card.instanceId, paymentIds),
-    { kind: 'play-item', playerId, instanceId: card.instanceId, paymentIds },
+    playItem(
+      state,
+      playerId,
+      card.instanceId,
+      costIds.paymentIds,
+      costIds.supportToTrashIds,
+      costIds.supportToHandIds,
+      costIds.discardHandIds,
+      costIds.hpToTrashTargetIds,
+    ),
+    {
+      kind: 'play-item',
+      playerId,
+      instanceId: card.instanceId,
+      paymentIds: costIds.paymentIds,
+    },
   )
   const effectSelections: AiEffectSelection[] = []
   const shuffleSeed = [...card.instanceId].reduce(
@@ -310,7 +425,7 @@ const resolveAiCardAbility = (
     nextState = executeCardEffect(nextState, context, effect, targetIds, shuffle)
     effectSelections.push({
       sourceInstanceId: card.instanceId,
-      paymentIds,
+      paymentIds: costIds.paymentIds,
       targetIds,
       effect,
     })
@@ -463,6 +578,23 @@ const resolveAiSkill = (
     ) {
       const targetIds = chooseEffectTargets(nextState, context, effect)
       if (targetIds.length < effect.target.min) return null
+      nextState = executeCardEffect(
+        nextState,
+        context,
+        effect,
+        targetIds,
+      )
+      effectSelections.push({
+        sourceInstanceId: source.card.instanceId,
+        paymentIds,
+        targetIds,
+        effect,
+      })
+      continue
+    }
+
+    if (effect.kind === 'opponent-battle-to-trash') {
+      const targetIds = chooseEffectTargets(nextState, context, effect)
       nextState = executeCardEffect(
         nextState,
         context,

@@ -18,6 +18,7 @@ import {
   getTrashBattleCookieCostCandidates,
   isPlayerControllingState,
   selectEnergyPayment,
+  type BuiltInDeckChoice,
   type DeckChoice,
 } from '../game'
 import {
@@ -579,7 +580,7 @@ export function useMatchController(params: {
 
   // resetMatchState: resets all match-owned state (used by App's resetGame)
   const resetMatchState = useCallback(
-    (nextConfig: { player: DeckChoice; ai: DeckChoice }) => {
+    (nextConfig: { player: DeckChoice; ai: BuiltInDeckChoice }) => {
       setGame(createDemoSetupGame('player-one', nextConfig))
       resetSetup()
       battleActions.clearAttacker()

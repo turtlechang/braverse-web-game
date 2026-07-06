@@ -17,11 +17,19 @@ import type { OfficialCardRecord } from '../cards/types'
 import type { CardEffect, GameCard, PlayerId } from './types'
 import { getCardPoolEntry } from './card-pool'
 
-export type DeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple' | 'custom'
+export type StarterDeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+export type AiPresetDeckChoice =
+  | 'bs2-red'
+  | 'bs2-yellow'
+  | 'bs2-bean'
+  | 'bs2-blue'
+  | 'bs2-purple'
+export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
+export type DeckChoice = BuiltInDeckChoice | 'custom'
 
 export interface StarterDeckEntry {
   cardNumber: string
-  name: string
+  name?: string
   count: number
 }
 
@@ -149,15 +157,128 @@ export const OFFICIAL_PURPLE_STARTER_DECK: StarterDeckEntry[] = [
   { cardNumber: 'ST5-022', name: 'Windswept Valley', count: 2 },
 ]
 
+export const AI_PRESET_BS2_RED_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'ST1-001', count: 2 },
+  { cardNumber: 'ST1-004', count: 4 },
+  { cardNumber: 'ST1-013', count: 4 },
+  { cardNumber: 'BS2-003', count: 4 },
+  { cardNumber: 'BS2-006', count: 4 },
+  { cardNumber: 'BS1-022', count: 4 },
+  { cardNumber: 'ST1-020', count: 4 },
+  { cardNumber: 'BS1-012', count: 4 },
+  { cardNumber: 'BS1-008', count: 4 },
+  { cardNumber: 'BS1-006', count: 3 },
+  { cardNumber: 'BS1-003', count: 4 },
+  { cardNumber: 'ST1-009', count: 1 },
+  { cardNumber: 'ST1-014', count: 2 },
+  { cardNumber: 'BS1-021', count: 2 },
+  { cardNumber: 'BS2-001', count: 1 },
+  { cardNumber: 'BS1-002', count: 1 },
+  { cardNumber: 'BS1-018', count: 4 },
+  { cardNumber: 'BS2-004', count: 4 },
+  { cardNumber: 'BS1-007', count: 4 },
+]
+
+export const AI_PRESET_BS2_YELLOW_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS1-036', count: 4 },
+  { cardNumber: 'BS1-037', count: 4 },
+  { cardNumber: 'BS1-049', count: 4 },
+  { cardNumber: 'BS1-052', count: 3 },
+  { cardNumber: 'BS1-044', count: 1 },
+  { cardNumber: 'BS1-040', count: 4 },
+  { cardNumber: 'BS1-032', count: 4 },
+  { cardNumber: 'BS1-033', count: 2 },
+  { cardNumber: 'BS1-031', count: 4 },
+  { cardNumber: 'ST2-020', count: 4 },
+  { cardNumber: 'ST2-007', count: 4 },
+  { cardNumber: 'BS1-030', count: 4 },
+  { cardNumber: 'ST2-005', count: 4 },
+  { cardNumber: 'BS1-051', count: 4 },
+  { cardNumber: 'ST2-008', count: 4 },
+  { cardNumber: 'BS2-010', count: 3 },
+  { cardNumber: 'BS2-011', count: 2 },
+  { cardNumber: 'ST2-016', count: 1 },
+]
+
+export const AI_PRESET_BS2_BEAN_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS2-018', count: 2 },
+  { cardNumber: 'BS2-021', count: 2 },
+  { cardNumber: 'BS1-075', count: 4 },
+  { cardNumber: 'BS1-069', count: 2 },
+  { cardNumber: 'BS1-057', count: 4 },
+  { cardNumber: 'ST3-022', count: 4 },
+  { cardNumber: 'ST3-019', count: 4 },
+  { cardNumber: 'ST3-014', count: 4 },
+  { cardNumber: 'ST3-011', count: 2 },
+  { cardNumber: 'ST3-008', count: 2 },
+  { cardNumber: 'BS1-055', count: 2 },
+  { cardNumber: 'BS1-054', count: 4 },
+  { cardNumber: 'BS1-007', count: 4 },
+  { cardNumber: 'BS1-032', count: 4 },
+  { cardNumber: 'BS2-035', count: 4 },
+  { cardNumber: 'BS2-053', count: 4 },
+  { cardNumber: 'ST3-016', count: 2 },
+  { cardNumber: 'BS2-015', count: 4 },
+  { cardNumber: 'ST3-017', count: 2 },
+]
+
+export const AI_PRESET_BS2_BLUE_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS2-031', count: 3 },
+  { cardNumber: 'BS2-029', count: 3 },
+  { cardNumber: 'BS2-036', count: 4 },
+  { cardNumber: 'BS2-040', count: 4 },
+  { cardNumber: 'BS2-049', count: 3 },
+  { cardNumber: 'ST4-021', count: 4 },
+  { cardNumber: 'ST4-017', count: 4 },
+  { cardNumber: 'ST4-016', count: 4 },
+  { cardNumber: 'ST4-014', count: 4 },
+  { cardNumber: 'ST4-007', count: 4 },
+  { cardNumber: 'ST4-006', count: 4 },
+  { cardNumber: 'BS2-051', count: 3 },
+  { cardNumber: 'BS2-035', count: 4 },
+  { cardNumber: 'ST4-020', count: 2 },
+  { cardNumber: 'BS2-042', count: 4 },
+  { cardNumber: 'BS2-037', count: 4 },
+  { cardNumber: 'BS2-044', count: 2 },
+]
+
+export const AI_PRESET_BS2_PURPLE_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS2-055', count: 1 },
+  { cardNumber: 'BS2-058', count: 4 },
+  { cardNumber: 'BS2-062', count: 4 },
+  { cardNumber: 'BS2-068@1', count: 4 },
+  { cardNumber: 'BS2-069', count: 4 },
+  { cardNumber: 'BS2-075', count: 2 },
+  { cardNumber: 'ST5-007', count: 3 },
+  { cardNumber: 'BS2-061', count: 4 },
+  { cardNumber: 'ST5-003', count: 4 },
+  { cardNumber: 'BS2-072', count: 4 },
+  { cardNumber: 'ST5-008', count: 2 },
+  { cardNumber: 'BS2-056', count: 2 },
+  { cardNumber: 'ST5-020', count: 3 },
+  { cardNumber: 'BS2-079', count: 4 },
+  { cardNumber: 'BS2-080', count: 3 },
+  { cardNumber: 'ST5-018', count: 2 },
+  { cardNumber: 'ST5-016', count: 1 },
+  { cardNumber: 'ST5-022', count: 4 },
+  { cardNumber: 'BS2-078', count: 2 },
+  { cardNumber: 'BS2-077', count: 3 },
+]
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
-export const OFFICIAL_DECK_RECIPES: Record<DeckChoice, StarterDeckEntry[]> = {
+export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
   red: OFFICIAL_RED_STARTER_DECK,
   yellow: OFFICIAL_YELLOW_STARTER_DECK,
   green: OFFICIAL_GREEN_STARTER_DECK,
   blue: OFFICIAL_BLUE_STARTER_DECK,
   purple: OFFICIAL_PURPLE_STARTER_DECK,
-} as Record<DeckChoice, StarterDeckEntry[]>
+  'bs2-red': AI_PRESET_BS2_RED_DECK,
+  'bs2-yellow': AI_PRESET_BS2_YELLOW_DECK,
+  'bs2-bean': AI_PRESET_BS2_BEAN_DECK,
+  'bs2-blue': AI_PRESET_BS2_BLUE_DECK,
+  'bs2-purple': AI_PRESET_BS2_PURPLE_DECK,
+}
 
 const getEnergyColor = (
   source: OfficialCardRecord,
@@ -325,10 +446,25 @@ export const createOfficialPurpleStarterDeck = (
     officialPurpleSample.cards as OfficialCardRecord[],
   )
 
+export const createAiPresetBs2RedDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS2_RED_DECK, [])
+
+export const createAiPresetBs2YellowDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS2_YELLOW_DECK, [])
+
+export const createAiPresetBs2BeanDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS2_BEAN_DECK, [])
+
+export const createAiPresetBs2BlueDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS2_BLUE_DECK, [])
+
+export const createAiPresetBs2PurpleDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS2_PURPLE_DECK, [])
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
-  DeckChoice,
+  BuiltInDeckChoice,
   (playerId: PlayerId) => GameCard[]
 > = {
   red: createOfficialRedStarterDeck,
@@ -336,9 +472,14 @@ export const DECK_CREATORS: Record<
   green: createOfficialGreenStarterDeck,
   blue: createOfficialBlueStarterDeck,
   purple: createOfficialPurpleStarterDeck,
-} as Record<DeckChoice, (playerId: PlayerId) => GameCard[]>
+  'bs2-red': createAiPresetBs2RedDeck,
+  'bs2-yellow': createAiPresetBs2YellowDeck,
+  'bs2-bean': createAiPresetBs2BeanDeck,
+  'bs2-blue': createAiPresetBs2BlueDeck,
+  'bs2-purple': createAiPresetBs2PurpleDeck,
+}
 
 export const createDeckForChoice = (
-  choice: DeckChoice,
+  choice: BuiltInDeckChoice,
   playerId: PlayerId,
 ): GameCard[] => DECK_CREATORS[choice](playerId)

@@ -266,11 +266,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             playerName={match.pendingPlayer.name}
             replacementCount={match.replacementTask?.remaining}
             options={match.pendingOptions}
-            isOptionDisabled={(card) =>
-              !match.game.pendingRefresh &&
-              card.type === 'cookie' &&
-              match.pendingPlayer!.deck.length < card.hp
-            }
+            isOptionDisabled={() => false}
             onSkipReplacement={
               match.game.pendingRefresh
                 ? undefined

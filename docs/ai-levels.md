@@ -27,7 +27,7 @@ simulateAiMatch(createDemoGame(seed), 1500, {
 })
 ```
 
-UI 由主選單「AI 對手」區塊選擇牌組（隨機／五色起始）與等級（Lv.1／Lv.2／Lv.3），
+UI 由主選單「AI 對手」區塊選擇牌組（隨機五色起始／五色起始／第二彈預設）與等級（Lv.1／Lv.2／Lv.3），
 經 `App.tsx` 傳入 `useAiTurn` 與 `useMatchSetup.handleDeckSelection`。
 
 ## Lv.1 實作細節
