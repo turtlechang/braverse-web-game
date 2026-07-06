@@ -32,6 +32,7 @@ import {
   type OpeningSetupStep,
 } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
+import { OnlineMatchDebugView } from './components/battle/OnlineMatchDebugView'
 import { useMatchDialogs } from './hooks/useMatchDialogs'
 import { usePendingEffect } from './hooks/usePendingEffect'
 import { useAiTurn } from './hooks/useAiTurn'
@@ -45,7 +46,14 @@ const testStateConfig = parseTestStateConfig(
   window.location.hostname,
 )
 
+const isOnlineDebugRequested =
+  new URLSearchParams(window.location.search).get('online-debug') === '1'
+
 function App() {
+  if (isOnlineDebugRequested) {
+    return <OnlineMatchDebugView />
+  }
+
   const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
     testStateConfig ? 'battle' : 'menu',
   )
