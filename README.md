@@ -14,6 +14,8 @@
 
 CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `npm test`、`npm run lint`、`npm run build` 與手動 Playwright AI 瀏覽器驗證，不負責部署。Vercel 監聽 PR 與 push 後自動產生 Preview 部署與正式部署。GitHub Secrets 不保存 Vercel Token，所有 Vercel 連線設定在 Vercel Dashboard 完成。
 
+Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與線上戰場 UI 重用流程；CI 修正以維持 `npm test`、`npm run lint`、`npm run build` 全通過為提交門檻。
+
 ## 目前進度
 
 - 已建立紅色起始牌組：22 種卡號，合計 60 張。
@@ -45,17 +47,19 @@ CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `np
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局選擇紅色、黃色、綠色、藍色或紫色起始牌組，AI 每局隨機選擇並立即公開；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
-  - 目前共有 742 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
+  - 目前共有 851 項單元測試；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發已支援戰鬥傷害與效果傷害、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程。
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
 - 昏厥效果、`draw-up-to` 抽牌決策與後續棄手牌決策已改用與攻擊宣告回應一致的深色置中提示框與可縮小 dock。BS2-040 Aloe Cookie 的強制昏厥效果以「確認結算」進入檢視牌庫流程，不再呈現略過語意；BS2-049 Salt Crystal Trident 會先在同一套提示框選擇抽牌數，抽牌後再切到棄置手牌選擇 UI。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
+- Phase 5 線上對戰 MVP 的 lint 修正已完成：線上效果目標選取改為 keyed state，避免 React hooks `set-state-in-effect`；移除未使用型別與空 handler 參數。本分支目前 `npm test` 為 851 項通過，`npm run lint` 與 `npm run build` 亦通過。
 
 ## 下一步計畫
 
 - 已達成：UI P0 操作體驗改版——PhaseRail 精確 CTA（略過支援階段／結束主要階段／結束回合）與操作指引、頂部短暫 Toast 取代中央戰場常駐訊息、手牌可操作/不可操作視覺狀態（降權顯示）、戰鬥卡 hover/focus 快速預覽面板（窄版自動隱藏）、`BattleRowProps` 增加預覽事件。
+- 待確認：推送 Phase 5 線上對戰 MVP lint 修正後，確認 GitHub Actions 的 Test, Lint & Build 工作重新回到綠燈。
 - 已達成：UI P1 資訊密度改版——桌機戰鬥卡放大約 16%～20%、HP/ATK 圖示徽章、敵我摘要集中顯示牌庫手牌棄牌與休息等級、支援區橫置/付款狀態視覺區別、資源區 hover 提示（休息等級、場景橫置狀態等）；`phaseAdvanceLabels` 匯出供元件測試使用。
 - 已達成：三色（RED / YELLOW / GREEN）起始牌組切換、App.tsx 元件拆分（卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板、modal）；10 張物品與 2 張場景完整支援（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand、複合效果暫停與 OnPlay/Refresh/補位銜接、AI deterministic 使用）。
 - 已達成：陷阱使攻擊者或目標離場後跳過攻擊傷害；HP 配置途中 Refresh 的登場允許；通用化物品/場景效果解析（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）；When this Cookie faints 事件引擎（pending queue、玩家/AI 雙路徑選擇、選 0 略過、多餅乾同時昏厥依序處理），且同一玩家的 BS2-040/BS2-049 類同時觸發效果會先交由玩家決定順序；顏色匹配與 Mix Cost 已實作；回合結束效果引擎（endPhase 標記、雙方順序觸發、一次性防重複、Refresh 暫停與恢復）。
@@ -122,6 +126,13 @@ npm run cards:import:purple-sample
 ```
 
 `cards:import:sample` 目前預設匯入綠色起始牌組；紅色、黃色、綠色、藍色與紫色也可使用明確腳本重新產生。
+
+# 2026-07-06 Phase 5 online battle CI lint fix
+
+- 修正 `useOnlinePendingEffect` 於 effect 變更時同步 `setState` 造成的 React hooks lint 錯誤，改以 keyed state 在效果切換時自然清空目標選取。
+- 移除 `useMatchController` 未使用的 `GameCommand` type import，並讓線上 no-op `handleOnPlayTrigger` 保持介面相容但不宣告未使用參數。
+- 已執行 `npm test`（851 項）、`npm run lint`、`npm run build`；build 仍只有 Vite chunk size 警告。
+
 # 2026-06-30 BS1 Phase 1/2 update
 
 - 已完成 Brave Beginning BS1 Phase 1/2：`data/cards/official-brave-beginning-bs1.en.json` 建立 adapter 盤點測試，覆蓋 99 筆資料、78 個 base card number、cookie/flip/item/trap/stage 類型分布。

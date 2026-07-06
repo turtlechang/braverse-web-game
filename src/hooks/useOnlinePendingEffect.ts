@@ -59,7 +59,6 @@ export function useOnlinePendingEffect(params: {
   hasAfterDamage: boolean
 }) {
   const { game, viewerPlayerId, dispatch, hasFaint, hasAfterDamage } = params
-  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
   const [effectHistory, setEffectHistory] = useState<string[]>([])
 
   const pendingAbility = game.pendingAbilityEffect
@@ -110,20 +109,27 @@ export function useOnlinePendingEffect(params: {
       ? `ability:${pendingAbility?.effectIndex}`
       : 'none'
 
-  useEffect(() => {
-    setSelectedTargetIds([])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectKey])
+  const [selectedTargetState, setSelectedTargetState] = useState<{
+    key: string
+    ids: string[]
+  }>({ key: effectKey, ids: [] })
+  const selectedTargetIds =
+    selectedTargetState.key === effectKey ? selectedTargetState.ids : []
 
   const toggleTarget = (instanceId: string) => {
     const max = currentTargetSelector?.max ?? 1
-    setSelectedTargetIds((current) => {
+    setSelectedTargetState((currentState) => {
+      const current =
+        currentState.key === effectKey ? currentState.ids : []
       if (current.includes(instanceId)) {
-        return current.filter((id) => id !== instanceId)
+        return {
+          key: effectKey,
+          ids: current.filter((id) => id !== instanceId),
+        }
       }
-      if (max <= 1) return [instanceId]
-      if (current.length >= max) return current
-      return [...current, instanceId]
+      if (max <= 1) return { key: effectKey, ids: [instanceId] }
+      if (current.length >= max) return { key: effectKey, ids: current }
+      return { key: effectKey, ids: [...current, instanceId] }
     })
   }
 
@@ -224,7 +230,7 @@ export function useOnlinePendingEffect(params: {
 
   /** 本地版本仰賴同步拿到指令套用後的狀態才能檢查 OnPlay;線上模式已經有
    * 上面的 effect 主動處理,這裡維持相同呼叫介面但不需要做任何事。 */
-  const handleOnPlayTrigger = (_state: GameState) => {}
+  const handleOnPlayTrigger: (state: GameState) => void = () => {}
 
   const beginPlayItem = (card: GameCard) => {
     if (!card.item || !canPlayItem(game, viewerPlayerId, card.instanceId)) return

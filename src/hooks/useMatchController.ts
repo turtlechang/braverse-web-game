@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, SupportCard } from '../game'
+import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, ReplacementTask, SupportCard } from '../game'
 import {
   applyGameCommand,
   createDemoSetupGame,
