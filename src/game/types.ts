@@ -789,6 +789,20 @@ export interface GameState {
     sourceCardName: string
     effectText: string
   } | null
+  /**
+   * 技能/道具/場景卡多效果的逐步待處理效果鏈。中途若出現其他待處理決策
+   * （pendingRefresh/pendingOnPlay 等）會保留此欄位，供之後恢復繼續執行剩餘效果。
+   */
+  pendingAbilityEffect?: {
+    playerId: PlayerId
+    sourcePlayerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName?: string
+    sourceKind: 'skill' | 'item' | 'stage'
+    trigger?: 'activate' | 'on-play'
+    effects: CardEffect[]
+    effectIndex: number
+  }
   supportAreaDecreasedThisTurn?: Partial<Record<PlayerId, boolean>>
 }
 

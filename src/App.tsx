@@ -5,7 +5,6 @@ import {
   canActivateStage,
   canPlayItem,
   canPlayStage,
-  applyGameCommand,
   selectEnergyPayment,
   type DeckChoice,
   type GameCard,
@@ -60,6 +59,7 @@ function App() {
   const pending = usePendingEffect({
     game: match.game,
     setGame: match.setGame,
+    dispatch: match.dispatch,
     viewerPlayerId: match.viewerPlayerId,
     setMessage: match.setMessage,
     clearAttacker: match.clearAttacker,
@@ -341,16 +341,15 @@ function App() {
           }}
           onEffectTarget={pending.toggleEffectTarget}
           onPlaceSupport={(instanceId) =>
-            match.runAction(
-              (current) =>
-                applyGameCommand(
-                  applyGameCommand(current, {
-                    kind: 'place-support',
-                    playerId: match.activePlayer.id,
-                    instanceId,
-                  }),
-                  { kind: 'advance-phase', playerId: match.activePlayer.id },
-                ),
+            match.dispatch(
+              [
+                {
+                  kind: 'place-support',
+                  playerId: match.activePlayer.id,
+                  instanceId,
+                },
+                { kind: 'advance-phase', playerId: match.activePlayer.id },
+              ],
               '已將卡牌配置到支援區，進入主要階段。',
             )
           }
@@ -371,13 +370,12 @@ function App() {
             )
           }}
           onDeployCookie={(instanceId) =>
-            match.runAction(
-              (current) =>
-                applyGameCommand(current, {
-                  kind: 'deploy-cookie',
-                  playerId: match.activePlayer.id,
-                  instanceId,
-                }),
+            match.dispatch(
+              {
+                kind: 'deploy-cookie',
+                playerId: match.activePlayer.id,
+                instanceId,
+              },
               '新餅乾已登場並配置 HP。',
               (nextGame) => {
                 if (nextGame.pendingRefresh) return
@@ -433,14 +431,13 @@ function App() {
               match.setMessage(`${card.name}目前無法支付放置費用。`)
               return
             }
-            match.runAction(
-              (current) =>
-                applyGameCommand(current, {
-                  kind: 'play-stage',
-                  playerId: match.activePlayer.id,
-                  instanceId,
-                  paymentIds,
-                }),
+            match.dispatch(
+              {
+                kind: 'play-stage',
+                playerId: match.activePlayer.id,
+                instanceId,
+                paymentIds,
+              },
               `${card.name}已放置到場景區。`,
             )
           }}

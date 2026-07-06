@@ -61,6 +61,7 @@ export const getLegalTurnCommands = (
   }
 
   if (state.pendingBattle) return []
+  if (state.pendingAbilityEffect) return []
   if (state.activePlayerId !== playerId) return []
 
   const commands: PlayerActionCommand[] = []

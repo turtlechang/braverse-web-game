@@ -3,20 +3,20 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
-import type { GameState } from '../game'
+import { applyGameCommand, type GameCommand } from '../game'
 import { createBattleState } from '../game/test-helpers/battle-helpers'
-import { useBattleActions, type RunGameAction } from './useBattleActions'
+import { useBattleActions, type DispatchGameCommand } from './useBattleActions'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 describe('useBattleActions', () => {
   it('declares an attack after selecting a legal attacker and payment', async () => {
     const game = createBattleState()
-    const runAction = vi.fn<RunGameAction>()
+    const dispatch = vi.fn<DispatchGameCommand>()
     let captured: ReturnType<typeof useBattleActions> | null = null
 
     function TestHarness() {
-      captured = useBattleActions({ game, runAction })
+      captured = useBattleActions({ game, dispatch })
       return null
     }
 
@@ -29,10 +29,10 @@ describe('useBattleActions', () => {
     expect(captured!.attackPaymentValidation.valid).toBe(true)
 
     await act(() => captured!.handleAttackTarget('defender'))
-    expect(runAction).toHaveBeenCalledTimes(1)
+    expect(dispatch).toHaveBeenCalledTimes(1)
 
-    const action = runAction.mock.calls[0][0]
-    const next: GameState = action(game)
+    const command = dispatch.mock.calls[0][0] as GameCommand
+    const next = applyGameCommand(game, command)
     expect(next.pendingBattle?.attackerInstanceId).toBe('attacker')
     expect(next.pendingBattle?.targetInstanceId).toBe('defender')
 

@@ -1,4 +1,4 @@
-import { applyGameCommand, resolveBattleAutomatically } from '../../game'
+import type { GameCommand } from '../../game'
 import {
   AttackResponseModal,
   TrapResponseModal,
@@ -6,7 +6,7 @@ import {
   FlipResponseModal,
 } from '../modals/GameModals'
 import { parseTestStateConfig } from '../../game/demo'
-import type { useMatchController } from '../../hooks/useMatchController'
+import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
 
 const testStateConfig = parseTestStateConfig(
   window.location.search,
@@ -14,7 +14,7 @@ const testStateConfig = parseTestStateConfig(
 )
 
 export interface BattleResponseModalsProps {
-  match: ReturnType<typeof useMatchController>
+  match: BattleUiMatchLike
 }
 
 export function BattleResponseModals({ match }: BattleResponseModalsProps) {
@@ -40,12 +40,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedBlockerId(id)
             }}
             onSkip={() => {
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'skip-trap',
-                    playerId: match.viewerPlayerId,
-                  }),
+              match.dispatch(
+                { kind: 'skip-trap', playerId: match.viewerPlayerId },
                 '未發動回應，進入傷害結算。',
               )
             }}
@@ -120,12 +116,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setPendingResponseMode(null)
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'skip-trap',
-                    playerId: match.viewerPlayerId,
-                  }),
+              match.dispatch(
+                { kind: 'skip-trap', playerId: match.viewerPlayerId },
                 '未發動陷阱，進入傷害結算。',
               )
             }}
@@ -137,25 +129,25 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setTrapSelectNoTarget(false)
               match.setPendingResponseMode(null)
-              match.runAction(
-                (current) => {
-                  const afterTrap = applyGameCommand(current, {
-                    kind: 'play-trap',
-                    playerId: match.viewerPlayerId,
-                    trapInstanceId: trap.instanceId,
-                    paymentIds: match.selectedTrapPaymentIds,
-                    targetIds: match.selectedTrapTargets.map(
-                      (target) => target.card.instanceId,
-                    ),
-                    supportTrashIds: match.selectedTrapSupportTrashIds,
-                    discardHandIds: match.selectedTrapDiscardIds,
-                    trashBattleCookieIds:
-                      match.selectedTrapTrashBattleCookieIds,
-                  })
-                  return testStateConfig
-                    ? resolveBattleAutomatically(afterTrap)
-                    : afterTrap
-                },
+              const playTrapCommand: GameCommand = {
+                kind: 'play-trap',
+                playerId: match.viewerPlayerId,
+                trapInstanceId: trap.instanceId,
+                paymentIds: match.selectedTrapPaymentIds,
+                targetIds: match.selectedTrapTargets.map(
+                  (target) => target.card.instanceId,
+                ),
+                supportTrashIds: match.selectedTrapSupportTrashIds,
+                discardHandIds: match.selectedTrapDiscardIds,
+                trashBattleCookieIds: match.selectedTrapTrashBattleCookieIds,
+              }
+              match.dispatch(
+                testStateConfig
+                  ? [
+                      playTrapCommand,
+                      { kind: 'resolve-battle', playerId: match.viewerPlayerId },
+                    ]
+                  : playTrapCommand,
                 `已發動${trap.name}。`,
               )
             }}
@@ -186,25 +178,20 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
             onConfirm={() => {
               if (!match.selectedBlockerId) return
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'play-blocker',
-                    playerId: match.viewerPlayerId,
-                    sourceInstanceId: match.selectedBlockerId!,
-                    paymentIds: match.selectedBlockerPaymentIds,
-                  }),
+              match.dispatch(
+                {
+                  kind: 'play-blocker',
+                  playerId: match.viewerPlayerId,
+                  sourceInstanceId: match.selectedBlockerId!,
+                  paymentIds: match.selectedBlockerPaymentIds,
+                },
                 '已使用 Blocker 阻擋攻擊。',
               )
             }}
             onSkip={() => {
               match.setSelectedBlockerId(null)
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'skip-trap',
-                    playerId: match.viewerPlayerId,
-                  }),
+              match.dispatch(
+                { kind: 'skip-trap', playerId: match.viewerPlayerId },
                 '未使用 Blocker，進入傷害結算。',
               )
             }}
@@ -231,26 +218,21 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
             onConfirm={() => {
               if (!match.selectedBlockerId) return
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'play-blocker',
-                    playerId: match.viewerPlayerId,
-                    sourceInstanceId: match.selectedBlockerId!,
-                    paymentIds: match.selectedBlockerPaymentIds,
-                  }),
+              match.dispatch(
+                {
+                  kind: 'play-blocker',
+                  playerId: match.viewerPlayerId,
+                  sourceInstanceId: match.selectedBlockerId!,
+                  paymentIds: match.selectedBlockerPaymentIds,
+                },
                 '已使用 Blocker 阻擋攻擊。',
               )
             }}
             onSkip={() => {
               match.setSelectedBlockerId(null)
               match.setPendingResponseMode(null)
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'skip-trap',
-                    playerId: match.viewerPlayerId,
-                  }),
+              match.dispatch(
+                { kind: 'skip-trap', playerId: match.viewerPlayerId },
                 '未使用 Blocker，進入傷害結算。',
               )
             }}
@@ -284,26 +266,24 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             }
             onSkip={() => {
               match.setSelectedFlipDiscardIds([])
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'resolve-flip',
-                    playerId: match.viewerPlayerId,
-                    activate: false,
-                  }),
+              match.dispatch(
+                {
+                  kind: 'resolve-flip',
+                  playerId: match.viewerPlayerId,
+                  activate: false,
+                },
                 '未發動 FLIP，繼續傷害結算。',
               )
             }}
             onActivate={() => {
               match.setSelectedFlipDiscardIds([])
-              match.runAction(
-                (current) =>
-                  applyGameCommand(current, {
-                    kind: 'resolve-flip',
-                    playerId: match.viewerPlayerId,
-                    activate: true,
-                    discardHandIds: match.selectedFlipDiscardIds,
-                  }),
+              match.dispatch(
+                {
+                  kind: 'resolve-flip',
+                  playerId: match.viewerPlayerId,
+                  activate: true,
+                  discardHandIds: match.selectedFlipDiscardIds,
+                },
                 `已發動${match.game.pendingBattle?.revealedHpCard?.name ?? 'FLIP'}。`,
               )
             }}

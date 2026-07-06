@@ -7,12 +7,8 @@ import type {
   SkillTrigger,
 } from '../game'
 import {
-  activateCookieSkill,
-  activateStage,
-  appendCommandLogEntry,
   applyGameCommand,
   canActivateCookieSkill,
-  executeCardEffect,
   finalizePendingReplacements,
   getEnergyCostTotal,
   getBreakToBattleCandidates,
@@ -27,11 +23,11 @@ import {
   getTrashToSupportCandidates,
   isEffectConditionMet,
   isEffectUntargeted,
-  playItem,
   validateEnergyPayment,
 } from '../game'
 import { describeEffectResult } from '../components/effects/effectUiUtils'
 import type { PendingEffect } from '../components/effects/effectUiTypes'
+import type { DispatchGameCommand } from './useBattleActions'
 
 interface HpPileInfo {
   title: string
@@ -41,6 +37,7 @@ interface HpPileInfo {
 export function usePendingEffect(params: {
   game: GameState
   setGame: (value: GameState | ((prev: GameState) => GameState)) => void
+  dispatch: DispatchGameCommand
   viewerPlayerId: PlayerId
   setMessage: (value: string) => void
   clearAttacker: () => void
@@ -59,6 +56,7 @@ export function usePendingEffect(params: {
   const {
     game,
     setGame,
+    dispatch,
     viewerPlayerId,
     setMessage,
     clearAttacker,
@@ -474,6 +472,28 @@ export function usePendingEffect(params: {
     },
     [setGame, setMessage, clearAttacker, setPendingEffect],
   )
+
+  /**
+   * 補位(refresh-deck/replace-cookie)完成後,若剛好觸發了 OnPlay 技能,
+   * 呼叫 beginCookieSkill 開始那個技能的精靈。傳入的 state 必須是指令
+   * 套用後的最新結果(本地模式下同步可得)。線上模式沒有同步結果,改用
+   * 監看 game.pendingOnPlay 變化的 effect 主動觸發,此函式在那邊是no-op。
+   */
+  const handleOnPlayTrigger = (state: GameState) => {
+    const onPlay = state.pendingOnPlay
+    if (!onPlay) return
+    const card = state.players[onPlay.playerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === onPlay.sourceInstanceId,
+    )?.card
+    beginCookieSkill(
+      state,
+      card,
+      onPlay.playerId,
+      'on-play',
+      'OnPlay 登場觸發',
+      true,
+    )
+  }
 
   const beginCardAbility = (
     card: GameCard,
@@ -891,14 +911,14 @@ export function usePendingEffect(params: {
 
     if (!pendingEffect?.optional) return
 
-    setGame(
-      applyGameCommand(game, {
+    dispatch(
+      {
         kind: 'skip-on-play',
         playerId: pendingEffect.context.sourcePlayerId,
         sourceInstanceId: pendingEffect.sourceCard.instanceId,
-      }),
+      },
+      `${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`,
     )
-    setMessage(`${pendingEffect.sourceCard.name}的 OnPlay 技能未發動。`)
     setPendingEffect(null)
   }
 
@@ -938,14 +958,15 @@ export function usePendingEffect(params: {
 
     try {
       if (pendingEffect.sourceKind === 'attack') {
-        const nextGame = applyGameCommand(game, {
-          kind: 'resolve-attack-effect',
-          playerId: pendingEffect.context.sourcePlayerId,
-          targetIds: pendingEffect.selectedTargetIds,
-        })
         const result = describeEffectResult(currentEffect, targetNames)
-        setGame(nextGame)
-        setMessage(result)
+        dispatch(
+          {
+            kind: 'resolve-attack-effect',
+            playerId: pendingEffect.context.sourcePlayerId,
+            targetIds: pendingEffect.selectedTargetIds,
+          },
+          result,
+        )
         setEffectHistory((history) => [result, ...history].slice(0, 4))
         setPendingEffect(null)
         return
@@ -961,80 +982,43 @@ export function usePendingEffect(params: {
       const discardHandIds = pendingEffect.selectedDiscardHandIds
 
       // 技能/道具/場景效果是多步驟精靈(逐一支付代價、逐一選目標),
-      // 只有第一次呼叫才會真的執行代價扣除,因此指令紀錄只在此處補記一筆。
+      // 只有第一次呼叫才需要支付代價(begin-*指令),之後每步都走 resolve-ability-effect。
       const activatedGame = pendingEffect.skillActivated
         ? game
         : pendingEffect.sourceKind === 'item'
-          ? appendCommandLogEntry(
-              game,
-              playItem(
-                game,
-                pendingEffect.context.sourcePlayerId,
-                pendingEffect.sourceCard.instanceId,
-                paymentIds,
-                supportToTrashIds,
-                supportToHandIds,
-                discardHandIds,
-              ),
-              {
-                kind: 'play-item',
-                playerId: pendingEffect.context.sourcePlayerId,
-                instanceId: pendingEffect.sourceCard.instanceId,
-                paymentIds,
-                supportToTrashIds,
-                supportToHandIds,
-                discardHandIds,
-              },
-            )
+          ? applyGameCommand(game, {
+              kind: 'begin-play-item',
+              playerId: pendingEffect.context.sourcePlayerId,
+              instanceId: pendingEffect.sourceCard.instanceId,
+              paymentIds,
+              supportToTrashIds,
+              supportToHandIds,
+              discardHandIds,
+            })
           : pendingEffect.sourceKind === 'stage'
-            ? appendCommandLogEntry(
-                game,
-                activateStage(
-                  game,
-                  pendingEffect.context.sourcePlayerId,
-                  paymentIds,
-                  supportToTrashIds,
-                  supportToHandIds,
-                  discardHandIds,
-                ),
-                {
-                  kind: 'activate-stage',
-                  playerId: pendingEffect.context.sourcePlayerId,
-                  paymentIds,
-                  supportToTrashIds,
-                  supportToHandIds,
-                  discardHandIds,
-                },
-              )
-            : appendCommandLogEntry(
-                game,
-                activateCookieSkill(
-                  game,
-                  pendingEffect.context.sourcePlayerId,
-                  pendingEffect.sourceCard.instanceId,
-                  pendingEffect.trigger,
-                  paymentIds,
-                  pendingEffect.selectedCostSupportToTrashIds,
-                  discardHandIds,
-                  pendingEffect.selectedTrashBattleCookieIds,
-                ),
-                {
-                  kind: 'activate-skill',
-                  playerId: pendingEffect.context.sourcePlayerId,
-                  sourceInstanceId: pendingEffect.sourceCard.instanceId,
-                  trigger: pendingEffect.trigger as 'activate' | 'on-play',
-                  paymentIds,
-                  costSupportToTrashIds: pendingEffect.selectedCostSupportToTrashIds,
-                  discardHandIds,
-                  trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
-                },
-              )
-      const nextGame = executeCardEffect(
-        activatedGame,
-        pendingEffect.context,
-        currentEffect,
-        pendingEffect.selectedTargetIds,
-      )
+            ? applyGameCommand(game, {
+                kind: 'begin-activate-stage',
+                playerId: pendingEffect.context.sourcePlayerId,
+                paymentIds,
+                supportToTrashIds,
+                supportToHandIds,
+                discardHandIds,
+              })
+            : applyGameCommand(game, {
+                kind: 'begin-activate-skill',
+                playerId: pendingEffect.context.sourcePlayerId,
+                sourceInstanceId: pendingEffect.sourceCard.instanceId,
+                trigger: pendingEffect.trigger as 'activate' | 'on-play',
+                paymentIds,
+                costSupportToTrashIds: pendingEffect.selectedCostSupportToTrashIds,
+                discardHandIds,
+                trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+              })
+      const nextGame = applyGameCommand(activatedGame, {
+        kind: 'resolve-ability-effect',
+        playerId: pendingEffect.context.sourcePlayerId,
+        targetIds: pendingEffect.selectedTargetIds,
+      })
       const result = describeEffectResult(currentEffect, targetNames)
       if (
         currentEffect.kind === 'view-hp' &&
@@ -1162,6 +1146,7 @@ export function usePendingEffect(params: {
     setEffectHistory,
     resetEffectContext,
     beginCookieSkill,
+    handleOnPlayTrigger,
     beginCardAbility,
     toggleEffectTarget,
     toggleSkillPayment,

@@ -51,6 +51,7 @@ const renderMenu = async (
         onSelectAiLevel={handlers.onSelectAiLevel ?? (() => undefined)}
         onSelectDeck={() => undefined}
         onStartBattle={() => undefined}
+        onOpenOnlineMatch={() => undefined}
         onOpenTestScenario={() => undefined}
         onCreateDeck={() => undefined}
         onEditDeck={() => undefined}

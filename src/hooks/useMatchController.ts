@@ -45,7 +45,11 @@ import {
 } from '../game/demo'
 import { useMatchSetup } from './useMatchSetup'
 import { useMatchAnimations } from './useMatchAnimations'
-import { useBattleActions, type RunGameAction } from './useBattleActions'
+import {
+  useBattleActions,
+  type DispatchGameCommand,
+  type RunGameAction,
+} from './useBattleActions'
 
 type TestStateConfig = ReturnType<typeof parseTestStateConfig>
 
@@ -287,7 +291,23 @@ export function useMatchController(params: {
       setMessage(error instanceof Error ? error.message : '動作無法執行。')
     }
   }
-  const battleActions = useBattleActions({ game, runAction })
+
+  /**
+   * 統一分派層：本地模式下與 runAction((current) => applyGameCommand(current, command), ...)
+   * 完全等價，差別只是呼叫端直接給出 command 物件而不是包一層閉包。
+   * 之後線上模式（見 useOnlineMatchController）會改成把 command 送到伺服器、
+   * 不在本地套用，等伺服器回傳新狀態。
+   */
+  const dispatch: DispatchGameCommand = (command, successMessage, onSuccess) => {
+    const commands = Array.isArray(command) ? command : [command]
+    runAction(
+      (current) =>
+        commands.reduce((state, cmd) => applyGameCommand(state, cmd), current),
+      successMessage,
+      onSuccess,
+    )
+  }
+  const battleActions = useBattleActions({ game, dispatch })
 
   const handleAdvancePhase = () => {
     runAction(
@@ -618,6 +638,7 @@ export function useMatchController(params: {
     handlePlayerMulligan,
     handleStartingCookie,
     runAction,
+    dispatch,
     handleAdvancePhase,
     handleAttackTarget: battleActions.handleAttackTarget,
     toggleAttackPayment: battleActions.toggleAttackPayment,

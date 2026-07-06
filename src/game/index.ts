@@ -39,6 +39,7 @@ export type {
   PlayerSideView,
   PlayerView,
 } from './player-view'
+export { maskGameStateForViewer } from './masked-state'
 export {
   getAttackEnergyCost,
   getEnergyCostTotal,

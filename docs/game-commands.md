@@ -45,12 +45,17 @@
 | 回合 | `advance-phase` | `advancePhase`（驗證回合玩家） |
 | 主階段 | `place-support` | `placeSupportCard`（驗證回合玩家） |
 | 主階段 | `deploy-cookie` | `deployCookie`（驗證回合玩家） |
-| 主階段 | `attack` | `attackCookie`（驗證回合玩家） |
-| 主階段 | `activate-skill` | `activateCookieSkill` + 依 `effectTargets` 執行效果 |
+| 主階段 | `attack` | `attackCookie`（驗證回合玩家，含自動 `resolveBattleAutomatically`，僅供 AI 使用） |
+| 主階段 | `declare-attack` | `beginAttack`（驗證回合玩家，只開戰不自動結算，供真人/線上互動流程使用） |
+| 主階段 | `activate-skill` | `activateCookieSkill` + 依 `effectTargets` 執行效果（批次版本，僅供 AI 使用） |
+| 主階段 | `begin-activate-skill` | `activateCookieSkill` + 設定 `pendingAbilityEffect`（供真人/線上逐步互動使用） |
 | 主階段 | `skip-on-play` | `skipCookieOnPlay` |
-| 主階段 | `play-item` | `playItem` + 依 `effectTargets` 執行效果 |
+| 主階段 | `play-item` | `playItem` + 依 `effectTargets` 執行效果（批次版本，僅供 AI 使用） |
+| 主階段 | `begin-play-item` | `playItem` + 設定 `pendingAbilityEffect`（供真人/線上逐步互動使用） |
 | 主階段 | `play-stage` | `playStage` |
-| 主階段 | `activate-stage` | `activateStage` + 依 `effectTargets` 執行效果 |
+| 主階段 | `activate-stage` | `activateStage` + 依 `effectTargets` 執行效果（批次版本，僅供 AI 使用） |
+| 主階段 | `begin-activate-stage` | `activateStage` + 設定 `pendingAbilityEffect`（供真人/線上逐步互動使用） |
+| 主階段 | `resolve-ability-effect` | 逐步解析 `pendingAbilityEffect` 目前效果的目標，中途遇其他待處理決策會保留待恢復 |
 | 補位 | `replace-cookie` | `replaceDefeatedCookie`（驗證補位玩家） |
 | 補位 | `skip-replacement` | `skipDefeatedCookieReplacement`（驗證補位玩家） |
 | Refresh | `refresh-deck` | `refreshDeck`（可注入 shuffle） |
@@ -69,7 +74,18 @@
 
 - 執行前逐一以 `isEffectConditionMet` 檢查條件，不成立的效果跳過（不消耗對應索引）。
 - 效果執行後若出現 `pendingRefresh` / `pendingOnPlay` 或對局結束，中止後續效果
-  （與 AI 既有語意一致）。
+  （與 AI 既有語意一致，這是特地為 AI 設計的簡化版本）。
+
+### 逐步效果指令（`pendingAbilityEffect`）
+
+`begin-activate-skill`／`begin-play-item`／`begin-activate-stage` 只支付代價，
+不執行任何效果；改為在 `GameState.pendingAbilityEffect` 記錄效果清單與目前索引
+（仿照 `PendingBattle` 的 `attackEffects`/`attackEffectIndex` 模式）。之後每呼叫一次
+`resolve-ability-effect { playerId, targetIds }` 就解析目前索引的效果目標，並前進到
+下一個條件成立的效果索引。若中途出現 `pendingRefresh`/`pendingOnPlay` 等其他待處理決策，
+`pendingAbilityEffect` 會被**保留**（不中止、不捨棄），待那些決策解決後可以再次呼叫
+`resolve-ability-effect` 繼續執行剩餘效果——這是真人互動（含線上對戰）需要的正確語意，
+與 AI 用的批次 `effectTargets` 版本刻意分開，兩者互不影響。
 
 ### `ApplyGameCommandOptions`
 
