@@ -1,4 +1,4 @@
-import { AlertTriangle, Copy, FlaskConical, Pencil, Play, RefreshCw, Trash2 } from 'lucide-react'
+import { AlertTriangle, Copy, FlaskConical, Pencil, Play, RefreshCw, Trash2, Wifi } from 'lucide-react'
 import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
@@ -32,6 +32,7 @@ interface MainMenuProps {
   onSelectAiLevel: (level: AiLevel) => void
   onSelectDeck: (deckId: string) => void
   onStartBattle: () => void
+  onOpenOnlineMatch: () => void
   onOpenTestScenario: () => void
   onCreateDeck: () => void
   onEditDeck: (deck: CustomDeck) => void
@@ -59,6 +60,7 @@ export function MainMenu({
   onSelectAiLevel,
   onSelectDeck,
   onStartBattle,
+  onOpenOnlineMatch,
   onOpenTestScenario,
   onCreateDeck,
   onEditDeck,
@@ -85,6 +87,10 @@ export function MainMenu({
           >
             <Play aria-hidden="true" />
             對戰入口
+          </button>
+          <button type="button" onClick={onOpenOnlineMatch}>
+            <Wifi aria-hidden="true" />
+            線上對戰
           </button>
           <button type="button" onClick={onCreateDeck}>
             <Pencil aria-hidden="true" />

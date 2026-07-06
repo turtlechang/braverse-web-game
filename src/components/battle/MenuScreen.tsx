@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { MainMenu, type AiDeckChoice } from '../MainMenu'
 import { DeckEditorModal } from '../modals/DeckEditorModal'
 import { TestScenarioModal } from '../modals/TestScenarioModal'
+import { OnlineMatchPanel } from './OnlineMatchPanel'
 import {
   deleteCustomDeck,
   duplicateCustomDeck,
@@ -51,6 +52,7 @@ export function MenuScreen({
   const [editingDeck, setEditingDeck] = useState<CustomDeck | null>(null)
   const [showDeckEditor, setShowDeckEditor] = useState(false)
   const [showTestScenario, setShowTestScenario] = useState(false)
+  const [showOnlineMatch, setShowOnlineMatch] = useState(false)
   const [battleEntryError, setBattleEntryError] = useState<string | null>(null)
   const [aiDeckChoice, setAiDeckChoice] = useState<AiDeckChoice>('random')
 
@@ -134,6 +136,7 @@ export function MenuScreen({
           setBattleEntryError(null)
         }}
         onStartBattle={startBattleFromMenu}
+        onOpenOnlineMatch={() => setShowOnlineMatch(true)}
         onOpenTestScenario={() => setShowTestScenario(true)}
         onCreateDeck={() => {
           setEditingDeck(null)
@@ -182,6 +185,12 @@ export function MenuScreen({
         <TestScenarioModal
           onClose={() => setShowTestScenario(false)}
           onStart={startTestScenario}
+        />
+      )}
+      {showOnlineMatch && (
+        <OnlineMatchPanel
+          decks={savedDecks}
+          onClose={() => setShowOnlineMatch(false)}
         />
       )}
     </>
