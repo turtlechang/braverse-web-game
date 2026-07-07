@@ -1,5 +1,6 @@
 import { playItem } from './card-abilities'
-import { appendCommandLogEntry, getPendingDecision } from './commands'
+import { appendCommandLogEntry } from './commands'
+import { getActingPlayerId } from './controller'
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import {
   executeCardEffect,
@@ -16,7 +17,6 @@ import {
 import { getAttackEnergyCost, selectEnergyPayment } from './energy'
 import {
   finalizePendingReplacements,
-  getCurrentReplacementTask,
   getReplacementCandidates,
 } from './replacement'
 import { activateCookieSkill, canActivateCookieSkill } from './skills'
@@ -796,20 +796,7 @@ export const simulateAiMatch = (
       }
     }
 
-    const controller =
-      getPendingDecision(state)?.playerId ??
-      state.pendingRefresh?.playerId ??
-      state.pendingOnPlay?.playerId ??
-      getCurrentReplacementTask(state)?.playerId ??
-      (state.pendingBattle
-        ? state.pendingBattle.stage === 'flip'
-          ? state.pendingBattle.damagePlayerId ??
-            state.pendingBattle.defenderPlayerId
-          : state.pendingBattle.stage === 'trap'
-            ? state.pendingBattle.defenderPlayerId
-            : state.activePlayerId
-        : null) ??
-      state.activePlayerId
+    const controller = getActingPlayerId(state)
     const decision = takeAiStep(state, controller, {
       level: options.levels?.[controller] ?? 2,
       seed: options.seed,
