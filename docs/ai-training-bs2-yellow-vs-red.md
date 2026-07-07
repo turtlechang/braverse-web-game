@@ -59,19 +59,67 @@
    - 勝局通常不是黃色爆發碾壓，而是透過高 HP 主戰餅乾、陷阱、Star Candy Road 與穩定支援付款，讓紅色先累積到 10 級破壞區。
    - 若黃色自己過早送掉 LV2/LV3 餅乾，很容易從優勢變成破壞區被反超。
 
-## 兩場敗局觀察
+## 深度敗局分析
 
-- seed 1：黃色破壞區 10、紅色破壞區 9，屬於接近局。黃色前期仍被紅色直傷推高破壞區，後段只差一張可擊倒目標。
-- seed 29：黃色破壞區 11、紅色破壞區 8。此局黃色中期替補與戰鬥區品質不足，紅色能穩定打穿主戰餅乾。
+### Seed 1（break-level-limit）
 
-## 可餵給 AI 的訓練規則
+**最終狀態：** 黃色破壞區 11，紅色 9
 
-- 對紅色時，替補評分應優先考量「剩餘 HP、卡片等級、對手可直接傷害量」，不可單純選最低 HP。
-- 主階段部署第二隻餅乾前，應檢查該餅乾是否會在下一個紅色回合被低成本擊倒；若風險高，改放支援或結束主階段。
-- 攻擊目標評分應加入威脅值：Pomegranate、Dark Choco、Rebel 類型的持續壓力要高於普通低 HP 目標。
-- 防守牌不應被過早當作支援；當手牌有 Super-Vita Jelly Bar、Winding Key Shield 且支援足以支付時，應保留到對手攻擊宣告。
-- Star Candy Road 對黃色是節奏牌，AI 應在不犧牲當回合關鍵攻擊的前提下優先放置與啟動。
-- Tropical Slushie 應依黃色破壞區中 LV2 以上餅乾數量調整評分，早期不必強行使用，中後期可作為收頭工具。
+**關鍵問題：**
+- 黃色破壞區有 **6 張餅乾**：2 個 Blackberry Cookie (Lv3)、Rockstar (Lv2)、Mustard (Lv1)、Cyborg (Lv1)、Chestnut (Lv1)
+- 紅色破壞區也有 6 張：Pomegranate (Lv2)、2 個 Carrot (Lv1)、Princess (Lv2)、Mala Sauce (Lv2)、Popcorn (Lv1)
+- 黃色棄牌 16 張，紅色 14 張
+
+**教訓：** 黃色的高階餅乾（Blackberry Lv3）也被送進破壞區，代表替補策略有問題
+
+### Seed 29（break-level-limit）
+
+**最終狀態：** 黃色破壞區 11，紅色 8
+
+**關鍵問題：**
+- 黃色破壞區有 **6 張餅乾**：Eclair (Lv3)、2 個 Chestnut (Lv1)、Rockstar (Lv2)、Cyborg (Lv1)、Earl Grey (Lv3)
+- 紅色破壞區有 6 張：2 個 Carrot (Lv1)、Adventurer (Lv1)、Popcorn (Lv1)、Muscle (Lv2)、Cherry (Lv2)
+- 黃色棄牌 18 張，紅色 18 張
+
+**教訓：** 黃色把 Lv3 餅乾（Eclair、Earl Grey）也送進破壞區，代表部署時機不當
+
+## 正式訓練規則（待餵給 AI）
+
+### 替補評分表（黃色對紅色）
+
+| 餅乾 | 評分 | 原因 |
+|---|---|---|
+| Banana Cookie (Lv1, HP 3) | ⭐⭐⭐⭐⭐ | HP 高，能撐很久 |
+| Vampire Cookie (Lv2, HP 3) | ⭐⭐⭐⭐⭐ | HP 高，有回復能力 |
+| Marshmallow Cookie (Lv1, HP 3) | ⭐⭐⭐⭐ | HP 高，穩定 |
+| Snake Fruit Cookie (Lv2, HP 2) | ⭐⭐⭐ | 有效果但 HP 較低 |
+| Rockstar Cookie (Lv2, HP 2) | ⭐⭐⭐ | 攻擊力高但 HP 較低 |
+| Eclair Cookie (Lv3, HP 3) | ⭐⭐⭐⭐ | 高等級但要小心使用 |
+| Earl Grey Cookie (Lv3, HP 3) | ⭐⭐⭐⭐ | 高等級但要小心使用 |
+| Chestnut Cookie (Lv1, HP 1) | ⭐ | **絕對不要補** |
+| Mustard Cookie (Lv1, HP 1) | ⭐ | **絕對不要補** |
+| Cyborg Cookie (Lv1, HP 1) | ⭐ | **絕對不要補** |
+
+### 攻擊目標威脅值
+
+| 目標 | 威脅值 | 原因 |
+|---|---|---|
+| Pomegranate Cookie | ⭐⭐⭐⭐⭐ | 持續壓力，回復能力 |
+| Dark Choco Cookie | ⭐⭐⭐⭐⭐ | 高攻擊，穩定輸出 |
+| Rebel Cookie | ⭐⭐⭐⭐⭐ | 高攻擊，能快速換掉 |
+| Cherry Cookie | ⭐⭐⭐⭐ | 攻擊後有效果 |
+| Mala Sauce Cookie | ⭐⭐⭐ | 攻擊後有效果 |
+| Popcorn Cookie | ⭐⭐ | 價值低 |
+| Carrot Cookie | ⭐⭐ | 價值低 |
+| Adventurer Cookie | ⭐⭐ | 價值低 |
+
+### 關鍵策略
+
+1. **替補**：只補 HP 3+ 的餅乾，避免 HP 1 的 Chestnut、Mustard、Cyborg
+2. **部署**：Lv3 餅乾（Eclair、Earl Grey）不要過早鋪上，容易被紅色快速換掉
+3. **攻擊**：優先擊倒 Pomegranate > Dark Choco > Rebel
+4. **防守**：保留 Super-Vita Jelly Bar、Winding Key Shield 到對手攻擊宣告
+5. **節奏**：Star Candy Road 優先放置，Tropical Slushie 中後期再用
 
 ## 後續建議
 

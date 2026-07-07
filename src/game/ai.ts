@@ -48,6 +48,12 @@ import {
   handleAiTurnState,
   type AiTurnStrategy,
 } from './ai/turn-handler'
+import {
+  evaluateBreakPressure,
+  getMatchupProfile,
+  scoreReplacement,
+  scoreAttackTarget,
+} from './ai/bs2MatchupProfiles'
 
 export type {
   AiActionType,
@@ -676,13 +682,23 @@ const resolveAiSkill = (
   }
 }
 
-const chooseReplacement = (state: GameState, playerId: PlayerId) =>
-  getReplacementCandidates(state, playerId)
-    .sort((left, right) =>
-      left.type === 'cookie' && right.type === 'cookie'
-        ? left.hp - right.hp
-        : 0,
-    )[0]
+const chooseReplacement = (state: GameState, playerId: PlayerId) => {
+  const candidates = getReplacementCandidates(state, playerId)
+  if (candidates.length === 0) return undefined
+
+  const profile = getMatchupProfile(state, playerId)
+  const breakPressure = evaluateBreakPressure(
+    state.players[playerId].breakArea,
+  )
+
+  return candidates
+    .filter((c) => c.type === 'cookie')
+    .sort((left, right) => {
+      const leftScore = scoreReplacement(left, profile, breakPressure)
+      const rightScore = scoreReplacement(right, profile, breakPressure)
+      return rightScore - leftScore
+    })[0]
+}
 
 const chooseAttackTarget = (
   state: GameState,
@@ -690,9 +706,13 @@ const chooseAttackTarget = (
 ) => {
   const opponentId =
     playerId === 'player-one' ? 'player-two' : 'player-one'
-  return [...state.players[opponentId].battleArea].sort(
-    (left, right) => left.hpCards.length - right.hpCards.length,
-  )[0]
+  const profile = getMatchupProfile(state, playerId)
+
+  return [...state.players[opponentId].battleArea].sort((left, right) => {
+    const leftScore = scoreAttackTarget(left, profile, state, playerId)
+    const rightScore = scoreAttackTarget(right, profile, state, playerId)
+    return rightScore - leftScore
+  })[0]
 }
 
 const aiTurnStrategy: AiTurnStrategy = {
@@ -743,8 +763,11 @@ export const takeAiStep = (
         : level === 3
           ? (current: GameState, currentPlayerId: PlayerId) =>
               handleAiEvaluatedTurnState(current, currentPlayerId, aiTurnStrategy)
-          : (current: GameState, currentPlayerId: PlayerId) =>
-              handleAiTurnState(current, currentPlayerId, aiTurnStrategy)
+          : level === 4
+            ? (current: GameState, currentPlayerId: PlayerId) =>
+                handleAiEvaluatedTurnState(current, currentPlayerId, aiTurnStrategy)
+            : (current: GameState, currentPlayerId: PlayerId) =>
+                handleAiTurnState(current, currentPlayerId, aiTurnStrategy)
 
     const decision =
       dispatchAiStep(state, playerId, [

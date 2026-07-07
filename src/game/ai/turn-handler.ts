@@ -29,6 +29,11 @@ import type {
   PlayerId,
 } from '../types'
 import type { AiDecision } from './types'
+import {
+  evaluateHandQuality,
+  chooseBestCookieToDeploy,
+  getMatchupProfile,
+} from './bs2MatchupProfiles'
 
 export interface AiTurnStrategy {
   chooseEffectTargets: (
@@ -300,47 +305,53 @@ export const handleAiTurnState = (
     }
 
     if (player.battleArea.length < 2) {
-      const deployable = player.hand.find((card) => card.type === 'cookie')
-      if (deployable) {
-        const deployedState = appendCommandLogEntry(
-          state,
-          deployCookie(state, deployable.instanceId),
-          { kind: 'deploy-cookie', playerId, instanceId: deployable.instanceId },
-        )
-        const deployed = deployedState.players[playerId].battleArea.find(
-          (cookie) => cookie.card.instanceId === deployable.instanceId,
-        )
-        const onPlay = deployed
-          ? strategy.resolveSkill(
-              deployedState,
-              playerId,
-              deployed,
-              'on-play',
-            )
-          : null
-        return {
-          state:
-            onPlay?.state ??
-            (deployedState.pendingOnPlay
-              ? appendCommandLogEntry(
-                  deployedState,
-                  skipCookieOnPlay(
+      const profile = getMatchupProfile(state, playerId)
+      const handQuality = evaluateHandQuality(player.hand, profile)
+
+      // 只有手牌品質足夠時才部署
+      if (handQuality >= 30) {
+        const deployable = chooseBestCookieToDeploy(player.hand, profile)
+        if (deployable) {
+          const deployedState = appendCommandLogEntry(
+            state,
+            deployCookie(state, deployable.instanceId),
+            { kind: 'deploy-cookie', playerId, instanceId: deployable.instanceId },
+          )
+          const deployed = deployedState.players[playerId].battleArea.find(
+            (cookie) => cookie.card.instanceId === deployable.instanceId,
+          )
+          const onPlay = deployed
+            ? strategy.resolveSkill(
+                deployedState,
+                playerId,
+                deployed,
+                'on-play',
+              )
+            : null
+          return {
+            state:
+              onPlay?.state ??
+              (deployedState.pendingOnPlay
+                ? appendCommandLogEntry(
                     deployedState,
-                    playerId,
-                    deployable.instanceId,
-                  ),
-                  {
-                    kind: 'skip-on-play',
-                    playerId,
-                    sourceInstanceId: deployable.instanceId,
-                  },
-                )
-              : deployedState),
-          action: 'deploy-cookie',
-          description: onPlay
-            ? `${player.name}讓${deployable.name}登場並發動 OnPlay。`
-            : `${player.name}讓${deployable.name}登場。`,
-          effectSelections: onPlay?.effectSelections,
+                    skipCookieOnPlay(
+                      deployedState,
+                      playerId,
+                      deployable.instanceId,
+                    ),
+                    {
+                      kind: 'skip-on-play',
+                      playerId,
+                      sourceInstanceId: deployable.instanceId,
+                    },
+                  )
+                : deployedState),
+            action: 'deploy-cookie',
+            description: onPlay
+              ? `${player.name}讓${deployable.name}登場並發動 OnPlay。`
+              : `${player.name}讓${deployable.name}登場。`,
+            effectSelections: onPlay?.effectSelections,
+          }
         }
       }
     }
