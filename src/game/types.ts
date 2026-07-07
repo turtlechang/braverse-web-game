@@ -397,6 +397,8 @@ export interface OptionalCostAttackEffect {
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
+  /** When true, the attacking cookie itself counts as 1 energy of its color for the cost. */
+  sourceAsEnergy?: boolean
 }
 
 export interface ReturnToHandEffect {
@@ -782,6 +784,7 @@ export interface GameState {
     cost: AbilityCost
     effects: CardEffect[]
     effectText: string
+    sourceAsEnergy?: boolean
   } | null
   pendingStageTrigger?: {
     playerId: PlayerId

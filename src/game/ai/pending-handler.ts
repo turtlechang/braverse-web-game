@@ -208,8 +208,24 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
+    // Calculate effective energy cost, accounting for sourceAsEnergy reduction
+    let effectiveEnergyCost = pendingDecision.cost.energy ?? pendingDecision.cost
+    if (pendingDecision.sourceAsEnergy) {
+      const attackerCookie = state.players[playerId].battleArea.find(
+        (c) => c.card.instanceId === pendingDecision.sourceInstanceId,
+      )
+      if (attackerCookie) {
+        const attackerColor = attackerCookie.card.energyColor
+        if (attackerColor && attackerColor !== 'wild' && attackerColor in effectiveEnergyCost) {
+          effectiveEnergyCost = {
+            ...effectiveEnergyCost,
+            [attackerColor]: Math.max(0, (effectiveEnergyCost[attackerColor] ?? 0) - 1),
+          }
+        }
+      }
+    }
     const paymentIds = selectEnergyPayment(
-      pendingDecision.cost.energy ?? pendingDecision.cost,
+      effectiveEnergyCost,
       state.players[playerId].supportArea,
     )
     const canPay =
@@ -230,9 +246,33 @@ export const handleAiPendingDecision = (
         )
           .slice(0, targetedEffect.target.max)
           .map((cookie) => cookie.card.instanceId)
-      : []
+      : (() => {
+          const bttEffect = pendingDecision.effects.find(
+            (e) => e.kind === 'opponent-battle-to-trash',
+          )
+          if (!bttEffect || bttEffect.kind !== 'opponent-battle-to-trash') return []
+          const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+          return state.players[opponentId].battleArea
+            .filter((cookie) => {
+              if (bttEffect.maxLevel !== undefined && cookie.card.level > bttEffect.maxLevel) return false
+              if (bttEffect.minLevel !== undefined && cookie.card.level < bttEffect.minLevel) return false
+              if (bttEffect.remainingHp !== undefined && cookie.hpCards.length > bttEffect.remainingHp) return false
+              return true
+            })
+            .sort((left, right) => left.hpCards.length - right.hpCards.length)
+            .slice(0, 1)
+            .map((cookie) => cookie.card.instanceId)
+        })()
     const hasTarget =
-      !targetedEffect || targetIds.length >= targetedEffect.target.min
+      targetedEffect
+        ? targetIds.length >= targetedEffect.target.min
+        : (() => {
+            const bttEffect = pendingDecision.effects.find(
+              (e) => e.kind === 'opponent-battle-to-trash',
+            )
+            if (!bttEffect || bttEffect.kind !== 'opponent-battle-to-trash') return true
+            return targetIds.length >= 1
+          })()
     if (canPay && hasTarget) {
       return {
         state: applyGameCommand(state, {

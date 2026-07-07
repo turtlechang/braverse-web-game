@@ -93,6 +93,7 @@ export interface OptionalCostAttackDecision {
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
+  sourceAsEnergy?: boolean
 }
 
 export interface DrawUpToDecision {
@@ -640,6 +641,7 @@ export const getPendingDecision = (
       cost: pending.cost,
       effects: pending.effects,
       effectText: pending.effectText,
+      sourceAsEnergy: pending.sourceAsEnergy,
     }
   }
 
