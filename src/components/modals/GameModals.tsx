@@ -487,7 +487,11 @@ export interface TrapResponseModalProps {
   battleCookieCostCards?: GameCard[]
   battleCookieCost?: number
   selectedBattleCookieIds?: string[]
+  attackerCard?: GameCard | null
+  trapTargetCandidates?: CookieInBattle[]
+  selectedTrapTargetId?: string | null
   onSelectTrap: (instanceId: string) => void
+  onSelectTrapTarget?: (instanceId: string) => void
   onToggleDiscardHand: (instanceId: string) => void
   onToggleBattleCookie?: (instanceId: string) => void
   onConfirm: () => void
@@ -510,7 +514,11 @@ export function TrapResponseModal({
   battleCookieCostCards = [],
   battleCookieCost = 0,
   selectedBattleCookieIds = [],
+  attackerCard = null,
+  trapTargetCandidates = [],
+  selectedTrapTargetId = null,
   onSelectTrap,
+  onSelectTrapTarget,
   onToggleDiscardHand,
   onToggleBattleCookie,
   onConfirm,
@@ -572,6 +580,13 @@ export function TrapResponseModal({
         )}
         <span>攻擊宣告回應</span>
         <h2>是否發動陷阱？</h2>
+        {attackerCard && (
+          <div className="trap-attacker-info">
+            <span>對方正在攻擊的餅乾：</span>
+            <CardFace card={attackerCard} />
+            <strong>{attackerCard.name}</strong>
+          </div>
+        )}
         <p>每次攻擊最多發動一張陷阱。選擇卡牌後會顯示付款與目標。</p>
         <div className="modal-card-options">
           {cards.map((card) => (
@@ -604,8 +619,40 @@ export function TrapResponseModal({
             )}
             <strong>付款支援卡</strong>
             <span>{paymentCards.map((card) => card.name).join('、') || '不需能量'}</span>
-            <strong>效果目標</strong>
-            <span>{targetCards.map((card) => card.name).join('、') || '不需目標'}</span>
+            {trapTargetCandidates.length > 0 && onSelectTrapTarget ? (
+              <>
+                <strong>選擇目標餅乾</strong>
+                <div className="modal-card-options compact trap-target-options">
+                  {trapTargetCandidates.map((candidate) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedTrapTargetId === candidate.card.instanceId
+                          ? 'is-selected'
+                          : ''
+                      }
+                      key={candidate.card.instanceId}
+                      onClick={() => onSelectTrapTarget(candidate.card.instanceId)}
+                    >
+                      <CardFace
+                        card={candidate.card}
+                        selected={selectedTrapTargetId === candidate.card.instanceId}
+                      />
+                      <span>{candidate.card.name}</span>
+                      {attackerCard &&
+                        candidate.card.instanceId === attackerCard.instanceId && (
+                          <small>（攻擊中）</small>
+                        )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <strong>效果目標</strong>
+                <span>{targetCards.map((card) => card.name).join('、') || '不需目標'}</span>
+              </>
+            )}
             {discardHandCost > 0 && (
               <>
                 <strong>選擇 {discardHandCost} 張手牌棄置</strong>

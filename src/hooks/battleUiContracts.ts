@@ -41,6 +41,10 @@ export interface BattleUiMatchLike {
   selectedTrapTrashBattleCookieCost: number
   selectedTrapTrashBattleCookieCandidates: CookieInBattle[]
   trapAllowEmptyTarget: boolean
+  trapTargetCandidates: CookieInBattle[]
+  attackerInstanceId: string | null
+  selectedTrapTargetId: string | null
+  setSelectedTrapTargetId: (value: string | null) => void
   selectedTrapTargets: CookieInBattle[]
   selectedTrapSupportTrashIds: string[]
   // Blocker

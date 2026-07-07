@@ -61,6 +61,7 @@ export function useOnlineMatchController(params: {
   const [selectedTrapTrashBattleCookieIds, setSelectedTrapTrashBattleCookieIds] =
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
+  const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
@@ -141,6 +142,7 @@ export function useOnlineMatchController(params: {
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
+      setSelectedTrapTargetId(null)
       dispatch(
         { kind: 'skip-trap', playerId: viewerPlayerId },
         '未發動回應，進入傷害結算。',
@@ -266,14 +268,27 @@ export function useOnlineMatchController(params: {
           effect.kind === 'prevent-knockout') &&
         (effect.target.min ?? 0) === 0,
     ) ?? false
-  const selectedTrapTargets =
+  const trapTargetCandidates =
     selectedTrap && !trapSelectNoTarget
       ? getTrapTargetCandidates(
           game,
           viewerPlayerId,
           selectedTrap.instanceId,
-        ).slice(0, 1)
+        )
       : []
+  const attackerInstanceId = game.pendingBattle?.attackerInstanceId ?? null
+  const selectedTrapTarget = selectedTrapTargetId
+    ? trapTargetCandidates.find(
+        (candidate) => candidate.card.instanceId === selectedTrapTargetId,
+      )
+    : attackerInstanceId
+      ? trapTargetCandidates.find(
+          (candidate) => candidate.card.instanceId === attackerInstanceId,
+        )
+      : undefined
+  const selectedTrapTargets = selectedTrapTarget
+    ? [selectedTrapTarget]
+    : trapTargetCandidates.slice(0, 1)
   const selectedTrapSupportTrashIds =
     selectedTrap?.trap?.effects.some(
       (effect) => effect.kind === 'support-to-trash',
@@ -346,6 +361,10 @@ export function useOnlineMatchController(params: {
     selectedTrapTrashBattleCookieCost,
     selectedTrapTrashBattleCookieCandidates,
     trapAllowEmptyTarget,
+    trapTargetCandidates,
+    attackerInstanceId,
+    selectedTrapTargetId,
+    setSelectedTrapTargetId,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
     // Blocker

@@ -264,6 +264,7 @@ export function useMatchController(params: {
   const [selectedTrapTrashBattleCookieIds, setSelectedTrapTrashBattleCookieIds] =
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
+  const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
@@ -438,21 +439,25 @@ export function useMatchController(params: {
           effect.kind === 'prevent-knockout') &&
         (effect.target.min ?? 0) === 0,
     ) ?? false
-  // 自動挑選陷阱目標時，優先選擇「當前攻擊者」而非戰鬥區第一隻餅乾。
+  // 陷阱目標：優先使用玩家手動選擇；若未選擇則自動挑選當前攻擊者。
   // 否則對手有多隻餅乾時，減攻擊／防昏厥類陷阱會套用到非攻擊者身上，
   // 導致玩家發動陷阱卻沒能減少實際攻擊傷害（看起來像「效果沒發動」）。
   const trapTargetCandidates =
     selectedTrap && !trapSelectNoTarget
       ? getTrapTargetCandidates(game, viewerPlayerId, selectedTrap.instanceId)
       : []
-  const attackerInstanceId = game.pendingBattle?.attackerInstanceId
-  const preferredTrapTarget = attackerInstanceId
+  const attackerInstanceId = game.pendingBattle?.attackerInstanceId ?? null
+  const selectedTrapTarget = selectedTrapTargetId
     ? trapTargetCandidates.find(
-        (candidate) => candidate.card.instanceId === attackerInstanceId,
+        (candidate) => candidate.card.instanceId === selectedTrapTargetId,
       )
-    : undefined
-  const selectedTrapTargets = preferredTrapTarget
-    ? [preferredTrapTarget]
+    : attackerInstanceId
+      ? trapTargetCandidates.find(
+          (candidate) => candidate.card.instanceId === attackerInstanceId,
+        )
+      : undefined
+  const selectedTrapTargets = selectedTrapTarget
+    ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
   const selectedTrapSupportTrashIds =
     selectedTrap?.trap?.effects.some(
@@ -566,6 +571,7 @@ export function useMatchController(params: {
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
+      setSelectedTrapTargetId(null)
       setGame((current: GameState) => {
         const currentBattle = current.pendingBattle
         if (
@@ -675,6 +681,10 @@ export function useMatchController(params: {
     selectedTrapTrashBattleCookieCost,
     selectedTrapTrashBattleCookieCandidates,
     trapAllowEmptyTarget,
+    trapTargetCandidates,
+    attackerInstanceId,
+    selectedTrapTargetId,
+    setSelectedTrapTargetId,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
     // Blocker
