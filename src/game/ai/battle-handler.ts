@@ -162,13 +162,19 @@ export const handleAiPendingBattle = (
           trapCard.trap.cost.energy ?? trapCard.trap.cost,
           state.players[playerId].supportArea,
         ) ?? []
-      const targetIds = getTrapTargetCandidates(
+      // 優先以當前攻擊者作為陷阱目標（減攻擊／防昏厥類陷阱才會作用在實際攻擊者身上）。
+      const trapTargets = getTrapTargetCandidates(
         state,
         playerId,
         trapCard.instanceId,
       )
-        .slice(0, 1)
-        .map((target) => target.card.instanceId)
+      const preferredTarget =
+        trapTargets.find(
+          (target) => target.card.instanceId === battle.attackerInstanceId,
+        ) ?? trapTargets[0]
+      const targetIds = preferredTarget
+        ? [preferredTarget.card.instanceId]
+        : []
       const supportTrashEffect = trapCard.trap.effects.find(
         (effect) => effect.kind === 'support-to-trash',
       )
