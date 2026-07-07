@@ -19,6 +19,7 @@ import {
 import { getOpponentId } from './helpers'
 import {
   clearDepartedCookieModifiers,
+  continuePendingReplacements,
   finalizePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
@@ -892,9 +893,8 @@ const removeFaintedCookie = (
     }
   }
 
-  return nextState
+  return continuePendingReplacements(nextState)
 }
-
 const finishBattle = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   let completedState = state
@@ -1800,7 +1800,7 @@ export const resolveFaintEffect = (
     return nextState
   }
 
-  return nextState
+  return continuePendingReplacements(nextState)
 }
 
 export const getAfterDamageEffectCandidates = (
@@ -1889,5 +1889,5 @@ export const resolveNextAfterDamageEffect = (
     }
   }
 
-  return nextState
+  return continuePendingReplacements(nextState)
 }

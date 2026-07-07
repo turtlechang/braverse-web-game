@@ -101,18 +101,26 @@ export const continuePendingReplacements = (
     return state
   }
 
-  const tasks = state.pendingReplacement?.tasks.filter(
+  const tasks = buildReplacementTasks(state).filter(
     (task) => task.remaining > 0,
-  ) ?? []
+  )
   if (tasks.length === 0) {
     return {
       ...state,
+      departedCookieCounts: {
+        'player-one': 0,
+        'player-two': 0,
+      },
       pendingReplacement: null,
     }
   }
 
   const nextState = {
     ...state,
+    departedCookieCounts: {
+      'player-one': 0,
+      'player-two': 0,
+    },
     pendingReplacement: { tasks },
   }
   return nextState
@@ -126,18 +134,7 @@ export const finalizePendingReplacements = (
     return victoryState
   }
 
-  const tasks = buildReplacementTasks(victoryState)
-  const queuedState: GameState = {
-    ...victoryState,
-    departedCookieCounts: {
-      'player-one': 0,
-      'player-two': 0,
-    },
-    pendingReplacement:
-      tasks.length > 0 ? { tasks } : null,
-  }
-
-  return continuePendingReplacements(queuedState)
+  return continuePendingReplacements(victoryState)
 }
 
 export const consumeReplacementTask = (
