@@ -350,7 +350,7 @@ export const executeCardEffect = (
       departedCookieCards,
     )
     const damagedInstanceIds = targets.map((t) => t.card.instanceId)
-    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
   if (effect.kind === 'redirect-attack') {
@@ -1477,7 +1477,7 @@ export const executeCardEffect = (
       departedCookieCards,
     )
     const damagedInstanceIds = targets.map((t) => t.card.instanceId)
-    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
   if (effect.kind === 'split-damage') {
@@ -1524,7 +1524,7 @@ export const executeCardEffect = (
       departedCookieCards,
     )
     const damagedInstanceIds = targets.map((t) => t.card.instanceId)
-    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
   if (effect.kind === 'prevent-knockout') {
