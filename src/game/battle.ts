@@ -1065,6 +1065,15 @@ const finishDamageSequence = (state: GameState): GameState => {
       battle.targetInstanceId,
     )
     if (!attackerExists || !targetExists) {
+      if (battle.attackEffectIndex < battle.attackEffects.length) {
+        return {
+          ...state,
+          pendingBattle: {
+            ...battle,
+            stage: 'attack-effect',
+          },
+        }
+      }
       return finishBattle(state)
     }
     return {
@@ -1420,14 +1429,22 @@ export const resolveNextDamage = (state: GameState): GameState => {
       !battleParticipantExists(nextState, activeBattle.attackerInstanceId) ||
       !battleParticipantExists(nextState, activeBattle.targetInstanceId)
     ) {
-      return finishBattle(nextState)
+      return finishDamageSequence(nextState)
     }
     return nextState
   }
 
-  return requirePendingBattle(nextState).remainingDamage <= 0
-    ? finishDamageSequence(nextState)
-    : nextState
+  const afterRemoveBattle = requirePendingBattle(nextState)
+  if (afterRemoveBattle.remainingDamage <= 0) {
+    return finishDamageSequence(nextState)
+  }
+  if (
+    !battleParticipantExists(nextState, afterRemoveBattle.targetInstanceId) &&
+    afterRemoveBattle.attackEffectIndex < afterRemoveBattle.attackEffects.length
+  ) {
+    return finishDamageSequence(nextState)
+  }
+  return nextState
 }
 
 export interface ResolveFlipOptions {

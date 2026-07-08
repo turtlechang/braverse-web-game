@@ -776,10 +776,14 @@ export const executeCardEffect = (
     const movedIds = new Set(selected.map((c) => c.card.instanceId))
     const movedCards = selected.map((c) => c.card)
     const hpCards = selected.flatMap((c) => c.hpCards)
+    const toBreak = effect.destination === 'break'
     const updatedPlayer: PlayerState = {
       ...targetPlayer,
       battleArea: targetPlayer.battleArea.filter((c) => !movedIds.has(c.card.instanceId)),
-      discardPile: [...targetPlayer.discardPile, ...movedCards, ...hpCards],
+      ...(toBreak
+        ? { breakArea: [...targetPlayer.breakArea, ...movedCards] }
+        : {}),
+      discardPile: [...targetPlayer.discardPile, ...(toBreak ? hpCards : [...movedCards, ...hpCards])],
     }
     const nextState = updatePlayer(state, updatedPlayer)
     const departedCount = selected.length

@@ -1706,6 +1706,7 @@ export const convertOfficialAttackEffects = (
           {
             kind: 'opponent-battle-to-trash',
             maxLevel: 1,
+            destination: 'break',
           },
         ],
         effectText: 'You can use this Cookie as {Y} to select up to 1 of your opponent\'s LV.1 Cookies and place that Cookie in the break area.',

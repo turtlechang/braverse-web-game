@@ -369,6 +369,7 @@ export interface OpponentBattleToTrashEffect {
   maxLevel?: number
   minLevel?: number
   remainingHp?: number
+  destination?: 'trash' | 'break'
 }
 
 export interface FieldToTrashEffect {
