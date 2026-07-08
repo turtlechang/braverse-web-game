@@ -55,18 +55,39 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       : null
 
   const optionalCostAttackTargetedEffect = pendingOptionalCost?.effects.find(
-    (effect) => isEffectTargeted(effect),
+    (effect) => isEffectTargeted(effect) || effect.kind === 'opponent-battle-to-trash',
   )
+  const needsTarget = Boolean(optionalCostAttackTargetedEffect)
+  const optionalCostAttackNeedsTarget = needsTarget
   const opponentBattleCards = (
     optionalCostAttackTargetedEffect
-      ? getEffectTargetCandidates(
-          match.game,
-          {
-            sourcePlayerId: match.viewerPlayerId,
-            sourceInstanceId: pendingOptionalCost!.sourceInstanceId,
-          },
-          optionalCostAttackTargetedEffect.target,
-        ).map((cookie) => cookie.card)
+      ? optionalCostAttackTargetedEffect.kind === 'opponent-battle-to-trash'
+        ? (() => {
+            const btt = optionalCostAttackTargetedEffect as { kind: 'opponent-battle-to-trash'; maxLevel?: number; minLevel?: number; remainingHp?: number }
+            return getEffectTargetCandidates(
+              match.game,
+              {
+                sourcePlayerId: match.viewerPlayerId,
+                sourceInstanceId: pendingOptionalCost!.sourceInstanceId,
+              },
+              {
+                side: 'opponent',
+                min: 1,
+                max: 1,
+                ...(btt.maxLevel !== undefined ? { maxLevel: btt.maxLevel } : {}),
+                ...(btt.minLevel !== undefined ? { minLevel: btt.minLevel } : {}),
+                ...(btt.remainingHp !== undefined ? { remainingHp: btt.remainingHp } : {}),
+              },
+            ).map((cookie) => cookie.card)
+          })()
+        : getEffectTargetCandidates(
+            match.game,
+            {
+              sourcePlayerId: match.viewerPlayerId,
+              sourceInstanceId: pendingOptionalCost!.sourceInstanceId,
+            },
+            (optionalCostAttackTargetedEffect as { target: import('../../game').EffectTargetSelector }).target,
+          ).map((cookie) => cookie.card)
       : match.game.players[match.opponentId].battleArea.map((cookie) => cookie.card)
   ).map((card) => ({ card, instanceId: card.instanceId }))
 
@@ -334,6 +355,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           playerHand={match.game.players[match.viewerPlayerId].hand}
           supportCandidates={optionalCostAttackSupportCandidates}
           opponentBattleCards={opponentBattleCards}
+          needsTarget={optionalCostAttackNeedsTarget}
           onSkip={() => {
             match.dispatch(
               {

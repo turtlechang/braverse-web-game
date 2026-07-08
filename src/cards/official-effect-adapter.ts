@@ -1971,6 +1971,12 @@ export const convertOfficialTrapAbility = (
   const deckToRestedSupport = text.match(
     /take the top card from your deck and place it in your support area as rested/i,
   )
+  const supportToHand = text.match(
+    /return (\d+) card(?:s)? from your support area to your hand/i,
+  )
+  const handToSupport = text.match(
+    /place (\d+) card(?:s)? from your hand into your support area as rested/i,
+  )
   const afterThen = text.split(/then/i).pop() ?? ''
   const strippedAfterThen = stripEffectText(afterThen).replace(
     /^[^A-Za-z]+/,
@@ -1982,6 +1988,22 @@ export const convertOfficialTrapAbility = (
   const setActive = text.match(
     /set\s+(?:up to\s+)?(\d+)\s+of\s+card\s+from\s+your\s+support\s+area\s+as\s+active/i,
   )
+
+  if (supportToHand) {
+    effects.push({
+      kind: 'support-to-hand',
+      amount: Number(supportToHand[1]),
+      optional: true,
+    })
+  }
+
+  if (handToSupport) {
+    effects.push({
+      kind: 'hand-to-support',
+      amount: Number(handToSupport[1]),
+      rested: true,
+    })
+  }
 
   if (attackDecrease && target) {
     effects.push({

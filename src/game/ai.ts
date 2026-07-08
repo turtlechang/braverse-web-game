@@ -423,6 +423,7 @@ const resolveAiCardAbility = (
       effect.kind !== 'trash-to-hand' &&
       effect.kind !== 'trash-to-deck' &&
       effect.kind !== 'flip-to-support' &&
+      effect.kind !== 'opponent-battle-to-trash' &&
       effect.target &&
       targetIds.length < effect.target.min
     ) {

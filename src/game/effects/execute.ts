@@ -549,7 +549,7 @@ export const executeCardEffect = (
     }), context.sourcePlayerId)
   }
 
-  if (effect.kind === 'support-to-hand') {
+    if (effect.kind === 'support-to-hand') {
     const player = state.players[context.sourcePlayerId]
     const uniqueIds = [...new Set(selectedTargetIds)]
     if (uniqueIds.length !== effect.amount) {
@@ -572,6 +572,30 @@ export const executeCardEffect = (
       ),
       hand: [...player.hand, ...selected.map((support) => support.card)],
     }), context.sourcePlayerId)
+  }
+
+  if (effect.kind === 'hand-to-support') {
+    const player = state.players[context.sourcePlayerId]
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== effect.amount) {
+      throw new GameRuleError(`必須選擇 ${effect.amount} 張手牌。`)
+    }
+    const selected = player.hand.filter(
+      (card) => uniqueIds.includes(card.instanceId),
+    )
+    if (selected.length !== effect.amount) {
+      throw new GameRuleError('選擇的卡片不在手牌中。')
+    }
+    return updatePlayer(state, {
+      ...player,
+      hand: player.hand.filter(
+        (card) => !uniqueIds.includes(card.instanceId),
+      ),
+      supportArea: [
+        ...player.supportArea,
+        ...selected.map((card) => ({ card, rested: effect.rested ?? true })),
+      ],
+    })
   }
 
   if (effect.kind === 'modify-all-attack') {

@@ -291,6 +291,7 @@ export interface OptionalCostAttackModalProps {
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
   opponentBattleCards: { card: GameCard; instanceId: string }[]
+  needsTarget: boolean
   onSkip: () => void
   onPay: (discardIds: string[], targetId: string, paymentIds: string[]) => void
 }
@@ -305,6 +306,7 @@ export function OptionalCostAttackModal({
   playerHand,
   supportCandidates,
   opponentBattleCards,
+  needsTarget,
   onSkip,
   onPay,
 }: OptionalCostAttackModalProps) {
@@ -312,8 +314,6 @@ export function OptionalCostAttackModal({
   const [selectedDiscardIds, setSelectedDiscardIds] = useState<string[]>([])
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
-
-  const needsTarget = opponentBattleCards.length > 0
 
   const canPay =
     playerHand.length >= discardHandCost &&

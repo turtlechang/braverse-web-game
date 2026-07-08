@@ -68,7 +68,8 @@ function EffectPanelContent({
             currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
             currentEffect.kind !== 'disable-block' &&
-            currentEffect.kind !== 'flip-to-support'
+            currentEffect.kind !== 'flip-to-support' &&
+            currentEffect.kind !== 'opponent-battle-to-trash'
           ? currentEffect.target
           : null
 

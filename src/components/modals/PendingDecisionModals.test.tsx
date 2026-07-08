@@ -275,6 +275,7 @@ describe('OptionalCostAttackModal', () => {
           supportCandidates={[]}
           playerHand={hand}
           opponentBattleCards={opponents}
+          needsTarget={true}
           onSkip={onSkip}
           onPay={onPay}
         />,
@@ -348,6 +349,7 @@ describe('OptionalCostAttackModal', () => {
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
+          needsTarget={true}
           onSkip={() => undefined}
           onPay={() => undefined}
         />,
@@ -378,6 +380,7 @@ describe('OptionalCostAttackModal', () => {
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
+          needsTarget={true}
           onSkip={() => undefined}
           onPay={() => undefined}
         />,
@@ -422,6 +425,7 @@ describe('OptionalCostAttackModal', () => {
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
+          needsTarget={true}
           onSkip={() => undefined}
           onPay={() => undefined}
         />,
@@ -480,6 +484,7 @@ describe('OptionalCostAttackModal', () => {
           opponentBattleCards={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
+          needsTarget={true}
           onSkip={onSkip}
           onPay={() => undefined}
         />,

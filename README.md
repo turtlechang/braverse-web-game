@@ -135,6 +135,7 @@ npm run cards:import:purple-sample
 
 | 日期 | 概要 |
 |---|---|
+| 2026-07-08 | 🔧 BS1-037 目標修正 — opponent-battle-to-trash 僅篩選 LV.1、OptionalCostAttackModal needsTarget 修正、新增 hand-to-support 效果型別與執行 |
 | 2026-07-07 | 🃏 AI 預設牌組 — 新增第二彈紅/黃/豆子/藍/紫 AI 牌組選項；補強牌庫檢視縮小／返回、AI 支援階段填能與第二彈 5×5 對局矩陣回歸；記錄第二彈黃對紅 50 場策略訓練 |
 | 2026-07-07 | 🔧 BS1-037/054 修正 — MIX 區域顏色解析、BS1-054 OnPlay 廢棄判定、sourceAsEnergy 支付與 AI 決策聯動 |
 | 2026-07-06 | ✅ Phase 5 CI — 修正線上對戰 lint 失敗，維持 test/lint/build 通過 |

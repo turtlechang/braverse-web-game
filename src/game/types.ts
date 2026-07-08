@@ -336,6 +336,21 @@ export interface SupportToHandEffect {
   amount: number
   maxLevel?: number
   condition?: EffectCondition
+  optional?: boolean
+}
+
+export interface HandToSupportEffect {
+  kind: 'hand-to-support'
+  amount: number
+  rested?: boolean
+  condition?: EffectCondition
+}
+
+export interface HandToSupportEffect {
+  kind: 'hand-to-support'
+  amount: number
+  rested?: boolean
+  condition?: EffectCondition
 }
 
 export interface OpponentDiscardHandEffect {
@@ -500,6 +515,7 @@ export type CardEffect =
   | BattleToSupportEffect
   | TrashToBattleEffect
   | SupportToHandEffect
+  | HandToSupportEffect
   | OpponentDiscardHandEffect
   | DiscardHandEffect
   | OpponentBattleToTrashEffect
@@ -521,6 +537,7 @@ export type CardEffect =
   | BattleToBreakEffect
   | BreakToHandBySumEffect
   | FlipToSupportEffect
+  | HandToSupportEffect
 
 export type TargetedCardEffect =
   | DamageEffect
