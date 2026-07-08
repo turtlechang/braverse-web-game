@@ -1,5 +1,4 @@
-import { createDemoGame, simulateAiMatch, takeAiStep } from '.'
-import type { GameState } from './types'
+import { createDemoGame, simulateAiMatch } from '.'
 
 const LOSING_SEEDS = [7, 8, 11, 14, 15, 18, 20, 25, 37, 46, 48]
 

@@ -101,7 +101,6 @@ const evaluateTrapWorth = (
 ): number => {
   if (!trapCard.trap) return 0
 
-  const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
   const attacker = state.players[battle.attackerPlayerId].battleArea.find(
     (c) => c.card.instanceId === battle.attackerInstanceId,
   )

@@ -74,7 +74,7 @@ const analyzeResults = (results: MatchResult[]) => {
 const main = () => {
   console.log('Starting 50-match test: BS2 Red (Player) vs BS2 Yellow (AI)...\n')
   const results = runMatches()
-  const stats = analyzeResults(results)
+  analyzeResults(results)
 
   console.log('\n=== Detailed Results ===')
   results.forEach((r) => {

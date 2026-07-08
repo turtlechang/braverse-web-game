@@ -258,8 +258,6 @@ export const simulateAiMatchDetailed = (
   let consecutiveNoProgressMax = 0
   let turnCapReached = false
   let r7TrapSkipCount = 0
-  let lethalOpportunityCount = 0
-  let lethalConversionCount = 0
   let directWinCount = 0
   let r6cReplacementCount = 0
   let r6cLowQualityCount = 0
@@ -389,8 +387,8 @@ export const simulateAiMatchDetailed = (
     turnProgression,
     error && !turnCapReached ? 1 : 0,
     r7TrapSkipCount,
-    lethalOpportunityCount,
-    lethalConversionCount,
+    0,
+    0,
     directWinCount,
     getR10Counters().penaltyApplied,
     getR10Counters().breakRaceRisk,

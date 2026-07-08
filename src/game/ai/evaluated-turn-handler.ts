@@ -279,6 +279,11 @@ interface EvaluatedCandidate {
   score: number
 }
 
+interface TwoPlyCandidate {
+  decision: AiDecision
+  score: number
+}
+
 /**
  * 目標能量數：低於此值時，AI 應優先鋪能量以維持運作。
  */

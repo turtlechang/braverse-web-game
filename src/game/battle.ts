@@ -1,4 +1,4 @@
-﻿import { collectAfterDamageEffectsFromIds } from './afterDamage'
+import { collectAfterDamageEffectsFromIds } from './afterDamage'
 import { GameRuleError } from './errors'
 import {
   executeCardEffect,
@@ -1293,7 +1293,7 @@ export const resolveOptionalCostAttack = (
   if (!allInHand) {
     throw new GameRuleError('Invalid battle action.')
   }
-  let energyCost = { ...(pending.cost.energy ?? {}) }
+  const energyCost = { ...(pending.cost.energy ?? {}) }
   const uniquePaymentIds = [...new Set(paymentIds)]
   if (uniquePaymentIds.length !== paymentIds.length) {
     throw new GameRuleError('Invalid battle action.')
