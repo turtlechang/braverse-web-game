@@ -184,6 +184,25 @@ export const handleAiPendingBattle = (
               .slice(0, supportTrashEffect.amount)
               .map((support) => support.card.instanceId)
           : []
+      const supportToHandEffect = trapCard.trap.effects.find(
+        (effect) => effect.kind === 'support-to-hand',
+      )
+      const supportToHandIds =
+        supportToHandEffect?.kind === 'support-to-hand'
+          ? state.players[playerId].supportArea
+              .slice(0, supportToHandEffect.amount)
+              .map((support) => support.card.instanceId)
+          : []
+      const handToSupportEffect = trapCard.trap.effects.find(
+        (effect) => effect.kind === 'hand-to-support',
+      )
+      const handToSupportIds =
+        handToSupportEffect?.kind === 'hand-to-support'
+          ? state.players[playerId].hand
+              .filter((card) => card.instanceId !== trapCard.instanceId)
+              .slice(0, handToSupportEffect.amount)
+              .map((card) => card.instanceId)
+          : []
       const discardHandColor = trapCard.trap.cost.discardHandColor
       const discardHandIds = state.players[playerId].hand
         .filter(
@@ -215,6 +234,21 @@ export const handleAiPendingBattle = (
         }
       }
 
+      if (
+        supportToHandEffect?.kind === 'support-to-hand' &&
+        supportToHandIds.length < supportToHandEffect.amount
+      ) {
+        return {
+          state: appendCommandLogEntry(
+            state,
+            skipTrap(state, playerId),
+            { kind: 'skip-trap', playerId },
+          ),
+          action: 'play-trap',
+          description: `${state.players[playerId].name}無法支付陷阱後續代價。`,
+        }
+      }
+
       return {
         state: appendCommandLogEntry(
           state,
@@ -223,6 +257,8 @@ export const handleAiPendingBattle = (
             paymentIds,
             targetIds,
             supportTrashIds,
+            supportToHandIds,
+            handToSupportIds,
             discardHandIds,
             trashBattleCookieIds,
           }),
@@ -233,6 +269,8 @@ export const handleAiPendingBattle = (
             paymentIds,
             targetIds,
             supportTrashIds,
+            supportToHandIds,
+            handToSupportIds,
             discardHandIds,
             trashBattleCookieIds,
           },

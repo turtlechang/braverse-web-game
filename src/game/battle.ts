@@ -373,6 +373,30 @@ const moveSupportsToTrash = (
   }
 }
 
+const moveSupportsToHand = (
+  player: PlayerState,
+  selectedIds: string[],
+  amount: number,
+): PlayerState => {
+  const uniqueIds = [...new Set(selectedIds)]
+  if (uniqueIds.length !== amount) {
+    throw new GameRuleError(`必須選擇 ${amount} 張支援卡。`)
+  }
+  const selected = player.supportArea.filter((support) =>
+    uniqueIds.includes(support.card.instanceId),
+  )
+  if (selected.length !== amount) {
+    throw new GameRuleError('選擇的卡片不在支援區。')
+  }
+  return {
+    ...player,
+    supportArea: player.supportArea.filter(
+      (support) => !uniqueIds.includes(support.card.instanceId),
+    ),
+    hand: [...player.hand, ...selected.map((support) => support.card)],
+  }
+}
+
 const markSupportAreaDecreased = (
   state: GameState,
   playerId: PlayerId,
@@ -389,6 +413,8 @@ export interface PlayTrapOptions {
   paymentIds: string[]
   targetIds: string[]
   supportTrashIds?: string[]
+  supportToHandIds?: string[]
+  handToSupportIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
 }
@@ -562,6 +588,44 @@ export const playTrap = (
     )
   }
 
+  const supportToHand = trap.effects.find(
+    (effect) => effect.kind === 'support-to-hand',
+  )
+  if (supportToHand?.kind === 'support-to-hand') {
+    updatedPlayer = moveSupportsToHand(
+      updatedPlayer,
+      options.supportToHandIds ?? [],
+      supportToHand.amount,
+    )
+  }
+
+  const handToSupport = trap.effects.find(
+    (effect) => effect.kind === 'hand-to-support',
+  )
+  if (handToSupport?.kind === 'hand-to-support') {
+    const uniqueHandIds = [...new Set(options.handToSupportIds ?? [])]
+    if (uniqueHandIds.length === handToSupport.amount) {
+      const selectedHand = updatedPlayer.hand.filter((card) =>
+        uniqueHandIds.includes(card.instanceId),
+      )
+      if (selectedHand.length === handToSupport.amount) {
+        updatedPlayer = {
+          ...updatedPlayer,
+          hand: updatedPlayer.hand.filter(
+            (card) => !uniqueHandIds.includes(card.instanceId),
+          ),
+          supportArea: [
+            ...updatedPlayer.supportArea,
+            ...selectedHand.map((card) => ({
+              card,
+              rested: handToSupport.rested ?? true,
+            })),
+          ],
+        }
+      }
+    }
+  }
+
   const trashBattlePayment = payTrashBattleCookieCost(
     updatedPlayer,
     trap.cost,
@@ -640,6 +704,14 @@ export const playTrap = (
           },
         }
       }
+      continue
+    }
+
+    if (effect.kind === 'support-to-hand') {
+      continue
+    }
+
+    if (effect.kind === 'hand-to-support') {
       continue
     }
 

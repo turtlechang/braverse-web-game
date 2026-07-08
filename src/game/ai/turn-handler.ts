@@ -198,8 +198,31 @@ export const handleAiTurnState = (
   const player = state.players[playerId]
   if (state.phase === 'support') {
     if (!state.supportPlacedThisTurn && player.hand.length > 0) {
-      const supportCard =
-        player.hand.find((card) => card.type !== 'cookie') ?? player.hand[0]
+      // 評估哪張手牌最適合放到支援區
+      // 優先放非餅乾卡（物品、陷阱、階段），再考慮能量需求
+      const nonCookieCards = player.hand.filter((card) => card.type !== 'cookie')
+      let supportCard: GameCard
+
+      if (nonCookieCards.length > 0) {
+        // 計算目前支援區每種能量的數量
+        const energyCount: Record<string, number> = {}
+        for (const s of player.supportArea) {
+          const color = s.card.energyColor ?? 'wild'
+          energyCount[color] = (energyCount[color] || 0) + 1
+        }
+
+        // 找出手牌中能量顏色最稀缺的非餅乾卡
+        supportCard = nonCookieCards.sort((a, b) => {
+          const aColor = a.energyColor ?? 'wild'
+          const bColor = b.energyColor ?? 'wild'
+          const aCount = energyCount[aColor] ?? 0
+          const bCount = energyCount[bColor] ?? 0
+          return aCount - bCount // 稀缺的排前面
+        })[0]
+      } else {
+        supportCard = player.hand[0]
+      }
+
       return {
         state: appendCommandLogEntry(
           state,
@@ -368,38 +391,59 @@ export const handleAiTurnState = (
 
     if (canAttack(state)) {
       const target = strategy.chooseAttackTarget(state, playerId)
-      for (const attacker of player.battleArea) {
-        if (
-          attacker.rested ||
-          state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
+      if (target) {
+        // 選擇最適合攻擊此目標的餅乾（優先選能一擊擊殺的）
+        const eligibleAttackers = player.battleArea.filter((attacker) => {
+          if (attacker.rested) return false
+          if (
+            state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
             state.turnNumber
-        ) {
-          continue
-        }
-        const paymentIds = selectEnergyPayment(
-          getAttackEnergyCost(attacker.card),
-          player.supportArea,
-        )
-        if (target && paymentIds) {
-          return {
-            state: appendCommandLogEntry(
-              state,
-              beginAttack(
-                state,
-                attacker.card.instanceId,
-                target.card.instanceId,
-                paymentIds,
-              ),
-              {
-                kind: 'attack',
-                playerId,
-                attackerInstanceId: attacker.card.instanceId,
-                targetInstanceId: target.card.instanceId,
-                supportPaymentIds: paymentIds,
-              },
-            ),
-            action: 'attack',
-            description: `${player.name}以${attacker.card.name}攻擊${target.card.name}。`,
+          )
+            return false
+          const paymentIds = selectEnergyPayment(
+            getAttackEnergyCost(attacker.card),
+            player.supportArea,
+          )
+          return !!paymentIds
+        })
+
+        if (eligibleAttackers.length > 0) {
+          // 按攻擊力排序，優先選能一擊擊殺的
+          const sortedAttackers = [...eligibleAttackers].sort((a, b) => {
+            const aCanKill = (a.card.attack ?? 0) >= target.hpCards.length
+            const bCanKill = (b.card.attack ?? 0) >= target.hpCards.length
+            if (aCanKill && !bCanKill) return -1
+            if (!aCanKill && bCanKill) return 1
+            return (b.card.attack ?? 0) - (a.card.attack ?? 0)
+          })
+
+          for (const attacker of sortedAttackers) {
+            const paymentIds = selectEnergyPayment(
+              getAttackEnergyCost(attacker.card),
+              player.supportArea,
+            )
+            if (paymentIds) {
+              return {
+                state: appendCommandLogEntry(
+                  state,
+                  beginAttack(
+                    state,
+                    attacker.card.instanceId,
+                    target.card.instanceId,
+                    paymentIds,
+                  ),
+                  {
+                    kind: 'attack',
+                    playerId,
+                    attackerInstanceId: attacker.card.instanceId,
+                    targetInstanceId: target.card.instanceId,
+                    supportPaymentIds: paymentIds,
+                  },
+                ),
+                action: 'attack',
+                description: `${player.name}以${attacker.card.name}攻擊${target.card.name}。`,
+              }
+            }
           }
         }
       }

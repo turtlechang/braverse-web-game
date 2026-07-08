@@ -384,6 +384,8 @@ export interface PlayTrapCommand {
   paymentIds: string[]
   targetIds: string[]
   supportTrashIds?: string[]
+  supportToHandIds?: string[]
+  handToSupportIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
 }

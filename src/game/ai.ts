@@ -82,7 +82,17 @@ const chooseEffectTargets = (
     effect.kind === 'support-to-trash' ||
     effect.kind === 'support-to-hand'
   ) {
-    return getSupportEffectCandidates(state, context)
+    const candidates = getSupportEffectCandidates(state, context)
+    // support-to-hand may have maxLevel filter; apply it during selection
+    const filtered =
+      effect.kind === 'support-to-hand' && effect.maxLevel !== undefined
+        ? candidates.filter(
+            (support) =>
+              support.card.type !== 'cookie' ||
+              support.card.level <= effect.maxLevel!,
+          )
+        : candidates
+    return filtered
       .slice(0, effect.amount)
       .map((support) => support.card.instanceId)
   }
