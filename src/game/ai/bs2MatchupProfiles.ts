@@ -7,10 +7,10 @@ import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId } from '
 export type BreakPressureLevel = 'safe' | 'warning' | 'danger' | 'critical'
 
 export const BREAK_PRESSURE_THRESHOLDS = {
-  safe: 6,
-  warning: 8,
-  danger: 10,
-  critical: 12,
+  safe: 4,
+  warning: 6,
+  danger: 8,
+  critical: 10,
 } as const
 
 export const evaluateBreakPressure = (
@@ -389,15 +389,37 @@ export const getMatchupProfile = (
 }
 
 /**
- * 計算替補評分
+ * R6a: 替補基礎品質篩選公式
+ *
+ * 使用 (Level × 3) + (HP × 2) 計算基礎分數。
+ * - Lv.1 HP-1: 3 + 2 = 5
+ * - Lv.2 HP-2: 6 + 4 = 10
+ * - Lv.2 HP-3: 6 + 6 = 12
+ * - Lv.3 HP-3: 9 + 6 = 15
+ *
+ * 此公式取代舊有的硬編碼查表，確保高等級、高 HP 餅乾
+ * 始終獲得更高分數，避免 AI 部署最低 HP 餅乾的問題。
+ */
+export const calculateReplacementBaseScore = (card: GameCard): number => {
+  if (card.type !== 'cookie') return 0
+  return card.level * 3 + card.hp * 2
+}
+
+/**
+ * 計算替補評分（R6a: 基礎品質篩選）
+ *
+ * 分數組成：
+ * 1. 基礎分：(Level × 3) + (HP × 2)
+ * 2. Break pressure 調整：危急/危險時額外重視 HP
+ * 3. 低價值餅乾懲罰：避免部署已知低價值餅乾
  */
 export const scoreReplacement = (
   card: GameCard,
   profile: MatchupProfile,
   breakPressure: BreakPressureLevel,
 ): number => {
-  const scoreEntry = profile.replacementScores[card.name]
-  const baseScore = scoreEntry?.baseScore ?? 50
+  // R6a: 使用公式計算基礎分數
+  const baseScore = calculateReplacementBaseScore(card)
 
   // Break pressure 調整
   let adjustment = 0
@@ -444,10 +466,12 @@ const oppBreakLevel = (breakArea: CookieCard[]): number =>
 /**
  * 計算攻擊目標評分（越高越應該攻擊）
  *
- * 改進重點：
+ * R1 Break Level 意識 + R2 集中火力：
  * 1. 多攻擊者 lethal 偵測（所有非休息餅乾總傷害）
- * 2. Break level race 意識（對手接近12時加成，我方接近12時減益）
- * 3. 集中火力加成（優先擊倒能被一次擊殺的目標）
+ * 2. Break level race 意識（對手破壞區越高，越重視能擊倒的目標）
+ * 3. 擊倒高 Level 目標在 break 高壓時更有價值
+ * 4. 受傷目標加成（已受傷的目標優先擊倒，不分散傷害）
+ * 5. 低 HP 目標大幅加成（接近擊倒的目標最高優先）
  */
 export const scoreAttackTarget = (
   cookie: CookieInBattle,
@@ -479,44 +503,65 @@ export const scoreAttackTarget = (
   const canOneShot = remainingHp <= maxSingleDamage
   const oneShotBonus = canOneShot ? 80 : 0
 
-  // --- Break level race 加成 ---
+  // --- R1: Break level race 意識 ---
   const opponentBreak = oppBreakLevel(opponentBreakArea)
   const myBreak = myBreakLevel(myBreakArea)
   let raceBonus = 0
 
-  // 對手接近12時，加成擊殺能推進到12的目標
-  if (opponentBreak >= 8) {
+  if (canKillInOneTurn) {
+    // R1: 擊倒能直接致勝（break ≥10）— 最高優先
     const projectedBreak = opponentBreak + cookie.card.level
-    if (projectedBreak >= 12) {
-      raceBonus += 200 // 直接致勝
-    } else if (projectedBreak >= 10) {
-      raceBonus += 100 // 接近致勝
+    if (projectedBreak >= 10) {
+      raceBonus += 300
     } else if (projectedBreak >= 8) {
-      raceBonus += 40 // 穩定推進
+      raceBonus += 80
+    } else if (opponentBreak >= 6) {
+      raceBonus += 30
+    }
+  } else {
+    // R1: 非擊倒攻擊也要有 break awareness（對手破壞區越高，越值得削 HP）
+    if (opponentBreak >= 10) {
+      raceBonus += 20
+    } else if (opponentBreak >= 8) {
+      raceBonus += 10
     }
   }
 
-  // 我方接近12時，減益（因為我方可能先輸）
+  // R1: 我方接近10時的壓力減益
   if (myBreak >= 10) {
     raceBonus -= 60
   } else if (myBreak >= 8) {
     raceBonus -= 20
   }
 
-  // --- Break area 好處（擊倒高級餅乾對對手破壞區幫助更大） ---
-  const breakAreaBenefit = cookie.card.level * 20
+  // --- R1: 高 Level 目標在 break 高壓時更有價值 ---
+  // 擊倒 Lv.3 目標對 break area 的貢獻比 Lv.1 大3倍
+  const levelBreakValue = cookie.card.level * 15
+  const breakPressureBonus = opponentBreak >= 8
+    ? levelBreakValue
+    : opponentBreak >= 6
+      ? Math.floor(levelBreakValue * 0.5)
+      : 0
 
-  // --- 低 HP 目標集中火力加成 ---
-  // 優先擊倒剩餘 HP 少的目標，避免分散傷害
-  const hpEfficiencyBonus = remainingHp <= 2 ? 30 : remainingHp <= 3 ? 15 : 0
+  // --- R2: 受傷目標加成 ---
+  const maxHp = cookie.card.hp
+  const missingHp = maxHp - remainingHp
+  const damagedTargetBonus = missingHp > 0 ? missingHp * 25 : 0
+
+  // --- R2: 低 HP 目標大幅加成 ---
+  const finishBonus =
+    remainingHp === 1 ? 100 :
+      remainingHp === 2 ? 60 :
+        remainingHp === 3 ? 30 : 0
 
   return (
     threatValue +
     lethalBonus +
     oneShotBonus +
     raceBonus +
-    breakAreaBenefit +
-    hpEfficiencyBonus
+    breakPressureBonus +
+    damagedTargetBonus +
+    finishBonus
   )
 }
 
@@ -556,6 +601,131 @@ export const chooseBestCookieToDeploy = (
     const rightScore = profile.replacementScores[right.name]?.baseScore ?? 50
     return rightScore - leftScore
   })[0]
+}
+
+/**
+ * R6b: 替補進階效果評分 — 效果價值表
+ *
+ * 依卡牌公開效果給分，分為進攻型、防守型、輔助型三類。
+ */
+const EFFECT_VALUE_BONUS: Record<string, number> = {
+  // 進攻型：可主動造成傷害
+  'Rebel Cookie': 8,
+  'Dark Choco Cookie': 8,
+  'Red Bean Cookie': 7,
+  'Sea Fairy Cookie': 7,
+  'Wind Archer Cookie': 7,
+  'Black Raisin Cookie': 6,
+  'Poison Mushroom Cookie': 6,
+  'Rockstar Cookie': 5,
+  'Cherry Cookie': 4,
+  'Mala Sauce Cookie': 4,
+  'Tiramisu Cookie': 4,
+  'White Choco Cookie': 4,
+  // 防守型：可回血或保護
+  'Banana Cookie': 6,
+  'Vampire Cookie': 6,
+  'Cream Unicorn Cookie': 5,
+  'Marshmallow Cookie': 4,
+  'Hydrangea Cookie': 4,
+  // 輔助型：可抽牌、提供資源
+  'Sherbet Cookie': 5,
+  'Sour Belt Cookie': 4,
+  'Clotted Cream Cookie': 4,
+  'Eclair Cookie': 3,
+  'Earl Grey Cookie': 3,
+  // 低效果價值
+  'Popcorn Cookie': 0,
+  'Adventurer Cookie': 0,
+  'Carrot Cookie': 0,
+  'Melon Bun Cookie': 0,
+  'Chestnut Cookie': 0,
+  'Mustard Cookie': 0,
+  'Cyborg Cookie': 0,
+  'Angel Cookie': 0,
+  'Spinach Cookie': 0,
+  'Bellflower Cookie': 0,
+  'Cookiemals': 0,
+  'Candlelight Cookie': 0,
+  'Salt Cookie': 0,
+  'Milk Cookie': 0,
+  'Skating Queen Cookie': 0,
+  'Peppermint Cookie': 0,
+  'Raspberry Mousse Cookie': 0,
+  'Fig Cookie': 0,
+  'Fairy Cookie': 0,
+}
+
+/**
+ * R6b: 計算替補進階分數
+ *
+ * 分數組成：
+ * 1. baseScore（R6a）：(Level × 3) + (HP × 2) + break pressure 調整 + 低價值懲罰
+ * 2. effectValueBonus：依卡牌效果給分（0–8）
+ * 3. boardNeedBonus：依場面需求給分（-5–+10）
+ * 4. survivalBonus：依生存能力給分（-5–+5）
+ */
+export const scoreReplacementAdvanced = (
+  card: GameCard,
+  profile: MatchupProfile,
+  breakPressure: BreakPressureLevel,
+  options: {
+    myBreakLevel: number
+    oppBreakLevel: number
+    myBattleAreaCount: number
+    myTotalBattleHp: number
+    oppTotalBattleHp: number
+  },
+): number => {
+  if (card.type !== 'cookie') return 0
+
+  // R6a base
+  const baseScore = scoreReplacement(card, profile, breakPressure)
+
+  // R6b: effectValueBonus
+  const effectBonus = EFFECT_VALUE_BONUS[card.name] ?? 2
+
+  // R6b: boardNeedBonus
+  let boardNeedBonus = 0
+  const myBreak = options.myBreakLevel
+  const oppBreak = options.oppBreakLevel
+
+  // 我方破壞區偏高 → 防守或回血單位加分
+  if (myBreak >= 8) {
+    const isDefensive = EFFECT_VALUE_BONUS[card.name] !== undefined &&
+      (card.name.includes('Banana') || card.name.includes('Vampire') ||
+        card.name.includes('Cream Unicorn') || card.name.includes('Marshmallow') ||
+        card.name.includes('Hydrangea'))
+    if (isDefensive) boardNeedBonus += 6
+  }
+
+  // 對手破壞區偏高 → 進攻單位加分
+  if (oppBreak >= 8) {
+    const isOffensive = (card.attack ?? 0) >= 2 || EFFECT_VALUE_BONUS[card.name] >= 5
+    if (isOffensive) boardNeedBonus += 5
+  }
+
+  // 我方戰鬥區缺 HP → 高 HP 替補加分
+  if (options.myBattleAreaCount <= 1 && card.hp >= 3) {
+    boardNeedBonus += 5
+  }
+
+  // 場面缺攻擊點 → 高攻擊或主動傷害技能加分
+  if (options.myTotalBattleHp < options.oppTotalBattleHp && (card.attack ?? 0) >= 2) {
+    boardNeedBonus += 3
+  }
+
+  // R6b: survivalBonus
+  let survivalBonus = 0
+  if (card.hp <= 1) {
+    survivalBonus = -5
+  } else if (card.hp >= 3) {
+    survivalBonus = 3
+  } else if (card.hp === 2) {
+    survivalBonus = 1
+  }
+
+  return baseScore + effectBonus + boardNeedBonus + survivalBonus
 }
 
 /**

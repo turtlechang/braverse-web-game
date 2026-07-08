@@ -36,6 +36,7 @@ import {
 } from './bs2MatchupProfiles'
 
 export interface AiTurnStrategy {
+  currentLevel?: number
   chooseEffectTargets: (
     state: GameState,
     context: EffectContext,
@@ -55,6 +56,7 @@ export interface AiTurnStrategy {
   chooseReplacement: (
     state: GameState,
     playerId: PlayerId,
+    level?: number,
   ) => GameCard | undefined
   chooseAttackTarget: (
     state: GameState,
@@ -94,7 +96,7 @@ export const handleAiTurnState = (
 
   const replacementTask = getCurrentReplacementTask(state)
   if (!state.pendingOnPlay && replacementTask?.playerId === playerId) {
-    const replacement = strategy.chooseReplacement(state, playerId)
+    const replacement = strategy.chooseReplacement(state, playerId, strategy.currentLevel)
     if (!replacement) {
       return {
         state: appendCommandLogEntry(

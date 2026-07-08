@@ -16,8 +16,9 @@ import {
 } from '../effects'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
-import type { CardEffect, EffectContext, GameState, PlayerId } from '../types'
-import type { AiDecision } from './types'
+import type { CardEffect, EffectContext, GameState, GameCard, PlayerId } from '../types'
+import type { AiDecision, AiLevel } from './types'
+import { isRuleEnabled } from './rule-profiles'
 
 const chooseAttackEffectTargets = (
   state: GameState,
@@ -70,9 +71,114 @@ const chooseAttackEffectTargets = (
   return ordered.slice(0, count).map((cookie) => cookie.card.instanceId)
 }
 
+/**
+ * R7: 評估陷阱是否值得使用
+ *
+ * 分數組成：
+ * 1. protectedTargetValue：保護目標價值（Level + HP + 效果價值）
+ * 2. preventedKillBonus：防止被擊倒的加分
+ * 3. preventedBreakBonus：防止 break area 推進的加分
+ * 4. effectValueBonus：陷阱效果本身的價值
+ * 5. lowValueWastePenalty：保護低價值目標的懲罰
+ * 6. costPenalty：陷阱代價懲罰（能量 + 棄牌）
+ */
+const EFFECT_VALUE_MAP: Record<string, number> = {
+  'prevent-knockout': 30,
+  'redirect-attack': 25,
+  'modify-attack': 20,
+  'damage': 15,
+  'field-to-trash': 15,
+  'gain-hp': 10,
+  'draw': 10,
+  'support-to-hand': 5,
+}
+
+const evaluateTrapWorth = (
+  state: GameState,
+  playerId: PlayerId,
+  trapCard: GameCard,
+  battle: NonNullable<GameState['pendingBattle']>,
+): number => {
+  if (!trapCard.trap) return 0
+
+  const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+  const attacker = state.players[battle.attackerPlayerId].battleArea.find(
+    (c) => c.card.instanceId === battle.attackerInstanceId,
+  )
+  const defender = state.players[battle.defenderPlayerId].battleArea.find(
+    (c) => c.card.instanceId === battle.targetInstanceId,
+  )
+
+  if (!attacker || !defender) return 0
+
+  let score = 0
+
+  // 1. protectedTargetValue：保護目標價值
+  const targetLevel = defender.card.level
+  const targetHp = defender.hpCards.length
+  score += targetLevel * 15
+  score += targetHp * 10
+
+  // 高效果價值餅乾加分
+  const highEffectNames = [
+    'Rebel', 'Dark Choco', 'Sea Fairy', 'Wind Archer', 'Banana',
+    'Vampire', 'Red Bean', 'Cream Unicorn', 'Black Raisin',
+  ]
+  if (highEffectNames.some((n) => defender.card.name.includes(n))) {
+    score += 20
+  }
+
+  // 2. preventedKillBonus：防止被擊倒（依目標等級縮放）
+  const attackerDamage = attacker.card.attack ?? 0
+  const wouldBeKilled = targetHp <= attackerDamage
+  if (wouldBeKilled) {
+    if (targetLevel >= 3) {
+      score += 60
+    } else if (targetLevel === 2) {
+      score += 35
+    } else {
+      score += 15
+    }
+  }
+
+  // 3. preventedBreakBonus：防止 break area 推進
+  const myBreakLevel = state.players[playerId].breakArea.reduce(
+    (sum, c) => sum + c.level, 0,
+  )
+  if (wouldBeKilled && myBreakLevel >= 8) {
+    score += 40
+  } else if (wouldBeKilled && myBreakLevel >= 6) {
+    score += 20
+  }
+
+  // 4. effectValueBonus：陷阱效果價值
+  for (const effect of trapCard.trap.effects) {
+    score += EFFECT_VALUE_MAP[effect.kind] ?? 5
+  }
+
+  // 5. lowValueWastePenalty：保護低價值目標（核心 R7 邏輯）
+  // 只在目標明顯無價值時才扣分
+  if (targetLevel <= 1 && targetHp <= 1) {
+    score -= 30
+  }
+
+  // 6. costPenalty：陷阱代價
+  const energyCost = Object.values(trapCard.trap.cost.energy ?? {}).reduce(
+    (sum, n) => sum + n, 0,
+  )
+  score -= energyCost * 8
+  const discardCost = trapCard.trap.cost.discardHand ?? 0
+  score -= discardCost * 12
+  const trashCost = trapCard.trap.cost.trashBattleCookie?.count ?? 0
+  score -= trashCost * 20
+
+  return score
+}
+
 export const handleAiPendingBattle = (
   state: GameState,
   playerId: PlayerId,
+  level?: AiLevel,
 ): AiDecision | null => {
   if (
     !state.pendingBattle ||
@@ -155,7 +261,38 @@ export const handleAiPendingBattle = (
   }
 
   if (battle.stage === 'trap' && battle.defenderPlayerId === playerId) {
-    const trapCard = getTrapCandidates(state, playerId)[0]
+    const trapCandidates = getTrapCandidates(state, playerId)
+    const useR7 = level !== undefined && isRuleEnabled(level, 'R7')
+
+    let trapCard: GameCard | undefined
+    if (useR7 && trapCandidates.length > 0) {
+      // R7: Lv.3+ 評估所有陷阱候選，選最高分
+      let bestScore = -Infinity
+      let bestCandidate: GameCard | undefined
+      for (const candidate of trapCandidates) {
+        if (!candidate.trap) continue
+        const score = evaluateTrapWorth(state, playerId, candidate, battle)
+        if (score > bestScore) {
+          bestScore = score
+          bestCandidate = candidate
+        }
+      }
+      // R7: 只在目標明顯無價值（Lv.1 HP1）且分數偏低時跳過
+      const target = state.players[battle.defenderPlayerId].battleArea.find(
+        (c) => c.card.instanceId === battle.targetInstanceId,
+      )
+      const isExpendable = (target?.card.level ?? 0) <= 1 && (target?.hpCards.length ?? 0) <= 1
+      if (isExpendable && bestScore < 50) {
+        trapCard = undefined
+      } else {
+        trapCard = bestCandidate
+      }
+    } else {
+      trapCard = trapCandidates[0]
+    }
+
+    const r7Skipped = useR7 && trapCandidates.length > 0 && !trapCard
+
     if (trapCard?.trap) {
       const paymentIds =
         selectEnergyPayment(
@@ -317,6 +454,7 @@ export const handleAiPendingBattle = (
       ),
       action: 'play-trap',
       description: `${state.players[playerId].name}未發動陷阱。`,
+      r7TrapSkip: r7Skipped,
     }
   }
 

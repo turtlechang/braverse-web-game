@@ -129,7 +129,7 @@ ACTION:
   - Prioritize attacking cookies that will be knocked out
   - Prefer attacking cookies with higher levels when multiple targets available
   - Avoid attacking cookies with prevention effects unless strategically necessary
-RATIONALE: Win condition is break-level-limit (12). Each KO should contribute maximum break level.
+RATIONALE: Win condition is break-level-limit (10). Each KO should contribute maximum break level.
 MEASURED IMPACT: Red deck achieves avg AI break of 6.9 in wins vs player's 10.4 in losses.
 ```
 
@@ -193,7 +193,7 @@ RULE: monitor-break-level-race
 PRIORITY: HIGH
 CONDITION: Both players above break level 6
 ACTION:
-  - Calculate: enemy_break_level + my_current_attack >= 12?
+  - Calculate: enemy_break_level + my_current_attack >= 10?
   - If yes, go for lethal attacks
   - If no, prioritize defensive positioning to avoid giving enemy lethal
   - Track how many more KOs needed to win

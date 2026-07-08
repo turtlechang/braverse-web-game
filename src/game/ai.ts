@@ -52,8 +52,11 @@ import {
   evaluateBreakPressure,
   getMatchupProfile,
   scoreReplacement,
+  scoreReplacementAdvanced,
+  sumBreakLevel,
   scoreAttackTarget,
 } from './ai/bs2MatchupProfiles'
+import { isRuleEnabled } from './ai/rule-profiles'
 
 export type {
   AiActionType,
@@ -693,7 +696,7 @@ const resolveAiSkill = (
   }
 }
 
-const chooseReplacement = (state: GameState, playerId: PlayerId) => {
+const chooseReplacement = (state: GameState, playerId: PlayerId, level?: number) => {
   const candidates = getReplacementCandidates(state, playerId)
   if (candidates.length === 0) return undefined
 
@@ -701,6 +704,33 @@ const chooseReplacement = (state: GameState, playerId: PlayerId) => {
   const breakPressure = evaluateBreakPressure(
     state.players[playerId].breakArea,
   )
+
+  const useR6b = level !== undefined && isRuleEnabled(level as 1 | 2 | 3 | 4, 'R6b')
+
+  if (useR6b) {
+    const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+    const myBreakLevel = sumBreakLevel(state.players[playerId].breakArea)
+    const oppBreakLevel = sumBreakLevel(state.players[opponentId].breakArea)
+    const myBattleAreaCount = state.players[playerId].battleArea.length
+    const myTotalBattleHp = state.players[playerId].battleArea.reduce(
+      (sum, c) => sum + c.hpCards.length, 0,
+    )
+    const oppTotalBattleHp = state.players[opponentId].battleArea.reduce(
+      (sum, c) => sum + c.hpCards.length, 0,
+    )
+
+    return candidates
+      .filter((c) => c.type === 'cookie')
+      .sort((left, right) => {
+        const leftScore = scoreReplacementAdvanced(left, profile, breakPressure, {
+          myBreakLevel, oppBreakLevel, myBattleAreaCount, myTotalBattleHp, oppTotalBattleHp,
+        })
+        const rightScore = scoreReplacementAdvanced(right, profile, breakPressure, {
+          myBreakLevel, oppBreakLevel, myBattleAreaCount, myTotalBattleHp, oppTotalBattleHp,
+        })
+        return rightScore - leftScore
+      })[0]
+  }
 
   return candidates
     .filter((c) => c.type === 'cookie')
@@ -772,18 +802,24 @@ export const takeAiStep = (
               createStepRandom(options.seed ?? 1, current),
             )
         : level === 3
-          ? (current: GameState, currentPlayerId: PlayerId) =>
-              handleAiEvaluatedTurnState(current, currentPlayerId, aiTurnStrategy)
+          ? (current: GameState, currentPlayerId: PlayerId) => {
+              aiTurnStrategy.currentLevel = level
+              return handleAiEvaluatedTurnState(current, currentPlayerId, aiTurnStrategy)
+            }
           : level === 4
-            ? (current: GameState, currentPlayerId: PlayerId) =>
-                handleAiTwoPlyTurnState(current, currentPlayerId, aiTurnStrategy)
-            : (current: GameState, currentPlayerId: PlayerId) =>
-                handleAiTurnState(current, currentPlayerId, aiTurnStrategy)
+            ? (current: GameState, currentPlayerId: PlayerId) => {
+                aiTurnStrategy.currentLevel = level
+                return handleAiTwoPlyTurnState(current, currentPlayerId, aiTurnStrategy)
+              }
+            : (current: GameState, currentPlayerId: PlayerId) => {
+                aiTurnStrategy.currentLevel = level
+                return handleAiTurnState(current, currentPlayerId, aiTurnStrategy)
+              }
 
     const decision =
       dispatchAiStep(state, playerId, [
         handleAiPendingDecision,
-        handleAiPendingBattle,
+        (s, p) => handleAiPendingBattle(s, p, level),
         turnHandler,
       ]) ?? {
         state,

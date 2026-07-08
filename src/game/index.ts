@@ -330,4 +330,13 @@ export type {
   AiStepOptions,
   SimulateAiMatchOptions,
 } from './ai'
+export type {
+  AiDetailedResult,
+  ReplacementEvent,
+  AttackEvent,
+  TurnProgression,
+  EndInfo,
+  BehaviorMetrics,
+} from './ai/types'
 export { evaluatePlayerView } from './ai/evaluated-turn-handler'
+export { simulateAiMatchDetailed } from './ai-detailed-sim'

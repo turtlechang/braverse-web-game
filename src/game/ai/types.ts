@@ -62,6 +62,7 @@ export interface AiDecision {
   effectSelections?: AiEffectSelection[]
   error?: string
   reason?: AiDecisionReason
+  r7TrapSkip?: boolean
 }
 
 export interface AiMatchMetrics {
@@ -77,4 +78,104 @@ export interface AiMatchResult {
   metrics: AiMatchMetrics
   stuck: boolean
   error: string | null
+}
+
+// ============================================================================
+// 詳細事件追蹤（Phase 3a-1.5）
+// ============================================================================
+
+export interface ReplacementEvent {
+  turn: number
+  player: PlayerId
+  cardId: string
+  cardName: string
+  level: number
+  hp: number
+  score: number
+  candidateCount: number
+  rank: number
+}
+
+export interface AttackEvent {
+  turn: number
+  attackerPlayerId: PlayerId
+  defenderPlayerId: PlayerId
+  attackerId: string
+  attackerName: string
+  declaredTargetId: string
+  finalTargetId: string
+  targetName: string
+  targetLevel: number
+  damage: number
+  targetHpBefore: number
+  targetHpAfter: number | null
+  isKill: boolean
+  isOverkill: boolean
+  overkillAmount: number
+  wasRedirected: boolean
+  breakAreaBefore: number
+  breakAreaAfter: number
+  breakAreaDelta: number
+}
+
+export interface TurnProgression {
+  totalTurns: number
+  noDamageTurns: number
+  noBoardChangeTurns: number
+  consecutiveNoProgressMax: number
+  turnCapReached: boolean
+}
+
+export interface EndInfo {
+  winner: PlayerId | null
+  loser: PlayerId | null
+  reason: string | null
+  playerOneBreakLevel: number
+  playerTwoBreakLevel: number
+  turnCapReached: boolean
+}
+
+export interface BehaviorMetrics {
+  lowQualityReplacementCount: number
+  playerOneLowQualityReplacements: number
+  playerTwoLowQualityReplacements: number
+  replacementAvgScore: number
+  replacementAvgRank: number
+  playerOneReplacementAvgScore: number
+  playerTwoReplacementAvgScore: number
+  playerOneTotalReplacements: number
+  playerTwoTotalReplacements: number
+  attackKillRate: number
+  overkillRatio: number
+  avgOverkillAmount: number
+  skillUsageCount: number
+  invalidActionCount: number
+  deadlockCount: number
+  noDamageTurns: number
+  noBoardChangeTurns: number
+  consecutiveNoProgressMax: number
+  r7TrapSkippedCount: number
+  lethalOpportunityCount: number
+  lethalConversionCount: number
+  directWinCount: number
+  r10PenaltyAppliedCount: number
+  r10BreakRaceRiskCount: number
+  r6cReplacementCount: number
+  r6cLowQualityCount: number
+  r6cForcedCount: number
+  r6cBreakWorsenedCount: number
+}
+
+export interface AiDetailedResult {
+  state: GameState
+  actions: number
+  logs: string[]
+  metrics: AiMatchMetrics
+  stuck: boolean
+  error: string | null
+  replacementEvents: ReplacementEvent[]
+  attackEvents: AttackEvent[]
+  turnProgression: TurnProgression
+  endInfo: EndInfo
+  behavior: BehaviorMetrics
 }
