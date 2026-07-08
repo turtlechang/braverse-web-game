@@ -1217,18 +1217,6 @@ export const resolveOptionalCostAttack = (
   if (uniquePaymentIds.length !== paymentIds.length) {
     throw new GameRuleError('Invalid battle action.')
   }
-  // When sourceAsEnergy is true, the attacking cookie itself counts as 1 energy of its color
-  if (pending.sourceAsEnergy) {
-    const attackerCookie = state.players[playerId].battleArea.find(
-      (c) => c.card.instanceId === pending.sourceInstanceId,
-    )
-    if (attackerCookie) {
-      const attackerColor = attackerCookie.card.energyColor
-      if (attackerColor && attackerColor !== 'wild' && attackerColor in energyCost) {
-        energyCost = { ...energyCost, [attackerColor]: Math.max(0, (energyCost[attackerColor] ?? 0) - 1) }
-      }
-    }
-  }
   const paymentValidation = validateEnergyPayment(
     energyCost,
     player.supportArea,

@@ -168,7 +168,7 @@ const chooseEffectTargets = (
       return true
     })
     return candidates
-      .sort((left, right) => left.hpCards.length - right.hpCards.length)
+      .sort((left, right) => right.hpCards.length - left.hpCards.length)
       .slice(0, 1)
       .map((cookie) => cookie.card.instanceId)
   }

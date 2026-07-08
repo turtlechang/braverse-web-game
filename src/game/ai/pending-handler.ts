@@ -208,22 +208,7 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
-    // Calculate effective energy cost, accounting for sourceAsEnergy reduction
-    let effectiveEnergyCost = pendingDecision.cost.energy ?? pendingDecision.cost
-    if (pendingDecision.sourceAsEnergy) {
-      const attackerCookie = state.players[playerId].battleArea.find(
-        (c) => c.card.instanceId === pendingDecision.sourceInstanceId,
-      )
-      if (attackerCookie) {
-        const attackerColor = attackerCookie.card.energyColor
-        if (attackerColor && attackerColor !== 'wild' && attackerColor in effectiveEnergyCost) {
-          effectiveEnergyCost = {
-            ...effectiveEnergyCost,
-            [attackerColor]: Math.max(0, (effectiveEnergyCost[attackerColor] ?? 0) - 1),
-          }
-        }
-      }
-    }
+    const effectiveEnergyCost = pendingDecision.cost.energy ?? pendingDecision.cost
     const paymentIds = selectEnergyPayment(
       effectiveEnergyCost,
       state.players[playerId].supportArea,
@@ -259,7 +244,7 @@ export const handleAiPendingDecision = (
               if (bttEffect.remainingHp !== undefined && cookie.hpCards.length > bttEffect.remainingHp) return false
               return true
             })
-            .sort((left, right) => left.hpCards.length - right.hpCards.length)
+            .sort((left, right) => right.hpCards.length - left.hpCards.length)
             .slice(0, 1)
             .map((cookie) => cookie.card.instanceId)
         })()
