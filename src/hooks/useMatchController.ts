@@ -417,9 +417,25 @@ export function useMatchController(params: {
   const trapEnergyCostTotal = getEnergyCostTotal(trapEnergyCost)
   const trapPaymentCandidates =
     trapEnergyCostTotal > 0
-      ? game.players[viewerPlayerId].supportArea.filter(
-          (support) => !support.rested,
-        )
+      ? game.players[viewerPlayerId].supportArea.filter((support) => {
+          if (support.rested) return false
+          const color = support.card.energyColor
+          if (!color) return false
+          if (color === 'wild') return true
+          const requiredColors = (
+            Object.keys(trapEnergyCost) as string[]
+          ).filter(
+            (k) =>
+              (trapEnergyCost[k as keyof typeof trapEnergyCost] ?? 0) > 0,
+          )
+          if (requiredColors.length === 0) return false
+          if (
+            requiredColors.length === 1 &&
+            requiredColors[0] === 'neutral'
+          )
+            return true
+          return requiredColors.includes(color)
+        })
       : []
   const trapPaymentTargetIds = new Set(
     trapEnergyCostTotal > 0
