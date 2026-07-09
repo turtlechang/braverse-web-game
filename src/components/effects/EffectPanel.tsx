@@ -24,6 +24,7 @@ export interface EffectPanelProps {
   onToggleDiscardHand?: (instanceId: string) => void
   discardHandCost?: number
   showCancelSkill?: boolean
+  energyPaymentValid?: boolean
 }
 
 function EffectPanelContent({
@@ -43,6 +44,7 @@ function EffectPanelContent({
   onToggleDiscardHand,
   discardHandCost = 0,
   showCancelSkill = false,
+  energyPaymentValid,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
@@ -77,7 +79,9 @@ function EffectPanelContent({
     !pendingEffect?.skillActivated &&
     (totalEnergyCost > 0 || supportAreaCost > 0 || discardHandCost > 0)
 
-  const energyPaid = pendingEffect?.selectedPaymentIds.length === totalEnergyCost
+  const energyPaid = totalEnergyCost > 0
+    ? energyPaymentValid === true
+    : true
   const supportPaid =
     supportAreaCost === 0 ||
     pendingEffect?.selectedCostSupportToTrashIds.length === supportAreaCost

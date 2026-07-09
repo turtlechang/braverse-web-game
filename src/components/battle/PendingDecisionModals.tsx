@@ -3,6 +3,8 @@ import {
   getEnergyCostTotal,
   getRefreshCandidates,
   isEffectTargeted,
+  type EnergyColor,
+  type EnergyCost,
 } from '../../game'
 import {
   DecisionModal,
@@ -94,10 +96,29 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
   const optionalCostAttackEnergyTotal = pendingOptionalCost
     ? getEnergyCostTotal(pendingOptionalCost.cost.energy ?? {})
     : 0
+  const optionalCostAttackEnergyCost =
+    pendingOptionalCost?.cost.energy ?? ({} as EnergyCost)
+  const optionalCostAttackRequiredColors = new Set(
+    (Object.keys(optionalCostAttackEnergyCost) as (EnergyColor | 'neutral')[]).filter(
+      (k) => (optionalCostAttackEnergyCost[k] ?? 0) > 0,
+    ),
+  )
   const optionalCostAttackSupportCandidates = match.game.players[
     match.viewerPlayerId
   ].supportArea
     .filter((support) => !support.rested)
+    .filter((support) => {
+      if (optionalCostAttackEnergyTotal <= 0) return true
+      if (!support.card.energyColor) return false
+      if (support.card.energyColor === 'wild') return true
+      if (optionalCostAttackRequiredColors.size === 0) return false
+      if (
+        optionalCostAttackRequiredColors.size === 1 &&
+        optionalCostAttackRequiredColors.has('neutral')
+      )
+        return true
+      return optionalCostAttackRequiredColors.has(support.card.energyColor)
+    })
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return (

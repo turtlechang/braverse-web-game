@@ -6,6 +6,7 @@ import type {
   PlayerId,
   PlayerState,
   ReplacementTask,
+  SupportCard,
 } from '../game'
 import type { DispatchGameCommand } from './useBattleActions'
 
@@ -36,6 +37,14 @@ export interface BattleUiMatchLike {
   setTrapSelectNoTarget: (value: boolean | ((current: boolean) => boolean)) => void
   selectedTrap: GameCard | undefined
   selectedTrapPaymentIds: string[]
+  setSelectedTrapPaymentIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  trapPaymentCandidates: SupportCard[]
+  trapPaymentTargetIds: Set<string>
+  trapPaymentValid: boolean
+  trapEnergyCostTotal: number
+  toggleTrapPayment: (instanceId: string) => void
   selectedTrapDiscardCost: number
   selectedTrapDiscardCandidates: GameCard[]
   selectedTrapTrashBattleCookieCost: number
@@ -47,6 +56,20 @@ export interface BattleUiMatchLike {
   setSelectedTrapTargetId: (value: string | null) => void
   selectedTrapTargets: CookieInBattle[]
   selectedTrapSupportTrashIds: string[]
+  selectedTrapSupportToHandIds: string[]
+  setSelectedTrapSupportToHandIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  trapSupportToHandCandidates: GameCard[]
+  trapSupportToHandAmount: number
+  toggleTrapSupportToHand: (instanceId: string) => void
+  selectedTrapHandToSupportIds: string[]
+  setSelectedTrapHandToSupportIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  trapHandToSupportCandidates: GameCard[]
+  trapHandToSupportAmount: number
+  toggleTrapHandToSupport: (instanceId: string) => void
   // Blocker
   selectedBlockerId: string | null
   setSelectedBlockerId: (value: string | null) => void

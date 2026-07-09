@@ -16,6 +16,7 @@ import {
   getTrapCandidates,
   getTrapTargetCandidates,
   getTrashBattleCookieCostCandidates,
+  getEnergyCostTotal,
   isPlayerControllingState,
   selectEnergyPayment,
   type BuiltInDeckChoice,
@@ -258,6 +259,7 @@ export function useMatchController(params: {
   } = setup
   const animations = useMatchAnimations()
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
   const [selectedTrapDiscardIds, setSelectedTrapDiscardIds] = useState<
     string[]
   >([])
@@ -266,6 +268,8 @@ export function useMatchController(params: {
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
+  const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
+  const [selectedTrapHandToSupportIds, setSelectedTrapHandToSupportIds] = useState<string[]>([])
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
@@ -408,12 +412,81 @@ export function useMatchController(params: {
   const selectedTrap = playerTrapCandidates.find(
     (card) => card.instanceId === selectedTrapId,
   )
-  const selectedTrapPaymentIds = selectedTrap?.trap
-    ? selectEnergyPayment(
-        selectedTrap.trap.cost.energy ?? selectedTrap.trap.cost,
-        game.players[viewerPlayerId].supportArea,
-      ) ?? []
-    : []
+  const trapEnergyCost =
+    selectedTrap?.trap?.cost.energy ?? selectedTrap?.trap?.cost ?? {}
+  const trapEnergyCostTotal = getEnergyCostTotal(trapEnergyCost)
+  const trapPaymentCandidates =
+    trapEnergyCostTotal > 0
+      ? game.players[viewerPlayerId].supportArea.filter(
+          (support) => !support.rested,
+        )
+      : []
+  const trapPaymentTargetIds = new Set(
+    trapEnergyCostTotal > 0
+      ? game.players[viewerPlayerId].supportArea
+          .filter((support) => {
+            if (support.rested) return false
+            if (selectedTrapPaymentIds.includes(support.card.instanceId))
+              return true
+            if (selectedTrapPaymentIds.length >= trapEnergyCostTotal)
+              return false
+            const color = support.card.energyColor
+            if (!color) return false
+            if (color === 'wild') return true
+            const requiredColors = (
+              Object.keys(trapEnergyCost) as string[]
+            ).filter(
+              (k) =>
+                (trapEnergyCost[k as keyof typeof trapEnergyCost] ?? 0) > 0,
+            )
+            if (requiredColors.length === 0) return false
+            if (
+              requiredColors.length === 1 &&
+              requiredColors[0] === 'neutral'
+            )
+              return true
+            return requiredColors.includes(color)
+          })
+          .map((support) => support.card.instanceId)
+      : [],
+  )
+  const trapPaymentValid =
+    trapEnergyCostTotal > 0
+      ? selectedTrapPaymentIds.length === trapEnergyCostTotal
+      : true
+  const toggleTrapPayment = (instanceId: string) => {
+    setSelectedTrapPaymentIds((current) => {
+      const isSelected = current.includes(instanceId)
+      if (!isSelected) {
+        if (current.length >= trapEnergyCostTotal) return current
+        const supportCard = game.players[viewerPlayerId].supportArea.find(
+          (s) => s.card.instanceId === instanceId,
+        )
+        if (!supportCard) return current
+        const color = supportCard.card.energyColor
+        if (!color) return current
+        if (color !== 'wild') {
+          const requiredColors = (
+            Object.keys(trapEnergyCost) as string[]
+          ).filter(
+            (k) =>
+              (trapEnergyCost[k as keyof typeof trapEnergyCost] ?? 0) > 0,
+          )
+          if (
+            !(
+              requiredColors.length === 1 &&
+              requiredColors[0] === 'neutral'
+            ) &&
+            !requiredColors.includes(color)
+          )
+            return current
+        }
+      }
+      return isSelected
+        ? current.filter((id) => id !== instanceId)
+        : [...current, instanceId]
+    })
+  }
   const selectedTrapDiscardCost = selectedTrap?.trap?.cost.discardHand ?? 0
   const selectedTrapTrashBattleCookieCost =
     selectedTrap?.trap?.cost.trashBattleCookie?.count ?? 0
@@ -467,6 +540,60 @@ export function useMatchController(params: {
           .slice(0, 1)
           .map((support: SupportCard) => support.card.instanceId)
       : []
+
+  const trapSupportToHandEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'support-to-hand',
+  )
+  const trapSupportToHandAmount =
+    trapSupportToHandEffect?.kind === 'support-to-hand'
+      ? trapSupportToHandEffect.amount
+      : 0
+  const trapSupportToHandCandidates =
+    trapSupportToHandAmount > 0
+      ? game.players[viewerPlayerId].supportArea.map(
+          (support: SupportCard) => support.card,
+        )
+      : []
+
+  const trapHandToSupportEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'hand-to-support',
+  )
+  const trapHandToSupportAmount =
+    trapHandToSupportEffect?.kind === 'hand-to-support'
+      ? trapHandToSupportEffect.amount
+      : 0
+  const trapHandToSupportCandidates =
+    trapHandToSupportAmount > 0
+      ? game.players[viewerPlayerId].hand.filter(
+          (card) => card.instanceId !== selectedTrap?.instanceId,
+        )
+      : []
+
+  const toggleTrapSupportToHand = useCallback(
+    (id: string) => {
+      setSelectedTrapSupportToHandIds((current) =>
+        current.includes(id)
+          ? current.filter((cId) => cId !== id)
+          : current.length < trapSupportToHandAmount
+            ? [...current, id]
+            : current,
+      )
+    },
+    [trapSupportToHandAmount],
+  )
+
+  const toggleTrapHandToSupport = useCallback(
+    (id: string) => {
+      setSelectedTrapHandToSupportIds((current) =>
+        current.includes(id)
+          ? current.filter((cId) => cId !== id)
+          : current.length < trapHandToSupportAmount
+            ? [...current, id]
+            : current,
+      )
+    },
+    [trapHandToSupportAmount],
+  )
 
   const playerBlockerCandidates =
     game.pendingBattle?.stage === 'trap' &&
@@ -657,6 +784,7 @@ export function useMatchController(params: {
     handleAdvancePhase,
     handleAttackTarget: battleActions.handleAttackTarget,
     toggleAttackPayment: battleActions.toggleAttackPayment,
+    attackPaymentTargetIds: battleActions.attackPaymentTargetIds,
     clearAttacker: battleActions.clearAttacker,
     activePlayer,
     viewerPlayerId,
@@ -676,6 +804,12 @@ export function useMatchController(params: {
     playerTrapCandidates,
     selectedTrap,
     selectedTrapPaymentIds,
+    setSelectedTrapPaymentIds,
+    trapPaymentCandidates,
+    trapPaymentTargetIds,
+    trapPaymentValid,
+    trapEnergyCostTotal,
+    toggleTrapPayment,
     selectedTrapDiscardCost,
     selectedTrapDiscardCandidates,
     selectedTrapTrashBattleCookieCost,
@@ -687,6 +821,16 @@ export function useMatchController(params: {
     setSelectedTrapTargetId,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
+    selectedTrapSupportToHandIds,
+    setSelectedTrapSupportToHandIds,
+    trapSupportToHandCandidates,
+    trapSupportToHandAmount,
+    toggleTrapSupportToHand,
+    selectedTrapHandToSupportIds,
+    setSelectedTrapHandToSupportIds,
+    trapHandToSupportCandidates,
+    trapHandToSupportAmount,
+    toggleTrapHandToSupport,
     // Blocker
     selectedBlockerId,
     setSelectedBlockerId,

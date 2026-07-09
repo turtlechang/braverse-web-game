@@ -593,11 +593,14 @@ export const playTrap = (
     (effect) => effect.kind === 'support-to-hand',
   )
   if (supportToHand?.kind === 'support-to-hand') {
-    updatedPlayer = moveSupportsToHand(
-      updatedPlayer,
-      options.supportToHandIds ?? [],
-      supportToHand.amount,
-    )
+    const ids = options.supportToHandIds ?? []
+    if (ids.length >= supportToHand.amount) {
+      updatedPlayer = moveSupportsToHand(
+        updatedPlayer,
+        ids,
+        supportToHand.amount,
+      )
+    }
   }
 
   const handToSupport = trap.effects.find(

@@ -143,6 +143,7 @@ export function OnlineBattleView({
   }
 
   const selectedAttackPaymentIdSet = new Set(match.selectedAttackPaymentIds)
+  const trapPaymentIdSetOnline = new Set(match.selectedTrapPaymentIds)
   const effectTargetIds = new Set(
     pending.candidateCards.map((card) => card.instanceId),
   )
@@ -241,6 +242,9 @@ export function OnlineBattleView({
           selectedEffectTargetIds={selectedEffectTargetIds}
           selectedSkillPaymentIds={new Set()}
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
+          selectedTrapPaymentIds={trapPaymentIdSetOnline}
+          trapPaymentTargetIds={match.trapPaymentTargetIds}
+          onTrapPayment={match.toggleTrapPayment}
           attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
           selectedHandCardId={selectedHandCardId}

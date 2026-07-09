@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type {
   CardAbility,
+  EnergyColor,
+  EnergyCost,
   GameCard,
   GameState,
   PlayerId,
@@ -250,6 +252,9 @@ export function usePendingEffect(params: {
         pendingEffect.skill.cost.energy ?? pendingEffect.skill.cost,
       )
     : 0
+  const skillEnergyCost = pendingEffect
+    ? (pendingEffect.skill.cost.energy ?? pendingEffect.skill.cost)
+    : ({} as EnergyCost)
   const skillEnergyPaymentValid = pendingEffect
     ? validateEnergyPayment(
         pendingEffect.skill.cost.energy ?? pendingEffect.skill.cost,
@@ -257,6 +262,25 @@ export function usePendingEffect(params: {
         pendingEffect.selectedPaymentIds,
       ).valid
     : false
+  const skillEnergyRequiredColors = new Set(
+    (Object.keys(skillEnergyCost) as (EnergyColor | 'neutral')[]).filter(
+      (k): k is EnergyColor | 'neutral' =>
+        (skillEnergyCost[k] ?? 0) > 0,
+    ),
+  )
+  const isSkillEnergyColorCompatible = (
+    cardColor: EnergyColor | 'wild' | undefined,
+  ): boolean => {
+    if (!cardColor) return false
+    if (cardColor === 'wild') return true
+    if (skillEnergyRequiredColors.size === 0) return false
+    if (
+      skillEnergyRequiredColors.size === 1 &&
+      skillEnergyRequiredColors.has('neutral')
+    )
+      return true
+    return skillEnergyRequiredColors.has(cardColor)
+  }
   const skillPaymentTargetIds = new Set(
     pendingEffect && !pendingEffect.skillActivated && skillEnergyCostTotal > 0
       ? pendingSupportArea
@@ -266,6 +290,10 @@ export function usePendingEffect(params: {
               !pendingEffect.selectedCostSupportToTrashIds.includes(
                 support.card.instanceId,
               ) &&
+              (pendingEffect.selectedPaymentIds.includes(
+                support.card.instanceId,
+              ) ||
+                isSkillEnergyColorCompatible(support.card.energyColor)) &&
               (pendingEffect.selectedPaymentIds.length <
                 skillEnergyCostTotal ||
                 pendingEffect.selectedPaymentIds.includes(
@@ -753,6 +781,16 @@ export function usePendingEffect(params: {
     ) {
       return
     }
+    if (
+      !isSelected &&
+      !isSkillEnergyColorCompatible(
+        pendingSupportArea.find(
+          (s) => s.card.instanceId === instanceId,
+        )?.card.energyColor,
+      )
+    ) {
+      return
+    }
     const selectedPaymentIds = isSelected
       ? pendingEffect.selectedPaymentIds.filter((id) => id !== instanceId)
       : [...pendingEffect.selectedPaymentIds, instanceId]
@@ -1169,6 +1207,7 @@ export function usePendingEffect(params: {
     trashToHandCandidates,
     trashToDeckCandidates,
     skillCostSupportCandidates,
+    skillEnergyPaymentValid,
     skillPaymentTargetIds,
     skillCostSupportTargetIds,
     skillCostDiscardHandCandidates,

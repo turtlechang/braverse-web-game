@@ -336,6 +336,11 @@ export const handleAiPendingBattle = (
       const supportToHandIds =
         supportToHandEffect?.kind === 'support-to-hand'
           ? state.players[playerId].supportArea
+              .slice()
+              .sort((a, b) => {
+                if (a.rested !== b.rested) return a.rested ? -1 : 1
+                return 0
+              })
               .slice(0, supportToHandEffect.amount)
               .map((support) => support.card.instanceId)
           : []
@@ -346,6 +351,13 @@ export const handleAiPendingBattle = (
         handToSupportEffect?.kind === 'hand-to-support'
           ? state.players[playerId].hand
               .filter((card) => card.instanceId !== trapCard.instanceId)
+              .slice()
+              .sort((a, b) => {
+                const aCookie = a.type === 'cookie' ? 1 : 0
+                const bCookie = b.type === 'cookie' ? 1 : 0
+                if (aCookie !== bCookie) return aCookie - bCookie
+                return 0
+              })
               .slice(0, handToSupportEffect.amount)
               .map((card) => card.instanceId)
           : []
