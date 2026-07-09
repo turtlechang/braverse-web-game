@@ -28,17 +28,17 @@ export const describeEffect = (effect: CardEffect) => {
     return `從牌庫頂放 ${effect.amount} 張到支援區。`
   }
   if (effect.kind === 'break-to-trash') {
-    return `從 break 區選最多 ${effect.max} 張 LV.${effect.exactLevel} 放入垃圾桶。`
+    return `從 break 區選最多 ${effect.max} 張 LV.${effect.exactLevel} 放入棄牌區。`
   }
   if (effect.kind === 'gain-hp') return `獲得 ${effect.amount} HP。`
   if (effect.kind === 'support-to-trash') {
-    return `將 ${effect.amount} 張支援區卡放入垃圾桶。`
+    return `將 ${effect.amount} 張支援區卡放入棄牌區。`
   }
   if (effect.kind === 'support-to-hand') {
     return `將 ${effect.amount} 張支援區卡返回手牌。`
   }
   if (effect.kind === 'trash-to-battle') {
-    return `從垃圾桶選 ${effect.amount} 張餅乾登場。`
+    return `從棄牌區選 ${effect.amount} 張餅乾登場。`
   }
   if (effect.kind === 'modify-all-attack') {
     return `全體${effect.side === 'self' ? '我方' : '對手'}餅乾攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}。`
@@ -54,7 +54,9 @@ export const describeEffect = (effect: CardEffect) => {
     return `對手隨機棄掉 ${effect.count} 張手牌。`
   }
   if (effect.kind === 'opponent-battle-to-trash') {
-    return '將符合條件的對手餅乾放入垃圾桶。'
+    return effect.destination === 'break'
+      ? '將符合條件的對手餅乾放入休息區。'
+      : '將符合條件的對手餅乾放入棄牌區。'
   }
   if (effect.kind === 'place-source-to-support') {
     return '將這張卡放入支援區。'
@@ -73,7 +75,7 @@ export const describeEffect = (effect: CardEffect) => {
     return '本回合對手不能發動 {bl}。'
   }
   if (effect.kind === 'hp-to-trash') {
-    return `選擇 ${effect.amount} 張 HP 卡放入垃圾桶。`
+    return `選擇 ${effect.amount} 張 HP 卡放入棄牌區。`
   }
   if (effect.kind === 'draw-up-to-then-discard') {
     return `最多抽 ${effect.max} 張牌，然後棄 ${effect.discardCount} 張。`
@@ -85,7 +87,7 @@ export const describeEffect = (effect: CardEffect) => {
     return '此餅乾不受效果傷害。'
   }
   if (effect.kind === 'field-to-trash-all') {
-    return '雙方符合條件的餅乾放入垃圾桶。'
+    return '雙方符合條件的餅乾放入棄牌區。'
   }
   if (effect.kind === 'trash-to-hand') {
     return `從棄牌區選最多 ${effect.max} 張卡返回手牌。`
@@ -120,7 +122,7 @@ export const describeEffect = (effect: CardEffect) => {
     return `選擇 ${count}${target}，本次戰鬥 HP 不會降到 0。`
   }
   if (effect.kind === 'field-to-trash') {
-    return `選擇 ${count}${target}或場景，放入垃圾桶。`
+    return `選擇 ${count}${target}或場景，放入棄牌區。`
   }
   if (effect.kind === 'return-to-hand') {
     return `選擇 ${count}${target}返回手牌。`
@@ -165,17 +167,17 @@ export const describeEffectResult = (
   if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
   if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
   if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
-  if (effect.kind === 'break-to-trash') return 'break 區卡已放入垃圾桶。'
+  if (effect.kind === 'break-to-trash') return 'break 區卡已放入棄牌區。'
   if (effect.kind === 'gain-hp') return `${names} 獲得 ${effect.amount} HP。`
-  if (effect.kind === 'support-to-trash') return '支援區卡已放入垃圾桶。'
+  if (effect.kind === 'support-to-trash') return '支援區卡已放入棄牌區。'
   if (effect.kind === 'support-to-hand') return '支援區卡已返回手牌。'
-  if (effect.kind === 'trash-to-battle') return '垃圾桶餅乾已登場。'
+  if (effect.kind === 'trash-to-battle') return '棄牌區餅乾已登場。'
   if (effect.kind === 'damage-all') return '全體傷害已結算。'
   if (effect.kind === 'modify-all-attack') return '全體攻擊修正已套用。'
   if (effect.kind === 'discard-hand') return '已建立棄手牌決策。'
   if (effect.kind === 'opponent-discard-hand') return '已要求對手棄手牌。'
   if (effect.kind === 'opponent-random-discard') return '對手已隨機棄手牌。'
-  if (effect.kind === 'opponent-battle-to-trash') return '對手餅乾已放入垃圾桶。'
+  if (effect.kind === 'opponent-battle-to-trash') return effect.destination === 'break' ? '對手餅乾已放入休息區。' : '對手餅乾已放入棄牌區。'
   if (effect.kind === 'place-source-to-support') return '已放入支援區。'
   if (effect.kind === 'set-active') return '支援區卡已設為活躍。'
   if (effect.kind === 'inspect-deck') return '已查看牌庫。'
@@ -187,14 +189,14 @@ export const describeEffectResult = (
   }
   if (effect.kind === 'redirect-attack') return `本次攻擊已改向 ${names}。`
   if (effect.kind === 'prevent-knockout') return `${names} 已受到保護。`
-  if (effect.kind === 'field-to-trash') return `${names} 已放入垃圾桶。`
+  if (effect.kind === 'field-to-trash') return `${names} 已放入棄牌區。`
   if (effect.kind === 'return-to-hand') return `${names} 已返回手牌。`
   if (effect.kind === 'return-to-deck-bottom') return `${names} 已返回牌庫底。`
   if (effect.kind === 'disable-flip') return `${names} 本回合不能發動 FLIP。`
   if (effect.kind === 'view-hp') return `已查看 ${names} 的 HP。`
   if (effect.kind === 'battle-to-support') return `${names} 已放入支援區。`
   if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
-  if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入垃圾桶。'
+  if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入棄牌區。'
   if (effect.kind === 'trash-to-hand') return '棄牌區卡牌已返回手牌。'
   if (effect.kind === 'trash-to-deck') return '棄牌區卡牌已洗回牌庫。'
   if (effect.kind === 'break-to-battle') return 'break 區餅乾已登場。'

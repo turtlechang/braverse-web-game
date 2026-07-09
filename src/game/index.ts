@@ -48,6 +48,16 @@ export {
 } from './energy'
 export type { EnergyPaymentValidation } from './energy'
 export {
+  AI_PRESET_BS2_BEAN_DECK,
+  AI_PRESET_BS2_BLUE_DECK,
+  AI_PRESET_BS2_PURPLE_DECK,
+  AI_PRESET_BS2_RED_DECK,
+  AI_PRESET_BS2_YELLOW_DECK,
+  createAiPresetBs2BeanDeck,
+  createAiPresetBs2BlueDeck,
+  createAiPresetBs2PurpleDeck,
+  createAiPresetBs2RedDeck,
+  createAiPresetBs2YellowDeck,
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
   createOfficialPurpleStarterDeck,
@@ -65,7 +75,13 @@ export {
   OFFICIAL_STARTER_DECK_RED,
   OFFICIAL_YELLOW_STARTER_DECK,
 } from './starter-deck'
-export type { DeckChoice, StarterDeckEntry } from './starter-deck'
+export type {
+  AiPresetDeckChoice,
+  BuiltInDeckChoice,
+  DeckChoice,
+  StarterDeckChoice,
+  StarterDeckEntry,
+} from './starter-deck'
 export {
   getAllCardPoolEntries,
   getCardPoolEntry,
@@ -314,4 +330,13 @@ export type {
   AiStepOptions,
   SimulateAiMatchOptions,
 } from './ai'
+export type {
+  AiDetailedResult,
+  ReplacementEvent,
+  AttackEvent,
+  TurnProgression,
+  EndInfo,
+  BehaviorMetrics,
+} from './ai/types'
 export { evaluatePlayerView } from './ai/evaluated-turn-handler'
+export { simulateAiMatchDetailed } from './ai-detailed-sim'

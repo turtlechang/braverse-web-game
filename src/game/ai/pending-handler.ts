@@ -3,7 +3,10 @@ import {
   getFaintEffectCandidates,
 } from '../battle'
 import { applyGameCommand, getPendingDecision } from '../commands'
+import { selectEnergyPayment } from '../energy'
+import { getEffectTargetCandidates, isEffectTargeted } from '../effects'
 import { getRefreshCandidates } from '../refresh'
+import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 
@@ -205,10 +208,56 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
-    const canPay = hand.length >= (pendingDecision.cost.discardHand ?? 0)
-    const opponentId =
-      playerId === 'player-one' ? 'player-two' : 'player-one'
-    const hasTarget = state.players[opponentId].battleArea.length > 0
+    const effectiveEnergyCost = pendingDecision.cost.energy ?? pendingDecision.cost
+    const paymentIds = selectEnergyPayment(
+      effectiveEnergyCost,
+      state.players[playerId].supportArea,
+    )
+    const canPay =
+      hand.length >= (pendingDecision.cost.discardHand ?? 0) &&
+      Boolean(paymentIds)
+    const targetedEffect = pendingDecision.effects.find((effect) =>
+      isEffectTargeted(effect),
+    )
+    const context: EffectContext = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: pendingDecision.sourceInstanceId,
+    }
+    const targetIds = targetedEffect
+      ? getEffectTargetCandidates(
+          state,
+          context,
+          targetedEffect.target,
+        )
+          .slice(0, targetedEffect.target.max)
+          .map((cookie) => cookie.card.instanceId)
+      : (() => {
+          const bttEffect = pendingDecision.effects.find(
+            (e) => e.kind === 'opponent-battle-to-trash',
+          )
+          if (!bttEffect || bttEffect.kind !== 'opponent-battle-to-trash') return []
+          const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
+          return state.players[opponentId].battleArea
+            .filter((cookie) => {
+              if (bttEffect.maxLevel !== undefined && cookie.card.level > bttEffect.maxLevel) return false
+              if (bttEffect.minLevel !== undefined && cookie.card.level < bttEffect.minLevel) return false
+              if (bttEffect.remainingHp !== undefined && cookie.hpCards.length > bttEffect.remainingHp) return false
+              return true
+            })
+            .sort((left, right) => right.hpCards.length - left.hpCards.length)
+            .slice(0, 1)
+            .map((cookie) => cookie.card.instanceId)
+        })()
+    const hasTarget =
+      targetedEffect
+        ? targetIds.length >= targetedEffect.target.min
+        : (() => {
+            const bttEffect = pendingDecision.effects.find(
+              (e) => e.kind === 'opponent-battle-to-trash',
+            )
+            if (!bttEffect || bttEffect.kind !== 'opponent-battle-to-trash') return true
+            return targetIds.length >= 1
+          })()
     if (canPay && hasTarget) {
       return {
         state: applyGameCommand(state, {
@@ -218,9 +267,8 @@ export const handleAiPendingDecision = (
           discardCardIds: hand
             .slice(0, pendingDecision.cost.discardHand ?? 0)
             .map((card) => card.instanceId),
-          targetIds: [
-            state.players[opponentId].battleArea[0].card.instanceId,
-          ],
+          targetIds,
+          paymentIds: paymentIds ?? [],
         }),
         action: 'resolve-optional-cost-attack',
         description: `${state.players[playerId].name}支付棄手牌代價發動攻擊後續效果。`,

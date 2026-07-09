@@ -105,7 +105,8 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'flip-to-support' ||
           currentEffect.kind === 'inspect-deck' ||
           currentEffect.kind === 'optional-cost-attack' ||
-          currentEffect.kind === 'disable-block'
+          currentEffect.kind === 'disable-block' ||
+          currentEffect.kind === 'opponent-battle-to-trash'
           ? null
           : currentEffect.target
         : null
@@ -721,7 +722,8 @@ export function usePendingEffect(params: {
           : currentEffect.kind === 'inspect-deck' ||
               currentEffect.kind === 'optional-cost-attack' ||
               currentEffect.kind === 'disable-block' ||
-              currentEffect.kind === 'flip-to-support'
+              currentEffect.kind === 'flip-to-support' ||
+              currentEffect.kind === 'opponent-battle-to-trash'
             ? 0
           : currentEffect.target?.max ?? 0
 

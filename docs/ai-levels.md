@@ -1,98 +1,89 @@
 # AI 等級分級設計
 
-> **狀態：Lv.1 / Lv.2 / Lv.3 已實作；Lv.4–5 為設計稿，未實作。**
+> **狀態：Lv.1–Lv.4 已實作完成；Lv.5 為設計稿，未實作。**
+> **最後更新：2026-07-08（Phase 5）**
 
 ## 等級總覽
 
-| 等級 | 名稱 | 決策邏輯 | 狀態 |
+| 等級 | 名稱 | 決策邏輯 | 規則 | 狀態 |
+|---|---|---|---|---|
+| Lv.1 | 隨機出招 | 從合法動作中隨機挑選；不主動使用技能 | 無 | ✅ 完成 |
+| Lv.2 | 基礎戰術 | 啟發式：能出牌就出牌、攻擊最低 HP 目標、斬殺優先 | R1–R4, R6a | ✅ 完成 |
+| Lv.3 | 評估式 | 對候選動作套用後以 PlayerView 評分，取最高分 | +R5, R6b, R7, R8 | ✅ 完成 |
+| Lv.4 | 兩層前瞻 | 枚舉動作序列，對回合終局狀態評分 + 風險管理 | +R9, R10, lv4RiskBonus | ✅ 完成 |
+| Lv.5 | 對抗性 | 在 Lv.4 之上加入對手回應期望值 | 未實作 | ⬜ 設計稿 |
+
+## 勝率驗收（seeds 1–30）
+
+| Matchup | 目標 | 實際 | 狀態 |
 |---|---|---|---|
-| Lv.1 | 隨機出招 | 從 `getLegalTurnCommands` 枚舉的合法動作指令中，以種子亂數均勻挑選一個執行；不主動使用技能、物品與 OnPlay | ✅ 已實作 |
-| Lv.2 | 基礎戰術 | 現行啟發式：能出牌就出牌、能用技能就用、攻擊剩餘 HP 最低的目標、斬殺優先 | ✅ 已實作（原有 AI 掛名） |
-| Lv.3 | 評估式 | 對支援／主要階段每個候選動作（含技能、物品、攻擊組合）套用後以 `PlayerView` 評分，取最高分；其餘強制流程委派 Lv.2 | ✅ 已實作 |
-| Lv.4 | 回合規劃 | 枚舉本回合的動作序列組合（出牌順序 × 攻擊分配），對回合終局狀態評分後執行最佳序列；依賴指令層序列化 | ⬜ 設計稿 |
-| Lv.5 | 對抗性 | 在 Lv.4 之上加入對手回應期望值（FLIP／陷阱觸發機率、手牌張數推估），僅使用公開資訊與機率 | ⬜ 設計稿 |
+| Lv.2 vs Lv.1 | ≥ 60% | 83.3% | ✅ PASS |
+| Lv.3 vs Lv.2 | ≥ 58% | 66.7% | ✅ PASS |
+| Lv.4 vs Lv.3 | 60%–75% | 73.3% | ✅ PASS |
+| Lv.3 vs Lv.1 | ≥ 65% | 100.0% | ✅ PASS（ceiling effect） |
+| Lv.4 vs Lv.1 | ≥ 70% | 93.3% | ✅ PASS |
 
-## 使用方式
+### 上限警戒
 
-```ts
-import { takeAiStep, simulateAiMatch } from '../game'
+- Lv.4 vs Lv.3 > 75%：需審核是否過強
+- Lv.4 vs Lv.3 > 80%：暫停，必須降權或回滾
 
-// 單步：預設 Lv.2；Lv.1 需要種子以確保可重現
-takeAiStep(state, 'player-two', { level: 1, seed: 42 })
+## 規則系統（R1–R10）
 
-// 模擬：可對兩位玩家分別指定等級
-simulateAiMatch(createDemoGame(seed), 1500, {
-  levels: { 'player-two': 1 },
-  seed,
-})
-```
+| 規則 | 名稱 | 適用等級 | 狀態 |
+|---|---|---|---|
+| R1 | Break Level 意識 | Lv.2+ | ✅ Done |
+| R2 | 集中火力 | Lv.2+ | ✅ Done |
+| R3 | 早期侵略部署 | Lv.2+ | ✅ Done |
+| R4 | 支援卡及早部署 | Lv.2+ | ✅ Done |
+| R5 | 技能主動使用 | Lv.3+ | ✅ Done |
+| R6a | 替補基礎品質篩選 | Lv.2+ | ✅ Done |
+| R6b | 替補進階效果評分 | Lv.3+ | ✅ Done |
+| R6c | 替補風險前瞻 | Lv.4+ | ⏸ Deferred |
+| R7 | 陷阱防護高價值目標 | Lv.3+ | ✅ Done |
+| R8 | 手牌數量管理 | Lv.3+ | ✅ Done |
+| R9 | 致命傷害偵測 | Lv.4 | ✅ Done |
+| R10 | 對手回應風險評估 | Lv.4 | ✅ Guardrail |
 
-UI 由主選單「AI 對手」區塊選擇牌組（隨機／五色起始）與等級（Lv.1／Lv.2／Lv.3），
-經 `App.tsx` 傳入 `useAiTurn` 與 `useMatchSetup.handleDeckSelection`。
+### R6c Deferred 理由
 
-## Lv.1 實作細節
+Lv.4 替補風險審查結果（30 games, 99 replacements）：
+- Low Quality: 6（6.1%）
+- Forced (≤2 candidates): 4/6 — 手牌 RNG，AI 無法改善
+- Non-forced LQ: 2 — 極低
+- Break Worsened: 0
 
-- 合法動作來源：`src/game/legal-actions.ts` 的 `getLegalTurnCommands(state, playerId)`，
-  回傳 `PlayerActionCommand[]`（Refresh、補位／略過、略過 OnPlay、支援放置、
-  餅乾登場、場景放置、攻擊組合含自動能量支付、階段推進）。
-- 執行路徑：選中的指令經 `applyGameCommand` 執行——Lv.1 是指令層的第一個
-  AI 消費者，其行動會完整寫入 `commandLog`。
-- 隨機性：`createSeededRandom(seed ^ 局面熵)`，局面熵由 commandLog 長度、
-  回合數、雙方手牌與牌庫張數混合而成；**相同種子 + 相同局面 = 相同決策**，
-  對局可重現（見 `ai-level1.test.ts`）。
-- 待處理決策與戰鬥回應（陷阱／FLIP／傷害結算）沿用與 Lv.2 共用的
-  pending／battle handler——這些屬於強制回應，不參與隨機挑選。
-- 決策標註：每個 `AiDecision` 附 `reason: { level, consideredCommands, chosenCommandKind }`，
-  供除錯與測試斷言。
+Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break worsening。
 
 ## 資訊邊界（防作弊）
 
 所有等級一律只能讀取：
+- **可讀**：雙方戰鬥區、支援區、棄牌區、Break 區、雙方手牌張數、牌庫張數、自己的手牌內容、已公開的卡牌
+- **不可讀**：對手手牌內容、牌庫順序、face-down HP 卡內容
 
-- **可讀**：雙方戰鬥區／支援區／棄牌區／Break 區、雙方手牌**張數**、
-  牌庫**張數**、自己的手牌內容、已公開的卡牌。
-- **不可讀**：對手手牌內容、雙方牌庫順序、face-down HP 卡內容
-  （現行程式僅使用 `hpCards.length`）。
+`PlayerView` 是過濾器：把 `GameState` 過濾成單一玩家可見資訊後才交給評分函式。
 
-`src/game/player-view.ts` 的 `createPlayerView(state, playerId)` 是這個過濾器：
-把 `GameState` 過濾成單一玩家可見資訊（對手手牌只留張數、雙方 HP 卡只留張數，
-持有者自己也看不到 HP 卡內容）後才交給評分函式，用型別而非紀律保證不作弊；
-該過濾器未來直接重用於線上對戰的 state snapshot。
+### Lv.4 特殊組件
 
-## Lv.3 實作細節
+| 組件 | 位置 | 說明 |
+|---|---|---|
+| `lv4RiskBonus` | evaluated-turn-handler.ts | 核心風險評分（不可刪除） |
+| `lethalDetectionBonus` | evaluated-turn-handler.ts | R9 致命偵測 |
+| `responseRiskPenalty` | evaluated-turn-handler.ts | R10 break 惡化 guardrail |
 
-- 評分函式 `evaluatePlayerView(view: PlayerView): number`（`src/game/ai/evaluated-turn-handler.ts`）
-  只吃 `PlayerView`，型別上不可能讀到隱藏資訊。對局結束回傳極值
-  （勝 +100000／敗 -100000）；進行中對局依戰鬥區數量與剩餘 HP、手牌張數、
-  可用支援卡、Break 區等級、牌庫張數加權計分。
-- 候選動作來源：`getLegalTurnCommands` 枚舉的指令（支援放置、登場、場景、
-  攻擊組合）逐一套用後評分；主要階段另外用 `AiTurnStrategy.resolveSkill` /
-  `resolveCardAbility` 枚舉技能與物品候選（沿用 Lv.2 的目標選擇邏輯）。
-- 攻擊候選採期望值加成而非套用後評分：套用攻擊指令後戰局停在待回應階段
-  （傷害尚未結算），直接評分會低估攻擊價值，因此用「預期傷害／斬殺」
-  額外加分（斬殺 > 部分傷害，並依付出的能量支付數量小幅扣分）。
-- 非自由選擇的局面（Refresh、補位、OnPlay、戰鬥回應、非行動回合）直接
-  委派給 Lv.2 的 `handleAiTurnState`，不重複實作。
-- 決策標註：`reason: { level: 3, consideredCommands, chosenCommandKind }`。
+## 已知問題
 
-## 測試策略
+1. `opencode-go-benchmark.test.js has no test suite`（pre-existing）
+2. Lv.4 vs Lv.3 = 73.3%，接近 75% 警戒線
+3. Lv.3 vs Lv.1 = 100%（ceiling effect，擴大牌組池後需重新驗證）
+4. 勝利條件為 `break >= 10`（非 12），所有規則已修正為正確閾值
 
-- `legal-actions.test.ts`：枚舉正確性——每個枚舉指令都必須能被
-  `applyGameCommand` 接受；非行動玩家、待處理決策時回傳空清單。
-- `player-view.test.ts`：視角過濾正確性——對手手牌與雙方牌庫只留張數、
-  雙方 HP 卡只留張數、公開區域（支援區／Break 區／棄牌區／場景）原樣保留。
-- `ai-level1.test.ts`：相同種子決策序列可重現、不同種子產生分歧、
-  reason 標註、Lv.1 對 Lv.2 與 Lv.1 對 Lv.1 模擬完賽（種子鎖定）。
-- `ai-level3.test.ts`：`evaluatePlayerView` 對場面優劣打分方向正確、
-  結束對局回傳勝負極值、Lv.3 對局可正常結束（種子 1–5）、
-  **Lv.3 對 Lv.1 的 20 場種子模擬勝率 ≥ 65%**（作為「等級有感」的驗收標準）、
-  同一局面 Lv.3 決策可重現。
-- 既有 `ai-simulation.test.ts` 的 20 種子 Lv.2 對局回歸不受影響（預設等級不變）。
+## 測試狀態
 
-## 不建議一開始做的
-
-- Lv.4 / Lv.5：搜尋空間與評分函式的調校成本高，玩家感知差異低於
-  Lv.1→Lv.3 的跳躍；建議先觀察 Lv.3 上線後的實際對戰體感再決定是否投入。
-- Lv.1 的技能／物品隨機使用：需要對每個效果枚舉目標組合，複雜度高且
-  容易產生非法組合；Lv.1 定位是「最弱的合法玩家」，略過技能是合法且
-  符合定位的簡化。
+```text
+1435 passed, 1 suite failed
+pre-existing issue: opencode-go-benchmark.test.js has no test suite
+Invalid Actions: 0
+Deadlocks: 0
+Hidden Info Access: 0
+```

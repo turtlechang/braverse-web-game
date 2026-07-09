@@ -336,6 +336,21 @@ export interface SupportToHandEffect {
   amount: number
   maxLevel?: number
   condition?: EffectCondition
+  optional?: boolean
+}
+
+export interface HandToSupportEffect {
+  kind: 'hand-to-support'
+  amount: number
+  rested?: boolean
+  condition?: EffectCondition
+}
+
+export interface HandToSupportEffect {
+  kind: 'hand-to-support'
+  amount: number
+  rested?: boolean
+  condition?: EffectCondition
 }
 
 export interface OpponentDiscardHandEffect {
@@ -354,6 +369,7 @@ export interface OpponentBattleToTrashEffect {
   maxLevel?: number
   minLevel?: number
   remainingHp?: number
+  destination?: 'trash' | 'break'
 }
 
 export interface FieldToTrashEffect {
@@ -397,6 +413,8 @@ export interface OptionalCostAttackEffect {
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
+  /** When true, the attacking cookie itself counts as 1 energy of its color for the cost. */
+  sourceAsEnergy?: boolean
 }
 
 export interface ReturnToHandEffect {
@@ -498,6 +516,7 @@ export type CardEffect =
   | BattleToSupportEffect
   | TrashToBattleEffect
   | SupportToHandEffect
+  | HandToSupportEffect
   | OpponentDiscardHandEffect
   | DiscardHandEffect
   | OpponentBattleToTrashEffect
@@ -519,6 +538,7 @@ export type CardEffect =
   | BattleToBreakEffect
   | BreakToHandBySumEffect
   | FlipToSupportEffect
+  | HandToSupportEffect
 
 export type TargetedCardEffect =
   | DamageEffect
@@ -782,6 +802,7 @@ export interface GameState {
     cost: AbilityCost
     effects: CardEffect[]
     effectText: string
+    sourceAsEnergy?: boolean
   } | null
   pendingStageTrigger?: {
     playerId: PlayerId

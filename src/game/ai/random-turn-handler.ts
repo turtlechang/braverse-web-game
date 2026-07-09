@@ -1,8 +1,37 @@
 import { applyGameCommand } from '../commands'
 import type { PlayerActionCommand } from '../commands'
+import { beginAttack } from '../battle'
 import { getLegalTurnCommands } from '../legal-actions'
 import type { GameState, PlayerId } from '../types'
 import type { AiActionType, AiDecision } from './types'
+
+/**
+ * 套用 AI 選定的行動以產生真正要送出的 decision.state。
+ *
+ * 攻擊必須停在 trap 階段（改用 beginAttack），讓防守方能回應陷阱／FLIP：
+ * - 對人類玩家：由 UI 顯示陷阱／Blocker／FLIP 提示框。
+ * - 對 AI 玩家：由後續 takeAiStep → handleAiPendingBattle 自動處理。
+ *
+ * 若直接用 `attack` 指令（applyGameCommand → attackCookie）會一次
+ * resolveBattleAutomatically 打完整場戰鬥並自動略過防守方陷阱，
+ * 造成人類玩家在對方主要階段完全無法防守。
+ *
+ * 其餘指令沿用 applyGameCommand。
+ */
+export const applyChosenTurnCommand = (
+  state: GameState,
+  command: PlayerActionCommand,
+): GameState => {
+  if (command.kind === 'attack') {
+    return beginAttack(
+      state,
+      command.attackerInstanceId,
+      command.targetInstanceId,
+      command.supportPaymentIds,
+    )
+  }
+  return applyGameCommand(state, command)
+}
 
 export const commandActionTypes: Record<
   PlayerActionCommand['kind'],
@@ -103,12 +132,29 @@ export const handleAiRandomTurnState = (
     }
   }
 
+  const supportCommand = commands.find(
+    (command) => command.kind === 'place-support',
+  )
+  if (state.phase === 'support' && supportCommand) {
+    const nextState = applyGameCommand(state, supportCommand)
+    return {
+      state: nextState,
+      action: commandActionTypes[supportCommand.kind],
+      description: describeCommand(state, playerId, supportCommand),
+      reason: {
+        level: 1,
+        consideredCommands: commands.length,
+        chosenCommandKind: supportCommand.kind,
+      },
+    }
+  }
+
   const index = Math.min(
     Math.floor(random() * commands.length),
     commands.length - 1,
   )
   const command = commands[index]
-  const nextState = applyGameCommand(state, command)
+  const nextState = applyChosenTurnCommand(state, command)
 
   return {
     state: nextState,

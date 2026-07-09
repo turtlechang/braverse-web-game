@@ -6,6 +6,7 @@ import {
   canPlayItem,
   canPlayStage,
   selectEnergyPayment,
+  type BuiltInDeckChoice,
   type DeckChoice,
   type GameCard,
 } from './game'
@@ -91,7 +92,7 @@ function App() {
   const faintActive = pending.faintActive
 
   const resetGame = (
-    nextConfig: { player: DeckChoice; ai: DeckChoice },
+    nextConfig: { player: DeckChoice; ai: BuiltInDeckChoice },
     nextMessage: string,
   ) => {
     setSelectedHandCardId(null)

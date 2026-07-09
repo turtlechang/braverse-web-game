@@ -350,7 +350,7 @@ export const executeCardEffect = (
       departedCookieCards,
     )
     const damagedInstanceIds = targets.map((t) => t.card.instanceId)
-    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
   if (effect.kind === 'redirect-attack') {
@@ -549,7 +549,7 @@ export const executeCardEffect = (
     }), context.sourcePlayerId)
   }
 
-  if (effect.kind === 'support-to-hand') {
+    if (effect.kind === 'support-to-hand') {
     const player = state.players[context.sourcePlayerId]
     const uniqueIds = [...new Set(selectedTargetIds)]
     if (uniqueIds.length !== effect.amount) {
@@ -572,6 +572,30 @@ export const executeCardEffect = (
       ),
       hand: [...player.hand, ...selected.map((support) => support.card)],
     }), context.sourcePlayerId)
+  }
+
+  if (effect.kind === 'hand-to-support') {
+    const player = state.players[context.sourcePlayerId]
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== effect.amount) {
+      throw new GameRuleError(`必須選擇 ${effect.amount} 張手牌。`)
+    }
+    const selected = player.hand.filter(
+      (card) => uniqueIds.includes(card.instanceId),
+    )
+    if (selected.length !== effect.amount) {
+      throw new GameRuleError('選擇的卡片不在手牌中。')
+    }
+    return updatePlayer(state, {
+      ...player,
+      hand: player.hand.filter(
+        (card) => !uniqueIds.includes(card.instanceId),
+      ),
+      supportArea: [
+        ...player.supportArea,
+        ...selected.map((card) => ({ card, rested: effect.rested ?? true })),
+      ],
+    })
   }
 
   if (effect.kind === 'modify-all-attack') {
@@ -752,10 +776,14 @@ export const executeCardEffect = (
     const movedIds = new Set(selected.map((c) => c.card.instanceId))
     const movedCards = selected.map((c) => c.card)
     const hpCards = selected.flatMap((c) => c.hpCards)
+    const toBreak = effect.destination === 'break'
     const updatedPlayer: PlayerState = {
       ...targetPlayer,
       battleArea: targetPlayer.battleArea.filter((c) => !movedIds.has(c.card.instanceId)),
-      discardPile: [...targetPlayer.discardPile, ...movedCards, ...hpCards],
+      ...(toBreak
+        ? { breakArea: [...targetPlayer.breakArea, ...movedCards] }
+        : {}),
+      discardPile: [...targetPlayer.discardPile, ...(toBreak ? hpCards : [...movedCards, ...hpCards])],
     }
     const nextState = updatePlayer(state, updatedPlayer)
     const departedCount = selected.length
@@ -1449,7 +1477,7 @@ export const executeCardEffect = (
       departedCookieCards,
     )
     const damagedInstanceIds = targets.map((t) => t.card.instanceId)
-    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
   if (effect.kind === 'split-damage') {
@@ -1496,7 +1524,7 @@ export const executeCardEffect = (
       departedCookieCards,
     )
     const damagedInstanceIds = targets.map((t) => t.card.instanceId)
-    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds)
+    return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
   if (effect.kind === 'prevent-knockout') {

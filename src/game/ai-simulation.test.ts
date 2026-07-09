@@ -4,6 +4,26 @@ import {
   simulateAiMatch,
   takeAiStep,
 } from '.'
+import type { BuiltInDeckChoice } from '.'
+
+const secondSetAiPresetDecks: BuiltInDeckChoice[] = [
+  'bs2-red',
+  'bs2-yellow',
+  'bs2-bean',
+  'bs2-blue',
+  'bs2-purple',
+]
+
+const secondSetPresetMatrixCases = secondSetAiPresetDecks.flatMap(
+  (playerDeck) =>
+    secondSetAiPresetDecks.flatMap((aiDeck) =>
+      Array.from({ length: 20 }, (_, index) => ({
+        playerDeck,
+        aiDeck,
+        seed: index + 1,
+      })),
+    ),
+)
 
 describe('AI match simulation', () => {
   it('stops a full simulation at the configured action limit', () => {
@@ -78,6 +98,22 @@ describe('AI match simulation', () => {
       expect(result.stuck, result.error ?? '').toBe(false)
       expect(result.state.status).toBe('finished')
       expect(result.actions).toBeLessThan(500)
+    },
+  )
+
+  it.each(secondSetPresetMatrixCases)(
+    'completes second set preset matrix player $playerDeck ai $aiDeck seed $seed',
+    ({ playerDeck, aiDeck, seed }) => {
+      const result = simulateAiMatch(
+        createDemoGame(seed, { player: playerDeck, ai: aiDeck }),
+        1500,
+      )
+
+      expect(
+        result.stuck,
+        `${playerDeck} vs ${aiDeck} seed ${seed}: ${result.error ?? ''}`,
+      ).toBe(false)
+      expect(result.state.status).toBe('finished')
     },
   )
 

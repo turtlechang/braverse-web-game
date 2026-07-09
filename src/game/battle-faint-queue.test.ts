@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyGameCommand,
   beginAttack,
   executeCardEffect,
   finalizePendingReplacements,
@@ -451,5 +452,163 @@ describe('faint effect queue', () => {
     // Assert: 昏厥效果仍然存在
     expect(state.pendingFaintEffects).toBeDefined()
     expect(state.pendingFaintEffects!.length).toBe(1)
+  })
+
+  // 迴歸測試：UI 走 applyGameCommand（會經過 assertNoPendingDecision），
+  // 必須允許在昏厥效果待處理時補位／略過補位，否則會出現「無法補位」死結
+  // （對方回合我方餅乾被打死，補位視窗顯示卻點不動）。
+  describe('replacement command dispatch while faint effect pending', () => {
+    const faintCookie: CookieCard = {
+      id: 'faint-cookie',
+      instanceId: 'faint-cookie',
+      name: 'Faint Cookie',
+      type: 'cookie',
+      officialType: 'cookie',
+      level: 2,
+      hp: 1,
+      attack: 1,
+      attackCost: 1,
+      attackEnergyCost: { red: 1 },
+      energyColor: 'yellow',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'When this Cookie faints, deal 1 damage to an opponent Cookie.',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        faint: true,
+      },
+    }
+
+    const createPendingState = (
+      { withExistingCookie = false } = {},
+    ): GameState =>
+      finalizePendingReplacements({
+        players: {
+          'player-one': {
+            id: 'player-one',
+            name: 'P1',
+            deck: [item('hp-a'), item('hp-b'), item('hp-c'), item('hp-d')],
+            hand: [cookie('p1-replacement')],
+            // 保留一隻既有餅乾時，略過補位不會因戰鬥區清空而判負
+            battleArea: withExistingCookie
+              ? [
+                  {
+                    card: cookie('p1-existing'),
+                    hpCards: [item('p1-existing-hp')],
+                    rested: false,
+                  },
+                ]
+              : [],
+            supportArea: [],
+            breakArea: [faintCookie],
+            discardPile: [],
+            stage: null,
+            hasMulliganed: false,
+            startingCookieSelected: true,
+          },
+          'player-two': {
+            id: 'player-two',
+            name: 'P2',
+            deck: [item('p2-d')],
+            hand: [],
+            battleArea: [
+              {
+                card: cookie('p2-attacker'),
+                hpCards: [item('p2-hp')],
+                rested: false,
+              },
+            ],
+            supportArea: [],
+            breakArea: [],
+            discardPile: [],
+            stage: null,
+            hasMulliganed: false,
+            startingCookieSelected: true,
+          },
+        },
+        firstPlayerId: 'player-two',
+        activePlayerId: 'player-two',
+        turnNumber: 2,
+        phase: 'main',
+        status: 'playing',
+        result: null,
+        supportPlacedThisTurn: false,
+        skillUsesThisTurn: [],
+        nextBattleEntrySequence: 1,
+        attackModifiers: [],
+        damageReceivedModifiers: [],
+        pendingReplacement: null,
+        departedCookieCounts: { 'player-one': 1, 'player-two': 0 },
+        pendingRefresh: null,
+        pendingBattle: null,
+        pendingFaintEffects: [
+          {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'faint-cookie',
+            sourceCardName: 'Faint Cookie',
+            effect: faintCookie.skill!.effects[0],
+            context: {
+              sourcePlayerId: 'player-one',
+              sourceInstanceId: 'faint-cookie',
+              sourceCardName: 'Faint Cookie',
+            },
+          },
+        ],
+      })
+
+    it('replace-cookie command succeeds while a faint effect is pending', () => {
+      const state = createPendingState()
+      expect(state.pendingReplacement?.tasks).toEqual([
+        { playerId: 'player-one', remaining: 1 },
+      ])
+      expect(state.pendingFaintEffects!.length).toBe(1)
+
+      const next = applyGameCommand(state, {
+        kind: 'replace-cookie',
+        playerId: 'player-one',
+        instanceId: 'p1-replacement',
+      })
+
+      expect(next.players['player-one'].battleArea).toHaveLength(1)
+      expect(next.players['player-one'].battleArea[0].card.instanceId).toBe(
+        'p1-replacement',
+      )
+      expect(next.pendingReplacement).toBeNull()
+      // 昏厥效果留待補位後處理
+      expect(next.pendingFaintEffects!.length).toBe(1)
+    })
+
+    it('skip-replacement command succeeds while a faint effect is pending', () => {
+      const state = createPendingState({ withExistingCookie: true })
+
+      const next = applyGameCommand(state, {
+        kind: 'skip-replacement',
+        playerId: 'player-one',
+      })
+
+      expect(next.status).toBe('playing')
+      expect(next.pendingReplacement).toBeNull()
+      // 昏厥效果留待略過補位後處理
+      expect(next.pendingFaintEffects!.length).toBe(1)
+    })
+
+    it('still blocks non-replacement actions while a faint effect is pending', () => {
+      const state = createPendingState()
+      expect(() =>
+        applyGameCommand(state, {
+          kind: 'advance-phase',
+          playerId: 'player-two',
+        }),
+      ).toThrowError('必須先處理待處理的決策。')
+    })
   })
 })

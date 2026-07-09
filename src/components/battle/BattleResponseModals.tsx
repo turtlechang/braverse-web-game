@@ -33,6 +33,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapId(id)
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
+              match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
             }}
             onSelectBlocker={(id) => {
@@ -76,10 +77,24 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             )}
             battleCookieCost={match.selectedTrapTrashBattleCookieCost}
             selectedBattleCookieIds={match.selectedTrapTrashBattleCookieIds}
+            attackerCard={
+              match.attackerInstanceId
+                ? (match.game.players[match.opponentId].battleArea.find(
+                    (c) => c.card.instanceId === match.attackerInstanceId,
+                  )?.card ?? null)
+                : null
+            }
+            trapTargetCandidates={match.trapTargetCandidates}
+            selectedTrapTargetId={match.selectedTrapTargetId}
             onSelectTrap={(id) => {
               match.setSelectedTrapId(id)
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
+              match.setSelectedTrapTargetId(null)
+              match.setTrapSelectNoTarget(false)
+            }}
+            onSelectTrapTarget={(id) => {
+              match.setSelectedTrapTargetId(id)
               match.setTrapSelectNoTarget(false)
             }}
             onToggleDiscardHand={(id) =>
@@ -106,6 +121,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                     match.setSelectedTrapId(null)
                     match.setSelectedTrapDiscardIds([])
                     match.setSelectedTrapTrashBattleCookieIds([])
+                    match.setSelectedTrapTargetId(null)
                     match.setTrapSelectNoTarget(false)
                     match.setPendingResponseMode(null)
                   }
@@ -115,6 +131,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapId(null)
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
+              match.setSelectedTrapTargetId(null)
               match.setPendingResponseMode(null)
               match.dispatch(
                 { kind: 'skip-trap', playerId: match.viewerPlayerId },
@@ -127,6 +144,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapId(null)
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
+              match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
               match.setPendingResponseMode(null)
               const playTrapCommand: GameCommand = {

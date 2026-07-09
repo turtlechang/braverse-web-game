@@ -1,11 +1,15 @@
 import { getEffectTargetCandidates } from './effects/targeting'
 import type { GameState, PlayerId } from './types'
 
+export type DamageSource = 'battle' | 'effect'
+
 export const collectAfterDamageEffectsFromIds = (
   state: GameState,
   damagedInstanceIds: string[],
+  damageSource?: DamageSource,
 ): GameState => {
   if (damagedInstanceIds.length === 0) return state
+  if (damageSource !== undefined && damageSource !== 'battle') return state
 
   let result = state
   const uniqueDamagedIds = [...new Set(damagedInstanceIds)]

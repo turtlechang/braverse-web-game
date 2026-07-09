@@ -13,12 +13,18 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'green', label: '綠色起始牌組' },
   { value: 'blue', label: '藍色起始牌組' },
   { value: 'purple', label: '紫色起始牌組' },
+  { value: 'bs2-red', label: '第二彈紅色牌組' },
+  { value: 'bs2-yellow', label: '第二彈黃色牌組' },
+  { value: 'bs2-bean', label: '第二彈豆子牌組' },
+  { value: 'bs2-blue', label: '第二彈藍色牌組' },
+  { value: 'bs2-purple', label: '第二彈紫色牌組' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
   { value: 1, label: 'Lv.1 隨機出招', hint: '從合法動作中隨機挑選，不主動使用技能。' },
   { value: 2, label: 'Lv.2 基礎戰術', hint: '會出牌、用技能並攻擊較脆弱的目標。' },
   { value: 3, label: 'Lv.3 評估戰局', hint: '對每個可行動作評分後選擇最佳選項，會優先斬殺。' },
+  { value: 4, label: 'Lv.4 兩層前瞻', hint: '模擬對手回應後再評分，並考量破壞區風險與高威脅目標。' },
 ]
 
 interface MainMenuProps {

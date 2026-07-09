@@ -1713,14 +1713,22 @@ describe('Starter Deck RED official effect adapter', () => {
         })
     })
 
-    it('BS2-004 Cherry Cookie converts to conditional attack damage', () => {
+    it('BS2-004 Cherry Cookie converts to optional-cost attack with conditional damage', () => {
       expect(convertOfficialAttackEffects(findBraveBeginningBS2Card('BS2-004')))
         .toEqual([
           {
-            kind: 'damage',
-            amount: 3,
-            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+            kind: 'optional-cost-attack',
+            cost: { energy: { red: 1 } },
+            effects: [
+              {
+                kind: 'damage',
+                amount: 3,
+                target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+                condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+              },
+            ],
+            effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+            sourceAsEnergy: true,
           },
         ])
     })

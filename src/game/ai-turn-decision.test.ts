@@ -98,15 +98,55 @@ describe('simple AI opponent', () => {
     )
   })
 
-  it('places one support card during the support phase', () => {
-    const state = asAiTurn(createDemoGame(), 'support')
-    const decision = takeAiStep(state)
+  it.each([1, 2, 3] as const)(
+    'places one support card during the support phase at level %i',
+    (level) => {
+      const state = asAiTurn(createDemoGame(), 'support')
+      const supportCount = state.players['player-two'].supportArea.length
+      const decision = takeAiStep(state, 'player-two', { level, seed: 5 })
 
-    expect(decision.action).toBe('place-support')
-    expect(
-      decision.state.players['player-two'].supportArea,
-    ).toHaveLength(1)
-    expect(decision.state.supportPlacedThisTurn).toBe(true)
+      expect(decision.action).toBe('place-support')
+      expect(
+        decision.state.players['player-two'].supportArea,
+      ).toHaveLength(supportCount + 1)
+      expect(decision.state.supportPlacedThisTurn).toBe(true)
+    },
+  )
+
+  it('fills support on every AI support phase while cards are available', () => {
+    let state = createDemoGame(4, { player: 'red', ai: 'bs2-blue' })
+    const supportTurns: number[] = []
+
+    for (let step = 0; step < 500 && supportTurns.length < 5; step += 1) {
+      const controller = getActingPlayerId(state) ?? state.activePlayerId
+      const aiCanPlaceSupport =
+        state.activePlayerId === 'player-two' &&
+        state.phase === 'support' &&
+        !state.supportPlacedThisTurn &&
+        state.players['player-two'].hand.length > 0
+
+      if (aiCanPlaceSupport) {
+        const supportCount = state.players['player-two'].supportArea.length
+        const decision = takeAiStep(state, 'player-two')
+
+        expect(decision.action).toBe('place-support')
+        expect(
+          decision.state.players['player-two'].supportArea,
+        ).toHaveLength(supportCount + 1)
+        expect(decision.state.supportPlacedThisTurn).toBe(true)
+        supportTurns.push(state.turnNumber)
+        state = decision.state
+        continue
+      }
+
+      const decision = takeAiStep(state, controller)
+      expect(decision.action, decision.description).not.toBe('error')
+      expect(decision.state, decision.description).not.toBe(state)
+      state = decision.state
+    }
+
+    expect(supportTurns.length).toBeGreaterThanOrEqual(3)
+    expect(new Set(supportTurns).size).toBe(supportTurns.length)
   })
 
   it('deploys a Cookie before other main phase actions', () => {
@@ -612,6 +652,44 @@ describe('simple AI opponent', () => {
     const decision = takeAiStep(state, 'player-two')
 
     expect(decision.action).toBe('resolve-attack-effect')
+    expect(decision.state).not.toBe(state)
+  })
+
+  it('selects a required target for an AI attack damage effect', () => {
+    const base = createDemoGame()
+    const attacker = base.players['player-two'].battleArea[0]
+    const target = base.players['player-one'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: attacker.card.instanceId,
+        targetInstanceId: target.card.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+        attackEffectIndex: 0,
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('resolve-attack-effect')
+    expect(decision.error).toBeUndefined()
     expect(decision.state).not.toBe(state)
   })
 

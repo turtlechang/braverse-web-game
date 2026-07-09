@@ -93,6 +93,7 @@ export interface OptionalCostAttackDecision {
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
+  sourceAsEnergy?: boolean
 }
 
 export interface DrawUpToDecision {
@@ -383,6 +384,8 @@ export interface PlayTrapCommand {
   paymentIds: string[]
   targetIds: string[]
   supportTrashIds?: string[]
+  supportToHandIds?: string[]
+  handToSupportIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
 }
@@ -640,6 +643,7 @@ export const getPendingDecision = (
       cost: pending.cost,
       effects: pending.effects,
       effectText: pending.effectText,
+      sourceAsEnergy: pending.sourceAsEnergy,
     }
   }
 
@@ -842,10 +846,27 @@ const requireActivePlayer = (state: GameState, playerId: PlayerId) => {
   }
 }
 
-const assertNoPendingDecision = (state: GameState) => {
-  if (getPendingDecision(state)) {
-    throw new GameRuleError('必須先處理待處理的決策。')
+const assertNoPendingDecision = (
+  state: GameState,
+  command: PlayerActionCommand,
+) => {
+  const pending = getPendingDecision(state)
+  if (!pending) return
+
+  // 補位／略過補位優先於昏厥效果與效果順序（與 getActingPlayerId 一致）。
+  // 規則：餅乾昏厥後先補位，再處理昏厥效果（見 replacement.ts continuePendingReplacements）。
+  // 若此處把待處理的昏厥效果視為阻塞，UI 會顯示補位視窗但引擎拒絕補位指令，
+  // 造成「無法補位」的死結（尤其在對方回合我方餅乾被打死時）。
+  if (
+    (command.kind === 'replace-cookie' ||
+      command.kind === 'skip-replacement') &&
+    (pending.kind === 'faint-effect' || pending.kind === 'effect-order') &&
+    getCurrentReplacementTask(state)?.playerId === command.playerId
+  ) {
+    return
   }
+
+  throw new GameRuleError('必須先處理待處理的決策。')
 }
 
 const executeAbilityEffects = (
@@ -889,7 +910,7 @@ const applyPlayerActionCommand = (
   command: PlayerActionCommand,
   options: ApplyGameCommandOptions,
 ): GameState => {
-  assertNoPendingDecision(state)
+  assertNoPendingDecision(state, command)
 
   switch (command.kind) {
     case 'keep-opening-hand':

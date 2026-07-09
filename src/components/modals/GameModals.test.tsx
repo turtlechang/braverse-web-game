@@ -280,6 +280,27 @@ describe('FaintEffectResponseModal', () => {
     await act(() => root.unmount())
   })
 
+  it('does not block board target clicks while choosing faint targets', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={1}
+        maxTargets={1}
+        selectedTargetCount={0}
+        onConfirm={() => undefined}
+      />,
+    ))
+
+    const backdrop = container.querySelector<HTMLElement>('.modal-backdrop')
+    const modal = container.querySelector<HTMLElement>('.faint-response-modal')
+    expect(backdrop?.style.pointerEvents).toBe('none')
+    expect(modal?.style.pointerEvents).toBe('auto')
+
+    await act(() => root.unmount())
+  })
+
   it('minimizes and restores the faint effect prompt', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
@@ -539,6 +560,52 @@ describe('DecisionModal', () => {
     expect(container.querySelector('.decision-modal')).not.toBeNull()
     expect(onSelect).not.toHaveBeenCalled()
     expect(onSkipReplacement).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+  })
+
+  it('selects a replacement option from the dialog', async () => {
+    const onSelect = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DecisionModal
+        isRefresh={false}
+        playerName="玩家"
+        replacementCount={1}
+        options={[createBattleCookie(1).card]}
+        isOptionDisabled={() => false}
+        onSelect={onSelect}
+        onSkipReplacement={() => undefined}
+      />,
+    ))
+
+    await click(findButton(container, '測試餅乾 1'))
+
+    expect(onSelect).toHaveBeenCalledWith('test-cookie-1')
+
+    await act(() => root.unmount())
+  })
+
+  it('skips replacement from the dialog', async () => {
+    const onSkipReplacement = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <DecisionModal
+        isRefresh={false}
+        playerName="玩家"
+        replacementCount={1}
+        options={[createBattleCookie(1).card]}
+        isOptionDisabled={() => false}
+        onSelect={() => undefined}
+        onSkipReplacement={onSkipReplacement}
+      />,
+    ))
+
+    await click(findButton(container, '不補餅乾'))
+
+    expect(onSkipReplacement).toHaveBeenCalledTimes(1)
 
     await act(() => root.unmount())
   })

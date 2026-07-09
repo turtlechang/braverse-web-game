@@ -1,5 +1,6 @@
 import { applyGameCommand } from '../commands'
 import type { AttackCommand, PlayerActionCommand } from '../commands'
+import { resolveBattleAutomatically } from '../battle'
 import { getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
 import { createPlayerView } from '../player-view'
@@ -7,6 +8,7 @@ import type { PlayerView } from '../player-view'
 import type { CookieCard, GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 import {
+  applyChosenTurnCommand,
   commandActionTypes,
   describeCommand,
 } from './random-turn-handler'
@@ -67,9 +69,248 @@ const attackBonus = (
   return bonus - command.supportPaymentIds.length * 6
 }
 
+/**
+ * 技能效果加成：比較技能發動前後的場面差異，回傳與 attackBonus
+ * 同量級的效果價值，讓技能候選能與攻擊候選公平競爭。
+ *
+ * 只使用公開資訊（PlayerView 內的 self/opponent 戰鬥區）。
+ */
+const skillEffectBonus = (
+  preState: GameState,
+  postState: GameState,
+  playerId: PlayerId,
+): number => {
+  const opponentId: PlayerId =
+    playerId === 'player-one' ? 'player-two' : 'player-one'
+  const preSelf = preState.players[playerId].battleArea
+  const postSelf = postState.players[playerId].battleArea
+  const preOpp = preState.players[opponentId].battleArea
+  const postOpp = postState.players[opponentId].battleArea
+
+  let bonus = 0
+
+  // 移除對手戰鬥區餅乾（每個 +70：含 60 board + 10 initiative）
+  const removedOpp = preOpp.filter(
+    (c) => !postOpp.find((p) => p.card.instanceId === c.card.instanceId),
+  )
+  bonus += removedOpp.length * 70
+
+  // 自方獲得 HP（每張 +25）
+  const selfHpBefore = preSelf.reduce((s, c) => s + c.hpCards.length, 0)
+  const selfHpAfter = postSelf.reduce((s, c) => s + c.hpCards.length, 0)
+  bonus += Math.max(0, selfHpAfter - selfHpBefore) * 25
+
+  // 對手破壞區推進（每級 +20）
+  const oppBreakBefore = preState.players[opponentId].breakArea.reduce(
+    (s, c) => s + c.level,
+    0,
+  )
+  const oppBreakAfter = postState.players[opponentId].breakArea.reduce(
+    (s, c) => s + c.level,
+    0,
+  )
+  bonus += Math.max(0, oppBreakAfter - oppBreakBefore) * 20
+
+  // 抽到手牌（每張 +6）
+  const handBefore = preState.players[playerId].hand.length
+  const handAfter = postState.players[playerId].hand.length
+  bonus += Math.max(0, handAfter - handBefore) * 6
+
+  // 清除所有對手戰鬥區餅乾（額外 +40 戰略價值）
+  if (preOpp.length > 0 && postOpp.length === 0) {
+    bonus += 40
+  }
+
+  // 計算對手戰鬥區受到的總傷害（剩餘 HP 差異）
+  let totalDamage = 0
+  for (const pre of preOpp) {
+    const post = postOpp.find(
+      (p) => p.card.instanceId === pre.card.instanceId,
+    )
+    if (post) {
+      totalDamage += Math.max(0, pre.hpCards.length - post.hpCards.length)
+    } else {
+      // 被移除 = 傷害至少等於其剩餘 HP
+      totalDamage += pre.hpCards.length
+    }
+  }
+  // 非擊倒傷害每點 +15（接近擊倒的累積價值，與 attackBonus 同量級）
+  bonus += totalDamage * 15
+
+  return bonus
+}
+
+/**
+ * R9: 致命傷害偵測加分（Lv.4 專用）
+ *
+ * 幫助 Lv.4 在「公開資訊下已經明顯可以收尾」時，不要錯過致命攻擊。
+ * 僅偵測明顯致命，不模擬完整多步連招。
+ *
+ * 只使用公開資訊：雙方戰鬥區、破壞區、HP 數量。
+ */
+const lethalDetectionBonus = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+): number => {
+  if (command.kind !== 'attack') return 0
+
+  const opponentId: PlayerId =
+    playerId === 'player-one' ? 'player-two' : 'player-one'
+  const attacker = state.players[playerId].battleArea.find(
+    (c) => c.card.instanceId === command.attackerInstanceId,
+  )
+  const target = state.players[opponentId].battleArea.find(
+    (c) => c.card.instanceId === command.targetInstanceId,
+  )
+  if (!attacker || !target) return 0
+
+  const damage = getEffectiveAttack(state, command.attackerInstanceId)
+  const targetHp = target.hpCards.length
+  const isLethal = targetHp <= damage
+
+  let bonus = 0
+
+  // 1. 直接致勝：擊倒後對手 break area 達到勝利條件（>=10）
+  const oppBreakLevel = state.players[opponentId].breakArea.reduce(
+    (sum, c) => sum + c.level, 0,
+  )
+  const projectedBreak = oppBreakLevel + target.card.level
+  if (isLethal && projectedBreak >= 10) {
+    bonus += 500
+  } else if (isLethal && projectedBreak >= 8) {
+    bonus += 80
+  }
+
+  // 2. 對手 break area 偏高時，擊倒價值提高
+  if (isLethal && oppBreakLevel >= 8) {
+    bonus += 50
+  } else if (isLethal && oppBreakLevel >= 6) {
+    bonus += 25
+  }
+
+  // 3. 多攻擊者聯合致命偵測
+  //    如果非休息的攻擊者總傷害 >= 目標 HP，且目標是最高價值目標
+  if (!isLethal) {
+    const totalDamage = state.players[playerId].battleArea
+      .filter((c) => !c.rested && c.card.instanceId !== command.attackerInstanceId)
+      .reduce((sum, c) => sum + (c.card.attack ?? 0), 0)
+    const combinedDamage = damage + totalDamage
+    if (combinedDamage >= targetHp) {
+      bonus += 40
+    }
+  }
+
+  // 4. 我方 break area 偏高時，收尾更急迫
+  const myBreakLevel = state.players[playerId].breakArea.reduce(
+    (sum, c) => sum + c.level, 0,
+  )
+  if (isLethal && myBreakLevel >= 8) {
+    bonus += 30
+  }
+
+  return bonus
+}
+
+/**
+ * R8: 手牌數量管理加分
+ *
+ * 讓 Lv.3+ 在評估行動時考慮手牌資源節奏：
+ * - 手牌過低時，低價值出牌扣分
+ * - 手牌過低時，抽牌效果加分
+ * - 手牌充足時，有效進攻不因消耗手牌被過度扣分
+ * - 不讓 AI 囤牌到不行動
+ */
+const handManagementBonus = (
+  preState: GameState,
+  postState: GameState,
+  playerId: PlayerId,
+  actionKind: string,
+): number => {
+  const preHand = preState.players[playerId].hand.length
+  const postHand = postState.players[playerId].hand.length
+  const handDelta = postHand - preHand
+
+  let bonus = 0
+
+  // 手牌極低（<=2）且行動後更低 → 扣分（避免耗盡手牌）
+  if (postHand <= 1 && handDelta < 0) {
+    bonus -= 40
+  } else if (postHand <= 2 && handDelta < 0) {
+    bonus -= 20
+  }
+
+  // 抽牌效果加分（手牌增加，且手牌偏低時更重視）
+  if (handDelta > 0) {
+    const drawBonus = handDelta * 12
+    bonus += preHand <= 3 ? drawBonus + 15 : drawBonus
+  }
+
+  // 支援放置（place-support）：消耗手牌但增加能量
+  // 手牌低時放置能量應鼓勵（建立資源基礎）
+  if (actionKind === 'place-support') {
+    if (preHand <= 2) {
+      bonus += 25
+    } else if (preHand <= 3) {
+      bonus += 10
+    }
+  }
+
+  // 部署餅乾（deploy-cookie）：消耗手牌但增加戰鬥力
+  // 手牌極低時需謹慎，但不應完全阻止部署
+  if (actionKind === 'deploy-cookie') {
+    if (preHand <= 1) {
+      bonus -= 15
+    } else if (preHand <= 2) {
+      bonus -= 5
+    }
+  }
+
+  // 手牌過多（>=6）且未消耗 → 小扣分（避免囤牌）
+  if (preHand >= 6 && handDelta >= 0 && actionKind !== 'attack') {
+    bonus -= 8
+  }
+
+  return bonus
+}
+
 interface EvaluatedCandidate {
   decision: AiDecision
   score: number
+}
+
+interface TwoPlyCandidate {
+  decision: AiDecision
+  score: number
+}
+
+/**
+ * 目標能量數：低於此值時，AI 應優先鋪能量以維持運作。
+ */
+const RAMP_ENERGY_TARGET = 5
+
+/**
+ * 餅乾放到支援區的懲罰。
+ *
+ * 原意是避免把還能登場的餅乾浪費成能量，但無條件 -12 會讓
+ * 以餅乾為主的牌組（例如 bs2-red）在手上全是餅乾時，因為
+ * 「放餅乾當能量」分數為負而寧可整個支援階段不填能，造成能量匱乏。
+ *
+ * 改為：能量已足夠（>= RAMP_ENERGY_TARGET）才施加懲罰以保留餅乾；
+ * 能量不足時不懲罰，確保 AI 會先把能量鋪起來。
+ */
+const cookieSupportPenalty = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+): number => {
+  if (command.kind !== 'place-support') return 0
+  const placed = state.players[playerId].hand.find(
+    (card) => card.instanceId === command.instanceId,
+  )
+  if (placed?.type !== 'cookie') return 0
+  const currentEnergy = state.players[playerId].supportArea.length
+  return currentEnergy >= RAMP_ENERGY_TARGET ? 12 : 0
 }
 
 const commandCandidate = (
@@ -78,20 +319,17 @@ const commandCandidate = (
   command: PlayerActionCommand,
 ): EvaluatedCandidate | null => {
   try {
-    const nextState = applyGameCommand(state, command)
+    const nextState = applyChosenTurnCommand(state, command)
     let score: number
     if (command.kind === 'attack') {
       score =
         evaluatePlayerView(createPlayerView(state, playerId)) +
-        attackBonus(state, playerId, command)
+        attackBonus(state, playerId, command) +
+        handManagementBonus(state, nextState, playerId, command.kind)
     } else {
       score = evaluatePlayerView(createPlayerView(nextState, playerId))
-      if (command.kind === 'place-support') {
-        const placed = state.players[playerId].hand.find(
-          (card) => card.instanceId === command.instanceId,
-        )
-        if (placed?.type === 'cookie') score -= 12
-      }
+      score -= cookieSupportPenalty(state, playerId, command)
+      score += handManagementBonus(state, nextState, playerId, command.kind)
     }
     return {
       decision: {
@@ -141,23 +379,33 @@ export const handleAiEvaluatedTurnState = (
 
   if (state.phase === 'main') {
     for (const source of state.players[playerId].battleArea) {
-      const decision = strategy.resolveSkill(state, playerId, source, 'activate')
-      if (decision) {
-        candidates.push({
-          decision,
-          score:
-            evaluatePlayerView(createPlayerView(decision.state, playerId)) + 2,
-        })
+      try {
+        const decision = strategy.resolveSkill(state, playerId, source, 'activate')
+        if (decision) {
+          candidates.push({
+            decision,
+            score:
+              evaluatePlayerView(createPlayerView(decision.state, playerId)) +
+              skillEffectBonus(state, decision.state, playerId),
+          })
+        }
+      } catch {
+        // skip invalid skill resolution
       }
     }
     for (const card of state.players[playerId].hand) {
-      const decision = strategy.resolveCardAbility(state, playerId, card)
-      if (decision) {
-        candidates.push({
-          decision,
-          score:
-            evaluatePlayerView(createPlayerView(decision.state, playerId)) + 2,
-        })
+      try {
+        const decision = strategy.resolveCardAbility(state, playerId, card)
+        if (decision) {
+          candidates.push({
+            decision,
+            score:
+              evaluatePlayerView(createPlayerView(decision.state, playerId)) +
+              skillEffectBonus(state, decision.state, playerId),
+          })
+        }
+      } catch {
+        // skip invalid card ability resolution
       }
     }
   }
@@ -176,6 +424,303 @@ export const handleAiEvaluatedTurnState = (
     ...best.decision,
     reason: {
       level: 3,
+      consideredCommands: candidates.length,
+      chosenCommandKind: best.decision.action,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// R10 tracking (module-level counter, reset per match)
+// ---------------------------------------------------------------------------
+
+let r10PenaltyAppliedCount = 0
+let r10BreakRaceRiskCount = 0
+
+export const resetR10Counters = () => {
+  r10PenaltyAppliedCount = 0
+  r10BreakRaceRiskCount = 0
+}
+
+export const getR10Counters = () => ({
+  penaltyApplied: r10PenaltyAppliedCount,
+  breakRaceRisk: r10BreakRaceRiskCount,
+})
+
+// ---------------------------------------------------------------------------
+// Lv.4 — Two-ply lookahead with battle resolution + risk management
+// ---------------------------------------------------------------------------
+
+/**
+ * Lv.4 既有核心風險評分（不可刪除）。
+ * 所有因子均只使用 PlayerView 公開資訊。
+ * 此函式是 Lv.4 兩層前瞻的基礎風險管理，不屬於 R10。
+ * R10 只能疊加在此函式之上，不可取代或刪除。
+ */
+const lv4RiskBonus = (
+  view: PlayerView,
+  _playerId: PlayerId,
+): number => {
+  if (view.status === 'finished') return 0
+
+  const { self, opponent } = view
+  let bonus = 0
+
+  const selfBreakSum = self.breakArea.reduce((s, c) => s + c.level, 0)
+  const oppBreakSum = opponent.breakArea.reduce((s, c) => s + c.level, 0)
+
+  // 破壞區接近 10 時的懲罰（越接近越重）
+  if (selfBreakSum >= 8) {
+    bonus -= (selfBreakSum - 7) * 25
+  } else if (selfBreakSum >= 6) {
+    bonus -= (selfBreakSum - 5) * 8
+  }
+
+  // 對手破壞區高時加分（我方優勢）
+  if (oppBreakSum >= 8) {
+    bonus += (oppBreakSum - 7) * 20
+  } else if (oppBreakSum >= 6) {
+    bonus += (oppBreakSum - 5) * 6
+  }
+
+  // 戰鬥區低 HP 餅乾暴露懲罰
+  for (const cookie of self.battleArea) {
+    if (cookie.hpCount <= 1) {
+      bonus -= 15
+    }
+  }
+
+  // 對手戰鬥區高威脅餅乾（高等級 + 多 HP）的清除價值
+  for (const cookie of opponent.battleArea) {
+    if (cookie.card.level >= 3 && cookie.hpCount >= 3) {
+      bonus -= 10
+    }
+  }
+
+  // 戰鬥區數量優勢 / 劣勢修正
+  const boardDelta = self.battleArea.length - opponent.battleArea.length
+  if (boardDelta >= 2) {
+    bonus += 15
+  } else if (boardDelta <= -2) {
+    bonus -= 15
+  }
+
+  // 無戰鬥區餅乾且手牌也無餅乾的風險
+  if (self.battleArea.length === 0) {
+    const hasCookieInHand = self.handCount > 0
+    if (!hasCookieInHand) {
+      bonus -= 40
+    } else {
+      bonus -= 20
+    }
+  }
+
+  return bonus
+}
+
+/**
+ * R10: 對手回應風險扣分（Lv.4 專用）
+ *
+ * 僅在最明確的高風險場景扣分：我方 break area 偏高時，行動導致 break 惡化。
+ * 不讀取對手隱藏資訊，只比較行動前後的公開場面變化。
+ * 以 penalty 為主，不做正向加分。
+ */
+const responseRiskPenalty = (
+  preState: GameState,
+  postState: GameState,
+  playerId: PlayerId,
+): number => {
+  let penalty = 0
+
+  const preMyBreak = preState.players[playerId].breakArea.reduce(
+    (s, c) => s + c.level, 0,
+  )
+  const postMyBreak = postState.players[playerId].breakArea.reduce(
+    (s, c) => s + c.level, 0,
+  )
+  const breakWorsened = postMyBreak - preMyBreak
+
+  if (preMyBreak >= 8 && breakWorsened > 0) {
+    penalty -= breakWorsened * 12
+    r10BreakRaceRiskCount++
+  }
+
+  if (penalty !== 0) {
+    r10PenaltyAppliedCount++
+  }
+
+  return penalty
+}
+
+/**
+ * 計算單一候選動作的兩層前瞻分數。
+ *
+ * 與 Lv.3 的差異：
+ * - 攻擊：使用 resolveBattleAutomatically 解析完整戰鬥，再評分
+ *   （Lv.3 僅用 attackBonus 啟發式）
+ * - 所有動作：疊加 lv4RiskBonus 風險修正
+ */
+const twoPlyCandidateScore = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+): number => {
+  try {
+    const nextState = applyGameCommand(state, command)
+    if (nextState.status === 'finished') {
+      const view = createPlayerView(nextState, playerId)
+      return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+    }
+
+    let resolved = nextState
+    if (command.kind === 'attack') {
+      // 攻擊：完整解析戰鬥（含陷阱、FLIP、昏厥效果）
+      resolved = resolveBattleAutomatically(nextState)
+    }
+
+    if (resolved.status === 'finished') {
+      const view = createPlayerView(resolved, playerId)
+      return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+    }
+
+    const view = createPlayerView(resolved, playerId)
+    let score = evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+
+    // 攻擊動作：仍保留 attackBonus 作為額外斬殺加成
+    if (command.kind === 'attack') {
+      score += attackBonus(state, playerId, command)
+      // R9: 致命傷害偵測（Lv.4 專用）
+      score += lethalDetectionBonus(state, playerId, command)
+    }
+
+    // R10: 對手回應風險扣分（Lv.4 專用）
+    // 僅在最明確的高風險場景扣分，不影響正常行動
+    score -= responseRiskPenalty(state, resolved, playerId)
+
+    // R8: 手牌數量管理
+    score += handManagementBonus(state, resolved, playerId, command.kind)
+
+    // 支援放置懲罰（餅乾放支援區浪費；能量不足時不懲罰以利鋪能量）
+    score -= cookieSupportPenalty(state, playerId, command)
+
+    return score
+  } catch {
+    return -999999
+  }
+}
+
+/**
+ * Lv.4 兩層前瞻 AI：在支援／主要階段對每個候選動作執行
+ * 「apply → resolveBattle（攻擊時）→ 評分 + 風險修正」流程，
+ * 取最高分動作。其餘強制流程委派給 Lv.2 turn handler。
+ *
+ * 核心改進（相較 Lv.3）：
+ * 1. 攻擊使用 resolveBattleAutomatically 而非 attackBonus 啟發式
+ * 2. 所有評分疊加 lv4RiskBonus（破壞區壓力、低 HP 暴露、高威脅未清除等）
+ */
+export const handleAiTwoPlyTurnState = (
+  state: GameState,
+  playerId: PlayerId,
+  strategy: AiTurnStrategy,
+): AiDecision => {
+  const isFreeChoiceState =
+    state.status === 'playing' &&
+    !state.pendingRefresh &&
+    !state.pendingReplacement &&
+    !state.pendingOnPlay &&
+    !state.pendingBattle &&
+    state.activePlayerId === playerId &&
+    (state.phase === 'support' || state.phase === 'main')
+
+  if (!isFreeChoiceState) {
+    const delegated = handleAiTurnState(state, playerId, strategy)
+    if (delegated.reason) return delegated
+    return {
+      ...delegated,
+      reason: {
+        level: 4 as const,
+        consideredCommands: 0,
+        chosenCommandKind: delegated.action,
+      },
+    }
+  }
+
+  const candidates: TwoPlyCandidate[] = []
+
+  for (const command of getLegalTurnCommands(state, playerId)) {
+    const score = twoPlyCandidateScore(state, playerId, command)
+    try {
+      candidates.push({
+        decision: {
+          // 攻擊停在 trap 階段讓防守方回應；評分已在
+          // twoPlyCandidateScore 內用 resolveBattleAutomatically 完整解析。
+          state: applyChosenTurnCommand(state, command),
+          action: commandActionTypes[command.kind],
+          description: describeCommand(state, playerId, command),
+        },
+        score,
+      })
+    } catch {
+      // skip invalid command
+    }
+  }
+
+  if (state.phase === 'main') {
+    for (const source of state.players[playerId].battleArea) {
+      try {
+        const decision = strategy.resolveSkill(state, playerId, source, 'activate')
+        if (decision) {
+          const view = createPlayerView(decision.state, playerId)
+          const score =
+            evaluatePlayerView(view) +
+            lv4RiskBonus(view, playerId) +
+            skillEffectBonus(state, decision.state, playerId)
+          candidates.push({ decision, score })
+        }
+      } catch {
+        // skip invalid skill resolution
+      }
+    }
+    for (const card of state.players[playerId].hand) {
+      try {
+        const decision = strategy.resolveCardAbility(state, playerId, card)
+        if (decision) {
+          const view = createPlayerView(decision.state, playerId)
+          const score =
+            evaluatePlayerView(view) +
+            lv4RiskBonus(view, playerId) +
+            skillEffectBonus(state, decision.state, playerId)
+          candidates.push({ decision, score })
+        }
+      } catch {
+        // skip invalid card ability resolution
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    const fallback = handleAiTurnState(state, playerId, strategy)
+    if (fallback.reason) return fallback
+    return {
+      ...fallback,
+      reason: {
+        level: 4 as const,
+        consideredCommands: 0,
+        chosenCommandKind: fallback.action,
+      },
+    }
+  }
+
+  // Deterministic tie-break：分數相同時選先出現的（穩定排序）
+  let best = candidates[0]
+  for (const candidate of candidates) {
+    if (candidate.score > best.score) best = candidate
+  }
+
+  return {
+    ...best.decision,
+    reason: {
+      level: 4,
       consideredCommands: candidates.length,
       chosenCommandKind: best.decision.action,
     },

@@ -9,6 +9,7 @@ import {
   resolveDrawUpTo,
   resolveFlip,
   resolveNextDamage,
+  takeAiStep,
   type CookieCard,
   type GameCard,
   type GameState,
@@ -761,5 +762,110 @@ describe('TRAP response window', () => {
     expect(
       battleState.players['player-one'].battleArea[0].hpCards.length,
     ).toBe(6)
+  })
+
+  // 迴歸測試：對手有多隻餅乾時，減攻擊類陷阱的目標必須是「當前攻擊者」，
+  // 而非戰鬥區的第一隻餅乾，否則傷害不會被減少（看似「陷阱沒效果」）。
+  it('targets the actual attacker (not the first cookie) when the AI defends with a modify-attack trap', () => {
+    const modifyTrap: GameCard = {
+      id: 'modify-trap',
+      instanceId: 'modify-trap',
+      name: 'Modify Trap',
+      type: 'trap',
+      officialType: 'trap',
+      energyColor: 'blue',
+      trap: {
+        text: 'Select up to 1 opponent Cookie. It deals -3 attack this turn.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -3,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+
+    // player-one 攻擊，戰鬥區有兩隻餅乾：'other'（第一隻）與 'atk'（實際攻擊者，第二隻）
+    const state: GameState = {
+      ...createBattleState(),
+      activePlayerId: 'player-one',
+      players: {
+        'player-one': {
+          id: 'player-one',
+          name: '攻擊玩家',
+          deck: [item('p1-deck')],
+          hand: [],
+          battleArea: [
+            {
+              card: cookie('other', 3, 2),
+              hpCards: [item('other-hp')],
+              rested: false,
+              battleEntryId: 'other:battle:1',
+            },
+            {
+              card: cookie('atk', 3, 2),
+              hpCards: [item('atk-hp')],
+              rested: true,
+              battleEntryId: 'atk:battle:2',
+            },
+          ],
+          supportArea: [],
+          breakArea: [],
+          discardPile: [],
+          stage: null,
+          hasMulliganed: false,
+          startingCookieSelected: true,
+        },
+        'player-two': {
+          id: 'player-two',
+          name: '防守 AI',
+          deck: [item('p2-deck')],
+          hand: [modifyTrap],
+          battleArea: [
+            {
+              card: cookie('p2-def', 1, 3),
+              hpCards: [item('d-a'), item('d-b'), item('d-c')],
+              rested: false,
+              battleEntryId: 'p2-def:battle:1',
+            },
+          ],
+          supportArea: [{ card: item('p2-s', 'blue'), rested: false }],
+          breakArea: [],
+          discardPile: [],
+          stage: null,
+          hasMulliganed: false,
+          startingCookieSelected: true,
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId: 'atk',
+        targetInstanceId: 'p2-def',
+        declaredDamage: 3,
+        remainingDamage: 3,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('play-trap')
+    // 減攻擊修正必須套用在實際攻擊者 'atk' 上
+    const modifier = decision.state.attackModifiers.find(
+      (m) => m.sourceInstanceId === 'modify-trap',
+    )
+    expect(modifier?.targetInstanceId).toBe('atk')
+    // 傷害因此由 3 降到 0
+    expect(decision.state.pendingBattle?.declaredDamage).toBe(0)
   })
 })

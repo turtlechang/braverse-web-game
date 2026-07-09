@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AI_PRESET_BS2_BEAN_DECK,
+  AI_PRESET_BS2_BLUE_DECK,
+  AI_PRESET_BS2_PURPLE_DECK,
+  AI_PRESET_BS2_RED_DECK,
+  AI_PRESET_BS2_YELLOW_DECK,
+  createAiPresetBs2BeanDeck,
+  createAiPresetBs2BlueDeck,
+  createAiPresetBs2PurpleDeck,
+  createAiPresetBs2RedDeck,
+  createAiPresetBs2YellowDeck,
   createDemoGame,
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
@@ -35,7 +45,8 @@ const expectCreatedDeckMatchesRecipe = (
 
   expect(deck).toHaveLength(60)
   for (const entry of recipe) {
-    expect(counts[entry.cardNumber]).toBe(entry.count)
+    const cardId = entry.cardNumber.replace(/@\d+$/, '')
+    expect(counts[cardId]).toBe(entry.count)
   }
 }
 
@@ -438,6 +449,55 @@ describe('official purple starter deck', () => {
       expect(cards.filter((card) => card.id === 'ST5-002')).toHaveLength(4)
       expect(cards.filter((card) => card.id === 'ST5-022')).toHaveLength(2)
     }
+  })
+})
+
+describe('AI second set preset decks', () => {
+  it('contains exactly 60 cards in every preset recipe', () => {
+    expectStarterDeckRecipe(AI_PRESET_BS2_RED_DECK, 19)
+    expectStarterDeckRecipe(AI_PRESET_BS2_YELLOW_DECK, 18)
+    expectStarterDeckRecipe(AI_PRESET_BS2_BEAN_DECK, 19)
+    expectStarterDeckRecipe(AI_PRESET_BS2_BLUE_DECK, 17)
+    expectStarterDeckRecipe(AI_PRESET_BS2_PURPLE_DECK, 20)
+  })
+
+  it('creates the configured quantity for every preset card number', () => {
+    expectCreatedDeckMatchesRecipe(
+      createAiPresetBs2RedDeck('player-two'),
+      AI_PRESET_BS2_RED_DECK,
+    )
+    expectCreatedDeckMatchesRecipe(
+      createAiPresetBs2YellowDeck('player-two'),
+      AI_PRESET_BS2_YELLOW_DECK,
+    )
+    expectCreatedDeckMatchesRecipe(
+      createAiPresetBs2BeanDeck('player-two'),
+      AI_PRESET_BS2_BEAN_DECK,
+    )
+    expectCreatedDeckMatchesRecipe(
+      createAiPresetBs2BlueDeck('player-two'),
+      AI_PRESET_BS2_BLUE_DECK,
+    )
+    expectCreatedDeckMatchesRecipe(
+      createAiPresetBs2PurpleDeck('player-two'),
+      AI_PRESET_BS2_PURPLE_DECK,
+    )
+  })
+
+  it('can create demo games with a second set preset AI deck', () => {
+    const state = createDemoGame(7, { player: 'red', ai: 'bs2-blue' })
+    const allAiCards = [
+      ...state.players['player-two'].deck,
+      ...state.players['player-two'].hand,
+      ...state.players['player-two'].battleArea.map((cookie) => cookie.card),
+      ...state.players['player-two'].battleArea.flatMap(
+        (cookie) => cookie.hpCards,
+      ),
+    ]
+
+    expect(allAiCards).toHaveLength(60)
+    expect(allAiCards.filter((card) => card.id === 'BS2-040')).toHaveLength(4)
+    expect(allAiCards.filter((card) => card.id === 'ST4-021')).toHaveLength(4)
   })
 })
 

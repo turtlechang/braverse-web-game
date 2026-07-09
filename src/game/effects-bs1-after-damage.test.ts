@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
   executeCardEffect,
-  getAfterDamageEffectCandidates,
   resolveBattleAutomatically,
-  resolveNextAfterDamageEffect,
   type CookieCard,
   type EffectContext,
   type GameCard,
@@ -211,10 +209,14 @@ describe('BS1-006 Mala Sauce Cookie after-damage trigger', () => {
   it('registers oncePerTurn use when after-damage effect is resolved', () => {
     const base = createDemoGame()
     const malaCookie = createMalaSauceCookie('mala-once')
-    const opponentCookie = makeCookie('opp-once', 'Opponent', 1, 3)
+    const attackerCookie = makeCookie('attacker-once', 'Attacker', 1, 3)
 
     const malaHpCards: GameCard[] = Array.from({ length: 5 }, (_, i) =>
       item(`mala-once-hp-${i}`),
+    )
+
+    const attackerHpCards: GameCard[] = Array.from({ length: 3 }, (_, i) =>
+      item(`attacker-once-hp-${i}`),
     )
 
     const state: GameState = {
@@ -222,6 +224,21 @@ describe('BS1-006 Mala Sauce Cookie after-damage trigger', () => {
       phase: 'main',
       activePlayerId: 'player-two',
       status: 'playing',
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker-once',
+        targetInstanceId: 'mala-once',
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'damage',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
       players: {
         ...base.players,
         'player-one': {
@@ -231,36 +248,20 @@ describe('BS1-006 Mala Sauce Cookie after-damage trigger', () => {
         'player-two': {
           ...base.players['player-two'],
           battleArea: [
-            { card: opponentCookie, hpCards: [item('opp-once-hp')], rested: false },
+            { card: attackerCookie, hpCards: attackerHpCards, rested: false },
           ],
         },
       },
     }
 
-    const context: EffectContext = {
-      sourcePlayerId: 'player-two',
-      sourceInstanceId: 'opp-once',
-    }
-    const dmgEffect = { kind: 'damage' as const, amount: 1, target: { side: 'opponent' as const, min: 1, max: 1 } }
-    const afterDmgState = executeCardEffect(state, context, dmgEffect, ['mala-once'])
-
-    expect(afterDmgState.pendingAfterDamageEffects).toBeDefined()
-    expect(afterDmgState.pendingAfterDamageEffects!.length).toBe(1)
-
-    const candidates = getAfterDamageEffectCandidates(afterDmgState)
-    expect(candidates.length).toBeGreaterThan(0)
-
-    const targetId = candidates[0].card.instanceId
-    const resolved = resolveNextAfterDamageEffect(afterDmgState, [targetId])
+    const resolved = resolveBattleAutomatically(state)
 
     expect(resolved.pendingAfterDamageEffects).toBeUndefined()
+    expect(resolved.pendingBattle).toBeFalsy()
     expect(resolved.skillUsesThisTurn).toContain('mala-once')
-
-    const secondDmgResult = executeCardEffect(resolved, context, dmgEffect, ['mala-once'])
-    expect(secondDmgResult.pendingAfterDamageEffects).toBeUndefined()
   })
 
-  it('triggers after-damage from effect damage, not just battle damage', () => {
+  it('does not trigger after-damage from effect damage (only battle damage)', () => {
     const base = createDemoGame()
     const malaCookie = createMalaSauceCookie('mala-effect')
     const opponentCookie = makeCookie('opp-effect', 'Opponent', 1, 3)
@@ -297,10 +298,7 @@ describe('BS1-006 Mala Sauce Cookie after-damage trigger', () => {
 
     const result = executeCardEffect(state, context, dmgEffect, ['mala-effect'])
 
-    expect(result.pendingAfterDamageEffects).toBeDefined()
-    expect(result.pendingAfterDamageEffects!.length).toBe(1)
-    expect(result.pendingAfterDamageEffects![0].sourceInstanceId).toBe('mala-effect')
-    expect(result.pendingAfterDamageEffects![0].sourcePlayerId).toBe('player-one')
+    expect(result.pendingAfterDamageEffects).toBeUndefined()
 
     const damaged = result.players['player-one'].battleArea.find(
       (c) => c.card.instanceId === 'mala-effect',

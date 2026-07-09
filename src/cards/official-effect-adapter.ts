@@ -169,7 +169,7 @@ const parseAbilityCost = (text: string): AbilityCost => {
     /(?:<|《)\s*Discard\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?card(?:s)?\.\s*(?:>|》)/i,
   )
   const supportToTrashMatch = text.match(
-    /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
+    /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+(?:in|into)\s+the\s+trash\.?\s*(?:>|》)/i,
   )
   const trashBattleMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?LV\.(\d+)\s+Cookie\s+from\s+your\s+battle\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
@@ -1691,42 +1691,83 @@ export const convertOfficialAttackEffects = (
     ],
     'BS2-004': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     // === BS1/BS2 黃綠藍紫攻擊 Then 效果 ===
     'BS1-037': [
       {
-        kind: 'opponent-battle-to-trash',
-        maxLevel: 1,
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'opponent-battle-to-trash',
+            maxLevel: 1,
+            destination: 'break',
+          },
+        ],
+        effectText: 'You can use this Cookie as {Y} to select up to 1 of your opponent\'s LV.1 Cookies and place that Cookie in the break area.',
+        sourceAsEnergy: true,
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-010': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {Y} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     'BS2-017': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { green: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {G} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     'BS2-044': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {B} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     'BS2-045': [
       {
@@ -1745,11 +1786,19 @@ export const convertOfficialAttackEffects = (
     ],
     'BS2-075': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {P} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
   }
 
@@ -1958,10 +2007,16 @@ export const convertOfficialTrapAbility = (
   const damage = text.match(/receives?\s+(\d+)\s+damage/i)
   const preventKnockout = /HP cannot reach 0 during this battle/i.test(text)
   const supportToTrash = text.match(
-    /place\s+(\d+)\s+card(?:s)?\s+from your support area into the trash/i,
+    /place\s+(\d+)\s+card(?:s)?\s+from your support area (?:in|into) the trash/i,
   )
   const deckToRestedSupport = text.match(
     /take the top card from your deck and place it in your support area as rested/i,
+  )
+  const supportToHand = text.match(
+    /return (\d+) card(?:s)? from your support area to your hand/i,
+  )
+  const handToSupport = text.match(
+    /place (\d+) card(?:s)? from your hand into your support area as rested/i,
   )
   const afterThen = text.split(/then/i).pop() ?? ''
   const strippedAfterThen = stripEffectText(afterThen).replace(
@@ -1974,6 +2029,22 @@ export const convertOfficialTrapAbility = (
   const setActive = text.match(
     /set\s+(?:up to\s+)?(\d+)\s+of\s+card\s+from\s+your\s+support\s+area\s+as\s+active/i,
   )
+
+  if (supportToHand) {
+    effects.push({
+      kind: 'support-to-hand',
+      amount: Number(supportToHand[1]),
+      optional: true,
+    })
+  }
+
+  if (handToSupport) {
+    effects.push({
+      kind: 'hand-to-support',
+      amount: Number(handToSupport[1]),
+      rested: true,
+    })
+  }
 
   if (attackDecrease && target) {
     effects.push({

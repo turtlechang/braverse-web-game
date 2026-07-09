@@ -7,7 +7,7 @@ import {
 } from '../game'
 import type { AiLevel, AiMatchResult } from '../game'
 import type { AiDecision } from '../game'
-import type { DeckChoice } from '../game'
+import type { BuiltInDeckChoice, DeckChoice } from '../game'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 
@@ -20,7 +20,7 @@ export function useAiTurn(params: {
   pendingEffect: unknown | null
   faintActive: boolean
   afterDamageActive: boolean
-  deckConfig: { player: DeckChoice; ai: DeckChoice }
+  deckConfig: { player: DeckChoice; ai: BuiltInDeckChoice }
   aiLevel?: AiLevel
   maxConsecutiveActions?: number
 }) {

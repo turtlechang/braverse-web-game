@@ -28,19 +28,23 @@ const createInstanceId = (
 const getEnergyColor = (
   card: OfficialCardRecord,
 ): GameCard['energyColor'] => {
-  if (card.energyType === 'MIX') {
-    return 'wild'
-  }
-
   const color = card.color?.toLowerCase()
-  return color === 'red' ||
+  if (
+    color === 'red' ||
     color === 'yellow' ||
     color === 'green' ||
     color === 'blue' ||
     color === 'purple' ||
     color === 'black'
-    ? color
-    : undefined
+  ) {
+    return color
+  }
+
+  if (card.energyType === 'MIX') {
+    return 'wild'
+  }
+
+  return undefined
 }
 
 export const convertOfficialCardToGameCard = (

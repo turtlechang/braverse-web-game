@@ -22,5 +22,10 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   green: '綠色',
   blue: '藍色',
   purple: '紫色',
+  'bs2-red': '第二彈紅色',
+  'bs2-yellow': '第二彈黃色',
+  'bs2-bean': '第二彈豆子',
+  'bs2-blue': '第二彈藍色',
+  'bs2-purple': '第二彈紫色',
   custom: '自訂',
 }
