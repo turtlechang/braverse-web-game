@@ -1664,7 +1664,7 @@ export const resolveFlip = (
         )
         const target = owner.battleArea[targetIndex]
         if (!target || owner.deck.length < effect.amount) {
-          throw new GameRuleError('Invalid battle action.')
+          continue
         }
         const gainedCards = owner.deck.slice(0, effect.amount)
         nextState = {
