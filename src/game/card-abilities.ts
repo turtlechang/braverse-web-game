@@ -345,7 +345,7 @@ const hasUsableEffect = (
         getTargetPlayerId(context, effect.target)
       ]
       return (
-        targetPlayer.battleArea.length > effect.target.min &&
+        targetPlayer.battleArea.length >= effect.target.min &&
         getEffectTargetCandidates(state, context, effect.target).length >=
           effect.target.min
       )
@@ -355,7 +355,7 @@ const hasUsableEffect = (
         getTargetPlayerId(context, effect.target)
       ]
       return (
-        targetPlayer.battleArea.length > effect.target.min &&
+        targetPlayer.battleArea.length >= effect.target.min &&
         getEffectTargetCandidates(state, context, effect.target).length >=
           effect.target.min
       )

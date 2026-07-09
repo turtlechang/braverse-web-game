@@ -190,4 +190,72 @@ describe('pending battle and FLIP', () => {
       expect.objectContaining({ instanceId: 'draw-card' }),
     )
   })
+
+  it('skips FLIP entirely when conditional FLIP effect condition is not met', () => {
+    const conditionalFlip: GameCard = {
+      ...cookie('conditional-flip'),
+      name: 'Conditional FLIP',
+      officialType: 'flip',
+      flip: {
+        text: '《Discard 1 card.》 If your break area is LV.6 or higher, gain +2 HP.',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{
+          kind: 'gain-hp',
+          amount: 2,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'break-level-at-least', level: 6 },
+        }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [conditionalFlip]
+    state.players['player-one'].breakArea = []
+    state = declareAttack(state)
+    state = skipTrap(state, 'player-one')
+    state = resolveNextDamage(state)
+
+    expect(state.pendingBattle?.stage).toBe('damage')
+    expect(state.players['player-one'].discardPile).toContain(conditionalFlip)
+    expect(state.pendingBattle?.revealedHpCard).toBeNull()
+  })
+
+  it('pays discard cost and applies effect when conditional FLIP condition is met', () => {
+    const conditionalFlip: GameCard = {
+      ...cookie('conditional-flip-met'),
+      name: 'Conditional FLIP Met',
+      officialType: 'flip',
+      flip: {
+        text: '《Discard 1 card.》 If your break area is LV.6 or higher, gain +2 HP.',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{
+          kind: 'gain-hp',
+          amount: 2,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'break-level-at-least', level: 6 },
+        }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [conditionalFlip]
+    state.players['player-one'].breakArea = [
+      { ...cookie('break-1', 3, 3), level: 3 },
+      { ...cookie('break-2', 3, 3), level: 3 },
+    ]
+    state = declareAttack(state)
+    state = skipTrap(state, 'player-one')
+    state = resolveNextDamage(state)
+
+    expect(state.pendingBattle?.stage).toBe('flip')
+
+    state = resolveFlip(state, 'player-one', {
+      activate: true,
+      discardHandIds: ['p1-hand-a'],
+    })
+
+    expect(state.players['player-one'].hand.length).toBe(1)
+    expect(state.players['player-one'].discardPile.map((c) => c.instanceId))
+      .toEqual(expect.arrayContaining(['p1-hand-a', 'conditional-flip-met']))
+    expect(state.players['player-one'].battleArea[0].hpCards.length).toBe(2)
+    expect(state.pendingBattle?.stage).toBe('damage')
+  })
 })

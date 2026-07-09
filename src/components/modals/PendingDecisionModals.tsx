@@ -362,6 +362,15 @@ export function OptionalCostAttackModal({
         className="battle-response-modal optional-cost-attack-modal"
         role="alertdialog"
       >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={onSkip}
+          title="縮小並略過效果"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
         <span>攻擊可選效果</span>
         <h2>{sourceCardName}</h2>
         <p className="optional-cost-attack-text">{effectText}</p>

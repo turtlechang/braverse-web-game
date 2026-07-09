@@ -31,6 +31,7 @@ import { canAttack } from './turn'
 import type {
   CardEffect,
   CookieInBattle,
+  EffectContext,
   EffectTargetSelector,
   EnergyColor,
   GameCard,
@@ -1216,6 +1217,7 @@ export const resolveAttackEffect = (
     sourcePlayerId: playerId,
     sourceInstanceId: battle.attackerInstanceId,
   }
+  const hasCondition = 'condition' in effect && Boolean(effect.condition)
   if (!isEffectConditionMet(state, effectContext, effect)) {
     const attackEffectIndex = battle.attackEffectIndex + 1
     if (attackEffectIndex < battle.attackEffects.length) {
@@ -1229,6 +1231,39 @@ export const resolveAttackEffect = (
       }
     }
     return finishBattle(state)
+  }
+
+  if (hasCondition) {
+    const nextState = executeCardEffect(
+      state,
+      effectContext,
+      effect,
+      selectedTargetIds,
+    )
+    if (nextState.status !== 'playing') {
+      return { ...nextState, pendingBattle: null }
+    }
+
+    const nextBattle = requirePendingBattle(nextState)
+    const attackEffectIndex = nextBattle.attackEffectIndex + 1
+    if (attackEffectIndex < nextBattle.attackEffects.length) {
+      return {
+        ...nextState,
+        pendingBattle: {
+          ...nextBattle,
+          attackEffectIndex,
+          stage: 'attack-effect',
+        },
+      }
+    }
+
+    return finishBattle({
+      ...nextState,
+      pendingBattle: {
+        ...nextBattle,
+        attackEffectIndex,
+      },
+    })
   }
 
   const nextState = executeCardEffect(
@@ -1458,7 +1493,14 @@ export const resolveNextDamage = (state: GameState): GameState => {
       stage:
         revealedHpCard.flip &&
         state.flipDisabledUntilTurn?.[target.card.instanceId] !==
-          state.turnNumber
+          state.turnNumber &&
+        revealedHpCard.flip.effects.some((effect) =>
+          isEffectConditionMet(state, {
+            sourcePlayerId: defender.id,
+            sourceInstanceId: revealedHpCard.instanceId,
+            sourceCardName: revealedHpCard.name,
+          }, effect),
+        )
           ? 'flip'
           : 'damage',
     },
@@ -1467,7 +1509,14 @@ export const resolveNextDamage = (state: GameState): GameState => {
   if (
     revealedHpCard.flip &&
     state.flipDisabledUntilTurn?.[target.card.instanceId] !==
-      state.turnNumber
+      state.turnNumber &&
+    revealedHpCard.flip.effects.some((effect) =>
+      isEffectConditionMet(state, {
+        sourcePlayerId: defender.id,
+        sourceInstanceId: revealedHpCard.instanceId,
+        sourceCardName: revealedHpCard.name,
+      }, effect),
+    )
   ) {
     return nextState
   }
@@ -1542,6 +1591,32 @@ export const resolveFlip = (
   let nextState = state
   let flipToSupportChoice: { rested: boolean } | null = null
   if (options.activate) {
+    const flipContext = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: revealed.instanceId,
+      sourceCardName: revealed.name,
+    }
+    const hasActivatableEffect = revealed.flip.effects.some((effect) =>
+      isEffectConditionMet(state, flipContext, effect),
+    )
+    if (!hasActivatableEffect) {
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          [playerId]: {
+            ...state.players[playerId],
+            discardPile: [...state.players[playerId].discardPile, revealed],
+          },
+        },
+        pendingBattle: {
+          ...requirePendingBattle(state),
+          stage: 'damage',
+          revealedHpCard: null,
+        },
+      }
+    }
+
     const player = nextState.players[playerId]
     const discardIds = [...new Set(options.discardHandIds ?? [])]
     if (discardIds.length !== (revealed.flip.cost.discardHand ?? 0)) {
@@ -1695,12 +1770,35 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const pending = nextState.pendingOptionalCostAttack
       const hand = nextState.players[pending.playerId].hand
       const canPayHand = hand.length >= (pending.cost.discardHand ?? 0)
+      const effectiveEnergyCost = pending.cost.energy ?? pending.cost
+      const paymentIds = selectEnergyPayment(
+        effectiveEnergyCost,
+        nextState.players[pending.playerId].supportArea,
+      )
+      const canPayEnergy = Boolean(paymentIds)
       const opponentId = pending.playerId === 'player-one' ? 'player-two' : 'player-one'
       const opponentHasCookie = nextState.players[opponentId].battleArea.length > 0
-      if (canPayHand && opponentHasCookie) {
+      const targetedEffect = pending.effects.find((e) => isEffectTargeted(e))
+      const context: EffectContext = { sourcePlayerId: pending.playerId, sourceInstanceId: pending.sourceInstanceId }
+      let autoTargetIds: string[] = []
+      if (targetedEffect) {
+        const battle = nextState.pendingBattle
+        if (targetedEffect.target.attackTargetOnly && battle) {
+          const attackTarget = nextState.players[opponentId].battleArea
+            .find((c) => c.card.instanceId === battle.targetInstanceId)
+          autoTargetIds = attackTarget ? [attackTarget.card.instanceId] : []
+        } else {
+          autoTargetIds = getEffectTargetCandidates(nextState, context, targetedEffect.target)
+            .slice(0, targetedEffect.target.max)
+            .map((c) => c.card.instanceId)
+        }
+      }
+      const hasTarget = targetedEffect
+        ? autoTargetIds.length >= targetedEffect.target.min
+        : true
+      if (canPayHand && canPayEnergy && opponentHasCookie && hasTarget) {
         const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
-        const targetIds = [nextState.players[opponentId].battleArea[0].card.instanceId]
-        nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, targetIds)
+        nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, autoTargetIds, paymentIds ?? undefined)
       } else {
         nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'skip')
       }

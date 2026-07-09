@@ -13,6 +13,7 @@ import { appendCommandLogEntry } from '../commands'
 import {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  isEffectConditionMet,
 } from '../effects'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
@@ -235,8 +236,17 @@ export const handleAiPendingBattle = (
     const discardHandIds = state.players[playerId].hand
       .slice(0, discardCount)
       .map((card) => card.instanceId)
-    const canActivate =
-      Boolean(revealed?.flip) && discardHandIds.length === discardCount
+    const flipContext = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: revealed?.instanceId ?? '',
+      sourceCardName: revealed?.name ?? '',
+    }
+    const hasActivatableEffect = Boolean(revealed?.flip) &&
+      revealed!.flip!.effects.some((effect) =>
+        isEffectConditionMet(state, flipContext, effect),
+      )
+    const canActivate = hasActivatableEffect &&
+      discardHandIds.length === discardCount
     return {
       state: appendCommandLogEntry(
         state,

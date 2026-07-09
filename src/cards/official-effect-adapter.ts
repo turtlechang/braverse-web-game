@@ -1691,11 +1691,19 @@ export const convertOfficialAttackEffects = (
     ],
     'BS2-004': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     // === BS1/BS2 黃綠藍紫攻擊 Then 效果 ===
     'BS1-037': [
@@ -1715,27 +1723,51 @@ export const convertOfficialAttackEffects = (
     ],
     'BS2-010': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {Y} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     'BS2-017': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { green: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {G} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     'BS2-044': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {B} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
     'BS2-045': [
       {
@@ -1754,11 +1786,19 @@ export const convertOfficialAttackEffects = (
     ],
     'BS2-075': [
       {
-        kind: 'damage',
-        amount: 3,
-        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-        condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
-      },
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 3,
+            target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+            condition: { kind: 'opponent-has-cookie-with-level', level: 1 },
+          },
+        ],
+        effectText: 'You can use this Cookie as {P} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
+        sourceAsEnergy: true,
+      } satisfies CardEffect as CardEffect,
     ],
   }
 

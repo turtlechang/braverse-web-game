@@ -678,4 +678,50 @@ describe('optional-cost-attack integration', () => {
     expect(state.pendingOptionalCostAttack).toBeFalsy()
     expect(state.status).toBe('playing')
   })
+
+  it('resolveBattleAutomatically pays energy cost when support is available', () => {
+    let state = createBattleState()
+    state.players['player-two'].supportArea[0].card.energyColor = 'blue'
+    state.players['player-two'].battleArea[0].card.attackEnergyCost = {}
+    state.players['player-two'].battleArea[0].card.attackCost = 0
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          { kind: 'damage', amount: 3, target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 } },
+        ],
+        effectText: 'Pay {B} to deal 3 damage.',
+        sourceAsEnergy: true,
+      },
+    ]
+    state = beginAttack(state, 'attacker', 'defender', [])
+    state = resolveBattleAutomatically(state)
+    expect(state.pendingBattle).toBeNull()
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.status).toBe('playing')
+  })
+
+  it('resolveBattleAutomatically skips when energy payment is impossible', () => {
+    let state = createBattleState()
+    state.players['player-two'].supportArea.forEach((s) => { s.rested = true })
+    state.players['player-two'].battleArea[0].card.attackEnergyCost = {}
+    state.players['player-two'].battleArea[0].card.attackCost = 0
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          { kind: 'damage', amount: 3, target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 } },
+        ],
+        effectText: 'Pay {B} to deal 3 damage.',
+        sourceAsEnergy: true,
+      },
+    ]
+    state = beginAttack(state, 'attacker', 'defender', [])
+    state = resolveBattleAutomatically(state)
+    expect(state.pendingBattle).toBeNull()
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.status).toBe('playing')
+  })
 })
