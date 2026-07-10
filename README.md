@@ -67,6 +67,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已達成：P1 工程管線補強——卡片匯入空系列驗證、validate-cards 執行前提註記、線上對戰狀態中文化與斷線原因對應、WebSocket 啟動日誌格式修正。
 - 已達成：UI P0 操作體驗改版——PhaseRail 精確 CTA（略過支援階段／結束主要階段／結束回合）與操作指引、頂部短暫 Toast 取代中央戰場常駐訊息、手牌可操作/不可操作視覺狀態（降權顯示）、戰鬥卡 hover/focus 快速預覽面板（窄版自動隱藏）、`BattleRowProps` 增加預覽事件。
 - 已達成：攻擊宣告阻擋加固 — `assertNoBlockingDecision` 新增 `pendingOnPlay` 與 `pendingAbilityEffect` 檢查，確保既有待處理效果（OnPlay、技能啟動）結算完成前不得宣告攻擊，避免狀態交錯；已同步新增 `src/game/battle-blocking-decision.test.ts` 回歸測試。
+- 已達成：UI P1-2 設計參考 mockup 按需載入 — `src/main.tsx` 移除 `MockupGallery` 靜態 import，改以 `React.lazy` + `Suspense` 條件載入；正常遊戲路徑不包含 `src/ui-reference/` 任何元件，mockup 以獨立 chunk 分離。
 - 待確認：推送 Phase 5 線上對戰 MVP lint 修正後，確認 GitHub Actions 的 Test, Lint & Build 工作重新回到綠燈。
 - 已達成：UI P1 資訊密度改版——桌機戰鬥卡放大約 16%～20%、HP/ATK 圖示徽章、敵我摘要集中顯示牌庫手牌棄牌與休息等級、支援區橫置/付款狀態視覺區別、資源區 hover 提示（休息等級、場景橫置狀態等）；`phaseAdvanceLabels` 匯出供元件測試使用。
 - 已達成：三色（RED / YELLOW / GREEN）起始牌組切換、App.tsx 元件拆分（卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板、modal）；10 張物品與 2 張場景完整支援（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand、複合效果暫停與 OnPlay/Refresh/補位銜接、AI deterministic 使用）。
