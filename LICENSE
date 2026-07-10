@@ -1,0 +1,40 @@
+MIT License
+
+Copyright (c) 2026 turtlechang
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+Scope note / 授權範圍說明:
+
+This license applies to the SOURCE CODE of this repository only (the rules
+engine, UI, tooling, and documentation written for this project).
+
+It does NOT apply to CookieRun: Braverse game content. All card data, card
+names, card text, artwork, card back designs, energy icons, logos, and
+trademarks of CookieRun: Braverse are the property of Devsisters Corporation
+and its licensors. Such materials are referenced in this repository solely
+for non-commercial fan research and study, are not covered by the MIT
+license above, and may not be redistributed or used commercially.
+
+本授權僅涵蓋本 repo 的原始程式碼（規則引擎、UI、工具與專案文件）。
+CookieRun: Braverse 的卡牌資料、卡名、效果文字、插畫、卡背、能量圖示、
+標誌與商標均屬 Devsisters Corporation 及其授權方所有，不在 MIT 授權
+範圍內，僅供非商業粉絲研究使用，不得再散布或商用。
