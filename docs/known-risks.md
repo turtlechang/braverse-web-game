@@ -1,0 +1,18 @@
+# 已知風險清單（Known Risks）
+
+最後更新：2026-07-10。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
+
+| # | 風險 | 等級 | 現況與緩解 |
+|---|---|---|---|
+| R1 | **官方素材公開部署**：卡圖熱連結 `cookierunbraverse.com`、卡背/能量圖示在 `public/`；專案已接上 Vercel，公開網址即公開展示官方 IP | 中（已決策接受） | README 與主選單 footer 已加非官方聲明（2026-07-10）；使用者決策：維持熱連結、不做 PUBLIC_MODE，收到異議再處理（ip-and-asset-policy §4）。熱連結另有官方改版失效風險（見 R8） |
+| R2 | ~~無 LICENSE~~ **已解除**（2026-07-10）：已加 MIT + Devsisters 素材除外條款的 LICENSE | — | 見 [LICENSE](../LICENSE) 與 ip-and-asset-policy §5 |
+| R3 | **UI/多段效果未全面走指令層**：攻擊宣告與效果精靈直呼規則函式、完成時補記 commandLog；補記若有遺漏，replay 與對戰紀錄不完整 | 中 | 已知清單見 README「待實作」；改造計畫列 roadmap P3。新增互動流程時必須補記（AGENTS.md 約束） |
+| R4 | **卡牌資料無獨立驗證**：缺 `validate:cards`；資料錯誤（缺欄位、重複 id、effectId 無 resolver）只能靠轉接層測試與人工發現 | 中 | PR #17 曾以一次性稽核腳本找出 25 張 unsupported 卡，證明需要常態化工具。列 roadmap P1 |
+| R5 | **效果文字解析的規則裁定風險**：官方文字→CardEffect 轉換含專案自行裁定（記錄於 rule-clarifications.md）；官方新版規則可能推翻 | 中 | 裁定集中記錄；不得將待確認規則寫成已完成（AGENTS.md）。官方更新時重新匯入＋覆核 |
+| R6 | **Vercel 不承載 ws server**：線上對戰伺服器（`server/`）需長連線，Vercel serverless 不適合；目前只能本機 `dev:online` | 中 | 已決策採 **Render 免費層**（評估見 [online-server-hosting.md](online-server-hosting.md)）；部署執行列 roadmap P1。免費層冷啟動 30–60 秒需在 UI 提示 |
+| R7 | **線上對戰無防作弊完整方案**：MVP 僅靠伺服器權威狀態＋`masked-state` 視角遮罩；斷線重連、逾時判負未完備 | 低（範圍內） | 主計畫明訂不做完整防作弊；規則驗證在伺服器端執行，非法操作擋下即符合驗收 |
+| R8 | **官方資料來源脆弱**：匯入腳本依賴官方 API/網站結構；卡圖熱連結若官方改版即整站缺圖 | 中 | 匯入樣本已入 repo（資料不會消失）；缺圖 fallback 與圖像快取策略待做（與 R1 的 PUBLIC_MODE 一併決策） |
+| R9 | **主 bundle 過大**（847 kB / gzip 176 kB） | 低 | 功能與載入尚可接受；code-split 列 roadmap P3 |
+| R10 | **AI 自動結算繞過人類防守**（歷史回歸點）：AI 攻擊若用 `attack` 指令會自動結算、跳過陷阱/FLIP 回應 | 已緩解 | 2026-07-07 已修：Lv.1/3/4 改走 `applyChosenTurnCommand` → `beginAttack`。新增 AI 等級時必須遵守（architecture.md §5） |
+| R11 | **單人維護 + 無 branch protection**：main 可直接 push；CI 綠燈非合併門檻 | 低（接受） | 使用者明確決策不啟用 branch protection；以 PR 工作流自律 + CI 通知 |
+| R12 | **README 過載**：進度、驗證數字、歷史決策全堆在 README（150+ 行），數字（如測試數）易過時 | 低 | 本輪已建 docs/ 分流（audit / architecture / roadmap）；後續更新日誌抽 CHANGELOG（roadmap P2） |
