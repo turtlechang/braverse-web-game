@@ -29,13 +29,16 @@
 
 不推薦 Fly.io 的原因：無免費層後性價比優勢縮小，且需要維護 Dockerfile/fly.toml 與 CLI 流程，對單人專案是持續負擔。不推薦 Railway 起步的原因：月月固定支出，對「偶爾開一局」的使用型態不划算。
 
-## 4. 部署步驟（待執行，roadmap P1）
+## 4. 部署步驟（程式面已就緒 2026-07-10，Dashboard 操作待執行）
 
-1. Render Dashboard → New Web Service → 連 GitHub repo。
-2. Build Command：`npm ci`；Start Command：`npx tsx server/src/index.ts`（或先補 `server:build` script 編譯後以 node 執行，避免 production 依賴 tsx——建議後者，屆時一併調整）。
-3. 服務需讀取 `PORT` 環境變數（Render 指定埠號）——部署前確認 `server/src/index.ts` 支援。
-4. 前端以 `VITE_ONLINE_SERVER_URL` 之類環境變數指向 `wss://<app>.onrender.com`，Vercel 上設定。
-5. 驗收：兩個瀏覽器視窗經公網完成一局，記錄於 test-plan。
+程式面準備（已完成）：`server/src/index.ts` 支援 `PORT` 環境變數（本機沿用 `WS_PORT`，預設 8787）；`npm run server:start` production 啟動 script；連線中 UI 已加免費層冷啟動提示。
+
+Dashboard 操作（需 Render 帳號，待執行）：
+
+1. Render Dashboard → New Web Service → 連 GitHub repo `turtlechang/braverse-web-game`。
+2. Instance Type：**Free**；Build Command：`npm ci --include=dev`（`tsx` 在 devDependencies，須明確安裝）；Start Command：`npm run server:start`。
+3. 前端：Vercel 專案設定環境變數 `VITE_WS_URL=wss://<app>.onrender.com`（本機開發不需設定——vite dev server 已將 `/ws` proxy 到 `ws://localhost:8787`，見 `vite.config.ts`；client fallback 為同網域 `/ws`）。
+4. 驗收：兩個瀏覽器視窗經公網完成一局，記錄於 test-plan；含首次連線冷啟動等待與斷線提示檢查。
 
 ## 5. 資料來源
 

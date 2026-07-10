@@ -22,14 +22,14 @@
 | PUBLIC_MODE 素材策略 | ✅ 決策：維持官方卡圖熱連結、不做 PUBLIC_MODE，收到異議再處理（[ip-and-asset-policy.md](ip-and-asset-policy.md) §4） |
 | LICENSE | ✅ MIT + Devsisters 素材除外條款 |
 
-### P1 — 補齊工程管線
+### P1 — 補齊工程管線（2026-07-10 大部分完成）
 
-| 項目 | 內容 | 規模 |
-|---|---|---|
-| `validate:cards` | `scripts/validate-cards.ts`：必填欄位、重複 id、effectId 有 resolver、缺圖 fallback；接入 CI | 中 |
-| `vercel.json` + preview 驗收 | SPA rewrite；開一支 PR 實測 preview URL 可玩 | 小 |
-| 線上對戰驗收 | 兩個瀏覽器視窗完整一局；斷線提示檢查；部署 server 至 **Render 免費層**（已決策，評估與步驟見 [online-server-hosting.md](online-server-hosting.md)），含 `PORT` 環境變數支援、production 啟動 script、前端 `wss://` URL 設定與冷啟動提示文案 | 中 |
-| `npm run typecheck` 別名 | 補 `tsc -b --noEmit` 類 script，讓 CI 與本地驗證語彙一致 | 小 |
+| 項目 | 狀態 |
+|---|---|
+| `validate:cards` | ✅ `scripts/validate-cards.ts`（必填欄位、同檔重複卡號、卡池 311 種全數可轉換 GameCard、效果文字未轉出偵測）；已接入 CI 第一步。首跑即抓到 BS2-061@1 缺 level 的資料缺陷（已修＋匯入腳本加異圖回填） |
+| `vercel.json` | ✅ SPA rewrite（assets 除外）；preview URL 可玩性驗收待本支 PR |
+| `npm run typecheck` | ✅ `tsc -b && server:typecheck`（app + server 全量型別檢查） |
+| Render 部署準備 | ✅ 程式面就緒（`PORT` 支援、`server:start`、冷啟動提示文案）；Dashboard 操作與雙視窗公網驗收待執行（需開 Render 帳號，見 [online-server-hosting.md](online-server-hosting.md) §4） |
 
 ### P2 — 維護流程正式化
 

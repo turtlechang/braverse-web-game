@@ -107,10 +107,14 @@ npm run dev
 ## 驗證指令
 
 ```bash
+npm run validate:cards
 npm test
 npm run lint
+npm run typecheck
 npm run build
 ```
+
+`validate:cards` 檢查 `data/cards/*.json` 的必填欄位、同檔重複卡號、全卡池可轉換為 `GameCard` 與效果文字未轉出偵測；CI 會在測試前先執行。`typecheck` 對 app 與 server 做全量型別檢查（`tsc -b` + server tsconfig）。
 
 AI 瀏覽器驗證：
 
