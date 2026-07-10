@@ -138,6 +138,7 @@ function App() {
     match.aiControlsCurrentState
 
   const selectedAttackPaymentIdSet = new Set(match.selectedAttackPaymentIds)
+  const trapPaymentIdSet = new Set(match.selectedTrapPaymentIds)
 
   const phaseDisabled =
     match.game.status === 'finished' ||
@@ -323,6 +324,10 @@ function App() {
           selectedSkillTrashBattleCookieIds={pending.selectedSkillTrashBattleCookieIds}
           skillTrashBattleCookieTargetIds={pending.skillTrashBattleCookieTargetIds}
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
+          attackPaymentTargetIds={match.attackPaymentTargetIds}
+          selectedTrapPaymentIds={trapPaymentIdSet}
+          trapPaymentTargetIds={match.trapPaymentTargetIds}
+          onTrapPayment={match.toggleTrapPayment}
           attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
           selectedHandCardId={activeSelectedHandCardId}
@@ -525,6 +530,7 @@ function App() {
         onToggleDiscardHand={pending.toggleSkillDiscardHand}
         discardHandCost={pending.discardHandCost}
         showCancelSkill={showCancelSkill}
+        energyPaymentValid={pending.skillEnergyPaymentValid}
       />
 
       {match.setupStep && (

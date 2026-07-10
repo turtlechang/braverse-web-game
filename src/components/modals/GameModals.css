@@ -5,15 +5,14 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(1, 8, 28, 0.1);
+  background: rgba(1, 8, 28, 0.35);
 }
 
 .decision-modal,
-.card-detail-modal,
 .deck-list-modal,
 .pause-modal,
 .result-modal {
-  width: min(660px, 100%);
+  width: min(720px, 100%);
   overflow: hidden;
   border: 2px solid rgba(105, 220, 255, 0.68);
   border-radius: 8px;
@@ -38,7 +37,7 @@
 
 .battle-response-modal {
   position: relative;
-  width: min(450px, 100%);
+  width: min(820px, 100%);
   max-height: calc(100vh - 48px);
   padding: 28px;
   overflow-y: auto;
@@ -53,8 +52,41 @@
   width: min(560px, 100%);
 }
 
+.battle-response-modal.is-wide {
+  width: min(820px, calc(100vw - 48px));
+}
+
 .trap-response-modal {
-  width: min(640px, 100%);
+  width: min(900px, calc(100vw - 48px));
+  padding-bottom: 80px;
+}
+
+.trap-response-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 10px 0;
+}
+
+.trap-response-col {
+  min-width: 0;
+}
+
+.trap-response-col-label {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.modal-actions-sticky {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0 4px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 1;
 }
 
 .card-pile-modal > span,
@@ -574,6 +606,7 @@
 
 .card-detail-modal {
   position: relative;
+  width: min(840px, 100%);
   display: grid;
   grid-template-columns: 240px 1fr;
   align-items: center;
@@ -851,6 +884,10 @@
 }
 
 @media (max-width: 680px) {
+  .trap-response-dual {
+    grid-template-columns: 1fr;
+  }
+
   .card-detail-modal {
     grid-template-columns: 130px 1fr;
     gap: 16px;

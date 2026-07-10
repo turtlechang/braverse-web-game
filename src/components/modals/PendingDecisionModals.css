@@ -1,5 +1,38 @@
 .optional-cost-attack-modal {
-  width: min(520px, 100%);
+  width: min(760px, 100%);
+  padding-bottom: 80px;
+}
+
+.optional-cost-dual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 10px 0;
+}
+
+.optional-cost-col {
+  min-width: 0;
+}
+
+.optional-cost-col-label {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.modal-actions-sticky {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 0 4px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 1;
+}
+
+.modal-actions-decision {
+  background: linear-gradient(135deg, #1a2a4a, #1e3d6e);
 }
 
 .optional-cost-attack-text {
@@ -16,7 +49,7 @@
 
 .inspect-deck-modal {
   position: relative;
-  width: min(620px, 100%);
+  width: min(860px, 100%);
 }
 
 .draw-up-to-modal {
@@ -24,7 +57,7 @@
 }
 
 .hand-discard-modal {
-  width: min(720px, 100%);
+  width: min(820px, calc(100vw - 48px));
 }
 
 .inspect-deck-grid {
@@ -252,6 +285,10 @@
 }
 
 @media (max-width: 680px) {
+  .optional-cost-dual {
+    grid-template-columns: 1fr;
+  }
+
   .inspect-deck-modal {
     width: min(360px, 100%);
   }

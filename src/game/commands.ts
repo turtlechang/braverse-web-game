@@ -1212,6 +1212,8 @@ const applyPlayerActionCommand = (
         paymentIds: command.paymentIds,
         targetIds: command.targetIds,
         supportTrashIds: command.supportTrashIds,
+        supportToHandIds: command.supportToHandIds,
+        handToSupportIds: command.handToSupportIds,
         discardHandIds: command.discardHandIds,
         trashBattleCookieIds: command.trashBattleCookieIds,
       })

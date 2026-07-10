@@ -57,15 +57,12 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
           <TrapResponseModal
             cards={match.playerTrapCandidates}
             selectedTrapId={match.selectedTrapId}
-            paymentCards={match.game.players[
-              match.viewerPlayerId
-            ].supportArea
-              .filter((support) =>
-                match.selectedTrapPaymentIds.includes(
-                  support.card.instanceId,
-                ),
-              )
-              .map((support) => support.card)}
+            paymentCards={match.trapPaymentCandidates.map(
+              (support) => support.card,
+            )}
+            trapEnergyCostTotal={match.trapEnergyCostTotal}
+            selectedPaymentIds={match.selectedTrapPaymentIds}
+            onTogglePayment={match.toggleTrapPayment}
             targetCards={match.selectedTrapTargets.map(
               (target) => target.card,
             )}
@@ -88,10 +85,13 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             selectedTrapTargetId={match.selectedTrapTargetId}
             onSelectTrap={(id) => {
               match.setSelectedTrapId(id)
+              match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
+              match.setSelectedTrapSupportToHandIds([])
+              match.setSelectedTrapHandToSupportIds([])
             }}
             onSelectTrapTarget={(id) => {
               match.setSelectedTrapTargetId(id)
@@ -129,10 +129,13 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             }
             onSkip={() => {
               match.setSelectedTrapId(null)
+              match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setPendingResponseMode(null)
+              match.setSelectedTrapSupportToHandIds([])
+              match.setSelectedTrapHandToSupportIds([])
               match.dispatch(
                 { kind: 'skip-trap', playerId: match.viewerPlayerId },
                 '未發動陷阱，進入傷害結算。',
@@ -142,11 +145,14 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               if (!match.selectedTrap) return
               const trap = match.selectedTrap
               match.setSelectedTrapId(null)
+              match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
               match.setPendingResponseMode(null)
+              match.setSelectedTrapSupportToHandIds([])
+              match.setSelectedTrapHandToSupportIds([])
               const playTrapCommand: GameCommand = {
                 kind: 'play-trap',
                 playerId: match.viewerPlayerId,
@@ -156,6 +162,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                   (target) => target.card.instanceId,
                 ),
                 supportTrashIds: match.selectedTrapSupportTrashIds,
+                supportToHandIds: match.selectedTrapSupportToHandIds,
+                handToSupportIds: match.selectedTrapHandToSupportIds,
                 discardHandIds: match.selectedTrapDiscardIds,
                 trashBattleCookieIds: match.selectedTrapTrashBattleCookieIds,
               }
@@ -174,6 +182,14 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onToggleEmptyTarget={() =>
               match.setTrapSelectNoTarget((v) => !v)
             }
+            supportToHandCards={match.trapSupportToHandCandidates}
+            supportToHandAmount={match.trapSupportToHandAmount}
+            selectedSupportToHandIds={match.selectedTrapSupportToHandIds}
+            onToggleSupportToHand={match.toggleTrapSupportToHand}
+            handToSupportCards={match.trapHandToSupportCandidates}
+            handToSupportAmount={match.trapHandToSupportAmount}
+            selectedHandToSupportIds={match.selectedTrapHandToSupportIds}
+            onToggleHandToSupport={match.toggleTrapHandToSupport}
           />
         )}
 

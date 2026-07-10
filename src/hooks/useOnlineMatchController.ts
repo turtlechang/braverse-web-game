@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type {
   CookieCard,
   CookieInBattle,
+  GameCard,
   GameCommand,
   GameState,
   PlayerId,
@@ -237,12 +238,12 @@ export function useOnlineMatchController(params: {
   const selectedTrap = playerTrapCandidates.find(
     (card) => card.instanceId === selectedTrapId,
   )
-  const selectedTrapPaymentIds = selectedTrap?.trap
-    ? selectEnergyPayment(
-        selectedTrap.trap.cost.energy ?? selectedTrap.trap.cost,
-        game.players[viewerPlayerId].supportArea,
-      ) ?? []
-    : []
+  const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
+  const trapPaymentCandidates: SupportCard[] = []
+  const trapPaymentTargetIds = new Set<string>()
+  const trapPaymentValid = true
+  const trapEnergyCostTotal = 0
+  const toggleTrapPayment = () => {}
   const selectedTrapDiscardCost = selectedTrap?.trap?.cost.discardHand ?? 0
   const selectedTrapTrashBattleCookieCost =
     selectedTrap?.trap?.cost.trashBattleCookie?.count ?? 0
@@ -298,6 +299,15 @@ export function useOnlineMatchController(params: {
           .map((support: SupportCard) => support.card.instanceId)
       : []
 
+  const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
+  const trapSupportToHandCandidates: GameCard[] = []
+  const trapSupportToHandAmount = 0
+  const toggleTrapSupportToHand = () => {}
+  const [selectedTrapHandToSupportIds, setSelectedTrapHandToSupportIds] = useState<string[]>([])
+  const trapHandToSupportCandidates: GameCard[] = []
+  const trapHandToSupportAmount = 0
+  const toggleTrapHandToSupport = () => {}
+
   // Blocker
   const playerBlockerCandidates =
     game.pendingBattle?.stage === 'trap' &&
@@ -340,6 +350,7 @@ export function useOnlineMatchController(params: {
     setSelectedAttackPaymentIds: battleActions.setSelectedAttackPaymentIds,
     handleAttackTarget: battleActions.handleAttackTarget,
     toggleAttackPayment: battleActions.toggleAttackPayment,
+    attackPaymentTargetIds: battleActions.attackPaymentTargetIds,
     clearAttacker: battleActions.clearAttacker,
     selectedAttacker: battleActions.selectedAttacker,
     selectedAttackCost: battleActions.selectedAttackCost,
@@ -356,6 +367,12 @@ export function useOnlineMatchController(params: {
     playerTrapCandidates,
     selectedTrap,
     selectedTrapPaymentIds,
+    setSelectedTrapPaymentIds,
+    trapPaymentCandidates,
+    trapPaymentTargetIds,
+    trapPaymentValid,
+    trapEnergyCostTotal,
+    toggleTrapPayment,
     selectedTrapDiscardCost,
     selectedTrapDiscardCandidates,
     selectedTrapTrashBattleCookieCost,
@@ -367,6 +384,16 @@ export function useOnlineMatchController(params: {
     setSelectedTrapTargetId,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
+    selectedTrapSupportToHandIds,
+    setSelectedTrapSupportToHandIds,
+    trapSupportToHandCandidates,
+    trapSupportToHandAmount,
+    toggleTrapSupportToHand,
+    selectedTrapHandToSupportIds,
+    setSelectedTrapHandToSupportIds,
+    trapHandToSupportCandidates,
+    trapHandToSupportAmount,
+    toggleTrapHandToSupport,
     // Blocker
     selectedBlockerId,
     setSelectedBlockerId,

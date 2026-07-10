@@ -33,6 +33,10 @@ export interface BattleRowProps {
   selectedSkillTrashBattleCookieIds?: Set<string>
   skillTrashBattleCookieTargetIds?: Set<string>
   selectedAttackPaymentIds: Set<string>
+  attackPaymentTargetIds?: Set<string>
+  selectedTrapPaymentIds?: Set<string>
+  trapPaymentTargetIds?: Set<string>
+  onTrapPayment?: (instanceId: string) => void
   attackPaymentValid: boolean
   interactionLocked: boolean
   selectedHandCardId?: string | null
@@ -77,6 +81,10 @@ export function BattleRow({
   selectedSkillTrashBattleCookieIds = new Set<string>(),
   skillTrashBattleCookieTargetIds = new Set<string>(),
   selectedAttackPaymentIds,
+  attackPaymentTargetIds = new Set<string>(),
+  selectedTrapPaymentIds = new Set<string>(),
+  trapPaymentTargetIds = new Set<string>(),
+  onTrapPayment,
   attackPaymentValid,
   interactionLocked,
   selectedHandCardId = null,
@@ -122,6 +130,8 @@ export function BattleRow({
             skillCostSupportTargetIds.has(supportId)
           const canSelectSkillPayment =
             skillPaymentTargetIds.has(supportId)
+          const canSelectTrapPayment =
+            trapPaymentTargetIds.has(supportId)
           const selectedForSkillCost =
             selectedSkillCostSupportIds.has(supportId)
 
@@ -137,40 +147,47 @@ export function BattleRow({
                 rested={
                   support.rested ||
                   selectedSkillPaymentIds.has(supportId) ||
-                  selectedAttackPaymentIds.has(supportId)
+                  selectedAttackPaymentIds.has(supportId) ||
+                  selectedTrapPaymentIds.has(supportId)
                 }
                 selected={
                   selectedForSkillCost ||
                   selectedSkillPaymentIds.has(supportId) ||
-                  selectedAttackPaymentIds.has(supportId)
+                  selectedAttackPaymentIds.has(supportId) ||
+                  selectedTrapPaymentIds.has(supportId)
                 }
                 targetable={
                 canSelectSkillCost ||
                 canSelectSkillPayment ||
+                canSelectTrapPayment ||
                 (canOperate &&
                   Boolean(selectedAttackerId) &&
                   !support.rested &&
-                  Boolean(onAttackPayment))
+                  Boolean(onAttackPayment) &&
+                  attackPaymentTargetIds.has(supportId))
               }
               ariaLabel={
                 canSelectSkillCost
                   ? `選擇${support.card.name}作為技能代價`
                   : canSelectSkillPayment
                     ? `選擇${support.card.name}支付技能能量`
+                  : canSelectTrapPayment
+                    ? `選擇${support.card.name}支付陷阱能量`
                   : undefined
               }
-              key={supportId}
               onClick={
                 canSelectSkillPayment && onSkillPayment
                   ? () => onSkillPayment(supportId)
                   : canSelectSkillCost && onSkillCostSupport
                     ? () => onSkillCostSupport(supportId)
-                    : canOperate &&
-                        selectedAttackerId &&
-                        !support.rested &&
-                        onAttackPayment
-                      ? () => onAttackPayment(supportId)
-                      : () => onInspectCard(support.card)
+                    : canSelectTrapPayment && onTrapPayment
+                      ? () => onTrapPayment(supportId)
+                      : canOperate &&
+                          selectedAttackerId &&
+                          !support.rested &&
+                          onAttackPayment
+                        ? () => onAttackPayment(supportId)
+                        : () => onInspectCard(support.card)
               }
             />
             </div>
