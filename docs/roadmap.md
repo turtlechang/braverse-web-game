@@ -1,6 +1,6 @@
 # Roadmap
 
-最後更新：2026-07-10。歷史完成項見 README「更新日誌」與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
+最後更新：2026-07-10。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
 
 ## 已完成里程碑（摘要）
 
