@@ -9,6 +9,10 @@
  * 5. imageUrl 不得為空
  *
  * 發現錯誤時以非零碼結束，供 CI 使用。
+ *
+ * 必要執行前提：本工具透過 tsx 執行（npm run validate:cards），
+ * 因為它直接匯入 TypeScript 原始碼（src/cards、src/game）。
+ * 請勿用 node 直接執行，否則會因無法解析 .ts 匯入而失敗。
  */
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'

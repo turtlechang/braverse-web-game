@@ -120,6 +120,24 @@ const createImportDocument = ({ cards, locale, sourceUrl, importedAt, series }) 
 
 const getDatasetUrl = (locale = 'en') => `${OFFICIAL_SITE_URL}/data/json/cardList_${locale}.json`
 
+export const validateSeriesNotEmpty = (bs1Cards, bs2Cards, categoryTitle) => {
+  if (bs1Cards.length === 0 && bs2Cards.length === 0) {
+    throw new Error(
+      `匯入失敗：篩選「${categoryTitle}」後沒有任何卡片 — 請確認資料來源是否包含對應卡號`,
+    )
+  }
+  if (bs1Cards.length === 0) {
+    throw new Error(
+      `匯入失敗：篩選「${categoryTitle}」後 BS1 系列沒有任何卡片 — 請確認資料來源是否包含 BS1 開頭的卡號`,
+    )
+  }
+  if (bs2Cards.length === 0) {
+    throw new Error(
+      `匯入失敗：篩選「${categoryTitle}」後 BS2 系列沒有任何卡片 — 請確認資料來源是否包含 BS2 開頭的卡號`,
+    )
+  }
+}
+
 const runImport = async () => {
   const locale = 'en'
   const sourceUrl = getDatasetUrl(locale)
@@ -151,6 +169,8 @@ const runImport = async () => {
 
   console.log(`BS1 系列：${bs1Cards.length} 張`)
   console.log(`BS2 系列：${bs2Cards.length} 張`)
+
+  validateSeriesNotEmpty(bs1Cards, bs2Cards, CATEGORY_TITLE)
 
   const outputDir = resolve('data/cards')
   await mkdir(outputDir, { recursive: true })
