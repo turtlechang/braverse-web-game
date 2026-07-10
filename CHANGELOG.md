@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 🎨 P0 UI/UX 改進：線上對戰面板深藍電競科幻 modal 樣式化（`OnlineMatchPanel.tsx` + `GameModals.css`），含專屬 `.online-match-panel` 類別、32×32px 關閉按鈕、內容區捲軸管理、完整 hover/focus-visible/active/disabled 狀態。
+- 🎨 P0 主選單空狀態引導：無自訂牌組時「建立第一副牌組」為 primary CTA、「對戰入口」disabled 並顯示原因文字；有牌組時還原以「對戰入口」為 primary CTA（`MainMenu.tsx` + `App.css`）。測試基線升至 92 檔／1488 項。新增 `OnlineMatchPanel.test.tsx`（15 項 mock hook 測試，含 idle/waiting/error/close/dialog/label/connecting 路徑）。
 - 🔧 P1 工程管線（PR #24，驗證中）：`npm run validate:cards`（卡池 311 種卡號全數可轉換檢查，接入 CI）、`npm run typecheck`、`vercel.json` SPA rewrite、server 支援 `PORT` 環境變數與線上對戰冷啟動提示；修復 BS2-061@1 異圖版缺 level 的匯入資料缺陷並在匯入腳本加異圖回填。
 - 📚 P2 維護流程文件（本 PR）：CHANGELOG 自 README 抽離、release / card-update 流程、回歸與手動測試清單、loop-engineering 說明。
 - 🛡️ 攻擊宣告阻擋加固：`assertNoBlockingDecision` 新增 `pendingOnPlay` 與 `pendingAbilityEffect` 檢查，既有待處理效果結算完成前禁止宣告攻擊；新增 `battle-blocking-decision.test.ts` 回歸測試。

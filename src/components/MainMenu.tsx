@@ -1,4 +1,4 @@
-import { AlertTriangle, Copy, FlaskConical, Pencil, Play, RefreshCw, Trash2, Wifi } from 'lucide-react'
+import { AlertTriangle, Copy, FlaskConical, Pencil, Play, Plus, RefreshCw, Trash2, Wifi } from 'lucide-react'
 import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
@@ -75,6 +75,7 @@ export function MainMenu({
   onRefreshDecks,
 }: MainMenuProps) {
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
+  const hasDecks = decks.length > 0
 
   return (
     <main className="main-menu-shell">
@@ -82,25 +83,57 @@ export function MainMenu({
         <div className="main-menu-heading">
           <span>CookieRun Braverse</span>
           <h1 id="main-menu-title">薑餅人對戰卡牌</h1>
-          <p>選擇一副合法牌組後開始對戰；AI 對手的牌組與等級可在下方指定，或維持隨機。</p>
+          <p>
+            {hasDecks
+              ? '選擇一副合法牌組後開始對戰；AI 對手的牌組與等級可在下方指定，或維持隨機。'
+              : '歡迎！請先建立一副自訂牌組，即可開始對戰或線上對戰。'}
+          </p>
         </div>
 
         <div className="main-menu-actions">
+          {hasDecks ? (
+            <button
+              type="button"
+              className="main-menu-primary"
+              onClick={onStartBattle}
+            >
+              <Play aria-hidden="true" />
+              對戰入口
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="main-menu-primary main-menu-create-first"
+                onClick={onCreateDeck}
+              >
+                <Plus aria-hidden="true" />
+                建立第一副牌組
+              </button>
+              <button
+                type="button"
+                className="main-menu-disabled-cta"
+                disabled
+              >
+                <Play aria-hidden="true" />
+                對戰入口
+              </button>
+              <p className="main-menu-disabled-reason">
+                尚無自訂牌組，請先建立牌組後再開始對戰。
+              </p>
+            </>
+          )}
           <button
             type="button"
-            className="main-menu-primary"
-            onClick={onStartBattle}
+            disabled={!hasDecks}
+            onClick={onOpenOnlineMatch}
           >
-            <Play aria-hidden="true" />
-            對戰入口
-          </button>
-          <button type="button" onClick={onOpenOnlineMatch}>
             <Wifi aria-hidden="true" />
             線上對戰
           </button>
           <button type="button" onClick={onCreateDeck}>
             <Pencil aria-hidden="true" />
-            牌組編輯器
+            {hasDecks ? '牌組編輯器' : '開啟牌組編輯器'}
           </button>
           <button type="button" onClick={onOpenTestScenario}>
             <FlaskConical aria-hidden="true" />

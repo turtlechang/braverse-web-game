@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { useState } from 'react'
 import type { CustomDeck } from '../../game'
 import { validateCustomDeck } from '../../game'
@@ -5,10 +6,6 @@ import { useOnlineMatch } from '../../hooks/useOnlineMatch'
 import { onlineMatchStatusLabels, matchEndedReasonLabels } from '../gameUiLabels'
 import { OnlineBattleView } from './OnlineBattleView'
 
-/**
- * Phase 5 線上對戰入口。對局進行中改用 OnlineBattleView 呈現真正的戰場
- * （重用 BattleRow/EffectPanel 等本地既有元件）,取代先前的 JSON dump 版本。
- */
 export interface OnlineMatchPanelProps {
   decks: CustomDeck[]
   onClose: () => void
@@ -55,92 +52,131 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
   }
 
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true">
-      <div className="modal-panel">
-        <div className="modal-header">
-          <h2>線上對戰</h2>
-          <button type="button" onClick={handleClose} aria-label="關閉">
-            關閉
+    <div className="modal-backdrop" role="presentation">
+      <section className="online-match-panel" role="dialog" aria-modal="true" aria-labelledby="online-match-title">
+        <div className="online-match-header">
+          <h2 id="online-match-title">線上對戰</h2>
+          <button
+            type="button"
+            className="online-match-close"
+            onClick={handleClose}
+            aria-label="關閉線上對戰"
+          >
+            <X aria-hidden="true" />
           </button>
         </div>
 
-        <p>狀態：{onlineMatchStatusLabels[online.status]}</p>
-        {online.errorMessage && <p style={{ color: '#e05252' }}>{online.errorMessage}</p>}
+        <div className="online-match-body">
+          <div className="online-match-status">
+            <span className="online-match-status-label">狀態</span>
+            <span className={`online-match-status-value is-${online.status}`}>
+              {onlineMatchStatusLabels[online.status]}
+            </span>
+          </div>
 
-        {online.status === 'idle' && (
-          <>
-            <label>
-              選擇牌組
-              <select
-                value={selectedDeckId ?? ''}
-                onChange={(event) => setSelectedDeckId(event.target.value)}
-              >
-                <option value="" disabled>
-                  請選擇牌組
-                </option>
-                {decks.map((deck) => (
-                  <option key={deck.id} value={deck.id}>
-                    {deck.name}
+          {online.errorMessage && (
+            <div className="online-match-error" role="alert">
+              {online.errorMessage}
+            </div>
+          )}
+
+          {online.status === 'idle' && (
+            <div className="online-match-idle">
+              <label className="online-match-field" htmlFor="deck-select">
+                <span>選擇牌組</span>
+                <select
+                  id="deck-select"
+                  value={selectedDeckId ?? ''}
+                  onChange={(event) => setSelectedDeckId(event.target.value)}
+                >
+                  <option value="" disabled>
+                    請選擇牌組
                   </option>
-                ))}
-              </select>
-            </label>
-            {selectedDeckValidation && !selectedDeckValidation.isValid && (
-              <p style={{ color: '#e05252' }}>目前牌組不合法，無法用於線上對戰。</p>
-            )}
+                  {decks.map((deck) => (
+                    <option key={deck.id} value={deck.id}>
+                      {deck.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                disabled={!selectedDeck || !selectedDeckValidation?.isValid}
-                onClick={() => selectedDeck && online.createRoom(selectedDeck)}
-              >
-                建立房間
-              </button>
-              <div>
-                <input
-                  value={joinCode}
-                  onChange={(event) => setJoinCode(event.target.value)}
-                  placeholder="輸入房號"
-                />
+              {selectedDeckValidation && !selectedDeckValidation.isValid && (
+                <div className="online-match-error" role="alert">
+                  目前牌組不合法，無法用於線上對戰。
+                </div>
+              )}
+
+              <div className="online-match-actions">
                 <button
                   type="button"
-                  disabled={!selectedDeck || !selectedDeckValidation?.isValid || !joinCode.trim()}
-                  onClick={() =>
-                    selectedDeck && online.joinRoom(joinCode.trim(), selectedDeck)
-                  }
+                  className="online-match-btn-primary"
+                  disabled={!selectedDeck || !selectedDeckValidation?.isValid}
+                  onClick={() => selectedDeck && online.createRoom(selectedDeck)}
                 >
-                  加入房間
+                  建立房間
                 </button>
+
+                <div className="online-match-join-row">
+                  <input
+                    className="online-match-input"
+                    value={joinCode}
+                    onChange={(event) => setJoinCode(event.target.value)}
+                    placeholder="輸入房號"
+                    aria-label="房號"
+                  />
+                  <button
+                    type="button"
+                    className="online-match-btn-secondary"
+                    disabled={
+                      !selectedDeck ||
+                      !selectedDeckValidation?.isValid ||
+                      !joinCode.trim()
+                    }
+                    onClick={() =>
+                      selectedDeck && online.joinRoom(joinCode.trim(), selectedDeck)
+                    }
+                  >
+                    加入房間
+                  </button>
+                </div>
               </div>
             </div>
-          </>
-        )}
+          )}
 
-        {online.status === 'connecting' && (
-          <p>連線中…</p>
-        )}
+          {online.status === 'connecting' && (
+            <div className="online-match-notice">
+              正在連線至伺服器…
+            </div>
+          )}
 
-        {online.status === 'waiting-for-opponent' && online.roomCode && (
-          <p>
-            房號：<strong>{online.roomCode}</strong>，請把房號分享給對手，等待對方加入…
-          </p>
-        )}
+          {online.status === 'waiting-for-opponent' && online.roomCode && (
+            <div className="online-match-notice">
+              <p>房號：<strong>{online.roomCode}</strong></p>
+              <p>請把房號分享給對手，等待對方加入…</p>
+            </div>
+          )}
 
-        {online.status === 'ended' && (
-          <p>
-            {online.matchEndedReason
-              ? `對局結束：${matchEndedReasonLabels[online.matchEndedReason] ?? online.matchEndedReason}`
-              : '對局已結束。'}
-          </p>
-        )}
+          {online.status === 'ended' && (
+            <div className="online-match-notice">
+              {online.matchEndedReason
+                ? `對局結束：${matchEndedReasonLabels[online.matchEndedReason] ?? online.matchEndedReason}`
+                : '對局已結束。'}
+            </div>
+          )}
 
-        {online.status === 'error' && (
-          <button type="button" onClick={onClose}>
-            返回
-          </button>
-        )}
-      </div>
+          {online.status === 'error' && (
+            <div className="online-match-actions">
+              <button
+                type="button"
+                className="online-match-btn-primary"
+                onClick={handleClose}
+              >
+                返回
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   )
 }
