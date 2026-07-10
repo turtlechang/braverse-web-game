@@ -2,7 +2,8 @@ import { WebSocketServer, type WebSocket } from 'ws'
 import { ConnectionManager } from './connection'
 import { createRoomStore } from './rooms'
 
-const PORT = Number(process.env.WS_PORT ?? 8787)
+// Render 等 PaaS 以 PORT 指定監聽埠；本機開發沿用 WS_PORT，預設 8787
+const PORT = Number(process.env.PORT ?? process.env.WS_PORT ?? 8787)
 
 const store = createRoomStore()
 const manager = new ConnectionManager(store)

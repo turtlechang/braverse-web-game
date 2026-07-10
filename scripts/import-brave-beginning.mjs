@@ -83,6 +83,26 @@ const normalizeOfficialCard = (rawCard, sourceUrl) => {
   }
 }
 
+// 官方資料的異圖版（@ 變體）偶爾缺少 level/hp 等數值（例：BS2-061@1 缺 card_level），
+// 規則上異圖與基礎版數值相同，從基礎版回填避免轉換失敗。
+const backfillVariantStats = (cards) => {
+  const baseByNumber = new Map(
+    cards.filter((card) => card.variant === null).map((card) => [card.baseCardNumber, card]),
+  )
+  return cards.map((card) => {
+    if (card.variant === null) return card
+    const base = baseByNumber.get(card.baseCardNumber)
+    if (!base) return card
+    return {
+      ...card,
+      level: card.level ?? base.level,
+      hp: card.hp ?? base.hp,
+      energyType: card.energyType ?? base.energyType,
+      color: card.color ?? base.color,
+    }
+  })
+}
+
 const createImportDocument = ({ cards, locale, sourceUrl, importedAt, series }) => ({
   schemaVersion: 1,
   source: {
@@ -122,9 +142,9 @@ const runImport = async () => {
   )
   console.log(`找到 ${matchingCards.length} 張 BRAVE BEGINNING 卡片`)
 
-  const normalizedCards = matchingCards
-    .map((card) => normalizeOfficialCard(card, sourceUrl))
-    .filter(Boolean)
+  const normalizedCards = backfillVariantStats(
+    matchingCards.map((card) => normalizeOfficialCard(card, sourceUrl)).filter(Boolean),
+  )
 
   const bs1Cards = normalizedCards.filter((c) => c.cardNumber.startsWith('BS1-'))
   const bs2Cards = normalizedCards.filter((c) => c.cardNumber.startsWith('BS2-'))

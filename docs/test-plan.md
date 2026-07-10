@@ -63,7 +63,7 @@
 
 ## 4. 待補（優先序）
 
-1. `validate:cards` 資料驗證 + CI 接入（roadmap P1）。
-2. 線上對戰雙視窗手動驗收腳本化（roadmap P1）。
+1. ~~`validate:cards` 資料驗證 + CI 接入~~ ✅ 2026-07-10 完成（`npm run validate:cards`，CI 第一步執行）。
+2. 線上對戰雙視窗手動驗收腳本化（roadmap P1；Render 部署後在公網執行）。
 3. 牌組編輯器 Playwright 流程（匯入錯誤 JSON 不 crash 的瀏覽器級驗證）。
 4. 手動 playtest checklist 正式文件化（roadmap P2，與 card-review-checklist 整併）。
