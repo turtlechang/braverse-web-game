@@ -19,4 +19,4 @@ wss.on('connection', (socket: WebSocket) => {
   })
 })
 
-console.log(`Braverse 線上對戰 server 已啟動,監聽 ws://localhost:${PORT}`)
+console.log(`Braverse 線上對戰 server 已啟動 (port ${PORT})`)
