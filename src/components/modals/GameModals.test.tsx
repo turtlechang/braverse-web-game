@@ -184,6 +184,44 @@ describe('TrapResponseModal', () => {
     }
     const onBack = vi.fn()
     const onSkip = vi.fn()
+    const onSelectTrap = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={null}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        onSelectTrap={onSelectTrap}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={onSkip}
+        onBack={onBack}
+      />,
+    ))
+
+    await click(findButton(container, 'Octo-Ink Spray'))
+
+    expect(onSelectTrap).toHaveBeenCalledWith(trap.instanceId)
+    expect(onBack).not.toHaveBeenCalled()
+    expect(onSkip).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+  })
+
+  it('returns from pay step to select step without calling onBack', async () => {
+    const trap: GameCard = {
+      id: 'ST4-020',
+      instanceId: 'st4-020-test',
+      name: 'Octo-Ink Spray',
+      type: 'trap',
+    }
+    const onBack = vi.fn()
+    const onSkip = vi.fn()
     const container = document.createElement('div')
     const root = createRoot(container)
     await act(() => root.render(
@@ -205,8 +243,9 @@ describe('TrapResponseModal', () => {
 
     await click(findButton(container, '返回'))
 
-    expect(onBack).toHaveBeenCalledOnce()
+    expect(onBack).not.toHaveBeenCalled()
     expect(onSkip).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('是否發動陷阱？')
 
     await act(() => root.unmount())
   })

@@ -514,6 +514,8 @@ export interface TrapResponseModalProps {
   onToggleHandToSupport?: (instanceId: string) => void
 }
 
+type TrapStep = 'select' | 'pay'
+
 export function TrapResponseModal({
   cards,
   selectedTrapId,
@@ -551,8 +553,38 @@ export function TrapResponseModal({
   onToggleHandToSupport,
 }: TrapResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
+  const [step, setStep] = useState<TrapStep>(() => selectedTrapId ? 'pay' : 'select')
   const selectedTrap = cards.find((card) => card.instanceId === selectedTrapId)
   const selectedTrapText = selectedTrap?.trap?.text ?? selectedTrap?.effectText
+
+  const hasCostPhase =
+    trapEnergyCostTotal > 0 ||
+    discardHandCost > 0 ||
+    battleCookieCost > 0 ||
+    supportToHandAmount > 0 ||
+    handToSupportAmount > 0
+
+  const handleSelectTrap = (instanceId: string) => {
+    onSelectTrap(instanceId)
+    if (instanceId) setStep('pay')
+  }
+
+  const handleBackToSelect = () => {
+    setStep('select')
+  }
+
+  const confirmDisabled =
+    !selectedTrapId ||
+    selectedDiscardHandIds.length !== discardHandCost ||
+    selectedBattleCookieIds.length !== battleCookieCost ||
+    (trapEnergyCostTotal > 0 &&
+      selectedPaymentIds.length !== trapEnergyCostTotal) ||
+    (supportToHandAmount > 0 &&
+      supportToHandCards.length > 0 &&
+      selectedSupportToHandIds.length !== supportToHandAmount) ||
+    (handToSupportAmount > 0 &&
+      handToSupportCards.length > 0 &&
+      selectedHandToSupportIds.length !== handToSupportAmount)
 
   if (minimized) {
     return (
@@ -589,42 +621,60 @@ export function TrapResponseModal({
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
-        {onBack && (
-          <button
-            type="button"
-            className="return-response"
-            onClick={onBack}
-            title="返回選擇回應方式"
-          >
-            <ChevronLeft aria-hidden="true" />
-            返回
-          </button>
-        )}
-        <span>攻擊宣告回應</span>
-        <h2>是否發動陷阱？</h2>
-        {attackerCard && (
-          <div className="trap-attacker-info">
-            <span>對方正在攻擊的餅乾：</span>
-            <CardFace card={attackerCard} />
-            <strong>{attackerCard.name}</strong>
-          </div>
-        )}
-        <p>每次攻擊最多發動一張陷阱。選擇卡牌後會顯示付款與目標。</p>
-        <div className="modal-card-options">
-          {cards.map((card) => (
+
+        {step === 'select' ? (
+          <>
+            {onBack && (
+              <button
+                type="button"
+                className="return-response"
+                onClick={onBack}
+                title="返回選擇回應方式"
+              >
+                <ChevronLeft aria-hidden="true" />
+                返回
+              </button>
+            )}
+            <span>攻擊宣告回應</span>
+            <h2>是否發動陷阱？</h2>
+            {attackerCard && (
+              <div className="trap-attacker-info">
+                <span>對方正在攻擊的餅乾：</span>
+                <CardFace card={attackerCard} />
+                <strong>{attackerCard.name}</strong>
+              </div>
+            )}
+            <p>每次攻擊最多發動一張陷阱。選擇卡牌後會顯示付款與目標。</p>
+            <div className="modal-card-options">
+              {cards.map((card) => (
+                <button
+                  type="button"
+                  className={selectedTrapId === card.instanceId ? 'is-selected' : ''}
+                  key={card.instanceId}
+                  onClick={() => handleSelectTrap(card.instanceId)}
+                >
+                  <CardFace card={card} selected={selectedTrapId === card.instanceId} />
+                  <span>{card.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="modal-actions">
+              <button type="button" onClick={onSkip}>不發動</button>
+            </div>
+          </>
+        ) : (
+          <>
             <button
               type="button"
-              className={selectedTrapId === card.instanceId ? 'is-selected' : ''}
-              key={card.instanceId}
-              onClick={() => onSelectTrap(card.instanceId)}
+              className="return-response"
+              onClick={handleBackToSelect}
+              title="返回選擇陷阱"
             >
-              <CardFace card={card} selected={selectedTrapId === card.instanceId} />
-              <span>{card.name}</span>
+              <ChevronLeft aria-hidden="true" />
+              返回
             </button>
-          ))}
-        </div>
-        {selectedTrapId && (
-          <div className="battle-response-summary">
+            <span>攻擊宣告回應</span>
+            <h2>支付費用與選擇目標</h2>
             {selectedTrap && (
               <div className="trap-selected-card-detail">
                 <CardFace card={selectedTrap} />
@@ -639,219 +689,259 @@ export function TrapResponseModal({
                 </div>
               </div>
             )}
-            {trapEnergyCostTotal > 0 && paymentCards.length > 0 ? (
-              <>
-                <strong>
-                  選擇 {trapEnergyCostTotal} 張支援卡支付能量
-                </strong>
-                <div className="modal-card-options compact trap-discard-options">
-                  {paymentCards.map((card) => (
-                    <button
-                      type="button"
-                      className={
-                        selectedPaymentIds.includes(card.instanceId)
-                          ? 'is-selected'
-                          : ''
-                      }
-                      key={card.instanceId}
-                      onClick={() => onTogglePayment?.(card.instanceId)}
-                    >
-                      <CardFace
-                        card={card}
-                        selected={selectedPaymentIds.includes(card.instanceId)}
-                      />
-                      <span>{card.name}</span>
-                    </button>
-                  ))}
+            {hasCostPhase ? (
+              <div className="trap-response-dual">
+                <div className="trap-response-col">
+                  <span className="trap-response-col-label">代價</span>
+                  {trapEnergyCostTotal > 0 && paymentCards.length > 0 && (
+                    <>
+                      <strong>
+                        選擇 {trapEnergyCostTotal} 張支援卡支付能量
+                      </strong>
+                      <div className="modal-card-options compact trap-discard-options">
+                        {paymentCards.map((card) => (
+                          <button
+                            type="button"
+                            className={
+                              selectedPaymentIds.includes(card.instanceId)
+                                ? 'is-selected'
+                                : ''
+                            }
+                            key={card.instanceId}
+                            onClick={() => onTogglePayment?.(card.instanceId)}
+                          >
+                            <CardFace
+                              card={card}
+                              selected={selectedPaymentIds.includes(card.instanceId)}
+                            />
+                            <span>{card.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <span>
+                        已選 {selectedPaymentIds.length}／{trapEnergyCostTotal}
+                      </span>
+                    </>
+                  )}
+                  {supportToHandAmount > 0 && supportToHandCards.length > 0 && (
+                    <>
+                      <strong>
+                        選擇 {supportToHandAmount} 張支援卡返回手牌
+                      </strong>
+                      <div className="modal-card-options compact trap-discard-options">
+                        {supportToHandCards.map((card) => (
+                          <button
+                            type="button"
+                            className={
+                              selectedSupportToHandIds.includes(card.instanceId)
+                                ? 'is-selected'
+                                : ''
+                            }
+                            key={card.instanceId}
+                            onClick={() => onToggleSupportToHand?.(card.instanceId)}
+                          >
+                            <CardFace
+                              card={card}
+                              selected={selectedSupportToHandIds.includes(card.instanceId)}
+                            />
+                            <span>{card.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <span>
+                        已選 {selectedSupportToHandIds.length}／{supportToHandAmount}
+                      </span>
+                    </>
+                  )}
+                  {handToSupportAmount > 0 && handToSupportCards.length > 0 && (
+                    <>
+                      <strong>
+                        選擇 {handToSupportAmount} 張手牌以橫置置入支援區
+                      </strong>
+                      <div className="modal-card-options compact trap-discard-options">
+                        {handToSupportCards.map((card) => (
+                          <button
+                            type="button"
+                            className={
+                              selectedHandToSupportIds.includes(card.instanceId)
+                                ? 'is-selected'
+                                : ''
+                            }
+                            key={card.instanceId}
+                            onClick={() => onToggleHandToSupport?.(card.instanceId)}
+                          >
+                            <CardFace
+                              card={card}
+                              selected={selectedHandToSupportIds.includes(card.instanceId)}
+                            />
+                            <span>{card.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <span>
+                        已選 {selectedHandToSupportIds.length}／{handToSupportAmount}
+                      </span>
+                    </>
+                  )}
+                  {discardHandCost > 0 && (
+                    <>
+                      <strong>選擇 {discardHandCost} 張手牌棄置</strong>
+                      <div className="modal-card-options compact trap-discard-options">
+                        {discardHandCards.map((card) => (
+                          <button
+                            type="button"
+                            className={
+                              selectedDiscardHandIds.includes(card.instanceId)
+                                ? 'is-selected'
+                                : ''
+                            }
+                            key={card.instanceId}
+                            onClick={() => onToggleDiscardHand(card.instanceId)}
+                          >
+                            <CardFace card={card} selected={selectedDiscardHandIds.includes(card.instanceId)} />
+                            <span>{card.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <span>
+                        已選 {selectedDiscardHandIds.length}／{discardHandCost}
+                      </span>
+                    </>
+                  )}
+                  {battleCookieCost > 0 && (
+                    <>
+                      <strong>選擇 {battleCookieCost} 張戰鬥區餅乾送入棄牌區</strong>
+                      <div className="modal-card-options compact">
+                        {battleCookieCostCards.map((card) => (
+                          <button
+                            type="button"
+                            className={
+                              selectedBattleCookieIds.includes(card.instanceId)
+                                ? 'is-selected'
+                                : ''
+                            }
+                            key={card.instanceId}
+                            onClick={() => onToggleBattleCookie?.(card.instanceId)}
+                          >
+                            <CardFace card={card} selected={selectedBattleCookieIds.includes(card.instanceId)} />
+                            <span>{card.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <span>
+                        已選 {selectedBattleCookieIds.length}／{battleCookieCost}
+                      </span>
+                    </>
+                  )}
                 </div>
-                <span>
-                  已選 {selectedPaymentIds.length}／{trapEnergyCostTotal}
-                </span>
-              </>
+                <div className="trap-response-col">
+                  <span className="trap-response-col-label">目標</span>
+                  {trapTargetCandidates.length > 0 && onSelectTrapTarget ? (
+                    <>
+                      <strong>選擇目標餅乾</strong>
+                      <div className="modal-card-options compact trap-target-options">
+                        {trapTargetCandidates.map((candidate) => (
+                          <button
+                            type="button"
+                            className={
+                              selectedTrapTargetId === candidate.card.instanceId
+                                ? 'is-selected'
+                                : ''
+                            }
+                            key={candidate.card.instanceId}
+                            onClick={() => onSelectTrapTarget(candidate.card.instanceId)}
+                          >
+                            <CardFace
+                              card={candidate.card}
+                              selected={selectedTrapTargetId === candidate.card.instanceId}
+                            />
+                            <span>{candidate.card.name}</span>
+                            {attackerCard &&
+                              candidate.card.instanceId === attackerCard.instanceId && (
+                                <small>（攻擊中）</small>
+                              )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <strong>效果目標</strong>
+                      <span>{targetCards.map((card) => card.name).join('、') || '不需目標'}</span>
+                    </>
+                  )}
+                  {allowEmptyTarget && (
+                    <label className="trap-target-toggle">
+                      <input
+                        type="checkbox"
+                        checked={emptyTargetActive ?? false}
+                        onChange={() => onToggleEmptyTarget?.()}
+                      />
+                      不選擇目標（略過傷害效果）
+                    </label>
+                  )}
+                </div>
+              </div>
             ) : (
               <>
-                <strong>付款支援卡</strong>
-                <span>{paymentCards.map((card) => card.name).join('、') || '不需能量'}</span>
+                {trapTargetCandidates.length > 0 && onSelectTrapTarget ? (
+                  <>
+                    <strong>選擇目標餅乾</strong>
+                    <div className="modal-card-options compact trap-target-options">
+                      {trapTargetCandidates.map((candidate) => (
+                        <button
+                          type="button"
+                          className={
+                            selectedTrapTargetId === candidate.card.instanceId
+                              ? 'is-selected'
+                              : ''
+                          }
+                          key={candidate.card.instanceId}
+                          onClick={() => onSelectTrapTarget(candidate.card.instanceId)}
+                        >
+                          <CardFace
+                            card={candidate.card}
+                            selected={selectedTrapTargetId === candidate.card.instanceId}
+                          />
+                          <span>{candidate.card.name}</span>
+                          {attackerCard &&
+                            candidate.card.instanceId === attackerCard.instanceId && (
+                              <small>（攻擊中）</small>
+                            )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <strong>效果目標</strong>
+                    <span>{targetCards.map((card) => card.name).join('、') || '不需目標'}</span>
+                  </>
+                )}
+                {allowEmptyTarget && (
+                  <label className="trap-target-toggle">
+                    <input
+                      type="checkbox"
+                      checked={emptyTargetActive ?? false}
+                      onChange={() => onToggleEmptyTarget?.()}
+                    />
+                    不選擇目標（略過傷害效果）
+                  </label>
+                )}
               </>
             )}
-            {supportToHandAmount > 0 && supportToHandCards.length > 0 && (
-              <>
-                <strong>
-                  選擇 {supportToHandAmount} 張支援卡返回手牌
-                </strong>
-                <div className="modal-card-options compact trap-discard-options">
-                  {supportToHandCards.map((card) => (
-                    <button
-                      type="button"
-                      className={
-                        selectedSupportToHandIds.includes(card.instanceId)
-                          ? 'is-selected'
-                          : ''
-                      }
-                      key={card.instanceId}
-                      onClick={() => onToggleSupportToHand?.(card.instanceId)}
-                    >
-                      <CardFace
-                        card={card}
-                        selected={selectedSupportToHandIds.includes(card.instanceId)}
-                      />
-                      <span>{card.name}</span>
-                    </button>
-                  ))}
-                </div>
-                <span>
-                  已選 {selectedSupportToHandIds.length}／{supportToHandAmount}
-                </span>
-              </>
-            )}
-            {handToSupportAmount > 0 && handToSupportCards.length > 0 && (
-              <>
-                <strong>
-                  選擇 {handToSupportAmount} 張手牌以橫置置入支援區
-                </strong>
-                <div className="modal-card-options compact trap-discard-options">
-                  {handToSupportCards.map((card) => (
-                    <button
-                      type="button"
-                      className={
-                        selectedHandToSupportIds.includes(card.instanceId)
-                          ? 'is-selected'
-                          : ''
-                      }
-                      key={card.instanceId}
-                      onClick={() => onToggleHandToSupport?.(card.instanceId)}
-                    >
-                      <CardFace
-                        card={card}
-                        selected={selectedHandToSupportIds.includes(card.instanceId)}
-                      />
-                      <span>{card.name}</span>
-                    </button>
-                  ))}
-                </div>
-                <span>
-                  已選 {selectedHandToSupportIds.length}／{handToSupportAmount}
-                </span>
-              </>
-            )}
-            {trapTargetCandidates.length > 0 && onSelectTrapTarget ? (
-              <>
-                <strong>選擇目標餅乾</strong>
-                <div className="modal-card-options compact trap-target-options">
-                  {trapTargetCandidates.map((candidate) => (
-                    <button
-                      type="button"
-                      className={
-                        selectedTrapTargetId === candidate.card.instanceId
-                          ? 'is-selected'
-                          : ''
-                      }
-                      key={candidate.card.instanceId}
-                      onClick={() => onSelectTrapTarget(candidate.card.instanceId)}
-                    >
-                      <CardFace
-                        card={candidate.card}
-                        selected={selectedTrapTargetId === candidate.card.instanceId}
-                      />
-                      <span>{candidate.card.name}</span>
-                      {attackerCard &&
-                        candidate.card.instanceId === attackerCard.instanceId && (
-                          <small>（攻擊中）</small>
-                        )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <>
-                <strong>效果目標</strong>
-                <span>{targetCards.map((card) => card.name).join('、') || '不需目標'}</span>
-              </>
-            )}
-            {discardHandCost > 0 && (
-              <>
-                <strong>選擇 {discardHandCost} 張手牌棄置</strong>
-                <div className="modal-card-options compact trap-discard-options">
-                  {discardHandCards.map((card) => (
-                    <button
-                      type="button"
-                      className={
-                        selectedDiscardHandIds.includes(card.instanceId)
-                          ? 'is-selected'
-                          : ''
-                      }
-                      key={card.instanceId}
-                      onClick={() => onToggleDiscardHand(card.instanceId)}
-                    >
-                      <CardFace card={card} selected={selectedDiscardHandIds.includes(card.instanceId)} />
-                      <span>{card.name}</span>
-                    </button>
-                  ))}
-                </div>
-                <span>
-                  已選 {selectedDiscardHandIds.length}／{discardHandCost}
-                </span>
-              </>
-            )}
-            {battleCookieCost > 0 && (
-              <>
-                <strong>選擇 {battleCookieCost} 張戰鬥區餅乾送入棄牌區</strong>
-                <div className="modal-card-options compact">
-                  {battleCookieCostCards.map((card) => (
-                    <button
-                      type="button"
-                      className={
-                        selectedBattleCookieIds.includes(card.instanceId)
-                          ? 'is-selected'
-                          : ''
-                      }
-                      key={card.instanceId}
-                      onClick={() => onToggleBattleCookie?.(card.instanceId)}
-                    >
-                      <CardFace card={card} selected={selectedBattleCookieIds.includes(card.instanceId)} />
-                      <span>{card.name}</span>
-                    </button>
-                  ))}
-                </div>
-                <span>
-                  已選 {selectedBattleCookieIds.length}／{battleCookieCost}
-                </span>
-              </>
-            )}
-            {allowEmptyTarget && (
-              <label className="trap-target-toggle">
-                <input
-                  type="checkbox"
-                  checked={emptyTargetActive ?? false}
-                  onChange={() => onToggleEmptyTarget?.()}
-                />
-                不選擇目標（略過傷害效果）
-              </label>
-            )}
-          </div>
+            <div className="modal-actions modal-actions-sticky">
+              <button type="button" onClick={onSkip}>不發動</button>
+              <button
+                type="button"
+                disabled={confirmDisabled}
+                onClick={onConfirm}
+              >
+                支付並發動
+              </button>
+            </div>
+          </>
         )}
-        <div className="modal-actions">
-          <button type="button" onClick={onSkip}>不發動</button>
-          <button
-            type="button"
-            disabled={
-              !selectedTrapId ||
-              selectedDiscardHandIds.length !== discardHandCost ||
-              selectedBattleCookieIds.length !== battleCookieCost ||
-              (trapEnergyCostTotal > 0 &&
-                selectedPaymentIds.length !== trapEnergyCostTotal) ||
-              (supportToHandAmount > 0 &&
-                supportToHandCards.length > 0 &&
-                selectedSupportToHandIds.length !== supportToHandAmount) ||
-              (handToSupportAmount > 0 &&
-                handToSupportCards.length > 0 &&
-                selectedHandToSupportIds.length !== handToSupportAmount)
-            }
-            onClick={onConfirm}
-          >
-            支付並發動
-          </button>
-        </div>
       </section>
     </div>
   )

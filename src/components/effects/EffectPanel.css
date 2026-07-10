@@ -1,17 +1,15 @@
 .effect-panel {
-  position: fixed;
-  z-index: 40;
-  right: 18px;
-  top: 94px;
-  width: min(330px, calc(100vw - 36px));
-  max-height: calc(100vh - 112px);
-  padding: 18px;
-  border: 1px solid rgba(113, 236, 255, 0.72);
+  position: relative;
+  width: min(750px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  padding: 28px;
+  padding-bottom: 0;
+  overflow: hidden;
+  border: 2px solid rgba(105, 220, 255, 0.68);
   border-radius: 8px;
-  background: rgba(3, 20, 53, 0.95);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(12px);
-  overflow-y: auto;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  color: #fff;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.54);
 }
 
 .effect-panel.is-complete {
@@ -30,9 +28,52 @@
   }
 }
 
+.effect-panel-dock {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid rgba(105, 220, 255, 0.68);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  color: #fff;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.effect-panel-dock span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.effect-panel-dock strong {
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.effect-panel-dock small {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.effect-panel-dock svg {
+  width: 18px;
+  flex-shrink: 0;
+}
+
 .effect-panel > span {
   color: #71e9ff;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 900;
 }
 
@@ -90,7 +131,7 @@
   white-space: nowrap;
 }
 
-.effect-panel > p,
+.effect-panel p,
 .effect-panel li {
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.75rem;
@@ -153,6 +194,29 @@
   width: 18px;
 }
 
+.effect-panel .minimize-reveal {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 0;
+  padding: 4px 10px;
+  border: 1px solid rgba(113, 233, 255, 0.6);
+  border-radius: 5px;
+  background: rgba(3, 20, 53, 0.82);
+  color: #fff;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.effect-panel .minimize-reveal svg {
+  width: 15px;
+}
+
 .effect-panel .phase-progress {
   display: flex;
   align-items: center;
@@ -201,14 +265,14 @@
 }
 
 .effect-panel .effect-candidates {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  display: grid;
+  gap: 6px;
   margin: 6px 0;
 }
 
 .effect-panel .effect-candidates button {
   width: 100%;
+  min-width: 0;
   min-height: 74px;
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
@@ -259,6 +323,72 @@
   color: #ff6b6b;
 }
 
+.effect-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 80px;
+}
+
+.effect-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+.effect-panel-interaction-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.effect-panel-interaction-grid.cols-3 {
+  grid-template-columns: minmax(180px, 0.9fr) minmax(180px, 0.9fr) minmax(240px, 1.2fr);
+}
+
+.effect-panel-interaction-grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.effect-panel-interaction-grid.cols-1 {
+  grid-template-columns: 1fr;
+}
+
+.effect-panel-col {
+  min-width: 0;
+}
+
+.effect-panel-col .effect-candidates {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.effect-panel-col-label {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.effect-panel-sticky-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  padding: 12px 0 4px;
+  background: linear-gradient(135deg, #071c44, #123f82);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 1;
+}
+
+.effect-panel-sticky-actions button {
+  flex: 1;
+}
+
 .effect-panel ol {
   max-height: 112px;
   margin: 12px 0 0;
@@ -267,11 +397,26 @@
   border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-@media (max-width: 680px) {
+@media (max-width: 780px) {
   .effect-panel {
-    top: 136px;
-    right: 8px;
-    width: min(300px, calc(100vw - 16px));
-    max-height: calc(100vh - 154px);
+    width: min(360px, calc(100vw - 16px));
+    max-height: calc(100vh - 32px);
+    padding: 18px;
+    padding-bottom: 0;
+  }
+
+  .effect-panel-interaction-grid,
+  .effect-panel-interaction-grid.cols-2,
+  .effect-panel-interaction-grid.cols-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .effect-panel-sticky-actions {
+    flex-direction: column;
+  }
+
+  .effect-panel-dock {
+    bottom: 12px;
+    right: 12px;
   }
 }
