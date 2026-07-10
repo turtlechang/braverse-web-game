@@ -769,7 +769,6 @@ const createStepRandom = (
   state: GameState,
 ): (() => number) => {
   const entropy =
-    ((state.commandLog?.length ?? 0) * 2654435761) ^
     (state.turnNumber * 97) ^
     (state.players['player-one'].hand.length * 13) ^
     (state.players['player-two'].hand.length * 31) ^
