@@ -136,17 +136,4 @@ npm run cards:import:purple-sample
 
 ## 📝 更新日誌
 
-| 日期 | 概要 |
-|---|---|
-| 2026-07-08 | 🐛 陷阱 support-to-hand/hand-to-support 修正 — 修復 Bean 牌組陷阱卡造成卡住的 bug；AI 改進支援放置能量稀缺優先、攻擊選擇一擊擊殺優先；新增 6 組 BS2 對局分析文件 |
-| 2026-07-08 | 🔧 BS1-006 修正 — after-damage 觸發改為僅限戰鬥傷害，效果傷害不再觸發 |
-| 2026-07-08 | 🔧 BS1-037 修正 — 移除 sourceAsEnergy 費用減少、目標改選 HP 最多、新增 hand-to-support 效果型別與執行 |
-| 2026-07-07 | 🃏 AI 預設牌組 — 新增第二彈紅/黃/豆子/藍/紫 AI 牌組選項；補強牌庫檢視縮小／返回、AI 支援階段填能與第二彈 5×5 對局矩陣回歸；記錄第二彈黃對紅 50 場策略訓練 |
-| 2026-07-07 | 🔧 BS1-037/054 修正 — MIX 區域顏色解析、BS1-054 OnPlay 廢棄判定、sourceAsEnergy 支付與 AI 決策聯動 |
-| 2026-07-06 | ✅ Phase 5 CI — 修正線上對戰 lint 失敗，維持 test/lint/build 通過 |
-| 2026-07-04 | 🧠 AI 分級 — 新增 Lv.1/Lv.2、`PlayerView` 視角過濾器與 Lv.3 評估式 AI |
-| 2026-07-04 | 🔗 指令層整合 — 擴充 `GameCommand`、加入 `commandLog` / replay，並補完牌組管理 |
-| 2026-07-03 | 🖱️ Playwright 驗證 — 修正支援卡點擊、藍牌驗證斷言與瀏覽器測試流程 |
-| 2026-07-02 | 🟥 BS2 紅牌 — 完成 BS2-006/007 非餅乾效果、HP-to-trash 與紅色手牌代價 |
-| 2026-07-01 | 🧩 BS1/BS2 效果 — 補齊紅色卡牌、非餅乾效果、after-damage 與 attack-effect 控制權 |
-| 2026-06-30 | 🃏 BS1 匯入 — 建立 Brave Beginning Phase 1/2 轉接與測試基線 |
+變更記錄已移至 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。
