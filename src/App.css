@@ -136,6 +136,29 @@ button {
   background: linear-gradient(180deg, #29a8cf, #0d68aa) !important;
 }
 
+.main-menu-create-first {
+  font-size: 1.05rem;
+  min-height: 48px;
+}
+
+.main-menu-disabled-cta {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.main-menu-disabled-reason {
+  margin: 0;
+  padding: 0 4px;
+  color: rgba(223, 239, 255, 0.58);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.main-menu-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
 .main-menu-status-grid {
   grid-area: status;
   display: grid;

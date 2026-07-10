@@ -1756,3 +1756,330 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* === 線上對戰面板 === */
+
+.online-match-panel {
+  position: relative;
+  width: min(520px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid rgba(105, 220, 255, 0.68);
+  border-radius: 10px;
+  background: linear-gradient(145deg, #06183e, #154d8f);
+  color: #fff;
+  box-shadow:
+    0 0 60px rgba(0, 160, 255, 0.18),
+    0 24px 80px rgba(0, 0, 0, 0.62);
+}
+
+.online-match-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 12px;
+  flex-shrink: 0;
+}
+
+.online-match-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.online-match-close {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(174, 220, 255, 0.48);
+  border-radius: 50%;
+  background: rgba(3, 20, 53, 0.72);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.online-match-close:hover {
+  background: rgba(30, 80, 150, 0.8);
+  border-color: rgba(174, 220, 255, 0.78);
+}
+
+.online-match-close:focus-visible {
+  outline: 2px solid #71e9ff;
+  outline-offset: 2px;
+}
+
+.online-match-close:active {
+  background: rgba(50, 110, 190, 0.9);
+}
+
+.online-match-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.online-match-body {
+  padding: 4px 24px 24px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.online-match-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.online-match-status-label {
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.online-match-status-value {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.online-match-status-value.is-idle {
+  background: rgba(113, 233, 255, 0.12);
+  color: #71e9ff;
+}
+
+.online-match-status-value.is-connecting {
+  background: rgba(255, 230, 117, 0.14);
+  color: #ffe675;
+  animation: online-match-pulse 1.2s ease-in-out infinite;
+}
+
+.online-match-status-value.is-waiting-for-opponent {
+  background: rgba(255, 230, 117, 0.14);
+  color: #ffe675;
+  animation: online-match-pulse 1.2s ease-in-out infinite;
+}
+
+.online-match-status-value.is-in-progress {
+  background: rgba(80, 220, 100, 0.14);
+  color: #6ce68c;
+}
+
+.online-match-status-value.is-ended {
+  background: rgba(160, 170, 190, 0.14);
+  color: #b2bccc;
+}
+
+.online-match-status-value.is-error {
+  background: rgba(255, 100, 100, 0.16);
+  color: #ff8a8a;
+}
+
+@keyframes online-match-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .online-match-status-value.is-connecting,
+  .online-match-status-value.is-waiting-for-opponent {
+    animation: none;
+  }
+}
+
+.online-match-error {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 130, 130, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 60, 60, 0.1);
+  color: #ffb4b4;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.online-match-idle {
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.online-match-field {
+  display: grid;
+  gap: 6px;
+}
+
+.online-match-field span {
+  color: #71e9ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.online-match-field select,
+.online-match-input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(113, 233, 255, 0.35);
+  border-radius: 6px;
+  background: rgba(3, 20, 53, 0.65);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.online-match-field select:focus-visible,
+.online-match-input:focus-visible {
+  outline: none;
+  border-color: #71e9ff;
+  box-shadow: 0 0 0 3px rgba(113, 233, 255, 0.18);
+}
+
+.online-match-field select:hover,
+.online-match-input:hover {
+  border-color: rgba(113, 233, 255, 0.6);
+}
+
+.online-match-input::placeholder {
+  color: #4a6a8a;
+}
+
+.online-match-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.online-match-join-row {
+  display: flex;
+  gap: 10px;
+}
+
+.online-match-join-row .online-match-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.online-match-btn-primary,
+.online-match-btn-secondary {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    opacity 0.15s,
+    border-color 0.15s;
+}
+
+.online-match-btn-primary {
+  border: 1px solid #ffe675;
+  background: linear-gradient(180deg, #27b8dd, #0875bd);
+  color: #fff;
+}
+
+.online-match-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #33c8ed, #0a83ca);
+}
+
+.online-match-btn-primary:focus-visible:not(:disabled) {
+  outline: 2px solid #ffe675;
+  outline-offset: 2px;
+}
+
+.online-match-btn-primary:active:not(:disabled) {
+  background: linear-gradient(180deg, #1ca0c2, #0762a0);
+}
+
+.online-match-btn-primary:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.online-match-btn-secondary {
+  border: 1px solid rgba(113, 233, 255, 0.45);
+  background: rgba(7, 33, 75, 0.85);
+  color: #fff;
+  white-space: nowrap;
+}
+
+.online-match-btn-secondary:hover:not(:disabled) {
+  background: rgba(20, 76, 138, 0.9);
+  border-color: rgba(113, 233, 255, 0.7);
+}
+
+.online-match-btn-secondary:focus-visible:not(:disabled) {
+  outline: 2px solid #71e9ff;
+  outline-offset: 2px;
+}
+
+.online-match-btn-secondary:active:not(:disabled) {
+  background: rgba(40, 100, 170, 0.95);
+}
+
+.online-match-btn-secondary:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+
+.online-match-notice {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.45);
+  text-align: center;
+}
+
+.online-match-notice p {
+  margin: 6px 0;
+  color: #bbdaf3;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.online-match-notice strong {
+  color: #ffe675;
+  font-size: 1.15rem;
+  letter-spacing: 0.05em;
+}
+
+@media (max-height: 720px) {
+  .online-match-panel {
+    max-height: calc(100vh - 32px);
+  }
+
+  .online-match-header {
+    padding: 14px 20px 10px;
+  }
+
+  .online-match-body {
+    padding: 0 20px 18px;
+  }
+}

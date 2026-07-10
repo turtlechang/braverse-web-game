@@ -20,23 +20,25 @@
 
 ## 2. 改進項（依優先序，2026-07-11 校正）
 
-### P0-1 線上對戰彈窗修復（最高）
+### P0-1 線上對戰彈窗修復（最高）實作完成；正式瀏覽器驗收待補
 
 - 來源：[UI 審查 §5](ui-audit-2026-07-11.md#5-線上對戰彈窗控制項重疊--未樣式化p0)
 - 問題：
-  - 控制項重疊：大廳列表與「建立房間」按鈕在 1280×720 下重疊。
-  - 未樣式化：房間列表項目無邊框/背景/hover 效果；加入按鈕與房間名稱擠在同一行。
-  - 列表溢出：房間數量多時內容超出 modal 高度，無捲軸管理。
+  - 控制項重疊與未樣式化：既有 modal 使用未定義的 `modal-panel`/`modal-header` 類別，控制項排列擁擠無樣式節奏。
   - 關閉按鈕（X）尺寸過小（~20×20px），hover 區域不足。
-- 方案：列表加捲軸容器與固定最大高度、項目加卡片式邊框/背景與 hover 效果、按鈕與文字分離、關閉按鈕加大至 32×32px 以上。
-- 驗收：1280×720 與 1366×768 兩解析度不重疊；3+ 房間仍可正常捲動；所有可點擊項目有 hover/active 狀態。
+  - 內容區無捲軸管理，高度不足時可能溢出。
+- 方案：以專屬 `.online-match-panel` 深藍電競科幻 modal 取代未樣式化面板；關閉按鈕加大至 32×32px 以上；內容區 `overflow-y: auto` 支援捲動；不含房間列表功能（現有協定僅支援建立房間與依房號加入）。
+- 實作：`OnlineMatchPanel.tsx` 使用專屬 `.online-match-*` 類別；`GameModals.css` 加入完整樣式（panel、header、body、form control、按鈕 primary/secondary、狀態色 badge、hover/focus-visible/active/disabled、pulse 動畫、高度媒體查詢）。
+- 已驗收（Vitest）：建立房間、輸入／加入房號、等待房號、錯誤訊息與返回按鈕、關閉/leave 行為；`OnlineMatchPanel.test.tsx`（15 項 mock hook 測試，含 idle/waiting/error/close/dialog/label/connecting 路徑）。
+- **待補**：1280×720 與 1366×768 正式瀏覽器驗證（含可點擊狀態），需有合法本機自訂牌組或 Render 環境後補做。目前僅通過單元測試與靜態樣式審查。
 
-### P0-2 主選單空狀態引導（最高）
+### P0-2 主選單空狀態引導（最高）✅ 已完成
 
 - 來源：[UI 審查 §1](ui-audit-2026-07-11.md#1-主選單無自訂牌組時主-cta-與下一步可理解性)
 - 問題：無自訂牌組時尚無明確引導玩家前往「建立牌組」的視覺線索，主 CTA 分散。
 - 方案：無自訂牌組時將「牌組編輯器」入口提升為視覺主 CTA（放大/置中/輔助文案），並保留快速開始的預設牌組作為次要選項。
-- 驗收：首次進入主選單時，玩家一眼知道下一步是「建立牌組」；存在自訂牌組後自動切回以「快速開始」為優先。
+- 實作：`MainMenu.tsx` 依 `decks.length` 條件切換按鈕配置；空狀態時「建立第一副牌組」為 primary CTA、「對戰入口」disabled + 解釋文字、「線上對戰」disabled；有牌組時還原以「對戰入口」為 primary CTA。`App.css` 加入 `.main-menu-create-first`、`.main-menu-disabled-cta`、`.main-menu-disabled-reason` 樣式。
+- 驗收依據：已通過 4 項 MainMenu Vitest；已在目前 734×698 本機瀏覽器確認無自訂牌組空狀態，1280×720、1366×768 與有牌組實機驗證仍待補。
 
 ---
 

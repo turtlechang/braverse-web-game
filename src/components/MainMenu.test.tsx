@@ -188,3 +188,124 @@ describe('MainMenu AI opponent options', () => {
     await act(() => root.unmount())
   })
 })
+
+describe('MainMenu empty deck state', () => {
+  it('shows 建立第一副牌組 as primary CTA when no decks exist', async () => {
+    const onCreateDeck = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() =>
+      root.render(
+        <MainMenu
+          decks={[]}
+          selectedDeckId={null}
+          selectedValidation={null}
+          battleError={null}
+          aiDeckChoice="random"
+          aiLevel={2}
+          onSelectAiDeck={() => undefined}
+          onSelectAiLevel={() => undefined}
+          onSelectDeck={() => undefined}
+          onStartBattle={() => undefined}
+          onOpenOnlineMatch={() => undefined}
+          onOpenTestScenario={() => undefined}
+          onCreateDeck={onCreateDeck}
+          onEditDeck={() => undefined}
+          onDuplicateDeck={() => undefined}
+          onDeleteDeck={() => undefined}
+          onRefreshDecks={() => undefined}
+        />,
+      ),
+    )
+
+    const createButton = [...container.querySelectorAll('button')].find(
+      (btn) => btn.textContent?.includes('建立第一副牌組'),
+    )
+    expect(createButton).toBeDefined()
+    expect(
+      createButton!.classList.contains('main-menu-primary'),
+    ).toBe(true)
+
+    await act(() => {
+      createButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(onCreateDeck).toHaveBeenCalledTimes(1)
+
+    await act(() => root.unmount())
+  })
+
+  it('disables 對戰入口 and 線上對戰 when no decks exist', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() =>
+      root.render(
+        <MainMenu
+          decks={[]}
+          selectedDeckId={null}
+          selectedValidation={null}
+          battleError={null}
+          aiDeckChoice="random"
+          aiLevel={2}
+          onSelectAiDeck={() => undefined}
+          onSelectAiLevel={() => undefined}
+          onSelectDeck={() => undefined}
+          onStartBattle={() => undefined}
+          onOpenOnlineMatch={() => undefined}
+          onOpenTestScenario={() => undefined}
+          onCreateDeck={() => undefined}
+          onEditDeck={() => undefined}
+          onDuplicateDeck={() => undefined}
+          onDeleteDeck={() => undefined}
+          onRefreshDecks={() => undefined}
+        />,
+      ),
+    )
+
+    const battleBtn = [...container.querySelectorAll('button')].find(
+      (btn) => btn.textContent?.includes('對戰入口'),
+    )
+    expect(battleBtn).toBeDefined()
+    expect(battleBtn!.disabled).toBe(true)
+
+    const onlineBtn = [...container.querySelectorAll('button')].find(
+      (btn) => btn.textContent?.includes('線上對戰'),
+    )
+    expect(onlineBtn).toBeDefined()
+    expect(onlineBtn!.disabled).toBe(true)
+
+    expect(container.textContent).toContain('尚無自訂牌組')
+
+    await act(() => root.unmount())
+  })
+
+  it('shows 對戰入口 as primary CTA when decks exist', async () => {
+    const { container, root } = await renderMenu([validDeck])
+
+    const battleButton = [...container.querySelectorAll('button')].find(
+      (btn) => btn.textContent?.includes('對戰入口'),
+    )
+    expect(battleButton).toBeDefined()
+    expect(
+      battleButton!.classList.contains('main-menu-primary'),
+    ).toBe(true)
+    expect(battleButton!.disabled).toBe(false)
+
+    expect(
+      container.querySelector('.main-menu-disabled-reason'),
+    ).toBeNull()
+
+    await act(() => root.unmount())
+  })
+
+  it('keeps 線上對戰 enabled when decks exist', async () => {
+    const { container, root } = await renderMenu([validDeck])
+
+    const onlineButton = [...container.querySelectorAll('button')].find(
+      (btn) => btn.textContent?.includes('線上對戰'),
+    )
+    expect(onlineButton).toBeDefined()
+    expect(onlineButton!.disabled).toBe(false)
+
+    await act(() => root.unmount())
+  })
+})
