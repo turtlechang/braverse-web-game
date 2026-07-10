@@ -11,7 +11,7 @@
 
 | 面向 | 狀態 | 摘要 |
 |---|---|---|
-| 規則引擎 | ✅ 成熟 | `src/game/` 純函式引擎，typed GameCommand 指令層 + commandLog + replay，具完整遊戲邏輯測試（非永久門檻，待 npm test 確認） |
+| 規則引擎 | ✅ 成熟 | `src/game/` 純函式引擎，typed GameCommand 指令層 + commandLog + replay，91 個測試檔、1469 項測試（目前基線非永久門檻） |
 | 卡牌資料庫 | ⚠️ 部分 | 官方 JSON 匯入管線完整（BS1/BS2 + 五色起始），但缺 `validate:cards` script 與自有 card schema |
 | 牌組編輯器 | ✅ 完成 | 60 張 / 同卡 4 張 / ≥1 餅乾 / FLIP ≤16 驗證、匯入匯出、localStorage 版本化保存 |
 | AI 對戰 | ✅ 完成 | Lv.1（隨機）/ Lv.2（啟發式）/ Lv.3（評估式）/ Lv.4（兩層前瞻）皆已實作，附訓練文件與勝率門檻測試 |
@@ -49,7 +49,7 @@
 |---|---|
 | `npm run lint` | ✅ eslint 10（flat config） |
 | `npm run typecheck` | ✅ 2026-07-10 補齊：`tsc -b && server:typecheck`（app + server） |
-| `npm run test` | ✅ vitest，全數通過（非永久門檻，待 npm test 確認）（見 §5） |
+| `npm run test` | ✅ vitest，1469 項通過（91 檔，見 §5） |
 | `npm run build` | ✅ tsc -b + vite build |
 | `npm run validate:cards` | ✅ 2026-07-10 補齊：`scripts/validate-cards.ts`，已接入 CI |
 | `vercel.json` | ✅ 2026-07-10 補齊：SPA rewrite（assets 除外） |
@@ -73,7 +73,7 @@
 ## 5. 驗證結果（2026-07-10 實測）
 
 - `npm run lint`：✅ 通過
-- `npm test`：✅ 全數通過（非永久門檻，待 npm test 確認）
+- `npm test`：✅ 91 個測試檔、1469 項測試全數通過（非永久門檻）
 - `npm run build`：✅ `tsc -b` + `vite build` 成功
 - ⚠️ build 警告：主 bundle 847 kB（gzip 176 kB）超過 500 kB 建議值；未來可考慮 dynamic import 分割（牌組編輯器、線上對戰模組是天然切點），非急迫。
 - 附註：CI（GitHub Actions）於 main 分支同樣執行以上三項。
