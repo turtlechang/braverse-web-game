@@ -96,6 +96,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已完成 Vercel Dashboard 匯入 GitHub repo：Framework Preset Vite、Build Command `npm run build`、Output Directory `dist`、Install Command `npm ci`、Node.js Version 22。
 - 不啟用 main branch protection（個人開發者，不要求 CI 通過 + review）。
 - 待用第一支 PR 驗證 Vercel Preview 網址可正常載入並操作對局。
+- 待執行：Render 公網雙視窗對局驗收（需開 Render 帳號，見 docs/online-server-hosting.md §4）；P1 程式面已就緒（PORT 支援、冷啟動提示），Dashboard 操作與公網驗收待完成。
 - 後續新 Braverse 任務優先用 `braverse-workflow` 模板開短 thread，依任務類型選擇驗證層級，再視需要載入 `develop-braverse` 的規則、派工或 Git 參考。
 
 ## 開發指令
