@@ -93,6 +93,6 @@
 ## 7. 建置與測試
 
 - Vite 8 + TypeScript 6（`tsc -b` 複合建置：app + node 兩個 tsconfig；server 獨立 `server:typecheck`）。
-- vitest 4：88 個測試檔、1449 項測試，與原始碼同目錄放置（`*.test.ts(x)`）。
+- vitest 4：目前基線 89 個測試檔、1455 項測試，與原始碼同目錄放置（`*.test.ts(x)`）。
 - Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度 AI 對局 smoke）、`npm run test:blue:browser`（藍牌效果流程）；手動 GitHub Actions workflow。
 - CI：`.github/workflows/ci.yml`（PR + main push：test → lint → build）。

@@ -1,4 +1,5 @@
 import type { DeckChoice, TurnPhase } from '../game'
+import type { OnlineMatchStatus } from '../hooks/useOnlineMatch'
 
 export const phaseLabels: Record<TurnPhase, string> = {
   active: '活躍階段',
@@ -28,4 +29,19 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs2-blue': '第二彈藍色',
   'bs2-purple': '第二彈紫色',
   custom: '自訂',
+}
+
+export const onlineMatchStatusLabels: Record<OnlineMatchStatus, string> = {
+  idle: '待機中',
+  connecting: '連線中',
+  'waiting-for-opponent': '等待對手',
+  'in-progress': '對戰中',
+  ended: '已結束',
+  error: '錯誤',
+}
+
+export const matchEndedReasonLabels: Record<string, string> = {
+  victory: '勝利',
+  defeat: '敗北',
+  'opponent-disconnected': '對手已離線',
 }

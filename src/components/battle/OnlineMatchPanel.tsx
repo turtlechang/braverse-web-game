@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { CustomDeck } from '../../game'
 import { validateCustomDeck } from '../../game'
 import { useOnlineMatch } from '../../hooks/useOnlineMatch'
+import { onlineMatchStatusLabels, matchEndedReasonLabels } from '../gameUiLabels'
 import { OnlineBattleView } from './OnlineBattleView'
 
 /**
@@ -26,7 +27,11 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
     : null
 
   const handleClose = () => {
-    if (online.status !== 'idle') {
+    if (
+      online.status === 'connecting' ||
+      online.status === 'waiting-for-opponent' ||
+      online.status === 'in-progress'
+    ) {
       online.leave()
     }
     onClose()
@@ -59,7 +64,7 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
           </button>
         </div>
 
-        <p>狀態：{online.status}</p>
+        <p>狀態：{onlineMatchStatusLabels[online.status]}</p>
         {online.errorMessage && <p style={{ color: '#e05252' }}>{online.errorMessage}</p>}
 
         {online.status === 'idle' && (
@@ -113,7 +118,7 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
         )}
 
         {online.status === 'connecting' && (
-          <p>連線中…（伺服器若正從閒置狀態喚醒，最多可能需要約 1 分鐘，請稍候）</p>
+          <p>連線中…</p>
         )}
 
         {online.status === 'waiting-for-opponent' && online.roomCode && (
@@ -124,9 +129,9 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
 
         {online.status === 'ended' && (
           <p>
-            {online.matchEndedReason === 'opponent-disconnected'
-              ? '對手已離線，對局結束。'
-              : `對局結束：${online.matchEndedReason}`}
+            {online.matchEndedReason
+              ? `對局結束：${matchEndedReasonLabels[online.matchEndedReason] ?? online.matchEndedReason}`
+              : '對局已結束。'}
           </p>
         )}
 
