@@ -48,11 +48,11 @@
 | 主計畫要求 | 現況 |
 |---|---|
 | `npm run lint` | ✅ eslint 10（flat config） |
-| `npm run typecheck` | ❌ 無獨立 script，但 `npm run build` = `tsc -b && vite build` 已含全量型別檢查；server 另有 `server:typecheck` |
+| `npm run typecheck` | ✅ 2026-07-10 補齊：`tsc -b && server:typecheck`（app + server） |
 | `npm run test` | ✅ vitest，1449 項通過（見 §5） |
 | `npm run build` | ✅ tsc -b + vite build |
-| `npm run validate:cards` | ❌ 不存在（差距，見 §6） |
-| `vercel.json` | ❌ 不存在（SPA deep link 404 風險；目前為單頁 state 切換、無 router，風險暫低） |
+| `npm run validate:cards` | ✅ 2026-07-10 補齊：`scripts/validate-cards.ts`，已接入 CI |
+| `vercel.json` | ✅ 2026-07-10 補齊：SPA rewrite（assets 除外） |
 | CI | ✅ PR + main push 觸發 test/lint/build；另有手動 Playwright workflow |
 | Vercel | ⚠️ README 記載 Dashboard 已匯入（Vite preset、Node 22）；待 PR preview 實測記錄 |
 
@@ -82,7 +82,7 @@
 
 1. **IP 聲明缺失（高）**：README、網站 footer 皆無「非官方粉絲研究」聲明；已部署 Vercel 則為公開網站。→ ✅ 已解決（2026-07-10）：README 與主選單 footer 皆已加聲明。
 2. **官方素材公開部署（高）**：卡圖熱連結 `cookierunbraverse.com`、卡背/能量圖示在 `public/`。→ 已決策（2026-07-10）：維持熱連結、不做 PUBLIC_MODE，收到異議再處理。詳見 [ip-and-asset-policy.md](ip-and-asset-policy.md)。
-3. **無 `validate:cards`（中）**：卡牌資料錯誤只能靠轉接層測試攔截；缺獨立驗證 script（必填欄位、重複 id、effectId 對應）。
+3. **無 `validate:cards`（中）**：→ ✅ 已解決（2026-07-10）：`npm run validate:cards` + CI；首跑即發現 BS2-061@1 缺 level 資料缺陷並修復。
 4. **UI 未全面走指令層（中）**：攻擊宣告與多段效果流程直呼規則函式、補記 log，replay 完整性依賴補記正確。
 5. **Vercel 與 ws server 架構分裂（中）**：Vercel 只能承載前端。→ 已決策（2026-07-10）：採 Render 免費層，評估見 [online-server-hosting.md](online-server-hosting.md)；部署執行待辦。
 6. **缺獨立 CHANGELOG 與 release 流程（低）**：README 更新日誌表格已運作，但不利對外版本化。

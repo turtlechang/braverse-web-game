@@ -112,7 +112,9 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
           </>
         )}
 
-        {online.status === 'connecting' && <p>連線中…</p>}
+        {online.status === 'connecting' && (
+          <p>連線中…（伺服器若正從閒置狀態喚醒，最多可能需要約 1 分鐘，請稍候）</p>
+        )}
 
         {online.status === 'waiting-for-opponent' && online.roomCode && (
           <p>
