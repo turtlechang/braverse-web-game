@@ -435,7 +435,7 @@ export const handleAiTurnState = (
                     paymentIds,
                   ),
                   {
-                    kind: 'attack',
+                    kind: 'declare-attack',
                     playerId,
                     attackerInstanceId: attacker.card.instanceId,
                     targetInstanceId: target.card.instanceId,

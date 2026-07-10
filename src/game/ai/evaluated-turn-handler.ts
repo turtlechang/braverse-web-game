@@ -1,6 +1,6 @@
 import { applyGameCommand } from '../commands'
 import type { AttackCommand, PlayerActionCommand } from '../commands'
-import { resolveBattleAutomatically } from '../battle'
+import { beginAttack, resolveBattleAutomatically } from '../battle'
 import { getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
 import { createPlayerView } from '../player-view'
@@ -566,7 +566,17 @@ const twoPlyCandidateScore = (
   command: PlayerActionCommand,
 ): number => {
   try {
-    const nextState = applyGameCommand(state, command)
+    let nextState: GameState
+    if (command.kind === 'attack') {
+      nextState = beginAttack(
+        state,
+        command.attackerInstanceId,
+        command.targetInstanceId,
+        command.supportPaymentIds,
+      )
+    } else {
+      nextState = applyGameCommand(state, command)
+    }
     if (nextState.status === 'finished') {
       const view = createPlayerView(nextState, playerId)
       return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
@@ -574,7 +584,6 @@ const twoPlyCandidateScore = (
 
     let resolved = nextState
     if (command.kind === 'attack') {
-      // 攻擊：完整解析戰鬥（含陷阱、FLIP、昏厥效果）
       resolved = resolveBattleAutomatically(nextState)
     }
 

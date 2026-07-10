@@ -88,4 +88,51 @@ describe('Lv.1 隨機 AI', () => {
       expect(first.actions).toBe(second.actions)
     }
   })
+
+  it('commandLog 長度不影響 Lv.1 決策（同 seed 同局面選出相同動作）', () => {
+    const seed = 7
+    const base = createDemoGame(seed)
+    const dummyLog: NonNullable<GameState['commandLog']> = [
+      {
+        id: 1,
+        turnNumber: 1,
+        phase: 'main',
+        playerId: 'player-one',
+        commandKind: 'advance-phase',
+        payload: {},
+      },
+      {
+        id: 2,
+        turnNumber: 1,
+        phase: 'main',
+        playerId: 'player-two',
+        commandKind: 'place-support',
+        payload: {},
+      },
+      {
+        id: 3,
+        turnNumber: 2,
+        phase: 'main',
+        playerId: 'player-one',
+        commandKind: 'deploy-cookie',
+        payload: {},
+      },
+    ]
+    const withLog: GameState = { ...base, commandLog: dummyLog }
+
+    const first = takeAiStep(base, base.activePlayerId, {
+      level: 1,
+      seed,
+    })
+    const second = takeAiStep(withLog, withLog.activePlayerId, {
+      level: 1,
+      seed,
+    })
+
+    expect(first.action).toBe(second.action)
+    expect(first.reason?.chosenCommandKind).toBe(
+      second.reason?.chosenCommandKind,
+    )
+    expect(first.description).toBe(second.description)
+  })
 })

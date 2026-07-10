@@ -79,7 +79,7 @@
 | Lv.5 | 設計文件 | 見 [ai-levels.md](ai-levels.md)，未實作 |
 
 - AI 只讀 `PlayerView`（型別保證不讀隱藏資訊）。
-- **關鍵約束**：AI 攻擊必須用 `applyChosenTurnCommand` → `beginAttack` 停在 trap 階段等人類防守方回應；`attack` 指令的自動結算只用於 AI 對 AI 模擬。
+- **關鍵約束**：AI 攻擊必須用 `applyChosenTurnCommand` → `beginAttack` 停在 trap 階段等人類防守方回應；`attack` 指令的自動結算只用於 AI 對 AI 模擬。所有 AI 等級以 `declare-attack` 記入 commandLog，replay 重播可保留陷阱/FLIP 回應窗口。Lv.1 隨機決策不受 `commandLog` 長度影響（deterministic）。
 - 訓練與勝率紀錄：docs/ai-training-*.md（20 份 BS2 對局矩陣）。
 
 ## 6. 線上對戰（server/ + src/net/）
@@ -93,6 +93,6 @@
 ## 7. 建置與測試
 
 - Vite 8 + TypeScript 6（`tsc -b` 複合建置：app + node 兩個 tsconfig；server 獨立 `server:typecheck`）。
-- vitest 4：目前測試快照 90 個測試檔、1457 項測試（此為觀測值，非固定門檻），與原始碼同目錄放置（`*.test.ts(x)`）。
+- vitest 4：目前基線 91 個測試檔、1469 項測試（非永久門檻），與原始碼同目錄放置（`*.test.ts(x)`）。
 - Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度 AI 對局 smoke）、`npm run test:blue:browser`（藍牌效果流程）；手動 GitHub Actions workflow。
 - CI：`.github/workflows/ci.yml`（PR + main push：test → lint → build）。
