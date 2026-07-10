@@ -263,6 +263,11 @@ export function MainMenu({
           )}
         </section>
       </section>
+      <footer className="main-menu-footer">
+        本作品為非官方粉絲研究專案，與 Devsisters Corporation
+        無任何關聯、合作或授權；CookieRun: Braverse
+        卡牌與圖像之著作權均屬 Devsisters 所有。
+      </footer>
     </main>
   )
 }

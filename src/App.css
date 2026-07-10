@@ -29,11 +29,13 @@ button {
 }
 
 .main-menu-shell {
+  position: relative;
   width: 100vw;
   height: 100vh;
   min-width: 320px;
   min-height: 520px;
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   place-items: center;
   padding: 28px;
   overflow: hidden;
@@ -59,6 +61,16 @@ button {
 .main-menu-heading {
   grid-area: heading;
   padding: 8px 4px;
+}
+
+.main-menu-footer {
+  width: min(1120px, 100%);
+  margin-top: 10px;
+  text-align: center;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: rgba(210, 226, 252, 0.55);
+  letter-spacing: 0.02em;
 }
 
 .main-menu-heading > span,
