@@ -53,3 +53,5 @@ export function MockupGallery({ mockupId }: { mockupId: string }) {
     </div>
   )
 }
+
+export default MockupGallery
