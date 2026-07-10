@@ -500,6 +500,53 @@ describe('OptionalCostAttackModal', () => {
     await act(() => root.unmount())
     container.remove()
   })
+
+  it('minimizes to dock without calling onSkip and restores on expand', async () => {
+    const onSkip = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="測試餅乾"
+          effectText="支付代價後使用效果。"
+          discardHandCost={2}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[createHandCard(1), createHandCard(2)]}
+          opponentBattleCards={[
+            { card: createCookieCard(1), instanceId: 'cookie-1' },
+          ]}
+          needsTarget={true}
+          onSkip={onSkip}
+          onPay={() => undefined}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '縮小')!.click()
+    })
+
+    expect(container.querySelector('.optional-cost-attack-modal')).toBeNull()
+    expect(container.querySelector('.card-reveal-dock')).not.toBeNull()
+    expect(container.querySelector('.card-reveal-dock')?.textContent).toContain(
+      '攻擊可選效果',
+    )
+    expect(onSkip).not.toHaveBeenCalled()
+
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.card-reveal-dock')!.click()
+    })
+
+    expect(container.querySelector('.optional-cost-attack-modal')).not.toBeNull()
+    expect(onSkip).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
 })
 
 describe('InspectDeckModal', () => {

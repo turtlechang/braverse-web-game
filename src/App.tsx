@@ -531,6 +531,17 @@ function App() {
         discardHandCost={pending.discardHandCost}
         showCancelSkill={showCancelSkill}
         energyPaymentValid={pending.skillEnergyPaymentValid}
+        paymentCandidates={
+          pending.pendingEffect && !pending.pendingEffect.skillActivated
+            ? match.game.players[pending.pendingEffect.context.sourcePlayerId].supportArea
+                .filter((support) =>
+                  pending.skillPaymentTargetIds.has(support.card.instanceId),
+                )
+                .map((support) => support.card)
+            : []
+        }
+        selectedPaymentIds={pending.selectedSkillPaymentIds}
+        onTogglePayment={pending.toggleSkillPayment}
       />
 
       {match.setupStep && (
