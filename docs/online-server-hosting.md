@@ -1,6 +1,6 @@
 # 線上對戰伺服器宿主評估（Online Server Hosting）
 
-最後更新：2026-07-10（依當日官網與第三方資料查證；雲端定價變動快，執行前請再確認）
+最後更新：2026-07-11（依當日官網與第三方資料查證；雲端定價變動快，執行前請再確認）
 
 ## 1. 需求
 
@@ -29,16 +29,25 @@
 
 不推薦 Fly.io 的原因：無免費層後性價比優勢縮小，且需要維護 Dockerfile/fly.toml 與 CLI 流程，對單人專案是持續負擔。不推薦 Railway 起步的原因：月月固定支出，對「偶爾開一局」的使用型態不划算。
 
-## 4. 部署步驟（程式面已就緒 2026-07-10，Dashboard 操作待執行）
+## 4. 部署執行結果（2026-07-11 完成）
 
-程式面準備（已完成）：`server/src/index.ts` 支援 `PORT` 環境變數（本機沿用 `WS_PORT`，預設 8787）；`npm run server:start` production 啟動 script；連線中 UI 已加免費層冷啟動提示。
+Render 服務 **braverse-web-game** 已部署 commit `a679f03`（Dashboard 顯示 Deployed）。設定摘要：
 
-Dashboard 操作（需 Render 帳號，待執行）：
+- Instance Type：Free
+- Build Command：`npm ci --include=dev`（`tsx` 在 devDependencies，須明確安裝）
+- Start Command：`npm run server:start`
 
-1. Render Dashboard → New Web Service → 連 GitHub repo `turtlechang/braverse-web-game`。
-2. Instance Type：**Free**；Build Command：`npm ci --include=dev`（`tsx` 在 devDependencies，須明確安裝）；Start Command：`npm run server:start`。
-3. 前端：Vercel 專案設定環境變數 `VITE_WS_URL=wss://<app>.onrender.com`（本機開發不需設定——vite dev server 已將 `/ws` proxy 到 `ws://localhost:8787`，見 `vite.config.ts`；client fallback 為同網域 `/ws`）。
-4. 驗收：兩個瀏覽器視窗經公網完成一局，記錄於 test-plan；含首次連線冷啟動等待與斷線提示檢查。
+Vercel Production 專案已設定環境變數 `VITE_WS_URL=wss://braverse-web-game.onrender.com` 並重新部署（Deployment 6riup9EUD… Ready）。正式網域為 https://braverse-web-game.vercel.app。
+
+### 驗收結果
+
+以兩個獨立 WebSocket 分頁完成完整對局驗證：合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。
+
+### 維護注意事項
+
+- **Render Free 冷啟動**：免費層閒置 15 分鐘後休眠，首次連線可能需 50 秒以上等待喚醒；活躍對局期間 ws 訊息可維持喚醒。
+- **斷線重連**：MVP 範圍不做斷線重連承諾（見 known-risks R7）。
+- **升級路徑**：如需去掉冷啟動，Render 付費（約 $7/月）或 Railway Hobby（$5/月底價）可無痛遷移——`server/` 是純 Node ws，無平台綁定。
 
 ## 5. 資料來源
 

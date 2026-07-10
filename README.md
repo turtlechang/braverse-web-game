@@ -61,6 +61,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
 - Phase 5 線上對戰 MVP 的 lint 修正已完成：線上效果目標選取改為 keyed state，避免 React hooks `set-state-in-effect`；移除未使用型別與空 handler 參數。本分支目前 `npm test` 為 851 項通過，`npm run lint` 與 `npm run build` 亦通過。
+- 已完成 Vercel + Render 公網部署與雙視窗對局驗證：Render 服務 braverse-web-game 部署 a679f03（Deployed）；Vercel Production 以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready）；正式網域 https://braverse-web-game.vercel.app 以兩個獨立 WebSocket 分頁完成合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。注意 Render Free 閒置會休眠，首次連線可能需 50 秒以上。
 
 ## 下一步計畫
 
@@ -98,8 +99,8 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
 - 已完成 Vercel Dashboard 匯入 GitHub repo：Framework Preset Vite、Build Command `npm run build`、Output Directory `dist`、Install Command `npm ci`、Node.js Version 22。
 - 不啟用 main branch protection（個人開發者，不要求 CI 通過 + review）。
-- 待用第一支 PR 驗證 Vercel Preview 網址可正常載入並操作對局。
-- 待執行：Render 公網雙視窗對局驗收（需開 Render 帳號，見 docs/online-server-hosting.md §4）；P1 程式面已就緒（PORT 支援、冷啟動提示），Dashboard 操作與公網驗收待完成。
+- 已驗證 Vercel Production（https://braverse-web-game.vercel.app）以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready），正式網域可正常載入對局。
+- 已完成 Render 服務 braverse-web-game 部署與公網雙視窗對局驗收：Render 部署 commit a679f03（Deployed），以兩個獨立 WebSocket 分頁完成合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。注意 Render Free 閒置會休眠，首次連線可能需 50 秒以上。
 - 後續新 Braverse 任務優先用 `braverse-workflow` 模板開短 thread，依任務類型選擇驗證層級，再視需要載入 `develop-braverse` 的規則、派工或 Git 參考。
 
 ## 開發指令
@@ -145,4 +146,8 @@ npm run cards:import:purple-sample
 
 ## 📝 更新日誌
 
-變更記錄已移至 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。
+| 日期 | 概要 |
+|---|---|
+| 2026-07-11 | Vercel + Render 公網部署與雙視窗對局驗證完成 |
+
+完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。

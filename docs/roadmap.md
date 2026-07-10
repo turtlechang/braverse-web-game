@@ -1,6 +1,6 @@
 # Roadmap
 
-最後更新：2026-07-10。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
+最後更新：2026-07-11。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
 
 ## 已完成里程碑（摘要）
 
@@ -27,9 +27,9 @@
 | 項目 | 狀態 |
 |---|---|
 | `validate:cards` | ✅ `scripts/validate-cards.ts`（必填欄位、同檔重複卡號、卡池 311 種全數可轉換 GameCard、效果文字未轉出偵測）；已接入 CI 第一步。首跑即抓到 BS2-061@1 缺 level 的資料缺陷（已修＋匯入腳本加異圖回填） |
-| `vercel.json` | ✅ SPA rewrite（assets 除外）；preview URL 可玩性驗收待本支 PR |
+| `vercel.json` | ✅ SPA rewrite（assets 除外）；已於 Production 網域驗證可正常載入 |
 | `npm run typecheck` | ✅ `tsc -b && server:typecheck`（app + server 全量型別檢查） |
-| Render 部署準備 | ✅ 程式面就緒（`PORT` 支援、`server:start`、冷啟動提示文案）；Dashboard 操作與雙視窗公網驗收待執行（需開 Render 帳號，見 [online-server-hosting.md](online-server-hosting.md) §4） |
+| Render 部署準備 | ✅ 已部署（commit a679f03）並完成雙視窗公網對局驗證；詳見 [online-server-hosting.md](online-server-hosting.md)。Render Free 閒置會休眠，首次連線需等待喚醒 |
 
 ### P2 — 維護流程正式化
 

@@ -1,6 +1,6 @@
 # 專案審查報告（Phase 0 Audit Report）
 
-- 審查日期：2026-07-10
+- 審查日期：2026-07-11
 - 審查範圍：整個 repo（main 分支，commit `897d393`）
 - 審查方式：目錄盤點、package.json scripts 檢查、文件比對、lint / test / build 實測
 - 審查性質：本報告對照「總體開發計畫」的 Phase 0–8 要求，盤點實際完成度與缺口。**本專案實際進度已遠超 Phase 0**，因此本報告同時是「差距分析」。
@@ -54,7 +54,7 @@
 | `npm run validate:cards` | ✅ 2026-07-10 補齊：`scripts/validate-cards.ts`，已接入 CI |
 | `vercel.json` | ✅ 2026-07-10 補齊：SPA rewrite（assets 除外） |
 | CI | ✅ PR + main push 觸發 test/lint/build；另有手動 Playwright workflow |
-| Vercel | ⚠️ README 記載 Dashboard 已匯入（Vite preset、Node 22）；待 PR preview 實測記錄 |
+| Vercel | ✅ 已部署 Production（VITE_WS_URL=wss://braverse-web-game.onrender.com），正式網域可正常載入對局；Render 為 ws server 宿主 |
 
 ## 4. 主計畫 Phase 對照
 
@@ -66,8 +66,8 @@
 | 3 牌組編輯器 | 搜尋/篩選/驗證/匯入匯出 | ✅ 完成（PR #11 等），含版本化儲存與遷移 |
 | 4 AI 對戰 | Lv.1–5 | ✅ Lv.1–4 實作完成（commit `076e7a5`）；Lv.5 為設計文件（docs/ai-levels.md） |
 | 5 UI/UX 重製 | 對標文件 + mockup | ⚠️ 實際 UI 已多輪重製（滿版桌墊、扇形手牌、統一 modal）；缺對標分析與 wireframe 文件（實作已超前文件） |
-| 6 線上對戰 | 房間 + 同步 | ✅ MVP 已進 main（ws server、房間、遮罩狀態、OnlineBattleView）；待雙視窗完整對局驗收紀錄 |
-| 7 部署/CI | vercel.json + workflows | ⚠️ CI 完成；Vercel 靠 Git Integration；缺 vercel.json 與 preview 驗收紀錄；**注意：Vercel 無法承載 ws server**（見 known-risks R6） |
+| 6 線上對戰 | 房間 + 同步 | ✅ MVP 已進 main（ws server、房間、遮罩狀態、OnlineBattleView）；雙視窗完整對局驗收已於 2026-07-11 完成 |
+| 7 部署/CI | vercel.json + workflows | ✅ Vercel Production 部署完成（Git Integration），Render 作為 ws server 宿主已部署並通過雙視窗驗收；Render Free 冷啟動風險見 known-risks R6 |
 | 8 維護流程 | CHANGELOG + 流程文件 | ⚠️ 更新日誌在 README 表格；有 card-review-checklist 與專案 Skills；缺獨立 CHANGELOG.md、release-process、card-update-process |
 
 ## 5. 驗證結果（2026-07-10 實測）
@@ -84,7 +84,7 @@
 2. **官方素材公開部署（高）**：卡圖熱連結 `cookierunbraverse.com`、卡背/能量圖示在 `public/`。→ 已決策（2026-07-10）：維持熱連結、不做 PUBLIC_MODE，收到異議再處理。詳見 [ip-and-asset-policy.md](ip-and-asset-policy.md)。
 3. **無 `validate:cards`（中）**：→ ✅ 已解決（2026-07-10）：`npm run validate:cards` + CI；首跑即發現 BS2-061@1 缺 level 資料缺陷並修復。
 4. **UI 未全面走指令層（中）**：攻擊宣告與多段效果流程直呼規則函式、補記 log，replay 完整性依賴補記正確。
-5. **Vercel 與 ws server 架構分裂（中）**：Vercel 只能承載前端。→ 已決策（2026-07-10）：採 Render 免費層，評估見 [online-server-hosting.md](online-server-hosting.md)；部署執行待辦。
+5. **Vercel 與 ws server 架構分裂（中）**：Vercel 只能承載前端。→ 已於 2026-07-11 部署 Render 免費層並完成雙視窗公網驗收。Render Free 冷啟動見 known-risks R6。
 6. **缺獨立 CHANGELOG 與 release 流程（低）**：README 更新日誌表格已運作，但不利對外版本化。
 7. **無 LICENSE（低）**：→ ✅ 已解決（2026-07-10）：MIT + Devsisters 素材除外條款。
 
@@ -92,5 +92,5 @@
 
 1. 網站 footer 加非官方聲明（小 UI 變更）。
 2. `scripts/validate-cards.ts` + `npm run validate:cards` + 接入 CI。
-3. `vercel.json`（SPA rewrite）+ 用一支 PR 驗證 preview URL。
-4. 線上對戰雙視窗完整對局驗收，並記錄伺服器部署方案決策。
+3. `vercel.json`（SPA rewrite）✅ 已完成（2026-07-11 於 Production 網域驗證載入與對局功能）。
+4. 線上對戰雙視窗完整對局驗收 ✅ 已完成（2026-07-11 以 Render + Vercel 完成公網對局驗證）。
