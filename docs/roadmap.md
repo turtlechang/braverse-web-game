@@ -22,22 +22,23 @@
 | PUBLIC_MODE 素材策略 | ✅ 決策：維持官方卡圖熱連結、不做 PUBLIC_MODE，收到異議再處理（[ip-and-asset-policy.md](ip-and-asset-policy.md) §4） |
 | LICENSE | ✅ MIT + Devsisters 素材除外條款 |
 
-### P1 — 補齊工程管線（2026-07-10 大部分完成）
+### P1 — 補齊工程管線（2026-07-10 完成，程式面全部就緒）
 
 | 項目 | 狀態 |
 |---|---|
 | `validate:cards` | ✅ `scripts/validate-cards.ts`（必填欄位、同檔重複卡號、卡池 311 種全數可轉換 GameCard、效果文字未轉出偵測）；已接入 CI 第一步。首跑即抓到 BS2-061@1 缺 level 的資料缺陷（已修＋匯入腳本加異圖回填） |
-| `vercel.json` | ✅ SPA rewrite（assets 除外）；preview URL 可玩性驗收待本支 PR |
+| `vercel.json` | ✅ SPA rewrite（assets 除外）；preview URL 可玩性驗收待第一支 PR 實測 |
 | `npm run typecheck` | ✅ `tsc -b && server:typecheck`（app + server 全量型別檢查） |
 | Render 部署準備 | ✅ 程式面就緒（`PORT` 支援、`server:start`、冷啟動提示文案）；Dashboard 操作與雙視窗公網驗收待執行（需開 Render 帳號，見 [online-server-hosting.md](online-server-hosting.md) §4） |
 
-### P2 — 維護流程正式化
+### P2 — 維護流程正式化（2026-07-10 完成）
 
 | 項目 | 內容 | 規模 |
 |---|---|---|
-| CHANGELOG.md | 從 README 更新日誌表格抽出，建立獨立版本紀錄 | 小 |
-| release-process / card-update-process | 新卡牌 11 步流程（匯入→validate→effectId→resolver→測試→AI smoke→UI 檢查→changelog→PR→preview→合併）文件化 | 小 |
-| regression / manual-playtest checklist | 併同現有 card-review-checklist 整理 | 小 |
+| CHANGELOG.md | ✅ 從 README 更新日誌表格抽出，建立獨立版本紀錄 | 小 |
+| release-process / card-update-process | ✅ 新卡牌 11 步流程文件化；card-update-process 定位為 Codex/CLI 受控匯入，驗證失敗不覆蓋正式卡池 | 小 |
+| regression / manual-playtest checklist | ✅ 已文件化（[regression-test-checklist.md](regression-test-checklist.md)、[manual-playtest-checklist.md](manual-playtest-checklist.md)） | 小 |
+| loop-engineering | ✅ 迴圈工程六步驟與風險分級文件化（[loop-engineering.md](loop-engineering.md)） | 小 |
 
 ### P3 — 產品深化（觀察後再投入）
 

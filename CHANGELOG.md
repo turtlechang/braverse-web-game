@@ -1,0 +1,57 @@
+# Changelog
+
+本專案的重要變更記錄。格式參考 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)；由於尚未對外發版，目前以日期為單位記錄，未採語意化版號。歷史記錄自 README 遷移而來（2026-07-10）。
+
+## [Unreleased]
+
+- 🔧 P1 工程管線（PR #24，已完成）：`npm run validate:cards`（卡池 311 種卡號全數可轉換檢查，接入 CI，含必填欄位、同檔重複卡號、效果文字未轉出偵測）、`npm run typecheck`（`tsc -b && server:typecheck` 全量型別檢查）、`vercel.json` SPA rewrite（assets 除外，deep link 重新整理不 404）、server 支援 `PORT` 環境變數與線上對戰冷啟動提示；修復 BS2-061@1 異圖版缺 level 的匯入資料缺陷並在匯入腳本加異圖回填（`backfillVariantStats`）、空系列驗證（`validateSeriesNotEmpty`）；線上對戰狀態中文化與斷線原因對應、WebSocket 啟動日誌格式修正。
+- 📚 P2 維護流程（本 PR，已完成）：CHANGELOG 自 README 抽離；新增 release-process、card-update-process、loop-engineering、manual-playtest-checklist、regression-test-checklist 維護文件；loop-engineering 加入風險分級（規則/卡池/AI/線上/安全/部署走完整 Verify+Review，純文案/小樣式走短流程）；card-update-process 定位為 Codex/CLI 受控匯入，資料驗證失敗不得覆蓋正式卡池；README 歷史 changelog 改連到 CHANGELOG。
+
+## 2026-07-10
+
+- 📋 Phase 0 文件與 IP 補強（PR #23）— 新增 audit-report、architecture、product-vision、roadmap、known-risks、ip-and-asset-policy、test-plan、online-server-hosting 文件；README 與主選單 footer 加非官方粉絲研究聲明；新增 MIT + Devsisters 素材除外條款的 LICENSE。
+
+## 2026-07-09
+
+- 🎨 EffectPanel 與陷阱/攻擊提示框改版（PR #20、#21）— dock、雙欄版面、多步驟流程；提示框加寬、背景加深。
+
+## 2026-07-08
+
+- 🐛 陷阱 support-to-hand/hand-to-support 修正 — 修復 Bean 牌組陷阱卡造成卡住的 bug；AI 改進支援放置能量稀缺優先、攻擊選擇一擊擊殺優先；新增 6 組 BS2 對局分析文件。
+- 🔧 BS1-006 修正 — after-damage 觸發改為僅限戰鬥傷害，效果傷害不再觸發。
+- 🔧 BS1-037 修正 — 移除 sourceAsEnergy 費用減少、目標改選 HP 最多、新增 hand-to-support 效果型別與執行。
+
+## 2026-07-07
+
+- 🃏 AI 預設牌組 — 新增第二彈紅/黃/豆子/藍/紫 AI 牌組選項；補強牌庫檢視縮小／返回、AI 支援階段填能與第二彈 5×5 對局矩陣回歸；記錄第二彈黃對紅 50 場策略訓練。
+- 🛡️ AI 攻擊防守修正 — Lv.1/3/4 AI 攻擊改停在 trap 階段等人類防守方回應（先前自動結算導致無法使用陷阱/FLIP）。
+- 🔧 BS1-037/054 修正 — MIX 區域顏色解析、BS1-054 OnPlay 廢棄判定、sourceAsEnergy 支付與 AI 決策聯動。
+
+## 2026-07-06
+
+- ✅ Phase 5 CI — 修正線上對戰 lint 失敗，維持 test/lint/build 通過。
+
+## 2026-07-05
+
+- 🧩 補齊卡牌效果（PR #17）— 稽核找出 25 張未支援卡，新增 8 個遊戲機制與 2 個代價/條件；修正 resolveFlip 條件檢查與異圖卡號正規化。
+
+## 2026-07-04
+
+- 🧠 AI 分級 — 新增 Lv.1/Lv.2、`PlayerView` 視角過濾器與 Lv.3 評估式 AI（PR #12、#13）。
+- 🔗 指令層整合 — 擴充 `GameCommand`、加入 `commandLog` / replay，並補完牌組管理（PR #11）；對戰紀錄側欄（PR #15）；App.tsx 容器元件拆分（PR #16）。
+
+## 2026-07-03
+
+- 🖱️ Playwright 驗證 — 修正支援卡點擊、藍牌驗證斷言與瀏覽器測試流程。
+
+## 2026-07-02
+
+- 🟥 BS2 紅牌 — 完成 BS2-006/007 非餅乾效果、HP-to-trash 與紅色手牌代價。
+
+## 2026-07-01
+
+- 🧩 BS1/BS2 效果 — 補齊紅色卡牌、非餅乾效果、after-damage 與 attack-effect 控制權。
+
+## 2026-06-30
+
+- 🃏 BS1 匯入 — 建立 Brave Beginning Phase 1/2 轉接與測試基線。

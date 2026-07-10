@@ -39,7 +39,7 @@
 
 - `custom-deck*.test.ts`：60 張/4 張上限/餅乾/FLIP 驗證、儲存版本遷移、損壞資料不整批消失。
 - `starter-deck.test.ts`、`scripts/import-official-cards.test.js`：牌組食譜張數與匯入。
-- ⚠️ 缺口：無獨立 `validate:cards`（資料完整性、重複 id、effectId↔resolver 對應）——roadmap P1。
+- ✅ `validate:cards`：資料完整性、重複 id、effectId↔resolver 對應、效果文字未轉出偵測；已接入 CI（2026-07-10 完成）。
 
 ### UI ✅／⚠️
 
@@ -66,4 +66,4 @@
 1. ~~`validate:cards` 資料驗證 + CI 接入~~ ✅ 2026-07-10 完成（`npm run validate:cards`，CI 第一步執行）。
 2. 線上對戰雙視窗手動驗收腳本化（roadmap P1；Render 部署後在公網執行）。
 3. 牌組編輯器 Playwright 流程（匯入錯誤 JSON 不 crash 的瀏覽器級驗證）。
-4. 手動 playtest checklist 正式文件化（roadmap P2，與 card-review-checklist 整併）。
+4. 手動 playtest checklist 正式文件化 — 已完成（2026-07-10，見 [manual-playtest-checklist.md](manual-playtest-checklist.md)）。
