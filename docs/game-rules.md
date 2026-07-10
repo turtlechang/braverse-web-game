@@ -193,6 +193,16 @@
 - FLIP 或陷阱途中需要 Refresh 時，先完成 Refresh，再回到尚未結束的戰鬥佇列。
 - 餅乾離場數量會先累計，待完整戰鬥或整組卡牌效果結束後，再依回合玩家、非回合玩家順序建立補位佇列。
 
+### 引擎安全邊界：攻擊宣告前提
+
+**[引擎保護機制]** 以下項目並非由單一官方規則條文直接定義，而是引擎為了確保既有待處理流程完整結算、避免狀態交錯所設的執行順序保護：
+
+- **`pendingOnPlay`（待處理登場效果）**：餅乾登場效果仍在等待玩家選擇是否發動、選擇目標或結算時，不得宣告攻擊。此保護確保 OnPlay 效果在進入下一個主要行動前完成，避免「登場效果與攻擊傷害交錯結算」。
+- **`pendingAbilityEffect`（待處理技能效果）**：餅乾技能（Activate／Main）效果仍在等待玩家支付代價、選擇目標或逐段結算時，不得宣告攻擊。此保護確保技能結算的原子性。
+- **其他既有阻擋條件**：`pendingBattle`、`pendingReplacement`、`pendingRefresh`、`pendingFaintEffects`、`pendingOpponentHandDiscard`、`pendingInspectDeck`、`pendingOptionalCostAttack` 均已在更早版本納入阻擋，本次補齊 `pendingOnPlay` 與 `pendingAbilityEffect` 兩項。
+
+以上保護全部集中在 `src/game/battle.ts` 的 `assertNoBlockingDecision` 函式，在 `beginAttack` 入口統一檢查；不宣稱新的官方規則，僅為引擎內部執行順序保護。
+
 ### 傷害計算更新
 
 - **[已確認]** 傷害開始結算後，結算途中才滿足的攻擊傷害增加或承受傷害減少條件，不會回頭改變這次已進入處理的傷害值。

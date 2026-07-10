@@ -80,6 +80,14 @@ const assertNoBlockingDecision = (state: GameState) => {
   if (state.pendingOptionalCostAttack) {
     throw new GameRuleError('Invalid battle action.')
   }
+
+  if (state.pendingOnPlay) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  if (state.pendingAbilityEffect) {
+    throw new GameRuleError('Invalid battle action.')
+  }
 }
 
 export const beginAttack = (
