@@ -6,112 +6,31 @@
 
 ## 開發背景
 
-本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。三副起始牌組共 10 張物品卡與 2 張場景卡已完整支援，含費用支付、主階段動作、場景替換橫置啟動、複合效果暫停與 OnPlay/Refresh/補位銜接，AI 以 deterministic 策略使用。桌機 UI 採滿版桌墊聚焦 HUD，以窄型五階段列、中央操作指引、55/45 戰鬥／支援區與按需展開的資源牌堆降低周邊資訊干擾；FLIP、物品、陷阱、昏厥效果、抽牌決策與棄手牌決策會以可縮小的深色置中提示框暫停展示。App.tsx 協調邏輯已拆至 useMatchController/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；大型 effects/battle/ai 測試已按領域拆檔；src/game/commands.ts 的 typed GameCommand 已從 pilot 擴充為全覆蓋指令層（8 種決策指令 + 24 種玩家動作指令），applyGameCommand 會在 GameState.commandLog 記錄每筆指令，src/game/replay.ts 提供 replayCommands/replayCommandLog 重播能力。桌面 MatchToolbar 已移至 PhaseRail 上方；雙方手牌採支援區邊界內的扇形呈現，我方右側切齊、對手左側切齊，動態調整間距、弧度與 z-index；我方 hover 保留扇形位置與角度，僅提供輕微上移提示。
+本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。
 
-目前以《綜合規則》Ver.1.2、《CRB 遊戲指南》240812 更新版、《CRB 說明書 P1》及《裁判指南》作為規則文件基線；專案裁定與仍待新版官方資料覆核的項目記錄於 `docs/rule-clarifications.md`。
+目前以《綜合規則》Ver.1.2、《CRB 遊戲指南》240812 更新版、《CRB 說明書 P1》及《裁判指南》作為規則文件基線；專案裁定與仍待新版官方資料覆核的項目記錄於 [docs/rule-clarifications.md](docs/rule-clarifications.md)。
 
-官方範例卡已匯入 `category_title` / `card_product_title` 為 `Starter Deck RED`、`Starter Deck YELLOW`、`Starter Deck GREEN`、`Starter Deck BLUE` 與 `Starter Deck PURPLE` 的五套起始牌組資料。五套資料都可建立 60 張牌組，並以官方 JSON 的卡號、名稱、類型、攻擊文字、效果文字與圖片 URL 轉成 runtime `GameCard`。
+專案開發流程已整理為 `.agents/skills/develop-braverse` 與 `.agents/skills/braverse-workflow` 兩個 Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟；`AGENTS.md` 保留硬性規範入口。子代理協作與停滯交接流程見 [docs/subagent-stall-handoff-protocol.md](docs/subagent-stall-handoff-protocol.md)。
 
-BS1/BS2 官方卡池已可供自訂牌組與 AI 預設牌組共用；主選單 AI 對手除五色起始牌組外，也可指定第二彈紅色、黃色、豆子、藍色與紫色預設牌組。
-
-專案開發流程已整理為 `.agents/skills/develop-braverse` Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟。工作流模板另拆為 `.agents/skills/braverse-workflow`，讓 `AGENTS.md` 保留硬規則，任務分類、驗證分級、派工提示與提交前檢查改由 Skill references 漸進式載入。
-
-CI/CD 採 GitHub Actions + Vercel Git Integration。GitHub Actions 僅執行 `npm test`、`npm run lint`、`npm run build` 與手動 Playwright AI 瀏覽器驗證，不負責部署。Vercel 監聽 PR 與 push 後自動產生 Preview 部署與正式部署。GitHub Secrets 不保存 Vercel Token，所有 Vercel 連線設定在 Vercel Dashboard 完成。
-
-Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與線上戰場 UI 重用流程；CI 修正以維持 `npm test`、`npm run lint`、`npm run build` 全通過為提交門檻。P1 工程管線補強已完成：卡片匯入空系列驗證、validate-cards 執行前提註記、線上對戰狀態中文化與斷線原因對應、WebSocket 啟動日誌格式修正。
+CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌驗證、測試、lint、build 與手動 Playwright 瀏覽器驗證，不負責部署；Vercel 監聽 PR 與 push 自動產生 Preview 與正式部署，連線設定在 Vercel Dashboard 完成，不存放於 GitHub Secrets。
 
 ## 目前進度
 
-- 已建立紅色起始牌組：22 種卡號，合計 60 張。
-- 已建立黃色起始牌組：20 種卡號，合計 60 張；官方清單未包含 `ST2-017`。
-- 已建立綠色起始牌組：22 種卡號，合計 60 張。
-- 已建立藍色起始牌組：22 種卡號，合計 60 張。
-- 已建立紫色起始牌組：22 種卡號，合計 60 張。
-- 已加入黃色起始牌組官方樣本檔：`data/cards/official-starter-deck-yellow.en.json`。
-- 已加入綠色起始牌組官方樣本檔：`data/cards/official-starter-deck-green.en.json`。
-- 已加入藍色起始牌組官方樣本檔：`data/cards/official-starter-deck-blue.en.json`。
-- 已加入紫色起始牌組官方樣本檔：`data/cards/official-starter-deck-purple.en.json`。
-- 已新增明確 API：`createOfficialRedStarterDeck`、`createOfficialYellowStarterDeck`、`createOfficialGreenStarterDeck`、`createOfficialBlueStarterDeck`、`createOfficialPurpleStarterDeck`、`OFFICIAL_RED_STARTER_DECK`、`OFFICIAL_YELLOW_STARTER_DECK`、`OFFICIAL_GREEN_STARTER_DECK`、`OFFICIAL_BLUE_STARTER_DECK`、`OFFICIAL_PURPLE_STARTER_DECK`。
-- `createOfficialStarterDeck` 與 `OFFICIAL_STARTER_DECK_RED` 仍保留為紅色起始牌組相容別名。
-- `ST3-010 Aloe Cookie` 的 deck-to-support 效果已完整支援：從牌庫頂取牌直立放入支援區、牌庫歸零觸發 Refresh；無候選時由正在 Refresh 的玩家敗北，對手獲勝。
-- FLIP 與 TRAP 以官方欄位驅動：`card_type=FLIP` 解析 `card_flip`，`card_type=TRAP` 解析 `card_attack_text`，不依卡號硬編碼。
-- 紅、黃、綠、藍、紫五套起始牌組的 FLIP 已支援棄手牌增加 HP、抽牌與逐張傷害暫停；TRAP 已支援攻擊回應、能量支付、攻擊降低、條件傷害、HP 下限、支援棄置、牌庫頂放入休息支援及複合抽牌（ST4-021）。
-- 餅乾因暈倒或效果離開戰鬥區後，會依各玩家離場張數逐張詢問是否補位；玩家可選擇補餅乾或略過，雙方同批離場時由回合玩家先完成，再由非回合玩家執行，並在每張實際補位間依序處理 Refresh 與 OnPlay。
-- 新對局會隨機洗牌，並依序進行玩家選牌組、AI 隨機選牌組、猜拳、先後攻、自由／強制調度、補償抽牌與起始餅乾配置。
-- 已新增主選單與對戰入口流程：玩家需先選擇一副合法自訂牌組才能進入對戰；合法性檢查集中於 `src/game/custom-deck.ts`，規則為剛好 60 張、同卡號最多 4 張、至少 1 張餅乾卡、FLIP 不超過 16 張且不限制單一顏色。牌組編輯器即時顯示總張數、FLIP 張數、餅乾卡數量與錯誤原因；AI 對手可維持五色起始牌組隨機，或指定五色起始牌組與第二彈預設牌組。
-- 主選單牌組卡片支援刪除（含確認）與複製；「需調整」標籤 hover 顯示不合法原因。牌組儲存改為含 `version` 欄位的格式並自動遷移舊陣列格式，損壞資料不會讓已存牌組消失整批。
-- 牌組編輯器卡池單擊直接加入 1 張、右下角顯示已選張數徽章、右上角 info 鈕開啟詳細與加減控制；達 4 張上限的卡片保留在卡池並以禁用樣式呈現。
-- 桌面 UI 已完成減法改版：左側為窄型五階段列，右上只保留重置、牌組與暫停資訊；雙方場地固定為戰鬥區 55%、支援區 45%，戰鬥卡向中央分隔列靠攏，我方支援卡由左向右、對手由右向左排列並維持可辨識尺寸；對手名稱與先後攻資訊位於戰鬥區左下角。牌庫／場景／休息區改為數字牌堆與鄰近浮層，棄牌與完整牌組維持大型視窗。手牌選取後才抬升並顯示單一合法動作，可用空白處或 `Escape` 取消；攻擊、付款與目標選擇提示集中在中央分隔列。低於 900px 的頂部階段列、中央牌桌、底部工具列維持既有模式，最低支援 600x338。
-- 已加入 `scripts/opencode-go.cmd` 與專案模型設定，使用獨立 runtime 目錄及 `OPENCODE_GO_API_KEY` 環境變數進行派工，不提交認證資料。
-- Codex 受限網路環境執行 OpenCode Go 時，需以核准的外部網路權限啟動派工；`ConnectionRefused` 且 Token 為 0 代表尚未進入模型推理。
-- OpenCode Go 只讀審查改用 `scripts/opencode-go-review.cmd` 與受限步數的 `review-fast` agent，限制讀檔範圍與工具迭代，避免多檔案 `plan` 審查超過呼叫端 timeout。
-- OpenCode Go wrapper 現在先解析結構化 JSONL 錯誤；只有 provider code／HTTP 402 才判定 quota 或 billing，`token=0` 的連線／session 問題不再誤報為沒有額度。協作與停滯流程見 [子代理停滯與交接協定](docs/subagent-stall-handoff-protocol.md)。
-- 已加入 `develop-braverse` 專案 Skill，提供漸進式載入的開發流程、架構規則、驗證與 Git、opencode-go 派工參考。
-- 已加入 `braverse-workflow` 專案 Skill，提供 Braverse 任務分類、固定開場模板、OpenCode Go / subagent 派工模板、驗證分級與 pre-commit review 清單。
-- 子代理採 2–3 檔案的小批次與小步驗證；逾時恢復先核對 `git status`／diff／測試，連續兩次停滯後由 Codex 接手，詳見 [子代理停滯與交接協定](docs/subagent-stall-handoff-protocol.md)。
-- `AGENTS.md` 已瘦身為硬性規範入口；模型路由長表、驗證矩陣、歷史回歸細節改由 `.agents/skills/braverse-workflow/references/` 與 `.agents/skills/develop-braverse/references/` 承接。
-- 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
-- 玩家於開局使用合法自訂牌組，AI 可隨機選擇五色起始牌組，或指定紅色、黃色、綠色、藍色、紫色起始牌組及第二彈紅色、黃色、豆子、藍色、紫色預設牌組；重新開始會回到牌組選擇。
-- 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
-  - 目前基線（非永久門檻）：95 個測試檔、1525 項單元測試（含 P0-1/P0-2 主選單空狀態、OnlineMatchPanel dialog/label/connecting close 等 mock 測試、攻擊宣告阻擋加固與 AI attack commandLog/determinism 修正）；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發僅限戰鬥傷害（效果傷害不觸發）、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程；AI 支援階段在有手牌且尚未放支援時會優先填能，並以 Lv.1/Lv.2/Lv.3 與多回合對局回歸測試鎖定。第二彈紅色／黃色／豆子／藍色／紫色預設牌組已納入玩家側 × AI 側 5×5 組合、每組 20 種種子的 500 場模擬回歸。
-- App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
-- Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、牌庫檢視提示框縮小／返回、昏厥目標選擇縮小後點選、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
-- `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
-- 昏厥效果、`draw-up-to` 抽牌決策與後續棄手牌決策已改用與攻擊宣告回應一致的深色置中提示框與可縮小 dock。BS2-040 Aloe Cookie 的強制昏厥效果以「確認結算」進入檢視牌庫流程，不再呈現略過語意；BS2-049 Salt Crystal Trident 會先在同一套提示框選擇抽牌數，抽牌後再切到棄置手牌選擇 UI。
-- 已新增 `docs/ai-training-bs2-yellow-vs-red.md`，記錄第二彈黃色玩家對第二彈紅色 Lv.2 AI 的 50 場策略測試；自動 AI 基準為 12/50～24/50，訓練用黃色駕駛策略達 48/50、勝率 96%，並整理替補、部署、攻擊目標與防守牌保留心得。
-- 修復陷阱卡 `support-to-hand` / `hand-to-support` 效果在 Bean 牌組觸發時導致卡住的 bug（根因：陷阱執行路徑誤傳餅乾 ID 而非支援/手牌 ID）；AI 支援階段改以能量稀缺度排序選擇放置卡牌、攻擊階段優先選能一擊擊殺的餅乾；新增 6 組 BS2 跨色對局訓練文件與批量測試腳本。
-- 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
-- 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
-- Phase 5 線上對戰 MVP 的 lint 修正已完成：線上效果目標選取改為 keyed state，避免 React hooks `set-state-in-effect`；移除未使用型別與空 handler 參數。本分支目前 `npm test` 為 95 files/1525 tests 通過，`npm run lint` 與 `npm run build` 亦通過。
-- 已完成 Vercel + Render 公網部署與雙視窗對局驗證：Render 服務 braverse-web-game 部署 a679f03（Deployed）；Vercel Production 以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready）；正式網域 https://braverse-web-game.vercel.app 以兩個獨立 WebSocket 分頁完成合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。注意 Render Free 閒置會休眠，首次連線可能需 50 秒以上。
-- 已達成：平板響應式 P0 修復——body、main menu、game shell、deck editor 支援 100dvh fallback；deck editor actions 保持可見且 deck list 可滾動；OnlineBattleView 開局準備移除 inline style，按鈕可換行、至少 44px、focus-visible；modal safe-area 保留原有間距。已驗證 npm test 95 files/1525 tests、lint、build，並以 1024x600 實際版面確認無溢出及操作列可見。
-- 已修正 StatusToast 在 matchMessages 內容變更時重新顯示，並將 AI 瀏覽器測試的休息區卡牌點擊改為 DOM click，避免 modal backdrop 攔截，提升測試穩定度。
-- break-to-trash 結果訊息依有無目標分流，effectUiUtils 單元測試已補齊，AI 瀏覽器斷言文案同步更新。
-- 完整 `npm run test:ai:browser` 已通過：20/20 種子無卡住（stuck=0）；已確認最新 `npm test` 為 95 files/1525 tests。
+完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
+
+- **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）。
+- **牌組編輯器**：搜尋/篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存。
+- **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；Lv.5 為設計稿，見 [docs/ai-levels.md](docs/ai-levels.md)。
+- **卡牌池**：BS1/BS2 官方卡池 + 五色起始牌組匯入；`npm run validate:cards` 接入 CI 做資料完整性驗證。
+- **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
+- **線上對戰**：WebSocket server（Render 部署）+ 房間碼 + 遮罩狀態，已完成雙視窗公網對局驗收。
+- **CI/CD**：GitHub Actions（卡牌／候選／registry 驗證 → test → lint → build → bundle budget）+ Vercel Git Integration 自動部署。
+
+測試基線、bundle 大小等會隨每次 PR 變動的數字，一律以 [CHANGELOG.md](CHANGELOG.md) 最新項目為準（非永久門檻，只要求不低於前次基線）。
 
 ## 下一步計畫
 
-- 已達成：P1 工程管線補強——卡片匯入空系列驗證、validate-cards 執行前提註記、線上對戰狀態中文化與斷線原因對應、WebSocket 啟動日誌格式修正。
-- 已達成：UI P0 操作體驗改版——PhaseRail 精確 CTA（略過支援階段／結束主要階段／結束回合）與操作指引、頂部短暫 Toast 取代中央戰場常駐訊息、手牌可操作/不可操作視覺狀態（降權顯示）、戰鬥卡 hover/focus 快速預覽面板（窄版自動隱藏）、`BattleRowProps` 增加預覽事件。
-- 已達成：攻擊宣告阻擋加固 — `assertNoBlockingDecision` 新增 `pendingOnPlay` 與 `pendingAbilityEffect` 檢查，確保既有待處理效果（OnPlay、技能啟動）結算完成前不得宣告攻擊，避免狀態交錯；已同步新增 `src/game/battle-blocking-decision.test.ts` 回歸測試。
-- 已達成：UI P1-2 設計參考 mockup 按需載入 — `src/main.tsx` 移除 `MockupGallery` 靜態 import，改以 `React.lazy` + `Suspense` 條件載入；正常遊戲路徑不包含 `src/ui-reference/` 任何元件，mockup 以獨立 chunk 分離。
-- 已達成：主選單重型 modal 按需載入 — 牌組編輯器、測試情境與線上對戰改用 `React.lazy` + `Suspense`，初始主 bundle 降至約 805.67 KB，並以瀏覽器驗收確認動態 chunk 可正常開啟與關閉。
-- 已達成：推送 Phase 5 線上對戰 MVP lint 修正後，GitHub Actions 的 Test, Lint & Build 工作已回到綠燈。
-- 已達成：UI P1 資訊密度改版——桌機戰鬥卡放大約 16%～20%、HP/ATK 圖示徽章、敵我摘要集中顯示牌庫手牌棄牌與休息等級、支援區橫置/付款狀態視覺區別、資源區 hover 提示（休息等級、場景橫置狀態等）；`phaseAdvanceLabels` 匯出供元件測試使用。
-- 已達成：三色（RED / YELLOW / GREEN）起始牌組切換、App.tsx 元件拆分（卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板、modal）；10 張物品與 2 張場景完整支援（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand、複合效果暫停與 OnPlay/Refresh/補位銜接、AI deterministic 使用）。
-- 已達成：陷阱使攻擊者或目標離場後跳過攻擊傷害；HP 配置途中 Refresh 的登場允許；通用化物品/場景效果解析（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）；When this Cookie faints 事件引擎（pending queue、玩家/AI 雙路徑選擇、選 0 略過、多餅乾同時昏厥依序處理），且同一玩家的 BS2-040/BS2-049 類同時觸發效果會先交由玩家決定順序；顏色匹配與 Mix Cost 已實作；回合結束效果引擎（endPhase 標記、雙方順序觸發、一次性防重複、Refresh 暫停與恢復）。
-- 已達成：修復 `isEffectUntargeted` 錯誤標記 `support-to-trash`、`trash-to-battle`、`support-to-hand` 為無目標，避免 AI 與 UI 在這些效果上出錯；擴充 `gain-hp` 效果支援非 FLIP 技能路徑（ST3-001 Muscle Cookie、ST2-004 Macaron Cookie）；新增 UI 動畫回饋（攻擊抖動、抽牌滑入、傷害閃爍、昏厥縮小）與 PhaseRail 回合指示器，提升真人玩家輪流操作體驗。
-- 已達成：修正 ST3-004 Vampire Cookie 複合 OnPlay 效果（{ap} cost GGGN，Select up to 1 opponent Cookie receives 2 damage, Then this Cookie gains +1 HP），於 official-effect-adapter 的 exactStarterEffects 新增 damage + gain-hp 明確轉換；修正 ST3-017 Viney Vines 攻擊效果第二段 support-to-trash 支援卡候選無法選取問題，於 usePendingEffect 新增 supportEffectTargetIds 供 toggleEffectTarget 接受支援卡目標。
-- 已達成：開局牌組選擇與 AI 隨機牌組、猜拳先後攻、玩家活躍／抽牌自動推進、支援放置後自動進主要階段、頂部 HUD、滿版無捲軸桌機畫布、公開卡牌詳情，以及可縮小的 FLIP／物品／陷阱確認式大卡。
-- 已達成：效果決策提示框統一化，Aloe Cookie 昏厥強制效果、BS2-049 抽牌與後續棄手牌選擇皆使用深色置中可縮小 modal，避免淺色浮窗遮擋牌桌與「略過」語意誤導。
-- 已達成：主選單、對戰入口與牌組編輯器整合；玩家自訂牌組需通過 60 張、同卡 4 張、至少 1 張餅乾、FLIP 不超過 16 張檢查後才能開始對戰，AI 牌組在進入對戰前可從五色起始牌組隨機決定，或指定五色起始／第二彈預設牌組。
-- 已達成：新增第二彈 AI 預設牌組（紅色、黃色、豆子、藍色、紫色），共用 BS1/BS2 官方卡池與既有牌組工廠，可從主選單 AI 對手牌組下拉選擇；牌庫檢視提示框支援縮小／返回，並以瀏覽器流程確認可恢復、選牌、返回重選與確認放回。第二彈五副牌組作為玩家側與 AI 側的 5×5 對局矩陣已各以 20 種種子驗證可正常結束。
-- 已達成：最大化桌面版桌墊聚焦改版，移除固定右側 HUD，採窄型階段列、55/45 場地、資源牌堆浮層、中央操作指引與選取後才顯示的手牌合法動作；窄版同步維持 55/45 比例並調整卡牌排列。
-- 已達成：ST3-002／ST3-005／ST3-015 可從我方支援區直接選擇卡牌作為送入棄牌區的技能代價；同一張支援卡不可同時支付能量與特殊代價。
-- 已達成：ST2-003 Wizard Cookie 在攻擊傷害完成後、替補開始前，可選最多 1 張己方 LV.1 休息區卡牌移至棄牌區；玩家與 AI 均可完成結算。
-- 已達成：導入 `category_title` 為 `Starter Deck BLUE` 與 `Starter Deck PURPLE` 的官方範例牌組，補齊 22 種卡號×60 張牌組食譜，並新增對應官方樣本檔、建立函式與張數驗證測試。
-- 已達成：BS1-006 Mala Sauce Cookie 受傷後效果，新增 `src/game/afterDamage.ts` 共用收集模組與 `src/game/effects-bs1-after-damage.test.ts`；僅戰鬥傷害會在餅乾仍留在戰鬥區時觸發後續傷害（效果傷害不觸發），並支援 once-per-turn 登記、玩家／AI pending decision 與 UI 目標選擇。
-- 已達成：修復 `pendingBattle.stage === "attack-effect"` 控制權判定，攻擊後續效果現在由攻擊方處理；AI 作為攻擊方時會自動結算 attack-effect，不再停在 AI 主要階段等待玩家無法操作的 pending battle。同步補上玩家確認棄手牌傷害技能後排入補位的 hook 回歸測試。
-- 已達成：玩家手牌 hover 保留原扇形位置與角度，僅上移 8px、縮放至 1.02；ST5-021 無合法必選目標時不再列入陷阱候選，並以紫色對紫色固定種子 6、19、29、33 鎖定 AI 不再卡住。
-- 待實作：App.tsx（1575 行）容器元件拆分。已分析候選：`BattleScreen`（~1235 行 battle shell）、`FaintEffectModal`、`AfterDamageEffectModal`、`OpponentHandDiscardModal`、`DrawUpToModal`、`StageTriggerModal` 等 inline JSX modal，以及 PlayerBattleRow 的 ~150 行 callback handlers。
-- 已達成：`usePendingEffect` 補位排程納入 `applyGameCommand` 指令邊界；每筆指令在沒有 blocking pending 時，會在寫入 `commandLog` 前冪等地執行 `finalizePendingReplacements`，多段效果中間步驟不會提前補位或判負，UI 不再於 command 之外重複推進補位。回歸測試涵蓋效果最後一步、中間步驟、場景決策與 replay 等值。
-- 待實作：部分 AI battle／turn handler 仍手動呼叫規則函式並補記 `commandLog`；全面改走 `applyGameCommand` 並統一對局種子後，才支援「複製對局紀錄」回報格式。
-- 已達成：AI 等級分級第一版（Lv.1 隨機／Lv.2 現行啟發式掛名）與主選單 AI 牌組、等級選擇；設計文件見 `docs/ai-levels.md`。
-- 已達成：`PlayerView` 視角過濾器（`src/game/player-view.ts`，對手手牌／雙方牌庫／雙方 HP 卡皆只留張數）與 Lv.3 評估式 AI（`src/game/ai/evaluated-turn-handler.ts`，對候選動作套用 `evaluatePlayerView` 打分取最高分，攻擊採預期傷害加成，其餘強制流程委派 Lv.2）；主選單等級選擇加入 Lv.3。Lv.1/Lv.2/Lv.3 支援階段皆會在有手牌時優先放支援；新版 Lv.1 基線下，20 場種子模擬中 Lv.3 對 Lv.1 勝率 ≥ 55%。
-- 待實作：Lv.4／Lv.5（回合規劃與對抗性 AI），觀察 Lv.3 上線後的實際對戰體感再決定是否投入；`PlayerView` 未來預計重用於線上對戰 state snapshot。
-- 已達成：AI 攻擊宣告與 commandLog/replay 一致性——各級 AI（Lv.1–Lv.4）攻擊統一透過 `applyChosenTurnCommand` 走 `beginAttack` 並以 `declare-attack` 記入 commandLog，保留陷阱/FLIP 回應窗口；`commandLog` 長度不再影響 Lv.1 deterministic 決策，確保同 seed 同局面選出相同動作。
-- 拖移卡牌暫不實作；未來若加入，拖放只負責輸入，仍須呼叫既有規則 API，且在 pending decision、確認式大卡與 AI 行動期間停用，並保留按鈕與鍵盤操作。
-- 待官方規則確認後才擴充 `CardEffect`；不得將待確認規則寫成已完成項目。
-- 持續補齊起始牌組以外的複合效果與完整事件優先權。
-- 專案指令、驗證範圍或派工策略調整時，同步維護 `develop-braverse` Skill。
-- 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
-- 已達成：1194x680 平板解析度響應式版面驗證——主選單、牌組編輯器、break-to-trash 對戰桌均無 body 溢出；牌組編輯器 modal 在 viewport 內、操作列可見、牌組清單可滾動。
-- 已通過：AI 瀏覽器完整結果（含 StatusToast 與休息區點擊修正後）20/20 種子全綠無卡住，後續維持回歸。
-- 已完成 Vercel Dashboard 匯入 GitHub repo：Framework Preset Vite、Build Command `npm run build`、Output Directory `dist`、Install Command `npm ci`、Node.js Version 22。
-- 不啟用 main branch protection（個人開發者，不要求 CI 通過 + review）。
-- 已驗證 Vercel Production（https://braverse-web-game.vercel.app）以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready），正式網域可正常載入對局。
-- 已完成 Render 服務 braverse-web-game 部署與公網雙視窗對局驗收：Render 部署 commit a679f03（Deployed），以兩個獨立 WebSocket 分頁完成合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。注意 Render Free 閒置會休眠，首次連線可能需 50 秒以上。
-- 後續新 Braverse 任務優先用 `braverse-workflow` 模板開短 thread，依任務類型選擇驗證層級，再視需要載入 `develop-braverse` 的規則、派工或 Git 參考。
+待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
 
 ## 開發指令
 
@@ -136,14 +55,15 @@ npm run build
 
 `validate:cards` 檢查 `data/cards/*.json` 的必填欄位、同檔重複卡號、全卡池可轉換為 `GameCard` 與效果文字未轉出偵測；CI 會在測試前先執行。`validate:candidate` 檢查 `data/candidates/*.json` 的候選卡牌資料，包含 schemaVersion、source 結構、欄位型別、卡牌轉換與正式卡池跨檔重複檢查。`generate:card-pool` 重新生成 `src/game/generated-card-pool.ts`（promote 後會自動執行）。`typecheck` 對 app 與 server 做全量型別檢查（`tsc -b` + server tsconfig）。
 
-AI 瀏覽器驗證：
+瀏覽器驗證（皆需先 `npm run build`）：
 
 ```bash
-npm run build
-npm run test:ai:browser
+npm run test:ai:browser      # AI 對局多解析度 smoke test
+npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
+npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
 ```
 
-若 Playwright 安裝於外部目錄，可用 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 路徑。測試報告與截圖會輸出到 `test-results/`，不得提交。
+若 Playwright 安裝於外部目錄，可用 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 路徑。測試報告與截圖會輸出到 `test-results/`，不得提交。詳細驗證分級（L1/L2/L3）見 [docs/loop-engineering.md](docs/loop-engineering.md)。
 
 ## 卡牌資料匯入
 
@@ -156,27 +76,8 @@ npm run cards:import:blue-sample
 npm run cards:import:purple-sample
 ```
 
-`cards:import:sample` 目前預設匯入綠色起始牌組；紅色、黃色、綠色、藍色與紫色也可使用明確腳本重新產生。
+`cards:import:sample` 目前預設匯入綠色起始牌組；紅色、黃色、綠色、藍色與紫色也可使用明確腳本重新產生。新卡牌／新彈的完整匯入流程見 [docs/card-update-process.md](docs/card-update-process.md)。
 
-## 📝 更新日誌
+## 變更記錄
 
-| 日期 | 概要 |
-|---|---|
-| 2026-07-11 | 指令出口統一補位排程，完成 usePendingEffect commandLog／replay 一致性與回歸測試 |
-| 2026-07-11 | 1194x680 平板解析度瀏覽器驗證完成：主選單、牌組編輯器、break-to-trash 對戰桌無 body 溢出，牌組編輯器 modal 在 viewport 內且操作列可見 |
-| 2026-07-11 | AI 瀏覽器完整驗證 20/20 種子全綠（stuck=0）；互動／文案修正 |
-| 2026-07-11 | break-to-trash 結果訊息分流、補 effectUiUtils 單元測試、同步 AI 瀏覽器斷言文案 |
-| 2026-07-11 | 修正 StatusToast 訊息變更後重新顯示，穩定 AI 瀏覽器測試休息區卡牌點擊（DOM click 避免 modal backdrop 攔截） |
-| 2026-07-11 | Vercel + Render 公網部署與雙視窗對局驗證完成 |
-| 2026-07-11 | 修正線上對戰加入房間後對戰畫面未顯示（MainMenu 與 OnlineBattleView 兄弟元素重疊問題） |
-| 2026-07-11 | 候選卡牌匯入管線強化：validate:candidate 新增 schemaVersion/source/欄位型別結構檢查、promote:candidate 加入檔名碰撞拒絕與 rollback、promote 後自動重新生成卡池 registry 確保新卡牌納入 runtime card pool |
-| 2026-07-11 | CI 新增 validate:candidate 與 check:card-pool gate，防止候選資料或 runtime registry 漏同步 |
-
-完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。
-### Latest verification baseline
-
-本輪新增 `npm run test:online:browser`，以 1366×768 與 280×720 驗證線上對戰 modal 的水平邊界、表單控制項、關閉流程與 console/page error；執行前需先 `npm run build`。
-
-更新日誌補充：2026-07-11 完成線上對戰 modal 桌機／窄視窗瀏覽器驗收腳本。
-
-最新驗證基線為 `npm test` 95 個測試檔、1525 項測試；`validate:cards`、`validate:candidate`、`check:card-pool`、lint、typecheck、build、AI 瀏覽器 20/20 與線上 modal 瀏覽器 2/2 均通過。主 JS bundle 為 806.97 kB（raw 788.06 KiB，gzip 167.23 kB；budget 實測 gzip 162.49 KiB）；牌組編輯器、測試情境與線上對戰 modal 已分離為按需載入 chunk，仍保留主 bundle >500 KB 的既有警告。bundle budget 已接入 GitHub Actions CI。
+完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；發布與 PR 流程見 [docs/release-process.md](docs/release-process.md)。
