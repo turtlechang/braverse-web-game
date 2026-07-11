@@ -16,5 +16,6 @@
 
 - Playwright 前必須先執行 `npm run build`。
 - 若 Playwright 安裝於外部目錄，以 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules`。
-- 完整 `npm run test:ai:browser` 目前有既有版面基線限制：1920x1080 玩家手牌覆蓋支援區斷言會失敗，且已在未修改基線重現。修正版面前不得宣稱完整 Playwright 全綠。
+- `npm run test:ai:browser` 目前基線為 20 場完成、`stuck=0`；不得以挑選種子掩蓋失敗。
+- 好友房核心流程使用 `npm run test:online:match:browser`，以兩個隔離瀏覽器連接本機權威 WebSocket server，驗證建房、加入、開局、合法階段同步與斷線提示；它不等同於自動打完整場至勝負。
 - 測試總數或瀏覽器驗證範圍改變時，同步更新 `AGENTS.md` 與 `README.md`。

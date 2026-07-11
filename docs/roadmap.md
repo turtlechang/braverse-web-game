@@ -2,18 +2,18 @@
 
 最後更新：2026-07-12。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
 
-> 2026-07-12 驗證補充：R3 AI Refresh replay 已由 `shuffleSeed` command payload 完成；最新 bundle 為 731.12 KiB raw / 152.39 KiB gzip，通過 budget。
-> AI Playwright smoke workflow 已於 main push 自動觸發，並保留手動觸發供調查使用。
+> 2026-07-12 驗證補充：R3 AI Refresh replay 已由 `shuffleSeed` command payload 完成；最新 bundle 為 731.11 KiB raw / 152.39 KiB gzip，通過 budget。
+> AI、牌組編輯器與好友房 Playwright smoke workflow 已於 main push 自動觸發，並保留手動觸發供調查使用。
 
 ## 已完成里程碑（摘要）
 
-- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay（含 AI 對局重播）、1526 項測試（96 檔，目前基線）。（PR #11 等）
+- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay（含 AI 對局重播）、1535 項測試（96 檔，目前基線）；多段能力效果已有 8 類中途決策阻擋與看牌決策恢復回歸。（PR #11 等）
 - **牌組編輯器**：搜尋/篩選/合法性檢查/匯入匯出/版本化儲存。（PR #11）
 - **AI Lv.1–4**：隨機 / 啟發式 / 評估式 / 兩層前瞻 + matchup 資料驅動評估；20 份 BS2 訓練文件。（PR #12/#13、commit `076e7a5`）
 - **卡牌池**：BS1/BS2 + 五色起始牌組匯入；25 張未支援卡效果補齊。（PR #17）
 - **UI 多輪重製**：滿版桌墊 HUD、扇形手牌、統一效果 modal、EffectPanel/陷阱/攻擊 modal 改版。（PR #16/#20/#21）
-- **線上對戰 MVP**：ws server、房間、遮罩狀態、OnlineBattleView。（Phase 5 分支已進 main）
-- **CI**：GitHub Actions test/lint/build + 手動 Playwright 驗證；Vercel Dashboard 已匯入。
+- **線上對戰 MVP**：ws server、房間、遮罩狀態、OnlineBattleView；本機雙瀏覽器已自動驗證建房、加入、開局、主階段同步與斷線提示。（Phase 5 分支已進 main）
+- **CI**：GitHub Actions test/lint/build + main push Playwright smoke；Vercel Dashboard 已匯入。
 
 ## 待辦（依優先序）
 
@@ -32,7 +32,7 @@
 | `validate:cards` | ✅ `scripts/validate-cards.ts`（必填欄位、同檔重複卡號、卡池 311 種全數可轉換 GameCard、效果文字未轉出偵測）；已接入 CI 第一步。首跑即抓到 BS2-061@1 缺 level 的資料缺陷（已修＋匯入腳本加異圖回填） |
 | `vercel.json` | ✅ SPA rewrite（assets 除外）；已於 Production 網域驗證可正常載入 |
 | `npm run typecheck` | ✅ `tsc -b && server:typecheck`（app + server 全量型別檢查） |
-| Render 部署準備 | ✅ 已部署（commit a679f03）並完成雙視窗公網對局驗證；詳見 [online-server-hosting.md](online-server-hosting.md)。Render Free 閒置會休眠，首次連線需等待喚醒 |
+| Render 部署準備 | ✅ 已部署（commit a679f03）並完成雙視窗公網對局驗證；本機 `test:online:match:browser` 另自動覆蓋核心好友房生命週期。詳見 [online-server-hosting.md](online-server-hosting.md)。Render Free 閒置會休眠，首次連線需等待喚醒 |
 
 ### P2 — 維護流程正式化 ✅（2026-07-11 確認完成）
 
@@ -43,6 +43,13 @@
 | [card-update-process.md](card-update-process.md) | ✅ 11 步流程（匯入→validate→effectId→resolver→測試→AI smoke→UI 檢查→changelog→PR→preview→合併）文件化 |
 | [regression-test-checklist.md](regression-test-checklist.md) | ✅ 自動化門檻、AI 行為、歷史回歸熱點、瀏覽器級、資料部署五個章節 |
 | [manual-playtest-checklist.md](manual-playtest-checklist.md) | ✅ 既有，涵蓋開局/回合戰鬥/效果/牌組編輯器/線上對戰/RWD/部署驗收 |
+
+### V1 退出檢查（目前待完成）
+
+| 項目 | 狀態 |
+|---|---|
+| 真人試玩證據 | ⏳ 依 [manual-playtest-checklist.md](manual-playtest-checklist.md) 完成至少 1–2 場，記錄規則疑點、AI 體感、牌組編輯器操作阻力與 UI 可讀性 |
+| 外部健康稽核 | ⏳ 本輪 main push 後確認 GitHub Actions、Vercel Production 與 Render WebSocket 實際健康；本機綠燈不代替外部狀態 |
 
 ### P3 — 產品深化（觀察後再投入）
 

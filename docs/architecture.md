@@ -92,9 +92,9 @@
 
 ## 7. 建置與測試
 
-> 2026-07-12 更新：AI smoke workflow 於 main push 自動執行，並保留 `workflow_dispatch` 手動觸發。
+> 2026-07-12 更新：AI、牌組編輯器與好友房 smoke workflow 於 main push 自動執行，並保留 `workflow_dispatch` 手動觸發。
 
 - Vite 8 + TypeScript 6（`tsc -b` 複合建置：app + node 兩個 tsconfig；server 獨立 `server:typecheck`）。
 - vitest 4：測試數與原始碼同目錄放置（`*.test.ts(x)`）；目前基線見 [CHANGELOG.md](../CHANGELOG.md) 最新項目（非永久門檻，只要求不低於前次基線）。
-- Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度、20 場 AI 對局）、`npm run test:deck:browser`（牌組編輯器匯入／儲存與桌機／窄版）、`npm run test:blue:browser`（藍牌效果流程）、`npm run test:online:browser`（線上 modal 桌機／窄版）；AI 與牌組編輯器驗證另由 main push／手動 GitHub Actions workflow 執行。
+- Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度、20 場 AI 對局）、`npm run test:deck:browser`（牌組編輯器匯入／儲存與桌機／窄版）、`npm run test:blue:browser`（藍牌效果流程）、`npm run test:online:browser`（線上 modal 桌機／窄版）、`npm run test:online:match:browser`（本機雙瀏覽器建房／加入／開局／同步／斷線）；AI、牌組編輯器與好友房驗證另由 main push／手動 GitHub Actions workflow 執行。
 - CI：`.github/workflows/ci.yml`（PR + main push：卡牌／候選／registry 驗證 → test → lint → build → bundle budget）。

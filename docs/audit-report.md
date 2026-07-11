@@ -1,98 +1,98 @@
-# 專案審查報告（Phase 0 Audit Report）
+# 專案審查報告（V1 Current Audit）
 
-> **2026-07-12 現況補充（以 `main@358f4ed` 為準）**：R3 AI Refresh replay 缺口已解決；現行基線為 96 個測試檔、可重現測試 1,526 項；主 bundle 731.12 KiB raw / 152.39 KiB gzip；AI 瀏覽器 20/20 (`stuck=0`)、線上 modal 2/2均通過。公網快照：Vercel Production HTTP 200；Render WebSocket 服務根路徑 HTTP 426 Upgrade Required（符合 WebSocket 服務預期）；AI smoke workflow 已綁定 main push 自動觸發。本段為當前審查的權威證據，下方歷史結果僅保留作為時點快照。
+> 最後更新：2026-07-12。本文件只保留可由目前程式碼、測試、部署紀錄與文件證明的現況；歷史實作細節見 [CHANGELOG.md](../CHANGELOG.md)。測試數與 bundle 為目前基線，不是永久寫死門檻。
 
-- 審查日期：2026-07-12
-- 審查範圍：整個 repo（main 分支，commit `ee6b7ef`）
-- 審查方式：目錄盤點、package.json scripts 檢查、文件比對、lint / test / build 實測
-- 審查性質：本報告對照「總體開發計畫」的 Phase 0–8 要求，盤點實際完成度與缺口。**本專案實際進度已遠超 Phase 0**，因此本報告同時是「差距分析」。
+- 審查範圍：目前 `main` 與本輪工作區
+- 審查方式：目錄與資料流盤點、文件交叉比對、lint／typecheck／test／build／bundle 實測、Playwright 真實瀏覽器驗證
+- 目前基線：96 個測試檔、1535 項 vitest 測試；主 bundle 731.11 KiB raw／152.39 KiB gzip
+- 瀏覽器基線：AI 20/20（`stuck=0`）、牌組編輯器 2/2、線上 modal 2/2、好友房雙瀏覽器核心流程通過
 
 ---
 
-## 1. 總體結論
+## 1. V1 完成度總覽
 
-| 面向 | 狀態 | 摘要 |
+| 面向 | 狀態 | 權威證據 |
 |---|---|---|
-| 規則引擎 | ✅ 成熟 | `src/game/` 純函式引擎，typed GameCommand 指令層 + commandLog + replay，96 個測試檔、1526 項測試（目前基線非永久門檻） |
-| 卡牌資料庫 | ⚠️ 部分 | 官方 JSON 匯入、schema、validate:cards、validate:candidate 已接入 CI，仍需持續擴充 effectId/新卡牌覆蓋與 PUBLIC_MODE 決策 |
-| 牌組編輯器 | ✅ 完成 | 60 張 / 同卡 4 張 / ≥1 餅乾 / FLIP ≤16 驗證、匯入匯出、localStorage 版本化保存 |
-| AI 對戰 | ✅ 完成 | Lv.1（隨機）/ Lv.2（啟發式）/ Lv.3（評估式）/ Lv.4（兩層前瞻）皆已實作，附訓練文件與勝率門檻測試 |
-| UI / UX | ✅ 持續迭代 | 滿版桌墊 HUD、扇形手牌、統一效果 modal、動畫；PR #20/#21 剛完成 EffectPanel 改版 |
-| 線上對戰 | ✅ MVP | `server/`（ws + rooms）、`src/net/onlineProtocol.ts`、遮罩狀態、OnlineBattleView 已進 main |
-| 部署 / CI | ✅ 完成 | GitHub Actions CI（test/lint/build）已建；Vercel + Render Production 已部署並通過雙視窗公網對局驗收；`vercel.json` SPA rewrite 已存在 |
-| IP / 授權 | ✅ 已解決（保留風險） | README 與主選單 footer 已有非官方粉絲研究聲明；LICENSE 已存在；保留官方素材熱連結風險與未實作 PUBLIC_MODE |
-| 維護文件 | ⚠️ 需持續維護 | AGENTS.md + docs/ 30+ 份文件 + 專案 Skills 完整；CHANGELOG.md、docs/release-process.md、docs/card-update-process.md 已建立，需持續維護 |
+| 規則引擎 | ✅ 核心完成 | `src/game/` 純函式規則、typed `GameCommand`、commandLog、replay；多段效果含 8 類中途決策阻擋與看牌決策恢復回歸 |
+| 卡牌資料管線 | ✅ V1 完成／持續擴充 | 官方 JSON 匯入、schema、`validate:cards`、候選隔離／驗證／promote、runtime registry gate 均已接入 CI |
+| 牌組編輯器 | ✅ 完成 | 搜尋／篩選、60 張／同卡 4 張／至少 1 餅乾／FLIP ≤16、匯入匯出、版本化 localStorage；瀏覽器匯入與 RWD smoke |
+| AI 對戰 | ✅ V1 完成 | Lv.1–4、PlayerView 資訊邊界、固定種子回歸、5×5 矩陣與 20 場瀏覽器 smoke；Lv.5 為觀察後增強，不阻擋 V1 |
+| UI／UX | ✅ V1 基礎完成／需真人打磨 | 原創深藍電競科幻介面、滿版桌墊、扇形手牌、統一效果 modal、RWD、六份 wireframe；市場級體感仍需真人試玩回報 |
+| 好友房對戰 | ✅ MVP 完成 | 權威 WebSocket server、房間碼、遮罩狀態、正式戰場；公網雙視窗完整對局曾人工驗收，本機雙瀏覽器自動覆蓋建房→加入→開局→主階段同步→斷線 |
+| 部署／CI | ✅ 基礎設施完成／待本輪外部健康確認 | Vercel Production + Render WebSocket；PR/main CI 與 main push Playwright workflow；bundle budget gate |
+| 維護／迭代 | ✅ 流程完成 | CHANGELOG、release、card-update、regression、manual-playtest、Loop Engineering、子代理停滯交接文件 |
+| IP／授權 | ⚠️ 已決策接受風險 | MIT + 官方素材除外條款、非官方聲明；維持官方卡圖熱連結，不做 PUBLIC_MODE，收到異議再處理 |
 
-## 2. 專案結構
+## 2. 架構證據
 
-```
-├─ src/
-│  ├─ game/          # 純函式規則引擎（約 90 檔，含測試）：actions、battle、effects/、ai/、
-│  │                 # commands（8 決策 + 24 玩家動作指令）、replay、player-view、masked-state、
-│  │                 # legal-actions、custom-deck、victory、refresh、pending
-│  ├─ cards/         # 官方卡牌 JSON → GameCard 轉接層（adapter / effect-adapter / text-parser）
-│  ├─ components/    # UI：MainMenu、battle/（含 OnlineBattleView）、cards、effects、modals、panels、layout
-│  ├─ hooks/         # useMatchController / usePendingEffect / useAiTurn / useOnlineMatch 等 12+ hooks
-│  ├─ net/           # onlineProtocol.ts（線上對戰協定）
-│  └─ App.tsx        # 573 行協調層（PR #16 已從 1554 行拆分）
-├─ server/src/       # WebSocket 對戰伺服器（index / rooms / connection，含測試）
-├─ data/
-│  ├─ cards/         # 官方卡牌 JSON（BS1、BS2、五色起始牌組）
-│  └─ schemas/       # official-card-import.schema.json（匯入格式 schema）
-├─ scripts/          # 卡牌匯入、Playwright 瀏覽器驗證、opencode-go 派工
-├─ docs/             # 規則、卡牌效果、AI 等級、20 份 BS2 對局訓練紀錄等
-├─ .github/workflows/ # ci.yml（test/lint/build）、ai-browser-validation.yml（手動 Playwright）
-└─ AGENTS.md         # 代理工作硬規範（已瘦身，細節在 .agents/skills/）
+```text
+src/game/          純函式規則、AI、GameCommand、replay、牌組與遮罩狀態
+src/cards/         官方資料格式、文字解析與 GameCard 轉接
+src/components/    主選單、戰場、牌組編輯器、效果與線上對戰 UI
+src/hooks/         本地／AI／線上控制器與 pending effect 協調
+src/net/           好友房前後端訊息協定
+server/src/        WebSocket 房間、連線、權威指令執行與視角遮罩
+scripts/           卡牌管線、bundle gate、五套 Playwright 驗證
+data/              正式卡池、候選隔離區與 schema
+docs/              規則、架構、UI 參考、發布／更新／回歸／試玩流程
 ```
 
-## 3. 工具鏈與 scripts 現況
+不可破壞的邊界：
 
-| 主計畫要求 | 現況 |
+- 規則與合法性集中在 `src/game/`，React 不另寫權威規則。
+- UI、AI 與 server 共用 `applyGameCommand`；重播依 command payload 還原。
+- 線上 server 驗證 socket 身分並只送出對應玩家的遮罩狀態。
+- 新卡先進 `data/candidates/`，驗證失敗不得覆蓋正式卡池。
+
+## 3. 驗證矩陣
+
+| 驗證 | 現況 |
 |---|---|
-| `npm run lint` | ✅ eslint 10（flat config） |
-| `npm run typecheck` | ✅ 2026-07-10 補齊：`tsc -b && server:typecheck`（app + server） |
-| `npm run test` | ✅ vitest，1526 項通過（96 檔，見 §5） |
-| `npm run build` | ✅ tsc -b + vite build |
-| `npm run validate:cards` | ✅ 2026-07-10 補齊：`scripts/validate-cards.ts`，已接入 CI |
-| `vercel.json` | ✅ 2026-07-10 補齊：SPA rewrite（assets 除外） |
-| CI | ✅ PR + main push 觸發 test/lint/build；另有手動 Playwright workflow |
-| Vercel | ✅ 已部署 Production（VITE_WS_URL=wss://braverse-web-game.onrender.com），正式網域可正常載入對局；Render 為 ws server 宿主 |
+| `npm test` | ✅ 96 檔／1535 項 |
+| `npm run lint` | ✅ |
+| `npm run typecheck` | ✅ app + server |
+| `npm run build` | ✅；仍有 Vite >500 kB 提示，但通過專案 budget |
+| `npm run check:bundle` | ✅ 731.11 KiB raw／152.39 KiB gzip（budget 850／180 KiB） |
+| `npm run test:ai:browser` | ✅ 20/20，`stuck=0` |
+| `npm run test:deck:browser` | ✅ 錯誤 JSON、合法匯入／儲存、1366×768／280×720 |
+| `npm run test:online:browser` | ✅ 線上 modal 桌機／窄版 RWD |
+| `npm run test:online:match:browser` | ✅ 兩個隔離瀏覽器連接本機權威 server，完成建房／加入／開局／階段同步／斷線 |
 
-## 4. 主計畫 Phase 對照
+## 4. 原計畫 Phase 對照
 
-| Phase | 主計畫目標 | 實際狀態 |
+| Phase | 目標 | 現況 |
 |---|---|---|
-| 0 盤點 | 8 份文件 | 本輪補齊（先前缺 7 份，AGENTS.md 已存在） |
-| 1 規則引擎 | Validator / Effect Resolver / Battle Log / Replay | ✅ 完成（PR #11）。UI 與 AI 均經 command 出口；AI Refresh 亦已攜帶 shuffle seed，R3 replay 缺口解除 |
-| 2 卡牌資料庫 | schema + validate + import | ⚠️ 管線已完成（import/schema/validate:cards/validate:candidate 已接入 CI），仍需持續擴充 effectId/新卡牌覆蓋與 PUBLIC_MODE 決策 |
-| 3 牌組編輯器 | 搜尋/篩選/驗證/匯入匯出 | ✅ 完成（PR #11 等），含版本化儲存與遷移 |
-| 4 AI 對戰 | Lv.1–5 | ✅ Lv.1–4 實作完成（commit `076e7a5`）；Lv.5 為設計文件（docs/ai-levels.md） |
-| 5 UI/UX 重製 | 對標文件 + mockup | ⚠️ 實際 UI 已多輪重製（滿版桌墊、扇形手牌、統一 modal）；缺對標分析與 wireframe 文件（實作已超前文件） |
-| 6 線上對戰 | 房間 + 同步 | ✅ MVP 已進 main（ws server、房間、遮罩狀態、OnlineBattleView）；雙視窗完整對局驗收已於 2026-07-11 完成 |
-| 7 部署/CI | vercel.json + workflows | ✅ Vercel Production 部署完成（Git Integration），Render 作為 ws server 宿主已部署並通過雙視窗驗收；Render Free 冷啟動風險見 known-risks R6 |
-| 8 維護流程 | CHANGELOG + 流程文件 | ⚠️ CHANGELOG.md、docs/release-process.md、docs/card-update-process.md 已建立，需持續維護 |
+| 0 盤點 | 架構、產品、風險、測試與部署文件 | ✅ 完成；本報告已移除過期快照 |
+| 1 規則引擎 | Validator／Effect Resolver／Battle Log／Replay | ✅ V1 完成；仍依官方新版規則持續覆核 |
+| 2 卡牌資料庫 | schema／validate／import／候選 promotion | ✅ V1 完成；新卡依流程持續新增 |
+| 3 牌組編輯器 | 搜尋／篩選／驗證／匯入匯出 | ✅ 完成且有瀏覽器 smoke |
+| 4 AI 對戰 | Lv.1–4 核心、Lv.5 觀察後投入 | ✅ V1 完成；Lv.5 延後至真人試玩後決策 |
+| 5 UI／UX | 原創方向、對標、wireframe、RWD | ✅ V1 基礎完成；需持續依真人體感迭代 |
+| 6 好友房 | 房間、同步、遮罩、斷線提示 | ✅ MVP 完成；自動化尚未打到勝負 |
+| 7 部署／CI | Vercel + Render + 自動 gate | ✅ 完成 |
+| 8 維護 | 發布、卡牌更新、回歸、Loop Engineering | ✅ 文件與工具完成，進入持續執行階段 |
 
-## 5. 驗證結果（2026-07-11 實測）
+## 5. 尚未完成的證據與下一步
 
-- `npm run lint`：✅ 通過
-- `npm test`：✅ 96 個測試檔、1526 項測試全數通過（非永久門檻）
-- `npm run build`：✅ `tsc -b` + `vite build` 成功
-- ⚠️ build 警告：主 bundle 806.97 kB（gzip 167.23 kB），仍有 >500 kB 建議值警告；未來可考慮 dynamic import 分割（牌組編輯器、線上對戰模組是天然切點），非急迫。
-- 附註：CI（GitHub Actions）於 main 分支同樣執行以上三項。
+### V1 退出前仍需
 
-## 6. 缺口清單（依風險排序）
+1. **真人試玩回報**：使用 [manual-playtest-checklist.md](manual-playtest-checklist.md) 完成至少 1–2 場，記錄規則疑點、AI 體感、牌組編輯器操作阻力與 UI 可讀性。這是目前唯一無法由自動測試取代的產品證據。
+2. **稽核生產自動流程**：main push 後確認 GitHub Actions、Vercel Production 與 Render 實際健康；本機綠燈不能代替外部狀態。
 
-1. **IP 聲明缺失（高）**：README、網站 footer 皆無「非官方粉絲研究」聲明；已部署 Vercel 則為公開網站。→ ✅ 已解決（2026-07-10）：README 與主選單 footer 皆已加聲明。
-2. **官方素材公開部署（高）**：卡圖熱連結 `cookierunbraverse.com`、卡背/能量圖示在 `public/`。→ 已決策（2026-07-10）：維持熱連結、不做 PUBLIC_MODE，收到異議再處理。詳見 [ip-and-asset-policy.md](ip-and-asset-policy.md)。
-3. **無 `validate:cards`（中）**：→ ✅ 已解決（2026-07-10）：`npm run validate:cards` + CI；首跑即發現 BS2-061@1 缺 level 資料缺陷並修復。
-4. **部分 AI 路徑仍手動補記 commandLog（中）**：玩家 UI 與 `usePendingEffect` 已走指令層，補位排程也在 command 出口統一處理；但部分 AI battle／turn handler 仍直呼規則函式後補記 log，全面 replay 仍需逐步 command 化。
-5. **Vercel 與 ws server 架構分裂（中）**：Vercel 只能承載前端。→ 已於 2026-07-11 部署 Render 免費層並完成雙視窗公網驗收。Render Free 冷啟動見 known-risks R6。
-6. **維護流程持續維護（低）**：CHANGELOG.md、release-process、card-update-process 已建立，需持續維護。
-7. **無 LICENSE（低）**：→ ✅ 已解決（2026-07-10）：MIT + Devsisters 素材除外條款。
+### 已知但接受的 V1 風險
 
-## 7. 建議下一輪（不在本輪執行）
+- Render Free 休眠與冷啟動；V1 不承諾斷線重連與逾時判負。
+- 官方卡圖熱連結與資料來源結構可能改版失效。
+- 官方效果文字轉換包含集中記錄的專案裁定，取得新版規則後需覆核。
+- 好友房瀏覽器自動化目前驗證到主要階段與斷線，尚未自動打完整場至勝負；既有人工公網對局與 server／規則整合測試共同降低風險。
 
-1. 網站 footer 加非官方聲明（小 UI 變更）。
-2. `scripts/validate-cards.ts` + `npm run validate:cards` + 接入 CI。
-3. `vercel.json`（SPA rewrite）✅ 已完成（2026-07-11 於 Production 網域驗證載入與對局功能）。
-4. 線上對戰雙視窗完整對局驗收 ✅ 已完成（2026-07-11 以 Render + Vercel 完成公網對局驗證）。
+### V1 後增強，不作為目前退出條件
+
+- AI Lv.5 牌組理解與策略傾向。
+- 拖移卡牌輸入層。
+- 進一步拆分主 bundle、卡圖快取與更完整的斷線重連。
+- 帳號、排名、配對、金流與賽事系統。
+
+## 6. 結論
+
+Braverse 已具備「可測試、可部署、可更新卡牌、可單機練牌、可與好友連線」的 V1 技術骨架。目標尚不能標記完成，原因不是核心功能缺失，而是仍需真人試玩證據與本輪 main push 後的外部 CI／Production 健康確認。完成這兩項後，才適合進行 V1 退出稽核。

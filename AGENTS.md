@@ -71,6 +71,7 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 | `npm run test:watch` | 監聽模式執行測試 |
 | `npm run test:ai:browser` | Playwright 瀏覽器 AI 驗證（需先 `npm run build`） |
 | `npm run test:online:browser` | Playwright 線上對戰 modal RWD／可用性驗證（需先 `npm run build`） |
+| `npm run test:online:match:browser` | Playwright 本機雙瀏覽器好友房建房／加入／開局／同步／斷線驗證（需先 `npm run build`） |
 | `npm run cards:import:sample` | 匯入官方 Starter Deck 卡牌資料範例（預設 GREEN） |
 | `npm run cards:import:red-sample` | 匯入官方 Starter Deck RED 卡牌資料 |
 | `npm run cards:import:yellow-sample` | 匯入官方 Starter Deck YELLOW 卡牌資料 |
