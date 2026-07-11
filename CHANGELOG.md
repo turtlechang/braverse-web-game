@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 📚 UI reference wireframe 文件（roadmap P3）：新增 `docs/ui-reference/06-online-match-wireframe.md`（線上對戰面板）；依實機驗證更新 `02-main-menu-wireframe.md`（空狀態 CTA 邏輯）；回填 `ui-audit-2026-07-11.md` 的 P0（主選單空狀態、線上對戰彈窗）已解決狀態。
 - ⚡ 戰鬥資訊 modal 群組（`InformationModals`／`BattleResponseModals`／`DamageEffectModals`／`PendingDecisionModals`／`ResultModal`／`OpeningSetupModal`）改為 `React.lazy` + `Suspense`；主 bundle 由約 806.92 KB 降至 730.68 KB raw（167.17 → 152.26 KB gzip）。
 - 🛡️ R3 指令層收尾：AI（`ai.ts`、`ai/battle-handler.ts`、`ai/turn-handler.ts`、`ai/random-turn-handler.ts`）全面改走 `applyGameCommand`，取代手動 `appendCommandLogEntry`；新增共用 `simulateAbilityEffects`（`src/game/ai/ability-effects.ts`）讓 AI 的 `play-item`／`activate-skill`／`activate-stage` 補齊 `effectTargets`，修復先前 AI 對局 commandLog 重播會失真的問題。過程中發現並修復 `commands.ts` 的 `assertNoPendingDecision` 缺口（補位帶出的新餅乾 OnPlay 未被排除在昏厥效果阻擋之外，會造成死結）。新增 `ai-replay-fidelity.test.ts`；測試基線升至 96 檔／1526 項。
 - 🎨 P0 UI/UX 改進：線上對戰面板深藍電競科幻 modal 樣式化（`OnlineMatchPanel.tsx` + `GameModals.css`），含專屬 `.online-match-panel` 類別、32×32px 關閉按鈕、內容區捲軸管理、完整 hover/focus-visible/active/disabled 狀態。
