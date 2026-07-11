@@ -50,7 +50,7 @@
 
 - **純函式**：所有規則函式 `(state, input) → newState`，可種子重現，測試不需 mock。
 - **不合法操作回傳可讀錯誤**（`errors.ts`），UI 與 AI 共用同一驗證。
-- **指令層現況**：玩家 UI、攻擊宣告與多段效果精靈皆透過 `applyGameCommand`；command 出口會在 blocking pending 全數結束後執行補位／勝負排程，再寫入 `commandLog`。部分 AI battle／turn handler 仍直呼規則函式並以 `appendCommandLogEntry` 補記，列為後續 command 化範圍（詳見 audit-report §6.4）。
+- **指令層現況**：玩家 UI、攻擊宣告、多段效果精靈與全部 AI battle／turn handler（`ai.ts`、`ai/battle-handler.ts`、`ai/turn-handler.ts`、`ai/random-turn-handler.ts`）皆透過 `applyGameCommand`；command 出口會在 blocking pending 全數結束後執行補位／勝負排程，再寫入 `commandLog`。AI 的 `play-item`／`activate-skill`／`activate-stage` 透過共用的 `simulateAbilityEffects`（`src/game/ai/ability-effects.ts`）先算出完整 `effectTargets` 才送入 `applyGameCommand`，確保 replay 對 AI 對局同樣忠實（`ai-replay-fidelity.test.ts`）。
 
 ## 3. 卡牌轉接層（src/cards/）
 
