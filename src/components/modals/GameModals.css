@@ -1939,6 +1939,8 @@
 
 .online-match-field select,
 .online-match-input {
+  width: 100%;
+  min-width: 0;
   min-height: 40px;
   padding: 0 12px;
   border: 1px solid rgba(113, 233, 255, 0.35);
@@ -2088,5 +2090,23 @@
 
   .online-match-body {
     padding: 0 20px 18px;
+  }
+}
+
+@media (max-width: 360px) {
+  .online-match-panel {
+    width: calc(100vw - 32px);
+  }
+
+  .online-match-header {
+    padding-inline: 16px;
+  }
+
+  .online-match-body {
+    padding-inline: 16px;
+  }
+
+  .online-match-join-row {
+    flex-direction: column;
   }
 }

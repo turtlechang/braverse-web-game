@@ -44,7 +44,7 @@
 ### UI ✅／⚠️
 
 - 元件測試：BattleRow（含互動）、MainMenu、gameUiLabels、各 hooks。
-- Playwright：滿版畫布無捲軸、扇形手牌幾何、modal 縮小/返回、陷阱/FLIP/補位/物品/場景路徑、12 種解析度（1600×900～600×338）。
+- Playwright：滿版畫布無捲軸、扇形手牌幾何、modal 縮小/返回、陷阱/FLIP/補位/物品/場景路徑、12 種解析度（1600×900～600×338）；`npm run test:online:browser` 另驗證線上對戰 modal 的 1366×768／280×720 RWD 與可點擊關閉流程。
 - ⚠️ 缺口：Playwright 屬手動觸發，不在每次 PR 的 CI；牌組編輯器與線上對戰無瀏覽器級測試。
 
 ### 線上對戰 ⚠️

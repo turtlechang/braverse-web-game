@@ -169,4 +169,8 @@ npm run cards:import:purple-sample
 完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。
 ### Latest verification baseline
 
-最新驗證基線為 `npm test` 94 個測試檔、1500 項測試；`validate:cards`、`validate:candidate`、lint、typecheck 與 build 均通過。主 JS bundle 約 851.56 KB 的 code-splitting 警告仍屬既有待辦。
+本輪新增 `npm run test:online:browser`，以 1366×768 與 280×720 驗證線上對戰 modal 的水平邊界、表單控制項、關閉流程與 console/page error；執行前需先 `npm run build`。
+
+更新日誌補充：2026-07-11 完成線上對戰 modal 桌機／窄視窗瀏覽器驗收腳本。
+
+最新驗證基線為 `npm test` 95 個測試檔、1520 項測試；`validate:cards`、`validate:candidate`、`check:card-pool`、lint、typecheck、build、AI 瀏覽器 20/20 與線上 modal 瀏覽器 2/2 均通過。主 JS bundle 約 851.60 KB 的 code-splitting 警告仍屬既有待辦。

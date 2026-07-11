@@ -26,6 +26,7 @@
     "lint": "eslint .",
     "test": "vitest run --exclude scripts/opencode-go-benchmark.test.js",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",
+    "test:online:browser": "node scripts/online-modal-browser-validation.mjs",
     "test:blue:browser": "node scripts/blue-card-validation.mjs",
     "test:watch": "vitest --exclude scripts/opencode-go-benchmark.test.js",
     "test:benchmark": "node --test scripts/opencode-go-benchmark.test.js",

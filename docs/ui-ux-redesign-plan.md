@@ -20,7 +20,7 @@
 
 ## 2. 改進項（依優先序，2026-07-11 校正）
 
-### P0-1 線上對戰彈窗修復（最高）實作完成；正式瀏覽器驗收待補
+### P0-1 線上對戰彈窗修復（最高）實作與正式瀏覽器驗收完成
 
 - 來源：[UI 審查 §5](ui-audit-2026-07-11.md#5-線上對戰彈窗控制項重疊--未樣式化p0)
 - 問題：
@@ -30,7 +30,7 @@
 - 方案：以專屬 `.online-match-panel` 深藍電競科幻 modal 取代未樣式化面板；關閉按鈕加大至 32×32px 以上；內容區 `overflow-y: auto` 支援捲動；不含房間列表功能（現有協定僅支援建立房間與依房號加入）。
 - 實作：`OnlineMatchPanel.tsx` 使用專屬 `.online-match-*` 類別；`GameModals.css` 加入完整樣式（panel、header、body、form control、按鈕 primary/secondary、狀態色 badge、hover/focus-visible/active/disabled、pulse 動畫、高度媒體查詢）。
 - 已驗收（Vitest）：建立房間、輸入／加入房號、等待房號、錯誤訊息與返回按鈕、關閉/leave 行為；`OnlineMatchPanel.test.tsx`（15 項 mock hook 測試，含 idle/waiting/error/close/dialog/label/connecting 路徑）。
-- **待補**：1280×720 與 1366×768 正式瀏覽器驗證（含可點擊狀態），需有合法本機自訂牌組或 Render 環境後補做。目前僅通過單元測試與靜態樣式審查。
+- **驗收**：`npm run test:online:browser` 以合法本機自訂牌組驗證 1366×768 與 280×720；確認 modal、表單控制項、關閉流程、水平邊界與 console/page error 均通過。窄版改為欄式加入房間列，並移除全域 body 最小寬度造成的 320px 溢出。
 
 ### P0-2 主選單空狀態引導（最高）✅ 已完成
 

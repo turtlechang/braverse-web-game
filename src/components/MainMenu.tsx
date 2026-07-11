@@ -127,6 +127,7 @@ export function MainMenu({
             type="button"
             disabled={!hasDecks}
             onClick={onOpenOnlineMatch}
+            data-testid="open-online-match"
           >
             <Wifi aria-hidden="true" />
             線上對戰
