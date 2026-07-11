@@ -62,7 +62,10 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
 - Phase 5 線上對戰 MVP 的 lint 修正已完成：線上效果目標選取改為 keyed state，避免 React hooks `set-state-in-effect`；移除未使用型別與空 handler 參數。本分支目前 `npm test` 為 851 項通過，`npm run lint` 與 `npm run build` 亦通過。
 - 已完成 Vercel + Render 公網部署與雙視窗對局驗證：Render 服務 braverse-web-game 部署 a679f03（Deployed）；Vercel Production 以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready）；正式網域 https://braverse-web-game.vercel.app 以兩個獨立 WebSocket 分頁完成合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。注意 Render Free 閒置會休眠，首次連線可能需 50 秒以上。
-- 已達成：平板響應式 P0 修復——body、main menu、game shell、deck editor 支援 100dvh fallback；deck editor actions 保持可見且 deck list 可滾動；OnlineBattleView 開局準備移除 inline style，按鈕可換行、至少 44px、focus-visible；modal safe-area 保留原有間距。已驗證 npm test 92 files/1488 tests、lint、build，並以 1024x600 實際版面確認無溢出及操作列可見。
+- 已達成：平板響應式 P0 修復——body、main menu、game shell、deck editor 支援 100dvh fallback；deck editor actions 保持可見且 deck list 可滾動；OnlineBattleView 開局準備移除 inline style，按鈕可換行、至少 44px、focus-visible；modal safe-area 保留原有間距。已驗證 npm test 93 files/1490 tests、lint、build，並以 1024x600 實際版面確認無溢出及操作列可見。
+- 已修正 StatusToast 在 matchMessages 內容變更時重新顯示，並將 AI 瀏覽器測試的休息區卡牌點擊改為 DOM click，避免 modal backdrop 攔截，提升測試穩定度。
+- break-to-trash 結果訊息依有無目標分流，effectUiUtils 單元測試已補齊，AI 瀏覽器斷言文案同步更新。
+- 完整 `npm run test:ai:browser` 已通過：20/20 種子無卡住（stuck=0）；已確認最新 `npm test` 為 93 files/1490 tests。
 
 ## 下一步計畫
 
@@ -99,6 +102,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 專案指令、驗證範圍或派工策略調整時，同步維護 `develop-braverse` Skill。
 - 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
 - 待實作：1194x680 平板解析度響應式版面驗證與修正（目前僅完成 1024x600 確認，1194x680 尚未補做）。
+- 已通過：AI 瀏覽器完整結果（含 StatusToast 與休息區點擊修正後）20/20 種子全綠無卡住，後續維持回歸。
 - 已完成 Vercel Dashboard 匯入 GitHub repo：Framework Preset Vite、Build Command `npm run build`、Output Directory `dist`、Install Command `npm ci`、Node.js Version 22。
 - 不啟用 main branch protection（個人開發者，不要求 CI 通過 + review）。
 - 已驗證 Vercel Production（https://braverse-web-game.vercel.app）以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready），正式網域可正常載入對局。
@@ -150,6 +154,9 @@ npm run cards:import:purple-sample
 
 | 日期 | 概要 |
 |---|---|
+| 2026-07-11 | AI 瀏覽器完整驗證 20/20 種子全綠（stuck=0）；互動／文案修正 |
+| 2026-07-11 | break-to-trash 結果訊息分流、補 effectUiUtils 單元測試、同步 AI 瀏覽器斷言文案 |
+| 2026-07-11 | 修正 StatusToast 訊息變更後重新顯示，穩定 AI 瀏覽器測試休息區卡牌點擊（DOM click 避免 modal backdrop 攔截） |
 | 2026-07-11 | Vercel + Render 公網部署與雙視窗對局驗證完成 |
 | 2026-07-11 | 修正線上對戰加入房間後對戰畫面未顯示（MainMenu 與 OnlineBattleView 兄弟元素重疊問題） |
 | 2026-07-11 | 平板響應式 P0 修復：body/main menu/game shell/deck editor 100dvh fallback、deck editor actions 固定與滾動、OnlineBattleView 開局準備無 inline style 且按鈕 44px/focus-visible、modal safe-area 間距保留 |

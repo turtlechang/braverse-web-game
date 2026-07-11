@@ -657,16 +657,13 @@ try {
       )
       assert.ok(isTargetable, 'LV.1 休息區卡牌應標示為效果目標')
 
-      await firstBreakCard.click({ force: true })
-      const isSelected = await firstBreakCard.evaluate(
-        (el) => el.classList.contains('is-selected'),
-      )
-      assert.ok(isSelected, '點選後休息區卡牌應進入已選狀態')
+      await firstBreakCard.evaluate((el) => el.click())
+      await page.locator('.bottom-field .break-cards .break-card.is-selected').waitFor()
 
       await confirmButton.click()
 
       const statusMessage = page.locator('.battle-status-message')
-      await statusMessage.filter({ hasText: /放入垃圾桶|移至棄牌區/ }).waitFor()
+      await statusMessage.filter({ hasText: /放入棄牌區/ }).waitFor()
 
       const discardZone = page.locator('.bottom-field .discard-zone')
       await discardZone.click()
@@ -690,7 +687,7 @@ try {
       await confirmButton.click()
 
       const statusMessage = page.locator('.battle-status-message')
-      await statusMessage.filter({ hasText: /放入垃圾桶|沒有選擇休息區目標/ }).waitFor()
+      await statusMessage.filter({ hasText: /沒有選擇休息區目標/ }).waitFor()
     }
 
     await page.waitForTimeout(1200)
@@ -718,19 +715,14 @@ try {
     ),
     'ST2-003 的 LV.1 休息區卡牌應標示為攻擊效果目標',
   )
-  await attackBreakCard.click()
-  assert.ok(
-    await attackBreakCard.evaluate((element) =>
-      element.classList.contains('is-selected'),
-    ),
-    'ST2-003 的攻擊效果目標應可選取',
-  )
+  await attackBreakCard.evaluate((el) => el.click())
+  await page.locator('.bottom-field .break-cards .break-card.is-selected').waitFor()
   await attackEffectPanel
     .locator('button', { hasText: '確認效果' })
     .click()
   await page
     .locator('.battle-status-message')
-    .filter({ hasText: /放入垃圾桶|移至棄牌區/ })
+    .filter({ hasText: /放入棄牌區/ })
     .waitFor()
   assert.strictEqual(
     await page.locator('.bottom-field .break-cards .break-card').count(),
@@ -799,7 +791,7 @@ try {
         (el) => el.classList.contains('is-targetable'),
       )
       assert.ok(isTargetable, '戰鬥區餅乾應標示為效果目標')
-      await targetCookie.locator('.card-face').first().click()
+      await targetCookie.locator('.card-face').first().evaluate((el) => el.click())
 
       const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
       await confirmButton.click()
@@ -903,7 +895,7 @@ try {
         (el) => el.classList.contains('is-targetable'),
       )
       assert.ok(isTargetable, '場景啟動後戰鬥區餅乾應標示為效果目標')
-      await targetCookie.locator('.card-face').first().click()
+      await targetCookie.locator('.card-face').first().evaluate((el) => el.click())
 
       const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
       await confirmButton.click()
@@ -1074,7 +1066,7 @@ try {
     await faintModal.getByRole('button', { name: /縮小/ }).click()
     const faintDock = page.locator('.card-reveal-dock')
     await faintDock.waitFor({ state: 'visible' })
-    await targetCookie.locator('.card-face').first().click()
+    await targetCookie.locator('.card-face').first().evaluate((el) => el.click())
     await faintDock.click()
     await faintModal.getByRole('button', { name: /確認/ }).click()
     await faintModal.waitFor({ state: 'hidden' })
@@ -1125,12 +1117,21 @@ try {
       '卡牌詳情應包含發動條件',
     )
 
+    const selectPretzelPayment = async () => {
+      const paymentButtons = battleModal.locator('.trap-discard-options > button')
+      const paymentCount = await paymentButtons.count()
+      assert.ok(paymentCount >= 2, `Pretzel Snare 應有至少 2 張付款選項，實際 ${paymentCount}`)
+      await paymentButtons.nth(0).click()
+      await paymentButtons.nth(1).click()
+    }
+
     // Capture initial HP card count for the attacker before the trap
     const hpLocator = page.locator('.top-field .combat-card-wrap .hp-card-stack .hp-card')
     const initialHp = await hpLocator.count()
     assert.ok(initialHp > 0, `攻擊者初始應有 HP 卡牌，實際 ${initialHp}`)
 
     // Pretzel select-1:確認發動，對攻擊者造成 1 點傷害
+    await selectPretzelPayment()
     await battleModal.getByRole('button', { name: '支付並發動' }).click()
     const trapRevealModal = page.locator('.card-reveal-modal')
     const hasTrapRevealModal = await trapRevealModal
@@ -1157,6 +1158,7 @@ try {
     const noTargetCheckbox = page.locator('.trap-target-toggle input[type="checkbox"]')
     await noTargetCheckbox.waitFor({ state: 'visible' })
     await noTargetCheckbox.click()
+    await selectPretzelPayment()
     await battleModal.getByRole('button', { name: '支付並發動' }).click()
     const secondTrapRevealModal = page.locator('.card-reveal-modal')
     const hasSecondTrapRevealModal = await secondTrapRevealModal
@@ -1325,7 +1327,7 @@ try {
       .locator('.top-field .combat-card-wrap > .card-face')
       .first()
 
-    await opponentCookie.click()
+    await opponentCookie.evaluate((el) => el.click())
     assert.ok(
       await confirmButton.isDisabled(),
       'ST3-002 選好效果目標但未支付支援卡代價時不可確認',

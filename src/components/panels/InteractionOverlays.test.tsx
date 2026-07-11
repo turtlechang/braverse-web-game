@@ -56,6 +56,13 @@ describe('interaction overlays', () => {
 
     await act(() => vi.advanceTimersByTime(1000))
     expect(container.querySelector('[role="status"]')).toBeNull()
+
+    await act(() =>
+      root.render(<StatusToast message="已進入戰鬥階段" duration={1000} />),
+    )
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(
+      '已進入戰鬥階段',
+    )
     await act(() => root.unmount())
   })
 })

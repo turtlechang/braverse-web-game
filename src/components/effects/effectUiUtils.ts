@@ -167,7 +167,10 @@ export const describeEffectResult = (
   if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
   if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
   if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
-  if (effect.kind === 'break-to-trash') return 'break 區卡已放入棄牌區。'
+  if (effect.kind === 'break-to-trash') {
+    if (targetNames.length === 0) return '沒有選擇休息區目標。'
+    return 'break 區卡已放入棄牌區。'
+  }
   if (effect.kind === 'gain-hp') return `${names} 獲得 ${effect.amount} HP。`
   if (effect.kind === 'support-to-trash') return '支援區卡已放入棄牌區。'
   if (effect.kind === 'support-to-hand') return '支援區卡已返回手牌。'

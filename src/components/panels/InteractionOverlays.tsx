@@ -32,15 +32,15 @@ export interface StatusToastProps {
 }
 
 export function StatusToast({ message, duration = 2800 }: StatusToastProps) {
-  const [visible, setVisible] = useState(true)
+  const [dismissedMessage, setDismissedMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!message) return
-    const timer = window.setTimeout(() => setVisible(false), duration)
+    const timer = window.setTimeout(() => setDismissedMessage(message), duration)
     return () => window.clearTimeout(timer)
   }, [duration, message])
 
-  if (!message || !visible) return null
+  if (!message || message === dismissedMessage) return null
 
   return (
     <div
