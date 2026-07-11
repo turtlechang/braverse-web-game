@@ -1,7 +1,9 @@
 # 專案審查報告（Phase 0 Audit Report）
 
-- 審查日期：2026-07-11
-- 審查範圍：整個 repo（main 分支，commit `ba1097b`）
+> **2026-07-12 現況補充（以 `main@ee6b7ef` 為準）**：R3 AI Refresh replay 缺口已解決；現行基線為 96 個測試檔、可重現測試 1,526 項；主 bundle 731.12 KiB raw / 152.39 KiB gzip；AI 瀏覽器 20/20 (`stuck=0`)、線上 modal 2/2均通過。本段為當前審查的權威證據，下方歷史結果僅保留作為時點快照。
+
+- 審查日期：2026-07-12
+- 審查範圍：整個 repo（main 分支，commit `ee6b7ef`）
 - 審查方式：目錄盤點、package.json scripts 檢查、文件比對、lint / test / build 實測
 - 審查性質：本報告對照「總體開發計畫」的 Phase 0–8 要求，盤點實際完成度與缺口。**本專案實際進度已遠超 Phase 0**，因此本報告同時是「差距分析」。
 
