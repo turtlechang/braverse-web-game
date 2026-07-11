@@ -94,7 +94,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已達成：修復 `pendingBattle.stage === "attack-effect"` 控制權判定，攻擊後續效果現在由攻擊方處理；AI 作為攻擊方時會自動結算 attack-effect，不再停在 AI 主要階段等待玩家無法操作的 pending battle。同步補上玩家確認棄手牌傷害技能後排入補位的 hook 回歸測試。
 - 已達成：玩家手牌 hover 保留原扇形位置與角度，僅上移 8px、縮放至 1.02；ST5-021 無合法必選目標時不再列入陷阱候選，並以紫色對紫色固定種子 6、19、29、33 鎖定 AI 不再卡住。
 - 待實作：App.tsx（1575 行）容器元件拆分。已分析候選：`BattleScreen`（~1235 行 battle shell）、`FaintEffectModal`、`AfterDamageEffectModal`、`OpponentHandDiscardModal`、`DrawUpToModal`、`StageTriggerModal` 等 inline JSX modal，以及 PlayerBattleRow 的 ~150 行 callback handlers。
-- 待實作：UI 與 AI 逐步改走 `applyGameCommand` 指令層（目前 UI 主要動作與 `usePendingEffect` 多段效果流程仍直接呼叫規則函式），完成後實際對局的 `commandLog` 才是完整重播來源；對局種子統一注入後可支援「複製對局紀錄」回報格式。
+- 待實作：`usePendingEffect` 效果結算納入 `applyGameCommand` 指令層（目前 `useMatchController.runAction` 已不對外暴露，玩家 dispatch 路徑均經 `applyGameCommand` 並記錄 `commandLog`；但 `usePendingEffect` 的 `finalizePendingReplacements` 仍直接呼叫規則函式而未經指令層），完成後 `commandLog` 才是完整 replay 來源；對局種子統一注入後可支援「複製對局紀錄」回報格式。
 - 已達成：AI 等級分級第一版（Lv.1 隨機／Lv.2 現行啟發式掛名）與主選單 AI 牌組、等級選擇；設計文件見 `docs/ai-levels.md`。
 - 已達成：`PlayerView` 視角過濾器（`src/game/player-view.ts`，對手手牌／雙方牌庫／雙方 HP 卡皆只留張數）與 Lv.3 評估式 AI（`src/game/ai/evaluated-turn-handler.ts`，對候選動作套用 `evaluatePlayerView` 打分取最高分，攻擊採預期傷害加成，其餘強制流程委派 Lv.2）；主選單等級選擇加入 Lv.3。Lv.1/Lv.2/Lv.3 支援階段皆會在有手牌時優先放支援；新版 Lv.1 基線下，20 場種子模擬中 Lv.3 對 Lv.1 勝率 ≥ 55%。
 - 待實作：Lv.4／Lv.5（回合規劃與對抗性 AI），觀察 Lv.3 上線後的實際對戰體感再決定是否投入；`PlayerView` 未來預計重用於線上對戰 state snapshot。

@@ -6,7 +6,7 @@
 |---|---|---|---|
 | R1 | **官方素材公開部署**：卡圖熱連結 `cookierunbraverse.com`、卡背/能量圖示在 `public/`；專案已接上 Vercel，公開網址即公開展示官方 IP | 中（已決策接受） | README 與主選單 footer 已加非官方聲明（2026-07-10）；使用者決策：維持熱連結、不做 PUBLIC_MODE，收到異議再處理（ip-and-asset-policy §4）。熱連結另有官方改版失效風險（見 R8） |
 | R2 | ~~無 LICENSE~~ **已解除**（2026-07-10）：已加 MIT + Devsisters 素材除外條款的 LICENSE | — | 見 [LICENSE](../LICENSE) 與 ip-and-asset-policy §5 |
-| R3 | **UI/多段效果未全面走指令層**：攻擊宣告與效果精靈直呼規則函式、完成時補記 commandLog；補記若有遺漏，replay 與對戰紀錄不完整 | 中 | 已知清單見 README「待實作」；改造計畫列 roadmap P3。新增互動流程時必須補記（AGENTS.md 約束） |
+| R3 | **usePendingEffect 效果結算未納入指令層**：useMatchController 的 runAction 已不對外暴露，玩家 dispatch 路徑改走 dispatch(applyGameCommand) 並記錄 commandLog；但 usePendingEffect 的 finalizePendingReplacements 仍繞過指令層直接呼叫規則函式，未記入 commandLog | 中 | 部分緩解（2026-07-11）：runAction 不再對外暴露，玩家主要 dispatch 路徑已收緊。仍待完成：usePendingEffect.finalizePendingReplacements 未納入 commandLog，多段效果 replay 仍不完整。改造計畫列 roadmap P3 |
 | R4 | **卡牌資料無獨立驗證**：缺 `validate:cards`；資料錯誤（缺欄位、重複 id、effectId 無 resolver）只能靠轉接層測試與人工發現 | 中 | PR #17 曾以一次性稽核腳本找出 25 張 unsupported 卡，證明需要常態化工具。列 roadmap P1 |
 | R5 | **效果文字解析的規則裁定風險**：官方文字→CardEffect 轉換含專案自行裁定（記錄於 rule-clarifications.md）；官方新版規則可能推翻 | 中 | 裁定集中記錄；不得將待確認規則寫成已完成（AGENTS.md）。官方更新時重新匯入＋覆核 |
 | R6 | **Vercel 不承載 ws server**：線上對戰伺服器（`server/`）需長連線，Vercel serverless 不適合 | 中（已部署但含免費層冷啟動風險） | 已於 2026-07-11 部署 Render 免費層（commit a679f03）並完成雙視窗公網對局驗收。免費層閒置 15 分鐘後休眠會切斷連線，首次連線冷啟動約需 50 秒以上；活躍對局期間 ws 訊息可維持喚醒 |

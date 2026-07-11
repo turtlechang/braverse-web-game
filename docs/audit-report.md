@@ -61,7 +61,7 @@
 | Phase | 主計畫目標 | 實際狀態 |
 |---|---|---|
 | 0 盤點 | 8 份文件 | 本輪補齊（先前缺 7 份，AGENTS.md 已存在） |
-| 1 規則引擎 | Validator / Effect Resolver / Battle Log / Replay | ✅ 完成（PR #11）。殘項：UI 攻擊宣告與多段效果精靈仍直呼規則函式，僅補記 commandLog（見 known-risks R3） |
+| 1 規則引擎 | Validator / Effect Resolver / Battle Log / Replay | ✅ 完成（PR #11）。殘項：usePendingEffect 的 finalizePendingReplacements 仍直接呼叫規則函式而未經指令層（見 known-risks R3） |
 | 2 卡牌資料庫 | schema + validate + import | ⚠️ 管線已完成（import/schema/validate:cards/validate:candidate 已接入 CI），仍需持續擴充 effectId/新卡牌覆蓋與 PUBLIC_MODE 決策 |
 | 3 牌組編輯器 | 搜尋/篩選/驗證/匯入匯出 | ✅ 完成（PR #11 等），含版本化儲存與遷移 |
 | 4 AI 對戰 | Lv.1–5 | ✅ Lv.1–4 實作完成（commit `076e7a5`）；Lv.5 為設計文件（docs/ai-levels.md） |
@@ -83,7 +83,7 @@
 1. **IP 聲明缺失（高）**：README、網站 footer 皆無「非官方粉絲研究」聲明；已部署 Vercel 則為公開網站。→ ✅ 已解決（2026-07-10）：README 與主選單 footer 皆已加聲明。
 2. **官方素材公開部署（高）**：卡圖熱連結 `cookierunbraverse.com`、卡背/能量圖示在 `public/`。→ 已決策（2026-07-10）：維持熱連結、不做 PUBLIC_MODE，收到異議再處理。詳見 [ip-and-asset-policy.md](ip-and-asset-policy.md)。
 3. **無 `validate:cards`（中）**：→ ✅ 已解決（2026-07-10）：`npm run validate:cards` + CI；首跑即發現 BS2-061@1 缺 level 資料缺陷並修復。
-4. **UI 未全面走指令層（中）**：攻擊宣告與多段效果流程直呼規則函式、補記 log，replay 完整性依賴補記正確。
+4. **usePendingEffect 效果結算未納入指令層（中）**：runAction 不再對外暴露，玩家主要 dispatch 路徑已走指令層；但 usePendingEffect 的 finalizePendingReplacements 繞過指令層直接呼叫規則函式，該路徑未記入 commandLog，replay 完整性仍依賴補記正確。
 5. **Vercel 與 ws server 架構分裂（中）**：Vercel 只能承載前端。→ 已於 2026-07-11 部署 Render 免費層並完成雙視窗公網驗收。Render Free 冷啟動見 known-risks R6。
 6. **維護流程持續維護（低）**：CHANGELOG.md、release-process、card-update-process 已建立，需持續維護。
 7. **無 LICENSE（低）**：→ ✅ 已解決（2026-07-10）：MIT + Devsisters 素材除外條款。
