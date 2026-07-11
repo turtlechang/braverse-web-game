@@ -122,6 +122,7 @@ npm run dev
 npm run validate:cards
 npm run validate:candidate
 npm run generate:card-pool
+npm run check:card-pool
 npm test
 npm run lint
 npm run typecheck
@@ -163,6 +164,7 @@ npm run cards:import:purple-sample
 | 2026-07-11 | Vercel + Render 公網部署與雙視窗對局驗證完成 |
 | 2026-07-11 | 修正線上對戰加入房間後對戰畫面未顯示（MainMenu 與 OnlineBattleView 兄弟元素重疊問題） |
 | 2026-07-11 | 候選卡牌匯入管線強化：validate:candidate 新增 schemaVersion/source/欄位型別結構檢查、promote:candidate 加入檔名碰撞拒絕與 rollback、promote 後自動重新生成卡池 registry 確保新卡牌納入 runtime card pool |
+| 2026-07-11 | CI 新增 validate:candidate 與 check:card-pool gate，防止候選資料或 runtime registry 漏同步 |
 
 完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。
 ### Latest verification baseline

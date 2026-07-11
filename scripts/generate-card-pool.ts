@@ -1,4 +1,4 @@
-import { readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -56,11 +56,31 @@ export const generateCardPool = (
   return files
 }
 
+export const isGeneratedCardPoolCurrent = (
+  directory = cardsDirectory,
+  outputPath = generatedPoolPath,
+): boolean => {
+  if (!existsSync(outputPath)) return false
+  const files = getCardDataFiles(directory)
+  return readFileSync(outputPath, 'utf8') === createGeneratedPoolSource(files)
+}
+
 const isDirectExecution =
   process.argv[1] &&
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 
-if (isDirectExecution) {
+if (isDirectExecution && process.argv.includes('--check')) {
+  if (!isGeneratedCardPoolCurrent()) {
+    console.error(
+      'generated card pool registry 與 data/cards/*.json 不一致，請執行 npm run generate:card-pool。',
+    )
+    process.exitCode = 1
+  } else {
+    console.log('generated card pool registry 與 data/cards/*.json 一致。')
+  }
+}
+
+if (isDirectExecution && !process.argv.includes('--check')) {
   const files = generateCardPool()
   console.log(`已生成卡池 registry：${files.length} 個資料檔案。`)
 }

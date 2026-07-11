@@ -96,6 +96,8 @@ npm run promote:candidate
 npm run generate:card-pool
 ```
 
+CI 會執行 `npm run check:card-pool`，只讀檢查 `data/cards/*.json` 與 generated registry 是否一致；若手動修改正式卡牌資料後忘記重新生成，CI 會拒絕提交。
+
 ## 欄位轉換
 
 匯入資料需符合 `data/schemas/official-card-import.schema.json`。

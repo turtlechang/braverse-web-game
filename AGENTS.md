@@ -79,6 +79,7 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 | `npm run validate:candidate` | 驗證候選卡牌資料（data/candidates/） |
 | `npm run promote:candidate` | 驗證並 promote 候選卡牌到正式卡池 |
 | `npm run generate:card-pool` | 依 data/cards/*.json 重新生成 runtime card pool registry |
+| `npm run check:card-pool` | 檢查 data/cards/*.json 與 runtime registry 是否一致（CI gate） |
 
 > Playwright 驗證前必須先執行 `npm run build`。
 > 若 Playwright 安裝於外部目錄，以 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 路徑。
