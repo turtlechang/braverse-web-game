@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://braverse.app/schemas/opencode-go-error.json",
+  "title": "OpenCode Go Error Result",
+  "description": "Minimal structured error output from opencode-go-wrapper.mjs",
+  "type": "object",
+  "required": ["schema_version", "ok", "error", "execution", "logs"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "ok": {
+      "type": "boolean",
+      "const": false
+    },
+    "error": {
+      "type": "object",
+      "required": ["error_type", "process_exit_code", "retryable", "confidence", "detail", "evidence"],
+      "properties": {
+        "error_type": {
+          "type": "string",
+          "enum": [
+            "auth_missing", "auth_invalid", "permission_denied",
+            "rate_limit", "token_rate_limit", "concurrency_limit",
+            "model_capacity", "quota_exhausted", "billing_limit",
+            "model_unavailable", "network", "sandbox",
+            "session_not_found", "command_not_found", "invalid_arguments",
+            "timeout", "invalid_response", "invalid_config",
+            "environment_error", "unknown"
+          ]
+        },
+        "process_exit_code": { "type": ["integer", "null"] },
+        "retryable": { "type": "boolean" },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "detail": { "type": "string" },
+        "http_status": { "type": ["integer", "null"] },
+        "provider_code": { "type": ["string", "null"] },
+        "retry_after_ms": { "type": ["integer", "null"] },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": "object",
+      "required": ["command", "started_at", "duration_ms"],
+      "properties": {
+        "command": { "type": "string" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "duration_ms": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "logs": {
+      "type": "object",
+      "properties": {
+        "stdout_path": { "type": ["string", "null"] },
+        "stderr_path": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
