@@ -4,7 +4,10 @@
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding-top: max(24px, env(safe-area-inset-top, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
   background: rgba(1, 8, 28, 0.35);
 }
 
@@ -1037,6 +1040,7 @@
   position: relative;
   width: min(1200px, 100%);
   max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   border: 2px solid rgba(105, 220, 255, 0.68);
   border-radius: 8px;
   background: linear-gradient(135deg, #071c44, #123f82);
@@ -1047,7 +1051,9 @@
 .deck-editor-layout {
   display: grid;
   grid-template-columns: 1fr 360px;
+  min-height: 0;
   height: calc(100vh - 48px);
+  height: calc(100dvh - 48px);
   overflow: hidden;
 }
 
@@ -1319,6 +1325,7 @@
   display: flex;
   gap: 8px;
   padding: 10px 16px 0;
+  flex-shrink: 0;
 }
 
 .deck-editor-clear-btn,

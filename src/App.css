@@ -17,6 +17,7 @@ body {
   min-width: 320px;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -32,6 +33,7 @@ button {
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   min-width: 320px;
   min-height: 520px;
   display: grid;
@@ -371,6 +373,7 @@ button {
   container-type: size;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   min-width: 0;
   overflow: hidden;
   background:
@@ -597,6 +600,7 @@ button {
 @media (max-width: 680px) {
   .main-menu-shell {
     height: 100vh;
+    height: 100dvh;
     min-height: 0;
     place-items: stretch;
     padding: 14px;
@@ -693,4 +697,94 @@ button {
   font-weight: 800;
   background: #f4ad77;
   cursor: pointer;
+}
+
+/* === 線上對戰開局準備 === */
+
+.online-setup {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  color: #eee;
+  overflow-y: auto;
+}
+
+.online-setup h2 {
+  margin: 0 0 8px;
+}
+
+.online-setup p {
+  margin: 8px 0;
+  color: #bbdaf3;
+}
+
+.online-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.online-setup-btn {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border: 1px solid rgba(113, 233, 255, 0.45);
+  border-radius: 6px;
+  background: rgba(7, 33, 75, 0.85);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.online-setup-btn:hover:not(:disabled) {
+  background: rgba(20, 76, 138, 0.9);
+  border-color: rgba(113, 233, 255, 0.7);
+}
+
+.online-setup-btn:focus-visible {
+  outline: 2px solid #71e9ff;
+  outline-offset: 2px;
+}
+
+.online-setup-btn:active:not(:disabled) {
+  background: rgba(40, 100, 170, 0.95);
+}
+
+.online-setup-leave {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+  padding: 8px 18px;
+  border: 1px solid rgba(255, 130, 130, 0.45);
+  border-radius: 6px;
+  background: transparent;
+  color: #ffb4b4;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.online-setup-leave:hover {
+  background: rgba(255, 60, 60, 0.12);
+  border-color: rgba(255, 130, 130, 0.7);
+}
+
+.online-setup-leave:focus-visible {
+  outline: 2px solid #ff8a8a;
+  outline-offset: 2px;
 }

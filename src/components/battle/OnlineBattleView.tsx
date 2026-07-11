@@ -69,14 +69,15 @@ export function OnlineBattleView({
     return (
       <main className="game-shell">
         <div className="board-texture" />
-        <section style={{ padding: 24, color: '#eee' }}>
+        <section className="online-setup">
           <h2>開局準備</h2>
           <p>房號：{roomCode}</p>
           {needsMulliganDecision && (
             <>
               <p>是否要重新抽取整副起始手牌？</p>
-              <div style={{ display: 'flex', gap: 12 }}>
+              <div className="online-setup-actions">
                 <button
+                  className="online-setup-btn"
                   type="button"
                   onClick={() =>
                     match.dispatch(
@@ -88,6 +89,7 @@ export function OnlineBattleView({
                   保留手牌
                 </button>
                 <button
+                  className="online-setup-btn"
                   type="button"
                   onClick={() =>
                     match.dispatch(
@@ -107,12 +109,13 @@ export function OnlineBattleView({
           {needsStartingCookie && (
             <>
               <p>請選擇一張起始餅乾：</p>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div className="online-setup-actions">
                 {viewerPlayer.hand
                   .filter((card) => card.type === 'cookie')
                   .map((card) => (
                     <button
                       key={card.instanceId}
+                      className="online-setup-btn"
                       type="button"
                       onClick={() =>
                         match.dispatch(
@@ -134,7 +137,11 @@ export function OnlineBattleView({
           {!needsMulliganDecision && !needsStartingCookie && (
             <p>等待對手完成開局準備…</p>
           )}
-          <button type="button" onClick={onLeave} style={{ marginTop: 24 }}>
+          <button
+            className="online-setup-leave"
+            type="button"
+            onClick={onLeave}
+          >
             離開對局
           </button>
         </section>
