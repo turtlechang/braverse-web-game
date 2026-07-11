@@ -34,7 +34,7 @@ button {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
-  min-width: 320px;
+  min-width: 0;
   min-height: 520px;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;

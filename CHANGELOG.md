@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 🧪 新增牌組編輯器 Playwright smoke：驗證錯誤 JSON 可恢復、合法 60 張牌組匯入／儲存，以及 1366×768／280×720 無水平溢出；並納入 main push 瀏覽器 workflow。
 - 🛡️ R3 replay 完整化：AI `refresh-deck` 將可重播的 `shuffleSeed` 寫入 command payload，補上最後一個 AI Refresh 非種子洗牌缺口；新增 AI Refresh commandLog 重播回歸測試。
 - 📚 P2 維護流程正式化確認完成（roadmap）：`release-process.md`、`card-update-process.md`、`regression-test-checklist.md`、`manual-playtest-checklist.md` 皆已存在且內容完整，本輪修正 `release-process.md` 寫死的「1449+ 項測試」為動態基線敘述（不得低於 Phase 0 基線，非固定數字）。
 - 📚 README 大幅精簡（known-risks R12）：182 行縮減至約 80 行。重新審視 known-risks 時發現先前「CHANGELOG 從 README 抽出」（P2）並不完整——README 自留的「更新日誌」表格與 `CHANGELOG.md` 內容已分岔，9 筆歷史紀錄從未同步；已將分岔紀錄併入本檔（見下方 2026-07-11 補充項）、移除 README 重複表格，「目前進度」／「下一步計畫」改為短摘要 + 連結 `docs/architecture.md`／`docs/roadmap.md`／`docs/known-risks.md`。同時修正 `docs/known-risks.md` R4（`validate:cards` 早已存在並接入 CI，非「缺」）與 R8（缺圖 fallback 早已存在，非「待做」）兩處過時描述；`docs/architecture.md` 同步修正過時的 App.tsx 行數與測試數字。
