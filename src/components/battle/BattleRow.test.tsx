@@ -142,6 +142,63 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('牌庫剩餘')
   })
 
+  it('renders scan-friendly active status and resource stats', () => {
+    const baseGame = createItemUsageDemoState(true)
+    const sampleCard = baseGame.players['player-one'].hand[0]
+    const game = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          deck: [sampleCard, sampleCard],
+          discardPile: [sampleCard],
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(<BattleRow {...createProps({ game })} />)
+
+    expect(markup).toContain('row-status" data-active="true"')
+    expect(markup).toContain('row-stat-status is-active')
+    expect(markup).toContain('aria-label="手牌 1"')
+    expect(markup).toContain('aria-label="牌庫 2"')
+    expect(markup).toContain('aria-label="棄牌 1"')
+    expect(markup).toContain('aria-label="休息 LV.0"')
+  })
+
+  it('renders waiting status and stats for an inactive row', () => {
+    const baseGame = createItemUsageDemoState(true)
+    const sampleCard = baseGame.players['player-one'].hand[0]
+    const game = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-two': {
+          ...baseGame.players['player-two'],
+          hand: [sampleCard, sampleCard],
+          deck: [sampleCard],
+          discardPile: [sampleCard, sampleCard, sampleCard],
+        },
+      },
+    }
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-two',
+          position: 'top',
+        })}
+      />,
+    )
+
+    expect(markup).toContain('row-status" data-active="false"')
+    expect(markup).toContain('row-stat-status is-waiting')
+    expect(markup).toContain('aria-label="手牌 2"')
+    expect(markup).toContain('aria-label="牌庫 1"')
+    expect(markup).toContain('aria-label="棄牌 3"')
+    expect(markup).toContain('aria-label="休息 LV.0"')
+  })
+
   it('does not offer an item action when the payment is unavailable', () => {
     const game = {
       ...createItemUsageDemoState(false),

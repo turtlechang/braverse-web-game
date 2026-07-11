@@ -322,15 +322,43 @@ export function BattleRow({
           )
         })()}
         <div className="combat-zone">
-          <div className="row-meta">
-            <span>{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
+          <div
+            className="row-meta"
+            data-active={isActivePlayer ? 'true' : 'false'}
+          >
+            <span className="row-role">{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
             <strong>{player.name}</strong>
             <b className="turn-order-badge">
               {game.firstPlayerId === playerId ? '先攻' : '後攻'}
             </b>
-            <small>
-              {isActivePlayer ? '行動中' : '等待'} · 手牌 {player.hand.length} · 牌庫 {player.deck.length} · 棄牌 {player.discardPile.length} · 休息 LV.{getBreakAreaLevel(game, playerId)}
-            </small>
+            <div
+              className="row-status"
+              data-active={isActivePlayer ? 'true' : 'false'}
+              aria-label={`${player.name}狀態：${isActivePlayer ? '行動中' : '等待'}，手牌 ${player.hand.length}，牌庫 ${player.deck.length}，棄牌 ${player.discardPile.length}，休息 LV.${getBreakAreaLevel(game, playerId)}`}
+            >
+              <span
+                className={`row-stat row-stat-status ${isActivePlayer ? 'is-active' : 'is-waiting'}`}
+                data-active={isActivePlayer ? 'true' : 'false'}
+              >
+                {isActivePlayer ? '行動中' : '等待'}
+              </span>
+              <span className="row-stat row-stat-hand" aria-label={`手牌 ${player.hand.length}`}>
+                <span className="row-stat-label">手牌</span>
+                <b className="row-stat-value">{player.hand.length}</b>
+              </span>
+              <span className="row-stat row-stat-secondary row-stat-deck" aria-label={`牌庫 ${player.deck.length}`}>
+                <span className="row-stat-label">牌庫</span>
+                <b className="row-stat-value">{player.deck.length}</b>
+              </span>
+              <span className="row-stat row-stat-secondary row-stat-discard" aria-label={`棄牌 ${player.discardPile.length}`}>
+                <span className="row-stat-label">棄牌</span>
+                <b className="row-stat-value">{player.discardPile.length}</b>
+              </span>
+              <span className="row-stat row-stat-rest" aria-label={`休息 LV.${getBreakAreaLevel(game, playerId)}`}>
+                <span className="row-stat-label">休息</span>
+                <b className="row-stat-value">LV.{getBreakAreaLevel(game, playerId)}</b>
+              </span>
+            </div>
           </div>
           <span className="zone-watermark">戰鬥區</span>
           <div className="combat-slots">
