@@ -120,6 +120,6 @@ interface ApplyGameCommandOptions {
 
 ## 未涵蓋（後續任務）
 
-- 玩家 UI 與 `usePendingEffect` 已全面透過 `applyGameCommand`；command 出口會在沒有 blocking pending 時執行冪等的 `finalizePendingReplacements` 再寫入紀錄，確保多段效果完整結束後的補位與勝負狀態可重播。
-- 部分 AI battle／turn handler 仍直接呼叫規則函式並手動 `appendCommandLogEntry`。在這些路徑完成 command 化前，完整 replay 保證仍限於由 typed command 驅動的流程。
+- 玩家 UI、`usePendingEffect` 與全部 AI battle／turn handler 已全面透過 `applyGameCommand`；command 出口會在沒有 blocking pending 時執行冪等的 `finalizePendingReplacements` 再寫入紀錄，確保多段效果完整結束後的補位與勝負狀態可重播。
 - 開局前流程（選牌組、猜拳、決定先後攻）發生在 `createGame` 之前，不在指令層內。
+- AI `refresh-deck` 目前仍用 `Math.random` 洗牌（未走種子化 `Shuffle`），該單一指令的重播不保證與實際對局一致；其餘 AI 指令（含 `play-item`／`activate-skill`／`activate-stage` 的 `effectTargets`）皆可忠實重播（見 `ai-replay-fidelity.test.ts`）。

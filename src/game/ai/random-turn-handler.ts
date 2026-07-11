@@ -1,6 +1,5 @@
-import { appendCommandLogEntry, applyGameCommand } from '../commands'
+import { applyGameCommand } from '../commands'
 import type { PlayerActionCommand } from '../commands'
-import { beginAttack } from '../battle'
 import { getLegalTurnCommands } from '../legal-actions'
 import type { GameState, PlayerId } from '../types'
 import type { AiActionType, AiDecision } from './types'
@@ -23,22 +22,13 @@ export const applyChosenTurnCommand = (
   command: PlayerActionCommand,
 ): GameState => {
   if (command.kind === 'attack') {
-    return appendCommandLogEntry(
-      state,
-      beginAttack(
-        state,
-        command.attackerInstanceId,
-        command.targetInstanceId,
-        command.supportPaymentIds,
-      ),
-      {
-        kind: 'declare-attack',
-        playerId: command.playerId,
-        attackerInstanceId: command.attackerInstanceId,
-        targetInstanceId: command.targetInstanceId,
-        supportPaymentIds: command.supportPaymentIds,
-      },
-    )
+    return applyGameCommand(state, {
+      kind: 'declare-attack',
+      playerId: command.playerId,
+      attackerInstanceId: command.attackerInstanceId,
+      targetInstanceId: command.targetInstanceId,
+      supportPaymentIds: command.supportPaymentIds,
+    })
   }
   return applyGameCommand(state, command)
 }

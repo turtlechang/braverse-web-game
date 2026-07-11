@@ -1,9 +1,8 @@
 import { playItem } from './card-abilities'
-import { appendCommandLogEntry } from './commands'
+import { applyGameCommand } from './commands'
 import { getActingPlayerId } from './controller'
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import {
-  executeCardEffect,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getSupportEffectCandidates,
@@ -15,11 +14,9 @@ import {
   isEffectUntargeted,
 } from './effects'
 import { getAttackEnergyCost, selectEnergyPayment } from './energy'
-import {
-  finalizePendingReplacements,
-  getReplacementCandidates,
-} from './replacement'
+import { getReplacementCandidates } from './replacement'
 import { activateCookieSkill, canActivateCookieSkill } from './skills'
+import { simulateAbilityEffects } from './ai/ability-effects'
 import type {
   AbilityCost,
   CardEffect,
@@ -32,7 +29,6 @@ import type {
 } from './types'
 import type {
   AiDecision,
-  AiEffectSelection,
   AiLevel,
   AiMatchMetrics,
   AiMatchResult,
@@ -387,83 +383,84 @@ const resolveAiCardAbility = (
     if (!canAttackAfterItem) return null
   }
 
-  let nextState = appendCommandLogEntry(
+  const played = playItem(
     state,
-    playItem(
-      state,
-      playerId,
-      card.instanceId,
-      costIds.paymentIds,
-      costIds.supportToTrashIds,
-      costIds.supportToHandIds,
-      costIds.discardHandIds,
-      costIds.hpToTrashTargetIds,
-    ),
-    {
-      kind: 'play-item',
-      playerId,
-      instanceId: card.instanceId,
-      paymentIds: costIds.paymentIds,
-    },
+    playerId,
+    card.instanceId,
+    costIds.paymentIds,
+    costIds.supportToTrashIds,
+    costIds.supportToHandIds,
+    costIds.discardHandIds,
+    costIds.hpToTrashTargetIds,
   )
-  const effectSelections: AiEffectSelection[] = []
   const shuffleSeed = [...card.instanceId].reduce(
     (seed, character) => Math.imul(seed ^ character.charCodeAt(0), 16777619),
     state.turnNumber,
   )
   const shuffle = createSeededShuffle(shuffleSeed)
-  for (const effect of effects) {
-    const targetIds = chooseEffectTargets(nextState, context, effect)
-    if (
-      (effect.kind === 'support-to-trash' ||
-        effect.kind === 'support-to-hand' ||
-        effect.kind === 'trash-to-battle' ||
-        effect.kind === 'trash-to-support') &&
-      targetIds.length < effect.amount
-    ) {
-      return null
-    }
-    if (
-      !isEffectUntargeted(effect) &&
-      effect.kind !== 'break-to-trash' &&
-      effect.kind !== 'support-to-trash' &&
-      effect.kind !== 'support-to-hand' &&
-      effect.kind !== 'trash-to-battle' &&
-      effect.kind !== 'trash-to-support' &&
-      effect.kind !== 'inspect-deck' &&
-      effect.kind !== 'optional-cost-attack' &&
-      effect.kind !== 'disable-block' &&
-      effect.kind !== 'trash-to-hand' &&
-      effect.kind !== 'trash-to-deck' &&
-      effect.kind !== 'flip-to-support' &&
-      effect.kind !== 'opponent-battle-to-trash' &&
-      effect.target &&
-      targetIds.length < effect.target.min
-    ) {
-      return null
-    }
-    nextState = executeCardEffect(nextState, context, effect, targetIds, shuffle)
-    effectSelections.push({
-      sourceInstanceId: card.instanceId,
-      paymentIds: costIds.paymentIds,
-      targetIds,
-      effect,
-    })
-    if (
-      nextState.pendingRefresh ||
-      nextState.pendingOnPlay ||
-      nextState.status !== 'playing'
-    ) {
-      break
-    }
-  }
+  const sim = simulateAbilityEffects(
+    played,
+    context,
+    ability.effects,
+    chooseEffectTargets,
+    isItemEffectTargetCountSufficient,
+    { sourceInstanceId: card.instanceId, paymentIds: costIds.paymentIds },
+    shuffle,
+  )
+  if (sim.aborted) return null
+
   return {
-    state: finalizePendingReplacements(nextState),
+    state: applyGameCommand(state, {
+      kind: 'play-item',
+      playerId,
+      instanceId: card.instanceId,
+      paymentIds: costIds.paymentIds,
+      supportToTrashIds: costIds.supportToTrashIds,
+      supportToHandIds: costIds.supportToHandIds,
+      discardHandIds: costIds.discardHandIds,
+      hpToTrashTargetIds: costIds.hpToTrashTargetIds,
+      effectTargets: sim.effectTargets,
+    }),
     action: 'play-item',
     description: `${state.players[playerId].name}使用${card.name}。`,
     revealedCard: card,
-    effectSelections,
+    effectSelections: sim.effectSelections,
   }
+}
+
+const isItemEffectTargetCountSufficient = (
+  effect: CardEffect,
+  targetIds: string[],
+): boolean => {
+  if (
+    (effect.kind === 'support-to-trash' ||
+      effect.kind === 'support-to-hand' ||
+      effect.kind === 'trash-to-battle' ||
+      effect.kind === 'trash-to-support') &&
+    targetIds.length < effect.amount
+  ) {
+    return false
+  }
+  if (
+    !isEffectUntargeted(effect) &&
+    effect.kind !== 'break-to-trash' &&
+    effect.kind !== 'support-to-trash' &&
+    effect.kind !== 'support-to-hand' &&
+    effect.kind !== 'trash-to-battle' &&
+    effect.kind !== 'trash-to-support' &&
+    effect.kind !== 'inspect-deck' &&
+    effect.kind !== 'optional-cost-attack' &&
+    effect.kind !== 'disable-block' &&
+    effect.kind !== 'trash-to-hand' &&
+    effect.kind !== 'trash-to-deck' &&
+    effect.kind !== 'flip-to-support' &&
+    effect.kind !== 'opponent-battle-to-trash' &&
+    effect.target &&
+    targetIds.length < effect.target.min
+  ) {
+    return false
+  }
+  return true
 }
 
 const resolveAiSkill = (
@@ -561,19 +558,28 @@ const resolveAiSkill = (
   )
   if (effects.length === 0) return null
 
-  let nextState = appendCommandLogEntry(
+  const activated = activateCookieSkill(
     state,
-    activateCookieSkill(
-      state,
-      playerId,
-      source.card.instanceId,
-      trigger,
-      paymentIds,
-      costSupportToTrashIds,
-      discardHandIds,
-      trashBattleCookieIds,
-    ),
-    {
+    playerId,
+    source.card.instanceId,
+    trigger,
+    paymentIds,
+    costSupportToTrashIds,
+    discardHandIds,
+    trashBattleCookieIds,
+  )
+  const sim = simulateAbilityEffects(
+    activated,
+    context,
+    skill.effects,
+    chooseEffectTargets,
+    isSkillEffectTargetCountSufficient,
+    { sourceInstanceId: source.card.instanceId, paymentIds },
+  )
+  if (sim.aborted) return null
+
+  return {
+    state: applyGameCommand(state, {
       kind: 'activate-skill',
       playerId,
       sourceInstanceId: source.card.instanceId,
@@ -582,118 +588,55 @@ const resolveAiSkill = (
       costSupportToTrashIds,
       discardHandIds,
       trashBattleCookieIds,
-    },
-  )
-  const effectSelections: AiEffectSelection[] = []
-
-  for (const effect of effects) {
-    if (nextState.status !== 'playing') {
-      break
-    }
-
-    if (
-      effect.kind === 'gain-hp' &&
-      effect.target &&
-      !effect.target.sourceOnly
-    ) {
-      const targetIds = chooseEffectTargets(nextState, context, effect)
-      if (targetIds.length < effect.target.min) return null
-      nextState = executeCardEffect(
-        nextState,
-        context,
-        effect,
-        targetIds,
-      )
-      effectSelections.push({
-        sourceInstanceId: source.card.instanceId,
-        paymentIds,
-        targetIds,
-        effect,
-      })
-      continue
-    }
-
-    if (effect.kind === 'opponent-battle-to-trash') {
-      const targetIds = chooseEffectTargets(nextState, context, effect)
-      nextState = executeCardEffect(
-        nextState,
-        context,
-        effect,
-        targetIds,
-      )
-      effectSelections.push({
-        sourceInstanceId: source.card.instanceId,
-        paymentIds,
-        targetIds,
-        effect,
-      })
-      continue
-    }
-
-    if (isEffectUntargeted(effect)) {
-      nextState = executeCardEffect(
-        nextState,
-        context,
-        effect,
-        [],
-      )
-      effectSelections.push({
-        sourceInstanceId: source.card.instanceId,
-        paymentIds,
-        targetIds: [],
-        effect,
-      })
-      continue
-    }
-
-    const targetIds = chooseEffectTargets(nextState, context, effect)
-    if (
-      (effect.kind === 'support-to-trash' ||
-        effect.kind === 'support-to-hand' ||
-        effect.kind === 'trash-to-battle' ||
-        effect.kind === 'trash-to-support') &&
-      targetIds.length < effect.amount
-    ) {
-      return null
-    }
-    if (
-      effect.kind !== 'break-to-trash' &&
-      effect.kind !== 'support-to-trash' &&
-      effect.kind !== 'support-to-hand' &&
-      effect.kind !== 'trash-to-battle' &&
-      effect.kind !== 'trash-to-support' &&
-      effect.kind !== 'inspect-deck' &&
-      effect.kind !== 'optional-cost-attack' &&
-      effect.kind !== 'field-to-trash' &&
-      effect.kind !== 'disable-block' &&
-      effect.kind !== 'trash-to-hand' &&
-      effect.kind !== 'trash-to-deck' &&
-      effect.kind !== 'flip-to-support' &&
-      effect.target &&
-      targetIds.length < effect.target.min
-    ) {
-      return null
-    }
-    nextState = executeCardEffect(
-      nextState,
-      context,
-      effect,
-      targetIds,
-    )
-    effectSelections.push({
-      sourceInstanceId: source.card.instanceId,
-      paymentIds,
-      targetIds,
-      effect,
-    })
-  }
-
-  return {
-    state: finalizePendingReplacements(nextState),
+      effectTargets: sim.effectTargets,
+    }),
     action: 'activate-skill',
     description: `${state.players[playerId].name}發動${source.card.name}的技能。`,
-    effectSelections,
+    effectSelections: sim.effectSelections,
   }
+}
+
+const isSkillEffectTargetCountSufficient = (
+  effect: CardEffect,
+  targetIds: string[],
+): boolean => {
+  if (effect.kind === 'gain-hp' && effect.target && !effect.target.sourceOnly) {
+    return targetIds.length >= effect.target.min
+  }
+  if (effect.kind === 'opponent-battle-to-trash') {
+    return true
+  }
+  if (isEffectUntargeted(effect)) {
+    return true
+  }
+  if (
+    (effect.kind === 'support-to-trash' ||
+      effect.kind === 'support-to-hand' ||
+      effect.kind === 'trash-to-battle' ||
+      effect.kind === 'trash-to-support') &&
+    targetIds.length < effect.amount
+  ) {
+    return false
+  }
+  if (
+    effect.kind !== 'break-to-trash' &&
+    effect.kind !== 'support-to-trash' &&
+    effect.kind !== 'support-to-hand' &&
+    effect.kind !== 'trash-to-battle' &&
+    effect.kind !== 'trash-to-support' &&
+    effect.kind !== 'inspect-deck' &&
+    effect.kind !== 'optional-cost-attack' &&
+    effect.kind !== 'field-to-trash' &&
+    effect.kind !== 'disable-block' &&
+    effect.kind !== 'trash-to-hand' &&
+    effect.kind !== 'trash-to-deck' &&
+    effect.kind !== 'flip-to-support' &&
+    effect.target &&
+    targetIds.length < effect.target.min
+  ) {
+    return false
+  }
+  return true
 }
 
 const chooseReplacement = (state: GameState, playerId: PlayerId, level?: number) => {

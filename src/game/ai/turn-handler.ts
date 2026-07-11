@@ -1,25 +1,13 @@
 import {
-  deployCookie,
-  placeSupportCard,
-  replaceDefeatedCookie,
-  skipDefeatedCookieReplacement,
-} from '../actions'
-import {
   activateStage,
   canActivateStage,
-  playStage,
 } from '../card-abilities'
-import { beginAttack } from '../battle'
-import { appendCommandLogEntry } from '../commands'
-import { executeCardEffect } from '../effects'
+import { applyGameCommand } from '../commands'
 import { getAttackEnergyCost, selectEnergyPayment } from '../energy'
-import { getRefreshCandidates, refreshDeck } from '../refresh'
-import {
-  finalizePendingReplacements,
-  getCurrentReplacementTask,
-} from '../replacement'
-import { skipCookieOnPlay } from '../skills'
+import { getRefreshCandidates } from '../refresh'
+import { getCurrentReplacementTask } from '../replacement'
 import { advancePhase, canAttack } from '../turn'
+import { simulateAbilityEffects } from './ability-effects'
 import type {
   CardEffect,
   CookieInBattle,
@@ -80,15 +68,11 @@ export const handleAiTurnState = (
       }
     }
     return {
-      state: appendCommandLogEntry(
-        state,
-        refreshDeck(state, playerId, candidate.instanceId),
-        {
-          kind: 'refresh-deck',
-          playerId,
-          cookieInstanceId: candidate.instanceId,
-        },
-      ),
+      state: applyGameCommand(state, {
+        kind: 'refresh-deck',
+        playerId,
+        cookieInstanceId: candidate.instanceId,
+      }),
       action: 'refresh',
       description: `${state.players[playerId].name}使用${candidate.name}完成 Refresh。`,
     }
@@ -99,20 +83,16 @@ export const handleAiTurnState = (
     const replacement = strategy.chooseReplacement(state, playerId, strategy.currentLevel)
     if (!replacement) {
       return {
-        state: appendCommandLogEntry(
-          state,
-          skipDefeatedCookieReplacement(state),
-          { kind: 'skip-replacement', playerId },
-        ),
+        state: applyGameCommand(state, { kind: 'skip-replacement', playerId }),
         action: 'skip-replacement',
         description: `${state.players[playerId].name}選擇不補餅乾。`,
       }
     }
-    const replacedState = appendCommandLogEntry(
-      state,
-      replaceDefeatedCookie(state, replacement.instanceId),
-      { kind: 'replace-cookie', playerId, instanceId: replacement.instanceId },
-    )
+    const replacedState = applyGameCommand(state, {
+      kind: 'replace-cookie',
+      playerId,
+      instanceId: replacement.instanceId,
+    })
     const replaced = replacedState.players[playerId].battleArea.find(
       (cookie) => cookie.card.instanceId === replacement.instanceId,
     )
@@ -124,19 +104,11 @@ export const handleAiTurnState = (
       state:
         onPlay?.state ??
         (replacedState.pendingOnPlay && !replacedState.pendingRefresh
-          ? appendCommandLogEntry(
-              replacedState,
-              skipCookieOnPlay(
-                replacedState,
-                playerId,
-                replacement.instanceId,
-              ),
-              {
-                kind: 'skip-on-play',
-                playerId,
-                sourceInstanceId: replacement.instanceId,
-              },
-            )
+          ? applyGameCommand(replacedState, {
+              kind: 'skip-on-play',
+              playerId,
+              sourceInstanceId: replacement.instanceId,
+            })
           : replacedState),
       action: 'replace-cookie',
       effectSelections: onPlay?.effectSelections,
@@ -154,19 +126,11 @@ export const handleAiTurnState = (
       : null
     return (
       onPlay ?? {
-        state: appendCommandLogEntry(
-          state,
-          skipCookieOnPlay(
-            state,
-            playerId,
-            state.pendingOnPlay.sourceInstanceId,
-          ),
-          {
-            kind: 'skip-on-play',
-            playerId,
-            sourceInstanceId: state.pendingOnPlay.sourceInstanceId,
-          },
-        ),
+        state: applyGameCommand(state, {
+          kind: 'skip-on-play',
+          playerId,
+          sourceInstanceId: state.pendingOnPlay.sourceInstanceId,
+        }),
         action: 'idle',
         description: `${state.players[playerId].name}未發動登場效果。`,
       }
@@ -187,11 +151,7 @@ export const handleAiTurnState = (
 
   if (state.phase === 'active' || state.phase === 'draw') {
     return {
-      state: appendCommandLogEntry(
-        state,
-        advancePhase(state),
-        { kind: 'advance-phase', playerId },
-      ),
+      state: applyGameCommand(state, { kind: 'advance-phase', playerId }),
       action: 'advance-phase',
       description: `${state.players[playerId].name}推進回合階段。`,
     }
@@ -226,21 +186,17 @@ export const handleAiTurnState = (
       }
 
       return {
-        state: appendCommandLogEntry(
-          state,
-          placeSupportCard(state, supportCard.instanceId),
-          { kind: 'place-support', playerId, instanceId: supportCard.instanceId },
-        ),
+        state: applyGameCommand(state, {
+          kind: 'place-support',
+          playerId,
+          instanceId: supportCard.instanceId,
+        }),
         action: 'place-support',
         description: `${player.name}將${supportCard.name}配置到支援區。`,
       }
     }
     return {
-      state: appendCommandLogEntry(
-        state,
-        advancePhase(state),
-        { kind: 'advance-phase', playerId },
-      ),
+      state: applyGameCommand(state, { kind: 'advance-phase', playerId }),
       action: 'advance-phase',
       description: `${player.name}進入主要階段。`,
     }
@@ -257,16 +213,12 @@ export const handleAiTurnState = (
       )
       if (paymentIds) {
         return {
-          state: appendCommandLogEntry(
-            state,
-            playStage(state, playerId, stageCard.instanceId, paymentIds),
-            {
-              kind: 'play-stage',
-              playerId,
-              instanceId: stageCard.instanceId,
-              paymentIds,
-            },
-          ),
+          state: applyGameCommand(state, {
+            kind: 'play-stage',
+            playerId,
+            instanceId: stageCard.instanceId,
+            paymentIds,
+          }),
           action: 'play-stage',
           description: `${player.name}放置${stageCard.name}。`,
         }
@@ -285,37 +237,33 @@ export const handleAiTurnState = (
           sourcePlayerId: playerId,
           sourceInstanceId: stage.card.instanceId,
         }
-        let nextState = activateStage(state, playerId, paymentIds)
-        for (const effect of ability.effects) {
-          const targetIds = strategy.chooseEffectTargets(
-            nextState,
-            context,
-            effect,
-          )
-          if (
-            (effect.kind === 'support-to-hand' ||
-              effect.kind === 'support-to-trash' ||
-              effect.kind === 'trash-to-support') &&
-            targetIds.length < effect.amount
-          ) {
-            break
+        const activated = activateStage(state, playerId, paymentIds)
+        const sim = simulateAbilityEffects(
+          activated,
+          context,
+          ability.effects,
+          strategy.chooseEffectTargets,
+          (effect, targetIds) =>
+            !(
+              (effect.kind === 'support-to-hand' ||
+                effect.kind === 'support-to-trash' ||
+                effect.kind === 'trash-to-support') &&
+              targetIds.length < effect.amount
+            ),
+          { sourceInstanceId: stage.card.instanceId, paymentIds },
+        )
+        if (!sim.aborted) {
+          return {
+            state: applyGameCommand(state, {
+              kind: 'activate-stage',
+              playerId,
+              paymentIds,
+              effectTargets: sim.effectTargets,
+            }),
+            action: 'activate-stage',
+            description: `${player.name}啟動${stage.card.name}。`,
+            effectSelections: sim.effectSelections,
           }
-          nextState = executeCardEffect(
-            nextState,
-            context,
-            effect,
-            targetIds,
-          )
-          if (nextState.pendingRefresh) break
-        }
-        return {
-          state: appendCommandLogEntry(
-            state,
-            finalizePendingReplacements(nextState),
-            { kind: 'activate-stage', playerId, paymentIds },
-          ),
-          action: 'activate-stage',
-          description: `${player.name}啟動${stage.card.name}。`,
         }
       }
     }
@@ -337,11 +285,11 @@ export const handleAiTurnState = (
       if (handQuality >= 30) {
         const deployable = chooseBestCookieToDeploy(player.hand, profile)
         if (deployable) {
-          const deployedState = appendCommandLogEntry(
-            state,
-            deployCookie(state, deployable.instanceId),
-            { kind: 'deploy-cookie', playerId, instanceId: deployable.instanceId },
-          )
+          const deployedState = applyGameCommand(state, {
+            kind: 'deploy-cookie',
+            playerId,
+            instanceId: deployable.instanceId,
+          })
           const deployed = deployedState.players[playerId].battleArea.find(
             (cookie) => cookie.card.instanceId === deployable.instanceId,
           )
@@ -357,19 +305,11 @@ export const handleAiTurnState = (
             state:
               onPlay?.state ??
               (deployedState.pendingOnPlay
-                ? appendCommandLogEntry(
-                    deployedState,
-                    skipCookieOnPlay(
-                      deployedState,
-                      playerId,
-                      deployable.instanceId,
-                    ),
-                    {
-                      kind: 'skip-on-play',
-                      playerId,
-                      sourceInstanceId: deployable.instanceId,
-                    },
-                  )
+                ? applyGameCommand(deployedState, {
+                    kind: 'skip-on-play',
+                    playerId,
+                    sourceInstanceId: deployable.instanceId,
+                  })
                 : deployedState),
             action: 'deploy-cookie',
             description: onPlay
@@ -426,22 +366,13 @@ export const handleAiTurnState = (
             )
             if (paymentIds) {
               return {
-                state: appendCommandLogEntry(
-                  state,
-                  beginAttack(
-                    state,
-                    attacker.card.instanceId,
-                    target.card.instanceId,
-                    paymentIds,
-                  ),
-                  {
-                    kind: 'declare-attack',
-                    playerId,
-                    attackerInstanceId: attacker.card.instanceId,
-                    targetInstanceId: target.card.instanceId,
-                    supportPaymentIds: paymentIds,
-                  },
-                ),
+                state: applyGameCommand(state, {
+                  kind: 'declare-attack',
+                  playerId,
+                  attackerInstanceId: attacker.card.instanceId,
+                  targetInstanceId: target.card.instanceId,
+                  supportPaymentIds: paymentIds,
+                }),
                 action: 'attack',
                 description: `${player.name}以${attacker.card.name}攻擊${target.card.name}。`,
               }
@@ -452,11 +383,7 @@ export const handleAiTurnState = (
     }
 
     return {
-      state: appendCommandLogEntry(
-        state,
-        advancePhase(state),
-        { kind: 'advance-phase', playerId },
-      ),
+      state: applyGameCommand(state, { kind: 'advance-phase', playerId }),
       action: 'advance-phase',
       description: `${player.name}結束主要階段。`,
     }
@@ -472,22 +399,14 @@ export const handleAiTurnState = (
       }
     }
     return {
-      state: appendCommandLogEntry(
-        state,
-        advanced,
-        { kind: 'advance-phase', playerId },
-      ),
+      state: applyGameCommand(state, { kind: 'advance-phase', playerId }),
       action: 'advance-phase',
       description: `${player.name}結束回合。`,
     }
   }
 
   return {
-    state: appendCommandLogEntry(
-      state,
-      advancePhase(state),
-      { kind: 'advance-phase', playerId },
-    ),
+    state: applyGameCommand(state, { kind: 'advance-phase', playerId }),
     action: 'advance-phase',
     description: `${player.name}結束回合。`,
   }

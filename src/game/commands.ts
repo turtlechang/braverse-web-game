@@ -874,6 +874,28 @@ const assertNoPendingDecision = (
     return
   }
 
+  // 補位帶出的新餅乾登場效果（OnPlay）同樣優先於昏厥效果與效果順序：
+  // 補位卡的 OnPlay 必須在原本昏厥效果解決前就能發動或略過，否則會與
+  // 上方補位放行邏輯銜接不上，造成「補完位但無法處理 OnPlay」的死結。
+  if (
+    command.kind === 'skip-on-play' &&
+    (pending.kind === 'faint-effect' || pending.kind === 'effect-order') &&
+    state.pendingOnPlay?.playerId === command.playerId &&
+    state.pendingOnPlay.sourceInstanceId === command.sourceInstanceId
+  ) {
+    return
+  }
+  if (
+    (command.kind === 'activate-skill' ||
+      command.kind === 'begin-activate-skill') &&
+    command.trigger === 'on-play' &&
+    (pending.kind === 'faint-effect' || pending.kind === 'effect-order') &&
+    state.pendingOnPlay?.playerId === command.playerId &&
+    state.pendingOnPlay.sourceInstanceId === command.sourceInstanceId
+  ) {
+    return
+  }
+
   throw new GameRuleError('必須先處理待處理的決策。')
 }
 
