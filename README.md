@@ -53,7 +53,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局使用合法自訂牌組，AI 可隨機選擇五色起始牌組，或指定紅色、黃色、綠色、藍色、紫色起始牌組及第二彈紅色、黃色、豆子、藍色、紫色預設牌組；重新開始會回到牌組選擇。
 - 手牌扇形配置完成：我方手牌右側切齊、對手手牌左側切齊，支援區邊界內動態調整間距、弧度與 z-index；我方卡片 hover 時以小比例突顯，對手卡片不回應 hover。對手手牌以上方中央為共同支點向下扇形展開；畫面由左至右依序覆蓋，右側卡牌位於較高層級；六張角度 -25/-15/-5/5/15/25 度；牌背 180 度；不越過支援區左界；1538×578 左界 0.96px，600×338 亦未越界且無捲軸、無 console error。
-  - 目前基線（非永久門檻）：92 個測試檔、1488 項單元測試（含 P0-1/P0-2 主選單空狀態、OnlineMatchPanel dialog/label/connecting close 等 mock 測試、攻擊宣告阻擋加固與 AI attack commandLog/determinism 修正）；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發僅限戰鬥傷害（效果傷害不觸發）、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程；AI 支援階段在有手牌且尚未放支援時會優先填能，並以 Lv.1/Lv.2/Lv.3 與多回合對局回歸測試鎖定。第二彈紅色／黃色／豆子／藍色／紫色預設牌組已納入玩家側 × AI 側 5×5 組合、每組 20 種種子的 500 場模擬回歸。
+  - 目前基線（非永久門檻）：95 個測試檔、1522 項單元測試（含 P0-1/P0-2 主選單空狀態、OnlineMatchPanel dialog/label/connecting close 等 mock 測試、攻擊宣告阻擋加固與 AI attack commandLog/determinism 修正）；ST5 紫色起始牌組效果已完整支援：ST5-003 可選抽 0～1 張、ST5-004 昏厥後會先完成對手強制棄牌再進入補位，並於同一公開視窗展示 AI 因效果棄置的全部卡牌；ST5-001/006/007 可移除符合條件的餅乾或場景、ST5-010/018/021 檢查剩餘 HP 上限、ST5-013/020 支付指定紫色 LV.1 戰鬥區餅乾、ST5-019 在對手棄牌區達 20 張後造成傷害並可選抽牌、ST5-022 僅在對手以效果將自己的戰鬥區餅乾送入棄牌區時觸發。非昏厥移除不會誤觸 faint；陷阱具必選目標但目前沒有足量合法目標時，會由共用規則層排除，避免 UI 與 AI 誤判 ST5-021 可發動。BS1-006 Mala Sauce Cookie 的 after-damage 觸發僅限戰鬥傷害（效果傷害不觸發）、once-per-turn 登記、pending decision、UI 與 AI 結算。UI 與 AI 皆使用相同目標、Refresh、付款與補位流程；AI 支援階段在有手牌且尚未放支援時會優先填能，並以 Lv.1/Lv.2/Lv.3 與多回合對局回歸測試鎖定。第二彈紅色／黃色／豆子／藍色／紫色預設牌組已納入玩家側 × AI 側 5×5 組合、每組 20 種種子的 500 場模擬回歸。
 - App.tsx 協調邏輯已拆至 useMatchController/useMatchSetup/useMatchAnimations/useBattleActions/usePendingEffect/useAiTurn/useMatchDialogs 自訂 hooks；useMatchController 由 710 行降至 440 行。AI 已拆為 pending、battle、turn handlers，effects.ts 保留 14 行相容 façade並依 targeting、combat、execute、pending 分組；typed GameCommand 已全覆蓋（8 種決策 + 24 種玩家動作指令），附 commandLog 指令紀錄與 replay 重播模組。
 - Playwright 種子 1-20 驗證用於確認 AI 對局可正常結束，並額外驗證十二種桌機與窄視窗解析度（含 1600x900、1536x864、1538x578、798x698，最低至 600x338）使用滿版遊戲容器、無垂直捲軸；雙方場地維持 55/45 比例，窄版 HUD 上下排列，主要區域、場地、支援區與手牌未超出畫布。另覆蓋支援卡左右排列與尺寸、戰鬥卡靠中央、對手名稱牌位置、手牌選取與 `Escape` 取消、資源浮層、戰鬥卡橫置、確認式大卡縮小／返回、牌庫檢視提示框縮小／返回、昏厥目標選擇縮小後點選、break-to-trash、ST2-003 攻擊後續效果、ST3-002 支援卡代價技能、陷阱、FLIP、補位、物品／場景、faint、Pretzel Snare 與 Roguefort Cookie 路徑、PhaseRail 明確 grid row 修正下一步按鈕誤佔 1fr、對手手牌牌背旋轉180度（1538×578 六張牌 faceTransform matrix(-1,0,0,-1,0,0)、外側角度 -25/+25deg、左界 0.96px，無 console error）；完整瀏覽器驗證前需先執行 `npm run build`。
 - `npm run test:ai:browser` 已於十二種解析度全綠（1600x900 至 600x338），支援卡維持扇形重疊視覺，點擊以 `page.evaluate(el => el.click())` 直接在目標元素觸發。`npm run test:blue:browser` 已於 1366×768、900×506 通過 ST4-012／013 與 ST4-016～020 的使用、付款、目標與決策流程；ST5 新增效果未影響既有藍牌瀏覽器驗證。
@@ -64,10 +64,10 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
 - Phase 5 線上對戰 MVP 的 lint 修正已完成：線上效果目標選取改為 keyed state，避免 React hooks `set-state-in-effect`；移除未使用型別與空 handler 參數。本分支目前 `npm test` 為 851 項通過，`npm run lint` 與 `npm run build` 亦通過。
 - 已完成 Vercel + Render 公網部署與雙視窗對局驗證：Render 服務 braverse-web-game 部署 a679f03（Deployed）；Vercel Production 以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready）；正式網域 https://braverse-web-game.vercel.app 以兩個獨立 WebSocket 分頁完成合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。注意 Render Free 閒置會休眠，首次連線可能需 50 秒以上。
-- 已達成：平板響應式 P0 修復——body、main menu、game shell、deck editor 支援 100dvh fallback；deck editor actions 保持可見且 deck list 可滾動；OnlineBattleView 開局準備移除 inline style，按鈕可換行、至少 44px、focus-visible；modal safe-area 保留原有間距。已驗證 npm test 93 files/1490 tests、lint、build，並以 1024x600 實際版面確認無溢出及操作列可見。
+- 已達成：平板響應式 P0 修復——body、main menu、game shell、deck editor 支援 100dvh fallback；deck editor actions 保持可見且 deck list 可滾動；OnlineBattleView 開局準備移除 inline style，按鈕可換行、至少 44px、focus-visible；modal safe-area 保留原有間距。已驗證 npm test 95 files/1522 tests、lint、build，並以 1024x600 實際版面確認無溢出及操作列可見。
 - 已修正 StatusToast 在 matchMessages 內容變更時重新顯示，並將 AI 瀏覽器測試的休息區卡牌點擊改為 DOM click，避免 modal backdrop 攔截，提升測試穩定度。
 - break-to-trash 結果訊息依有無目標分流，effectUiUtils 單元測試已補齊，AI 瀏覽器斷言文案同步更新。
-- 完整 `npm run test:ai:browser` 已通過：20/20 種子無卡住（stuck=0）；已確認最新 `npm test` 為 93 files/1490 tests。
+- 完整 `npm run test:ai:browser` 已通過：20/20 種子無卡住（stuck=0）；已確認最新 `npm test` 為 95 files/1522 tests。
 
 ## 下一步計畫
 
@@ -76,7 +76,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已達成：攻擊宣告阻擋加固 — `assertNoBlockingDecision` 新增 `pendingOnPlay` 與 `pendingAbilityEffect` 檢查，確保既有待處理效果（OnPlay、技能啟動）結算完成前不得宣告攻擊，避免狀態交錯；已同步新增 `src/game/battle-blocking-decision.test.ts` 回歸測試。
 - 已達成：UI P1-2 設計參考 mockup 按需載入 — `src/main.tsx` 移除 `MockupGallery` 靜態 import，改以 `React.lazy` + `Suspense` 條件載入；正常遊戲路徑不包含 `src/ui-reference/` 任何元件，mockup 以獨立 chunk 分離。
 - 已達成：主選單重型 modal 按需載入 — 牌組編輯器、測試情境與線上對戰改用 `React.lazy` + `Suspense`，初始主 bundle 降至約 805.67 KB，並以瀏覽器驗收確認動態 chunk 可正常開啟與關閉。
-- 待確認：推送 Phase 5 線上對戰 MVP lint 修正後，確認 GitHub Actions 的 Test, Lint & Build 工作重新回到綠燈。
+- 已達成：推送 Phase 5 線上對戰 MVP lint 修正後，GitHub Actions 的 Test, Lint & Build 工作已回到綠燈。
 - 已達成：UI P1 資訊密度改版——桌機戰鬥卡放大約 16%～20%、HP/ATK 圖示徽章、敵我摘要集中顯示牌庫手牌棄牌與休息等級、支援區橫置/付款狀態視覺區別、資源區 hover 提示（休息等級、場景橫置狀態等）；`phaseAdvanceLabels` 匯出供元件測試使用。
 - 已達成：三色（RED / YELLOW / GREEN）起始牌組切換、App.tsx 元件拆分（卡牌展示、BattleRow、PhaseRail、MatchToolbar、狀態面板、效果面板、modal）；10 張物品與 2 張場景完整支援（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand、複合效果暫停與 OnPlay/Refresh/補位銜接、AI deterministic 使用）。
 - 已達成：陷阱使攻擊者或目標離場後跳過攻擊傷害；HP 配置途中 Refresh 的登場允許；通用化物品/場景效果解析（disable-flip、view-hp、modify-all-attack、battle-to-support、trash-to-battle、support-to-hand）；When this Cookie faints 事件引擎（pending queue、玩家/AI 雙路徑選擇、選 0 略過、多餅乾同時昏厥依序處理），且同一玩家的 BS2-040/BS2-049 類同時觸發效果會先交由玩家決定順序；顏色匹配與 Mix Cost 已實作；回合結束效果引擎（endPhase 標記、雙方順序觸發、一次性防重複、Refresh 暫停與恢復）。
@@ -176,4 +176,4 @@ npm run cards:import:purple-sample
 
 更新日誌補充：2026-07-11 完成線上對戰 modal 桌機／窄視窗瀏覽器驗收腳本。
 
-最新驗證基線為 `npm test` 95 個測試檔、1520 項測試；`validate:cards`、`validate:candidate`、`check:card-pool`、lint、typecheck、build、AI 瀏覽器 20/20 與線上 modal 瀏覽器 2/2 均通過。主 JS bundle 已由約 851.60 KB 降至 805.67 KB；牌組編輯器、測試情境與線上對戰 modal 已分離為按需載入 chunk，仍保留主 bundle >500 KB 的既有警告。
+最新驗證基線為 `npm test` 95 個測試檔、1522 項測試；`validate:cards`、`validate:candidate`、`check:card-pool`、lint、typecheck、build、AI 瀏覽器 20/20 與線上 modal 瀏覽器 2/2 均通過。主 JS bundle 已由約 851.60 KB 降至 805.67 KB；牌組編輯器、測試情境與線上對戰 modal 已分離為按需載入 chunk，仍保留主 bundle >500 KB 的既有警告。
