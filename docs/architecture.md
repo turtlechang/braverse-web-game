@@ -92,6 +92,8 @@
 
 ## 7. 建置與測試
 
+> 2026-07-12 更新：AI smoke workflow 於 main push 自動執行，並保留 `workflow_dispatch` 手動觸發。
+
 - Vite 8 + TypeScript 6（`tsc -b` 複合建置：app + node 兩個 tsconfig；server 獨立 `server:typecheck`）。
 - vitest 4：測試數與原始碼同目錄放置（`*.test.ts(x)`）；目前基線見 [CHANGELOG.md](../CHANGELOG.md) 最新項目（非永久門檻，只要求不低於前次基線）。
 - Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度、20 場 AI 對局）、`npm run test:blue:browser`（藍牌效果流程）、`npm run test:online:browser`（線上 modal 桌機／窄版）；AI 驗證另有手動 GitHub Actions workflow。

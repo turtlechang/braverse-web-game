@@ -33,6 +33,8 @@ npm run build            # tsc -b + vite build（不可只跑 tsc --noEmit）
 
 ## 4. 合併後
 
+> 2026-07-12 補充：main push 會自動觸發 `.github/workflows/ai-browser-validation.yml`；保留 `workflow_dispatch` 供窄版或失敗後重跑。
+
 1. 確認 `main` 的 CI 綠燈與 production 部署成功。
 2. `CHANGELOG.md`：合併時將對應項目從 `[Unreleased]` 移到日期段落（PR 內先寫在 Unreleased）。
 3. 有新規則裁定、工作流程變更時同步 `AGENTS.md` / 相關 docs / 專案 Skills。

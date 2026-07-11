@@ -3,6 +3,7 @@
 最後更新：2026-07-12。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
 
 > 2026-07-12 驗證補充：R3 AI Refresh replay 已由 `shuffleSeed` command payload 完成；最新 bundle 為 731.12 KiB raw / 152.39 KiB gzip，通過 budget。
+> AI Playwright smoke workflow 已於 main push 自動觸發，並保留手動觸發供調查使用。
 
 ## 已完成里程碑（摘要）
 
