@@ -114,10 +114,11 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 
 ## 開發指令
 
-```bash
-npm install
-npm run dev
-```
+| 指令 | 用途 |
+|---|---|
+| `npm install` | 安裝相依套件 |
+| `npm run dev` | 啟動開發伺服器（Vite HMR） |
+| `npm run check:bundle` | 檢查 dist/assets/index-*.js 的 raw/gzip bundle budget，預設上限 850/180 KiB，執行前需先 `npm run build` |
 
 ## 驗證指令
 
@@ -176,4 +177,4 @@ npm run cards:import:purple-sample
 
 更新日誌補充：2026-07-11 完成線上對戰 modal 桌機／窄視窗瀏覽器驗收腳本。
 
-最新驗證基線為 `npm test` 95 個測試檔、1522 項測試；`validate:cards`、`validate:candidate`、`check:card-pool`、lint、typecheck、build、AI 瀏覽器 20/20 與線上 modal 瀏覽器 2/2 均通過。主 JS bundle 已由約 851.60 KB 降至 805.67 KB；牌組編輯器、測試情境與線上對戰 modal 已分離為按需載入 chunk，仍保留主 bundle >500 KB 的既有警告。
+最新驗證基線為 `npm test` 95 個測試檔、1522 項測試；`validate:cards`、`validate:candidate`、`check:card-pool`、lint、typecheck、build、AI 瀏覽器 20/20 與線上 modal 瀏覽器 2/2 均通過。主 JS bundle 為 806.96 kB（raw 788.06 KiB，gzip 167.23 KiB）；牌組編輯器、測試情境與線上對戰 modal 已分離為按需載入 chunk，仍保留主 bundle >500 KB 的既有警告。bundle budget 已接入 GitHub Actions CI。

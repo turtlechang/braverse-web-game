@@ -24,6 +24,7 @@
     "cards:import:purple-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck PURPLE\" --output data/cards/official-starter-deck-purple.en.json --limit 100",
     "cards:import:brave-beginning": "node scripts/import-brave-beginning.mjs",
     "lint": "eslint .",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
     "test": "vitest run",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",
     "test:online:browser": "node scripts/online-modal-browser-validation.mjs",
