@@ -122,54 +122,56 @@ export function MenuScreen({
 
   return (
     <>
-      <MainMenu
-        decks={savedDecks}
-        selectedDeckId={selectedDeckId}
-        selectedValidation={selectedDeckValidation}
-        battleError={battleEntryError}
-        aiDeckChoice={aiDeckChoice}
-        aiLevel={aiLevel}
-        onSelectAiDeck={setAiDeckChoice}
-        onSelectAiLevel={onSelectAiLevel}
-        onSelectDeck={(deckId) => {
-          setSelectedDeckId(deckId)
-          setBattleEntryError(null)
-        }}
-        onStartBattle={startBattleFromMenu}
-        onOpenOnlineMatch={() => setShowOnlineMatch(true)}
-        onOpenTestScenario={() => setShowTestScenario(true)}
-        onCreateDeck={() => {
-          setEditingDeck(null)
-          setShowDeckEditor(true)
-        }}
-        onEditDeck={(deck) => {
-          setEditingDeck(deck)
-          setShowDeckEditor(true)
-        }}
-        onDuplicateDeck={(deck) => {
-          const { decks, newDeck } = duplicateCustomDeck(deck.id)
-          setSavedDecks(decks)
-          if (newDeck) {
-            setSelectedDeckId(newDeck.id)
-          }
-        }}
-        onDeleteDeck={(deck) => {
-          if (
-            !window.confirm(
-              `確定要刪除牌組「${deck.name}」嗎？此動作無法復原。`,
+      {!showOnlineMatch && (
+        <MainMenu
+          decks={savedDecks}
+          selectedDeckId={selectedDeckId}
+          selectedValidation={selectedDeckValidation}
+          battleError={battleEntryError}
+          aiDeckChoice={aiDeckChoice}
+          aiLevel={aiLevel}
+          onSelectAiDeck={setAiDeckChoice}
+          onSelectAiLevel={onSelectAiLevel}
+          onSelectDeck={(deckId) => {
+            setSelectedDeckId(deckId)
+            setBattleEntryError(null)
+          }}
+          onStartBattle={startBattleFromMenu}
+          onOpenOnlineMatch={() => setShowOnlineMatch(true)}
+          onOpenTestScenario={() => setShowTestScenario(true)}
+          onCreateDeck={() => {
+            setEditingDeck(null)
+            setShowDeckEditor(true)
+          }}
+          onEditDeck={(deck) => {
+            setEditingDeck(deck)
+            setShowDeckEditor(true)
+          }}
+          onDuplicateDeck={(deck) => {
+            const { decks, newDeck } = duplicateCustomDeck(deck.id)
+            setSavedDecks(decks)
+            if (newDeck) {
+              setSelectedDeckId(newDeck.id)
+            }
+          }}
+          onDeleteDeck={(deck) => {
+            if (
+              !window.confirm(
+                `確定要刪除牌組「${deck.name}」嗎？此動作無法復原。`,
+              )
+            ) {
+              return
+            }
+            const decks = deleteCustomDeck(deck.id)
+            setSavedDecks(decks)
+            setSelectedDeckId((current) =>
+              current === deck.id ? decks[0]?.id ?? null : current,
             )
-          ) {
-            return
-          }
-          const decks = deleteCustomDeck(deck.id)
-          setSavedDecks(decks)
-          setSelectedDeckId((current) =>
-            current === deck.id ? decks[0]?.id ?? null : current,
-          )
-          setBattleEntryError(null)
-        }}
-        onRefreshDecks={refreshSavedDecks}
-      />
+            setBattleEntryError(null)
+          }}
+          onRefreshDecks={refreshSavedDecks}
+        />
+      )}
       {showDeckEditor && (
         <DeckEditorModal
           initialDeck={editingDeck ?? undefined}
