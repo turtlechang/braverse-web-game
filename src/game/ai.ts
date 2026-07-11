@@ -15,7 +15,11 @@ import {
 } from './effects'
 import { getAttackEnergyCost, selectEnergyPayment } from './energy'
 import { getReplacementCandidates } from './replacement'
-import { activateCookieSkill, canActivateCookieSkill } from './skills'
+import {
+  activateCookieSkill,
+  canActivateCookieSkill,
+  getTrashBattleCookieCostCandidates,
+} from './skills'
 import { simulateAbilityEffects } from './ai/ability-effects'
 import type {
   AbilityCost,
@@ -302,12 +306,25 @@ const chooseAbilityCostIds = (
     : []
   if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
 
+  const trashBattleCookieIds = cost.trashBattleCookie
+    ? getTrashBattleCookieCostCandidates(cost, player.battleArea, sourceInstanceId)
+        .slice(0, cost.trashBattleCookie.count)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+  if (
+    cost.trashBattleCookie &&
+    trashBattleCookieIds.length < cost.trashBattleCookie.count
+  ) {
+    return null
+  }
+
   return {
     paymentIds,
     supportToTrashIds,
     supportToHandIds,
     discardHandIds,
     hpToTrashTargetIds,
+    trashBattleCookieIds,
   }
 }
 
@@ -392,6 +409,7 @@ const resolveAiCardAbility = (
     costIds.supportToHandIds,
     costIds.discardHandIds,
     costIds.hpToTrashTargetIds,
+    costIds.trashBattleCookieIds,
   )
   const shuffleSeed = [...card.instanceId].reduce(
     (seed, character) => Math.imul(seed ^ character.charCodeAt(0), 16777619),
@@ -419,6 +437,7 @@ const resolveAiCardAbility = (
       supportToHandIds: costIds.supportToHandIds,
       discardHandIds: costIds.discardHandIds,
       hpToTrashTargetIds: costIds.hpToTrashTargetIds,
+      trashBattleCookieIds: costIds.trashBattleCookieIds,
       effectTargets: sim.effectTargets,
     }),
     action: 'play-item',

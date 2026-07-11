@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+- 🐛 真人試玩回報修復（2026-07-12，[manual-playtest-checklist.md](docs/manual-playtest-checklist.md) 試玩紀錄）：
+  - 線上對戰攻擊方在對手決定陷阱/Blocker/FLIP 時無任何等待提示，體感等同卡死；`OnlineBattleView.tsx` 狀態列新增 `opponentDecisionLabel`，涵蓋 trap/flip/attack-effect 三種待決策階段。
+  - BS2-077 `trashBattleCookie` 物品代價完全未執行就結算效果：補齊 `PlayItemCommand`／`playItem()`／`payAbilityCost`／AI `chooseAbilityCostIds`／人類互動流程 `begin-play-item` 的欄位與邏輯，新增回歸測試。
+  - BS2-079 陷阱「棄牌洗回牌庫」後續效果從未轉出：`official-effect-adapter.ts` 補上 `trash-to-deck` 效果；發現陷阱系統只有單一共用 `targetIds`（無法比照物品/技能逐效果選目標），已避免例外崩潰但效果本身仍是靜默無選擇，記錄為新風險 known-risks R15。
+  - BS2-058 攻擊後續效果經核對程式碼與既有測試未複現，判斷可能是玩家誤解「檢查自己棄牌區」的條件或目標已被主傷害擊倒。
 - 🌐 好友房 WebSocket 生命週期硬化：以單一有效連線防止舊 socket 覆寫新連線，CONNECTING 階段可安全離開，加入房間立即保留房號；新增 90 秒 Render 冷啟動與 10 秒首次回應 timeout、非預期 error/close、constructor/send 失敗、錯誤 JSON／GameState envelope 防護及合法私人協定 close code。新增 10 項 hook 回歸，並擴充雙瀏覽器 smoke 驗證伺服器無法連線時的錯誤提示與返回操作；測試基線升至 97 檔／1545 項。
 - 🌐 新增本機雙瀏覽器好友房 Playwright smoke：啟動獨立 Vite 與權威 WebSocket server，驗證建房、加入、雙方開局、支援→主階段狀態同步及對手離線提示；納入 main push workflow，Playwright 驗證增至 5 套。
 - 🧭 強化多段能力效果決策順序證據：新增 8 類 pending decision 表格回歸，驗證 `resolve-ability-effect` 無法繞過中途決策，並驗證看牌決策完成後可保留並恢復效果鏈；測試基線升至 96 檔／1535 項。

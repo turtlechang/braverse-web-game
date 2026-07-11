@@ -1949,6 +1949,22 @@ describe('Starter Deck RED official effect adapter', () => {
         ])
     })
 
+    it('BS2-079 Yew Village Scroll applies attack decrease and shuffles trash back into the deck', () => {
+      expect(
+        convertOfficialTrapAbility(findBraveBeginningBS2Card('BS2-079')),
+      ).toMatchObject({
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'trash-to-deck', max: 5, excludeFlip: true },
+        ],
+      })
+    })
+
     it('BS2-060 Beet Cookie faints into a conditional draw', () => {
       expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-060')))
         .toMatchObject({

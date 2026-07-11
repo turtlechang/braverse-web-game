@@ -70,6 +70,65 @@ describe('item and stage actions', () => {
     ).toBe(true)
   })
 
+  it('requires and pays a trashBattleCookie item cost (BS2-077 regression)', () => {
+    const item: GameCard = {
+      id: 'item',
+      instanceId: 'item-1',
+      name: 'Item',
+      type: 'item',
+      item: {
+        cost: {
+          energy: { red: 1 },
+          trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
+        },
+        text: 'item',
+        effects: [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } }],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].hand = [item]
+    state.players['player-one'].battleArea = [
+      {
+        card: {
+          id: 'cookie',
+          instanceId: 'cookie-1',
+          name: 'Cookie',
+          type: 'cookie',
+          level: 1,
+          energyColor: 'purple',
+          hp: 1,
+          attack: 1,
+          attackCost: 1,
+        },
+        hpCards: [
+          {
+            id: 'hp',
+            instanceId: 'hp-1',
+            name: 'HP',
+            type: 'cookie',
+            level: 1,
+            hp: 1,
+            attack: 1,
+            attackCost: 1,
+          },
+        ],
+        rested: false,
+      },
+    ]
+
+    expect(() =>
+      playItem(state, 'player-one', item.instanceId, ['pay-1']),
+    ).toThrow('必須選擇 1 張戰鬥區餅乾作為代價。')
+
+    const next = playItem(state, 'player-one', item.instanceId, ['pay-1'], [], [], [], [], [
+      'cookie-1',
+    ])
+    expect(next.players['player-one'].battleArea).toHaveLength(0)
+    expect(
+      next.players['player-one'].discardPile.map((card) => card.instanceId),
+    ).toEqual(expect.arrayContaining(['cookie-1', 'hp-1']))
+  })
+
   it('replaces an existing stage and activates the new stage once', () => {
     const oldStage: GameCard = {
       id: 'old-stage',

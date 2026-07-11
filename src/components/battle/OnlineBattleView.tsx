@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Swords } from 'lucide-react'
+import { Sparkles, Swords } from 'lucide-react'
 import type { GameState, PlayerId } from '../../game'
 import { selectEnergyPayment } from '../../game'
 import { useOnlineMatchController } from '../../hooks/useOnlineMatchController'
@@ -60,6 +60,20 @@ export function OnlineBattleView({
 
   const opponentId = match.opponentId
   const viewerPlayer = game.players[viewerPlayerId]
+
+  const pendingBattle = game.pendingBattle
+  const opponentDecisionLabel =
+    pendingBattle?.stage === 'trap' &&
+    pendingBattle.defenderPlayerId !== viewerPlayerId
+      ? '對手正在決定是否發動陷阱或出動阻擋者…'
+      : pendingBattle?.stage === 'flip' &&
+          (pendingBattle.damagePlayerId ?? pendingBattle.defenderPlayerId) !==
+            viewerPlayerId
+        ? '對手正在決定是否發動 FLIP…'
+        : pendingBattle?.stage === 'attack-effect' &&
+            pendingBattle.attackerPlayerId !== viewerPlayerId
+          ? '對手正在結算攻擊後續效果…'
+          : null
 
   if (game.status === 'setup') {
     const needsMulliganDecision = !viewerPlayer.freeMulliganDecided
@@ -224,6 +238,10 @@ export function OnlineBattleView({
             <strong>
               {pending.pendingEffect ? (
                 <>選擇效果目標</>
+              ) : opponentDecisionLabel ? (
+                <>
+                  <Sparkles aria-hidden="true" /> {opponentDecisionLabel}
+                </>
               ) : match.selectedAttackerId ? (
                 <>
                   <Swords aria-hidden="true" />{' '}
