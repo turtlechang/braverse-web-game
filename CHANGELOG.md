@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 - 📚 P2 維護流程正式化確認完成（roadmap）：`release-process.md`、`card-update-process.md`、`regression-test-checklist.md`、`manual-playtest-checklist.md` 皆已存在且內容完整，本輪修正 `release-process.md` 寫死的「1449+ 項測試」為動態基線敘述（不得低於 Phase 0 基線，非固定數字）。
+- 📚 README 大幅精簡（known-risks R12）：182 行縮減至約 80 行。重新審視 known-risks 時發現先前「CHANGELOG 從 README 抽出」（P2）並不完整——README 自留的「更新日誌」表格與 `CHANGELOG.md` 內容已分岔，9 筆歷史紀錄從未同步；已將分岔紀錄併入本檔（見下方 2026-07-11 補充項）、移除 README 重複表格，「目前進度」／「下一步計畫」改為短摘要 + 連結 `docs/architecture.md`／`docs/roadmap.md`／`docs/known-risks.md`。同時修正 `docs/known-risks.md` R4（`validate:cards` 早已存在並接入 CI，非「缺」）與 R8（缺圖 fallback 早已存在，非「待做」）兩處過時描述；`docs/architecture.md` 同步修正過時的 App.tsx 行數與測試數字。
 - 📚 AI Lv.5 前置觀察（roadmap P3）：新增 `docs/ai-lv3-lv4-observation-2026-07-11.md`，以 7 場 Lv.3/Lv.4 對局逐字紀錄＋儀器化驗證（多重攻擊資源判定、陷阱使用頻率對照牌組組成）確認行為結構健康，建議暫緩 Lv.5 開發、待使用者真人對局確認後再決定。
 - 📚 UI reference wireframe 文件（roadmap P3）：新增 `docs/ui-reference/06-online-match-wireframe.md`（線上對戰面板）；依實機驗證更新 `02-main-menu-wireframe.md`（空狀態 CTA 邏輯）；回填 `ui-audit-2026-07-11.md` 的 P0（主選單空狀態、線上對戰彈窗）已解決狀態。
 - ⚡ 戰鬥資訊 modal 群組（`InformationModals`／`BattleResponseModals`／`DamageEffectModals`／`PendingDecisionModals`／`ResultModal`／`OpeningSetupModal`）改為 `React.lazy` + `Suspense`；主 bundle 由約 806.92 KB 降至 730.68 KB raw（167.17 → 152.26 KB gzip）。
@@ -15,6 +16,15 @@
 - 📚 P2 維護流程文件（本 PR）：CHANGELOG 自 README 抽離、release / card-update 流程、回歸與手動測試清單、loop-engineering 說明。
 - 🛡️ 攻擊宣告阻擋加固：`assertNoBlockingDecision` 新增 `pendingOnPlay` 與 `pendingAbilityEffect` 檢查，既有待處理效果結算完成前禁止宣告攻擊；新增 `battle-blocking-decision.test.ts` 回歸測試。
 - 🛡️ AI 攻擊宣告與 determinism 修正：各級 AI 攻擊統一以 `declare-attack` 記入 commandLog 保留陷阱/FLIP 回應窗口；`commandLog` 長度不再影響 Lv.1 隨機決策；新增 `ai-attack-declaration.test.ts`（309 行），測試基線升至 91 檔／1469 項。
+- 🔧 候選卡牌匯入管線強化：`validate:candidate` 新增 schemaVersion／source／欄位型別結構檢查；`promote:candidate` 加入檔名碰撞拒絕與 rollback；promote 後自動重新生成卡池 registry 確保新卡牌納入 runtime card pool。
+- ✅ CI 新增 `validate:candidate` 與 `check:card-pool` gate，防止候選資料或 runtime registry 漏同步。
+- 🌐 Vercel + Render 公網部署與雙視窗對局驗證完成。
+- 🐛 修正線上對戰加入房間後對戰畫面未顯示（`MainMenu` 與 `OnlineBattleView` 兄弟元素重疊問題）。
+- 🔧 指令出口統一補位排程：完成 `usePendingEffect` commandLog／replay 一致性與回歸測試。
+- 📱 1194×680 平板解析度瀏覽器驗證完成：主選單、牌組編輯器、break-to-trash 對戰桌無 body 溢出，牌組編輯器 modal 在 viewport 內且操作列可見。
+- ✅ AI 瀏覽器完整驗證 20/20 種子全綠（stuck=0）；互動／文案修正。
+- 🔧 break-to-trash 結果訊息依有無目標分流；補齊 `effectUiUtils` 單元測試；同步 AI 瀏覽器斷言文案。
+- 🐛 修正 `StatusToast` 訊息變更後未重新顯示；AI 瀏覽器測試的休息區卡牌點擊改為 DOM click，避免 modal backdrop 攔截。
 
 ## 2026-07-10
 

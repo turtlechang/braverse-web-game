@@ -63,7 +63,7 @@
 
 ## 4. UI 層（src/components/ + src/hooks/）
 
-- `App.tsx`（573 行）只做協調：組合 hooks、切換畫面（主選單 / 牌組編輯器 / 對戰 / 線上對戰）。
+- `App.tsx`（約 630 行）只做協調：組合 hooks、切換畫面（主選單 / 牌組編輯器 / 對戰 / 線上對戰）；戰鬥資訊 modal 群組與 `ResultModal`／`OpeningSetupModal` 以 `React.lazy` 按需載入。
 - 協調邏輯在 hooks：`useMatchController`（對局主控）、`useMatchSetup`、`useBattleActions`、`usePendingEffect`（多段效果精靈）、`useAiTurn`、`useMatchAnimations`、`useMatchDialogs`、`useDeckEditor`；線上為 `useOnlineMatch*` 三件組。
 - 容器元件在 `components/battle/`：MenuScreen、BattleRow、各類 Modals（Information / BattleResponse / DamageEffect / PendingDecision）、OnlineBattleView、OnlineMatchPanel。
 - 版面：滿版桌墊、左側窄型五階段列（PhaseRail）、55/45 戰鬥/支援區、扇形手牌、可縮小深色置中效果提示框；最低支援 600×338。
@@ -93,6 +93,6 @@
 ## 7. 建置與測試
 
 - Vite 8 + TypeScript 6（`tsc -b` 複合建置：app + node 兩個 tsconfig；server 獨立 `server:typecheck`）。
-- vitest 4：目前基線 95 個測試檔、1525 項測試（非永久門檻），與原始碼同目錄放置（`*.test.ts(x)`）。
+- vitest 4：測試數與原始碼同目錄放置（`*.test.ts(x)`）；目前基線見 [CHANGELOG.md](../CHANGELOG.md) 最新項目（非永久門檻，只要求不低於前次基線）。
 - Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度、20 場 AI 對局）、`npm run test:blue:browser`（藍牌效果流程）、`npm run test:online:browser`（線上 modal 桌機／窄版）；AI 驗證另有手動 GitHub Actions workflow。
 - CI：`.github/workflows/ci.yml`（PR + main push：卡牌／候選／registry 驗證 → test → lint → build → bundle budget）。

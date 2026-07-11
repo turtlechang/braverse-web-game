@@ -15,4 +15,4 @@
 | R9 | **主 bundle 大小**（~731 kB raw / ~152 kB gzip） | 低（已設 budget） | CI `check:bundle` 上限 raw 850 KiB / gzip 180 KiB；code-split 已完成（牌組編輯器、測試情境、線上對戰 modal、戰鬥資訊 modal 群組按需載入），主 bundle 已從 847 kB 降至 ~731 kB（2026-07-11） |
 | R10 | **AI 自動結算繞過人類防守**（歷史回歸點）：AI 攻擊若用 `attack` 指令會自動結算、跳過陷阱/FLIP 回應 | 已緩解 | 2026-07-07 已修：Lv.1/3/4 改走 `applyChosenTurnCommand` → `beginAttack`。新增 AI 等級時必須遵守（architecture.md §5） |
 | R11 | **單人維護 + 無 branch protection**：main 可直接 push；CI 綠燈非合併門檻 | 低（接受） | 使用者明確決策不啟用 branch protection；以 PR 工作流自律 + CI 通知 |
-| R12 | **README 過載**：進度、驗證數字、歷史決策全堆在 README（150+ 行），數字（如測試數）易過時 | 低 | 本輪已建 docs/ 分流（audit / architecture / roadmap）；後續更新日誌抽 CHANGELOG（roadmap P2） |
+| R12 | ~~README 過載~~ **已解決**（2026-07-11）：README 由 182 行縮減至約 80 行 | — | 先前 P2「CHANGELOG 抽出」只建立了 CHANGELOG.md，但 README 自己的「📝 更新日誌」表格從未真正移除，且與 CHANGELOG.md 內容分岔（9 筆歷史紀錄只存在 README，從未同步）；本輪重新審視 known-risks 時發現此落差，已將分岔的紀錄併入 CHANGELOG.md、移除 README 重複表格，「目前進度」／「下一步計畫」改為短摘要 + 指向 docs/architecture.md／docs/roadmap.md／docs/known-risks.md 的連結 |
