@@ -101,7 +101,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 持續補齊起始牌組以外的複合效果與完整事件優先權。
 - 專案指令、驗證範圍或派工策略調整時，同步維護 `develop-braverse` Skill。
 - 若官方規則或卡牌資料更新，重新匯入樣本並同步更新文件與測試數字。
-- 待實作：1194x680 平板解析度響應式版面驗證與修正（目前僅完成 1024x600 確認，1194x680 尚未補做）。
+- 已達成：1194x680 平板解析度響應式版面驗證——主選單、牌組編輯器、break-to-trash 對戰桌均無 body 溢出；牌組編輯器 modal 在 viewport 內、操作列可見、牌組清單可滾動。
 - 已通過：AI 瀏覽器完整結果（含 StatusToast 與休息區點擊修正後）20/20 種子全綠無卡住，後續維持回歸。
 - 已完成 Vercel Dashboard 匯入 GitHub repo：Framework Preset Vite、Build Command `npm run build`、Output Directory `dist`、Install Command `npm ci`、Node.js Version 22。
 - 不啟用 main branch protection（個人開發者，不要求 CI 通過 + review）。
@@ -154,6 +154,7 @@ npm run cards:import:purple-sample
 
 | 日期 | 概要 |
 |---|---|
+| 2026-07-11 | 1194x680 平板解析度瀏覽器驗證完成：主選單、牌組編輯器、break-to-trash 對戰桌無 body 溢出，牌組編輯器 modal 在 viewport 內且操作列可見 |
 | 2026-07-11 | AI 瀏覽器完整驗證 20/20 種子全綠（stuck=0）；互動／文案修正 |
 | 2026-07-11 | break-to-trash 結果訊息分流、補 effectUiUtils 單元測試、同步 AI 瀏覽器斷言文案 |
 | 2026-07-11 | 修正 StatusToast 訊息變更後重新顯示，穩定 AI 瀏覽器測試休息區卡牌點擊（DOM click 避免 modal backdrop 攔截） |
