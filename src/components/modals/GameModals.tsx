@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { lazy, Suspense, useCallback, useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,8 +25,12 @@ import {
   EnergyCostIcons,
 } from '../cards/CardVisuals'
 import { deckChoiceLabel } from '../gameUiLabels'
-import { DeckEditorModal } from './DeckEditorModal'
 import './GameModals.css'
+
+const DeckEditorModal = lazy(async () => {
+  const module = await import('./DeckEditorModal')
+  return { default: module.DeckEditorModal }
+})
 
 export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, DrawUpToResponseModal, HandDiscardResponseModal } from './PendingDecisionModals'
 
@@ -89,11 +93,21 @@ export function OpeningSetupModal({
 
   if (showDeckEditor) {
     return (
-      <DeckEditorModal
-        initialDeck={savedCustomDeck ?? undefined}
-        onSave={handleDeckEditorSave}
-        onClose={() => setShowDeckEditor(false)}
-      />
+      <Suspense
+        fallback={
+          <div className="modal-backdrop" role="presentation">
+            <div className="modal-loading-fallback" role="status">
+              載入畫面中…
+            </div>
+          </div>
+        }
+      >
+        <DeckEditorModal
+          initialDeck={savedCustomDeck ?? undefined}
+          onSave={handleDeckEditorSave}
+          onClose={() => setShowDeckEditor(false)}
+        />
+      </Suspense>
     )
   }
 

@@ -132,7 +132,11 @@ export function MainMenu({
             <Wifi aria-hidden="true" />
             線上對戰
           </button>
-          <button type="button" onClick={onCreateDeck}>
+          <button
+            type="button"
+            onClick={onCreateDeck}
+            data-testid="open-deck-editor"
+          >
             <Pencil aria-hidden="true" />
             {hasDecks ? '牌組編輯器' : '開啟牌組編輯器'}
           </button>

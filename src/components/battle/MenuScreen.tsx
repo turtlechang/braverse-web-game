@@ -1,8 +1,5 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { MainMenu, type AiDeckChoice } from '../MainMenu'
-import { DeckEditorModal } from '../modals/DeckEditorModal'
-import { TestScenarioModal } from '../modals/TestScenarioModal'
-import { OnlineMatchPanel } from './OnlineMatchPanel'
 import {
   deleteCustomDeck,
   duplicateCustomDeck,
@@ -16,6 +13,31 @@ import type { useMatchController } from '../../hooks/useMatchController'
 import type { usePendingEffect } from '../../hooks/usePendingEffect'
 import type { useAiTurn } from '../../hooks/useAiTurn'
 import type { useMatchDialogs } from '../../hooks/useMatchDialogs'
+
+const DeckEditorModal = lazy(async () => {
+  const module = await import('../modals/DeckEditorModal')
+  return { default: module.DeckEditorModal }
+})
+
+const TestScenarioModal = lazy(async () => {
+  const module = await import('../modals/TestScenarioModal')
+  return { default: module.TestScenarioModal }
+})
+
+const OnlineMatchPanel = lazy(async () => {
+  const module = await import('./OnlineMatchPanel')
+  return { default: module.OnlineMatchPanel }
+})
+
+function ModalLoadingFallback() {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <div className="modal-loading-fallback" role="status" aria-live="polite">
+        載入畫面中…
+      </div>
+    </div>
+  )
+}
 
 const testStateConfig = parseTestStateConfig(
   window.location.search,
@@ -173,27 +195,33 @@ export function MenuScreen({
         />
       )}
       {showDeckEditor && (
-        <DeckEditorModal
-          initialDeck={editingDeck ?? undefined}
-          onSave={handleDeckEditorSave}
-          onClose={() => {
-            setShowDeckEditor(false)
-            setEditingDeck(null)
-            refreshSavedDecks()
-          }}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <DeckEditorModal
+            initialDeck={editingDeck ?? undefined}
+            onSave={handleDeckEditorSave}
+            onClose={() => {
+              setShowDeckEditor(false)
+              setEditingDeck(null)
+              refreshSavedDecks()
+            }}
+          />
+        </Suspense>
       )}
       {showTestScenario && (
-        <TestScenarioModal
-          onClose={() => setShowTestScenario(false)}
-          onStart={startTestScenario}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <TestScenarioModal
+            onClose={() => setShowTestScenario(false)}
+            onStart={startTestScenario}
+          />
+        </Suspense>
       )}
       {showOnlineMatch && (
-        <OnlineMatchPanel
-          decks={savedDecks}
-          onClose={() => setShowOnlineMatch(false)}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <OnlineMatchPanel
+            decks={savedDecks}
+            onClose={() => setShowOnlineMatch(false)}
+          />
+        </Suspense>
       )}
     </>
   )

@@ -45,6 +45,6 @@
 |---|---|---|
 | UI 走指令層 | 攻擊宣告與多段效果精靈改走 `applyGameCommand`，commandLog 成為完整重播來源；支援「複製對局紀錄」回報 | 無，但工程量大 |
 | AI Lv.5 | 牌組理解與策略傾向（設計稿見 [ai-levels.md](ai-levels.md)） | 觀察 Lv.3/4 實際體感 |
-| Bundle code-split | 主 bundle 847 kB，牌組編輯器/線上對戰為天然切點 | 無，非急迫 |
+| Bundle code-split | ✅ 主選單牌組編輯器、測試情境與線上對戰 modal 已改為 `React.lazy` + `Suspense`；主 bundle 由約 851.60 KB 降至 805.67 KB，仍有 >500 KB 警告待後續拆分 | 後續可再拆戰鬥資訊模組 |
 | UI reference wireframe 文件 | 主計畫 Phase 5 要求的對標分析與 wireframe 文件；2026-07-10 決策：**要做**，以「記錄現行 UI ＋ 標注下一步改進」的混合形式撰寫，與 UI 迭代並行 | 已決策 |
 | 拖移卡牌 | 拖放只做輸入層，仍走規則 API（AGENTS.md 已有約束） | UI 穩定後 |

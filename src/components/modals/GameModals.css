@@ -11,6 +11,17 @@
   background: rgba(1, 8, 28, 0.35);
 }
 
+.modal-loading-fallback {
+  padding: 18px 24px;
+  border: 1px solid rgba(113, 233, 255, 0.45);
+  border-radius: 8px;
+  background: rgba(3, 20, 53, 0.92);
+  color: #dff8ff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+}
+
 .decision-modal,
 .deck-list-modal,
 .pause-modal,
