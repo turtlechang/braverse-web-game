@@ -1,6 +1,6 @@
 # 專案審查報告（Phase 0 Audit Report）
 
-> **2026-07-12 現況補充（以 `main@ee6b7ef` 為準）**：R3 AI Refresh replay 缺口已解決；現行基線為 96 個測試檔、可重現測試 1,526 項；主 bundle 731.12 KiB raw / 152.39 KiB gzip；AI 瀏覽器 20/20 (`stuck=0`)、線上 modal 2/2均通過。公網快照：Vercel Production HTTP 200；Render WebSocket 服務根路徑 HTTP 426 Upgrade Required（符合 WebSocket 服務預期）。本段為當前審查的權威證據，下方歷史結果僅保留作為時點快照。
+> **2026-07-12 現況補充（以 `main@358f4ed` 為準）**：R3 AI Refresh replay 缺口已解決；現行基線為 96 個測試檔、可重現測試 1,526 項；主 bundle 731.12 KiB raw / 152.39 KiB gzip；AI 瀏覽器 20/20 (`stuck=0`)、線上 modal 2/2均通過。公網快照：Vercel Production HTTP 200；Render WebSocket 服務根路徑 HTTP 426 Upgrade Required（符合 WebSocket 服務預期）；AI smoke workflow 已綁定 main push 自動觸發。本段為當前審查的權威證據，下方歷史結果僅保留作為時點快照。
 
 - 審查日期：2026-07-12
 - 審查範圍：整個 repo（main 分支，commit `ee6b7ef`）
