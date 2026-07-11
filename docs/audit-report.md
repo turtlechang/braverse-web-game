@@ -1,7 +1,7 @@
 # 專案審查報告（Phase 0 Audit Report）
 
 - 審查日期：2026-07-11
-- 審查範圍：整個 repo（main 分支，commit `897d393`）
+- 審查範圍：整個 repo（main 分支，commit `ba1097b`）
 - 審查方式：目錄盤點、package.json scripts 檢查、文件比對、lint / test / build 實測
 - 審查性質：本報告對照「總體開發計畫」的 Phase 0–8 要求，盤點實際完成度與缺口。**本專案實際進度已遠超 Phase 0**，因此本報告同時是「差距分析」。
 
@@ -11,15 +11,15 @@
 
 | 面向 | 狀態 | 摘要 |
 |---|---|---|
-| 規則引擎 | ✅ 成熟 | `src/game/` 純函式引擎，typed GameCommand 指令層 + commandLog + replay，91 個測試檔、1469 項測試（目前基線非永久門檻） |
-| 卡牌資料庫 | ⚠️ 部分 | 官方 JSON 匯入管線完整（BS1/BS2 + 五色起始），但缺 `validate:cards` script 與自有 card schema |
+| 規則引擎 | ✅ 成熟 | `src/game/` 純函式引擎，typed GameCommand 指令層 + commandLog + replay，95 個測試檔、1522 項測試（目前基線非永久門檻） |
+| 卡牌資料庫 | ⚠️ 部分 | 官方 JSON 匯入、schema、validate:cards、validate:candidate 已接入 CI，仍需持續擴充 effectId/新卡牌覆蓋與 PUBLIC_MODE 決策 |
 | 牌組編輯器 | ✅ 完成 | 60 張 / 同卡 4 張 / ≥1 餅乾 / FLIP ≤16 驗證、匯入匯出、localStorage 版本化保存 |
 | AI 對戰 | ✅ 完成 | Lv.1（隨機）/ Lv.2（啟發式）/ Lv.3（評估式）/ Lv.4（兩層前瞻）皆已實作，附訓練文件與勝率門檻測試 |
 | UI / UX | ✅ 持續迭代 | 滿版桌墊 HUD、扇形手牌、統一效果 modal、動畫；PR #20/#21 剛完成 EffectPanel 改版 |
 | 線上對戰 | ✅ MVP | `server/`（ws + rooms）、`src/net/onlineProtocol.ts`、遮罩狀態、OnlineBattleView 已進 main |
-| 部署 / CI | ⚠️ 部分 | GitHub Actions CI（test/lint/build）已建；Vercel Dashboard 已匯入；缺 `vercel.json` SPA rewrite |
-| IP / 授權 | ❌ 缺口 | README 與網站皆**無**非官方聲明；卡圖熱連結官方網站；無 LICENSE、無 PUBLIC_MODE |
-| 維護文件 | ⚠️ 部分 | AGENTS.md + docs/ 30+ 份文件 + 專案 Skills 完整；但缺 CHANGELOG.md（更新日誌寫在 README）與正式 release/card-update 流程文件 |
+| 部署 / CI | ✅ 完成 | GitHub Actions CI（test/lint/build）已建；Vercel + Render Production 已部署並通過雙視窗公網對局驗收；`vercel.json` SPA rewrite 已存在 |
+| IP / 授權 | ✅ 已解決（保留風險） | README 與主選單 footer 已有非官方粉絲研究聲明；LICENSE 已存在；保留官方素材熱連結風險與未實作 PUBLIC_MODE |
+| 維護文件 | ⚠️ 需持續維護 | AGENTS.md + docs/ 30+ 份文件 + 專案 Skills 完整；CHANGELOG.md、docs/release-process.md、docs/card-update-process.md 已建立，需持續維護 |
 
 ## 2. 專案結構
 
@@ -49,7 +49,7 @@
 |---|---|
 | `npm run lint` | ✅ eslint 10（flat config） |
 | `npm run typecheck` | ✅ 2026-07-10 補齊：`tsc -b && server:typecheck`（app + server） |
-| `npm run test` | ✅ vitest，1469 項通過（91 檔，見 §5） |
+| `npm run test` | ✅ vitest，1522 項通過（95 檔，見 §5） |
 | `npm run build` | ✅ tsc -b + vite build |
 | `npm run validate:cards` | ✅ 2026-07-10 補齊：`scripts/validate-cards.ts`，已接入 CI |
 | `vercel.json` | ✅ 2026-07-10 補齊：SPA rewrite（assets 除外） |
@@ -62,20 +62,20 @@
 |---|---|---|
 | 0 盤點 | 8 份文件 | 本輪補齊（先前缺 7 份，AGENTS.md 已存在） |
 | 1 規則引擎 | Validator / Effect Resolver / Battle Log / Replay | ✅ 完成（PR #11）。殘項：UI 攻擊宣告與多段效果精靈仍直呼規則函式，僅補記 commandLog（見 known-risks R3） |
-| 2 卡牌資料庫 | schema + validate + import | ⚠️ import 完整、匯入 schema 有；缺 validate:cards、effectId 對應檢查 script、PUBLIC_MODE |
+| 2 卡牌資料庫 | schema + validate + import | ⚠️ 管線已完成（import/schema/validate:cards/validate:candidate 已接入 CI），仍需持續擴充 effectId/新卡牌覆蓋與 PUBLIC_MODE 決策 |
 | 3 牌組編輯器 | 搜尋/篩選/驗證/匯入匯出 | ✅ 完成（PR #11 等），含版本化儲存與遷移 |
 | 4 AI 對戰 | Lv.1–5 | ✅ Lv.1–4 實作完成（commit `076e7a5`）；Lv.5 為設計文件（docs/ai-levels.md） |
 | 5 UI/UX 重製 | 對標文件 + mockup | ⚠️ 實際 UI 已多輪重製（滿版桌墊、扇形手牌、統一 modal）；缺對標分析與 wireframe 文件（實作已超前文件） |
 | 6 線上對戰 | 房間 + 同步 | ✅ MVP 已進 main（ws server、房間、遮罩狀態、OnlineBattleView）；雙視窗完整對局驗收已於 2026-07-11 完成 |
 | 7 部署/CI | vercel.json + workflows | ✅ Vercel Production 部署完成（Git Integration），Render 作為 ws server 宿主已部署並通過雙視窗驗收；Render Free 冷啟動風險見 known-risks R6 |
-| 8 維護流程 | CHANGELOG + 流程文件 | ⚠️ 更新日誌在 README 表格；有 card-review-checklist 與專案 Skills；缺獨立 CHANGELOG.md、release-process、card-update-process |
+| 8 維護流程 | CHANGELOG + 流程文件 | ⚠️ CHANGELOG.md、docs/release-process.md、docs/card-update-process.md 已建立，需持續維護 |
 
-## 5. 驗證結果（2026-07-10 實測）
+## 5. 驗證結果（2026-07-11 實測）
 
 - `npm run lint`：✅ 通過
-- `npm test`：✅ 91 個測試檔、1469 項測試全數通過（非永久門檻）
+- `npm test`：✅ 95 個測試檔、1522 項測試全數通過（非永久門檻）
 - `npm run build`：✅ `tsc -b` + `vite build` 成功
-- ⚠️ build 警告：主 bundle 847 kB（gzip 176 kB）超過 500 kB 建議值；未來可考慮 dynamic import 分割（牌組編輯器、線上對戰模組是天然切點），非急迫。
+- ⚠️ build 警告：主 bundle 806.96 kB（gzip 167.23 kB），仍有 >500 kB 建議值警告；未來可考慮 dynamic import 分割（牌組編輯器、線上對戰模組是天然切點），非急迫。
 - 附註：CI（GitHub Actions）於 main 分支同樣執行以上三項。
 
 ## 6. 缺口清單（依風險排序）
@@ -85,7 +85,7 @@
 3. **無 `validate:cards`（中）**：→ ✅ 已解決（2026-07-10）：`npm run validate:cards` + CI；首跑即發現 BS2-061@1 缺 level 資料缺陷並修復。
 4. **UI 未全面走指令層（中）**：攻擊宣告與多段效果流程直呼規則函式、補記 log，replay 完整性依賴補記正確。
 5. **Vercel 與 ws server 架構分裂（中）**：Vercel 只能承載前端。→ 已於 2026-07-11 部署 Render 免費層並完成雙視窗公網驗收。Render Free 冷啟動見 known-risks R6。
-6. **缺獨立 CHANGELOG 與 release 流程（低）**：README 更新日誌表格已運作，但不利對外版本化。
+6. **維護流程持續維護（低）**：CHANGELOG.md、release-process、card-update-process 已建立，需持續維護。
 7. **無 LICENSE（低）**：→ ✅ 已解決（2026-07-10）：MIT + Devsisters 素材除外條款。
 
 ## 7. 建議下一輪（不在本輪執行）
