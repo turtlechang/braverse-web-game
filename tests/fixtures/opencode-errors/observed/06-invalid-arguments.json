@@ -1,0 +1,11 @@
+{
+  "scenario": "invalid_arguments",
+  "source": "observed",
+  "description": "opencode run with unknown CLI flag",
+  "command": "opencode run --unknown-flag test",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "[full help text for 'opencode run' command]",
+  "observed_at": "2026-07-11T08:10:10.000Z",
+  "notes": "Unknown flags cause the CLI to display full help text and exit with code 1. No specific error message about the invalid flag."
+}

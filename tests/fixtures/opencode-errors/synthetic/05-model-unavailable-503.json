@@ -1,0 +1,17 @@
+{
+  "scenario": "model_unavailable_503",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "generic-openai-compatible",
+    "document": "Standard HTTP 503 Service Unavailable",
+    "confidence": "high"
+  },
+  "description": "Model temporarily unavailable / overloaded",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: {\n  \"error\": {\n    \"message\": \"Model is currently overloaded. Please try again later.\",\n    \"type\": \"server_error\",\n    \"code\": \"model_overloaded\"\n  }\n}",
+  "httpStatus": 503,
+  "providerCode": "model_overloaded",
+  "observed_at": null,
+  "notes": "Synthetic fixture. 503 with retry-after header indicates temporary unavailability."
+}

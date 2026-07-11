@@ -1,0 +1,17 @@
+{
+  "scenario": "quota_exhausted",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "generic-openai-compatible",
+    "document": "Common quota exhaustion pattern",
+    "confidence": "low"
+  },
+  "description": "Account quota/credits exhausted",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: {\n  \"error\": {\n    \"message\": \"Insufficient credits. Please add credits to your account.\",\n    \"type\": \"insufficient_quota\",\n    \"code\": \"quota_exceeded\"\n  }\n}",
+  "httpStatus": 402,
+  "providerCode": "quota_exceeded",
+  "observed_at": null,
+  "notes": "Synthetic fixture. Actual format may vary by provider."
+}

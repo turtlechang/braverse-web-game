@@ -1,0 +1,11 @@
+{
+  "scenario": "model_not_found_direct_run",
+  "source": "observed",
+  "description": "opencode run with nonexistent model ID (direct run path)",
+  "command": "opencode run --model opencode-go/nonexistent-model-xyz test",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: Session not found",
+  "observed_at": "2026-07-11T08:10:15.000Z",
+  "notes": "CLI returns generic 'Session not found' for nonexistent model. Same error as API key missing. Direct run path on Windows also fails with Session not found for ALL cases."
+}

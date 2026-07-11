@@ -1,0 +1,11 @@
+{
+  "scenario": "session_not_found_valid_prefix",
+  "source": "observed",
+  "description": "opencode export with correctly formatted but nonexistent session ID",
+  "command": "opencode export ses_nonexistent12345",
+  "exitCode": 1,
+  "stdout": "Exporting session: ses_nonexistent12345",
+  "stderr": "Error: Session not found: ses_nonexistent12345",
+  "observed_at": "2026-07-11T08:09:50.000Z",
+  "notes": "Clear session-specific error message when ID has correct prefix but doesn't exist."
+}

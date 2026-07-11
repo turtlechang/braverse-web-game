@@ -1,0 +1,11 @@
+{
+  "scenario": "model_not_found_via_serve_attach",
+  "source": "observed",
+  "description": "Nonexistent model via opencode serve + run --attach path",
+  "command": "opencode run --attach http://127.0.0.1:4102 --model opencode-go/nonexistent-model-xyz --pure test",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: {\n  \"name\": \"UnknownError\",\n  \"data\": {\n    \"message\": \"Unexpected server error. Check server logs for details.\",\n    \"ref\": \"err_66219463\"\n  }\n}",
+  "observed_at": "2026-07-11T08:33:30.000Z",
+  "notes": "Via serve+attach, nonexistent model produces structured JSON error with UnknownError. Much more informative than direct run path. Error ref can be used for server-side log correlation."
+}

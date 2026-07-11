@@ -1,0 +1,18 @@
+{
+  "scenario": "rate_limit_rpm",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "deepseek",
+    "document": "DeepSeek API error format (OpenAI-compatible)",
+    "confidence": "medium",
+    "note": "Based on known OpenAI 429 response patterns"
+  },
+  "description": "Request rate limit exceeded (RPM)",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: {\n  \"error\": {\n    \"message\": \"Rate limit reached for requests. Please retry after 30s.\",\n    \"type\": \"rate_limit_error\",\n    \"code\": \"rate_limit_exceeded\"\n  }\n}",
+  "httpStatus": 429,
+  "providerCode": "rate_limit_exceeded",
+  "observed_at": null,
+  "notes": "Synthetic fixture based on OpenAI-compatible 429 response format."
+}

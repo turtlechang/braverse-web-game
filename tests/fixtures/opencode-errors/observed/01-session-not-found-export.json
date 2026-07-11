@@ -1,0 +1,11 @@
+{
+  "scenario": "session_not_found_via_export",
+  "source": "observed",
+  "description": "opencode export with nonexistent session ID that does not start with 'ses'",
+  "command": "opencode export nonexistent-session-id-12345",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: Unexpected error, check log file at C:\\Users\\...\\log\\...\\log for more details\n\nExpected a string starting with \"ses\", got \"nonexistent-session-id-12345\"",
+  "observed_at": "2026-07-11T08:09:45.000Z",
+  "notes": "Session ID validation requires 'ses' prefix. Different from 'Session not found' when ID has correct prefix."
+}

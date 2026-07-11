@@ -1,0 +1,11 @@
+{
+  "scenario": "direct_run_session_not_found_environment",
+  "source": "observed",
+  "description": "opencode run (any invocation) always fails with 'Session not found' on this Windows environment",
+  "command": "opencode run --model opencode-go/deepseek-v4-flash --pure test",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: Session not found",
+  "observed_at": "2026-07-11T08:10:30.000Z",
+  "notes": "CRITICAL ENVIRONMENT FINDING: On this Windows environment (Node v24.16.0, OpenCode 1.16.2), 'opencode run' ALWAYS fails with 'Session not found' regardless of model, API key, or arguments. The 'opencode serve' + 'opencode run --attach' path works correctly. This suggests the CLI's internal session initialization fails on this platform. The 'Session not found' error is NOT specific to missing sessions — it's a generic failure mode for the direct run path."
+}

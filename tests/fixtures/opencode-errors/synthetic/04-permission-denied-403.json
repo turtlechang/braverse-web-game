@@ -1,0 +1,17 @@
+{
+  "scenario": "permission_denied_403",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "generic-openai-compatible",
+    "document": "Standard HTTP 403 Forbidden response",
+    "confidence": "high"
+  },
+  "description": "Permission denied / model access restricted",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: {\n  \"error\": {\n    \"message\": \"You do not have access to this model.\",\n    \"type\": \"permission_error\",\n    \"code\": \"model_access_denied\"\n  }\n}",
+  "httpStatus": 403,
+  "providerCode": "model_access_denied",
+  "observed_at": null,
+  "notes": "Synthetic fixture. Some providers return 403 for model access restrictions."
+}

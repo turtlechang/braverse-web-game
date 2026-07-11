@@ -1,0 +1,17 @@
+{
+  "scenario": "auth_invalid_401",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "generic-openai-compatible",
+    "document": "Standard HTTP 401 Unauthorized response",
+    "confidence": "high"
+  },
+  "description": "Invalid or expired API key",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: {\n  \"error\": {\n    \"message\": \"Invalid API key provided.\",\n    \"type\": \"invalid_request_error\",\n    \"code\": \"invalid_api_key\"\n  }\n}",
+  "httpStatus": 401,
+  "providerCode": "invalid_api_key",
+  "observed_at": null,
+  "notes": "Synthetic fixture based on standard OpenAI 401 response."
+}

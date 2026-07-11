@@ -1,0 +1,17 @@
+{
+  "scenario": "rate_limit_tpm",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "deepseek",
+    "document": "Token rate limit pattern",
+    "confidence": "medium"
+  },
+  "description": "Token per minute (TPM) rate limit exceeded",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: {\n  \"error\": {\n    \"message\": \"Rate limit reached for tokens. Please retry after 60s.\",\n    \"type\": \"rate_limit_error\",\n    \"code\": \"token_rate_limit_exceeded\"\n  }\n}",
+  "httpStatus": 429,
+  "providerCode": "token_rate_limit_exceeded",
+  "observed_at": null,
+  "notes": "Synthetic fixture. TPM limits require longer wait than RPM limits."
+}

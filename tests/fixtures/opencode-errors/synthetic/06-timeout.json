@@ -1,0 +1,16 @@
+{
+  "scenario": "timeout_process_killed",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "generic",
+    "document": "Process timeout behavior",
+    "confidence": "medium"
+  },
+  "description": "CLI process killed due to timeout",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "",
+  "exitSignal": "SIGTERM",
+  "observed_at": null,
+  "notes": "Synthetic fixture. When the CLI is killed by timeout, it may not produce any stderr output. The exit code may be non-zero or null depending on how the process was terminated."
+}

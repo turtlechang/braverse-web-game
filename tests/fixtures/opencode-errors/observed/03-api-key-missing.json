@@ -1,0 +1,11 @@
+{
+  "scenario": "api_key_missing_direct_run",
+  "source": "observed",
+  "description": "opencode run with API key removed from environment (direct run path)",
+  "command": "cmd.exe /c \"set OPENCODE_GO_API_KEY= && opencode run --model opencode-go/deepseek-v4-flash test\"",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: Session not found",
+  "observed_at": "2026-07-11T08:10:20.000Z",
+  "notes": "CRITICAL: CLI returns generic 'Session not found' for API key missing. Same error as model not found. Cannot distinguish via stderr alone. Direct 'opencode run' path also has separate 'Session not found' issue on this Windows environment."
+}

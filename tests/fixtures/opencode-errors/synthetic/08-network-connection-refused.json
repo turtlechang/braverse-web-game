@@ -1,0 +1,15 @@
+{
+  "scenario": "network_connection_refused",
+  "source": "synthetic",
+  "source_reference": {
+    "provider": "generic",
+    "document": "Node.js fetch/network error behavior",
+    "confidence": "high"
+  },
+  "description": "Network connection refused (bad proxy or firewall)",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "Error: fetch failed\nCause: ConnectTimeoutError: Connect Timeout Error (attempted addresses: 127.0.0.1:1, timeout: 5000ms)",
+  "observed_at": null,
+  "notes": "Synthetic fixture. Network errors from Node.js fetch. Actual message depends on the error type (ECONNREFUSED, ETIMEDOUT, ENOTFOUND, etc.)."
+}

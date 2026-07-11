@@ -1,0 +1,11 @@
+{
+  "scenario": "command_not_found",
+  "source": "observed",
+  "description": "opencode.cmd not in PATH (empty PATH in subprocess)",
+  "command": "cmd.exe /c \"set PATH= && opencode --version\"",
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "'opencode' is not recognized as an internal or external command, operable program or batch file.",
+  "observed_at": "2026-07-11T08:10:25.000Z",
+  "notes": "Standard Windows 'command not found' error. Chinese encoding may appear garbled in PowerShell output but the error is clear."
+}
