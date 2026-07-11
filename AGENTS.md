@@ -220,6 +220,7 @@ Codex App 在此專案中擔任**指揮官**角色，職責範圍僅限於：
 - **平台核准仍優先**：上述同意是專案偏好，不取代 Codex 執行環境的安全審查或外部網路核准；若工具要求再次核准，仍須依平台流程處理，不得繞過。
 - **避免重複耗用**：同一子任務原則上只派工一次；結果完整即可直接整合，不再用另一個 GPT／OpenCode 模型重做。只有結果不完整、測試失敗或重大疑點時才依升級機制追加派工。
 - **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。若出現 `Error: Session not found` / `In a restricted Codex environment`，參考 `.agents/skills/develop-braverse/references/opencode-go-sandbox.md` 的標準流程處理。
+- **子代理停滯與交接**：所有子代理批次採 2–3 個檔案的小範圍契約，先做最小驗證；恢復時先檢查工作樹與測試，連續兩次停滯後由 Codex 接手，不無限重試。完整流程見 [`docs/subagent-stall-handoff-protocol.md`](docs/subagent-stall-handoff-protocol.md)。
 - **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個檔案。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
 - **模型與成本細節**：完整分級路由表、模型限制、省 token 規則與逾時判斷維護於 `.agents/skills/develop-braverse/references/delegation.md`，避免根目錄規範過厚。
 

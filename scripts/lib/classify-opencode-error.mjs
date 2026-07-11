@@ -50,12 +50,6 @@ const STDERR_PATTERNS = [
   { pattern: /unauthorized/i, errorType: "auth_invalid", confidence: "high" },
   { pattern: /authentication/i, errorType: "auth_invalid", confidence: "medium" },
 
-  // Quota / Billing
-  { pattern: /insufficient[_ ]quota/i, errorType: "quota_exhausted", confidence: "high" },
-  { pattern: /quota[_ ]exceeded/i, errorType: "quota_exhausted", confidence: "high" },
-  { pattern: /credits?.{0,20}exhausted/i, errorType: "quota_exhausted", confidence: "medium" },
-  { pattern: /billing/i, errorType: "billing_limit", confidence: "medium" },
-
   // Rate limit (check specific types first)
   { pattern: /token[_ ]rate[_ ]limit/i, errorType: "token_rate_limit", confidence: "high" },
   { pattern: /tpm[_ ]exceeded/i, errorType: "token_rate_limit", confidence: "high" },
@@ -242,6 +236,13 @@ export function classifyOpenCodeError(raw) {
         break
       }
     }
+  }
+
+  // Plain-text quota/billing words are not proof of account exhaustion.
+  // OpenCode can emit these words for model routing, plan, or environment
+  // messages; only structured provider codes or HTTP 402 may claim billing.
+  if (!errorType && /\b(?:quota|credit|billing)\b/i.test(stderr)) {
+    evidence.push("ambiguous_quota_text_unverified")
   }
 
   // ── Step 6: Exit signal ──

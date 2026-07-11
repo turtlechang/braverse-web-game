@@ -30,7 +30,7 @@
     "test:blue:browser": "node scripts/blue-card-validation.mjs",
     "test:watch": "vitest",
     "test:benchmark": "node --test scripts/opencode-go-benchmark.test.js",
-    "test:opencode": "node --test scripts/lib/classify-opencode-error.test.mjs scripts/opencode-go-health-check.test.mjs scripts/opencode-go-wrapper.test.mjs",
+    "test:opencode": "node --test scripts/lib/classify-opencode-error.test.mjs scripts/lib/parse-opencode-error.test.mjs scripts/opencode-go-health-check.test.mjs scripts/opencode-go-wrapper.test.mjs",
     "test:all": "npm test && npm run test:opencode",
     "benchmark:opencode-go": "node scripts/opencode-go-benchmark.mjs",
     "preview": "vite preview"

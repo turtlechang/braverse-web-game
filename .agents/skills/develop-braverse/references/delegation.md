@@ -54,6 +54,14 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-pro "審查任務
 
 若命令因 timeout 結束，先用 `scripts\opencode-go.cmd session list` 找到最新 session，再以 `scripts\opencode-go.cmd export <session-id> --sanitize` 檢查。Token 大於 0 且 session 後續出現 `finish: "stop"`，代表模型仍在背景完成，問題是工具迴圈超過呼叫端 timeout，而不是連線失敗。
 
+## Codex ↔ OpenCode Go 協作協定
+
+- OpenCode Go 派工與 Codex 子代理採相同的小批次規則：每批 2–3 個檔案、一個主題、明確不可修改範圍；不得自行 stage、commit、push 或再派代理。
+- 每批先跑最小驗證，再回報修改檔案、指令輸出、風險與未確認事項。Codex 以 `git status`、diff 與測試結果核對，不把代理自述視為完成證據。
+- 逾時先判斷來源：`token=0` 且 `ConnectionRefused`／`Session not found` 是沙箱、網路或 session 問題，不是額度不足；`token>0` 則先查 session 是否仍在背景完成。相同子任務連續兩次停滯後由 Codex 接手，不無限重試。
+- 額度／帳務只有在結構化 provider code 或 HTTP 402 有證據時才標記 `quota_exhausted`／`billing_limit`；單純 stderr 出現 quota、credit 或 billing 只標記未驗證的 `unknown`，避免誤報。
+- wrapper 會先解析 OpenCode JSONL／結構化錯誤，再交給 classifier；因此模型不存在、權限、rate limit、網路與帳務不會混成同一種訊息。
+
 ## 模型路由
 
 ### 分級路由表（依優先順序）

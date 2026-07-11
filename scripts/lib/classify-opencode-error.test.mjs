@@ -204,6 +204,17 @@ describe("classifyOpenCodeError", () => {
       })
       assert.equal(result.error_type, "billing_limit")
     })
+
+    it("does not claim exhausted quota from unstructured stderr", () => {
+      const result = classifyOpenCodeError({
+        exitCode: 1,
+        stdout: "",
+        stderr: "OpenCode: no quota configured for this model; retry with another route",
+      })
+      assert.equal(result.error_type, "unknown")
+      assert.equal(result.confidence, "low")
+      assert.ok(result.evidence.includes("ambiguous_quota_text_unverified"))
+    })
   })
 
   describe("auth_invalid", () => {

@@ -170,6 +170,20 @@ describe("Level 2: Connectivity checks", () => {
     assert.equal(result.checks.credentials.accepted, false)
   })
 
+  it("treats an unsupported models probe as reachable, not quota failure", async () => {
+    const checker = createHealthChecker({
+      ...createMockFs(),
+      fetchFn: createMockFetch(() => Promise.resolve({ ok: false, status: 404 })),
+    })
+
+    const config = { provider: { "opencode-go": { options: { baseURL: "https://opencode.ai/zen/go/v1" } } } }
+    const result = await checker.checkConnectivity(config)
+    assert.equal(result.ok, true)
+    assert.equal(result.checks.https.probe_route_supported, false)
+    assert.equal(result.checks.credentials.accepted, null)
+    assert.equal(result.checks.credentials.reason, "probe_route_not_supported")
+  })
+
   it("handles network errors", async () => {
     const checker = createHealthChecker({
       ...createMockFs(),

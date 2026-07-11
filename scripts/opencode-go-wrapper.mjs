@@ -15,6 +15,7 @@ import { resolve, dirname, normalize, basename } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createHealthChecker } from "./opencode-go-health-check.mjs"
 import { classifyOpenCodeError } from "./lib/classify-opencode-error.mjs"
+import { getStructuredHttpStatus, parseStructuredOpenCodeError } from "./lib/parse-opencode-error.mjs"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = resolve(__dirname, "..")
@@ -308,10 +309,15 @@ async function main() {
     }
   } else {
     // Error: classify and output
+    const parsedBody =
+      parseStructuredOpenCodeError(result.stderr) ||
+      parseStructuredOpenCodeError(result.stdout)
     const classification = classifyOpenCodeError({
       exitCode: result.exitCode,
       stdout: result.stdout,
       stderr: result.stderr,
+      parsedBody,
+      httpStatus: getStructuredHttpStatus(parsedBody),
       timedOut: result.timedOut,
       exitSignal: result.exitSignal,
       durationMs: result.durationMs,

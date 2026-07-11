@@ -45,8 +45,10 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 已加入 `scripts/opencode-go.cmd` 與專案模型設定，使用獨立 runtime 目錄及 `OPENCODE_GO_API_KEY` 環境變數進行派工，不提交認證資料。
 - Codex 受限網路環境執行 OpenCode Go 時，需以核准的外部網路權限啟動派工；`ConnectionRefused` 且 Token 為 0 代表尚未進入模型推理。
 - OpenCode Go 只讀審查改用 `scripts/opencode-go-review.cmd` 與受限步數的 `review-fast` agent，限制讀檔範圍與工具迭代，避免多檔案 `plan` 審查超過呼叫端 timeout。
+- OpenCode Go wrapper 現在先解析結構化 JSONL 錯誤；只有 provider code／HTTP 402 才判定 quota 或 billing，`token=0` 的連線／session 問題不再誤報為沒有額度。協作與停滯流程見 [子代理停滯與交接協定](docs/subagent-stall-handoff-protocol.md)。
 - 已加入 `develop-braverse` 專案 Skill，提供漸進式載入的開發流程、架構規則、驗證與 Git、opencode-go 派工參考。
 - 已加入 `braverse-workflow` 專案 Skill，提供 Braverse 任務分類、固定開場模板、OpenCode Go / subagent 派工模板、驗證分級與 pre-commit review 清單。
+- 子代理採 2–3 檔案的小批次與小步驗證；逾時恢復先核對 `git status`／diff／測試，連續兩次停滯後由 Codex 接手，詳見 [子代理停滯與交接協定](docs/subagent-stall-handoff-protocol.md)。
 - `AGENTS.md` 已瘦身為硬性規範入口；模型路由長表、驗證矩陣、歷史回歸細節改由 `.agents/skills/braverse-workflow/references/` 與 `.agents/skills/develop-braverse/references/` 承接。
 - 已整合四份繁中官方規則文件，確認可選再登場、同時效果順序、陷阱回應限制、FLIP 可略過、Refresh 插入時機與雙方敗北；另記錄 `doubleLoss`、非戰鬥離場再登場、強制重抽補償及賽事模組範圍等專案決議。
 - 玩家於開局使用合法自訂牌組，AI 可隨機選擇五色起始牌組，或指定紅色、黃色、綠色、藍色、紫色起始牌組及第二彈紅色、黃色、豆子、藍色、紫色預設牌組；重新開始會回到牌組選擇。

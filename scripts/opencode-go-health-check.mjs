@@ -166,13 +166,24 @@ export function createHealthChecker(deps = {}) {
         },
         signal: AbortSignal.timeout(10_000),
       })
-      checks.https = { ok: response.ok || response.status === 401, status: response.status }
+      const probeRouteSupported = response.ok || response.status === 401
+      const probeReachable = probeRouteSupported || response.status === 404 || response.status === 405
+      checks.https = {
+        ok: probeReachable,
+        status: response.status,
+        probe_route_supported: probeRouteSupported,
+      }
 
       // Credentials check (only if we got a non-401 response)
       if (response.status === 200) {
         checks.credentials = { accepted: true }
       } else if (response.status === 401) {
         checks.credentials = { accepted: false }
+      } else if (response.status === 404 || response.status === 405) {
+        checks.credentials = {
+          accepted: null,
+          reason: "probe_route_not_supported",
+        }
       } else {
         checks.credentials = { accepted: null }
       }
@@ -181,7 +192,10 @@ export function createHealthChecker(deps = {}) {
       checks.credentials = { accepted: null }
     }
 
-    const ok = checks.dns?.ok === true && checks.https?.ok === true && checks.credentials?.accepted === true
+    const ok =
+      checks.dns?.ok === true &&
+      checks.https?.ok === true &&
+      checks.credentials?.accepted !== false
 
     return { ok, checks }
   }
