@@ -45,6 +45,6 @@
 |---|---|---|
 | 指令層收尾 | ✅ 已完成（2026-07-11）：玩家 UI、攻擊宣告、多段效果、補位排程與全部 AI battle／turn handler 皆走 `applyGameCommand`；新增 `simulateAbilityEffects` 共用模擬讓 AI 的 `play-item`／`activate-skill`／`activate-stage` 補齊 `effectTargets`，並修復過程中發現的 `assertNoPendingDecision` 補位 OnPlay 死結。剩 AI `refresh-deck` 洗牌未種子化，重播不保證一致（見 known-risks R3） | — |
 | AI Lv.5 | 牌組理解與策略傾向（設計稿見 [ai-levels.md](ai-levels.md)） | 觀察 Lv.3/4 實際體感 |
-| Bundle code-split | ✅ 主選單牌組編輯器、測試情境與線上對戰 modal 已改為 `React.lazy` + `Suspense`；主 bundle 由約 851.60 KB 降至 805.67 KB，仍有 >500 KB 警告待後續拆分 | 後續可再拆戰鬥資訊模組 |
+| Bundle code-split | ✅ 已完成（2026-07-11）：戰鬥資訊模組（`InformationModals`／`BattleResponseModals`／`DamageEffectModals`／`PendingDecisionModals`／`GameModals.tsx` 內的 `ResultModal`／`OpeningSetupModal`）改為 `React.lazy` + `Suspense`；主 bundle 由約 806.92 KB 降至 730.68 KB raw（167.17 → 152.26 KB gzip），仍有 >500 KB 警告 | 後續可視情況再拆 `EffectPanel`（目前未加 Suspense 邊界，改動較大） |
 | UI reference wireframe 文件 | 主計畫 Phase 5 要求的對標分析與 wireframe 文件；2026-07-10 決策：**要做**，以「記錄現行 UI ＋ 標注下一步改進」的混合形式撰寫，與 UI 迭代並行 | 已決策 |
 | 拖移卡牌 | 拖放只做輸入層，仍走規則 API（AGENTS.md 已有約束） | UI 穩定後 |

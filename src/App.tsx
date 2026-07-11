@@ -1,5 +1,5 @@
 import { Sparkles, Swords } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import './App.css'
 import {
   canActivateStage,
@@ -21,22 +21,54 @@ import { phaseLabels, deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
 import { StatusToast, CardPreviewPanel } from './components/panels/InteractionOverlays'
 import { BattleLogSidebar } from './components/panels/BattleLogSidebar'
-import { InformationModals } from './components/battle/InformationModals'
 import { MenuScreen } from './components/battle/MenuScreen'
-import { BattleResponseModals } from './components/battle/BattleResponseModals'
-import { DamageEffectModals } from './components/battle/DamageEffectModals'
-import { PendingDecisionModals } from './components/battle/PendingDecisionModals'
-import {
-  ResultModal,
-  OpeningSetupModal,
-  type OpeningSetupStep,
-} from './components/modals/GameModals'
+import type { OpeningSetupStep } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
 import { useMatchDialogs } from './hooks/useMatchDialogs'
 import { usePendingEffect } from './hooks/usePendingEffect'
 import { useAiTurn } from './hooks/useAiTurn'
 import { useMatchController } from './hooks/useMatchController'
 import type { AiLevel } from './game'
+
+const InformationModals = lazy(async () => {
+  const module = await import('./components/battle/InformationModals')
+  return { default: module.InformationModals }
+})
+
+const BattleResponseModals = lazy(async () => {
+  const module = await import('./components/battle/BattleResponseModals')
+  return { default: module.BattleResponseModals }
+})
+
+const DamageEffectModals = lazy(async () => {
+  const module = await import('./components/battle/DamageEffectModals')
+  return { default: module.DamageEffectModals }
+})
+
+const PendingDecisionModals = lazy(async () => {
+  const module = await import('./components/battle/PendingDecisionModals')
+  return { default: module.PendingDecisionModals }
+})
+
+const ResultModal = lazy(async () => {
+  const module = await import('./components/modals/GameModals')
+  return { default: module.ResultModal }
+})
+
+const OpeningSetupModal = lazy(async () => {
+  const module = await import('./components/modals/GameModals')
+  return { default: module.OpeningSetupModal }
+})
+
+function ModalLoadingFallback() {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <div className="modal-loading-fallback" role="status" aria-live="polite">
+        載入畫面中…
+      </div>
+    </div>
+  )
+}
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 
@@ -545,46 +577,52 @@ function App() {
       />
 
       {match.setupStep && (
-        <OpeningSetupModal
-          step={match.setupStep as OpeningSetupStep}
-          message={match.setupMessage}
-          hand={match.game.players[match.viewerPlayerId].hand}
-          deckConfig={match.deckConfig}
-          onSelectDeck={match.handleDeckSelection}
-          onRps={match.handleRps}
-          onChooseFirstPlayer={(playerFirst) =>
-            match.beginOrderedSetup(
-              playerFirst ? 'player-one' : 'player-two',
-            )
-          }
-          onMulligan={match.handlePlayerMulligan}
-          onSelectStartingCookie={match.handleStartingCookie}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <OpeningSetupModal
+            step={match.setupStep as OpeningSetupStep}
+            message={match.setupMessage}
+            hand={match.game.players[match.viewerPlayerId].hand}
+            deckConfig={match.deckConfig}
+            onSelectDeck={match.handleDeckSelection}
+            onRps={match.handleRps}
+            onChooseFirstPlayer={(playerFirst) =>
+              match.beginOrderedSetup(
+                playerFirst ? 'player-one' : 'player-two',
+              )
+            }
+            onMulligan={match.handlePlayerMulligan}
+            onSelectStartingCookie={match.handleStartingCookie}
+          />
+        </Suspense>
       )}
 
-      <BattleResponseModals match={match} />
+      <Suspense fallback={null}>
+        <BattleResponseModals match={match} />
 
-      <DamageEffectModals match={match} pending={pending} />
+        <DamageEffectModals match={match} pending={pending} />
 
-      <PendingDecisionModals match={match} pending={pending} />
+        <PendingDecisionModals match={match} pending={pending} />
 
-      <InformationModals match={match} ai={ai} dialogs={dialogs} />
+        <InformationModals match={match} ai={ai} dialogs={dialogs} />
+      </Suspense>
 
       {match.game.result && (
-        <ResultModal
-          winnerName={
-            match.game.players[match.game.result.winnerId].name
-          }
-          loserId={match.game.result.loserId}
-          viewerPlayerId={match.viewerPlayerId}
-          reason={match.game.result.reason}
-          onRestart={() => {
-            resetGame(
-              match.deckConfig,
-              `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
-            )
-          }}
-        />
+        <Suspense fallback={<ModalLoadingFallback />}>
+          <ResultModal
+            winnerName={
+              match.game.players[match.game.result.winnerId].name
+            }
+            loserId={match.game.result.loserId}
+            viewerPlayerId={match.viewerPlayerId}
+            reason={match.game.result.reason}
+            onRestart={() => {
+              resetGame(
+                match.deckConfig,
+                `我方 ${deckChoiceLabel[match.deckConfig.player]} vs AI ${deckChoiceLabel[match.deckConfig.ai]} 新對局。`,
+              )
+            }}
+          />
+        </Suspense>
       )}
     </main>
   )
