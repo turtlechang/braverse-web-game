@@ -2,7 +2,7 @@
   "scenario": "api_key_missing_direct_run",
   "source": "observed",
   "description": "opencode run with API key removed from environment (direct run path)",
-  "command": "cmd.exe /c \"set OPENCODE_GO_API_KEY= && opencode run --model opencode-go/deepseek-v4-flash test\"",
+  "command": "cmd.exe /c \"set OPENCODE_GO_API_KEY= && opencode run --model opencode-go/mimo-v2.5 test\"",
   "exitCode": 1,
   "stdout": "",
   "stderr": "Error: Session not found",

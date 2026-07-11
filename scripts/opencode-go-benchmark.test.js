@@ -79,7 +79,7 @@ describe('config — three-phase review/implementation/integration contract', ()
 
   it('models are the expected seven in order (含 minimax-m3/kimi-k2.6，不含 glm/mimo 普通版)', () => {
     assert.deepStrictEqual(config.models, [
-      'opencode-go/deepseek-v4-flash',
+      'opencode-go/mimo-v2.5',
       'opencode-go/deepseek-v4-pro',
       'opencode-go/minimax-m3',
       'opencode-go/kimi-k2.6',
@@ -332,7 +332,7 @@ describe('callOpenCodeGo', () => {
     const mockRun = createMockRunCommand([{ stdout: SIMPLE_OK }])
 
     const result = await callOpenCodeGo(
-      'opencode-go/deepseek-v4-flash',
+      'opencode-go/mimo-v2.5',
       'test prompt',
       'test-key',
       15000,
@@ -345,7 +345,7 @@ describe('callOpenCodeGo', () => {
     assert.equal(result.outputTokens, 7)
     assert.equal(mockRun.calls.length, 1)
     assert.match(mockRun.calls[0].command, /opencode-go\.cmd$/)
-    assert.ok(mockRun.calls[0].args.includes('opencode-go/deepseek-v4-flash'))
+    assert.ok(mockRun.calls[0].args.includes('opencode-go/mimo-v2.5'))
     assert.ok(mockRun.calls[0].args.includes('test prompt'))
     assert.ok(mockRun.calls[0].args.includes('--file=src/game/energy.ts'))
     assert.equal(mockRun.calls[0].options.env?.OPENCODE_GO_API_KEY, 'test-key')
@@ -353,7 +353,7 @@ describe('callOpenCodeGo', () => {
 
   it('passes multiple files as separate --file= args', async () => {
     const mockRun = createMockRunCommand([{ stdout: SIMPLE_OK }])
-    await callOpenCodeGo('opencode-go/deepseek-v4-flash', 't', 'k', 15000, ['a.ts', 'b.ts'], mockRun)
+    await callOpenCodeGo('opencode-go/mimo-v2.5', 't', 'k', 15000, ['a.ts', 'b.ts'], mockRun)
     assert.ok(mockRun.calls[0].args.includes('--file=a.ts'))
     assert.ok(mockRun.calls[0].args.includes('--file=b.ts'))
   })
@@ -361,7 +361,7 @@ describe('callOpenCodeGo', () => {
   it('rejects on CLI non-zero exit code', async () => {
     const mockRun = createMockRunCommand([{ stderr: 'auth failed', exitCode: 1 }])
     await assert.rejects(
-      () => callOpenCodeGo('opencode-go/deepseek-v4-flash', 't', 'k', 15000, [], mockRun),
+      () => callOpenCodeGo('opencode-go/mimo-v2.5', 't', 'k', 15000, [], mockRun),
       /CLI exited with code 1/,
     )
   })
@@ -369,7 +369,7 @@ describe('callOpenCodeGo', () => {
   it('rejects empty API key without calling CLI', async () => {
     const mockRun = createMockRunCommand([{ stdout: SIMPLE_OK }])
     await assert.rejects(
-      () => callOpenCodeGo('opencode-go/deepseek-v4-flash', 't', '', 15000, [], mockRun),
+      () => callOpenCodeGo('opencode-go/mimo-v2.5', 't', '', 15000, [], mockRun),
       /OPENCODE_GO_API_KEY/,
     )
     assert.equal(mockRun.calls.length, 0)
@@ -378,7 +378,7 @@ describe('callOpenCodeGo', () => {
   it('rejects whitespace-only API key', async () => {
     const mockRun = createMockRunCommand([{ stdout: SIMPLE_OK }])
     await assert.rejects(
-      () => callOpenCodeGo('opencode-go/deepseek-v4-flash', 't', '   ', 15000, [], mockRun),
+      () => callOpenCodeGo('opencode-go/mimo-v2.5', 't', '   ', 15000, [], mockRun),
       /OPENCODE_GO_API_KEY/,
     )
   })
@@ -406,7 +406,7 @@ describe('runPhase', () => {
     ])
 
     const phase = { id: 'test', name: 'T', order: 0 }
-    const testModels = ['opencode-go/deepseek-v4-flash', 'opencode-go/qwen3.7-plus']
+    const testModels = ['opencode-go/mimo-v2.5', 'opencode-go/qwen3.7-plus']
     const testTasks = [
       { id: 't1', prompt: 'T1', files: ['a.ts'], timeoutMs: 5000 },
       { id: 't2', prompt: 'T2', files: ['b.ts'], timeoutMs: 5000 },
@@ -418,8 +418,8 @@ describe('runPhase', () => {
     assert.deepStrictEqual(
       results.map((r) => ({ model: r.model, taskId: r.taskId })),
       [
-        { model: 'opencode-go/deepseek-v4-flash', taskId: 't1' },
-        { model: 'opencode-go/deepseek-v4-flash', taskId: 't2' },
+        { model: 'opencode-go/mimo-v2.5', taskId: 't1' },
+        { model: 'opencode-go/mimo-v2.5', taskId: 't2' },
         { model: 'opencode-go/qwen3.7-plus', taskId: 't1' },
         { model: 'opencode-go/qwen3.7-plus', taskId: 't2' },
       ],
@@ -435,7 +435,7 @@ describe('runPhase', () => {
     const phase = { id: 'test', name: 'T', order: 0 }
     const results = await runPhase(
       phase,
-      ['opencode-go/deepseek-v4-flash'],
+      ['opencode-go/mimo-v2.5'],
       [
         { id: 't1', prompt: 'T1', files: [], timeoutMs: 5000 },
         { id: 't2', prompt: 'T2', files: [], timeoutMs: 5000 },
@@ -456,7 +456,7 @@ describe('runPhase', () => {
     const phase = { id: 'test', name: 'T', order: 0 }
     const results = await runPhase(
       phase,
-      ['opencode-go/deepseek-v4-flash'],
+      ['opencode-go/mimo-v2.5'],
       [{ id: 'echo', prompt: '回覆 OK', files: [], timeoutMs: 5000, expectedPattern: /^OK$/ }],
       'test-key',
       { runCommand: mockRun },
@@ -473,7 +473,7 @@ describe('runPhase', () => {
     const phase = { id: 'test', name: 'T', order: 0 }
     await runPhase(
       phase,
-      ['opencode-go/deepseek-v4-flash'],
+      ['opencode-go/mimo-v2.5'],
       [{ id: 't0', prompt: 'T0', files: [], timeoutMs: 5000 }],
       'test-key',
       {
@@ -492,7 +492,7 @@ describe('runPhase', () => {
     const phase = { id: 'review', name: '審查', order: 0 }
     const results = await runPhase(
       phase,
-      ['opencode-go/deepseek-v4-flash'],
+      ['opencode-go/mimo-v2.5'],
       [
         { id: 'r1', prompt: '', files: [], timeoutMs: 5000, expectedPattern: /PASS|FAIL:/i },
         { id: 'r2', prompt: '', files: [], timeoutMs: 5000, expectedPattern: /PASS|FAIL:/i },
@@ -527,7 +527,7 @@ describe('runBenchmark', () => {
         { id: 'p0', name: 'Phase 0', order: 0 },
         { id: 'p1', name: 'Phase 1', order: 1 },
       ],
-      models: ['opencode-go/deepseek-v4-flash'],
+      models: ['opencode-go/mimo-v2.5'],
       tasks: {
         p0: [{ id: 't0', prompt: 'T0', files: [], timeoutMs: 5000 }],
         p1: [{ id: 't1', prompt: 'T1', files: [], timeoutMs: 5000 }],
@@ -548,7 +548,7 @@ describe('runBenchmark', () => {
 
     const config = {
       phases: [{ id: 'p0', name: 'P0', order: 0 }],
-      models: ['opencode-go/deepseek-v4-flash', 'opencode-go/qwen3.7-plus'],
+      models: ['opencode-go/mimo-v2.5', 'opencode-go/qwen3.7-plus'],
       tasks: {
         p0: [{ id: 'echo', prompt: '', files: [], timeoutMs: 5000, expectedPattern: 'OK' }],
       },
@@ -568,7 +568,7 @@ describe('runBenchmark', () => {
         { id: 'has', name: 'Has', order: 0 },
         { id: 'none', name: 'None', order: 1 },
       ],
-      models: ['opencode-go/deepseek-v4-flash'],
+      models: ['opencode-go/mimo-v2.5'],
       tasks: {
         has: [{ id: 't0', prompt: '', files: [], timeoutMs: 5000 }],
         none: [],
@@ -601,7 +601,7 @@ describe('reporter', () => {
     const md = formatReport(report, 'markdown')
     assert.match(md, /OpenCode Go Benchmark/)
     assert.match(md, /\| 模型/)
-    assert.match(md, /deepseek-v4-flash/)
+    assert.match(md, /mimo-v2\.5/)
     assert.match(md, /審查/)
     assert.match(md, /實作/)
     assert.match(md, /整合/)

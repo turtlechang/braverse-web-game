@@ -2,7 +2,7 @@
   "scenario": "direct_run_session_not_found_environment",
   "source": "observed",
   "description": "opencode run (any invocation) always fails with 'Session not found' on this Windows environment",
-  "command": "opencode run --model opencode-go/deepseek-v4-flash --pure test",
+  "command": "opencode run --model opencode-go/mimo-v2.5 --pure test",
   "exitCode": 1,
   "stdout": "",
   "stderr": "Error: Session not found",

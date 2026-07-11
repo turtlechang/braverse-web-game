@@ -99,7 +99,7 @@ export function makeSampleReport() {
   return {
     results: [
       {
-        model: 'opencode-go/deepseek-v4-flash',
+        model: 'opencode-go/mimo-v2.5',
         phaseId: 'review',
         taskId: 'review-energy-payment',
         elapsedMs: 250,
@@ -119,7 +119,7 @@ export function makeSampleReport() {
         retries: 0,
       },
       {
-        model: 'opencode-go/deepseek-v4-flash',
+        model: 'opencode-go/mimo-v2.5',
         phaseId: 'integration',
         taskId: 'integrate-card-lifecycle',
         elapsedMs: 800,

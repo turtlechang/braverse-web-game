@@ -224,7 +224,7 @@ export function createHealthChecker(deps = {}) {
       return { ok: null, skipped: true, reason: "no_endpoint_configured", cached: false }
     }
 
-    const model = config?.model || "opencode-go/deepseek-v4-flash"
+    const model = config?.model || "opencode-go/mimo-v2.5"
     const startTime = clock()
 
     try {
