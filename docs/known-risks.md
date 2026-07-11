@@ -1,6 +1,6 @@
 # 已知風險清單（Known Risks）
 
-最後更新：2026-07-11。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
+最後更新：2026-07-12。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
 
 | # | 風險 | 等級 | 現況與緩解 |
 |---|---|---|---|
@@ -16,3 +16,5 @@
 | R10 | **AI 自動結算繞過人類防守**（歷史回歸點）：AI 攻擊若用 `attack` 指令會自動結算、跳過陷阱/FLIP 回應 | 已緩解 | 2026-07-07 已修：Lv.1/3/4 改走 `applyChosenTurnCommand` → `beginAttack`。新增 AI 等級時必須遵守（architecture.md §5） |
 | R11 | **單人維護 + 無 branch protection**：main 可直接 push；CI 綠燈非合併門檻 | 低（接受） | 使用者明確決策不啟用 branch protection；以 PR 工作流自律 + CI 通知 |
 | R12 | ~~README 過載~~ **已解決**（2026-07-11）：README 由 182 行縮減至約 80 行 | — | 先前 P2「CHANGELOG 抽出」只建立了 CHANGELOG.md，但 README 自己的「📝 更新日誌」表格從未真正移除，且與 CHANGELOG.md 內容分岔（9 筆歷史紀錄只存在 README，從未同步）；本輪重新審視 known-risks 時發現此落差，已將分岔的紀錄併入 CHANGELOG.md、移除 README 重複表格，「目前進度」／「下一步計畫」改為短摘要 + 指向 docs/architecture.md／docs/roadmap.md／docs/known-risks.md 的連結 |
+| R13 | **WebSocket 伺服器入站訊息只有型別 cast**：`ConnectionManager` 能忽略壞 JSON，但尚未驗證合法 JSON 的 envelope；例如 `null` 可能在讀取 `message.type` 時拋錯 | 高（待處理） | 用戶端已加入伺服器訊息 envelope 與 GameState 外框驗證；下一批須在共用協定層加入 ClientMessage 執行期驗證，讓所有畸形輸入安全拒絕且不影響程序 |
+| R14 | **線上對戰指令拒絕尚未顯示於戰場**：hook 已收到 `command-rejected`，但 `OnlineBattleView` 未呈現該訊息 | 中（待處理） | 伺服器仍會拒絕非法指令，不會污染權威狀態；下一批將錯誤傳入戰場 UI，並補可見性與清除時機回歸 |

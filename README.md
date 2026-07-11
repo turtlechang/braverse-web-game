@@ -14,6 +14,8 @@
 
 CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌驗證、測試、lint、build；AI、牌組編輯器與好友房 Playwright 瀏覽器 smoke 在 main push 自動執行，也保留手動觸發，不負責部署；Vercel 監聽 PR 與 push 自動產生 Preview 與正式部署，連線設定在 Vercel Dashboard 完成，不存放於 GitHub Secrets。
 
+好友房 V1 不做自動重連；前端只保留單一有效 WebSocket，容許 Render 最長 90 秒冷啟動，連線後 10 秒內未收到伺服器回應或中途斷線時會明確結束並顯示錯誤，不讓畫面永久停在「連線中」。
+
 ## 目前進度
 
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
@@ -23,14 +25,14 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；Lv.5 為設計稿，見 [docs/ai-levels.md](docs/ai-levels.md)。
 - **卡牌池**：BS1/BS2 官方卡池 + 五色起始牌組匯入；`npm run validate:cards` 接入 CI 做資料完整性驗證。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
-- **線上對戰**：WebSocket server（Render 部署）+ 房間碼 + 遮罩狀態，已完成雙視窗公網對局驗收；本機雙瀏覽器另自動驗證建房、加入、開局、階段同步與斷線提示。
+- **線上對戰**：WebSocket server（Render 部署）+ 房間碼 + 遮罩狀態，已完成雙視窗公網對局驗收；本機雙瀏覽器另自動驗證建房、加入、開局、階段同步、對手離線與伺服器無法連線的可恢復錯誤路徑。
 - **CI/CD**：GitHub Actions（卡牌／候選／registry 驗證 → test → lint → build → bundle budget；main push 另跑 AI／牌組編輯器／好友房瀏覽器 smoke）+ Vercel Git Integration 自動部署。
 
 測試基線、bundle 大小等會隨每次 PR 變動的數字，一律以 [CHANGELOG.md](CHANGELOG.md) 最新項目為準（非永久門檻，只要求不低於前次基線）。
 
 ## 下一步計畫
 
-待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；近期優先完成 1–2 場真人試玩回報，以及 main push 後的 GitHub Actions／Vercel／Render 健康稽核。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
+待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；近期先補伺服器端 WebSocket 入站訊息的執行期驗證與對戰中指令拒絕提示，再完成 1–2 場真人試玩回報，以及 main push 後的 GitHub Actions／Vercel／Render 健康稽核。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
 
 ## 開發指令
 
@@ -62,7 +64,7 @@ npm run test:ai:browser      # AI 對局多解析度 smoke test
 npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
-npm run test:online:match:browser # 本機雙瀏覽器好友房流程與同步驗證
+npm run test:online:match:browser # 本機雙瀏覽器好友房同步、斷線與連線失敗驗證
 ```
 
 若 Playwright 安裝於外部目錄，可用 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 路徑。測試報告與截圖會輸出到 `test-results/`，不得提交。詳細驗證分級（L1/L2/L3）見 [docs/loop-engineering.md](docs/loop-engineering.md)。

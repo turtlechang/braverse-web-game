@@ -70,8 +70,11 @@ const waitForPort = async (port, processInfo, label) => {
   throw new Error(`${label} unavailable on port ${port}:\n${processInfo.getOutput()}`)
 }
 
+const hasExited = (child) =>
+  child.exitCode !== null || child.signalCode !== null
+
 const waitForExit = (child, timeoutMs) => {
-  if (child.exitCode !== null) return Promise.resolve(true)
+  if (hasExited(child)) return Promise.resolve(true)
   return new Promise((resolvePromise) => {
     const onExit = () => {
       clearTimeout(timeout)
@@ -87,7 +90,7 @@ const waitForExit = (child, timeoutMs) => {
 
 const stopProcess = async (processInfo) => {
   const { child } = processInfo
-  if (child.exitCode !== null) return
+  if (hasExited(child)) return
 
   const gracefulExit = waitForExit(child, 2000)
   child.kill()
@@ -95,9 +98,25 @@ const stopProcess = async (processInfo) => {
 
   const forcedExit = waitForExit(child, 2000)
   child.kill('SIGKILL')
-  if (!(await forcedExit) && child.exitCode === null) {
+  if (!(await forcedExit) && !hasExited(child)) {
     throw new Error(`Unable to stop child process ${child.pid ?? 'unknown'}`)
   }
+}
+
+const waitForPortClosed = async (port, label) => {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const available = await new Promise((resolvePromise) => {
+      const socket = connect({ host: '127.0.0.1', port })
+      socket.once('connect', () => {
+        socket.destroy()
+        resolvePromise(true)
+      })
+      socket.once('error', () => resolvePromise(false))
+    })
+    if (!available) return
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 100))
+  }
+  throw new Error(`${label} still accepts connections on port ${port}`)
 }
 
 const deckEntries = [
@@ -149,8 +168,10 @@ const openOnlinePanel = async (page) => {
 let browser
 let hostContext
 let guestContext
+let failureContext
 let hostPage
 let guestPage
+let failurePage
 try {
   await Promise.all([
     waitForPort(wsPort, serverProcess, 'WebSocket server'),
@@ -243,12 +264,51 @@ try {
   assert.equal(host.errors.length, 0, `host errors: ${host.errors.join('; ')}`)
   assert.equal(guest.errors.length, 0, `guest errors: ${guest.errors.join('; ')}`)
 
+  await hostContext.close()
+  hostContext = null
+  await stopProcess(serverProcess)
+  await waitForPortClosed(wsPort, 'WebSocket server')
+
+  failureContext = await browser.newContext({ viewport: { width: 1366, height: 768 } })
+  await installDeck(failureContext, 'failure-browser-deck', 'Failure Browser Deck')
+  const failure = await trackedPage(failureContext)
+  failurePage = failure.page
+  await openOnlinePanel(failurePage)
+  await failurePage.locator('.online-match-btn-primary').click()
+
+  const failureStatus = failurePage.locator(
+    '.online-match-status-value.is-error',
+  )
+  await failureStatus.waitFor({ state: 'visible' })
+  const failureAlert = failurePage.getByRole('alert')
+  await failureAlert.waitFor({ state: 'visible' })
+  assert.ok((await failureAlert.textContent())?.trim())
+
+  const unexpectedFailureErrors = failure.errors.filter((message) => !(
+    message.includes(wsUrl) &&
+    message.includes('WebSocket connection') &&
+    message.includes('failed')
+  ))
+  assert.equal(
+    unexpectedFailureErrors.length,
+    0,
+    `failure-path errors: ${unexpectedFailureErrors.join('; ')}`,
+  )
+
+  const returnButton = failurePage.locator(
+    '.online-match-actions .online-match-btn-primary',
+  )
+  await returnButton.waitFor({ state: 'visible' })
+  await returnButton.click()
+  await failurePage.locator('.online-match-panel').waitFor({ state: 'hidden' })
+
   console.log(JSON.stringify({
     roomCode,
     setupCompleted: true,
     synchronizedPhase: 'main',
     synchronizedTurn: hostTurn,
     disconnectHandled: true,
+    connectionFailureHandled: true,
   }, null, 2))
 } catch (error) {
   const outputDirectory = resolve(root, 'test-results')
@@ -256,12 +316,14 @@ try {
   await Promise.allSettled([
     hostPage?.screenshot({ path: resolve(outputDirectory, 'online-match-host.png'), fullPage: true }),
     guestPage?.screenshot({ path: resolve(outputDirectory, 'online-match-guest.png'), fullPage: true }),
+    failurePage?.screenshot({ path: resolve(outputDirectory, 'online-match-failure.png'), fullPage: true }),
   ])
   throw error
 } finally {
   await Promise.allSettled([
     hostContext?.close(),
     guestContext?.close(),
+    failureContext?.close(),
     browser?.close(),
   ])
   await Promise.all([stopProcess(appProcess), stopProcess(serverProcess)])

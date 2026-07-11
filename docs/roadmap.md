@@ -7,12 +7,12 @@
 
 ## 已完成里程碑（摘要）
 
-- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay（含 AI 對局重播）、1535 項測試（96 檔，目前基線）；多段能力效果已有 8 類中途決策阻擋與看牌決策恢復回歸。（PR #11 等）
+- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay（含 AI 對局重播）、1545 項測試（97 檔，目前基線）；多段能力效果已有 8 類中途決策阻擋與看牌決策恢復回歸。（PR #11 等）
 - **牌組編輯器**：搜尋/篩選/合法性檢查/匯入匯出/版本化儲存。（PR #11）
 - **AI Lv.1–4**：隨機 / 啟發式 / 評估式 / 兩層前瞻 + matchup 資料驅動評估；20 份 BS2 訓練文件。（PR #12/#13、commit `076e7a5`）
 - **卡牌池**：BS1/BS2 + 五色起始牌組匯入；25 張未支援卡效果補齊。（PR #17）
 - **UI 多輪重製**：滿版桌墊 HUD、扇形手牌、統一效果 modal、EffectPanel/陷阱/攻擊 modal 改版。（PR #16/#20/#21）
-- **線上對戰 MVP**：ws server、房間、遮罩狀態、OnlineBattleView；本機雙瀏覽器已自動驗證建房、加入、開局、主階段同步與斷線提示。（Phase 5 分支已進 main）
+- **線上對戰 MVP**：ws server、房間、遮罩狀態、OnlineBattleView；本機雙瀏覽器已自動驗證建房、加入、開局、主階段同步、對手離線與伺服器無法連線的錯誤恢復。（Phase 5 分支已進 main）
 - **CI**：GitHub Actions test/lint/build + main push Playwright smoke；Vercel Dashboard 已匯入。
 
 ## 待辦（依優先序）
@@ -33,6 +33,8 @@
 | `vercel.json` | ✅ SPA rewrite（assets 除外）；已於 Production 網域驗證可正常載入 |
 | `npm run typecheck` | ✅ `tsc -b && server:typecheck`（app + server 全量型別檢查） |
 | Render 部署準備 | ✅ 已部署（commit a679f03）並完成雙視窗公網對局驗證；本機 `test:online:match:browser` 另自動覆蓋核心好友房生命週期。詳見 [online-server-hosting.md](online-server-hosting.md)。Render Free 閒置會休眠，首次連線需等待喚醒 |
+| WebSocket 用戶端生命週期 | ✅ 單一有效連線、90 秒開啟／10 秒首次回應 timeout、舊連線競態與 error/close/錯誤協定防護；hook 與雙瀏覽器負向路徑已有回歸 |
+| WebSocket 伺服器入站驗證 | ⏳ `ConnectionManager` 目前仍以 TypeScript cast 讀取用戶端 JSON；下一批加入執行期 envelope 驗證，並同步讓對戰中的 `command-rejected` 對玩家可見 |
 
 ### P2 — 維護流程正式化 ✅（2026-07-11 確認完成）
 

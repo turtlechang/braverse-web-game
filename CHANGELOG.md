@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 🌐 好友房 WebSocket 生命週期硬化：以單一有效連線防止舊 socket 覆寫新連線，CONNECTING 階段可安全離開，加入房間立即保留房號；新增 90 秒 Render 冷啟動與 10 秒首次回應 timeout、非預期 error/close、constructor/send 失敗、錯誤 JSON／GameState envelope 防護及合法私人協定 close code。新增 10 項 hook 回歸，並擴充雙瀏覽器 smoke 驗證伺服器無法連線時的錯誤提示與返回操作；測試基線升至 97 檔／1545 項。
 - 🌐 新增本機雙瀏覽器好友房 Playwright smoke：啟動獨立 Vite 與權威 WebSocket server，驗證建房、加入、雙方開局、支援→主階段狀態同步及對手離線提示；納入 main push workflow，Playwright 驗證增至 5 套。
 - 🧭 強化多段能力效果決策順序證據：新增 8 類 pending decision 表格回歸，驗證 `resolve-ability-effect` 無法繞過中途決策，並驗證看牌決策完成後可保留並恢復效果鏈；測試基線升至 96 檔／1535 項。
 - 🧪 新增牌組編輯器 Playwright smoke：驗證錯誤 JSON 可恢復、合法 60 張牌組匯入／儲存，以及 1366×768／280×720 無水平溢出；並納入 main push 瀏覽器 workflow。
