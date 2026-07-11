@@ -316,12 +316,11 @@ export function useMatchController(params: {
   const battleActions = useBattleActions({ game, dispatch })
 
   const handleAdvancePhase = () => {
-    runAction(
-      (current) =>
-        applyGameCommand(current, {
-          kind: 'advance-phase',
-          playerId: viewerPlayerId,
-        }),
+    dispatch(
+      {
+        kind: 'advance-phase',
+        playerId: viewerPlayerId,
+      },
       '階段已推進。',
     )
     battleActions.clearAttacker()
@@ -795,7 +794,6 @@ export function useMatchController(params: {
     beginOrderedSetup,
     handlePlayerMulligan,
     handleStartingCookie,
-    runAction,
     dispatch,
     handleAdvancePhase,
     handleAttackTarget: battleActions.handleAttackTarget,
