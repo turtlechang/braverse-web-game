@@ -120,13 +120,15 @@ npm run dev
 
 ```bash
 npm run validate:cards
+npm run validate:candidate
+npm run generate:card-pool
 npm test
 npm run lint
 npm run typecheck
 npm run build
 ```
 
-`validate:cards` 檢查 `data/cards/*.json` 的必填欄位、同檔重複卡號、全卡池可轉換為 `GameCard` 與效果文字未轉出偵測；CI 會在測試前先執行。`typecheck` 對 app 與 server 做全量型別檢查（`tsc -b` + server tsconfig）。
+`validate:cards` 檢查 `data/cards/*.json` 的必填欄位、同檔重複卡號、全卡池可轉換為 `GameCard` 與效果文字未轉出偵測；CI 會在測試前先執行。`validate:candidate` 檢查 `data/candidates/*.json` 的候選卡牌資料，包含 schemaVersion、source 結構、欄位型別、卡牌轉換與正式卡池跨檔重複檢查。`generate:card-pool` 重新生成 `src/game/generated-card-pool.ts`（promote 後會自動執行）。`typecheck` 對 app 與 server 做全量型別檢查（`tsc -b` + server tsconfig）。
 
 AI 瀏覽器驗證：
 
@@ -160,6 +162,9 @@ npm run cards:import:purple-sample
 | 2026-07-11 | 修正 StatusToast 訊息變更後重新顯示，穩定 AI 瀏覽器測試休息區卡牌點擊（DOM click 避免 modal backdrop 攔截） |
 | 2026-07-11 | Vercel + Render 公網部署與雙視窗對局驗證完成 |
 | 2026-07-11 | 修正線上對戰加入房間後對戰畫面未顯示（MainMenu 與 OnlineBattleView 兄弟元素重疊問題） |
-| 2026-07-11 | 平板響應式 P0 修復：body/main menu/game shell/deck editor 100dvh fallback、deck editor actions 固定與滾動、OnlineBattleView 開局準備無 inline style 且按鈕 44px/focus-visible、modal safe-area 間距保留 |
+| 2026-07-11 | 候選卡牌匯入管線強化：validate:candidate 新增 schemaVersion/source/欄位型別結構檢查、promote:candidate 加入檔名碰撞拒絕與 rollback、promote 後自動重新生成卡池 registry 確保新卡牌納入 runtime card pool |
 
 完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。
+### Latest verification baseline
+
+最新驗證基線為 `npm test` 94 個測試檔、1500 項測試；`validate:cards`、`validate:candidate`、lint、typecheck 與 build 均通過。主 JS bundle 約 851.56 KB 的 code-splitting 警告仍屬既有待辦。

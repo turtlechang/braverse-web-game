@@ -49,6 +49,53 @@ node scripts/import-official-cards.mjs \
 - `data/cards/official-starter-deck-yellow.en.json`：`Starter Deck YELLOW`，20 種卡號；官方清單未包含 `ST2-017`。
 - `data/cards/official-starter-deck-green.en.json`：`Starter Deck GREEN`，22 種卡號。
 
+## 候選卡牌安全匯入管線
+
+新增候選卡牌資料時，使用隔離的匯入管線避免直接修改正式卡池：
+
+```bash
+# 1. 將候選 JSON 放入 data/candidates/ 目錄
+# 2. 驗證候選資料
+npm run validate:candidate
+
+# 3. 驗證通過後 promote 到正式卡池
+npm run promote:candidate
+```
+
+### 流程說明
+
+1. **隔離**：候選 JSON 放入 `data/candidates/` 目錄，不影響 `data/cards/`
+2. **驗證**：`validate:candidate` 檢查：
+   - 頂層 `schemaVersion`（必須為 number）與 `source`（必須為物件，含 `provider`/`pageUrl`/`locale`）
+   - `cards` 為物件陣列
+   - 必填欄位存在且型別正確（`cardNumber`/`baseCardNumber`/`name`/`locale`/`imageUrl` 為 string、`sourceId` 為 number、`type` 為合法值）
+   - 子物件結構檢查（`flags`/`restrictions`/`product` 含必要 boolean/number 欄位）
+   - 同一檔案內不得有重複 cardNumber
+   - 不得與現有正式卡池卡號重複
+   - 每張可玩卡牌必須能轉換為 GameCard
+   - 有效果文字的卡牌必須轉出對應效果
+3. **Promote**：`promote:candidate`：
+   - 先檢查檔名碰撞（不得與既有 `data/cards/` 檔案同名）
+   - 通過後執行驗證（fail-fast）
+   - 全部檢查通過後，依序複製到 `data/cards/`
+   - 複製成功後重新生成 `src/game/generated-card-pool.ts`
+   - 最後從 `data/candidates/` 移除已 promote 的檔案
+
+### 安全保證
+
+- 檔名碰撞時拒絕全部，不修改任何檔案
+- 驗證失敗時不執行任何寫入
+- 複製階段若任一失敗則 rollback（刪除已複製的檔案、還原卡池 registry），候選全數保留
+- 只在複製全部成功 + registry 重新生成後才刪除候選檔案
+
+### 卡池 registry
+
+正式卡池透過 `scripts/generate-card-pool.ts` 產生 `src/game/generated-card-pool.ts`，`promote:candidate` 會自動重新生成。若需手動重新生成：
+
+```bash
+npm run generate:card-pool
+```
+
 ## 欄位轉換
 
 匯入資料需符合 `data/schemas/official-card-import.schema.json`。
