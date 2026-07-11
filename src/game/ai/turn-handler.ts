@@ -25,6 +25,8 @@ import {
 
 export interface AiTurnStrategy {
   currentLevel?: number
+  /** 由 takeAiStep 注入，供 AI Refresh commandLog 重播。 */
+  shuffleSeed?: number
   chooseEffectTargets: (
     state: GameState,
     context: EffectContext,
@@ -72,6 +74,9 @@ export const handleAiTurnState = (
         kind: 'refresh-deck',
         playerId,
         cookieInstanceId: candidate.instanceId,
+        ...(strategy.shuffleSeed === undefined
+          ? {}
+          : { shuffleSeed: strategy.shuffleSeed }),
       }),
       action: 'refresh',
       description: `${state.players[playerId].name}使用${candidate.name}完成 Refresh。`,

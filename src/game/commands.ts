@@ -34,6 +34,7 @@ import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
 import { hasBlockingPending } from './pending'
+import { createSeededShuffle } from './helpers'
 import { describeCommand } from './command-log'
 import {
   drawMulliganCompensation,
@@ -376,6 +377,8 @@ export interface RefreshDeckCommand {
   kind: 'refresh-deck'
   playerId: PlayerId
   cookieInstanceId: string
+  /** AI 可將種子寫入指令，讓 commandLog 不依賴外部 Math.random 重播。 */
+  shuffleSeed?: number
 }
 
 export interface PlayTrapCommand {
@@ -1229,13 +1232,18 @@ const applyPlayerActionCommand = (
       }
       return skipDefeatedCookieReplacement(state)
     }
-    case 'refresh-deck':
+    case 'refresh-deck': {
+      const refreshShuffle =
+        command.shuffleSeed === undefined
+          ? options.shuffle
+          : createSeededShuffle(command.shuffleSeed)
       return refreshDeck(
         state,
         command.playerId,
         command.cookieInstanceId,
-        options.shuffle,
+        refreshShuffle,
       )
+    }
     case 'play-trap':
       return playTrap(state, command.playerId, {
         trapInstanceId: command.trapInstanceId,

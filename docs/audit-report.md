@@ -11,7 +11,7 @@
 
 | 面向 | 狀態 | 摘要 |
 |---|---|---|
-| 規則引擎 | ✅ 成熟 | `src/game/` 純函式引擎，typed GameCommand 指令層 + commandLog + replay，95 個測試檔、1525 項測試（目前基線非永久門檻） |
+| 規則引擎 | ✅ 成熟 | `src/game/` 純函式引擎，typed GameCommand 指令層 + commandLog + replay，96 個測試檔、1526 項測試（目前基線非永久門檻） |
 | 卡牌資料庫 | ⚠️ 部分 | 官方 JSON 匯入、schema、validate:cards、validate:candidate 已接入 CI，仍需持續擴充 effectId/新卡牌覆蓋與 PUBLIC_MODE 決策 |
 | 牌組編輯器 | ✅ 完成 | 60 張 / 同卡 4 張 / ≥1 餅乾 / FLIP ≤16 驗證、匯入匯出、localStorage 版本化保存 |
 | AI 對戰 | ✅ 完成 | Lv.1（隨機）/ Lv.2（啟發式）/ Lv.3（評估式）/ Lv.4（兩層前瞻）皆已實作，附訓練文件與勝率門檻測試 |
@@ -49,7 +49,7 @@
 |---|---|
 | `npm run lint` | ✅ eslint 10（flat config） |
 | `npm run typecheck` | ✅ 2026-07-10 補齊：`tsc -b && server:typecheck`（app + server） |
-| `npm run test` | ✅ vitest，1525 項通過（95 檔，見 §5） |
+| `npm run test` | ✅ vitest，1526 項通過（96 檔，見 §5） |
 | `npm run build` | ✅ tsc -b + vite build |
 | `npm run validate:cards` | ✅ 2026-07-10 補齊：`scripts/validate-cards.ts`，已接入 CI |
 | `vercel.json` | ✅ 2026-07-10 補齊：SPA rewrite（assets 除外） |
@@ -61,7 +61,7 @@
 | Phase | 主計畫目標 | 實際狀態 |
 |---|---|---|
 | 0 盤點 | 8 份文件 | 本輪補齊（先前缺 7 份，AGENTS.md 已存在） |
-| 1 規則引擎 | Validator / Effect Resolver / Battle Log / Replay | ✅ 完成（PR #11）。UI 補位排程已納入 command 出口；殘項為部分 AI handler 仍手動補記 commandLog（見 known-risks R3） |
+| 1 規則引擎 | Validator / Effect Resolver / Battle Log / Replay | ✅ 完成（PR #11）。UI 與 AI 均經 command 出口；AI Refresh 亦已攜帶 shuffle seed，R3 replay 缺口解除 |
 | 2 卡牌資料庫 | schema + validate + import | ⚠️ 管線已完成（import/schema/validate:cards/validate:candidate 已接入 CI），仍需持續擴充 effectId/新卡牌覆蓋與 PUBLIC_MODE 決策 |
 | 3 牌組編輯器 | 搜尋/篩選/驗證/匯入匯出 | ✅ 完成（PR #11 等），含版本化儲存與遷移 |
 | 4 AI 對戰 | Lv.1–5 | ✅ Lv.1–4 實作完成（commit `076e7a5`）；Lv.5 為設計文件（docs/ai-levels.md） |
@@ -73,7 +73,7 @@
 ## 5. 驗證結果（2026-07-11 實測）
 
 - `npm run lint`：✅ 通過
-- `npm test`：✅ 95 個測試檔、1525 項測試全數通過（非永久門檻）
+- `npm test`：✅ 96 個測試檔、1526 項測試全數通過（非永久門檻）
 - `npm run build`：✅ `tsc -b` + `vite build` 成功
 - ⚠️ build 警告：主 bundle 806.97 kB（gzip 167.23 kB），仍有 >500 kB 建議值警告；未來可考慮 dynamic import 分割（牌組編輯器、線上對戰模組是天然切點），非急迫。
 - 附註：CI（GitHub Actions）於 main 分支同樣執行以上三項。

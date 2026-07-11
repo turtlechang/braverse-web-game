@@ -104,9 +104,15 @@ try {
       await page.waitForTimeout(200)
     }
 
-    for (let attempt = 0; attempt < 30; attempt += 1) {
-      const modal = page.locator('.opening-setup-modal')
-      if ((await modal.count()) === 0 || !(await modal.isVisible())) return
+    let sawModal = false
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const modal = page.locator('.opening-setup-modal').first()
+      if ((await modal.count()) === 0 || !(await modal.isVisible())) {
+        if (sawModal) return
+        await page.waitForTimeout(60)
+        continue
+      }
+      sawModal = true
 
       const heading = await modal.locator('h2').innerText()
       if (heading.includes('選擇牌組')) {
@@ -131,6 +137,16 @@ try {
   const statusMessage = page.locator('.battle-status-message')
 
   await completeOpeningSetup()
+  // The final opening-cookie click updates the match state asynchronously;
+  // wait for both battle rows before collecting the responsive layout matrix.
+  await page.locator('.bottom-field .combat-card-wrap').waitFor({
+    state: 'attached',
+    timeout: 5000,
+  })
+  await page.locator('.top-field .combat-card-wrap').waitFor({
+    state: 'attached',
+    timeout: 5000,
+  })
 
   for (const viewport of [
     { width: 1600, height: 900 },

@@ -720,6 +720,21 @@ const createStepRandom = (
   return createSeededRandom((seed ^ entropy) >>> 0)
 }
 
+const createStepShuffleSeed = (
+  seed: number,
+  state: GameState,
+  playerId: PlayerId,
+): number => {
+  const entropy =
+    (state.turnNumber * 97) ^
+    (state.players['player-one'].hand.length * 13) ^
+    (state.players['player-two'].hand.length * 31) ^
+    (state.players['player-one'].deck.length * 7) ^
+    (state.players['player-two'].deck.length * 3) ^
+    (playerId === 'player-one' ? 0x13579bdf : 0x2468ace0)
+  return (seed ^ entropy) >>> 0
+}
+
 export const takeAiStep = (
   state: GameState,
   playerId: PlayerId = 'player-two',
@@ -735,6 +750,9 @@ export const takeAiStep = (
       }
     }
 
+    const shuffleSeed = createStepShuffleSeed(options.seed ?? 1, state, playerId)
+    aiTurnStrategy.shuffleSeed = shuffleSeed
+
     const turnHandler =
       level === 1
         ? (current: GameState, currentPlayerId: PlayerId) =>
@@ -742,6 +760,7 @@ export const takeAiStep = (
               current,
               currentPlayerId,
               createStepRandom(options.seed ?? 1, current),
+              shuffleSeed,
             )
         : level === 3
           ? (current: GameState, currentPlayerId: PlayerId) => {

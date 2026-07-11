@@ -7,6 +7,7 @@ import {
   finalizePendingReplacements,
   getActingPlayerId,
   replaceDefeatedCookie,
+  replayCommandLog,
   selectAiEnergyPayment,
   simulateAiMatch,
   takeAiStep,
@@ -432,7 +433,14 @@ describe('simple AI opponent', () => {
       },
     }
 
-    expect(takeAiStep(refreshState).action).toBe('refresh')
+    const refreshDecision = takeAiStep(refreshState, 'player-two', { seed: 42 })
+    expect(refreshDecision.action).toBe('refresh')
+    const refreshEntry = refreshDecision.state.commandLog?.at(-1)
+    expect(refreshEntry?.payload).toMatchObject({
+      shuffleSeed: expect.any(Number),
+    })
+    expect(replayCommandLog(refreshState, refreshDecision.state.commandLog ?? []))
+      .toEqual(refreshDecision.state)
 
     const replacementCard = base.players['player-two'].hand.find(
       (card) => card.type === 'cookie',

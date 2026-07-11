@@ -120,6 +120,7 @@ export const handleAiRandomTurnState = (
   state: GameState,
   playerId: PlayerId,
   random: () => number,
+  shuffleSeed?: number,
 ): AiDecision => {
   const commands = getLegalTurnCommands(state, playerId)
 
@@ -154,7 +155,11 @@ export const handleAiRandomTurnState = (
     commands.length - 1,
   )
   const command = commands[index]
-  const nextState = applyChosenTurnCommand(state, command)
+  const commandWithSeed =
+    command.kind === 'refresh-deck' && shuffleSeed !== undefined
+      ? { ...command, shuffleSeed }
+      : command
+  const nextState = applyChosenTurnCommand(state, commandWithSeed)
 
   return {
     state: nextState,
