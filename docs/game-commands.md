@@ -83,7 +83,8 @@
 不執行任何效果；改為在 `GameState.pendingAbilityEffect` 記錄效果清單與目前索引
 （仿照 `PendingBattle` 的 `attackEffects`/`attackEffectIndex` 模式）。之後每呼叫一次
 `resolve-ability-effect { playerId, targetIds }` 就解析目前索引的效果目標，並前進到
-下一個條件成立的效果索引。若中途出現 `pendingRefresh`/`pendingOnPlay` 等其他待處理決策，
+下一個條件成立的效果索引。若中途出現 `pendingRefresh`／`pendingOnPlay`，或看牌、對手棄牌、
+可選費用、補抽、場景觸發、倒下、傷害後與效果順序等其他待處理決策，
 `pendingAbilityEffect` 會被**保留**（不中止、不捨棄），待那些決策解決後可以再次呼叫
 `resolve-ability-effect` 繼續執行剩餘效果——這是真人互動（含線上對戰）需要的正確語意，
 與 AI 用的批次 `effectTargets` 版本刻意分開，兩者互不影響。

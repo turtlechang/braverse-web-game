@@ -624,6 +624,179 @@ describe('applyGameCommand replacement finalization', () => {
     }
   }
 
+  const abilityEffect = {
+    playerId: 'player-one' as const,
+    sourcePlayerId: 'player-one' as const,
+    sourceInstanceId: 'test-source',
+    sourceKind: 'skill' as const,
+    effects: [{ kind: 'draw' as const, amount: 1 }],
+    effectIndex: 0,
+  }
+
+  const decisionOverrides = (): Array<[string, string, Partial<GameState>]> => {
+    const base = createDemoGame()
+    const decisionEffect = { kind: 'draw' as const, amount: 1 }
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: 'test-source',
+    }
+    return [
+      ['effect order', 'effect-order', {
+        pendingEffectOrder: {
+          playerId: 'player-one',
+          items: [{
+            id: 'ordered-effect',
+            kind: 'inspect-deck',
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'test-source',
+            sourceCardName: 'Test Source',
+          }],
+        },
+      }],
+      ['faint effect', 'faint-effect', {
+        pendingFaintEffects: [{
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          effect: decisionEffect,
+          context,
+        }],
+      }],
+      ['after-damage effect', 'after-damage-effect', {
+        pendingAfterDamageEffects: [{
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          effect: decisionEffect,
+          context,
+        }],
+      }],
+      ['opponent hand discard', 'opponent-hand-discard', {
+        pendingOpponentHandDiscard: {
+          playerId: 'player-two',
+          count: 1,
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test Source',
+          effectText: 'Discard 1 card.',
+        },
+      }],
+      ['inspect deck', 'inspect-deck', {
+        pendingInspectDeck: {
+          playerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test Source',
+          revealedCards: base.players['player-one'].deck.slice(0, 2),
+          lookCount: 2,
+          pickCount: 1,
+        },
+      }],
+      ['optional-cost attack', 'optional-cost-attack', {
+        pendingOptionalCostAttack: {
+          playerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test Source',
+          cost: { energy: {}, discardHand: 0 },
+          effects: [],
+          effectText: 'Optional cost.',
+        },
+      }],
+      ['draw up to', 'draw-up-to', {
+        pendingDrawUpTo: {
+          playerId: 'player-one',
+          max: 6,
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test Source',
+        },
+      }],
+      ['stage trigger', 'stage-trigger', {
+        pendingStageTrigger: {
+          playerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test Source',
+          effectText: 'Trigger effect.',
+        },
+      }],
+    ]
+  }
+
+  it.each(decisionOverrides())(
+    'does not bypass a pending %s decision between ability-effect steps',
+    (_name, expectedKind, decisionOverride) => {
+      const state = makeState({
+        pendingAbilityEffect: abilityEffect,
+        ...decisionOverride,
+      })
+      const snapshot = JSON.parse(JSON.stringify(state)) as GameState
+
+      expect(getPendingDecision(state)?.kind).toBe(expectedKind)
+      expect(() =>
+        applyGameCommand(state, {
+          kind: 'resolve-ability-effect',
+          playerId: 'player-one',
+          targetIds: [],
+        }),
+      ).toThrow('必須先處理待處理的決策。')
+      expect(state).toEqual(snapshot)
+    },
+  )
+
+  it('resumes an ability effect after the intervening decision is resolved', () => {
+    const base = makeState({
+      pendingAbilityEffect: {
+        ...abilityEffect,
+        effects: [
+          {
+            kind: 'inspect-deck',
+            lookCount: 2,
+            pickCount: 1,
+            restToBottom: true,
+          },
+          { kind: 'draw', amount: 1 },
+        ],
+      },
+    })
+    const resolveAbility = {
+      kind: 'resolve-ability-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: [],
+    }
+
+    const awaitingInspect = applyGameCommand(base, resolveAbility)
+    expect(awaitingInspect.pendingInspectDeck?.revealedCards).toHaveLength(2)
+    expect(awaitingInspect.pendingAbilityEffect?.effectIndex).toBe(1)
+    expect(() => applyGameCommand(awaitingInspect, resolveAbility)).toThrow(
+      '必須先處理待處理的決策。',
+    )
+
+    const revealedCards = awaitingInspect.pendingInspectDeck!.revealedCards
+    const resolveInspect = {
+      kind: 'resolve-inspect-deck' as const,
+      playerId: 'player-one' as const,
+      pickedCardId: revealedCards[0].instanceId,
+      restOrder: [revealedCards[1].instanceId],
+    }
+    const afterInspect = applyGameCommand(awaitingInspect, resolveInspect)
+    expect(afterInspect.pendingInspectDeck).toBeNull()
+    expect(afterInspect.pendingAbilityEffect?.effectIndex).toBe(1)
+    expect(afterInspect.players['player-one'].hand).toHaveLength(
+      base.players['player-one'].hand.length + 1,
+    )
+
+    const result = applyGameCommand(afterInspect, resolveAbility)
+    expect(result.pendingAbilityEffect).toBeUndefined()
+    expect(result.players['player-one'].hand).toHaveLength(
+      base.players['player-one'].hand.length + 2,
+    )
+    expect(result.commandLog?.slice(-3).map((entry) => entry.commandKind)).toEqual([
+      'resolve-ability-effect',
+      'resolve-inspect-deck',
+      'resolve-ability-effect',
+    ])
+    expect(replayCommands(base, [resolveAbility, resolveInspect, resolveAbility])).toEqual(
+      result,
+    )
+  })
+
   it('finalizes replacement after the last ability-effect step', () => {
     const state = makeState({
       departedCookieCounts: { 'player-one': 1, 'player-two': 0 },
