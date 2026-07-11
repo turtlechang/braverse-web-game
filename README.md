@@ -149,5 +149,6 @@ npm run cards:import:purple-sample
 | 日期 | 概要 |
 |---|---|
 | 2026-07-11 | Vercel + Render 公網部署與雙視窗對局驗證完成 |
+| 2026-07-11 | 修正線上對戰加入房間後對戰畫面未顯示（MainMenu 與 OnlineBattleView 兄弟元素重疊問題） |
 
 完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；開發流程見 [docs/release-process.md](docs/release-process.md) 與 [docs/loop-engineering.md](docs/loop-engineering.md)。
