@@ -9,6 +9,7 @@ import {
   applyGameCommand,
   getPendingDecision,
 } from './commands'
+import { replayCommands } from './replay'
 
 describe('getPendingDecision', () => {
   it('returns null when no pending decisions exist', () => {
@@ -603,5 +604,146 @@ describe('applyGameCommand', () => {
       action: 'skip',
     })
     expect(result.pendingOptionalCostAttack).toBeNull()
+  })
+})
+
+describe('applyGameCommand replacement finalization', () => {
+  const makeState = (overrides: Partial<GameState> = {}): GameState => {
+    const base = createDemoGame()
+    return {
+      ...base,
+      pendingBattle: null,
+      pendingRefresh: null,
+      pendingOnPlay: null,
+      pendingReplacement: null,
+      pendingStageTrigger: null,
+      pendingFaintEffects: [],
+      pendingAfterDamageEffects: [],
+      departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+      ...overrides,
+    }
+  }
+
+  it('finalizes replacement after the last ability-effect step', () => {
+    const state = makeState({
+      departedCookieCounts: { 'player-one': 1, 'player-two': 0 },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'test-source',
+        sourceKind: 'skill',
+        effects: [{ kind: 'draw', amount: 1 }],
+        effectIndex: 0,
+      },
+    })
+
+    const command = {
+      kind: 'resolve-ability-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: [],
+    }
+    const result = applyGameCommand(state, command)
+
+    expect(result.pendingAbilityEffect).toBeUndefined()
+    expect(result.pendingReplacement).not.toBeNull()
+    expect(result.pendingReplacement?.tasks).toHaveLength(1)
+    expect(result.pendingReplacement?.tasks[0]).toMatchObject({
+      playerId: 'player-one',
+      remaining: 1,
+    })
+    expect(result.commandLog?.at(-1)?.commandKind).toBe(
+      'resolve-ability-effect',
+    )
+    expect(replayCommands(state, [command])).toEqual(result)
+  })
+
+  it('does not finalize replacement between ability-effect steps', () => {
+    const base = makeState({
+      departedCookieCounts: { 'player-one': 1, 'player-two': 0 },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'test-source',
+        sourceKind: 'skill',
+        effects: [
+          { kind: 'draw', amount: 1 },
+          { kind: 'draw', amount: 1 },
+        ],
+        effectIndex: 0,
+      },
+    })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          breakArea: [
+            {
+              ...base.players['player-one'].battleArea[0].card,
+              instanceId: 'break-level-limit-test',
+              level: 10,
+            },
+          ],
+        },
+      },
+    }
+
+    const command = {
+      kind: 'resolve-ability-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: [],
+    }
+    const firstResult = applyGameCommand(state, command)
+
+    expect(firstResult.status).toBe('playing')
+    expect(firstResult.result).toBeNull()
+    expect(firstResult.pendingAbilityEffect).toBeDefined()
+    expect(firstResult.pendingAbilityEffect!.effectIndex).toBe(1)
+    expect(firstResult.pendingReplacement).toBeNull()
+    expect(firstResult.commandLog?.at(-1)?.commandKind).toBe(
+      'resolve-ability-effect',
+    )
+
+    const finalResult = applyGameCommand(firstResult, command)
+
+    expect(finalResult.status).toBe('finished')
+    expect(finalResult.result).toEqual({
+      loserId: 'player-one',
+      winnerId: 'player-two',
+      reason: 'break-level-limit',
+    })
+    expect(finalResult.pendingAbilityEffect).toBeUndefined()
+    expect(finalResult.pendingReplacement).toBeNull()
+    expect(replayCommands(state, [command, command])).toEqual(finalResult)
+  })
+
+  it('finalizes replacement after a stage decision is cleared', () => {
+    const state = makeState({
+      departedCookieCounts: { 'player-one': 1, 'player-two': 0 },
+      pendingStageTrigger: {
+        playerId: 'player-one',
+        sourceInstanceId: 'stage-test',
+        sourceCardName: 'Test Stage',
+        effectText: 'Test effect',
+      },
+    })
+
+    const result = applyGameCommand(state, {
+      kind: 'resolve-stage-trigger',
+      playerId: 'player-one',
+      action: 'skip',
+    })
+
+    expect(result.pendingStageTrigger).toBeNull()
+    expect(result.pendingReplacement).not.toBeNull()
+    expect(result.pendingReplacement?.tasks).toHaveLength(1)
+    expect(result.pendingReplacement?.tasks[0]).toMatchObject({
+      playerId: 'player-one',
+      remaining: 1,
+    })
+    expect(result.commandLog?.at(-1)?.commandKind).toBe(
+      'resolve-stage-trigger',
+    )
   })
 })

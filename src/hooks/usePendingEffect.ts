@@ -11,7 +11,6 @@ import type {
 import {
   applyGameCommand,
   canActivateCookieSkill,
-  finalizePendingReplacements,
   getEnergyCostTotal,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
@@ -1124,10 +1123,7 @@ export function usePendingEffect(params: {
         return
       }
 
-      const resolvedGame =
-        nextGame.status !== 'playing' || hasNextEffect
-          ? nextGame
-          : finalizePendingReplacements(nextGame)
+      const resolvedGame = nextGame
 
       setGame(resolvedGame)
       setMessage(result)

@@ -7,7 +7,8 @@
 > 2. **PlayerActionCommand**（24 種）：開局、回合推進、主要階段動作、補位／Refresh 與戰鬥回應。
 >
 > 每次 `applyGameCommand` 成功執行都會在 `GameState.commandLog` 附加一筆
-> `CommandLogEntry`，「初始狀態（含種子）＋指令序列」即可完整重播一場對局。
+> `CommandLogEntry`。由 typed command 驅動的流程，可用「初始狀態（含種子）＋
+> 指令序列」重播相同狀態；完整對局保證仍受下方 AI 遷移範圍限制。
 
 ## 設計目標
 
@@ -119,7 +120,6 @@ interface ApplyGameCommandOptions {
 
 ## 未涵蓋（後續任務）
 
-- UI 與 AI 尚未全面改走指令層：App.tsx 與 hooks 仍直接呼叫規則函式，
-  UI 的多段效果流程（`usePendingEffect`）遷移到 `effectTargets` 形式列為後續任務。
-  在遷移完成前，實際對局的 `commandLog` 不完整，重播僅保證「透過指令層執行的對局」。
+- 玩家 UI 與 `usePendingEffect` 已全面透過 `applyGameCommand`；command 出口會在沒有 blocking pending 時執行冪等的 `finalizePendingReplacements` 再寫入紀錄，確保多段效果完整結束後的補位與勝負狀態可重播。
+- 部分 AI battle／turn handler 仍直接呼叫規則函式並手動 `appendCommandLogEntry`。在這些路徑完成 command 化前，完整 replay 保證仍限於由 typed command 驅動的流程。
 - 開局前流程（選牌組、猜拳、決定先後攻）發生在 `createGame` 之前，不在指令層內。

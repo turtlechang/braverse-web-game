@@ -32,7 +32,8 @@ import { advancePhase } from './turn'
 import { activateCookieSkill, skipCookieOnPlay } from './skills'
 import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
-import { getCurrentReplacementTask } from './replacement'
+import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
+import { hasBlockingPending } from './pending'
 import { describeCommand } from './command-log'
 import {
   drawMulliganCompensation,
@@ -730,7 +731,14 @@ export const applyGameCommand = (
   const next = isPendingDecisionCommand(command)
     ? applyPendingDecisionCommand(state, command)
     : applyPlayerActionCommand(state, command, options)
-  return appendCommandLogEntry(state, next, command)
+  // Keep replacement scheduling inside the command boundary so replaying the
+  // same command log produces the same pending decisions as the live match.
+  // A multi-step effect must finish before replacement or break-level victory
+  // can be finalized.
+  const finalized = next.status === 'playing' && !hasBlockingPending(next)
+    ? finalizePendingReplacements(next)
+    : next
+  return appendCommandLogEntry(state, finalized, command)
 }
 
 const applyPendingDecisionCommand = (

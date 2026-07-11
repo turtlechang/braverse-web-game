@@ -50,7 +50,7 @@
 
 - **純函式**：所有規則函式 `(state, input) → newState`，可種子重現，測試不需 mock。
 - **不合法操作回傳可讀錯誤**（`errors.ts`），UI 與 AI 共用同一驗證。
-- **指令層現況**：可 1:1 對應的動作走 `applyGameCommand`；攻擊宣告與多段效果精靈屬互動式流程，直呼規則函式並於完成時 `appendCommandLogEntry` 補記（原因：`attack` 指令會自動 `resolveBattleAutomatically`，不適合人類互動；詳見 audit-report §6.4）。
+- **指令層現況**：玩家 UI、攻擊宣告與多段效果精靈皆透過 `applyGameCommand`；command 出口會在 blocking pending 全數結束後執行補位／勝負排程，再寫入 `commandLog`。部分 AI battle／turn handler 仍直呼規則函式並以 `appendCommandLogEntry` 補記，列為後續 command 化範圍（詳見 audit-report §6.4）。
 
 ## 3. 卡牌轉接層（src/cards/）
 
@@ -93,6 +93,6 @@
 ## 7. 建置與測試
 
 - Vite 8 + TypeScript 6（`tsc -b` 複合建置：app + node 兩個 tsconfig；server 獨立 `server:typecheck`）。
-- vitest 4：目前基線 91 個測試檔、1469 項測試（非永久門檻），與原始碼同目錄放置（`*.test.ts(x)`）。
-- Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度 AI 對局 smoke）、`npm run test:blue:browser`（藍牌效果流程）；手動 GitHub Actions workflow。
-- CI：`.github/workflows/ci.yml`（PR + main push：test → lint → build）。
+- vitest 4：目前基線 95 個測試檔、1525 項測試（非永久門檻），與原始碼同目錄放置（`*.test.ts(x)`）。
+- Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度、20 場 AI 對局）、`npm run test:blue:browser`（藍牌效果流程）、`npm run test:online:browser`（線上 modal 桌機／窄版）；AI 驗證另有手動 GitHub Actions workflow。
+- CI：`.github/workflows/ci.yml`（PR + main push：卡牌／候選／registry 驗證 → test → lint → build → bundle budget）。

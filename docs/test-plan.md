@@ -1,6 +1,6 @@
 # 測試計畫（Test Plan）
 
-最後更新：2026-07-10。現況為 91 個測試檔、1469 項 vitest 測試（非永久門檻） + 2 套 Playwright 瀏覽器驗證，全數綠燈。
+最後更新：2026-07-11。現況為 95 個測試檔、1525 項 vitest 測試（非永久門檻） + 3 套 Playwright 瀏覽器驗證；本輪 AI 瀏覽器 20/20、stuck=0。
 
 ## 1. 測試層級
 
@@ -8,8 +8,8 @@
 |---|---|---|---|
 | 單元/整合 | vitest 4（jsdom） | 規則引擎、卡牌轉接、hooks、元件、server | `npm test`（CI 每次 PR/push） |
 | AI 回歸模擬 | vitest 內嵌 | 多回合 AI 對局矩陣、勝率門檻、卡死偵測 | 同上 |
-| 瀏覽器 E2E | Playwright（自製腳本） | 12 種解析度 AI 對局 smoke、藍牌效果流程 | `npm run test:ai:browser` / `test:blue:browser`（手動 + workflow_dispatch） |
-| 靜態 | eslint / `tsc -b` | 全 repo | `npm run lint` / `npm run build`（CI） |
+| 瀏覽器 E2E | Playwright（自製腳本） | 12 種解析度 AI 對局、藍牌效果、線上 modal 桌機／窄版 | `npm run test:ai:browser` / `test:blue:browser` / `test:online:browser` |
+| 靜態 | eslint / `tsc -b` / bundle budget | 全 repo | `npm run lint` / `npm run build` / `npm run check:bundle`（CI） |
 
 ## 2. 覆蓋現況（依主計畫驗收項對照）
 
@@ -39,7 +39,7 @@
 
 - `custom-deck*.test.ts`：60 張/4 張上限/餅乾/FLIP 驗證、儲存版本遷移、損壞資料不整批消失。
 - `starter-deck.test.ts`、`scripts/import-official-cards.test.js`：牌組食譜張數與匯入。
-- ⚠️ 缺口：無獨立 `validate:cards`（資料完整性、重複 id、effectId↔resolver 對應）——roadmap P1。
+- `validate:cards`、`validate:candidate` 與 `check:card-pool` 已接入 CI；候選 promote 失敗不覆蓋正式卡池，成功後會重新產生 runtime registry。
 
 ### UI ✅／⚠️
 

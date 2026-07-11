@@ -4,7 +4,7 @@
 
 ## 已完成里程碑（摘要）
 
-- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay、1469 項測試（91 檔，目前基線）。（PR #11 等）
+- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay、1525 項測試（95 檔，目前基線）。（PR #11 等）
 - **牌組編輯器**：搜尋/篩選/合法性檢查/匯入匯出/版本化儲存。（PR #11）
 - **AI Lv.1–4**：隨機 / 啟發式 / 評估式 / 兩層前瞻 + matchup 資料驅動評估；20 份 BS2 訓練文件。（PR #12/#13、commit `076e7a5`）
 - **卡牌池**：BS1/BS2 + 五色起始牌組匯入；25 張未支援卡效果補齊。（PR #17）
@@ -43,7 +43,7 @@
 
 | 項目 | 內容 | 前置 |
 |---|---|---|
-| UI 走指令層 | 攻擊宣告與多段效果精靈改走 `applyGameCommand`，commandLog 成為完整重播來源；支援「複製對局紀錄」回報 | 無，但工程量大 |
+| 指令層收尾 | ✅ 玩家 UI、攻擊宣告、多段效果與補位排程已走 `applyGameCommand`；後續將 AI battle／turn handler 的手動補記改為 typed command，完成後支援「複製對局紀錄」 | AI handler 逐批遷移 |
 | AI Lv.5 | 牌組理解與策略傾向（設計稿見 [ai-levels.md](ai-levels.md)） | 觀察 Lv.3/4 實際體感 |
 | Bundle code-split | ✅ 主選單牌組編輯器、測試情境與線上對戰 modal 已改為 `React.lazy` + `Suspense`；主 bundle 由約 851.60 KB 降至 805.67 KB，仍有 >500 KB 警告待後續拆分 | 後續可再拆戰鬥資訊模組 |
 | UI reference wireframe 文件 | 主計畫 Phase 5 要求的對標分析與 wireframe 文件；2026-07-10 決策：**要做**，以「記錄現行 UI ＋ 標注下一步改進」的混合形式撰寫，與 UI 迭代並行 | 已決策 |
