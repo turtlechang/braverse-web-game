@@ -31,13 +31,15 @@
 | `npm run typecheck` | ✅ `tsc -b && server:typecheck`（app + server 全量型別檢查） |
 | Render 部署準備 | ✅ 已部署（commit a679f03）並完成雙視窗公網對局驗證；詳見 [online-server-hosting.md](online-server-hosting.md)。Render Free 閒置會休眠，首次連線需等待喚醒 |
 
-### P2 — 維護流程正式化
+### P2 — 維護流程正式化 ✅（2026-07-11 確認完成）
 
-| 項目 | 內容 | 規模 |
-|---|---|---|
-| CHANGELOG.md | 從 README 更新日誌表格抽出，建立獨立版本紀錄 | 小 |
-| release-process / card-update-process | 新卡牌 11 步流程（匯入→validate→effectId→resolver→測試→AI smoke→UI 檢查→changelog→PR→preview→合併）文件化 | 小 |
-| regression / manual-playtest checklist | 併同現有 card-review-checklist 整理 | 小 |
+| 項目 | 狀態 |
+|---|---|
+| [CHANGELOG.md](../CHANGELOG.md) | ✅ 已從 README 抽出，獨立版本紀錄，每次 PR 於 `[Unreleased]` 段落記錄 |
+| [release-process.md](release-process.md) | ✅ 分支/PR 慣例、驗證門檻、部署管線、合併後步驟俱全；本輪修正「1449+」寫死數字為動態基線敘述 |
+| [card-update-process.md](card-update-process.md) | ✅ 11 步流程（匯入→validate→effectId→resolver→測試→AI smoke→UI 檢查→changelog→PR→preview→合併）文件化 |
+| [regression-test-checklist.md](regression-test-checklist.md) | ✅ 自動化門檻、AI 行為、歷史回歸熱點、瀏覽器級、資料部署五個章節 |
+| [manual-playtest-checklist.md](manual-playtest-checklist.md) | ✅ 既有，涵蓋開局/回合戰鬥/效果/牌組編輯器/線上對戰/RWD/部署驗收 |
 
 ### P3 — 產品深化（觀察後再投入）
 

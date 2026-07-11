@@ -14,7 +14,7 @@
 
 ```bash
 npm run validate:cards   # 卡牌資料完整性
-npm test                 # 1449+ 項單元測試
+npm test                 # 全數通過，且總數不得低於 Phase 0 基線（見 audit-report.md，非寫死數字）
 npm run lint
 npm run typecheck        # app + server 全量型別檢查
 npm run build            # tsc -b + vite build（不可只跑 tsc --noEmit）

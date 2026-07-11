@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 📚 P2 維護流程正式化確認完成（roadmap）：`release-process.md`、`card-update-process.md`、`regression-test-checklist.md`、`manual-playtest-checklist.md` 皆已存在且內容完整，本輪修正 `release-process.md` 寫死的「1449+ 項測試」為動態基線敘述（不得低於 Phase 0 基線，非固定數字）。
 - 📚 AI Lv.5 前置觀察（roadmap P3）：新增 `docs/ai-lv3-lv4-observation-2026-07-11.md`，以 7 場 Lv.3/Lv.4 對局逐字紀錄＋儀器化驗證（多重攻擊資源判定、陷阱使用頻率對照牌組組成）確認行為結構健康，建議暫緩 Lv.5 開發、待使用者真人對局確認後再決定。
 - 📚 UI reference wireframe 文件（roadmap P3）：新增 `docs/ui-reference/06-online-match-wireframe.md`（線上對戰面板）；依實機驗證更新 `02-main-menu-wireframe.md`（空狀態 CTA 邏輯）；回填 `ui-audit-2026-07-11.md` 的 P0（主選單空狀態、線上對戰彈窗）已解決狀態。
 - ⚡ 戰鬥資訊 modal 群組（`InformationModals`／`BattleResponseModals`／`DamageEffectModals`／`PendingDecisionModals`／`ResultModal`／`OpeningSetupModal`）改為 `React.lazy` + `Suspense`；主 bundle 由約 806.92 KB 降至 730.68 KB raw（167.17 → 152.26 KB gzip）。
