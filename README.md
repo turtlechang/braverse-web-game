@@ -62,7 +62,7 @@ Phase 5 線上對戰 MVP 分支新增 WebSocket 對局、遮罩版 GameState 與
 - 修復陷阱卡 `support-to-hand` / `hand-to-support` 效果在 Bean 牌組觸發時導致卡住的 bug（根因：陷阱執行路徑誤傳餅乾 ID 而非支援/手牌 ID）；AI 支援階段改以能量稀缺度排序選擇放置卡牌、攻擊階段優先選能一擊擊殺的餅乾；新增 6 組 BS2 跨色對局訓練文件與批量測試腳本。
 - 已建立 `.github/workflows/ci.yml`：於 PR 與 main push 觸發，Node 22、啟用 npm cache、僅 `contents: read`，執行 `npm test`、`npm run lint`、`npm run build`。
 - 已建立 `.github/workflows/ai-browser-validation.yml`：手動觸發（`workflow_dispatch`），安裝 Chromium 含 `--with-deps`，失敗時上傳 `test-results` 保留 7 天。
-- Phase 5 線上對戰 MVP 的 lint 修正已完成：線上效果目標選取改為 keyed state，避免 React hooks `set-state-in-effect`；移除未使用型別與空 handler 參數。本分支目前 `npm test` 為 851 項通過，`npm run lint` 與 `npm run build` 亦通過。
+- Phase 5 線上對戰 MVP 的 lint 修正已完成：線上效果目標選取改為 keyed state，避免 React hooks `set-state-in-effect`；移除未使用型別與空 handler 參數。本分支目前 `npm test` 為 95 files/1522 tests 通過，`npm run lint` 與 `npm run build` 亦通過。
 - 已完成 Vercel + Render 公網部署與雙視窗對局驗證：Render 服務 braverse-web-game 部署 a679f03（Deployed）；Vercel Production 以 VITE_WS_URL=wss://braverse-web-game.onrender.com 重新部署（6riup9EUD… Ready）；正式網域 https://braverse-web-game.vercel.app 以兩個獨立 WebSocket 分頁完成合法 60 張牌組→建立房間→加入房間→保留手牌→選起始餅乾→進入同步對局桌。注意 Render Free 閒置會休眠，首次連線可能需 50 秒以上。
 - 已達成：平板響應式 P0 修復——body、main menu、game shell、deck editor 支援 100dvh fallback；deck editor actions 保持可見且 deck list 可滾動；OnlineBattleView 開局準備移除 inline style，按鈕可換行、至少 44px、focus-visible；modal safe-area 保留原有間距。已驗證 npm test 95 files/1522 tests、lint、build，並以 1024x600 實際版面確認無溢出及操作列可見。
 - 已修正 StatusToast 在 matchMessages 內容變更時重新顯示，並將 AI 瀏覽器測試的休息區卡牌點擊改為 DOM click，避免 modal backdrop 攔截，提升測試穩定度。
