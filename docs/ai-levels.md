@@ -77,7 +77,7 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 
 ## 已知問題
 
-1. `opencode-go-benchmark.test.js has no test suite`（pre-existing）
+1. `opencode-go-benchmark.test.js has no test suite`（pre-existing；2026-07-11 隨 deepseek-v4-flash 退出派工清單重排後，suite 仍未載入，需另案處理）
 2. Lv.4 vs Lv.3 = 73.3%，接近 75% 警戒線
 3. Lv.3 vs Lv.1 = 100%（ceiling effect，擴大牌組池後需重新驗證）
 4. 勝利條件為 `break >= 10`（非 12），所有規則已修正為正確閾值

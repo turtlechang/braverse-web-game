@@ -27,11 +27,11 @@ EXIT_CODE: 1
 ```powershell
 $job = Start-Job -ScriptBlock { opencode serve --port 4096 --pure }
 Start-Sleep -Seconds 5
-opencode run --attach http://127.0.0.1:4096 --model opencode-go/deepseek-v4-flash --pure "prompt"
+opencode run --attach http://127.0.0.1:4096 --model opencode-go/mimo-v2.5 --pure "prompt"
 Stop-Job $job; Remove-Job $job -Force
 ```
 
-此路徑下 `opencode-go/deepseek-v4-flash` 可正常回應。
+此路徑下 `opencode-go/mimo-v2.5` 可正常回應；本環境下 `opencode-go/mimo-v2.5` 沿用同路徑可正常回應。
 
 ### 2. CLI 錯誤訊息高度重複
 

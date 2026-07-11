@@ -36,14 +36,14 @@ OpenCode Go 會連線至外部 HTTPS API。在 Codex 的受限網路沙箱中執
 最小連線驗證：
 
 ```powershell
-scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-flash "只回覆 OK"
+scripts\opencode-go.cmd run --model opencode-go/mimo-v2.5 "只回覆 OK"
 scripts\opencode-go.cmd run --model opencode-go/deepseek-v4-pro "只回覆 OK"
 scripts\opencode-go.cmd run --model opencode-go/qwen3.7-plus "只回覆 OK"
 ```
 
 一般只讀審查使用專案的 `review-fast` agent。此 agent 限制為一次工具迭代、最多讀取 4 個聚焦檔案區段，並禁止 bash、編輯、子代理與網路工具：
 
-- 低風險且邊界明確的極聚焦唯讀審查可使用 `opencode-go/deepseek-v4-flash`。
+- 低風險且邊界明確的極聚焦唯讀審查使用 `opencode-go/mimo-v2.5`。
 - 跨模組、高風險或重大疑點的審查改用 `opencode-go/deepseek-v4-pro` 或既有大型 PR 模型。
 
 ```powershell
@@ -68,8 +68,8 @@ scripts\opencode-go-review.cmd --model opencode-go/deepseek-v4-pro "審查任務
 
 | 任務分級 | 優先 | 備援一 | 備援二 | 備援三 |
 |---|---|---|---|---|
-| 微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀審查） | `opencode-go/deepseek-v4-flash` | `opencode-go/mimo-v2.5` | `opencode-go/minimax-m3` | `opencode-go/deepseek-v4-pro` |
-| 中型一般實作（多數 CRUD、一般功能、中等測試、文件更新） | `opencode-go/qwen3.7-plus` | `opencode-go/minimax-m2.7` | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` |
+| 微任務（單檔機械式變更、錯字、極短 docstring、單一 assertion、小型低風險唯讀審查） | `opencode-go/mimo-v2.5` | `opencode-go/minimax-m3` | `opencode-go/deepseek-v4-pro` | — |
+| 中型一般實作（多數 CRUD、一般功能、中等測試、文件更新） | `opencode-go/deepseek-v4-pro` | `opencode-go/minimax-m3` | `opencode-go/qwen3.7-plus` | `opencode-go/mimo-v2.5-pro` |
 | 複雜跨模組實作（規則引擎、React UI、AI 決策、整合、測試套件、完整驗證鏈） | `opencode-go/deepseek-v4-pro` | `opencode-go/mimo-v2.5-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
 | 大型 PR 審查（多檔案跨模組） | `opencode-go/kimi-k2.7-code` | `opencode-go/deepseek-v4-pro` | `opencode-go/glm-5.1` | `opencode-go/qwen3.7-max` |
 | UI 截圖／視覺分析 | `opencode-go/mimo-v2.5` | `opencode-go/qwen3.7-plus` | `opencode-go/kimi-k2.6` | `opencode-go/mimo-v2.5-pro` |

@@ -219,7 +219,7 @@ describe("Level 3: Inference checks", () => {
     })
     process.env.OPENCODE_GO_API_KEY = "test-key"
 
-    const config = { model: "opencode-go/deepseek-v4-flash", provider: { "opencode-go": { options: { baseURL: "https://opencode.ai/zen/go/v1" } } } }
+    const config = { model: "opencode-go/mimo-v2.5", provider: { "opencode-go": { options: { baseURL: "https://opencode.ai/zen/go/v1" } } } }
     const result = await checker.checkInference(config, true)
     assert.equal(result.ok, true)
     assert.equal(result.cached, false)
@@ -261,7 +261,7 @@ describe("Level 3: Inference checks", () => {
       clock: () => Date.now(),
     })
 
-    const config = { model: "opencode-go/deepseek-v4-flash", provider: { "opencode-go": { options: { baseURL: "https://opencode.ai/zen/go/v1" } } } }
+    const config = { model: "opencode-go/mimo-v2.5", provider: { "opencode-go": { options: { baseURL: "https://opencode.ai/zen/go/v1" } } } }
     const result = await checker.checkInference(config, true)
     assert.equal(fetchCalled, true, "should call fetch when noCache is true")
   })

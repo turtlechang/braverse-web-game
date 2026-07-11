@@ -2,7 +2,7 @@
  * OpenCode Go Benchmark 設定
  *
  * 三階段：review / implementation / integration。
- * 受測模型固定為 7 個，含 minimax-m3、kimi-k2.6，不含 glm、mimo 普通版。
+ * 受測模型固定為 7 個，含 minimax-m3、kimi-k2.6、mimo-v2.5，不含 glm 與 mimo 其他版。
  * 每階段兩個 scenario，取自 Braverse 專案內真實程式碼。
  *
  * 任務設計原則：
@@ -46,7 +46,7 @@ export const phases = [
 
 /** @type {string[]} */
 export const models = [
-  'opencode-go/deepseek-v4-flash',
+  'opencode-go/mimo-v2.5',
   'opencode-go/deepseek-v4-pro',
   'opencode-go/minimax-m3',
   'opencode-go/kimi-k2.6',
@@ -57,7 +57,7 @@ export const models = [
 
 /** @type {Record<string, { reasoningEffort: string }>} */
 export const modelOptions = {
-  'opencode-go/deepseek-v4-flash': { reasoningEffort: 'low' },
+  'opencode-go/mimo-v2.5': { reasoningEffort: 'low' },
   'opencode-go/deepseek-v4-pro': { reasoningEffort: 'medium' },
   'opencode-go/minimax-m3': { reasoningEffort: 'low' },
   'opencode-go/kimi-k2.6': { reasoningEffort: 'low' },
