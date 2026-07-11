@@ -15,6 +15,7 @@ import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
 } from './replacement'
+import { payTrashBattleCookieCost } from './skills'
 import type {
   AbilityCost,
   CardAbility,
@@ -84,6 +85,8 @@ export interface AbilityPaymentOptions {
   supportToHandIds?: string[]
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
+  trashBattleCookieIds?: string[]
+  sourceInstanceId?: string
 }
 
 const markSupportAreaDecreased = (
@@ -298,6 +301,15 @@ const payAbilityCost = (
     }
   }
 
+  const trashBattleCookiePayment = payTrashBattleCookieCost(
+    updatedPlayer,
+    cost,
+    options.trashBattleCookieIds ?? [],
+    options.sourceInstanceId,
+  )
+  updatedPlayer = trashBattleCookiePayment.player
+  departedCount += trashBattleCookiePayment.departedCount
+
   let nextState: GameState = {
     ...state,
     players: {
@@ -427,6 +439,7 @@ export const playItem = (
   supportToHandIds: string[] = [],
   discardHandIds: string[] = [],
   hpToTrashTargetIds: string[] = [],
+  trashBattleCookieIds: string[] = [],
 ): GameState => {
   assertMainAction(state, playerId)
   const player = state.players[playerId]
@@ -446,6 +459,8 @@ export const playItem = (
     supportToHandIds,
     discardHandIds,
     hpToTrashTargetIds,
+    trashBattleCookieIds,
+    sourceInstanceId: instanceId,
   })
   const paidPlayer = paidState.players[playerId]
 

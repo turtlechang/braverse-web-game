@@ -72,3 +72,40 @@ UX 評分（1–5）
 - 提示框清楚度：__
 - 視覺風格：__
 ```
+
+## 試玩紀錄
+
+### 2026-07-12（Production，commit `8b56370`）
+
+```text
+版本 / commit：8b5637044d7474ea59a96649ae521837975ba91c
+遊玩網址（Production）：https://braverse-web-game.vercel.app/
+日期：7/12 06:43
+我方牌組 / AI 牌組：第二彈紫色牌組/第二彈豆子牌組
+AI 等級：Lv.4
+
+結果：我方勝
+最有感的功能：AI對戰自動化。
+最困困的互動或規則：
+BS2-077 沒有執行代價(《Place 1 of your 紫色 LV.1 Cookies from your battle area into the trash.》)，就執行後續效果。
+BS2-058 攻擊後，沒有檢查條件就執行後續效果，加上後續效果不是可以選擇的，只能對同一張餅乾造成效果傷害；另外，為何後續效果傷害沒有造成對手餅乾扣血?。
+BS2-079 發動後的後續效果(已減完傷)沒有棄牌提示框讓玩家選擇並放回牌庫洗牌。
+在線上對戰連上對手後的開局準備感覺很奇怪，應該直接進入遊戲對戰畫面，再開始猜拳(決定先後攻)->洗牌->抽牌(雙方抽取6張起手手牌)->設置初始餅乾(或調度)。
+在線上對戰時，若是我方攻擊對手餅乾時，對手視角會出現陷阱(或阻擋者)提示框，但我方沒有出現對手正在決定是否發動陷阱(或阻擋者)提示框，會造成我方覺得遊戲卡住沒有執行下去。
+是否卡死：是
+
+UX 評分（1–5）
+- 規則理解：3.5
+- 操作流暢：3.5
+- 提示框清楚度：3
+- 視覺風格：3.5
+```
+
+清單結果（同一輪）：全數 ★ 項目通過；未通過／不確定：線上對戰「連線中顯示冷啟動提示；斷線有提示」未通過、「不合法操作被 server 端規則擋下」未驗證（對應 known-risks R13，已知缺口）、「1366×768 不爆版、無捲軸」不確定。
+
+**衍生行動項**（依嚴重度，處理狀態見下）：
+1. ✅ **已修復（2026-07-12）線上對戰攻擊方無等待提示（回報為「卡死」）**：根因是 `BattleResponseModals.tsx` 只在 `viewerPlayerId` 為防守方/傷害方/攻擊方本人時才渲染對應提示框，攻擊方視角完全沒有 fallback。`OnlineBattleView.tsx` 的狀態列新增 `opponentDecisionLabel`（trap／flip／attack-effect 三種待決策階段皆涵蓋），對手決策中會顯示「對手正在決定是否發動陷阱或出動阻擋者…」等文字，不再顯得卡死。
+2. ✅ **已修復（2026-07-12）BS2-077 代價未執行就結算效果**：根因是 `trashBattleCookie` 代價只在轉接層（`official-effect-adapter.ts`）與技能路徑（`skills.ts`）被實作，物品路徑（`PlayItemCommand`／`playItem()`／`payAbilityCost`）完全沒有對應欄位，代價形同虛設。已補齊 command 型別、`payItem()` 簽名、`payAbilityCost` 驗證與支付、AI 端 `chooseAbilityCostIds` 計算、人類互動流程 `begin-play-item` 派發，新增回歸測試 `card-abilities.test.ts`「requires and pays a trashBattleCookie item cost (BS2-077 regression)」。
+3. **BS2-058 攻擊後續效果邏輯錯誤**：逐一核對轉接層（`official-effect-adapter.ts`）、條件檢查（`battle.ts`／`targeting.ts`）與傷害執行（`execute.ts`），目前程式碼看起來都正確（已有既有測試 `official-effect-adapter.test.ts`「BS2-058 Wind Archer Cookie attack bonus checks its own trash, not the opponent's」鎖定「檢查自己棄牌區，不是對手的」這個易混淆點）。**未複現**；懷疑是玩家自身棄牌區當下未達 15 張門檻（因此後續傷害本就不會觸發，符合設計）或攻擊目標已被主傷害擊倒。若能重現，請附回合數/console/操作步驟以便進一步排查。
+4. 🟡 **部分修復（2026-07-12）BS2-079 後續效果缺棄牌提示框**：轉接層原本完全沒有轉出「棄牌洗回牌庫」這段效果文字，已補上 `{ kind: 'trash-to-deck', max: 5, excludeFlip: true }`（`official-effect-adapter.ts`，新增回歸測試）。但陷阱系統目前只有一組共用 `targetIds`（`playTrap`/`battle.ts`），不像物品/技能有逐效果的 `effectTargets: string[][]`，所以陷阱裡第二個效果沒有獨立的目標選擇管道；已將 `trash-to-deck` 排除在共用 `targetIds` 之外避免誤用對手餅乾 ID 導致丟例外（此前會讓 5×5 AI 對局矩陣直接卡死，已在 `ai-simulation.test.ts` 驗證修復），但目前效果本身仍是靜默無選擇（0 張），**尚未真的彈出棄牌提示框**——這是陷阱系統本身的架構缺口（單一 `targetIds` 無法支援多段效果各自選目標），非本輪範圍，記錄為新的 known-risk。
+5. 線上對戰開局準備順序體感怪異（先進戰場再猜拳/抽牌/起始配置）——待與現有 `OpeningSetupModal` 流程比對後判斷是否為認知落差或真的需要調整；本輪未處理。

@@ -2155,6 +2155,17 @@ export const convertOfficialTrapAbility = (
       ],
       cost: { energy: { blue: 3 }, discardHand: 1 },
     },
+    'BS2-079': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'trash-to-deck', max: 5, excludeFlip: true },
+      ],
+    },
   }
 
   const exactTrap = exactTrapEffects[card.cardNumber]

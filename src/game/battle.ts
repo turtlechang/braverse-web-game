@@ -800,6 +800,7 @@ export const playTrap = (
       effect,
       effect.kind === 'draw' ||
         effect.kind === 'deck-to-support' ||
+        effect.kind === 'trash-to-deck' ||
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
         : options.targetIds,

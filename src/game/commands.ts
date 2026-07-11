@@ -310,6 +310,7 @@ export interface PlayItemCommand {
   supportToHandIds?: string[]
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
+  trashBattleCookieIds?: string[]
   effectTargets?: string[][]
 }
 
@@ -322,6 +323,7 @@ export interface BeginPlayItemCommand {
   supportToHandIds?: string[]
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
+  trashBattleCookieIds?: string[]
 }
 
 export interface PlayStageCommand {
@@ -1062,6 +1064,7 @@ const applyPlayerActionCommand = (
         command.supportToHandIds ?? [],
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
+        command.trashBattleCookieIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -1089,6 +1092,7 @@ const applyPlayerActionCommand = (
         command.supportToHandIds ?? [],
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
+        command.trashBattleCookieIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,

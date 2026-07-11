@@ -1033,6 +1033,7 @@ export function usePendingEffect(params: {
               supportToTrashIds,
               supportToHandIds,
               discardHandIds,
+              trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
             })
           : pendingEffect.sourceKind === 'stage'
             ? applyGameCommand(game, {
