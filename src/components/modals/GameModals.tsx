@@ -1543,6 +1543,8 @@ export interface PauseModalProps {
   aiActionCount: number
   onRunSimulation: () => void
   onResume: () => void
+  /** 複製 ReplayIssueBundleV1 JSON 到剪貼簿；resolve 為是否成功。 */
+  onCopyIssueBundle?: () => Promise<boolean>
 }
 
 export function PauseModal({
@@ -1552,7 +1554,11 @@ export function PauseModal({
   aiActionCount,
   onRunSimulation,
   onResume,
+  onCopyIssueBundle,
 }: PauseModalProps) {
+  const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
+    'idle',
+  )
   return (
     <div className="modal-backdrop" role="presentation">
       <section className="pause-modal" role="dialog">
@@ -1573,6 +1579,23 @@ export function PauseModal({
         >
           執行 20 場 AI 驗證
         </button>
+        {onCopyIssueBundle && (
+          <button
+            className="pause-simulation-button"
+            type="button"
+            onClick={() => {
+              void onCopyIssueBundle().then((ok) => {
+                setCopyResult(ok ? 'copied' : 'failed')
+              })
+            }}
+          >
+            {copyResult === 'copied'
+              ? '已複製問題包'
+              : copyResult === 'failed'
+                ? '複製失敗，請再試一次'
+                : '複製問題包'}
+          </button>
+        )}
         <button type="button" onClick={onResume}>
           繼續對戰
         </button>

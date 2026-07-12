@@ -1,4 +1,5 @@
 import { phaseLabels } from '../gameUiLabels'
+import { serializeReplayIssueBundle } from '../../game'
 import {
   DiscardRevealModal,
   CardDetailModal,
@@ -7,6 +8,7 @@ import {
   PauseModal,
   DeckListModal,
 } from '../modals/GameModals'
+import { copyTextToClipboard } from '../copyTextToClipboard'
 import type { useMatchController } from '../../hooks/useMatchController'
 import type { useAiTurn } from '../../hooks/useAiTurn'
 import type { useMatchDialogs } from '../../hooks/useMatchDialogs'
@@ -82,6 +84,11 @@ export function InformationModals({ match, ai, dialogs }: InformationModalsProps
             ai.runSimulation()
           }}
           onResume={dialogs.closePause}
+          onCopyIssueBundle={() =>
+            copyTextToClipboard(
+              serializeReplayIssueBundle(match.buildIssueBundle(null)),
+            )
+          }
         />
       )}
 

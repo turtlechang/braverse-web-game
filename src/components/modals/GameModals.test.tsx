@@ -13,6 +13,7 @@ import {
   FaintEffectResponseModal,
   FlipResponseModal,
   OpeningSetupModal,
+  PauseModal,
   ResultModal,
   TrapResponseModal,
 } from './GameModals'
@@ -800,5 +801,41 @@ describe('ResultModal', () => {
     )
 
     expect(markup).toContain('對方休息區的等級達到 10。')
+  })
+})
+
+describe('PauseModal', () => {
+  const baseProps = {
+    turnNumber: 3,
+    phaseLabel: '主要階段',
+    deckConfig: { player: 'red', ai: 'red' } as const,
+    aiActionCount: 5,
+    onRunSimulation: () => undefined,
+    onResume: () => undefined,
+  }
+
+  it('offers 複製問題包 and shows copied feedback after the handler resolves', async () => {
+    const onCopyIssueBundle = vi.fn().mockResolvedValue(true)
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() =>
+      root.render(
+        <PauseModal {...baseProps} onCopyIssueBundle={onCopyIssueBundle} />,
+      ),
+    )
+
+    await click(findButton(container, '複製問題包'))
+    await act(async () => {})
+
+    expect(onCopyIssueBundle).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain('已複製問題包')
+
+    await act(() => root.unmount())
+  })
+
+  it('hides the copy button when onCopyIssueBundle is not provided', () => {
+    const markup = renderToStaticMarkup(<PauseModal {...baseProps} />)
+    expect(markup).not.toContain('複製問題包')
+    expect(markup).toContain('繼續對戰')
   })
 })

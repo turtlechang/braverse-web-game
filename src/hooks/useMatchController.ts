@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import type { CookieCard, CookieInBattle, GameState, PlayerId, PlayerState, ReplacementTask, SupportCard } from '../game'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CookieCard, CookieInBattle, GameCommand, GameState, PlayerId, PlayerState, ReplacementTask, ReplayIssueBundleV1, SupportCard } from '../game'
 import {
   applyGameCommand,
   createDemoSetupGame,
@@ -17,6 +17,7 @@ import {
   getTrapTargetCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCandidates,
+  buildReplayIssueBundle,
   getEnergyCostTotal,
   isPlayerControllingState,
   selectEnergyPayment,
@@ -48,6 +49,7 @@ import {
 } from '../game/demo'
 import { useMatchSetup } from './useMatchSetup'
 import { useMatchAnimations } from './useMatchAnimations'
+import { registerIssueBundleProvider } from './issueBundleSource'
 import {
   useBattleActions,
   type DispatchGameCommand,
@@ -286,6 +288,17 @@ export function useMatchController(params: {
   const opponentId = opponentOfId(viewerPlayerId)
   const activePlayer = game.players[game.activePlayerId]
 
+  // 問題包（ReplayIssueBundleV1）素材：對局起點快照 + 最後一個失敗指令。
+  // 首次 render 時 game 尚未套用任何 dispatch，直接當作重播起點。
+  const initialGameRef = useRef<GameState | null>(null)
+  if (initialGameRef.current === null) {
+    initialGameRef.current = game
+  }
+  const lastFailedCommandRef = useRef<{
+    command: GameCommand
+    message: string
+  } | null>(null)
+
   const runAction: RunGameAction = (action, successMessage, onSuccess) => {
     try {
       const nextGame = action(game)
@@ -293,6 +306,7 @@ export function useMatchController(params: {
       setGame(nextGame)
       setMessage(successMessage)
       animations.observeTransition(prevGame, nextGame)
+      lastFailedCommandRef.current = null
 
       onSuccess?.(nextGame)
     } catch (error) {
@@ -310,12 +324,50 @@ export function useMatchController(params: {
     const commands = Array.isArray(command) ? command : [command]
     runAction(
       (current) =>
-        commands.reduce((state, cmd) => applyGameCommand(state, cmd), current),
+        commands.reduce((state, cmd) => {
+          try {
+            return applyGameCommand(state, cmd)
+          } catch (error) {
+            // 失敗指令不會進 commandLog，記下來供問題包重現錯誤。
+            lastFailedCommandRef.current = {
+              command: cmd,
+              message:
+                error instanceof Error ? error.message : String(error),
+            }
+            throw error
+          }
+        }, current),
       successMessage,
       onSuccess,
     )
   }
   const battleActions = useBattleActions({ game, dispatch })
+
+  // 問題包出口：暫停選單主動回報用，也註冊給 GameErrorBoundary 崩潰時取用。
+  const buildIssueBundle = useCallback(
+    (errorSummary?: string | null): ReplayIssueBundleV1 => {
+      const failed = lastFailedCommandRef.current
+      return buildReplayIssueBundle({
+        state: game,
+        mode: 'offline',
+        viewerId: viewerPlayerId,
+        decks: {
+          playerOne: deckConfig.player,
+          playerTwo: deckConfig.ai,
+        },
+        errorSummary: errorSummary ?? failed?.message ?? null,
+        failedCommand: failed?.command ?? null,
+        initialState: initialGameRef.current,
+      })
+    },
+    [game, deckConfig, viewerPlayerId],
+  )
+
+  useEffect(() => {
+    registerIssueBundleProvider((errorSummary) =>
+      buildIssueBundle(errorSummary),
+    )
+  }, [buildIssueBundle])
 
   const handleAdvancePhase = () => {
     dispatch(
@@ -768,7 +820,10 @@ export function useMatchController(params: {
   // resetMatchState: resets all match-owned state (used by App's resetGame)
   const resetMatchState = useCallback(
     (nextConfig: { player: DeckChoice; ai: BuiltInDeckChoice }) => {
-      setGame(createDemoSetupGame('player-one', nextConfig))
+      const nextGame = createDemoSetupGame('player-one', nextConfig)
+      initialGameRef.current = nextGame
+      lastFailedCommandRef.current = null
+      setGame(nextGame)
       resetSetup()
       battleActions.clearAttacker()
       setSelectedFaintTargetIds([])
@@ -787,6 +842,8 @@ export function useMatchController(params: {
   // loadScenarioState: loads a player-configured test scenario, skipping opening setup
   const loadScenarioState = useCallback(
     (scenarioState: GameState, scenarioMessage: string) => {
+      initialGameRef.current = scenarioState
+      lastFailedCommandRef.current = null
       setGame(scenarioState)
       setSetupStep(null)
       setMessage(scenarioMessage)
@@ -927,5 +984,6 @@ export function useMatchController(params: {
     // Reset
     resetMatchState,
     loadScenarioState,
+    buildIssueBundle,
   } as const
 }
