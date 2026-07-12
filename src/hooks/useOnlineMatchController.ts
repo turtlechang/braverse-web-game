@@ -10,6 +10,7 @@ import type {
   SupportCard,
 } from '../game'
 import {
+  buildReplayIssueBundle,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
   getBlockerCandidates,
@@ -29,6 +30,7 @@ import {
 import { useMatchAnimations } from './useMatchAnimations'
 import { useBattleActions, type DispatchGameCommand } from './useBattleActions'
 import { getPendingChoicePlayerId } from './useMatchController'
+import { registerIssueBundleProvider } from './issueBundleSource'
 
 const opponentOfId = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
@@ -83,6 +85,22 @@ export function useOnlineMatchController(params: {
     previousGameRef.current = game
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game])
+
+  // 註冊問題包 provider 給 GameErrorBoundary。線上 game 已是伺服器遮罩版，
+  // builder 的 online 模式會再遮罩一次（防禦性）並強制 initialState 為 null；
+  // 牌組識別線上端不可知，failedCommand 由伺服器拒絕（command-rejected，
+  // 見 known-risks R14）尚未回流 UI，先維持 null。
+  useEffect(() => {
+    registerIssueBundleProvider((errorSummary) =>
+      buildReplayIssueBundle({
+        state: game,
+        mode: 'online',
+        viewerId: viewerPlayerId,
+        decks: { playerOne: 'unknown', playerTwo: 'unknown' },
+        errorSummary,
+      }),
+    )
+  }, [game, viewerPlayerId])
 
   const dispatch: DispatchGameCommand = (command, successMessage, onSuccess) => {
     const commands = Array.isArray(command) ? command : [command]

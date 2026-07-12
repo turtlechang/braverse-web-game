@@ -321,6 +321,16 @@ export {
   replayCommandLog,
   replayCommands,
 } from './replay'
+export {
+  buildReplayIssueBundle,
+  parseReplayIssueBundle,
+  ReplayIssueBundleParseError,
+  serializeReplayIssueBundle,
+} from './replay-issue-bundle'
+export type {
+  BuildReplayIssueBundleOptions,
+  ReplayIssueBundleV1,
+} from './replay-issue-bundle'
 export type {
   AiActionType,
   AiDecision,
