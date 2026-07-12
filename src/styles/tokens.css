@@ -1,0 +1,276 @@
+/**
+ * Braverse Design Tokens
+ *
+ * 集中管理色彩、字型、間距、圓角、陰影、動畫、z-index 等設計原子。
+ * 修改 token 後請同步執行 `docs/phase1-state-matrix.md` 與 mockup gallery 的截圖比對。
+ *
+ * 風格定位：原創電競科幻戰術桌
+ * - 深藍底 / 青色全息高亮 / 琥珀警示 / 抽象場景材質
+ * - 主要用於桌機與平板橫向
+ */
+
+:root {
+  /* === 色彩：背景 === */
+  --color-bg-base: #020817;
+  --color-bg-elevated: #07162f;
+  --color-bg-panel: #0b1d3e;
+  --color-bg-panel-soft: #132038;
+  --color-bg-overlay: rgba(7, 22, 47, 0.78);
+
+  /* === 色彩：表面與邊框 === */
+  --color-surface-card: #0c244d;
+  --color-surface-elevated: #123f90;
+  --color-border-subtle: rgba(126, 231, 240, 0.18);
+  --color-border-default: rgba(126, 231, 240, 0.32);
+  --color-border-strong: rgba(126, 231, 240, 0.55);
+
+  /* === 色彩：主色（青色全息） === */
+  --color-primary: #7ee7f0;
+  --color-primary-strong: #67e7ff;
+  --color-primary-soft: rgba(126, 231, 240, 0.18);
+  --color-on-primary: #020817;
+
+  /* === 色彩：次要（深藍） === */
+  --color-secondary: #149bd2;
+  --color-secondary-strong: #27b8dd;
+  --color-on-secondary: #f7fbff;
+
+  /* === 色彩：強調琥珀 === */
+  --color-accent: #f3b937;
+  --color-accent-strong: #ffcf49;
+  --color-accent-soft: rgba(243, 185, 55, 0.18);
+  --color-on-accent: #2a1a05;
+
+  /* === 色彩：危險 === */
+  --color-danger: #ff6b6b;
+  --color-danger-strong: #ff4444;
+  --color-danger-soft: rgba(255, 107, 107, 0.18);
+  --color-on-danger: #fff;
+
+  /* === 色彩：成功 === */
+  --color-success: #6ce68c;
+  --color-success-soft: rgba(108, 230, 140, 0.18);
+  --color-on-success: #020817;
+
+  /* === 色彩：文字 === */
+  --color-text-primary: #f7fbff;
+  --color-text-secondary: #d9efff;
+  --color-text-muted: rgba(223, 239, 255, 0.78);
+  --color-text-subtle: rgba(223, 239, 255, 0.55);
+  --color-text-disabled: rgba(223, 239, 255, 0.32);
+  --color-text-inverse: #020817;
+
+  /* === 色彩：戰鬥輔助 === */
+  --color-battle-rest: #d9efff;
+  --color-battle-active: #7ee7f0;
+  --color-battle-target: #ff9d9d;
+  --color-battle-blocker: #a9d8ff;
+  --color-battle-faint: rgba(255, 255, 255, 0.32);
+
+  /* === 字型 === */
+  --font-family-base:
+    Inter, "Noto Sans TC", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-family-display:
+    "Rajdhani", "Noto Sans TC", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-family-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --font-size-xs: 0.72rem;
+  --font-size-sm: 0.84rem;
+  --font-size-base: 0.94rem;
+  --font-size-md: 1.05rem;
+  --font-size-lg: 1.2rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-size-3xl: clamp(2.1rem, 5vw, 4.6rem);
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+
+  --line-height-tight: 1.15;
+  --line-height-normal: 1.45;
+  --line-height-relaxed: 1.65;
+
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.05em;
+  --letter-spacing-widest: 0.12em;
+
+  /* === 間距 === */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 56px;
+  --space-10: 72px;
+
+  /* === 圓角 === */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  /* === 陰影 === */
+  --shadow-sm: 0 1px 2px rgba(2, 8, 23, 0.4);
+  --shadow-md:
+    0 4px 12px rgba(2, 8, 23, 0.45),
+    0 1px 2px rgba(2, 8, 23, 0.4);
+  --shadow-lg:
+    0 16px 40px rgba(2, 8, 23, 0.55),
+    0 2px 4px rgba(2, 8, 23, 0.4);
+  --shadow-glow-primary: 0 0 0 1px var(--color-primary), 0 6px 24px rgba(126, 231, 240, 0.35);
+  --shadow-glow-accent: 0 0 0 1px var(--color-accent), 0 6px 24px rgba(243, 185, 55, 0.32);
+  --shadow-glow-danger: 0 0 0 1px var(--color-danger), 0 6px 24px rgba(255, 107, 107, 0.32);
+
+  /* === 動畫 === */
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --easing-emphasized: cubic-bezier(0.2, 0, 0.1, 1.4);
+  --easing-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  --duration-instant: 80ms;
+  --duration-fast: 160ms;
+  --duration-base: 240ms;
+  --duration-slow: 380ms;
+  --duration-glacial: 600ms;
+
+  /* === 觸控目標 === */
+  --touch-target-min: 44px;
+  --control-height-sm: 32px;
+  --control-height-md: 40px;
+  --control-height-lg: 48px;
+
+  /* === 焦點 === */
+  --focus-ring-width: 2px;
+  --focus-ring-color: var(--color-primary);
+  --focus-ring-offset: 2px;
+
+  /* === 表面材質（電競科幻） === */
+  --surface-grid-color: rgba(126, 231, 240, 0.06);
+  --surface-grid-size: 32px;
+  --surface-noise-opacity: 0.04;
+
+  /* === z-index 層級 === */
+  --z-base: 0;
+  --z-elevated: 10;
+  --z-sticky: 50;
+  --z-overlay: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-tooltip: 400;
+  --z-modal-backdrop: 199;
+
+  /* === 佈局 === */
+  --layout-max-width: 1280px;
+  --layout-gutter: 24px;
+  --layout-aside-width: 240px;
+  --layout-aside-width-compact: 200px;
+  --layout-rail-width: 220px;
+}
+
+/* === 變體：深色強化（原版，含漸層/glow/棋盤格） === */
+:root,
+[data-theme="tactical"] {
+  color-scheme: dark;
+}
+
+/* === 變體：戰術深空 Clean（2026-07-12 優化版） =========================
+ * 同色系，但關閉裝飾元素：
+ * - 標題改用純色，移除漸層
+ * - glow 強度降為 0（無 box-shadow 全息高亮）
+ * - 棋盤格 surface-grid 顏色拉到接近 0
+ * - 按鈕 / 卡片改用平面色塊
+ * - 保留深藍底、青色 primary、琥珀警示三色骨架
+ * ========================================================================= */
+[data-theme="tactical-clean"] {
+  color-scheme: dark;
+  --color-primary: #6fdde6;
+  --color-primary-strong: #95ecf0;
+  --color-primary-soft: rgba(111, 221, 230, 0.10);
+  --color-accent: #e9b13a;
+  --color-accent-soft: rgba(233, 177, 58, 0.12);
+  --color-border-subtle: rgba(223, 239, 255, 0.06);
+  --color-border-default: rgba(223, 239, 255, 0.16);
+  --color-border-strong: rgba(223, 239, 255, 0.28);
+  --surface-grid-color: rgba(111, 221, 230, 0.02);
+  --shadow-sm: none;
+  --shadow-md: 0 1px 0 rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 2px 0 rgba(0, 0, 0, 0.45);
+  --shadow-glow-primary: 0 0 0 1px var(--color-primary);
+  --shadow-glow-accent: 0 0 0 1px var(--color-accent);
+  --shadow-glow-danger: 0 0 0 1px var(--color-danger);
+  --letter-spacing-wide: 0.01em;
+  --letter-spacing-widest: 0.04em;
+}
+
+/* === 變體：戰術深空 Mono（純灰階、無主色強調） =====================
+ * 完全去掉青色 / 琥珀點綴，僅保留中性灰階與純白文字。
+ * 用途：證明資訊層不需要顏色也能閱讀。
+ * ==================================================================== */
+[data-theme="tactical-mono"] {
+  color-scheme: dark;
+  --color-primary: #d9e2ee;
+  --color-primary-strong: #f0f4fa;
+  --color-primary-soft: rgba(217, 226, 238, 0.08);
+  --color-secondary: #aab4c2;
+  --color-secondary-strong: #c8d2de;
+  --color-accent: #b0b8c4;
+  --color-accent-soft: rgba(176, 184, 196, 0.10);
+  --color-border-subtle: rgba(217, 226, 238, 0.05);
+  --color-border-default: rgba(217, 226, 238, 0.14);
+  --color-border-strong: rgba(217, 226, 238, 0.26);
+  --surface-grid-color: rgba(217, 226, 238, 0.015);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-glow-primary: 0 0 0 1px var(--color-border-default);
+  --shadow-glow-accent: 0 0 0 1px var(--color-border-default);
+  --shadow-glow-danger: 0 0 0 1px var(--color-border-default);
+  --letter-spacing-wide: 0;
+  --letter-spacing-widest: 0;
+}
+
+/* === 變體：低眩光（更高對比、可讀性） === */
+[data-theme="low-glare"] {
+  --color-bg-base: #010410;
+  --color-bg-elevated: #040c29;
+  --color-bg-panel: #06183e;
+  --color-primary: #65e8ff;
+  --color-text-primary: #f7fbff;
+  --color-text-secondary: #dff8ff;
+  --color-text-muted: rgba(223, 248, 255, 0.85);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* === 變體：賽事廣播（更大字、更強對比） === */
+[data-theme="broadcast"] {
+  --color-bg-elevated: #071b46;
+  --color-bg-panel: #0b2a61;
+  --font-size-base: 1.02rem;
+  --font-size-md: 1.12rem;
+  --font-size-lg: 1.32rem;
+  --font-size-xl: 1.65rem;
+  --color-primary: #71e9ff;
+  --color-accent: #ffd159;
+  --shadow-glow-primary: 0 0 0 1px var(--color-primary), 0 8px 28px rgba(113, 233, 255, 0.45);
+}
+
+/* === 尊重使用者的動畫偏好 === */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+    --duration-glacial: 0ms;
+  }
+}

@@ -1,5 +1,6 @@
 import { Sparkles, Swords } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState } from 'react'
+import './styles/base.css'
 import './App.css'
 import {
   canActivateStage,
