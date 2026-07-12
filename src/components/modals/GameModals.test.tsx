@@ -472,6 +472,34 @@ describe('CardDetailModal', () => {
     expect(markup.match(/card-rule-section/g)).toHaveLength(1)
   })
 
+  it('shows the FLIP heading and text for a FLIP-only cookie once effectText is populated (BS2-056 regression)', () => {
+    // 修復前 official-card-adapter.ts／starter-deck.ts 的 fallback chain 沒有把
+    // flip 納入，FLIP-only 餅乾（無 activate/on-play 技能）的 card.effectText
+    // 永遠是 undefined，這裡的 FLIP 段落因此永遠不會渲染。
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={{
+          id: 'BS2-056',
+          instanceId: 'test-BS2-056',
+          name: 'Raspberry Mousse Cookie',
+          type: 'cookie',
+          officialType: 'flip',
+          level: 2,
+          hp: 3,
+          attack: 1,
+          attackCost: 1,
+          attackText: '《{P}》 Deals 1 damage.',
+          effectText:
+            '《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.',
+        }}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('<strong>FLIP</strong>')
+    expect(markup).toContain('gains +1 HP')
+  })
+
   it('shows ST2-021 Pretzel Snare official effect text', () => {
     const markup = renderToStaticMarkup(
       <CardDetailModal

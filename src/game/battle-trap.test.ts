@@ -61,6 +61,32 @@ describe('TRAP response window', () => {
     },
   })
 
+  const trashCountConditionTrap = (): GameCard => ({
+    id: 'BS2-080',
+    instanceId: 'bs2-080-test',
+    name: 'Abandoned Cloud Nest',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: '《{P}{P}》 If there are 15 cards or more in your trash, select up to 1 of your opponent\'s Cookies. During this turn, that Cookie deals -3 attack damage.',
+      cost: { energy: { purple: 2 }, discardHand: 0 },
+      // 產生自泛用 parser 的 condition.kind 命名為 'opponent-trash-count-at-least'，
+      // 但陷阱評估（battle.ts isTrapConditionMet）實際檢查的是「陷阱擁有者
+      // （防守方）自己」的棄牌區，並非對手（攻擊方）的——這是刻意保留的既有語意
+      // （與 CardEffect 用的同名 condition 語意不同，見 targeting.ts），不要
+      // 誤以為是命名反過來要「修正」成檢查對手棄牌區。
+      condition: { kind: 'opponent-trash-count-at-least', count: 15 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+  })
+
   const hiddenWarpgateTrap = (): GameCard => ({
     id: 'ST5-021',
     instanceId: 'st5-021-test',
@@ -111,6 +137,43 @@ describe('TRAP response window', () => {
     expect(result.pendingReplacement).toMatchObject({
       tasks: [{ playerId: 'player-one', remaining: 1 }],
     })
+  })
+
+  it("gates BS2-080's condition on the trap owner's (defender's) own trash, not the attacker's", () => {
+    const trap = trashCountConditionTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, ...state.players['player-one'].hand]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-purple-a', 'purple'), rested: false },
+      { card: item('p1-purple-b', 'purple'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    // 防守方（陷阱擁有者）自己的棄牌區未滿 15 張：不該出現在候選陷阱中。
+    expect(getTrapCandidates(state, 'player-one')).toEqual([])
+
+    // 攻擊方（對手）棄牌區堆到 15 張以上，但條件檢查的不是這裡，候選仍應為空。
+    state.players['player-two'].discardPile = Array.from(
+      { length: 20 },
+      (_, i) => item(`p2-trash-${i}`),
+    )
+    expect(getTrapCandidates(state, 'player-one')).toEqual([])
+
+    // 防守方自己的棄牌區到達 15 張，條件才成立、陷阱才可發動。
+    state.players['player-one'].discardPile = Array.from(
+      { length: 15 },
+      (_, i) => item(`p1-trash-${i}`),
+    )
+    expect(getTrapCandidates(state, 'player-one')).toEqual([trap])
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple-a', 'p1-purple-b'],
+      targetIds: ['attacker'],
+    })
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -3 }),
+    )
   })
 
   it('lets ST5-021 select and trash the attacking Cookie', () => {

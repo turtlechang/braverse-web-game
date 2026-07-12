@@ -204,6 +204,35 @@ describe('official card adapter', () => {
     })
   })
 
+  it('falls back to the FLIP ability text when the generic converter cannot parse a FLIP-only card (BS2-056 regression)', () => {
+    // BS2-056 Raspberry Mousse Cookie 的 FLIP 文字（discard cost + gain-hp）不會被
+    // convertOfficialCardEffects 的一般轉換器解析出來，先前只有 card.flip 有正確值，
+    // 頂層 card.effectText/card.effects 是 undefined；CardDetailModal 靠這兩個欄位
+    // 才會顯示「FLIP」段落，導致玩家點開卡牌詳情看不到 FLIP 說明。
+    const result = convertOfficialCardToGameCard(
+      createOfficialCard({
+        cardNumber: 'BS2-056',
+        baseCardNumber: 'BS2-056',
+        skill: { name: null, text: null },
+        attackText: '《{P}》 Deals 1 damage.',
+        flipText:
+          '《Discard 1 card.》 The Cookie with this card attached for HP gains +1 HP.',
+      }),
+      'flip-copy',
+    )
+
+    expect(result.status).toBe('converted')
+    if (result.status !== 'converted') return
+
+    expect(result.gameCard.flip).toMatchObject({
+      cost: { discardHand: 1 },
+      effects: [{ kind: 'gain-hp', amount: 1 }],
+    })
+    // 修復前這兩個欄位是 undefined，CardDetailModal 的 FLIP 段落因此不會渲染。
+    expect(result.gameCard.effectText).toContain('gains +1 HP')
+    expect(result.gameCard.effects).toEqual([{ kind: 'gain-hp', amount: 1 }])
+  })
+
   it('uses base card number as runtime id while preserving art variant metadata', () => {
     const result = convertOfficialCardToGameCard(createOfficialCard())
 
