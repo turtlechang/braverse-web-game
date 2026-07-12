@@ -88,4 +88,22 @@ describe('DeckEditorModal pool interactions', () => {
 
     await cleanup()
   })
+
+  it('shows item, trap, and stage card counts in the stats bar', async () => {
+    const { container, cleanup } = await render()
+
+    const stats = container.querySelectorAll('.deck-editor-stats span')
+    const labels = Array.from(stats).map((node) => node.textContent ?? '')
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^FLIP：\d+ \/ 16$/),
+        expect.stringMatching(/^餅乾卡：\d+$/),
+        expect.stringMatching(/^物品卡：\d+$/),
+        expect.stringMatching(/^陷阱卡：\d+$/),
+        expect.stringMatching(/^場景卡：\d+$/),
+      ]),
+    )
+
+    await cleanup()
+  })
 })

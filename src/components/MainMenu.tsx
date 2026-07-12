@@ -159,6 +159,9 @@ export function MainMenu({
                 <span>{selectedValidation.stats.totalCards} / 60 張</span>
                 <span>FLIP {selectedValidation.stats.flipCards} / 16</span>
                 <span>餅乾卡 {selectedValidation.stats.cookieCards}</span>
+                <span>物品卡 {selectedValidation.stats.itemCards}</span>
+                <span>陷阱卡 {selectedValidation.stats.trapCards}</span>
+                <span>場景卡 {selectedValidation.stats.stageCards}</span>
               </div>
             ) : (
               <p>請先建立或選擇一副自訂牌組。</p>
@@ -266,6 +269,9 @@ export function MainMenu({
                       <span>{validation.stats.totalCards} 張</span>
                       <span>FLIP {validation.stats.flipCards}</span>
                       <span>餅乾 {validation.stats.cookieCards}</span>
+                      <span>物品 {validation.stats.itemCards}</span>
+                      <span>陷阱 {validation.stats.trapCards}</span>
+                      <span>場景 {validation.stats.stageCards}</span>
                       <span>{formatUpdatedAt(deck.updatedAt)}</span>
                     </div>
                     <div className="main-menu-deck-actions">

@@ -364,6 +364,9 @@ export function DeckEditorModal({
             <div className="deck-editor-stats">
               <span>FLIP：{deckStats.flipCards} / {MAX_FLIP_CARDS}</span>
               <span>餅乾卡：{deckStats.cookieCards}</span>
+              <span>物品卡：{deckStats.itemCards}</span>
+              <span>陷阱卡：{deckStats.trapCards}</span>
+              <span>場景卡：{deckStats.stageCards}</span>
             </div>
             <div className="deck-editor-io-bar">
               <button type="button" className="deck-editor-io-btn" onClick={handleExport}>
