@@ -87,6 +87,8 @@ export {
   getCardPoolEntry,
   getCardPoolEntriesByColor,
   getCardPoolEntriesByType,
+  getCardPoolVariants,
+  normalizeCardNumber,
 } from './card-pool'
 export type { CardPoolEntry } from './card-pool'
 export {

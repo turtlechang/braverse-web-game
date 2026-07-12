@@ -246,7 +246,7 @@ export const AI_PRESET_BS2_PURPLE_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS2-055', count: 1 },
   { cardNumber: 'BS2-058', count: 4 },
   { cardNumber: 'BS2-062', count: 4 },
-  { cardNumber: 'BS2-068@1', count: 4 },
+  { cardNumber: 'BS2-068', count: 4 },
   { cardNumber: 'BS2-069', count: 4 },
   { cardNumber: 'BS2-075', count: 2 },
   { cardNumber: 'ST5-007', count: 3 },

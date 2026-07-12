@@ -10,7 +10,11 @@ import {
   exportDeck,
   importDeck,
 } from '../../game/custom-deck'
-import { getCardPoolEntry, type CardPoolEntry } from '../../game/card-pool'
+import {
+  getCardPoolEntry,
+  normalizeCardNumber,
+  type CardPoolEntry,
+} from '../../game/card-pool'
 import { useDeckEditor } from '../../hooks/useDeckEditor'
 import './GameModals.css'
 
@@ -66,10 +70,13 @@ const TYPE_OPTIONS = [
 const RARITY_OPTIONS = [
   { value: null, label: '全部稀有度' },
   { value: 'C', label: 'C' },
-  { value: 'UC', label: 'UC' },
+  { value: 'U', label: 'U' },
   { value: 'R', label: 'R' },
   { value: 'SR', label: 'SR' },
   { value: 'SSR', label: 'SSR' },
+  { value: 'UR', label: 'UR' },
+  { value: 'SEC', label: 'SEC' },
+  { value: 'SUR', label: 'SUR' },
 ]
 
 const SERIES_OPTIONS = [
@@ -259,14 +266,58 @@ export function DeckEditorModal({
                   </option>
                 ))}
               </select>
+              <select
+                value={editor.filterLevel ?? ''}
+                onChange={(e) =>
+                  editor.setFilterLevel(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">全部等級</option>
+                <option value="1">Lv.1</option>
+                <option value="2">Lv.2</option>
+                <option value="3">Lv.3</option>
+              </select>
+              <select
+                value={editor.filterHp ?? ''}
+                onChange={(e) =>
+                  editor.setFilterHp(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">全部 HP</option>
+                <option value="1">HP 1</option>
+                <option value="2">HP 2</option>
+                <option value="3">HP 3</option>
+                <option value="4">HP 4</option>
+                <option value="5">HP 5</option>
+                <option value="6">HP 6</option>
+              </select>
+              <select
+                value={editor.filterEffect ?? ''}
+                onChange={(e) =>
+                  editor.setFilterEffect(e.target.value || null)
+                }
+              >
+                <option value="">全部效果</option>
+                <option value="activate">啟動</option>
+                <option value="blocker">阻擋者</option>
+                <option value="on-play">登場時</option>
+                <option value="your-turn">你的回合</option>
+                <option value="once-per-turn">每回合一次</option>
+              </select>
             </div>
             <div className="deck-editor-pool-grid">
               {filteredPool.map((entry) => {
-                const currentCount =
-                  editor.deckEntries.find(
-                    (e) => e.cardNumber === entry.cardNumber,
-                  )?.count ?? 0
-                const atMax = currentCount >= MAX_COPIES_PER_CARD
+                const baseCardNumber = normalizeCardNumber(entry.cardNumber)
+                const ownCount = editor.deckEntries
+                  .filter((e) => e.cardNumber === entry.cardNumber)
+                  .reduce((sum, e) => sum + e.count, 0)
+                const totalForBase = editor.deckEntries
+                  .filter(
+                    (e) => normalizeCardNumber(e.cardNumber) === baseCardNumber,
+                  )
+                  .reduce((sum, e) => sum + e.count, 0)
+                const atMax = totalForBase >= MAX_COPIES_PER_CARD
+                const showCount = ownCount
 
                 return (
                   <div
@@ -276,15 +327,15 @@ export function DeckEditorModal({
                     <button
                       type="button"
                       className="deck-editor-pool-card-btn"
-                      title={`${entry.cardNumber} ${entry.name}（點擊加入 1 張）`}
+                      title={`${baseCardNumber} ${entry.name}（點擊加入 1 張）`}
                       disabled={atMax}
                       onClick={() => editor.addCard(entry.cardNumber)}
                     >
                       <CardPoolImage entry={entry} />
                     </button>
-                    {currentCount > 0 && (
+                    {showCount > 0 && (
                       <span className="deck-editor-pool-count" aria-hidden="true">
-                        {currentCount}
+                        {showCount}
                       </span>
                     )}
                     <button
@@ -293,17 +344,17 @@ export function DeckEditorModal({
                       title="卡片詳細與數量調整"
                       onClick={() =>
                         setTooltipCard(
-                          tooltipCard === entry.cardNumber ? null : entry.cardNumber,
+                          tooltipCard === baseCardNumber ? null : baseCardNumber,
                         )
                       }
                     >
                       <Info aria-hidden="true" />
                     </button>
-                    {tooltipCard === entry.cardNumber && (
+                    {tooltipCard === baseCardNumber && (
                       <div className="deck-editor-tooltip" ref={tooltipRef}>
                         <div className="deck-editor-tooltip-header">
                           <span className="deck-editor-tooltip-number">
-                            {entry.cardNumber}
+                            {baseCardNumber}
                           </span>
                           <span className="deck-editor-tooltip-name">
                             {entry.name}
@@ -313,7 +364,7 @@ export function DeckEditorModal({
                           <button
                             type="button"
                             className="deck-editor-tooltip-btn"
-                            disabled={currentCount === 0}
+                            disabled={showCount === 0}
                             onClick={() => {
                               editor.removeCard(entry.cardNumber)
                             }}
@@ -321,7 +372,7 @@ export function DeckEditorModal({
                             <Minus aria-hidden="true" />
                           </button>
                           <span className="deck-editor-tooltip-count">
-                            {currentCount}
+                            {showCount}
                           </span>
                           <button
                             type="button"
@@ -364,6 +415,9 @@ export function DeckEditorModal({
             <div className="deck-editor-stats">
               <span>FLIP：{deckStats.flipCards} / {MAX_FLIP_CARDS}</span>
               <span>餅乾卡：{deckStats.cookieCards}</span>
+              <span>物品卡：{deckStats.itemCards}</span>
+              <span>陷阱卡：{deckStats.trapCards}</span>
+              <span>場景卡：{deckStats.stageCards}</span>
             </div>
             <div className="deck-editor-io-bar">
               <button type="button" className="deck-editor-io-btn" onClick={handleExport}>
@@ -377,7 +431,14 @@ export function DeckEditorModal({
             </div>
             <div className="deck-editor-deck-list">
               {editor.deckEntries.map((entry) => {
+                const baseCardNumber = normalizeCardNumber(entry.cardNumber)
                 const poolEntry = getCardPoolEntry(entry.cardNumber)
+                const totalForBase = editor.deckEntries
+                  .filter(
+                    (e) => normalizeCardNumber(e.cardNumber) === baseCardNumber,
+                  )
+                  .reduce((sum, e) => sum + e.count, 0)
+                const atBaseMax = totalForBase >= MAX_COPIES_PER_CARD
                 return (
                   <div
                     key={entry.cardNumber}
@@ -395,7 +456,7 @@ export function DeckEditorModal({
                       </div>
                     )}
                     <span className="deck-editor-deck-entry-number">
-                      {entry.cardNumber}
+                      {baseCardNumber}
                     </span>
                     <span className="deck-editor-deck-entry-name">
                       {poolEntry?.name ?? entry.cardNumber}
@@ -416,7 +477,7 @@ export function DeckEditorModal({
                       <button
                         type="button"
                         className="deck-editor-count-btn"
-                        disabled={entry.count >= MAX_COPIES_PER_CARD}
+                        disabled={atBaseMax}
                         onClick={() =>
                           editor.addCard(entry.cardNumber)
                         }

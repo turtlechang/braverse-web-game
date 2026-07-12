@@ -1,7 +1,13 @@
 import type { OfficialCardRecord } from '../cards/types'
-import { getCardPoolEntry } from './card-pool'
+import { getCardPoolEntry, normalizeCardNumber } from './card-pool'
 import { createCard } from './starter-deck'
 import type { GameCard, PlayerId } from './types'
+
+const canonicalizeEntry = (entry: CustomDeckEntry): CustomDeckEntry => {
+  const base = normalizeCardNumber(entry.cardNumber)
+  if (base === entry.cardNumber) return entry
+  return { ...entry, cardNumber: base }
+}
 
 export interface CustomDeckEntry {
   cardNumber: string
@@ -30,6 +36,9 @@ export interface DeckValidationResult {
     totalCards: number
     flipCards: number
     cookieCards: number
+    itemCards: number
+    trapCards: number
+    stageCards: number
   }
 }
 
@@ -128,8 +137,12 @@ export const validateCustomDeck = (
   let totalCount = 0
   let flipCards = 0
   let cookieCards = 0
+  let itemCards = 0
+  let trapCards = 0
+  let stageCards = 0
 
-  for (const entry of entries) {
+  for (const rawEntry of entries) {
+    const entry = canonicalizeEntry(rawEntry)
     if (entry.count < 1) {
       errors.push(`${entry.cardNumber} 的數量不能小於 1`)
     }
@@ -153,6 +166,12 @@ export const validateCustomDeck = (
     }
     if (poolEntry.type === 'cookie' || poolEntry.type === 'flip') {
       cookieCards += entry.count
+    } else if (poolEntry.type === 'item') {
+      itemCards += entry.count
+    } else if (poolEntry.type === 'trap') {
+      trapCards += entry.count
+    } else if (poolEntry.type === 'stage') {
+      stageCards += entry.count
     }
     totalCount += entry.count
   }
@@ -185,6 +204,9 @@ export const validateCustomDeck = (
       totalCards: totalCount,
       flipCards,
       cookieCards,
+      itemCards,
+      trapCards,
+      stageCards,
     },
   }
 }
@@ -195,7 +217,8 @@ export const createDeckFromCustomDeck = (
 ): GameCard[] => {
   const cards: GameCard[] = []
 
-  for (const entry of deck.entries) {
+  for (const rawEntry of deck.entries) {
+    const entry = canonicalizeEntry(rawEntry)
     const poolEntry = getCardPoolEntry(entry.cardNumber)
     if (!poolEntry) {
       throw new Error(`卡池中找不到 ${entry.cardNumber}`)
@@ -247,10 +270,11 @@ export const importDeck = (
       if (typeof entry.count !== 'number' || entry.count < 1) {
         return { deck: null, error: `${entry.cardNumber} 數量格式錯誤` }
       }
-      entries.push({
-        cardNumber: entry.cardNumber,
-        count: Math.floor(entry.count),
-      })
+      const cardNumber = entry.cardNumber
+      if (!getCardPoolEntry(cardNumber)) {
+        return { deck: null, error: `卡池中找不到 ${entry.cardNumber}` }
+      }
+      entries.push({ cardNumber, count: Math.floor(entry.count) })
     }
 
     const validation = validateCustomDeck(entries)
