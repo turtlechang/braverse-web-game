@@ -15,6 +15,9 @@ export interface DeckEditorState {
   filterType: string | null
   filterRarity: string | null
   filterSeries: string | null
+  filterLevel: number | null
+  filterHp: number | null
+  filterEffect: string | null
 }
 
 export interface DeckEditorActions {
@@ -27,6 +30,9 @@ export interface DeckEditorActions {
   setFilterType: (type: string | null) => void
   setFilterRarity: (rarity: string | null) => void
   setFilterSeries: (series: string | null) => void
+  setFilterLevel: (level: number | null) => void
+  setFilterHp: (hp: number | null) => void
+  setFilterEffect: (effect: string | null) => void
   clearDeck: () => void
   loadDeck: (deck: CustomDeck) => void
 }
@@ -48,6 +54,9 @@ export function useDeckEditor(): DeckEditorState &
   const [filterType, setFilterType] = useState<string | null>(null)
   const [filterRarity, setFilterRarity] = useState<string | null>(null)
   const [filterSeries, setFilterSeries] = useState<string | null>(null)
+  const [filterLevel, setFilterLevel] = useState<number | null>(null)
+  const [filterHp, setFilterHp] = useState<number | null>(null)
+  const [filterEffect, setFilterEffect] = useState<string | null>(null)
 
   const addCard = useCallback((cardNumber: string) => {
     const raw = cardNumber
@@ -142,6 +151,21 @@ export function useDeckEditor(): DeckEditorState &
       ) {
         return false
       }
+      if (filterLevel !== null && entry.level !== filterLevel) {
+        return false
+      }
+      if (filterHp !== null && entry.hp !== filterHp) {
+        return false
+      }
+      if (filterEffect === 'attack' && !entry.attackText) {
+        return false
+      }
+      if (filterEffect === 'skill' && !entry.skill?.text) {
+        return false
+      }
+      if (filterEffect === 'flip' && !entry.flipText) {
+        return false
+      }
       if (searchText) {
         const lower = searchText.toLowerCase()
         if (
@@ -153,7 +177,7 @@ export function useDeckEditor(): DeckEditorState &
       }
       return true
     })
-  }, [searchText, filterColor, filterType, filterRarity, filterSeries])
+  }, [searchText, filterColor, filterType, filterRarity, filterSeries, filterLevel, filterHp, filterEffect])
 
   const getDeckTotalCount = useCallback((): number => {
     return deckEntries.reduce((sum, e) => sum + e.count, 0)
@@ -176,6 +200,9 @@ export function useDeckEditor(): DeckEditorState &
     filterType,
     filterRarity,
     filterSeries,
+    filterLevel,
+    filterHp,
+    filterEffect,
     addCard,
     removeCard,
     setCardCount,
@@ -185,6 +212,9 @@ export function useDeckEditor(): DeckEditorState &
     setFilterType,
     setFilterRarity,
     setFilterSeries,
+    setFilterLevel,
+    setFilterHp,
+    setFilterEffect,
     clearDeck,
     loadDeck,
     getFilteredPool,

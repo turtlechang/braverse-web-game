@@ -70,10 +70,13 @@ const TYPE_OPTIONS = [
 const RARITY_OPTIONS = [
   { value: null, label: '全部稀有度' },
   { value: 'C', label: 'C' },
-  { value: 'UC', label: 'UC' },
+  { value: 'U', label: 'U' },
   { value: 'R', label: 'R' },
   { value: 'SR', label: 'SR' },
   { value: 'SSR', label: 'SSR' },
+  { value: 'UR', label: 'UR' },
+  { value: 'SEC', label: 'SEC' },
+  { value: 'SUR', label: 'SUR' },
 ]
 
 const SERIES_OPTIONS = [
@@ -262,6 +265,42 @@ export function DeckEditorModal({
                     {opt.label}
                   </option>
                 ))}
+              </select>
+              <select
+                value={editor.filterLevel ?? ''}
+                onChange={(e) =>
+                  editor.setFilterLevel(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">全部等級</option>
+                <option value="1">Lv.1</option>
+                <option value="2">Lv.2</option>
+                <option value="3">Lv.3</option>
+              </select>
+              <select
+                value={editor.filterHp ?? ''}
+                onChange={(e) =>
+                  editor.setFilterHp(e.target.value ? Number(e.target.value) : null)
+                }
+              >
+                <option value="">全部 HP</option>
+                <option value="1">HP 1</option>
+                <option value="2">HP 2</option>
+                <option value="3">HP 3</option>
+                <option value="4">HP 4</option>
+                <option value="5">HP 5</option>
+                <option value="6">HP 6</option>
+              </select>
+              <select
+                value={editor.filterEffect ?? ''}
+                onChange={(e) =>
+                  editor.setFilterEffect(e.target.value || null)
+                }
+              >
+                <option value="">全部效果</option>
+                <option value="attack">攻擊效果</option>
+                <option value="skill">技能效果</option>
+                <option value="flip">FLIP 效果</option>
               </select>
             </div>
             <div className="deck-editor-pool-grid">
