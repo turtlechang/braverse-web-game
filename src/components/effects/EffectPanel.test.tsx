@@ -89,6 +89,49 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('shows the ability text for the active pendingEffect, not the card\'s unrelated effectText (BS2-058 attack-effect regression)', () => {
+    const attacker: CookieCard = {
+      ...createCookieCard(0),
+      // sourceCard.effectText 是卡牌的技能文字，攻擊後續效果流程要顯示的是
+      // pendingEffect.skill.text（攻擊文字），兩者這裡故意設成不同字串以驗證。
+      effectText: 'OnPlay 登場技能文字（不應顯示）',
+    }
+    const pending = createPendingEffect({
+      sourceCard: attacker,
+      sourceKind: 'attack',
+      triggerLabel: '攻擊後續效果',
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: '攻擊後續效果文字（應該顯示）',
+        effects: [],
+      },
+    })
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain('攻擊後續效果文字（應該顯示）')
+    expect(container.textContent).not.toContain('OnPlay 登場技能文字（不應顯示）')
+    act(() => root.unmount())
+  })
+
   it('shows effect history when no pending effect', () => {
     const container = document.createElement('div')
     const root = createRoot(container)

@@ -8,7 +8,7 @@
   - 線上對戰攻擊方在對手決定陷阱/Blocker/FLIP 時無任何等待提示，體感等同卡死；`OnlineBattleView.tsx` 狀態列新增 `opponentDecisionLabel`，涵蓋 trap/flip/attack-effect 三種待決策階段。
   - BS2-077 `trashBattleCookie` 物品代價完全未執行就結算效果：補齊 `PlayItemCommand`／`playItem()`／`payAbilityCost`／AI `chooseAbilityCostIds`／人類互動流程 `begin-play-item` 的欄位與邏輯，新增回歸測試。
   - BS2-079 陷阱「棄牌洗回牌庫」後續效果從未轉出：`official-effect-adapter.ts` 補上 `trash-to-deck` 效果；發現陷阱系統只有單一共用 `targetIds`（無法比照物品/技能逐效果選目標），已避免例外崩潰但效果本身仍是靜默無選擇，記錄為新風險 known-risks R15。
-  - BS2-058 攻擊後續效果經核對程式碼與既有測試未複現，判斷可能是玩家誤解「檢查自己棄牌區」的條件或目標已被主傷害擊倒。
+  - BS2-058「攻擊後續效果邏輯錯誤」複現後查出實為 UI 顯示錯誤文字：`EffectPanel.tsx` 誤讀 `sourceCard.effectText`（卡牌固定技能文字）而非 `pendingEffect.skill.text`（依當下情境正確設定），導致攻擊後續效果提示框顯示成 OnPlay 技能文字。條件/目標/傷害邏輯本身正確，已修正顯示欄位並補回歸測試；另新增 `battle-attack-effect.test.ts` 端到端整合測試，實跑「攻擊 → 主傷害 → 條件判定 → 後續傷害」全流程驗證攻擊方棄牌區達 15 張前後兩種結果；並補上 `usePendingEffect.test.tsx` hook 層測試，用真實 attack-effect `pendingBattle` 狀態驗證 hook 給 UI 的 `pendingEffect.skill.text` 確實是攻擊文字，串起轉換／hook／UI／規則四層驗證。
 - 🌐 好友房 WebSocket 生命週期硬化：以單一有效連線防止舊 socket 覆寫新連線，CONNECTING 階段可安全離開，加入房間立即保留房號；新增 90 秒 Render 冷啟動與 10 秒首次回應 timeout、非預期 error/close、constructor/send 失敗、錯誤 JSON／GameState envelope 防護及合法私人協定 close code。新增 10 項 hook 回歸，並擴充雙瀏覽器 smoke 驗證伺服器無法連線時的錯誤提示與返回操作；測試基線升至 97 檔／1545 項。
 - 🌐 新增本機雙瀏覽器好友房 Playwright smoke：啟動獨立 Vite 與權威 WebSocket server，驗證建房、加入、雙方開局、支援→主階段狀態同步及對手離線提示；納入 main push workflow，Playwright 驗證增至 5 套。
 - 🧭 強化多段能力效果決策順序證據：新增 8 類 pending decision 表格回歸，驗證 `resolve-ability-effect` 無法繞過中途決策，並驗證看牌決策完成後可保留並恢復效果鏈；測試基線升至 96 檔／1535 項。

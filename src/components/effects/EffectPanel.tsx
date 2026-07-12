@@ -155,9 +155,7 @@ function EffectPanelContent({
             </div>
           </div>
           <p>
-            <CardEffectText
-              text={pendingEffect.sourceCard.effectText ?? ''}
-            />
+            <CardEffectText text={pendingEffect.skill.text} />
           </p>
 
           {hasCostPhase && (
