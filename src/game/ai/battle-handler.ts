@@ -178,7 +178,8 @@ export const handleAiPendingBattle = (
   if (
     !state.pendingBattle ||
     state.pendingRefresh ||
-    state.pendingReplacement
+    state.pendingReplacement ||
+    state.pendingOnPlay
   ) {
     return null
   }

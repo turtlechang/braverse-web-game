@@ -89,7 +89,7 @@ try {
     const modal = page.locator('.deck-editor-modal')
     await modal.waitFor({ state: 'visible' })
     assert.equal(await modal.locator('.deck-editor-search').count(), 1)
-    assert.equal(await modal.locator('.deck-editor-filters select').count(), 4)
+    assert.equal(await modal.locator('.deck-editor-filters select').count(), 7)
     assert.ok(await modal.locator('.deck-editor-pool-card-btn').count() > 0)
 
     await modal.locator('.deck-editor-search').fill('ST1-001')
