@@ -426,6 +426,14 @@ export interface PlayTrapOptions {
   handToSupportIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
+  /**
+   * trash-to-deck 效果的獨立目標欄位（例如 BS2-079 第二段「洗回牌庫」）。
+   * 陷阱效果不像物品/技能有逐效果的 effectTargets 陣列，只有單一共用
+   * targetIds；trash-to-deck 與其他可能同時出現的目標式效果（如
+   * modify-attack）語意不同、選擇對象也不同，需要自己的欄位才能與
+   * targetIds 並存，不會互相覆蓋。
+   */
+  trashToDeckIds?: string[]
 }
 
 export interface PlayBlockerOptions {
@@ -794,13 +802,22 @@ export const playTrap = (
       continue
     }
 
+    if (effect.kind === 'trash-to-deck') {
+      nextState = executeCardEffect(
+        nextState,
+        context,
+        effect,
+        options.trashToDeckIds ?? [],
+      )
+      continue
+    }
+
     nextState = executeCardEffect(
       nextState,
       context,
       effect,
       effect.kind === 'draw' ||
         effect.kind === 'deck-to-support' ||
-        effect.kind === 'trash-to-deck' ||
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
         : options.targetIds,

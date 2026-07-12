@@ -394,6 +394,7 @@ export interface PlayTrapCommand {
   handToSupportIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
+  trashToDeckIds?: string[]
 }
 
 export interface SkipTrapCommand {
@@ -1258,6 +1259,7 @@ const applyPlayerActionCommand = (
         handToSupportIds: command.handToSupportIds,
         discardHandIds: command.discardHandIds,
         trashBattleCookieIds: command.trashBattleCookieIds,
+        trashToDeckIds: command.trashToDeckIds,
       })
     case 'skip-trap':
       return skipTrap(state, command.playerId)

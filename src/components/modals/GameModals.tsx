@@ -526,6 +526,10 @@ export interface TrapResponseModalProps {
   handToSupportAmount?: number
   selectedHandToSupportIds?: string[]
   onToggleHandToSupport?: (instanceId: string) => void
+  trashToDeckCards?: GameCard[]
+  trashToDeckAmount?: number
+  selectedTrashToDeckIds?: string[]
+  onToggleTrashToDeck?: (instanceId: string) => void
 }
 
 type TrapStep = 'select' | 'pay'
@@ -565,6 +569,10 @@ export function TrapResponseModal({
   handToSupportAmount = 0,
   selectedHandToSupportIds = [],
   onToggleHandToSupport,
+  trashToDeckCards = [],
+  trashToDeckAmount = 0,
+  selectedTrashToDeckIds = [],
+  onToggleTrashToDeck,
 }: TrapResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<TrapStep>(() => selectedTrapId ? 'pay' : 'select')
@@ -576,7 +584,8 @@ export function TrapResponseModal({
     discardHandCost > 0 ||
     battleCookieCost > 0 ||
     supportToHandAmount > 0 ||
-    handToSupportAmount > 0
+    handToSupportAmount > 0 ||
+    trashToDeckAmount > 0
 
   const handleSelectTrap = (instanceId: string) => {
     onSelectTrap(instanceId)
@@ -844,6 +853,36 @@ export function TrapResponseModal({
                       </div>
                       <span>
                         已選 {selectedBattleCookieIds.length}／{battleCookieCost}
+                      </span>
+                    </>
+                  )}
+                  {trashToDeckAmount > 0 && trashToDeckCards.length > 0 && (
+                    <>
+                      <strong>
+                        選擇最多 {trashToDeckAmount} 張棄牌區卡牌洗回牌庫
+                      </strong>
+                      <div className="modal-card-options compact trap-discard-options">
+                        {trashToDeckCards.map((card) => (
+                          <button
+                            type="button"
+                            className={
+                              selectedTrashToDeckIds.includes(card.instanceId)
+                                ? 'is-selected'
+                                : ''
+                            }
+                            key={card.instanceId}
+                            onClick={() => onToggleTrashToDeck?.(card.instanceId)}
+                          >
+                            <CardFace
+                              card={card}
+                              selected={selectedTrashToDeckIds.includes(card.instanceId)}
+                            />
+                            <span>{card.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <span>
+                        已選 {selectedTrashToDeckIds.length}／最多 {trashToDeckAmount}
                       </span>
                     </>
                   )}

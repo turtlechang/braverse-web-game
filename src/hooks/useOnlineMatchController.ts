@@ -307,6 +307,13 @@ export function useOnlineMatchController(params: {
   const trapHandToSupportCandidates: GameCard[] = []
   const trapHandToSupportAmount = 0
   const toggleTrapHandToSupport = () => {}
+  // 陷阱 trash-to-deck（如 BS2-079 第二段效果）目前線上對戰尚未實作互動 UI，
+  // 比照上方 support-to-hand/hand-to-support 的既有限制先回傳空值；
+  // 離線對局（useMatchController）已完整支援。見 docs/known-risks.md R15。
+  const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
+  const trapTrashToDeckCandidates: GameCard[] = []
+  const trapTrashToDeckAmount = 0
+  const toggleTrapTrashToDeck = () => {}
 
   // Blocker
   const playerBlockerCandidates =
@@ -394,6 +401,11 @@ export function useOnlineMatchController(params: {
     trapHandToSupportCandidates,
     trapHandToSupportAmount,
     toggleTrapHandToSupport,
+    selectedTrapTrashToDeckIds,
+    setSelectedTrapTrashToDeckIds,
+    trapTrashToDeckCandidates,
+    trapTrashToDeckAmount,
+    toggleTrapTrashToDeck,
     // Blocker
     selectedBlockerId,
     setSelectedBlockerId,

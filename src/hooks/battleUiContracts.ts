@@ -70,6 +70,13 @@ export interface BattleUiMatchLike {
   trapHandToSupportCandidates: GameCard[]
   trapHandToSupportAmount: number
   toggleTrapHandToSupport: (instanceId: string) => void
+  selectedTrapTrashToDeckIds: string[]
+  setSelectedTrapTrashToDeckIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  trapTrashToDeckCandidates: GameCard[]
+  trapTrashToDeckAmount: number
+  toggleTrapTrashToDeck: (instanceId: string) => void
   // Blocker
   selectedBlockerId: string | null
   setSelectedBlockerId: (value: string | null) => void

@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 🛡️ R15 解決：陷阱 `trash-to-deck` 效果新增獨立的 `trashToDeckIds` 欄位（2026-07-12）。BS2-079（「選最多 1 張對手餅乾降攻」+「選最多 5 張非 FLIP 棄牌區卡片洗回牌庫」）先前第二段效果誤用第一段共用的 `targetIds`，已避免例外但效果靜默無選擇；盤點全卡池確認唯一受影響的陷阱只有 BS2-079，改比照陷阱系統既有慣例（`supportTrashIds`／`handToSupportIds` 等專屬欄位模式）新增 `trashToDeckIds`，而非套用物品/技能的通用 `effectTargets` 陣列（陷阱效果迴圈的特例邏輯與 `executeAbilityEffects` 不相容，硬套用不成比例）。同時修復 AI `chooseEffectTargets`（`ai.ts`）對 `trash-to-deck` 一律回傳空陣列的缺口，此缺口先前也讓物品的 trash-to-deck 效果對 AI 完全無效。已貫穿引擎（`battle.ts`／`commands.ts`）、AI（`ai/battle-handler.ts`）、人類 UI（`useMatchController.ts`＋`TrapResponseModal`）三層新增回歸測試；線上對戰陷阱 trash-to-deck 選擇 UI 尚未實作（比照既有 support-to-hand/hand-to-support 線上限制，離線對局已完整支援）。
 - 🐛 真人試玩回報修復（2026-07-12，[manual-playtest-checklist.md](docs/manual-playtest-checklist.md) 試玩紀錄）：
   - 線上對戰攻擊方在對手決定陷阱/Blocker/FLIP 時無任何等待提示，體感等同卡死；`OnlineBattleView.tsx` 狀態列新增 `opponentDecisionLabel`，涵蓋 trap/flip/attack-effect 三種待決策階段。
   - BS2-077 `trashBattleCookie` 物品代價完全未執行就結算效果：補齊 `PlayItemCommand`／`playItem()`／`payAbilityCost`／AI `chooseAbilityCostIds`／人類互動流程 `begin-play-item` 的欄位與邏輯，新增回歸測試。

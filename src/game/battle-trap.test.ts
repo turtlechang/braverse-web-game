@@ -869,3 +869,176 @@ describe('TRAP response window', () => {
     expect(decision.state.pendingBattle?.declaredDamage).toBe(0)
   })
 })
+
+describe('R15: trap multi-effect targeting (BS2-079)', () => {
+  const modifyAttackAndTrashToDeckTrap = (): GameCard => ({
+    id: 'BS2-079',
+    instanceId: 'bs2-079-test',
+    name: 'Two-Effect Trap',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: '《{P}》 Select up to 1 of your opponent\'s Cookies. During this turn, that Cookie deals -1 attack damage. Select up to 5 non-FLIP cards in your trash. Shuffle them into your deck.',
+      cost: { energy: { purple: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'trash-to-deck', max: 5, excludeFlip: true },
+      ],
+    },
+  })
+
+  it('lets the modify-attack target and the trash-to-deck selection be chosen independently via trashToDeckIds', () => {
+    const trap = modifyAttackAndTrashToDeckTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, ...state.players['player-one'].hand]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-purple', 'purple'), rested: false },
+    ]
+    state.players['player-one'].discardPile = [
+      item('p1-trash-1'),
+      item('p1-trash-2'),
+      item('p1-trash-3'),
+    ]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple'],
+      targetIds: ['attacker'],
+      trashToDeckIds: ['p1-trash-1', 'p1-trash-2'],
+    })
+
+    // 第一段效果：修改攻擊者傷害，目標來自 targetIds
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -1 }),
+    )
+
+    // 第二段效果：洗回牌庫，選擇對象來自獨立的 trashToDeckIds，
+    // 不受第一段 targetIds（攻擊者，不在棄牌區合法範圍內）影響。
+    const player = result.players['player-one']
+    // 陷阱卡本身結算後也會進入棄牌區，一併出現在結果中。
+    expect(player.discardPile.map((card) => card.instanceId)).toEqual([
+      'p1-trash-3',
+      trap.instanceId,
+    ])
+    expect(
+      player.deck.some((card) => card.instanceId === 'p1-trash-1'),
+    ).toBe(true)
+    expect(
+      player.deck.some((card) => card.instanceId === 'p1-trash-2'),
+    ).toBe(true)
+  })
+
+  it('leaves the trash pile untouched when trashToDeckIds is omitted (no silent forced discard)', () => {
+    const trap = modifyAttackAndTrashToDeckTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, ...state.players['player-one'].hand]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-purple', 'purple'), rested: false },
+    ]
+    state.players['player-one'].discardPile = [item('p1-trash-1')]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple'],
+      targetIds: ['attacker'],
+    })
+
+    expect(
+      result.players['player-one'].discardPile.map((card) => card.instanceId),
+    ).toEqual(['p1-trash-1', trap.instanceId])
+  })
+
+  it('AI defender fills both effects independently: attacker takes modify-attack, own trash feeds trash-to-deck', () => {
+    const trap = modifyAttackAndTrashToDeckTrap()
+
+    const state: GameState = {
+      ...createBattleState(),
+      activePlayerId: 'player-one',
+      players: {
+        'player-one': {
+          id: 'player-one',
+          name: '攻擊玩家',
+          deck: [item('p1-deck')],
+          hand: [],
+          battleArea: [
+            {
+              card: cookie('atk', 3, 2),
+              hpCards: [item('atk-hp')],
+              rested: true,
+              battleEntryId: 'atk:battle:1',
+            },
+          ],
+          supportArea: [],
+          breakArea: [],
+          discardPile: [],
+          stage: null,
+          hasMulliganed: false,
+          startingCookieSelected: true,
+        },
+        'player-two': {
+          id: 'player-two',
+          name: '防守 AI',
+          deck: [item('p2-deck')],
+          hand: [trap],
+          battleArea: [
+            {
+              card: cookie('p2-def', 1, 3),
+              hpCards: [item('d-a'), item('d-b'), item('d-c')],
+              rested: false,
+              battleEntryId: 'p2-def:battle:1',
+            },
+          ],
+          supportArea: [{ card: item('p2-s', 'purple'), rested: false }],
+          breakArea: [],
+          discardPile: [item('p2-trash-1'), item('p2-trash-2')],
+          stage: null,
+          hasMulliganed: false,
+          startingCookieSelected: true,
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId: 'atk',
+        targetInstanceId: 'p2-def',
+        declaredDamage: 3,
+        remainingDamage: 3,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('play-trap')
+    // 第一段效果：套用在實際攻擊者身上（沿用既有攻擊者鎖定邏輯）
+    const modifier = decision.state.attackModifiers.find(
+      (m) => m.sourceInstanceId === trap.instanceId,
+    )
+    expect(modifier?.targetInstanceId).toBe('atk')
+    // 第二段效果：AI 自己選了 trashToDeckIds，把自己的棄牌區卡片洗回牌庫，
+    // 不會因為與第一段共用 targetIds（攻擊者，不在棄牌區合法範圍）而靜默失敗。
+    const defenderAfter = decision.state.players['player-two']
+    expect(defenderAfter.discardPile.map((card) => card.instanceId)).toEqual([
+      trap.instanceId,
+    ])
+    expect(
+      defenderAfter.deck.some((card) => card.instanceId === 'p2-trash-1'),
+    ).toBe(true)
+    expect(
+      defenderAfter.deck.some((card) => card.instanceId === 'p2-trash-2'),
+    ).toBe(true)
+  })
+})

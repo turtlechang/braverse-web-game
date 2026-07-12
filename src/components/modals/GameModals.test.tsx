@@ -175,6 +175,59 @@ describe('TrapResponseModal', () => {
     expect(markup).toContain('disabled=""')
   })
 
+  it('shows a trash-to-deck selection section independent from the modify-attack target section (R15, BS2-079 regression)', async () => {
+    const trap: GameCard = {
+      id: 'BS2-079',
+      instanceId: 'bs2-079-test',
+      name: 'Two-Effect Trap',
+      type: 'trap',
+      trap: {
+        text: "Select up to 1 opponent Cookie. -1 attack this turn. Select up to 5 non-FLIP trash cards, shuffle into deck.",
+        cost: { energy: { purple: 1 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'trash-to-deck', max: 5, excludeFlip: true },
+        ],
+      },
+    }
+    const trashCards = [createHandCard(1), createHandCard(2)]
+    const onToggleTrashToDeck = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        onSelectTrap={() => undefined}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        trashToDeckCards={trashCards}
+        trashToDeckAmount={5}
+        selectedTrashToDeckIds={[trashCards[0].instanceId]}
+        onToggleTrashToDeck={onToggleTrashToDeck}
+      />,
+    ))
+
+    expect(container.textContent).toContain('選擇最多 5 張棄牌區卡牌洗回牌庫')
+    expect(container.textContent).toContain('已選 1／最多 5')
+
+    await click(findButton(container, '測試手牌 2'))
+    expect(onToggleTrashToDeck).toHaveBeenCalledWith(trashCards[1].instanceId)
+
+    await act(() => root.unmount())
+  })
+
   it('returns to response selection without skipping the attack response', async () => {
     const trap: GameCard = {
       id: 'ST4-020',

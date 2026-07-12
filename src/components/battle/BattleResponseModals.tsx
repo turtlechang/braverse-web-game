@@ -35,6 +35,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
+              match.setSelectedTrapTrashToDeckIds([])
             }}
             onSelectBlocker={(id) => {
               match.setPendingResponseMode('blocker')
@@ -74,6 +75,10 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             )}
             battleCookieCost={match.selectedTrapTrashBattleCookieCost}
             selectedBattleCookieIds={match.selectedTrapTrashBattleCookieIds}
+            trashToDeckCards={match.trapTrashToDeckCandidates}
+            trashToDeckAmount={match.trapTrashToDeckAmount}
+            selectedTrashToDeckIds={match.selectedTrapTrashToDeckIds}
+            onToggleTrashToDeck={match.toggleTrapTrashToDeck}
             attackerCard={
               match.attackerInstanceId
                 ? (match.game.players[match.opponentId].battleArea.find(
@@ -92,6 +97,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setTrapSelectNoTarget(false)
               match.setSelectedTrapSupportToHandIds([])
               match.setSelectedTrapHandToSupportIds([])
+              match.setSelectedTrapTrashToDeckIds([])
             }}
             onSelectTrapTarget={(id) => {
               match.setSelectedTrapTargetId(id)
@@ -124,6 +130,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                     match.setSelectedTrapTargetId(null)
                     match.setTrapSelectNoTarget(false)
                     match.setPendingResponseMode(null)
+                    match.setSelectedTrapTrashToDeckIds([])
                   }
                 : undefined
             }
@@ -136,6 +143,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setPendingResponseMode(null)
               match.setSelectedTrapSupportToHandIds([])
               match.setSelectedTrapHandToSupportIds([])
+              match.setSelectedTrapTrashToDeckIds([])
               match.dispatch(
                 { kind: 'skip-trap', playerId: match.viewerPlayerId },
                 '未發動陷阱，進入傷害結算。',
@@ -153,6 +161,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setPendingResponseMode(null)
               match.setSelectedTrapSupportToHandIds([])
               match.setSelectedTrapHandToSupportIds([])
+              match.setSelectedTrapTrashToDeckIds([])
               const playTrapCommand: GameCommand = {
                 kind: 'play-trap',
                 playerId: match.viewerPlayerId,
@@ -166,6 +175,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 handToSupportIds: match.selectedTrapHandToSupportIds,
                 discardHandIds: match.selectedTrapDiscardIds,
                 trashBattleCookieIds: match.selectedTrapTrashBattleCookieIds,
+                trashToDeckIds: match.selectedTrapTrashToDeckIds,
               }
               match.dispatch(
                 testStateConfig
