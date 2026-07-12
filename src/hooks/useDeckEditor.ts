@@ -157,14 +157,17 @@ export function useDeckEditor(): DeckEditorState &
       if (filterHp !== null && entry.hp !== filterHp) {
         return false
       }
-      if (filterEffect === 'attack' && !entry.attackText) {
-        return false
-      }
-      if (filterEffect === 'skill' && !entry.skill?.text) {
-        return false
-      }
-      if (filterEffect === 'flip' && !entry.flipText) {
-        return false
+      if (filterEffect) {
+        const text = entry.skill?.text ?? ''
+        const attack = entry.attackText ?? ''
+        const matched =
+          (filterEffect === 'activate' && text.includes('{mob}')) ||
+          (filterEffect === 'blocker' && text.includes('{bl}')) ||
+          (filterEffect === 'on-play' && text.includes('{ap}')) ||
+          (filterEffect === 'your-turn' && (text.includes('{mt}') || attack.includes('{mt}'))) ||
+          (filterEffect === 'once-per-turn' && text.includes('{t1}')) ||
+          (filterEffect === 'equip' && entry.type === 'item')
+        if (!matched) return false
       }
       if (searchText) {
         const lower = searchText.toLowerCase()

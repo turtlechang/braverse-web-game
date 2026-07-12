@@ -298,9 +298,12 @@ export function DeckEditorModal({
                 }
               >
                 <option value="">全部效果</option>
-                <option value="attack">攻擊效果</option>
-                <option value="skill">技能效果</option>
-                <option value="flip">FLIP 效果</option>
+                <option value="activate">啟動</option>
+                <option value="blocker">阻擋者</option>
+                <option value="on-play">登場時</option>
+                <option value="your-turn">你的回合</option>
+                <option value="once-per-turn">每回合一次</option>
+                <option value="equip">裝備</option>
               </select>
             </div>
             <div className="deck-editor-pool-grid">
