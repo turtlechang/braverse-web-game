@@ -6,6 +6,7 @@ import {
 import {
   MAX_FLIP_CARDS,
   createDeckFromCustomDeck,
+  exportDeck,
   importDeck,
   validateCustomDeck,
   type CustomDeck,
@@ -128,16 +129,16 @@ describe('validateCustomDeck', () => {
     })
   })
 
-  it('imports @ variant entries and rewrites them to their base cardNumber', () => {
+  it('imports @ variant entries and keeps base and variant as separate rows under shared 4-copy limit', () => {
     const cookieNumbers = getAllCardPoolEntries()
-      .filter((entry) => entry.type === 'cookie')
+      .filter((entry) => entry.type === 'cookie' && !entry.cardNumber.includes('@'))
       .slice(0, 14)
       .map((entry) => entry.cardNumber)
 
     const json = JSON.stringify({
       name: 'variant import',
       entries: [
-        { cardNumber: 'BS2-031@1', count: 2 },
+        { cardNumber: 'BS2-031@1', count: 3 },
         { cardNumber: 'BS2-031', count: 2 },
         ...entriesFromNumbers(cookieNumbers),
       ],
@@ -145,28 +146,25 @@ describe('validateCustomDeck', () => {
 
     const result = importDeck(json)
 
-    expect(result.error).toBeNull()
-    expect(result.deck?.entries.find((e) => e.cardNumber === 'BS2-031')).toEqual({
-      cardNumber: 'BS2-031',
-      count: 4,
-    })
+    expect(result.error).not.toBeNull()
+    expect(result.error).toMatch(/BS2-031 合計 5 張/)
   })
 
   it('counts item, trap, and stage cards by pool type', () => {
     const itemNumbers = getAllCardPoolEntries()
-      .filter((entry) => entry.type === 'item')
+      .filter((entry) => entry.type === 'item' && !entry.cardNumber.includes('@'))
       .slice(0, 2)
       .map((entry) => entry.cardNumber)
     const trapNumbers = getAllCardPoolEntries()
-      .filter((entry) => entry.type === 'trap')
+      .filter((entry) => entry.type === 'trap' && !entry.cardNumber.includes('@'))
       .slice(0, 2)
       .map((entry) => entry.cardNumber)
     const stageNumbers = getAllCardPoolEntries()
-      .filter((entry) => entry.type === 'stage')
+      .filter((entry) => entry.type === 'stage' && !entry.cardNumber.includes('@'))
       .slice(0, 1)
       .map((entry) => entry.cardNumber)
     const cookieNumbers = getAllCardPoolEntries()
-      .filter((entry) => entry.type === 'cookie')
+      .filter((entry) => entry.type === 'cookie' && !entry.cardNumber.includes('@'))
       .slice(0, 10)
       .map((entry) => entry.cardNumber)
 
@@ -179,6 +177,60 @@ describe('validateCustomDeck', () => {
     expect(result.stats.itemCards).toBe(itemNumbers.length * 4)
     expect(result.stats.trapCards).toBe(trapNumbers.length * 4)
     expect(result.stats.stageCards).toBe(stageNumbers.length * 4)
+  })
+
+  it('exportDeck preserves base and @ variant entries as separate rows', () => {
+    const deck: CustomDeck = {
+      id: 'variant-export',
+      name: 'variant export',
+      entries: [
+        { cardNumber: 'BS2-031', count: 2 },
+        { cardNumber: 'BS2-031@1', count: 1 },
+      ],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+
+    const json = exportDeck(deck)
+    const parsed = JSON.parse(json) as { name: string; entries: { cardNumber: string; count: number }[] }
+
+    expect(parsed.name).toBe('variant export')
+    expect(parsed.entries).toEqual([
+      { cardNumber: 'BS2-031', count: 2 },
+      { cardNumber: 'BS2-031@1', count: 1 },
+    ])
+  })
+
+  it('importDeck keeps base and @ variant as separate rows when under the shared 4-copy limit', () => {
+    const cookieNumbers = getAllCardPoolEntries()
+      .filter((entry) => entry.type === 'cookie' && !entry.cardNumber.includes('@'))
+      .map((entry) => entry.cardNumber)
+    const fillers = cookieNumbers.filter((n) => n !== 'BS2-031').slice(0, 14)
+    const entries: CustomDeckEntry[] = [
+      { cardNumber: 'BS2-031@1', count: 2 },
+      { cardNumber: 'BS2-031', count: 2 },
+      ...entriesFromNumbers(fillers),
+    ]
+    const validation = validateCustomDeck(entries)
+    expect(validation.stats.totalCards).toBe(60)
+
+    const json = JSON.stringify({
+      name: 'split variant',
+      entries: [
+        { cardNumber: 'BS2-031@1', count: 2 },
+        { cardNumber: 'BS2-031', count: 2 },
+        ...entriesFromNumbers(fillers),
+      ],
+    })
+
+    const result = importDeck(json)
+
+    expect(result.error).toBeNull()
+    expect(result.deck?.entries).toEqual([
+      { cardNumber: 'BS2-031@1', count: 2 },
+      { cardNumber: 'BS2-031', count: 2 },
+      ...entriesFromNumbers(fillers),
+    ])
   })
 })
 

@@ -4,16 +4,21 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 import { DeckEditorModal } from './DeckEditorModal'
+import type { CustomDeck } from '../../game/custom-deck'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
-const render = async () => {
+const render = async (initialDeck?: CustomDeck) => {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
   await act(() =>
     root.render(
-      <DeckEditorModal onSave={() => undefined} onClose={() => undefined} />,
+      <DeckEditorModal
+        initialDeck={initialDeck}
+        onSave={() => undefined}
+        onClose={() => undefined}
+      />,
     ),
   )
   const cleanup = async () => {
@@ -103,6 +108,43 @@ describe('DeckEditorModal pool interactions', () => {
         expect.stringMatching(/^場景卡：\d+$/),
       ]),
     )
+
+    await cleanup()
+  })
+
+  it('disables both base and @1 variant pool cards once the base reaches four copies', async () => {
+    const initialDeck: CustomDeck = {
+      id: 'legacy-deck',
+      name: 'legacy',
+      entries: [
+        { cardNumber: 'BS2-031', count: 2 },
+        { cardNumber: 'BS2-031@1', count: 2 },
+      ],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+
+    const { container, cleanup } = await render(initialDeck)
+
+    const atMaxCards = container.querySelectorAll('.deck-editor-pool-card.at-max')
+    expect(atMaxCards.length).toBeGreaterThanOrEqual(2)
+    atMaxCards.forEach((card) => {
+      const btn = card.querySelector<HTMLButtonElement>(
+        '.deck-editor-pool-card-btn',
+      )
+      expect(btn?.disabled).toBe(true)
+    })
+
+    const deckNumbers = Array.from(
+      container.querySelectorAll('.deck-editor-deck-entry-number'),
+    ).map((node) => node.textContent ?? '')
+    expect(deckNumbers.sort()).toEqual(['BS2-031', 'BS2-031'])
+    expect(deckNumbers.every((text) => !text.includes('@'))).toBe(true)
+
+    const deckCounts = Array.from(
+      container.querySelectorAll('.deck-editor-deck-entry-count'),
+    ).map((node) => node.textContent ?? '')
+    expect(deckCounts.sort()).toEqual(['2', '2'])
 
     await cleanup()
   })

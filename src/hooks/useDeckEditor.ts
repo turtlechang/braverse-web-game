@@ -50,48 +50,57 @@ export function useDeckEditor(): DeckEditorState &
   const [filterSeries, setFilterSeries] = useState<string | null>(null)
 
   const addCard = useCallback((cardNumber: string) => {
-    const base = normalizeCardNumber(cardNumber)
+    const raw = cardNumber
     setDeckEntries((prev) => {
-      const existing = prev.find((e) => e.cardNumber === base)
+      const base = normalizeCardNumber(raw)
+      const totalForBase = prev
+        .filter((e) => normalizeCardNumber(e.cardNumber) === base)
+        .reduce((sum, e) => sum + e.count, 0)
+      if (totalForBase >= MAX_COPIES_PER_CARD) return prev
+      const existing = prev.find((e) => e.cardNumber === raw)
       if (existing) {
-        if (existing.count >= MAX_COPIES_PER_CARD) return prev
         return prev.map((e) =>
-          e.cardNumber === base ? { ...e, count: e.count + 1 } : e,
+          e.cardNumber === raw ? { ...e, count: e.count + 1 } : e,
         )
       }
-      return [...prev, { cardNumber: base, count: 1 }]
+      return [...prev, { cardNumber: raw, count: 1 }]
     })
   }, [])
 
   const removeCard = useCallback((cardNumber: string) => {
-    const base = normalizeCardNumber(cardNumber)
+    const raw = cardNumber
     setDeckEntries((prev) => {
-      const existing = prev.find((e) => e.cardNumber === base)
+      const existing = prev.find((e) => e.cardNumber === raw)
       if (!existing) return prev
       if (existing.count <= 1) {
-        return prev.filter((e) => e.cardNumber !== base)
+        return prev.filter((e) => e.cardNumber !== raw)
       }
       return prev.map((e) =>
-        e.cardNumber === base ? { ...e, count: e.count - 1 } : e,
+        e.cardNumber === raw ? { ...e, count: e.count - 1 } : e,
       )
     })
   }, [])
 
   const setCardCount = useCallback((cardNumber: string, count: number) => {
-    const base = normalizeCardNumber(cardNumber)
+    const raw = cardNumber
     if (count < 0) return
     setDeckEntries((prev) => {
+      const base = normalizeCardNumber(raw)
+      const totalForBase = prev
+        .filter((e) => normalizeCardNumber(e.cardNumber) === base)
+        .reduce((sum, e) => sum + e.count, 0)
+      const remainingForBase = Math.max(0, MAX_COPIES_PER_CARD - totalForBase)
       if (count === 0) {
-        return prev.filter((e) => e.cardNumber !== base)
+        return prev.filter((e) => e.cardNumber !== raw)
       }
-      const clamped = Math.min(count, MAX_COPIES_PER_CARD)
-      const existing = prev.find((e) => e.cardNumber === base)
+      const clamped = Math.min(count, remainingForBase)
+      const existing = prev.find((e) => e.cardNumber === raw)
       if (existing) {
         return prev.map((e) =>
-          e.cardNumber === base ? { ...e, count: clamped } : e,
+          e.cardNumber === raw ? { ...e, count: clamped } : e,
         )
       }
-      return [...prev, { cardNumber: base, count: clamped }]
+      return [...prev, { cardNumber: raw, count: clamped }]
     })
   }, [])
 
@@ -100,11 +109,7 @@ export function useDeckEditor(): DeckEditorState &
   }, [])
 
   const loadDeck = useCallback((deck: CustomDeck) => {
-    const normalized = deck.entries.map((entry) => ({
-      ...entry,
-      cardNumber: normalizeCardNumber(entry.cardNumber),
-    }))
-    setDeckEntries(normalized)
+    setDeckEntries(deck.entries.map((entry) => ({ ...entry })))
     setDeckName(deck.name)
   }, [])
 

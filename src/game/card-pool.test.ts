@@ -11,14 +11,15 @@ const BS2_031_VARIANT = 'BS2-031@1'
 const ST1_001 = 'ST1-001'
 
 describe('card-pool @ variant merging', () => {
-  it('treats BS2-031 and BS2-031@1 as the same card via getCardPoolEntry', () => {
+  it('returns separate base and @1 variant entries via getCardPoolEntry', () => {
     const baseEntry = getCardPoolEntry(BS2_031_BASE)
     const variantEntry = getCardPoolEntry(BS2_031_VARIANT)
 
     expect(baseEntry).toBeDefined()
     expect(variantEntry).toBeDefined()
-    expect(variantEntry).toBe(baseEntry)
-    expect(variantEntry?.cardNumber).toBe(BS2_031_BASE)
+    expect(variantEntry).not.toBe(baseEntry)
+    expect(baseEntry?.cardNumber).toBe(BS2_031_BASE)
+    expect(variantEntry?.cardNumber).toBe(BS2_031_VARIANT)
   })
 
   it('returns a non-empty list of variants for a card that has @1 entries', () => {
@@ -29,13 +30,15 @@ describe('card-pool @ variant merging', () => {
     )
   })
 
-  it('returns only one entry per base card from getAllCardPoolEntries', () => {
+  it('exposes both base and @1 variant rows from getAllCardPoolEntries', () => {
     const all = getAllCardPoolEntries()
-    const variantEntries = all.filter((entry) => entry.cardNumber.includes('@'))
-    expect(variantEntries).toEqual([])
+    const variantEntries = all.filter((entry) =>
+      entry.cardNumber.startsWith(`${BS2_031_BASE}@`),
+    )
+    expect(variantEntries.length).toBeGreaterThan(0)
 
-    const bs2031Entries = all.filter((entry) => entry.cardNumber === BS2_031_BASE)
-    expect(bs2031Entries.length).toBe(1)
+    const baseRows = all.filter((entry) => entry.cardNumber === BS2_031_BASE)
+    expect(baseRows.length).toBe(1)
   })
 
   it('normalizeCardNumber canonicalizes @ variants and unknown inputs', () => {
@@ -50,4 +53,20 @@ describe('card-pool @ variant merging', () => {
     expect(entry).toBeDefined()
     expect(entry?.cardNumber).toBe(ST1_001)
   })
+
+  it('keeps base and variant imageUrl from their own raw records', () => {
+    const baseEntry = getCardPoolEntry(BS2_031_BASE)
+    const variantEntry = getCardPoolEntry(BS2_031_VARIANT)
+
+    expect(baseEntry).toBeDefined()
+    expect(variantEntry).toBeDefined()
+    const baseVariants = getCardPoolVariants(BS2_031_BASE)
+    const baseRecord = baseVariants.find((card) => card.cardNumber === BS2_031_BASE)
+    const variantRecord = baseVariants.find(
+      (card) => card.cardNumber === BS2_031_VARIANT,
+    )
+    expect(baseEntry?.imageUrl).toBe(baseRecord?.imageUrl)
+    expect(variantEntry?.imageUrl).toBe(variantRecord?.imageUrl)
+  })
 })
+

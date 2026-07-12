@@ -263,7 +263,6 @@ export const importDeck = (
     }
 
     const entries: CustomDeckEntry[] = []
-    const entriesByNumber = new Map<string, number>()
     for (const entry of data.entries) {
       if (!entry.cardNumber || typeof entry.cardNumber !== 'string') {
         return { deck: null, error: '卡號格式錯誤' }
@@ -271,15 +270,11 @@ export const importDeck = (
       if (typeof entry.count !== 'number' || entry.count < 1) {
         return { deck: null, error: `${entry.cardNumber} 數量格式錯誤` }
       }
-      const base = normalizeCardNumber(entry.cardNumber)
-      if (!getCardPoolEntry(base)) {
+      const cardNumber = entry.cardNumber
+      if (!getCardPoolEntry(cardNumber)) {
         return { deck: null, error: `卡池中找不到 ${entry.cardNumber}` }
       }
-      const next = (entriesByNumber.get(base) ?? 0) + Math.floor(entry.count)
-      entriesByNumber.set(base, next)
-    }
-    for (const [cardNumber, count] of entriesByNumber) {
-      entries.push({ cardNumber, count })
+      entries.push({ cardNumber, count: Math.floor(entry.count) })
     }
 
     const validation = validateCustomDeck(entries)
