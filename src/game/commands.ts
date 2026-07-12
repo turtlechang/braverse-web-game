@@ -880,6 +880,18 @@ const assertNoPendingDecision = (
     return
   }
 
+  // 牌庫 Renew（refresh-deck）優先於昏厥效果與效果順序：
+  // 補位餅乾登場可能使牌庫用盡而觸發 pendingRefresh；若此時不允許執行
+  // refresh-deck，AI 會因為 pendingRefresh 擋住昏厥效果處理、而昏厥效果
+  // 又擋住 refresh-deck 指令，形成無法推進的死結。
+  if (
+    command.kind === 'refresh-deck' &&
+    (pending.kind === 'faint-effect' || pending.kind === 'effect-order') &&
+    state.pendingRefresh?.playerId === command.playerId
+  ) {
+    return
+  }
+
   // 補位帶出的新餅乾登場效果（OnPlay）同樣優先於昏厥效果與效果順序：
   // 補位卡的 OnPlay 必須在原本昏厥效果解決前就能發動或略過，否則會與
   // 上方補位放行邏輯銜接不上，造成「補完位但無法處理 OnPlay」的死結。
