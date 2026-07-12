@@ -586,6 +586,19 @@ export interface FlipAbility {
   effects: CardEffect[]
 }
 
+/**
+ * 注意：`'opponent-trash-count-at-least'` 這個 kind 名稱在 TrapCondition 與
+ * CardEffect 的 EffectCondition（見上方 OpponentTrashCountAtLeastCondition／
+ * effects/targeting.ts 的 isEffectConditionMet）語意不同：
+ * - TrapCondition（本檔案下方、由 battle.ts 的 isTrapConditionMet 評估）：
+ *   檢查的是陷阱擁有者（防守方）自己的棄牌區，不是對手／攻擊方的。
+ * - EffectCondition（供 item／skill／attack-effect 使用）：檢查的才是對手的
+ *   棄牌區（getOpponentId(context.sourcePlayerId)）。
+ * 這是官方卡牌文字裡「if there are N cards or more in your trash」的陷阱版
+ * 解析結果（parseTrapCondition，見 official-effect-adapter.ts），「your」對
+ * 陷阱擁有者而言就是自己，命名沿用舊有 kind 字串、未特別更名以免影響既有資料，
+ * 不要因為名稱看起來像「檢查對手」就去「修正」battle.ts 的評估邏輯。
+ */
 export type TrapCondition =
   | {
       kind: 'break-level-at-least'

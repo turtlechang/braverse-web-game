@@ -325,6 +325,9 @@ export const createCard = (
   } else if (stageAbility) {
     effectText = stageAbility.text
     effects = stageAbility.effects
+  } else if (flip) {
+    effectText = flip.text
+    effects = flip.effects
   }
 
   const base = {

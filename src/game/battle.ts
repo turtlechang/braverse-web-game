@@ -203,6 +203,10 @@ const isTrapConditionMet = (
   }
 
   if (condition.kind === 'opponent-trash-count-at-least') {
+    // 名稱雖是「opponent」，但陷阱語意檢查的是 playerId（陷阱擁有者／防守方）
+    // 自己的棄牌區，對應官方文字「if there are N cards or more in your
+    // trash」的「your」。見 types.ts TrapCondition 上方註解；不要改成
+    // getOpponentId(playerId)，那會破壞 BS2-080 等既有卡牌。
     return state.players[playerId].discardPile.length >= condition.count
   }
 
