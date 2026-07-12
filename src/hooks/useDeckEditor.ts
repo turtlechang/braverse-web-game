@@ -5,7 +5,7 @@ import {
   validateCustomDeck,
 } from '../game/custom-deck'
 import type { CardPoolEntry } from '../game/card-pool'
-import { getAllCardPoolEntries } from '../game/card-pool'
+import { getAllCardPoolEntries, normalizeCardNumber } from '../game/card-pool'
 
 export interface DeckEditorState {
   deckEntries: CustomDeckEntry[]
@@ -50,45 +50,48 @@ export function useDeckEditor(): DeckEditorState &
   const [filterSeries, setFilterSeries] = useState<string | null>(null)
 
   const addCard = useCallback((cardNumber: string) => {
+    const base = normalizeCardNumber(cardNumber)
     setDeckEntries((prev) => {
-      const existing = prev.find((e) => e.cardNumber === cardNumber)
+      const existing = prev.find((e) => e.cardNumber === base)
       if (existing) {
         if (existing.count >= MAX_COPIES_PER_CARD) return prev
         return prev.map((e) =>
-          e.cardNumber === cardNumber ? { ...e, count: e.count + 1 } : e,
+          e.cardNumber === base ? { ...e, count: e.count + 1 } : e,
         )
       }
-      return [...prev, { cardNumber, count: 1 }]
+      return [...prev, { cardNumber: base, count: 1 }]
     })
   }, [])
 
   const removeCard = useCallback((cardNumber: string) => {
+    const base = normalizeCardNumber(cardNumber)
     setDeckEntries((prev) => {
-      const existing = prev.find((e) => e.cardNumber === cardNumber)
+      const existing = prev.find((e) => e.cardNumber === base)
       if (!existing) return prev
       if (existing.count <= 1) {
-        return prev.filter((e) => e.cardNumber !== cardNumber)
+        return prev.filter((e) => e.cardNumber !== base)
       }
       return prev.map((e) =>
-        e.cardNumber === cardNumber ? { ...e, count: e.count - 1 } : e,
+        e.cardNumber === base ? { ...e, count: e.count - 1 } : e,
       )
     })
   }, [])
 
   const setCardCount = useCallback((cardNumber: string, count: number) => {
+    const base = normalizeCardNumber(cardNumber)
     if (count < 0) return
     setDeckEntries((prev) => {
       if (count === 0) {
-        return prev.filter((e) => e.cardNumber !== cardNumber)
+        return prev.filter((e) => e.cardNumber !== base)
       }
       const clamped = Math.min(count, MAX_COPIES_PER_CARD)
-      const existing = prev.find((e) => e.cardNumber === cardNumber)
+      const existing = prev.find((e) => e.cardNumber === base)
       if (existing) {
         return prev.map((e) =>
-          e.cardNumber === cardNumber ? { ...e, count: clamped } : e,
+          e.cardNumber === base ? { ...e, count: clamped } : e,
         )
       }
-      return [...prev, { cardNumber, count: clamped }]
+      return [...prev, { cardNumber: base, count: clamped }]
     })
   }, [])
 
@@ -97,7 +100,11 @@ export function useDeckEditor(): DeckEditorState &
   }, [])
 
   const loadDeck = useCallback((deck: CustomDeck) => {
-    setDeckEntries(deck.entries)
+    const normalized = deck.entries.map((entry) => ({
+      ...entry,
+      cardNumber: normalizeCardNumber(entry.cardNumber),
+    }))
+    setDeckEntries(normalized)
     setDeckName(deck.name)
   }, [])
 

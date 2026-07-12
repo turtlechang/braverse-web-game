@@ -11,23 +11,50 @@ const allRawCards: OfficialCardRecord[] = [
   ),
 ]
 
-const poolByNumber = new Map<string, CardPoolEntry>()
+const aliasToBase = new Map<string, string>()
+const poolByBaseNumber = new Map<string, CardPoolEntry>()
 
 for (const card of allRawCards) {
-  if (!poolByNumber.has(card.cardNumber)) {
-    poolByNumber.set(card.cardNumber, {
+  const base =
+    card.baseCardNumber && card.baseCardNumber.length > 0
+      ? card.baseCardNumber
+      : card.cardNumber
+
+  aliasToBase.set(card.cardNumber, base)
+  if (card.baseCardNumber) {
+    aliasToBase.set(card.baseCardNumber, base)
+  }
+
+  if (!poolByBaseNumber.has(base)) {
+    poolByBaseNumber.set(base, {
       ...card,
-      poolId: card.cardNumber,
+      cardNumber: base,
+      poolId: base,
     })
   }
 }
 
+export const normalizeCardNumber = (cardNumber: string): string => {
+  const trimmed = cardNumber.trim()
+  return aliasToBase.get(trimmed) ?? trimmed
+}
+
 export const getAllCardPoolEntries = (): CardPoolEntry[] =>
-  Array.from(poolByNumber.values())
+  Array.from(poolByBaseNumber.values())
 
 export const getCardPoolEntry = (
   cardNumber: string,
-): CardPoolEntry | undefined => poolByNumber.get(cardNumber)
+): CardPoolEntry | undefined => {
+  const base = normalizeCardNumber(cardNumber)
+  return poolByBaseNumber.get(base)
+}
+
+export const getCardPoolVariants = (
+  cardNumber: string,
+): OfficialCardRecord[] => {
+  const base = normalizeCardNumber(cardNumber)
+  return allRawCards.filter((card) => card.baseCardNumber === base)
+}
 
 export const getCardPoolEntriesByColor = (
   color: string,

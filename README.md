@@ -21,7 +21,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
 
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸。
-- **牌組編輯器**：搜尋/篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存。
+- **牌組編輯器**：搜尋/篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；Lv.5 為設計稿，見 [docs/ai-levels.md](docs/ai-levels.md)。
 - **卡牌池**：BS1/BS2 官方卡池 + 五色起始牌組匯入；`npm run validate:cards` 接入 CI 做資料完整性驗證。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
