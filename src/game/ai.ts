@@ -8,6 +8,7 @@ import {
   getSupportEffectCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
+  getTrashToDeckCandidates,
   getTrashToSupportCandidates,
   getEffectiveAttack,
   isEffectConditionMet,
@@ -198,12 +199,17 @@ const chooseEffectTargets = (
       .map((card) => card.instanceId)
   }
 
+  if (effect.kind === 'trash-to-deck') {
+    return getTrashToDeckCandidates(state, context, effect)
+      .slice(0, effect.max)
+      .map((card) => card.instanceId)
+  }
+
   if (
     effect.kind === 'inspect-deck' ||
     effect.kind === 'optional-cost-attack' ||
     effect.kind === 'disable-block' ||
     effect.kind === 'trash-to-hand' ||
-    effect.kind === 'trash-to-deck' ||
     effect.kind === 'flip-to-support'
   ) {
     return []

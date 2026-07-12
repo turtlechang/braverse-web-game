@@ -16,6 +16,7 @@ import {
   getTrapCandidates,
   getTrapTargetCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckCandidates,
   getEnergyCostTotal,
   isPlayerControllingState,
   selectEnergyPayment,
@@ -270,6 +271,7 @@ export function useMatchController(params: {
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
   const [selectedTrapHandToSupportIds, setSelectedTrapHandToSupportIds] = useState<string[]>([])
+  const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
@@ -584,6 +586,22 @@ export function useMatchController(params: {
         )
       : []
 
+  const trapTrashToDeckEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'trash-to-deck',
+  )
+  const trapTrashToDeckAmount =
+    trapTrashToDeckEffect?.kind === 'trash-to-deck'
+      ? trapTrashToDeckEffect.max
+      : 0
+  const trapTrashToDeckCandidates =
+    trapTrashToDeckEffect?.kind === 'trash-to-deck' && selectedTrap
+      ? getTrashToDeckCandidates(
+          game,
+          { sourcePlayerId: viewerPlayerId, sourceInstanceId: selectedTrap.instanceId },
+          trapTrashToDeckEffect,
+        )
+      : []
+
   const toggleTrapSupportToHand = useCallback(
     (id: string) => {
       setSelectedTrapSupportToHandIds((current) =>
@@ -608,6 +626,19 @@ export function useMatchController(params: {
       )
     },
     [trapHandToSupportAmount],
+  )
+
+  const toggleTrapTrashToDeck = useCallback(
+    (id: string) => {
+      setSelectedTrapTrashToDeckIds((current) =>
+        current.includes(id)
+          ? current.filter((cId) => cId !== id)
+          : current.length < trapTrashToDeckAmount
+            ? [...current, id]
+            : current,
+      )
+    },
+    [trapTrashToDeckAmount],
   )
 
   const playerBlockerCandidates =
@@ -845,6 +876,11 @@ export function useMatchController(params: {
     trapHandToSupportCandidates,
     trapHandToSupportAmount,
     toggleTrapHandToSupport,
+    selectedTrapTrashToDeckIds,
+    setSelectedTrapTrashToDeckIds,
+    trapTrashToDeckCandidates,
+    trapTrashToDeckAmount,
+    toggleTrapTrashToDeck,
     // Blocker
     selectedBlockerId,
     setSelectedBlockerId,

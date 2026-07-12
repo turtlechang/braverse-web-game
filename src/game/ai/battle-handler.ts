@@ -7,6 +7,7 @@ import { applyGameCommand } from '../commands'
 import {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getTrashToDeckCandidates,
   isEffectConditionMet,
 } from '../effects'
 import { selectEnergyPayment } from '../energy'
@@ -362,6 +363,19 @@ export const handleAiPendingBattle = (
       )
         .slice(0, trapCard.trap.cost.trashBattleCookie?.count ?? 0)
         .map((cookie) => cookie.card.instanceId)
+      const trashToDeckEffect = trapCard.trap.effects.find(
+        (effect) => effect.kind === 'trash-to-deck',
+      )
+      const trashToDeckIds =
+        trashToDeckEffect?.kind === 'trash-to-deck'
+          ? getTrashToDeckCandidates(
+              state,
+              { sourcePlayerId: playerId, sourceInstanceId: trapCard.instanceId },
+              trashToDeckEffect,
+            )
+              .slice(0, trashToDeckEffect.max)
+              .map((card) => card.instanceId)
+          : []
 
       if (
         supportTrashEffect?.kind === 'support-to-trash' &&
@@ -397,6 +411,7 @@ export const handleAiPendingBattle = (
           handToSupportIds,
           discardHandIds,
           trashBattleCookieIds,
+          trashToDeckIds,
         }),
         action: 'play-trap',
         revealedCard: trapCard,
