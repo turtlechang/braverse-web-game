@@ -765,6 +765,96 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
   })
 })
 
+function createAttackEffectPendingState(): GameState {
+  const base = createBlueOptionalCostAttackDemoState(true)
+  const attacker = base.players['player-one'].battleArea[0]
+  return {
+    ...base,
+    pendingOptionalCostAttack: null,
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        battleArea: [
+          {
+            ...attacker,
+            card: {
+              ...attacker.card,
+              // 故意讓攻擊文字與技能文字不同，驗證 hook 給 UI 的是攻擊文字
+              // （skill.text），不是卡牌固定的技能文字（effectText），對應
+              // EffectPanel.tsx 先前誤讀欄位的 BS2-058 迴歸問題。
+              attackText: '攻擊後續效果測試文字（應顯示於 skill.text）',
+              effectText: 'OnPlay 技能文字（不應顯示於攻擊後續效果）',
+            },
+          },
+        ],
+      },
+    },
+    pendingBattle: {
+      ...base.pendingBattle!,
+      attackEffects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'trash-count-at-least', count: 15 },
+        },
+      ],
+    },
+  }
+}
+
+describe('usePendingEffect attack-effect trigger', () => {
+  it("sets pendingEffect.skill.text to the attacker's attackText, not its unrelated effectText (BS2-058 regression)", async () => {
+    vi.useFakeTimers()
+    const gameState = createAttackEffectPendingState()
+    const setGameMock = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.runAllTimers())
+
+    expect(captured).not.toBeNull()
+    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.pendingEffect?.sourceKind).toBe('attack')
+    expect(captured!.pendingEffect?.skill.text).toBe(
+      '攻擊後續效果測試文字（應顯示於 skill.text）',
+    )
+    expect(captured!.pendingEffect?.skill.text).not.toBe(
+      'OnPlay 技能文字（不應顯示於攻擊後續效果）',
+    )
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
+  })
+})
+
 describe('usePendingEffect optional-cost-attack', () => {
   it('asks the rules layer to create the pending decision from a real attack effect', async () => {
     vi.useFakeTimers()
