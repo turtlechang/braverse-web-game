@@ -165,8 +165,7 @@ export function useDeckEditor(): DeckEditorState &
           (filterEffect === 'blocker' && text.includes('{bl}')) ||
           (filterEffect === 'on-play' && text.includes('{ap}')) ||
           (filterEffect === 'your-turn' && (text.includes('{mt}') || attack.includes('{mt}'))) ||
-          (filterEffect === 'once-per-turn' && text.includes('{t1}')) ||
-          (filterEffect === 'equip' && entry.type === 'item')
+          (filterEffect === 'once-per-turn' && text.includes('{t1}'))
         if (!matched) return false
       }
       if (searchText) {
