@@ -71,7 +71,9 @@ export const convertOfficialCardToGameCard = (
         ? { effectText: item.text, effects: item.effects }
         : stageAbility
           ? { effectText: stageAbility.text, effects: stageAbility.effects }
-          : {}
+          : flip
+            ? { effectText: flip.text, effects: flip.effects }
+            : {}
 
   if (card.type === 'extra' || card.type === 'unknown') {
     return {

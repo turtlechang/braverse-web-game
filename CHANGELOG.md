@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 🐛 紫色卡牌全面稽核（2026-07-12，資料轉換／hook／UI／規則引擎四層檢查）：發現並修復 FLIP 卡的頂層 `effectText`/`effects` 未填入問題——`official-card-adapter.ts`／`starter-deck.ts` 的 fallback 鏈（`trap → item → stageAbility`）漏了 `flip` 分支，導致通用轉換器無法解析的 FLIP 文字（如 BS2-056「棄 1 張手牌 → 該餅乾 HP +1」）只有 `card.flip` 有值，`CardDetailModal` 的 FLIP 段落因此不會渲染（純顯示層，規則引擎只讀 `card.flip` 不受影響）。已於兩處 adapter 補上 `flip` 分支，新增 adapter 層與元件層回歸測試，並實際在瀏覽器測試對局模式載入 BS2-056、點擊卡牌確認 FLIP 段落正確顯示。另盤點 `'opponent-trash-count-at-least'` 條件命名：`TrapCondition`（`battle.ts` 判定，檢查陷阱擁有者自身棄牌區）與 `EffectCondition`（`targeting.ts` 判定，檢查真正對手棄牌區）語意相反卻同名，目前 BS2-080 因呼叫方式巧合而運作正確，非活躍 bug，但屬維護地雷；已加鎖定回歸測試與程式碼註解說明，不貿然重新命名。記錄為 known-risks R16（已解決）；測試基線升至 97 檔／1554 項。
 - 🐛 真人試玩回報修復（2026-07-12，[manual-playtest-checklist.md](docs/manual-playtest-checklist.md) 試玩紀錄）：
   - 線上對戰攻擊方在對手決定陷阱/Blocker/FLIP 時無任何等待提示，體感等同卡死；`OnlineBattleView.tsx` 狀態列新增 `opponentDecisionLabel`，涵蓋 trap/flip/attack-effect 三種待決策階段。
   - BS2-077 `trashBattleCookie` 物品代價完全未執行就結算效果：補齊 `PlayItemCommand`／`playItem()`／`payAbilityCost`／AI `chooseAbilityCostIds`／人類互動流程 `begin-play-item` 的欄位與邏輯，新增回歸測試。
