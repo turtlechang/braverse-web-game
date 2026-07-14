@@ -1,6 +1,6 @@
 ---
 name: develop-braverse
-description: 依 Braverse 專案規範執行需求分析、規則查核、React/TypeScript 實作、卡牌資料轉接、AI 決策、測試、瀏覽器驗證、程式碼審查、文件更新與 Git 提交流程。處理此專案的功能開發、錯誤修正、重構、規則或卡牌效果調整、UI 互動、AI 對戰、測試補強、PR 審查或提交準備時使用。
+description: 依 Braverse 專案規範執行規則查核、React/TypeScript 實作、卡牌資料轉接、AI 決策、測試、瀏覽器驗證、程式碼審查與文件同步。處理功能開發、錯誤修正、重構、規則或卡牌效果、UI 互動、AI 對戰與測試補強時使用；任務拆分、模型路由與提交準備搭配 braverse-workflow。
 ---
 
 # Braverse 開發流程
@@ -21,8 +21,9 @@ description: 依 Braverse 專案規範執行需求分析、規則查核、React/
 - 修改官方卡牌匯入或文字解析：另讀 `docs/card-data-import.md` 與 `docs/card-effects.md`。
 - 修改 UI、版面或互動：另讀 `docs/official-ui-reference.md`，確認 UI 只呈現規則層結果。
 - 修改 AI 或完整對戰流程：讀 `src/game/ai.ts`、相關規則模組與瀏覽器驗證腳本。
-- 準備驗證、文件或提交：讀 [references/verification-and-git.md](references/verification-and-git.md)。
-- 需要派工或獨立審查：讀 [references/delegation.md](references/delegation.md)。
+- 決定驗證層級：讀 `../braverse-workflow/references/verification-levels.md`。
+- 準備文件或 Git 收尾：讀 [references/verification-and-git.md](references/verification-and-git.md)。
+- 需要模型分級、subagent 或外部備援：先讀 `../braverse-workflow/references/delegation-template.md`；確定使用 OpenCode Go 時才讀 [references/delegation.md](references/delegation.md)。
 
 ## 3. 查核規則
 
@@ -44,7 +45,7 @@ description: 依 Braverse 專案規範執行需求分析、規則查核、React/
 
 ## 5. 驗證
 
-依 [references/verification-and-git.md](references/verification-and-git.md) 選擇測試層級。最低提交門檻為：
+依 `../braverse-workflow/references/verification-levels.md` 選擇測試層級。最低提交門檻為：
 
 ```powershell
 npm test
@@ -52,13 +53,13 @@ npm run lint
 npm run build
 ```
 
-AI、完整對戰、付款或 UI 互動改變時，先建置，再執行 Playwright 驗證，並涵蓋合法與不合法路徑。修正所有由本次變更造成的失敗，不以特製種子或硬編碼資料掩蓋問題。
+AI 或完整對戰行為改變時，另執行 `npm run test:ai:browser`。付款或 UI 互動改變時，先建置，再用瀏覽器驗證合法與不合法路徑。修正所有由本次變更造成的失敗，不以特製種子或硬編碼資料掩蓋問題。
 
 ## 6. 收尾
 
-1. 檢查完整 diff 與 `git status --short`。
+1. 檢查完整 diff、`git diff --check` 與 `git status --short`。
 2. 排除 `node_modules/`、`dist/`、`test-results/`、密鑰與無關檔案。
 3. 功能完成或準備 commit 時，更新 `README.md` 的「開發背景」、「目前進度」與「下一步計畫」。
-4. `README.md` 的「更新日誌」固定使用「日期 / 概要」Markdown 表格；同日期可合併為一列，概要保持精簡，不寫詳細實作清單。
+4. `README.md` 的「更新日誌」固定使用「日期 / 概要」Markdown 表格；同日期可合併為一列，概要保持精簡。
 5. 測試數量或瀏覽器驗證範圍改變時，同步更新 `AGENTS.md` 與 `README.md`。
 6. 僅在使用者要求時建立 commit；使用英文 commit 訊息，並只納入本次任務檔案。

@@ -67,7 +67,7 @@ npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
 npm run test:online:match:browser # 本機雙瀏覽器好友房同步、斷線與連線失敗驗證
 ```
 
-若 Playwright 安裝於外部目錄，可用 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 路徑。測試報告與截圖會輸出到 `test-results/`，不得提交。詳細驗證分級（L1/L2/L3）見 [docs/loop-engineering.md](docs/loop-engineering.md)。
+若 Playwright 安裝於外部目錄，可用 `PLAYWRIGHT_NODE_MODULES` 指定其 `node_modules` 路徑。測試報告與截圖會輸出到 `test-results/`，不得提交。詳細驗證分級見 [.agents/skills/braverse-workflow/references/verification-levels.md](.agents/skills/braverse-workflow/references/verification-levels.md)。
 
 ## 卡牌資料匯入
 
