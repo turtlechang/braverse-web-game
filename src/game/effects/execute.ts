@@ -495,6 +495,8 @@ export const executeCardEffect = (
 
   if (effect.kind === 'gain-hp') {
     const player = state.players[context.sourcePlayerId]
+    const isOptionalTarget =
+      !effect.target?.sourceOnly && (effect.target?.min ?? 1) === 0
     const targetInstanceId =
       effect.target?.sourceOnly
         ? context.sourceInstanceId
@@ -502,6 +504,7 @@ export const executeCardEffect = (
           state.pendingBattle?.damageTargetInstanceId ??
           state.pendingBattle?.targetInstanceId
     if (!targetInstanceId) {
+      if (isOptionalTarget) return { ...state }
       throw new GameRuleError('增加 HP 需要明確目標餅乾。')
     }
     const targetIndex = player.battleArea.findIndex(
@@ -509,6 +512,7 @@ export const executeCardEffect = (
     )
     const target = player.battleArea[targetIndex]
     if (!target || player.deck.length < effect.amount) {
+      if (isOptionalTarget) return { ...state }
       throw new GameRuleError('牌庫張數不足，無法增加 HP。')
     }
     const gainedCards = player.deck.slice(0, effect.amount)
