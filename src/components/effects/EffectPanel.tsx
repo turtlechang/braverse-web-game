@@ -29,6 +29,11 @@ export interface EffectPanelProps {
   paymentCandidates?: GameCard[]
   selectedPaymentIds?: Set<string>
   onTogglePayment?: (instanceId: string) => void
+  trashBattleCookieCandidates?: GameCard[]
+  selectedTrashBattleCookieIds?: Set<string>
+  onToggleTrashBattleCookie?: (instanceId: string) => void
+  trashBattleCookieCost?: number
+  showTargetSelection?: boolean
 }
 
 function EffectPanelContent({
@@ -52,6 +57,11 @@ function EffectPanelContent({
   paymentCandidates = [],
   selectedPaymentIds = new Set<string>(),
   onTogglePayment,
+  trashBattleCookieCandidates = [],
+  selectedTrashBattleCookieIds = new Set<string>(),
+  onToggleTrashBattleCookie,
+  trashBattleCookieCost = 0,
+  showTargetSelection = true,
 }: EffectPanelProps) {
   const targetRef = useRef<HTMLDivElement>(null)
   const hasScrolledRef = useRef(false)
@@ -64,6 +74,8 @@ function EffectPanelContent({
       currentEffect?.kind === 'trash-to-hand' ||
       currentEffect?.kind === 'trash-to-deck'
       ? { min: 0, max: currentEffect.max }
+      : currentEffect?.kind === 'opponent-battle-to-trash'
+        ? { min: 1, max: 1 }
       : currentEffect?.kind === 'break-to-battle'
         ? { min: 0, max: currentEffect.amount }
         : currentEffect?.kind === 'support-to-trash' ||
@@ -79,14 +91,16 @@ function EffectPanelContent({
             currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
             currentEffect.kind !== 'disable-block' &&
-            currentEffect.kind !== 'flip-to-support' &&
-            currentEffect.kind !== 'opponent-battle-to-trash'
+            currentEffect.kind !== 'flip-to-support'
           ? currentEffect.target
           : null
 
   const hasCostPhase =
     !pendingEffect?.skillActivated &&
-    (totalEnergyCost > 0 || supportAreaCost > 0 || discardHandCost > 0)
+    (totalEnergyCost > 0 ||
+      supportAreaCost > 0 ||
+      discardHandCost > 0 ||
+      trashBattleCookieCost > 0)
 
   const energyPaid = totalEnergyCost > 0
     ? energyPaymentValid === true
@@ -97,7 +111,12 @@ function EffectPanelContent({
   const discardPaid =
     discardHandCost === 0 ||
     pendingEffect?.selectedDiscardHandIds.length === discardHandCost
-  const costReady = !hasCostPhase || (energyPaid && supportPaid && discardPaid)
+  const trashBattleCookiePaid =
+    trashBattleCookieCost === 0 ||
+    pendingEffect?.selectedTrashBattleCookieIds.length === trashBattleCookieCost
+  const costReady =
+    !hasCostPhase ||
+    (energyPaid && supportPaid && discardPaid && trashBattleCookiePaid)
 
   const targetReady =
     !selectionLimits ||
@@ -110,9 +129,12 @@ function EffectPanelContent({
   const hasExtraCostContent =
     costSupportCandidates.length > 0 ||
     discardHandCandidates.length > 0 ||
+    trashBattleCookieCandidates.length > 0 ||
     supportAreaCost > 0 ||
-    discardHandCost > 0
-  const hasTargetContent = candidateCards.length > 0 || Boolean(currentEffect)
+    discardHandCost > 0 ||
+    trashBattleCookieCost > 0
+  const hasTargetContent =
+    showTargetSelection && (candidateCards.length > 0 || Boolean(currentEffect))
 
   const visibleColumnCount =
     [hasPaymentContent, hasExtraCostContent, hasTargetContent].filter(Boolean).length
@@ -160,7 +182,7 @@ function EffectPanelContent({
 
           {hasCostPhase && (
             <div className="phase-progress">
-              <span className={`phase-step${energyPaid && supportPaid && discardPaid ? ' is-done' : ' is-active'}`}>
+              <span className={`phase-step${energyPaid && supportPaid && discardPaid && trashBattleCookiePaid ? ' is-done' : ' is-active'}`}>
                 1 費用
               </span>
               <span className="phase-divider" />
@@ -220,6 +242,12 @@ function EffectPanelContent({
                     {discardHandCost} 張手牌代價
                   </small>
                 )}
+                {trashBattleCookieCost > 0 && (
+                  <small>
+                    已選 {pendingEffect.selectedTrashBattleCookieIds.length}／
+                    {trashBattleCookieCost} 張戰鬥區餅乾代價
+                  </small>
+                )}
                 {costSupportCandidates.length > 0 && (
                   <>
                     <small>選擇要作為代價棄置的支援區卡牌</small>
@@ -258,6 +286,35 @@ function EffectPanelContent({
                           onClick={() => onToggleDiscardHand?.(card.instanceId)}
                         >
                           <CardFace card={card} selected={selectedDiscardHandIds.has(card.instanceId)} />
+                          <span>{card.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                {trashBattleCookieCandidates.length > 0 && (
+                  <>
+                    <small>選擇要作為代價送入棄牌區的戰鬥區餅乾</small>
+                    <div className="effect-candidates effect-candidates-trash-battle">
+                      {trashBattleCookieCandidates.map((card) => (
+                        <button
+                          type="button"
+                          className={
+                            selectedTrashBattleCookieIds.has(card.instanceId)
+                              ? 'is-selected'
+                              : ''
+                          }
+                          key={card.instanceId}
+                          onClick={() =>
+                            onToggleTrashBattleCookie?.(card.instanceId)
+                          }
+                        >
+                          <CardFace
+                            card={card}
+                            selected={selectedTrashBattleCookieIds.has(
+                              card.instanceId,
+                            )}
+                          />
                           <span>{card.name}</span>
                         </button>
                       ))}
@@ -379,10 +436,14 @@ export function EffectPanel(props: EffectPanelProps) {
   }
 
   return (
-    <div className="modal-backdrop" role="presentation">
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      style={props.pendingEffect ? undefined : { pointerEvents: 'none' }}
+    >
       <section
         className={`battle-response-modal effect-panel${props.pendingEffect ? '' : ' is-complete'}`}
-        role="alertdialog"
+        role={props.pendingEffect ? 'alertdialog' : 'status'}
         aria-live="polite"
       >
         {props.pendingEffect && (

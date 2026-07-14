@@ -34,7 +34,7 @@
 | `npm run typecheck` | ✅ `tsc -b && server:typecheck`（app + server 全量型別檢查） |
 | Render 部署準備 | ✅ 已部署（commit a679f03）並完成雙視窗公網對局驗證；本機 `test:online:match:browser` 另自動覆蓋核心好友房生命週期。詳見 [online-server-hosting.md](online-server-hosting.md)。Render Free 閒置會休眠，首次連線需等待喚醒 |
 | WebSocket 用戶端生命週期 | ✅ 單一有效連線、90 秒開啟／10 秒首次回應 timeout、舊連線競態與 error/close/錯誤協定防護；hook 與雙瀏覽器負向路徑已有回歸 |
-| WebSocket 伺服器入站驗證 | ⏳ `ConnectionManager` 目前仍以 TypeScript cast 讀取用戶端 JSON；下一批加入執行期 envelope 驗證，並同步讓對戰中的 `command-rejected` 對玩家可見 |
+| WebSocket 伺服器入站驗證 | ✅ 已完成（2026-07-14）：共用協定層驗證 ClientMessage 外框、牌組欄位與全部 GameCommand 必填／選填欄位；格式錯誤訊息依連線狀態安全拒絕，不再直接以型別 cast 進入伺服器。線上戰場也會顯示 `command-rejected` 原因，並在下一個合法 state update 後清除。 |
 
 ### P2 — 維護流程正式化 ✅（2026-07-11 確認完成）
 

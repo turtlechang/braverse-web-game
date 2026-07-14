@@ -1,5 +1,9 @@
 import type { CustomDeck, GameCommand, PlayerId } from '../../src/game'
-import type { ClientMessage, ServerMessage } from '../../src/net/onlineProtocol'
+import {
+  isClientMessage,
+  type ClientMessage,
+  type ServerMessage,
+} from '../../src/net/onlineProtocol'
 import { RoomStore, maskedStateFor, type Room } from './rooms'
 
 export interface SocketLike {
@@ -13,6 +17,8 @@ interface ConnectionInfo {
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '發生未知錯誤。'
+
+const INVALID_CLIENT_MESSAGE_REASON = '用戶端訊息格式無效。'
 
 const opponentOf = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
@@ -35,13 +41,36 @@ export class ConnectionManager {
     slot?.send(JSON.stringify(message))
   }
 
-  handleMessage(socket: SocketLike, raw: string): void {
-    let message: ClientMessage
-    try {
-      message = JSON.parse(raw) as ClientMessage
-    } catch {
+  private rejectInvalidMessage(socket: SocketLike): void {
+    if (this.connections.has(socket)) {
+      this.send(socket, {
+        type: 'command-rejected',
+        reason: INVALID_CLIENT_MESSAGE_REASON,
+      })
       return
     }
+
+    this.send(socket, {
+      type: 'room-join-error',
+      reason: INVALID_CLIENT_MESSAGE_REASON,
+    })
+  }
+
+  handleMessage(socket: SocketLike, raw: string): void {
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      this.rejectInvalidMessage(socket)
+      return
+    }
+
+    if (!isClientMessage(parsed)) {
+      this.rejectInvalidMessage(socket)
+      return
+    }
+
+    const message: ClientMessage = parsed
 
     switch (message.type) {
       case 'create-room':

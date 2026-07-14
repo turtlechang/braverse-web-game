@@ -1,0 +1,218 @@
+.online-activity-toggle {
+  position: absolute;
+  z-index: 30;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(129, 224, 255, 0.45);
+  border-radius: 999px;
+  color: #e8f8ff;
+  background: rgba(2, 18, 49, 0.78);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.online-activity-toggle:hover {
+  background: rgba(2, 27, 66, 0.9);
+}
+
+.online-activity-toggle em {
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(129, 224, 255, 0.28);
+  font-size: 0.6rem;
+  font-style: normal;
+}
+
+.online-activity-peek {
+  position: absolute;
+  z-index: 29;
+  top: 46px;
+  right: 10px;
+  width: min(310px, 28vw);
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid rgba(129, 224, 255, 0.3);
+  border-radius: 9px;
+  color: rgba(232, 248, 255, 0.9);
+  background: rgba(2, 18, 49, 0.78);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  font-size: 0.64rem;
+  line-height: 1.35;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.online-activity-peek.is-faint {
+  color: #ffb4b4;
+  font-weight: 900;
+}
+
+.online-activity-peek.is-status {
+  border-color: rgba(255, 241, 124, 0.54);
+  color: #fff17c;
+  font-weight: 900;
+}
+
+.online-activity-panel {
+  position: absolute;
+  z-index: 32;
+  top: 46px;
+  right: 10px;
+  bottom: 12px;
+  width: min(310px, 30vw);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  border: 1px solid rgba(129, 224, 255, 0.45);
+  border-radius: 12px;
+  color: #e8f8ff;
+  background: rgba(2, 16, 45, 0.94);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.online-activity-panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(129, 224, 255, 0.25);
+  font-size: 0.7rem;
+}
+
+.online-activity-panel > header > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #bdeeff;
+}
+
+.online-activity-panel > header button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+  border: none;
+  border-radius: 999px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.online-activity-panel > header button:hover {
+  background: rgba(129, 224, 255, 0.18);
+}
+
+.online-activity-current {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(129, 224, 255, 0.2);
+}
+
+.online-activity-status {
+  margin: 7px 0 0;
+  color: #fff17c;
+  font-size: 0.67rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.online-activity-list {
+  display: grid;
+  gap: 4px;
+  margin: 7px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.online-activity-list li {
+  color: rgba(232, 248, 255, 0.82);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.online-activity-list li.is-faint {
+  color: #ffb4b4;
+  font-weight: 900;
+}
+
+.online-activity-history {
+  min-height: 0;
+  padding: 8px 10px;
+  overflow: hidden;
+}
+
+.online-activity-history > strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #bdeeff;
+  font-size: 0.65rem;
+}
+
+.online-activity-history ol {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  height: 100%;
+  margin: 0;
+  padding: 0 0 10px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.online-activity-history li {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid rgba(138, 212, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.online-activity-history li span {
+  color: rgba(219, 239, 255, 0.6);
+  font-size: 0.56rem;
+}
+
+.online-activity-history li p {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.online-activity-history li.is-empty {
+  display: block;
+  border: none;
+  background: transparent;
+  color: rgba(219, 239, 255, 0.6);
+  font-size: 0.65rem;
+  text-align: center;
+}
+
+@container game-shell (max-width: 900px) {
+  .online-activity-toggle span {
+    display: none;
+  }
+
+  .online-activity-peek {
+    width: min(250px, 62vw);
+  }
+
+  .online-activity-panel {
+    width: min(280px, 76vw);
+  }
+
+  .online-activity-list li:nth-child(n + 3) {
+    display: none;
+  }
+}

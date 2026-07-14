@@ -3,6 +3,7 @@ import type {
   CardAbility,
   EnergyColor,
   EnergyCost,
+  EffectTargetSelector,
   GameCard,
   GameState,
   PlayerId,
@@ -90,13 +91,28 @@ export function usePendingEffect(params: {
 
   const currentEffect =
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
-  const currentTargetSelector =
+  const currentTargetSelector: EffectTargetSelector | null =
     currentEffect?.kind === 'gain-hp'
       ? currentEffect.target?.sourceOnly
         ? null
         : currentEffect.target ?? null
       : currentEffect && !isEffectUntargeted(currentEffect)
-        ? currentEffect.kind === 'break-to-trash' ||
+        ? currentEffect.kind === 'opponent-battle-to-trash'
+          ? {
+              side: 'opponent',
+              min: 1,
+              max: 1,
+              ...(currentEffect.maxLevel !== undefined
+                ? { maxLevel: currentEffect.maxLevel }
+                : {}),
+              ...(currentEffect.minLevel !== undefined
+                ? { minLevel: currentEffect.minLevel }
+                : {}),
+              ...(currentEffect.remainingHp !== undefined
+                ? { remainingHp: currentEffect.remainingHp }
+                : {}),
+            }
+          : currentEffect.kind === 'break-to-trash' ||
           currentEffect.kind === 'support-to-trash' ||
           currentEffect.kind === 'support-to-hand' ||
           currentEffect.kind === 'trash-to-battle' ||
@@ -106,10 +122,9 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'flip-to-support' ||
           currentEffect.kind === 'inspect-deck' ||
           currentEffect.kind === 'optional-cost-attack' ||
-          currentEffect.kind === 'disable-block' ||
-          currentEffect.kind === 'opponent-battle-to-trash'
+          currentEffect.kind === 'disable-block'
           ? null
-          : currentEffect.target
+          : (currentEffect.target ?? null)
         : null
 
   const effectTargetCandidates =
@@ -457,6 +472,50 @@ export function usePendingEffect(params: {
       return
     }
 
+    const hasRequiredTargets = availableEffects.every((effect) => {
+      if (effect.kind === 'opponent-battle-to-trash') {
+        const selector: EffectTargetSelector = {
+          side: 'opponent',
+          min: 1,
+          max: 1,
+          ...(effect.maxLevel !== undefined ? { maxLevel: effect.maxLevel } : {}),
+          ...(effect.minLevel !== undefined ? { minLevel: effect.minLevel } : {}),
+          ...(effect.remainingHp !== undefined
+            ? { remainingHp: effect.remainingHp }
+            : {}),
+        }
+        return getEffectTargetCandidates(nextGame, context, selector).length > 0
+      }
+      if (isEffectUntargeted(effect) || !('target' in effect) || !effect.target) {
+        return true
+      }
+      if ((effect.target.min ?? 0) === 0) return true
+      const candidates = getEffectTargetCandidates(nextGame, context, effect.target)
+      const opponentId: PlayerId =
+        playerId === 'player-one' ? 'player-two' : 'player-one'
+      const targetPlayerId =
+        effect.target.side === 'self' ? playerId : opponentId
+      const hasStageTarget =
+        effect.kind === 'field-to-trash' &&
+        (effect.allowStage || effect.stageOnly) &&
+        nextGame.players[targetPlayerId].stage !== null
+      return candidates.length + Number(hasStageTarget) >= effect.target.min
+    })
+
+    if (!hasRequiredTargets) {
+      if (trigger === 'on-play' && nextGame.pendingOnPlay) {
+        setGame(
+          applyGameCommand(nextGame, {
+            kind: 'skip-on-play',
+            playerId,
+            sourceInstanceId: card.instanceId,
+          }),
+        )
+      }
+      setMessage(`${card.name}目前沒有合法的效果目標。`)
+      return
+    }
+
     if (
       !canActivateCookieSkill(
         nextGame,
@@ -746,11 +805,12 @@ export function usePendingEffect(params: {
           ? currentEffect.kind === 'gain-hp'
             ? currentEffect.target?.max ?? 0
             : 0
-          : currentEffect.kind === 'inspect-deck' ||
+          : currentEffect.kind === 'opponent-battle-to-trash'
+            ? 1
+            : currentEffect.kind === 'inspect-deck' ||
               currentEffect.kind === 'optional-cost-attack' ||
               currentEffect.kind === 'disable-block' ||
-              currentEffect.kind === 'flip-to-support' ||
-              currentEffect.kind === 'opponent-battle-to-trash'
+              currentEffect.kind === 'flip-to-support'
             ? 0
           : currentEffect.target?.max ?? 0
 

@@ -302,7 +302,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
         )}
 
       {match.pendingPlayer &&
-        match.pendingPlayer.id !== 'player-two' && (
+        match.pendingPlayer.id === match.viewerPlayerId && (
           <DecisionModal
             isRefresh={Boolean(match.game.pendingRefresh)}
             playerName={match.pendingPlayer.name}

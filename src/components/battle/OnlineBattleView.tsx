@@ -8,11 +8,13 @@ import { BattleRow } from './BattleRow'
 import { PhaseRail } from '../layout/PhaseRail'
 import { AttackPaymentPanel } from '../panels/GameStatusPanels'
 import { StatusToast, CardPreviewPanel } from '../panels/InteractionOverlays'
+import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
 import { EffectPanel } from '../effects/EffectPanel'
 import { BattleResponseModals } from './BattleResponseModals'
 import { DamageEffectModals } from './DamageEffectModals'
 import { PendingDecisionModals } from './PendingDecisionModals'
-import { ResultModal } from '../modals/GameModals'
+import { CardDetailModal, ResultModal } from '../modals/GameModals'
+import { CardFace } from '../cards/CardVisuals'
 import { phaseLabels } from '../gameUiLabels'
 import type { GameCard } from '../../game'
 
@@ -21,6 +23,7 @@ export interface OnlineBattleViewProps {
   viewerPlayerId: PlayerId
   roomCode: string | null
   sendCommand: (command: import('../../game').GameCommand) => void
+  commandRejectedReason: string | null
   onLeave: () => void
 }
 
@@ -42,9 +45,11 @@ export function OnlineBattleView({
   viewerPlayerId,
   roomCode,
   sendCommand,
+  commandRejectedReason,
   onLeave,
 }: OnlineBattleViewProps) {
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
+  const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
   const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
     null,
   )
@@ -89,6 +94,22 @@ export function OnlineBattleView({
           {needsMulliganDecision && (
             <>
               <p>是否要重新抽取整副起始手牌？</p>
+              <div
+                className="online-setup-hand"
+                data-testid="online-opening-hand"
+                aria-label="起始手牌"
+              >
+                {viewerPlayer.hand.map((card) => (
+                  <div
+                    key={card.instanceId}
+                    className="online-setup-hand-card"
+                    data-testid="online-opening-card"
+                  >
+                    <CardFace card={card} />
+                    <span>{card.name}</span>
+                  </div>
+                ))}
+              </div>
               <div className="online-setup-actions">
                 <button
                   className="online-setup-btn"
@@ -123,14 +144,19 @@ export function OnlineBattleView({
           {needsStartingCookie && (
             <>
               <p>請選擇一張起始餅乾：</p>
-              <div className="online-setup-actions">
-                {viewerPlayer.hand
-                  .filter((card) => card.type === 'cookie')
-                  .map((card) => (
+              <div
+                className="online-setup-hand"
+                data-testid="online-opening-hand"
+                aria-label="起始手牌"
+              >
+                {viewerPlayer.hand.map((card) =>
+                  card.type === 'cookie' ? (
                     <button
                       key={card.instanceId}
-                      className="online-setup-btn"
+                      className="online-setup-hand-card is-selectable"
+                      data-testid="online-starting-cookie"
                       type="button"
+                      aria-label={`選擇 ${card.name} 作為起始餅乾`}
                       onClick={() =>
                         match.dispatch(
                           {
@@ -142,9 +168,20 @@ export function OnlineBattleView({
                         )
                       }
                     >
+                      <CardFace card={card} />
                       {card.name}
                     </button>
-                  ))}
+                  ) : (
+                    <div
+                      key={card.instanceId}
+                      className="online-setup-hand-card is-unavailable"
+                      data-testid="online-opening-card"
+                    >
+                      <CardFace card={card} />
+                      <span>{card.name}</span>
+                    </div>
+                  ),
+                )}
               </div>
             </>
           )}
@@ -188,7 +225,8 @@ export function OnlineBattleView({
     <main className="game-shell">
       <div className="board-texture" />
 
-      <StatusToast message={match.message} />
+      <StatusToast message={commandRejectedReason ?? match.message} />
+      <OnlineActivityFeed game={game} viewerPlayerId={viewerPlayerId} />
 
       <PhaseRail
         phase={game.phase}
@@ -226,7 +264,7 @@ export function OnlineBattleView({
           drawAnimIds={match.drawAnimIds}
           onAttackTarget={match.handleAttackTarget}
           onEffectTarget={pending.toggleTarget}
-          onInspectCard={setHoveredCard}
+          onInspectCard={setInspectedCard}
           onInspectDiscard={() => {}}
           onHoverCard={setHoveredCard}
           onFocusCard={setHoveredCard}
@@ -345,7 +383,7 @@ export function OnlineBattleView({
             )
           }}
           onActivateStage={() => pending.beginActivateStage()}
-          onInspectCard={setHoveredCard}
+          onInspectCard={setInspectedCard}
           onInspectDiscard={() => {}}
           onHoverCard={setHoveredCard}
           onFocusCard={setHoveredCard}
@@ -377,6 +415,30 @@ export function OnlineBattleView({
         onSkip={() => {}}
         candidateCards={pending.candidateCards}
         onToggleCandidate={pending.toggleTarget}
+        discardHandCandidates={pending.draftDiscardHandCandidates}
+        selectedDiscardHandIds={pending.selectedDraftDiscardHandIds}
+        onToggleDiscardHand={pending.toggleDraftDiscardHand}
+        discardHandCost={pending.draftDiscardHandCost}
+        paymentCandidates={pending.draftPaymentCandidates}
+        selectedPaymentIds={pending.selectedDraftPaymentIds}
+        energyPaymentValid={pending.draftPaymentValid}
+        onTogglePayment={pending.toggleDraftPayment}
+        costSupportCandidates={pending.draftCostSupportCandidates}
+        selectedCostSupportIds={pending.selectedDraftCostSupportIds}
+        onToggleCostSupport={pending.toggleDraftCostSupport}
+        trashBattleCookieCandidates={pending.draftTrashBattleCookieCandidates}
+        selectedTrashBattleCookieIds={pending.selectedDraftTrashBattleCookieIds}
+        onToggleTrashBattleCookie={pending.toggleDraftTrashBattleCookie}
+        trashBattleCookieCost={pending.draftTrashBattleCookieCost}
+        showTargetSelection={!pending.abilityCostDraft}
+        showCancelSkill={Boolean(pending.abilityCostDraft)}
+        onCancel={() => {
+          if (pending.abilityCostDraft?.trigger === 'on-play') {
+            pending.skipOnPlay(pending.abilityCostDraft.card.instanceId)
+          } else {
+            pending.cancelAbilityCostDraft()
+          }
+        }}
       />
 
       <BattleResponseModals match={match} />
@@ -390,6 +452,13 @@ export function OnlineBattleView({
           viewerPlayerId={viewerPlayerId}
           reason={game.result.reason}
           onRestart={onLeave}
+        />
+      )}
+
+      {inspectedCard && (
+        <CardDetailModal
+          card={inspectedCard}
+          onClose={() => setInspectedCard(null)}
         />
       )}
     </main>
