@@ -2066,8 +2066,8 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     type: 'stage',
   }
   const opponentBreakArea: CookieCard[] = [
-    cardCheckFillerCookie('opp-break-1', 2, 4).cookie,
-    cardCheckFillerCookie('opp-break-2', 2, 4).cookie,
+    cardCheckFillerCookie('opp-break-1', 2, 4, 0, 'red').cookie,
+    cardCheckFillerCookie('opp-break-2', 2, 4, 0, 'yellow').cookie,
   ]
 
   // Extra battle cookies for the player, beyond the card under test, so
@@ -2097,10 +2097,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   const deckFiller = (prefix: string): GameCard[] =>
     Array.from({ length: 20 }, (_, i) => testSupportCard(`${prefix}-deck-${i}`, payColor))
 
-  // Own break area filler for break-area-level conditions (flip cards).
+  // Own break area filler for break-area-level conditions (flip cards) and
+  // for skills that select own-color cookies from the break area (e.g.
+  // "Select {Y} Cookies from your break area" — colorless fillers would give
+  // such skills zero legal candidates and silently never activate).
   const ownBreakArea: CookieCard[] = [
-    cardCheckFillerCookie('self-break-1', 2, 4).cookie,
-    cardCheckFillerCookie('self-break-2', 2, 4).cookie,
+    cardCheckFillerCookie('self-break-1', 2, 4, 0, payColor).cookie,
+    cardCheckFillerCookie('self-break-2', 2, 4, 0, payColor).cookie,
   ]
 
   const baseState = (): GameState => ({
