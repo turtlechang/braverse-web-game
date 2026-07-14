@@ -142,6 +142,20 @@ const installDeck = async (context, id, name) => {
   }, { deckId: id, deckName: name, entries: deckEntries })
 }
 
+const trackApplicationSockets = async (context) => {
+  await context.addInitScript(() => {
+    const NativeWebSocket = window.WebSocket
+    const sockets = []
+    window.__braverseTestSockets = sockets
+    window.WebSocket = class TrackingWebSocket extends NativeWebSocket {
+      constructor(...args) {
+        super(...args)
+        sockets.push(this)
+      }
+    }
+  })
+}
+
 const trackedPage = async (context) => {
   const page = await context.newPage()
   const errors = []
@@ -185,6 +199,7 @@ try {
   guestContext = await browser.newContext({ viewport: { width: 1366, height: 768 } })
   await installDeck(hostContext, 'host-browser-deck', 'Host Browser Deck')
   await installDeck(guestContext, 'guest-browser-deck', 'Guest Browser Deck')
+  await trackApplicationSockets(guestContext)
   const host = await trackedPage(hostContext)
   const guest = await trackedPage(guestContext)
   hostPage = host.page
@@ -208,6 +223,10 @@ try {
     guestPage.locator('.online-setup').waitFor({ state: 'visible' }),
   ])
   assert.match((await hostPage.locator('.online-setup').textContent()) ?? '', new RegExp(roomCode))
+  const hostOpeningHand = hostPage.getByTestId('online-opening-hand')
+  const guestOpeningHand = guestPage.getByTestId('online-opening-hand')
+  assert.ok(await hostOpeningHand.getByTestId('online-opening-card').count() > 0)
+  assert.ok(await guestOpeningHand.getByTestId('online-opening-card').count() > 0)
 
   await hostPage.getByRole('button', { name: '保留手牌', exact: true }).click()
   await guestPage.getByRole('button', { name: '保留手牌', exact: true }).click()
@@ -215,13 +234,27 @@ try {
     hostPage.getByText('請選擇一張起始餅乾：', { exact: true }).waitFor(),
     guestPage.getByText('請選擇一張起始餅乾：', { exact: true }).waitFor(),
   ])
-  await hostPage.locator('.online-setup-actions .online-setup-btn').first().click()
-  await guestPage.locator('.online-setup-actions .online-setup-btn').first().click()
+  assert.ok(await hostOpeningHand.getByTestId('online-starting-cookie').count() > 0)
+  assert.ok(await guestOpeningHand.getByTestId('online-starting-cookie').count() > 0)
+  await hostOpeningHand.getByTestId('online-starting-cookie').first().click()
+  await guestOpeningHand.getByTestId('online-starting-cookie').first().click()
 
   await Promise.all([
     hostPage.locator('.table-area').waitFor({ state: 'visible' }),
     guestPage.locator('.table-area').waitFor({ state: 'visible' }),
   ])
+  const hostActivityToggle = hostPage.getByTestId('online-activity-toggle')
+  const guestActivityToggle = guestPage.getByTestId('online-activity-toggle')
+  await Promise.all([
+    hostActivityToggle.waitFor({ state: 'visible' }),
+    guestActivityToggle.waitFor({ state: 'visible' }),
+  ])
+  await hostActivityToggle.click()
+  const hostActivityFeed = hostPage.getByTestId('online-activity-feed')
+  await hostActivityFeed.waitFor({ state: 'visible' })
+  assert.ok((await hostActivityFeed.locator('li').count()) > 0)
+  await hostActivityToggle.click()
+  await hostActivityFeed.waitFor({ state: 'hidden' })
   await hostPage.waitForFunction(() => {
     const button = document.querySelector('.next-phase-button')
     const phase = document.querySelector('.phase-rail li.is-current strong')
@@ -255,6 +288,51 @@ try {
   )?.trim()
   assert.equal(hostPhase, '主要階段')
   assert.equal(guestPhase, hostPhase)
+
+  const hostHandCard = hostPage.locator('.bottom-hand .hand-card').first()
+  await hostHandCard.click()
+  const detailButton = hostPage.locator('.hand-card-detail').first()
+  await detailButton.waitFor({ state: 'visible' })
+  await detailButton.click()
+  const detailModal = hostPage.locator('.card-detail-modal')
+  await detailModal.waitFor({ state: 'visible' })
+  await detailModal.locator('.close-modal').click()
+  await detailModal.waitFor({ state: 'hidden' })
+
+  const hostPhaseButton = hostPage.locator('.next-phase-button')
+  assert.equal(await hostPhaseButton.isEnabled(), true)
+  await hostPhaseButton.click()
+  await Promise.all([
+    hostPage.waitForFunction(() =>
+      document.querySelector('.phase-rail li.is-current strong')?.textContent
+        ?.includes('結束階段'),
+    ),
+    guestPage.waitForFunction(() =>
+      document.querySelector('.phase-rail li.is-current strong')?.textContent
+        ?.includes('結束階段'),
+    ),
+  ])
+
+  // 對手回合的下一階段按鈕在 UI 層已停用；直接透過應用程式自身的 socket
+  // 送出同一個非法請求，驗證伺服器仍會拒絕不受信任的 WebSocket payload。
+  const invalidCommandSent = await guestPage.evaluate(() => {
+    const socket = window.__braverseTestSockets?.at(-1)
+    if (!socket || socket.readyState !== WebSocket.OPEN) return false
+    socket.send(JSON.stringify({
+      type: 'submit-command',
+      command: { kind: 'advance-phase', playerId: 'player-two' },
+    }))
+    return true
+  })
+  assert.equal(invalidCommandSent, true)
+  const rejectionToast = guestPage.locator('.status-toast')
+  await guestPage.waitForFunction(() =>
+    document.querySelector('.status-toast')?.textContent?.includes('不是目前的回合玩家'),
+  )
+  assert.match(
+    (await rejectionToast.textContent()) ?? '',
+    /不是目前的回合玩家/,
+  )
 
   await guestContext.close()
   guestContext = null
@@ -307,6 +385,10 @@ try {
     setupCompleted: true,
     synchronizedPhase: 'main',
     synchronizedTurn: hostTurn,
+    openingHandVisible: true,
+    activityFeedbackVisible: true,
+    cardDetailClosable: true,
+    commandRejectionVisible: true,
     disconnectHandled: true,
     connectionFailureHandled: true,
   }, null, 2))

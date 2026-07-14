@@ -669,6 +669,84 @@ describe('usePendingEffect cancelPendingSkill', () => {
   })
 })
 
+describe('usePendingEffect required target gating', () => {
+  it('does not open BS2-058-style payment UI without an opposing level 3 Cookie', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const originalSource = baseGame.players['player-one'].battleArea[0]
+    const sourceCard: CookieCard = {
+      ...originalSource.card,
+      type: 'cookie',
+      level: originalSource.card.level ?? 1,
+      hp: originalSource.card.hp ?? 1,
+      attack: originalSource.card.attack ?? 1,
+      attackCost: originalSource.card.attackCost ?? 1,
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: { red: 1 } },
+        text: 'Place 1 opposing LV.3 Cookie into trash.',
+        effects: [
+          { kind: 'opponent-battle-to-trash', minLevel: 3, maxLevel: 3 },
+        ],
+      },
+    }
+    const gameState: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          battleArea: [{ ...originalSource, card: sourceCard }],
+        },
+      },
+    }
+    const setMessage = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: () => undefined,
+        dispatch: vi.fn(),
+        viewerPlayerId: 'player-one',
+        setMessage,
+        clearAttacker: () => undefined,
+        setInspectedHpPile: () => undefined,
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => undefined,
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => undefined,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCookieSkill(
+        gameState,
+        sourceCard,
+        'player-one',
+        'activate',
+        '主動技能',
+      ),
+    )
+
+    expect(captured!.pendingEffect).toBeNull()
+    expect(setMessage).toHaveBeenCalledWith(
+      `${sourceCard.name}目前沒有合法的效果目標。`,
+    )
+    await act(() => root.unmount())
+  })
+})
+
 describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
   it('selects and deselects a support-to-trash candidate via toggleEffectTarget', async () => {
     const baseGame = createItemUsageDemoState(true)

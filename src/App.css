@@ -725,6 +725,81 @@ button {
   margin-top: 8px;
 }
 
+.online-setup-hand {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid rgba(113, 233, 255, 0.24);
+  border-radius: 10px;
+  background: rgba(4, 25, 64, 0.44);
+}
+
+.online-setup-hand-card {
+  width: 136px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #d9eeff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.online-setup-hand-card .card-face {
+  width: 120px;
+}
+
+.online-setup-hand-card.is-selectable {
+  border-color: rgba(113, 233, 255, 0.55);
+  background: rgba(9, 54, 111, 0.7);
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.online-setup-hand-card.is-selectable:hover {
+  border-color: #71e9ff;
+  background: rgba(20, 88, 160, 0.86);
+  transform: translateY(-5px);
+}
+
+.online-setup-hand-card.is-selectable:focus-visible {
+  outline: 2px solid #fff17c;
+  outline-offset: 3px;
+}
+
+.online-setup-hand-card.is-unavailable {
+  opacity: 0.56;
+}
+
+@media (max-width: 640px) {
+  .online-setup {
+    padding: 16px;
+  }
+
+  .online-setup-hand {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .online-setup-hand-card {
+    width: 102px;
+    padding: 5px;
+  }
+
+  .online-setup-hand-card .card-face {
+    width: 94px;
+  }
+}
+
 .online-setup-btn {
   min-width: 44px;
   min-height: 44px;

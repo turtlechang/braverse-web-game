@@ -147,6 +147,10 @@ describe('EffectPanel', () => {
 
     expect(container.textContent).toContain('效果紀錄')
     expect(container.textContent).toContain('發動了技能效果')
+    const backdrop = container.querySelector<HTMLElement>('.modal-backdrop')
+    const history = container.querySelector<HTMLElement>('[role="status"]')
+    expect(backdrop?.style.pointerEvents).toBe('none')
+    expect(history).not.toBeNull()
     act(() => root.unmount())
   })
 
@@ -406,6 +410,54 @@ describe('EffectPanel', () => {
     const stickyActions = container.querySelector('.effect-panel-sticky-actions')
     const confirmBtn = stickyActions!.querySelector('button:not(.skip-effect)') as HTMLButtonElement
     expect(confirmBtn.disabled).toBe(true)
+
+    await act(() => root.unmount())
+  })
+
+  it('shows and requires a battle Cookie sacrifice cost', async () => {
+    const battleCookie = createCookieCard(7)
+    const pending = createPendingEffect({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: {
+          energy: {},
+          trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
+        },
+        text: 'Trash a battle Cookie as a cost.',
+        effects: [],
+      },
+    })
+    const onToggle = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{ kind: 'draw', amount: 1 }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        trashBattleCookieCandidates={[battleCookie]}
+        selectedTrashBattleCookieIds={new Set()}
+        onToggleTrashBattleCookie={onToggle}
+        trashBattleCookieCost={1}
+      />,
+    ))
+
+    expect(container.textContent).toContain('戰鬥區餅乾代價')
+    const confirmButton = container.querySelector(
+      '.effect-panel-sticky-actions button:not(.skip-effect)',
+    ) as HTMLButtonElement
+    expect(confirmButton.disabled).toBe(true)
+
+    const candidateButton = container.querySelector(
+      '.effect-candidates-trash-battle button',
+    ) as HTMLButtonElement
+    await act(() => candidateButton.click())
+    expect(onToggle).toHaveBeenCalledWith(battleCookie.instanceId)
 
     await act(() => root.unmount())
   })

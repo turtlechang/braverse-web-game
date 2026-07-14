@@ -46,6 +46,7 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
         viewerPlayerId={online.viewerPlayerId}
         roomCode={online.roomCode}
         sendCommand={online.sendCommand}
+        commandRejectedReason={online.errorMessage}
         onLeave={handleClose}
       />
     )

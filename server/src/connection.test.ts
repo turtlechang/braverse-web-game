@@ -90,6 +90,34 @@ describe('ConnectionManager', () => {
     expect(socket.last()).toMatchObject({ type: 'room-join-error' })
   })
 
+  it('會拒絕格式錯誤的初始訊息與已連線玩家的錯誤指令', () => {
+    const manager = new ConnectionManager(new RoomStore())
+    const socket = new MockSocket()
+
+    manager.handleMessage(socket, '{not-json')
+    expect(socket.last()).toMatchObject({
+      type: 'room-join-error',
+      reason: '用戶端訊息格式無效。',
+    })
+
+    manager.handleMessage(
+      socket,
+      JSON.stringify({ type: 'create-room', deck: createTestDeck('one') }),
+    )
+    manager.handleMessage(
+      socket,
+      JSON.stringify({
+        type: 'submit-command',
+        command: { kind: 'advance-phase', playerId: 'not-a-player' },
+      }),
+    )
+
+    expect(socket.last()).toMatchObject({
+      type: 'command-rejected',
+      reason: '用戶端訊息格式無效。',
+    })
+  })
+
   it('submit-command 成功後雙方都會收到 state-update', () => {
     const manager = new ConnectionManager(new RoomStore())
     const hostSocket = new MockSocket()

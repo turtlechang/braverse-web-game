@@ -3,7 +3,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import type { CustomDeck } from '../../game'
+import { createDemoGame, type CustomDeck } from '../../game'
 import { OFFICIAL_RED_STARTER_DECK } from '../../game/starter-deck'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -33,11 +33,15 @@ const {
     roomCode: string | null
     errorMessage: string | null
     matchEndedReason: string | null
+    viewerPlayerId: 'player-one' | 'player-two' | null
+    maskedGame: ReturnType<typeof createDemoGame> | null
   } = {
     status: 'idle',
     roomCode: null,
     errorMessage: null,
     matchEndedReason: null,
+    viewerPlayerId: null,
+    maskedGame: null,
   }
 
   return {
@@ -58,8 +62,8 @@ vi.mock('../../hooks/useOnlineMatch', () => ({
     return {
       status: state.status,
       roomCode: state.roomCode,
-      viewerPlayerId: null,
-      maskedGame: null,
+      viewerPlayerId: state.viewerPlayerId,
+      maskedGame: state.maskedGame,
       errorMessage: state.errorMessage,
       matchEndedReason: state.matchEndedReason,
       createRoom: mockCreateRoom,
@@ -71,7 +75,9 @@ vi.mock('../../hooks/useOnlineMatch', () => ({
 }))
 
 vi.mock('./OnlineBattleView', () => ({
-  OnlineBattleView: () => 'mock-battle-view',
+  OnlineBattleView: ({ commandRejectedReason }: { commandRejectedReason: string | null }) => (
+    <div data-testid="mock-battle-view">{commandRejectedReason}</div>
+  ),
 }))
 
 import { OnlineMatchPanel } from './OnlineMatchPanel'
@@ -106,6 +112,8 @@ beforeEach(() => {
     roomCode: null,
     errorMessage: null,
     matchEndedReason: null,
+    viewerPlayerId: null,
+    maskedGame: null,
   })
   mockCreateRoom.mockClear()
   mockJoinRoom.mockClear()
@@ -276,6 +284,24 @@ describe('OnlineMatchPanel error state', () => {
 
     const returnBtn = findButton(container, '返回')
     expect(returnBtn).toBeDefined()
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('OnlineMatchPanel in-progress state', () => {
+  it('passes a rejected command reason to the battle view', async () => {
+    setMockState({
+      status: 'in-progress',
+      errorMessage: '現在不是你的回合。',
+      viewerPlayerId: 'player-one',
+      maskedGame: createDemoGame(),
+    })
+    const { container, root } = await renderPanel([validDeck])
+
+    expect(container.querySelector('[data-testid="mock-battle-view"]')?.textContent).toBe(
+      '現在不是你的回合。',
+    )
 
     await act(() => root.unmount())
   })

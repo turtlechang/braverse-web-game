@@ -149,6 +149,20 @@ export function useOnlineMatchController(params: {
   // 沒有陷阱/Blocker 可回應時自動略過——比照本地版本的同名邏輯。
   useEffect(() => {
     const battle = game.pendingBattle
+    if (battle?.stage === 'damage') {
+      const damagePlayerId = battle.damagePlayerId ?? battle.defenderPlayerId
+      if (damagePlayerId !== viewerPlayerId) return
+
+      const timer = window.setTimeout(() => {
+        dispatch(
+          { kind: 'resolve-next-damage', playerId: viewerPlayerId },
+          '正在結算傷害。',
+        )
+      }, 500)
+
+      return () => window.clearTimeout(timer)
+    }
+
     if (
       battle?.stage !== 'trap' ||
       battle.defenderPlayerId !== viewerPlayerId ||
