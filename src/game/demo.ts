@@ -5,6 +5,7 @@ import {
   selectStartingCookie,
 } from './setup'
 import {
+  createCard,
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
   createOfficialPurpleStarterDeck,
@@ -13,6 +14,7 @@ import {
   DECK_CREATORS,
   type DeckChoice,
 } from './starter-deck'
+import { getCardPoolEntry } from './card-pool'
 import type {
   CustomDeck,
 } from './custom-deck'
@@ -22,6 +24,7 @@ import type {
   EnergyColor,
   GameCard,
   GameState,
+  PendingFaintEffect,
   PlayerId,
   PlayerState,
   TurnPhase,
@@ -57,6 +60,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-018' }
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
+  | { kind: 'card-check'; cardNumber: string }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -155,6 +159,12 @@ export const parseTestStateConfig = (
   }
   if (testState === 'blue-st4-020-unpayable') {
     return { kind: 'blue-st4-020', payable: false }
+  }
+  if (testState?.startsWith('card:')) {
+    const cardNumber = testState.slice('card:'.length).trim()
+    if (cardNumber.length > 0) {
+      return { kind: 'card-check', cardNumber }
+    }
   }
   return null
 }
@@ -1973,6 +1983,521 @@ export const createBlueSt4TrapDemoState = (payable: boolean): GameState => {
       faintedColors: [],
       attackEffects: [],
       attackEffectIndex: 0,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Generic, data-driven "card check" test state.
+//
+// Instead of one hand-built scenario per card (as above), this builds a
+// minimal legal GameState for ANY official card number by looking it up in
+// the shared card pool and inspecting which ability field the created
+// GameCard actually carries (`skill` / `attackEffects` / `flip` / `trap` /
+// `item` / `stageAbility`). A handful of scenario "shapes" are dispatched by
+// that inspection, reusing the same field conventions as the hand-built
+// scenarios above (phase 'main', mulligan/starting-cookie already resolved,
+// support/energy pre-placed for cost payment, a spread of legal opponent
+// targets across levels/remaining-HP so level- or HP-filtered target
+// selectors have at least one match, etc.).
+// ---------------------------------------------------------------------------
+
+const cardCheckFillerCookie = (
+  instanceId: string,
+  level: number,
+  hp: number,
+  damage = 0,
+  energyColor?: EnergyColor,
+): { cookie: CookieCard; hpCards: GameCard[] } => {
+  const cookie: CookieCard = {
+    id: instanceId,
+    instanceId,
+    name: instanceId,
+    type: 'cookie',
+    level,
+    hp,
+    attack: 1,
+    attackCost: 0,
+    energyColor,
+  }
+  const remainingHp = Math.max(0, hp - damage)
+  const hpCards = Array.from({ length: remainingHp }, (_, i) =>
+    testSupportCard(`${instanceId}-hp-${i}`),
+  )
+  return { cookie, hpCards }
+}
+
+const cardCheckBattleEntry = (
+  cookie: CookieCard,
+  hpCards: GameCard[],
+  sequence: number,
+  rested = false,
+) => ({
+  card: cookie,
+  hpCards,
+  rested,
+  battleEntryId: `${cookie.instanceId}:battle:${sequence}`,
+})
+
+/**
+ * Builds a minimal legal GameState positioned so the given card's ability
+ * (if any) can be triggered through the real UI. Throws if the card number
+ * isn't in the shared official card pool.
+ */
+export const createCardCheckDemoState = (cardNumber: string): GameState => {
+  const entry = getCardPoolEntry(cardNumber)
+  if (!entry) {
+    throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
+  }
+  const card = createCard(entry, 'player-one', 1)
+  const payColor: EnergyColor = card.energyColor && card.energyColor !== 'wild'
+    ? card.energyColor
+    : 'purple'
+
+  // A spread of opponent battle cookies covering several levels and
+  // remaining-HP totals so level/remaining-HP-filtered target selectors have
+  // at least one legal candidate.
+  const opp1 = cardCheckFillerCookie('opp-lv1', 1, 6, 0, 'red')
+  const opp2 = cardCheckFillerCookie('opp-lv3', 3, 8, 3, 'yellow')
+  const opponentStage: GameCard = {
+    id: 'opp-stage-card',
+    instanceId: 'opp-stage-card-1',
+    name: '對手場景卡',
+    type: 'stage',
+  }
+  const opponentBreakArea: CookieCard[] = [
+    cardCheckFillerCookie('opp-break-1', 2, 4).cookie,
+    cardCheckFillerCookie('opp-break-2', 2, 4).cookie,
+  ]
+
+  // Extra battle cookies for the player, beyond the card under test, so
+  // self-side target selectors and trash-battle-cookie costs have
+  // candidates that aren't the tested card itself.
+  const selfExtra1 = cardCheckFillerCookie('self-extra-1', 1, 4, 0, payColor)
+
+  // Generous energy support to pay any skill/item/trap/stage energy cost.
+  const energySupports = Array.from({ length: 6 }, (_, i) =>
+    testSupportCard(`support-pay-${i}`, payColor),
+  )
+  // Hand filler cards for discard-hand style costs, beyond the tested card.
+  const handFillers = Array.from({ length: 4 }, (_, i) =>
+    testSupportCard(`hand-filler-${i}`, i % 2 === 0 ? payColor : 'wild'),
+  )
+  // Trash (discard pile) filler for skills that select from trash.
+  const trashFillers: GameCard[] = [
+    cardCheckFillerCookie('trash-cookie-1', 1, 3).cookie,
+    cardCheckFillerCookie('trash-cookie-2', 2, 4, 0, payColor).cookie,
+    testSupportCard('trash-item-1', payColor),
+  ]
+  // Deploying a cookie draws HP cards from the top of the deck
+  // (see deployCookie in actions.ts); an empty deck immediately triggers
+  // deck-exhaustion (`pendingRefresh`), which in turn blocks on-play skill
+  // resolution and other pending-state-gated actions. Give both players a
+  // generous filler deck so no card-check scenario accidentally exhausts it.
+  const deckFiller = (prefix: string): GameCard[] =>
+    Array.from({ length: 20 }, (_, i) => testSupportCard(`${prefix}-deck-${i}`, payColor))
+
+  // Own break area filler for break-area-level conditions (flip cards).
+  const ownBreakArea: CookieCard[] = [
+    cardCheckFillerCookie('self-break-1', 2, 4).cookie,
+    cardCheckFillerCookie('self-break-2', 2, 4).cookie,
+  ]
+
+  const baseState = (): GameState => ({
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: deckFiller('p1'),
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: deckFiller('p2'),
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 2,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 10,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
+  })
+
+  // The real game caps each side's battle area at 2 cookies.
+  const opponentBattleArea = [
+    cardCheckBattleEntry(opp1.cookie, opp1.hpCards, 1),
+    cardCheckBattleEntry(opp2.cookie, opp2.hpCards, 2),
+  ]
+
+  // --- Non-cookie cards (item / trap / stage) --------------------------
+  if (card.type === 'item') {
+    const state = baseState()
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [card, ...handFillers],
+          battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          discardPile: trashFillers,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: opponentBattleArea,
+          stage: { card: opponentStage, rested: false },
+        },
+      },
+    }
+  }
+
+  if (card.type === 'stage') {
+    const oldStage: GameCard = { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
+    const state = baseState()
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [card, ...handFillers],
+          battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          stage: { card: oldStage, rested: false },
+          discardPile: trashFillers,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: opponentBattleArea,
+        },
+      },
+    }
+  }
+
+  if (card.type === 'trap') {
+    const defender = cardCheckFillerCookie('trap-defender', 2, 5, 0, payColor)
+    // A high-attack attacker so "attacker attack more than N" trap
+    // conditions have a chance of being met, plus 2 extra opponent battle
+    // cookies (beyond the attacker) so traps that select an opponent target
+    // (rather than just redirecting/countering the current attack) have
+    // legal candidates.
+    const attacker: CookieCard = { ...cardCheckFillerCookie('trap-attacker', 2, 5, 0, 'black').cookie, attack: 6 }
+    const bigTrashFillers = Array.from({ length: 16 }, (_, i) =>
+      cardCheckFillerCookie(`trash-bulk-${i}`, 1, 3).cookie,
+    )
+    const state = baseState()
+    return {
+      ...state,
+      firstPlayerId: 'player-two',
+      activePlayerId: 'player-two',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [card, ...handFillers],
+          battleArea: [cardCheckBattleEntry(defender.cookie, defender.hpCards, 4)],
+          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          discardPile: [...trashFillers, ...bigTrashFillers],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [
+            cardCheckBattleEntry(attacker, [], 5),
+            cardCheckBattleEntry(opp2.cookie, opp2.hpCards, 6),
+          ],
+          stage: { card: opponentStage, rested: false },
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: attacker.instanceId,
+        targetInstanceId: defender.cookie.instanceId,
+        declaredDamage: attacker.attack,
+        remainingDamage: attacker.attack,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+    }
+  }
+
+  // --- Cookie / flip cards ----------------------------------------------
+
+  // Flip-attachment cards trigger when revealed as an HP card during an
+  // attack, not from the player's hand — mirror createFlipResponseDemoState.
+  if (card.flip) {
+    const defender = cardCheckFillerCookie('flip-defender', 2, 5, 4, payColor) // 1 HP card left: the flip card itself
+    const attacker = cardCheckFillerCookie('flip-attacker', 2, 5, 0, 'black')
+    // breakArea totalling level 6 so "break area level >= N" flip
+    // conditions (Frost Queen/Space Doughnut) have a fair chance of being met.
+    const bigOwnBreakArea: CookieCard[] = [
+      cardCheckFillerCookie('self-break-big-1', 3, 5).cookie,
+      cardCheckFillerCookie('self-break-big-2', 3, 5).cookie,
+      ...ownBreakArea,
+    ]
+    const state = baseState()
+    return {
+      ...state,
+      firstPlayerId: 'player-two',
+      activePlayerId: 'player-two',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: handFillers,
+          battleArea: [
+            cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
+            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+          ],
+          breakArea: bigOwnBreakArea,
+          discardPile: trashFillers,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5)],
+          breakArea: opponentBreakArea,
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: attacker.cookie.instanceId,
+        targetInstanceId: defender.cookie.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 0,
+        stage: 'flip',
+        trapUsed: false,
+        revealedHpCard: card,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+    }
+  }
+
+  // Faint-triggered skill ("when this Cookie faints ..."): mirror
+  // createFaintDamageDemoState — the card is already in the break area with
+  // a pending faint effect queued.
+  if (card.skill?.faint) {
+    const target = cardCheckFillerCookie('faint-target', 2, 5, 0, payColor)
+    const state = baseState()
+    const faintCard: CookieCard = { ...(card as CookieCard) }
+    const pendingFaintEffects: PendingFaintEffect[] = card.skill.effects.map((effect) => ({
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: faintCard.instanceId,
+      sourceCardName: faintCard.name,
+      effect,
+      context: { sourcePlayerId: 'player-one', sourceInstanceId: faintCard.instanceId },
+    }))
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          breakArea: [faintCard, ...ownBreakArea],
+          discardPile: trashFillers,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [
+            cardCheckBattleEntry(target.cookie, target.hpCards, 4),
+            ...opponentBattleArea,
+          ],
+        },
+      },
+      pendingFaintEffects,
+    }
+  }
+
+  // Attack-post-effect cookies ("Then ..." attack text): mirror
+  // createAttackEffectDemoState / createBlueOptionalCostAttackDemoState.
+  const cookieCard = card as CookieCard
+  if (cookieCard.attackEffects && cookieCard.attackEffects.length > 0) {
+    const state = baseState()
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: handFillers,
+          battleArea: [
+            cardCheckBattleEntry(card as CookieCard, [], 4, true),
+            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+          ],
+          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          breakArea: ownBreakArea,
+          discardPile: trashFillers,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: opponentBattleArea,
+          stage: { card: opponentStage, rested: false },
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId: card.instanceId,
+        targetInstanceId: opp1.cookie.instanceId,
+        declaredDamage: cookieCard.attack,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: cookieCard.attackEffects,
+        attackEffectIndex: 0,
+      },
+    }
+  }
+
+  // Activatable / passive / block-triggered skill.
+  if (card.skill) {
+    const state = baseState()
+    if (card.skill.trigger === 'block') {
+      // Blocker-style skill: triggers when the opponent attacks another of
+      // the player's cookies — mirror createBlockerResponseDemoState.
+      const defender = cardCheckFillerCookie('blocker-defender', 2, 5, 0, payColor)
+      const attacker = cardCheckFillerCookie('blocker-attacker', 2, 5, 0, 'black')
+      return {
+        ...state,
+        firstPlayerId: 'player-two',
+        activePlayerId: 'player-two',
+        players: {
+          ...state.players,
+          'player-one': {
+            ...state.players['player-one'],
+            hand: handFillers,
+            battleArea: [
+              cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
+              cardCheckBattleEntry(card as CookieCard, [], 6),
+            ],
+            supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+            discardPile: trashFillers,
+          },
+          'player-two': {
+            ...state.players['player-two'],
+            battleArea: [cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5)],
+          },
+        },
+        pendingBattle: {
+          attackerPlayerId: 'player-two',
+          defenderPlayerId: 'player-one',
+          attackerInstanceId: attacker.cookie.instanceId,
+          targetInstanceId: defender.cookie.instanceId,
+          declaredDamage: attacker.cookie.attack,
+          remainingDamage: attacker.cookie.attack,
+          stage: 'trap',
+          trapUsed: false,
+          revealedHpCard: null,
+          preventKnockoutTargetIds: [],
+          faintedColors: [],
+          attackEffects: [],
+          attackEffectIndex: 0,
+        },
+      }
+    }
+
+    if (card.skill.trigger === 'on-play') {
+      // On-play skills ({ap} in the card text) resolve when the cookie is
+      // deployed from hand, not via a battlefield "activate skill" button —
+      // mirror createOpponentDiscardHandDemoState / createSt5010OnPlayDemoState:
+      // the card sits in hand, ready to deploy into an empty battle-area
+      // slot, with the opponent's diverse battle area (and one own-side
+      // cookie already on the field) providing legal targets for whatever
+      // the on-play effect selects.
+      return {
+        ...state,
+        players: {
+          ...state.players,
+          'player-one': {
+            ...state.players['player-one'],
+            hand: [card, ...handFillers],
+            battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)],
+            supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+            breakArea: ownBreakArea,
+            discardPile: trashFillers,
+          },
+          'player-two': {
+            ...state.players['player-two'],
+            battleArea: opponentBattleArea,
+            stage: { card: opponentStage, rested: false },
+            breakArea: opponentBreakArea,
+          },
+        },
+      }
+    }
+
+    // 'activate' / 'passive' (and any other non-block, non-on-play
+    // trigger): put the card on the battlefield with enough hand/support/
+    // trash to pay whatever cost it has, plus a spread of legal targets on
+    // both sides.
+    return {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: handFillers,
+          battleArea: [
+            cardCheckBattleEntry(card as CookieCard, [], 4),
+            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+          ],
+          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          breakArea: ownBreakArea,
+          discardPile: trashFillers,
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: opponentBattleArea,
+          stage: { card: opponentStage, rested: false },
+          breakArea: opponentBreakArea,
+        },
+      },
+    }
+  }
+
+  // No skill/flip/attackEffects/item/trap/stageAbility text: a vanilla
+  // cookie. Light check only — verify it can be deployed and can attack.
+  const state = baseState()
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        hand: [card, ...handFillers],
+        battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+        supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+      },
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: opponentBattleArea,
+      },
     },
   }
 }
