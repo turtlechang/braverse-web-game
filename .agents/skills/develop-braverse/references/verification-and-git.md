@@ -1,17 +1,6 @@
 # 驗證、文件與 Git
 
-## 驗證矩陣
-
-| 變更類型 | 必要驗證 |
-|---|---|
-| 文件或註解 | 檢查 diff；視影響執行 lint/build |
-| 純 UI 樣式 | `npm run lint`、`npm run build`，並實際檢查畫面 |
-| 一般 TypeScript／React | 相關測試、`npm run lint`、`npm run build` |
-| 規則、卡牌效果、能量或時機 | 新增回歸測試、`npm test`、lint、build |
-| AI 或完整對戰 | 上述全部，加上 `npm run test:ai:browser` |
-| UI 互動或付款 | 上述相關測試，加上瀏覽器合法與不合法兩條路徑 |
-
-Playwright 前必須先執行 `npm run build`。若 Playwright 在外部目錄，使用 `PLAYWRIGHT_NODE_MODULES` 指向其 `node_modules`。
+驗證層級以 `../../braverse-workflow/references/verification-levels.md` 為單一真實來源。本文件只補充測試設計、文件同步與 Git 收尾，不再維護第二份驗證矩陣。
 
 ## 測試原則
 

@@ -1,30 +1,31 @@
-﻿---
+---
 name: braverse-workflow
-description: Use when planning, splitting, delegating, validating, or preparing pre-commit review for Braverse project tasks, including rule, UI, AI, test, Git review, AGENTS.md, Skill, workflow, validation-level, or OpenCode Go handoff work.
+description: 規劃、拆分、分派、驗證與提交前檢查 Braverse 任務。處理任務契約、Codex 模型路由、平行代理、OpenCode Go 備援、驗證層級、Git review、AGENTS.md 或 Skill 工作流調整時使用；實作細節搭配 develop-braverse。
 ---
 
-# Braverse Workflow
+# Braverse 工作流
 
-Use this skill to keep Braverse work short, typed, and verifiable. Pair it with `develop-braverse` for implementation details; this skill focuses on task shape, delegation prompts, validation level, and commit readiness.
+用最小任務契約管理 Braverse 工作的範圍、執行者、驗證與提交準備。需要修改遊戲功能、規則、UI 或 AI 時，搭配 `develop-braverse`。
 
-## Quick Start
+## 快速流程
 
-1. Classify the task as one or more of: `rules`, `ui`, `ai`, `tests`, `git-review`, `docs-workflow`.
-2. Fill the smallest useful task brief from [references/task-template.md](references/task-template.md).
-3. Choose validation from [references/verification-levels.md](references/verification-levels.md).
-4. If using OpenCode Go or subagents, use [references/delegation-template.md](references/delegation-template.md).
-5. Before staging or committing, run [references/pre-commit-review.md](references/pre-commit-review.md).
+1. 將任務分類為 `rules`、`ui`、`ai`、`tests`、`git-review` 或 `docs-workflow`。
+2. 依 [references/task-template.md](references/task-template.md) 建立最小任務契約。
+3. 由 Codex 主線直接執行；需要模型分級、平行代理或外部備援時，讀 [references/delegation-template.md](references/delegation-template.md)。
+4. 依 [references/verification-levels.md](references/verification-levels.md) 選擇必要驗證。
+5. stage 或 commit 前執行 [references/pre-commit-review.md](references/pre-commit-review.md)。
 
-## Load Only What You Need
+## 依需求載入
 
-- **New Braverse task or thread opener**: read `task-template.md`.
-- **Validation decision**: read `verification-levels.md`.
-- **OpenCode Go or subagent handoff**: read `delegation-template.md`, then load `../develop-braverse/references/delegation.md` only when model routing or sandbox handling details matter.
-- **Commit preparation or diff review**: read `pre-commit-review.md`.
+- 新任務或新 thread：讀 `task-template.md`。
+- 驗證決策：讀 `verification-levels.md`。
+- Codex 模型分級、subagent 或 OpenCode Go：先讀 `delegation-template.md`；只有確定使用 OpenCode Go 時，才讀 `../develop-braverse/references/delegation.md`。
+- commit 準備或 diff review：讀 `pre-commit-review.md`。
 
-## Guardrails
+## 邊界
 
-- Keep root `AGENTS.md` as the hard-rule entrypoint.
-- Do not weaken rule-engine, UI, AI, Git, or security boundaries from `AGENTS.md` and `develop-braverse`.
-- Keep historical bug matrices and model tables in references or README status notes, not in every task prompt.
-- Prefer short, fresh threads for focused Braverse work; include the task type, files, boundaries, and validation level up front.
+- 以根目錄 `AGENTS.md` 為硬規則入口。
+- 不弱化 `AGENTS.md` 與 `develop-braverse` 的規則層、UI、AI、Git 或安全邊界。
+- Codex 是預設主線；OpenCode Go 僅用於溢出、備援、低風險平行工或第二意見。
+- 不讓多個執行者同時修改相同檔案或同一責任區。
+- 將歷史 bug 矩陣與供應商模型細節留在 references 或 README，不放進每個任務提示。

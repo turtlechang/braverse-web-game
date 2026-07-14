@@ -192,38 +192,39 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 
 ---
 
-## Codex 指揮官職責（強制規範）
+## Codex 主線開發與模型路由
 
-Codex App 在此專案中擔任**指揮官**角色，職責範圍僅限於：
+Codex 是本專案的預設主線開發者，負責需求分析、規則裁決、實作、測試、文件同步、整合與最終驗證。除非使用者明確限制為唯讀或規劃階段，Codex 可直接完成任務範圍內的檔案修改，不必先派給 OpenCode Go。
 
-- 需求規劃與問題分析
-- 官方規則裁決與衝突判定
-- 任務拆分與派工
-- 唯讀差異審查與最終驗證
+依目前 Codex 可用模型與任務風險選擇層級：
 
-**所有程式碼、測試、設定、文件的新增、編輯、修改，一律優先且必須由 OpenCode Go 模型執行。** Codex 不得使用 `apply_patch`、`edit`、`write` 等工具或 shell 指令直接寫入或修改檔案內容。
+- **GPT-5.6 Sol**：核心規則、狀態機、AI、線上同步、資料結構、高風險跨模組修改、疑難除錯與最終整合。
+- **GPT-5.6 Terra**：一般功能、單一模組實作、中等複雜度 bug、測試、React 元件、型別整理與文件同步。
+- **GPT-5.6 Luna**：快速搜尋、清單整理、錯字與命名、小型低風險修改、執行既定驗證與簡單文件更新。
+- 若指定層級在目前帳號、工作區或 Codex surface 不可用，使用當前可用且足以完成任務的 Codex 模型，不因模型標籤阻塞工作。
 
-只有在**同時滿足以下所有條件**時，Codex 才能例外親自編輯：
-
-1. OpenCode Go 完全不可用（API 離線、授權失效等）
-2. OpenCode Go 連續派工失敗且無法透過升級模型解決
-3. **使用者已明確知悉並同意此例外**
-
-平台安全核准與外部網路要求仍不可繞過；若工具要求使用者再次核准，仍須依平台流程正常處理。
+模型選擇不改變專案的規則、安全、測試與 Git 邊界；高風險工作仍須由主線代理掌握完整上下文並完成最終驗證。
 
 ---
 
-## opencode-go 派工策略
+## OpenCode Go 與平行代理策略
 
-由 Codex 派工時先讀 `.agents/skills/braverse-workflow/references/delegation-template.md`；需要完整模型路由、沙箱網路處理或 review-fast agent 細節時，再讀 `.agents/skills/develop-braverse/references/delegation.md`。
+OpenCode Go 保留為**溢出、備援、低風險平行工與獨立第二意見**，不是每個任務的預設實作者。只有下列情境才優先考慮：
 
-- **預設優先派工**：使用者已同意將本專案原始碼內容傳送至 OpenCode Go 外部 API。凡 OpenCode Go 可可靠完成的唯讀審查、測試補強、文件更新、簡單重構、CRUD 與一般實作，預設先派給 OpenCode Go，以降低 Codex GPT 額度消耗；Codex 主線負責需求拆解、規則裁決、跨模組整合、高風險修改與最終驗證。
-- **平台核准仍優先**：上述同意是專案偏好，不取代 Codex 執行環境的安全審查或外部網路核准；若工具要求再次核准，仍須依平台流程處理，不得繞過。
-- **避免重複耗用**：同一子任務原則上只派工一次；結果完整即可直接整合，不再用另一個 GPT／OpenCode 模型重做。只有結果不完整、測試失敗或重大疑點時才依升級機制追加派工。
-- **受限網路環境**：OpenCode Go 使用外部 HTTPS API；透過 Codex 執行 `scripts\opencode-go.cmd run` 時，第一次呼叫即使用 `sandbox_permissions: "require_escalated"`，避免 `ConnectionRefused` 被 CLI 重試放大成假性模型逾時。若出現 `Error: Session not found` / `In a restricted Codex environment`，參考 `.agents/skills/develop-braverse/references/opencode-go-sandbox.md` 的標準流程處理。
-- **子代理停滯與交接**：所有子代理批次採 2–3 個檔案的小範圍契約，先做最小驗證；恢復時先檢查工作樹與測試，連續兩次停滯後由 Codex 接手，不無限重試。完整流程見 [`docs/subagent-stall-handoff-protocol.md`](docs/subagent-stall-handoff-protocol.md)。
-- **只讀審查**：使用 `scripts\opencode-go-review.cmd` 的 `review-fast` agent；單次最多指定 4 個檔案。跨模組審查拆成多個派工，避免內建 `plan` agent 無步數上限造成假性逾時。
-- **模型與成本細節**：完整分級路由表、模型限制、省 token 規則與逾時判斷維護於 `.agents/skills/develop-braverse/references/delegation.md`，避免根目錄規範過厚。
+- Codex 額度不足，需要獨立額度池處理可清楚驗收的工作。
+- 有互不重疊的低風險工作可平行執行，例如大量測試補強、文件盤點、靜態搜尋或格式統一。
+- 需要不同模型做唯讀 PR review、反方意見或交叉驗證。
+- 使用者明確指定 OpenCode Go。
+
+核心規則、FSM、AI 決策、安全／權限、資料遷移、不明根因 bug、跨模組整合與發布判斷，預設由 Codex 主線處理，不派給 OpenCode Go 自主決策。
+
+使用任何外部或平行代理時：
+
+- 先讀 `.agents/skills/braverse-workflow/references/delegation-template.md`；確定使用 OpenCode Go 後，才讀 `.agents/skills/develop-braverse/references/delegation.md`。
+- 一個子任務只交給一個執行者；不得平行修改相同檔案或同一責任區。
+- 每批限定 2–3 個檔案、一個主題、明確驗收與不可修改範圍；結果由 Codex 以 diff、原始碼與測試自行驗證。
+- 子代理連續兩次停滯後由 Codex 接手，不無限重試。完整流程見 [`docs/subagent-stall-handoff-protocol.md`](docs/subagent-stall-handoff-protocol.md)。
+- 平台安全核准與外部網路要求不得繞過；核准不可用或被拒絕時，停止外部派工並由 Codex 本機繼續或回報限制。
 
 ## 禁止提交
 

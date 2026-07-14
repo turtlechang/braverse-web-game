@@ -1,6 +1,6 @@
-﻿# Braverse 任務模板
+# Braverse 任務模板
 
-用於開新 thread、整理需求、或交給 OpenCode Go 前壓縮上下文。
+用於開新 thread、整理需求，或交給平行代理前壓縮上下文。
 
 ## 任務分類
 
@@ -11,7 +11,7 @@
 - `git-review`：diff、分支、提交、PR、CI 或 review comment。
 - `docs-workflow`：AGENTS、Skill、README、流程、驗證模板。
 
-## 使用者開場模板
+## 任務契約
 
 ```text
 任務類型：rules / ui / ai / tests / git-review / docs-workflow
@@ -20,11 +20,13 @@
 不可修改：
 驗收標準：
 需跑驗證：
-是否允許使用 sub-agents / OpenCode Go：
+主線模型：Sol / Terra / Luna / 自動選擇
+是否需要 Codex subagent：否 / 是（說明可平行範圍）
+是否允許傳送至 OpenCode Go：否 / 是（說明用途）
 備註：
 ```
 
-## 派工唯讀分析模板
+## 唯讀分析模板
 
 ```text
 請唯讀分析，不要修改、stage 或 commit。
@@ -40,7 +42,7 @@
 4. 未確認事項
 ```
 
-## 實作派工模板
+## 低風險平行實作模板
 
 ```text
 請直接修改，但不要 stage 或 commit。
