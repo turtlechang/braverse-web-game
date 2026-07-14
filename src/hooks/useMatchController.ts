@@ -32,6 +32,7 @@ import {
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
   createBreakToTrashDemoState,
+  createCardCheckDemoState,
   createFaintDamageDemoState,
   createFlipResponseDemoState,
   createItemUsageDemoState,
@@ -153,6 +154,9 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'blue-st4-020') {
       return createBlueSt4TrapDemoState(testStateConfig.payable)
     }
+    if (testStateConfig?.kind === 'card-check') {
+      return createCardCheckDemoState(testStateConfig.cardNumber)
+    }
     return createDemoSetupGame('player-one')
   })
   const [message, setMessage] = useState(() => {
@@ -236,6 +240,9 @@ export function useMatchController(params: {
       return testStateConfig.payable
         ? '測試狀態：ST4-020 選擇並棄置 2 張手牌。'
         : '測試狀態：ST4-020 手牌不足，不能發動。'
+    }
+    if (testStateConfig?.kind === 'card-check') {
+      return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
     }
     return '推進階段，開始這場對戰。'
   })

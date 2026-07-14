@@ -31,6 +31,7 @@
     "test:online:browser": "node scripts/online-modal-browser-validation.mjs",
     "test:online:match:browser": "node scripts/online-match-browser-validation.mjs",
     "test:blue:browser": "node scripts/blue-card-validation.mjs",
+    "test:bs2:cards:browser": "node scripts/bs2-purple-blue-card-validation.mjs",
     "test:watch": "vitest",
     "test:benchmark": "node --test scripts/opencode-go-benchmark.test.js",
     "test:opencode": "node --test scripts/lib/classify-opencode-error.test.mjs scripts/lib/parse-opencode-error.test.mjs scripts/opencode-go-health-check.test.mjs scripts/opencode-go-wrapper.test.mjs",
