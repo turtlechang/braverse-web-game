@@ -162,7 +162,7 @@ export const isEffectUntargeted = (
   | DrawEffect
   | DeckToSupportEffect
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-support'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -180,7 +180,6 @@ export const isEffectUntargeted = (
   effect.kind === 'field-to-trash-all' ||
   effect.kind === 'break-to-battle' ||
   effect.kind === 'break-to-hand-by-level-sum'
-  || effect.kind === 'hand-to-support'
 
 /** Effects that require the player to select 1+ targets, including opponent-battle-to-trash which has no standard `target` selector but still needs a target chosen. */
 export const requiresTargetSelection = (

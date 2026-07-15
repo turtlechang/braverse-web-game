@@ -113,6 +113,13 @@ const chooseEffectTargets = (
       .map((card) => card.instanceId)
   }
 
+  if (effect.kind === 'hand-to-support') {
+    const player = state.players[context.sourcePlayerId]
+    return player.hand
+      .slice(0, effect.amount)
+      .map((card) => card.instanceId)
+  }
+
   if (effect.kind === 'field-to-trash') {
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
@@ -460,6 +467,7 @@ const isItemEffectTargetCountSufficient = (
   if (
     (effect.kind === 'support-to-trash' ||
       effect.kind === 'support-to-hand' ||
+      effect.kind === 'hand-to-support' ||
       effect.kind === 'trash-to-battle' ||
       effect.kind === 'trash-to-support') &&
     targetIds.length < effect.amount
@@ -471,6 +479,7 @@ const isItemEffectTargetCountSufficient = (
     effect.kind !== 'break-to-trash' &&
     effect.kind !== 'support-to-trash' &&
     effect.kind !== 'support-to-hand' &&
+    effect.kind !== 'hand-to-support' &&
     effect.kind !== 'trash-to-battle' &&
     effect.kind !== 'trash-to-support' &&
     effect.kind !== 'inspect-deck' &&
@@ -637,6 +646,7 @@ const isSkillEffectTargetCountSufficient = (
   if (
     (effect.kind === 'support-to-trash' ||
       effect.kind === 'support-to-hand' ||
+      effect.kind === 'hand-to-support' ||
       effect.kind === 'trash-to-battle' ||
       effect.kind === 'trash-to-support') &&
     targetIds.length < effect.amount
@@ -647,6 +657,7 @@ const isSkillEffectTargetCountSufficient = (
     effect.kind !== 'break-to-trash' &&
     effect.kind !== 'support-to-trash' &&
     effect.kind !== 'support-to-hand' &&
+    effect.kind !== 'hand-to-support' &&
     effect.kind !== 'trash-to-battle' &&
     effect.kind !== 'trash-to-support' &&
     effect.kind !== 'inspect-deck' &&

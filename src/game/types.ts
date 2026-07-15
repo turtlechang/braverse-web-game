@@ -346,13 +346,6 @@ export interface HandToSupportEffect {
   condition?: EffectCondition
 }
 
-export interface HandToSupportEffect {
-  kind: 'hand-to-support'
-  amount: number
-  rested?: boolean
-  condition?: EffectCondition
-}
-
 export interface OpponentDiscardHandEffect {
   kind: 'opponent-discard-hand'
   count: number
@@ -538,7 +531,6 @@ export type CardEffect =
   | BattleToBreakEffect
   | BreakToHandBySumEffect
   | FlipToSupportEffect
-  | HandToSupportEffect
 
 export type TargetedCardEffect =
   | DamageEffect

@@ -115,6 +115,7 @@ export function usePendingEffect(params: {
           : currentEffect.kind === 'break-to-trash' ||
           currentEffect.kind === 'support-to-trash' ||
           currentEffect.kind === 'support-to-hand' ||
+          currentEffect.kind === 'hand-to-support' ||
           currentEffect.kind === 'trash-to-battle' ||
           currentEffect.kind === 'trash-to-support' ||
           currentEffect.kind === 'trash-to-hand' ||
@@ -799,6 +800,7 @@ export function usePendingEffect(params: {
           ? Number.MAX_SAFE_INTEGER
         : currentEffect.kind === 'support-to-trash' ||
             currentEffect.kind === 'support-to-hand' ||
+            currentEffect.kind === 'hand-to-support' ||
             currentEffect.kind === 'trash-to-battle' ||
             currentEffect.kind === 'trash-to-support' ||
             currentEffect.kind === 'break-to-battle'
