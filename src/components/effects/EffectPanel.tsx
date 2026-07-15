@@ -123,6 +123,7 @@ function EffectPanelContent({
         ? { min: 0, max: currentEffect.amount }
         : currentEffect?.kind === 'support-to-trash' ||
           currentEffect?.kind === 'support-to-hand' ||
+          currentEffect?.kind === 'hand-to-support' ||
           currentEffect?.kind === 'trash-to-battle' ||
           currentEffect?.kind === 'trash-to-support'
         ? { min: currentEffect.amount, max: currentEffect.amount }
@@ -131,7 +132,7 @@ function EffectPanelContent({
             !currentEffect.target.sourceOnly
           ? currentEffect.target
         : currentEffect && !isEffectUntargeted(currentEffect) &&
-            currentEffect.kind !== 'inspect-deck' &&
+        currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
             currentEffect.kind !== 'disable-block' &&
             currentEffect.kind !== 'flip-to-support'

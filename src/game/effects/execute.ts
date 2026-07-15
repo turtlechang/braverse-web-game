@@ -313,6 +313,50 @@ export const executeCardEffect = (
     }
   }
 
+  if (effect.kind === 'draw-up-to-then-discard') {
+    const sourcePlayer = state.players[context.sourcePlayerId]
+    const battleCard = sourcePlayer.battleArea.find(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    )
+    const handCard = sourcePlayer.hand.find(
+      (card) => card.instanceId === context.sourceInstanceId,
+    )
+    const discardCard = sourcePlayer.discardPile.find(
+      (card) => card.instanceId === context.sourceInstanceId,
+    )
+    const supportCard = sourcePlayer.supportArea.find(
+      (card) => card.card.instanceId === context.sourceInstanceId,
+    )
+    const sourceCard = battleCard?.card ?? handCard ?? discardCard ?? supportCard?.card
+    const effectText =
+      sourceCard && 'effectText' in sourceCard
+        ? sourceCard.effectText
+        : undefined
+    const itemText =
+      sourceCard && 'item' in sourceCard && sourceCard.item
+        ? sourceCard.item.text
+        : undefined
+    const sourceCardName =
+      context.sourceCardName ??
+      battleCard?.card.name ?? handCard?.name ?? discardCard?.name ?? supportCard?.card.name ?? 'Unknown'
+    return {
+      ...state,
+      pendingDrawUpTo: {
+        playerId: context.sourcePlayerId,
+        max: effect.max,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName,
+        effectText: effectText ?? itemText,
+        afterEffects: [
+          { kind: 'discard-hand', count: effect.discardCount },
+        ],
+        afterEffectContext: context,
+        afterEffectsRequireDraw: true,
+      },
+    }
+  }
+
   if (effect.kind === 'damage-all') {
     const targetPlayerId =
       effect.side === 'self'

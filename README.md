@@ -22,9 +22,9 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
 
-- **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸。
+- **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序。
 - **牌組編輯器**：搜尋/篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
-- **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；Lv.5 為設計稿，見 [docs/ai-levels.md](docs/ai-levels.md)。
+- **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果，見 [docs/ai-levels.md](docs/ai-levels.md)。Lv.5 為設計稿。
 - **卡牌池**：BS1/BS2 官方卡池 + 五色起始牌組匯入；`npm run validate:cards` 接入 CI 做資料完整性驗證。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
 - **線上對戰**：WebSocket server（Render 部署）+ 房間碼 + 玩家名稱 + 遮罩狀態，提供雙方即時對戰動態、昏厥／陷阱／FLIP／物品事件提示與可展開完整紀錄；手牌點擊外部可取消選取，牌庫／場景區／休息區／棄牌區可查看公開資訊，對手攻擊選取會同步餅乾高光與付款支援卡橫置；所有餅乾 OnPlay 登場效果在發動前皆可取消，本機與線上共用導引式費用／代價／目標流程，BS2-061 可從棄牌區選最多 3 張非 FLIP 卡洗回牌庫，BS2-069 類「手動代價後必選目標」會在最後一次確認時一併提交；本機雙瀏覽器另自動驗證建房、加入、自訂名稱、支援→主要→結束階段同步、卡牌詳情、攻擊預覽、拒絕提示、斷線與連線失敗。
@@ -34,7 +34,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 下一步計畫
 
-待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；WebSocket 入站驗證、玩家名稱、攻擊選取預覽、導引式效果操作與對戰中指令拒絕提示已完成。近期應完成 1–2 場真人試玩回報、修正多段陷阱效果的逐效果目標選擇，並在 main push 後稽核 GitHub Actions／Vercel／Render 健康。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
+待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；WebSocket 入站驗證、玩家名稱、攻擊選取預覽、導引式效果操作與對戰中指令拒絕提示已完成。近期應完成 1–2 場真人試玩回報、修正多段陷阱效果的逐效果目標選擇（known-risks R15），並在 main push 後稽核 GitHub Actions／Vercel／Render 健康。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
 
 ## 開發指令
 

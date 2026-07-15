@@ -46,7 +46,7 @@ export const resolveDrawUpTo = (
     }
   }
 
-  if (pending.afterEffects && pending.afterEffectContext) {
+  if (pending.afterEffects && pending.afterEffectContext && (!pending.afterEffectsRequireDraw || actualDraw > 0)) {
     for (const effect of pending.afterEffects) {
       updatedState = executeCardEffect(
         updatedState,

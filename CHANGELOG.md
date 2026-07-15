@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 🧩 卡牌效果修正（2026-07-16，fix/card-effects-gaps）：split-damage 列舉所有合法配置 [A]/[B]/[A,B]/[B,A]，index 0 套 primaryAmount、index 1 套 secondaryAmount，依昏厥數→殘留 HP 排序；補強 draw-up-to-then-discard 在 afterEffectsRequireDraw 條件下的 pendingDrawUpTo 早返行為、draw 0/1 回歸測試（3 項）。isEffectTargeted 補齊 split-damage、prevent-effect-damage；AI 效果目標選擇新增 split-damage（5 項，含 HP1+HP2 2+1 回歸）與 hp-to-trash/support/disable-flip/disable-attack/battle-to-support/prevent-effect-damage（8 項）回歸測試。測試基線升至 112 檔／1641 項；AI 瀏覽器 20/20 種子 stuck=0 全綠。
 - 🎨 本機與線上效果操作統一為導引式流程：餅乾、物品、場景與陷阱共用「能量 → 代價 → 目標」phase-step，缺少的步驟會自動略過；每次只顯示目前步驟，提供「下一步／上一步」，並只在最後以「確認發動」提交。技能文字移到來源卡圖右側，手機版同步調整卡片摘要與陷阱操作列。線上 `begin-activate-skill`／`begin-play-item`／`begin-activate-stage` 可在最後一次命令一併帶入第一段效果目標，避免導引途中先改動權威狀態；測試基線升至 110 檔／1625 項。
 - 修正餅乾 OnPlay 登場提示：本機與線上對戰在效果尚未發動前皆提供取消按鍵；線上 BS2-061 現可顯示棄牌區非 FLIP 候選卡、選擇最多 3 張並正常確認洗回牌庫。
 - 🌐 線上對戰互動與身份補強（2026-07-15）：建房／加入房間新增 1–20 字元玩家名稱並由伺服器保存至雙方 `GameState`；補齊線上戰場點擊手牌外部或按 `Escape` 取消選取；新增經伺服器場面 ID 過濾的非權威攻擊選取預覽，讓對手即時看到攻擊餅乾高光與付款支援卡橫置，正式攻擊仍由既有 `declare-attack` 裁決；修正付款完成後無法點選攻擊目標、BS2-069 類「手動代價＋必選目標」費用階段無法確認、ST4-017 移至棄牌區後來源卡圖片降級成 `unknown` 與重複送出結算；線上戰場補齊牌庫、場景區、休息區提示及棄牌區清單。擴充協定、RoomStore、hook、元件與雙瀏覽器回歸，測試基線升至 109 檔／1622 項。
