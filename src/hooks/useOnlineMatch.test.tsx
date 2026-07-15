@@ -167,7 +167,9 @@ describe('useOnlineMatch', () => {
     expect(socket.url).toBe(`ws://${window.location.host}/ws`)
 
     await act(() => socket.emitOpen())
-    expect(sentMessages(socket)).toEqual([{ type: 'create-room', deck }])
+    expect(sentMessages(socket)).toEqual([
+      { type: 'create-room', deck, playerName: 'Player One' },
+    ])
 
     await act(() => socket.emitMessage({ type: 'room-created', code: 'ABCD' }))
     expect(current().status).toBe('waiting-for-opponent')
@@ -186,7 +188,7 @@ describe('useOnlineMatch', () => {
 
     await act(() => socket.emitOpen())
     expect(sentMessages(socket)).toEqual([
-      { type: 'join-room', code: 'WXYZ', deck },
+      { type: 'join-room', code: 'WXYZ', deck, playerName: 'Player Two' },
     ])
 
     await act(() =>
@@ -218,6 +220,34 @@ describe('useOnlineMatch', () => {
     expect(current().maskedGame).toEqual(initialState)
 
     await act(() =>
+      current().sendAttackSelection({
+        attackerInstanceId: 'attacker-1',
+        supportPaymentIds: ['support-1'],
+      }),
+    )
+    expect(sentMessages(socket).at(-1)).toEqual({
+      type: 'update-attack-selection',
+      selection: {
+        attackerInstanceId: 'attacker-1',
+        supportPaymentIds: ['support-1'],
+      },
+    })
+
+    await act(() =>
+      socket.emitMessage({
+        type: 'opponent-attack-selection',
+        selection: {
+          attackerInstanceId: 'opponent-attacker',
+          supportPaymentIds: ['opponent-support'],
+        },
+      }),
+    )
+    expect(current().opponentAttackSelection).toEqual({
+      attackerInstanceId: 'opponent-attacker',
+      supportPaymentIds: ['opponent-support'],
+    })
+
+    await act(() =>
       current().sendCommand({ kind: 'advance-phase', playerId: 'player-two' }),
     )
     expect(sentMessages(socket).at(-1)).toEqual({
@@ -235,6 +265,10 @@ describe('useOnlineMatch', () => {
     )
     expect(current().maskedGame).toEqual(updatedState)
     expect(current().errorMessage).toBeNull()
+    expect(current().opponentAttackSelection).toEqual({
+      attackerInstanceId: null,
+      supportPaymentIds: [],
+    })
 
     await act(() =>
       socket.emitMessage({ type: 'match-ended', reason: 'victory' }),
@@ -295,7 +329,7 @@ describe('useOnlineMatch', () => {
 
     await act(() => currentSocket.emitOpen())
     expect(sentMessages(currentSocket)).toEqual([
-      { type: 'join-room', code: 'NEXT', deck },
+      { type: 'join-room', code: 'NEXT', deck, playerName: 'Player Two' },
     ])
   })
 

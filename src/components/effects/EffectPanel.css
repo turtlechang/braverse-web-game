@@ -1,6 +1,6 @@
 .effect-panel {
   position: relative;
-  width: min(750px, calc(100vw - 48px));
+  width: min(860px, calc(100vw - 48px));
   max-height: calc(100vh - 48px);
   padding: 28px;
   padding-bottom: 0;
@@ -71,15 +71,22 @@
   flex-shrink: 0;
 }
 
-.effect-panel > span {
+.effect-panel-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px;
+  padding-right: 80px;
+}
+
+.effect-panel-heading > span {
   color: #71e9ff;
   font-size: 0.72rem;
   font-weight: 900;
 }
 
-.effect-panel > strong {
-  display: block;
-  margin-top: 3px;
+.effect-panel-heading > strong {
+  display: inline;
 }
 
 .skill-labels {
@@ -101,21 +108,21 @@
 
 .effect-source-card {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
   margin-top: 12px;
-  padding: 8px;
+  padding: 12px;
   border: 1px solid rgba(113, 236, 255, 0.22);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.05);
 }
 
 .effect-source-card .card-face {
-  width: 64px;
+  width: 92px;
 }
 
-.effect-source-card span {
+.effect-source-copy > span {
   display: block;
   color: #71e9ff;
   font-size: 0.68rem;
@@ -126,9 +133,20 @@
   display: block;
   overflow: hidden;
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.94rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.effect-source-copy {
+  min-width: 0;
+}
+
+.effect-source-description {
+  margin: 10px 0 0;
+  color: #d7e9ff !important;
+  font-size: 0.78rem !important;
+  line-height: 1.55 !important;
 }
 
 .effect-panel p,
@@ -217,41 +235,6 @@
   width: 15px;
 }
 
-.effect-panel .phase-progress {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  margin: 12px 0 8px;
-  padding: 0;
-}
-
-.effect-panel .phase-step {
-  padding: 4px 12px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 0.68rem;
-  font-weight: 800;
-  transition: background 0.2s, color 0.2s;
-}
-
-.effect-panel .phase-step.is-active {
-  background: rgba(113, 236, 255, 0.2);
-  color: #71e9ff;
-}
-
-.effect-panel .phase-step.is-done {
-  background: rgba(108, 225, 108, 0.15);
-  color: rgba(108, 225, 108, 0.7);
-}
-
-.effect-panel .phase-divider {
-  width: 20px;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.15);
-}
-
 .effect-panel .cost-summary {
   margin: 8px 0;
   padding: 6px 10px;
@@ -266,6 +249,7 @@
 
 .effect-panel .effect-candidates {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 6px;
   margin: 6px 0;
 }
@@ -337,22 +321,9 @@
   padding-bottom: 16px;
 }
 
-.effect-panel-interaction-grid {
-  display: grid;
-  gap: 14px;
-  margin-top: 14px;
-}
-
-.effect-panel-interaction-grid.cols-3 {
-  grid-template-columns: minmax(180px, 0.9fr) minmax(180px, 0.9fr) minmax(240px, 1.2fr);
-}
-
-.effect-panel-interaction-grid.cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.effect-panel-interaction-grid.cols-1 {
-  grid-template-columns: 1fr;
+.effect-panel-guided-content {
+  min-height: 148px;
+  margin-top: 12px;
 }
 
 .effect-panel-col {
@@ -360,9 +331,28 @@
 }
 
 .effect-panel-col .effect-candidates {
-  max-height: 260px;
+  max-height: 320px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.effect-auto-cost {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(113, 236, 255, 0.2);
+  border-radius: 5px;
+  background: rgba(113, 236, 255, 0.07);
+  color: #c7f4ff;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.effect-auto-cost svg {
+  width: 16px;
+  flex: 0 0 auto;
 }
 
 .effect-panel-col-label {
@@ -389,6 +379,16 @@
   flex: 1;
 }
 
+.effect-panel button.effect-panel-back-action {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(4, 34, 75, 0.72);
+  color: #d8e9fb;
+}
+
+.effect-resolution-summary {
+  margin-top: 14px;
+}
+
 .effect-panel ol {
   max-height: 112px;
   margin: 12px 0 0;
@@ -405,9 +405,16 @@
     padding-bottom: 0;
   }
 
-  .effect-panel-interaction-grid,
-  .effect-panel-interaction-grid.cols-2,
-  .effect-panel-interaction-grid.cols-3 {
+  .effect-source-card {
+    grid-template-columns: 74px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .effect-source-card .card-face {
+    width: 70px;
+  }
+
+  .effect-panel .effect-candidates {
     grid-template-columns: 1fr;
   }
 

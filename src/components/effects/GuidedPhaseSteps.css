@@ -1,0 +1,73 @@
+.phase-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 16px 0 10px;
+  padding: 0;
+}
+
+.phase-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.phase-step-number {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.62rem;
+}
+
+.phase-step.is-active {
+  border-color: rgba(113, 236, 255, 0.55);
+  background: rgba(113, 236, 255, 0.16);
+  color: #8cecff;
+}
+
+.phase-step.is-active .phase-step-number {
+  background: #29b8df;
+  color: #041b3d;
+}
+
+.phase-step.is-done:not(.is-active) {
+  border-color: rgba(108, 225, 108, 0.22);
+  background: rgba(108, 225, 108, 0.1);
+  color: rgba(141, 238, 141, 0.82);
+}
+
+.phase-divider {
+  width: clamp(12px, 3vw, 32px);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+@media (max-width: 540px) {
+  .phase-step {
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 0.64rem;
+  }
+
+  .phase-step-number {
+    width: 16px;
+    height: 16px;
+  }
+
+  .phase-divider {
+    width: 8px;
+  }
+}

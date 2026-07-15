@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   canActivateCookieSkill,
   canPlayItem,
@@ -6,11 +6,13 @@ import {
   getEffectTargetCandidates,
   getEnergyCostTotal,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckCandidates,
   isEffectConditionMet,
   isEffectUntargeted,
   selectEnergyPayment,
   validateEnergyPayment,
   type CardAbility,
+  type CardEffect,
   type CardSkill,
   type EffectContext,
   type EffectTargetSelector,
@@ -32,6 +34,25 @@ type AbilityCostDraft = {
   selectedTrashBattleCookieIds: string[]
 }
 
+const getTargetSelector = (
+  effect: CardEffect | null,
+): EffectTargetSelector | null => {
+  if (!effect || isEffectUntargeted(effect)) return null
+  if (effect.kind === 'opponent-battle-to-trash') {
+    return {
+      side: 'opponent',
+      min: 1,
+      max: 1,
+      ...(effect.maxLevel !== undefined ? { maxLevel: effect.maxLevel } : {}),
+      ...(effect.minLevel !== undefined ? { minLevel: effect.minLevel } : {}),
+      ...(effect.remainingHp !== undefined
+        ? { remainingHp: effect.remainingHp }
+        : {}),
+    }
+  }
+  return 'target' in effect ? (effect.target ?? null) : null
+}
+
 const findCardByInstanceId = (
   game: GameState,
   instanceId: string,
@@ -43,6 +64,18 @@ const findCardByInstanceId = (
     if (battleCard) return battleCard
     const handCard = player.hand.find((card) => card.instanceId === instanceId)
     if (handCard) return handCard
+    const supportCard = player.supportArea.find(
+      (support) => support.card.instanceId === instanceId,
+    )?.card
+    if (supportCard) return supportCard
+    const discardCard = player.discardPile.find(
+      (card) => card.instanceId === instanceId,
+    )
+    if (discardCard) return discardCard
+    const breakCard = player.breakArea.find(
+      (card) => card.instanceId === instanceId,
+    )
+    if (breakCard) return breakCard
     if (player.stage?.card.instanceId === instanceId) return player.stage.card
   }
   return undefined
@@ -108,36 +141,6 @@ export function useOnlinePendingEffect(params: {
         }
       : null
 
-  const currentTargetSelector: EffectTargetSelector | null =
-    currentEffect && context && !isEffectUntargeted(currentEffect)
-      ? currentEffect.kind === 'opponent-battle-to-trash'
-        ? {
-            side: 'opponent',
-            min: 1,
-            max: 1,
-            ...(currentEffect.maxLevel !== undefined
-              ? { maxLevel: currentEffect.maxLevel }
-              : {}),
-            ...(currentEffect.minLevel !== undefined
-              ? { minLevel: currentEffect.minLevel }
-              : {}),
-            ...(currentEffect.remainingHp !== undefined
-              ? { remainingHp: currentEffect.remainingHp }
-              : {}),
-          }
-        : 'target' in currentEffect
-          ? (currentEffect.target ?? null)
-          : null
-      : null
-
-  const candidateCards: GameCard[] =
-    context && currentTargetSelector
-      ? getEffectTargetCandidates(game, context, currentTargetSelector).map(
-          (candidate) => candidate.card,
-        )
-      : []
-  const isEffectPending = Boolean(currentEffect)
-
   const draftSkill: CardSkill | null = abilityCostDraft
     ? abilityCostDraft.sourceKind === 'cookie'
       ? (abilityCostDraft.ability as CardSkill)
@@ -160,6 +163,20 @@ export function useOnlinePendingEffect(params: {
       }
     : null
   const displayedEffect = currentEffect ?? draftEffect
+  const displayedContext = context ?? draftContext
+
+  const currentTargetSelector = getTargetSelector(displayedEffect)
+
+  const candidateCards: GameCard[] = displayedContext
+    ? currentTargetSelector
+      ? getEffectTargetCandidates(game, displayedContext, currentTargetSelector).map(
+          (candidate) => candidate.card,
+        )
+      : displayedEffect?.kind === 'trash-to-deck'
+        ? getTrashToDeckCandidates(game, displayedContext, displayedEffect)
+        : []
+    : []
+  const isEffectPending = Boolean(currentEffect)
   const draftDiscardHandCost =
     abilityCostDraft?.ability.cost.discardHand ?? 0
   const draftDiscardHandCandidates = abilityCostDraft
@@ -293,10 +310,17 @@ export function useOnlinePendingEffect(params: {
   }
 
   const effectKey = attackEffectActive
-    ? `attack:${attackBattle?.attackEffectIndex}`
+    ? `attack:${attackBattle?.attackerInstanceId}:${attackBattle?.attackEffectIndex}`
     : abilityActiveForViewer
-      ? `ability:${pendingAbility?.effectIndex}`
-      : 'none'
+      ? `ability:${pendingAbility?.sourceInstanceId}:${pendingAbility?.effectIndex}`
+      : abilityCostDraft
+        ? `draft:${abilityCostDraft.card.instanceId}:0`
+        : 'none'
+  const submittedEffectKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    submittedEffectKeyRef.current = null
+  }, [effectKey])
 
   const [selectedTargetState, setSelectedTargetState] = useState<{
     key: string
@@ -306,7 +330,10 @@ export function useOnlinePendingEffect(params: {
     selectedTargetState.key === effectKey ? selectedTargetState.ids : []
 
   const toggleTarget = (instanceId: string) => {
-    const max = currentTargetSelector?.max ?? 1
+    const max =
+      displayedEffect?.kind === 'trash-to-deck'
+        ? displayedEffect.max
+        : (currentTargetSelector?.max ?? 1)
     setSelectedTargetState((currentState) => {
       const current =
         currentState.key === effectKey ? currentState.ids : []
@@ -325,13 +352,23 @@ export function useOnlinePendingEffect(params: {
   const confirmEffect = () => {
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
+      const targetMin = currentTargetSelector?.min ?? 0
+      const targetMax =
+        displayedEffect?.kind === 'trash-to-deck'
+          ? displayedEffect.max
+          : (currentTargetSelector?.max ?? 0)
+      const requiresTargetSelection =
+        currentTargetSelector !== null || displayedEffect?.kind === 'trash-to-deck'
       if (
         !draftPaymentValid ||
         abilityCostDraft.selectedCostSupportToTrashIds.length !==
           ((cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)) ||
         abilityCostDraft.selectedDiscardHandIds.length !== (cost.discardHand ?? 0) ||
         abilityCostDraft.selectedTrashBattleCookieIds.length !==
-          (cost.trashBattleCookie?.count ?? 0)
+          (cost.trashBattleCookie?.count ?? 0) ||
+        (requiresTargetSelection &&
+          (selectedTargetIds.length < targetMin ||
+            selectedTargetIds.length > targetMax))
       ) {
         return
       }
@@ -340,6 +377,7 @@ export function useOnlinePendingEffect(params: {
         paymentIds: abilityCostDraft.selectedPaymentIds,
         discardHandIds: abilityCostDraft.selectedDiscardHandIds,
         trashBattleCookieIds: abilityCostDraft.selectedTrashBattleCookieIds,
+        targetIds: selectedTargetIds,
       }
       if (abilityCostDraft.sourceKind === 'cookie') {
         dispatch(
@@ -351,7 +389,7 @@ export function useOnlinePendingEffect(params: {
             costSupportToTrashIds:
               abilityCostDraft.selectedCostSupportToTrashIds,
           },
-          `${abilityCostDraft.card.name}已支付技能代價，請選擇效果目標。`,
+          `${abilityCostDraft.card.name}已確認代價與效果目標。`,
         )
       } else if (abilityCostDraft.sourceKind === 'item') {
         dispatch(
@@ -361,7 +399,7 @@ export function useOnlinePendingEffect(params: {
             instanceId: abilityCostDraft.card.instanceId,
             supportToTrashIds: abilityCostDraft.selectedCostSupportToTrashIds,
           },
-          `${abilityCostDraft.card.name}已支付使用代價，請選擇效果目標。`,
+          `${abilityCostDraft.card.name}已確認使用代價與效果目標。`,
         )
       } else {
         dispatch(
@@ -370,13 +408,20 @@ export function useOnlinePendingEffect(params: {
             ...sharedCost,
             supportToTrashIds: abilityCostDraft.selectedCostSupportToTrashIds,
           },
-          `${abilityCostDraft.card.name}已支付場景技能代價，請選擇效果目標。`,
+          `${abilityCostDraft.card.name}已確認場景代價與效果目標。`,
         )
       }
       setAbilityCostDraft(null)
       return
     }
     if (!currentEffect || !context) return
+    if (submittedEffectKeyRef.current === effectKey) return
+    submittedEffectKeyRef.current = effectKey
+    window.setTimeout(() => {
+      if (submittedEffectKeyRef.current === effectKey) {
+        submittedEffectKeyRef.current = null
+      }
+    }, 1500)
     if (attackEffectActive) {
       dispatch(
         {
@@ -403,6 +448,7 @@ export function useOnlinePendingEffect(params: {
   }
 
   const skipOnPlay = (sourceInstanceId: string) => {
+    setAbilityCostDraft(null)
     dispatch(
       { kind: 'skip-on-play', playerId: viewerPlayerId, sourceInstanceId },
       '未發動 OnPlay 技能。',
@@ -499,7 +545,7 @@ export function useOnlinePendingEffect(params: {
       if (trigger === 'on-play' && game.pendingOnPlay) skipOnPlay(card.instanceId)
       return
     }
-    if (requiresManualCostSelection(card.skill)) {
+    if (trigger === 'on-play' || requiresManualCostSelection(card.skill)) {
       openAbilityCostDraft('cookie', card, card.skill, trigger)
       return
     }
@@ -508,9 +554,6 @@ export function useOnlinePendingEffect(params: {
       game.players[viewerPlayerId].supportArea,
     )
     if (!paymentIds) {
-      if (trigger === 'on-play' && game.pendingOnPlay) {
-        skipOnPlay(card.instanceId)
-      }
       return
     }
     dispatch(
@@ -657,7 +700,7 @@ export function useOnlinePendingEffect(params: {
           trigger: abilityCostDraft.trigger,
           effects: draftSkill.effects,
           effectIndex: 0,
-          selectedTargetIds: [],
+          selectedTargetIds,
           selectedPaymentIds: abilityCostDraft.selectedPaymentIds,
           selectedCostSupportToTrashIds:
             abilityCostDraft.selectedCostSupportToTrashIds,
@@ -743,7 +786,7 @@ export function useOnlinePendingEffect(params: {
 
   return {
     currentEffect: displayedEffect,
-    candidateCards: abilityCostDraft ? [] : candidateCards,
+    candidateCards,
     selectedTargetIds,
     toggleTarget,
     confirmEffect,

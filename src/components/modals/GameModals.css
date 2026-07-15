@@ -94,6 +94,33 @@
   font-weight: 800;
 }
 
+.trap-guided-section {
+  min-height: 190px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid rgba(113, 233, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(3, 20, 53, 0.32);
+}
+
+.trap-guided-section > strong,
+.trap-guided-section > span {
+  display: block;
+  margin: 6px 0;
+}
+
+.trap-guided-section .modal-card-options {
+  margin: 10px 0;
+}
+
+.trap-no-guided-step {
+  margin: 16px 0;
+  padding: 12px;
+  border-left: 3px solid #71e9ff;
+  background: rgba(113, 233, 255, 0.08);
+  color: #c9f4ff;
+}
+
 .modal-actions-sticky {
   position: sticky;
   bottom: 0;
@@ -552,6 +579,11 @@
   cursor: pointer;
 }
 
+.modal-actions button svg {
+  width: 17px;
+  vertical-align: middle;
+}
+
 .modal-actions button:last-child {
   border-color: #fff17c;
   background: linear-gradient(#27b8dd, #0875bd);
@@ -900,6 +932,19 @@
 @media (max-width: 680px) {
   .trap-response-dual {
     grid-template-columns: 1fr;
+  }
+
+  .trap-response-modal .modal-actions-sticky {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trap-response-modal .modal-actions-sticky button {
+    min-width: 0;
+  }
+
+  .trap-response-modal .modal-actions-sticky button:first-child {
+    grid-column: 1 / -1;
   }
 
   .card-detail-modal {

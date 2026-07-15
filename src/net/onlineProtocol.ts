@@ -1,9 +1,22 @@
 import type { CustomDeck, GameCommand, GameState, PlayerId } from '../game'
 
+export interface AttackSelectionPreview {
+  attackerInstanceId: string | null
+  supportPaymentIds: string[]
+}
+
+export const ONLINE_PLAYER_NAME_MAX_LENGTH = 20
+
+export const isValidOnlinePlayerName = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  value.trim().length > 0 &&
+  value.trim().length <= ONLINE_PLAYER_NAME_MAX_LENGTH
+
 export type ClientMessage =
-  | { type: 'create-room'; deck: CustomDeck }
-  | { type: 'join-room'; code: string; deck: CustomDeck }
+  | { type: 'create-room'; deck: CustomDeck; playerName?: string }
+  | { type: 'join-room'; code: string; deck: CustomDeck; playerName?: string }
   | { type: 'submit-command'; command: GameCommand }
+  | { type: 'update-attack-selection'; selection: AttackSelectionPreview }
   | { type: 'leave-room' }
 
 /**
@@ -15,6 +28,7 @@ export type ServerMessage =
   | { type: 'room-join-error'; reason: string }
   | { type: 'match-start'; seed: number; viewerId: PlayerId; state: GameState }
   | { type: 'state-update'; state: GameState }
+  | { type: 'opponent-attack-selection'; selection: AttackSelectionPreview }
   | { type: 'command-rejected'; reason: string }
   | {
       type: 'match-ended'
@@ -114,6 +128,7 @@ const commandShapes = {
       'costSupportToTrashIds',
       'discardHandIds',
       'trashBattleCookieIds',
+      'targetIds',
     ],
     enumFields: { trigger: ['activate', 'on-play'] },
   },
@@ -138,6 +153,7 @@ const commandShapes = {
       'supportToHandIds',
       'discardHandIds',
       'hpToTrashTargetIds',
+      'targetIds',
       'trashBattleCookieIds',
     ],
   },
@@ -152,6 +168,7 @@ const commandShapes = {
       'supportToHandIds',
       'discardHandIds',
       'hpToTrashTargetIds',
+      'targetIds',
     ],
     optionalStringMatrices: ['effectTargets'],
   },
@@ -162,6 +179,7 @@ const commandShapes = {
       'supportToHandIds',
       'discardHandIds',
       'hpToTrashTargetIds',
+      'targetIds',
     ],
   },
   'resolve-ability-effect': { requiredStringArrays: ['targetIds'] },
@@ -252,11 +270,27 @@ export const isClientMessage = (value: unknown): value is ClientMessage => {
 
   switch (value.type) {
     case 'create-room':
-      return isCustomDeck(value.deck)
+      return (
+        isCustomDeck(value.deck) &&
+        (value.playerName === undefined ||
+          isValidOnlinePlayerName(value.playerName))
+      )
     case 'join-room':
-      return typeof value.code === 'string' && isCustomDeck(value.deck)
+      return (
+        typeof value.code === 'string' &&
+        isCustomDeck(value.deck) &&
+        (value.playerName === undefined ||
+          isValidOnlinePlayerName(value.playerName))
+      )
     case 'submit-command':
       return isGameCommand(value.command)
+    case 'update-attack-selection':
+      return (
+        isRecord(value.selection) &&
+        (value.selection.attackerInstanceId === null ||
+          typeof value.selection.attackerInstanceId === 'string') &&
+        isStringArray(value.selection.supportPaymentIds)
+      )
     case 'leave-room':
       return true
     default:

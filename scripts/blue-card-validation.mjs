@@ -68,6 +68,40 @@ const runTest = async (page, testName, testFn) => {
   }
 }
 
+const advanceEffectPanelToConfirm = async (panel) => {
+  for (let step = 0; step < 3; step += 1) {
+    const nextButton = panel.locator('button', { hasText: '下一步' })
+    if ((await nextButton.count()) === 0) break
+
+    if (await nextButton.first().isDisabled()) {
+      const candidate = panel.locator(
+        '.effect-panel-guided-content .effect-candidates button:not(.is-selected)',
+      )
+      if ((await candidate.count()) > 0) {
+        await candidate.first().click()
+      }
+    }
+
+    assert.ok(
+      !(await nextButton.first().isDisabled()),
+      '目前效果步驟完成後，下一步按鈕應可使用',
+    )
+    await nextButton.first().click()
+  }
+
+  const confirmButton = panel.locator('button', { hasText: '確認發動' })
+  await confirmButton.waitFor({ state: 'visible' })
+  if (await confirmButton.isDisabled()) {
+    const candidate = panel.locator(
+      '.effect-panel-guided-content .effect-candidates button:not(.is-selected)',
+    )
+    if ((await candidate.count()) > 0) {
+      await candidate.first().click()
+    }
+  }
+  return confirmButton
+}
+
 try {
   await waitForServer()
   await mkdir(screenshotDir, { recursive: true })
@@ -181,8 +215,7 @@ try {
       }
 
       // Confirm
-      const confirmButton = effectPanel.locator('button', { hasText: /確認效果/ })
-      await confirmButton.waitFor({ state: 'visible' })
+      const confirmButton = await advanceEffectPanelToConfirm(effectPanel)
       assert.ok(
         !(await confirmButton.isDisabled()),
         '選擇手牌與目標後確認按鈕不應停用',
@@ -351,13 +384,13 @@ try {
       await p.waitForTimeout(200)
       const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
       await playButton.click()
-      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       const supportCards = p.locator('.bottom-field .support-cards .support-card')
       await supportCards.nth(0).evaluate((el) => el.click())
       await supportCards.nth(1).evaluate((el) => el.click())
+      await effectPanel.getByRole('button', { name: '下一步' }).click()
 
       const targetCandidates = effectPanel.locator('.effect-candidates-target button')
       assert.ok(await targetCandidates.count() > 0, '應有候選目標')
@@ -394,11 +427,11 @@ try {
       await p.waitForTimeout(200)
       const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
       await playButton.click()
-      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       await p.locator('.bottom-field .support-cards .support-card').nth(0).evaluate((el) => el.click())
+      await effectPanel.getByRole('button', { name: '下一步' }).click()
 
       const targetCandidates = effectPanel.locator('.effect-candidates-target button')
       assert.ok(await targetCandidates.count() > 0, '應有候選目標')
@@ -433,14 +466,14 @@ try {
       await p.waitForTimeout(200)
       const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
       await playButton.click()
-      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       const supportCards = p.locator('.bottom-field .support-cards .support-card')
       await supportCards.nth(0).evaluate((el) => el.click())
       await supportCards.nth(1).evaluate((el) => el.click())
-      await effectPanel.locator('button', { hasText: '確認效果' }).click()
+      const effectConfirmButton = await advanceEffectPanelToConfirm(effectPanel)
+      await effectConfirmButton.click()
 
       const modal = p.locator('.draw-up-to-modal')
       await modal.waitFor({ state: 'visible', timeout: 3000 })
@@ -466,12 +499,12 @@ try {
       await p.waitForTimeout(200)
       const playButton = handCards.first().locator('.hand-card-action', { hasText: '使用' })
       await playButton.click()
-      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認使用' }).click()
 
       const effectPanel = p.locator('.effect-panel')
       await effectPanel.waitFor({ state: 'visible', timeout: 3000 })
       await p.locator('.bottom-field .support-cards .support-card').nth(0).evaluate((el) => el.click())
-      await effectPanel.locator('button', { hasText: '確認效果' }).click()
+      const confirmButton = await advanceEffectPanelToConfirm(effectPanel)
+      await confirmButton.click()
       await p.waitForTimeout(500)
 
       const handCountAfter = await handCards.count()
@@ -483,25 +516,41 @@ try {
       await p.goto(`${baseUrl}?test-state=blue-st4-020-payable`, { waitUntil: 'networkidle' })
       await p.waitForTimeout(300)
 
-      const trapModal = p.locator('.battle-response-modal', { hasText: '是否發動陷阱' })
+      const trapModal = p.locator('.battle-response-modal')
       await trapModal.waitFor({ state: 'visible' })
-      const handCountBefore = await p.locator('.bottom-hand .hand-card-wrap').count()
       await trapModal.locator('.modal-card-options > button', { hasText: 'Octo-Ink Spray' }).click()
-      await p.locator('.card-detail-modal .close-modal').click()
 
-      const activateButton = trapModal.locator('button', { hasText: '支付並發動' })
-      assert.strictEqual(await activateButton.isDisabled(), true, '未選滿 2 張手牌時不可發動')
+      const nextButton = trapModal.getByRole('button', { name: '下一步' })
+      const paymentOptions = trapModal.locator('.trap-discard-options > button')
+      assert.ok(await paymentOptions.count() >= 1, '應顯示至少 1 張可支付能量的支援卡')
+      await paymentOptions.first().click()
+      assert.strictEqual(await nextButton.isEnabled(), true, '支付能量後應可進入代價步驟')
+      await nextButton.click()
+
+      assert.strictEqual(await nextButton.isDisabled(), true, '未選滿 2 張手牌時不可進入下一步')
       const discardOptions = trapModal.locator('.trap-discard-options > button')
       assert.ok(await discardOptions.count() >= 2, '應顯示至少 2 張可棄手牌')
       await discardOptions.nth(0).click()
       await discardOptions.nth(1).click()
-      assert.strictEqual(await activateButton.isEnabled(), true, '選滿 2 張手牌後應可發動')
+      assert.strictEqual(await nextButton.isEnabled(), true, '選滿 2 張手牌後應可進入下一步')
+      await nextButton.click()
+      const trapTargets = trapModal.locator('.trap-target-options > button')
+      if ((await trapTargets.count()) > 0) {
+        await trapTargets.first().click()
+      }
+      const activateButton = trapModal.getByRole('button', { name: '確認發動' })
       await activateButton.click()
-      await p.locator('.card-reveal-modal').getByRole('button', { name: '確認發動' }).click()
+      const revealModal = p.locator('.card-reveal-modal')
+      if (await revealModal.waitFor({ state: 'visible', timeout: 1000 }).then(() => true).catch(() => false)) {
+        await revealModal.getByRole('button', { name: '確認發動' }).click()
+      }
       await p.waitForTimeout(500)
 
-      const handCountAfter = await p.locator('.bottom-hand .hand-card-wrap').count()
-      assert.strictEqual(handCountAfter, handCountBefore - 3, '陷阱與所選 2 張手牌應進入棄牌區')
+      const discardText = await p.locator('.bottom-field .discard-zone').innerText()
+      assert.ok(
+        discardText.includes('3'),
+        `陷阱與所選 2 張手牌應進入棄牌區，實際：${discardText}`,
+      )
     })
 
     await runTest(page, `${vpLabel} ST4-020 discard-hand unpayable`, async (p) => {

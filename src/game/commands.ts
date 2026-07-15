@@ -293,6 +293,8 @@ export interface BeginActivateSkillCommand {
   costSupportToTrashIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
+  /** 提供時會在支付完成後一併解析第一個效果，供導引式 UI 最後確認使用。 */
+  targetIds?: string[]
 }
 
 export interface SkipOnPlayCommand {
@@ -324,6 +326,7 @@ export interface BeginPlayItemCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  targetIds?: string[]
 }
 
 export interface PlayStageCommand {
@@ -352,6 +355,7 @@ export interface BeginActivateStageCommand {
   supportToHandIds?: string[]
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
+  targetIds?: string[]
 }
 
 /**
@@ -953,6 +957,58 @@ const filterActiveEffects = (
 ): CardEffect[] =>
   effects.filter((effect) => isEffectConditionMet(state, context, effect))
 
+const resolvePendingAbilityEffect = (
+  state: GameState,
+  playerId: PlayerId,
+  targetIds: string[],
+  options: ApplyGameCommandOptions,
+): GameState => {
+  const pending = state.pendingAbilityEffect
+  if (!pending) {
+    throw new GameRuleError('目前沒有待處理的效果。')
+  }
+  if (pending.playerId !== playerId) {
+    throw new GameRuleError('不是目前需要選擇效果目標的玩家。')
+  }
+  if (
+    state.pendingRefresh ||
+    state.pendingOnPlay ||
+    state.pendingReplacement ||
+    state.pendingBattle
+  ) {
+    throw new GameRuleError('必須先處理其他待處理的決策。')
+  }
+  const context: EffectContext = {
+    sourcePlayerId: pending.sourcePlayerId,
+    sourceInstanceId: pending.sourceInstanceId,
+    sourceCardName: pending.sourceCardName,
+  }
+  const effect = pending.effects[pending.effectIndex]
+  const resolved = executeCardEffect(
+    state,
+    context,
+    effect,
+    targetIds,
+    options.shuffle,
+  )
+  const nextIndex = pending.effectIndex + 1
+  if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
+    return { ...resolved, pendingAbilityEffect: undefined }
+  }
+  return {
+    ...resolved,
+    pendingAbilityEffect: { ...pending, effectIndex: nextIndex },
+  }
+}
+
+const hasBlockingAbilityDecision = (state: GameState) =>
+  Boolean(
+    state.pendingRefresh ||
+      state.pendingOnPlay ||
+      state.pendingReplacement ||
+      state.pendingBattle,
+  )
+
 const applyPlayerActionCommand = (
   state: GameState,
   command: PlayerActionCommand,
@@ -1048,7 +1104,7 @@ const applyPlayerActionCommand = (
       if (activated.status !== 'playing' || effects.length === 0) {
         return activated
       }
-      return {
+      const pendingState: GameState = {
         ...activated,
         pendingAbilityEffect: {
           playerId: command.playerId,
@@ -1061,6 +1117,14 @@ const applyPlayerActionCommand = (
           effectIndex: 0,
         },
       }
+      return command.targetIds === undefined || hasBlockingAbilityDecision(pendingState)
+        ? pendingState
+        : resolvePendingAbilityEffect(
+            pendingState,
+            command.playerId,
+            command.targetIds,
+            options,
+          )
     }
     case 'skip-on-play':
       return skipCookieOnPlay(state, command.playerId, command.sourceInstanceId)
@@ -1116,7 +1180,7 @@ const applyPlayerActionCommand = (
       if (played.status !== 'playing' || effects.length === 0) {
         return played
       }
-      return {
+      const pendingState: GameState = {
         ...played,
         pendingAbilityEffect: {
           playerId: command.playerId,
@@ -1128,6 +1192,14 @@ const applyPlayerActionCommand = (
           effectIndex: 0,
         },
       }
+      return command.targetIds === undefined || hasBlockingAbilityDecision(pendingState)
+        ? pendingState
+        : resolvePendingAbilityEffect(
+            pendingState,
+            command.playerId,
+            command.targetIds,
+            options,
+          )
     }
     case 'play-stage':
       return playStage(
@@ -1184,7 +1256,7 @@ const applyPlayerActionCommand = (
       if (activated.status !== 'playing' || effects.length === 0) {
         return activated
       }
-      return {
+      const pendingState: GameState = {
         ...activated,
         pendingAbilityEffect: {
           playerId: command.playerId,
@@ -1196,44 +1268,22 @@ const applyPlayerActionCommand = (
           effectIndex: 0,
         },
       }
+      return command.targetIds === undefined || hasBlockingAbilityDecision(pendingState)
+        ? pendingState
+        : resolvePendingAbilityEffect(
+            pendingState,
+            command.playerId,
+            command.targetIds,
+            options,
+          )
     }
     case 'resolve-ability-effect': {
-      const pending = state.pendingAbilityEffect
-      if (!pending) {
-        throw new GameRuleError('目前沒有待處理的效果。')
-      }
-      if (pending.playerId !== command.playerId) {
-        throw new GameRuleError('不是目前需要選擇效果目標的玩家。')
-      }
-      if (
-        state.pendingRefresh ||
-        state.pendingOnPlay ||
-        state.pendingReplacement ||
-        state.pendingBattle
-      ) {
-        throw new GameRuleError('必須先處理其他待處理的決策。')
-      }
-      const context: EffectContext = {
-        sourcePlayerId: pending.sourcePlayerId,
-        sourceInstanceId: pending.sourceInstanceId,
-        sourceCardName: pending.sourceCardName,
-      }
-      const effect = pending.effects[pending.effectIndex]
-      const resolved = executeCardEffect(
+      return resolvePendingAbilityEffect(
         state,
-        context,
-        effect,
+        command.playerId,
         command.targetIds,
-        options.shuffle,
+        options,
       )
-      const nextIndex = pending.effectIndex + 1
-      if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
-        return { ...resolved, pendingAbilityEffect: undefined }
-      }
-      return {
-        ...resolved,
-        pendingAbilityEffect: { ...pending, effectIndex: nextIndex },
-      }
     }
     case 'replace-cookie': {
       const task = getCurrentReplacementTask(state)

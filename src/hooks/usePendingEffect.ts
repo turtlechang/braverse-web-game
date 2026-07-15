@@ -374,7 +374,7 @@ export function usePendingEffect(params: {
   const selectedSkillTrashBattleCookieIds = new Set(
     pendingEffect?.selectedTrashBattleCookieIds ?? [],
   )
-  const skillTrashBattleCookieTargetIds = new Set(
+  const skillTrashBattleCookieCandidates =
     pendingEffect &&
     !pendingEffect.skillActivated &&
     pendingEffect.skill.cost.trashBattleCookie
@@ -382,8 +382,10 @@ export function usePendingEffect(params: {
           pendingEffect.skill.cost,
           game.players[pendingEffect.context.sourcePlayerId].battleArea,
           pendingEffect.context.sourceInstanceId,
-        ).map((cookie) => cookie.card.instanceId)
-      : [],
+        ).map((cookie) => cookie.card)
+      : []
+  const skillTrashBattleCookieTargetIds = new Set(
+    skillTrashBattleCookieCandidates.map((card) => card.instanceId),
   )
 
   useEffect(() => {
@@ -1278,6 +1280,7 @@ export function usePendingEffect(params: {
     selectedSkillPaymentIds,
     selectedSkillCostSupportToTrashIds,
     selectedSkillTrashBattleCookieIds,
+    skillTrashBattleCookieCandidates,
     skillTrashBattleCookieTargetIds,
     faintActive,
     afterDamageActive,

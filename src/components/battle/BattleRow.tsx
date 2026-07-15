@@ -23,6 +23,7 @@ export interface BattleRowProps {
   playerId: PlayerId
   position: 'top' | 'bottom'
   selectedAttackerId: string | null
+  attackTargetingActive?: boolean
   effectTargetIds: Set<string>
   breakEffectTargetIds: Set<string>
   selectedEffectTargetIds: Set<string>
@@ -71,6 +72,7 @@ export function BattleRow({
   playerId,
   position,
   selectedAttackerId,
+  attackTargetingActive = false,
   effectTargetIds,
   breakEffectTargetIds,
   selectedEffectTargetIds,
@@ -139,6 +141,7 @@ export function BattleRow({
             <div
               key={supportId}
               className="support-card-wrap"
+              data-card-instance-id={supportId}
               style={{ '--support-index': isOpponent ? player.supportArea.length - 1 - supportIndex : supportIndex } as React.CSSProperties}
             >
               <CardFace
@@ -378,7 +381,7 @@ export function BattleRow({
               const canTarget =
                 !interactionLocked &&
                 isOpponent &&
-                Boolean(selectedAttackerId) &&
+                attackTargetingActive &&
                 attackPaymentValid
               const canActivateSkill =
                 canOperate &&
@@ -401,6 +404,7 @@ export function BattleRow({
                 <div
                   className={`combat-card-wrap ${animClasses}`}
                   key={cookie.card.instanceId}
+                  data-card-instance-id={cookie.card.instanceId}
                   onMouseEnter={() => onHoverCard?.(cookie.card)}
                   onMouseLeave={() => onHoverCard?.(null)}
                   onFocus={() => onFocusCard?.(cookie.card)}

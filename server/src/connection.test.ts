@@ -185,6 +185,62 @@ describe('ConnectionManager', () => {
     expect(hostSocket.last()).toMatchObject({ type: 'match-start' })
   })
 
+  it('只向對手轉送目前場面中合法的攻擊者與付款支援卡', () => {
+    const store = new RoomStore()
+    const manager = new ConnectionManager(store)
+    const hostSocket = new MockSocket()
+    const guestSocket = new MockSocket()
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({ type: 'create-room', deck: createTestDeck('one') }),
+    )
+    const created = hostSocket.last()
+    if (created?.type !== 'room-created') throw new Error('unexpected message')
+    manager.handleMessage(
+      guestSocket,
+      JSON.stringify({
+        type: 'join-room',
+        code: created.code,
+        deck: createTestDeck('two'),
+      }),
+    )
+
+    const room = store.getRoom(created.code)
+    const player = room?.state?.players['player-one']
+    if (!player) throw new Error('missing player state')
+    const cards = [...player.hand, ...player.deck]
+    const attacker = cards.find((card) => card.type === 'cookie')
+    const support = cards.find(
+      (card) => card.instanceId !== attacker?.instanceId,
+    )
+    if (!attacker || attacker.type !== 'cookie' || !support) {
+      throw new Error('missing test cards')
+    }
+    player.battleArea = [{ card: attacker, hpCards: [], rested: false }]
+    player.supportArea = [{ card: support, rested: false }]
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({
+        type: 'update-attack-selection',
+        selection: {
+          attackerInstanceId: attacker.instanceId,
+          supportPaymentIds: [support.instanceId, support.instanceId, 'fake-id'],
+        },
+      }),
+    )
+
+    expect(guestSocket.last()).toEqual({
+      type: 'opponent-attack-selection',
+      selection: {
+        attackerInstanceId: attacker.instanceId,
+        supportPaymentIds: [support.instanceId],
+      },
+    })
+    expect(hostSocket.last()).toMatchObject({ type: 'match-start' })
+  })
+
   it('斷線會通知對手 match-ended 並清除房間', () => {
     const store = new RoomStore()
     const manager = new ConnectionManager(store)

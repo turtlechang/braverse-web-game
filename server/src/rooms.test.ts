@@ -45,6 +45,21 @@ describe('RoomStore', () => {
     expect(joined.seed).toBe(42)
   })
 
+  it('會保留雙方輸入並去除首尾空白的玩家名稱', () => {
+    const store = new RoomStore()
+    const created = store.createRoom(createTestDeck('one'), noop, '  餅乾隊長  ')
+    const joined = store.joinRoom(
+      created.code,
+      createTestDeck('two'),
+      noop,
+      42,
+      '奶油騎士',
+    )
+
+    expect(joined.state?.players['player-one'].name).toBe('餅乾隊長')
+    expect(joined.state?.players['player-two'].name).toBe('奶油騎士')
+  })
+
   it('相同種子加入房間會產生確定性的洗牌結果', () => {
     const runWithSeed = (seed: number) => {
       const store = new RoomStore()

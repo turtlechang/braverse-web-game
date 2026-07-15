@@ -129,6 +129,10 @@ describe('EffectPanel', () => {
 
     expect(container.textContent).toContain('攻擊後續效果文字（應該顯示）')
     expect(container.textContent).not.toContain('OnPlay 登場技能文字（不應顯示）')
+    expect(
+      container.querySelector('.effect-source-copy .effect-source-description')
+        ?.textContent,
+    ).toContain('攻擊後續效果文字（應該顯示）')
     act(() => root.unmount())
   })
 
@@ -154,7 +158,7 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
-  it('uses wide interaction layout when payment, extra cost, and target are present', () => {
+  it('guides payment, extra cost, and target one step at a time with back navigation', async () => {
     const paymentCard = createSupportCard(1, 'red')
     const costSupport = createItemCard(2)
     const target = createCookieCard(3)
@@ -192,18 +196,33 @@ describe('EffectPanel', () => {
         onToggleCostSupport={() => undefined}
         candidateCards={[target]}
         onToggleCandidate={() => undefined}
-        energyPaymentValid={false}
+        energyPaymentValid={true}
       />,
     ))
 
-    const grid = container.querySelector('.effect-panel-interaction-grid')
-    expect(grid).not.toBeNull()
-    expect(grid!.classList.contains('cols-3')).toBe(true)
+    expect(container.querySelectorAll('.phase-step')).toHaveLength(3)
     expect(container.textContent).toContain('能量支付')
-    expect(container.textContent).toContain('額外代價')
-    expect(container.textContent).toContain('目標')
+    expect(container.querySelector('.effect-panel-extra-cost-col')).toBeNull()
+    expect(container.querySelector('.effect-panel-target-col')).toBeNull()
 
-    act(() => root.unmount())
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.click()
+    })
+    expect(container.textContent).toContain('額外代價')
+    expect(container.querySelector('.effect-panel-payment-col')).toBeNull()
+
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.click()
+    })
+    expect(container.textContent).toContain('目標')
+    expect(container.querySelector('.effect-panel-extra-cost-col')).toBeNull()
+
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-back-action')!.click()
+    })
+    expect(container.textContent).toContain('額外代價')
+
+    await act(() => root.unmount())
   })
 
   it('renders energy payment candidates inside the panel', () => {
@@ -365,9 +384,9 @@ describe('EffectPanel', () => {
     const stickyActions = container.querySelector('.effect-panel-sticky-actions')
     expect(stickyActions).not.toBeNull()
 
-    const confirmBtn = stickyActions!.querySelector('button:not(.skip-effect)') as HTMLButtonElement
+    const confirmBtn = stickyActions!.querySelector('.effect-panel-primary-action') as HTMLButtonElement
     expect(confirmBtn).toBeDefined()
-    expect(confirmBtn.textContent).toContain('確認效果')
+    expect(confirmBtn.textContent).toContain('確認發動')
 
     const skipBtn = stickyActions!.querySelector('.skip-effect') as HTMLButtonElement
     expect(skipBtn).toBeDefined()
@@ -408,8 +427,49 @@ describe('EffectPanel', () => {
     ))
 
     const stickyActions = container.querySelector('.effect-panel-sticky-actions')
-    const confirmBtn = stickyActions!.querySelector('button:not(.skip-effect)') as HTMLButtonElement
+    const confirmBtn = stickyActions!.querySelector('.effect-panel-primary-action') as HTMLButtonElement
     expect(confirmBtn.disabled).toBe(true)
+
+    await act(() => root.unmount())
+  })
+
+  it('allows BS2-069 cost confirmation before the server opens target selection', async () => {
+    const discardedCard = createItemCard(9)
+    const pending = createPendingEffect({
+      selectedDiscardHandIds: [discardedCard.instanceId],
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 1 },
+        text: 'Discard 1 card. Trash up to 1 opposing LV.1 Cookie.',
+        effects: [{ kind: 'opponent-battle-to-trash', maxLevel: 1 }],
+      },
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{ kind: 'opponent-battle-to-trash', maxLevel: 1 }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        discardHandCandidates={[discardedCard]}
+        selectedDiscardHandIds={new Set([discardedCard.instanceId])}
+        discardHandCost={1}
+        energyPaymentValid={true}
+        showTargetSelection={false}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-panel-target-col')).toBeNull()
+    const confirmButton = container.querySelector(
+      '.effect-panel-primary-action',
+    ) as HTMLButtonElement
+    expect(confirmButton.disabled).toBe(false)
 
     await act(() => root.unmount())
   })
@@ -449,7 +509,7 @@ describe('EffectPanel', () => {
 
     expect(container.textContent).toContain('戰鬥區餅乾代價')
     const confirmButton = container.querySelector(
-      '.effect-panel-sticky-actions button:not(.skip-effect)',
+      '.effect-panel-primary-action',
     ) as HTMLButtonElement
     expect(confirmButton.disabled).toBe(true)
 

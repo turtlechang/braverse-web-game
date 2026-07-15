@@ -114,6 +114,90 @@ describe('useOnlinePendingEffect', () => {
     await act(() => root.unmount())
   })
 
+  it('keeps the ST4-017 source card image after the item moves to discard and ignores duplicate confirms', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const targetCard = baseGame.players['player-one'].battleArea[0].card
+    const sourceCard = {
+      ...baseGame.players['player-one'].hand[0],
+      id: 'ST4-017',
+      instanceId: 'ST4-017:test',
+      name: 'Emergency Lifebuoy',
+      imageUrl: '/cards/ST4-017.webp',
+      item: {
+        cost: {},
+        text: 'Return 1 LV.1 Cookie from your battle area to your hand.',
+        effects: [
+          {
+            kind: 'return-to-hand' as const,
+            target: { side: 'self' as const, min: 1, max: 1, maxLevel: 1 },
+          },
+        ],
+      },
+    }
+    const game: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          hand: baseGame.players['player-one'].hand.filter(
+            (card) => card.instanceId !== sourceCard.instanceId,
+          ),
+          discardPile: [sourceCard],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: sourceCard.instanceId,
+        sourceCardName: sourceCard.name,
+        sourceKind: 'item',
+        effects: sourceCard.item.effects,
+        effectIndex: 0,
+      },
+    }
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+
+    expect(captured!.pendingEffect?.sourceCard).toMatchObject({
+      id: 'ST4-017',
+      name: 'Emergency Lifebuoy',
+      imageUrl: '/cards/ST4-017.webp',
+    })
+
+    await act(() => captured!.toggleTarget(targetCard.instanceId))
+    await act(() => {
+      captured!.confirmEffect()
+      captured!.confirmEffect()
+    })
+
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(dispatch).toHaveBeenCalledWith(
+      {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: [targetCard.instanceId],
+      },
+      expect.any(String),
+    )
+    expect(captured!.effectHistory).toHaveLength(1)
+    await act(() => root.unmount())
+  })
+
   it('requires the player to choose the OnPlay discard cost before starting BS2-069-style effects', async () => {
     const baseGame = createItemUsageDemoState(true)
     const originalSource = baseGame.players['player-one'].battleArea[0]
@@ -170,6 +254,11 @@ describe('useOnlinePendingEffect', () => {
     expect(dispatch).not.toHaveBeenCalled()
 
     await act(() => captured!.toggleDraftDiscardHand(discardCard.instanceId))
+    const targetCard = game.players['player-two'].battleArea[0].card
+    expect(captured!.candidateCards.map((card) => card.instanceId)).toContain(
+      targetCard.instanceId,
+    )
+    await act(() => captured!.toggleTarget(targetCard.instanceId))
     await act(() => captured!.confirmEffect())
 
     expect(dispatch).toHaveBeenCalledWith(
@@ -182,6 +271,171 @@ describe('useOnlinePendingEffect', () => {
         costSupportToTrashIds: [],
         discardHandIds: [discardCard.instanceId],
         trashBattleCookieIds: [],
+        targetIds: [targetCard.instanceId],
+      },
+      expect.any(String),
+    )
+    await act(() => root.unmount())
+  })
+
+  it('opens a cancelable confirmation draft for no-cost OnPlay Cookie skills', async () => {
+    vi.useFakeTimers()
+    const baseGame = createItemUsageDemoState(true)
+    const originalSource = baseGame.players['player-one'].battleArea[0]
+    const sourceCard = {
+      ...originalSource.card,
+      id: 'BS2-061',
+      name: 'Hydrangea Cookie',
+      skill: {
+        trigger: 'on-play' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Return up to 3 non-FLIP cards from trash to the deck.',
+        effects: [{ kind: 'trash-to-deck' as const, max: 3, excludeFlip: true }],
+      },
+    }
+    const game: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          battleArea: [{ ...originalSource, card: sourceCard }],
+        },
+      },
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: sourceCard.instanceId,
+      },
+    }
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginCookieSkill(sourceCard, 'on-play'))
+
+    expect(captured!.abilityCostDraft?.trigger).toBe('on-play')
+    expect(captured!.draftPaymentValid).toBe(true)
+    expect(dispatch).not.toHaveBeenCalled()
+
+    await act(() => captured!.skipOnPlay(sourceCard.instanceId))
+    expect(captured!.abilityCostDraft).toBeNull()
+    expect(dispatch).toHaveBeenCalledWith(
+      {
+        kind: 'skip-on-play',
+        playerId: 'player-one',
+        sourceInstanceId: sourceCard.instanceId,
+      },
+      expect.any(String),
+    )
+
+    dispatch.mockClear()
+    await act(() => captured!.beginCookieSkill(sourceCard, 'on-play'))
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledWith(
+      {
+        kind: 'begin-activate-skill',
+        playerId: 'player-one',
+        sourceInstanceId: sourceCard.instanceId,
+        trigger: 'on-play',
+        paymentIds: [],
+        costSupportToTrashIds: [],
+        discardHandIds: [],
+        trashBattleCookieIds: [],
+        targetIds: [],
+      },
+      expect.any(String),
+    )
+    await act(() => root.unmount())
+  })
+
+  it('lets BS2-061 select up to 3 non-FLIP cards from trash online', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const sourceCard = baseGame.players['player-one'].battleArea[0].card
+    const baseDiscardCard = baseGame.players['player-one'].hand[0]
+    const candidates = [1, 2, 3, 4].map((index) => ({
+      ...baseDiscardCard,
+      instanceId: `trash-card-${index}`,
+      name: `Trash Card ${index}`,
+    }))
+    const flipCard = {
+      ...baseDiscardCard,
+      instanceId: 'trash-flip-card',
+      name: 'Trash FLIP Card',
+      officialType: 'flip' as const,
+      flip: {
+        text: 'Draw 1 card.',
+        cost: { energy: {} },
+        effects: [{ kind: 'draw' as const, amount: 1 }],
+      },
+    }
+    const game: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          discardPile: [...candidates, flipCard],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: sourceCard.instanceId,
+        sourceCardName: 'Hydrangea Cookie',
+        sourceKind: 'skill',
+        trigger: 'on-play',
+        effects: [{ kind: 'trash-to-deck', max: 3, excludeFlip: true }],
+        effectIndex: 0,
+      },
+    }
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+
+    expect(captured!.candidateCards.map((card) => card.instanceId)).toEqual(
+      candidates.map((card) => card.instanceId),
+    )
+    for (const card of candidates) {
+      await act(() => captured!.toggleTarget(card.instanceId))
+    }
+    expect(captured!.selectedTargetIds).toEqual(
+      candidates.slice(0, 3).map((card) => card.instanceId),
+    )
+
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledWith(
+      {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: candidates.slice(0, 3).map((card) => card.instanceId),
       },
       expect.any(String),
     )
@@ -250,6 +504,9 @@ describe('useOnlinePendingEffect', () => {
 
     await act(() => captured!.toggleDraftPayment(paymentCard.instanceId))
     expect(captured!.draftPaymentValid).toBe(true)
+    const targetCard = captured!.candidateCards[0]
+    expect(targetCard).toBeDefined()
+    await act(() => captured!.toggleTarget(targetCard.instanceId))
     await act(() => captured!.confirmEffect())
 
     expect(dispatch).toHaveBeenCalledWith(
@@ -262,6 +519,7 @@ describe('useOnlinePendingEffect', () => {
         costSupportToTrashIds: [],
         discardHandIds: [],
         trashBattleCookieIds: [],
+        targetIds: [targetCard.instanceId],
       },
       expect.any(String),
     )
@@ -405,6 +663,7 @@ describe('useOnlinePendingEffect', () => {
         supportToTrashIds: [],
         discardHandIds: [],
         trashBattleCookieIds: [battleCookie.instanceId],
+        targetIds: [],
       },
       expect.any(String),
     )

@@ -191,8 +191,11 @@ function App() {
   const showCancelSkill =
     pe !== null &&
     !pe.skillActivated &&
-    (pe.sourceKind === 'cookie' || pe.sourceKind === 'item' || pe.sourceKind === 'stage') &&
-    pe.trigger === 'activate'
+    ((pe.sourceKind === 'cookie' && pe.trigger === 'on-play') ||
+      (pe.trigger === 'activate' &&
+        (pe.sourceKind === 'cookie' ||
+          pe.sourceKind === 'item' ||
+          pe.sourceKind === 'stage')))
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -282,6 +285,7 @@ function App() {
           playerId={match.opponentId}
           position="top"
           selectedAttackerId={match.selectedAttackerId}
+          attackTargetingActive={Boolean(match.selectedAttackerId)}
           effectTargetIds={pending.effectTargetIds}
           breakEffectTargetIds={pending.breakEffectTargetIds}
           selectedEffectTargetIds={pending.selectedEffectTargetIds}
@@ -575,6 +579,12 @@ function App() {
         }
         selectedPaymentIds={pending.selectedSkillPaymentIds}
         onTogglePayment={pending.toggleSkillPayment}
+        trashBattleCookieCandidates={pending.skillTrashBattleCookieCandidates}
+        selectedTrashBattleCookieIds={pending.selectedSkillTrashBattleCookieIds}
+        onToggleTrashBattleCookie={pending.toggleSkillTrashBattleCookie}
+        trashBattleCookieCost={
+          pending.pendingEffect?.skill.cost.trashBattleCookie?.count ?? 0
+        }
       />
 
       {match.setupStep && (
