@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Sparkles, Swords } from 'lucide-react'
 import type { GameState, PlayerId } from '../../game'
 import { selectEnergyPayment } from '../../game'
 import { useOnlineMatchController } from '../../hooks/useOnlineMatchController'
 import { useOnlinePendingEffect } from '../../hooks/useOnlinePendingEffect'
+import { useMatchDialogs } from '../../hooks/useMatchDialogs'
 import { BattleRow } from './BattleRow'
 import { PhaseRail } from '../layout/PhaseRail'
 import { AttackPaymentPanel } from '../panels/GameStatusPanels'
@@ -13,16 +14,19 @@ import { EffectPanel } from '../effects/EffectPanel'
 import { BattleResponseModals } from './BattleResponseModals'
 import { DamageEffectModals } from './DamageEffectModals'
 import { PendingDecisionModals } from './PendingDecisionModals'
-import { CardDetailModal, ResultModal } from '../modals/GameModals'
+import { CardDetailModal, CardPileModal, ResultModal } from '../modals/GameModals'
 import { CardFace } from '../cards/CardVisuals'
 import { phaseLabels } from '../gameUiLabels'
 import type { GameCard } from '../../game'
+import type { AttackSelectionPreview } from '../../net/onlineProtocol'
 
 export interface OnlineBattleViewProps {
   game: GameState
   viewerPlayerId: PlayerId
   roomCode: string | null
   sendCommand: (command: import('../../game').GameCommand) => void
+  sendAttackSelection: (selection: AttackSelectionPreview) => void
+  opponentAttackSelection: AttackSelectionPreview
   commandRejectedReason: string | null
   onLeave: () => void
 }
@@ -45,14 +49,17 @@ export function OnlineBattleView({
   viewerPlayerId,
   roomCode,
   sendCommand,
+  sendAttackSelection,
+  opponentAttackSelection,
   commandRejectedReason,
   onLeave,
 }: OnlineBattleViewProps) {
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
-  const [inspectedCard, setInspectedCard] = useState<GameCard | null>(null)
   const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
     null,
   )
+  const dialogs = useMatchDialogs()
+  const { closeResourcePopover } = dialogs
 
   const match = useOnlineMatchController({ game, viewerPlayerId, sendCommand })
   const pending = useOnlinePendingEffect({
@@ -65,6 +72,42 @@ export function OnlineBattleView({
 
   const opponentId = match.opponentId
   const viewerPlayer = game.players[viewerPlayerId]
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (target instanceof Element && !target.closest('.hand-card-wrap')) {
+        setSelectedHandCardId(null)
+      }
+      if (target instanceof Element && !target.closest('.resource-dock')) {
+        closeResourcePopover()
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedHandCardId(null)
+        closeResourcePopover()
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [closeResourcePopover])
+
+  useEffect(() => {
+    sendAttackSelection({
+      attackerInstanceId: match.selectedAttackerId,
+      supportPaymentIds: match.selectedAttackPaymentIds,
+    })
+  }, [
+    match.selectedAttackerId,
+    match.selectedAttackPaymentIds,
+    sendAttackSelection,
+  ])
 
   const pendingBattle = game.pendingBattle
   const opponentDecisionLabel =
@@ -201,11 +244,19 @@ export function OnlineBattleView({
   }
 
   const selectedAttackPaymentIdSet = new Set(match.selectedAttackPaymentIds)
+  const opponentAttackPaymentIdSet = new Set(
+    opponentAttackSelection.supportPaymentIds,
+  )
   const trapPaymentIdSetOnline = new Set(match.selectedTrapPaymentIds)
   const effectTargetIds = new Set(
     pending.candidateCards.map((card) => card.instanceId),
   )
   const selectedEffectTargetIds = new Set(pending.selectedTargetIds)
+  const activeSelectedHandCardId =
+    selectedHandCardId &&
+    viewerPlayer.hand.some((card) => card.instanceId === selectedHandCardId)
+      ? selectedHandCardId
+      : null
 
   const interactionLocked =
     Boolean(pending.pendingEffect) ||
@@ -250,12 +301,13 @@ export function OnlineBattleView({
           game={game}
           playerId={opponentId}
           position="top"
-          selectedAttackerId={match.selectedAttackerId}
+          selectedAttackerId={opponentAttackSelection.attackerInstanceId}
+          attackTargetingActive={Boolean(match.selectedAttackerId)}
           effectTargetIds={effectTargetIds}
           breakEffectTargetIds={new Set()}
           selectedEffectTargetIds={selectedEffectTargetIds}
           selectedSkillPaymentIds={new Set()}
-          selectedAttackPaymentIds={selectedAttackPaymentIdSet}
+          selectedAttackPaymentIds={opponentAttackPaymentIdSet}
           attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
           attackShakeId={match.attackShakeId}
@@ -264,8 +316,16 @@ export function OnlineBattleView({
           drawAnimIds={match.drawAnimIds}
           onAttackTarget={match.handleAttackTarget}
           onEffectTarget={pending.toggleTarget}
-          onInspectCard={setInspectedCard}
-          onInspectDiscard={() => {}}
+          openResourceKind={
+            dialogs.resourcePopover?.playerId === opponentId
+              ? dialogs.resourcePopover.kind
+              : null
+          }
+          onToggleResource={(kind) =>
+            dialogs.toggleResourcePopover(opponentId, kind)
+          }
+          onInspectCard={dialogs.openCardDetail}
+          onInspectDiscard={dialogs.openDiscardPile}
           onHoverCard={setHoveredCard}
           onFocusCard={setHoveredCard}
         />
@@ -279,6 +339,11 @@ export function OnlineBattleView({
               ) : opponentDecisionLabel ? (
                 <>
                   <Sparkles aria-hidden="true" /> {opponentDecisionLabel}
+                </>
+              ) : opponentAttackSelection.attackerInstanceId ? (
+                <>
+                  <Sparkles aria-hidden="true" />
+                  對手正在選擇支援卡支付攻擊費用…
                 </>
               ) : match.selectedAttackerId ? (
                 <>
@@ -310,12 +375,17 @@ export function OnlineBattleView({
           onTrapPayment={match.toggleTrapPayment}
           attackPaymentValid={match.attackPaymentValidation.valid}
           interactionLocked={interactionLocked}
-          selectedHandCardId={selectedHandCardId}
+          selectedHandCardId={activeSelectedHandCardId}
           onSelectHandCard={setSelectedHandCardId}
           attackShakeId={match.attackShakeId}
           damageFlashId={match.damageFlashId}
           faintAnimIds={match.faintAnimIds}
           drawAnimIds={match.drawAnimIds}
+          openResourceKind={
+            dialogs.resourcePopover?.playerId === viewerPlayerId
+              ? dialogs.resourcePopover.kind
+              : null
+          }
           onSelectAttacker={(instanceId) => {
             match.setSelectedAttackerId(instanceId)
             match.setSelectedAttackPaymentIds([])
@@ -383,8 +453,11 @@ export function OnlineBattleView({
             )
           }}
           onActivateStage={() => pending.beginActivateStage()}
-          onInspectCard={setInspectedCard}
-          onInspectDiscard={() => {}}
+          onToggleResource={(kind) =>
+            dialogs.toggleResourcePopover(viewerPlayerId, kind)
+          }
+          onInspectCard={dialogs.openCardDetail}
+          onInspectDiscard={dialogs.openDiscardPile}
           onHoverCard={setHoveredCard}
           onFocusCard={setHoveredCard}
         />
@@ -430,7 +503,7 @@ export function OnlineBattleView({
         selectedTrashBattleCookieIds={pending.selectedDraftTrashBattleCookieIds}
         onToggleTrashBattleCookie={pending.toggleDraftTrashBattleCookie}
         trashBattleCookieCost={pending.draftTrashBattleCookieCost}
-        showTargetSelection={!pending.abilityCostDraft}
+        showTargetSelection
         showCancelSkill={Boolean(pending.abilityCostDraft)}
         onCancel={() => {
           if (pending.abilityCostDraft?.trigger === 'on-play') {
@@ -455,10 +528,22 @@ export function OnlineBattleView({
         />
       )}
 
-      {inspectedCard && (
+      {dialogs.inspectedDiscardPlayerId && (
+        <CardPileModal
+          title={`${game.players[dialogs.inspectedDiscardPlayerId].name}棄牌區`}
+          cards={game.players[dialogs.inspectedDiscardPlayerId].discardPile}
+          onInspect={(card) => {
+            dialogs.closeDiscardPile()
+            dialogs.openCardDetail(card)
+          }}
+          onClose={dialogs.closeDiscardPile}
+        />
+      )}
+
+      {dialogs.inspectedCard && (
         <CardDetailModal
-          card={inspectedCard}
-          onClose={() => setInspectedCard(null)}
+          card={dialogs.inspectedCard}
+          onClose={dialogs.closeCardDetail}
         />
       )}
     </main>

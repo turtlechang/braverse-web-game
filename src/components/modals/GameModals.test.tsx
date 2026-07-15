@@ -99,6 +99,62 @@ describe('DiscardRevealModal', () => {
 })
 
 describe('TrapResponseModal', () => {
+  it('guides energy, cost, and target separately with previous-step navigation', async () => {
+    const trap: GameCard = {
+      id: 'GUIDED-TRAP',
+      instanceId: 'guided-trap',
+      name: 'Guided Trap',
+      type: 'trap',
+      trap: {
+        text: 'Pay energy, discard 1 card, then select a target.',
+        cost: { energy: { blue: 1 }, discardHand: 1 },
+        effects: [],
+      },
+    }
+    const payment = createHandCard(10)
+    const discard = createHandCard(11)
+    const target = createBattleCookie(12)
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[payment]}
+        trapEnergyCostTotal={1}
+        selectedPaymentIds={[payment.instanceId]}
+        targetCards={[target.card]}
+        trapTargetCandidates={[target]}
+        selectedTrapTargetId={target.card.instanceId}
+        onSelectTrap={() => undefined}
+        onSelectTrapTarget={() => undefined}
+        onTogglePayment={() => undefined}
+        discardHandCards={[discard]}
+        discardHandCost={1}
+        selectedDiscardHandIds={[discard.instanceId]}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.querySelectorAll('.phase-step')).toHaveLength(3)
+    expect(container.textContent).toContain('能量支付')
+    expect(container.textContent).not.toContain('額外代價')
+
+    await click(findButton(container, '下一步'))
+    expect(container.textContent).toContain('額外代價')
+    expect(container.textContent).not.toContain('能量支付')
+
+    await click(findButton(container, '下一步'))
+    expect(container.textContent).toContain('選擇目標餅乾')
+
+    await click(findButton(container, '上一步'))
+    expect(container.textContent).toContain('額外代價')
+
+    await act(() => root.unmount())
+  })
+
   it('selects a trap without opening a separate card detail modal', async () => {
     const trap: GameCard = {
       id: 'ST4-020',
@@ -295,7 +351,7 @@ describe('TrapResponseModal', () => {
       />,
     ))
 
-    await click(findButton(container, '返回'))
+    await click(findButton(container, '上一步'))
 
     expect(onBack).not.toHaveBeenCalled()
     expect(onSkip).not.toHaveBeenCalled()

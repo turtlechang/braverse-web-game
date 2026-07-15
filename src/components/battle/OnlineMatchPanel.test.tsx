@@ -21,6 +21,7 @@ const {
   mockJoinRoom,
   mockLeave,
   mockSendCommand,
+  mockSendAttackSelection,
   getMockState,
   setMockState,
 } = vi.hoisted(() => {
@@ -28,6 +29,7 @@ const {
   const mockJoinRoom = vi.fn()
   const mockLeave = vi.fn()
   const mockSendCommand = vi.fn()
+  const mockSendAttackSelection = vi.fn()
   let state: {
     status: string
     roomCode: string | null
@@ -49,6 +51,7 @@ const {
     mockJoinRoom,
     mockLeave,
     mockSendCommand,
+    mockSendAttackSelection,
     getMockState: () => state,
     setMockState: (next: Partial<typeof state>) => {
       state = { ...state, ...next }
@@ -69,6 +72,11 @@ vi.mock('../../hooks/useOnlineMatch', () => ({
       createRoom: mockCreateRoom,
       joinRoom: mockJoinRoom,
       sendCommand: mockSendCommand,
+      sendAttackSelection: mockSendAttackSelection,
+      opponentAttackSelection: {
+        attackerInstanceId: null,
+        supportPaymentIds: [],
+      },
       leave: mockLeave,
     }
   },
@@ -106,6 +114,17 @@ const click = async (btn: HTMLButtonElement | null | undefined) => {
   })
 }
 
+const fillInput = async (input: HTMLInputElement, value: string) => {
+  await act(() => {
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype,
+      'value',
+    )!.set!
+    nativeInputValueSetter.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
+
 beforeEach(() => {
   setMockState({
     status: 'idle',
@@ -119,6 +138,7 @@ beforeEach(() => {
   mockJoinRoom.mockClear()
   mockLeave.mockClear()
   mockSendCommand.mockClear()
+  mockSendAttackSelection.mockClear()
 })
 
 describe('OnlineMatchPanel idle state', () => {
@@ -138,12 +158,21 @@ describe('OnlineMatchPanel idle state', () => {
     await act(() => root.unmount())
   })
 
-  it('has 建立房間 button enabled when valid deck selected', async () => {
+  it('requires a player name before creating a room', async () => {
     const { container, root } = await renderPanel([validDeck])
 
     const createBtn = findButton(container, '建立房間')
     expect(createBtn).toBeDefined()
+    expect(createBtn!.disabled).toBe(true)
+
+    const nameInput = container.querySelector<HTMLInputElement>(
+      '#online-player-name',
+    )!
+    await fillInput(nameInput, '奶油騎士')
     expect(createBtn!.disabled).toBe(false)
+
+    await click(createBtn)
+    expect(mockCreateRoom).toHaveBeenCalledWith(validDeck, '奶油騎士')
 
     await act(() => root.unmount())
   })
@@ -161,19 +190,14 @@ describe('OnlineMatchPanel idle state', () => {
   it('entering join code enables 加入房間 button', async () => {
     const { container, root } = await renderPanel([validDeck])
 
-    const input = container.querySelector<HTMLInputElement>(
-      '.online-match-input',
-    )
-    expect(input).toBeDefined()
-
-    await act(() => {
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value',
-      )!.set!
-      nativeInputValueSetter.call(input!, 'ABC123')
-      input!.dispatchEvent(new Event('input', { bubbles: true }))
-    })
+    const roomInput = container.querySelector<HTMLInputElement>(
+      '[aria-label="房號"]',
+    )!
+    const nameInput = container.querySelector<HTMLInputElement>(
+      '#online-player-name',
+    )!
+    await fillInput(nameInput, '奶油騎士')
+    await fillInput(roomInput, 'ABC123')
 
     const joinBtn = findButton(container, '加入房間')
     expect(joinBtn!.disabled).toBe(false)
@@ -184,24 +208,23 @@ describe('OnlineMatchPanel idle state', () => {
   it('clicking 加入房間 calls joinRoom with deck and trim code', async () => {
     const { container, root } = await renderPanel([validDeck])
 
-    const input = container.querySelector<HTMLInputElement>(
-      '.online-match-input',
-    )
-    expect(input).toBeDefined()
-
-    await act(() => {
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        'value',
-      )!.set!
-      nativeInputValueSetter.call(input!, '  ABC123  ')
-      input!.dispatchEvent(new Event('input', { bubbles: true }))
-    })
+    const roomInput = container.querySelector<HTMLInputElement>(
+      '[aria-label="房號"]',
+    )!
+    const nameInput = container.querySelector<HTMLInputElement>(
+      '#online-player-name',
+    )!
+    await fillInput(nameInput, '  奶油騎士  ')
+    await fillInput(roomInput, '  ABC123  ')
 
     await click(findButton(container, '加入房間'))
 
     expect(mockJoinRoom).toHaveBeenCalledTimes(1)
-    expect(mockJoinRoom).toHaveBeenCalledWith('ABC123', validDeck)
+    expect(mockJoinRoom).toHaveBeenCalledWith(
+      'ABC123',
+      validDeck,
+      '奶油騎士',
+    )
 
     await act(() => root.unmount())
   })
@@ -249,7 +272,7 @@ describe('OnlineMatchPanel accessibility', () => {
   it('room code input has aria-label', async () => {
     const { container, root } = await renderPanel([validDeck])
 
-    const input = container.querySelector<HTMLInputElement>('.online-match-input')
+    const input = container.querySelector<HTMLInputElement>('[aria-label="房號"]')
     expect(input).toBeDefined()
     expect(input!.getAttribute('aria-label')).toBe('房號')
 

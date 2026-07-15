@@ -12,12 +12,14 @@ import {
   type GameState,
   type PlayerId,
 } from '../../src/game'
+import { isValidOnlinePlayerName } from '../../src/net/onlineProtocol'
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 4
 
 export interface RoomSlot {
   playerId: PlayerId
+  playerName: string
   deck: CustomDeck
   send: (data: string) => void
 }
@@ -50,17 +52,29 @@ export class RoomStore {
     return code
   }
 
-  createRoom(deck: CustomDeck, send: (data: string) => void): Room {
+  createRoom(
+    deck: CustomDeck,
+    send: (data: string) => void,
+    playerName = 'Player One',
+  ): Room {
     const validation = validateCustomDeck(deck.entries)
     if (!validation.isValid) {
       throw new GameRuleError(validation.errors[0] ?? '牌組不合法。')
+    }
+    if (!isValidOnlinePlayerName(playerName)) {
+      throw new GameRuleError('玩家名稱必須為 1 至 20 個字元。')
     }
 
     const code = this.generateCode()
     const room: Room = {
       code,
       status: 'waiting',
-      playerOne: { playerId: 'player-one', deck, send },
+      playerOne: {
+        playerId: 'player-one',
+        playerName: playerName.trim(),
+        deck,
+        send,
+      },
       playerTwo: null,
       state: null,
       seed: null,
@@ -74,6 +88,7 @@ export class RoomStore {
     deck: CustomDeck,
     send: (data: string) => void,
     seed: number = Date.now(),
+    playerName = 'Player Two',
   ): Room {
     const room = this.rooms.get(code)
     if (!room) {
@@ -87,8 +102,16 @@ export class RoomStore {
     if (!validation.isValid) {
       throw new GameRuleError(validation.errors[0] ?? '牌組不合法。')
     }
+    if (!isValidOnlinePlayerName(playerName)) {
+      throw new GameRuleError('玩家名稱必須為 1 至 20 個字元。')
+    }
 
-    room.playerTwo = { playerId: 'player-two', deck, send }
+    room.playerTwo = {
+      playerId: 'player-two',
+      playerName: playerName.trim(),
+      deck,
+      send,
+    }
     room.status = 'in-progress'
     room.seed = seed
 
@@ -96,12 +119,12 @@ export class RoomStore {
     room.state = createGame(
       {
         id: 'player-one',
-        name: 'Player One',
+        name: room.playerOne.playerName,
         deck: createDeckFromCustomDeck(room.playerOne.deck, 'player-one'),
       },
       {
         id: 'player-two',
-        name: 'Player Two',
+        name: room.playerTwo.playerName,
         deck: createDeckFromCustomDeck(room.playerTwo.deck, 'player-two'),
       },
       'player-one',

@@ -111,7 +111,7 @@ const drainEffectPanel = async (page, { maxRounds = 6 } = {}) => {
   ]
 
   for (let round = 0; round < maxRounds; round += 1) {
-    const confirmButton = panel.locator('button', { hasText: '確認效果' })
+    const confirmButton = panel.locator('button', { hasText: '確認發動' })
     if (await confirmButton.count() > 0) {
       const disabled = await confirmButton.first().isDisabled().catch(() => true)
       if (!disabled) {
@@ -136,11 +136,22 @@ const drainEffectPanel = async (page, { maxRounds = 6 } = {}) => {
         }
       }
     }
-    if (!clickedAny) break
+    if (!clickedAny) {
+      const nextButton = panel.locator('button', { hasText: '下一步' })
+      if (
+        (await nextButton.count()) > 0 &&
+        !(await nextButton.first().isDisabled().catch(() => true))
+      ) {
+        await nextButton.first().click({ force: true })
+        await page.waitForTimeout(150)
+        continue
+      }
+      break
+    }
   }
 
   // Final confirm attempt (even if some optional columns weren't filled).
-  const confirmButton = panel.locator('button', { hasText: '確認效果' })
+  const confirmButton = panel.locator('button', { hasText: '確認發動' })
   if (await confirmButton.count() > 0) {
     const disabled = await confirmButton.first().isDisabled().catch(() => true)
     if (!disabled) {

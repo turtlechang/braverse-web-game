@@ -5,7 +5,11 @@ import type {
   GameState,
   PlayerId,
 } from '../game'
-import type { ClientMessage, ServerMessage } from '../net/onlineProtocol'
+import type {
+  AttackSelectionPreview,
+  ClientMessage,
+  ServerMessage,
+} from '../net/onlineProtocol'
 
 export type OnlineMatchStatus =
   | 'idle'
@@ -27,6 +31,11 @@ const CONNECTION_LOST_MESSAGE =
 const PROTOCOL_ERROR_MESSAGE =
   '對戰伺服器回傳了無法辨識的資料，請稍後再試。'
 const PROTOCOL_ERROR_CLOSE_CODE = 4002
+
+const EMPTY_ATTACK_SELECTION: AttackSelectionPreview = {
+  attackerInstanceId: null,
+  supportPaymentIds: [],
+}
 
 type ConnectionPhase =
   | 'opening'
@@ -130,6 +139,16 @@ const parseServerMessage = (data: unknown): ServerMessage | null => {
         : null
     case 'state-update':
       return isGameStateEnvelope(parsed.state) ? (parsed as ServerMessage) : null
+    case 'opponent-attack-selection':
+      return isRecord(parsed.selection) &&
+        (parsed.selection.attackerInstanceId === null ||
+          typeof parsed.selection.attackerInstanceId === 'string') &&
+        Array.isArray(parsed.selection.supportPaymentIds) &&
+        parsed.selection.supportPaymentIds.every(
+          (id) => typeof id === 'string',
+        )
+        ? (parsed as ServerMessage)
+        : null
     case 'match-ended':
       return parsed.reason === 'victory' ||
         parsed.reason === 'defeat' ||
@@ -180,6 +199,8 @@ export function useOnlineMatch() {
   const [viewerPlayerId, setViewerPlayerId] = useState<PlayerId | null>(null)
   const [maskedGame, setMaskedGame] = useState<GameState | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [opponentAttackSelection, setOpponentAttackSelection] =
+    useState<AttackSelectionPreview>(EMPTY_ATTACK_SELECTION)
   const [matchEndedReason, setMatchEndedReason] = useState<
     'victory' | 'defeat' | 'opponent-disconnected' | null
   >(null)
@@ -206,6 +227,7 @@ export function useOnlineMatch() {
       setViewerPlayerId(null)
       setMaskedGame(null)
       setErrorMessage(null)
+      setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
       setMatchEndedReason(null)
 
       let socket: WebSocket
@@ -314,7 +336,11 @@ export function useOnlineMatch() {
             break
           case 'state-update':
             setMaskedGame(message.state)
+            setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
             setErrorMessage(null)
+            break
+          case 'opponent-attack-selection':
+            setOpponentAttackSelection(message.selection)
             break
           case 'command-rejected':
             setErrorMessage(message.reason)
@@ -353,15 +379,15 @@ export function useOnlineMatch() {
   }, [])
 
   const createRoom = useCallback(
-    (deck: CustomDeck) => {
-      connect({ type: 'create-room', deck })
+    (deck: CustomDeck, playerName = 'Player One') => {
+      connect({ type: 'create-room', deck, playerName })
     },
     [connect],
   )
 
   const joinRoom = useCallback(
-    (code: string, deck: CustomDeck) => {
-      connect({ type: 'join-room', code, deck })
+    (code: string, deck: CustomDeck, playerName = 'Player Two') => {
+      connect({ type: 'join-room', code, deck, playerName })
     },
     [connect],
   )
@@ -369,6 +395,13 @@ export function useOnlineMatch() {
   const sendCommand = useCallback(
     (command: GameCommand) => {
       send({ type: 'submit-command', command })
+    },
+    [send],
+  )
+
+  const sendAttackSelection = useCallback(
+    (selection: AttackSelectionPreview) => {
+      send({ type: 'update-attack-selection', selection })
     },
     [send],
   )
@@ -381,6 +414,7 @@ export function useOnlineMatch() {
     setViewerPlayerId(null)
     setMaskedGame(null)
     setErrorMessage(null)
+    setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
     setMatchEndedReason(null)
   }, [send, closeActiveConnection])
 
@@ -390,10 +424,12 @@ export function useOnlineMatch() {
     viewerPlayerId,
     maskedGame,
     errorMessage,
+    opponentAttackSelection,
     matchEndedReason,
     createRoom,
     joinRoom,
     sendCommand,
+    sendAttackSelection,
     leave,
   } as const
 }

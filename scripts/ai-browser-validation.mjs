@@ -54,6 +54,22 @@ const waitForServer = async () => {
   throw new Error(`Vite preview 未在 ${baseUrl} 啟動。`)
 }
 
+const advanceEffectPanelToConfirm = async (panel) => {
+  for (let step = 0; step < 3; step += 1) {
+    const nextButton = panel.locator('button', { hasText: '下一步' })
+    if ((await nextButton.count()) === 0) break
+    assert.ok(
+      !(await nextButton.first().isDisabled()),
+      '目前效果步驟完成後，下一步按鈕應可使用',
+    )
+    await nextButton.first().click()
+  }
+
+  const confirmButton = panel.locator('button', { hasText: '確認發動' })
+  await confirmButton.waitFor({ state: 'visible' })
+  return confirmButton
+}
+
 try {
   await waitForServer()
   const browser = await chromium.launch({
@@ -660,8 +676,6 @@ try {
       '選取技能付款後支援卡應立即顯示橫置預覽',
     )
 
-    const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
-
     if (variant === 'lv1') {
       const breakCards = page.locator('.bottom-field .break-cards .break-card')
       const breakCount = await breakCards.count()
@@ -676,6 +690,7 @@ try {
       await firstBreakCard.evaluate((el) => el.click())
       await page.locator('.bottom-field .break-cards .break-card.is-selected').waitFor()
 
+      const confirmButton = await advanceEffectPanelToConfirm(effectPanel)
       await confirmButton.click()
 
       const statusMessage = page.locator('.battle-status-message')
@@ -700,6 +715,7 @@ try {
       )
       assert.ok(!isTargetable, 'LV.2 休息區卡牌不應標示為效果目標')
 
+      const confirmButton = await advanceEffectPanelToConfirm(effectPanel)
       await confirmButton.click()
 
       const statusMessage = page.locator('.battle-status-message')
@@ -733,9 +749,8 @@ try {
   )
   await attackBreakCard.evaluate((el) => el.click())
   await page.locator('.bottom-field .break-cards .break-card.is-selected').waitFor()
-  await attackEffectPanel
-    .locator('button', { hasText: '確認效果' })
-    .click()
+  const attackConfirmButton = await advanceEffectPanelToConfirm(attackEffectPanel)
+  await attackConfirmButton.click()
   await page
     .locator('.battle-status-message')
     .filter({ hasText: /放入棄牌區/ })
@@ -809,7 +824,7 @@ try {
       assert.ok(isTargetable, '戰鬥區餅乾應標示為效果目標')
       await targetCookie.locator('.card-face').first().evaluate((el) => el.click())
 
-      const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
+      const confirmButton = await advanceEffectPanelToConfirm(effectPanel)
       await confirmButton.click()
 
       const statusMessage = page.locator('.battle-status-message')
@@ -913,7 +928,7 @@ try {
       assert.ok(isTargetable, '場景啟動後戰鬥區餅乾應標示為效果目標')
       await targetCookie.locator('.card-face').first().evaluate((el) => el.click())
 
-      const confirmButton = effectPanel.locator('button', { hasText: '確認效果' })
+      const confirmButton = await advanceEffectPanelToConfirm(effectPanel)
       await confirmButton.click()
 
       await statusMessage.filter({ hasText: /攻擊傷害|受到.*傷害|傷害已結算/ }).waitFor()
@@ -1148,7 +1163,14 @@ try {
 
     // Pretzel select-1:確認發動，對攻擊者造成 1 點傷害
     await selectPretzelPayment()
-    await battleModal.getByRole('button', { name: '支付並發動' }).click()
+    await battleModal.getByRole('button', { name: '下一步' }).click()
+    const pretzelTargets = battleModal.locator('.trap-target-options > button')
+    assert.ok(
+      (await pretzelTargets.count()) >= 1,
+      'Pretzel Snare 的目標步驟應顯示攻擊餅乾',
+    )
+    await pretzelTargets.first().click()
+    await battleModal.getByRole('button', { name: '確認發動' }).click()
     const trapRevealModal = page.locator('.card-reveal-modal')
     const hasTrapRevealModal = await trapRevealModal
       .waitFor({ state: 'visible', timeout: 1000 })
@@ -1171,11 +1193,12 @@ try {
     await battleModal.waitFor({ state: 'visible' })
     await pretzelCard.click()
     await page.waitForTimeout(100)
+    await selectPretzelPayment()
+    await battleModal.getByRole('button', { name: '下一步' }).click()
     const noTargetCheckbox = page.locator('.trap-target-toggle input[type="checkbox"]')
     await noTargetCheckbox.waitFor({ state: 'visible' })
     await noTargetCheckbox.click()
-    await selectPretzelPayment()
-    await battleModal.getByRole('button', { name: '支付並發動' }).click()
+    await battleModal.getByRole('button', { name: '確認發動' }).click()
     const secondTrapRevealModal = page.locator('.card-reveal-modal')
     const hasSecondTrapRevealModal = await secondTrapRevealModal
       .waitFor({ state: 'visible', timeout: 1000 })
@@ -1336,17 +1359,15 @@ try {
 
     const effectPanel = page.locator('.effect-panel')
     await effectPanel.waitFor({ state: 'visible' })
-    const confirmButton = effectPanel.getByRole('button', {
-      name: /確認效果/,
-    })
+    const primaryButton = effectPanel.locator('.effect-panel-primary-action')
     const opponentCookie = page
       .locator('.top-field .combat-card-wrap > .card-face')
       .first()
 
     await opponentCookie.evaluate((el) => el.click())
     assert.ok(
-      await confirmButton.isDisabled(),
-      'ST3-002 選好效果目標但未支付支援卡代價時不可確認',
+      await primaryButton.isDisabled(),
+      'ST3-002 選好效果目標但未支付支援卡代價時不可進入下一步',
     )
 
     const costSupports = page.getByRole('button', {
@@ -1379,10 +1400,11 @@ try {
       '選滿技能代價後只應保留已選支援卡可取消',
     )
     assert.ok(
-      !(await confirmButton.isDisabled()),
-      'ST3-002 選好目標與支援卡代價後應可確認',
+      !(await primaryButton.isDisabled()),
+      'ST3-002 選好目標與支援卡代價後應可進入下一步',
     )
 
+    const confirmButton = await advanceEffectPanelToConfirm(effectPanel)
     await confirmButton.click()
     await confirmButton.waitFor({ state: 'hidden' })
 

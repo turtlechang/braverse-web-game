@@ -1,10 +1,22 @@
-import { useEffect, useRef, useState } from 'react'
-import { Check, Maximize2, Minimize2, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import {
+  ArrowRight,
+  Check,
+  ChevronLeft,
+  Maximize2,
+  Minimize2,
+  Sparkles,
+} from 'lucide-react'
 import type { CardEffect, CardSkill, GameCard } from '../../game'
 import { isEffectUntargeted } from '../../game'
-import { CardEffectText, CardFace, SkillCost } from '../cards/CardVisuals'
+import { CardEffectText, CardFace, EnergyCostIcons } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
 import { describeEffect, getSkillLabels } from './effectUiUtils'
+import {
+  GuidedPhaseSteps,
+  type GuidedPhase,
+  type GuidedPhaseId,
+} from './GuidedPhaseSteps'
 import type { PendingEffect } from './effectUiTypes'
 import './EffectPanel.css'
 
@@ -36,6 +48,39 @@ export interface EffectPanelProps {
   showTargetSelection?: boolean
 }
 
+function CandidateButtons({
+  cards,
+  selectedIds,
+  onToggle,
+  className,
+}: {
+  cards: GameCard[]
+  selectedIds: Set<string>
+  onToggle?: (instanceId: string) => void
+  className: string
+}) {
+  if (cards.length === 0) return null
+
+  return (
+    <div className={`effect-candidates ${className}`}>
+      {cards.map((card) => {
+        const selected = selectedIds.has(card.instanceId)
+        return (
+          <button
+            type="button"
+            className={selected ? 'is-selected' : ''}
+            key={card.instanceId}
+            onClick={() => onToggle?.(card.instanceId)}
+          >
+            <CardFace card={card} selected={selected} />
+            <span>{card.name}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 function EffectPanelContent({
   pendingEffect,
   currentEffect,
@@ -63,8 +108,6 @@ function EffectPanelContent({
   trashBattleCookieCost = 0,
   showTargetSelection = true,
 }: EffectPanelProps) {
-  const targetRef = useRef<HTMLDivElement>(null)
-  const hasScrolledRef = useRef(false)
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
   const supportAreaCost =
@@ -95,13 +138,6 @@ function EffectPanelContent({
           ? currentEffect.target
           : null
 
-  const hasCostPhase =
-    !pendingEffect?.skillActivated &&
-    (totalEnergyCost > 0 ||
-      supportAreaCost > 0 ||
-      discardHandCost > 0 ||
-      trashBattleCookieCost > 0)
-
   const energyPaid = totalEnergyCost > 0
     ? energyPaymentValid === true
     : true
@@ -114,11 +150,10 @@ function EffectPanelContent({
   const trashBattleCookiePaid =
     trashBattleCookieCost === 0 ||
     pendingEffect?.selectedTrashBattleCookieIds.length === trashBattleCookieCost
-  const costReady =
-    !hasCostPhase ||
-    (energyPaid && supportPaid && discardPaid && trashBattleCookiePaid)
+  const extraCostReady = supportPaid && discardPaid && trashBattleCookiePaid
 
   const targetReady =
+    !showTargetSelection ||
     !selectionLimits ||
     (pendingEffect &&
       pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
@@ -126,110 +161,144 @@ function EffectPanelContent({
 
   const hasPaymentContent =
     !pendingEffect?.skillActivated && totalEnergyCost > 0
+  const automaticCostDescriptions = pendingEffect?.skillActivated
+    ? []
+    : [
+        ...(skill?.restSource ? ['將效果來源卡橫置'] : []),
+        ...(skill?.cost.hpToTrash?.amount
+          ? [`棄置 ${skill.cost.hpToTrash.amount} 張 HP 卡`]
+          : []),
+        ...(skill?.cost.hpToTrash?.untilRemainingHp !== undefined
+          ? [`棄置 HP 卡直到剩餘 ${skill.cost.hpToTrash.untilRemainingHp} HP`]
+          : []),
+        ...(skill?.cost.selfToBreakArea ? ['將效果來源餅乾放到休息區'] : []),
+      ]
   const hasExtraCostContent =
-    costSupportCandidates.length > 0 ||
-    discardHandCandidates.length > 0 ||
-    trashBattleCookieCandidates.length > 0 ||
-    supportAreaCost > 0 ||
-    discardHandCost > 0 ||
-    trashBattleCookieCost > 0
+    !pendingEffect?.skillActivated &&
+    (costSupportCandidates.length > 0 ||
+      discardHandCandidates.length > 0 ||
+      trashBattleCookieCandidates.length > 0 ||
+      supportAreaCost > 0 ||
+      discardHandCost > 0 ||
+      trashBattleCookieCost > 0 ||
+      automaticCostDescriptions.length > 0)
   const hasTargetContent =
-    showTargetSelection && (candidateCards.length > 0 || Boolean(currentEffect))
+    showTargetSelection && selectionLimits !== null
 
-  const visibleColumnCount =
-    [hasPaymentContent, hasExtraCostContent, hasTargetContent].filter(Boolean).length
-  const gridClass =
-    visibleColumnCount >= 3
-      ? 'cols-3'
-      : visibleColumnCount === 2
-        ? 'cols-2'
-        : 'cols-1'
-
-  useEffect(() => {
-    if (costReady && hasTargetContent) {
-      if (targetRef.current && !hasScrolledRef.current) {
-        hasScrolledRef.current = true
-        targetRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      }
+  const phaseIds: GuidedPhaseId[] = [
+    ...(hasPaymentContent ? (['energy'] as const) : []),
+    ...(hasExtraCostContent ? (['cost'] as const) : []),
+    ...(hasTargetContent ? (['target'] as const) : []),
+  ]
+  const phaseSignature = pendingEffect
+    ? `${pendingEffect.sourceCard.instanceId}:${pendingEffect.effectIndex}:${pendingEffect.skillActivated}:${phaseIds.join('-')}`
+    : 'none'
+  const [phaseState, setPhaseState] = useState<{
+    signature: string
+    phase: GuidedPhaseId | null
+  }>({ signature: '', phase: null })
+  const activePhase =
+    phaseState.signature === phaseSignature &&
+    phaseState.phase !== null &&
+    phaseIds.includes(phaseState.phase)
+      ? phaseState.phase
+      : (phaseIds[0] ?? null)
+  const activePhaseIndex = activePhase ? phaseIds.indexOf(activePhase) : -1
+  const phases: GuidedPhase[] = phaseIds.map((id, index) => ({
+    id,
+    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : '目標',
+    complete: index < activePhaseIndex,
+  }))
+  const activePhaseReady =
+    activePhase === 'energy'
+      ? energyPaid
+      : activePhase === 'cost'
+        ? extraCostReady
+        : activePhase === 'target'
+          ? targetReady
+          : true
+  const hasPreviousPhase = activePhaseIndex > 0
+  const hasNextPhase =
+    activePhaseIndex >= 0 && activePhaseIndex < phaseIds.length - 1
+  const goToPhase = (phase: GuidedPhaseId) => {
+    setPhaseState({ signature: phaseSignature, phase })
+  }
+  const handlePrimaryAction = () => {
+    if (hasNextPhase) {
+      goToPhase(phaseIds[activePhaseIndex + 1])
+      return
     }
-  }, [costReady, hasTargetContent])
-
-  useEffect(() => {
-    hasScrolledRef.current = false
-  }, [currentEffect?.kind])
+    onConfirm()
+  }
 
   if (pendingEffect && currentEffect) {
     return (
       <>
         <div className="effect-panel-body">
-          <span>{pendingEffect.triggerLabel}</span>
-          <strong>{pendingEffect.sourceCard.name}</strong>
-          <div className="skill-labels">
-            {getSkillLabels(pendingEffect.skill).map((label) => (
-              <span key={label}>{label}</span>
-            ))}
+          <div className="effect-panel-heading">
+            <span>{pendingEffect.triggerLabel}</span>
+            <strong>{pendingEffect.sourceCard.name}</strong>
           </div>
           <div className="effect-source-card">
             <CardFace card={pendingEffect.sourceCard} />
-            <div>
+            <div className="effect-source-copy">
               <span>{pendingEffect.sourceCard.id}</span>
               <strong>{pendingEffect.sourceCard.name}</strong>
+              <div className="skill-labels">
+                {getSkillLabels(pendingEffect.skill).map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <p className="effect-source-description">
+                <CardEffectText text={pendingEffect.skill.text} />
+              </p>
             </div>
           </div>
-          <p>
-            <CardEffectText text={pendingEffect.skill.text} />
-          </p>
 
-          {hasCostPhase && (
-            <div className="phase-progress">
-              <span className={`phase-step${energyPaid && supportPaid && discardPaid && trashBattleCookiePaid ? ' is-done' : ' is-active'}`}>
-                1 費用
-              </span>
-              <span className="phase-divider" />
-              <span className={`phase-step${costReady ? ' is-active' : ''}`}>
-                2 目標
-              </span>
+          <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
+
+          {phaseIds.length === 0 && (
+            <div className="effect-instruction effect-resolution-summary">
+              <Sparkles aria-hidden="true" />
+              <span>{describeEffect(currentEffect)}</span>
             </div>
           )}
 
-          <div className={`effect-panel-interaction-grid ${gridClass}`}>
-            {hasPaymentContent && (
+          <div className="effect-panel-guided-content">
+            {activePhase === 'energy' && (
               <section className="effect-panel-col effect-panel-payment-col">
                 <span className="effect-panel-col-label">能量支付</span>
                 <div className="skill-cost">
-                  <SkillCost skill={pendingEffect.skill} />
+                  <EnergyCostIcons
+                    cost={pendingEffect.skill.cost.energy ?? pendingEffect.skill.cost}
+                  />
                 </div>
                 <small>
                   已選 {pendingEffect.selectedPaymentIds.length}／
                   {totalEnergyCost} 張能量支援卡
                 </small>
                 {paymentCandidates.length > 0 ? (
-                  <div className="effect-candidates effect-candidates-payment">
-                    {paymentCandidates.map((card) => (
-                      <button
-                        type="button"
-                        className={
-                          selectedPaymentIds.has(card.instanceId)
-                            ? 'is-selected'
-                            : ''
-                        }
-                        key={card.instanceId}
-                        onClick={() => onTogglePayment?.(card.instanceId)}
-                      >
-                        <CardFace card={card} selected={selectedPaymentIds.has(card.instanceId)} />
-                        <span>{card.name}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <CandidateButtons
+                    cards={paymentCandidates}
+                    selectedIds={selectedPaymentIds}
+                    onToggle={onTogglePayment}
+                    className="effect-candidates-payment"
+                  />
                 ) : (
                   <small>沒有可支付的支援卡</small>
                 )}
               </section>
             )}
 
-            {hasExtraCostContent && (
+            {activePhase === 'cost' && (
               <section className="effect-panel-col effect-panel-extra-cost-col">
                 <span className="effect-panel-col-label">額外代價</span>
+                {automaticCostDescriptions.map((description) => (
+                  <div className="effect-auto-cost" key={description}>
+                    <Check aria-hidden="true" />
+                    <span>{description}</span>
+                  </div>
+                ))}
                 {supportAreaCost > 0 && (
                   <small>
                     已選 {pendingEffect.selectedCostSupportToTrashIds.length}／
@@ -250,112 +319,53 @@ function EffectPanelContent({
                 )}
                 {costSupportCandidates.length > 0 && (
                   <>
-                    <small>選擇要作為代價棄置的支援區卡牌</small>
-                    <div className="effect-candidates effect-candidates-cost-support">
-                      {costSupportCandidates.map((card) => (
-                        <button
-                          type="button"
-                          className={
-                            selectedCostSupportIds.has(card.instanceId)
-                              ? 'is-selected'
-                              : ''
-                          }
-                          key={card.instanceId}
-                          onClick={() => onToggleCostSupport?.(card.instanceId)}
-                        >
-                          <CardFace card={card} selected={selectedCostSupportIds.has(card.instanceId)} />
-                          <span>{card.name}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <small>選擇要作為代價移動的支援區卡牌</small>
+                    <CandidateButtons
+                      cards={costSupportCandidates}
+                      selectedIds={selectedCostSupportIds}
+                      onToggle={onToggleCostSupport}
+                      className="effect-candidates-cost-support"
+                    />
                   </>
                 )}
                 {discardHandCandidates.length > 0 && (
                   <>
                     <small>選擇要作為代價棄置的手牌</small>
-                    <div className="effect-candidates effect-candidates-discard-hand">
-                      {discardHandCandidates.map((card) => (
-                        <button
-                          type="button"
-                          className={
-                            selectedDiscardHandIds.has(card.instanceId)
-                              ? 'is-selected'
-                              : ''
-                          }
-                          key={card.instanceId}
-                          onClick={() => onToggleDiscardHand?.(card.instanceId)}
-                        >
-                          <CardFace card={card} selected={selectedDiscardHandIds.has(card.instanceId)} />
-                          <span>{card.name}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <CandidateButtons
+                      cards={discardHandCandidates}
+                      selectedIds={selectedDiscardHandIds}
+                      onToggle={onToggleDiscardHand}
+                      className="effect-candidates-discard-hand"
+                    />
                   </>
                 )}
                 {trashBattleCookieCandidates.length > 0 && (
                   <>
                     <small>選擇要作為代價送入棄牌區的戰鬥區餅乾</small>
-                    <div className="effect-candidates effect-candidates-trash-battle">
-                      {trashBattleCookieCandidates.map((card) => (
-                        <button
-                          type="button"
-                          className={
-                            selectedTrashBattleCookieIds.has(card.instanceId)
-                              ? 'is-selected'
-                              : ''
-                          }
-                          key={card.instanceId}
-                          onClick={() =>
-                            onToggleTrashBattleCookie?.(card.instanceId)
-                          }
-                        >
-                          <CardFace
-                            card={card}
-                            selected={selectedTrashBattleCookieIds.has(
-                              card.instanceId,
-                            )}
-                          />
-                          <span>{card.name}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <CandidateButtons
+                      cards={trashBattleCookieCandidates}
+                      selectedIds={selectedTrashBattleCookieIds}
+                      onToggle={onToggleTrashBattleCookie}
+                      className="effect-candidates-trash-battle"
+                    />
                   </>
                 )}
               </section>
             )}
 
-            {hasTargetContent && (
-              <section
-                className="effect-panel-col effect-panel-target-col"
-                ref={targetRef}
-              >
+            {activePhase === 'target' && (
+              <section className="effect-panel-col effect-panel-target-col">
                 <span className="effect-panel-col-label">目標</span>
                 <div className="effect-instruction">
                   <Sparkles aria-hidden="true" />
                   <span>{describeEffect(currentEffect)}</span>
                 </div>
-                {candidateCards.length > 0 && (
-                  <div className="effect-candidates effect-candidates-target">
-                    {candidateCards.map((card) => (
-                      <button
-                        type="button"
-                        className={
-                          pendingEffect.selectedTargetIds.includes(card.instanceId)
-                            ? 'is-selected'
-                            : ''
-                        }
-                        key={card.instanceId}
-                        onClick={() => onToggleCandidate?.(card.instanceId)}
-                      >
-                        <CardFace
-                          card={card}
-                          selected={pendingEffect.selectedTargetIds.includes(card.instanceId)}
-                        />
-                        <span>{card.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <CandidateButtons
+                  cards={candidateCards}
+                  selectedIds={new Set(pendingEffect.selectedTargetIds)}
+                  onToggle={onToggleCandidate}
+                  className="effect-candidates-target"
+                />
                 {selectionLimits && (
                   <small>
                     已選 {pendingEffect.selectedTargetIds.length}／
@@ -387,13 +397,33 @@ function EffectPanelContent({
               不發動
             </button>
           ) : null}
+          {hasPreviousPhase && (
+            <button
+              className="effect-panel-back-action"
+              type="button"
+              onClick={() => goToPhase(phaseIds[activePhaseIndex - 1])}
+            >
+              <ChevronLeft aria-hidden="true" />
+              上一步
+            </button>
+          )}
           <button
+            className="effect-panel-primary-action"
             type="button"
-            disabled={!costReady || !targetReady}
-            onClick={onConfirm}
+            disabled={!activePhaseReady}
+            onClick={handlePrimaryAction}
           >
-            <Check aria-hidden="true" />
-            確認效果
+            {hasNextPhase ? (
+              <>
+                下一步
+                <ArrowRight aria-hidden="true" />
+              </>
+            ) : (
+              <>
+                <Check aria-hidden="true" />
+                確認發動
+              </>
+            )}
           </button>
         </div>
       </>

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { CustomDeck } from '../../game'
 import { validateCustomDeck } from '../../game'
 import { useOnlineMatch } from '../../hooks/useOnlineMatch'
+import { ONLINE_PLAYER_NAME_MAX_LENGTH } from '../../net/onlineProtocol'
 import { onlineMatchStatusLabels, matchEndedReasonLabels } from '../gameUiLabels'
 import { OnlineBattleView } from './OnlineBattleView'
 
@@ -17,6 +18,7 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
     decks[0]?.id ?? null,
   )
   const [joinCode, setJoinCode] = useState('')
+  const [playerName, setPlayerName] = useState('')
 
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
   const selectedDeckValidation = selectedDeck
@@ -46,6 +48,8 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
         viewerPlayerId={online.viewerPlayerId}
         roomCode={online.roomCode}
         sendCommand={online.sendCommand}
+        sendAttackSelection={online.sendAttackSelection}
+        opponentAttackSelection={online.opponentAttackSelection}
         commandRejectedReason={online.errorMessage}
         onLeave={handleClose}
       />
@@ -101,6 +105,19 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
                 </select>
               </label>
 
+              <label className="online-match-field" htmlFor="online-player-name">
+                <span>玩家名稱</span>
+                <input
+                  id="online-player-name"
+                  className="online-match-input"
+                  value={playerName}
+                  maxLength={ONLINE_PLAYER_NAME_MAX_LENGTH}
+                  onChange={(event) => setPlayerName(event.target.value)}
+                  placeholder="輸入名稱"
+                  autoComplete="nickname"
+                />
+              </label>
+
               {selectedDeckValidation && !selectedDeckValidation.isValid && (
                 <div className="online-match-error" role="alert">
                   目前牌組不合法，無法用於線上對戰。
@@ -111,8 +128,15 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
                 <button
                   type="button"
                   className="online-match-btn-primary"
-                  disabled={!selectedDeck || !selectedDeckValidation?.isValid}
-                  onClick={() => selectedDeck && online.createRoom(selectedDeck)}
+                  disabled={
+                    !selectedDeck ||
+                    !selectedDeckValidation?.isValid ||
+                    !playerName.trim()
+                  }
+                  onClick={() =>
+                    selectedDeck &&
+                    online.createRoom(selectedDeck, playerName.trim())
+                  }
                 >
                   建立房間
                 </button>
@@ -131,10 +155,16 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
                     disabled={
                       !selectedDeck ||
                       !selectedDeckValidation?.isValid ||
+                      !playerName.trim() ||
                       !joinCode.trim()
                     }
                     onClick={() =>
-                      selectedDeck && online.joinRoom(joinCode.trim(), selectedDeck)
+                      selectedDeck &&
+                      online.joinRoom(
+                        joinCode.trim(),
+                        selectedDeck,
+                        playerName.trim(),
+                      )
                     }
                   >
                     加入房間

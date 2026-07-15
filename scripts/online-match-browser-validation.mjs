@@ -199,13 +199,18 @@ try {
   guestContext = await browser.newContext({ viewport: { width: 1366, height: 768 } })
   await installDeck(hostContext, 'host-browser-deck', 'Host Browser Deck')
   await installDeck(guestContext, 'guest-browser-deck', 'Guest Browser Deck')
-  await trackApplicationSockets(guestContext)
+  await Promise.all([
+    trackApplicationSockets(hostContext),
+    trackApplicationSockets(guestContext),
+  ])
   const host = await trackedPage(hostContext)
   const guest = await trackedPage(guestContext)
   hostPage = host.page
   guestPage = guest.page
 
   await Promise.all([openOnlinePanel(hostPage), openOnlinePanel(guestPage)])
+  await hostPage.locator('#online-player-name').fill('Host Player')
+  await guestPage.locator('#online-player-name').fill('Guest Player')
   await hostPage.locator('.online-match-btn-primary').click()
   const waitingStatus = hostPage.locator(
     '.online-match-status-value.is-waiting-for-opponent',
@@ -216,7 +221,7 @@ try {
   )?.trim()
   assert.match(roomCode ?? '', /^[A-HJ-NP-Z2-9]{4}$/)
 
-  await guestPage.locator('.online-match-input').fill(roomCode)
+  await guestPage.locator('[aria-label="房號"]').fill(roomCode)
   await guestPage.locator('.online-match-btn-secondary').click()
   await Promise.all([
     hostPage.locator('.online-setup').waitFor({ state: 'visible' }),
@@ -243,6 +248,24 @@ try {
     hostPage.locator('.table-area').waitFor({ state: 'visible' }),
     guestPage.locator('.table-area').waitFor({ state: 'visible' }),
   ])
+  assert.match(
+    (await hostPage.locator('.bottom-field .row-meta').textContent()) ?? '',
+    /Host Player/,
+  )
+  assert.match(
+    (await hostPage.locator('.top-field .row-meta').textContent()) ?? '',
+    /Guest Player/,
+  )
+  for (const zone of ['deck', 'stage', 'break']) {
+    const resourceButton = hostPage.locator(
+      `.bottom-field .${zone}-zone > .resource-summary`,
+    )
+    await resourceButton.click()
+    await hostPage
+      .locator(`.bottom-field .${zone}-zone .resource-popover`)
+      .waitFor({ state: 'visible' })
+    await resourceButton.click()
+  }
   const hostActivityToggle = hostPage.getByTestId('online-activity-toggle')
   const guestActivityToggle = guestPage.getByTestId('online-activity-toggle')
   await Promise.all([
@@ -269,7 +292,9 @@ try {
   const guestTurn = (await guestPage.locator('.turn-counter').textContent())?.trim()
   assert.equal(hostTurn, guestTurn)
 
-  await hostPage.locator('.next-phase-button').click()
+  const hostSupportHandCard = hostPage.locator('.bottom-hand .hand-card').first()
+  await hostSupportHandCard.click({ force: true })
+  await hostPage.locator('.bottom-hand .hand-card-action', { hasText: '支援' }).click()
   await Promise.all([
     hostPage.waitForFunction(() =>
       document.querySelector('.phase-rail li.is-current strong')?.textContent
@@ -289,8 +314,17 @@ try {
   assert.equal(hostPhase, '主要階段')
   assert.equal(guestPhase, hostPhase)
 
-  const hostHandCard = hostPage.locator('.bottom-hand .hand-card').first()
-  await hostHandCard.click()
+  const hostHandCard = hostPage
+    .locator('.bottom-hand .hand-card-wrap.is-actionable .hand-card')
+    .last()
+  await hostHandCard.click({ force: true })
+  await hostPage.locator('.bottom-hand .hand-card-wrap.is-selected').first().waitFor()
+  await hostPage.locator('.table-divider').click({ position: { x: 5, y: 5 } })
+  assert.equal(
+    await hostPage.locator('.bottom-hand .hand-card-wrap.is-selected').count(),
+    0,
+  )
+  await hostHandCard.click({ force: true })
   const detailButton = hostPage.locator('.hand-card-detail').first()
   await detailButton.waitFor({ state: 'visible' })
   await detailButton.click()
@@ -313,20 +347,98 @@ try {
     ),
   ])
 
+  await hostPhaseButton.click()
+  await Promise.all([
+    hostPage.waitForFunction(() =>
+      document.querySelector('.phase-rail li.is-current strong')?.textContent
+        ?.includes('支援階段'),
+    ),
+    guestPage.waitForFunction(() => {
+      const button = document.querySelector('.next-phase-button')
+      const phase = document.querySelector('.phase-rail li.is-current strong')
+      return button instanceof HTMLButtonElement && !button.disabled &&
+        phase?.textContent?.includes('支援階段')
+    }),
+  ])
+
+  const guestSupportHandCard = guestPage.locator('.bottom-hand .hand-card').first()
+  await guestSupportHandCard.click({ force: true })
+  await guestPage.locator('.bottom-hand .hand-card-action', { hasText: '支援' }).click()
+  await Promise.all([
+    hostPage.waitForFunction(() =>
+      document.querySelector('.phase-rail li.is-current strong')?.textContent
+        ?.includes('主要階段'),
+    ),
+    guestPage.waitForFunction(() =>
+      document.querySelector('.phase-rail li.is-current strong')?.textContent
+        ?.includes('主要階段'),
+    ),
+  ])
+
+  const previewIds = await guestPage.evaluate(() => {
+    const socket = window.__braverseTestSockets?.at(-1)
+    const attackerInstanceId = document
+      .querySelector('.bottom-field .combat-card-wrap')
+      ?.getAttribute('data-card-instance-id')
+    const supportInstanceId = document
+      .querySelector('.bottom-field .support-card-wrap')
+      ?.getAttribute('data-card-instance-id')
+    if (
+      !socket ||
+      socket.readyState !== WebSocket.OPEN ||
+      !attackerInstanceId ||
+      !supportInstanceId
+    ) {
+      return null
+    }
+    socket.send(JSON.stringify({
+      type: 'update-attack-selection',
+      selection: { attackerInstanceId, supportPaymentIds: [] },
+    }))
+    return { attackerInstanceId, supportInstanceId }
+  })
+  assert.ok(previewIds)
+  await hostPage.locator('.top-field .combat-card-wrap .card-face.is-selected').waitFor()
+  assert.match(
+    (await hostPage.locator('.table-divider').textContent()) ?? '',
+    /對手正在選擇支援卡支付攻擊費用/,
+  )
+  await guestPage.evaluate(({ attackerInstanceId, supportInstanceId }) => {
+    const socket = window.__braverseTestSockets?.at(-1)
+    socket?.send(JSON.stringify({
+      type: 'update-attack-selection',
+      selection: {
+        attackerInstanceId,
+        supportPaymentIds: [supportInstanceId],
+      },
+    }))
+  }, previewIds)
+  await hostPage.locator('.top-field .support-card.is-rested.is-selected').waitFor()
+  await guestPage.evaluate(() => {
+    const socket = window.__braverseTestSockets?.at(-1)
+    socket?.send(JSON.stringify({
+      type: 'update-attack-selection',
+      selection: { attackerInstanceId: null, supportPaymentIds: [] },
+    }))
+  })
+  await hostPage
+    .locator('.top-field .combat-card-wrap .card-face.is-selected')
+    .waitFor({ state: 'hidden' })
+
   // 對手回合的下一階段按鈕在 UI 層已停用；直接透過應用程式自身的 socket
   // 送出同一個非法請求，驗證伺服器仍會拒絕不受信任的 WebSocket payload。
-  const invalidCommandSent = await guestPage.evaluate(() => {
+  const invalidCommandSent = await hostPage.evaluate(() => {
     const socket = window.__braverseTestSockets?.at(-1)
     if (!socket || socket.readyState !== WebSocket.OPEN) return false
     socket.send(JSON.stringify({
       type: 'submit-command',
-      command: { kind: 'advance-phase', playerId: 'player-two' },
+      command: { kind: 'advance-phase', playerId: 'player-one' },
     }))
     return true
   })
   assert.equal(invalidCommandSent, true)
-  const rejectionToast = guestPage.locator('.status-toast')
-  await guestPage.waitForFunction(() =>
+  const rejectionToast = hostPage.locator('.status-toast')
+  await hostPage.waitForFunction(() =>
     document.querySelector('.status-toast')?.textContent?.includes('不是目前的回合玩家'),
   )
   assert.match(
@@ -352,6 +464,7 @@ try {
   const failure = await trackedPage(failureContext)
   failurePage = failure.page
   await openOnlinePanel(failurePage)
+  await failurePage.locator('#online-player-name').fill('Failure Player')
   await failurePage.locator('.online-match-btn-primary').click()
 
   const failureStatus = failurePage.locator(
@@ -387,6 +500,11 @@ try {
     synchronizedTurn: hostTurn,
     openingHandVisible: true,
     activityFeedbackVisible: true,
+    customPlayerNamesVisible: true,
+    handSelectionDismissed: true,
+    opponentAttackPreviewVisible: true,
+    opponentSupportPaymentRested: true,
+    onlineResourcePopoversVisible: true,
     cardDetailClosable: true,
     commandRejectionVisible: true,
     disconnectHandled: true,

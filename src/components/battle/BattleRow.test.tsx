@@ -99,6 +99,28 @@ describe('opponent hand fan pure functions', () => {
 })
 
 describe('BattleRow desktop interactions', () => {
+  it('highlights an opponent attack preview and rests its selected support', () => {
+    const game = createItemUsageDemoState(true)
+    const player = game.players['player-one']
+    const attackerId = player.battleArea[0].card.instanceId
+    const supportId = player.supportArea[0].card.instanceId
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'top',
+          selectedAttackerId: attackerId,
+          selectedAttackPaymentIds: new Set([supportId]),
+          interactionLocked: true,
+        })}
+      />,
+    )
+
+    expect(markup).toContain('card-face support-card is-rested is-selected')
+    expect(markup).toContain('card-face  is-selected')
+  })
+
   it('keeps legal hand actions hidden until the card is selected', () => {
     const markup = renderToStaticMarkup(
       <BattleRow {...createProps()} />,

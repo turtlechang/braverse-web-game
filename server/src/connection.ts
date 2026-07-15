@@ -1,6 +1,7 @@
 import type { CustomDeck, GameCommand, PlayerId } from '../../src/game'
 import {
   isClientMessage,
+  type AttackSelectionPreview,
   type ClientMessage,
   type ServerMessage,
 } from '../../src/net/onlineProtocol'
@@ -74,13 +75,25 @@ export class ConnectionManager {
 
     switch (message.type) {
       case 'create-room':
-        this.handleCreateRoom(socket, message.deck)
+        this.handleCreateRoom(
+          socket,
+          message.deck,
+          message.playerName ?? 'Player One',
+        )
         return
       case 'join-room':
-        this.handleJoinRoom(socket, message.code, message.deck)
+        this.handleJoinRoom(
+          socket,
+          message.code,
+          message.deck,
+          message.playerName ?? 'Player Two',
+        )
         return
       case 'submit-command':
         this.handleSubmitCommand(socket, message.command)
+        return
+      case 'update-attack-selection':
+        this.handleAttackSelection(socket, message.selection)
         return
       case 'leave-room':
         this.handleDisconnect(socket)
@@ -103,9 +116,17 @@ export class ConnectionManager {
     this.store.deleteRoom(info.code)
   }
 
-  private handleCreateRoom(socket: SocketLike, deck: CustomDeck): void {
+  private handleCreateRoom(
+    socket: SocketLike,
+    deck: CustomDeck,
+    playerName: string,
+  ): void {
     try {
-      const room = this.store.createRoom(deck, (data) => socket.send(data))
+      const room = this.store.createRoom(
+        deck,
+        (data) => socket.send(data),
+        playerName,
+      )
       this.connections.set(socket, { code: room.code, playerId: 'player-one' })
       this.send(socket, { type: 'room-created', code: room.code })
     } catch (error) {
@@ -113,10 +134,21 @@ export class ConnectionManager {
     }
   }
 
-  private handleJoinRoom(socket: SocketLike, code: string, deck: CustomDeck): void {
+  private handleJoinRoom(
+    socket: SocketLike,
+    code: string,
+    deck: CustomDeck,
+    playerName: string,
+  ): void {
     let room: Room
     try {
-      room = this.store.joinRoom(code, deck, (data) => socket.send(data))
+      room = this.store.joinRoom(
+        code,
+        deck,
+        (data) => socket.send(data),
+        undefined,
+        playerName,
+      )
     } catch (error) {
       this.send(socket, { type: 'room-join-error', reason: errorMessage(error) })
       return
@@ -169,5 +201,42 @@ export class ConnectionManager {
       this.sendToSlot(room, result.loserId, { type: 'match-ended', reason: 'defeat' })
       this.store.deleteRoom(room.code)
     }
+  }
+
+  private handleAttackSelection(
+    socket: SocketLike,
+    selection: AttackSelectionPreview,
+  ): void {
+    const info = this.connections.get(socket)
+    if (!info) return
+    const room = this.store.getRoom(info.code)
+    const state = room?.state
+    if (!room || !state) return
+
+    const player = state.players[info.playerId]
+    const canPreviewAttack = state.activePlayerId === info.playerId
+    const attackerInstanceId =
+      canPreviewAttack &&
+      selection.attackerInstanceId !== null &&
+      player.battleArea.some(
+        (cookie) => cookie.card.instanceId === selection.attackerInstanceId,
+      )
+        ? selection.attackerInstanceId
+        : null
+    const availableSupportIds = new Set(
+      player.supportArea
+        .filter((support) => !support.rested)
+        .map((support) => support.card.instanceId),
+    )
+    const supportPaymentIds = attackerInstanceId
+      ? [...new Set(selection.supportPaymentIds)].filter((id) =>
+          availableSupportIds.has(id),
+        )
+      : []
+
+    this.sendToSlot(room, opponentOf(info.playerId), {
+      type: 'opponent-attack-selection',
+      selection: { attackerInstanceId, supportPaymentIds },
+    })
   }
 }
