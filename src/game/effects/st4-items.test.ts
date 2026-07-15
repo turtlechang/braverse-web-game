@@ -853,3 +853,75 @@ describe('AI dispatch for ST4 effects', () => {
     expect(nextState.pendingDrawUpTo?.max).toBe(2)
   })
 })
+
+describe('draw-up-to-then-discard', () => {
+  const context: EffectContext = {
+    sourcePlayerId: 'player-one',
+    sourceInstanceId: 'bs2-025',
+  }
+
+  const effect: CardEffect = {
+    kind: 'draw-up-to-then-discard',
+    max: 1,
+    discardCount: 1,
+  }
+
+  it('sets pendingDrawUpTo with afterEffectsRequireDraw', () => {
+    const state = createTestGameState([], [], [], [
+      { id: 'deck-1', instanceId: 'deck-1', name: 'deck-1', type: 'item' },
+    ])
+
+    const result = executeCardEffect(state, context, effect, [])
+
+    expect(result.pendingDrawUpTo).toBeDefined()
+    expect(result.pendingDrawUpTo?.max).toBe(1)
+    expect(result.pendingDrawUpTo?.afterEffects).toEqual([
+      { kind: 'discard-hand', count: 1 },
+    ])
+    expect(result.pendingDrawUpTo?.afterEffectsRequireDraw).toBe(true)
+  })
+
+  it('does not execute afterEffects when 0 cards drawn', () => {
+    let state = createTestGameState([], [], [
+      { id: 'hand-1', instanceId: 'hand-1', name: 'hand-1', type: 'item' },
+    ], [
+      { id: 'deck-1', instanceId: 'deck-1', name: 'deck-1', type: 'item' },
+    ])
+    state = executeCardEffect(state, context, effect, [])
+
+    const result = resolveDrawUpTo(state, 'player-one', 0)
+
+    expect(result.pendingDrawUpTo).toBeNull()
+    expect(result.players['player-one'].hand).toHaveLength(1)
+    expect(result.players['player-one'].hand[0].instanceId).toBe('hand-1')
+    expect(result.players['player-one'].discardPile).toHaveLength(0)
+  })
+
+  it('creates pendingOpponentHandDiscard after drawing 1 card', () => {
+    const myCookie = createBattleCookie('my-cookie', 1, 1)
+    const oppCookie = createBattleCookie('opp-cookie', 1, 1)
+    let state = createTestGameState([myCookie], [oppCookie], [
+      { id: 'hand-1', instanceId: 'hand-1', name: 'hand-1', type: 'item' },
+    ], [
+      { id: 'deck-1', instanceId: 'deck-1', name: 'deck-1', type: 'item' },
+      { id: 'deck-2', instanceId: 'deck-2', name: 'deck-2', type: 'item' },
+    ])
+    state = executeCardEffect(state, context, effect, [])
+
+    expect(state.pendingDrawUpTo).toBeDefined()
+    expect(state.pendingDrawUpTo?.afterEffects).toEqual([
+      { kind: 'discard-hand', count: 1 },
+    ])
+    expect(state.pendingDrawUpTo?.afterEffectContext).toBeDefined()
+
+    const result = resolveDrawUpTo(state, 'player-one', 1)
+
+    expect(result.pendingDrawUpTo).toBeNull()
+    expect(result.players['player-one'].hand).toHaveLength(2)
+    expect(result.status).toBe('playing')
+    expect(result.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-one',
+      count: 1,
+    })
+  })
+})

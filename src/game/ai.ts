@@ -231,7 +231,78 @@ const chooseEffectTargets = (
   )
   const ordered = [...candidates]
 
-  if (effect.kind === 'damage') {
+  if (effect.kind === 'split-damage') {
+    const maxTargets = effect.target.max ?? 1
+    const configs: CookieInBattle[][] = []
+    for (let i = 0; i < candidates.length; i++) {
+      configs.push([candidates[i]])
+      if (maxTargets >= 2) {
+        for (let j = i + 1; j < candidates.length; j++) {
+          configs.push([candidates[i], candidates[j]])
+          configs.push([candidates[j], candidates[i]])
+        }
+      }
+    }
+    configs.sort((a, b) => {
+      const faints = (cfg: CookieInBattle[]): number => {
+        let count = 0
+        for (let k = 0; k < cfg.length; k++) {
+          const dmg = k === 0 ? effect.primaryAmount : effect.secondaryAmount
+          if (cfg[k].hpCards.length <= dmg) count++
+        }
+        return count
+      }
+      const aFaints = faints(a)
+      const bFaints = faints(b)
+      if (aFaints !== bFaints) return bFaints - aFaints
+      const remaining = (cfg: CookieInBattle[]): number =>
+        cfg.reduce(
+          (sum, c, k) =>
+            sum + Math.max(0, c.hpCards.length - (k === 0 ? effect.primaryAmount : effect.secondaryAmount)),
+          0,
+        )
+      return remaining(a) - remaining(b)
+    })
+    return configs[0].map((c) => c.card.instanceId)
+  } else if (effect.kind === 'hp-to-trash') {
+    const targetSide = effect.target.side
+    if (targetSide === 'self') {
+      ordered.sort(
+        (left, right) => right.hpCards.length - left.hpCards.length,
+      )
+    } else {
+      ordered.sort((left, right) => {
+        const leftFaintable = left.hpCards.length <= effect.amount ? 0 : 1
+        const rightFaintable = right.hpCards.length <= effect.amount ? 0 : 1
+        if (leftFaintable !== rightFaintable) return leftFaintable - rightFaintable
+        return left.hpCards.length - right.hpCards.length
+      })
+    }
+  } else if (effect.kind === 'hp-to-support') {
+    ordered.sort(
+      (left, right) => right.hpCards.length - left.hpCards.length,
+    )
+  } else if (effect.kind === 'disable-flip') {
+    ordered.sort(
+      (left, right) => right.card.level - left.card.level,
+    )
+  } else if (effect.kind === 'disable-attack') {
+    ordered.sort(
+      (left, right) =>
+        getEffectiveAttack(state, right.card.instanceId) -
+        getEffectiveAttack(state, left.card.instanceId),
+    )
+  } else if (effect.kind === 'battle-to-support') {
+    ordered.sort(
+      (left, right) => left.hpCards.length - right.hpCards.length,
+    )
+  } else if (effect.kind === 'prevent-effect-damage') {
+    const sourceOnly = ordered.filter(
+      (c) => c.card.instanceId === context.sourceInstanceId,
+    )
+    if (sourceOnly.length === 0) return []
+    return sourceOnly.map((c) => c.card.instanceId)
+  } else if (effect.kind === 'damage') {
     ordered.sort((left, right) => {
       const leftLethal = left.hpCards.length <= effect.amount ? 0 : 1
       const rightLethal = right.hpCards.length <= effect.amount ? 0 : 1

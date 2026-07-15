@@ -206,7 +206,9 @@ export const isEffectTargeted = (
   effect.kind === 'hp-to-trash' ||
   effect.kind === 'disable-attack' ||
   effect.kind === 'hp-to-support' ||
-  effect.kind === 'battle-to-break'
+  effect.kind === 'battle-to-break' ||
+  effect.kind === 'split-damage' ||
+  effect.kind === 'prevent-effect-damage'
 
 export const getSupportEffectCandidates = (
   state: GameState,
