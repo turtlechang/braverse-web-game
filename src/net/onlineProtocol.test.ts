@@ -70,4 +70,33 @@ describe('online protocol validation', () => {
       }),
     ).toBe(false)
   })
+
+  it('validates online trap trash-to-deck target ids', () => {
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-trap',
+          playerId: 'player-one',
+          trapInstanceId: 'bs2-079-online',
+          paymentIds: ['purple-support'],
+          targetIds: ['attacker'],
+          trashToDeckIds: ['trash-1', 'trash-2'],
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-trap',
+          playerId: 'player-one',
+          trapInstanceId: 'bs2-079-online',
+          paymentIds: ['purple-support'],
+          targetIds: ['attacker'],
+          trashToDeckIds: ['trash-1', 2],
+        },
+      }),
+    ).toBe(false)
+  })
 })
