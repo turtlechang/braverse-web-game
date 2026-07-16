@@ -35,6 +35,7 @@ export const onlineMatchStatusLabels: Record<OnlineMatchStatus, string> = {
   idle: '待機中',
   connecting: '連線中',
   'waiting-for-opponent': '等待對手',
+  opening: '開局準備',
   'in-progress': '對戰中',
   ended: '已結束',
   error: '錯誤',

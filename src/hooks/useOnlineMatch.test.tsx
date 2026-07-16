@@ -199,6 +199,47 @@ describe('useOnlineMatch', () => {
     expect(socket.closeCalls).toBe(1)
   })
 
+  it('stores public opening progress and sends typed opening actions', async () => {
+    await mountHook()
+    await act(() => current().joinRoom('OPEN', deck))
+    const socket = MockWebSocket.instances[0]
+    await act(() => socket.emitOpen())
+
+    const opening = {
+      stage: 'rps' as const,
+      round: 1,
+      actorId: null,
+      firstPlayerId: null,
+      players: {
+        'player-one': { name: 'Host', submitted: false },
+        'player-two': { name: 'Guest', submitted: false },
+      },
+      rpsResult: null,
+      revealedNoCookieHand: [],
+    }
+    await act(() =>
+      socket.emitMessage({
+        type: 'opening-update',
+        viewerId: 'player-two',
+        opening,
+        state: null,
+      }),
+    )
+
+    expect(current().status).toBe('opening')
+    expect(current().viewerPlayerId).toBe('player-two')
+    expect(current().openingSnapshot).toEqual(opening)
+    expect(current().maskedGame).toBeNull()
+
+    await act(() =>
+      current().sendOpeningAction({ kind: 'rps', choice: 'paper' }),
+    )
+    expect(sentMessages(socket).at(-1)).toEqual({
+      type: 'submit-opening-action',
+      action: { kind: 'rps', choice: 'paper' },
+    })
+  })
+
   it('handles match updates, command rejection, and a terminal result', async () => {
     await mountHook()
     const initialState = createDemoGame()

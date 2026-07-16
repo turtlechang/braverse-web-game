@@ -6,6 +6,7 @@ import { useOnlineMatch } from '../../hooks/useOnlineMatch'
 import { ONLINE_PLAYER_NAME_MAX_LENGTH } from '../../net/onlineProtocol'
 import { onlineMatchStatusLabels, matchEndedReasonLabels } from '../gameUiLabels'
 import { OnlineBattleView } from './OnlineBattleView'
+import { OnlineOpeningView } from './OnlineOpeningView'
 
 export interface OnlineMatchPanelProps {
   decks: CustomDeck[]
@@ -29,6 +30,7 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
     if (
       online.status === 'connecting' ||
       online.status === 'waiting-for-opponent' ||
+      online.status === 'opening' ||
       online.status === 'in-progress'
     ) {
       online.leave()
@@ -37,8 +39,28 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
   }
 
   if (
-    (online.status === 'in-progress' ||
-      (online.status === 'ended' && online.matchEndedReason !== 'opponent-disconnected')) &&
+    online.status === 'opening' &&
+    online.openingSnapshot &&
+    online.viewerPlayerId &&
+    !online.maskedGame
+  ) {
+    return (
+      <OnlineOpeningView
+        opening={online.openingSnapshot}
+        viewerPlayerId={online.viewerPlayerId}
+        roomCode={online.roomCode}
+        commandRejectedReason={online.errorMessage}
+        sendOpeningAction={online.sendOpeningAction}
+        onLeave={handleClose}
+      />
+    )
+  }
+
+  if (
+    (online.status === 'opening' ||
+      online.status === 'in-progress' ||
+      (online.status === 'ended' &&
+        online.matchEndedReason !== 'opponent-disconnected')) &&
     online.maskedGame &&
     online.viewerPlayerId
   ) {
@@ -50,7 +72,9 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
         sendCommand={online.sendCommand}
         sendAttackSelection={online.sendAttackSelection}
         opponentAttackSelection={online.opponentAttackSelection}
+        openingSnapshot={online.openingSnapshot}
         commandRejectedReason={online.errorMessage}
+        sendOpeningAction={online.sendOpeningAction}
         onLeave={handleClose}
       />
     )

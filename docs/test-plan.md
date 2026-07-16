@@ -1,8 +1,8 @@
 # 測試計畫（Test Plan）
 
-最後更新：2026-07-12。現況為 97 個測試檔、1545 項 vitest 測試（非永久門檻） + 5 套 Playwright 瀏覽器驗證；本輪 AI 瀏覽器 20/20、stuck=0。
+最後更新：2026-07-16。現況為 113 個測試檔、1656 項 vitest 測試（非永久門檻） + 5 套 Playwright 瀏覽器驗證；最近一次 AI 瀏覽器 20/20、stuck=0，本輪好友房雙瀏覽器驗證通過。
 
-> 2026-07-12 更新：AI、牌組編輯器與好友房 Playwright smoke 已綁定 main push 自動執行，但不在每次 PR 執行以控制成本；好友房已自動驗證建房至主階段同步、斷線與伺服器無法連線提示，尚未自動打到勝負。
+> 2026-07-16 更新：AI、牌組編輯器與好友房 Playwright smoke 已綁定 main push 自動執行，但不在每次 PR 執行以控制成本；好友房已自動驗證私密猜拳、順位、依序調度、起始餅乾同步揭示至主階段同步，以及斷線與伺服器無法連線提示，尚未自動打到勝負。
 
 ## 1. 測試層級
 
@@ -46,15 +46,15 @@
 ### UI ✅／⚠️
 
 - 元件測試：BattleRow（含互動）、MainMenu、gameUiLabels、各 hooks。
-- Playwright：滿版畫布無捲軸、扇形手牌幾何、modal 縮小/返回、陷阱/FLIP/補位/物品/場景路徑、12 種解析度（1600×900～600×338）；`npm run test:deck:browser` 驗證牌組編輯器錯誤 JSON、合法牌組匯入／儲存與 1366×768／280×720 RWD；`npm run test:online:browser` 驗證線上 modal RWD；`npm run test:online:match:browser` 以兩個隔離瀏覽器連接本機權威 server，驗證建房、加入、開局、合法階段指令同步與斷線通知，並關閉 server 驗證連線失敗提示與返回操作。
+- Playwright：滿版畫布無捲軸、扇形手牌幾何、modal 縮小/返回、陷阱/FLIP/補位/物品/場景路徑、12 種解析度（1600×900～600×338）；`npm run test:deck:browser` 驗證牌組編輯器錯誤 JSON、合法牌組匯入／儲存與 1366×768／280×720 RWD；`npm run test:online:browser` 驗證線上 modal RWD；`npm run test:online:match:browser` 以兩個隔離瀏覽器連接本機權威 server，在 600×338 驗證開局浮層無水平溢出，並驗證建房、加入、猜拳內容保密、勝者選順位、依序調度、起始餅乾同步揭示、先後攻／階段提示、合法階段指令同步與斷線通知，最後關閉 server 驗證連線失敗提示與返回操作。
 - ⚠️ 缺口：Playwright 不在每次 PR 的 CI；好友房尚未自動打到勝負，完整一局仍以既有公網人工驗收與規則／server 整合測試共同覆蓋。
 
 ### 線上對戰 ⚠️
 
 - `server/src/rooms.test.ts`、`connection.test.ts`、`commands-online-mvp.test.ts`。
 - `src/hooks/useOnlineMatch.test.tsx` 以 10 項回歸覆蓋 timeout、error/close、舊連線競態、主動離開、unmount 與錯誤伺服器 envelope。
-- ✅ 兩個隔離瀏覽器已自動完成建房、加入、開局、主階段同步、斷線與連線失敗提示；完整打到勝負仍保留為人工驗收項。
-- ⚠️ 待補：伺服器端 ClientMessage 執行期 envelope 驗證，以及戰場內 `command-rejected` 可見性。
+- ✅ 兩個隔離瀏覽器已自動完成建房、加入、私密猜拳、順位、調度、起始餅乾揭示、主階段同步、斷線與連線失敗提示；完整打到勝負仍保留為人工驗收項。
+- ✅ 伺服器端 ClientMessage 執行期 envelope 驗證與戰場內 `command-rejected` 可見性已有單元及瀏覽器回歸。
 
 ## 3. 慣例與門檻
 

@@ -24,6 +24,85 @@ class MockSocket implements SocketLike {
   }
 }
 
+const submitOpeningAction = (
+  manager: ConnectionManager,
+  socket: MockSocket,
+  action: Record<string, unknown>,
+) =>
+  manager.handleMessage(
+    socket,
+    JSON.stringify({ type: 'submit-opening-action', action }),
+  )
+
+const completeOpening = (
+  manager: ConnectionManager,
+  hostSocket: MockSocket,
+  guestSocket: MockSocket,
+) => {
+  submitOpeningAction(manager, hostSocket, { kind: 'rps', choice: 'rock' })
+  submitOpeningAction(manager, guestSocket, {
+    kind: 'rps',
+    choice: 'scissors',
+  })
+  submitOpeningAction(manager, hostSocket, {
+    kind: 'choose-order',
+    goFirst: true,
+  })
+
+  for (let step = 0; step < 100; step += 1) {
+    if (hostSocket.last()?.type === 'match-start') return
+    const update = hostSocket.last()
+    if (update?.type !== 'opening-update') {
+      throw new Error('missing opening update')
+    }
+    const actorSocket =
+      update.opening.actorId === 'player-two' ? guestSocket : hostSocket
+    switch (update.opening.stage) {
+      case 'mulligan':
+        submitOpeningAction(manager, actorSocket, {
+          kind: 'mulligan',
+          replaceAll: false,
+        })
+        break
+      case 'forced-mulligan':
+        submitOpeningAction(manager, actorSocket, { kind: 'force-mulligan' })
+        break
+      case 'compensation':
+        submitOpeningAction(manager, actorSocket, {
+          kind: 'mulligan-compensation',
+          draw: false,
+        })
+        break
+      case 'starting-cookie':
+        for (const [playerId, socket] of [
+          ['player-one', hostSocket],
+          ['player-two', guestSocket],
+        ] as const) {
+          const current = socket.last()
+          if (
+            current?.type !== 'opening-update' ||
+            current.opening.players[playerId].submitted
+          ) {
+            continue
+          }
+          const cookie = current.state?.players[playerId].hand.find(
+            (card) => card.type === 'cookie',
+          )
+          if (!cookie) throw new Error('missing opening cookie')
+          submitOpeningAction(manager, socket, {
+            kind: 'starting-cookie',
+            instanceId: cookie.instanceId,
+          })
+        }
+        break
+      case 'rps':
+      case 'choose-order':
+        throw new Error(`unexpected opening stage: ${update.opening.stage}`)
+    }
+  }
+  throw new Error('opening did not finish')
+}
+
 describe('ConnectionManager', () => {
   it('create-room 回傳 room-created 並記錄連線為 player-one', () => {
     const manager = new ConnectionManager(new RoomStore())
@@ -37,7 +116,7 @@ describe('ConnectionManager', () => {
     expect(socket.last()).toMatchObject({ type: 'room-created' })
   })
 
-  it('join-room 成功後雙方都會收到各自視角的 match-start', () => {
+  it('join-room 成功後雙方收到保密猜拳的 opening-update', () => {
     const manager = new ConnectionManager(new RoomStore())
     const hostSocket = new MockSocket()
     const guestSocket = new MockSocket()
@@ -60,22 +139,18 @@ describe('ConnectionManager', () => {
 
     const hostStart = hostSocket.last()
     const guestStart = guestSocket.last()
-    expect(hostStart).toMatchObject({ type: 'match-start', viewerId: 'player-one' })
-    expect(guestStart).toMatchObject({ type: 'match-start', viewerId: 'player-two' })
-    if (hostStart?.type !== 'match-start' || guestStart?.type !== 'match-start') {
+    expect(hostStart).toMatchObject({ type: 'opening-update', viewerId: 'player-one' })
+    expect(guestStart).toMatchObject({ type: 'opening-update', viewerId: 'player-two' })
+    if (
+      hostStart?.type !== 'opening-update' ||
+      guestStart?.type !== 'opening-update'
+    ) {
       throw new Error('unexpected message')
     }
-    expect(hostStart.seed).toBe(guestStart.seed)
-    // 對手手牌長度不變,但內容被遮罩(看不到真實卡牌)。
-    const opponentHand = hostStart.state.players['player-two'].hand
-    expect(opponentHand.length).toBeGreaterThan(0)
-    expect(opponentHand.every((card) => card.name === '???')).toBe(true)
-    // 自己的手牌維持真實內容。
-    expect(
-      hostStart.state.players['player-one'].hand.every(
-        (card) => card.name !== '???',
-      ),
-    ).toBe(true)
+    expect(hostStart.state).toBeNull()
+    expect(guestStart.state).toBeNull()
+    expect(hostStart.opening.rpsResult).toBeNull()
+    expect(guestStart.opening.rpsResult).toBeNull()
   })
 
   it('加入不存在的房間會收到 room-join-error', () => {
@@ -138,12 +213,13 @@ describe('ConnectionManager', () => {
         deck: createTestDeck('two'),
       }),
     )
+    completeOpening(manager, hostSocket, guestSocket)
 
     manager.handleMessage(
       hostSocket,
       JSON.stringify({
         type: 'submit-command',
-        command: { kind: 'keep-opening-hand', playerId: 'player-one' },
+        command: { kind: 'advance-phase', playerId: 'player-one' },
       }),
     )
 
@@ -171,13 +247,14 @@ describe('ConnectionManager', () => {
         deck: createTestDeck('two'),
       }),
     )
+    completeOpening(manager, hostSocket, guestSocket)
 
     // player-two 冒充 player-one 送出指令,應被拒絕。
     manager.handleMessage(
       guestSocket,
       JSON.stringify({
         type: 'submit-command',
-        command: { kind: 'keep-opening-hand', playerId: 'player-one' },
+        command: { kind: 'advance-phase', playerId: 'player-one' },
       }),
     )
 
@@ -205,6 +282,7 @@ describe('ConnectionManager', () => {
         deck: createTestDeck('two'),
       }),
     )
+    completeOpening(manager, hostSocket, guestSocket)
 
     const room = store.getRoom(created.code)
     const player = room?.state?.players['player-one']

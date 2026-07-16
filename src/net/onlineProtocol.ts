@@ -1,8 +1,56 @@
-import type { CustomDeck, GameCommand, GameState, PlayerId } from '../game'
+import type {
+  CustomDeck,
+  GameCard,
+  GameCommand,
+  GameState,
+  PlayerId,
+} from '../game'
 
 export interface AttackSelectionPreview {
   attackerInstanceId: string | null
   supportPaymentIds: string[]
+}
+
+export type RpsChoice = 'rock' | 'paper' | 'scissors'
+
+export type OnlineOpeningStage =
+  | 'rps'
+  | 'choose-order'
+  | 'mulligan'
+  | 'forced-mulligan'
+  | 'compensation'
+  | 'starting-cookie'
+
+export type OnlineOpeningAction =
+  | { kind: 'rps'; choice: RpsChoice }
+  | { kind: 'choose-order'; goFirst: boolean }
+  | { kind: 'mulligan'; replaceAll: boolean }
+  | { kind: 'force-mulligan' }
+  | { kind: 'mulligan-compensation'; draw: boolean }
+  | { kind: 'starting-cookie'; instanceId: string }
+
+export interface OnlineOpeningPlayerProgress {
+  name: string
+  submitted: boolean
+}
+
+export interface OnlineOpeningRpsResult {
+  choices: Record<PlayerId, RpsChoice>
+  winnerId: PlayerId | null
+}
+
+/**
+ * 只包含雙方在開局流程中都能知道的資訊。猜拳選擇在雙方送出前不會出現，
+ * 起始餅乾的 instanceId 永遠不會透過此快照傳給對手。
+ */
+export interface OnlineOpeningSnapshot {
+  stage: OnlineOpeningStage
+  round: number
+  actorId: PlayerId | null
+  firstPlayerId: PlayerId | null
+  players: Record<PlayerId, OnlineOpeningPlayerProgress>
+  rpsResult: OnlineOpeningRpsResult | null
+  revealedNoCookieHand: GameCard[]
 }
 
 export const ONLINE_PLAYER_NAME_MAX_LENGTH = 20
@@ -15,6 +63,7 @@ export const isValidOnlinePlayerName = (value: unknown): value is string =>
 export type ClientMessage =
   | { type: 'create-room'; deck: CustomDeck; playerName?: string }
   | { type: 'join-room'; code: string; deck: CustomDeck; playerName?: string }
+  | { type: 'submit-opening-action'; action: OnlineOpeningAction }
   | { type: 'submit-command'; command: GameCommand }
   | { type: 'update-attack-selection'; selection: AttackSelectionPreview }
   | { type: 'leave-room' }
@@ -26,6 +75,12 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: 'room-created'; code: string }
   | { type: 'room-join-error'; reason: string }
+  | {
+      type: 'opening-update'
+      viewerId: PlayerId
+      opening: OnlineOpeningSnapshot
+      state: GameState | null
+    }
   | { type: 'match-start'; seed: number; viewerId: PlayerId; state: GameState }
   | { type: 'state-update'; state: GameState }
   | { type: 'opponent-attack-selection'; selection: AttackSelectionPreview }
@@ -261,6 +316,33 @@ const isGameCommand = (value: unknown): value is GameCommand => {
   return hasValidCommandShape(value, shape)
 }
 
+const isOnlineOpeningAction = (
+  value: unknown,
+): value is OnlineOpeningAction => {
+  if (!isRecord(value) || typeof value.kind !== 'string') return false
+
+  switch (value.kind) {
+    case 'rps':
+      return (
+        value.choice === 'rock' ||
+        value.choice === 'paper' ||
+        value.choice === 'scissors'
+      )
+    case 'choose-order':
+      return typeof value.goFirst === 'boolean'
+    case 'mulligan':
+      return typeof value.replaceAll === 'boolean'
+    case 'force-mulligan':
+      return true
+    case 'mulligan-compensation':
+      return typeof value.draw === 'boolean'
+    case 'starting-cookie':
+      return typeof value.instanceId === 'string'
+    default:
+      return false
+  }
+}
+
 /**
  * 伺服器將不受信任的 WebSocket payload 轉為型別化訊息前的執行期防線。
  * 牌組是否合法、指令是否符合當前局面，仍分別由 RoomStore 與規則引擎驗證。
@@ -282,6 +364,8 @@ export const isClientMessage = (value: unknown): value is ClientMessage => {
         (value.playerName === undefined ||
           isValidOnlinePlayerName(value.playerName))
       )
+    case 'submit-opening-action':
+      return isOnlineOpeningAction(value.action)
     case 'submit-command':
       return isGameCommand(value.command)
     case 'update-attack-selection':
