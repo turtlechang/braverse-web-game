@@ -37,6 +37,10 @@
 8. 抽牌效果使用既有的 `drawCards` 純函式與 `pendingRefresh` 流程，
    牌庫耗盡時自動進入 Refresh 等待。
 
+## 語意驗證防線
+
+`npm run validate:cards` 除了確認卡牌可轉換，還會驗證 ability 不是空殼、技能標記、可選抽牌與來源橫置語意。對容易發生「已有 payload 但語意不完整」的卡牌，`scripts/lib/card-effect-validation.ts` 維護人工覆核的高風險契約，鎖定效果 kind、代價、條件、目標與複合效果數量。契約是回歸防線，不取代官方文字與完整流程測試。
+
 ## 已支援效果
 
 下列效果已完整實作，可經由 `CardEffect` union type 描述並由規則引擎執行：
