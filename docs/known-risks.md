@@ -1,6 +1,6 @@
 # 已知風險清單（Known Risks）
 
-最後更新：2026-07-12。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
+最後更新：2026-07-16。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
 
 | # | 風險 | 等級 | 現況與緩解 |
 |---|---|---|---|
@@ -18,5 +18,5 @@
 | R12 | ~~README 過載~~ **已解決**（2026-07-11）：README 由 182 行縮減至約 80 行 | — | 先前 P2「CHANGELOG 抽出」只建立了 CHANGELOG.md，但 README 自己的「📝 更新日誌」表格從未真正移除，且與 CHANGELOG.md 內容分岔（9 筆歷史紀錄只存在 README，從未同步）；本輪重新審視 known-risks 時發現此落差，已將分岔的紀錄併入 CHANGELOG.md、移除 README 重複表格，「目前進度」／「下一步計畫」改為短摘要 + 指向 docs/architecture.md／docs/roadmap.md／docs/known-risks.md 的連結 |
 | R13 | ~~WebSocket 伺服器入站訊息只有型別 cast~~ **已解決**（2026-07-14）：共用協定層以執行期檢查 ClientMessage 外框、牌組欄位與全部 GameCommand 的必要欄位／值域 | — | `ConnectionManager` 現在會先解析為 `unknown`；格式錯誤或未知訊息在尚未建立房間時回覆 `room-join-error`，已連線玩家則收到 `command-rejected`，不會進入 RoomStore 或規則引擎。 |
 | R14 | ~~線上對戰指令拒絕尚未顯示於戰場~~ **已解決**（2026-07-14）：`OnlineMatchPanel` 將 hook 接收的 `command-rejected` 原因傳給 `OnlineBattleView`，由既有中央 StatusToast 顯示 | — | 用戶端在收到下一個 `state-update` 時已清除拒絕原因；新增面板測試確認對戰中的原因會傳入戰場。 |
-| R15 | **陷阱效果只有單一共用 `targetIds`，無法支援多段效果各自選目標**：`playTrap`／`battle.ts` 對 `trap.effects` 逐一執行時共用同一組 `options.targetIds`；物品／技能已有逐效果的 `effectTargets: string[][]`，陷阱沒有對應機制 | 中（2026-07-12 發現，部分緩解） | 真人試玩發現 BS2-079（「選最多 1 張對手餅乾降攻」+「選最多 5 張非 FLIP 棄牌區卡片洗回牌庫」）第二段效果因誤用第一段的目標 ID 導致例外，AI 對局矩陣卡死；已將 `trash-to-deck` 排除在共用 `targetIds` 之外避免例外（`battle.ts`），但此舉讓該效果變成靜默無選擇（0 張），未真正修復互動流程。需要陷阱系統比照物品/技能改為逐效果目標陣列才能徹底解決；影響範圍需先盤點還有哪些陷阱有多段可選目標效果 |
+| R15 | ~~陷阱效果只有單一共用 `targetIds`，無法支援多段效果各自選目標~~ **已解決**（2026-07-16）：BS2-079 的 `trash-to-deck` 使用獨立 `trashToDeckIds`，本機、AI 與線上對戰皆能分別選擇兩段效果目標 | — | 全卡池盤點確認 BS2-079 是唯一受影響陷阱，因此沿用陷阱系統既有的專屬欄位模式，未進行不成比例的通用 `effectTargets: string[][]` 重構。`battle.ts`／`commands.ts`／AI／本機 UI 已支援獨立目標；線上控制器於 2026-07-16 補齊紫色能量付款、非 FLIP 棄牌區候選、最多 5 張選擇與 `play-trap` 指令傳遞，協定層會拒絕非字串目標陣列。未來若新增其他多段可選目標陷阱，再評估通用逐效果目標模型。 |
 | R16 | ~~FLIP 卡的頂層 `effectText`/`effects` 未填入~~ **已解決**（2026-07-12）：`official-card-adapter.ts`／`starter-deck.ts` 的 fallback 鏈（`trap → item → stageAbility`）漏了 `flip` 分支 | — | 紫色卡牌全面稽核時發現：當通用轉換器 `convertOfficialCardEffects` 無法解析 FLIP 文字時（例如 BS2-056 的「棄 1 張手牌 → 該餅乾 HP +1」複合語法），只有 `card.flip` 有正確值，頂層 `effectText`/`effects` 停在 `undefined`；`CardDetailModal` 的 FLIP 段落靠這兩個欄位才會渲染，導致玩家點開任何走此 fallback 路徑的 FLIP 卡都看不到 FLIP 說明（純顯示層，不影響規則執行，因為規則引擎只讀 `card.flip`）。兩處 adapter 都補上 `flip` 分支；已加 adapter 層與 `CardDetailModal` 元件層回歸測試，並實際在瀏覽器測試模式載入 BS2-056、點擊卡牌確認 FLIP 段落正確顯示 |

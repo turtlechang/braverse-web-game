@@ -3,10 +3,11 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { skipTrap, type GameCommand } from '../game'
+import { skipTrap, type GameCard, type GameCommand } from '../game'
 import {
   createBattleState,
   declareAttack,
+  item,
 } from '../game/test-helpers/battle-helpers'
 import { useOnlineMatchController } from './useOnlineMatchController'
 
@@ -40,6 +41,88 @@ describe('useOnlineMatchController', () => {
       kind: 'resolve-next-damage',
       playerId: 'player-one',
     })
+    await act(() => root.unmount())
+  })
+
+  it('exposes legal online BS2-079 payment and trash-to-deck selections', async () => {
+    const trap: GameCard = {
+      id: 'BS2-079',
+      instanceId: 'bs2-079-online',
+      name: 'Yew Village Scroll',
+      type: 'trap',
+      trap: {
+        text: 'Choose up to 5 non-FLIP cards in your trash and shuffle them into your deck.',
+        cost: { energy: { purple: 1 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'trash-to-deck', max: 5, excludeFlip: true },
+        ],
+      },
+    }
+    let game = createBattleState()
+    game.players['player-one'].hand = [trap, ...game.players['player-one'].hand]
+    game.players['player-one'].supportArea = [
+      { card: item('purple-support', 'purple'), rested: false },
+      { card: item('red-support', 'red'), rested: false },
+    ]
+    const trashCards = Array.from({ length: 6 }, (_, index) =>
+      item(`trash-${index + 1}`),
+    )
+    const flipTrash: GameCard = {
+      ...item('flip-trash'),
+      flip: { text: 'FLIP', cost: { energy: {} }, effects: [] },
+    }
+    game.players['player-one'].discardPile = [...trashCards, flipTrash]
+    game = declareAttack(game)
+
+    const sendCommand = vi.fn<(command: GameCommand) => void>()
+    let latest: ReturnType<typeof useOnlineMatchController> | undefined
+
+    function TestHarness() {
+      latest = useOnlineMatchController({
+        game,
+        viewerPlayerId: 'player-one',
+        sendCommand,
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => latest!.setSelectedTrapId(trap.instanceId))
+
+    expect(latest!.trapEnergyCostTotal).toBe(1)
+    expect(
+      latest!.trapPaymentCandidates.map((support) => support.card.instanceId),
+    ).toEqual(['purple-support'])
+    expect(latest!.trapTrashToDeckAmount).toBe(5)
+    expect(latest!.trapTrashToDeckCandidates.map((card) => card.instanceId)).toEqual(
+      trashCards.map((card) => card.instanceId),
+    )
+
+    await act(() => latest!.toggleTrapPayment('red-support'))
+    expect(latest!.selectedTrapPaymentIds).toEqual([])
+    await act(() => latest!.toggleTrapPayment('purple-support'))
+    expect(latest!.selectedTrapPaymentIds).toEqual(['purple-support'])
+    expect(latest!.trapPaymentValid).toBe(true)
+
+    for (const card of trashCards) {
+      await act(() => latest!.toggleTrapTrashToDeck(card.instanceId))
+    }
+    expect(latest!.selectedTrapTrashToDeckIds).toEqual(
+      trashCards.slice(0, 5).map((card) => card.instanceId),
+    )
+    await act(() => latest!.toggleTrapTrashToDeck(flipTrash.instanceId))
+    expect(latest!.selectedTrapTrashToDeckIds).toEqual(
+      trashCards.slice(0, 5).map((card) => card.instanceId),
+    )
+
     await act(() => root.unmount())
   })
 })

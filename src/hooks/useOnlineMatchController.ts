@@ -23,9 +23,12 @@ import {
   getTrapCandidates,
   getTrapTargetCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckCandidates,
+  getEnergyCostTotal,
   hasBlockingPending,
   isPlayerControllingState,
   selectEnergyPayment,
+  validateEnergyPayment,
 } from '../game'
 import { useMatchAnimations } from './useMatchAnimations'
 import { useBattleActions, type DispatchGameCommand } from './useBattleActions'
@@ -271,11 +274,65 @@ export function useOnlineMatchController(params: {
     (card) => card.instanceId === selectedTrapId,
   )
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
-  const trapPaymentCandidates: SupportCard[] = []
-  const trapPaymentTargetIds = new Set<string>()
-  const trapPaymentValid = true
-  const trapEnergyCostTotal = 0
-  const toggleTrapPayment = () => {}
+  const trapEnergyCost =
+    selectedTrap?.trap?.cost.energy ?? selectedTrap?.trap?.cost ?? {}
+  const trapEnergyCostTotal = getEnergyCostTotal(trapEnergyCost)
+  const trapPaymentCandidates =
+    trapEnergyCostTotal > 0
+      ? game.players[viewerPlayerId].supportArea.filter((support) => {
+          if (support.rested) return false
+          const color = support.card.energyColor
+          if (!color) return false
+          if (color === 'wild') return true
+          const requiredColors = Object.keys(trapEnergyCost).filter(
+            (key) =>
+              (trapEnergyCost[key as keyof typeof trapEnergyCost] ?? 0) > 0,
+          )
+          if (requiredColors.length === 1 && requiredColors[0] === 'neutral') {
+            return true
+          }
+          return requiredColors.includes(color)
+        })
+      : []
+  const trapPaymentTargetIds = new Set(
+    trapPaymentCandidates.map((support) => support.card.instanceId),
+  )
+  const trapPaymentValid = validateEnergyPayment(
+    trapEnergyCost,
+    game.players[viewerPlayerId].supportArea,
+    selectedTrapPaymentIds,
+  ).valid
+  const toggleTrapPayment = (instanceId: string) => {
+    setSelectedTrapPaymentIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= trapEnergyCostTotal) return current
+      const candidate = game.players[viewerPlayerId].supportArea.find(
+        (support) =>
+          support.card.instanceId === instanceId && !support.rested,
+      )
+      if (
+        !candidate ||
+        !trapPaymentCandidates.some(
+          (support) => support.card.instanceId === candidate.card.instanceId,
+        )
+      ) {
+        return current
+      }
+      const next = [...current, instanceId]
+      if (next.length === trapEnergyCostTotal) {
+        return validateEnergyPayment(
+          trapEnergyCost,
+          game.players[viewerPlayerId].supportArea,
+          next,
+        ).valid
+          ? next
+          : current
+      }
+      return next
+    })
+  }
   const selectedTrapDiscardCost = selectedTrap?.trap?.cost.discardHand ?? 0
   const selectedTrapTrashBattleCookieCost =
     selectedTrap?.trap?.cost.trashBattleCookie?.count ?? 0
@@ -339,13 +396,34 @@ export function useOnlineMatchController(params: {
   const trapHandToSupportCandidates: GameCard[] = []
   const trapHandToSupportAmount = 0
   const toggleTrapHandToSupport = () => {}
-  // 陷阱 trash-to-deck（如 BS2-079 第二段效果）目前線上對戰尚未實作互動 UI，
-  // 比照上方 support-to-hand/hand-to-support 的既有限制先回傳空值；
-  // 離線對局（useMatchController）已完整支援。見 docs/known-risks.md R15。
   const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
-  const trapTrashToDeckCandidates: GameCard[] = []
-  const trapTrashToDeckAmount = 0
-  const toggleTrapTrashToDeck = () => {}
+  const trapTrashToDeckEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'trash-to-deck',
+  )
+  const trapTrashToDeckAmount =
+    trapTrashToDeckEffect?.kind === 'trash-to-deck'
+      ? trapTrashToDeckEffect.max
+      : 0
+  const trapTrashToDeckCandidates =
+    trapTrashToDeckEffect?.kind === 'trash-to-deck' && selectedTrap
+      ? getTrashToDeckCandidates(
+          game,
+          { sourcePlayerId: viewerPlayerId, sourceInstanceId: selectedTrap.instanceId },
+          trapTrashToDeckEffect,
+        )
+      : []
+  const toggleTrapTrashToDeck = (instanceId: string) => {
+    if (!trapTrashToDeckCandidates.some((card) => card.instanceId === instanceId)) {
+      return
+    }
+    setSelectedTrapTrashToDeckIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < trapTrashToDeckAmount
+          ? [...current, instanceId]
+          : current,
+    )
+  }
 
   // Blocker
   const playerBlockerCandidates =
