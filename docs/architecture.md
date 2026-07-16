@@ -1,6 +1,6 @@
 # 系統架構（Architecture）
 
-最後更新：2026-07-10。本文件描述現行架構；硬性開發規範見根目錄 [AGENTS.md](../AGENTS.md)。
+最後更新：2026-07-16。本文件描述現行架構；硬性開發規範見根目錄 [AGENTS.md](../AGENTS.md)。
 
 ## 1. 分層總覽
 
@@ -85,8 +85,9 @@
 ## 6. 線上對戰（server/ + src/net/）
 
 - `server/src/index.ts`：ws WebSocket 伺服器；`rooms.ts` 房間碼建立/加入；`connection.ts` 連線生命週期。
+- `rooms.ts` 同時持有好友房開局狀態機：私密猜拳 → 勝者選先後攻 → 依先攻／後攻順序調度 → 無餅乾公開與補償 → 雙方私密選起始餅乾。只有可公開的進度會透過 `opening-update` 傳送；猜拳在雙方送出前、起始餅乾在雙方完成前都不公開內容。
 - 權威狀態在伺服器；廣播前以 `masked-state` 依玩家視角遮罩，客戶端拿不到對手隱藏資訊。
-- 客戶端 `src/net/onlineProtocol.ts` 定義訊息協定；`useOnlineMatch*` hooks 驅動 `OnlineBattleView`。
+- 客戶端 `src/net/onlineProtocol.ts` 定義訊息協定；`useOnlineMatch*` hooks 驅動 `OnlineOpeningView`／`OnlineBattleView`。猜拳與順位階段先顯示戰場背景，建立 `GameState` 後沿用完整戰場並疊加 `OnlineOpeningOverlay`，不再切換至獨立開局頁。
 - 本機開發：`npm run dev:online`（concurrently 起 vite + tsx watch server）。
 - **部署注意**：Vercel 不承載長連線，server 需獨立宿主（見 known-risks R6）。
 
@@ -96,5 +97,5 @@
 
 - Vite 8 + TypeScript 6（`tsc -b` 複合建置：app + node 兩個 tsconfig；server 獨立 `server:typecheck`）。
 - vitest 4：測試數與原始碼同目錄放置（`*.test.ts(x)`）；目前基線見 [CHANGELOG.md](../CHANGELOG.md) 最新項目（非永久門檻，只要求不低於前次基線）。
-- Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度、20 場 AI 對局）、`npm run test:deck:browser`（牌組編輯器匯入／儲存與桌機／窄版）、`npm run test:blue:browser`（藍牌效果流程）、`npm run test:online:browser`（線上 modal 桌機／窄版）、`npm run test:online:match:browser`（本機雙瀏覽器建房／加入／開局／同步／斷線）；AI、牌組編輯器與好友房驗證另由 main push／手動 GitHub Actions workflow 執行。
+- Playwright 瀏覽器驗證：`npm run test:ai:browser`（12 種解析度、20 場 AI 對局）、`npm run test:deck:browser`（牌組編輯器匯入／儲存與桌機／窄版）、`npm run test:blue:browser`（藍牌效果流程）、`npm run test:online:browser`（線上 modal 桌機／窄版）、`npm run test:online:match:browser`（本機雙瀏覽器建房／加入／私密猜拳／順位／依序調度／起始餅乾揭示／同步／斷線）；AI、牌組編輯器與好友房驗證另由 main push／手動 GitHub Actions workflow 執行。
 - CI：`.github/workflows/ci.yml`（PR + main push：卡牌／候選／registry 驗證 → test → lint → build → bundle budget）。

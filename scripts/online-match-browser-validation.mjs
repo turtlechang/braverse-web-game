@@ -179,6 +179,42 @@ const openOnlinePanel = async (page) => {
   await page.locator('.online-match-panel').waitFor({ state: 'visible' })
 }
 
+const completeMulliganDecision = async (
+  playerPage,
+  opponentPage,
+  nextStageLocator,
+) => {
+  await playerPage
+    .getByRole('button', { name: '保留手牌', exact: true })
+    .click()
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const forcedButton = playerPage.getByRole('button', {
+      name: '公開並重新抽牌',
+      exact: true,
+    })
+    const outcome = await Promise.race([
+      forcedButton
+        .waitFor({ state: 'visible', timeout: 10_000 })
+        .then(() => 'forced'),
+      nextStageLocator
+        .waitFor({ state: 'visible', timeout: 10_000 })
+        .then(() => 'next'),
+    ])
+    if (outcome === 'next') return
+
+    await forcedButton.click()
+    const declineCompensation = opponentPage.getByRole('button', {
+      name: '不抽取',
+      exact: true,
+    })
+    await declineCompensation.waitFor({ state: 'visible' })
+    await declineCompensation.click()
+  }
+
+  throw new Error('Opening mulligan did not resolve within 10 attempts')
+}
+
 let browser
 let hostContext
 let guestContext
@@ -224,29 +260,96 @@ try {
   await guestPage.locator('[aria-label="房號"]').fill(roomCode)
   await guestPage.locator('.online-match-btn-secondary').click()
   await Promise.all([
-    hostPage.locator('.online-setup').waitFor({ state: 'visible' }),
-    guestPage.locator('.online-setup').waitFor({ state: 'visible' }),
+    hostPage.locator('.online-opening-overlay').waitFor({ state: 'visible' }),
+    guestPage.locator('.online-opening-overlay').waitFor({ state: 'visible' }),
   ])
-  assert.match((await hostPage.locator('.online-setup').textContent()) ?? '', new RegExp(roomCode))
+  await Promise.all([
+    hostPage.setViewportSize({ width: 600, height: 338 }),
+    guestPage.setViewportSize({ width: 600, height: 338 }),
+  ])
+  for (const page of [hostPage, guestPage]) {
+    const openingFitsViewport = await page.evaluate(() => {
+      const layer = document.querySelector('.online-opening-layer')
+      if (!(layer instanceof HTMLElement)) return false
+      const rect = layer.getBoundingClientRect()
+      return (
+        document.documentElement.scrollWidth <= window.innerWidth &&
+        rect.left >= 0 &&
+        rect.right <= window.innerWidth
+      )
+    })
+    assert.equal(openingFitsViewport, true)
+  }
+  assert.match(
+    (await hostPage.locator('.online-opening-overlay').textContent()) ?? '',
+    new RegExp(roomCode),
+  )
+
+  await hostPage.getByRole('button', { name: '石頭', exact: true }).click()
+  await hostPage
+    .getByText('已送出選擇，等待對手完成猜拳…', { exact: true })
+    .waitFor()
+  assert.equal(await hostPage.getByTestId('online-rps-result').count(), 0)
+  assert.equal(await guestPage.getByTestId('online-rps-result').count(), 0)
+  await guestPage.getByRole('button', { name: '剪刀', exact: true }).click()
+
+  const chooseFirstButton = hostPage.getByRole('button', {
+    name: '選擇先攻',
+    exact: true,
+  })
+  await chooseFirstButton.waitFor({ state: 'visible' })
+  await guestPage
+    .getByText('Host Player 正在選擇先攻或後攻…', { exact: true })
+    .waitFor()
+  assert.match(
+    (await hostPage.getByTestId('online-rps-result').textContent()) ?? '',
+    /Host Player：石頭.*你獲勝.*Guest Player：剪刀/s,
+  )
+  await chooseFirstButton.click()
+
+  const hostOpeningOverlay = hostPage.locator('.online-opening-overlay')
+  const guestOpeningOverlay = guestPage.locator('.online-opening-overlay')
+  await Promise.all([
+    hostOpeningOverlay.getByText('先攻', { exact: true }).waitFor(),
+    guestOpeningOverlay.getByText('後攻', { exact: true }).waitFor(),
+  ])
   const hostOpeningHand = hostPage.getByTestId('online-opening-hand')
   const guestOpeningHand = guestPage.getByTestId('online-opening-hand')
   assert.ok(await hostOpeningHand.getByTestId('online-opening-card').count() > 0)
   assert.ok(await guestOpeningHand.getByTestId('online-opening-card').count() > 0)
+  assert.equal(
+    await guestPage
+      .getByRole('button', { name: '保留手牌', exact: true })
+      .count(),
+    0,
+  )
 
-  await hostPage.getByRole('button', { name: '保留手牌', exact: true }).click()
-  await guestPage.getByRole('button', { name: '保留手牌', exact: true }).click()
-  await Promise.all([
-    hostPage.getByText('請選擇一張起始餅乾：', { exact: true }).waitFor(),
-    guestPage.getByText('請選擇一張起始餅乾：', { exact: true }).waitFor(),
-  ])
+  const guestKeepButton = guestPage.getByRole('button', {
+    name: '保留手牌',
+    exact: true,
+  })
+  await completeMulliganDecision(hostPage, guestPage, guestKeepButton)
+  await completeMulliganDecision(
+    guestPage,
+    hostPage,
+    hostOpeningHand.getByTestId('online-starting-cookie').first(),
+  )
   assert.ok(await hostOpeningHand.getByTestId('online-starting-cookie').count() > 0)
   assert.ok(await guestOpeningHand.getByTestId('online-starting-cookie').count() > 0)
   await hostOpeningHand.getByTestId('online-starting-cookie').first().click()
+  await hostPage
+    .getByText('起始餅乾已覆蓋，等待對手完成選擇…', { exact: true })
+    .waitFor()
+  assert.ok(await guestOpeningHand.getByTestId('online-starting-cookie').count() > 0)
   await guestOpeningHand.getByTestId('online-starting-cookie').first().click()
 
   await Promise.all([
     hostPage.locator('.table-area').waitFor({ state: 'visible' }),
     guestPage.locator('.table-area').waitFor({ state: 'visible' }),
+  ])
+  await Promise.all([
+    hostPage.setViewportSize({ width: 1366, height: 768 }),
+    guestPage.setViewportSize({ width: 1366, height: 768 }),
   ])
   assert.match(
     (await hostPage.locator('.bottom-field .row-meta').textContent()) ?? '',
@@ -255,6 +358,18 @@ try {
   assert.match(
     (await hostPage.locator('.top-field .row-meta').textContent()) ?? '',
     /Guest Player/,
+  )
+  assert.equal(
+    (await hostPage.locator('.bottom-field .turn-order-badge').textContent())?.trim(),
+    '先攻',
+  )
+  assert.equal(
+    (await guestPage.locator('.bottom-field .turn-order-badge').textContent())?.trim(),
+    '後攻',
+  )
+  assert.match(
+    (await guestPage.locator('.table-divider').textContent()) ?? '',
+    /對手 Host Player 正在進行活躍階段/,
   )
   for (const zone of ['deck', 'stage', 'break']) {
     const resourceButton = hostPage.locator(
@@ -287,6 +402,10 @@ try {
   await guestPage.waitForFunction(() =>
     document.querySelector('.phase-rail li.is-current strong')?.textContent
       ?.includes('支援階段'),
+  )
+  assert.match(
+    (await guestPage.locator('.table-divider').textContent()) ?? '',
+    /對手 Host Player 正在進行支援階段/,
   )
   const hostTurn = (await hostPage.locator('.turn-counter').textContent())?.trim()
   const guestTurn = (await guestPage.locator('.turn-counter').textContent())?.trim()
@@ -498,6 +617,7 @@ try {
     setupCompleted: true,
     synchronizedPhase: 'main',
     synchronizedTurn: hostTurn,
+    openingResponsive: true,
     openingHandVisible: true,
     activityFeedbackVisible: true,
     customPlayerNamesVisible: true,

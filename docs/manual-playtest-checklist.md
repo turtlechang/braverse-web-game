@@ -1,6 +1,6 @@
 # 手動遊玩測試清單（Manual Playtest Checklist）
 
-最後更新：2026-07-12。重大功能合併後、或 Vercel preview 驗收時抽查。全跑約 20–30 分鐘；標 ★ 的為最小驗收集（約 10 分鐘）。
+最後更新：2026-07-16。重大功能合併後、或 Vercel preview 驗收時抽查。全跑約 20–30 分鐘；標 ★ 的為最小驗收集（約 10 分鐘）。
 
 ## 開局流程 ★
 
@@ -35,6 +35,8 @@
 ## 線上對戰（部署後）
 
 - [ ] 建立房間顯示房號；另一視窗可加入
+- [ ] 進入戰場後完成私密猜拳、勝者選先後攻、依序調度與起始餅乾同步揭示
+- [ ] 雙方全程可辨識目前行動者；正式對局持續顯示先攻／後攻與對手目前階段
 - [ ] 連線中顯示冷啟動提示；斷線有提示
 - [ ] 雙方各自只看得到自己的手牌（遮罩）
 - [ ] 不合法操作被 server 端規則擋下
@@ -108,4 +110,4 @@ UX 評分（1–5）
 2. ✅ **已修復（2026-07-12）BS2-077 代價未執行就結算效果**：根因是 `trashBattleCookie` 代價只在轉接層（`official-effect-adapter.ts`）與技能路徑（`skills.ts`）被實作，物品路徑（`PlayItemCommand`／`playItem()`／`payAbilityCost`）完全沒有對應欄位，代價形同虛設。已補齊 command 型別、`payItem()` 簽名、`payAbilityCost` 驗證與支付、AI 端 `chooseAbilityCostIds` 計算、人類互動流程 `begin-play-item` 派發，新增回歸測試 `card-abilities.test.ts`「requires and pays a trashBattleCookie item cost (BS2-077 regression)」。
 3. ✅ **已修復（2026-07-12）BS2-058「攻擊後續效果邏輯錯誤」——實為 UI 顯示錯誤文字，規則邏輯本身正確**：使用者提供截圖後複現：「攻擊後續效果」提示框顯示的是 BS2-058 的 **OnPlay 技能文字**（「Place up to 1 of your opponent's LV.3 Cookies...」），而不是攻擊文字（「Deals 4 damage. Then, if there are 15 cards or more in your trash, deals 1 damage.」），讓玩家誤以為條件/目標/傷害邏輯有問題。根因：`EffectPanel.tsx` 顯示卡牌說明時讀的是 `pendingEffect.sourceCard.effectText`（卡牌固定的技能文字欄位），而不是 `pendingEffect.skill.text`（依當下情境正確設定的文字，`usePendingEffect.ts` 對攻擊後續效果流程已正確設成 `sourceCard.attackText`，只是 `EffectPanel.tsx` 沒用到這個欄位）。已修正為讀取 `pendingEffect.skill.text`，新增回歸測試鎖定「顯示的文字要對應當下 pendingEffect，不是卡牌固定的技能文字」。條件檢查、目標選擇、傷害執行三處程式邏輯經核對本來就是正確的（見 `official-effect-adapter.test.ts`「BS2-058 Wind Archer Cookie attack bonus checks its own trash, not the opponent's」）；另補上 `battle-attack-effect.test.ts` 兩則端到端整合測試，實際跑「宣告攻擊 → 主傷害結算 → 攻擊後續效果條件判定 → 額外傷害套用」全流程，分別驗證攻擊方棄牌區達 15 張（條件成立，防守方多扣 1 點 HP）與未達 15 張（條件不成立，防守方 HP 不變）兩種情況，不只是驗證轉換結構或顯示文字。使用者追問後發現原本三層測試（轉換／UI／規則）彼此沒有串起來——`EffectPanel.test.tsx` 只驗證「給定正確 props 會畫對」，沒有驗證 `usePendingEffect.ts` 真的會給出正確 props；已補上 `usePendingEffect.test.tsx` 的 hook 層測試，用真實的 attack-effect `pendingBattle` 狀態跑過 hook，斷言 `pendingEffect.skill.text` 確實等於攻擊文字而非卡牌固定的技能文字，至此轉換／hook／UI／規則四層才真正串起來。
 4. ✅ **已修復（2026-07-16）BS2-079 後續效果缺棄牌提示框**：轉接層已產生 `{ kind: 'trash-to-deck', max: 5, excludeFlip: true }`，規則指令以獨立 `trashToDeckIds` 保存第二段目標，避免與第一段降攻目標共用 `targetIds`。本機、AI 與線上控制器現在都能列出自己的非 FLIP 棄牌區候選、限制最多 5 張並送交 `play-trap`；線上流程同時補齊紫色能量付款，合法選擇可完整結算，錯誤顏色、FLIP 卡及超量選擇不會進入指令。全卡池盤點確認只有 BS2-079 需要此專屬欄位，known-risks R15 已解除。
-5. 線上對戰開局準備順序體感怪異（先進戰場再猜拳/抽牌/起始配置）——待與現有 `OpeningSetupModal` 流程比對後判斷是否為認知落差或真的需要調整；本輪未處理。
+5. ✅ **已修復（2026-07-16）線上對戰開局準備順序體感怪異**：加入對手後直接進入戰場背景，依序完成私密猜拳、勝者選先後攻、建立並顯示自己的 6 張起手牌、先攻再後攻調度、無餅乾強制調度與補償、雙方覆蓋起始餅乾後同步揭示。開局浮層會顯示目前行動者，正式對局的玩家名稱牌持續顯示先攻／後攻，中央狀態列區分「你的回合」與「對手正在進行的階段」。

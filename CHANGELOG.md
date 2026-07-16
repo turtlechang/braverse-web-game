@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- 🛡️ R5 卡牌語意防線（2026-07-16）：`validate:cards` 從「可轉換／有任一 payload」提升為 ability 非空、技能標記、可選抽牌與來源橫置檢查，並以 8 張高風險卡契約鎖定 Then／If you did／特殊代價／條件／觸發。整合 2026-03-30 官方 Rule Update，新增同時補位逐一處理 OnPlay 與傷害步驟開始後不回溯傷害的完整流程回歸；R5 保留為官方規則持續更新風險，測試基線升至 115 檔／1663 項。
+- 🃏 ST5-022 觸發修正（2026-07-16）：改以被效果送入棄牌區的餅乾所屬玩家判定對手戰鬥場事件；己方 ST5-007 丟棄對手 LV.1 餅乾後，現在會正確提示是否橫置己方 ST5-022 並抽 1 張牌，且不會因己方餅乾被丟棄而誤觸發。新增完整技能支付與目標選擇回歸，測試基線升至 113 檔／1657 項。
+- 🌐 好友房開局整合（2026-07-16）：加入對手後直接進入戰場背景，由伺服器權威狀態機依序處理私密猜拳、同時揭曉、勝者選先後攻、先攻再後攻調度、無餅乾公開與補償、雙方私密選擇並同步揭示起始餅乾；一般對局指令在完成前會被拒絕。開局浮層顯示雙方提交進度與目前行動者，正式戰場持續顯示先攻／後攻，中央狀態列明示自己或對手目前階段。雙瀏覽器 Playwright 已驗證內容保密、完整開局、順位／階段同步及既有斷線負向路徑；測試基線升至 113 檔／1656 項，主 bundle 749.50 KiB raw／156.56 KiB gzip，維持 850／180 KiB budget 內。
 - 🛡️ R15 收尾（2026-07-16）：線上 `useOnlineMatchController` 補齊陷阱能量付款與 BS2-079 `trash-to-deck` 候選推導，玩家可在「目標」步驟分別選擇攻擊者降攻及最多 5 張自己的非 FLIP 棄牌，並透過既有 `play-trap.trashToDeckIds` 送交權威伺服器；非法顏色、橫置支援、FLIP 棄牌與第 6 張選擇均不會進入命令。協定回歸另確認非字串 `trashToDeckIds` 會被拒絕。全卡池只有 BS2-079 需要此專屬欄位，R15 正式解除；測試基線升至 112 檔／1643 項。
 - 🧩 卡牌效果修正（2026-07-16，fix/card-effects-gaps）：split-damage 列舉所有合法配置 [A]/[B]/[A,B]/[B,A]，index 0 套 primaryAmount、index 1 套 secondaryAmount，依昏厥數→殘留 HP 排序；補強 draw-up-to-then-discard 在 afterEffectsRequireDraw 條件下的 pendingDrawUpTo 早返行為、draw 0/1 回歸測試（3 項）。isEffectTargeted 補齊 split-damage、prevent-effect-damage；AI 效果目標選擇新增 split-damage（5 項，含 HP1+HP2 2+1 回歸）與 hp-to-trash/support/disable-flip/disable-attack/battle-to-support/prevent-effect-damage（8 項）回歸測試。測試基線升至 112 檔／1641 項；AI 瀏覽器 20/20 種子 stuck=0 全綠。
 - 🎨 本機與線上效果操作統一為導引式流程：餅乾、物品、場景與陷阱共用「能量 → 代價 → 目標」phase-step，缺少的步驟會自動略過；每次只顯示目前步驟，提供「下一步／上一步」，並只在最後以「確認發動」提交。技能文字移到來源卡圖右側，手機版同步調整卡片摘要與陷阱操作列。線上 `begin-activate-skill`／`begin-play-item`／`begin-activate-stage` 可在最後一次命令一併帶入第一段效果目標，避免導引途中先改動權威狀態；測試基線升至 110 檔／1625 項。

@@ -125,21 +125,59 @@ describe('Windswept Valley (ST5-022) trigger', () => {
     sourceInstanceId: 'st5-001',
   }
 
-  it('does not trigger when the stage owner sends an opponent cookie to trash', () => {
+  it('triggers when ST5-007 sends an opponent cookie to trash', () => {
     const windswept = createWindsweptValley()
+    const yoga = createBattleCookie('st5-007', 1, 3, 'purple')
+    yoga.card.id = 'ST5-007'
+    yoga.card.name = 'Yoga Cookie'
+    yoga.card.skill = {
+      trigger: 'activate',
+      oncePerTurn: true,
+      yourTurn: true,
+      restSource: false,
+      cost: { energy: { purple: 1 }, discardHand: 1 },
+      text: 'Place 1 of your opponent\'s LV.1 Cookies from their battle area into the trash.',
+      effects: [{
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+        allowStage: true,
+      }],
+    }
     const lv1 = createBattleCookie('opp-lv1', 1, 3, 'purple')
     const deck = [
       { id: 'deck-1', instanceId: 'deck-1', name: 'deck-1', type: 'item' as const },
     ]
-    let state = createTestGameState([], [lv1], windswept, deck)
+    let state = createTestGameState([yoga], [lv1], windswept, deck)
+    state.players['player-one'].hand = [
+      { id: 'discard-cost', instanceId: 'discard-cost', name: 'discard-cost', type: 'item' },
+    ]
+    state.players['player-one'].supportArea = [{
+      card: {
+        id: 'purple-support',
+        instanceId: 'purple-support',
+        name: 'purple-support',
+        type: 'item',
+        energyColor: 'purple',
+      },
+      rested: false,
+    }]
 
-    const effect: CardEffect = {
-      kind: 'field-to-trash',
-      target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
-    }
-    state = executeCardEffect(state, context, effect, ['opp-lv1'])
+    state = applyGameCommand(state, {
+      kind: 'activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: 'st5-007',
+      trigger: 'activate',
+      paymentIds: ['purple-support'],
+      discardHandIds: ['discard-cost'],
+      effectTargets: [['opp-lv1']],
+    })
 
-    expect(state.pendingStageTrigger).toBeUndefined()
+    expect(state.pendingStageTrigger).toMatchObject({
+      playerId: 'player-one',
+      sourceInstanceId: 'st5-022',
+    })
+    expect(hasBlockingPending(state)).toBe(true)
+    expect(state.players['player-two'].battleArea).toHaveLength(0)
   })
 
   it('triggers when the opponent effect sends their own cookie to trash', () => {
@@ -164,6 +202,24 @@ describe('Windswept Valley (ST5-022) trigger', () => {
       sourceInstanceId: 'st5-022',
     })
     expect(hasBlockingPending(state)).toBe(true)
+  })
+
+  it('does not trigger the stage when its owner cookie is sent to trash', () => {
+    const windswept = createWindsweptValley()
+    const stageOwnerCookie = createBattleCookie('stage-owner-lv1', 1, 3, 'purple')
+    let state = createTestGameState([stageOwnerCookie], [], windswept)
+
+    state = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-two', sourceInstanceId: 'opponent-effect' },
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 },
+      },
+      ['stage-owner-lv1'],
+    )
+
+    expect(state.pendingStageTrigger).toBeUndefined()
   })
 
   it('does not trigger when stage is rested', () => {

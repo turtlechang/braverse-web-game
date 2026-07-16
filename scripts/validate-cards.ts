@@ -5,8 +5,9 @@
  * 1. data/cards/*.json 可解析、含 cards 陣列、必填欄位齊全
  * 2. 同一檔案內不得有重複 cardNumber（跨檔重複屬正常，卡池會去重）
  * 3. 卡池每張可玩卡牌（排除 extra/unknown）必須能轉換為 GameCard
- * 4. 有技能／FLIP／效果文字的卡牌，轉換結果必須帶對應效果（防止 silent 未支援）
+ * 4. 有技能／FLIP／效果文字的卡牌，轉換結果必須帶非空的對應 ability
  * 5. imageUrl 不得為空
+ * 6. 高風險文字與卡牌必須符合已人工覆核的 runtime 語意契約
  *
  * 發現錯誤時以非零碼結束，供 CI 使用。
  *
@@ -20,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { convertOfficialCardToGameCard } from '../src/cards'
 import type { OfficialCardRecord } from '../src/cards/types'
 import { getAllCardPoolEntries } from '../src/game/card-pool'
+import { validateCardEffectSemantics } from './lib/card-effect-validation'
 
 const cardsDir = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'data', 'cards')
 
@@ -120,6 +122,8 @@ for (const entry of poolEntries) {
   ) {
     errors.push(`${entry.cardNumber} ${entry.name}: 有效果文字但未轉出任何效果`)
   }
+
+  errors.push(...validateCardEffectSemantics(entry, gameCard))
 }
 
 // --- 輸出 ---

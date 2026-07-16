@@ -38,7 +38,9 @@ describe('OnlineBattleView resource inspection', () => {
             attackerInstanceId: null,
             supportPaymentIds: [],
           }}
+          openingSnapshot={null}
           commandRejectedReason={null}
+          sendOpeningAction={vi.fn()}
           onLeave={vi.fn()}
         />,
       ),

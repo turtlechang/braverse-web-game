@@ -5,7 +5,12 @@ import {
   type ClientMessage,
   type ServerMessage,
 } from '../../src/net/onlineProtocol'
-import { RoomStore, maskedStateFor, type Room } from './rooms'
+import {
+  RoomStore,
+  maskedStateFor,
+  openingSnapshotFor,
+  type Room,
+} from './rooms'
 
 export interface SocketLike {
   send(data: string): void
@@ -40,6 +45,31 @@ export class ConnectionManager {
   private sendToSlot(room: Room, playerId: PlayerId, message: ServerMessage): void {
     const slot = playerId === 'player-one' ? room.playerOne : room.playerTwo
     slot?.send(JSON.stringify(message))
+  }
+
+  private sendOpeningUpdate(room: Room): void {
+    for (const playerId of ['player-one', 'player-two'] as const) {
+      const opening = openingSnapshotFor(room, playerId)
+      if (!opening) continue
+      this.sendToSlot(room, playerId, {
+        type: 'opening-update',
+        viewerId: playerId,
+        opening,
+        state: maskedStateFor(room, playerId),
+      })
+    }
+  }
+
+  private sendMatchStart(room: Room): void {
+    if (!room.state || room.seed === null) return
+    for (const playerId of ['player-one', 'player-two'] as const) {
+      this.sendToSlot(room, playerId, {
+        type: 'match-start',
+        seed: room.seed,
+        viewerId: playerId,
+        state: maskedStateFor(room, playerId)!,
+      })
+    }
   }
 
   private rejectInvalidMessage(socket: SocketLike): void {
@@ -88,6 +118,9 @@ export class ConnectionManager {
           message.deck,
           message.playerName ?? 'Player Two',
         )
+        return
+      case 'submit-opening-action':
+        this.handleOpeningAction(socket, message.action)
         return
       case 'submit-command':
         this.handleSubmitCommand(socket, message.command)
@@ -156,21 +189,30 @@ export class ConnectionManager {
 
     this.connections.set(socket, { code: room.code, playerId: 'player-two' })
 
-    const state = room.state
-    if (!state || room.seed === null) return
+    this.sendOpeningUpdate(room)
+  }
 
-    this.sendToSlot(room, 'player-one', {
-      type: 'match-start',
-      seed: room.seed,
-      viewerId: 'player-one',
-      state: maskedStateFor(room, 'player-one')!,
-    })
-    this.send(socket, {
-      type: 'match-start',
-      seed: room.seed,
-      viewerId: 'player-two',
-      state: maskedStateFor(room, 'player-two')!,
-    })
+  private handleOpeningAction(
+    socket: SocketLike,
+    action: Extract<ClientMessage, { type: 'submit-opening-action' }>['action'],
+  ): void {
+    const info = this.connections.get(socket)
+    if (!info) return
+    const room = this.store.getRoom(info.code)
+    if (!room) return
+
+    try {
+      this.store.submitOpeningAction(room, info.playerId, action)
+    } catch (error) {
+      this.send(socket, { type: 'command-rejected', reason: errorMessage(error) })
+      return
+    }
+
+    if (room.status === 'in-progress') {
+      this.sendMatchStart(room)
+      return
+    }
+    this.sendOpeningUpdate(room)
   }
 
   private handleSubmitCommand(socket: SocketLike, command: GameCommand): void {

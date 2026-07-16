@@ -122,5 +122,5 @@ interface ApplyGameCommandOptions {
 ## 未涵蓋（後續任務）
 
 - 玩家 UI、`usePendingEffect` 與全部 AI battle／turn handler 已全面透過 `applyGameCommand`；command 出口會在沒有 blocking pending 時執行冪等的 `finalizePendingReplacements` 再寫入紀錄，確保多段效果完整結束後的補位與勝負狀態可重播。
-- 開局前流程（選牌組、猜拳、決定先後攻）發生在 `createGame` 之前，不在指令層內。
+- 本機開局前流程（選牌組、猜拳、決定先後攻）發生在 `createGame` 之前，不在通用 `GameCommand` 指令層內。好友房則由 `RoomStore` 的專用 `OnlineOpeningAction` 狀態機協調：猜拳與順位在 `createGame` 前處理，建立遊戲後的調度／補償／起始餅乾仍呼叫既有 `applyGameCommand`，但一般對局指令在開局完成前會被伺服器拒絕。
 - AI `refresh-deck` 會將可重播的 `shuffleSeed` 寫入 command payload；玩家未提供種子時仍沿用 `ApplyGameCommandOptions.shuffle` 或預設洗牌。其餘 AI 指令（含 `play-item`／`activate-skill`／`activate-stage` 的 `effectTargets`）皆可忠實重播（見 `ai-replay-fidelity.test.ts`）。

@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { createDemoGame, type CustomDeck } from '../../game'
 import { OFFICIAL_RED_STARTER_DECK } from '../../game/starter-deck'
+import type { OnlineOpeningSnapshot } from '../../net/onlineProtocol'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -21,6 +22,7 @@ const {
   mockJoinRoom,
   mockLeave,
   mockSendCommand,
+  mockSendOpeningAction,
   mockSendAttackSelection,
   getMockState,
   setMockState,
@@ -29,6 +31,7 @@ const {
   const mockJoinRoom = vi.fn()
   const mockLeave = vi.fn()
   const mockSendCommand = vi.fn()
+  const mockSendOpeningAction = vi.fn()
   const mockSendAttackSelection = vi.fn()
   let state: {
     status: string
@@ -37,6 +40,7 @@ const {
     matchEndedReason: string | null
     viewerPlayerId: 'player-one' | 'player-two' | null
     maskedGame: ReturnType<typeof createDemoGame> | null
+    openingSnapshot: OnlineOpeningSnapshot | null
   } = {
     status: 'idle',
     roomCode: null,
@@ -44,6 +48,7 @@ const {
     matchEndedReason: null,
     viewerPlayerId: null,
     maskedGame: null,
+    openingSnapshot: null,
   }
 
   return {
@@ -51,6 +56,7 @@ const {
     mockJoinRoom,
     mockLeave,
     mockSendCommand,
+    mockSendOpeningAction,
     mockSendAttackSelection,
     getMockState: () => state,
     setMockState: (next: Partial<typeof state>) => {
@@ -67,11 +73,13 @@ vi.mock('../../hooks/useOnlineMatch', () => ({
       roomCode: state.roomCode,
       viewerPlayerId: state.viewerPlayerId,
       maskedGame: state.maskedGame,
+      openingSnapshot: state.openingSnapshot,
       errorMessage: state.errorMessage,
       matchEndedReason: state.matchEndedReason,
       createRoom: mockCreateRoom,
       joinRoom: mockJoinRoom,
       sendCommand: mockSendCommand,
+      sendOpeningAction: mockSendOpeningAction,
       sendAttackSelection: mockSendAttackSelection,
       opponentAttackSelection: {
         attackerInstanceId: null,
@@ -83,8 +91,25 @@ vi.mock('../../hooks/useOnlineMatch', () => ({
 }))
 
 vi.mock('./OnlineBattleView', () => ({
-  OnlineBattleView: ({ commandRejectedReason }: { commandRejectedReason: string | null }) => (
-    <div data-testid="mock-battle-view">{commandRejectedReason}</div>
+  OnlineBattleView: ({
+    commandRejectedReason,
+    openingSnapshot,
+  }: {
+    commandRejectedReason: string | null
+    openingSnapshot: OnlineOpeningSnapshot | null
+  }) => (
+    <div
+      data-testid="mock-battle-view"
+      data-opening-stage={openingSnapshot?.stage ?? ''}
+    >
+      {commandRejectedReason}
+    </div>
+  ),
+}))
+
+vi.mock('./OnlineOpeningView', () => ({
+  OnlineOpeningView: ({ opening }: { opening: OnlineOpeningSnapshot }) => (
+    <div data-testid="mock-opening-view">{opening.stage}</div>
   ),
 }))
 
@@ -133,11 +158,13 @@ beforeEach(() => {
     matchEndedReason: null,
     viewerPlayerId: null,
     maskedGame: null,
+    openingSnapshot: null,
   })
   mockCreateRoom.mockClear()
   mockJoinRoom.mockClear()
   mockLeave.mockClear()
   mockSendCommand.mockClear()
+  mockSendOpeningAction.mockClear()
   mockSendAttackSelection.mockClear()
 })
 
@@ -325,6 +352,54 @@ describe('OnlineMatchPanel in-progress state', () => {
     expect(container.querySelector('[data-testid="mock-battle-view"]')?.textContent).toBe(
       '現在不是你的回合。',
     )
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('OnlineMatchPanel opening state', () => {
+  const opening: OnlineOpeningSnapshot = {
+    stage: 'rps',
+    round: 1,
+    actorId: null,
+    firstPlayerId: null,
+    players: {
+      'player-one': { name: 'Host Player', submitted: false },
+      'player-two': { name: 'Guest Player', submitted: false },
+    },
+    rpsResult: null,
+    revealedNoCookieHand: [],
+  }
+
+  it('猜拳與決定順位時直接顯示戰場背景的開局畫面', async () => {
+    setMockState({
+      status: 'opening',
+      viewerPlayerId: 'player-one',
+      openingSnapshot: opening,
+    })
+    const { container, root } = await renderPanel([validDeck])
+
+    expect(container.querySelector('[data-testid="mock-opening-view"]')?.textContent).toBe(
+      'rps',
+    )
+
+    await act(() => root.unmount())
+  })
+
+  it('建立遊戲狀態後改由完整戰場承載開局浮層', async () => {
+    setMockState({
+      status: 'opening',
+      viewerPlayerId: 'player-one',
+      maskedGame: createDemoGame(),
+      openingSnapshot: { ...opening, stage: 'mulligan' },
+    })
+    const { container, root } = await renderPanel([validDeck])
+
+    expect(
+      container.querySelector('[data-testid="mock-battle-view"]')?.getAttribute(
+        'data-opening-stage',
+      ),
+    ).toBe('mulligan')
 
     await act(() => root.unmount())
   })

@@ -43,6 +43,33 @@ describe('online protocol validation', () => {
     ).toBe(false)
   })
 
+  it('validates every server-authoritative opening action shape', () => {
+    for (const action of [
+      { kind: 'rps', choice: 'rock' },
+      { kind: 'choose-order', goFirst: true },
+      { kind: 'mulligan', replaceAll: false },
+      { kind: 'force-mulligan' },
+      { kind: 'mulligan-compensation', draw: true },
+      { kind: 'starting-cookie', instanceId: 'cookie-1' },
+    ]) {
+      expect(
+        isClientMessage({ type: 'submit-opening-action', action }),
+      ).toBe(true)
+    }
+    expect(
+      isClientMessage({
+        type: 'submit-opening-action',
+        action: { kind: 'rps', choice: 'fire' },
+      }),
+    ).toBe(false)
+    expect(
+      isClientMessage({
+        type: 'submit-opening-action',
+        action: { kind: 'starting-cookie', instanceId: 123 },
+      }),
+    ).toBe(false)
+  })
+
   it('accepts guided begin commands with a first-effect target selection', () => {
     expect(
       isClientMessage({

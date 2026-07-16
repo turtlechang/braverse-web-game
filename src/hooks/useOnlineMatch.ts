@@ -8,6 +8,8 @@ import type {
 import type {
   AttackSelectionPreview,
   ClientMessage,
+  OnlineOpeningAction,
+  OnlineOpeningSnapshot,
   ServerMessage,
 } from '../net/onlineProtocol'
 
@@ -15,6 +17,7 @@ export type OnlineMatchStatus =
   | 'idle'
   | 'connecting'
   | 'waiting-for-opponent'
+  | 'opening'
   | 'in-progress'
   | 'ended'
   | 'error'
@@ -65,6 +68,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isPlayerId = (value: unknown): value is PlayerId =>
   value === 'player-one' || value === 'player-two'
 
+const isRpsChoice = (value: unknown): boolean =>
+  value === 'rock' || value === 'paper' || value === 'scissors'
+
 const isPlayerStateEnvelope = (
   value: unknown,
   expectedId: PlayerId,
@@ -113,6 +119,40 @@ const isGameStateEnvelope = (value: unknown): value is GameState => {
   )
 }
 
+const isOnlineOpeningSnapshotEnvelope = (
+  value: unknown,
+): value is OnlineOpeningSnapshot => {
+  if (!isRecord(value) || !isRecord(value.players)) return false
+  const validStage =
+    value.stage === 'rps' ||
+    value.stage === 'choose-order' ||
+    value.stage === 'mulligan' ||
+    value.stage === 'forced-mulligan' ||
+    value.stage === 'compensation' ||
+    value.stage === 'starting-cookie'
+  const validProgress = (progress: unknown) =>
+    isRecord(progress) &&
+    typeof progress.name === 'string' &&
+    typeof progress.submitted === 'boolean'
+
+  return (
+    validStage &&
+    Number.isInteger(value.round) &&
+    (value.actorId === null || isPlayerId(value.actorId)) &&
+    (value.firstPlayerId === null || isPlayerId(value.firstPlayerId)) &&
+    validProgress(value.players['player-one']) &&
+    validProgress(value.players['player-two']) &&
+    Array.isArray(value.revealedNoCookieHand) &&
+    (value.rpsResult === null ||
+      (isRecord(value.rpsResult) &&
+        isRecord(value.rpsResult.choices) &&
+        isRpsChoice(value.rpsResult.choices['player-one']) &&
+        isRpsChoice(value.rpsResult.choices['player-two']) &&
+        (value.rpsResult.winnerId === null ||
+          isPlayerId(value.rpsResult.winnerId))))
+  )
+}
+
 const parseServerMessage = (data: unknown): ServerMessage | null => {
   if (typeof data !== 'string') return null
 
@@ -147,6 +187,12 @@ const parseServerMessage = (data: unknown): ServerMessage | null => {
         parsed.selection.supportPaymentIds.every(
           (id) => typeof id === 'string',
         )
+        ? (parsed as ServerMessage)
+        : null
+    case 'opening-update':
+      return isPlayerId(parsed.viewerId) &&
+        isOnlineOpeningSnapshotEnvelope(parsed.opening) &&
+        (parsed.state === null || isGameStateEnvelope(parsed.state))
         ? (parsed as ServerMessage)
         : null
     case 'match-ended':
@@ -198,6 +244,8 @@ export function useOnlineMatch() {
   const [roomCode, setRoomCode] = useState<string | null>(null)
   const [viewerPlayerId, setViewerPlayerId] = useState<PlayerId | null>(null)
   const [maskedGame, setMaskedGame] = useState<GameState | null>(null)
+  const [openingSnapshot, setOpeningSnapshot] =
+    useState<OnlineOpeningSnapshot | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [opponentAttackSelection, setOpponentAttackSelection] =
     useState<AttackSelectionPreview>(EMPTY_ATTACK_SELECTION)
@@ -226,6 +274,7 @@ export function useOnlineMatch() {
       setRoomCode(initialMessage.type === 'join-room' ? initialMessage.code : null)
       setViewerPlayerId(null)
       setMaskedGame(null)
+      setOpeningSnapshot(null)
       setErrorMessage(null)
       setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
       setMatchEndedReason(null)
@@ -332,7 +381,20 @@ export function useOnlineMatch() {
             connection.phase = 'in-progress'
             setViewerPlayerId(message.viewerId)
             setMaskedGame(message.state)
+            setOpeningSnapshot(null)
             setStatus('in-progress')
+            break
+          case 'opening-update':
+            if (connection.ackTimer !== null) {
+              clearTimeout(connection.ackTimer)
+              connection.ackTimer = null
+            }
+            connection.phase = 'in-progress'
+            setViewerPlayerId(message.viewerId)
+            setOpeningSnapshot(message.opening)
+            setMaskedGame(message.state)
+            setErrorMessage(null)
+            setStatus('opening')
             break
           case 'state-update':
             setMaskedGame(message.state)
@@ -399,6 +461,13 @@ export function useOnlineMatch() {
     [send],
   )
 
+  const sendOpeningAction = useCallback(
+    (action: OnlineOpeningAction) => {
+      send({ type: 'submit-opening-action', action })
+    },
+    [send],
+  )
+
   const sendAttackSelection = useCallback(
     (selection: AttackSelectionPreview) => {
       send({ type: 'update-attack-selection', selection })
@@ -413,6 +482,7 @@ export function useOnlineMatch() {
     setRoomCode(null)
     setViewerPlayerId(null)
     setMaskedGame(null)
+    setOpeningSnapshot(null)
     setErrorMessage(null)
     setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
     setMatchEndedReason(null)
@@ -423,12 +493,14 @@ export function useOnlineMatch() {
     roomCode,
     viewerPlayerId,
     maskedGame,
+    openingSnapshot,
     errorMessage,
     opponentAttackSelection,
     matchEndedReason,
     createRoom,
     joinRoom,
     sendCommand,
+    sendOpeningAction,
     sendAttackSelection,
     leave,
   } as const

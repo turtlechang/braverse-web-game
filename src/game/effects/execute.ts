@@ -38,12 +38,10 @@ import {
 
 const checkWindsweptValleyTrigger = (
   state: GameState,
-  actorPlayerId: PlayerId,
   cookieOwnerId: PlayerId,
 ): GameState => {
   if (state.pendingStageTrigger) return state
-  if (actorPlayerId !== cookieOwnerId) return state
-  const stageOwnerId = getOpponentId(actorPlayerId)
+  const stageOwnerId = getOpponentId(cookieOwnerId)
   const stageOwner = state.players[stageOwnerId]
   const stage = stageOwner.stage
   if (!stage) return state
@@ -842,7 +840,6 @@ export const executeCardEffect = (
     )
     return checkWindsweptValleyTrigger(
       afterDeparture,
-      context.sourcePlayerId,
       targetPlayerId,
     )
   }
@@ -911,7 +908,6 @@ export const executeCardEffect = (
     const afterDeparture = resolveNonFaintDepartureOutcome(nextState, targetPlayerId, 1)
     return checkWindsweptValleyTrigger(
       afterDeparture,
-      context.sourcePlayerId,
       targetPlayerId,
     )
   }
@@ -940,9 +936,7 @@ export const executeCardEffect = (
       }
       nextState = updatePlayer(nextState, updatedPlayer)
       nextState = resolveNonFaintDepartureOutcome(nextState, playerId, matching.length)
-      if (playerId !== context.sourcePlayerId) {
-        nextState = checkWindsweptValleyTrigger(nextState, context.sourcePlayerId, playerId)
-      }
+      nextState = checkWindsweptValleyTrigger(nextState, playerId)
     }
     return nextState
   }

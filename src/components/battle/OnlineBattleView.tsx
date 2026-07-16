@@ -15,10 +15,14 @@ import { BattleResponseModals } from './BattleResponseModals'
 import { DamageEffectModals } from './DamageEffectModals'
 import { PendingDecisionModals } from './PendingDecisionModals'
 import { CardDetailModal, CardPileModal, ResultModal } from '../modals/GameModals'
-import { CardFace } from '../cards/CardVisuals'
 import { phaseLabels } from '../gameUiLabels'
 import type { GameCard } from '../../game'
-import type { AttackSelectionPreview } from '../../net/onlineProtocol'
+import type {
+  AttackSelectionPreview,
+  OnlineOpeningAction,
+  OnlineOpeningSnapshot,
+} from '../../net/onlineProtocol'
+import { OnlineOpeningOverlay } from './OnlineOpeningOverlay'
 
 export interface OnlineBattleViewProps {
   game: GameState
@@ -27,7 +31,9 @@ export interface OnlineBattleViewProps {
   sendCommand: (command: import('../../game').GameCommand) => void
   sendAttackSelection: (selection: AttackSelectionPreview) => void
   opponentAttackSelection: AttackSelectionPreview
+  openingSnapshot: OnlineOpeningSnapshot | null
   commandRejectedReason: string | null
+  sendOpeningAction: (action: OnlineOpeningAction) => void
   onLeave: () => void
 }
 
@@ -51,7 +57,9 @@ export function OnlineBattleView({
   sendCommand,
   sendAttackSelection,
   opponentAttackSelection,
+  openingSnapshot,
   commandRejectedReason,
+  sendOpeningAction,
   onLeave,
 }: OnlineBattleViewProps) {
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
@@ -123,126 +131,6 @@ export function OnlineBattleView({
           ? '對手正在結算攻擊後續效果…'
           : null
 
-  if (game.status === 'setup') {
-    const needsMulliganDecision = !viewerPlayer.freeMulliganDecided
-    const needsStartingCookie =
-      !needsMulliganDecision && !viewerPlayer.startingCookieSelected
-
-    return (
-      <main className="game-shell">
-        <div className="board-texture" />
-        <section className="online-setup">
-          <h2>開局準備</h2>
-          <p>房號：{roomCode}</p>
-          {needsMulliganDecision && (
-            <>
-              <p>是否要重新抽取整副起始手牌？</p>
-              <div
-                className="online-setup-hand"
-                data-testid="online-opening-hand"
-                aria-label="起始手牌"
-              >
-                {viewerPlayer.hand.map((card) => (
-                  <div
-                    key={card.instanceId}
-                    className="online-setup-hand-card"
-                    data-testid="online-opening-card"
-                  >
-                    <CardFace card={card} />
-                    <span>{card.name}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="online-setup-actions">
-                <button
-                  className="online-setup-btn"
-                  type="button"
-                  onClick={() =>
-                    match.dispatch(
-                      { kind: 'keep-opening-hand', playerId: viewerPlayerId },
-                      '保留起始手牌。',
-                    )
-                  }
-                >
-                  保留手牌
-                </button>
-                <button
-                  className="online-setup-btn"
-                  type="button"
-                  onClick={() =>
-                    match.dispatch(
-                      {
-                        kind: 'mulligan-opening-hand',
-                        playerId: viewerPlayerId,
-                      },
-                      '已重新抽取起始手牌。',
-                    )
-                  }
-                >
-                  全部調度
-                </button>
-              </div>
-            </>
-          )}
-          {needsStartingCookie && (
-            <>
-              <p>請選擇一張起始餅乾：</p>
-              <div
-                className="online-setup-hand"
-                data-testid="online-opening-hand"
-                aria-label="起始手牌"
-              >
-                {viewerPlayer.hand.map((card) =>
-                  card.type === 'cookie' ? (
-                    <button
-                      key={card.instanceId}
-                      className="online-setup-hand-card is-selectable"
-                      data-testid="online-starting-cookie"
-                      type="button"
-                      aria-label={`選擇 ${card.name} 作為起始餅乾`}
-                      onClick={() =>
-                        match.dispatch(
-                          {
-                            kind: 'select-starting-cookie',
-                            playerId: viewerPlayerId,
-                            instanceId: card.instanceId,
-                          },
-                          `已選擇${card.name}作為起始餅乾。`,
-                        )
-                      }
-                    >
-                      <CardFace card={card} />
-                      {card.name}
-                    </button>
-                  ) : (
-                    <div
-                      key={card.instanceId}
-                      className="online-setup-hand-card is-unavailable"
-                      data-testid="online-opening-card"
-                    >
-                      <CardFace card={card} />
-                      <span>{card.name}</span>
-                    </div>
-                  ),
-                )}
-              </div>
-            </>
-          )}
-          {!needsMulliganDecision && !needsStartingCookie && (
-            <p>等待對手完成開局準備…</p>
-          )}
-          <button
-            className="online-setup-leave"
-            type="button"
-            onClick={onLeave}
-          >
-            離開對局
-          </button>
-        </section>
-      </main>
-    )
-  }
-
   const selectedAttackPaymentIdSet = new Set(match.selectedAttackPaymentIds)
   const opponentAttackPaymentIdSet = new Set(
     opponentAttackSelection.supportPaymentIds,
@@ -265,7 +153,7 @@ export function OnlineBattleView({
     !match.viewerControlsState
 
   const phaseDisabled =
-    game.status === 'finished' ||
+    game.status !== 'playing' ||
     Boolean(game.pendingReplacement) ||
     Boolean(game.pendingOnPlay) ||
     Boolean(game.pendingRefresh) ||
@@ -353,7 +241,9 @@ export function OnlineBattleView({
                     : '選擇支援卡支付攻擊費用'}
                 </>
               ) : (
-                `${match.activePlayer.name} · ${phaseLabels[game.phase]}`
+                game.activePlayerId === viewerPlayerId
+                  ? `你的回合 · ${phaseLabels[game.phase]}`
+                  : `對手 ${match.activePlayer.name} 正在進行${phaseLabels[game.phase]}`
               )}
             </strong>
           </div>
@@ -464,6 +354,18 @@ export function OnlineBattleView({
       </section>
 
       <CardPreviewPanel card={hoveredCard} position="bottom" />
+
+      {openingSnapshot && (
+        <OnlineOpeningOverlay
+          opening={openingSnapshot}
+          game={game}
+          viewerPlayerId={viewerPlayerId}
+          roomCode={roomCode}
+          errorMessage={commandRejectedReason}
+          onAction={sendOpeningAction}
+          onLeave={onLeave}
+        />
+      )}
 
       {match.selectedAttacker && !pending.pendingEffect && (
         <AttackPaymentPanel

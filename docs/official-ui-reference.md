@@ -24,6 +24,13 @@
 - 選卡、Refresh、替補與對局結果使用暗幕中央視窗；使用官方紅色、黃色與綠色起始牌組 metadata 中的圖片 URL 呈現牌面。
 - 不把整張官方截圖當作背景，也不將來源截圖提交至 repository。
 
+## 線上開局整合
+
+- 加入對手後立即顯示對戰桌，開局操作使用中央輕量浮層承載，不切回獨立表單頁；此方向延續本專案官方截圖中「重要決策集中於桌面中央」的配置。
+- 流程固定為「私密猜拳 → 同時揭曉 → 勝者選先後攻 → 依順位調度 → 雙方覆蓋起始餅乾 → 同時揭示」。選擇內容在規則允許揭曉前不送給對手，避免 UI 預先洩漏結果。
+- 先攻／後攻在開局浮層與正式戰場名稱牌持續顯示，不只使用會消失的短暫提示。此決策也回應 Pokémon TCG Live 官方論壇中玩家對「開局後難以確認誰先攻」的公開回饋：[Lack of First Turn Indication](https://community.pokemon.com/en-us/discussion/3855)。
+- 隨機決勝後由勝者選先攻或後攻的節奏，參考 Konami 公開的 MASTER DUEL 賽事流程中「coin toss／前局敗者決定先後攻」的順序：[MASTER DUEL Tournament public event information](https://yugiohblog.konami.com/2026/event-information/team-yu-gi-oh-championship-series-la-paz-bolivia-2026-public-event-information/)。Braverse 仍依自身官方規則使用猜拳，不複製其他遊戲的規則或視覺資產。
+
 ## 響應式調整
 
 官方截圖以 16:9 桌面為主；專案畫面則使用滿版 viewport，不再限制整體 16:9。專案在 900px 以下窄畫布將階段導覽改為頂部橫列，
