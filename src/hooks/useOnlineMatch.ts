@@ -25,7 +25,7 @@ export type OnlineMatchStatus =
   | 'ended'
   | 'error'
 
-export type OnlineConnectionMode = 'syncing' | 'reconnecting' | null
+export type OnlineConnectionMode = 'syncing' | null
 
 export const ONLINE_SOCKET_OPEN_TIMEOUT_MS = 90_000
 export const ONLINE_SERVER_ACK_TIMEOUT_MS = 10_000

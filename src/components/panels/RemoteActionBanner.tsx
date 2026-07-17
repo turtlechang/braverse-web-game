@@ -15,13 +15,10 @@ const modeLabels: Record<ActionStatusMode, string> = {
   'awaiting-opponent-decision': '等待對手回應',
   resolving: '效果結算中',
   syncing: '同步中',
-  reconnecting: '重新連線中',
 }
 
 const iconFor = (mode: ActionStatusMode) => {
-  if (mode === 'syncing' || mode === 'reconnecting') {
-    return <Wifi aria-hidden="true" />
-  }
+  if (mode === 'syncing') return <Wifi aria-hidden="true" />
   if (mode === 'resolving') return <LoaderCircle aria-hidden="true" />
   if (mode === 'awaiting-local-decision') return <Sparkles aria-hidden="true" />
   return <Clock3 aria-hidden="true" />

@@ -17,7 +17,7 @@ export interface ActionProgressOptions {
 
 const labels: Record<'declare' | 'payment' | 'cost' | 'target' | 'resolve', string> = {
   declare: '宣告',
-  payment: '費用',
+  payment: '能量',
   cost: '代價',
   target: '目標',
   resolve: '結算',

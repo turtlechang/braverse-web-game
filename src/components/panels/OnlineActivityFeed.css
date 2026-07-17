@@ -152,11 +152,37 @@
   overflow: hidden;
 }
 
-.online-activity-history > strong {
-  display: block;
+.online-activity-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   margin-bottom: 6px;
+}
+
+.online-activity-history-header > strong {
   color: #bdeeff;
   font-size: 0.65rem;
+}
+
+.online-activity-copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border: 1px solid rgba(129, 224, 255, 0.35);
+  border-radius: 999px;
+  color: #bdeeff;
+  background: rgba(129, 224, 255, 0.08);
+  font: inherit;
+  font-size: 0.58rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.online-activity-copy:hover {
+  background: rgba(129, 224, 255, 0.18);
 }
 
 .online-activity-history ol {
