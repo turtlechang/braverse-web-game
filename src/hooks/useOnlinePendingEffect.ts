@@ -38,7 +38,11 @@ type AbilityCostDraft = {
 const getTargetSelector = (
   effect: CardEffect | null,
 ): EffectTargetSelector | null => {
-  if (!effect || isEffectUntargeted(effect)) return null
+  if (!effect) return null
+  if (effect.kind === 'gain-hp') {
+    return effect.target?.sourceOnly ? null : (effect.target ?? null)
+  }
+  if (isEffectUntargeted(effect)) return null
   if (effect.kind === 'opponent-battle-to-trash') {
     return {
       side: 'opponent',

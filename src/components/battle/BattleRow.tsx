@@ -143,6 +143,10 @@ export function BattleRow({
               className="support-card-wrap"
               data-card-instance-id={supportId}
               style={{ '--support-index': isOpponent ? player.supportArea.length - 1 - supportIndex : supportIndex } as React.CSSProperties}
+              onMouseEnter={() => onHoverCard?.(support.card)}
+              onMouseLeave={() => onHoverCard?.(null)}
+              onFocus={() => onFocusCard?.(support.card)}
+              onBlur={() => onFocusCard?.(null)}
             >
               <CardFace
                 card={support.card}
@@ -235,7 +239,14 @@ export function BattleRow({
               card.instanceId,
             )
             return (
-              <div className="break-card-wrap" key={card.instanceId}>
+              <div
+                className="break-card-wrap"
+                key={card.instanceId}
+                onMouseEnter={() => onHoverCard?.(card)}
+                onMouseLeave={() => onHoverCard?.(null)}
+                onFocus={() => onFocusCard?.(card)}
+                onBlur={() => onFocusCard?.(null)}
+              >
                 <CardFace
                   card={card}
                   className="break-card"
@@ -518,6 +529,10 @@ export function BattleRow({
             aria-expanded={openResourceKind === 'stage'}
             title={player.stage ? `${player.stage.card.name} ${player.stage.rested ? '(已橫置)' : '(活躍)'}` : '場景區空'}
             onClick={() => toggleResource('stage')}
+            onMouseEnter={() => player.stage && onHoverCard?.(player.stage.card)}
+            onMouseLeave={() => onHoverCard?.(null)}
+            onFocus={() => player.stage && onFocusCard?.(player.stage.card)}
+            onBlur={() => onFocusCard?.(null)}
           >
             {player.stage ? (
               <CardFace
@@ -572,6 +587,16 @@ export function BattleRow({
           disabled={player.discardPile.length === 0}
           title={`棄牌區 ${player.discardPile.length} 張`}
           onClick={() => onInspectDiscard(playerId)}
+          onMouseEnter={() => {
+            const topCard = player.discardPile[player.discardPile.length - 1]
+            if (topCard) onHoverCard?.(topCard)
+          }}
+          onMouseLeave={() => onHoverCard?.(null)}
+          onFocus={() => {
+            const topCard = player.discardPile[player.discardPile.length - 1]
+            if (topCard) onFocusCard?.(topCard)
+          }}
+          onBlur={() => onFocusCard?.(null)}
         >
           <span>棄牌區</span>
           {player.discardPile.length > 0 && (
@@ -654,6 +679,10 @@ export function BattleRow({
                   '--fan-y': `${fanY}px`,
                   '--fan-rotation': `${fanRotation}deg`,
                 } as React.CSSProperties}
+                onMouseEnter={() => onHoverCard?.(card)}
+                onMouseLeave={() => onHoverCard?.(null)}
+                onFocus={() => onFocusCard?.(card)}
+                onBlur={() => onFocusCard?.(null)}
               >
                 <CardFace
                   card={card}

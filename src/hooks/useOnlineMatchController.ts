@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import type {
   CookieCard,
   CookieInBattle,
-  GameCard,
   GameCommand,
   GameState,
   PlayerId,
@@ -408,13 +407,57 @@ export function useOnlineMatchController(params: {
   }
 
   const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
-  const trapSupportToHandCandidates: GameCard[] = []
-  const trapSupportToHandAmount = 0
-  const toggleTrapSupportToHand = () => {}
+  const trapSupportToHandEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'support-to-hand',
+  )
+  const trapSupportToHandAmount =
+    trapSupportToHandEffect?.kind === 'support-to-hand'
+      ? trapSupportToHandEffect.amount
+      : 0
+  const trapSupportToHandCandidates =
+    trapSupportToHandAmount > 0
+      ? game.players[viewerPlayerId].supportArea.map(
+          (support: SupportCard) => support.card,
+        )
+      : []
+  const toggleTrapSupportToHand = (id: string) => {
+    if (!trapSupportToHandCandidates.some((card) => card.instanceId === id)) {
+      return
+    }
+    setSelectedTrapSupportToHandIds((current) =>
+      current.includes(id)
+        ? current.filter((cId) => cId !== id)
+        : current.length < trapSupportToHandAmount
+          ? [...current, id]
+          : current,
+    )
+  }
   const [selectedTrapHandToSupportIds, setSelectedTrapHandToSupportIds] = useState<string[]>([])
-  const trapHandToSupportCandidates: GameCard[] = []
-  const trapHandToSupportAmount = 0
-  const toggleTrapHandToSupport = () => {}
+  const trapHandToSupportEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'hand-to-support',
+  )
+  const trapHandToSupportAmount =
+    trapHandToSupportEffect?.kind === 'hand-to-support'
+      ? trapHandToSupportEffect.amount
+      : 0
+  const trapHandToSupportCandidates =
+    trapHandToSupportAmount > 0
+      ? game.players[viewerPlayerId].hand.filter(
+          (card) => card.instanceId !== selectedTrap?.instanceId,
+        )
+      : []
+  const toggleTrapHandToSupport = (id: string) => {
+    if (!trapHandToSupportCandidates.some((card) => card.instanceId === id)) {
+      return
+    }
+    setSelectedTrapHandToSupportIds((current) =>
+      current.includes(id)
+        ? current.filter((cId) => cId !== id)
+        : current.length < trapHandToSupportAmount
+          ? [...current, id]
+          : current,
+    )
+  }
   const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
   const trapTrashToDeckEffect = selectedTrap?.trap?.effects.find(
     (effect) => effect.kind === 'trash-to-deck',

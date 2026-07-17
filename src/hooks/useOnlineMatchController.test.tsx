@@ -125,4 +125,79 @@ describe('useOnlineMatchController', () => {
 
     await act(() => root.unmount())
   })
+
+  it('offers BS2-021-style support-to-hand and hand-to-support follow-up selections online', async () => {
+    const trap: GameCard = {
+      id: 'BS2-021',
+      instanceId: 'bs2-021-online',
+      name: 'Carrot Farm Scarecrow',
+      type: 'trap',
+      trap: {
+        text:
+          "Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, return 1 card from your support area to your hand. If you did, place 1 card from your hand into your support area as rested.",
+        cost: { energy: { green: 1 } },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'support-to-hand', amount: 1 },
+          { kind: 'hand-to-support', amount: 1 },
+        ],
+      },
+    }
+    let game = createBattleState()
+    game.players['player-one'].hand = [trap, ...game.players['player-one'].hand]
+    game.players['player-one'].supportArea = [
+      { card: item('green-support', 'green'), rested: false },
+      { card: item('returnable-support', 'red'), rested: false },
+    ]
+    game = declareAttack(game)
+
+    const sendCommand = vi.fn<(command: GameCommand) => void>()
+    let latest: ReturnType<typeof useOnlineMatchController> | undefined
+
+    function TestHarness() {
+      latest = useOnlineMatchController({
+        game,
+        viewerPlayerId: 'player-one',
+        sendCommand,
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => latest!.setSelectedTrapId(trap.instanceId))
+
+    expect(latest!.trapSupportToHandAmount).toBe(1)
+    expect(
+      latest!.trapSupportToHandCandidates.map((card) => card.instanceId),
+    ).toEqual(['green-support', 'returnable-support'])
+    expect(latest!.trapHandToSupportAmount).toBe(1)
+
+    await act(() => latest!.toggleTrapSupportToHand('returnable-support'))
+    expect(latest!.selectedTrapSupportToHandIds).toEqual(['returnable-support'])
+
+    expect(
+      latest!.trapHandToSupportCandidates.map((card) => card.instanceId),
+    ).toEqual(
+      expect.arrayContaining(
+        game.players['player-one'].hand
+          .filter((card) => card.instanceId !== trap.instanceId)
+          .map((card) => card.instanceId),
+      ),
+    )
+
+    const handToSupportTarget = latest!.trapHandToSupportCandidates[0]
+    await act(() => latest!.toggleTrapHandToSupport(handToSupportTarget.instanceId))
+    expect(latest!.selectedTrapHandToSupportIds).toEqual([
+      handToSupportTarget.instanceId,
+    ])
+
+    await act(() => root.unmount())
+  })
 })

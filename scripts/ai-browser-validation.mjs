@@ -253,7 +253,7 @@ try {
       const tableAreaRect = tableArea.getBoundingClientRect()
       const topField = document.querySelector('.top-field')
       const tableDivider = document.querySelector('.table-divider')
-      const tableDividerContent = tableDivider?.querySelector(':scope > div')
+      const tableDividerContent = tableDivider?.querySelector(':scope > :not(span)')
       if (
         !(topField instanceof HTMLElement) ||
         !(tableDivider instanceof HTMLElement) ||
