@@ -38,6 +38,13 @@ button.card-face {
   animation: target-pulse 1.1s ease-in-out infinite alternate;
 }
 
+.card-face.is-attackable:not(.is-selected) {
+  border-color: #ffb443;
+  box-shadow:
+    0 0 0 2px rgba(255, 180, 67, 0.32),
+    0 0 14px rgba(255, 180, 67, 0.4);
+}
+
 @keyframes target-pulse {
   from {
     box-shadow: 0 0 0 2px rgba(82, 230, 255, 0.3);
