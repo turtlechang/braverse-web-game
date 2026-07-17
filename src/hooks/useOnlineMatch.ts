@@ -10,8 +10,11 @@ import type {
   ClientMessage,
   OnlineOpeningAction,
   OnlineOpeningSnapshot,
+  PublicIntent,
+  PublicIntentDraft,
   ServerMessage,
 } from '../net/onlineProtocol'
+import { isPublicIntent } from '../net/onlineProtocol'
 
 export type OnlineMatchStatus =
   | 'idle'
@@ -39,6 +42,8 @@ const EMPTY_ATTACK_SELECTION: AttackSelectionPreview = {
   attackerInstanceId: null,
   supportPaymentIds: [],
 }
+
+const EMPTY_PUBLIC_INTENTS: Partial<Record<PlayerId, PublicIntent>> = {}
 
 type ConnectionPhase =
   | 'opening'
@@ -189,6 +194,20 @@ const parseServerMessage = (data: unknown): ServerMessage | null => {
         )
         ? (parsed as ServerMessage)
         : null
+    case 'public-intent-update':
+      return isPlayerId(parsed.playerId) &&
+        typeof parsed.sequence === 'number' &&
+        Number.isInteger(parsed.sequence) &&
+        parsed.sequence >= 0 &&
+        typeof parsed.stateVersion === 'number' &&
+        Number.isInteger(parsed.stateVersion) &&
+        parsed.stateVersion >= 0 &&
+        (parsed.intent === null ||
+          (isPublicIntent(parsed.intent) &&
+            parsed.intent.actorId === parsed.playerId &&
+            parsed.intent.sequence === parsed.sequence))
+        ? (parsed as ServerMessage)
+        : null
     case 'opening-update':
       return isPlayerId(parsed.viewerId) &&
         isOnlineOpeningSnapshotEnvelope(parsed.opening) &&
@@ -249,6 +268,9 @@ export function useOnlineMatch() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [opponentAttackSelection, setOpponentAttackSelection] =
     useState<AttackSelectionPreview>(EMPTY_ATTACK_SELECTION)
+  const [publicIntents, setPublicIntents] = useState<
+    Partial<Record<PlayerId, PublicIntent>>
+  >(EMPTY_PUBLIC_INTENTS)
   const [matchEndedReason, setMatchEndedReason] = useState<
     'victory' | 'defeat' | 'opponent-disconnected' | null
   >(null)
@@ -277,6 +299,7 @@ export function useOnlineMatch() {
       setOpeningSnapshot(null)
       setErrorMessage(null)
       setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
+      setPublicIntents(EMPTY_PUBLIC_INTENTS)
       setMatchEndedReason(null)
 
       let socket: WebSocket
@@ -381,6 +404,7 @@ export function useOnlineMatch() {
             connection.phase = 'in-progress'
             setViewerPlayerId(message.viewerId)
             setMaskedGame(message.state)
+            setPublicIntents(EMPTY_PUBLIC_INTENTS)
             setOpeningSnapshot(null)
             setStatus('in-progress')
             break
@@ -393,6 +417,7 @@ export function useOnlineMatch() {
             setViewerPlayerId(message.viewerId)
             setOpeningSnapshot(message.opening)
             setMaskedGame(message.state)
+            setPublicIntents(EMPTY_PUBLIC_INTENTS)
             setErrorMessage(null)
             setStatus('opening')
             break
@@ -403,6 +428,27 @@ export function useOnlineMatch() {
             break
           case 'opponent-attack-selection':
             setOpponentAttackSelection(message.selection)
+            break
+          case 'public-intent-update':
+            setPublicIntents((current) => {
+              const previous = current[message.playerId]
+              if (
+                previous &&
+                (message.sequence < previous.sequence ||
+                  (message.sequence === previous.sequence &&
+                    message.stateVersion < previous.stateVersion))
+              ) {
+                return current
+              }
+
+              const next = { ...current }
+              if (message.intent === null) {
+                delete next[message.playerId]
+              } else {
+                next[message.playerId] = message.intent
+              }
+              return next
+            })
             break
           case 'command-rejected':
             setErrorMessage(message.reason)
@@ -475,6 +521,20 @@ export function useOnlineMatch() {
     [send],
   )
 
+  const sendPublicIntent = useCallback(
+    (intent: PublicIntentDraft) => {
+      send({ type: 'set-public-intent', intent })
+    },
+    [send],
+  )
+
+  const clearPublicIntent = useCallback(
+    (intentId?: string) => {
+      send({ type: 'clear-public-intent', intentId })
+    },
+    [send],
+  )
+
   const leave = useCallback(() => {
     send({ type: 'leave-room' })
     closeActiveConnection()
@@ -485,6 +545,7 @@ export function useOnlineMatch() {
     setOpeningSnapshot(null)
     setErrorMessage(null)
     setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
+    setPublicIntents(EMPTY_PUBLIC_INTENTS)
     setMatchEndedReason(null)
   }, [send, closeActiveConnection])
 
@@ -496,12 +557,15 @@ export function useOnlineMatch() {
     openingSnapshot,
     errorMessage,
     opponentAttackSelection,
+    publicIntents,
     matchEndedReason,
     createRoom,
     joinRoom,
     sendCommand,
     sendOpeningAction,
     sendAttackSelection,
+    sendPublicIntent,
+    clearPublicIntent,
     leave,
   } as const
 }

@@ -379,10 +379,31 @@
   flex: 1;
 }
 
+.effect-panel-sticky-actions.is-confirm-only {
+  justify-content: flex-end;
+}
+
+.effect-panel-sticky-actions.is-confirm-only
+  .effect-panel-primary-action {
+  flex: 0 0 min(220px, 100%);
+  width: min(220px, 100%);
+  margin-left: auto;
+}
+
 .effect-panel button.effect-panel-back-action {
   border-color: rgba(255, 255, 255, 0.32);
   background: rgba(4, 34, 75, 0.72);
   color: #d8e9fb;
+}
+
+.effect-panel .optional-cost-attack-inline {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.effect-panel .optional-cost-attack-inline .modal-actions {
+  margin-top: 8px;
 }
 
 .effect-resolution-summary {
@@ -420,6 +441,15 @@
 
   .effect-panel-sticky-actions {
     flex-direction: column;
+  }
+
+  .effect-panel-sticky-actions.is-confirm-only {
+    flex-direction: row;
+  }
+
+  .effect-panel-sticky-actions.is-confirm-only
+    .effect-panel-primary-action {
+    flex-basis: min(220px, 100%);
   }
 
   .effect-panel-dock {

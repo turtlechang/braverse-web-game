@@ -283,18 +283,19 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
 const getEnergyColor = (
   source: OfficialCardRecord,
 ): GameCard['energyColor'] => {
-  const value =
-    source.energyType === 'MIX' ? 'wild' : source.color?.toLowerCase()
+  const color = source.color?.toLowerCase()
+  if (
+    color === 'red' ||
+    color === 'yellow' ||
+    color === 'green' ||
+    color === 'blue' ||
+    color === 'purple' ||
+    color === 'black'
+  ) {
+    return color
+  }
 
-  return value === 'red' ||
-    value === 'yellow' ||
-    value === 'green' ||
-    value === 'blue' ||
-    value === 'purple' ||
-    value === 'black' ||
-    value === 'wild'
-    ? value
-    : undefined
+  return source.energyType === 'MIX' ? 'wild' : undefined
 }
 
 export const createCard = (

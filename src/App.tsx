@@ -1,4 +1,3 @@
-import { Sparkles, Swords } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import './styles/base.css'
 import './App.css'
@@ -18,10 +17,13 @@ import {
   AttackPaymentPanel,
   SimulationReport,
 } from './components/panels/GameStatusPanels'
-import { phaseLabels, deckChoiceLabel } from './components/gameUiLabels'
+import { deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
+import { getOptionalCostAttackPrompt } from './components/modals/optionalCostAttackPrompt'
 import { StatusToast, CardPreviewPanel } from './components/panels/InteractionOverlays'
 import { BattleLogSidebar } from './components/panels/BattleLogSidebar'
+import { RemoteActionBanner } from './components/panels/RemoteActionBanner'
+import { deriveActionStatus } from './components/panels/actionStatus'
 import { MenuScreen } from './components/battle/MenuScreen'
 import type { OpeningSetupStep } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
@@ -122,6 +124,17 @@ function App() {
     aiLevel,
   })
 
+  const actionStatus = deriveActionStatus({
+    game: match.game,
+    viewerPlayerId: match.viewerPlayerId,
+    local: {
+      aiThinking: ai.aiThinking,
+      pendingEffect: pending.pendingEffect,
+      selectedAttackerId: match.selectedAttackerId,
+      attackPaymentValid: match.attackPaymentValidation.valid,
+    },
+  })
+
   const faintActive = pending.faintActive
 
   const resetGame = (
@@ -186,6 +199,11 @@ function App() {
 
   const currentJsxEffect = pending.currentEffect
   const playerHand = match.game.players[match.viewerPlayerId].hand
+  const optionalCostAttackPrompt =
+    match.game.pendingEffectOrder &&
+    !match.game.pendingEffectOrder.resolvedOrder
+      ? null
+      : getOptionalCostAttackPrompt(match.game, match.viewerPlayerId)
 
   const pe = pending.pendingEffect
   const showCancelSkill =
@@ -315,32 +333,7 @@ function App() {
 
         <div className="table-divider">
           <span />
-          <div role="status" aria-live="polite">
-            <strong>
-              {ai.aiThinking ? (
-                <>
-                  <Sparkles aria-hidden="true" /> AI 思考中
-                </>
-              ) : pending.pendingEffect ? (
-                <>
-                  <Sparkles aria-hidden="true" /> 選擇效果目標
-                </>
-              ) : faintActive ? (
-                <>
-                  <Sparkles aria-hidden="true" /> 選擇昏厥效果目標
-                </>
-              ) : match.selectedAttackerId ? (
-                <>
-                  <Swords aria-hidden="true" />{' '}
-                  {match.attackPaymentValidation.valid
-                    ? '付款完成，選擇攻擊目標'
-                    : '選擇支援卡支付攻擊費用'}
-                </>
-              ) : (
-                `${match.activePlayer.name} · ${phaseLabels[match.game.phase]}`
-              )}
-            </strong>
-          </div>
+          <RemoteActionBanner status={actionStatus} compact />
           <span />
         </div>
 
@@ -584,6 +577,36 @@ function App() {
         onToggleTrashBattleCookie={pending.toggleSkillTrashBattleCookie}
         trashBattleCookieCost={
           pending.pendingEffect?.skill.cost.trashBattleCookie?.count ?? 0
+        }
+        optionalCostAttack={
+          optionalCostAttackPrompt
+            ? {
+                ...optionalCostAttackPrompt,
+                onSkip: () => {
+                  match.dispatch(
+                    {
+                      kind: 'resolve-optional-cost-attack',
+                      playerId: match.viewerPlayerId,
+                      action: 'skip',
+                    },
+                    '撌脩??訾誨?寞????',
+                  )
+                },
+                onPay: (discardIds, targetId, paymentIds) => {
+                  match.dispatch(
+                    {
+                      kind: 'resolve-optional-cost-attack',
+                      playerId: match.viewerPlayerId,
+                      action: 'pay',
+                      discardCardIds: discardIds,
+                      targetIds: targetId ? [targetId] : [],
+                      paymentIds,
+                    },
+                    '撌脫隞?訾誨?寞????',
+                  )
+                },
+              }
+            : null
         }
       />
 

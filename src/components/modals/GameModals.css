@@ -646,6 +646,22 @@
   cursor: pointer;
 }
 
+.modal-card-options.trap-target-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  justify-content: stretch;
+  align-items: start;
+  max-height: min(360px, 42vh);
+  padding: 2px 4px 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.modal-card-options.trap-target-options > button {
+  width: 100%;
+  min-width: 0;
+}
+
 .modal-card-options .card-face {
   width: 88px;
 }

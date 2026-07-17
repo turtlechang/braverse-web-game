@@ -72,9 +72,16 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
         sendCommand={online.sendCommand}
         sendAttackSelection={online.sendAttackSelection}
         opponentAttackSelection={online.opponentAttackSelection}
+        publicIntent={
+          online.publicIntents?.[
+            online.viewerPlayerId === 'player-one' ? 'player-two' : 'player-one'
+          ] ?? null
+        }
         openingSnapshot={online.openingSnapshot}
         commandRejectedReason={online.errorMessage}
         sendOpeningAction={online.sendOpeningAction}
+        sendPublicIntent={online.sendPublicIntent}
+        clearPublicIntent={online.clearPublicIntent}
         onLeave={handleClose}
       />
     )

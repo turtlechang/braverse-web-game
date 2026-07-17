@@ -1,4 +1,5 @@
 import type {
+  CardType,
   CustomDeck,
   GameCard,
   GameCommand,
@@ -10,6 +11,118 @@ export interface AttackSelectionPreview {
   attackerInstanceId: string | null
   supportPaymentIds: string[]
 }
+
+/**
+ * 公開給對手看的互動範圍。只允許描述公開區域，避免把手牌／牌庫內容
+ * 當成即時提示傳出去。
+ */
+export type PublicTargetScope =
+  | 'opponent-battle-cookie'
+  | 'own-battle-cookie'
+  | 'support'
+  | 'break'
+  | 'discard'
+  | 'hand'
+  | 'deck'
+  | 'stage'
+  | 'public-card'
+
+export type PublicIntentStepState = 'done' | 'active' | 'pending'
+
+export interface PublicIntentProgressStep {
+  key: string
+  label: string
+  state: PublicIntentStepState
+}
+
+export interface PublicCardReference {
+  instanceId: string
+  id: string
+  name: string
+  type: CardType
+  ownerId: PlayerId
+}
+
+interface PublicIntentCommon {
+  intentId: string
+  actorId: PlayerId
+  sequence: number
+  stateVersion: number
+  updatedAt: string
+  expiresAt?: string
+  source?: PublicCardReference
+  highlightedTargetInstanceIds?: string[]
+  progress?: PublicIntentProgressStep[]
+}
+
+export type PublicIntent =
+  | (PublicIntentCommon & {
+      type: 'selecting-payment'
+      requiredCount: number
+      selectedCount: number
+    })
+  | (PublicIntentCommon & {
+      type: 'selecting-hidden-cost'
+      requiredCount: number
+      selectedCount: number
+      publicDescription: string
+    })
+  | (PublicIntentCommon & {
+      type: 'selecting-target'
+      targetScope: PublicTargetScope
+      requiredCount: number
+      selectedCount: number
+    })
+  | (PublicIntentCommon & {
+      type: 'awaiting-response'
+      responderId: PlayerId
+      responseType: 'trap' | 'flip' | 'effect'
+    })
+  | (PublicIntentCommon & {
+      type: 'resolving'
+      resolutionLabel?: string
+    })
+
+type PublicIntentDraftCommon = Omit<
+  PublicIntentCommon,
+  | 'intentId'
+  | 'actorId'
+  | 'sequence'
+  | 'stateVersion'
+  | 'updatedAt'
+  | 'expiresAt'
+  | 'source'
+> & {
+  sourceInstanceId?: string
+}
+
+export type PublicIntentDraft =
+  | (PublicIntentDraftCommon & {
+      type: 'selecting-payment'
+      requiredCount: number
+      selectedCount: number
+    })
+  | (PublicIntentDraftCommon & {
+      type: 'selecting-hidden-cost'
+      requiredCount: number
+      selectedCount: number
+      publicDescription: string
+    })
+  | (PublicIntentDraftCommon & {
+      type: 'selecting-target'
+      targetScope: PublicTargetScope
+      requiredCount: number
+      selectedCount: number
+    })
+  | (PublicIntentDraftCommon & {
+      type: 'awaiting-response'
+      responderId: PlayerId
+      responseType: 'trap' | 'flip' | 'effect'
+    })
+  | (PublicIntentDraftCommon & {
+      type: 'resolving'
+      resolutionLabel?: string
+    })
 
 export type RpsChoice = 'rock' | 'paper' | 'scissors'
 
@@ -66,6 +179,8 @@ export type ClientMessage =
   | { type: 'submit-opening-action'; action: OnlineOpeningAction }
   | { type: 'submit-command'; command: GameCommand }
   | { type: 'update-attack-selection'; selection: AttackSelectionPreview }
+  | { type: 'set-public-intent'; intent: PublicIntentDraft }
+  | { type: 'clear-public-intent'; intentId?: string }
   | { type: 'leave-room' }
 
 /**
@@ -84,6 +199,13 @@ export type ServerMessage =
   | { type: 'match-start'; seed: number; viewerId: PlayerId; state: GameState }
   | { type: 'state-update'; state: GameState }
   | { type: 'opponent-attack-selection'; selection: AttackSelectionPreview }
+  | {
+      type: 'public-intent-update'
+      playerId: PlayerId
+      sequence: number
+      stateVersion: number
+      intent: PublicIntent | null
+    }
   | { type: 'command-rejected'; reason: string }
   | {
       type: 'match-ended'
@@ -119,6 +241,123 @@ const isStringMatrix = (value: unknown): value is string[][] =>
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
+
+const publicTargetScopes: readonly PublicTargetScope[] = [
+  'opponent-battle-cookie',
+  'own-battle-cookie',
+  'support',
+  'break',
+  'discard',
+  'hand',
+  'deck',
+  'stage',
+  'public-card',
+]
+
+const publicIntentTypes = [
+  'selecting-payment',
+  'selecting-hidden-cost',
+  'selecting-target',
+  'awaiting-response',
+  'resolving',
+] as const
+
+const isPublicTargetScope = (value: unknown): value is PublicTargetScope =>
+  typeof value === 'string' && publicTargetScopes.includes(value as PublicTargetScope)
+
+const isCardType = (value: unknown): value is CardType =>
+  value === 'cookie' || value === 'item' || value === 'trap' || value === 'stage'
+
+const isPublicProgress = (value: unknown): value is PublicIntentProgressStep[] =>
+  Array.isArray(value) &&
+  value.every(
+    (step) =>
+      isRecord(step) &&
+      typeof step.key === 'string' &&
+      typeof step.label === 'string' &&
+      (step.state === 'done' || step.state === 'active' || step.state === 'pending'),
+  )
+
+const isPublicCardReference = (value: unknown): value is PublicCardReference =>
+  isRecord(value) &&
+  typeof value.instanceId === 'string' &&
+  typeof value.id === 'string' &&
+  typeof value.name === 'string' &&
+  isCardType(value.type) &&
+  isPlayerId(value.ownerId)
+
+const isStringArrayOrUndefined = (value: unknown): value is string[] | undefined =>
+  value === undefined || isStringArray(value)
+
+export const isPublicIntentDraft = (value: unknown): value is PublicIntentDraft => {
+  if (!isRecord(value) || !publicIntentTypes.includes(value.type as PublicIntent['type'])) {
+    return false
+  }
+
+  if (
+    (value.sourceInstanceId !== undefined && typeof value.sourceInstanceId !== 'string') ||
+    !isStringArrayOrUndefined(value.highlightedTargetInstanceIds) ||
+    (value.progress !== undefined && !isPublicProgress(value.progress))
+  ) {
+    return false
+  }
+
+  switch (value.type) {
+    case 'selecting-payment':
+    case 'selecting-hidden-cost':
+    case 'selecting-target':
+      if (
+        !isFiniteNumber(value.requiredCount) ||
+        !Number.isInteger(value.requiredCount) ||
+        value.requiredCount < 0 ||
+        !isFiniteNumber(value.selectedCount) ||
+        !Number.isInteger(value.selectedCount) ||
+        value.selectedCount < 0
+      ) {
+        return false
+      }
+      if (
+        value.type === 'selecting-hidden-cost' &&
+        typeof value.publicDescription !== 'string'
+      ) {
+        return false
+      }
+      return value.type !== 'selecting-target' || isPublicTargetScope(value.targetScope)
+    case 'awaiting-response':
+      return (
+        isPlayerId(value.responderId) &&
+        (value.responseType === 'trap' ||
+          value.responseType === 'flip' ||
+          value.responseType === 'effect')
+      )
+    case 'resolving':
+      return (
+        value.resolutionLabel === undefined ||
+        typeof value.resolutionLabel === 'string'
+      )
+    default:
+      return false
+  }
+}
+
+export const isPublicIntent = (value: unknown): value is PublicIntent => {
+  if (!isRecord(value) || !isPublicIntentDraft(value)) return false
+  const record = value as UnknownRecord
+
+  return (
+    typeof record.intentId === 'string' &&
+    isPlayerId(record.actorId) &&
+    isFiniteNumber(record.sequence) &&
+    Number.isInteger(record.sequence) &&
+    record.sequence >= 0 &&
+    isFiniteNumber(record.stateVersion) &&
+    Number.isInteger(record.stateVersion) &&
+    record.stateVersion >= 0 &&
+    typeof record.updatedAt === 'string' &&
+    (record.expiresAt === undefined || typeof record.expiresAt === 'string') &&
+    (record.source === undefined || isPublicCardReference(record.source))
+  )
+}
 
 const isCustomDeck = (value: unknown): value is CustomDeck =>
   isRecord(value) &&
@@ -375,6 +614,10 @@ export const isClientMessage = (value: unknown): value is ClientMessage => {
           typeof value.selection.attackerInstanceId === 'string') &&
         isStringArray(value.selection.supportPaymentIds)
       )
+    case 'set-public-intent':
+      return isPublicIntentDraft(value.intent)
+    case 'clear-public-intent':
+      return value.intentId === undefined || typeof value.intentId === 'string'
     case 'leave-room':
       return true
     default:

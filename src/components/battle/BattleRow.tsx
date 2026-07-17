@@ -188,6 +188,7 @@ export function BattleRow({
                       : canOperate &&
                           selectedAttackerId &&
                           !support.rested &&
+                          attackPaymentTargetIds.has(supportId) &&
                           onAttackPayment
                         ? () => onAttackPayment(supportId)
                         : () => onInspectCard(support.card)

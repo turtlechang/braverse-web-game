@@ -18,6 +18,10 @@ import {
   type GuidedPhaseId,
 } from './GuidedPhaseSteps'
 import type { PendingEffect } from './effectUiTypes'
+import {
+  OptionalCostAttackModal,
+  type OptionalCostAttackModalProps,
+} from '../modals/PendingDecisionModals'
 import './EffectPanel.css'
 
 export interface EffectPanelProps {
@@ -46,6 +50,7 @@ export interface EffectPanelProps {
   onToggleTrashBattleCookie?: (instanceId: string) => void
   trashBattleCookieCost?: number
   showTargetSelection?: boolean
+  optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
 }
 
 function CandidateButtons({
@@ -107,6 +112,7 @@ function EffectPanelContent({
   onToggleTrashBattleCookie,
   trashBattleCookieCost = 0,
   showTargetSelection = true,
+  optionalCostAttack = null,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
@@ -221,6 +227,15 @@ function EffectPanelContent({
   const hasPreviousPhase = activePhaseIndex > 0
   const hasNextPhase =
     activePhaseIndex >= 0 && activePhaseIndex < phaseIds.length - 1
+  const hasOptionalSkip =
+    pendingEffect !== null &&
+    !pendingEffect.skillActivated &&
+    (pendingEffect.optional === true ||
+      (currentEffect !== null &&
+        'optional' in currentEffect &&
+        currentEffect.optional === true))
+  const hasSecondaryAction =
+    Boolean(showCancelSkill) || hasOptionalSkip || hasPreviousPhase
   const goToPhase = (phase: GuidedPhaseId) => {
     setPhaseState({ signature: phaseSignature, phase })
   }
@@ -230,6 +245,15 @@ function EffectPanelContent({
       return
     }
     onConfirm()
+  }
+
+  if (optionalCostAttack) {
+    return (
+      <OptionalCostAttackModal
+        {...optionalCostAttack}
+        embedded
+      />
+    )
   }
 
   if (pendingEffect && currentEffect) {
@@ -378,7 +402,11 @@ function EffectPanelContent({
           </div>
         </div>
 
-        <div className="effect-panel-sticky-actions">
+        <div
+          className={`effect-panel-sticky-actions${
+            hasSecondaryAction ? '' : ' is-confirm-only'
+          }`}
+        >
           {showCancelSkill && (
             <button
               className="skip-effect"
@@ -388,8 +416,7 @@ function EffectPanelContent({
               取消技能
             </button>
           )}
-          {(pendingEffect.optional && !pendingEffect.skillActivated) ||
-          ('optional' in currentEffect && currentEffect.optional) ? (
+          {hasOptionalSkip ? (
             <button
               className="skip-effect"
               type="button"
@@ -445,8 +472,13 @@ function EffectPanelContent({
 
 export function EffectPanel(props: EffectPanelProps) {
   const [minimized, setMinimized] = useState(false)
+  const hasPendingPrompt = Boolean(props.pendingEffect || props.optionalCostAttack)
 
-  if (!props.pendingEffect && props.effectHistory.length === 0) {
+  if (
+    !props.pendingEffect &&
+    props.effectHistory.length === 0 &&
+    !props.optionalCostAttack
+  ) {
     return null
   }
 
@@ -470,11 +502,11 @@ export function EffectPanel(props: EffectPanelProps) {
     <div
       className="modal-backdrop"
       role="presentation"
-      style={props.pendingEffect ? undefined : { pointerEvents: 'none' }}
+      style={hasPendingPrompt ? undefined : { pointerEvents: 'none' }}
     >
       <section
-        className={`battle-response-modal effect-panel${props.pendingEffect ? '' : ' is-complete'}`}
-        role={props.pendingEffect ? 'alertdialog' : 'status'}
+        className={`battle-response-modal effect-panel${hasPendingPrompt ? '' : ' is-complete'}`}
+        role={hasPendingPrompt ? 'alertdialog' : 'status'}
         aria-live="polite"
       >
         {props.pendingEffect && (

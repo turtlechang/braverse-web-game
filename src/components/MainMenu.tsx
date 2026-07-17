@@ -81,8 +81,19 @@ export function MainMenu({
     <main className="main-menu-shell">
       <section className="main-menu-panel" aria-labelledby="main-menu-title">
         <div className="main-menu-heading">
-          <span>CookieRun Braverse</span>
-          <h1 id="main-menu-title">薑餅人對戰卡牌</h1>
+          <h1
+            id="main-menu-title"
+            className="main-menu-brand-title"
+            aria-label="薑餅人對戰卡牌 Braverse"
+          >
+            <span className="main-menu-brand-line main-menu-brand-line-top">
+              薑餅人
+            </span>
+            <span className="main-menu-brand-line main-menu-brand-line-main">
+              對戰卡牌
+            </span>
+            <span className="main-menu-brand-badge">BRAVERSE</span>
+          </h1>
           <p>
             {hasDecks
               ? '選擇一副合法牌組後開始對戰；AI 對手的牌組與等級可在下方指定，或維持隨機。'

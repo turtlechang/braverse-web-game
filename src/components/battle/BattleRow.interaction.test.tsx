@@ -2,7 +2,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createBattleState } from '../../game/test-helpers/battle-helpers'
+import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 
 const containers: HTMLDivElement[] = []
@@ -91,6 +91,62 @@ describe('BattleRow battle cookie interactions', () => {
 
     expect(onSelectAttacker).toHaveBeenCalledWith('attacker')
     expect(onSkillTrashBattleCookie).not.toHaveBeenCalled()
+    await act(() => root.unmount())
+  })
+
+  it('does not send an invalid-color support card to attack payment', async () => {
+    const game = createBattleState()
+    game.players['player-two'].battleArea[0].card.attackEnergyCost = {
+      green: 2,
+    }
+    game.players['player-two'].supportArea = [
+      { card: item('red-support', 'red'), rested: false },
+      { card: item('green-support-a', 'green'), rested: false },
+      { card: item('green-support-b', 'green'), rested: false },
+    ]
+    const onAttackPayment = vi.fn()
+    const onInspectCard = vi.fn()
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    const props: BattleRowProps = {
+      game,
+      playerId: 'player-two',
+      position: 'bottom',
+      selectedAttackerId: 'attacker',
+      effectTargetIds: new Set(),
+      breakEffectTargetIds: new Set(),
+      selectedEffectTargetIds: new Set(),
+      selectedSkillPaymentIds: new Set(),
+      selectedAttackPaymentIds: new Set(),
+      attackPaymentTargetIds: new Set(['green-support-a', 'green-support-b']),
+      attackPaymentValid: false,
+      interactionLocked: false,
+      onAttackPayment,
+      onInspectCard,
+      onInspectDiscard: vi.fn(),
+    }
+
+    await act(() => root.render(<BattleRow {...props} />))
+    const redSupportButton = container.querySelector<HTMLButtonElement>(
+      '[data-card-instance-id="red-support"] button',
+    )
+    const greenSupportButton = container.querySelector<HTMLButtonElement>(
+      '[data-card-instance-id="green-support-a"] button',
+    )
+    expect(redSupportButton).not.toBeNull()
+    expect(greenSupportButton).not.toBeNull()
+
+    await act(() => redSupportButton!.click())
+    expect(onAttackPayment).not.toHaveBeenCalled()
+    expect(onInspectCard).toHaveBeenCalledWith(
+      game.players['player-two'].supportArea[0].card,
+    )
+
+    await act(() => greenSupportButton!.click())
+    expect(onAttackPayment).toHaveBeenCalledWith('green-support-a')
     await act(() => root.unmount())
   })
 })

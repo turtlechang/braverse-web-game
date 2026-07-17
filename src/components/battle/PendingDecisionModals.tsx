@@ -1,14 +1,6 @@
-import {
-  getEffectTargetCandidates,
-  getEnergyCostTotal,
-  getRefreshCandidates,
-  isEffectTargeted,
-  type EnergyColor,
-  type EnergyCost,
-} from '../../game'
+import { getRefreshCandidates } from '../../game'
 import {
   DecisionModal,
-  OptionalCostAttackModal,
   InspectDeckModal,
   DrawUpToResponseModal,
   HandDiscardResponseModal,
@@ -36,16 +28,6 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       ? match.game.pendingInspectDeck
       : null
 
-  const pendingOptionalCost =
-    match.game.pendingOptionalCostAttack &&
-    match.game.pendingOptionalCostAttack.playerId === match.viewerPlayerId &&
-    !(
-      match.game.pendingEffectOrder &&
-      !match.game.pendingEffectOrder.resolvedOrder
-    )
-      ? match.game.pendingOptionalCostAttack
-      : null
-
   const pendingEffectOrder =
     match.game.pendingEffectOrder &&
     !match.game.pendingEffectOrder.resolvedOrder &&
@@ -55,71 +37,6 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
     !match.game.pendingOnPlay
       ? match.game.pendingEffectOrder
       : null
-
-  const optionalCostAttackTargetedEffect = pendingOptionalCost?.effects.find(
-    (effect) => isEffectTargeted(effect) || effect.kind === 'opponent-battle-to-trash',
-  )
-  const needsTarget = Boolean(optionalCostAttackTargetedEffect)
-  const optionalCostAttackNeedsTarget = needsTarget
-  const opponentBattleCards = (
-    optionalCostAttackTargetedEffect
-      ? optionalCostAttackTargetedEffect.kind === 'opponent-battle-to-trash'
-        ? (() => {
-            const btt = optionalCostAttackTargetedEffect as { kind: 'opponent-battle-to-trash'; maxLevel?: number; minLevel?: number; remainingHp?: number }
-            return getEffectTargetCandidates(
-              match.game,
-              {
-                sourcePlayerId: match.viewerPlayerId,
-                sourceInstanceId: pendingOptionalCost!.sourceInstanceId,
-              },
-              {
-                side: 'opponent',
-                min: 1,
-                max: 1,
-                ...(btt.maxLevel !== undefined ? { maxLevel: btt.maxLevel } : {}),
-                ...(btt.minLevel !== undefined ? { minLevel: btt.minLevel } : {}),
-                ...(btt.remainingHp !== undefined ? { remainingHp: btt.remainingHp } : {}),
-              },
-            ).map((cookie) => cookie.card)
-          })()
-        : getEffectTargetCandidates(
-            match.game,
-            {
-              sourcePlayerId: match.viewerPlayerId,
-              sourceInstanceId: pendingOptionalCost!.sourceInstanceId,
-            },
-            (optionalCostAttackTargetedEffect as { target: import('../../game').EffectTargetSelector }).target,
-          ).map((cookie) => cookie.card)
-      : match.game.players[match.opponentId].battleArea.map((cookie) => cookie.card)
-  ).map((card) => ({ card, instanceId: card.instanceId }))
-
-  const optionalCostAttackEnergyTotal = pendingOptionalCost
-    ? getEnergyCostTotal(pendingOptionalCost.cost.energy ?? {})
-    : 0
-  const optionalCostAttackEnergyCost =
-    pendingOptionalCost?.cost.energy ?? ({} as EnergyCost)
-  const optionalCostAttackRequiredColors = new Set(
-    (Object.keys(optionalCostAttackEnergyCost) as (EnergyColor | 'neutral')[]).filter(
-      (k) => (optionalCostAttackEnergyCost[k] ?? 0) > 0,
-    ),
-  )
-  const optionalCostAttackSupportCandidates = match.game.players[
-    match.viewerPlayerId
-  ].supportArea
-    .filter((support) => !support.rested)
-    .filter((support) => {
-      if (optionalCostAttackEnergyTotal <= 0) return true
-      if (!support.card.energyColor) return false
-      if (support.card.energyColor === 'wild') return true
-      if (optionalCostAttackRequiredColors.size === 0) return false
-      if (
-        optionalCostAttackRequiredColors.size === 1 &&
-        optionalCostAttackRequiredColors.has('neutral')
-      )
-        return true
-      return optionalCostAttackRequiredColors.has(support.card.energyColor)
-    })
-    .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return (
     <>
@@ -361,43 +278,6 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                 orderedIds,
               },
               '已決定同時觸發效果的處理順序。',
-            )
-          }}
-        />
-      )}
-
-      {pendingOptionalCost && (
-        <OptionalCostAttackModal
-          key={pendingOptionalCost.sourceInstanceId}
-          sourceCardName={pendingOptionalCost.sourceCardName}
-          effectText={pendingOptionalCost.effectText}
-          discardHandCost={pendingOptionalCost.cost.discardHand ?? 0}
-          energyCostTotal={optionalCostAttackEnergyTotal}
-          playerHand={match.game.players[match.viewerPlayerId].hand}
-          supportCandidates={optionalCostAttackSupportCandidates}
-          opponentBattleCards={opponentBattleCards}
-          needsTarget={optionalCostAttackNeedsTarget}
-          onSkip={() => {
-            match.dispatch(
-              {
-                kind: 'resolve-optional-cost-attack',
-                playerId: match.viewerPlayerId,
-                action: 'skip',
-              },
-              '已略過可選代價攻擊效果。',
-            )
-          }}
-          onPay={(discardIds, targetId, paymentIds) => {
-            match.dispatch(
-              {
-                kind: 'resolve-optional-cost-attack',
-                playerId: match.viewerPlayerId,
-                action: 'pay',
-                discardCardIds: discardIds,
-                targetIds: targetId ? [targetId] : [],
-                paymentIds,
-              },
-              '已支付可選代價攻擊效果。',
             )
           }}
         />

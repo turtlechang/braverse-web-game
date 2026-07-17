@@ -294,6 +294,7 @@ export interface OptionalCostAttackModalProps {
   needsTarget: boolean
   onSkip: () => void
   onPay: (discardIds: string[], targetId: string, paymentIds: string[]) => void
+  embedded?: boolean
 }
 
 type AttackPayStep = 'decision' | 'pay'
@@ -309,6 +310,7 @@ export function OptionalCostAttackModal({
   needsTarget,
   onSkip,
   onPay,
+  embedded = false,
 }: OptionalCostAttackModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<AttackPayStep>('decision')
@@ -376,12 +378,9 @@ export function OptionalCostAttackModal({
     )
   }
 
-  return (
-    <div className="modal-backdrop" role="presentation">
-      <section
-        className="battle-response-modal optional-cost-attack-modal"
-        role="alertdialog"
-      >
+  const optionalCostAttackContent = (
+    <>
+      {!embedded && (
         <button
           type="button"
           className="minimize-reveal"
@@ -391,6 +390,7 @@ export function OptionalCostAttackModal({
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
+      )}
         <span>攻擊可選效果</span>
         <h2>{sourceCardName}</h2>
         <p className="optional-cost-attack-text">{effectText}</p>
@@ -592,6 +592,24 @@ export function OptionalCostAttackModal({
             </div>
           </>
         )}
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div className="optional-cost-attack-inline">
+        {optionalCostAttackContent}
+      </div>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal optional-cost-attack-modal"
+        role="alertdialog"
+      >
+        {optionalCostAttackContent}
       </section>
     </div>
   )

@@ -285,6 +285,95 @@ describe('TrapResponseModal', () => {
     await act(() => root.unmount())
   })
 
+  it('lets the player choose the support card for a support-to-trash effect', async () => {
+    const trap: GameCard = {
+      id: 'ST3-019',
+      instanceId: 'st3-019-modal-test',
+      name: 'Supreme Whipped Cream',
+      type: 'trap',
+      trap: {
+        text: 'Place 1 card from your support area into the trash.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'support-to-trash', amount: 1 }],
+      },
+    }
+    const supportCards = [createHandCard(21), createHandCard(22)]
+    const onToggleSupportTrash = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        onSelectTrap={() => undefined}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        supportTrashCards={supportCards}
+        supportTrashAmount={1}
+        selectedSupportTrashIds={[]}
+        onToggleSupportTrash={onToggleSupportTrash}
+      />,
+    ))
+
+    expect(container.textContent).toContain('支援區')
+    await click(findButton(container, supportCards[1].name))
+    expect(onToggleSupportTrash).toHaveBeenCalledWith(supportCards[1].instanceId)
+
+    await act(() => root.unmount())
+  })
+
+  it('keeps every trap target button in a scrollable target list', () => {
+    const trap: GameCard = {
+      id: 'BS2-021',
+      instanceId: 'bs2-021-modal-test',
+      name: 'Carrot Farm Scarecrow',
+      type: 'trap',
+      trap: {
+        text: "Select up to 1 of your opponent's Cookies.",
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+    const targets = Array.from({ length: 8 }, (_, index) =>
+      createBattleCookie(index + 30),
+    )
+    const markup = renderToStaticMarkup(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[]}
+        targetCards={targets.map((target) => target.card)}
+        trapTargetCandidates={targets}
+        selectedTrapTargetId={null}
+        onSelectTrap={() => undefined}
+        onSelectTrapTarget={() => undefined}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    )
+
+    expect((markup.match(/class="is-selected"/g) ?? []).length).toBe(0)
+    expect(markup).toContain('trap-target-options')
+    expect((markup.match(/type="button"/g) ?? []).length).toBeGreaterThanOrEqual(9)
+  })
+
   it('returns to response selection without skipping the attack response', async () => {
     const trap: GameCard = {
       id: 'ST4-020',

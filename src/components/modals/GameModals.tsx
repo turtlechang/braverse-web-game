@@ -523,6 +523,10 @@ export interface TrapResponseModalProps {
   allowEmptyTarget?: boolean
   emptyTargetActive?: boolean
   onToggleEmptyTarget?: () => void
+  supportTrashCards?: GameCard[]
+  supportTrashAmount?: number
+  selectedSupportTrashIds?: string[]
+  onToggleSupportTrash?: (instanceId: string) => void
   supportToHandCards?: GameCard[]
   supportToHandAmount?: number
   selectedSupportToHandIds?: string[]
@@ -566,6 +570,10 @@ export function TrapResponseModal({
   allowEmptyTarget,
   emptyTargetActive,
   onToggleEmptyTarget,
+  supportTrashCards = [],
+  supportTrashAmount = 0,
+  selectedSupportTrashIds = [],
+  onToggleSupportTrash,
   supportToHandCards = [],
   supportToHandAmount = 0,
   selectedSupportToHandIds = [],
@@ -590,6 +598,7 @@ export function TrapResponseModal({
   const hasCostPhase = discardHandCost > 0 || battleCookieCost > 0
   const hasTargetPhase =
     (trapTargetCandidates.length > 0 && Boolean(onSelectTrapTarget)) ||
+    supportTrashAmount > 0 ||
     supportToHandAmount > 0 ||
     handToSupportAmount > 0 ||
     trashToDeckAmount > 0 ||
@@ -613,6 +622,9 @@ export function TrapResponseModal({
     selectedDiscardHandIds.length === discardHandCost &&
     selectedBattleCookieIds.length === battleCookieCost
   const targetReady =
+    (supportTrashAmount === 0 ||
+      supportTrashCards.length === 0 ||
+      selectedSupportTrashIds.length === supportTrashAmount) &&
     (supportToHandAmount === 0 ||
       supportToHandCards.length === 0 ||
       selectedSupportToHandIds.length === supportToHandAmount) &&
@@ -836,6 +848,25 @@ export function TrapResponseModal({
             {activePhase === 'target' && (
               <div className="trap-guided-section">
                 <span className="trap-response-col-label">目標</span>
+                {supportTrashAmount > 0 && supportTrashCards.length > 0 && (
+                  <>
+                    <strong>選擇 {supportTrashAmount} 張支援區卡牌置入棄牌區</strong>
+                    <div className="modal-card-options compact trap-discard-options">
+                      {supportTrashCards.map((card) => (
+                        <button
+                          type="button"
+                          className={selectedSupportTrashIds.includes(card.instanceId) ? 'is-selected' : ''}
+                          key={card.instanceId}
+                          onClick={() => onToggleSupportTrash?.(card.instanceId)}
+                        >
+                          <CardFace card={card} selected={selectedSupportTrashIds.includes(card.instanceId)} />
+                          <span>{card.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <span>已選 {selectedSupportTrashIds.length}／{supportTrashAmount}</span>
+                  </>
+                )}
                 {supportToHandAmount > 0 && supportToHandCards.length > 0 && (
                   <>
                     <strong>選擇 {supportToHandAmount} 張支援卡返回手牌</strong>

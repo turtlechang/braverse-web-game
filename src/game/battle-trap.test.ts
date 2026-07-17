@@ -219,6 +219,40 @@ describe('TRAP response window', () => {
     expect(getTrapCandidates(state, 'player-one')).toEqual([])
   })
 
+  it('requires support cards before offering a support-to-trash trap', () => {
+    const trap: GameCard = {
+      id: 'ST3-019',
+      instanceId: 'st3-019-test',
+      name: 'Supreme Whipped Cream',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: 'Place 1 card from your support area into the trash.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'support-to-trash', amount: 1 }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state.players['player-one'].supportArea = []
+    state = declareAttack(state)
+
+    expect(getTrapCandidates(state, 'player-one')).toEqual([])
+
+    const support = item('support-trash-option', 'green')
+    state.players['player-one'].supportArea = [{ card: support, rested: false }]
+    expect(getTrapCandidates(state, 'player-one')).toEqual([trap])
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: [],
+      supportTrashIds: [support.instanceId],
+    })
+    expect(result.players['player-one'].supportArea).toEqual([])
+    expect(result.players['player-one'].discardPile).toContainEqual(support)
+  })
+
   it('requires the player to choose exactly two hand cards for ST4-020', () => {
     const trap = discardCostTrap()
     const discardA = item('discard-a')

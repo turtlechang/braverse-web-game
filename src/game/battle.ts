@@ -271,6 +271,12 @@ export const getTrapCandidates = (
       Boolean(card.trap) &&
       isTrapConditionMet(state, playerId, card.trap!) &&
       hasRequiredTrapTargets(state, playerId, card) &&
+      player.supportArea.length >=
+        card.trap!.effects.reduce(
+          (total, effect) =>
+            effect.kind === 'support-to-trash' ? total + effect.amount : total,
+          0,
+        ) &&
       player.hand.filter(
         (handCard) =>
           handCard.instanceId !== card.instanceId &&
