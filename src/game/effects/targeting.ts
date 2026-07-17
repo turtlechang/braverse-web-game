@@ -13,6 +13,7 @@ import type {
   GameCard,
   GameState,
   PlayerId,
+  OpponentBattleToTrashEffect,
   TargetedCardEffect,
 } from '../types'
 import { getBreakAreaLevel } from '../victory'
@@ -128,6 +129,47 @@ export const getEffectTargetCandidates = (
     (cookie) => matchesSelector(cookie, selector, context, state),
   )
 
+/**
+ * 回傳沒有標準 `target` selector 的卡牌效果之合法目標。
+ *
+ * `opponent-battle-to-trash` 使用效果本身的等級／剩餘 HP 條件，
+ * 但在 UI、攻擊後續效果與規則驗證中仍必須和一般目標效果共用同一份候選。
+ */
+export const getEffectTargetCandidatesForEffect = (
+  state: GameState,
+  context: EffectContext,
+  effect: CardEffect,
+): CookieInBattle[] => {
+  if (effect.kind === 'opponent-battle-to-trash') {
+    const targetPlayer = state.players[getOpponentId(context.sourcePlayerId)]
+    const bttEffect: OpponentBattleToTrashEffect = effect
+    return targetPlayer.battleArea.filter((cookie) => {
+      if (
+        bttEffect.maxLevel !== undefined &&
+        cookie.card.level > bttEffect.maxLevel
+      ) {
+        return false
+      }
+      if (
+        bttEffect.minLevel !== undefined &&
+        cookie.card.level < bttEffect.minLevel
+      ) {
+        return false
+      }
+      if (
+        bttEffect.remainingHp !== undefined &&
+        cookie.hpCards.length > bttEffect.remainingHp
+      ) {
+        return false
+      }
+      return true
+    })
+  }
+
+  if (!isEffectTargeted(effect)) return []
+  return getEffectTargetCandidates(state, context, effect.target)
+}
+
 export const selectEffectTargets = (
   state: GameState,
   context: EffectContext,
@@ -184,8 +226,20 @@ export const isEffectUntargeted = (
 /** Effects that require the player to select 1+ targets, including opponent-battle-to-trash which has no standard `target` selector but still needs a target chosen. */
 export const requiresTargetSelection = (
   effect: CardEffect,
-): effect is CardEffect & { kind: 'opponent-battle-to-trash' } =>
+): effect is TargetedCardEffect | OpponentBattleToTrashEffect =>
   isEffectTargeted(effect) || effect.kind === 'opponent-battle-to-trash'
+
+export const hasRequiredEffectTargets = (
+  state: GameState,
+  context: EffectContext,
+  effect: CardEffect,
+): boolean => {
+  if (!requiresTargetSelection(effect)) return true
+  const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
+  const min =
+    effect.kind === 'opponent-battle-to-trash' ? 1 : effect.target.min
+  return candidates.length >= min
+}
 
 export const isEffectTargeted = (
   effect: CardEffect,

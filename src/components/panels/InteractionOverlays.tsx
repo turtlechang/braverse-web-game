@@ -1,15 +1,28 @@
 import { useEffect, useState } from 'react'
 import type { GameCard } from '../../game'
-import { CardFace } from '../cards/CardVisuals'
+import { CardEffectText, CardFace } from '../cards/CardVisuals'
 import './InteractionOverlays.css'
 
 export interface CardPreviewPanelProps {
   card: GameCard | null
   position: 'top' | 'bottom'
+  contextLabel?: string
 }
 
-export function CardPreviewPanel({ card, position }: CardPreviewPanelProps) {
+export function CardPreviewPanel({
+  card,
+  position,
+  contextLabel,
+}: CardPreviewPanelProps) {
   if (!card) return null
+
+  const effectText =
+    card.effectText ??
+    card.skill?.text ??
+    card.item?.text ??
+    card.trap?.text ??
+    card.stageAbility?.text ??
+    (card.type === 'cookie' ? card.attackText : undefined)
 
   return (
     <aside
@@ -19,8 +32,14 @@ export function CardPreviewPanel({ card, position }: CardPreviewPanelProps) {
     >
       <CardFace card={card} className="preview-card" />
       <div>
+        {contextLabel && <small className="card-preview-context">{contextLabel}</small>}
         <strong>{card.name}</strong>
         <small>{card.id} · {card.type.toUpperCase()}</small>
+        {effectText && (
+          <p className="card-preview-effect">
+            <CardEffectText text={effectText} />
+          </p>
+        )}
       </div>
     </aside>
   )

@@ -56,6 +56,12 @@ export interface BattleUiMatchLike {
   setSelectedTrapTargetId: (value: string | null) => void
   selectedTrapTargets: CookieInBattle[]
   selectedTrapSupportTrashIds: string[]
+  setSelectedTrapSupportTrashIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  trapSupportTrashCandidates: GameCard[]
+  trapSupportTrashAmount: number
+  toggleTrapSupportTrash: (instanceId: string) => void
   selectedTrapSupportToHandIds: string[]
   setSelectedTrapSupportToHandIds: (
     value: string[] | ((current: string[]) => string[]),

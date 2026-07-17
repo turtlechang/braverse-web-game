@@ -2,6 +2,14 @@ import { ScrollText, Swords, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CommandLogEntry, GameState, PlayerId } from '../../game'
 import { phaseLabels } from '../gameUiLabels'
+import {
+  CommandLogFilterBar,
+} from './CommandLogFilters'
+import {
+  emptyCommandLogFilters,
+  filterCommandLogEntries,
+  type CommandLogFilterState,
+} from './commandLogFilterUtils'
 import './OnlineActivityFeed.css'
 
 type ActivityEvent = {
@@ -12,15 +20,12 @@ type ActivityEvent = {
 
 const playerIds = ['player-one', 'player-two'] as const
 
-const actionEvent = (
-  entry: CommandLogEntry,
-  viewerPlayerId: PlayerId,
-): ActivityEvent => ({
+const actionEvent = (entry: CommandLogEntry, game: GameState): ActivityEvent => ({
   id: `command-${entry.id}`,
   kind: 'action',
-  message: `${entry.playerId === viewerPlayerId ? '你' : '對手'}：${
-    entry.summary ?? entry.commandKind
-  }`,
+  message:
+    entry.summary ??
+    `${game.players[entry.playerId]?.name ?? entry.playerId}：${entry.commandKind}`,
 })
 
 const battleStatus = (game: GameState, viewerPlayerId: PlayerId): string | null => {
@@ -34,23 +39,24 @@ const battleStatus = (game: GameState, viewerPlayerId: PlayerId): string | null 
 
   const battle = game.pendingBattle
   if (battle) {
-    const attacker = battle.attackerPlayerId === viewerPlayerId ? '你' : '對手'
+    const attacker = game.players[battle.attackerPlayerId].name
+    const defender = game.players[battle.defenderPlayerId].name
     switch (battle.stage) {
       case 'trap':
-        return `${attacker}已宣告攻擊，等待防守方回應。`
+        return `${attacker} 已宣告攻擊，等待 ${defender} 回應。`
       case 'damage':
         return '正在依序結算傷害。'
       case 'flip':
-        return '正在處理翻轉效果。'
+        return `${defender} 正在處理 FLIP 回應。`
       case 'attack-effect':
-        return `${attacker}正在處理攻擊效果。`
+        return `${attacker} 正在處理攻擊效果。`
     }
   }
 
   const faint = game.pendingFaintEffects?.[0]
   if (faint) {
-    const owner = faint.sourcePlayerId === viewerPlayerId ? '你' : '對手'
-    return `${owner}的 ${faint.sourceCardName ?? '餅乾'} 昏厥效果等待處理。`
+    const owner = game.players[faint.sourcePlayerId].name
+    return `${owner} 的 ${faint.sourceCardName ?? '餅乾'} 昏厥效果等待處理。`
   }
 
   return null
@@ -70,8 +76,11 @@ export function OnlineActivityFeed({
   viewerPlayerId,
 }: OnlineActivityFeedProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [filters, setFilters] = useState<CommandLogFilterState>(
+    emptyCommandLogFilters,
+  )
   const [events, setEvents] = useState<ActivityEvent[]>(() =>
-    (game.commandLog ?? []).slice(-4).map((entry) => actionEvent(entry, viewerPlayerId)),
+    (game.commandLog ?? []).slice(-4).map((entry) => actionEvent(entry, game)),
   )
   const previousGameRef = useRef(game)
   const status = useMemo(
@@ -79,6 +88,10 @@ export function OnlineActivityFeed({
     [game, viewerPlayerId],
   )
   const latestEvent = events.at(-1)
+  const filteredEntries = useMemo(
+    () => filterCommandLogEntries(game.commandLog ?? [], filters),
+    [filters, game.commandLog],
+  )
   const replacementPending = Boolean(game.pendingReplacement?.tasks[0])
   const peekMessage =
     replacementPending && status ? status : latestEvent?.message
@@ -89,40 +102,17 @@ export function OnlineActivityFeed({
     const newCommands = (game.commandLog ?? []).filter(
       (entry) => entry.id > previousLastLogId,
     )
-    const addedEvents = newCommands.map((entry) => actionEvent(entry, viewerPlayerId))
-
-    for (const entry of newCommands) {
-      const actor = entry.playerId === viewerPlayerId ? '你' : '對手'
-      if (entry.commandKind === 'play-trap') {
-        addedEvents.push({
-          id: `trap-${entry.id}`,
-          kind: 'action',
-          message: `${actor}的陷阱已觸發，正在結算效果。`,
-        })
-      }
-      if (
-        entry.commandKind === 'play-item' ||
-        entry.commandKind === 'begin-play-item'
-      ) {
-        addedEvents.push({
-          id: `item-${entry.id}`,
-          kind: 'action',
-          message: `${actor}使用物品，正在結算效果。`,
-        })
-      }
-    }
+    const addedEvents = newCommands.map((entry) => actionEvent(entry, game))
 
     const previousBattle = previous.pendingBattle
     const battle = game.pendingBattle
     if (battle?.stage === 'trap' && previousBattle?.stage !== 'trap') {
-      const attacker =
-        battle.attackerPlayerId === viewerPlayerId ? '你' : '對手'
-      const defender =
-        battle.defenderPlayerId === viewerPlayerId ? '你' : '對手'
+      const attacker = game.players[battle.attackerPlayerId].name
+      const defender = game.players[battle.defenderPlayerId].name
       addedEvents.push({
         id: `trap-window-${battle.attackerInstanceId}-${game.turnNumber}`,
         kind: 'action',
-        message: `${attacker}宣告攻擊，${defender}可使用陷阱或阻擋。`,
+        message: `${attacker} 已宣告攻擊，${defender} 可使用陷阱或阻擋。`,
       })
     }
     if (
@@ -130,15 +120,14 @@ export function OnlineActivityFeed({
       (previousBattle?.stage !== 'flip' ||
         previousBattle.revealedHpCard?.instanceId !== battle.revealedHpCard?.instanceId)
     ) {
-      const owner =
-        (battle.damagePlayerId ?? battle.defenderPlayerId) === viewerPlayerId
-          ? '你'
-          : '對手'
+      const owner = game.players[
+        battle.damagePlayerId ?? battle.defenderPlayerId
+      ].name
       const cardName = battle.revealedHpCard?.name
       addedEvents.push({
         id: `flip-${battle.revealedHpCard?.instanceId ?? game.turnNumber}`,
         kind: 'action',
-        message: `${owner}翻開${cardName ? ` ${cardName}` : '一張 HP 卡'}，FLIP 效果觸發。`,
+        message: `${owner} 翻開${cardName ? ` ${cardName}` : '一張 HP 卡'}，FLIP 效果觸發。`,
       })
     }
 
@@ -148,11 +137,11 @@ export function OnlineActivityFeed({
       )
       for (const card of game.players[playerId].breakArea) {
         if (previousBreakIds.has(card.instanceId)) continue
-        const owner = playerId === viewerPlayerId ? '你的' : '對手的'
+        const owner = game.players[playerId].name
         addedEvents.push({
           id: `faint-${card.instanceId}-${game.turnNumber}`,
           kind: 'faint',
-          message: `${owner} ${card.name} 昏厥，移至 Break 區。`,
+          message: `${owner} 的 ${card.name} 昏厥，移至 Break 區。`,
         })
       }
     }
@@ -224,11 +213,23 @@ export function OnlineActivityFeed({
             </ol>
           </section>
 
+          <CommandLogFilterBar
+            entries={game.commandLog ?? []}
+            playerNames={{
+              'player-one': game.players['player-one'].name,
+              'player-two': game.players['player-two'].name,
+            }}
+            value={filters}
+            onChange={setFilters}
+          />
+
           <section className="online-activity-history">
-            <strong>完整紀錄</strong>
+            <strong>
+              完整紀錄（{filteredEntries.length}/{game.commandLog?.length ?? 0}）
+            </strong>
             <ol>
-              {game.commandLog?.length ? (
-                [...game.commandLog].reverse().map((entry) => (
+              {filteredEntries.length ? (
+                [...filteredEntries].reverse().map((entry) => (
                   <li key={entry.id}>
                     <span>
                       第 {entry.turnNumber} 回合・{phaseLabels[entry.phase]}
@@ -237,7 +238,9 @@ export function OnlineActivityFeed({
                   </li>
                 ))
               ) : (
-                <li className="is-empty">尚無對戰紀錄。</li>
+                <li className="is-empty">
+                  {game.commandLog?.length ? '沒有符合篩選條件的紀錄。' : '尚無對戰紀錄。'}
+                </li>
               )}
             </ol>
           </section>

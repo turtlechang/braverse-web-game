@@ -15,6 +15,9 @@ import {
 } from '../../src/game'
 import {
   isValidOnlinePlayerName,
+  type PublicCardReference,
+  type PublicIntent,
+  type PublicIntentDraft,
   type OnlineOpeningAction,
   type OnlineOpeningRpsResult,
   type OnlineOpeningSnapshot,
@@ -24,6 +27,9 @@ import {
 
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 4
+
+/** 公開決策提示的伺服器權威倒數；不直接替玩家自動選擇，只提供同步期限。 */
+export const PUBLIC_INTENT_DEADLINE_MS = 45_000
 
 export interface RoomSlot {
   playerId: PlayerId
@@ -54,6 +60,8 @@ export interface Room {
   state: GameState | null
   seed: number | null
   opening: RoomOpeningState | null
+  publicIntents: Partial<Record<PlayerId, PublicIntent>>
+  publicIntentSequences: Record<PlayerId, number>
 }
 
 export class RoomNotFoundError extends Error {}
@@ -100,6 +108,11 @@ export class RoomStore {
       state: null,
       seed: null,
       opening: null,
+      publicIntents: {},
+      publicIntentSequences: {
+        'player-one': 0,
+        'player-two': 0,
+      },
     }
     this.rooms.set(code, room)
     return room
@@ -433,6 +446,79 @@ export class RoomStore {
     room.state = nextState
     return nextState
   }
+
+  setPublicIntent(
+    room: Room,
+    playerId: PlayerId,
+    draft: PublicIntentDraft,
+  ): PublicIntent {
+    const sequence = (room.publicIntentSequences[playerId] ?? 0) + 1
+    room.publicIntentSequences[playerId] = sequence
+
+    const source = draft.sourceInstanceId
+      ? publicCardReferenceFor(room, playerId, draft.sourceInstanceId)
+      : undefined
+    const previous = room.publicIntents[playerId]
+    const sameDecisionStage =
+      previous?.type === draft.type &&
+      previous.source?.instanceId === source?.instanceId
+    const expiresAt =
+      draft.type === 'resolving'
+        ? undefined
+        : sameDecisionStage && previous.expiresAt
+          ? previous.expiresAt
+          : new Date(Date.now() + PUBLIC_INTENT_DEADLINE_MS).toISOString()
+    const actorSource = source?.ownerId === playerId ? source : undefined
+    const highlightedTargetInstanceIds = draft.highlightedTargetInstanceIds
+      ? [...
+          new Set(
+            draft.highlightedTargetInstanceIds.filter((instanceId) =>
+              publicCardReferenceFor(room, playerId, instanceId),
+            ),
+          )]
+      : undefined
+    const safeDraft = { ...draft } as Record<string, unknown>
+    delete safeDraft.sourceInstanceId
+    delete safeDraft.highlightedTargetInstanceIds
+    delete safeDraft.source
+    delete safeDraft.intentId
+    delete safeDraft.actorId
+    delete safeDraft.sequence
+    delete safeDraft.stateVersion
+    delete safeDraft.updatedAt
+    delete safeDraft.expiresAt
+
+    const intent = {
+      ...safeDraft,
+      intentId: `${playerId}-${sequence}`,
+      actorId: playerId,
+      sequence,
+      stateVersion: stateVersionFor(room),
+      updatedAt: new Date().toISOString(),
+      ...(actorSource ? { source: actorSource } : {}),
+      ...(highlightedTargetInstanceIds?.length
+        ? { highlightedTargetInstanceIds }
+        : {}),
+      ...(expiresAt ? { expiresAt } : {}),
+    } as PublicIntent
+
+    room.publicIntents[playerId] = intent
+    return intent
+  }
+
+  clearPublicIntent(
+    room: Room,
+    playerId: PlayerId,
+    intentId?: string,
+  ): boolean {
+    const current = room.publicIntents[playerId]
+    if (!current || (intentId && current.intentId !== intentId)) return false
+
+    delete room.publicIntents[playerId]
+    room.publicIntentSequences[playerId] =
+      (room.publicIntentSequences[playerId] ?? current.sequence) + 1
+    return true
+  }
 }
 
 const opponentOf = (playerId: PlayerId): PlayerId =>
@@ -447,6 +533,56 @@ export const maskedStateFor = (
   if (!room.state) return null
   return maskGameStateForViewer(room.state, playerId)
 }
+
+export const stateVersionFor = (room: Room): number =>
+  room.state?.commandLog?.length ?? 0
+
+const publicCardsFor = (room: Room): Array<{
+  card: GameCard
+  ownerId: PlayerId
+}> => {
+  if (!room.state) return []
+
+  return (['player-one', 'player-two'] as const).flatMap((ownerId) => {
+    const player = room.state!.players[ownerId]
+    return [
+      ...player.battleArea.map(({ card }) => ({ card, ownerId })),
+      ...player.supportArea.map(({ card }) => ({ card, ownerId })),
+      ...player.breakArea.map((card) => ({ card, ownerId })),
+      ...player.discardPile.map((card) => ({ card, ownerId })),
+      ...(player.stage ? [{ card: player.stage.card, ownerId }] : []),
+    ]
+  })
+}
+
+export const publicCardReferenceFor = (
+  room: Room,
+  _viewerId: PlayerId,
+  instanceId: string,
+): PublicCardReference | undefined => {
+  const entry = publicCardsFor(room).find(
+    ({ card }) => card.instanceId === instanceId,
+  )
+  if (!entry) return undefined
+
+  return {
+    instanceId: entry.card.instanceId,
+    id: entry.card.id,
+    name: entry.card.name,
+    type: entry.card.type,
+    ownerId: entry.ownerId,
+  }
+}
+
+export const publicIntentFor = (
+  room: Room,
+  playerId: PlayerId,
+): PublicIntent | null => room.publicIntents[playerId] ?? null
+
+export const publicIntentSequenceFor = (
+  room: Room,
+  playerId: PlayerId,
+): number => room.publicIntentSequences[playerId] ?? 0
 
 export const openingSnapshotFor = (
   room: Room,

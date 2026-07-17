@@ -1,6 +1,7 @@
 import type { CustomDeck, GameCommand, PlayerId } from '../../src/game'
 import {
   isClientMessage,
+  type PublicIntentDraft,
   type AttackSelectionPreview,
   type ClientMessage,
   type ServerMessage,
@@ -9,6 +10,9 @@ import {
   RoomStore,
   maskedStateFor,
   openingSnapshotFor,
+  publicIntentFor,
+  publicIntentSequenceFor,
+  stateVersionFor,
   type Room,
 } from './rooms'
 
@@ -128,6 +132,12 @@ export class ConnectionManager {
       case 'update-attack-selection':
         this.handleAttackSelection(socket, message.selection)
         return
+      case 'set-public-intent':
+        this.handleSetPublicIntent(socket, message.intent)
+        return
+      case 'clear-public-intent':
+        this.handleClearPublicIntent(socket, message.intentId)
+        return
       case 'leave-room':
         this.handleDisconnect(socket)
         return
@@ -228,20 +238,79 @@ export class ConnectionManager {
       return
     }
 
+    const clearedPublicIntent = this.store.clearPublicIntent(
+      room,
+      info.playerId,
+    )
+
     this.sendToSlot(room, 'player-one', {
       type: 'state-update',
       state: maskedStateFor(room, 'player-one')!,
+      updatedBy: info.playerId,
     })
     this.sendToSlot(room, 'player-two', {
       type: 'state-update',
       state: maskedStateFor(room, 'player-two')!,
+      updatedBy: info.playerId,
     })
+
+    if (clearedPublicIntent) {
+      this.broadcastPublicIntent(room, info.playerId)
+    }
 
     const result = room.state?.result
     if (room.state?.status !== 'playing' && result) {
       this.sendToSlot(room, result.winnerId, { type: 'match-ended', reason: 'victory' })
       this.sendToSlot(room, result.loserId, { type: 'match-ended', reason: 'defeat' })
       this.store.deleteRoom(room.code)
+    }
+  }
+
+  private broadcastPublicIntent(room: Room, playerId: PlayerId): void {
+    const message: ServerMessage = {
+      type: 'public-intent-update',
+      playerId,
+      sequence: publicIntentSequenceFor(room, playerId),
+      stateVersion: stateVersionFor(room),
+      intent: publicIntentFor(room, playerId),
+    }
+
+    this.sendToSlot(room, 'player-one', message)
+    this.sendToSlot(room, 'player-two', message)
+  }
+
+  private handleSetPublicIntent(
+    socket: SocketLike,
+    draft: PublicIntentDraft,
+  ): void {
+    const info = this.connections.get(socket)
+    if (!info) return
+    const room = this.store.getRoom(info.code)
+    if (!room || room.status !== 'in-progress' || !room.state) return
+
+    const intent = this.store.setPublicIntent(room, info.playerId, draft)
+    const message: ServerMessage = {
+      type: 'public-intent-update',
+      playerId: info.playerId,
+      sequence: intent.sequence,
+      stateVersion: intent.stateVersion,
+      intent,
+    }
+    this.sendToSlot(room, 'player-one', message)
+    this.sendToSlot(room, 'player-two', message)
+  }
+
+  private handleClearPublicIntent(
+    socket: SocketLike,
+    intentId?: string,
+  ): void {
+    const info = this.connections.get(socket)
+    if (!info) return
+    const room = this.store.getRoom(info.code)
+    if (!room || room.status !== 'in-progress') return
+
+    if (this.store.clearPublicIntent(room, info.playerId, intentId)) {
+      this.broadcastPublicIntent(room, info.playerId)
     }
   }
 

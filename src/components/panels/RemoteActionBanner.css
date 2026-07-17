@@ -1,0 +1,220 @@
+.remote-action-banner {
+  min-width: 0;
+  max-width: min(580px, 52vw);
+  display: grid;
+  gap: 3px;
+  padding: 6px 14px;
+  border: 1px solid rgba(138, 212, 255, 0.32);
+  border-radius: 999px;
+  color: #e9f8ff;
+  background: rgba(2, 19, 52, 0.78);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+  text-align: center;
+  backdrop-filter: blur(8px);
+}
+
+.remote-action-banner.is-opponent-thinking,
+.remote-action-banner.is-awaiting-opponent-decision {
+  border-color: rgba(129, 224, 255, 0.42);
+}
+
+.remote-action-banner.is-awaiting-local-decision {
+  border-color: rgba(255, 241, 124, 0.6);
+  box-shadow: 0 0 16px rgba(255, 241, 124, 0.16);
+}
+
+.remote-action-banner.is-resolving {
+  border-color: rgba(194, 162, 255, 0.58);
+}
+
+.remote-action-banner.is-syncing,
+.remote-action-banner.is-reconnecting {
+  border-color: rgba(255, 190, 121, 0.62);
+}
+
+.remote-action-banner-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 0.76rem;
+}
+
+.remote-action-banner-heading svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+}
+
+.remote-action-banner.is-resolving .remote-action-banner-heading svg {
+  animation: remote-action-banner-spin 1.2s linear infinite;
+}
+
+.remote-action-banner-heading strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remote-action-banner-mode {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid rgba(138, 212, 255, 0.28);
+  border-radius: 999px;
+  color: rgba(216, 239, 255, 0.72);
+  font-size: 0.56rem;
+  font-weight: 800;
+}
+
+.remote-action-banner-detail {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(216, 239, 255, 0.68);
+  font-size: 0.61rem;
+  font-weight: 600;
+}
+
+.remote-action-banner-detail.is-compact {
+  gap: 5px;
+  color: rgba(216, 239, 255, 0.62);
+  font-size: 0.54rem;
+}
+
+.remote-action-banner-detail > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remote-action-banner-detail small {
+  color: #fff17c;
+  font-size: inherit;
+  font-weight: 800;
+}
+
+.remote-action-banner-detail .remote-action-banner-connection {
+  color: #baf3ff;
+}
+
+.remote-action-banner-detail time {
+  flex: 0 0 auto;
+  color: #fff17c;
+  font-size: inherit;
+  font-weight: 900;
+}
+
+.remote-action-banner-detail time.is-expired {
+  color: #ffb4b4;
+}
+
+.remote-action-banner-progress {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.remote-action-banner-progress li {
+  padding: 1px 5px;
+  border-radius: 999px;
+  color: rgba(216, 239, 255, 0.46);
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.54rem;
+  font-weight: 800;
+}
+
+.remote-action-banner-progress li.is-pending {
+  color: rgba(216, 239, 255, 0.5);
+  border: 1px dashed rgba(216, 239, 255, 0.2);
+}
+
+.remote-action-banner-progress li.is-active {
+  color: #fff17c;
+  background: rgba(255, 241, 124, 0.14);
+}
+
+.remote-action-banner-progress li.is-done {
+  color: #baf3ff;
+  background: rgba(129, 224, 255, 0.13);
+}
+
+.remote-action-banner.is-compact {
+  width: 100%;
+  max-width: min(580px, 52vw);
+  padding: 3px 10px;
+  border-color: rgba(138, 212, 255, 0.18);
+  background: rgba(2, 19, 52, 0.42);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.remote-action-banner.is-compact .remote-action-banner-heading {
+  font-size: 0.76rem;
+}
+
+.remote-action-banner.is-compact .remote-action-banner-progress {
+  gap: 2px;
+}
+
+.remote-action-banner.is-compact .remote-action-banner-progress li {
+  padding: 1px 4px;
+  font-size: 0.48rem;
+}
+
+@keyframes remote-action-banner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remote-action-banner.is-resolving .remote-action-banner-heading svg {
+    animation: none;
+  }
+}
+
+@container game-shell (max-width: 900px) {
+  .remote-action-banner {
+    max-width: 70vw;
+    padding: 2px 7px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .remote-action-banner-heading {
+    gap: 4px;
+    font-size: 0.54rem;
+  }
+
+  .remote-action-banner-heading svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .remote-action-banner-mode {
+    display: none;
+  }
+
+  .remote-action-banner.is-compact {
+    max-width: 70vw;
+    padding: 0 4px;
+  }
+}
+
+@container game-shell (max-width: 900px) and (max-height: 400px) {
+  .remote-action-banner-heading {
+    font-size: 0.46rem;
+  }
+
+  .remote-action-banner-heading svg {
+    width: 10px;
+    height: 10px;
+  }
+}

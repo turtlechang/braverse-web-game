@@ -3,7 +3,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
-import { createBattleState } from '../../game/test-helpers/battle-helpers'
+import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import { OnlineBattleView } from './OnlineBattleView'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -71,6 +71,69 @@ describe('OnlineBattleView resource inspection', () => {
 
     await act(() => discardButton.click())
     expect(container.querySelector('.card-pile-modal')).not.toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('lets the online player click a support card while paying attack energy', async () => {
+    const game = createBattleState()
+    const attacker = game.players['player-two'].battleArea[0].card
+    attacker.id = 'BS1-007'
+    attacker.name = 'Melon Bun Cookie'
+    attacker.attackCost = 3
+    attacker.attackEnergyCost = { neutral: 3 }
+    game.players['player-two'].supportArea = [
+      { card: item('p2-support-1', 'red'), rested: false },
+      { card: item('p2-support-2', 'blue'), rested: false },
+      { card: item('p2-support-3', undefined), rested: false },
+    ]
+    const sendAttackSelection = vi.fn()
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OnlineBattleView
+          game={game}
+          viewerPlayerId="player-two"
+          roomCode="TEST"
+          sendCommand={vi.fn()}
+          sendAttackSelection={sendAttackSelection}
+          opponentAttackSelection={{
+            attackerInstanceId: null,
+            supportPaymentIds: [],
+          }}
+          openingSnapshot={null}
+          commandRejectedReason={null}
+          sendOpeningAction={vi.fn()}
+          onLeave={vi.fn()}
+        />,
+      ),
+    )
+
+    sendAttackSelection.mockClear()
+    const attackerButton = container.querySelector<HTMLButtonElement>(
+      '.bottom-field .combat-card-wrap button',
+    )
+    expect(attackerButton).not.toBeNull()
+
+    await act(() => attackerButton!.click())
+    sendAttackSelection.mockClear()
+
+    const supportButton = container.querySelector<HTMLButtonElement>(
+      '[data-card-instance-id="p2-support-1"] button',
+    )
+    expect(supportButton).not.toBeNull()
+    expect(supportButton!.className).toContain('is-targetable')
+
+    await act(() => supportButton!.click())
+
+    expect(sendAttackSelection).toHaveBeenLastCalledWith({
+      attackerInstanceId: 'attacker',
+      supportPaymentIds: ['p2-support-1'],
+    })
 
     await act(() => root.unmount())
     container.remove()

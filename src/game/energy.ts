@@ -28,6 +28,26 @@ export const getEnergyCostTotal = (cost: EnergyCost): number =>
 export const getAttackEnergyCost = (card: CookieCard): EnergyCost =>
   card.attackEnergyCost ?? { neutral: card.attackCost }
 
+/**
+ * 判斷支援卡是否值得在目前費用中列為可選候選。
+ *
+ * 中性費用可以由任何未橫置的支援卡支付；若同時包含指定顏色與中性
+ * 費用，其他顏色的卡仍可能支付中性部分，最後的完整合法性仍由
+ * `validateEnergyPayment` 確認。
+ */
+export const isEnergyColorCompatibleWithCost = (
+  cost: EnergyCost,
+  energyColor: SupportCard['card']['energyColor'],
+): boolean => {
+  if ((cost.neutral ?? 0) > 0) return true
+  if (!energyColor) return false
+  if (energyColor === 'wild') return true
+
+  return ENERGY_COLORS.some((color) =>
+    color === energyColor && (cost[color] ?? 0) > 0,
+  )
+}
+
 export const validateEnergyPayment = (
   cost: EnergyCost,
   supports: SupportCard[],

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { OFFICIAL_RED_STARTER_DECK, type CustomDeck } from '../../src/game'
-import { RoomStore, openingSnapshotFor, type Room } from './rooms'
+import {
+  RoomStore,
+  openingSnapshotFor,
+  publicIntentFor,
+  publicIntentSequenceFor,
+  type Room,
+} from './rooms'
 
 const createTestDeck = (id: string): CustomDeck => ({
   id,
@@ -73,6 +79,50 @@ const completeOpening = (store: RoomStore, room: Room): Room => {
 }
 
 describe('RoomStore', () => {
+  it('公開意圖只解析公開區域，並以序號保護清除事件', () => {
+    const store = new RoomStore()
+    const created = store.createRoom(createTestDeck('one'), noop)
+    const room = store.joinRoom(created.code, createTestDeck('two'), noop, 42)
+    completeOpening(store, room)
+
+    const source = room.state!.players['player-one'].battleArea[0].card
+    const opponentCookie = room.state!.players['player-two'].battleArea[0].card
+    const hiddenCard = room.state!.players['player-one'].hand[0]
+    const intent = store.setPublicIntent(room, 'player-one', {
+      type: 'selecting-target',
+      sourceInstanceId: source.instanceId,
+      targetScope: 'opponent-battle-cookie',
+      requiredCount: 1,
+      selectedCount: 1,
+      highlightedTargetInstanceIds: [
+        opponentCookie.instanceId,
+        hiddenCard.instanceId,
+      ],
+    })
+
+    expect(intent.source?.instanceId).toBe(source.instanceId)
+    expect(intent.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(intent.highlightedTargetInstanceIds).toEqual([
+      opponentCookie.instanceId,
+    ])
+    expect(publicIntentFor(room, 'player-one')).toEqual(intent)
+    const updatedIntent = store.setPublicIntent(room, 'player-one', {
+      type: 'selecting-target',
+      sourceInstanceId: source.instanceId,
+      targetScope: 'opponent-battle-cookie',
+      requiredCount: 1,
+      selectedCount: 0,
+      highlightedTargetInstanceIds: [],
+    })
+    expect(updatedIntent.expiresAt).toBe(intent.expiresAt)
+    expect(publicIntentSequenceFor(room, 'player-one')).toBe(2)
+
+    expect(store.clearPublicIntent(room, 'player-one', 'stale-id')).toBe(false)
+    expect(store.clearPublicIntent(room, 'player-one', updatedIntent.intentId)).toBe(true)
+    expect(publicIntentFor(room, 'player-one')).toBeNull()
+    expect(publicIntentSequenceFor(room, 'player-one')).toBe(3)
+  })
+
   it('建立房間會產生房號並處於等待狀態', () => {
     const store = new RoomStore()
     const room = store.createRoom(createTestDeck('one'), noop)

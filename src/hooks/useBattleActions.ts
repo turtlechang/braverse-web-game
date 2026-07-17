@@ -2,8 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 import {
   getAttackEnergyCost,
   getEnergyCostTotal,
+  isEnergyColorCompatibleWithCost,
   validateEnergyPayment,
-  type EnergyColor,
   type GameCommand,
   type GameState,
 } from '../game'
@@ -45,24 +45,6 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
     ? getAttackEnergyCost(selectedAttacker.card)
     : {}
 
-  const getRequiredColors = (cost: Record<string, number | undefined>): Set<EnergyColor | 'neutral'> =>
-    new Set(
-      (Object.keys(cost) as (EnergyColor | 'neutral')[]).filter(
-        (k) => (cost[k] ?? 0) > 0,
-      ),
-    )
-
-  const checkColorCompatible = (
-    cardColor: EnergyColor | 'wild' | undefined,
-    requiredColors: Set<EnergyColor | 'neutral'>,
-  ): boolean => {
-    if (!cardColor) return false
-    if (cardColor === 'wild') return true
-    if (requiredColors.size === 0) return false
-    if (requiredColors.size === 1 && requiredColors.has('neutral')) return true
-    return requiredColors.has(cardColor)
-  }
-
   const attackPaymentTargetIds = useMemo(() => {
     if (!selectedAttackerId) return new Set<string>()
     const attacker = activePlayer.battleArea.find(
@@ -72,14 +54,13 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
     const cost = getAttackEnergyCost(attacker.card)
     const totalCost = getEnergyCostTotal(cost)
     if (totalCost <= 0) return new Set<string>()
-    const requiredColors = getRequiredColors(cost)
     return new Set(
       activePlayer.supportArea
         .filter((support) => {
           if (support.rested) return false
           if (selectedAttackPaymentIds.includes(support.card.instanceId)) return true
           if (selectedAttackPaymentIds.length >= totalCost) return false
-          return checkColorCompatible(support.card.energyColor, requiredColors)
+          return isEnergyColorCompatibleWithCost(cost, support.card.energyColor)
         })
         .map((support) => support.card.instanceId),
     )
@@ -108,13 +89,12 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
             : {}
           const totalCost = getEnergyCostTotal(cost)
           if (current.length >= totalCost) return current
-          const requiredColors = getRequiredColors(cost)
           const supportCard = activePlayer.supportArea.find(
             (s) => s.card.instanceId === instanceId,
           )
           if (
             !supportCard ||
-            !checkColorCompatible(supportCard.card.energyColor, requiredColors)
+            !isEnergyColorCompatibleWithCost(cost, supportCard.card.energyColor)
           )
             return current
         }

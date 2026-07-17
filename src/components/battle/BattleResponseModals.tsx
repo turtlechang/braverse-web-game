@@ -35,6 +35,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
+              match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapTrashToDeckIds([])
             }}
             onSelectBlocker={(id) => {
@@ -95,6 +96,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
+              match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapSupportToHandIds([])
               match.setSelectedTrapHandToSupportIds([])
               match.setSelectedTrapTrashToDeckIds([])
@@ -129,6 +131,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                     match.setSelectedTrapTrashBattleCookieIds([])
                     match.setSelectedTrapTargetId(null)
                     match.setTrapSelectNoTarget(false)
+                    match.setSelectedTrapSupportTrashIds([])
                     match.setPendingResponseMode(null)
                     match.setSelectedTrapTrashToDeckIds([])
                   }
@@ -141,6 +144,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setPendingResponseMode(null)
+              match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapSupportToHandIds([])
               match.setSelectedTrapHandToSupportIds([])
               match.setSelectedTrapTrashToDeckIds([])
@@ -159,6 +163,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
               match.setPendingResponseMode(null)
+              match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapSupportToHandIds([])
               match.setSelectedTrapHandToSupportIds([])
               match.setSelectedTrapTrashToDeckIds([])
@@ -196,6 +201,10 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             supportToHandAmount={match.trapSupportToHandAmount}
             selectedSupportToHandIds={match.selectedTrapSupportToHandIds}
             onToggleSupportToHand={match.toggleTrapSupportToHand}
+            supportTrashCards={match.trapSupportTrashCandidates}
+            supportTrashAmount={match.trapSupportTrashAmount}
+            selectedSupportTrashIds={match.selectedTrapSupportTrashIds}
+            onToggleSupportTrash={match.toggleTrapSupportTrash}
             handToSupportCards={match.trapHandToSupportCandidates}
             handToSupportAmount={match.trapHandToSupportAmount}
             selectedHandToSupportIds={match.selectedTrapHandToSupportIds}

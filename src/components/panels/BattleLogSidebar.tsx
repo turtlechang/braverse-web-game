@@ -1,15 +1,31 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ScrollText, X } from 'lucide-react'
-import type { CommandLogEntry } from '../../game'
+import type { CommandLogEntry, PlayerId } from '../../game'
 import { phaseLabels } from '../gameUiLabels'
+import {
+  CommandLogFilterBar,
+} from './CommandLogFilters'
+import {
+  emptyCommandLogFilters,
+  filterCommandLogEntries,
+  type CommandLogFilterState,
+} from './commandLogFilterUtils'
 import './BattleLogSidebar.css'
 
 export interface BattleLogSidebarProps {
   entries: CommandLogEntry[]
+  playerNames?: Partial<Record<PlayerId, string>>
 }
 
-export function BattleLogSidebar({ entries }: BattleLogSidebarProps) {
+export function BattleLogSidebar({ entries, playerNames }: BattleLogSidebarProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [filters, setFilters] = useState<CommandLogFilterState>(
+    emptyCommandLogFilters,
+  )
+  const filteredEntries = useMemo(
+    () => filterCommandLogEntries(entries, filters),
+    [entries, filters],
+  )
 
   return (
     <>
@@ -44,11 +60,19 @@ export function BattleLogSidebar({ entries }: BattleLogSidebarProps) {
               <X size={14} />
             </button>
           </header>
+          <CommandLogFilterBar
+            entries={entries}
+            playerNames={playerNames}
+            value={filters}
+            onChange={setFilters}
+          />
           <ol className="battle-log-list">
-            {entries.length === 0 && (
-              <li className="battle-log-empty">尚無對戰紀錄。</li>
+            {filteredEntries.length === 0 && (
+              <li className="battle-log-empty">
+                {entries.length === 0 ? '尚無對戰紀錄。' : '沒有符合篩選條件的紀錄。'}
+              </li>
             )}
-            {[...entries].reverse().map((entry) => (
+            {[...filteredEntries].reverse().map((entry) => (
               <li key={entry.id} className="battle-log-entry">
                 <span className="battle-log-meta">
                   第 {entry.turnNumber} 回合 · {phaseLabels[entry.phase]}

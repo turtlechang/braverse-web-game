@@ -17,6 +17,7 @@ import {
   getBreakToHandBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashCookieCandidates,
@@ -651,6 +652,44 @@ export function usePendingEffect(params: {
       battle.attackEffects[battle.attackEffectIndex]
     if (!sourceCard || !currentAttackEffect) return
 
+    const attackContext = {
+      sourcePlayerId: viewerPlayerId,
+      sourceInstanceId: battle.attackerInstanceId,
+    }
+    const hasApplicableEffect =
+      currentAttackEffect.kind === 'optional-cost-attack'
+        ? currentAttackEffect.effects.some(
+            (effect) =>
+              isEffectConditionMet(game, attackContext, effect) &&
+              hasRequiredEffectTargets(game, attackContext, effect),
+          )
+        : isEffectConditionMet(game, attackContext, currentAttackEffect) &&
+          hasRequiredEffectTargets(game, attackContext, currentAttackEffect)
+
+    if (!hasApplicableEffect) {
+      const timer = window.setTimeout(() => {
+        setGame((current) => {
+          const currentBattle = current.pendingBattle
+          if (
+            !currentBattle ||
+            currentBattle.stage !== 'attack-effect' ||
+            currentBattle.attackerPlayerId !== viewerPlayerId ||
+            currentBattle.attackerInstanceId !== battle.attackerInstanceId ||
+            currentBattle.attackEffectIndex !== battle.attackEffectIndex
+          ) {
+            return current
+          }
+          return applyGameCommand(current, {
+            kind: 'resolve-attack-effect',
+            playerId: viewerPlayerId,
+            targetIds: [],
+          })
+        })
+        setMessage(`已略過 ${sourceCard.name} 的攻擊後續效果。`)
+      }, 0)
+      return () => window.clearTimeout(timer)
+    }
+
     if (currentAttackEffect.kind === 'optional-cost-attack') {
       const timer = window.setTimeout(() => {
         setGame((current) => {
@@ -1025,6 +1064,19 @@ export function usePendingEffect(params: {
     setPendingEffect(null)
   }
 
+  const skipAttackEffect = () => {
+    if (!pendingEffect || pendingEffect.sourceKind !== 'attack') return
+    dispatch(
+      {
+        kind: 'resolve-attack-effect',
+        playerId: pendingEffect.context.sourcePlayerId,
+        targetIds: [],
+      },
+      `已略過 ${pendingEffect.sourceCard.name} 的攻擊後續效果。`,
+    )
+    setPendingEffect(null)
+  }
+
   const confirmEffect = () => {
     if (!pendingEffect || !currentEffect) return
 
@@ -1256,6 +1308,7 @@ export function usePendingEffect(params: {
     toggleSkillTrashBattleCookie,
     confirmEffect,
     skipOptionalSkill,
+    skipAttackEffect,
     cancelPendingSkill,
     currentEffect,
     effectTargetCandidates,

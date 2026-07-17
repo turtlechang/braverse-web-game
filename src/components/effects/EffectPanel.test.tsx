@@ -158,6 +158,76 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('embeds optional attack cost choices in the shared effect prompt', () => {
+    const hand = createItemCard(10)
+    const support = createSupportCard(11, 'blue')
+    const target = createCookieCard(12)
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={null}
+        currentEffect={null}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        optionalCostAttack={{
+          sourceCard: createCookieCard(13),
+          sourceCardName: 'Tiramisu Cookie',
+          effectText: 'Pay to deal damage.',
+          discardHandCost: 1,
+          energyCostTotal: 1,
+          playerHand: [hand],
+          supportCandidates: [{ card: support, instanceId: support.instanceId }],
+          opponentBattleCards: [{ card: target, instanceId: target.instanceId }],
+          needsTarget: true,
+          onSkip: () => undefined,
+          onPay: () => undefined,
+        }}
+      />,
+    ))
+
+    expect(container.querySelectorAll('.modal-backdrop')).toHaveLength(1)
+    expect(container.querySelector('.optional-cost-attack-inline')).not.toBeNull()
+    expect(container.querySelector('.optional-cost-attack-modal')).toBeNull()
+    expect(container.textContent).toContain('Tiramisu Cookie')
+    expect(container.querySelector('.effect-source-card')).not.toBeNull()
+
+    act(() => root.unmount())
+  })
+
+  it('allows skipping an attack follow-up effect', () => {
+    const pending = createPendingEffect({
+      skillActivated: true,
+      sourceKind: 'attack',
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, discardHand: 0 },
+          effects: [],
+          effectText: 'Optional attack effect.',
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(
+      container
+        .querySelector('.effect-panel-sticky-actions')
+        ?.classList.contains('is-confirm-only'),
+    ).toBe(false)
+    expect(container.querySelector('.effect-skip-label')?.textContent).toBe('略過')
+
+    act(() => root.unmount())
+  })
+
   it('guides payment, extra cost, and target one step at a time with back navigation', async () => {
     const paymentCard = createSupportCard(1, 'red')
     const costSupport = createItemCard(2)

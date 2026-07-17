@@ -6,6 +6,8 @@ export {
   getBreakToHandBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
+  hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
   getTrashToDeckCandidates,
@@ -15,6 +17,7 @@ export {
   isEffectConditionMet,
   isEffectTargeted,
   isEffectUntargeted,
+  requiresTargetSelection,
   resolveOpponentHandDiscard,
   resolveInspectDeck,
   resolveDrawUpTo,
@@ -43,6 +46,7 @@ export { maskGameStateForViewer } from './masked-state'
 export {
   getAttackEnergyCost,
   getEnergyCostTotal,
+  isEnergyColorCompatibleWithCost,
   selectEnergyPayment,
   validateEnergyPayment,
 } from './energy'

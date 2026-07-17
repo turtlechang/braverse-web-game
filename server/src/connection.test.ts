@@ -227,6 +227,67 @@ describe('ConnectionManager', () => {
     expect(guestSocket.last()).toMatchObject({ type: 'state-update' })
   })
 
+  it('公開意圖會同步給雙方，成功指令後會清除發動者意圖', () => {
+    const manager = new ConnectionManager(new RoomStore())
+    const hostSocket = new MockSocket()
+    const guestSocket = new MockSocket()
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({ type: 'create-room', deck: createTestDeck('one') }),
+    )
+    const created = hostSocket.last()
+    if (created?.type !== 'room-created') throw new Error('unexpected message')
+    manager.handleMessage(
+      guestSocket,
+      JSON.stringify({
+        type: 'join-room',
+        code: created.code,
+        deck: createTestDeck('two'),
+      }),
+    )
+    completeOpening(manager, hostSocket, guestSocket)
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({
+        type: 'set-public-intent',
+        intent: {
+          type: 'selecting-target',
+          targetScope: 'opponent-battle-cookie',
+          requiredCount: 1,
+          selectedCount: 0,
+        },
+      }),
+    )
+
+    expect(hostSocket.last()).toMatchObject({
+      type: 'public-intent-update',
+      playerId: 'player-one',
+      intent: { type: 'selecting-target', actorId: 'player-one' },
+    })
+    expect(guestSocket.last()).toMatchObject({
+      type: 'public-intent-update',
+      playerId: 'player-one',
+    })
+
+    manager.handleMessage(
+      hostSocket,
+      JSON.stringify({
+        type: 'submit-command',
+        command: { kind: 'advance-phase', playerId: 'player-one' },
+      }),
+    )
+
+    expect(hostSocket.received).toContainEqual(
+      expect.objectContaining({
+        type: 'public-intent-update',
+        playerId: 'player-one',
+        intent: null,
+      }),
+    )
+  })
+
   it('submit-command 送出非法指令會收到 command-rejected,不影響另一方', () => {
     const manager = new ConnectionManager(new RoomStore())
     const hostSocket = new MockSocket()

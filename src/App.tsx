@@ -1,4 +1,3 @@
-import { Sparkles, Swords } from 'lucide-react'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import './styles/base.css'
 import './App.css'
@@ -18,11 +17,16 @@ import {
   AttackPaymentPanel,
   SimulationReport,
 } from './components/panels/GameStatusPanels'
-import { phaseLabels, deckChoiceLabel } from './components/gameUiLabels'
+import { deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
+import { getOptionalCostAttackPrompt } from './components/modals/optionalCostAttackPrompt'
 import { StatusToast, CardPreviewPanel } from './components/panels/InteractionOverlays'
 import { BattleLogSidebar } from './components/panels/BattleLogSidebar'
+import { RemoteActionBanner } from './components/panels/RemoteActionBanner'
+import { deriveActionStatus } from './components/panels/actionStatus'
 import { MenuScreen } from './components/battle/MenuScreen'
+import { AttackPreviewArrow } from './components/battle/AttackPreviewArrow'
+import { findCardInGame } from './components/battle/publicCardLookup'
 import type { OpeningSetupStep } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
 import { useMatchDialogs } from './hooks/useMatchDialogs'
@@ -87,6 +91,7 @@ function App() {
     null,
   )
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
+  const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
@@ -120,6 +125,17 @@ function App() {
     afterDamageActive: pending.afterDamageActive,
     deckConfig: match.deckConfig,
     aiLevel,
+  })
+
+  const actionStatus = deriveActionStatus({
+    game: match.game,
+    viewerPlayerId: match.viewerPlayerId,
+    local: {
+      aiThinking: ai.aiThinking,
+      pendingEffect: pending.pendingEffect,
+      selectedAttackerId: match.selectedAttackerId,
+      attackPaymentValid: match.attackPaymentValidation.valid,
+    },
   })
 
   const faintActive = pending.faintActive
@@ -186,6 +202,11 @@ function App() {
 
   const currentJsxEffect = pending.currentEffect
   const playerHand = match.game.players[match.viewerPlayerId].hand
+  const optionalCostAttackPrompt =
+    match.game.pendingEffectOrder &&
+    !match.game.pendingEffectOrder.resolvedOrder
+      ? null
+      : getOptionalCostAttackPrompt(match.game, match.viewerPlayerId)
 
   const pe = pending.pendingEffect
   const showCancelSkill =
@@ -227,6 +248,11 @@ function App() {
     playerHand.some((card) => card.instanceId === selectedHandCardId)
       ? selectedHandCardId
       : null
+  const opponentSourcePreviewCard =
+    actionStatus.mode === 'opponent-thinking'
+      ? findCardInGame(match.game, actionStatus.sourceCard?.instanceId) ?? null
+      : null
+  const opponentPreviewCard = hoveredOpponentCard ?? opponentSourcePreviewCard
 
   if (screen === 'menu') {
     return (
@@ -260,7 +286,13 @@ function App() {
 
       <StatusToast message={match.message} />
 
-      <BattleLogSidebar entries={match.game.commandLog ?? []} />
+      <BattleLogSidebar
+        entries={match.game.commandLog ?? []}
+        playerNames={{
+          'player-one': match.game.players['player-one'].name,
+          'player-two': match.game.players['player-two'].name,
+        }}
+      />
 
       <PhaseRail
         phase={match.game.phase}
@@ -306,8 +338,8 @@ function App() {
           onEffectTarget={pending.toggleEffectTarget}
           onInspectCard={dialogs.openCardDetail}
           onInspectDiscard={dialogs.openDiscardPile}
-          onHoverCard={setHoveredCard}
-          onFocusCard={setHoveredCard}
+          onHoverCard={setHoveredOpponentCard}
+          onFocusCard={setHoveredOpponentCard}
           onToggleResource={(kind) =>
             dialogs.toggleResourcePopover(match.opponentId, kind)
           }
@@ -315,34 +347,26 @@ function App() {
 
         <div className="table-divider">
           <span />
-          <div role="status" aria-live="polite">
-            <strong>
-              {ai.aiThinking ? (
-                <>
-                  <Sparkles aria-hidden="true" /> AI 思考中
-                </>
-              ) : pending.pendingEffect ? (
-                <>
-                  <Sparkles aria-hidden="true" /> 選擇效果目標
-                </>
-              ) : faintActive ? (
-                <>
-                  <Sparkles aria-hidden="true" /> 選擇昏厥效果目標
-                </>
-              ) : match.selectedAttackerId ? (
-                <>
-                  <Swords aria-hidden="true" />{' '}
-                  {match.attackPaymentValidation.valid
-                    ? '付款完成，選擇攻擊目標'
-                    : '選擇支援卡支付攻擊費用'}
-                </>
-              ) : (
-                `${match.activePlayer.name} · ${phaseLabels[match.game.phase]}`
-              )}
-            </strong>
-          </div>
+          <RemoteActionBanner status={actionStatus} compact />
           <span />
         </div>
+
+        <AttackPreviewArrow
+          sourceInstanceId={
+            match.selectedAttackerId ??
+            (actionStatus.mode === 'opponent-thinking'
+              ? actionStatus.sourceCard?.instanceId ?? null
+              : null)
+          }
+          targetInstanceIds={actionStatus.attackTargetInstanceIds ?? []}
+          label={
+            match.selectedAttackerId ||
+            match.game.pendingBattle ||
+            actionStatus.headline.includes('攻擊')
+              ? '攻擊宣告'
+              : '目標選擇'
+          }
+        />
 
         <BattleRow
           game={match.game}
@@ -509,6 +533,15 @@ function App() {
         />
       </section>
 
+      <CardPreviewPanel
+        card={opponentPreviewCard}
+        position="top"
+        contextLabel={
+          hoveredOpponentCard || !opponentSourcePreviewCard
+            ? undefined
+            : '對手目前操作'
+        }
+      />
       <CardPreviewPanel card={hoveredCard} position="bottom" />
 
       {match.selectedAttacker && !pending.pendingEffect && (
@@ -539,7 +572,13 @@ function App() {
         currentEffect={currentJsxEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
-        onSkip={pending.skipOptionalSkill}
+        onSkip={() => {
+          if (pending.pendingEffect?.sourceKind === 'attack') {
+            pending.skipAttackEffect()
+          } else {
+            pending.skipOptionalSkill()
+          }
+        }}
         onCancel={pending.cancelPendingSkill}
         candidateCards={[
           ...pending.effectTargetCandidates.map((c) => c.card),
@@ -584,6 +623,36 @@ function App() {
         onToggleTrashBattleCookie={pending.toggleSkillTrashBattleCookie}
         trashBattleCookieCost={
           pending.pendingEffect?.skill.cost.trashBattleCookie?.count ?? 0
+        }
+        optionalCostAttack={
+          optionalCostAttackPrompt
+            ? {
+                ...optionalCostAttackPrompt,
+                onSkip: () => {
+                  match.dispatch(
+                    {
+                      kind: 'resolve-optional-cost-attack',
+                      playerId: match.viewerPlayerId,
+                      action: 'skip',
+                    },
+                    '撌脩??訾誨?寞????',
+                  )
+                },
+                onPay: (discardIds, targetId, paymentIds) => {
+                  match.dispatch(
+                    {
+                      kind: 'resolve-optional-cost-attack',
+                      playerId: match.viewerPlayerId,
+                      action: 'pay',
+                      discardCardIds: discardIds,
+                      targetIds: targetId ? [targetId] : [],
+                      paymentIds,
+                    },
+                    '撌脫隞?訾誨?寞????',
+                  )
+                },
+              }
+            : null
         }
       />
 

@@ -72,9 +72,18 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
         sendCommand={online.sendCommand}
         sendAttackSelection={online.sendAttackSelection}
         opponentAttackSelection={online.opponentAttackSelection}
+        publicIntent={
+          online.publicIntents?.[
+            online.viewerPlayerId === 'player-one' ? 'player-two' : 'player-one'
+          ] ?? null
+        }
         openingSnapshot={online.openingSnapshot}
         commandRejectedReason={online.errorMessage}
         sendOpeningAction={online.sendOpeningAction}
+        sendPublicIntent={online.sendPublicIntent}
+        clearPublicIntent={online.clearPublicIntent}
+        connectionNotice={online.connectionNotice}
+        connectionMode={online.connectionMode}
         onLeave={handleClose}
       />
     )
@@ -107,6 +116,12 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
             <div className="online-match-error" role="alert">
               {online.errorMessage}
             </div>
+          )}
+
+          {online.connectionNotice && (
+            <p className="online-match-connection-status" role="status">
+              {online.connectionNotice}
+            </p>
           )}
 
           {online.status === 'idle' && (

@@ -21,6 +21,8 @@ import {
   OFFICIAL_PURPLE_STARTER_DECK,
   OFFICIAL_RED_STARTER_DECK,
   OFFICIAL_YELLOW_STARTER_DECK,
+  selectEnergyPayment,
+  validateEnergyPayment,
   type StarterDeckEntry,
 } from '.'
 
@@ -125,7 +127,7 @@ describe('official yellow starter deck', () => {
     expect(strawberry).toMatchObject({
       name: 'Strawberry Cookie',
       type: 'cookie',
-      energyColor: 'wild',
+      energyColor: 'yellow',
     })
     expect(windingKeyShield).toMatchObject({
       name: 'Winding Key Shield',
@@ -238,7 +240,7 @@ describe('official green starter deck', () => {
     expect(gingerBright).toMatchObject({
       name: 'GingerBright',
       type: 'cookie',
-      energyColor: 'wild',
+      energyColor: 'green',
     })
     expect(vineyVines).toMatchObject({
       name: 'Viney Vines',
@@ -309,7 +311,7 @@ describe('official blue starter deck', () => {
     expect(candyDiver).toMatchObject({
       name: 'Candy Diver Cookie',
       type: 'cookie',
-      energyColor: 'wild',
+      energyColor: 'blue',
       attackEnergyCost: { neutral: 1 },
     })
     expect(skatingQueen).toMatchObject({
@@ -402,7 +404,7 @@ describe('official purple starter deck', () => {
     expect(gingerBright).toMatchObject({
       name: 'GingerBright',
       type: 'cookie',
-      energyColor: 'wild',
+      energyColor: 'purple',
     })
     expect(skater).toMatchObject({
       name: 'Skater Cookie',
@@ -482,6 +484,67 @@ describe('AI second set preset decks', () => {
       createAiPresetBs2PurpleDeck('player-two'),
       AI_PRESET_BS2_PURPLE_DECK,
     )
+  })
+
+  it('keeps an explicit card color when MIX is used for its energy type', () => {
+    const yellowDeck = createAiPresetBs2YellowDeck('player-one')
+    const banana = yellowDeck.find((card) => card.id === 'BS1-032')
+
+    expect(banana).toBeDefined()
+    if (!banana) {
+      throw new Error('BS1-032 should be present in the BS2 yellow preset.')
+    }
+
+    expect(banana.energyColor).toBe('yellow')
+    expect(
+      validateEnergyPayment(
+        { green: 1 },
+        [{ card: banana, rested: false }],
+        [banana.instanceId],
+      ),
+    ).toMatchObject({
+      valid: false,
+      reason: '所選支援卡的能量顏色不符合費用需求。',
+    })
+  })
+
+  it('does not let a red MIX card pay BS2-018 green attack energy', () => {
+    const redDeck = createAiPresetBs2RedDeck('player-one')
+    const greenDeck = createOfficialGreenStarterDeck('player-one')
+    const beanDeck = createAiPresetBs2BeanDeck('player-one')
+    const redSupport = redDeck.find((card) => card.id === 'BS1-007')
+    const greenAttacker = beanDeck.find((card) => card.id === 'BS2-018')
+    const greenSupports = greenDeck
+      .filter((card) => card.energyColor === 'green')
+      .slice(0, 2)
+
+    expect(redSupport).toBeDefined()
+    expect(greenAttacker).toMatchObject({
+      name: 'Candlelight Cookie',
+      attackEnergyCost: { green: 2 },
+    })
+    expect(greenSupports).toHaveLength(2)
+    if (
+      !redSupport ||
+      !greenAttacker ||
+      greenAttacker.type !== 'cookie' ||
+      greenSupports.length !== 2
+    ) {
+      throw new Error('BS2-018 payment regression fixture is incomplete.')
+    }
+
+    expect(redSupport.energyColor).toBe('red')
+    const supportArea = [
+      { card: redSupport, rested: false },
+      ...greenSupports.map((card) => ({ card, rested: false })),
+    ]
+    const paymentIds = selectEnergyPayment(
+      greenAttacker.attackEnergyCost ?? {},
+      supportArea,
+    )
+
+    expect(paymentIds).toHaveLength(2)
+    expect(paymentIds).not.toContain(redSupport.instanceId)
   })
 
   it('can create demo games with a second set preset AI deck', () => {

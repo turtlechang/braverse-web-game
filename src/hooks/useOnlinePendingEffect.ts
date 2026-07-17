@@ -4,6 +4,7 @@ import {
   canPlayItem,
   canActivateStage,
   getEffectTargetCandidates,
+  hasRequiredEffectTargets as hasRequiredTargetsForEffect,
   getEnergyCostTotal,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCandidates,
@@ -317,10 +318,57 @@ export function useOnlinePendingEffect(params: {
         ? `draft:${abilityCostDraft.card.instanceId}:0`
         : 'none'
   const submittedEffectKeyRef = useRef<string | null>(null)
+  const autoSkippedAttackEffectKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     submittedEffectKeyRef.current = null
   }, [effectKey])
+
+  useEffect(() => {
+    if (
+      !attackEffectActive ||
+      !attackBattle ||
+      !currentEffect ||
+      game.pendingOptionalCostAttack
+    ) {
+      return
+    }
+
+    const attackContext: EffectContext = {
+      sourcePlayerId: viewerPlayerId,
+      sourceInstanceId: attackBattle.attackerInstanceId,
+    }
+    const hasApplicableEffect =
+      currentEffect.kind === 'optional-cost-attack'
+        ? currentEffect.effects.some(
+            (effect) =>
+              isEffectConditionMet(game, attackContext, effect) &&
+              hasRequiredTargetsForEffect(game, attackContext, effect),
+          )
+        : isEffectConditionMet(game, attackContext, currentEffect) &&
+          hasRequiredTargetsForEffect(game, attackContext, currentEffect)
+    if (hasApplicableEffect || autoSkippedAttackEffectKeyRef.current === effectKey) {
+      return
+    }
+
+    autoSkippedAttackEffectKeyRef.current = effectKey
+    dispatch(
+      {
+        kind: 'resolve-attack-effect',
+        playerId: viewerPlayerId,
+        targetIds: [],
+      },
+      '已略過攻擊後續效果。',
+    )
+  }, [
+    attackBattle,
+    attackEffectActive,
+    currentEffect,
+    dispatch,
+    effectKey,
+    game,
+    viewerPlayerId,
+  ])
 
   const [selectedTargetState, setSelectedTargetState] = useState<{
     key: string

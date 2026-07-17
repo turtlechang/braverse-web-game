@@ -279,6 +279,7 @@ export function useMatchController(params: {
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
+  const [selectedTrapSupportTrashIds, setSelectedTrapSupportTrashIds] = useState<string[]>([])
   const [selectedTrapHandToSupportIds, setSelectedTrapHandToSupportIds] = useState<string[]>([])
   const [selectedTrapTrashToDeckIds, setSelectedTrapTrashToDeckIds] = useState<string[]>([])
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
@@ -608,13 +609,18 @@ export function useMatchController(params: {
   const selectedTrapTargets = selectedTrapTarget
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
-  const selectedTrapSupportTrashIds =
-    selectedTrap?.trap?.effects.some(
-      (effect) => effect.kind === 'support-to-trash',
-    )
-      ? game.players[viewerPlayerId].supportArea
-          .slice(0, 1)
-          .map((support: SupportCard) => support.card.instanceId)
+  const trapSupportTrashEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'support-to-trash',
+  )
+  const trapSupportTrashAmount =
+    trapSupportTrashEffect?.kind === 'support-to-trash'
+      ? trapSupportTrashEffect.amount
+      : 0
+  const trapSupportTrashCandidates =
+    trapSupportTrashAmount > 0
+      ? game.players[viewerPlayerId].supportArea.map(
+          (support: SupportCard) => support.card,
+        )
       : []
 
   const trapSupportToHandEffect = selectedTrap?.trap?.effects.find(
@@ -672,6 +678,26 @@ export function useMatchController(params: {
       )
     },
     [trapSupportToHandAmount],
+  )
+
+  const toggleTrapSupportTrash = useCallback(
+    (id: string) => {
+      if (
+        !game.players[viewerPlayerId].supportArea.some(
+          (support) => support.card.instanceId === id,
+        )
+      ) {
+        return
+      }
+      setSelectedTrapSupportTrashIds((current) =>
+        current.includes(id)
+          ? current.filter((cId) => cId !== id)
+          : current.length < trapSupportTrashAmount
+            ? [...current, id]
+            : current,
+      )
+    },
+    [game, trapSupportTrashAmount, viewerPlayerId],
   )
 
   const toggleTrapHandToSupport = useCallback(
@@ -930,6 +956,10 @@ export function useMatchController(params: {
     setSelectedTrapTargetId,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
+    setSelectedTrapSupportTrashIds,
+    trapSupportTrashCandidates,
+    trapSupportTrashAmount,
+    toggleTrapSupportTrash,
     selectedTrapSupportToHandIds,
     setSelectedTrapSupportToHandIds,
     trapSupportToHandCandidates,

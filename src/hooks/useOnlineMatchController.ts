@@ -68,6 +68,7 @@ export function useOnlineMatchController(params: {
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
+  const [selectedTrapSupportTrashIds, setSelectedTrapSupportTrashIds] = useState<string[]>([])
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
@@ -379,14 +380,32 @@ export function useOnlineMatchController(params: {
   const selectedTrapTargets = selectedTrapTarget
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
-  const selectedTrapSupportTrashIds =
-    selectedTrap?.trap?.effects.some(
-      (effect) => effect.kind === 'support-to-trash',
-    )
-      ? game.players[viewerPlayerId].supportArea
-          .slice(0, 1)
-          .map((support: SupportCard) => support.card.instanceId)
+  const trapSupportTrashEffect = selectedTrap?.trap?.effects.find(
+    (effect) => effect.kind === 'support-to-trash',
+  )
+  const trapSupportTrashAmount =
+    trapSupportTrashEffect?.kind === 'support-to-trash'
+      ? trapSupportTrashEffect.amount
+      : 0
+  const trapSupportTrashCandidates =
+    trapSupportTrashAmount > 0
+      ? game.players[viewerPlayerId].supportArea.map(
+          (support: SupportCard) => support.card,
+        )
       : []
+
+  const toggleTrapSupportTrash = (id: string) => {
+    if (!trapSupportTrashCandidates.some((card) => card.instanceId === id)) {
+      return
+    }
+    setSelectedTrapSupportTrashIds((current) =>
+      current.includes(id)
+        ? current.filter((cId) => cId !== id)
+        : current.length < trapSupportTrashAmount
+          ? [...current, id]
+          : current,
+    )
+  }
 
   const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
   const trapSupportToHandCandidates: GameCard[] = []
@@ -501,6 +520,10 @@ export function useOnlineMatchController(params: {
     setSelectedTrapTargetId,
     selectedTrapTargets,
     selectedTrapSupportTrashIds,
+    setSelectedTrapSupportTrashIds,
+    trapSupportTrashCandidates,
+    trapSupportTrashAmount,
+    toggleTrapSupportTrash,
     selectedTrapSupportToHandIds,
     setSelectedTrapSupportToHandIds,
     trapSupportToHandCandidates,

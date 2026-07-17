@@ -390,6 +390,7 @@ try {
   await hostActivityToggle.click()
   const hostActivityFeed = hostPage.getByTestId('online-activity-feed')
   await hostActivityFeed.waitFor({ state: 'visible' })
+  await hostActivityFeed.getByTestId('command-log-filters').waitFor({ state: 'visible' })
   assert.ok((await hostActivityFeed.locator('li').count()) > 0)
   await hostActivityToggle.click()
   await hostActivityFeed.waitFor({ state: 'hidden' })
@@ -522,6 +523,8 @@ try {
     (await hostPage.locator('.table-divider').textContent()) ?? '',
     /對手正在選擇支援卡支付攻擊費用/,
   )
+  await hostPage.locator('[data-testid="attack-preview-arrow"] svg').waitFor({ state: 'visible' })
+  await hostPage.locator('.card-preview-panel.is-top').waitFor({ state: 'visible' })
   await guestPage.evaluate(({ attackerInstanceId, supportInstanceId }) => {
     const socket = window.__braverseTestSockets?.at(-1)
     socket?.send(JSON.stringify({
@@ -623,6 +626,8 @@ try {
     customPlayerNamesVisible: true,
     handSelectionDismissed: true,
     opponentAttackPreviewVisible: true,
+    opponentAttackArrowVisible: true,
+    opponentCardPreviewVisible: true,
     opponentSupportPaymentRested: true,
     onlineResourcePopoversVisible: true,
     cardDetailClosable: true,

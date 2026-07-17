@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isEnergyColorCompatibleWithCost,
   selectEnergyPayment,
   validateEnergyPayment,
   type GameCard,
@@ -65,5 +66,28 @@ describe('energy payment', () => {
     expect(
       selectEnergyPayment({ red: 2 }, supports),
     ).toEqual(['red', 'wild'])
+  })
+
+  it('allows every active support as a candidate for neutral attack costs', () => {
+    const neutralSupports = [
+      createSupport('red-neutral', 'red'),
+      createSupport('untyped-neutral', undefined),
+      createSupport('blue-neutral', 'blue'),
+    ]
+
+    expect(
+      isEnergyColorCompatibleWithCost({ neutral: 3 }, undefined),
+    ).toBe(true)
+    expect(
+      isEnergyColorCompatibleWithCost({ red: 1, neutral: 1 }, 'blue'),
+    ).toBe(true)
+    expect(isEnergyColorCompatibleWithCost({ red: 1 }, 'blue')).toBe(false)
+    expect(
+      validateEnergyPayment(
+        { neutral: 3 },
+        neutralSupports,
+        ['red-neutral', 'untyped-neutral', 'blue-neutral'],
+      ),
+    ).toMatchObject({ valid: true })
   })
 })

@@ -77,6 +77,25 @@ const click = async (button: HTMLButtonElement | undefined) => {
 }
 
 describe('MainMenu deck management', () => {
+  it('renders the branded main-menu heading as styled text', async () => {
+    const { container, root } = await renderMenu([validDeck])
+
+    const title = container.querySelector<HTMLElement>(
+      '.main-menu-brand-title',
+    )
+    expect(title?.getAttribute('aria-label')).toBe('薑餅人對戰卡牌 Braverse')
+    expect(
+      [...container.querySelectorAll('.main-menu-brand-line')].map(
+        (line) => line.textContent,
+      ),
+    ).toEqual(['薑餅人', '對戰卡牌'])
+    expect(container.querySelector('.main-menu-brand-badge')?.textContent).toBe(
+      'BRAVERSE',
+    )
+
+    await act(() => root.unmount())
+  })
+
   it('invokes onDuplicateDeck with the deck when 複製 is clicked', async () => {
     const onDuplicateDeck = vi.fn()
     const { container, root } = await renderMenu([validDeck], {

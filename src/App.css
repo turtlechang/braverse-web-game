@@ -62,7 +62,58 @@ button {
 
 .main-menu-heading {
   grid-area: heading;
+  align-self: start;
   padding: 8px 4px;
+}
+
+.main-menu-brand-title {
+  width: min(100%, 390px);
+  margin: 0 0 18px;
+  color: #ffda62;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  font-weight: 900;
+  text-align: center;
+}
+
+.main-menu-brand-line {
+  display: block;
+  color: #ffda62;
+  line-height: 0.86;
+  letter-spacing: -0.14em;
+  white-space: nowrap;
+  -webkit-text-stroke: 3px #6d351b;
+  paint-order: stroke fill;
+  text-shadow:
+    0 4px 0 #6d351b,
+    2px 4px 0 #6d351b,
+    -2px 4px 0 #6d351b;
+}
+
+.main-menu-brand-line-top {
+  font-size: clamp(3rem, 6vw, 4.8rem);
+  text-align: center;
+}
+
+.main-menu-brand-line-main {
+  font-size: clamp(4.5rem, 8vw, 5.4rem);
+  text-align: center;
+}
+
+.main-menu-brand-badge {
+  display: block;
+  width: min(86%, 320px);
+  margin: 12px auto 0;
+  padding: 5px 18px 7px;
+  border-radius: 999px;
+  background: #70401f;
+  box-shadow: inset 0 -2px 0 rgba(60, 27, 13, 0.45);
+  color: #ffda62;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 2px 0 #4e2915;
 }
 
 .main-menu-footer {
@@ -75,7 +126,6 @@ button {
   letter-spacing: 0.02em;
 }
 
-.main-menu-heading > span,
 .main-menu-status > span,
 .main-menu-section-title > span {
   color: #7ee7f0;
@@ -83,12 +133,6 @@ button {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.main-menu-heading h1 {
-  margin: 8px 0 10px;
-  font-size: clamp(2.1rem, 5vw, 4.6rem);
-  line-height: 0.98;
 }
 
 .main-menu-heading p,
