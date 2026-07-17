@@ -42,7 +42,7 @@
   bottom: 12px;
   width: min(280px, 32vw);
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   border: 1px solid rgba(129, 224, 255, 0.45);
   border-radius: 12px;
   background: rgba(2, 16, 45, 0.92);

@@ -875,7 +875,7 @@ function createAttackEffectPendingState(): GameState {
           kind: 'damage',
           amount: 1,
           target: { side: 'opponent', min: 0, max: 1 },
-          condition: { kind: 'trash-count-at-least', count: 15 },
+          condition: { kind: 'trash-count-at-least', count: 0 },
         },
       ],
     },

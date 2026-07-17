@@ -14,6 +14,8 @@
 
 效果操作的 UI 以「同一個提示框完成一段決策」為原則：必要時依序呈現能量、代價與目標，並讓玩家在最後一步才確認發動，避免同一效果被巢狀提示打斷。
 
+對戰資訊可視化依 P0–P2 分層：P0 固定顯示行動玩家、階段、來源卡、中央等待原因、攻擊箭頭與一致事件句型；P1 顯示宣告 → 費用 → 代價 → 目標 → 結算進度、對手卡牌預覽與陷阱／FLIP／攻擊效果回應狀態；P2 提供活動紀錄篩選、連線同步細節與伺服器提供的決策期限。所有線上公開提示都只使用伺服器過濾後的公開卡牌與 instance ID，不揭露對手手牌或牌庫內容。
+
 專案開發流程已整理為 `.agents/skills/develop-braverse` 與 `.agents/skills/braverse-workflow` 兩個 Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟；`AGENTS.md` 保留硬性規範入口。子代理協作與停滯交接流程見 [docs/subagent-stall-handoff-protocol.md](docs/subagent-stall-handoff-protocol.md)。
 
 CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌驗證、測試、lint、build；AI、牌組編輯器與好友房 Playwright 瀏覽器 smoke 在 main push 自動執行，也保留手動觸發，不負責部署；Vercel 監聽 PR 與 push 自動產生 Preview 與正式部署，連線設定在 Vercel Dashboard 完成，不存放於 GitHub Secrets。
@@ -32,15 +34,15 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 - **牌組編輯器**：搜尋/篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果，見 [docs/ai-levels.md](docs/ai-levels.md)。Lv.5 為設計稿。
 - **卡牌池**：BS1/BS2 官方卡池 + 五色起始牌組匯入；`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及 8 張高風險卡的語意契約。
-- **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
-- **線上對戰**：WebSocket server（Render 部署）+ 房間碼 + 玩家名稱 + 遮罩狀態；開局已整合至對戰桌，依序完成私密猜拳、勝者選先後攻、先攻再後攻調度、強制調度補償與起始餅乾同步揭示，並持續顯示雙方順位及目前行動者／階段。對局中提供即時對戰動態、昏厥／陷阱／FLIP／物品事件提示與可展開完整紀錄；手牌點擊外部可取消選取，公開資源可查看，對手攻擊選取會同步餅乾高光與付款支援卡橫置；新增伺服器權威 `PublicIntent`（序號／狀態版本／公開牌面過濾）與共用 `ActionStatus`／非阻塞 `RemoteActionBanner`，本機與線上統一呈現能量、代價、目標、回應及結算狀態；本機雙瀏覽器自動驗證完整開局、階段同步、卡牌詳情、攻擊預覽、拒絕提示、斷線與連線失敗。
+- **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
+- **線上對戰**：WebSocket server（Render 部署）+ 房間碼 + 玩家名稱 + 遮罩狀態；開局已整合至對戰桌，依序完成私密猜拳、勝者選先後攻、先攻再後攻調度、強制調度補償與起始餅乾同步揭示，並持續顯示雙方順位及目前行動者／階段。對局中提供即時對戰動態、昏厥／陷阱／FLIP／物品事件提示與可展開完整紀錄；手牌點擊外部可取消選取，公開資源可查看，對手攻擊選取會同步餅乾高光與付款支援卡橫置，自己的攻擊支付也會收到候選清單而正常點選支援卡。P0–P2 對戰可視化已收尾：中央 `RemoteActionBanner` 固定補齊玩家／階段／來源卡、等待原因、五步驟進度、攻擊箭頭與伺服器期限；P1 加入公開來源卡預覽及一致回應狀態；P2 加入 commandLog 回合／階段／玩家／卡牌篩選與同步／拒絕／斷線細節。上述功能共用伺服器權威 `PublicIntent`（序號／狀態版本／公開牌面過濾）與 `ActionStatus`，本機與線上維持相同顯示邏輯；BS1-037 無合法 LV.1 對手目標時不建立等待提示，已有提示可由玩家略過；本機雙瀏覽器自動驗證完整開局、階段同步、卡牌詳情、攻擊預覽、拒絕提示、斷線與連線失敗。
 - **CI/CD**：GitHub Actions（卡牌／候選／registry 驗證 → test → lint → build → bundle budget；main push 另跑 AI／牌組編輯器／好友房瀏覽器 smoke）+ Vercel Git Integration 自動部署。
 
 測試基線、bundle 大小等會隨每次 PR 變動的數字，一律以 [CHANGELOG.md](CHANGELOG.md) 最新項目為準（非永久門檻，只要求不低於前次基線）。
 
 ## 下一步計畫
 
-待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；WebSocket 入站驗證、玩家名稱、攻擊選取預覽、開局整合、導引式效果操作、對戰中指令拒絕提示與公開互動意圖第一版已完成，並補上 ST3-019、BS2-021、BS2-044 的提示框回歸。下一步是以真人好友房驗證公開提示在 BS2-069、OnPlay、陷阱／FLIP／物品／場景多段決策中的文案與高光邊界，並補齊活動紀錄的意圖事件聚合；R5 已建立語意驗證與官方更新回歸防線，但仍須在新卡或新版規則進入時擴充契約。近期應以 Vercel Preview 完成 1–2 場真人好友房試玩，特別確認開局節奏、ST5-007／ST5-022 的雙方提示、窄畫面可讀性與 Render 冷啟動後的完整流程，再稽核 GitHub Actions／Vercel／Render 健康。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
+待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；WebSocket 入站驗證、玩家名稱、攻擊選取預覽、開局整合、導引式效果操作、對戰中指令拒絕提示、公開互動意圖與 P0–P2 對戰可視化第一版已完成，並補上 ST3-019、BS2-021、BS2-044、BS1-007 攻擊支付與 BS1-037 攻擊後效果的提示框回歸。下一步是以真人好友房驗證中央提示、五步驟進度、對手卡牌預覽與回應狀態在 BS2-069、OnPlay、陷阱／FLIP／物品／場景多段決策中的文案與高光邊界；伺服器期限目前只提供顯示，不自動替玩家作決策。R5 已建立語意驗證與官方更新回歸防線，但仍須在新卡或新版規則進入時擴充契約。近期應以 Vercel Preview 完成 1–2 場真人好友房試玩，特別確認開局節奏、ST5-007／ST5-022 的雙方提示、窄畫面可讀性與 Render 冷啟動後的完整流程，再稽核 GitHub Actions／Vercel／Render 健康。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
 
 ## 開發指令
 

@@ -73,4 +73,35 @@ describe('useBattleActions', () => {
 
     await act(() => root.unmount())
   })
+
+  it('exposes every active support card for a neutral attack cost', async () => {
+    const game = createBattleState()
+    const attacker = game.players['player-two'].battleArea[0].card
+    attacker.attackEnergyCost = { neutral: 3 }
+    game.players['player-two'].supportArea = [
+      { card: item('red-support', 'red'), rested: false },
+      { card: item('untyped-support', undefined), rested: false },
+      { card: item('rested-support', 'blue'), rested: true },
+    ]
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useBattleActions> | null = null
+
+    function TestHarness() {
+      captured = useBattleActions({ game, dispatch })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.setSelectedAttackerId('attacker'))
+
+    expect(captured!.attackPaymentTargetIds).toEqual(
+      new Set(['red-support', 'untyped-support']),
+    )
+    await act(() => captured!.toggleAttackPayment('untyped-support'))
+    expect(captured!.selectedAttackPaymentIds).toEqual(['untyped-support'])
+
+    await act(() => root.unmount())
+  })
 })

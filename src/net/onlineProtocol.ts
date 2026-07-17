@@ -29,8 +29,15 @@ export type PublicTargetScope =
 
 export type PublicIntentStepState = 'done' | 'active' | 'pending'
 
+export type PublicIntentProgressKey =
+  | 'declare'
+  | 'payment'
+  | 'cost'
+  | 'target'
+  | 'resolve'
+
 export interface PublicIntentProgressStep {
-  key: string
+  key: PublicIntentProgressKey
   label: string
   state: PublicIntentStepState
 }
@@ -42,6 +49,8 @@ export interface PublicCardReference {
   type: CardType
   ownerId: PlayerId
 }
+
+export type PublicResponseType = 'trap' | 'flip' | 'effect'
 
 interface PublicIntentCommon {
   intentId: string
@@ -76,7 +85,7 @@ export type PublicIntent =
   | (PublicIntentCommon & {
       type: 'awaiting-response'
       responderId: PlayerId
-      responseType: 'trap' | 'flip' | 'effect'
+      responseType: PublicResponseType
     })
   | (PublicIntentCommon & {
       type: 'resolving'
@@ -117,7 +126,7 @@ export type PublicIntentDraft =
   | (PublicIntentDraftCommon & {
       type: 'awaiting-response'
       responderId: PlayerId
-      responseType: 'trap' | 'flip' | 'effect'
+      responseType: PublicResponseType
     })
   | (PublicIntentDraftCommon & {
       type: 'resolving'
@@ -197,7 +206,7 @@ export type ServerMessage =
       state: GameState | null
     }
   | { type: 'match-start'; seed: number; viewerId: PlayerId; state: GameState }
-  | { type: 'state-update'; state: GameState }
+  | { type: 'state-update'; state: GameState; updatedBy?: PlayerId }
   | { type: 'opponent-attack-selection'; selection: AttackSelectionPreview }
   | {
       type: 'public-intent-update'
@@ -273,7 +282,11 @@ const isPublicProgress = (value: unknown): value is PublicIntentProgressStep[] =
   value.every(
     (step) =>
       isRecord(step) &&
-      typeof step.key === 'string' &&
+      (step.key === 'declare' ||
+        step.key === 'payment' ||
+        step.key === 'cost' ||
+        step.key === 'target' ||
+        step.key === 'resolve') &&
       typeof step.label === 'string' &&
       (step.state === 'done' || step.state === 'active' || step.state === 'pending'),
   )

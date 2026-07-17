@@ -5,8 +5,11 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
+  hasRequiredEffectTargets,
   getTargetPlayerId,
   isEffectConditionMet,
+  requiresTargetSelection,
   isEffectTargeted,
   resolveDrawUpTo,
   selectEffectTargets,
@@ -1066,6 +1069,49 @@ const collectAfterDamageEffects = (
   return collectAfterDamageEffectsFromIds(state, damagedIds)
 }
 
+const getAttackEffectContext = (
+  playerId: PlayerId,
+  battle: PendingBattle,
+): EffectContext => ({
+  sourcePlayerId: playerId,
+  sourceInstanceId: battle.attackerInstanceId,
+})
+
+const hasApplicableOptionalAttackEffect = (
+  state: GameState,
+  context: EffectContext,
+  effects: CardEffect[],
+): boolean =>
+  effects.some(
+    (effect) =>
+      isEffectConditionMet(state, context, effect) &&
+      hasRequiredEffectTargets(state, context, effect),
+  )
+
+const advanceAttackEffect = (
+  state: GameState,
+  battle: PendingBattle,
+): GameState => {
+  const attackEffectIndex = battle.attackEffectIndex + 1
+  if (attackEffectIndex < battle.attackEffects.length) {
+    return {
+      ...state,
+      pendingBattle: {
+        ...battle,
+        attackEffectIndex,
+        stage: 'attack-effect',
+      },
+    }
+  }
+  return finishBattle({
+    ...state,
+    pendingBattle: {
+      ...battle,
+      attackEffectIndex,
+    },
+  })
+}
+
 const findSourceCardName = (
   state: GameState,
   playerId: PlayerId,
@@ -1234,7 +1280,27 @@ export const resolveAttackEffect = (
     return finishBattle(state)
   }
 
+  const effectContext = getAttackEffectContext(playerId, battle)
+
+  // 攻擊後效果若已沒有合法目標（例如 BS1-037 對手場上沒有 LV.1
+  // 餅乾），直接略過該效果，不建立任何玩家提示或付款決策。
+  if (
+    !isEffectConditionMet(state, effectContext, effect) ||
+    !hasRequiredEffectTargets(state, effectContext, effect)
+  ) {
+    return advanceAttackEffect(state, battle)
+  }
+
   if (effect.kind === 'optional-cost-attack') {
+    if (
+      !hasApplicableOptionalAttackEffect(
+        state,
+        effectContext,
+        effect.effects,
+      )
+    ) {
+      return advanceAttackEffect(state, battle)
+    }
     const sourceCard = state.players[playerId].battleArea.find(
       (c) => c.card.instanceId === battle.attackerInstanceId,
     )?.card
@@ -1252,25 +1318,7 @@ export const resolveAttackEffect = (
     }
   }
 
-  const effectContext = {
-    sourcePlayerId: playerId,
-    sourceInstanceId: battle.attackerInstanceId,
-  }
   const hasCondition = 'condition' in effect && Boolean(effect.condition)
-  if (!isEffectConditionMet(state, effectContext, effect)) {
-    const attackEffectIndex = battle.attackEffectIndex + 1
-    if (attackEffectIndex < battle.attackEffects.length) {
-      return {
-        ...state,
-        pendingBattle: {
-          ...battle,
-          attackEffectIndex,
-          stage: 'attack-effect',
-        },
-      }
-    }
-    return finishBattle(state)
-  }
 
   if (hasCondition) {
     const nextState = executeCardEffect(
@@ -1284,25 +1332,7 @@ export const resolveAttackEffect = (
     }
 
     const nextBattle = requirePendingBattle(nextState)
-    const attackEffectIndex = nextBattle.attackEffectIndex + 1
-    if (attackEffectIndex < nextBattle.attackEffects.length) {
-      return {
-        ...nextState,
-        pendingBattle: {
-          ...nextBattle,
-          attackEffectIndex,
-          stage: 'attack-effect',
-        },
-      }
-    }
-
-    return finishBattle({
-      ...nextState,
-      pendingBattle: {
-        ...nextBattle,
-        attackEffectIndex,
-      },
-    })
+    return advanceAttackEffect(nextState, nextBattle)
   }
 
   const nextState = executeCardEffect(
@@ -1316,25 +1346,7 @@ export const resolveAttackEffect = (
   }
 
   const nextBattle = requirePendingBattle(nextState)
-  const attackEffectIndex = nextBattle.attackEffectIndex + 1
-  if (attackEffectIndex < nextBattle.attackEffects.length) {
-    return {
-      ...nextState,
-      pendingBattle: {
-        ...nextBattle,
-        attackEffectIndex,
-        stage: 'attack-effect',
-      },
-    }
-  }
-
-  return finishBattle({
-    ...nextState,
-    pendingBattle: {
-      ...nextBattle,
-      attackEffectIndex,
-    },
-  })
+  return advanceAttackEffect(nextState, nextBattle)
 }
 
 export const resolveOptionalCostAttack = (
@@ -1380,7 +1392,34 @@ export const resolveOptionalCostAttack = (
   if (!paymentValidation.valid) {
     throw new GameRuleError(`Invalid attack effect payment: ${paymentValidation.reason}`)
   }
-  const hasTargetedEffect = pending.effects.some((e) => isEffectTargeted(e))
+  const effectContext = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: pending.sourceInstanceId,
+  }
+  const applicableEffects = pending.effects.filter((effect) =>
+    isEffectConditionMet(state, effectContext, effect),
+  )
+  if (applicableEffects.length === 0) {
+    const battle = requirePendingBattle(state)
+    const nextIndex = battle.attackEffectIndex + 1
+    const clearedState = { ...state, pendingOptionalCostAttack: null }
+    return nextIndex < battle.attackEffects.length
+      ? {
+          ...clearedState,
+          pendingBattle: {
+            ...battle,
+            attackEffectIndex: nextIndex,
+            stage: 'attack-effect',
+          },
+        }
+      : finishBattle({
+          ...clearedState,
+          pendingBattle: { ...battle, attackEffectIndex: nextIndex },
+        })
+  }
+  const hasTargetedEffect = applicableEffects.some((e) =>
+    requiresTargetSelection(e),
+  )
   if (hasTargetedEffect) {
     const uniqueTargetIds = [...new Set(targetIds)]
     if (uniqueTargetIds.length !== targetIds.length) {
@@ -1389,12 +1428,17 @@ export const resolveOptionalCostAttack = (
     if (uniqueTargetIds.length !== 1) {
     throw new GameRuleError('Invalid battle action.')
     }
-    const opponentId = getOpponentId(playerId)
-    const inOpponentBattle = uniqueTargetIds.every((id) =>
-      state.players[opponentId].battleArea.some((c) => c.card.instanceId === id),
-    )
-    if (!inOpponentBattle) {
-    throw new GameRuleError('Invalid battle action.')
+    const hasValidTarget = applicableEffects
+      .filter((effect) => requiresTargetSelection(effect))
+      .every((effect) =>
+        getEffectTargetCandidatesForEffect(
+          state,
+          effectContext,
+          effect,
+        ).some((cookie) => cookie.card.instanceId === uniqueTargetIds[0]),
+      )
+    if (!hasValidTarget) {
+      throw new GameRuleError('Invalid battle action.')
     }
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
@@ -1416,8 +1460,8 @@ export const resolveOptionalCostAttack = (
       },
     },
   }
-  const context = { sourcePlayerId: playerId, sourceInstanceId: pending.sourceInstanceId }
-  for (const effect of pending.effects) {
+  const context = effectContext
+  for (const effect of applicableEffects) {
     if (nextState.status !== 'playing') break
     nextState = executeCardEffect(nextState, context, effect, targetIds)
   }
@@ -1815,27 +1859,34 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         nextState.players[pending.playerId].supportArea,
       )
       const canPayEnergy = Boolean(paymentIds)
-      const opponentId = pending.playerId === 'player-one' ? 'player-two' : 'player-one'
-      const opponentHasCookie = nextState.players[opponentId].battleArea.length > 0
-      const targetedEffect = pending.effects.find((e) => isEffectTargeted(e))
-      const context: EffectContext = { sourcePlayerId: pending.playerId, sourceInstanceId: pending.sourceInstanceId }
+      const context: EffectContext = {
+        sourcePlayerId: pending.playerId,
+        sourceInstanceId: pending.sourceInstanceId,
+      }
+      const applicableEffects = pending.effects.filter((effect) =>
+        isEffectConditionMet(nextState, context, effect),
+      )
+      const targetedEffect = applicableEffects.find((e) =>
+        requiresTargetSelection(e),
+      )
       let autoTargetIds: string[] = []
       if (targetedEffect) {
-        const battle = nextState.pendingBattle
-        if (targetedEffect.target.attackTargetOnly && battle) {
-          const attackTarget = nextState.players[opponentId].battleArea
-            .find((c) => c.card.instanceId === battle.targetInstanceId)
-          autoTargetIds = attackTarget ? [attackTarget.card.instanceId] : []
-        } else {
-          autoTargetIds = getEffectTargetCandidates(nextState, context, targetedEffect.target)
-            .slice(0, targetedEffect.target.max)
-            .map((c) => c.card.instanceId)
-        }
+        const candidates = getEffectTargetCandidatesForEffect(
+          nextState,
+          context,
+          targetedEffect,
+        )
+        autoTargetIds = candidates
+          .slice(0, targetedEffect.kind === 'opponent-battle-to-trash' ? 1 : targetedEffect.target.max)
+          .map((c) => c.card.instanceId)
       }
       const hasTarget = targetedEffect
-        ? autoTargetIds.length >= targetedEffect.target.min
-        : true
-      if (canPayHand && canPayEnergy && opponentHasCookie && hasTarget) {
+        ? autoTargetIds.length >=
+          (targetedEffect.kind === 'opponent-battle-to-trash'
+            ? 1
+            : targetedEffect.target.min)
+        : applicableEffects.length > 0
+      if (canPayHand && canPayEnergy && hasTarget) {
         const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
         nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, autoTargetIds, paymentIds ?? undefined)
       } else {

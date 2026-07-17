@@ -853,6 +853,46 @@ describe('DecisionModal', () => {
     await act(() => root.unmount())
   })
 
+  it('keeps the first and last replacement cards reachable in the horizontal list', async () => {
+    const onSelect = vi.fn()
+    const options = Array.from({ length: 8 }, (_, index) =>
+      createBattleCookie(index + 1).card,
+    )
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() =>
+      root.render(
+        <DecisionModal
+          isRefresh={false}
+          playerName="玩家"
+          replacementCount={1}
+          options={options}
+          isOptionDisabled={() => false}
+          onSelect={onSelect}
+          onSkipReplacement={() => undefined}
+        />,
+      ),
+    )
+
+    const optionsList = container.querySelector('.decision-card-options')
+    expect(optionsList).not.toBeNull()
+    const optionButtons = optionsList!.querySelectorAll('button')
+    expect(optionButtons).toHaveLength(options.length)
+
+    await act(() => (optionButtons[0] as HTMLButtonElement).click())
+    await act(() =>
+      (optionButtons[optionButtons.length - 1] as HTMLButtonElement).click(),
+    )
+
+    expect(onSelect).toHaveBeenNthCalledWith(1, options[0].instanceId)
+    expect(onSelect).toHaveBeenNthCalledWith(
+      2,
+      options[options.length - 1].instanceId,
+    )
+
+    await act(() => root.unmount())
+  })
+
   it('skips replacement from the dialog', async () => {
     const onSkipReplacement = vi.fn()
     const container = document.createElement('div')

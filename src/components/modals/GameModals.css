@@ -631,8 +631,15 @@
   overflow-x: auto;
 }
 
+.decision-card-options {
+  justify-content: flex-start;
+  padding-inline: 4px;
+  scroll-padding-inline: 4px;
+}
+
 .modal-card-options > button {
   min-width: 112px;
+  flex: 0 0 112px;
   display: grid;
   justify-items: center;
   gap: 8px;
@@ -1987,6 +1994,13 @@
   background: rgba(255, 60, 60, 0.1);
   color: #ffb4b4;
   font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.online-match-connection-status {
+  margin: 8px 0 0;
+  color: #bdeeff;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 

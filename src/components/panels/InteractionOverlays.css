@@ -2,7 +2,7 @@
   position: absolute;
   z-index: 28;
   right: 104px;
-  width: 174px;
+  width: 208px;
   display: grid;
   gap: 7px;
   padding: 8px;
@@ -23,7 +23,7 @@
 }
 
 .card-preview-panel .preview-card {
-  width: 156px;
+  width: 188px;
 }
 
 .card-preview-panel > div {
@@ -38,6 +38,23 @@
 .card-preview-panel small {
   color: rgba(219, 239, 255, 0.65);
   font-size: 0.52rem;
+}
+
+.card-preview-panel .card-preview-context {
+  color: #fff17c;
+  font-weight: 900;
+}
+
+.card-preview-effect {
+  max-height: 54px;
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: rgba(232, 248, 255, 0.74);
+  font-size: 0.58rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .status-toast {
@@ -64,11 +81,11 @@
 @container game-shell (max-width: 1100px) {
   .card-preview-panel {
     right: 82px;
-    width: 144px;
+    width: 174px;
   }
 
   .card-preview-panel .preview-card {
-    width: 126px;
+    width: 156px;
   }
 }
 

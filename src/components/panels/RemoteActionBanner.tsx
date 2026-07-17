@@ -1,10 +1,12 @@
 import { Clock3, LoaderCircle, Sparkles, Wifi } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import type { ActionStatus, ActionStatusMode } from './actionStatus'
 import './RemoteActionBanner.css'
 
 export interface RemoteActionBannerProps {
   status: ActionStatus | null
   compact?: boolean
+  connectionNotice?: string | null
 }
 
 const modeLabels: Record<ActionStatusMode, string> = {
@@ -25,13 +27,35 @@ const iconFor = (mode: ActionStatusMode) => {
   return <Clock3 aria-hidden="true" />
 }
 
+const formatRemaining = (remainingMs: number): string => {
+  if (remainingMs <= 0) return '已到時限'
+  const totalSeconds = Math.ceil(remainingMs / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return minutes > 0
+    ? `剩餘 ${minutes}:${seconds.toString().padStart(2, '0')}`
+    : `剩餘 ${seconds} 秒`
+}
+
 export function RemoteActionBanner({
   status,
   compact = false,
+  connectionNotice = null,
 }: RemoteActionBannerProps) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (!status?.expiresAt) return
+    const timer = window.setInterval(() => setNow(Date.now()), 250)
+    return () => window.clearInterval(timer)
+  }, [status?.expiresAt])
+
   if (!status) return null
 
-  const progress = status.progress?.filter((step) => step.state !== 'pending')
+  const expiryMs = status.expiresAt ? Date.parse(status.expiresAt) : Number.NaN
+  const remainingMs = Number.isFinite(expiryMs)
+    ? Math.max(0, expiryMs - now)
+    : null
 
   return (
     <aside
@@ -44,18 +68,29 @@ export function RemoteActionBanner({
         <strong>{status.headline}</strong>
         <span className="remote-action-banner-mode">{modeLabels[status.mode]}</span>
       </div>
-      {!compact && (
-        <div className="remote-action-banner-detail">
-          <span>
-            {status.actorLabel} · {status.phaseLabel}
-            {status.sourceCard ? ` · ${status.sourceCard.name}` : ''}
-          </span>
-          {status.detail && <small>{status.detail}</small>}
-        </div>
-      )}
-      {progress && progress.length > 0 && (
+      <div className={`remote-action-banner-detail${compact ? ' is-compact' : ''}`}>
+        <span>
+          {status.actorLabel} · {status.phaseLabel}
+          {status.sourceCard ? ` · ${status.sourceCard.name}` : ''}
+        </span>
+        {status.detail && <small>{status.detail}</small>}
+        {connectionNotice && connectionNotice !== status.detail && (
+          <small className="remote-action-banner-connection">
+            {connectionNotice}
+          </small>
+        )}
+        {remainingMs !== null && (
+          <time
+            className={remainingMs <= 0 ? 'is-expired' : undefined}
+            dateTime={status.expiresAt}
+          >
+            {formatRemaining(remainingMs)}
+          </time>
+        )}
+      </div>
+      {status.progress && status.progress.length > 0 && (
         <ol className="remote-action-banner-progress" aria-label="操作進度">
-          {progress.map((step) => (
+          {status.progress.map((step) => (
             <li key={step.key} className={`is-${step.state}`}>
               {step.label}
             </li>

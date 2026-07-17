@@ -208,6 +208,14 @@
   color: rgba(255, 255, 255, 0.72);
 }
 
+.effect-panel button.skip-effect:has(.effect-skip-label) {
+  font-size: 0;
+}
+
+.effect-panel .effect-skip-label {
+  font-size: 0.9rem;
+}
+
 .effect-panel button svg {
   width: 18px;
 }
@@ -400,6 +408,10 @@
   display: grid;
   gap: 8px;
   padding-top: 4px;
+}
+
+.effect-panel .optional-cost-attack-inline > span:first-of-type {
+  display: none;
 }
 
 .effect-panel .optional-cost-attack-inline .modal-actions {

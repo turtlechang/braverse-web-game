@@ -2,15 +2,19 @@ import { useEffect, useMemo, useState } from 'react'
 import type { GameState, PlayerId } from '../../game'
 import { getEnergyCostTotal, selectEnergyPayment } from '../../game'
 import { useOnlineMatchController } from '../../hooks/useOnlineMatchController'
+import type { OnlineConnectionMode } from '../../hooks/useOnlineMatch'
 import { useOnlinePendingEffect } from '../../hooks/useOnlinePendingEffect'
 import { useMatchDialogs } from '../../hooks/useMatchDialogs'
 import { BattleRow } from './BattleRow'
+import { AttackPreviewArrow } from './AttackPreviewArrow'
+import { findCardInGame } from './publicCardLookup'
 import { PhaseRail } from '../layout/PhaseRail'
 import { AttackPaymentPanel } from '../panels/GameStatusPanels'
 import { StatusToast, CardPreviewPanel } from '../panels/InteractionOverlays'
 import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
 import { RemoteActionBanner } from '../panels/RemoteActionBanner'
 import { deriveActionStatus } from '../panels/actionStatus'
+import { buildActionProgress } from '../panels/actionProgress'
 import { EffectPanel } from '../effects/EffectPanel'
 import { getOptionalCostAttackPrompt } from '../modals/optionalCostAttackPrompt'
 import { BattleResponseModals } from './BattleResponseModals'
@@ -27,20 +31,6 @@ import type {
   PublicTargetScope,
 } from '../../net/onlineProtocol'
 import { OnlineOpeningOverlay } from './OnlineOpeningOverlay'
-
-const publicProgress = (
-  active: 'payment' | 'cost' | 'target',
-) =>
-  (['payment', 'cost', 'target'] as const).map((key) => ({
-    key,
-    label: key === 'payment' ? '能量' : key === 'cost' ? '代價' : '目標',
-    state:
-      key === active
-        ? ('active' as const)
-        : key === 'payment' || (key === 'cost' && active === 'target')
-          ? ('done' as const)
-          : ('pending' as const),
-  }))
 
 const publicTargetScopeFor = (kind: string | undefined): PublicTargetScope => {
   if (kind === 'opponent-battle-to-trash' || kind === 'damage') {
@@ -71,6 +61,8 @@ export interface OnlineBattleViewProps {
   sendOpeningAction: (action: OnlineOpeningAction) => void
   sendPublicIntent?: (intent: PublicIntentDraft) => void
   clearPublicIntent?: (intentId?: string) => void
+  connectionNotice?: string | null
+  connectionMode?: OnlineConnectionMode
   onLeave: () => void
 }
 
@@ -100,9 +92,12 @@ export function OnlineBattleView({
   sendOpeningAction,
   sendPublicIntent,
   clearPublicIntent,
+  connectionNotice = null,
+  connectionMode = null,
   onLeave,
 }: OnlineBattleViewProps) {
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
+  const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const [selectedHandCardId, setSelectedHandCardId] = useState<string | null>(
     null,
   )
@@ -130,6 +125,8 @@ export function OnlineBattleView({
       pendingSourceCard: pending.abilityCostDraft?.card,
       selectedAttackerId: match.selectedAttackerId,
       attackPaymentValid: match.attackPaymentValidation.valid,
+      connectionMode: connectionMode ?? undefined,
+      connectionNotice,
     },
   })
 
@@ -218,7 +215,12 @@ export function OnlineBattleView({
           highlightedTargetInstanceIds: selectedDraftPaymentKey
             ? selectedDraftPaymentKey.split(',')
             : [],
-          progress: publicProgress('payment'),
+          progress: buildActionProgress({
+            active: 'payment',
+            hasPayment: requiredPayment > 0,
+            hasCost: requiredCost > 0,
+            hasTarget: pending.candidateCards.length > 0,
+          }),
         }
       }
 
@@ -229,7 +231,12 @@ export function OnlineBattleView({
           requiredCount: requiredCost,
           selectedCount: selectedCostCount,
           publicDescription: '正在選擇發動代價',
-          progress: publicProgress('cost'),
+          progress: buildActionProgress({
+            active: 'cost',
+            hasPayment: requiredPayment > 0,
+            hasCost: requiredCost > 0,
+            hasTarget: pending.candidateCards.length > 0,
+          }),
         }
       }
 
@@ -246,7 +253,12 @@ export function OnlineBattleView({
           highlightedTargetInstanceIds: selectedDraftTargetKey
             ? selectedDraftTargetKey.split(',')
             : [],
-          progress: publicProgress('target'),
+          progress: buildActionProgress({
+            active: 'target',
+            hasPayment: requiredPayment > 0,
+            hasCost: requiredCost > 0,
+            hasTarget: pending.candidateCards.length > 0,
+          }),
         }
       }
 
@@ -254,6 +266,12 @@ export function OnlineBattleView({
         type: 'resolving',
         sourceInstanceId: draft.card.instanceId,
         resolutionLabel: '準備結算效果',
+        progress: buildActionProgress({
+          active: 'resolve',
+          hasPayment: requiredPayment > 0,
+          hasCost: requiredCost > 0,
+          hasTarget: pending.candidateCards.length > 0,
+        }),
       }
     }
 
@@ -266,7 +284,12 @@ export function OnlineBattleView({
           requiredCount: requiredPayment,
           selectedCount: match.selectedAttackPaymentIds.length,
           highlightedTargetInstanceIds: [...match.selectedAttackPaymentIds],
-          progress: publicProgress('payment'),
+          progress: buildActionProgress({
+            active: 'payment',
+            hasPayment: requiredPayment > 0,
+            hasCost: false,
+            hasTarget: true,
+          }),
         }
       }
       return {
@@ -275,7 +298,12 @@ export function OnlineBattleView({
         targetScope: 'opponent-battle-cookie',
         requiredCount: 1,
         selectedCount: 0,
-        progress: publicProgress('target'),
+        progress: buildActionProgress({
+          active: 'target',
+          hasPayment: requiredPayment > 0,
+          hasCost: false,
+          hasTarget: true,
+        }),
       }
     }
 
@@ -291,6 +319,12 @@ export function OnlineBattleView({
         responderId: viewerPlayerId,
         responseType: pendingBattle.stage,
         sourceInstanceId: pendingBattle.attackerInstanceId,
+        progress: buildActionProgress({
+          active: 'response',
+          hasPayment: false,
+          hasCost: false,
+          hasTarget: true,
+        }),
       }
     }
 
@@ -346,6 +380,13 @@ export function OnlineBattleView({
     Boolean(game.pendingRefresh) ||
     Boolean(game.pendingFaintEffects && game.pendingFaintEffects.length > 0) ||
     Boolean(pending.pendingEffect)
+
+  const opponentSourcePreviewCard =
+    actionStatus.mode === 'opponent-thinking' ||
+    actionStatus.mode === 'awaiting-opponent-decision'
+      ? findCardInGame(game, actionStatus.sourceCard?.instanceId) ?? null
+      : null
+  const opponentPreviewCard = hoveredOpponentCard ?? opponentSourcePreviewCard
 
   return (
     <main className="game-shell">
@@ -404,15 +445,37 @@ export function OnlineBattleView({
           }
           onInspectCard={dialogs.openCardDetail}
           onInspectDiscard={dialogs.openDiscardPile}
-          onHoverCard={setHoveredCard}
-          onFocusCard={setHoveredCard}
+          onHoverCard={setHoveredOpponentCard}
+          onFocusCard={setHoveredOpponentCard}
         />
 
         <div className="table-divider">
           <span />
-          <RemoteActionBanner status={actionStatus} compact />
+          <RemoteActionBanner
+            status={actionStatus}
+            compact
+            connectionNotice={connectionNotice}
+          />
           <span />
         </div>
+
+        <AttackPreviewArrow
+          sourceInstanceId={
+            opponentAttackSelection.attackerInstanceId ??
+            (actionStatus.mode === 'opponent-thinking'
+              ? actionStatus.sourceCard?.instanceId ?? null
+              : null)
+          }
+          targetInstanceIds={actionStatus.attackTargetInstanceIds ?? []}
+          label={
+            opponentAttackSelection.attackerInstanceId ||
+            match.selectedAttackerId ||
+            pendingBattle ||
+            actionStatus.headline.includes('攻擊')
+              ? '攻擊宣告'
+              : '目標選擇'
+          }
+        />
 
         <BattleRow
           game={game}
@@ -424,6 +487,7 @@ export function OnlineBattleView({
           selectedEffectTargetIds={selectedEffectTargetIds}
           selectedSkillPaymentIds={new Set()}
           selectedAttackPaymentIds={selectedAttackPaymentIdSet}
+          attackPaymentTargetIds={match.attackPaymentTargetIds}
           selectedTrapPaymentIds={trapPaymentIdSetOnline}
           trapPaymentTargetIds={match.trapPaymentTargetIds}
           onTrapPayment={match.toggleTrapPayment}
@@ -517,6 +581,15 @@ export function OnlineBattleView({
         />
       </section>
 
+      <CardPreviewPanel
+        card={opponentPreviewCard}
+        position="top"
+        contextLabel={
+          hoveredOpponentCard || !opponentSourcePreviewCard
+            ? undefined
+            : '對手目前操作'
+        }
+      />
       <CardPreviewPanel card={hoveredCard} position="bottom" />
 
       {openingSnapshot && (
@@ -551,7 +624,17 @@ export function OnlineBattleView({
         currentEffect={pending.currentEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
-        onSkip={() => {}}
+        onSkip={() => {
+          if (pending.pendingEffect?.sourceKind !== 'attack') return
+          match.dispatch(
+            {
+              kind: 'resolve-attack-effect',
+              playerId: viewerPlayerId,
+              targetIds: [],
+            },
+            '已略過攻擊後續效果。',
+          )
+        }}
         candidateCards={pending.candidateCards}
         onToggleCandidate={pending.toggleTarget}
         discardHandCandidates={pending.draftDiscardHandCandidates}

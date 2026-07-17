@@ -88,7 +88,7 @@ describe('optional-cost-attack', () => {
     ).toContain(deployableCookie.instanceId)
   })
 
-  it('creates pendingOptionalCostAttack even when hand has fewer cards than cost', () => {
+  it('skips optional attack effects with no applicable child effect', () => {
     let state = createBattleState()
     state.players['player-two'].hand = []
     state.players['player-two'].battleArea[0].card.attackEffects = [
@@ -103,13 +103,13 @@ describe('optional-cost-attack', () => {
     state = advanceToAttackEffect(state)
     expect(state.pendingBattle!.stage).toBe('attack-effect')
     state = resolveAttackEffect(state, 'player-two', [])
-    expect(state.pendingOptionalCostAttack).toBeDefined()
-    expect(state.pendingOptionalCostAttack!.cost.discardHand).toBe(2)
-    expect(state.pendingBattle).toBeDefined()
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeFalsy()
   })
 
   it('creates pendingOptionalCostAttack when hand has enough cards', () => {
     let state = createBattleState()
+    state.players['player-two'].battleArea[0].card.attack = 1
     const hc1 = handCookie('hc1')
     const hc2 = handCookie('hc2')
     state.players['player-two'].hand = [hc1, hc2]
@@ -547,6 +547,7 @@ describe('optional-cost-attack', () => {
 describe('optional-cost-attack integration', () => {
   it('full battle flow with sufficient hand creates pending', () => {
     let state = createBattleState()
+    state.players['player-two'].battleArea[0].card.attack = 1
     const hc1 = handCookie('hc1')
     const hc2 = handCookie('hc2')
     state.players['player-two'].hand = [hc1, hc2]
@@ -564,9 +565,9 @@ describe('optional-cost-attack integration', () => {
     expect(state.pendingBattle!.stage).toBe('trap')
     state = skipTrap(state, 'player-one')
     expect(state.pendingBattle!.stage).toBe('damage')
-    state = resolveNextDamage(state)
-    state = resolveNextDamage(state)
-    state = resolveNextDamage(state)
+    while (state.pendingBattle?.stage === 'damage') {
+      state = resolveNextDamage(state)
+    }
     expect(state.pendingBattle!.stage).toBe('attack-effect')
     state = resolveAttackEffect(state, 'player-two', [])
     expect(state.pendingOptionalCostAttack).toBeDefined()
@@ -575,7 +576,7 @@ describe('optional-cost-attack integration', () => {
     expect(state.pendingBattle).toBeDefined()
   })
 
-  it('full battle flow with insufficient hand still creates pending', () => {
+  it('full battle flow with insufficient hand skips without pending', () => {
     let state = createBattleState()
     state.players['player-two'].hand = []
     state.players['player-two'].battleArea[0].card.attackEffects = [
@@ -593,9 +594,8 @@ describe('optional-cost-attack integration', () => {
     state = resolveNextDamage(state)
     expect(state.pendingBattle!.stage).toBe('attack-effect')
     state = resolveAttackEffect(state, 'player-two', [])
-    expect(state.pendingOptionalCostAttack).toBeDefined()
-    expect(state.pendingOptionalCostAttack!.cost.discardHand).toBe(2)
-    expect(state.pendingBattle).toBeDefined()
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeFalsy()
   })
 
   it('resolveBattleAutomatically auto-skips optional-cost-attack without looping', () => {
@@ -616,7 +616,7 @@ describe('optional-cost-attack integration', () => {
     expect(state.status).toBe('playing')
   })
 
-  it('still creates pending even when opponent has no battle area cookies (UI decides pay vs skip)', () => {
+  it('skips optional attack effects when opponent has no battle area cookies', () => {
     let state = createBattleState()
     const hc1 = handCookie('hc1')
     const hc2 = handCookie('hc2')
@@ -652,9 +652,50 @@ describe('optional-cost-attack integration', () => {
       },
     }
     state = resolveAttackEffect(state, 'player-two', [])
-    // Still creates pending — the UI/AI decides whether Pay is available
-    expect(state.pendingOptionalCostAttack).toBeDefined()
-    expect(state.pendingBattle).toBeDefined()
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeFalsy()
+  })
+
+  it('skips BS1-037-style optional effect when only higher-level cookies remain', () => {
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].card.level = 2
+    state.players['player-two'].hand = [handCookie('hc1')]
+    state = {
+      ...state,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        declaredDamage: 0,
+        remainingDamage: 0,
+        stage: 'attack-effect' as const,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [
+          {
+            kind: 'optional-cost-attack' as const,
+            cost: { energy: {}, discardHand: 0 },
+            effects: [
+              {
+                kind: 'opponent-battle-to-trash' as const,
+                maxLevel: 1,
+                destination: 'break' as const,
+              },
+            ],
+            effectText: 'Select up to 1 opposing LV.1 Cookie.',
+          },
+        ],
+        attackEffectIndex: 0,
+      },
+    }
+
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeFalsy()
   })
 
   it('resolveBattleAutomatically completes battle with optional-cost-attack and damage effect', () => {

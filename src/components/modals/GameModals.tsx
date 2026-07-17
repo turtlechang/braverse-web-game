@@ -294,7 +294,7 @@ export function DecisionModal({
                   replacementCount ?? 1
                 } 張）`}
           </strong>
-          <div className="modal-card-options">
+          <div className="modal-card-options decision-card-options">
             {options.map((card) => (
               <button
                 type="button"

@@ -101,16 +101,26 @@ describe('RoomStore', () => {
     })
 
     expect(intent.source?.instanceId).toBe(source.instanceId)
+    expect(intent.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
     expect(intent.highlightedTargetInstanceIds).toEqual([
       opponentCookie.instanceId,
     ])
     expect(publicIntentFor(room, 'player-one')).toEqual(intent)
-    expect(publicIntentSequenceFor(room, 'player-one')).toBe(1)
+    const updatedIntent = store.setPublicIntent(room, 'player-one', {
+      type: 'selecting-target',
+      sourceInstanceId: source.instanceId,
+      targetScope: 'opponent-battle-cookie',
+      requiredCount: 1,
+      selectedCount: 0,
+      highlightedTargetInstanceIds: [],
+    })
+    expect(updatedIntent.expiresAt).toBe(intent.expiresAt)
+    expect(publicIntentSequenceFor(room, 'player-one')).toBe(2)
 
     expect(store.clearPublicIntent(room, 'player-one', 'stale-id')).toBe(false)
-    expect(store.clearPublicIntent(room, 'player-one', intent.intentId)).toBe(true)
+    expect(store.clearPublicIntent(room, 'player-one', updatedIntent.intentId)).toBe(true)
     expect(publicIntentFor(room, 'player-one')).toBeNull()
-    expect(publicIntentSequenceFor(room, 'player-one')).toBe(2)
+    expect(publicIntentSequenceFor(room, 'player-one')).toBe(3)
   })
 
   it('建立房間會產生房號並處於等待狀態', () => {

@@ -82,6 +82,8 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
         sendOpeningAction={online.sendOpeningAction}
         sendPublicIntent={online.sendPublicIntent}
         clearPublicIntent={online.clearPublicIntent}
+        connectionNotice={online.connectionNotice}
+        connectionMode={online.connectionMode}
         onLeave={handleClose}
       />
     )
@@ -114,6 +116,12 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
             <div className="online-match-error" role="alert">
               {online.errorMessage}
             </div>
+          )}
+
+          {online.connectionNotice && (
+            <p className="online-match-connection-status" role="status">
+              {online.connectionNotice}
+            </p>
           )}
 
           {online.status === 'idle' && (

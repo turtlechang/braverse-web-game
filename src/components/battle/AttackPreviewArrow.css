@@ -1,0 +1,51 @@
+.attack-preview-overlay {
+  position: absolute;
+  z-index: 25;
+  inset: 0;
+  pointer-events: none;
+}
+
+.attack-preview-svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.attack-preview-svg line {
+  stroke: #fff17c;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 8 7;
+  filter: drop-shadow(0 0 5px rgba(255, 241, 124, 0.8));
+  animation: attack-preview-dash 0.85s linear infinite;
+}
+
+.attack-preview-svg marker path {
+  fill: #fff17c;
+}
+
+.attack-preview-label {
+  position: absolute;
+  translate: -50% -50%;
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 241, 124, 0.72);
+  border-radius: 999px;
+  color: #fff17c;
+  background: rgba(2, 19, 52, 0.9);
+  box-shadow: 0 0 14px rgba(255, 241, 124, 0.25);
+  font-size: 0.58rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@keyframes attack-preview-dash {
+  to {
+    stroke-dashoffset: -15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attack-preview-svg line {
+    animation: none;
+  }
+}

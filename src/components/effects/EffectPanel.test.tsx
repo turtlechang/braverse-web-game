@@ -172,6 +172,7 @@ describe('EffectPanel', () => {
         onConfirm={() => undefined}
         onSkip={() => undefined}
         optionalCostAttack={{
+          sourceCard: createCookieCard(13),
           sourceCardName: 'Tiramisu Cookie',
           effectText: 'Pay to deal damage.',
           discardHandCost: 1,
@@ -190,11 +191,12 @@ describe('EffectPanel', () => {
     expect(container.querySelector('.optional-cost-attack-inline')).not.toBeNull()
     expect(container.querySelector('.optional-cost-attack-modal')).toBeNull()
     expect(container.textContent).toContain('Tiramisu Cookie')
+    expect(container.querySelector('.effect-source-card')).not.toBeNull()
 
     act(() => root.unmount())
   })
 
-  it('uses a compact right-aligned action when confirmation is the only action', () => {
+  it('allows skipping an attack follow-up effect', () => {
     const pending = createPendingEffect({
       skillActivated: true,
       sourceKind: 'attack',
@@ -220,7 +222,8 @@ describe('EffectPanel', () => {
       container
         .querySelector('.effect-panel-sticky-actions')
         ?.classList.contains('is-confirm-only'),
-    ).toBe(true)
+    ).toBe(false)
+    expect(container.querySelector('.effect-skip-label')?.textContent).toBe('略過')
 
     act(() => root.unmount())
   })

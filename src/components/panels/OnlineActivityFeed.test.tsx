@@ -103,8 +103,8 @@ describe('OnlineActivityFeed', () => {
     )
     expect(toggle).not.toBeNull()
     await act(() => toggle!.click())
-    expect(container.textContent).toContain('陷阱已觸發')
-    expect(container.textContent).toContain('使用物品，正在結算效果')
+    expect(container.textContent).toContain('Player One 使用陷阱')
+    expect(container.textContent).toContain('Player Two 使用物品')
     expect(container.textContent).toContain('FLIP 效果觸發')
 
     const fainted: GameState = {

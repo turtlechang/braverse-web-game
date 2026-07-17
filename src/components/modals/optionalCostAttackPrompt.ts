@@ -1,7 +1,7 @@
 import {
-  getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
   getEnergyCostTotal,
-  isEffectTargeted,
+  requiresTargetSelection,
   type EnergyColor,
   type EnergyCost,
   type GameCard,
@@ -10,6 +10,7 @@ import {
 } from '../../game'
 
 export interface OptionalCostAttackPromptData {
+  sourceCard?: GameCard
   sourceCardName: string
   effectText: string
   discardHandCost: number
@@ -27,53 +28,21 @@ export function getOptionalCostAttackPrompt(
   const pending = game.pendingOptionalCostAttack
   if (!pending || pending.playerId !== viewerPlayerId) return null
 
-  const targetedEffect = pending.effects.find(
-    (effect) =>
-      isEffectTargeted(effect) || effect.kind === 'opponent-battle-to-trash',
+  const targetedEffect = pending.effects.find((effect) =>
+    requiresTargetSelection(effect),
   )
   const needsTarget = Boolean(targetedEffect)
   const opponentId = viewerPlayerId === 'player-one' ? 'player-two' : 'player-one'
   const opponentBattleCards = (
     targetedEffect
-      ? targetedEffect.kind === 'opponent-battle-to-trash'
-        ? (() => {
-            const effect = targetedEffect as {
-              kind: 'opponent-battle-to-trash'
-              maxLevel?: number
-              minLevel?: number
-              remainingHp?: number
-            }
-            return getEffectTargetCandidates(
-              game,
-              {
-                sourcePlayerId: viewerPlayerId,
-                sourceInstanceId: pending.sourceInstanceId,
-              },
-              {
-                side: 'opponent',
-                min: 1,
-                max: 1,
-                ...(effect.maxLevel !== undefined
-                  ? { maxLevel: effect.maxLevel }
-                  : {}),
-                ...(effect.minLevel !== undefined
-                  ? { minLevel: effect.minLevel }
-                  : {}),
-                ...(effect.remainingHp !== undefined
-                  ? { remainingHp: effect.remainingHp }
-                  : {}),
-              },
-            ).map((cookie) => cookie.card)
-          })()
-        : getEffectTargetCandidates(
-            game,
-            {
-              sourcePlayerId: viewerPlayerId,
-              sourceInstanceId: pending.sourceInstanceId,
-            },
-            (targetedEffect as { target: import('../../game').EffectTargetSelector })
-              .target,
-          ).map((cookie) => cookie.card)
+      ? getEffectTargetCandidatesForEffect(
+          game,
+          {
+            sourcePlayerId: viewerPlayerId,
+            sourceInstanceId: pending.sourceInstanceId,
+          },
+          targetedEffect,
+        ).map((cookie) => cookie.card)
       : game.players[opponentId].battleArea.map((cookie) => cookie.card)
   ).map((card) => ({ card, instanceId: card.instanceId }))
 
@@ -97,6 +66,9 @@ export function getOptionalCostAttackPrompt(
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return {
+    sourceCard: game.players[viewerPlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+    )?.card,
     sourceCardName: pending.sourceCardName,
     effectText: pending.effectText,
     discardHandCost: pending.cost.discardHand ?? 0,

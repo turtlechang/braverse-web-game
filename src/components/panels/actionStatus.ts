@@ -6,11 +6,13 @@ import type {
 } from '../../game'
 import { getAttackEnergyCost, getEnergyCostTotal } from '../../game'
 import { phaseLabels } from '../gameUiLabels'
+import { buildActionProgress } from './actionProgress'
 import type {
   AttackSelectionPreview,
   PublicCardReference,
   PublicIntent,
   PublicIntentProgressStep,
+  PublicResponseType,
   PublicTargetScope,
 } from '../../net/onlineProtocol'
 
@@ -31,7 +33,9 @@ export interface ActionStatus {
   detail?: string
   sourceCard?: PublicCardReference
   highlightedTargetInstanceIds?: string[]
+  attackTargetInstanceIds?: string[]
   progress?: PublicIntentProgressStep[]
+  expiresAt?: string
 }
 
 export interface ActionStatusLocalState {
@@ -44,6 +48,7 @@ export interface ActionStatusLocalState {
   selectedAttackerId?: string | null
   attackPaymentValid?: boolean
   connectionMode?: 'syncing' | 'reconnecting'
+  connectionNotice?: string | null
 }
 
 export interface ActionStatusOptions {
@@ -99,20 +104,43 @@ const targetScopeLabel = (scope: PublicTargetScope): string => {
   }
 }
 
+const responseTypeLabel = (responseType: PublicResponseType): string => {
+  switch (responseType) {
+    case 'trap':
+      return '陷阱／阻擋'
+    case 'flip':
+      return 'FLIP'
+    case 'effect':
+      return '攻擊效果'
+  }
+}
+
+const cardInGame = (game: GameState, instanceId: string): GameCard | undefined => {
+  for (const player of Object.values(game.players)) {
+    const found = [
+      ...player.hand,
+      ...player.deck,
+      ...player.breakArea,
+      ...player.discardPile,
+      ...player.battleArea.flatMap((entry) => [entry.card, ...entry.hpCards]),
+      ...player.supportArea.map((entry) => entry.card),
+      ...(player.stage ? [player.stage.card] : []),
+    ].find((card) => card.instanceId === instanceId)
+    if (found) return found
+  }
+  return undefined
+}
+
 const progressFor = (
   active: 'payment' | 'cost' | 'target' | 'response' | 'resolve',
-): PublicIntentProgressStep[] => {
-  const steps: Array<[string, string]> = [
-    ['payment', '能量'],
-    ['cost', '代價'],
-    ['target', '目標'],
-  ]
-  return steps.map(([key, label]) => ({
-    key,
-    label,
-    state: key === active ? 'active' : key === 'payment' && active !== 'payment' ? 'done' : 'pending',
-  }))
-}
+  options?: { hasPayment?: boolean; hasCost?: boolean; hasTarget?: boolean },
+): PublicIntentProgressStep[] =>
+  buildActionProgress({
+    active,
+    hasPayment: options?.hasPayment,
+    hasCost: options?.hasCost,
+    hasTarget: options?.hasTarget,
+  })
 
 const pendingBattleActor = (
   game: GameState,
@@ -211,7 +239,13 @@ const statusForIntent = (
         detail: `已選 ${intent.selectedCount}/${intent.requiredCount}`,
         sourceCard: intent.source,
         highlightedTargetInstanceIds: intent.highlightedTargetInstanceIds,
-        progress: intent.progress ?? progressFor('payment'),
+        progress:
+          intent.progress ??
+          progressFor('payment', {
+            hasCost: false,
+            hasTarget: true,
+          }),
+        expiresAt: intent.expiresAt,
       }
     case 'selecting-hidden-cost':
       return {
@@ -225,7 +259,13 @@ const statusForIntent = (
         detail: `已選 ${intent.selectedCount}/${intent.requiredCount}`,
         sourceCard: intent.source,
         highlightedTargetInstanceIds: intent.highlightedTargetInstanceIds,
-        progress: intent.progress ?? progressFor('cost'),
+        progress:
+          intent.progress ??
+          progressFor('cost', {
+            hasPayment: false,
+            hasTarget: true,
+          }),
+        expiresAt: intent.expiresAt,
       }
     case 'selecting-target':
       return {
@@ -239,7 +279,14 @@ const statusForIntent = (
         detail: `已選 ${intent.selectedCount}/${intent.requiredCount}`,
         sourceCard: intent.source,
         highlightedTargetInstanceIds: intent.highlightedTargetInstanceIds,
-        progress: intent.progress ?? progressFor('target'),
+        attackTargetInstanceIds: intent.highlightedTargetInstanceIds,
+        progress:
+          intent.progress ??
+          progressFor('target', {
+            hasPayment: false,
+            hasCost: false,
+          }),
+        expiresAt: intent.expiresAt,
       }
     case 'awaiting-response':
       return {
@@ -254,10 +301,18 @@ const statusForIntent = (
           intent.responderId === viewerPlayerId
             ? '請選擇是否回應'
             : `${playerLabel(game, intent.responderId)} 正在決定是否回應`,
-        detail: `回應類型：${intent.responseType.toUpperCase()}`,
+        detail: `可回應：${responseTypeLabel(intent.responseType)}`,
         sourceCard: intent.source,
         highlightedTargetInstanceIds: intent.highlightedTargetInstanceIds,
-        progress: intent.progress ?? progressFor('response'),
+        attackTargetInstanceIds: intent.highlightedTargetInstanceIds,
+        progress:
+          intent.progress ??
+          progressFor('response', {
+            hasPayment: false,
+            hasCost: false,
+            hasTarget: true,
+          }),
+        expiresAt: intent.expiresAt,
       }
     case 'resolving':
       return {
@@ -268,7 +323,15 @@ const statusForIntent = (
         headline: intent.resolutionLabel ?? `${actorLabel} 正在結算效果`,
         sourceCard: intent.source,
         highlightedTargetInstanceIds: intent.highlightedTargetInstanceIds,
-        progress: intent.progress ?? progressFor('resolve'),
+        attackTargetInstanceIds: intent.highlightedTargetInstanceIds,
+        progress:
+          intent.progress ??
+          progressFor('resolve', {
+            hasPayment: false,
+            hasCost: false,
+            hasTarget: false,
+          }),
+        expiresAt: intent.expiresAt,
       }
   }
 }
@@ -294,6 +357,7 @@ export const deriveActionStatus = ({
         local.connectionMode === 'reconnecting'
           ? '正在重新連線'
           : '正在同步對戰狀態',
+      detail: local.connectionNotice ?? undefined,
     }
   }
 
@@ -323,11 +387,11 @@ export const deriveActionStatus = ({
         ? cardReference(attacker.card, opponentId)
         : undefined,
       highlightedTargetInstanceIds: opponentAttackSelection.supportPaymentIds,
-      progress: [
-        { key: 'payment', label: '能量', state: paymentComplete ? 'done' : 'active' },
-        { key: 'cost', label: '代價', state: 'pending' },
-        { key: 'target', label: '目標', state: paymentComplete ? 'active' : 'pending' },
-      ],
+      attackTargetInstanceIds: [],
+      progress: buildActionProgress({
+        active: paymentComplete ? 'target' : 'payment',
+        hasCost: false,
+      }),
     }
   }
 
@@ -344,11 +408,41 @@ export const deriveActionStatus = ({
       actorLabel: playerLabel(game, pendingOwner),
       phaseLabel,
       headline: pendingHeadline(game, pendingOwner),
-      sourceCard:
-        cardReference(
-          local?.pendingEffect?.sourceCard ?? local?.pendingSourceCard ?? undefined,
-          viewerPlayerId,
-        ),
+      sourceCard: (() => {
+        const battleSource = game.pendingBattle
+          ? cardInGame(game, game.pendingBattle.attackerInstanceId)
+          : undefined
+        const source =
+          battleSource ??
+          local?.pendingEffect?.sourceCard ??
+          local?.pendingSourceCard ??
+          (game.pendingOnPlay
+            ? cardInGame(game, game.pendingOnPlay.sourceInstanceId)
+            : undefined)
+        const ownerId = game.pendingBattle?.attackerPlayerId ??
+          local?.pendingEffect?.context?.sourcePlayerId ??
+          pendingOwner
+        return source ? cardReference(source, ownerId) : undefined
+      })(),
+      highlightedTargetInstanceIds: game.pendingBattle?.targetInstanceId
+        ? [game.pendingBattle.targetInstanceId]
+        : undefined,
+      attackTargetInstanceIds: game.pendingBattle?.targetInstanceId
+        ? [game.pendingBattle.targetInstanceId]
+        : [],
+      progress: game.pendingBattle
+        ? buildActionProgress({
+            active:
+              game.pendingBattle.stage === 'trap' || game.pendingBattle.stage === 'flip'
+                ? 'response'
+                : game.pendingBattle.stage === 'attack-effect'
+                  ? 'target'
+                  : 'resolve',
+            hasPayment: false,
+            hasCost: false,
+            hasTarget: Boolean(game.pendingBattle.targetInstanceId),
+          })
+        : undefined,
     }
   }
 
@@ -373,11 +467,10 @@ export const deriveActionStatus = ({
         ? '請選擇攻擊目標'
         : '請選擇支付攻擊能量',
       detail: '選好後即可進入下一步',
-      progress: [
-        { key: 'payment', label: '能量', state: local.attackPaymentValid ? 'done' : 'active' },
-        { key: 'cost', label: '代價', state: 'pending' },
-        { key: 'target', label: '目標', state: local.attackPaymentValid ? 'active' : 'pending' },
-      ],
+      progress: buildActionProgress({
+        active: local.attackPaymentValid ? 'target' : 'payment',
+        hasCost: false,
+      }),
     }
   }
 

@@ -1,18 +1,20 @@
 # Roadmap
 
-最後更新：2026-07-16。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
+最後更新：2026-07-17。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
 
-> 2026-07-16 驗證補充：好友房完整開局雙瀏覽器 smoke 通過；最新主 bundle 為 749.50 KiB raw / 156.56 KiB gzip，通過 budget。
+> 2026-07-17 驗證補充：線上 modal RWD smoke 通過；最新主 bundle 為 509.25 KiB raw / 133.22 KiB gzip，通過 budget。好友房完整開局驗證本輪在起始餅乾同步檢查失敗，尚未宣稱通過。
 > AI、牌組編輯器與好友房 Playwright smoke workflow 已於 main push 自動觸發，並保留手動觸發供調查使用。
 
 ## 已完成里程碑（摘要）
 
-- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay（含 AI 對局重播）、1663 項測試（115 檔，目前基線）；多段能力效果已有 8 類中途決策阻擋與看牌決策恢復回歸。（PR #11 等）
+- **規則引擎**：純函式引擎、GameCommand 指令層（8 決策 + 24 動作）、commandLog、replay（含 AI 對局重播）、1689 項測試（119 檔，目前基線）；多段能力效果已有 8 類中途決策阻擋與看牌決策恢復回歸。（PR #11 等）
 - **牌組編輯器**：搜尋/篩選/合法性檢查/匯入匯出/版本化儲存。（PR #11）
 - **AI Lv.1–4**：隨機 / 啟發式 / 評估式 / 兩層前瞻 + matchup 資料驅動評估；20 份 BS2 訓練文件。（PR #12/#13、commit `076e7a5`）
 - **卡牌池**：BS1/BS2 + 五色起始牌組匯入；25 張未支援卡效果補齊。（PR #17）
 - **UI 多輪重製**：滿版桌墊 HUD、扇形手牌、統一效果 modal、EffectPanel/陷阱/攻擊 modal 改版。（PR #16/#20/#21）
 - **線上對戰 MVP**：ws server、房間、遮罩狀態、OnlineBattleView；開局已整合私密猜拳、勝者選順位、依序調度、補償與起始餅乾同步揭示，本機雙瀏覽器已自動驗證完整開局、主階段同步、對手離線與伺服器無法連線的錯誤恢復。（Phase 5 分支已進 main）
+- **對戰可視化 P0–P2（2026-07-17）**：P0 中央提示統一顯示玩家／階段／來源卡／等待原因、攻擊箭頭與事件句型；P1 加入宣告 → 費用 → 代價 → 目標 → 結算進度、對手公開卡牌預覽與陷阱／FLIP／攻擊效果回應狀態；P2 加入 commandLog 篩選、同步／拒絕／斷線提示與伺服器提供的 45 秒決策期限顯示；另修正線上攻擊支付候選清單遺漏，BS1-007 中性攻擊費用可正常選取。線上提示只投影公開區域，未加入自動超時決策。
+- **BS1-037 攻擊後效果（2026-07-17）**：本機與線上共用 LV.1 目標候選判定，沒有合法目標時不建立等待提示；攻擊後效果提示整合來源卡、效果文字與付款／目標操作，玩家可用「略過」跳過可選效果。
 - **CI**：GitHub Actions test/lint/build + main push Playwright smoke；Vercel Dashboard 已匯入。
 
 ## 待辦（依優先序）

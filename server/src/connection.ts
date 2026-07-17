@@ -246,10 +246,12 @@ export class ConnectionManager {
     this.sendToSlot(room, 'player-one', {
       type: 'state-update',
       state: maskedStateFor(room, 'player-one')!,
+      updatedBy: info.playerId,
     })
     this.sendToSlot(room, 'player-two', {
       type: 'state-update',
       state: maskedStateFor(room, 'player-two')!,
+      updatedBy: info.playerId,
     })
 
     if (clearedPublicIntent) {

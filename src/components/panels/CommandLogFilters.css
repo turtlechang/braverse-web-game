@@ -1,0 +1,49 @@
+.command-log-filter-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(129, 224, 255, 0.2);
+}
+
+.command-log-filter-bar label {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  color: rgba(219, 239, 255, 0.68);
+  font-size: 0.52rem;
+  font-weight: 800;
+}
+
+.command-log-filter-bar label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-log-filter-bar select,
+.command-log-filter-bar input {
+  min-width: 0;
+  height: 25px;
+  padding: 0 5px;
+  border: 1px solid rgba(138, 212, 255, 0.25);
+  border-radius: 5px;
+  color: #e8f8ff;
+  background: rgba(255, 255, 255, 0.06);
+  font: inherit;
+  font-size: 0.58rem;
+}
+
+.command-log-filter-bar option {
+  color: #061a3b;
+}
+
+.command-log-card-filter {
+  grid-column: 1 / -1;
+}
+
+@container game-shell (max-width: 900px) {
+  .command-log-filter-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

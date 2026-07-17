@@ -28,6 +28,9 @@ import {
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 4
 
+/** 公開決策提示的伺服器權威倒數；不直接替玩家自動選擇，只提供同步期限。 */
+export const PUBLIC_INTENT_DEADLINE_MS = 45_000
+
 export interface RoomSlot {
   playerId: PlayerId
   playerName: string
@@ -455,6 +458,16 @@ export class RoomStore {
     const source = draft.sourceInstanceId
       ? publicCardReferenceFor(room, playerId, draft.sourceInstanceId)
       : undefined
+    const previous = room.publicIntents[playerId]
+    const sameDecisionStage =
+      previous?.type === draft.type &&
+      previous.source?.instanceId === source?.instanceId
+    const expiresAt =
+      draft.type === 'resolving'
+        ? undefined
+        : sameDecisionStage && previous.expiresAt
+          ? previous.expiresAt
+          : new Date(Date.now() + PUBLIC_INTENT_DEADLINE_MS).toISOString()
     const actorSource = source?.ownerId === playerId ? source : undefined
     const highlightedTargetInstanceIds = draft.highlightedTargetInstanceIds
       ? [...
@@ -486,6 +499,7 @@ export class RoomStore {
       ...(highlightedTargetInstanceIds?.length
         ? { highlightedTargetInstanceIds }
         : {}),
+      ...(expiresAt ? { expiresAt } : {}),
     } as PublicIntent
 
     room.publicIntents[playerId] = intent

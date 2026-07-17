@@ -78,6 +78,12 @@
   font-weight: 600;
 }
 
+.remote-action-banner-detail.is-compact {
+  gap: 5px;
+  color: rgba(216, 239, 255, 0.62);
+  font-size: 0.54rem;
+}
+
 .remote-action-banner-detail > span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -88,6 +94,21 @@
   color: #fff17c;
   font-size: inherit;
   font-weight: 800;
+}
+
+.remote-action-banner-detail .remote-action-banner-connection {
+  color: #baf3ff;
+}
+
+.remote-action-banner-detail time {
+  flex: 0 0 auto;
+  color: #fff17c;
+  font-size: inherit;
+  font-weight: 900;
+}
+
+.remote-action-banner-detail time.is-expired {
+  color: #ffb4b4;
 }
 
 .remote-action-banner-progress {
@@ -106,6 +127,11 @@
   background: rgba(255, 255, 255, 0.05);
   font-size: 0.54rem;
   font-weight: 800;
+}
+
+.remote-action-banner-progress li.is-pending {
+  color: rgba(216, 239, 255, 0.5);
+  border: 1px dashed rgba(216, 239, 255, 0.2);
 }
 
 .remote-action-banner-progress li.is-active {
@@ -133,7 +159,12 @@
 }
 
 .remote-action-banner.is-compact .remote-action-banner-progress {
-  display: none;
+  gap: 2px;
+}
+
+.remote-action-banner.is-compact .remote-action-banner-progress li {
+  padding: 1px 4px;
+  font-size: 0.48rem;
 }
 
 @keyframes remote-action-banner-spin {

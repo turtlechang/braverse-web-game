@@ -229,11 +229,12 @@ function EffectPanelContent({
     activePhaseIndex >= 0 && activePhaseIndex < phaseIds.length - 1
   const hasOptionalSkip =
     pendingEffect !== null &&
-    !pendingEffect.skillActivated &&
-    (pendingEffect.optional === true ||
-      (currentEffect !== null &&
-        'optional' in currentEffect &&
-        currentEffect.optional === true))
+    (pendingEffect.sourceKind === 'attack' ||
+      (!pendingEffect.skillActivated &&
+        (pendingEffect.optional === true ||
+          (currentEffect !== null &&
+            'optional' in currentEffect &&
+            currentEffect.optional === true))))
   const hasSecondaryAction =
     Boolean(showCancelSkill) || hasOptionalSkip || hasPreviousPhase
   const goToPhase = (phase: GuidedPhaseId) => {
@@ -249,10 +250,32 @@ function EffectPanelContent({
 
   if (optionalCostAttack) {
     return (
-      <OptionalCostAttackModal
-        {...optionalCostAttack}
-        embedded
-      />
+      <>
+        <div className="effect-panel-body">
+          <div className="effect-panel-heading">
+            <span>攻擊後續效果</span>
+            <strong>{optionalCostAttack.sourceCardName}</strong>
+          </div>
+          {optionalCostAttack.sourceCard && (
+            <div className="effect-source-card">
+              <CardFace card={optionalCostAttack.sourceCard} />
+              <div className="effect-source-copy">
+                <span>{optionalCostAttack.sourceCard.id}</span>
+                <strong>{optionalCostAttack.sourceCard.name}</strong>
+                <p className="effect-source-description">
+                  <CardEffectText text={optionalCostAttack.effectText} />
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="effect-panel-guided-content">
+            <OptionalCostAttackModal
+              {...optionalCostAttack}
+              embedded
+            />
+          </div>
+        </div>
+      </>
     )
   }
 
@@ -422,6 +445,9 @@ function EffectPanelContent({
               type="button"
               onClick={onSkip}
             >
+              <span className="effect-skip-label">
+                {pendingEffect.sourceKind === 'attack' ? '略過' : '不發動'}
+              </span>
               不發動
             </button>
           ) : null}

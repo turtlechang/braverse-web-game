@@ -25,6 +25,8 @@ export type OnlineMatchStatus =
   | 'ended'
   | 'error'
 
+export type OnlineConnectionMode = 'syncing' | 'reconnecting' | null
+
 export const ONLINE_SOCKET_OPEN_TIMEOUT_MS = 90_000
 export const ONLINE_SERVER_ACK_TIMEOUT_MS = 10_000
 
@@ -183,7 +185,10 @@ const parseServerMessage = (data: unknown): ServerMessage | null => {
         ? (parsed as ServerMessage)
         : null
     case 'state-update':
-      return isGameStateEnvelope(parsed.state) ? (parsed as ServerMessage) : null
+      return isGameStateEnvelope(parsed.state) &&
+        (parsed.updatedBy === undefined || isPlayerId(parsed.updatedBy))
+        ? (parsed as ServerMessage)
+        : null
     case 'opponent-attack-selection':
       return isRecord(parsed.selection) &&
         (parsed.selection.attackerInstanceId === null ||
@@ -274,8 +279,11 @@ export function useOnlineMatch() {
   const [matchEndedReason, setMatchEndedReason] = useState<
     'victory' | 'defeat' | 'opponent-disconnected' | null
   >(null)
+  const [connectionNotice, setConnectionNotice] = useState<string | null>(null)
+  const [connectionMode, setConnectionMode] = useState<OnlineConnectionMode>(null)
 
   const connectionRef = useRef<ActiveConnection | null>(null)
+  const viewerPlayerIdRef = useRef<PlayerId | null>(null)
 
   const closeActiveConnection = useCallback(() => {
     const connection = connectionRef.current
@@ -298,6 +306,9 @@ export function useOnlineMatch() {
       setMaskedGame(null)
       setOpeningSnapshot(null)
       setErrorMessage(null)
+      setConnectionNotice('正在連線')
+      setConnectionMode(null)
+      viewerPlayerIdRef.current = null
       setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
       setPublicIntents(EMPTY_PUBLIC_INTENTS)
       setMatchEndedReason(null)
@@ -308,6 +319,7 @@ export function useOnlineMatch() {
       } catch {
         setStatus('error')
         setErrorMessage(CONNECT_FAILED_MESSAGE)
+        setConnectionNotice('連線失敗，請確認伺服器狀態')
         return
       }
 
@@ -344,6 +356,8 @@ export function useOnlineMatch() {
         clearConnectionTimers(connection)
         setStatus('error')
         setErrorMessage(message)
+        setConnectionMode(null)
+        setConnectionNotice('連線已中斷，請重新加入房間')
         safelyCloseSocket(connection.socket, closeCode)
       }
 
@@ -390,6 +404,7 @@ export function useOnlineMatch() {
             connection.phase = 'waiting-for-opponent'
             setRoomCode(message.code)
             setStatus('waiting-for-opponent')
+            setConnectionNotice('房間已建立，等待對手加入')
             break
           case 'room-join-error':
             finishConnection()
@@ -402,11 +417,13 @@ export function useOnlineMatch() {
               connection.ackTimer = null
             }
             connection.phase = 'in-progress'
+            viewerPlayerIdRef.current = message.viewerId
             setViewerPlayerId(message.viewerId)
             setMaskedGame(message.state)
             setPublicIntents(EMPTY_PUBLIC_INTENTS)
             setOpeningSnapshot(null)
             setStatus('in-progress')
+            setConnectionNotice('已連線，等待對戰同步')
             break
           case 'opening-update':
             if (connection.ackTimer !== null) {
@@ -414,17 +431,25 @@ export function useOnlineMatch() {
               connection.ackTimer = null
             }
             connection.phase = 'in-progress'
+            viewerPlayerIdRef.current = message.viewerId
             setViewerPlayerId(message.viewerId)
             setOpeningSnapshot(message.opening)
             setMaskedGame(message.state)
             setPublicIntents(EMPTY_PUBLIC_INTENTS)
             setErrorMessage(null)
             setStatus('opening')
+            setConnectionNotice('開局資訊已同步')
             break
           case 'state-update':
             setMaskedGame(message.state)
             setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
             setErrorMessage(null)
+            setConnectionMode(null)
+            setConnectionNotice(
+              message.updatedBy && message.updatedBy !== viewerPlayerIdRef.current
+                ? '已收到對手操作'
+                : '已同步你的操作',
+            )
             break
           case 'opponent-attack-selection':
             setOpponentAttackSelection(message.selection)
@@ -449,23 +474,42 @@ export function useOnlineMatch() {
               }
               return next
             })
+            setConnectionNotice(
+              message.playerId === viewerPlayerIdRef.current
+                ? '操作提示已同步'
+                : '已收到對手操作提示',
+            )
             break
           case 'command-rejected':
             setErrorMessage(message.reason)
+            setConnectionMode(null)
+            setConnectionNotice('伺服器拒絕操作')
             break
           case 'match-ended':
             finishConnection()
             setMatchEndedReason(message.reason)
             setStatus('ended')
+            setConnectionMode(null)
+            setConnectionNotice(
+              message.reason === 'opponent-disconnected'
+                ? '對手已離線'
+                : '對戰已結束',
+            )
             break
         }
       })
 
       socket.addEventListener('error', () => {
+        if (connection.intentional || connection.terminal) return
+        setConnectionMode(null)
+        setConnectionNotice('連線發生錯誤')
         failConnection(getUnexpectedDisconnectMessage(connection.phase))
       })
 
       socket.addEventListener('close', () => {
+        if (connection.intentional || connection.terminal) return
+        setConnectionMode(null)
+        setConnectionNotice('連線已中斷，請重新加入房間')
         failConnection(getUnexpectedDisconnectMessage(connection.phase))
       })
     },
@@ -502,7 +546,12 @@ export function useOnlineMatch() {
 
   const sendCommand = useCallback(
     (command: GameCommand) => {
-      send({ type: 'submit-command', command })
+      setConnectionMode('syncing')
+      setConnectionNotice('同步中')
+      if (!send({ type: 'submit-command', command })) {
+        setConnectionMode(null)
+        setConnectionNotice('尚未連線，操作未送出')
+      }
     },
     [send],
   )
@@ -544,6 +593,9 @@ export function useOnlineMatch() {
     setMaskedGame(null)
     setOpeningSnapshot(null)
     setErrorMessage(null)
+    setConnectionNotice(null)
+    setConnectionMode(null)
+    viewerPlayerIdRef.current = null
     setOpponentAttackSelection(EMPTY_ATTACK_SELECTION)
     setPublicIntents(EMPTY_PUBLIC_INTENTS)
     setMatchEndedReason(null)
@@ -559,6 +611,8 @@ export function useOnlineMatch() {
     opponentAttackSelection,
     publicIntents,
     matchEndedReason,
+    connectionNotice,
+    connectionMode,
     createRoom,
     joinRoom,
     sendCommand,

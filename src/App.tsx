@@ -25,6 +25,8 @@ import { BattleLogSidebar } from './components/panels/BattleLogSidebar'
 import { RemoteActionBanner } from './components/panels/RemoteActionBanner'
 import { deriveActionStatus } from './components/panels/actionStatus'
 import { MenuScreen } from './components/battle/MenuScreen'
+import { AttackPreviewArrow } from './components/battle/AttackPreviewArrow'
+import { findCardInGame } from './components/battle/publicCardLookup'
 import type { OpeningSetupStep } from './components/modals/GameModals'
 import { parseTestStateConfig } from './game/demo'
 import { useMatchDialogs } from './hooks/useMatchDialogs'
@@ -89,6 +91,7 @@ function App() {
     null,
   )
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
+  const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
@@ -245,6 +248,11 @@ function App() {
     playerHand.some((card) => card.instanceId === selectedHandCardId)
       ? selectedHandCardId
       : null
+  const opponentSourcePreviewCard =
+    actionStatus.mode === 'opponent-thinking'
+      ? findCardInGame(match.game, actionStatus.sourceCard?.instanceId) ?? null
+      : null
+  const opponentPreviewCard = hoveredOpponentCard ?? opponentSourcePreviewCard
 
   if (screen === 'menu') {
     return (
@@ -278,7 +286,13 @@ function App() {
 
       <StatusToast message={match.message} />
 
-      <BattleLogSidebar entries={match.game.commandLog ?? []} />
+      <BattleLogSidebar
+        entries={match.game.commandLog ?? []}
+        playerNames={{
+          'player-one': match.game.players['player-one'].name,
+          'player-two': match.game.players['player-two'].name,
+        }}
+      />
 
       <PhaseRail
         phase={match.game.phase}
@@ -324,8 +338,8 @@ function App() {
           onEffectTarget={pending.toggleEffectTarget}
           onInspectCard={dialogs.openCardDetail}
           onInspectDiscard={dialogs.openDiscardPile}
-          onHoverCard={setHoveredCard}
-          onFocusCard={setHoveredCard}
+          onHoverCard={setHoveredOpponentCard}
+          onFocusCard={setHoveredOpponentCard}
           onToggleResource={(kind) =>
             dialogs.toggleResourcePopover(match.opponentId, kind)
           }
@@ -336,6 +350,23 @@ function App() {
           <RemoteActionBanner status={actionStatus} compact />
           <span />
         </div>
+
+        <AttackPreviewArrow
+          sourceInstanceId={
+            match.selectedAttackerId ??
+            (actionStatus.mode === 'opponent-thinking'
+              ? actionStatus.sourceCard?.instanceId ?? null
+              : null)
+          }
+          targetInstanceIds={actionStatus.attackTargetInstanceIds ?? []}
+          label={
+            match.selectedAttackerId ||
+            match.game.pendingBattle ||
+            actionStatus.headline.includes('攻擊')
+              ? '攻擊宣告'
+              : '目標選擇'
+          }
+        />
 
         <BattleRow
           game={match.game}
@@ -502,6 +533,15 @@ function App() {
         />
       </section>
 
+      <CardPreviewPanel
+        card={opponentPreviewCard}
+        position="top"
+        contextLabel={
+          hoveredOpponentCard || !opponentSourcePreviewCard
+            ? undefined
+            : '對手目前操作'
+        }
+      />
       <CardPreviewPanel card={hoveredCard} position="bottom" />
 
       {match.selectedAttacker && !pending.pendingEffect && (
@@ -532,7 +572,13 @@ function App() {
         currentEffect={currentJsxEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
-        onSkip={pending.skipOptionalSkill}
+        onSkip={() => {
+          if (pending.pendingEffect?.sourceKind === 'attack') {
+            pending.skipAttackEffect()
+          } else {
+            pending.skipOptionalSkill()
+          }
+        }}
         onCancel={pending.cancelPendingSkill}
         candidateCards={[
           ...pending.effectTargetCandidates.map((c) => c.card),

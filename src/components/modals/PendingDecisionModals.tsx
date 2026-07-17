@@ -285,6 +285,7 @@ export function HandDiscardResponseModal({
 
 export interface OptionalCostAttackModalProps {
   sourceCardName: string
+  sourceCard?: GameCard
   effectText: string
   discardHandCost: number
   energyCostTotal: number
@@ -392,8 +393,10 @@ export function OptionalCostAttackModal({
         </button>
       )}
         <span>攻擊可選效果</span>
-        <h2>{sourceCardName}</h2>
-        <p className="optional-cost-attack-text">{effectText}</p>
+        {!embedded && <h2>{sourceCardName}</h2>}
+        {!embedded && (
+          <p className="optional-cost-attack-text">{effectText}</p>
+        )}
         <p className="optional-cost-attack-cost">
           代價：
           {discardHandCost > 0 && `棄置 ${discardHandCost} 張手牌`}
