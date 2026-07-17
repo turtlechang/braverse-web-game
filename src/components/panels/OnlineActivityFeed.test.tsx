@@ -1,15 +1,22 @@
 /** @vitest-environment jsdom */
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { buildReplayIssueBundle } from '../../game'
 import type { CommandLogEntry, GameState } from '../../game'
 import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
+import {
+  registerIssueBundleProvider,
+  resetIssueBundleProviderForTest,
+} from '../../hooks/issueBundleSource'
 import { OnlineActivityFeed } from './OnlineActivityFeed'
 
 const containers: HTMLDivElement[] = []
 
 afterEach(() => {
   for (const container of containers.splice(0)) container.remove()
+  vi.restoreAllMocks()
+  resetIssueBundleProviderForTest()
 })
 
 const logEntry = (
@@ -123,6 +130,78 @@ describe('OnlineActivityFeed', () => {
       root.render(<OnlineActivityFeed game={fainted} viewerPlayerId="player-one" />),
     )
     expect(container.textContent).toContain('昏厥，移至 Break 區')
+    await act(() => root.unmount())
+  })
+
+  it('copies the current issue bundle to the clipboard when a provider is registered', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    const base = createBattleState()
+    registerIssueBundleProvider((errorSummary) =>
+      buildReplayIssueBundle({
+        state: base,
+        mode: 'online',
+        viewerId: 'player-one',
+        decks: { playerOne: 'unknown', playerTwo: 'unknown' },
+        errorSummary,
+      }),
+    )
+
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+    await act(() =>
+      root.render(<OnlineActivityFeed game={base} viewerPlayerId="player-one" />),
+    )
+
+    const toggle = container.querySelector<HTMLButtonElement>(
+      '[data-testid="online-activity-toggle"]',
+    )
+    await act(() => toggle!.click())
+
+    const copyButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('複製紀錄'),
+    )
+    expect(copyButton).toBeDefined()
+
+    await act(() => {
+      copyButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {})
+
+    expect(writeText).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain('已複製')
+    await act(() => root.unmount())
+  })
+
+  it('does nothing when no issue bundle provider is registered', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+    const base = createBattleState()
+
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+    await act(() =>
+      root.render(<OnlineActivityFeed game={base} viewerPlayerId="player-one" />),
+    )
+
+    const toggle = container.querySelector<HTMLButtonElement>(
+      '[data-testid="online-activity-toggle"]',
+    )
+    await act(() => toggle!.click())
+
+    const copyButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('複製紀錄'),
+    )
+    await act(() => {
+      copyButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {})
+
+    expect(writeText).not.toHaveBeenCalled()
     await act(() => root.unmount())
   })
 })

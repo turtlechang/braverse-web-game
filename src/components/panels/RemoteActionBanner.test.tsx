@@ -26,7 +26,7 @@ const status: ActionStatus = {
   },
   progress: [
     { key: 'declare', label: '宣告', state: 'done' },
-    { key: 'payment', label: '費用', state: 'done' },
+    { key: 'payment', label: '能量', state: 'done' },
     { key: 'target', label: '目標', state: 'active' },
     { key: 'resolve', label: '結算', state: 'pending' },
   ],

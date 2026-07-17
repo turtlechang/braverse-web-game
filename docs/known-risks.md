@@ -1,6 +1,6 @@
 # 已知風險清單（Known Risks）
 
-最後更新：2026-07-16。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
+最後更新：2026-07-17。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
 
 | # | 風險 | 等級 | 現況與緩解 |
 |---|---|---|---|
@@ -10,7 +10,7 @@
 | R4 | ~~卡牌資料無獨立驗證~~ **已解決**（2026-07-10）：`npm run validate:cards`（`scripts/validate-cards.ts`）已存在並接入 CI（`.github/workflows/ci.yml`），檢查必填欄位、同檔重複卡號、全卡池可轉換 `GameCard`、效果文字未轉出偵測；候選卡牌另有 `validate:candidate` | 低 | PR #17 曾以一次性稽核腳本找出 25 張 unsupported 卡，證明需要常態化工具，已建置為 CI 第一步 |
 | R5 | **效果文字解析與官方規則漂移風險**：官方文字→CardEffect 轉換含專案自行裁定；只有 payload 不代表代價、條件、可選性與流程完整正確 | 中（已強化） | `validate:cards` 新增能力非空、技能標記、可選抽牌、來源橫置檢查，並以 8 張高風險卡語意契約鎖定 Then／If you did／特殊代價／條件／觸發；另依 2026-03-30 官方公告新增同時補位 OnPlay 順序與傷害步驟鎖定回歸。未來官方規則與新卡仍可能新增語意，故保留為持續風險；依 [rule-clarifications.md](rule-clarifications.md) 與官方更新逐批覆核。 |
 | R6 | **Vercel 不承載 ws server**：線上對戰伺服器（`server/`）需長連線，Vercel serverless 不適合 | 中（已部署但含免費層冷啟動風險） | 已於 2026-07-11 部署 Render 免費層（commit a679f03）並完成雙視窗公網對局驗收。免費層閒置 15 分鐘後休眠會切斷連線，首次連線冷啟動約需 50 秒以上；活躍對局期間 ws 訊息可維持喚醒 |
-| R7 | **線上對戰無防作弊完整方案**：MVP 僅靠伺服器權威狀態＋`masked-state` 視角遮罩；斷線重連、逾時判負未完備 | 低（範圍內） | 主計畫明訂不做完整防作弊；規則驗證在伺服器端執行，非法操作擋下即符合驗收 |
+| R7 | **線上對戰無防作弊完整方案**：MVP 僅靠伺服器權威狀態＋`masked-state` 視角遮罩；斷線重連、逾時判負未完備 | 低（範圍內） | 主計畫明訂不做完整防作弊；規則驗證在伺服器端執行，非法操作擋下即符合驗收。伺服器目前沒有 session token／房間狀態保留機制，`joinRoom` 一旦房間進入 `playing` 就會拒絕重新加入，斷線一律視同對手離線並結束對局；用戶端原本保留的 `reconnecting` 連線狀態型別與文案因此從未被觸發，2026-07-17 已移除該死碼，斷線統一走既有「連線已中斷，請重新加入房間」錯誤流程。`PublicIntent` 的 45 秒決策倒數（`RemoteActionBanner`）同理只讀伺服器 `expiresAt` 做顯示，伺服器端沒有 setTimeout 之類的邏輯在逾時後代為略過或判負；真正的重連恢復與逾時強制執行都留待此風險解除時一併設計 |
 | R8 | **官方資料來源脆弱**：匯入腳本依賴官方 API/網站結構；卡圖熱連結若官方改版即整站缺圖 | 中（部分緩解） | 匯入樣本已入 repo（資料不會消失）；缺圖 fallback **已存在**（`CardVisuals.tsx` 的 `.card-fallback`／`.card-back-fallback`，`onError` 時改顯示卡名/類型/等級/HP 文字卡），本輪確認；圖像快取策略仍待做（與 R1 的 PUBLIC_MODE 一併決策） |
 | R9 | **主 bundle 大小**（~750 KiB raw / ~157 KiB gzip） | 低（已設 budget） | CI `check:bundle` 上限 raw 850 KiB / gzip 180 KiB；code-split 已完成（牌組編輯器、測試情境、線上對戰 modal、戰鬥資訊 modal 群組按需載入），2026-07-16 完整建置仍在 budget 內 |
 | R10 | **AI 自動結算繞過人類防守**（歷史回歸點）：AI 攻擊若用 `attack` 指令會自動結算、跳過陷阱/FLIP 回應 | 已緩解 | 2026-07-07 已修：Lv.1/3/4 改走 `applyChosenTurnCommand` → `beginAttack`。新增 AI 等級時必須遵守（architecture.md §5） |

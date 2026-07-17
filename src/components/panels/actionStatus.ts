@@ -22,7 +22,6 @@ export type ActionStatusMode =
   | 'awaiting-opponent-decision'
   | 'resolving'
   | 'syncing'
-  | 'reconnecting'
 
 export interface ActionStatus {
   mode: ActionStatusMode
@@ -47,7 +46,7 @@ export interface ActionStatusLocalState {
   pendingSourceCard?: GameCard | null
   selectedAttackerId?: string | null
   attackPaymentValid?: boolean
-  connectionMode?: 'syncing' | 'reconnecting'
+  connectionMode?: 'syncing'
   connectionNotice?: string | null
 }
 
@@ -353,10 +352,7 @@ export const deriveActionStatus = ({
       actorId: null,
       actorLabel: '線上對戰',
       phaseLabel,
-      headline:
-        local.connectionMode === 'reconnecting'
-          ? '正在重新連線'
-          : '正在同步對戰狀態',
+      headline: '正在同步對戰狀態',
       detail: local.connectionNotice ?? undefined,
     }
   }

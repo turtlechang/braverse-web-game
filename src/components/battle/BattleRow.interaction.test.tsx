@@ -2,7 +2,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
+import { cookie, createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 
 const containers: HTMLDivElement[] = []
@@ -147,6 +147,70 @@ describe('BattleRow battle cookie interactions', () => {
 
     await act(() => greenSupportButton!.click())
     expect(onAttackPayment).toHaveBeenCalledWith('green-support-a')
+    await act(() => root.unmount())
+  })
+
+  it('reports hover/focus previews for hand, support, and break-area cards, not just the battle area', async () => {
+    const game = createBattleState()
+    game.players['player-one'].breakArea = [cookie('p1-break-a')]
+    const onHoverCard = vi.fn()
+    const onFocusCard = vi.fn()
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    const props: BattleRowProps = {
+      game,
+      playerId: 'player-one',
+      position: 'bottom',
+      selectedAttackerId: null,
+      effectTargetIds: new Set(),
+      breakEffectTargetIds: new Set(),
+      selectedEffectTargetIds: new Set(),
+      selectedSkillPaymentIds: new Set(),
+      selectedAttackPaymentIds: new Set(),
+      attackPaymentValid: true,
+      interactionLocked: false,
+      onInspectCard: vi.fn(),
+      onInspectDiscard: vi.fn(),
+      onHoverCard,
+      onFocusCard,
+    }
+
+    await act(() => root.render(<BattleRow {...props} />))
+
+    const handCardWrap = container.querySelector<HTMLDivElement>(
+      '.hand-card-wrap',
+    )
+    const supportCardWrap = container.querySelector<HTMLDivElement>(
+      '[data-card-instance-id="p1-support-a"]',
+    )
+    const breakCardWrap = container.querySelector<HTMLDivElement>(
+      '.break-card-wrap',
+    )
+    expect(handCardWrap).not.toBeNull()
+    expect(supportCardWrap).not.toBeNull()
+    expect(breakCardWrap).not.toBeNull()
+
+    const dispatchMouseEnter = (el: Element) =>
+      el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+
+    await act(() => dispatchMouseEnter(handCardWrap!))
+    expect(onHoverCard).toHaveBeenCalledWith(
+      game.players['player-one'].hand[0],
+    )
+
+    await act(() => dispatchMouseEnter(supportCardWrap!))
+    expect(onHoverCard).toHaveBeenCalledWith(
+      game.players['player-one'].supportArea[0].card,
+    )
+
+    await act(() => dispatchMouseEnter(breakCardWrap!))
+    expect(onHoverCard).toHaveBeenCalledWith(
+      game.players['player-one'].breakArea[0],
+    )
+
     await act(() => root.unmount())
   })
 })

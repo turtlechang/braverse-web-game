@@ -1,6 +1,9 @@
-import { ScrollText, Swords, X } from 'lucide-react'
+import { Copy, ScrollText, Swords, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CommandLogEntry, GameState, PlayerId } from '../../game'
+import { serializeReplayIssueBundle } from '../../game'
+import { buildIssueBundleFromProvider } from '../../hooks/issueBundleSource'
+import { copyTextToClipboard } from '../copyTextToClipboard'
 import { phaseLabels } from '../gameUiLabels'
 import {
   CommandLogFilterBar,
@@ -79,6 +82,16 @@ export function OnlineActivityFeed({
   const [filters, setFilters] = useState<CommandLogFilterState>(
     emptyCommandLogFilters,
   )
+  const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
+    'idle',
+  )
+  const handleCopyLog = () => {
+    const bundle = buildIssueBundleFromProvider(null)
+    if (!bundle) return
+    void copyTextToClipboard(serializeReplayIssueBundle(bundle)).then((ok) => {
+      setCopyResult(ok ? 'copied' : 'failed')
+    })
+  }
   const [events, setEvents] = useState<ActivityEvent[]>(() =>
     (game.commandLog ?? []).slice(-4).map((entry) => actionEvent(entry, game)),
   )
@@ -224,9 +237,23 @@ export function OnlineActivityFeed({
           />
 
           <section className="online-activity-history">
-            <strong>
-              完整紀錄（{filteredEntries.length}/{game.commandLog?.length ?? 0}）
-            </strong>
+            <div className="online-activity-history-header">
+              <strong>
+                完整紀錄（{filteredEntries.length}/{game.commandLog?.length ?? 0}）
+              </strong>
+              <button
+                type="button"
+                className="online-activity-copy"
+                onClick={handleCopyLog}
+              >
+                <Copy size={12} aria-hidden="true" />
+                {copyResult === 'copied'
+                  ? '已複製'
+                  : copyResult === 'failed'
+                    ? '複製失敗'
+                    : '複製紀錄'}
+              </button>
+            </div>
             <ol>
               {filteredEntries.length ? (
                 [...filteredEntries].reverse().map((entry) => (

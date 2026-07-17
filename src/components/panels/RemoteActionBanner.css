@@ -27,8 +27,7 @@
   border-color: rgba(194, 162, 255, 0.58);
 }
 
-.remote-action-banner.is-syncing,
-.remote-action-banner.is-reconnecting {
+.remote-action-banner.is-syncing {
   border-color: rgba(255, 190, 121, 0.62);
 }
 

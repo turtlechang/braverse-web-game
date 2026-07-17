@@ -526,6 +526,90 @@ describe('useOnlinePendingEffect', () => {
     await act(() => root.unmount())
   })
 
+  it('offers a target picker for BS1-052-style Activate skills that gain HP on a chosen Cookie', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const originalSource = baseGame.players['player-one'].battleArea[0]
+    const sourceCard = {
+      ...originalSource.card,
+      energyColor: 'yellow' as const,
+      skill: {
+        trigger: 'activate' as const,
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: true,
+        cost: { energy: { yellow: 2 } },
+        text: 'Select 1 of your Cookies. That Cookie gains +1 HP.',
+        effects: [
+          {
+            kind: 'gain-hp' as const,
+            amount: 1,
+            target: { side: 'self' as const, min: 1, max: 1 },
+          },
+        ],
+      },
+    }
+    const basePaymentCard = baseGame.players['player-one'].supportArea[0].card
+    const paymentCards = [
+      { ...basePaymentCard, energyColor: 'yellow' as const },
+      {
+        ...basePaymentCard,
+        instanceId: 'pay-2',
+        id: 'pay-2',
+        energyColor: 'yellow' as const,
+      },
+    ]
+    const game: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          battleArea: [{ ...originalSource, card: sourceCard }],
+          supportArea: paymentCards.map((card) => ({ card, rested: false })),
+        },
+      },
+    }
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+    function TestHarness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginCookieSkill(sourceCard, 'activate'))
+
+    expect(captured!.abilityCostDraft?.card.instanceId).toBe(sourceCard.instanceId)
+    await act(() =>
+      paymentCards.forEach((card) => captured!.toggleDraftPayment(card.instanceId)),
+    )
+    expect(captured!.draftPaymentValid).toBe(true)
+
+    expect(captured!.candidateCards.map((card) => card.instanceId)).toEqual([
+      sourceCard.instanceId,
+    ])
+
+    await act(() => captured!.toggleTarget(sourceCard.instanceId))
+    await act(() => captured!.confirmEffect())
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'begin-activate-skill',
+        sourceInstanceId: sourceCard.instanceId,
+        targetIds: [sourceCard.instanceId],
+      }),
+      expect.any(String),
+    )
+    await act(() => root.unmount())
+  })
+
   it('does not open BS2-058-style cost UI when no opposing level 3 target exists', async () => {
     const baseGame = createItemUsageDemoState(true)
     const originalSource = baseGame.players['player-one'].battleArea[0]
