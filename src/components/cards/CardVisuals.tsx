@@ -136,6 +136,7 @@ export interface CardFaceProps {
   rested?: boolean
   selected?: boolean
   targetable?: boolean
+  attackable?: boolean
   ariaPressed?: boolean
   ariaLabel?: string
   onClick?: () => void
@@ -153,6 +154,7 @@ export function CardFace({
   rested = false,
   selected = false,
   targetable = false,
+  attackable = false,
   ariaPressed,
   ariaLabel,
   onClick,
@@ -200,7 +202,9 @@ export function CardFace({
       <div
         className={`card-face ${className}${rested ? ' is-rested' : ''}${
           selected ? ' is-selected' : ''
-        }${targetable ? ' is-targetable' : ''}`}
+        }${targetable ? ' is-targetable' : ''}${
+          attackable ? ' is-attackable' : ''
+        }`}
       >
         {content}
       </div>
@@ -211,7 +215,9 @@ export function CardFace({
     <button
       className={`card-face ${className}${rested ? ' is-rested' : ''}${
         selected ? ' is-selected' : ''
-      }${targetable ? ' is-targetable' : ''}`}
+      }${targetable ? ' is-targetable' : ''}${
+        attackable ? ' is-attackable' : ''
+      }`}
       type="button"
       title={card.name}
       aria-label={ariaLabel}

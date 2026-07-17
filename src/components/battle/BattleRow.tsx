@@ -8,6 +8,7 @@ import {
   getAttackEnergyCost,
   getBreakAreaLevel,
   getEffectiveAttack,
+  getEnergyCostTotal,
   selectEnergyPayment,
   type GameState,
   type PlayerId,
@@ -381,15 +382,22 @@ export function BattleRow({
               const canSelectEffectTarget = effectTargetIds.has(
                 cookie.card.instanceId,
               )
-              const canSelectAttack =
+              const attackEligibleExceptEnergy =
                 canOperate &&
                 game.phase === 'main' &&
                 canAttack(game) &&
-                !cookie.rested &&
-                selectEnergyPayment(
-                  getAttackEnergyCost(cookie.card),
-                  player.supportArea,
-                ) !== null
+                !cookie.rested
+              const attackEnergyCost = getAttackEnergyCost(cookie.card)
+              const canAffordAttack =
+                selectEnergyPayment(attackEnergyCost, player.supportArea) !==
+                null
+              const canSelectAttack =
+                attackEligibleExceptEnergy && canAffordAttack
+              const showEnergyShortfallHint =
+                attackEligibleExceptEnergy && !canAffordAttack
+              const availableEnergyCount = player.supportArea.filter(
+                (support) => !support.rested,
+              ).length
               const canTarget =
                 !interactionLocked &&
                 isOpponent &&
@@ -436,6 +444,7 @@ export function BattleRow({
                         cookie.card.instanceId,
                       )
                     }
+                    attackable={canSelectAttack}
                     onClick={
                       canSelectEffectTarget
                         ? () => onEffectTarget?.(cookie.card.instanceId)
@@ -471,6 +480,12 @@ export function BattleRow({
                   {(canTarget || canSelectEffectTarget) && (
                     <span className="target-hint">
                       {canSelectEffectTarget ? '效果目標' : '攻擊目標'}
+                    </span>
+                  )}
+                  {showEnergyShortfallHint && (
+                    <span className="energy-shortfall-hint">
+                      能量不足：需要 {getEnergyCostTotal(attackEnergyCost)}，
+                      目前可用 {availableEnergyCount}
                     </span>
                   )}
                   {canActivateSkill && (
