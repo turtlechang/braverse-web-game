@@ -94,4 +94,4 @@ npm run cards:import:purple-sample
 
 ## 變更記錄
 
-完整變更記錄見 [CHANGELOG.md](CHANGELOG.md)；發布與 PR 流程見 [docs/release-process.md](docs/release-process.md)。
+目前發布版本 **`0.9.0`**（2026-07-16，git tag `0.9.0`）。完整變更記錄見 [CHANGELOG.md](CHANGELOG.md#090---2026-07-16)；發布與 PR 流程見 [docs/release-process.md](docs/release-process.md)。
