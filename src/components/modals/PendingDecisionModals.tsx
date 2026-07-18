@@ -2,6 +2,11 @@ import { useState, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
 import type { EnergyColor, GameCard, PendingEffectOrderItem } from '../../game'
 import { CardEffectText, CardFace } from '../cards/CardVisuals'
+import {
+  GuidedPhaseSteps,
+  type GuidedPhase,
+  type GuidedPhaseId,
+} from '../effects/GuidedPhaseSteps'
 import './PendingDecisionModals.css'
 
 const effectOrderLabels: Record<PendingEffectOrderItem['kind'], string> = {
@@ -315,6 +320,7 @@ export function OptionalCostAttackModal({
 }: OptionalCostAttackModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<AttackPayStep>('decision')
+  const [phaseIndex, setPhaseIndex] = useState(0)
   const [selectedDiscardIds, setSelectedDiscardIds] = useState<string[]>([])
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
@@ -360,8 +366,54 @@ export function OptionalCostAttackModal({
     onPay(selectedDiscardIds, selectedTargetId ?? '', selectedPaymentIds)
   }, [readyToConfirm, selectedDiscardIds, selectedTargetId, selectedPaymentIds, onPay])
 
-  const hasCostContent = discardHandCost > 0 || energyCostTotal > 0
-  const showDual = step === 'pay' && hasCostContent && needsTarget
+  // 比照其他效果提示框的能量／代價／目標分步流程(見 EffectPanel.tsx 的
+  // GuidedPhaseSteps),一次只處理一件事,而非把代價與目標塞進同一畫面。
+  const phaseIds: GuidedPhaseId[] = [
+    ...(energyCostTotal > 0 ? (['energy'] as const) : []),
+    ...(discardHandCost > 0 ? (['cost'] as const) : []),
+    ...(needsTarget ? (['target'] as const) : []),
+  ]
+  const activePhase = phaseIds[phaseIndex] ?? null
+  const phases: GuidedPhase[] = phaseIds.map((id, index) => ({
+    id,
+    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : '目標',
+    complete: index < phaseIndex,
+  }))
+  const activePhaseReady =
+    activePhase === 'energy'
+      ? selectedPaymentIds.length === energyCostTotal
+      : activePhase === 'cost'
+        ? selectedDiscardIds.length === discardHandCost
+        : activePhase === 'target'
+          ? Boolean(selectedTargetId)
+          : true
+  const hasPreviousPhase = phaseIndex > 0
+  const hasNextPhase = phaseIndex < phaseIds.length - 1
+
+  const startPay = () => {
+    setPhaseIndex(0)
+    setStep('pay')
+  }
+
+  const goBack = () => {
+    if (hasPreviousPhase) {
+      setPhaseIndex((index) => index - 1)
+      return
+    }
+    setSelectedDiscardIds([])
+    setSelectedPaymentIds([])
+    setSelectedTargetId(null)
+    setPhaseIndex(0)
+    setStep('decision')
+  }
+
+  const handlePrimaryAction = () => {
+    if (hasNextPhase) {
+      setPhaseIndex((index) => index + 1)
+      return
+    }
+    handlePay()
+  }
 
   if (minimized) {
     return (
@@ -412,7 +464,7 @@ export function OptionalCostAttackModal({
             <button
               type="button"
               disabled={!canPay}
-              onClick={() => setStep('pay')}
+              onClick={startPay}
             >
               支付
             </button>
@@ -421,176 +473,94 @@ export function OptionalCostAttackModal({
 
         {step === 'pay' && (
           <>
-            {showDual ? (
-              <div className="optional-cost-dual">
-                <div className="optional-cost-col">
-                  <span className="optional-cost-col-label">代價</span>
-                  {discardHandCost > 0 && (
-                    <>
-                      <strong>
-                        選擇 {discardHandCost} 張手牌棄置
-                      </strong>
-                      <div className="modal-card-options">
-                        {playerHand.map((card) => (
-                          <button
-                            type="button"
-                            key={card.instanceId}
-                            className={
-                              selectedDiscardIds.includes(card.instanceId)
-                                ? 'is-selected'
-                                : ''
-                            }
-                            onClick={() => toggleDiscard(card.instanceId)}
-                          >
-                            <CardFace card={card} selected={selectedDiscardIds.includes(card.instanceId)} />
-                            <span>{card.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                  {energyCostTotal > 0 && (
-                    <>
-                      <strong>
-                        選擇 {energyCostTotal} 張支援區能量卡作為代價
-                      </strong>
-                      <div className="modal-card-options">
-                        {supportCandidates.map((entry) => (
-                          <button
-                            type="button"
-                            key={entry.instanceId}
-                            className={
-                              selectedPaymentIds.includes(entry.instanceId)
-                                ? 'is-selected'
-                                : ''
-                            }
-                            onClick={() => togglePayment(entry.instanceId)}
-                          >
-                            <CardFace card={entry.card} selected={selectedPaymentIds.includes(entry.instanceId)} />
-                            <span>{entry.card.name}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="optional-cost-col">
-                  <span className="optional-cost-col-label">目標</span>
-                  <strong>選擇 1 個對手餅乾作為目標</strong>
-                  <div className="modal-card-options">
-                    {opponentBattleCards.map((entry) => (
-                      <button
-                        type="button"
-                        key={entry.instanceId}
-                        className={
-                          selectedTargetId === entry.instanceId
-                            ? 'is-selected'
-                            : ''
-                        }
-                        onClick={() => toggleTarget(entry.instanceId)}
-                      >
-                        <CardFace card={entry.card} selected={selectedTargetId === entry.instanceId} />
-                        <span>{entry.card.name}</span>
-                      </button>
-                    ))}
-                  </div>
+            <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
+
+            {activePhase === 'energy' && (
+              <div className="optional-cost-col">
+                <span className="optional-cost-col-label">能量</span>
+                <strong>
+                  選擇 {energyCostTotal} 張支援區能量卡作為代價
+                </strong>
+                <div className="modal-card-options">
+                  {supportCandidates.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedPaymentIds.includes(entry.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => togglePayment(entry.instanceId)}
+                    >
+                      <CardFace card={entry.card} selected={selectedPaymentIds.includes(entry.instanceId)} />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-            ) : (
-              <>
-                {discardHandCost > 0 && (
-                  <>
-                    <strong>
-                      選擇 {discardHandCost} 張手牌棄置
-                    </strong>
-                    <div className="modal-card-options">
-                      {playerHand.map((card) => (
-                        <button
-                          type="button"
-                          key={card.instanceId}
-                          className={
-                            selectedDiscardIds.includes(card.instanceId)
-                              ? 'is-selected'
-                              : ''
-                          }
-                          onClick={() => toggleDiscard(card.instanceId)}
-                        >
-                          <CardFace card={card} selected={selectedDiscardIds.includes(card.instanceId)} />
-                          <span>{card.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+            )}
 
-                {energyCostTotal > 0 && (
-                  <>
-                    <strong>
-                      選擇 {energyCostTotal} 張支援區能量卡作為代價
-                    </strong>
-                    <div className="modal-card-options">
-                      {supportCandidates.map((entry) => (
-                        <button
-                          type="button"
-                          key={entry.instanceId}
-                          className={
-                            selectedPaymentIds.includes(entry.instanceId)
-                              ? 'is-selected'
-                              : ''
-                          }
-                          onClick={() => togglePayment(entry.instanceId)}
-                        >
-                          <CardFace card={entry.card} selected={selectedPaymentIds.includes(entry.instanceId)} />
-                          <span>{entry.card.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+            {activePhase === 'cost' && (
+              <div className="optional-cost-col">
+                <span className="optional-cost-col-label">代價</span>
+                <strong>
+                  選擇 {discardHandCost} 張手牌棄置
+                </strong>
+                <div className="modal-card-options">
+                  {playerHand.map((card) => (
+                    <button
+                      type="button"
+                      key={card.instanceId}
+                      className={
+                        selectedDiscardIds.includes(card.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleDiscard(card.instanceId)}
+                    >
+                      <CardFace card={card} selected={selectedDiscardIds.includes(card.instanceId)} />
+                      <span>{card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-                {needsTarget && (
-                  <>
-                    <strong>選擇 1 個對手餅乾作為目標</strong>
-                    <div className="modal-card-options">
-                      {opponentBattleCards.map((entry) => (
-                        <button
-                          type="button"
-                          key={entry.instanceId}
-                          className={
-                            selectedTargetId === entry.instanceId
-                              ? 'is-selected'
-                              : ''
-                          }
-                          onClick={() => toggleTarget(entry.instanceId)}
-                        >
-                          <CardFace card={entry.card} selected={selectedTargetId === entry.instanceId} />
-                          <span>{entry.card.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </>
+            {activePhase === 'target' && (
+              <div className="optional-cost-col">
+                <span className="optional-cost-col-label">目標</span>
+                <strong>選擇 1 個對手餅乾作為目標</strong>
+                <div className="modal-card-options">
+                  {opponentBattleCards.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedTargetId === entry.instanceId
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleTarget(entry.instanceId)}
+                    >
+                      <CardFace card={entry.card} selected={selectedTargetId === entry.instanceId} />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
 
             <div className="modal-actions modal-actions-sticky modal-actions-decision">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedDiscardIds([])
-                  setSelectedPaymentIds([])
-                  setSelectedTargetId(null)
-                  setStep('decision')
-                }}
-              >
-                返回
+              <button type="button" onClick={goBack}>
+                {hasPreviousPhase ? '上一步' : '返回'}
               </button>
               <button
                 type="button"
-                disabled={!readyToConfirm}
-                onClick={handlePay}
+                disabled={!activePhaseReady}
+                onClick={handlePrimaryAction}
               >
-                確認
+                {hasNextPhase ? '下一步' : '確認'}
               </button>
             </div>
           </>
