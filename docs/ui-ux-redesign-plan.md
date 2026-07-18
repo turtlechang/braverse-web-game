@@ -63,14 +63,18 @@
 - 實作：`DeckEditorModal.tsx` 以 `savedSnapshot`（存檔快照）與目前 `deckName`/`deckEntries` 的 JSON 比較推導 `hasUnsavedChanges`；儲存按鈕改為僅在牌組空白時 disabled，不合法時仍可存檔並顯示為「儲存草稿」（`is-draft` 樣式，`GameModals.css`）；關閉／清空／匯入三個動作在 `hasUnsavedChanges` 為真時透過 `window.confirm()`（沿用刪除牌組既有的確認模式）詢問，取消則保留現況。
 - 驗收：組牌到一半可隨時儲存草稿並在下次進入編輯器時繼續；關閉/清空/匯入三個破壞性操作在有未儲存變更時都需要二次確認。已通過 6 項新增 Vitest（`DeckEditorModal.data-safety.test.tsx`：空牌組禁止儲存、草稿可儲存、無變更關閉不詢問、有變更關閉/清空/匯入覆蓋皆詢問且取消可復原）與本機瀏覽器實測（新增卡片→草稿存檔按鈕可用、關閉/清空/匯入三動作的取消與確認路徑、匯入合法牌組後草稿樣式自動清除）。
 
-### P1-2 本機／線上戰場元件收斂（高，新發現，工程前置項）
+### P1-2 本機／線上戰場元件收斂（高，新發現，工程前置項）✅ 已完成（2026-07-18）
 
 - 來源：2026-07-18 程式碼走讀，由 P0-3 亂碼在兩檔案各出現一次觸發的觀察。
 - 問題：`src/App.tsx`（本機對戰，711 行）與 `src/components/battle/OnlineBattleView.tsx`（線上對戰，730 行）是兩份平行的畫面編排實作——modal 掛載、`interactionLocked` 判斷邏輯、dispatch 文案幾乎逐行重複，僅共用 `BattleRow` 等子元件。兩邊已出現行為漂移（同一個 bug 各修一次的風險、局部文案不同步）。
-- 影響：後續任何戰場 UI/UX 改動（P1-3、P2-2、P2-3、P3-1 等）若不先處理，都要改兩次、測兩次，且會持續漂移。
-- 方案：抽出共用的 `BattleScreen` 骨架（modal 群組、`interactionLocked` 衍生邏輯、toast 文案來源）供本機與線上共用，僅注入 `dispatch`/`viewerPlayerId` 等差異點。
-- 驗收：本機與線上戰場共用同一份畫面編排程式碼；既有 `OnlineBattleView.test.tsx`、`App` 相關測試與 `test:online:match:browser` 全數通過；新增文案只需修改一處。
-- 注意：此項屬工程重構，建議排在 P1-3（資訊密度）之前執行，作為後續戰場改版的乘數效益前置工作。
+- 深入研究後修正原先的理解：`BattleResponseModals`／`DamageEffectModals`／`PendingDecisionModals` 三個 modal 群組其實**已經共用**（透過 `src/hooks/battleUiContracts.ts` 的 `BattleUiMatchLike`／`BattleUiPendingEffectLike` 結構化介面）；本機 `usePendingEffect` 與線上 `useOnlinePendingEffect` 是**刻意縮小範圍的獨立實作**（線上不支援 break-to-* 等多類型 target candidate，`beginCookieSkill` 簽章也不同），不在本次收斂範圍內。額外發現線上版 `interactionLocked` 只檢查 4 個條件、本機檢查 13 個，其中 `pendingOptionalCostAttack` 在線上模式確實有實作但未鎖定戰場其他互動——經使用者確認後一併修正。
+- 實作：
+  - 新增 `src/hooks/useHandSelectionDismissal.ts`：收斂手牌選取狀態、點擊外部／Escape 解除選取、`activeSelectedHandCardId` 推導。
+  - 新增 `src/hooks/deriveInteractionLocked.ts`：共用的互動鎖定判斷函式，核心欄位（`pendingEffect`、`faintActive`、六個 viewer-scoped pending-*）兩邊都檢查，本機/線上各自的 AI 旗標／`viewerControlsState` 以 `extras` 參數傳入。
+  - 新增 `src/components/battle/BattleTable.tsx`：承接 PhaseRail、雙方 BattleRow（含分隔列、攻擊預覽箭頭）、卡牌快速預覽、攻擊付款面板的共用版面骨架，僅搬運 JSX、不統一背後邏輯——每個 prop 由呼叫端組好傳入。`.board-texture` 桌墊背景經評估後**刻意不搬入**（它是無 z-index 的 `position: absolute` 裝飾層，搬進去會排到 StatusToast/活動列後面蓋住它們，兩邊呼叫端各自保留）。`BattleUiMatchLike` 介面實際上不需要擴充（原計畫誤判；改用「呼叫端組好整個 `BattleRowProps` 物件傳入」的設計，比直接消費 `match`/`pending` 更安全，也不需要改介面）。
+  - `App.tsx`／`OnlineBattleView.tsx` 改用上述三者；App.tsx 711→632 行、OnlineBattleView.tsx 731→683 行（實際減少的行數比原估計少，因為 prop 組裝邏輯是搬移到具名物件而非刪除——真正的重複 JSX 骨架與判斷邏輯已收斂到只有一份）。
+- 驗收：`npx tsc -b --noEmit`、`npx eslint` 皆通過；新增 33 項 Vitest（`useHandSelectionDismissal` 8 項、`deriveInteractionLocked` 16 項、`BattleTable` 9 項），全專案套件 123 檔／1733 測試全數通過。本機瀏覽器實機操作確認：開局流程、PhaseRail 推進、hover 快速預覽、手牌選取、點擊外部與 Escape 解除選取皆正常，無 console error。線上模式以 `npm run test:online:match:browser`（真實雙瀏覽器 context + 真實 WebSocket）跑 3 次，2 次全綠（含直接驗證新 hook 的 `handSelectionDismissed` 欄位），1 次在開局調度階段（本次完全未觸碰的程式碼路徑）失敗；改動前的基準版本於同一腳本亦曾在該不相關路徑穩定通過，判斷為既有 E2E 時序性 flaky，非本次改動造成的回歸。`pendingOptionalCostAttack` 鎖定生效這個具體情境本身已由 `deriveInteractionLocked` 的單元測試逐一覆蓋（含 viewer-scoping 正確性），但需要特定卡牌觸發的真實雙人對局情境未逐一實機驗證——誠實記錄為理論修正＋單元測試覆蓋，未做該情境的端到端人工驗證。
+- 注意：此項屬工程重構，已排在 P1-3（資訊密度）之前完成，作為後續戰場改版的乘數效益前置工作。
 
 ### P1-3 戰場資訊密度與空白區利用（高）
 
