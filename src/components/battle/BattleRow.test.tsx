@@ -4,6 +4,7 @@ import {
   createItemUsageDemoState,
   createStageUsageDemoState,
 } from '../../game/demo'
+import type { GameState, PendingBattle } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
 
@@ -705,5 +706,95 @@ describe('BattleRow desktop interactions', () => {
       expect(div).not.toMatch(/\bbottom\s*:/)
       expect(div).not.toMatch(/\btransform-origin\s*:/)
     }
+  })
+})
+
+describe('HP flip chain reveal indicator', () => {
+  const revealedCard = {
+    id: 'revealed-hp',
+    instanceId: 'revealed-hp',
+    name: 'Revealed HP Card',
+    type: 'item' as const,
+  }
+
+  const flipRevealedCard = {
+    ...revealedCard,
+    id: 'revealed-hp-flip',
+    instanceId: 'revealed-hp-flip',
+    flip: { text: 'FLIP effect', cost: {}, effects: [] },
+  }
+
+  const withPendingBattle = (
+    game: GameState,
+    overrides: Partial<PendingBattle>,
+  ): GameState =>
+    ({
+      ...game,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'p2-cookie',
+        targetInstanceId: 'p1-cookie',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        stage: 'damage',
+        trapUsed: false,
+        revealedHpCard: revealedCard,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        ...overrides,
+      },
+    }) as GameState
+
+  it('shows the revealed HP card face-up while stage is damage', () => {
+    const game = withPendingBattle(createItemUsageDemoState(true), {})
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+    expect(markup).toContain('hp-reveal-indicator')
+    expect(markup).not.toContain('hp-reveal-flip-badge')
+  })
+
+  it('shows a FLIP badge when the revealed card has a flip ability', () => {
+    const game = withPendingBattle(createItemUsageDemoState(true), {
+      stage: 'flip',
+      revealedHpCard: flipRevealedCard,
+    })
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+    expect(markup).toContain('hp-reveal-indicator')
+    expect(markup).toContain('hp-reveal-flip-badge')
+  })
+
+  it('does not show the indicator for a cookie that is not the damage target', () => {
+    const game = withPendingBattle(createItemUsageDemoState(true), {
+      targetInstanceId: 'p2-cookie',
+      damageTargetInstanceId: 'p2-cookie',
+    })
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+    expect(markup).not.toContain('hp-reveal-indicator')
+  })
+
+  it('does not show the indicator outside damage/flip stages', () => {
+    const game = withPendingBattle(createItemUsageDemoState(true), {
+      stage: 'trap',
+    })
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+    expect(markup).not.toContain('hp-reveal-indicator')
+  })
+
+  it('does not show the indicator when there is no pending battle', () => {
+    const game = createItemUsageDemoState(true)
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+    expect(markup).not.toContain('hp-reveal-indicator')
   })
 })

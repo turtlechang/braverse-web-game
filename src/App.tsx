@@ -200,6 +200,12 @@ function App() {
       ? findCardInGame(match.game, actionStatus.sourceCard?.instanceId) ?? null
       : null
   const opponentPreviewCard = hoveredOpponentCard ?? opponentSourcePreviewCard
+  const centerPreviewCard =
+    actionStatus.mode === 'opponent-thinking' ||
+    actionStatus.mode === 'resolving' ||
+    actionStatus.mode === 'awaiting-opponent-decision'
+      ? findCardInGame(match.game, actionStatus.sourceCard?.instanceId) ?? null
+      : null
 
   if (screen === 'menu') {
     return (
@@ -476,6 +482,11 @@ function App() {
                   match.setMessage('已取消攻擊。')
                 },
               }
+            : null
+        }
+        centerPreview={
+          centerPreviewCard
+            ? { card: centerPreviewCard, label: actionStatus.headline }
             : null
         }
       />

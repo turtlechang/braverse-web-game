@@ -76,20 +76,22 @@
 - 驗收：`npx tsc -b --noEmit`、`npx eslint` 皆通過；新增 33 項 Vitest（`useHandSelectionDismissal` 8 項、`deriveInteractionLocked` 16 項、`BattleTable` 9 項），全專案套件 123 檔／1733 測試全數通過。本機瀏覽器實機操作確認：開局流程、PhaseRail 推進、hover 快速預覽、手牌選取、點擊外部與 Escape 解除選取皆正常，無 console error。線上模式以 `npm run test:online:match:browser`（真實雙瀏覽器 context + 真實 WebSocket）跑 3 次，2 次全綠（含直接驗證新 hook 的 `handSelectionDismissed` 欄位），1 次在開局調度階段（本次完全未觸碰的程式碼路徑）失敗；改動前的基準版本於同一腳本亦曾在該不相關路徑穩定通過，判斷為既有 E2E 時序性 flaky，非本次改動造成的回歸。`pendingOptionalCostAttack` 鎖定生效這個具體情境本身已由 `deriveInteractionLocked` 的單元測試逐一覆蓋（含 viewer-scoping 正確性），但需要特定卡牌觸發的真實雙人對局情境未逐一實機驗證——誠實記錄為理論修正＋單元測試覆蓋，未做該情境的端到端人工驗證。
 - 注意：此項屬工程重構，已排在 P1-3（資訊密度）之前完成，作為後續戰場改版的乘數效益前置工作。
 
-### P1-3 戰場資訊密度與空白區利用（高）
+### P1-3 戰場資訊密度與空白區利用（高）✅ 已完成（2026-07-18）
 
 - 來源：[UI 審查 §4](ui-audit-2026-07-11.md#4-對局桌面資訊密度與空白區) + W1；併入 [UX-002](ui-ux/ui-risk-register.md)（HP 逐張翻開 UI 不穩定，risk register P1）。
 - 問題：
   - 中央分隔列在無攻擊/效果進行時為大片空白（~15-20% 高度）。
   - 對手場地卡牌尺寸小且無快速放大途徑（原 W1）。
-  - 支援區卡牌缺乏放大預覽（原 W1）。
+  - ~~支援區卡牌缺乏放大預覽（原 W1）~~ → **訂正**：程式碼走讀確認支援區其實已接 hover 放大預覽（`BattleRow.tsx` 本機/線上、雙方場地共用同一段邏輯），此條為過時描述，並非實際落差。
   - UX-002：傷害處理過程中，玩家無法從 UI 穩定追蹤每張 HP 翻開的結果、順序與 FLIP 狀態，僅能事後查戰鬥紀錄。
-- 方案：
-  - 中央空白區動態利用：對手出牌時顯示卡牌放大預覽、技能發動時顯示效果摘要。
-  - 全域卡牌放大預覽（原 W1）：統一 hover/長按 → 固定位置放大卡面板，重用既有預覽事件與卡牌詳情 modal 資料。
-  - HP Flip Chain 視覺化（UX-002）：每張 HP 翻開、FLIP 判定、進棄牌區各給一個可觀察的 UI 狀態，與中央區改版一併設計以避免二次佈局調整。
-- 驗收：任一區域任一卡（含對手可見卡）皆可 2 步內讀到全文；中央區不再長時間空白；傷害處理中每張 HP 的翻開結果與 FLIP 判定在 UI 上可逐張辨識。
-- 注意：建議在 P1-2（戰場元件收斂）完成後執行，避免同一批佈局調整要在兩份平行實作各做一次。
+- 深入研究後修正範圍：
+  - 全域長按（行動裝置）目前完全沒有基礎建設，且 RWD 觸控深度優化本來就已排在改版計畫後續項目——**經使用者確認排除**，不重複投入。
+  - HP 翻牌鏈視覺化有關鍵分岔：一般攻擊傷害已有完整逐張中繼狀態（`PendingBattle.stage`／`resolveNextDamage`，`src/game/battle.ts`），是純 UI 工作；但效果傷害（技能/道具/陷阱造成的傷害）在規則引擎層級整批一次移除 HP、完全跳過逐張 FLIP 判定——這其實是風險登錄表 **RULE-002** 的 P0 規則正確性 bug（FLIP 效果被靜默跳過，不只是沒顯示）。**經使用者確認**：本次只做攻擊傷害的翻牌鏈視覺化；RULE-002 的規則引擎修正不在範圍內，維持現狀記錄在風險登錄表。
+- 實作：
+  - `src/components/battle/BattleRow.tsx`：戰鬥區 cookie 迴圈內新增衍生渲染（不需新增任何 prop，`game.pendingBattle` 早已是既有的 `BattleRowProps.game`）——當 `pendingBattle.stage` 為 `damage`／`flip` 且目標 id（沿用既有 `damageTargetInstanceId ?? targetInstanceId` 判定，與傷害閃爍動畫同一套邏輯）符合時，顯示該張 `revealedHpCard` 正面＋FLIP 徽章（若有）。`PendingBattle.revealedHpCard` 不受線上遮罩處理影響，雙方模式行為一致。
+  - 新增 `src/components/battle/CenterCardPreview.tsx`：`.table-area` 內以 `position: absolute` 覆蓋層呈現在 `.table-divider` 附近（比照既有 `AttackPreviewArrow` 定位手法），顯示卡面放大＋效果文字（沿用 `CardPreviewPanel` 既有欄位優先序）＋簡短動作標籤。`BattleTable.tsx` 新增 `centerPreview` prop；`App.tsx`／`OnlineBattleView.tsx` 各自用 `actionStatus.sourceCard` + 既有的 `findCardInGame` 組出完整卡牌資料傳入，觸發時機為 `opponent-thinking`／`resolving`／`awaiting-opponent-decision` 且有可解析來源卡時。
+- 驗收：`npx tsc -b --noEmit`、`npx eslint .` 皆通過；新增 7 項 Vitest（`BattleRow.test.tsx` HP 翻牌鏈 5 項、`BattleTable.test.tsx` 中央預覽 2 項），全專案套件 123 檔／1740 測試全數通過。本機瀏覽器實機驗證：以 `?test-state=flip-response` 直接確認 HP 翻牌區塊正確顯示卡面與 FLIP 徽章；實際對局中宣告攻擊後，AI 決定是否發陷阱期間中央區正確顯示攻擊卡「GingerBrave」卡面與攻擊文字，全程無 console error。
+- 注意：已排在 P1-2（戰場元件收斂）完成後執行，佈局改動只需改共用的 `BattleTable.tsx` 一份。
 
 ### P1-4 動態匯入效能（高）✅ 已完成
 

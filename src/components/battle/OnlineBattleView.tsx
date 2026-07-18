@@ -356,6 +356,12 @@ export function OnlineBattleView({
       ? findCardInGame(game, actionStatus.sourceCard?.instanceId) ?? null
       : null
   const opponentPreviewCard = hoveredOpponentCard ?? opponentSourcePreviewCard
+  const centerPreviewCard =
+    actionStatus.mode === 'opponent-thinking' ||
+    actionStatus.mode === 'awaiting-opponent-decision' ||
+    actionStatus.mode === 'resolving'
+      ? findCardInGame(game, actionStatus.sourceCard?.instanceId) ?? null
+      : null
 
   const topBattleRowProps: BattleRowProps = {
     game,
@@ -556,6 +562,11 @@ export function OnlineBattleView({
                   match.setMessage('已取消攻擊。')
                 },
               }
+            : null
+        }
+        centerPreview={
+          centerPreviewCard
+            ? { card: centerPreviewCard, label: actionStatus.headline }
             : null
         }
       />
