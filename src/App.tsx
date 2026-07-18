@@ -635,7 +635,7 @@ function App() {
                       playerId: match.viewerPlayerId,
                       action: 'skip',
                     },
-                    '撌脩??訾誨?寞????',
+                    '已略過攻擊後續效果。',
                   )
                 },
                 onPay: (discardIds, targetId, paymentIds) => {
@@ -648,7 +648,7 @@ function App() {
                       targetIds: targetId ? [targetId] : [],
                       paymentIds,
                     },
-                    '撌脫隞?訾誨?寞????',
+                    '已支付攻擊後續效果費用。',
                   )
                 },
               }
