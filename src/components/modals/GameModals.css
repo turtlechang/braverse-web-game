@@ -1443,6 +1443,11 @@
   opacity: 0.5;
 }
 
+.deck-editor-save-btn.is-draft {
+  border: 1px solid #ffb454;
+  background: linear-gradient(#a86a1f, #7a4a12);
+}
+
 .deck-editor-errors {
   padding: 8px 16px 0;
 }

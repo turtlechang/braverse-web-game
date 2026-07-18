@@ -99,6 +99,14 @@ export function DeckEditorModal({
   const { loadDeck } = editor
   const [tooltipCard, setTooltipCard] = useState<string | null>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  const [savedSnapshot, setSavedSnapshot] = useState<string>(() =>
+    initialDeck
+      ? JSON.stringify({ name: initialDeck.name, entries: initialDeck.entries })
+      : JSON.stringify({ name: editor.deckName, entries: editor.deckEntries }),
+  )
+  const hasUnsavedChanges =
+    JSON.stringify({ name: editor.deckName, entries: editor.deckEntries }) !==
+    savedSnapshot
 
   useEffect(() => {
     if (initialDeck) {
@@ -120,7 +128,7 @@ export function DeckEditorModal({
   }, [tooltipCard])
 
   const handleSave = useCallback(() => {
-    if (!editor.deckValidation.valid) return
+    if (editor.deckEntries.length === 0) return
 
     const now = new Date().toISOString()
     const deck: CustomDeck = {
@@ -139,8 +147,19 @@ export function DeckEditorModal({
       existing.push(deck)
     }
     saveCustomDecks(existing)
+    setSavedSnapshot(JSON.stringify({ name: deck.name, entries: deck.entries }))
     onSave(deck)
   }, [editor, initialDeck, onSave])
+
+  const handleRequestClose = useCallback(() => {
+    if (
+      hasUnsavedChanges &&
+      !window.confirm('目前牌組有尚未儲存的變更，確定要放棄並關閉嗎？')
+    ) {
+      return
+    }
+    onClose()
+  }, [hasUnsavedChanges, onClose])
 
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [importText, setImportText] = useState('')
@@ -180,6 +199,14 @@ export function DeckEditorModal({
       return
     }
     if (result.deck) {
+      if (
+        hasUnsavedChanges &&
+        !window.confirm(
+          '匯入將覆蓋目前編輯中尚未儲存的牌組內容，確定要繼續嗎？',
+        )
+      ) {
+        return
+      }
       editor.setDeckName(result.deck.name)
       editor.clearDeck()
       for (const entry of result.deck.entries) {
@@ -191,7 +218,7 @@ export function DeckEditorModal({
       setImportText('')
       showStatus(`已匯入牌組「${result.deck.name}」`)
     }
-  }, [editor, importText])
+  }, [editor, importText, hasUnsavedChanges])
 
   const filteredPool = editor.getFilteredPool()
   const deckStats = editor.deckValidation.stats
@@ -203,7 +230,7 @@ export function DeckEditorModal({
           className="close-modal"
           type="button"
           title="關閉"
-          onClick={onClose}
+          onClick={handleRequestClose}
         >
           <X aria-hidden="true" />
         </button>
@@ -498,19 +525,38 @@ export function DeckEditorModal({
               <button
                 type="button"
                 className="deck-editor-clear-btn"
-                onClick={editor.clearDeck}
+                onClick={() => {
+                  if (
+                    hasUnsavedChanges &&
+                    !window.confirm(
+                      '確定要清空目前牌組的所有卡牌嗎？尚未儲存的變更將會遺失。',
+                    )
+                  ) {
+                    return
+                  }
+                  editor.clearDeck()
+                }}
               >
                 <Trash2 aria-hidden="true" />
                 清空
               </button>
               <button
                 type="button"
-                className="deck-editor-save-btn"
-                disabled={!editor.deckValidation.valid}
+                className={
+                  editor.deckValidation.valid
+                    ? 'deck-editor-save-btn'
+                    : 'deck-editor-save-btn is-draft'
+                }
+                disabled={editor.deckEntries.length === 0}
+                title={
+                  editor.deckValidation.valid
+                    ? undefined
+                    : '牌組尚未合法，將以草稿狀態儲存，可稍後再調整。'
+                }
                 onClick={handleSave}
               >
                 <Save aria-hidden="true" />
-                儲存牌組
+                {editor.deckValidation.valid ? '儲存牌組' : '儲存草稿'}
               </button>
             </div>
             {editor.deckValidation.errors.length > 0 && (
