@@ -220,4 +220,49 @@ describe('BattleTable', () => {
 
     await cleanup()
   })
+
+  it('omits the center card preview when not provided', async () => {
+    const { container, cleanup } = await render(baseProps())
+
+    expect(container.querySelector('.center-card-preview')).toBeNull()
+
+    await cleanup()
+  })
+
+  it('shows the center card preview with card name, label, and effect text', async () => {
+    const skillCard: GameCard = {
+      id: 'skill-card',
+      instanceId: 'skill-card',
+      name: 'Opponent Skill Cookie',
+      type: 'cookie',
+      officialType: 'cookie',
+      level: 1,
+      hp: 3,
+      attack: 2,
+      attackCost: 1,
+      attackEnergyCost: { red: 1 },
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        text: 'Deals bonus damage.',
+        cost: {},
+        effects: [],
+      },
+    }
+    const { container, cleanup } = await render(
+      baseProps({
+        centerPreview: { card: skillCard, label: '對手發動技能' },
+      }),
+    )
+
+    const preview = container.querySelector('.center-card-preview')
+    expect(preview).not.toBeNull()
+    expect(preview?.textContent).toContain('對手發動技能')
+    expect(preview?.textContent).toContain('Opponent Skill Cookie')
+    expect(preview?.textContent).toContain('Deals bonus damage.')
+
+    await cleanup()
+  })
 })

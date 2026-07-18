@@ -411,6 +411,16 @@ export function BattleRow({
                   cookie.card.instanceId,
                   'activate',
                 )
+              const revealTargetId =
+                game.pendingBattle?.damageTargetInstanceId ??
+                game.pendingBattle?.targetInstanceId
+              const revealedHpCard =
+                game.pendingBattle &&
+                (game.pendingBattle.stage === 'damage' ||
+                  game.pendingBattle.stage === 'flip') &&
+                revealTargetId === cookie.card.instanceId
+                  ? game.pendingBattle.revealedHpCard
+                  : null
 
               const animClasses = [
                 faintAnimIds?.has(cookie.card.instanceId) && 'animate-faint-shrink',
@@ -477,6 +487,19 @@ export function BattleRow({
                       />
                     ))}
                   </div>
+                  {revealedHpCard && (
+                    <div className="hp-reveal-indicator" aria-live="polite">
+                      <CardFace
+                        card={revealedHpCard}
+                        className="hp-reveal-card"
+                        key={revealedHpCard.instanceId}
+                        onClick={() => onInspectCard(cookie.card)}
+                      />
+                      {revealedHpCard.flip && (
+                        <span className="hp-reveal-flip-badge">FLIP</span>
+                      )}
+                    </div>
+                  )}
                   {(canTarget || canSelectEffectTarget) && (
                     <span className="target-hint">
                       {canSelectEffectTarget ? '效果目標' : '攻擊目標'}

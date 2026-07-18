@@ -1,6 +1,7 @@
 import type { GameCard } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { AttackPreviewArrow, type AttackPreviewArrowProps } from './AttackPreviewArrow'
+import { CenterCardPreview, type CenterCardPreviewProps } from './CenterCardPreview'
 import { PhaseRail, type PhaseRailProps } from '../layout/PhaseRail'
 import { AttackPaymentPanel, type AttackPaymentPanelProps } from '../panels/GameStatusPanels'
 import { CardPreviewPanel } from '../panels/InteractionOverlays'
@@ -28,6 +29,7 @@ export interface BattleTableProps {
   opponentPreviewContextLabel?: string
   hoveredCard: GameCard | null
   attackPaymentPanel: AttackPaymentPanelProps | null
+  centerPreview?: CenterCardPreviewProps | null
 }
 
 export function BattleTable({
@@ -41,6 +43,7 @@ export function BattleTable({
   opponentPreviewContextLabel,
   hoveredCard,
   attackPaymentPanel,
+  centerPreview,
 }: BattleTableProps) {
   return (
     <>
@@ -56,6 +59,8 @@ export function BattleTable({
         </div>
 
         <AttackPreviewArrow {...attackPreviewArrow} />
+
+        {centerPreview && <CenterCardPreview {...centerPreview} />}
 
         <BattleRow {...bottomBattleRow} />
       </section>

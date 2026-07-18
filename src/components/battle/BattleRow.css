@@ -257,6 +257,52 @@
 .hp-card-stack .hp-card:nth-child(5) { left: 88px; }
 .hp-card-stack .hp-card:nth-child(n + 6) { left: 110px; }
 
+.hp-reveal-indicator {
+  position: absolute;
+  z-index: 7;
+  top: -16px;
+  left: 50%;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  transform: translateX(-50%);
+  padding: 4px;
+  border: 1px solid #ffe65f;
+  border-radius: 6px;
+  background: rgba(2, 16, 45, 0.92);
+  box-shadow: 0 0 12px rgba(255, 230, 95, 0.55);
+  animation: hp-reveal-pulse 900ms ease-out;
+}
+
+.hp-reveal-indicator .hp-reveal-card {
+  width: 60px;
+}
+
+.hp-reveal-flip-badge {
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: #ff5f7a;
+  color: #fff;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+@keyframes hp-reveal-pulse {
+  0% {
+    transform: translateX(-50%) scale(0.85);
+    box-shadow: 0 0 0 rgba(255, 230, 95, 0);
+  }
+  30% {
+    transform: translateX(-50%) scale(1.05);
+    box-shadow: 0 0 16px rgba(255, 230, 95, 0.75);
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 0 12px rgba(255, 230, 95, 0.55);
+  }
+}
+
 .card-badges {
   position: absolute;
   z-index: 4;
