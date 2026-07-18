@@ -2,7 +2,7 @@
 
 最後更新：2026-07-17。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
 
-> 2026-07-17 驗證補充：線上 modal RWD smoke 通過；最新主 bundle 為 509.25 KiB raw / 133.22 KiB gzip，通過 budget。好友房完整開局驗證本輪在起始餅乾同步檢查失敗，尚未宣稱通過。
+> 2026-07-17 驗證補充：線上 modal RWD smoke 通過；最新主 bundle 為 509.25 KiB raw / 133.22 KiB gzip，通過 budget。好友房完整開局驗證（`test:online:match:browser`）當時本地跑到起始餅乾同步檢查失敗，經查為過期／偶發紀錄——CI 上 PR #64、#65 合併後兩輪皆綠燈，已重新確認通過。
 > AI、牌組編輯器與好友房 Playwright smoke workflow 已於 main push 自動觸發，並保留手動觸發供調查使用。
 
 ## 已完成里程碑（摘要）
@@ -48,12 +48,12 @@
 | [regression-test-checklist.md](regression-test-checklist.md) | ✅ 自動化門檻、AI 行為、歷史回歸熱點、瀏覽器級、資料部署五個章節 |
 | [manual-playtest-checklist.md](manual-playtest-checklist.md) | ✅ 既有，涵蓋開局/回合戰鬥/效果/牌組編輯器/線上對戰/RWD/部署驗收 |
 
-### V1 退出檢查（目前待完成）
+### V1 退出檢查（僅剩真人試玩證據待完成）
 
 | 項目 | 狀態 |
 |---|---|
 | 真人試玩證據 | ⏳ 依 [manual-playtest-checklist.md](manual-playtest-checklist.md) 完成至少 1–2 場，記錄規則疑點、AI 體感、牌組編輯器操作阻力與 UI 可讀性 |
-| 外部健康稽核 | ⏳ 本輪 main push 後確認 GitHub Actions、Vercel Production 與 Render WebSocket 實際健康；本機綠燈不代替外部狀態 |
+| 外部健康稽核 | ✅ 已完成（2026-07-17）：GitHub Actions（CI／AI Browser Validation）於 PR #65 合併後綠燈；Vercel Production（<https://braverse-web-game.vercel.app/>）確認為合併後最新版本（bundle 內含當日新功能字串）、主選單正常渲染、無 console error；Render WebSocket（`wss://braverse-web-game.onrender.com`）確認可連線，冷啟動喚醒後 689ms 完成 handshake，符合 R6 記載的免費層特性 |
 
 ### P3 — 產品深化（觀察後再投入）
 
