@@ -3,13 +3,6 @@
   padding-bottom: 80px;
 }
 
-.optional-cost-dual {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin: 10px 0;
-}
-
 .optional-cost-col {
   min-width: 0;
 }
@@ -285,10 +278,6 @@
 }
 
 @media (max-width: 680px) {
-  .optional-cost-dual {
-    grid-template-columns: 1fr;
-  }
-
   .inspect-deck-modal {
     width: min(360px, 100%);
   }

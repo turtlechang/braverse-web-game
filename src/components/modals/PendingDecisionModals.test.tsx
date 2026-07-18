@@ -290,26 +290,41 @@ describe('OptionalCostAttackModal', () => {
       payBtn!.click()
     })
 
-    const handButtons = container.querySelectorAll('.modal-card-options button')
-    const handBtns = Array.from(handButtons).filter((btn) =>
-      btn.textContent?.includes('測試手牌'),
-    )
+    // discardHandCost>0 and needsTarget=true (energyCostTotal=0) means the
+    // guided flow is cost -> target: only the hand-discard step is visible
+    // first, matching the same one-thing-at-a-time flow as other prompts.
+    const handBtns = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.modal-card-options button'),
+    ).filter((btn) => btn.textContent?.includes('測試手牌'))
     expect(handBtns.length).toBe(3)
+    expect(
+      Array.from(
+        container.querySelectorAll<HTMLButtonElement>('.modal-card-options button'),
+      ).some((btn) => btn.textContent?.includes('對手餅乾')),
+    ).toBe(false)
 
     await act(() => {
-      ;(handBtns[0] as HTMLButtonElement).click()
+      handBtns[0].click()
     })
     await act(() => {
-      ;(handBtns[1] as HTMLButtonElement).click()
+      handBtns[1].click()
     })
 
-    const targetBtns = Array.from(handButtons).filter((btn) =>
-      btn.textContent?.includes('對手餅乾'),
-    )
+    const nextBtn = findButtonByText(container, '下一步')
+    expect(nextBtn).toBeDefined()
+    expect(nextBtn!.disabled).toBe(false)
+
+    await act(() => {
+      nextBtn!.click()
+    })
+
+    const targetBtns = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.modal-card-options button'),
+    ).filter((btn) => btn.textContent?.includes('對手餅乾'))
     expect(targetBtns.length).toBe(2)
 
     await act(() => {
-      ;(targetBtns[1] as HTMLButtonElement).click()
+      targetBtns[1].click()
     })
 
     const confirmBtn = findButtonByText(container, '確認')
@@ -391,17 +406,33 @@ describe('OptionalCostAttackModal', () => {
       findButtonByText(container, '支付')!.click()
     })
 
-    const confirmBtn = findButtonByText(container, '確認')
-    expect(confirmBtn!.disabled).toBe(true)
+    // Cost phase comes before target (energyCostTotal=0), so the primary
+    // button here is "下一步", not "確認" — the target step isn't reachable
+    // yet with an incomplete cost selection.
+    const nextBtn = findButtonByText(container, '下一步')
+    expect(nextBtn!.disabled).toBe(true)
 
     const handBtns = Array.from(
-      container.querySelectorAll('.modal-card-options button'),
+      container.querySelectorAll<HTMLButtonElement>('.modal-card-options button'),
     ).filter((btn) => btn.textContent?.includes('測試手牌'))
 
     await act(() => {
-      ;(handBtns[0] as HTMLButtonElement).click()
+      handBtns[0].click()
     })
 
+    expect(nextBtn!.disabled).toBe(true)
+
+    await act(() => {
+      handBtns[1].click()
+    })
+
+    expect(nextBtn!.disabled).toBe(false)
+
+    await act(() => {
+      nextBtn!.click()
+    })
+
+    const confirmBtn = findButtonByText(container, '確認')
     expect(confirmBtn!.disabled).toBe(true)
 
     await act(() => root.unmount())
