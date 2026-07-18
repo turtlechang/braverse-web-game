@@ -79,6 +79,9 @@ try {
       if (message.text().includes('net::ERR_NETWORK_ACCESS_DENIED')) return
       errors.push(message.text())
     })
+    // Close/clear/import-overwrite confirm via window.confirm() when there are
+    // unsaved changes (see DeckEditorModal.tsx); this flow always wants to proceed.
+    page.on('dialog', (dialog) => dialog.accept())
 
     try {
     await page.goto(baseUrl, { waitUntil: 'networkidle' })
@@ -110,7 +113,12 @@ try {
     }
     assert.equal(await searchedCard.isDisabled(), true)
     assert.equal(await modal.locator('.deck-editor-pool-card.at-max').count(), 1)
-    assert.equal(await modal.locator('.deck-editor-save-btn').isDisabled(), true)
+    // An incomplete (4/60) deck is still saveable as a draft (P1-1): the save
+    // button stays enabled and switches to the amber "儲存草稿" draft styling.
+    const saveButton = modal.locator('.deck-editor-save-btn')
+    assert.equal(await saveButton.isEnabled(), true)
+    assert.equal(await saveButton.evaluate((el) => el.classList.contains('is-draft')), true)
+    assert.match((await saveButton.textContent()) ?? '', /儲存草稿/)
 
     await modal.locator('.deck-editor-io-btn').nth(1).click()
     const importDialog = modal.locator('.deck-editor-import-dialog')
@@ -140,7 +148,8 @@ try {
       (await modal.locator('.deck-editor-deck-header').textContent()) ?? '',
       /60\s*\/\s*60/,
     )
-    assert.equal(await modal.locator('.deck-editor-save-btn').isEnabled(), true)
+    assert.equal(await saveButton.isEnabled(), true)
+    assert.equal(await saveButton.evaluate((el) => el.classList.contains('is-draft')), false)
 
     const metrics = await page.evaluate(() => {
       const element = document.querySelector('.deck-editor-modal')
@@ -168,7 +177,7 @@ try {
       `${viewport.width}x${viewport.height} document width ${metrics.documentWidth} exceeds viewport`,
     )
 
-    await modal.locator('.deck-editor-save-btn').click()
+    await saveButton.click()
     await modal.waitFor({ state: 'hidden' })
     const savedStorage = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('braverse-custom-decks') ?? '[]'),
