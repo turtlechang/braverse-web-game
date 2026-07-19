@@ -1,9 +1,9 @@
 /**
  * 戰場 mockup（docs/ui-reference/01-battlefield-wireframe.md 的可渲染版）。
- * 靜態樣本資料，呈現 P2-1 戰場線稿圖重新設計四階段 PR 完成、並依實機預覽回饋
- * 校正後的現行桌機版面：左欄卡片預覽、支援/戰鬥上下堆疊、休息區與牌庫等
+ * 靜態樣本資料，呈現參考 Master Duel 排版校正後的現行桌機版面：大卡圖預覽為
+ * 純 hover 浮窗（不佔用常駐左欄寬度）、支援/戰鬥上下堆疊、休息區與牌庫等
  * 依對手/我方左右鏡射、PhaseRail 縮成貼近中央分隔列的置中小區塊、手牌置中
- * 且只露出部分高度、行動按鈕集中右下角。不接規則引擎，僅供 UI 審查。
+ * 放大且只露出部分高度、行動按鈕集中右下角。不接規則引擎，僅供 UI 審查。
  * dev server 開 /?mockup=battlefield。
  */
 import { useState } from 'react'
@@ -87,17 +87,16 @@ export function BattlefieldMockup() {
   return (
     <div className="mock-bf-root">
       <style>{`
-        .mock-bf-root { position: fixed; inset: 0; display: grid; grid-template-columns: 180px 1fr;
+        .mock-bf-root { position: fixed; inset: 0; display: grid; grid-template-columns: 1fr;
           background: linear-gradient(135deg, rgba(8,38,89,.96), rgba(22,62,126,.9)), #07162f;
           color: #eef9ff; font-family: system-ui, 'Noto Sans TC', sans-serif; overflow: hidden; }
 
-        .mock-bf-preview-rail { display: grid; align-content: center; justify-items: center; gap: 10px;
-          padding: 16px 10px; background: rgba(5,21,52,.62); border-right: 1px solid rgba(126,231,240,.28); }
+        .mock-bf-preview-rail { position: absolute; z-index: 28; top: 40px; left: 14px; width: 180px;
+          display: grid; justify-items: center; gap: 10px; padding: 16px 10px; border-radius: 12px;
+          border: 1px solid rgba(129,224,255,.4);
+          background: linear-gradient(160deg, rgba(2,16,45,.94), rgba(2,16,45,.8));
+          box-shadow: 0 18px 42px rgba(1,8,28,.42); pointer-events: none; }
         .mock-bf-preview-rail .mock-bf-card { position: static; width: 100%; height: 160px; cursor: default; }
-        .mock-bf-preview-hint { display: grid; justify-items: center; gap: 6px; padding: 18px 10px;
-          border: 1px dashed rgba(126,231,240,.3); border-radius: 8px; text-align: center; }
-        .mock-bf-preview-hint small:first-child { font-weight: 800; letter-spacing: .04em; color: rgba(219,239,255,.55); }
-        .mock-bf-preview-hint small:last-child { color: rgba(219,239,255,.4); }
         .mock-bf-preview-name { font-size: .82rem; font-weight: 800; text-align: center; }
 
         .mock-bf-phase-block { position: absolute; top: 50%; right: 0; transform: translateY(-50%); z-index: 15;
@@ -166,29 +165,22 @@ export function BattlefieldMockup() {
         .mock-bf-action-cluster button { padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(129,224,255,.45);
           background: rgba(2,18,49,.78); color: #e8f8ff; font-size: .62rem; font-weight: 700; cursor: pointer; }
 
-        .mock-bf-note { position: absolute; left: 190px; bottom: 8px; font-size: .64rem; color: rgba(210,226,252,.55); }
+        .mock-bf-note { position: absolute; left: 14px; bottom: 8px; font-size: .64rem; color: rgba(210,226,252,.55); }
       `}</style>
 
-      <aside className="mock-bf-preview-rail">
-        {preview ? (
-          <>
-            <div className="mock-bf-card" style={{ background: `linear-gradient(160deg, ${preview.color}, #10233f 130%)` }}>
-              <span className="mock-bf-card-name">{preview.name}</span>
-              <span className="mock-bf-card-lv">LV.{preview.level}</span>
-              <span className="mock-bf-badges">
-                <span className="mock-bf-badge hp">❤{preview.hp}</span>
-                <span className="mock-bf-badge atk">⚔{preview.atk}</span>
-              </span>
-            </div>
-            <div className="mock-bf-preview-name">{preview.name}</div>
-          </>
-        ) : (
-          <div className="mock-bf-preview-hint">
-            <small>Hover Preview</small>
-            <small>滑鼠移到卡牌顯示大圖</small>
+      {preview && (
+        <aside className="mock-bf-preview-rail">
+          <div className="mock-bf-card" style={{ background: `linear-gradient(160deg, ${preview.color}, #10233f 130%)` }}>
+            <span className="mock-bf-card-name">{preview.name}</span>
+            <span className="mock-bf-card-lv">LV.{preview.level}</span>
+            <span className="mock-bf-badges">
+              <span className="mock-bf-badge hp">❤{preview.hp}</span>
+              <span className="mock-bf-badge atk">⚔{preview.atk}</span>
+            </span>
           </div>
-        )}
-      </aside>
+          <div className="mock-bf-preview-name">{preview.name}</div>
+        </aside>
+      )}
 
       <main className="mock-bf-table">
         <div className="mock-bf-hand-window opponent">
