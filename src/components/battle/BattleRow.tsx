@@ -337,33 +337,33 @@ export function BattleRow({
             </div>
           )
         })()}
-        <div className="combat-zone">
+        <div
+          className="row-meta"
+          data-active={isActivePlayer ? 'true' : 'false'}
+        >
+          <span className="row-role">{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
+          <strong>{player.name}</strong>
+          <b className="turn-order-badge">
+            {game.firstPlayerId === playerId ? '先攻' : '後攻'}
+          </b>
           <div
-            className="row-meta"
+            className="row-status"
             data-active={isActivePlayer ? 'true' : 'false'}
+            aria-label={`${player.name}狀態：${isActivePlayer ? '行動中' : '等待'}，手牌 ${player.hand.length}`}
           >
-            <span className="row-role">{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
-            <strong>{player.name}</strong>
-            <b className="turn-order-badge">
-              {game.firstPlayerId === playerId ? '先攻' : '後攻'}
-            </b>
-            <div
-              className="row-status"
+            <span
+              className={`row-stat row-stat-status ${isActivePlayer ? 'is-active' : 'is-waiting'}`}
               data-active={isActivePlayer ? 'true' : 'false'}
-              aria-label={`${player.name}狀態：${isActivePlayer ? '行動中' : '等待'}，手牌 ${player.hand.length}`}
             >
-              <span
-                className={`row-stat row-stat-status ${isActivePlayer ? 'is-active' : 'is-waiting'}`}
-                data-active={isActivePlayer ? 'true' : 'false'}
-              >
-                {isActivePlayer ? '行動中' : '等待'}
-              </span>
-              <span className="row-stat row-stat-hand" aria-label={`手牌 ${player.hand.length}`}>
-                <span className="row-stat-label">手牌</span>
-                <b className="row-stat-value">{player.hand.length}</b>
-              </span>
-            </div>
+              {isActivePlayer ? '行動中' : '等待'}
+            </span>
+            <span className="row-stat row-stat-hand" aria-label={`手牌 ${player.hand.length}`}>
+              <span className="row-stat-label">手牌</span>
+              <b className="row-stat-value">{player.hand.length}</b>
+            </span>
           </div>
+        </div>
+        <div className="combat-zone">
           <span className="zone-watermark">戰鬥區</span>
           <div className="combat-slots">
             {player.battleArea.map((cookie) => {

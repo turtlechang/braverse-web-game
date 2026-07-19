@@ -167,6 +167,8 @@
 }
 
 .bottom-field .row-meta {
+  top: auto;
+  bottom: 9px;
   right: auto;
   left: 0;
   padding: 5px 9px 5px 12px;
@@ -193,11 +195,6 @@
 
 .top-field .turn-order-badge {
   color: #71e9ff;
-}
-
-.top-field .row-meta {
-  top: auto;
-  bottom: 9px;
 }
 
 .zone-watermark {
@@ -1252,12 +1249,9 @@
   }
 
   .bottom-field .row-meta {
-    padding: 2px 4px 2px 6px;
-  }
-
-  .top-field .row-meta {
     top: auto;
     bottom: 3px;
+    padding: 2px 4px 2px 6px;
   }
 
   .row-role,
