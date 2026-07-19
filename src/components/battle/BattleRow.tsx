@@ -300,7 +300,7 @@ export function BattleRow({
       </div>
 
       <div className="field-stack">
-        {supportZone}
+        {position === 'top' && supportZone}
         {isOpponent && player.hand.length > 0 && (() => {
           const baseFan = computeOpponentFan(player.hand.length, 0)
           const count = player.hand.length
@@ -518,6 +518,7 @@ export function BattleRow({
             )}
           </div>
         </div>
+        {position === 'bottom' && supportZone}
       </div>
 
       <div className="utility-zones">

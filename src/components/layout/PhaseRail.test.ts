@@ -25,7 +25,8 @@ describe('PhaseRail CSS grid-row assignments', () => {
     )
   })
 
-  it('is positioned on the right edge of the game shell', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*inset\s*:\s*0\s+0\s+0\s+auto[^}]*\}/)
+  it('floats as a vertically-centered block near the right edge of the game shell', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*top\s*:\s*50%[^}]*\}/)
+    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*right\s*:\s*4px[^}]*\}/)
   })
 })

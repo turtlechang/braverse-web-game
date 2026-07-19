@@ -9,8 +9,8 @@
   align-items: stretch;
 }
 
-.break-zone {
-  grid-column: 1;
+.top-field .break-zone {
+  grid-column: 3;
   grid-row: 1;
 }
 
@@ -19,7 +19,17 @@
   grid-row: 1;
 }
 
-.utility-zones {
+.top-field .utility-zones {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bottom-field .break-zone {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bottom-field .utility-zones {
   grid-column: 3;
   grid-row: 1;
 }
@@ -29,7 +39,7 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   gap: 7px;
 }
 
@@ -38,9 +48,13 @@
   top: 0;
   left: calc(var(--opponent-card-width) * var(--safety-ratio) + var(--opponent-card-width) * 0.5 + 2px);
   width: calc(var(--opponent-card-width) * 2);
-  height: 160px;
+  height: 53px;
   pointer-events: none;
   z-index: 10;
+}
+
+.bottom-field .field-stack {
+  grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
 }
 
 .combat-zone,
@@ -190,8 +204,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  padding: 10px 14px 8px;
+  gap: 100px;
+  padding: 10px 76px 8px;
 }
 
 .top-field .combat-slots {
@@ -703,7 +717,8 @@
   backdrop-filter: blur(10px);
 }
 
-.utility-zones .resource-popover {
+.top-field .break-zone .resource-popover,
+.bottom-field .utility-zones .resource-popover {
   right: calc(100% + 8px);
   left: auto;
 }
@@ -774,6 +789,7 @@
   z-index: 20;
   width: min(560px, 52%);
   height: 160px;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -789,9 +805,15 @@
 .hand-fan.bottom-hand {
   left: 50%;
   right: auto;
+  bottom: 88px;
   width: min(680px, calc(100% - 32px));
+  height: 80px;
   box-sizing: border-box;
   transform: translateX(-50%);
+}
+
+.hand-fan.bottom-hand .hand-card-wrap {
+  bottom: -80px;
 }
 
 .hand-card-wrap {
@@ -955,18 +977,23 @@
   .hand-fan.bottom-hand {
     left: 50%;
     right: auto;
+    bottom: 98px;
     width: min(680px, calc(100% - 32px));
+    height: 90px;
     box-sizing: border-box;
     transform: translateX(-50%);
   }
 
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -90px;
+  }
+
   .support-cards {
-    padding: 7px 18px;
+    padding: 7px 82px;
   }
 
   .combat-slots {
-    gap: 22px;
-    padding: 10px 18px 8px;
+    padding: 10px 82px 8px;
   }
 }
 
@@ -1015,8 +1042,8 @@
   }
 
   .combat-slots {
-    gap: 14px;
-    padding: 6px 12px;
+    gap: 100px;
+    padding: 6px 60px;
   }
 
   .combat-card-wrap {
@@ -1063,9 +1090,15 @@
   .hand-fan.bottom-hand {
     left: 50%;
     right: auto;
+    bottom: 68px;
     width: min(680px, calc(100% - 32px));
+    height: 60px;
     box-sizing: border-box;
     transform: translateX(-50%);
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -60px;
   }
 
   .break-cards {
@@ -1085,7 +1118,7 @@
   }
 
   .combat-slots {
-    padding-inline: 12px;
+    padding-inline: 54px;
   }
 
   .hand-fan {
@@ -1141,29 +1174,12 @@
 
   .field-stack,
   .bottom-field .field-stack {
-    grid-template-columns: none;
     grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
     gap: 3px;
   }
 
-  .support-zone {
-    grid-row: 1;
-  }
-
-  .combat-zone {
-    grid-row: 2;
-  }
-
   .bottom-field .field-stack {
     grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
-  }
-
-  .bottom-field .support-zone {
-    grid-row: 2;
-  }
-
-  .bottom-field .combat-zone {
-    grid-row: 1;
   }
 
   .combat-zone,
@@ -1173,8 +1189,8 @@
   }
 
   .combat-slots {
-    gap: 18px;
-    padding: 4px 12px;
+    gap: 100px;
+    padding: 4px 38px;
   }
 
   .top-field .combat-slots {
@@ -1401,8 +1417,8 @@
   }
 
   .combat-slots {
-    gap: 10px;
-    padding: 2px 8px;
+    gap: 100px;
+    padding: 2px 30px;
   }
 
   .hp-card-stack {

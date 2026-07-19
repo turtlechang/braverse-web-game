@@ -84,7 +84,7 @@
   position: absolute;
   z-index: 40;
   top: 10px;
-  left: calc(50% + var(--side-panel-width) / 2 - var(--phase-rail-width) / 2);
+  left: calc(50% + var(--side-panel-width) / 2);
   max-width: min(560px, 54vw);
   padding: 7px 16px;
   overflow: hidden;

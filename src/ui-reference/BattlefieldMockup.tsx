@@ -1,8 +1,9 @@
 /**
  * 戰場 mockup（docs/ui-reference/01-battlefield-wireframe.md 的可渲染版）。
- * 靜態樣本資料，呈現 P2-1 戰場線稿圖重新設計四階段 PR 完成後的桌機版面：
- * 左欄卡片預覽、右欄簡化階段列、支援/戰鬥/休息橫向三欄、牌庫等統一右側、
- * 手牌置中、行動按鈕集中右下角。不接規則引擎，僅供 UI 審查。
+ * 靜態樣本資料，呈現 P2-1 戰場線稿圖重新設計四階段 PR 完成、並依實機預覽回饋
+ * 校正後的現行桌機版面：左欄卡片預覽、支援/戰鬥上下堆疊、休息區與牌庫等
+ * 依對手/我方左右鏡射、PhaseRail 縮成貼近中央分隔列的置中小區塊、手牌置中
+ * 且只露出部分高度、行動按鈕集中右下角。不接規則引擎，僅供 UI 審查。
  * dev server 開 /?mockup=battlefield。
  */
 import { useState } from 'react'
@@ -46,34 +47,36 @@ function BattleCard({ card, onPreview }: { card: MockCard; onPreview: (card: Moc
   )
 }
 
-function ZoneRow({
+function FieldStack({
   supportCount,
-  restCount,
   battle,
+  isOpponent,
   onPreview,
 }: {
   supportCount: number
-  restCount: number
   battle: MockCard[]
+  isOpponent: boolean
   onPreview: (card: MockCard | null) => void
 }) {
+  const supportZone = (
+    <div className="mock-bf-zone mock-bf-support-zone">
+      <span className="mock-bf-zone-label">支援區</span>
+      {Array.from({ length: supportCount }).map((_, i) => (
+        <div key={i} className={`mock-bf-support${i === 0 ? ' is-rested' : ''}`} />
+      ))}
+    </div>
+  )
+  const battleZone = (
+    <div className="mock-bf-zone mock-bf-battle-zone">
+      {battle.map((card) => (
+        <BattleCard key={card.id} card={card} onPreview={onPreview} />
+      ))}
+    </div>
+  )
   return (
-    <div className="mock-bf-zone-row">
-      <div className="mock-bf-zone mock-bf-support-zone">
-        <span className="mock-bf-zone-label">支援區</span>
-        {Array.from({ length: supportCount }).map((_, i) => (
-          <div key={i} className={`mock-bf-support${i === 0 ? ' is-rested' : ''}`} />
-        ))}
-      </div>
-      <div className="mock-bf-zone mock-bf-battle-zone">
-        {battle.map((card) => (
-          <BattleCard key={card.id} card={card} onPreview={onPreview} />
-        ))}
-      </div>
-      <div className="mock-bf-zone mock-bf-rest-zone">
-        <span className="mock-bf-zone-label">休息</span>
-        <strong>×{restCount}</strong>
-      </div>
+    <div className="mock-bf-field-stack">
+      {isOpponent ? supportZone : battleZone}
+      {isOpponent ? battleZone : supportZone}
     </div>
   )
 }
@@ -84,7 +87,7 @@ export function BattlefieldMockup() {
   return (
     <div className="mock-bf-root">
       <style>{`
-        .mock-bf-root { position: fixed; inset: 0; display: grid; grid-template-columns: 180px 1fr 96px;
+        .mock-bf-root { position: fixed; inset: 0; display: grid; grid-template-columns: 180px 1fr;
           background: linear-gradient(135deg, rgba(8,38,89,.96), rgba(22,62,126,.9)), #07162f;
           color: #eef9ff; font-family: system-ui, 'Noto Sans TC', sans-serif; overflow: hidden; }
 
@@ -97,22 +100,32 @@ export function BattlefieldMockup() {
         .mock-bf-preview-hint small:last-child { color: rgba(219,239,255,.4); }
         .mock-bf-preview-name { font-size: .82rem; font-weight: 800; text-align: center; }
 
-        .mock-bf-phase-rail { display: flex; flex-direction: column; gap: 10px; padding: 16px 8px 12px; }
-        .mock-bf-phase-badge { padding: 9px 6px; border-radius: 10px; text-align: center; font-size: .68rem; font-weight: 800; }
+        .mock-bf-phase-block { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); z-index: 15;
+          width: 92px; display: grid; gap: 6px; padding: 8px; border-radius: 12px;
+          border: 1px solid rgba(130,194,255,.3); background: linear-gradient(160deg, rgba(3,20,57,.94), rgba(2,12,37,.9));
+          box-shadow: 0 18px 40px rgba(1,8,28,.35); }
+        .mock-bf-phase-badge { padding: 6px; border-radius: 8px; text-align: center; font-size: .64rem; font-weight: 800; }
         .mock-bf-phase-badge.mine { background: linear-gradient(160deg, rgba(37,99,235,.55), rgba(3,20,53,.5)); border: 1px solid rgba(96,165,250,.7); }
-        .mock-bf-cta { margin-top: auto; padding: 10px 6px; border-radius: 12px; border: 2px solid #7ee7f0;
-          background: rgba(82,230,255,.16); color: #7ee7f0; font-size: .68rem; font-weight: 800; cursor: pointer; }
-        .mock-bf-turn-counter { text-align: center; font-size: .62rem; color: rgba(255,255,255,.42); font-weight: 800; }
+        .mock-bf-cta { padding: 8px 6px; border-radius: 10px; border: 2px solid #7ee7f0;
+          background: rgba(82,230,255,.16); color: #7ee7f0; font-size: .62rem; font-weight: 800; cursor: pointer; }
+        .mock-bf-turn-counter { text-align: center; font-size: .58rem; color: rgba(255,255,255,.42); font-weight: 800; }
 
-        .mock-bf-table { position: relative; display: grid; grid-template-rows: 1fr 1.15fr auto 1.15fr 1fr; gap: 6px; padding: 10px 14px; min-height: 0; }
+        .mock-bf-table { position: relative; display: grid;
+          grid-template-rows: 40px 1fr auto 1fr 40px; gap: 4px; padding: 10px 100px 10px 14px; min-height: 0; }
 
-        .mock-bf-zone-row { display: grid; grid-template-columns: 0.85fr 1fr 84px; gap: 8px; min-height: 0; }
+        .mock-bf-row { display: grid; grid-template-columns: 84px 1fr 84px; gap: 8px; min-height: 0; }
+        .mock-bf-row.opponent { grid-template-columns: 84px 1fr 84px; }
+        .mock-bf-field-stack { min-width: 0; display: grid; grid-template-rows: 1fr 0.82fr; gap: 6px; }
+        .mock-bf-row.opponent .mock-bf-field-stack { grid-template-rows: 0.82fr 1fr; }
+
         .mock-bf-zone { position: relative; display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px;
           background: rgba(7,27,61,.5); border: 1px solid rgba(255,255,255,.05); min-height: 0; }
         .mock-bf-zone-label { position: absolute; top: 6px; left: 10px; font-size: .6rem; letter-spacing: .1em; color: #9fc3e8; }
         .mock-bf-battle-zone { justify-content: center; }
-        .mock-bf-rest-zone { flex-direction: column; justify-content: center; align-items: center; gap: 2px; }
+
+        .mock-bf-rest-zone { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px; }
         .mock-bf-rest-zone strong { font-size: 1rem; color: #fff3a6; }
+        .mock-bf-rest-zone span { font-size: .6rem; color: #9fc3e8; }
 
         .mock-bf-divider { display: flex; align-items: center; justify-content: center; padding: 6px;
           border-radius: 10px; background: rgba(255,214,111,.14); border: 1px dashed rgba(255,214,111,.5);
@@ -134,22 +147,24 @@ export function BattlefieldMockup() {
           border: 1px solid rgba(126,231,240,.28); margin-left: -22px; }
         .mock-bf-support.is-rested { transform: rotate(90deg) scale(.9); opacity: .8; }
 
-        .mock-bf-utility { position: absolute; top: 6px; right: 6px; display: flex; gap: 6px; }
-        .mock-bf-utility > div { border-radius: 8px; padding: 4px 8px; background: rgba(3,14,36,.58);
-          border: 1px solid rgba(126,231,240,.28); font-size: .62rem; color: #9fc3e8; text-align: center; }
-        .mock-bf-utility strong { display: block; color: #eef9ff; font-size: .8rem; }
+        .mock-bf-utility { display: grid; grid-template-rows: repeat(3, 1fr); gap: 6px; }
+        .mock-bf-utility > div { border-radius: 8px; padding: 4px 6px; display: grid; place-content: center;
+          background: rgba(3,14,36,.58); border: 1px solid rgba(126,231,240,.28); font-size: .58rem; color: #9fc3e8; text-align: center; }
+        .mock-bf-utility strong { display: block; color: #eef9ff; font-size: .74rem; }
 
+        .mock-bf-hand-window { position: relative; overflow: hidden; display: flex; justify-content: center; }
+        .mock-bf-hand-window.opponent { height: 34px; }
+        .mock-bf-hand-window.player { height: 52px; }
         .mock-bf-hand { display: flex; justify-content: center; }
-        .mock-bf-hand.opponent { padding-top: 4px; }
-        .mock-bf-handcard { width: 74px; height: 100px; border-radius: 8px; margin-left: -30px;
+        .mock-bf-handcard { width: 74px; height: 100px; border-radius: 8px; margin-left: -30px; flex: none;
           border: 1px solid rgba(255,255,255,.2); background: linear-gradient(150deg, #1d3f74, #0c1e3e);
           box-shadow: 0 6px 16px rgba(3,14,36,.5); transition: transform .15s ease-out; }
-        .mock-bf-hand:not(.opponent) .mock-bf-handcard:hover { transform: translateY(-10px); }
+        .mock-bf-hand-window.player .mock-bf-handcard:hover { transform: translateY(-10px); }
         .mock-bf-handcard.disabledCard { opacity: .45; }
 
-        .mock-bf-action-cluster { position: absolute; right: 100px; bottom: 10px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-        .mock-bf-action-cluster button { padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(129,224,255,.45);
-          background: rgba(2,18,49,.78); color: #e8f8ff; font-size: .68rem; font-weight: 700; cursor: pointer; }
+        .mock-bf-action-cluster { position: absolute; right: 6px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+        .mock-bf-action-cluster button { padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(129,224,255,.45);
+          background: rgba(2,18,49,.78); color: #e8f8ff; font-size: .62rem; font-weight: 700; cursor: pointer; }
 
         .mock-bf-note { position: absolute; left: 190px; bottom: 8px; font-size: .64rem; color: rgba(210,226,252,.55); }
       `}</style>
@@ -176,48 +191,68 @@ export function BattlefieldMockup() {
       </aside>
 
       <main className="mock-bf-table">
-        <div className="mock-bf-hand opponent">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="mock-bf-handcard" style={{ transform: `rotate(${(i - 2) * -7}deg)` }} />
-          ))}
+        <div className="mock-bf-hand-window opponent">
+          <div className="mock-bf-hand">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="mock-bf-handcard" style={{ transform: `rotate(${(i - 2) * -7}deg)` }} />
+            ))}
+          </div>
         </div>
 
-        <ZoneRow supportCount={3} restCount={2} battle={OPPONENT_BATTLE} onPreview={setPreview} />
+        <div className="mock-bf-row opponent">
+          <div className="mock-bf-zone mock-bf-utility">
+            <div>牌庫<strong>57</strong></div>
+            <div>場景<strong>–</strong></div>
+            <div>棄牌<strong>0</strong></div>
+          </div>
+          <FieldStack supportCount={3} battle={OPPONENT_BATTLE} isOpponent onPreview={setPreview} />
+          <div className="mock-bf-zone mock-bf-rest-zone">
+            <span>休息</span>
+            <strong>×2</strong>
+          </div>
+        </div>
 
         <div className="mock-bf-divider">選擇攻擊目標——點擊對手戰鬥區的餅乾</div>
 
-        <ZoneRow supportCount={4} restCount={0} battle={PLAYER_BATTLE} onPreview={setPreview} />
-
-        <div className="mock-bf-hand">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className={`mock-bf-handcard${i === 4 ? ' disabledCard' : ''}`}
-              style={{ transform: `rotate(${(i - 2.5) * 7}deg)` }}
-            />
-          ))}
+        <div className="mock-bf-row">
+          <div className="mock-bf-zone mock-bf-rest-zone">
+            <span>休息</span>
+            <strong>×0</strong>
+          </div>
+          <FieldStack supportCount={4} battle={PLAYER_BATTLE} isOpponent={false} onPreview={setPreview} />
+          <div className="mock-bf-zone mock-bf-utility">
+            <div>牌庫<strong>31</strong></div>
+            <div>場景<strong>1</strong></div>
+            <div>棄牌<strong>8</strong></div>
+          </div>
         </div>
 
-        <div className="mock-bf-utility">
-          <div>牌庫<strong>31</strong></div>
-          <div>棄牌<strong>8</strong></div>
-          <div>場景<strong>1</strong></div>
+        <div className="mock-bf-hand-window player">
+          <div className="mock-bf-hand">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className={`mock-bf-handcard${i === 4 ? ' disabledCard' : ''}`}
+                style={{ transform: `rotate(${(i - 2.5) * 7}deg)` }}
+              />
+            ))}
+          </div>
         </div>
 
         <div className="mock-bf-action-cluster">
           <button type="button">≡ 選單</button>
           <button type="button">戰鬥記錄</button>
         </div>
+
+        <div className="mock-bf-phase-block">
+          <div className="mock-bf-phase-badge mine">我方 · 主要階段</div>
+          <button className="mock-bf-cta" type="button">結束主要階段</button>
+          <span className="mock-bf-turn-counter">TURN 3</span>
+        </div>
       </main>
 
-      <aside className="mock-bf-phase-rail">
-        <div className="mock-bf-phase-badge mine">我方 · 主要階段</div>
-        <button className="mock-bf-cta" type="button">結束主要階段</button>
-        <span className="mock-bf-turn-counter">TURN 3</span>
-      </aside>
-
       <div className="mock-bf-note">
-        Mockup：靜態樣本資料，僅供 UI 審查（wireframe 01，P2-1 戰場重新設計四階段完成後版面）
+        Mockup：靜態樣本資料，僅供 UI 審查（wireframe 01，依實機預覽回饋校正後版面）
       </div>
     </div>
   )
