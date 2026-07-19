@@ -89,17 +89,17 @@
   position: absolute;
   z-index: 5;
   top: 9px;
-  left: 0;
+  right: 0;
   display: grid;
   grid-template-columns: auto auto;
   align-items: baseline;
   gap: 1px 7px;
   max-width: 200px;
-  padding: 5px 9px 5px 12px;
-  border-left: 3px solid #65e8ff;
-  border-radius: 0 7px 7px 0;
+  padding: 5px 12px 5px 9px;
+  border-right: 3px solid #65e8ff;
+  border-radius: 7px 0 0 7px;
   background: rgba(3, 22, 58, 0.72);
-  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: -8px 8px 20px rgba(0, 0, 0, 0.12);
   backdrop-filter: blur(7px);
 }
 
@@ -159,7 +159,7 @@
 }
 
 .row-meta[data-active='true'] {
-  border-left-color: #75f1bb;
+  border-right-color: #75f1bb;
 }
 
 .row-meta[data-active='false'] .row-stat-status {
@@ -1215,7 +1215,7 @@
   .row-meta {
     top: 2px;
     max-width: 96px;
-    padding: 2px 4px 2px 6px;
+    padding: 2px 6px 2px 4px;
   }
 
   .top-field .row-meta {

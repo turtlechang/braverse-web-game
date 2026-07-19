@@ -1,7 +1,6 @@
 .card-preview-panel {
   position: absolute;
   z-index: 28;
-  right: 104px;
   width: 208px;
   display: grid;
   gap: 7px;
@@ -16,9 +15,11 @@
 
 .card-preview-panel.is-top {
   top: 58px;
+  left: 104px;
 }
 
 .card-preview-panel.is-bottom {
+  right: 104px;
   bottom: 104px;
 }
 
@@ -80,8 +81,15 @@
 
 @container game-shell (max-width: 1100px) {
   .card-preview-panel {
-    right: 82px;
     width: 174px;
+  }
+
+  .card-preview-panel.is-top {
+    left: 82px;
+  }
+
+  .card-preview-panel.is-bottom {
+    right: 82px;
   }
 
   .card-preview-panel .preview-card {

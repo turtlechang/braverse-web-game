@@ -86,13 +86,20 @@ export function useAiTurn(params: {
         return
       }
 
-      if (decision.revealedCard || decision.revealedCards?.length) {
+      if (decision.revealedCards?.length) {
         setPendingAiDecision(decision)
         setMessage(
-          decision.revealedCards?.length
-            ? `AI 棄置 ${decision.revealedCards.length} 張卡牌，等待公開確認。`
-            : `AI 公開${decision.revealedCard!.name}，等待確認。`,
+          `AI 棄置 ${decision.revealedCards.length} 張卡牌，等待公開確認。`,
         )
+        return
+      }
+
+      if (decision.revealedCard) {
+        // 實驗性：單張卡牌公開（如 FLIP）不再暫停等待玩家點擊確認，改由 toast 訊息帶出。
+        setGame(decision.state)
+        setMessage(`AI 公開 ${decision.revealedCard.name}：${decision.description}`)
+        consecutiveAiActionCountRef.current += 1
+        setAiActionCount((count) => count + 1)
         return
       }
 
