@@ -93,6 +93,24 @@
 - 驗收：`npx tsc -b --noEmit`、`npx eslint .` 皆通過；新增 7 項 Vitest（`BattleRow.test.tsx` HP 翻牌鏈 5 項、`BattleTable.test.tsx` 中央預覽 2 項），全專案套件 123 檔／1740 測試全數通過。本機瀏覽器實機驗證：以 `?test-state=flip-response` 直接確認 HP 翻牌區塊正確顯示卡面與 FLIP 徽章；實際對局中宣告攻擊後，AI 決定是否發陷阱期間中央區正確顯示攻擊卡「GingerBrave」卡面與攻擊文字，全程無 console error。
 - 注意：已排在 P1-2（戰場元件收斂）完成後執行，佈局改動只需改共用的 `BattleTable.tsx` 一份。
 
+### P1-3b 戰場版面線稿圖重新設計（高，新發現，2026-07-19）✅ 已完成
+
+- 來源：使用者提供新戰場線稿圖，確認全面取代 P1-3 完成時沿用的舊版 [01 戰場 wireframe](ui-reference/01-battlefield-wireframe.md) 版面方向（`PhaseRail` 佔左欄、支援區 45%／戰鬥區 55% 上下疊、`CardPreviewPanel` 為角落小面板）。
+- 問題：左欄未善用大面積做卡片放大預覽；每側戰場支援/戰鬥區上下堆疊、休息區與牌庫/場景/棄牌分散在版面兩側、左右鏡射規則不一致；手牌貼右非置中；行動按鈕（結束回合/選單/戰鬥紀錄）分散在畫面四個角落。
+- 深入研究後的範圍決定：
+  - 線稿圖戰鬥區的「HP／IP」兩排堆疊經使用者確認是既有 HP 堆疊被截圖切斷造成的誤讀，非新資源機制；支援區「+1/回」為純版面佔位，本次不實作對應規則。
+  - `PhaseRail` 的 5 階段進度列表、逐階段提示文字、品牌 logo 經使用者確認直接簡化拿掉，只保留「目前階段＋回合數」（我方回合底色藍、對手回合底色紅）與既有動態「下一步」按鈕。
+  - 行動裝置（<900px）版面刻意維持本次改版前的既有版面不變，未套用新版面（RWD 深度優化為獨立後續項目）。
+  - 使用者確認拆成四個階段式 PR 逐步落地，降低單次改動風險。
+- 實作（依 PR 順序）：
+  - **PR-1**：`InteractionOverlays.tsx`/`.css` 的 `CardPreviewPanel` 從兩個角落小面板整併為單一左欄常駐面板（優先顯示 hover 中的卡，無 hover 時退回對手行動預覽，皆無時顯示「Hover Preview」提示）；`PhaseRail.tsx`/`.css` 簡化並搬到右欄；`App.css` 新增 `--phase-rail-width`，`.table-area` 同時扣除左右兩欄寬度。
+  - **PR-2**：`BattleRow.tsx`/`.css` 的 `.field-stack` 從支援/戰鬥上下堆疊改為橫向並列；休息區數量徽章改為「×N」樣式；行動裝置維持改版前的上下堆疊（`grid-row` 覆寫確保戰鬥區仍緊鄰中央分隔列）。
+  - **PR-3**：`.utility-zones`（牌庫/場景/棄牌）與 `.break-zone`（休息）不再依對手/我方左右鏡射，統一為休息在左、牌庫等在右（雙方垂直鏡射）；移除 `row-meta` 角落卡片中與牌庫/棄牌/休息重複的數字。
+  - **PR-4**：`.hand-fan.bottom-hand` 改為戰場區內置中對齊；`MatchToolbar`、`BattleLogSidebar` 開關從左上/右上角移到右下角，與結束回合按鈕群聚；行動裝置維持改版前定位。
+  - 收尾：改寫 `docs/ui-reference/01-battlefield-wireframe.md` 與 `src/ui-reference/BattlefieldMockup.tsx`（`/?mockup=battlefield`）反映新版面。
+- 驗收：四個 PR 各自通過 `npx tsc -b --noEmit`、`npx eslint .`、`npx vitest run`（123 檔／1739 測試全過，含更新的 `BattleTable.test.tsx`／`BattleRow.test.tsx`／`PhaseRail.test.ts`／`InteractionOverlays.test.tsx` 斷言）；本機瀏覽器逐項實測確認左欄 hover 放大預覽、右欄階段藍/紅底色切換、支援/戰鬥/休息橫向並列、牌庫等統一右欄、彈出視窗開啟方向、手牌置中、行動按鈕群集中右下角且互不重疊，桌機（1280×800）與行動裝置斷點（820×500）皆驗證正確；修正過程中發現並修好一個行動裝置手牌 `transform` 未重設導致的位置偏移 bug。
+- 注意：與 P2-1（牌組編輯器）互不影響，各自獨立 PR；P1-3 完成時的舊版面描述已被本項取代。
+
 ### P1-4 動態匯入效能（高）✅ 已完成
 
 - 來源：[UI 審查 §6](ui-audit-2026-07-11.md#6-總結與優先順序建議)
