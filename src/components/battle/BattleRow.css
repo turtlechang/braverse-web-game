@@ -48,7 +48,7 @@
   top: 0;
   left: calc(var(--opponent-card-width) * var(--safety-ratio) + var(--opponent-card-width) * 0.5 + 2px);
   width: calc(var(--opponent-card-width) * 2);
-  height: 53px;
+  height: 63px;
   pointer-events: none;
   z-index: 10;
 }
@@ -90,11 +90,10 @@
   z-index: 5;
   top: 9px;
   right: 0;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: baseline;
-  gap: 1px 7px;
-  max-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 236px;
   padding: 5px 12px 5px 9px;
   border-right: 3px solid #65e8ff;
   border-radius: 7px 0 0 7px;
@@ -103,14 +102,36 @@
   backdrop-filter: blur(7px);
 }
 
-.row-meta > .row-role {
+.row-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: linear-gradient(160deg, #1d3f74, #0c1e3e);
+  color: #d9f3ff;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.row-meta-info {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  gap: 1px 7px;
+  min-width: 0;
+}
+
+.row-meta-info > .row-role {
   grid-column: 1;
   color: #65e8ff;
   font-size: 0.49rem;
   font-weight: 900;
 }
 
-.row-meta strong {
+.row-meta-info strong {
   grid-column: 1;
   overflow: hidden;
   font-size: 0.78rem;
@@ -799,13 +820,13 @@
   position: absolute;
   z-index: 20;
   width: min(560px, 52%);
-  height: 160px;
+  height: 189px;
   overflow: hidden;
   pointer-events: none;
 }
 
 .top-hand {
-  --opponent-card-width: 112px;
+  --opponent-card-width: 132px;
   top: 8px;
 }
 
@@ -816,15 +837,15 @@
 .hand-fan.bottom-hand {
   left: 50%;
   right: auto;
-  bottom: 88px;
+  bottom: 102px;
   width: min(680px, calc(100% - 32px));
-  height: 80px;
+  height: 95px;
   box-sizing: border-box;
   transform: translateX(-50%);
 }
 
 .hand-fan.bottom-hand .hand-card-wrap {
-  bottom: -80px;
+  bottom: -94px;
 }
 
 .hand-card-wrap {
@@ -891,7 +912,7 @@
 
 
 .hand-card {
-  width: 112px;
+  width: 132px;
 }
 
 .hand-card-actions {
@@ -973,30 +994,30 @@
   }
 
   .hand-card {
-    width: 128px;
+    width: 150px;
   }
 
   .top-hand {
-    --opponent-card-width: 128px;
+    --opponent-card-width: 150px;
   }
 
   .hand-fan {
     width: min(640px, 54%);
-    height: 180px;
+    height: 214px;
   }
 
   .hand-fan.bottom-hand {
     left: 50%;
     right: auto;
-    bottom: 98px;
+    bottom: 115px;
     width: min(680px, calc(100% - 32px));
-    height: 90px;
+    height: 107px;
     box-sizing: border-box;
     transform: translateX(-50%);
   }
 
   .hand-fan.bottom-hand .hand-card-wrap {
-    bottom: -90px;
+    bottom: -107px;
   }
 
   .support-cards {
@@ -1033,15 +1054,24 @@
   }
 
   .hand-card {
-    width: 96px;
+    width: 113px;
   }
 
   .top-hand {
-    --opponent-card-width: 96px;
+    --opponent-card-width: 113px;
   }
 
   .hand-fan {
-    height: 140px;
+    height: 161px;
+  }
+
+  .hand-fan.bottom-hand {
+    bottom: 89px;
+    height: 80px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -80px;
   }
 
 }
@@ -1063,13 +1093,16 @@
     padding-bottom: 26px;
   }
 
-  .combat-card-wrap > .card-face,
-  .hand-card {
+  .combat-card-wrap > .card-face {
     width: 110px;
   }
 
+  .hand-card {
+    width: 130px;
+  }
+
   .top-hand {
-    --opponent-card-width: 110px;
+    --opponent-card-width: 130px;
   }
 
   .hp-card-stack {
@@ -1095,21 +1128,21 @@
   }
 
   .hand-fan {
-    height: 120px;
+    height: 186px;
   }
 
   .hand-fan.bottom-hand {
     left: 50%;
     right: auto;
-    bottom: 68px;
+    bottom: 101px;
     width: min(680px, calc(100% - 32px));
-    height: 60px;
+    height: 93px;
     box-sizing: border-box;
     transform: translateX(-50%);
   }
 
   .hand-fan.bottom-hand .hand-card-wrap {
-    bottom: -60px;
+    bottom: -93px;
   }
 
   .break-cards {
@@ -1152,13 +1185,16 @@
     padding-bottom: 22px;
   }
 
-  .combat-card-wrap > .card-face,
-  .hand-card {
+  .combat-card-wrap > .card-face {
     width: 96px;
   }
 
+  .hand-card {
+    width: 113px;
+  }
+
   .top-hand {
-    --opponent-card-width: 96px;
+    --opponent-card-width: 113px;
   }
 
   .support-cards {
@@ -1171,7 +1207,16 @@
   }
 
   .hand-fan {
-    height: 100px;
+    height: 161px;
+  }
+
+  .hand-fan.bottom-hand {
+    bottom: 89px;
+    height: 80px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -80px;
   }
 
 }
@@ -1246,6 +1291,10 @@
     top: 2px;
     max-width: 96px;
     padding: 2px 6px 2px 4px;
+  }
+
+  .row-avatar {
+    display: none;
   }
 
   .bottom-field .row-meta {

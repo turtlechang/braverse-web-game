@@ -38,7 +38,7 @@ describe('interaction overlays', () => {
     await act(() => root.unmount())
   })
 
-  it('renders an empty-state hint when no card is given', async () => {
+  it('renders nothing when no card is given', async () => {
     const container = document.createElement('div')
     containers.push(container)
     document.body.append(container)
@@ -46,8 +46,7 @@ describe('interaction overlays', () => {
 
     await act(() => root.render(<CardPreviewPanel card={null} />))
 
-    expect(container.querySelector('.card-preview-panel.is-empty')).not.toBeNull()
-    expect(container.textContent).toContain('滑鼠移到卡牌顯示大圖')
+    expect(container.querySelector('.card-preview-panel')).toBeNull()
     await act(() => root.unmount())
   })
 

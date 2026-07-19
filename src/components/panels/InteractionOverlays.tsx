@@ -12,16 +12,7 @@ export function CardPreviewPanel({
   card,
   contextLabel,
 }: CardPreviewPanelProps) {
-  if (!card) {
-    return (
-      <aside className="card-preview-panel is-empty" aria-label="卡片預覽">
-        <div className="card-preview-empty-hint">
-          <small>Hover Preview</small>
-          <small>滑鼠移到卡牌顯示大圖</small>
-        </div>
-      </aside>
-    )
-  }
+  if (!card) return null
 
   const effectText =
     card.effectText ??

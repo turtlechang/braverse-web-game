@@ -150,12 +150,10 @@ describe('BattleTable', () => {
     await cleanup()
   })
 
-  it('shows the empty preview placeholder when no card is hovered or previewed', async () => {
+  it('omits the preview panel when no card is hovered or previewed', async () => {
     const { container, cleanup } = await render(baseProps())
 
-    expect(
-      container.querySelector('.card-preview-panel.is-empty'),
-    ).not.toBeNull()
+    expect(container.querySelector('.card-preview-panel')).toBeNull()
 
     await cleanup()
   })
