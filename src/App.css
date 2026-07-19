@@ -446,7 +446,7 @@ button {
   margin: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr) 34px minmax(0, 1fr);
-  padding: 12px 18px 8px 14px;
+  padding: 6px 150px 4px;
   overflow: hidden;
 }
 
