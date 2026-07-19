@@ -350,7 +350,7 @@ export function BattleRow({
             <div
               className="row-status"
               data-active={isActivePlayer ? 'true' : 'false'}
-              aria-label={`${player.name}狀態：${isActivePlayer ? '行動中' : '等待'}，手牌 ${player.hand.length}，牌庫 ${player.deck.length}，棄牌 ${player.discardPile.length}，休息 LV.${getBreakAreaLevel(game, playerId)}`}
+              aria-label={`${player.name}狀態：${isActivePlayer ? '行動中' : '等待'}，手牌 ${player.hand.length}`}
             >
               <span
                 className={`row-stat row-stat-status ${isActivePlayer ? 'is-active' : 'is-waiting'}`}
@@ -361,18 +361,6 @@ export function BattleRow({
               <span className="row-stat row-stat-hand" aria-label={`手牌 ${player.hand.length}`}>
                 <span className="row-stat-label">手牌</span>
                 <b className="row-stat-value">{player.hand.length}</b>
-              </span>
-              <span className="row-stat row-stat-secondary row-stat-deck" aria-label={`牌庫 ${player.deck.length}`}>
-                <span className="row-stat-label">牌庫</span>
-                <b className="row-stat-value">{player.deck.length}</b>
-              </span>
-              <span className="row-stat row-stat-secondary row-stat-discard" aria-label={`棄牌 ${player.discardPile.length}`}>
-                <span className="row-stat-label">棄牌</span>
-                <b className="row-stat-value">{player.discardPile.length}</b>
-              </span>
-              <span className="row-stat row-stat-rest" aria-label={`休息 LV.${getBreakAreaLevel(game, playerId)}`}>
-                <span className="row-stat-label">休息</span>
-                <b className="row-stat-value">LV.{getBreakAreaLevel(game, playerId)}</b>
               </span>
             </div>
           </div>

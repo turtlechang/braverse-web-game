@@ -184,9 +184,8 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('row-status" data-active="true"')
     expect(markup).toContain('row-stat-status is-active')
     expect(markup).toContain('aria-label="手牌 1"')
-    expect(markup).toContain('aria-label="牌庫 2"')
-    expect(markup).toContain('aria-label="棄牌 1"')
-    expect(markup).toContain('aria-label="休息 LV.0"')
+    expect(markup).toContain('aria-label="玩家牌庫 2 張"')
+    expect(markup).toContain('title="棄牌區 1 張"')
   })
 
   it('renders waiting status and stats for an inactive row', () => {
@@ -217,9 +216,8 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('row-status" data-active="false"')
     expect(markup).toContain('row-stat-status is-waiting')
     expect(markup).toContain('aria-label="手牌 2"')
-    expect(markup).toContain('aria-label="牌庫 1"')
-    expect(markup).toContain('aria-label="棄牌 3"')
-    expect(markup).toContain('aria-label="休息 LV.0"')
+    expect(markup).toContain('aria-label="AI 對手牌庫 1 張"')
+    expect(markup).toContain('title="棄牌區 3 張"')
   })
 
   it('does not offer an item action when the payment is unavailable', () => {
