@@ -409,7 +409,8 @@ button {
 }
 
 .game-shell {
-  --side-panel-width: clamp(96px, 7.2%, 118px);
+  --side-panel-width: clamp(180px, 15%, 240px);
+  --phase-rail-width: clamp(84px, 7%, 110px);
   --compact-phase-height: 54px;
   --compact-toolbar-height: 52px;
   position: relative;
@@ -440,10 +441,10 @@ button {
   position: relative;
   z-index: 2;
   min-width: 0;
-  width: calc(100% - var(--side-panel-width));
+  width: calc(100% - var(--side-panel-width) - var(--phase-rail-width));
   height: 100%;
   max-width: none;
-  margin: 0 0 0 var(--side-panel-width);
+  margin: 0 var(--phase-rail-width) 0 var(--side-panel-width);
   display: grid;
   grid-template-rows: minmax(0, 1fr) 34px minmax(0, 1fr);
   padding: 12px 18px 8px 14px;
@@ -661,13 +662,14 @@ button {
   }
 
   .game-shell {
-    --side-panel-width: 112px;
+    --side-panel-width: 140px;
+    --phase-rail-width: 72px;
   }
 
   .table-area {
-    width: calc(100% - var(--side-panel-width));
+    width: calc(100% - var(--side-panel-width) - var(--phase-rail-width));
     height: 100%;
-    margin: 0 0 0 var(--side-panel-width);
+    margin: 0 var(--phase-rail-width) 0 var(--side-panel-width);
     padding: 4px;
   }
 

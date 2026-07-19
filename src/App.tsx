@@ -461,13 +461,12 @@ function App() {
               ? '攻擊宣告'
               : '目標選擇',
         }}
-        opponentPreviewCard={opponentPreviewCard}
-        opponentPreviewContextLabel={
-          hoveredOpponentCard || !opponentSourcePreviewCard
+        previewCard={hoveredCard ?? opponentPreviewCard}
+        previewContextLabel={
+          hoveredCard || hoveredOpponentCard || !opponentSourcePreviewCard
             ? undefined
             : '對手目前操作'
         }
-        hoveredCard={hoveredCard}
         attackPaymentPanel={
           match.selectedAttacker && !pending.pendingEffect
             ? {

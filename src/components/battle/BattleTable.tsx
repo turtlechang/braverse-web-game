@@ -25,9 +25,8 @@ export interface BattleTableProps {
   bottomBattleRow: BattleRowProps
   remoteActionBanner: RemoteActionBannerProps
   attackPreviewArrow: AttackPreviewArrowProps
-  opponentPreviewCard: GameCard | null
-  opponentPreviewContextLabel?: string
-  hoveredCard: GameCard | null
+  previewCard: GameCard | null
+  previewContextLabel?: string
   attackPaymentPanel: AttackPaymentPanelProps | null
   centerPreview?: CenterCardPreviewProps | null
 }
@@ -39,15 +38,14 @@ export function BattleTable({
   bottomBattleRow,
   remoteActionBanner,
   attackPreviewArrow,
-  opponentPreviewCard,
-  opponentPreviewContextLabel,
-  hoveredCard,
+  previewCard,
+  previewContextLabel,
   attackPaymentPanel,
   centerPreview,
 }: BattleTableProps) {
   return (
     <>
-      <PhaseRail {...phaseRail} />
+      <CardPreviewPanel card={previewCard} contextLabel={previewContextLabel} />
 
       <section className="table-area" aria-label={ariaLabel}>
         <BattleRow {...topBattleRow} />
@@ -65,12 +63,7 @@ export function BattleTable({
         <BattleRow {...bottomBattleRow} />
       </section>
 
-      <CardPreviewPanel
-        card={opponentPreviewCard}
-        position="top"
-        contextLabel={opponentPreviewContextLabel}
-      />
-      <CardPreviewPanel card={hoveredCard} position="bottom" />
+      <PhaseRail {...phaseRail} />
 
       {attackPaymentPanel && <AttackPaymentPanel {...attackPaymentPanel} />}
     </>

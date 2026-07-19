@@ -5,16 +5,23 @@ import './InteractionOverlays.css'
 
 export interface CardPreviewPanelProps {
   card: GameCard | null
-  position: 'top' | 'bottom'
   contextLabel?: string
 }
 
 export function CardPreviewPanel({
   card,
-  position,
   contextLabel,
 }: CardPreviewPanelProps) {
-  if (!card) return null
+  if (!card) {
+    return (
+      <aside className="card-preview-panel is-empty" aria-label="卡片預覽">
+        <div className="card-preview-empty-hint">
+          <small>Hover Preview</small>
+          <small>滑鼠移到卡牌顯示大圖</small>
+        </div>
+      </aside>
+    )
+  }
 
   const effectText =
     card.effectText ??
@@ -26,7 +33,7 @@ export function CardPreviewPanel({
 
   return (
     <aside
-      className={`card-preview-panel is-${position}`}
+      className="card-preview-panel"
       aria-label={`${card.name}快速預覽`}
       data-testid="card-preview-panel"
     >

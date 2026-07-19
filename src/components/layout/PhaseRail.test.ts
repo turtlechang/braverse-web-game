@@ -7,29 +7,25 @@ const normalizedPhaseRailCss = readFileSync(
 ).replace(/\r\n/g, '\n')
 
 describe('PhaseRail CSS grid-row assignments', () => {
-  it('brand-mark specifies grid-row: 1 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.brand-mark\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/)
+  it('turn-indicator specifies grid-row: 1 in base rules', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.turn-indicator\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/)
   })
 
-  it('turn-indicator specifies grid-row: 2 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.turn-indicator\s*\{[^}]*grid-row\s*:\s*2[^}]*\}/)
+  it('turn-counter specifies grid-row: 2 in base rules', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.turn-counter\s*\{[^}]*grid-row\s*:\s*2[^}]*\}/)
   })
 
-  it('phase-rail ol specifies grid-row: 3 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s+ol\s*\{[^}]*grid-row\s*:\s*3[^}]*\}/)
+  it('next-phase-button specifies grid-row: 3 in base rules', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*3[^}]*\}/)
   })
 
-  it('next-phase-button specifies grid-row: 5 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*5[^}]*\}/)
-  })
-
-  it('turn-counter specifies grid-row: 6 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.turn-counter\s*\{[^}]*grid-row\s*:\s*6[^}]*\}/)
-  })
-
-  it('max-width:900px block resets grid-row to 1 for all six children', () => {
+  it('max-width:900px block resets grid-row to 1 for the three remaining children', () => {
     expect(normalizedPhaseRailCss).toMatch(
-      /\.brand-mark\s*,\s*\.turn-indicator\s*,\s*\.phase-rail\s+ol\s*,\s*\.phase-hint\s*,\s*\.next-phase-button\s*,\s*\.turn-counter\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
+      /\.turn-indicator\s*,\s*\.turn-counter\s*,\s*\.next-phase-button\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
     )
+  })
+
+  it('is positioned on the right edge of the game shell', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*inset\s*:\s*0\s+0\s+0\s+auto[^}]*\}/)
   })
 })

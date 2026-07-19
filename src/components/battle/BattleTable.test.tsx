@@ -46,8 +46,7 @@ const baseProps = (
   bottomBattleRow: battleRowProps({ playerId: 'player-one', position: 'bottom' }),
   remoteActionBanner: { status: null, compact: true },
   attackPreviewArrow: { sourceInstanceId: null, targetInstanceIds: [] },
-  opponentPreviewCard: null,
-  hoveredCard: null,
+  previewCard: null,
   attackPaymentPanel: null,
   ...overrides,
 })
@@ -153,36 +152,29 @@ describe('BattleTable', () => {
     await cleanup()
   })
 
-  it('omits card preview panels when no card is hovered or previewed', async () => {
+  it('shows the empty preview placeholder when no card is hovered or previewed', async () => {
     const { container, cleanup } = await render(baseProps())
 
-    expect(container.querySelectorAll('.card-preview-panel')).toHaveLength(0)
+    expect(
+      container.querySelector('.card-preview-panel.is-empty'),
+    ).not.toBeNull()
 
     await cleanup()
   })
 
-  it('shows the opponent preview panel with its context label when provided', async () => {
+  it('shows the preview panel with its context label when provided', async () => {
     const { container, cleanup } = await render(
       baseProps({
-        opponentPreviewCard: previewCard,
-        opponentPreviewContextLabel: '對手目前操作',
+        previewCard,
+        previewContextLabel: '對手目前操作',
       }),
     )
 
-    const panel = container.querySelector('.card-preview-panel.is-top')
+    const panel = container.querySelector('.card-preview-panel')
     expect(panel).not.toBeNull()
+    expect(panel?.classList.contains('is-empty')).toBe(false)
     expect(panel?.textContent).toContain('對手目前操作')
     expect(panel?.textContent).toContain('Preview Cookie')
-
-    await cleanup()
-  })
-
-  it('shows the hovered-card preview panel at the bottom position', async () => {
-    const { container, cleanup } = await render(
-      baseProps({ hoveredCard: previewCard }),
-    )
-
-    expect(container.querySelector('.card-preview-panel.is-bottom')).not.toBeNull()
 
     await cleanup()
   })

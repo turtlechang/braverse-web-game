@@ -1,44 +1,37 @@
 .card-preview-panel {
   position: absolute;
   z-index: 28;
-  width: 208px;
+  inset: 0 auto 0 0;
+  width: var(--side-panel-width);
   display: grid;
-  gap: 7px;
-  padding: 8px;
-  border: 1px solid rgba(129, 224, 255, 0.55);
-  border-radius: 10px;
-  background: rgba(2, 16, 45, 0.92);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
-  pointer-events: none;
+  align-content: start;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px 10px;
+  border-right: 1px solid rgba(129, 224, 255, 0.4);
+  background: linear-gradient(90deg, rgba(2, 16, 45, 0.92), rgba(2, 16, 45, 0.78));
+  box-shadow: 14px 0 32px rgba(1, 8, 28, 0.22);
   backdrop-filter: blur(12px);
 }
 
-.card-preview-panel.is-top {
-  top: 58px;
-  left: 104px;
-}
-
-.card-preview-panel.is-bottom {
-  right: 104px;
-  bottom: 104px;
-}
-
 .card-preview-panel .preview-card {
-  width: 188px;
+  width: min(100%, 188px);
 }
 
 .card-preview-panel > div {
   display: grid;
-  gap: 2px;
+  justify-items: center;
+  gap: 3px;
+  text-align: center;
 }
 
 .card-preview-panel strong {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
 }
 
 .card-preview-panel small {
   color: rgba(219, 239, 255, 0.65);
-  font-size: 0.52rem;
+  font-size: 0.58rem;
 }
 
 .card-preview-panel .card-preview-context {
@@ -47,22 +40,51 @@
 }
 
 .card-preview-effect {
-  max-height: 54px;
+  max-height: 84px;
   margin: 2px 0 0;
   overflow: hidden;
   color: rgba(232, 248, 255, 0.74);
-  font-size: 0.58rem;
-  line-height: 1.35;
+  font-size: 0.64rem;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 5;
+}
+
+.card-preview-panel.is-empty {
+  align-content: center;
+  border-style: dashed;
+  border-color: rgba(129, 224, 255, 0.28);
+  background: rgba(2, 16, 45, 0.55);
+}
+
+.card-preview-empty-hint {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 18px 10px;
+  border: 1px dashed rgba(129, 224, 255, 0.3);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.card-preview-empty-hint small:first-child {
+  color: rgba(219, 239, 255, 0.55);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.card-preview-empty-hint small:last-child {
+  color: rgba(219, 239, 255, 0.4);
+  font-size: 0.56rem;
 }
 
 .status-toast {
   position: absolute;
   z-index: 40;
   top: 10px;
-  left: calc(50% + var(--side-panel-width) / 2);
+  left: calc(50% + var(--side-panel-width) / 2 - var(--phase-rail-width) / 2);
   max-width: min(560px, 54vw);
   padding: 7px 16px;
   overflow: hidden;
@@ -80,18 +102,6 @@
 }
 
 @container game-shell (max-width: 1100px) {
-  .card-preview-panel {
-    width: 174px;
-  }
-
-  .card-preview-panel.is-top {
-    left: 82px;
-  }
-
-  .card-preview-panel.is-bottom {
-    right: 82px;
-  }
-
   .card-preview-panel .preview-card {
     width: 156px;
   }
