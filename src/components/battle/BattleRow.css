@@ -787,10 +787,11 @@
 }
 
 .hand-fan.bottom-hand {
-  right: 16px;
-  left: auto;
-  width: min(500px, calc(100% - 32px));
+  left: 50%;
+  right: auto;
+  width: min(680px, calc(100% - 32px));
   box-sizing: border-box;
+  transform: translateX(-50%);
 }
 
 .hand-card-wrap {
@@ -952,10 +953,11 @@
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    left: 50%;
+    right: auto;
+    width: min(680px, calc(100% - 32px));
     box-sizing: border-box;
+    transform: translateX(-50%);
   }
 
   .support-cards {
@@ -1059,10 +1061,11 @@
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    left: 50%;
+    right: auto;
+    width: min(680px, calc(100% - 32px));
     box-sizing: border-box;
+    transform: translateX(-50%);
   }
 
   .break-cards {
@@ -1090,10 +1093,11 @@
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    left: 50%;
+    right: auto;
+    width: min(680px, calc(100% - 32px));
     box-sizing: border-box;
+    transform: translateX(-50%);
   }
 }
 
@@ -1340,6 +1344,7 @@
     width: min(500px, calc(100% - 32px));
     box-sizing: border-box;
     bottom: 4px;
+    transform: none;
   }
 
   .top-hand {
@@ -1460,6 +1465,7 @@
     width: min(500px, calc(100% - 32px));
     box-sizing: border-box;
     bottom: 2px;
+    transform: none;
   }
 
   .bottom-hand {

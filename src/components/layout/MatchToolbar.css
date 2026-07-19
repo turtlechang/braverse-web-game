@@ -1,8 +1,8 @@
 .match-toolbar {
   position: absolute;
   z-index: 30;
-  top: 8px;
-  left: 8px;
+  bottom: 8px;
+  right: calc(var(--phase-rail-width) + 10px);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -39,8 +39,8 @@
 
 @container game-shell (max-height: 720px) {
   .match-toolbar {
-    top: 5px;
-    left: 5px;
+    bottom: 5px;
+    right: calc(var(--phase-rail-width) + 8px);
   }
 }
 
