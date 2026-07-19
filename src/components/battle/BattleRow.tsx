@@ -217,8 +217,8 @@ export function BattleRow({
       <div className="break-zone resource-dock">
         <div className="zone-heading">
           <span>休息</span>
+          <b>×{player.breakArea.length}</b>
           <strong>LV. {getBreakAreaLevel(game, playerId)}</strong>
-          <b>{player.breakArea.length}</b>
         </div>
         <button
           className="resource-summary break-summary"
@@ -300,7 +300,7 @@ export function BattleRow({
       </div>
 
       <div className="field-stack">
-        {position === 'top' && supportZone}
+        {supportZone}
         {isOpponent && player.hand.length > 0 && (() => {
           const baseFan = computeOpponentFan(player.hand.length, 0)
           const count = player.hand.length
@@ -530,7 +530,6 @@ export function BattleRow({
             )}
           </div>
         </div>
-        {position === 'bottom' && supportZone}
       </div>
 
       <div className="utility-zones">
