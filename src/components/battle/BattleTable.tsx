@@ -54,6 +54,7 @@ export function BattleTable({
           <span />
           <RemoteActionBanner {...remoteActionBanner} />
           <span />
+          <PhaseRail {...phaseRail} />
         </div>
 
         <AttackPreviewArrow {...attackPreviewArrow} />
@@ -62,8 +63,6 @@ export function BattleTable({
 
         <BattleRow {...bottomBattleRow} />
       </section>
-
-      <PhaseRail {...phaseRail} />
 
       {attackPaymentPanel && <AttackPaymentPanel {...attackPaymentPanel} />}
     </>

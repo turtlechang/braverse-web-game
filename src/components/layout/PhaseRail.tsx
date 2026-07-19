@@ -14,7 +14,6 @@ const nextPhaseLabels: Record<TurnPhase, string> = {
 export interface PhaseRailProps {
   phase: TurnPhase
   turnNumber: number
-  activePlayerName: string
   isPlayerTurn: boolean
   disabled: boolean
   onAdvance: () => void
@@ -23,7 +22,6 @@ export interface PhaseRailProps {
 export function PhaseRail({
   phase,
   turnNumber,
-  activePlayerName,
   isPlayerTurn,
   disabled,
   onAdvance,
@@ -31,7 +29,7 @@ export function PhaseRail({
   return (
     <aside className="phase-rail" aria-label="回合階段">
       <div className={`turn-indicator ${isPlayerTurn ? 'is-player' : 'is-opponent'}`}>
-        <span>{activePlayerName}</span>
+        <span>TURN {turnNumber}</span>
         <strong>{phaseLabels[phase]}</strong>
       </div>
       <button
@@ -43,7 +41,6 @@ export function PhaseRail({
         <span>{nextPhaseLabels[phase]}</span>
         <ChevronRight aria-hidden="true" />
       </button>
-      <span className="turn-counter">TURN {turnNumber}</span>
     </aside>
   )
 }

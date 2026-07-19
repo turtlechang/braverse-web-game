@@ -166,6 +166,20 @@
   color: rgba(255, 255, 255, 0.62);
 }
 
+.bottom-field .row-meta {
+  right: auto;
+  left: 0;
+  padding: 5px 9px 5px 12px;
+  border-right: none;
+  border-left: 3px solid #65e8ff;
+  border-radius: 0 7px 7px 0;
+  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.bottom-field .row-meta[data-active='true'] {
+  border-left-color: #75f1bb;
+}
+
 .turn-order-badge {
   grid-column: 2;
   grid-row: 1 / 3;
@@ -1235,6 +1249,10 @@
     top: 2px;
     max-width: 96px;
     padding: 2px 6px 2px 4px;
+  }
+
+  .bottom-field .row-meta {
+    padding: 2px 4px 2px 6px;
   }
 
   .top-field .row-meta {

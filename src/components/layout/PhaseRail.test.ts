@@ -11,22 +11,18 @@ describe('PhaseRail CSS grid-row assignments', () => {
     expect(normalizedPhaseRailCss).toMatch(/\.turn-indicator\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/)
   })
 
-  it('turn-counter specifies grid-row: 2 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.turn-counter\s*\{[^}]*grid-row\s*:\s*2[^}]*\}/)
+  it('next-phase-button specifies grid-row: 2 in base rules', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*2[^}]*\}/)
   })
 
-  it('next-phase-button specifies grid-row: 3 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*3[^}]*\}/)
-  })
-
-  it('max-width:900px block resets grid-row to 1 for the three remaining children', () => {
+  it('max-width:900px block resets grid-row to 1 for the two remaining children', () => {
     expect(normalizedPhaseRailCss).toMatch(
-      /\.turn-indicator\s*,\s*\.turn-counter\s*,\s*\.next-phase-button\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
+      /\.turn-indicator\s*,\s*\.next-phase-button\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
     )
   })
 
-  it('floats as a vertically-centered block near the right edge of the game shell', () => {
+  it('floats as a vertically-centered block anchored to the right edge of its container', () => {
     expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*top\s*:\s*50%[^}]*\}/)
-    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*right\s*:\s*4px[^}]*\}/)
+    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*right\s*:\s*0[^}]*\}/)
   })
 })

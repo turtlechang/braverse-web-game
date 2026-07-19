@@ -100,15 +100,15 @@ export function BattlefieldMockup() {
         .mock-bf-preview-hint small:last-child { color: rgba(219,239,255,.4); }
         .mock-bf-preview-name { font-size: .82rem; font-weight: 800; text-align: center; }
 
-        .mock-bf-phase-block { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); z-index: 15;
+        .mock-bf-phase-block { position: absolute; top: 50%; right: 0; transform: translateY(-50%); z-index: 15;
           width: 92px; display: grid; gap: 6px; padding: 8px; border-radius: 12px;
           border: 1px solid rgba(130,194,255,.3); background: linear-gradient(160deg, rgba(3,20,57,.94), rgba(2,12,37,.9));
           box-shadow: 0 18px 40px rgba(1,8,28,.35); }
-        .mock-bf-phase-badge { padding: 6px; border-radius: 8px; text-align: center; font-size: .64rem; font-weight: 800; }
+        .mock-bf-phase-badge { display: grid; gap: 2px; padding: 6px; border-radius: 8px; text-align: center; font-size: .64rem; font-weight: 800; }
         .mock-bf-phase-badge.mine { background: linear-gradient(160deg, rgba(37,99,235,.55), rgba(3,20,53,.5)); border: 1px solid rgba(96,165,250,.7); }
+        .mock-bf-phase-badge span { font-size: .56rem; color: rgba(255,255,255,.7); }
         .mock-bf-cta { padding: 8px 6px; border-radius: 10px; border: 2px solid #7ee7f0;
           background: rgba(82,230,255,.16); color: #7ee7f0; font-size: .62rem; font-weight: 800; cursor: pointer; }
-        .mock-bf-turn-counter { text-align: center; font-size: .58rem; color: rgba(255,255,255,.42); font-weight: 800; }
 
         .mock-bf-table { position: relative; display: grid;
           grid-template-rows: 40px 1fr auto 1fr 40px; gap: 4px; padding: 10px 100px 10px 14px; min-height: 0; }
@@ -127,7 +127,7 @@ export function BattlefieldMockup() {
         .mock-bf-rest-zone strong { font-size: 1rem; color: #fff3a6; }
         .mock-bf-rest-zone span { font-size: .6rem; color: #9fc3e8; }
 
-        .mock-bf-divider { display: flex; align-items: center; justify-content: center; padding: 6px;
+        .mock-bf-divider { position: relative; display: flex; align-items: center; justify-content: center; padding: 6px;
           border-radius: 10px; background: rgba(255,214,111,.14); border: 1px dashed rgba(255,214,111,.5);
           color: #ffd66f; font-size: .82rem; font-weight: 700; }
 
@@ -212,7 +212,16 @@ export function BattlefieldMockup() {
           </div>
         </div>
 
-        <div className="mock-bf-divider">選擇攻擊目標——點擊對手戰鬥區的餅乾</div>
+        <div className="mock-bf-divider">
+          選擇攻擊目標——點擊對手戰鬥區的餅乾
+          <div className="mock-bf-phase-block">
+            <div className="mock-bf-phase-badge mine">
+              <span>TURN 3</span>
+              <strong>主要階段</strong>
+            </div>
+            <button className="mock-bf-cta" type="button">結束主要階段</button>
+          </div>
+        </div>
 
         <div className="mock-bf-row">
           <div className="mock-bf-zone mock-bf-rest-zone">
@@ -242,12 +251,6 @@ export function BattlefieldMockup() {
         <div className="mock-bf-action-cluster">
           <button type="button">≡ 選單</button>
           <button type="button">戰鬥記錄</button>
-        </div>
-
-        <div className="mock-bf-phase-block">
-          <div className="mock-bf-phase-badge mine">我方 · 主要階段</div>
-          <button className="mock-bf-cta" type="button">結束主要階段</button>
-          <span className="mock-bf-turn-counter">TURN 3</span>
         </div>
       </main>
 

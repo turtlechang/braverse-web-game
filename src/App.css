@@ -452,6 +452,7 @@ button {
 }
 
 .table-divider {
+  position: relative;
   height: 34px;
   display: grid;
   grid-template-columns: 1fr auto 1fr;

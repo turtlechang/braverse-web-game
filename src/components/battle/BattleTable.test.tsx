@@ -37,7 +37,6 @@ const baseProps = (
   phaseRail: {
     phase: 'main',
     turnNumber: 1,
-    activePlayerName: 'Player One',
     isPlayerTurn: true,
     disabled: false,
     onAdvance: vi.fn(),
@@ -91,7 +90,6 @@ describe('BattleTable', () => {
         phaseRail: {
           phase: 'main',
           turnNumber: 3,
-          activePlayerName: 'Player One',
           isPlayerTurn: true,
           disabled: false,
           onAdvance,
@@ -99,7 +97,7 @@ describe('BattleTable', () => {
       }),
     )
 
-    expect(container.querySelector('.turn-counter')?.textContent).toBe(
+    expect(container.querySelector('.turn-indicator')?.textContent).toContain(
       'TURN 3',
     )
     const button = container.querySelector<HTMLButtonElement>(

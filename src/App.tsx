@@ -432,7 +432,6 @@ function App() {
         phaseRail={{
           phase: match.game.phase,
           turnNumber: match.game.turnNumber,
-          activePlayerName: match.activePlayer.name,
           isPlayerTurn: match.game.activePlayerId === match.viewerPlayerId,
           disabled:
             phaseDisabled ||

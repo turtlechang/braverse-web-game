@@ -10,7 +10,6 @@ describe('desktop battle HUD', () => {
       <PhaseRail
         phase="main"
         turnNumber={3}
-        activePlayerName="玩家"
         isPlayerTurn
         disabled={false}
         onAdvance={() => undefined}

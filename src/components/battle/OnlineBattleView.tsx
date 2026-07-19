@@ -507,7 +507,6 @@ export function OnlineBattleView({
         phaseRail={{
           phase: game.phase,
           turnNumber: game.turnNumber,
-          activePlayerName: match.activePlayer.name,
           isPlayerTurn: game.activePlayerId === viewerPlayerId,
           disabled:
             phaseDisabled ||
