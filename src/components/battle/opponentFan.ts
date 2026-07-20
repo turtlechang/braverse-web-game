@@ -19,10 +19,9 @@ export function computeOpponentFan(count: number, index: number): OpponentFanRes
   const opponentAngle = count <= 1 ? 0 : (index - centerIndex) * (arcSpan / (count - 1))
   const opponentStep = count <= 1 ? 0 : Math.max(36, Math.min(96, 384 / (count - 1)))
   const opponentX = (index - centerIndex) * opponentStep
-  // From the local player's view, the opponent is holding the hand above the
-  // table: the middle card sits slightly lower than the two ends.
-  const normalizedOffset = count <= 1 ? 0 : (index - centerIndex) / centerIndex
-  const opponentY = count <= 1 ? 0 : Math.round(18 * (1 - normalizedOffset ** 2))
+  // Keep every card on the same clipped top edge. The held-card fan is formed
+  // by overlap and rotation rather than shifting individual cards downward.
+  const opponentY = 0
   const maxAngle = count <= 1 ? 0 : arcSpan / 2
   const a = maxAngle * Math.PI / 180
   const leftOverhang =

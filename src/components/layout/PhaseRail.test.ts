@@ -32,8 +32,9 @@ describe('PhaseRail CSS grid-row assignments', () => {
     )
   })
 
-  it('uses a gold background for the phase rail while preserving turn ownership colors', () => {
-    expect(normalizedPhaseRailCss).toContain('background: #d4af37')
+  it('uses a deep navy background with a gold frame while preserving turn ownership colors', () => {
+    expect(normalizedPhaseRailCss).toContain('background: #12365F')
+    expect(normalizedPhaseRailCss).toContain('border: 2px solid #d4af37')
     expect(normalizedPhaseRailCss).toContain('rgba(37, 99, 235, 0.78)')
     expect(normalizedPhaseRailCss).toContain('rgba(220, 38, 38, 0.76)')
   })

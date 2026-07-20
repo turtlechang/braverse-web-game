@@ -851,10 +851,12 @@
 @container game-shell (min-width: 901px) {
   .top-field {
     --break-summary-start: 72px;
+    --field-stack-reserve: var(--break-summary-start);
   }
 
   .bottom-field {
     --break-summary-end: 112px;
+    --field-stack-reserve: 72px;
   }
 
   .top-field .break-zone,
@@ -879,12 +881,25 @@
   }
 
   .top-field .field-stack {
-    grid-template-rows: minmax(0, 30fr) minmax(0, 70fr);
+    grid-template-rows: minmax(0, calc(30% + 35px)) minmax(0, calc(70% - 45px));
+  }
+
+  /* The top field reserves 72px above its stack, while the combat track is
+   * 70% of that remaining height minus 45px. Mirror that exact size for the
+   * visible opponent break dock. */
+  .top-field .break-zone {
+    height: calc(70% - 95.4px);
+    top: -30px;
+  }
+
+  .bottom-field .break-zone {
+    height: calc(70% - 95.4px);
+    top: -30px;
   }
 
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 70fr) minmax(0, 30fr);
-    gap: 0;
+    grid-template-rows: minmax(0, calc(70% - 45px)) minmax(0, calc(30% + 35px));
+    gap: 10px;
     top: -30px;
   }
 
@@ -905,10 +920,12 @@
   .top-field .combat-zone {
     border-radius: 16px 16px 0 0;
     border-bottom-width: 1px;
+    border-bottom-color: transparent;
   }
 
   .bottom-field .combat-zone {
     border-top-width: 0;
+    border-top-color: transparent;
     border-radius: 0 0 16px 16px;
   }
 
@@ -1813,7 +1830,7 @@
   }
 
   .top-field .field-stack {
-    height: calc(100% - var(--break-summary-start));
+    height: calc(100% - var(--field-stack-reserve));
     align-self: end;
   }
 
@@ -1834,7 +1851,7 @@
   }
 
   .bottom-field .field-stack {
-    height: calc(100% - var(--break-summary-end));
+    height: calc(100% - var(--field-stack-reserve));
     align-self: start;
   }
 
@@ -1940,12 +1957,12 @@
 
 .bottom-field .support-count {
   top: auto;
-  bottom: -18px;
+  bottom: -25px;
   left: 0;
 }
 
 .top-field .support-count {
-  top: -18px;
+  top: -25px;
   right: 0;
   bottom: auto;
   left: auto;
@@ -1960,9 +1977,38 @@
 }
 
 .support-count {
-  font-size: 0.792rem;
+  font-size: 0.95rem;
 }
 
 .top-field .row-meta {
   border-right-color: rgba(220, 38, 38, 0.76);
+}
+
+/* Opponent zones share the same red side identity as the opponent nameplate. */
+.top-field .combat-zone,
+.top-field .support-zone,
+.top-field .break-zone > .resource-summary,
+.top-field .deck-zone > .resource-summary,
+.top-field .stage-zone > .resource-summary,
+.top-field .discard-zone.resource-summary {
+  border-color: rgba(220, 38, 38, 0.76);
+}
+
+.bottom-field .combat-zone,
+.bottom-field .support-zone,
+.bottom-field .break-zone > .resource-summary,
+.bottom-field .deck-zone > .resource-summary,
+.bottom-field .stage-zone > .resource-summary,
+.bottom-field .discard-zone.resource-summary {
+  border-color: #2179d1;
+}
+
+/* These rules intentionally follow the side-color rules so the joined combat
+ * field never regains a colored seam through border-color shorthand. */
+.top-field .combat-zone {
+  border-bottom-color: transparent;
+}
+
+.bottom-field .combat-zone {
+  border-top-color: transparent;
 }

@@ -36,7 +36,6 @@ const baseProps = (
   ariaLabel: 'Braverse 對戰桌',
   topBattleRow: battleRowProps({ playerId: 'player-two', position: 'top' }),
   bottomBattleRow: battleRowProps({ playerId: 'player-one', position: 'bottom' }),
-  remoteActionBanner: { status: null, compact: true },
   attackPreviewArrow: { sourceInstanceId: null, targetInstanceIds: [] },
   previewCard: null,
   attackPaymentPanel: null,
@@ -76,25 +75,10 @@ describe('BattleTable', () => {
     await cleanup()
   })
 
-  it('renders the remote action banner when a status is given, without a table divider', async () => {
-    const { container, cleanup } = await render(
-      baseProps({
-        remoteActionBanner: {
-          status: {
-            mode: 'resolving',
-            actorId: null,
-            actorLabel: '',
-            phaseLabel: '',
-            headline: '效果結算中',
-          },
-          compact: true,
-        },
-      }),
-    )
+  it('omits the obsolete status banner and table divider', async () => {
+    const { container, cleanup } = await render(baseProps())
 
-    expect(
-      container.querySelector('.table-status-banner .remote-action-banner'),
-    ).not.toBeNull()
+    expect(container.querySelector('.table-status-banner')).toBeNull()
     expect(container.querySelector('.table-divider')).toBeNull()
 
     await cleanup()

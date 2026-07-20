@@ -77,6 +77,18 @@ describe('player hand hover styles', () => {
     )
   })
 
+  it('uses the same red border for every opponent board and resource zone', () => {
+    expect(normalizedCss).toMatch(
+      /\.top-field \.combat-zone,\s*\.top-field \.support-zone,\s*\.top-field \.break-zone > \.resource-summary,\s*\.top-field \.deck-zone > \.resource-summary,\s*\.top-field \.stage-zone > \.resource-summary,\s*\.top-field \.discard-zone\.resource-summary\s*\{[^}]*border-color:\s*rgba\(220, 38, 38, 0\.76\)[^}]*}/,
+    )
+  })
+
+  it('uses the same blue border for every player board and resource zone', () => {
+    expect(normalizedCss).toMatch(
+      /\.bottom-field \.combat-zone,\s*\.bottom-field \.support-zone,\s*\.bottom-field \.break-zone > \.resource-summary,\s*\.bottom-field \.deck-zone > \.resource-summary,\s*\.bottom-field \.stage-zone > \.resource-summary,\s*\.bottom-field \.discard-zone\.resource-summary\s*\{[^}]*border-color:\s*#2179d1[^}]*}/,
+    )
+  })
+
   it('uses a blue active border for the player metadata', () => {
     expect(normalizedCss).toMatch(
       /\.bottom-field \.row-meta\[data-active='true'\]\s*\{[^}]*border-left-color:\s*#2179d1[^}]*}/,
@@ -92,6 +104,18 @@ describe('player hand hover styles', () => {
   it('starts the opponent break-zone at the visible field-stack upper edge on desktop', () => {
     expect(normalizedCss).toMatch(
       /\.top-field \.break-zone\s*,\s*\.top-field \.utility-zones\s*\{[^}]*align-self:\s*end[^}]*height:\s*calc\(100% - var\(--break-summary-start\)\)[^}]*}/,
+    )
+  })
+
+  it('matches the opponent break dock height to the opponent combat zone', () => {
+    expect(normalizedCss).toMatch(
+      /\.top-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 95\.4px\)[^}]*top:\s*-30px[^}]*}/,
+    )
+  })
+
+  it('matches the player break dock height and position to the player combat zone', () => {
+    expect(normalizedCss).toMatch(
+      /\.bottom-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 95\.4px\)[^}]*top:\s*-30px[^}]*}/,
     )
   })
 
@@ -140,22 +164,22 @@ describe('player hand hover styles', () => {
 
   it('places the player support count just outside the support zone lower-left edge', () => {
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.support-count\s*\{[^}]*top:\s*auto[^}]*bottom:\s*-18px[^}]*left:\s*0[^}]*}/,
+      /\.bottom-field \.support-count\s*\{[^}]*top:\s*auto[^}]*bottom:\s*-25px[^}]*left:\s*0[^}]*}/,
     )
   })
 
   it('places the opponent support count just outside the support zone upper-right edge', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.support-count\s*\{[^}]*top:\s*-18px[^}]*right:\s*0[^}]*bottom:\s*auto[^}]*left:\s*auto[^}]*}/,
+      /\.top-field \.support-count\s*\{[^}]*top:\s*-25px[^}]*right:\s*0[^}]*bottom:\s*auto[^}]*left:\s*auto[^}]*}/,
     )
   })
 
-  it('enlarges both support counts by 20 percent', () => {
+  it('enlarges both support counts by another 20 percent', () => {
     expect(normalizedCss.lastIndexOf('.support-count {')).toBeGreaterThan(
       normalizedCss.lastIndexOf('.top-field .support-count {'),
     )
     expect(normalizedCss).toMatch(
-      /\.support-count\s*\{[^}]*font-size:\s*0\.792rem[^}]*}/,
+      /\.support-count\s*\{[^}]*font-size:\s*0\.95rem[^}]*}/,
     )
   })
 
@@ -183,21 +207,33 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('uses compact desktop support zones to give equal combat zones the room needed to fill the table', () => {
+  it('matches combat and support zone heights with a shared desktop field-stack reserve', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, 30fr\) minmax\(0, 70fr\)[^}]*}/,
+      /\.top-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(30% \+ 35px\)\) minmax\(0, calc\(70% - 45px\)\)[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, 70fr\) minmax\(0, 30fr\)[^}]*}/,
+      /\.bottom-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(70% - 45px\)\) minmax\(0, calc\(30% \+ 35px\)\)[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.top-field \.field-stack\s*\{[^}]*height:\s*calc\(100% - var\(--field-stack-reserve\)\)[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.bottom-field \.field-stack\s*\{[^}]*height:\s*calc\(100% - var\(--field-stack-reserve\)\)[^}]*}/,
     )
   })
 
   it('visually joins the opponent and player combat zones into one shared battlefield on desktop', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.combat-zone\s*\{[^}]*border-radius:\s*16px 16px 0 0[^}]*border-bottom-width:\s*1px[^}]*}/,
+      /\.top-field \.combat-zone\s*\{[^}]*border-radius:\s*16px 16px 0 0[^}]*border-bottom-width:\s*1px[^}]*border-bottom-color:\s*transparent[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.combat-zone\s*\{[^}]*border-top-width:\s*0[^}]*border-radius:\s*0 0 16px 16px[^}]*}/,
+      /\.bottom-field \.combat-zone\s*\{[^}]*border-top-width:\s*0[^}]*border-top-color:\s*transparent[^}]*border-radius:\s*0 0 16px 16px[^}]*}/,
+    )
+    expect(normalizedCss.lastIndexOf('border-bottom-color: transparent;')).toBeGreaterThan(
+      normalizedCss.lastIndexOf('border-color: rgba(220, 38, 38, 0.76);'),
+    )
+    expect(normalizedCss.lastIndexOf('border-top-color: transparent;')).toBeGreaterThan(
+      normalizedCss.lastIndexOf('border-color: #2179d1;'),
     )
   })
 
@@ -206,7 +242,7 @@ describe('player hand hover styles', () => {
       /\.top-field \.support-zone,\s*\.top-field \.combat-zone\s*\{[^}]*transform:\s*translateY\(-30px\)[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.field-stack\s*\{[^}]*gap:\s*0[^}]*top:\s*-30px[^}]*}/,
+      /\.bottom-field \.field-stack\s*\{[^}]*gap:\s*10px[^}]*top:\s*-30px[^}]*}/,
     )
   })
 

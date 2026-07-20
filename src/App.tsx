@@ -432,7 +432,6 @@ function App() {
         ariaLabel="Braverse 對戰桌"
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
-        remoteActionBanner={{ status: actionStatus, compact: true }}
         attackPreviewArrow={{
           sourceInstanceId:
             match.selectedAttackerId ??

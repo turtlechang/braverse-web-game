@@ -4,10 +4,9 @@ import { AttackPreviewArrow, type AttackPreviewArrowProps } from './AttackPrevie
 import { CenterCardPreview, type CenterCardPreviewProps } from './CenterCardPreview'
 import { AttackPaymentPanel, type AttackPaymentPanelProps } from '../panels/GameStatusPanels'
 import { CardPreviewPanel } from '../panels/InteractionOverlays'
-import { RemoteActionBanner, type RemoteActionBannerProps } from '../panels/RemoteActionBanner'
 
 /**
- * 本機與線上戰場共用的版面骨架:雙方 BattleRow(含分隔列與攻擊
+ * 本機與線上戰場共用的版面骨架:雙方 BattleRow、攻擊
  * 預覽箭頭)、卡牌快速預覽、攻擊付款面板。只搬運 JSX 結構,不統一背後的
  * 資料推導——每個 prop 都是呼叫端(App.tsx / OnlineBattleView.tsx)依自己
  * 的 match/pending hook 組好之後傳入,BattleTable 本身不重新計算任何邏輯。
@@ -21,7 +20,6 @@ export interface BattleTableProps {
   ariaLabel: string
   topBattleRow: BattleRowProps
   bottomBattleRow: BattleRowProps
-  remoteActionBanner: RemoteActionBannerProps
   attackPreviewArrow: AttackPreviewArrowProps
   previewCard: GameCard | null
   previewContextLabel?: string
@@ -33,7 +31,6 @@ export function BattleTable({
   ariaLabel,
   topBattleRow,
   bottomBattleRow,
-  remoteActionBanner,
   attackPreviewArrow,
   previewCard,
   previewContextLabel,
@@ -46,10 +43,6 @@ export function BattleTable({
 
       <section className="table-area" aria-label={ariaLabel}>
         <BattleRow {...topBattleRow} />
-
-        <div className="table-status-banner">
-          <RemoteActionBanner {...remoteActionBanner} />
-        </div>
 
         <AttackPreviewArrow {...attackPreviewArrow} />
 

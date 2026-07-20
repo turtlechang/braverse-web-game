@@ -507,11 +507,6 @@ export function OnlineBattleView({
         ariaLabel="Braverse 線上對戰桌"
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
-        remoteActionBanner={{
-          status: actionStatus,
-          compact: true,
-          connectionNotice,
-        }}
         attackPreviewArrow={{
           sourceInstanceId:
             opponentAttackSelection.attackerInstanceId ??
