@@ -7,6 +7,12 @@ const normalizedCss = readFileSync(
 ).replace(/\r\n/g, '\n')
 
 describe('player hand hover styles', () => {
+  it('curves the opponent hand downward from the local player perspective', () => {
+    expect(normalizedCss).toContain(
+      'translateX(calc(-50% + var(--opponent-x))) translateY(var(--opponent-y, 0px)) rotate(var(--opponent-angle))',
+    )
+  })
+
   it('keeps the bottom hand inside its fan viewport without clipping every card', () => {
     const baseFanRule = normalizedCss.match(
       /\.hand-fan\.bottom-hand\s*\{[\s\S]*?\n}/,

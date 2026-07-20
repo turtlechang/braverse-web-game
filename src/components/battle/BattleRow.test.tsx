@@ -51,23 +51,23 @@ describe('opponent hand fan pure functions', () => {
     const r0 = computeOpponentFan(3, 0)
     const r1 = computeOpponentFan(3, 1)
     const r2 = computeOpponentFan(3, 2)
-    expect(r0.opponentAngle).toBeCloseTo(-4, 0)
-    expect(r2.opponentAngle).toBeCloseTo(4, 0)
+    expect(r0.opponentAngle).toBeCloseTo(-6, 0)
+    expect(r2.opponentAngle).toBeCloseTo(6, 0)
     expect(r1.opponentAngle).toBe(0)
   })
 
   it('count=2: arcSpan=18, maxAngle=9, opponentAngle=-9', () => {
     const r0 = computeOpponentFan(2, 0)
-    expect(r0.arcSpan).toBe(8)
-    expect(r0.maxAngle).toBe(4)
-    expect(r0.opponentAngle).toBeCloseTo(-4, 0)
+    expect(r0.arcSpan).toBe(12)
+    expect(r0.maxAngle).toBe(6)
+    expect(r0.opponentAngle).toBeCloseTo(-6, 0)
   })
 
   it('count=5: maxAngle=9, leftOverhang≈24', () => {
     const r = computeOpponentFan(5, 0)
-    expect(r.maxAngle).toBe(4)
-    expect(r.leftOverhang).toBeCloseTo(11, 0)
-    expect(r.safetyInset).toBeCloseTo(13, 0)
+    expect(r.maxAngle).toBe(6)
+    expect(r.leftOverhang).toBeCloseTo(16, 0)
+    expect(r.safetyInset).toBeCloseTo(18, 0)
   })
 
   it('fanZIndex monotonically decreases with index (index 0 highest, last index 0)', () => {
@@ -608,7 +608,7 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('opponent-oriented-card')
   })
 
-  it('opponent hand cards set --opponent-angle and --fan-z-index custom properties, no obsolete vars', () => {
+  it('opponent hand cards set arc angle, curve depth, and stacking custom properties', () => {
     const game = createItemUsageDemoState(true)
     const opponentHand = Array.from({ length: 3 }, (_, i) => ({
       id: `opp-${i}`,
@@ -641,6 +641,7 @@ describe('BattleRow desktop interactions', () => {
       />,
     )
     expect(markup).toContain('--opponent-angle')
+    expect(markup).toContain('--opponent-y')
     expect(markup).toContain('--fan-z-index')
     expect(markup).not.toContain('--hand-offset-fraction')
     expect(markup).not.toContain('--arc-y-ratio')

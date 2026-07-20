@@ -1052,7 +1052,7 @@
   transform-origin: center top;
   transition: none;
   z-index: calc(10 + var(--fan-z-index, 0));
-  transform: translateX(calc(-50% + var(--opponent-x))) rotate(var(--opponent-angle));
+  transform: translateX(calc(-50% + var(--opponent-x))) translateY(var(--opponent-y, 0px)) rotate(var(--opponent-angle));
 }
 
 .hand-card-wrap.opponent-hand-card.single-card {

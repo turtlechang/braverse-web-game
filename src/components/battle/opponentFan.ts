@@ -5,6 +5,7 @@ export interface OpponentFanResult {
   arcSpan: number
   opponentAngle: number
   opponentX: number
+  opponentY: number
   maxAngle: number
   leftOverhang: number
   safetyInset: number
@@ -13,11 +14,15 @@ export interface OpponentFanResult {
 }
 
 export function computeOpponentFan(count: number, index: number): OpponentFanResult {
-  const arcSpan = count <= 1 ? 0 : 8
+  const arcSpan = count <= 1 ? 0 : 12
   const centerIndex = (count - 1) / 2
   const opponentAngle = count <= 1 ? 0 : (index - centerIndex) * (arcSpan / (count - 1))
   const opponentStep = count <= 1 ? 0 : Math.max(36, Math.min(96, 384 / (count - 1)))
   const opponentX = (index - centerIndex) * opponentStep
+  // From the local player's view, the opponent is holding the hand above the
+  // table: the middle card sits slightly lower than the two ends.
+  const normalizedOffset = count <= 1 ? 0 : (index - centerIndex) / centerIndex
+  const opponentY = count <= 1 ? 0 : Math.round(18 * (1 - normalizedOffset ** 2))
   const maxAngle = count <= 1 ? 0 : arcSpan / 2
   const a = maxAngle * Math.PI / 180
   const leftOverhang =
@@ -25,5 +30,5 @@ export function computeOpponentFan(count: number, index: number): OpponentFanRes
   const safetyInset = leftOverhang + 2
   const safetyRatio = count <= 1 ? 0 : leftOverhang / CARD_W
   const fanZIndex = count <= 1 ? 0 : (count - 1) - index
-  return { arcSpan, opponentAngle, opponentX, maxAngle, leftOverhang, safetyInset, safetyRatio, fanZIndex }
+  return { arcSpan, opponentAngle, opponentX, opponentY, maxAngle, leftOverhang, safetyInset, safetyRatio, fanZIndex }
 }

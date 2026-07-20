@@ -319,6 +319,7 @@ export function BattleRow({
                     style={{
                       '--opponent-angle': `${fan.opponentAngle}deg`,
                       '--opponent-x': `${fan.opponentX}px`,
+                      '--opponent-y': `${fan.opponentY}px`,
                       '--fan-z-index': fan.fanZIndex,
                     } as React.CSSProperties}
                   >
