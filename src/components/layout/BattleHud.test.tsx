@@ -23,7 +23,7 @@ describe('desktop battle HUD', () => {
     expect(markup).not.toContain('執行 20 場 AI 驗證')
   })
 
-  it('renders the match toolbar as compact icon controls only', () => {
+  it('renders the match toolbar as a compact tool-menu trigger', () => {
     const markup = renderToStaticMarkup(
       <MatchToolbar
         onReset={() => undefined}
@@ -33,11 +33,25 @@ describe('desktop battle HUD', () => {
     )
 
     expect(markup).toContain('match-toolbar')
-    expect(markup).toContain('重新開始')
-    expect(markup).toContain('查看官方範例牌組')
-    expect(markup).toContain('暫停資訊')
+    expect(markup).toContain('match-toolbar-trigger')
+    expect(markup).toContain('對局工具')
+    expect(markup).toContain('aria-expanded="false"')
     expect(markup).not.toContain('match-status')
     expect(markup).not.toContain('deck-matchup')
+  })
+
+  it('renders the match toolbar as one closed tool-menu trigger', () => {
+    const markup = renderToStaticMarkup(
+      <MatchToolbar
+        onReset={() => undefined}
+        onViewDeck={() => undefined}
+        onPause={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('match-toolbar-trigger')
+    expect(markup).toContain('aria-label="對局工具"')
+    expect(markup).not.toContain('<div id="match-toolbar-menu"')
   })
 
   it('moves AI diagnostics and the matchup into the pause modal', () => {

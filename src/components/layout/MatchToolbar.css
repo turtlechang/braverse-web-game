@@ -1,14 +1,13 @@
 .match-toolbar {
   position: absolute;
   z-index: 30;
-  bottom: 8px;
-  right: calc(var(--phase-rail-width) + 10px);
+  top: 10px;
+  left: 10px;
   display: flex;
   align-items: center;
-  gap: 4px;
 }
 
-.match-toolbar button {
+.match-toolbar-trigger {
   width: 32px;
   height: 32px;
   display: grid;
@@ -16,6 +15,7 @@
   padding: 0;
   border: 1px solid rgba(178, 219, 255, 0.38);
   border-radius: 50%;
+  color: #e8f8ff;
   background: rgba(2, 15, 44, 0.68);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(8px);
@@ -26,8 +26,8 @@
     transform 150ms ease;
 }
 
-.match-toolbar button:hover,
-.match-toolbar button:focus-visible {
+.match-toolbar-trigger:hover,
+.match-toolbar-trigger:focus-visible {
   border-color: rgba(113, 233, 255, 0.86);
   background: rgba(7, 55, 101, 0.88);
   transform: translateY(-1px);
@@ -37,38 +37,77 @@
   width: 17px;
 }
 
+.match-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max-content;
+  min-width: 164px;
+  display: grid;
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid rgba(178, 219, 255, 0.38);
+  border-radius: 10px;
+  background: rgba(2, 15, 44, 0.92);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.match-toolbar-menu button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #e8f8ff;
+  background: transparent;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.match-toolbar-menu button:hover,
+.match-toolbar-menu button:focus-visible {
+  border-color: rgba(113, 233, 255, 0.52);
+  background: rgba(7, 55, 101, 0.88);
+}
+
+.match-toolbar-menu svg {
+  flex: 0 0 auto;
+  width: 15px;
+}
+
 @container game-shell (max-height: 720px) {
   .match-toolbar {
-    bottom: 5px;
-    right: calc(var(--phase-rail-width) + 8px);
+    top: 6px;
+    left: 6px;
   }
 }
 
 @container game-shell (max-width: 900px) {
   .match-toolbar {
-    inset: 0 0 auto 0;
-    width: 100%;
-    height: var(--compact-toolbar-height);
-    justify-content: flex-end;
-    padding: 4px 7px;
-    border-bottom: 1px solid rgba(167, 216, 255, 0.22);
-    background: rgba(3, 18, 54, 0.92);
-  }
-
-  .match-toolbar button {
-    width: 32px;
-    height: 32px;
+    top: 8px;
+    left: 8px;
   }
 }
 
 @container game-shell (max-width: 900px) and (max-height: 400px) {
   .match-toolbar {
-    gap: 4px;
-    padding: 3px 4px;
+    top: 4px;
+    left: 4px;
   }
 
-  .match-toolbar button {
+  .match-toolbar-trigger {
     width: 28px;
     height: 28px;
+  }
+
+  .match-toolbar-menu {
+    top: calc(100% + 3px);
   }
 }

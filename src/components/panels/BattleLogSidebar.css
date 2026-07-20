@@ -1,8 +1,8 @@
 .battle-log-toggle {
   position: absolute;
   z-index: 30;
-  bottom: 48px;
-  right: calc(var(--phase-rail-width) + 10px);
+  right: 10px;
+  bottom: 10px;
   display: flex;
   align-items: center;
   gap: 6px;

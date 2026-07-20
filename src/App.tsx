@@ -13,6 +13,7 @@ import {
 import { BattleTable } from './components/battle/BattleTable'
 import type { BattleRowProps } from './components/battle/BattleRow'
 import { MatchToolbar } from './components/layout/MatchToolbar'
+import { PhaseRail } from './components/layout/PhaseRail'
 import { SimulationReport } from './components/panels/GameStatusPanels'
 import { deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
@@ -429,20 +430,6 @@ function App() {
 
       <BattleTable
         ariaLabel="Braverse 對戰桌"
-        phaseRail={{
-          phase: match.game.phase,
-          turnNumber: match.game.turnNumber,
-          isPlayerTurn: match.game.activePlayerId === match.viewerPlayerId,
-          disabled:
-            phaseDisabled ||
-            match.game.activePlayerId !== match.viewerPlayerId ||
-            match.game.phase === 'active' ||
-            match.game.phase === 'draw',
-          onAdvance: () => {
-            if (pending.pendingEffect || faintActive) return
-            match.handleAdvancePhase()
-          },
-        }}
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
         remoteActionBanner={{ status: actionStatus, compact: true }}
@@ -487,6 +474,22 @@ function App() {
             ? { card: centerPreviewCard, label: actionStatus.headline }
             : null
         }
+      />
+
+      <PhaseRail
+        phase={match.game.phase}
+        turnNumber={match.game.turnNumber}
+        isPlayerTurn={match.game.activePlayerId === match.viewerPlayerId}
+        disabled={
+          phaseDisabled ||
+          match.game.activePlayerId !== match.viewerPlayerId ||
+          match.game.phase === 'active' ||
+          match.game.phase === 'draw'
+        }
+        onAdvance={() => {
+          if (pending.pendingEffect || faintActive) return
+          match.handleAdvancePhase()
+        }}
       />
 
       {ai.simulationResults && (

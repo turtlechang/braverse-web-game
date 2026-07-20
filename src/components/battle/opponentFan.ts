@@ -4,6 +4,7 @@ export const CARD_H = 156
 export interface OpponentFanResult {
   arcSpan: number
   opponentAngle: number
+  opponentX: number
   maxAngle: number
   leftOverhang: number
   safetyInset: number
@@ -12,9 +13,11 @@ export interface OpponentFanResult {
 }
 
 export function computeOpponentFan(count: number, index: number): OpponentFanResult {
-  const arcSpan = count <= 1 ? 0 : 50
+  const arcSpan = count <= 1 ? 0 : 8
   const centerIndex = (count - 1) / 2
   const opponentAngle = count <= 1 ? 0 : (index - centerIndex) * (arcSpan / (count - 1))
+  const opponentStep = count <= 1 ? 0 : Math.max(36, Math.min(96, 384 / (count - 1)))
+  const opponentX = (index - centerIndex) * opponentStep
   const maxAngle = count <= 1 ? 0 : arcSpan / 2
   const a = maxAngle * Math.PI / 180
   const leftOverhang =
@@ -22,5 +25,5 @@ export function computeOpponentFan(count: number, index: number): OpponentFanRes
   const safetyInset = leftOverhang + 2
   const safetyRatio = count <= 1 ? 0 : leftOverhang / CARD_W
   const fanZIndex = count <= 1 ? 0 : (count - 1) - index
-  return { arcSpan, opponentAngle, maxAngle, leftOverhang, safetyInset, safetyRatio, fanZIndex }
+  return { arcSpan, opponentAngle, opponentX, maxAngle, leftOverhang, safetyInset, safetyRatio, fanZIndex }
 }

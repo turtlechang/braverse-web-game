@@ -39,22 +39,23 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
+  grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
   gap: 7px;
 }
 
 .field-stack > .hand-fan.top-hand {
   position: absolute;
   top: 0;
-  left: calc(var(--opponent-card-width) * var(--safety-ratio) + var(--opponent-card-width) * 0.5 + 2px);
-  width: calc(var(--opponent-card-width) * 2);
+  left: 50%;
+  width: min(600px, calc(100% - 32px));
   height: 63px;
   pointer-events: none;
   z-index: 10;
+  transform: translateX(-50%);
 }
 
 .bottom-field .field-stack {
-  grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+  grid-template-rows: minmax(0, 38fr) minmax(0, 62fr);
 }
 
 .combat-zone,
@@ -71,6 +72,8 @@
 
 .combat-zone {
   z-index: 2;
+  container-name: combat-zone;
+  container-type: size;
   border-color: rgba(132, 220, 255, 0.3);
 }
 
@@ -200,7 +203,7 @@
 }
 
 .bottom-field .row-meta[data-active='true'] {
-  border-left-color: #75f1bb;
+  border-left-color: #2179d1;
 }
 
 .turn-order-badge {
@@ -222,7 +225,7 @@
   position: absolute;
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  color: rgba(255, 255, 255, 0.1);
+  color: rgba(211, 238, 255, 0.2);
   font-size: clamp(0.82rem, 1.1vw, 1.12rem);
   font-weight: 900;
   letter-spacing: 0.16em;
@@ -250,16 +253,15 @@
 
 .combat-card-wrap {
   position: relative;
-  width: 155px;
-  height: 215px;
-  padding-bottom: 38px;
+  width: 132px;
+  aspect-ratio: 0.7;
 }
 
 .combat-card-wrap > .card-face {
   position: absolute;
   top: 0;
   left: 0;
-  width: 155px;
+  width: 132px;
   transform-origin: center;
 }
 
@@ -439,7 +441,7 @@
   top: 6px;
   left: 8px;
   color: #fff3a6;
-  font-size: 0.58rem;
+  font-size: 0.66rem;
   letter-spacing: 0.04em;
 }
 
@@ -551,8 +553,8 @@
 
 .resource-summary span,
 .zone-heading span {
-  color: rgba(227, 242, 255, 0.56);
-  font-size: 0.54rem;
+  color: rgba(227, 242, 255, 0.76);
+  font-size: 0.6rem;
   font-weight: 800;
 }
 
@@ -844,6 +846,185 @@
   transform: translateX(-50%);
 }
 
+/* Cookie-table desktop skin: retains the existing semantic zones and their
+ * interactive cards while making their hierarchy match the tabletop board. */
+@container game-shell (min-width: 901px) {
+  .top-field {
+    --break-summary-start: 72px;
+  }
+
+  .bottom-field {
+    --break-summary-end: 112px;
+  }
+
+  .top-field .break-zone,
+  .top-field .utility-zones {
+    align-self: end;
+    height: calc(100% - var(--break-summary-start));
+  }
+
+  .bottom-field .break-zone,
+  .bottom-field .utility-zones {
+    align-self: start;
+    height: calc(100% - var(--break-summary-end));
+  }
+
+  .battle-row {
+    grid-template-columns: 96px minmax(0, 1fr) 96px;
+    gap: 12px;
+  }
+
+  .field-stack {
+    gap: 10px;
+  }
+
+  .top-field .field-stack {
+    grid-template-rows: minmax(0, 30fr) minmax(0, 70fr);
+  }
+
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(0, 70fr) minmax(0, 30fr);
+    gap: 0;
+    top: -30px;
+  }
+
+  .combat-zone,
+  .support-zone {
+    border: 2px solid rgba(115, 204, 255, 0.52);
+    border-radius: 16px;
+    background: rgba(4, 41, 99, 0.28);
+    box-shadow: inset 0 0 0 2px rgba(177, 231, 255, 0.12), inset 0 0 28px rgba(1, 17, 56, 0.28);
+  }
+
+  .combat-zone,
+  .bottom-field .combat-zone {
+    border-color: rgba(126, 231, 240, 0.68);
+    box-shadow: inset 0 0 0 2px rgba(177, 231, 255, 0.16), inset 0 0 28px rgba(1, 17, 56, 0.28);
+  }
+
+  .top-field .combat-zone {
+    border-radius: 16px 16px 0 0;
+    border-bottom-width: 1px;
+  }
+
+  .bottom-field .combat-zone {
+    border-top-width: 0;
+    border-radius: 0 0 16px 16px;
+  }
+
+  /* Keep the opponent field and the shared battlefield visually closer to the
+   * opponent side without changing either field stack's flow height. */
+  .top-field .support-zone,
+  .top-field .combat-zone {
+    transform: translateY(-30px);
+  }
+
+  .row-meta {
+    top: 8px;
+    right: 8px;
+    max-width: 250px;
+    border: 1px solid rgba(129, 224, 255, 0.52);
+    border-right: 4px solid #65e8ff;
+    border-radius: 10px 0 0 10px;
+    background: rgba(3, 22, 58, 0.84);
+    box-shadow: -8px 8px 18px rgba(1, 8, 28, 0.3);
+  }
+
+  .row-avatar {
+    border-color: rgba(177, 231, 255, 0.7);
+    background: #1d4d91;
+    color: #e7f8ff;
+  }
+
+  .row-meta-info > .row-role,
+  .row-stat-label {
+    color: #8eeeff;
+  }
+
+  .row-status {
+    color: rgba(216, 239, 255, 0.72);
+  }
+
+  .zone-watermark {
+    color: rgba(166, 224, 255, 0.32);
+  }
+
+  .support-count,
+  .zone-heading {
+    color: #d9f3ff;
+    text-shadow: 0 1px 0 #08285f;
+  }
+
+  .resource-dock {
+    border-color: rgba(115, 204, 255, 0.46);
+    background: rgba(3, 25, 69, 0.78);
+    box-shadow: inset 0 0 0 1px rgba(177, 231, 255, 0.13), 0 10px 18px rgba(1, 10, 36, 0.28);
+  }
+}
+
+@container combat-zone (max-height: 220px) {
+  .combat-slots {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 100px;
+  }
+
+  .hp-card-stack {
+    width: 100px;
+    height: 26px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 28px;
+  }
+
+  .hp-card-stack .hp-card:nth-child(2) { left: 18px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 36px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 54px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 72px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 86px; }
+
+  .card-badges {
+    bottom: 28px;
+  }
+
+  .card-badges span {
+    padding: 2px 5px;
+    font-size: 0.58rem;
+  }
+}
+
+@container combat-zone (max-height: 160px) {
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 90px;
+  }
+
+  .hp-card-stack {
+    width: 90px;
+  }
+}
+
+@container combat-zone (max-height: 140px) {
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 80px;
+  }
+
+  .hp-card-stack {
+    width: 80px;
+  }
+
+  .card-badges span {
+    padding: 1px 4px;
+    font-size: 0.52rem;
+  }
+}
+
 .hand-fan.bottom-hand .hand-card-wrap {
   bottom: -94px;
 }
@@ -865,17 +1046,16 @@
 .hand-card-wrap.opponent-hand-card {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 50%;
   bottom: auto;
   pointer-events: none;
   transform-origin: center top;
   transition: none;
   z-index: calc(10 + var(--fan-z-index, 0));
-  transform: rotate(var(--opponent-angle));
+  transform: translateX(calc(-50% + var(--opponent-x))) rotate(var(--opponent-angle));
 }
 
 .hand-card-wrap.opponent-hand-card.single-card {
-  left: 50%;
   transform: translateX(-50%);
 }
 
@@ -906,7 +1086,7 @@
   filter:
     drop-shadow(0 0 10px rgba(255, 236, 104, 0.85))
     brightness(1.1);
-  transform: translateX(calc(-50% + var(--fan-x))) translateY(-28px) rotate(0deg) scale(1.07);
+  transform: translateX(calc(-50% + var(--fan-x))) translateY(var(--fan-y)) rotate(var(--fan-rotation)) scale(1.07);
 }
 
 
@@ -948,13 +1128,12 @@
 
 @container game-shell (min-width: 1500px) and (min-height: 850px) {
   .combat-card-wrap {
-    width: 175px;
-    height: 243px;
-    padding-bottom: 44px;
+    width: 150px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face {
-    width: 175px;
+    width: 150px;
   }
 
   .hp-card-stack {
@@ -1032,8 +1211,7 @@
 @container game-shell (max-height: 800px) {
   .combat-card-wrap {
     width: 140px;
-    height: 194px;
-    padding-bottom: 34px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face {
@@ -1083,18 +1261,17 @@
   }
 
   .combat-slots {
-    gap: 100px;
-    padding: 6px 60px;
+    gap: 72px;
+    padding: 6px 48px;
   }
 
   .combat-card-wrap {
-    width: 110px;
-    height: 152px;
-    padding-bottom: 26px;
+    width: 118px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face {
-    width: 110px;
+    width: 118px;
   }
 
   .hand-card {
@@ -1106,8 +1283,8 @@
   }
 
   .hp-card-stack {
-    width: 110px;
-    height: 24px;
+    width: 118px;
+    height: 26px;
   }
 
   .hp-card-stack .hp-card {
@@ -1181,8 +1358,7 @@
 @container game-shell (max-height: 620px) {
   .combat-card-wrap {
     width: 96px;
-    height: 133px;
-    padding-bottom: 22px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face {
@@ -1230,12 +1406,12 @@
 
   .field-stack,
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
+    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
     gap: 3px;
   }
 
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   }
 
   .combat-zone,
@@ -1259,8 +1435,7 @@
 
   .combat-card-wrap {
     width: 80px;
-    height: 111px;
-    padding-bottom: 18px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face,
@@ -1454,18 +1629,17 @@
 
   .field-stack,
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
+    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
     gap: 2px;
   }
 
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   }
 
   .combat-card-wrap {
     width: 46px;
-    height: 64px;
-    padding-bottom: 16px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face,
@@ -1553,4 +1727,242 @@
     top: 2px;
   }
 
+}
+
+@container game-shell (min-width: 901px) {
+  .utility-zones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .top-field .utility-zones {
+    width: 176px;
+    justify-self: end;
+  }
+
+  .bottom-field .utility-zones {
+    width: 176px;
+    justify-self: start;
+  }
+
+  .top-field .deck-zone {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .top-field .discard-zone {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .top-field .stage-zone {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 96px;
+    justify-self: end;
+  }
+
+  .bottom-field .stage-zone {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 96px;
+    justify-self: start;
+  }
+
+  .bottom-field .discard-zone {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .bottom-field .discard-zone.resource-summary {
+    height: 80px;
+    align-self: end;
+  }
+
+  .bottom-field .deck-zone {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .bottom-field .deck-zone.resource-dock {
+    width: 86px;
+    height: 80px;
+    justify-self: end;
+    align-self: end;
+  }
+
+  .top-field .row-meta {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    bottom: auto;
+    left: auto;
+    transform: scale(1.44);
+    transform-origin: top right;
+  }
+
+  .bottom-field .row-meta {
+    position: fixed;
+    top: auto;
+    right: auto;
+    bottom: 16px;
+    left: 16px;
+    transform: scale(1.44);
+    transform-origin: bottom left;
+  }
+
+  .top-field .field-stack {
+    height: calc(100% - var(--break-summary-start));
+    align-self: end;
+  }
+
+  .field-stack > .hand-fan.top-hand {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    height: 72px;
+    overflow: hidden;
+    transform: translateX(-50%);
+  }
+
+  .top-hand .hand-card-wrap.opponent-hand-card {
+    top: -142px;
+  }
+
+  .bottom-field .field-stack {
+    height: calc(100% - var(--break-summary-end));
+    align-self: start;
+  }
+
+  .hand-fan.bottom-hand {
+    z-index: 40;
+    bottom: 2px;
+    height: 180px;
+    overflow: visible;
+  }
+
+  .bottom-hand .hand-card {
+    width: 100px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: 0;
+  }
+}
+
+/* This must follow every game-shell breakpoint: combat-zone height is the
+ * final authority for card size when the board is vertically constrained. */
+@container combat-zone (max-height: 220px) {
+  .combat-slots {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 100px;
+  }
+
+  .hp-card-stack {
+    width: 100px;
+    height: 26px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 28px;
+  }
+
+  .hp-card-stack .hp-card:nth-child(2) { left: 18px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 36px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 54px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 72px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 86px; }
+
+  .card-badges {
+    bottom: 28px;
+  }
+
+  .card-badges span {
+    padding: 2px 5px;
+    font-size: 0.58rem;
+  }
+}
+
+@container combat-zone (max-height: 160px) {
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 90px;
+  }
+
+  .hp-card-stack {
+    width: 90px;
+  }
+}
+
+@container combat-zone (max-height: 140px) {
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 80px;
+  }
+
+  .hp-card-stack {
+    width: 80px;
+  }
+
+  .card-badges span {
+    padding: 1px 4px;
+    font-size: 0.52rem;
+  }
+}
+
+/* Board cards share one physical size on both sides of the table. This final
+ * rule intentionally follows every viewport and container override. */
+.combat-card-wrap,
+.combat-card-wrap > .card-face,
+.card-face.support-card {
+  width: 70px;
+  height: 100px;
+  aspect-ratio: 0.7;
+}
+
+.top-field .card-face.support-card {
+  transform: none;
+  bottom: 6px;
+}
+
+.top-field .card-face.support-card.is-rested {
+  transform: rotate(-90deg) scale(0.82);
+}
+
+.bottom-field .support-count {
+  top: auto;
+  bottom: -18px;
+  left: 0;
+}
+
+.top-field .support-count {
+  top: -18px;
+  right: 0;
+  bottom: auto;
+  left: auto;
+}
+
+.bottom-hand .hand-card-wrap {
+  opacity: 1;
+}
+
+.top-hand .hand-card-wrap {
+  opacity: 1;
+}
+
+.support-count {
+  font-size: 0.792rem;
+}
+
+.top-field .row-meta {
+  border-right-color: rgba(220, 38, 38, 0.76);
 }

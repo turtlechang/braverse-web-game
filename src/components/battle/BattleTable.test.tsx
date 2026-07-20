@@ -34,13 +34,6 @@ const baseProps = (
   overrides: Partial<BattleTableProps> = {},
 ): BattleTableProps => ({
   ariaLabel: 'Braverse 對戰桌',
-  phaseRail: {
-    phase: 'main',
-    turnNumber: 1,
-    isPlayerTurn: true,
-    disabled: false,
-    onAdvance: vi.fn(),
-  },
   topBattleRow: battleRowProps({ playerId: 'player-two', position: 'top' }),
   bottomBattleRow: battleRowProps({ playerId: 'player-one', position: 'bottom' }),
   remoteActionBanner: { status: null, compact: true },
@@ -70,10 +63,10 @@ const previewCard: GameCard = {
 }
 
 describe('BattleTable', () => {
-  it('renders the phase rail and both battle rows with the given aria-label', async () => {
+  it('renders both battle rows with the given aria-label without owning the phase rail', async () => {
     const { container, cleanup } = await render(baseProps())
 
-    expect(container.querySelector('.phase-rail')).not.toBeNull()
+    expect(container.querySelector('.phase-rail')).toBeNull()
     expect(
       container.querySelector('.table-area')?.getAttribute('aria-label'),
     ).toBe('Braverse 對戰桌')
@@ -83,33 +76,7 @@ describe('BattleTable', () => {
     await cleanup()
   })
 
-  it('forwards phaseRail props so onAdvance fires from the next-phase button', async () => {
-    const onAdvance = vi.fn()
-    const { container, cleanup } = await render(
-      baseProps({
-        phaseRail: {
-          phase: 'main',
-          turnNumber: 3,
-          isPlayerTurn: true,
-          disabled: false,
-          onAdvance,
-        },
-      }),
-    )
-
-    expect(container.querySelector('.turn-indicator')?.textContent).toContain(
-      'TURN 3',
-    )
-    const button = container.querySelector<HTMLButtonElement>(
-      '.next-phase-button',
-    )
-    await act(() => button!.click())
-    expect(onAdvance).toHaveBeenCalledTimes(1)
-
-    await cleanup()
-  })
-
-  it('renders the remote action banner when a status is given, inside the table divider', async () => {
+  it('renders the remote action banner when a status is given, without a table divider', async () => {
     const { container, cleanup } = await render(
       baseProps({
         remoteActionBanner: {
@@ -126,8 +93,9 @@ describe('BattleTable', () => {
     )
 
     expect(
-      container.querySelector('.table-divider .remote-action-banner'),
+      container.querySelector('.table-status-banner .remote-action-banner'),
     ).not.toBeNull()
+    expect(container.querySelector('.table-divider')).toBeNull()
 
     await cleanup()
   })

@@ -11,8 +11,7 @@
   padding: 8px;
   border: 1px solid rgba(130, 194, 255, 0.3);
   border-radius: 14px;
-  background:
-    linear-gradient(160deg, rgba(3, 20, 57, 0.94), rgba(2, 12, 37, 0.9));
+  background: #d4af37;
   box-shadow: 0 18px 40px rgba(1, 8, 28, 0.35);
   backdrop-filter: blur(10px);
 }
@@ -177,5 +176,77 @@
   .turn-indicator strong,
   .next-phase-button span {
     font-size: 0.46rem;
+  }
+}
+
+@container game-shell (min-width: 901px) {
+  .phase-rail {
+    top: 50%;
+    right: 0;
+    bottom: auto;
+    transform: translateY(-50%);
+    gap: 9px;
+    padding: 9px;
+    border: 2px solid rgba(126, 231, 240, 0.72);
+    border-radius: 24px;
+    background: #d4af37;
+    box-shadow: inset 0 0 0 2px rgba(144, 226, 255, 0.1), 0 14px 30px rgba(1, 8, 28, 0.44);
+  }
+
+  .turn-indicator {
+    gap: 5px;
+    padding: 10px 6px;
+    border: 1px solid rgba(126, 231, 240, 0.44);
+    border-radius: 15px;
+    background: rgba(8, 48, 109, 0.7);
+  }
+
+  .turn-indicator span {
+    color: #c8f4ff;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+  }
+
+  .turn-indicator strong {
+    color: #72eaff;
+    font-size: 1rem;
+  }
+
+  .turn-indicator.is-player {
+    border-color: rgba(96, 165, 250, 0.8);
+    background: linear-gradient(160deg, rgba(37, 99, 235, 0.78), rgba(3, 20, 53, 0.72));
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.3);
+  }
+
+  .turn-indicator.is-opponent {
+    border-color: rgba(248, 113, 113, 0.8);
+    background: linear-gradient(160deg, rgba(220, 38, 38, 0.76), rgba(62, 12, 24, 0.72));
+    box-shadow: 0 0 16px rgba(220, 38, 38, 0.3);
+  }
+
+  .turn-indicator.is-player strong {
+    color: #72eaff;
+  }
+
+  .turn-indicator.is-opponent strong {
+    color: #ffe0e0;
+  }
+
+  .next-phase-button {
+    min-height: 60px;
+    grid-template-columns: 1fr;
+    border: 2px solid rgba(126, 231, 240, 0.82);
+    border-radius: 15px;
+    background: rgba(7, 78, 148, 0.92);
+    box-shadow: inset 0 0 0 1px rgba(181, 240, 255, 0.16);
+    color: #e7fbff;
+  }
+
+  .next-phase-button span {
+    font-size: 0.82rem;
+  }
+
+  .next-phase-button svg {
+    display: none;
   }
 }

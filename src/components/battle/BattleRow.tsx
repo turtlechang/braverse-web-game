@@ -15,6 +15,7 @@ import {
 } from '../../game'
 import { CardFace } from '../cards/CardVisuals'
 import { computeOpponentFan } from './opponentFan'
+import { computePlayerHandFan } from './playerHandFan'
 import './BattleRow.css'
 
 export type BattleResourceKind = 'deck' | 'stage' | 'break'
@@ -303,17 +304,11 @@ export function BattleRow({
         {position === 'top' && supportZone}
         {isOpponent && player.hand.length > 0 && (() => {
           const baseFan = computeOpponentFan(player.hand.length, 0)
-          const count = player.hand.length
           return (
             <div
               className="hand-fan top-hand"
               aria-label="對手手牌"
-              style={{
-                '--safety-ratio': baseFan.safetyRatio,
-                ...(count === 1
-                  ? { left: '50%', transform: 'translateX(-50%)', width: 'var(--opponent-card-width)' }
-                  : {}),
-              } as React.CSSProperties}
+              style={{ '--safety-ratio': baseFan.safetyRatio } as React.CSSProperties}
             >
               {player.hand.map((card, index) => {
                 const fan = computeOpponentFan(player.hand.length, index)
@@ -323,6 +318,7 @@ export function BattleRow({
                     key={card.instanceId}
                     style={{
                       '--opponent-angle': `${fan.opponentAngle}deg`,
+                      '--opponent-x': `${fan.opponentX}px`,
                       '--fan-z-index': fan.fanZIndex,
                     } as React.CSSProperties}
                   >
@@ -690,15 +686,7 @@ export function BattleRow({
                     : null
             const isSelected = selectedHandCardId === card.instanceId
             const count = player.hand.length
-            const center = (count - 1) / 2
-            const offset = index - center
-            const baseStep = count <= 1 ? 0 : Math.max(20, Math.min(30, 150 / count))
-            const fanX = offset * baseStep
-            const maxNorm = (count - 1) / 2 || 1
-            const normOffset = offset / maxNorm
-            const fanY = normOffset * normOffset * 50
-            const angleStep = count <= 1 ? 0 : Math.min(12, 60 / count)
-            const fanRotation = offset * angleStep
+            const { fanX, fanY, fanRotation } = computePlayerHandFan(count, index)
 
             return (
               <div

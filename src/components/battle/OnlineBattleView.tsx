@@ -9,6 +9,7 @@ import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
+import { PhaseRail } from '../layout/PhaseRail'
 import { findCardInGame } from './publicCardLookup'
 import { StatusToast } from '../panels/InteractionOverlays'
 import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
@@ -504,20 +505,6 @@ export function OnlineBattleView({
 
       <BattleTable
         ariaLabel="Braverse 線上對戰桌"
-        phaseRail={{
-          phase: game.phase,
-          turnNumber: game.turnNumber,
-          isPlayerTurn: game.activePlayerId === viewerPlayerId,
-          disabled:
-            phaseDisabled ||
-            game.activePlayerId !== viewerPlayerId ||
-            game.phase === 'active' ||
-            game.phase === 'draw',
-          onAdvance: () => {
-            if (pending.pendingEffect) return
-            match.handleAdvancePhase()
-          },
-        }}
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
         remoteActionBanner={{
@@ -567,6 +554,22 @@ export function OnlineBattleView({
             ? { card: centerPreviewCard, label: actionStatus.headline }
             : null
         }
+      />
+
+      <PhaseRail
+        phase={game.phase}
+        turnNumber={game.turnNumber}
+        isPlayerTurn={game.activePlayerId === viewerPlayerId}
+        disabled={
+          phaseDisabled ||
+          game.activePlayerId !== viewerPlayerId ||
+          game.phase === 'active' ||
+          game.phase === 'draw'
+        }
+        onAdvance={() => {
+          if (pending.pendingEffect) return
+          match.handleAdvancePhase()
+        }}
       />
 
       {openingSnapshot && (

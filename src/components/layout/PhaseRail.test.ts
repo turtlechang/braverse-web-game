@@ -25,4 +25,28 @@ describe('PhaseRail CSS grid-row assignments', () => {
     expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*top\s*:\s*50%[^}]*\}/)
     expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*right\s*:\s*0[^}]*\}/)
   })
+
+  it('keeps the desktop rail vertically centered against the game-shell right edge', () => {
+    expect(normalizedPhaseRailCss).toMatch(
+      /@container game-shell \(min-width: 901px\)\s*\{\s*\.phase-rail\s*\{[^}]*top\s*:\s*50%[^}]*right\s*:\s*0[^}]*bottom\s*:\s*auto[^}]*transform\s*:\s*translateY\(-50%\)[^}]*\}/,
+    )
+  })
+
+  it('uses a gold background for the phase rail while preserving turn ownership colors', () => {
+    expect(normalizedPhaseRailCss).toContain('background: #d4af37')
+    expect(normalizedPhaseRailCss).toContain('rgba(37, 99, 235, 0.78)')
+    expect(normalizedPhaseRailCss).toContain('rgba(220, 38, 38, 0.76)')
+  })
+
+  it('uses blue for the player turn and red for the opponent turn on desktop', () => {
+    const desktopPlayerRule = normalizedPhaseRailCss.match(
+      /@container game-shell \(min-width: 901px\)\s*\{[\s\S]*?\.turn-indicator\.is-player\s*\{[\s\S]*?\n {2}}/,
+    )?.[0]
+    const desktopOpponentRule = normalizedPhaseRailCss.match(
+      /@container game-shell \(min-width: 901px\)\s*\{[\s\S]*?\.turn-indicator\.is-opponent\s*\{[\s\S]*?\n {2}}/,
+    )?.[0]
+
+    expect(desktopPlayerRule).toContain('rgba(37, 99, 235, 0.78)')
+    expect(desktopOpponentRule).toContain('rgba(220, 38, 38, 0.76)')
+  })
 })

@@ -7,6 +7,7 @@ import {
 import type { GameState, PendingBattle } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
+import { computePlayerHandFan } from './playerHandFan'
 
 const createProps = (
   overrides: Record<string, unknown> = {},
@@ -46,27 +47,27 @@ describe('opponent hand fan pure functions', () => {
     expect(r.arcSpan).toBe(0)
   })
 
-  it('symmetric angles ±25° for count=3', () => {
+  it('uses symmetric compact angles ±9° for count=3', () => {
     const r0 = computeOpponentFan(3, 0)
     const r1 = computeOpponentFan(3, 1)
     const r2 = computeOpponentFan(3, 2)
-    expect(r0.opponentAngle).toBeCloseTo(-25, 0)
-    expect(r2.opponentAngle).toBeCloseTo(25, 0)
+    expect(r0.opponentAngle).toBeCloseTo(-4, 0)
+    expect(r2.opponentAngle).toBeCloseTo(4, 0)
     expect(r1.opponentAngle).toBe(0)
   })
 
-  it('count=2: arcSpan=50, maxAngle=25, opponentAngle=-25', () => {
+  it('count=2: arcSpan=18, maxAngle=9, opponentAngle=-9', () => {
     const r0 = computeOpponentFan(2, 0)
-    expect(r0.arcSpan).toBe(50)
-    expect(r0.maxAngle).toBe(25)
-    expect(r0.opponentAngle).toBeCloseTo(-25, 0)
+    expect(r0.arcSpan).toBe(8)
+    expect(r0.maxAngle).toBe(4)
+    expect(r0.opponentAngle).toBeCloseTo(-4, 0)
   })
 
-  it('count=5: maxAngle=25, leftOverhang≈61', () => {
+  it('count=5: maxAngle=9, leftOverhang≈24', () => {
     const r = computeOpponentFan(5, 0)
-    expect(r.maxAngle).toBe(25)
-    expect(r.leftOverhang).toBeCloseTo(61, 0)
-    expect(r.safetyInset).toBeCloseTo(63, 0)
+    expect(r.maxAngle).toBe(4)
+    expect(r.leftOverhang).toBeCloseTo(11, 0)
+    expect(r.safetyInset).toBeCloseTo(13, 0)
   })
 
   it('fanZIndex monotonically decreases with index (index 0 highest, last index 0)', () => {
@@ -96,6 +97,34 @@ describe('opponent hand fan pure functions', () => {
   it('CARD_W=112, CARD_H=156', () => {
     expect(CARD_W).toBe(112)
     expect(CARD_H).toBe(156)
+  })
+})
+
+describe('player hand fan pure functions', () => {
+  it('spreads five cards broadly with only a shallow arc', () => {
+    expect(computePlayerHandFan(5, 0)).toEqual({
+      fanX: -224,
+      fanY: 6,
+      fanRotation: -4.8,
+    })
+    expect(computePlayerHandFan(5, 2)).toEqual({
+      fanX: 0,
+      fanY: 0,
+      fanRotation: 0,
+    })
+    expect(computePlayerHandFan(5, 4)).toEqual({
+      fanX: 224,
+      fanY: 6,
+      fanRotation: 4.8,
+    })
+  })
+
+  it('keeps a single player hand card level', () => {
+    expect(computePlayerHandFan(1, 0)).toEqual({
+      fanX: 0,
+      fanY: 0,
+      fanRotation: 0,
+    })
   })
 })
 
