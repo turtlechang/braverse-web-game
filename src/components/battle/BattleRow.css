@@ -1853,7 +1853,24 @@
   }
 
   .hand-fan.bottom-hand .hand-card-wrap {
-    bottom: 0;
+    bottom: -60px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap:hover,
+  .hand-fan.bottom-hand .hand-card-wrap:focus-within {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 76px))
+      rotate(var(--fan-rotation))
+      scale(1.04);
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap.is-selected {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 60px))
+      rotate(var(--fan-rotation))
+      scale(1.07);
   }
 }
 
