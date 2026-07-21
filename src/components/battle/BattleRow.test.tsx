@@ -47,27 +47,27 @@ describe('opponent hand fan pure functions', () => {
     expect(r.arcSpan).toBe(0)
   })
 
-  it('uses symmetric compact angles ±9° for count=3', () => {
+  it('keeps every opponent card unrotated for count=3', () => {
     const r0 = computeOpponentFan(3, 0)
     const r1 = computeOpponentFan(3, 1)
     const r2 = computeOpponentFan(3, 2)
-    expect(r0.opponentAngle).toBeCloseTo(-6, 0)
-    expect(r2.opponentAngle).toBeCloseTo(6, 0)
+    expect(r0.opponentAngle).toBe(0)
+    expect(r2.opponentAngle).toBe(0)
     expect(r1.opponentAngle).toBe(0)
   })
 
-  it('count=2: arcSpan=18, maxAngle=9, opponentAngle=-9', () => {
+  it('count=2: arcSpan=0, maxAngle=0, opponentAngle=0', () => {
     const r0 = computeOpponentFan(2, 0)
-    expect(r0.arcSpan).toBe(12)
-    expect(r0.maxAngle).toBe(6)
-    expect(r0.opponentAngle).toBeCloseTo(-6, 0)
+    expect(r0.arcSpan).toBe(0)
+    expect(r0.maxAngle).toBe(0)
+    expect(r0.opponentAngle).toBe(0)
   })
 
-  it('count=5: maxAngle=9, leftOverhang≈24', () => {
+  it('count=5: no rotation means no edge overhang', () => {
     const r = computeOpponentFan(5, 0)
-    expect(r.maxAngle).toBe(6)
-    expect(r.leftOverhang).toBeCloseTo(16, 0)
-    expect(r.safetyInset).toBeCloseTo(18, 0)
+    expect(r.maxAngle).toBe(0)
+    expect(r.leftOverhang).toBe(0)
+    expect(r.safetyInset).toBe(2)
   })
 
   it('fanZIndex monotonically decreases with index (index 0 highest, last index 0)', () => {
@@ -608,7 +608,7 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('opponent-oriented-card')
   })
 
-  it('opponent hand cards set arc angle, curve depth, and stacking custom properties', () => {
+  it('opponent hand cards set horizontal offset, aligned depth, and stacking custom properties', () => {
     const game = createItemUsageDemoState(true)
     const opponentHand = Array.from({ length: 3 }, (_, i) => ({
       id: `opp-${i}`,
@@ -640,7 +640,8 @@ describe('BattleRow desktop interactions', () => {
         })}
       />,
     )
-    expect(markup).toContain('--opponent-angle')
+    expect(markup).not.toContain('--opponent-angle')
+    expect(markup).toContain('--opponent-x')
     expect(markup).toContain('--opponent-y')
     expect(markup).toContain('--fan-z-index')
     expect(markup).not.toContain('--hand-offset-fraction')
@@ -725,7 +726,7 @@ describe('BattleRow desktop interactions', () => {
     )
     // Each opponent-hand-card wrapper should be a div with hand-card-wrap opponent-hand-card class
     // Extract style blocks of opponent-hand-card wrappers
-    const cardDivs = markup.match(/<div class="hand-card-wrap opponent-hand-card[^"]*" style="[^"]*--opponent-angle[^"]*"/g)
+    const cardDivs = markup.match(/<div class="hand-card-wrap opponent-hand-card[^"]*" style="[^"]*--opponent-x[^"]*"/g)
     expect(cardDivs).not.toBeNull()
     for (const div of cardDivs!) {
       // Should NOT contain inline left:, top:, bottom:, or transform-origin:
@@ -816,6 +817,17 @@ describe('HP flip chain reveal indicator', () => {
       <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
     )
     expect(markup).not.toContain('hp-reveal-indicator')
+  })
+
+  it('marks the declared target throughout the attack response', () => {
+    const game = withPendingBattle(createItemUsageDemoState(true), {
+      stage: 'trap',
+    })
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps({ game, playerId: 'player-one', position: 'bottom' })} />,
+    )
+
+    expect(markup).toContain('combat-card-wrap is-attack-target')
   })
 
   it('does not show the indicator when there is no pending battle', () => {

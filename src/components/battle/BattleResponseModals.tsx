@@ -18,6 +18,19 @@ export interface BattleResponseModalsProps {
 }
 
 export function BattleResponseModals({ match }: BattleResponseModalsProps) {
+  const findBattleCard = (instanceId: string | null | undefined) => {
+    if (!instanceId) return null
+
+    return (
+      Object.values(match.game.players)
+        .flatMap((player) => player.battleArea)
+        .find(({ card }) => card.instanceId === instanceId)?.card ?? null
+    )
+  }
+  const pendingBattle = match.game.pendingBattle
+  const attackAttackerCard = findBattleCard(pendingBattle?.attackerInstanceId)
+  const attackTargetCard = findBattleCard(pendingBattle?.targetInstanceId)
+
   return (
     <>
       {match.game.pendingBattle?.stage === 'trap' &&
@@ -28,6 +41,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
           <AttackResponseModal
             trapCards={match.playerTrapCandidates}
             blockerCards={match.playerBlockerCandidates}
+            attackerCard={attackAttackerCard}
+            attackTargetCard={attackTargetCard}
             onSelectTrap={(id) => {
               match.setPendingResponseMode('trap')
               match.setSelectedTrapId(id)
@@ -81,12 +96,9 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             selectedTrashToDeckIds={match.selectedTrapTrashToDeckIds}
             onToggleTrashToDeck={match.toggleTrapTrashToDeck}
             attackerCard={
-              match.attackerInstanceId
-                ? (match.game.players[match.opponentId].battleArea.find(
-                    (c) => c.card.instanceId === match.attackerInstanceId,
-                  )?.card ?? null)
-                : null
+              attackAttackerCard
             }
+            attackTargetCard={attackTargetCard}
             trapTargetCandidates={match.trapTargetCandidates}
             selectedTrapTargetId={match.selectedTrapTargetId}
             onSelectTrap={(id) => {
@@ -219,6 +231,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
           <BlockerResponseModal
             blockerCards={match.playerBlockerCandidates}
             selectedBlockerId={match.selectedBlockerId}
+            attackerCard={attackAttackerCard}
+            attackTargetCard={attackTargetCard}
             paymentCards={match.game.players[
               match.viewerPlayerId
             ].supportArea
@@ -259,6 +273,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
           <BlockerResponseModal
             blockerCards={match.playerBlockerCandidates}
             selectedBlockerId={match.selectedBlockerId}
+            attackerCard={attackAttackerCard}
+            attackTargetCard={attackTargetCard}
             paymentCards={match.game.players[
               match.viewerPlayerId
             ].supportArea

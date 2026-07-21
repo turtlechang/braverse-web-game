@@ -99,6 +99,34 @@ describe('DiscardRevealModal', () => {
 })
 
 describe('TrapResponseModal', () => {
+  it('shows the attacker and attack target together during an attack response', () => {
+    const attacker = createBattleCookie(40).card
+    const target = createBattleCookie(41).card
+    const markup = renderToStaticMarkup(
+      <TrapResponseModal
+        cards={[createHandCard(40)]}
+        selectedTrapId={null}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        attackerCard={attacker}
+        attackTargetCard={target}
+        onSelectTrap={() => undefined}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('attack-declaration-summary')
+    expect(markup).toContain('attack-declaration-attacker')
+    expect(markup).toContain('attack-declaration-target')
+    expect(markup).toContain(attacker.name)
+    expect(markup).toContain(target.name)
+  })
+
   it('guides energy, cost, and target separately with previous-step navigation', async () => {
     const trap: GameCard = {
       id: 'GUIDED-TRAP',
@@ -451,6 +479,24 @@ describe('TrapResponseModal', () => {
 })
 
 describe('AttackResponseModal', () => {
+  it('keeps the attack target visible while choosing a response', () => {
+    const attacker = createBattleCookie(50).card
+    const target = createBattleCookie(51).card
+    const markup = renderToStaticMarkup(
+      <AttackResponseModal
+        trapCards={[createHandCard(50)]}
+        blockerCards={[]}
+        attackerCard={attacker}
+        attackTargetCard={target}
+        onSkip={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('attack-declaration-summary')
+    expect(markup).toContain(attacker.name)
+    expect(markup).toContain(target.name)
+  })
+
   it('minimizes and restores the response choice prompt', async () => {
     const trap = createHandCard(1)
     const blocker = createBattleCookie(1)

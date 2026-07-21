@@ -6,6 +6,8 @@
 
 ## 開發背景
 
+對戰桌以共用展示元件呈現本機與線上對戰，將攻擊者、攻擊目標、回應流程與傷害結算的可視回饋維持一致，避免玩家必須從對戰紀錄回推目前攻擊關係。
+
 本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。
 
 目前以《綜合規則》Ver.1.2、《CRB 遊戲指南》240812 更新版、《CRB 說明書 P1》、《裁判指南》及 2026-03-30 官方 Rule Update 作為規則文件基線；專案裁定與仍待新版官方資料覆核的項目記錄於 [docs/rule-clarifications.md](docs/rule-clarifications.md)。
@@ -28,6 +30,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
+攻擊宣告期間已在場上保留攻擊箭頭、以目標黃框標示被攻擊餅乾，並在陷阱與 Blocker 回應視窗直接呈現「攻擊者 → 攻擊目標」摘要；本機 AI 與線上對戰共用此回饋邏輯。
+
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
 
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
@@ -42,6 +46,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 測試基線、bundle 大小等會隨每次 PR 變動的數字，一律以 [CHANGELOG.md](CHANGELOG.md) 最新項目為準（非永久門檻，只要求不低於前次基線）。
 
 ## 下一步計畫
+
+近期優先以真人與線上好友房確認多張同名餅乾、Blocker 轉移目標與窄畫面下的攻擊目標辨識度。
 
 待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；WebSocket 入站驗證、玩家名稱、攻擊選取預覽、開局整合、導引式效果操作、對戰中指令拒絕提示、公開互動意圖與 P0–P2 對戰可視化第一版已完成，並補上 ST3-019、BS2-021、BS2-044、BS1-007 攻擊支付與 BS1-037 攻擊後效果的提示框回歸。下一步是以真人好友房驗證攻擊箭頭、卡牌預覽、活動紀錄與回應狀態在 BS2-069、OnPlay、陷阱／FLIP／物品／場景多段決策中的文案與高光邊界，並覆核 600×338 窄畫面下的手牌可讀性；伺服器期限目前只提供顯示，不自動替玩家作決策。R5 已建立語意驗證與官方更新回歸防線，但仍須在新卡或新版規則進入時擴充契約。近期應以 Vercel Preview 完成 1–2 場真人好友房試玩，特別確認開局節奏、ST5-007／ST5-022 的雙方提示、窄畫面可讀性與 Render 冷啟動後的完整流程，再稽核 GitHub Actions／Vercel／Render 健康。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
 
@@ -99,4 +105,5 @@ npm run cards:import:purple-sample
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-07-21 | 攻擊宣告可視化：場上高亮被攻擊餅乾，並於陷阱／Blocker 回應直接顯示攻擊者與目標。 |
 | 2026-07-20 | 線上對戰桌版面收斂：雙方戰鬥／支援／休息區對齊、紅藍陣營邊框、對手手牌淺弧及移除中央狀態橫幅。 |

@@ -435,6 +435,7 @@ function App() {
         attackPreviewArrow={{
           sourceInstanceId:
             match.selectedAttackerId ??
+            match.game.pendingBattle?.attackerInstanceId ??
             (actionStatus.mode === 'opponent-thinking'
               ? actionStatus.sourceCard?.instanceId ?? null
               : null),

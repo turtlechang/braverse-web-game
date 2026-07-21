@@ -7,10 +7,11 @@ const normalizedCss = readFileSync(
 ).replace(/\r\n/g, '\n')
 
 describe('player hand hover styles', () => {
-  it('curves the opponent hand downward from the local player perspective', () => {
+  it('keeps every opponent hand card horizontally aligned without individual rotation', () => {
     expect(normalizedCss).toContain(
-      'translateX(calc(-50% + var(--opponent-x))) translateY(var(--opponent-y, 0px)) rotate(var(--opponent-angle))',
+      'translateX(calc(-50% + var(--opponent-x))) translateY(var(--opponent-y, 0px))',
     )
+    expect(normalizedCss).not.toContain('rotate(var(--opponent-angle))')
   })
 
   it('keeps the bottom hand inside its fan viewport without clipping every card', () => {
@@ -246,14 +247,14 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('uses the same 100px-tall cards in both combat and support zones', () => {
-    const fixedBoardCardRule = normalizedCss.match(
-      /\/\* Board cards share one physical size[\s\S]*?\.combat-card-wrap,\s*\.combat-card-wrap > \.card-face,\s*\.card-face\.support-card\s*\{[\s\S]*?\n}/,
+  it('keeps support cards at their agreed fixed board size', () => {
+    const fixedSupportCardRule = normalizedCss.match(
+      /\/\* Support cards retain their agreed fixed board size\. \*\/\s*\.card-face\.support-card\s*\{[\s\S]*?\n}/,
     )?.[0]
 
-    expect(fixedBoardCardRule).toContain('width: 70px')
-    expect(fixedBoardCardRule).toContain('height: 100px')
-    expect(fixedBoardCardRule).toContain('aspect-ratio: 0.7')
+    expect(fixedSupportCardRule).toContain('width: 70px')
+    expect(fixedSupportCardRule).toContain('height: 100px')
+    expect(fixedSupportCardRule).toContain('aspect-ratio: 0.7')
     expect(normalizedCss).toContain(
       '.top-field .card-face.support-card {\n  transform: none;\n  bottom: 6px;',
     )
@@ -261,16 +262,45 @@ describe('player hand hover styles', () => {
     expect(normalizedCss).not.toContain('padding-bottom: 38px')
   })
 
-  it('scales combat cards to the available combat-zone height', () => {
+  it('scales both combat card faces to their combat-zone inner height without overflow', () => {
     expect(normalizedCss).toContain('container-name: combat-zone')
     expect(normalizedCss).toContain('container-type: size')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 220px)')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 160px)')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 140px)')
-    expect(normalizedCss).toContain('.combat-card-wrap,\n  .combat-card-wrap > .card-face')
-    expect(normalizedCss).toContain('width: 100px')
-    expect(normalizedCss.lastIndexOf('/* Board cards share one physical size')).toBeGreaterThan(
-      normalizedCss.lastIndexOf('@container combat-zone (max-height: 140px)'),
+    expect(normalizedCss).toMatch(
+      /@container combat-zone \(min-height: 0px\)\s*\{\s*\.combat-card-wrap\s*\{[^}]*--combat-card-height:\s*max\(0px, calc\(100cqh - 18px\)\)[^}]*width:\s*calc\(var\(--combat-card-height\) \* 0\.7\)[^}]*height:\s*var\(--combat-card-height\)[^}]*max-height:\s*var\(--combat-card-height\)[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap > \.card-face\s*\{[^}]*width:\s*100%[^}]*height:\s*100%[^}]*max-height:\s*100%[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(/\.combat-card-wrap \.hp-card-stack\s*\{[^}]*max-width:\s*100%[^}]*}/)
+  })
+
+  it('pins the HP badge to the card upper-right and enlarges both combat stat badges by 10%', () => {
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap \.card-badges\s*\{[^}]*inset:\s*0[^}]*display:\s*block[^}]*padding:\s*0[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap \.badge-hp\s*\{[^}]*position:\s*absolute[^}]*top:\s*3px[^}]*right:\s*3px[^}]*transform:\s*scale\(1\.1\)[^}]*transform-origin:\s*top right[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap \.badge-atk\s*\{[^}]*position:\s*absolute[^}]*right:\s*3px[^}]*bottom:\s*40px[^}]*transform:\s*scale\(1\.1\)[^}]*transform-origin:\s*bottom right[^}]*}/,
+    )
+  })
+
+  it('aligns the energy shortfall hint immediately below the card lower edge', () => {
+    expect(normalizedCss).toMatch(
+      /\.energy-shortfall-hint\s*\{[^}]*position:\s*absolute[^}]*top:\s*100%[^}]*bottom:\s*auto[^}]*left:\s*50%[^}]*transform:\s*translateX\(-50%\)[^}]*}/,
+    )
+  })
+
+  it('draws a persistent target marker around the pending attack target', () => {
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap\.is-attack-target::before\s*\{[^}]*content:\s*'攻擊目標'[^}]*z-index:\s*7[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap\.is-attack-target::after\s*\{[^}]*inset:\s*-5px[^}]*border:\s*3px solid #fff17c[^}]*animation:\s*attack-target-pulse 0\.9s ease-in-out infinite[^}]*}/,
     )
   })
 })

@@ -510,6 +510,7 @@ export interface TrapResponseModalProps {
   battleCookieCost?: number
   selectedBattleCookieIds?: string[]
   attackerCard?: GameCard | null
+  attackTargetCard?: GameCard | null
   trapTargetCandidates?: CookieInBattle[]
   selectedTrapTargetId?: string | null
   onSelectTrap: (instanceId: string) => void
@@ -543,6 +544,38 @@ export interface TrapResponseModalProps {
 
 type TrapStep = 'select' | GuidedPhaseId
 
+function AttackDeclarationSummary({
+  attackerCard = null,
+  attackTargetCard = null,
+}: {
+  attackerCard?: GameCard | null
+  attackTargetCard?: GameCard | null
+}) {
+  if (!attackerCard && !attackTargetCard) return null
+
+  return (
+    <div className="attack-declaration-summary" aria-label="本次攻擊資訊">
+      {attackerCard && (
+        <div className="attack-declaration-card attack-declaration-attacker">
+          <span>攻擊者</span>
+          <CardFace card={attackerCard} />
+          <strong>{attackerCard.name}</strong>
+        </div>
+      )}
+      {attackerCard && attackTargetCard && (
+        <ChevronRight className="attack-declaration-arrow" aria-hidden="true" />
+      )}
+      {attackTargetCard && (
+        <div className="attack-declaration-card attack-declaration-target">
+          <span>攻擊目標</span>
+          <CardFace card={attackTargetCard} />
+          <strong>{attackTargetCard.name}</strong>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function TrapResponseModal({
   cards,
   selectedTrapId,
@@ -558,6 +591,7 @@ export function TrapResponseModal({
   battleCookieCost = 0,
   selectedBattleCookieIds = [],
   attackerCard = null,
+  attackTargetCard = null,
   trapTargetCandidates = [],
   selectedTrapTargetId = null,
   onSelectTrap,
@@ -730,13 +764,10 @@ export function TrapResponseModal({
             )}
             <span>攻擊宣告回應</span>
             <h2>是否發動陷阱？</h2>
-            {attackerCard && (
-              <div className="trap-attacker-info">
-                <span>對方正在攻擊的餅乾：</span>
-                <CardFace card={attackerCard} />
-                <strong>{attackerCard.name}</strong>
-              </div>
-            )}
+            <AttackDeclarationSummary
+              attackerCard={attackerCard}
+              attackTargetCard={attackTargetCard}
+            />
             <p>每次攻擊最多發動一張陷阱。選擇卡牌後會顯示付款與目標。</p>
             <div className="modal-card-options">
               {cards.map((card) => (
@@ -990,6 +1021,8 @@ export function TrapResponseModal({
 export interface AttackResponseModalProps {
   trapCards: GameCard[]
   blockerCards: CookieInBattle[]
+  attackerCard?: GameCard | null
+  attackTargetCard?: GameCard | null
   onSelectTrap?: (instanceId: string) => void
   onSelectBlocker?: (instanceId: string) => void
   onSkip: () => void
@@ -999,6 +1032,8 @@ export interface AttackResponseModalProps {
 export function AttackResponseModal({
   trapCards,
   blockerCards,
+  attackerCard,
+  attackTargetCard,
   onSelectTrap,
   onSelectBlocker,
   onSkip,
@@ -1041,6 +1076,10 @@ export function AttackResponseModal({
         <span>攻擊宣告回應</span>
         <h2>選擇回應方式</h2>
         <p>每次攻擊只能發動一種回應，請選擇使用陷阱卡或 Blocker。</p>
+        <AttackDeclarationSummary
+          attackerCard={attackerCard}
+          attackTargetCard={attackTargetCard}
+        />
         {trapCards.length > 0 && (
           <>
             <strong>陷阱卡</strong>
@@ -1189,6 +1228,8 @@ export interface BlockerResponseModalProps {
   blockerCards: CookieInBattle[]
   selectedBlockerId: string | null
   paymentCards: GameCard[]
+  attackerCard?: GameCard | null
+  attackTargetCard?: GameCard | null
   onSelectBlocker: (instanceId: string) => void
   onConfirm: () => void
   onSkip: () => void
@@ -1200,6 +1241,8 @@ export function BlockerResponseModal({
   blockerCards,
   selectedBlockerId,
   paymentCards,
+  attackerCard,
+  attackTargetCard,
   onSelectBlocker,
   onConfirm,
   onSkip,
@@ -1260,6 +1303,10 @@ export function BlockerResponseModal({
         <span>攻擊宣告回應</span>
         <h2>是否使用 Blocker 阻擋？</h2>
         <p>選擇要阻擋攻擊的餅乾，攻擊將轉移至該餅乾。</p>
+        <AttackDeclarationSummary
+          attackerCard={attackerCard}
+          attackTargetCard={attackTargetCard}
+        />
         <div className="modal-card-options">
           {blockerCards.map((cookie) => (
             <button

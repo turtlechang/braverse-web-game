@@ -392,7 +392,8 @@
 .energy-shortfall-hint {
   position: absolute;
   z-index: 6;
-  bottom: 0;
+  top: 100%;
+  bottom: auto;
   left: 50%;
   width: max-content;
   max-width: 150px;
@@ -985,11 +986,6 @@
     padding-bottom: 6px;
   }
 
-  .combat-card-wrap,
-  .combat-card-wrap > .card-face {
-    width: 100px;
-  }
-
   .hp-card-stack {
     width: 100px;
     height: 26px;
@@ -1016,22 +1012,12 @@
 }
 
 @container combat-zone (max-height: 160px) {
-  .combat-card-wrap,
-  .combat-card-wrap > .card-face {
-    width: 90px;
-  }
-
   .hp-card-stack {
     width: 90px;
   }
 }
 
 @container combat-zone (max-height: 140px) {
-  .combat-card-wrap,
-  .combat-card-wrap > .card-face {
-    width: 80px;
-  }
-
   .hp-card-stack {
     width: 80px;
   }
@@ -1069,7 +1055,7 @@
   transform-origin: center top;
   transition: none;
   z-index: calc(10 + var(--fan-z-index, 0));
-  transform: translateX(calc(-50% + var(--opponent-x))) translateY(var(--opponent-y, 0px)) rotate(var(--opponent-angle));
+  transform: translateX(calc(-50% + var(--opponent-x))) translateY(var(--opponent-y, 0px));
 }
 
 .hand-card-wrap.opponent-hand-card.single-card {
@@ -1936,14 +1922,101 @@
   }
 }
 
-/* Board cards share one physical size on both sides of the table. This final
- * rule intentionally follows every viewport and container override. */
-.combat-card-wrap,
-.combat-card-wrap > .card-face,
+/* Support cards retain their agreed fixed board size. */
 .card-face.support-card {
   width: 70px;
   height: 100px;
   aspect-ratio: 0.7;
+}
+
+/* Combat cards expand to each combat zone's inner height. The 18px reserve
+ * matches the desktop combat-slot vertical padding, leaving room for the HP
+ * stack without either side's card crossing its combat-zone boundary. */
+@container combat-zone (min-height: 0px) {
+  .combat-card-wrap {
+    --combat-card-height: max(0px, calc(100cqh - 18px));
+    width: calc(var(--combat-card-height) * 0.7);
+    height: var(--combat-card-height);
+    max-height: var(--combat-card-height);
+    aspect-ratio: 0.7;
+  }
+
+  .combat-card-wrap > .card-face {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    aspect-ratio: 0.7;
+  }
+
+  .combat-card-wrap .hp-card-stack {
+    max-width: 100%;
+  }
+}
+
+/* Combat stat badges are anchored to the card itself so HP remains visible at
+ * the upper-right corner while the attack badge keeps its lower-right slot. */
+.combat-card-wrap .card-badges {
+  inset: 0;
+  display: block;
+  padding: 0;
+}
+
+.combat-card-wrap .badge-hp {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  transform: scale(1.1);
+  transform-origin: top right;
+}
+
+.combat-card-wrap .badge-atk {
+  position: absolute;
+  right: 3px;
+  bottom: 40px;
+  transform: scale(1.1);
+  transform-origin: bottom right;
+}
+
+.combat-card-wrap.is-attack-target::before {
+  content: '攻擊目標';
+  position: absolute;
+  z-index: 7;
+  top: 4px;
+  left: 4px;
+  padding: 2px 5px;
+  border: 1px solid #fff17c;
+  border-radius: 4px;
+  color: #1f2937;
+  background: #fff17c;
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.combat-card-wrap.is-attack-target::after {
+  content: '';
+  position: absolute;
+  z-index: 6;
+  inset: -5px;
+  border: 3px solid #fff17c;
+  border-radius: 8px;
+  box-shadow: 0 0 18px rgba(255, 241, 124, 0.92);
+  animation: attack-target-pulse 0.9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes attack-target-pulse {
+  50% {
+    border-color: #ff9b45;
+    box-shadow: 0 0 28px rgba(255, 155, 69, 0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combat-card-wrap.is-attack-target::after {
+    animation: none;
+  }
 }
 
 .top-field .card-face.support-card {

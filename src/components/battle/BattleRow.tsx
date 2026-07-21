@@ -317,7 +317,6 @@ export function BattleRow({
                     className={`hand-card-wrap opponent-hand-card${player.hand.length === 1 ? ' single-card' : ''}`}
                     key={card.instanceId}
                     style={{
-                      '--opponent-angle': `${fan.opponentAngle}deg`,
                       '--opponent-x': `${fan.opponentX}px`,
                       '--opponent-y': `${fan.opponentY}px`,
                       '--fan-z-index': fan.fanZIndex,
@@ -411,11 +410,14 @@ export function BattleRow({
                 revealTargetId === cookie.card.instanceId
                   ? game.pendingBattle.revealedHpCard
                   : null
+              const isPendingAttackTarget =
+                game.pendingBattle?.targetInstanceId === cookie.card.instanceId
 
               const animClasses = [
                 faintAnimIds?.has(cookie.card.instanceId) && 'animate-faint-shrink',
                 attackShakeId === cookie.card.instanceId && 'animate-attack-shake',
                 damageFlashId === cookie.card.instanceId && 'animate-damage-flash',
+                isPendingAttackTarget && 'is-attack-target',
               ]
                 .filter(Boolean)
                 .join(' ')

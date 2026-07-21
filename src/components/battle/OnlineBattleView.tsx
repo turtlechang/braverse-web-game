@@ -510,6 +510,7 @@ export function OnlineBattleView({
         attackPreviewArrow={{
           sourceInstanceId:
             opponentAttackSelection.attackerInstanceId ??
+            pendingBattle?.attackerInstanceId ??
             (actionStatus.mode === 'opponent-thinking'
               ? actionStatus.sourceCard?.instanceId ?? null
               : null),
