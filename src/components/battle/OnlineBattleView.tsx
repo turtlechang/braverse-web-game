@@ -13,6 +13,7 @@ import type { BattleRowProps } from './BattleRow'
 import { PhaseRail } from '../layout/PhaseRail'
 import { findCardInGame } from './publicCardLookup'
 import { StatusToast } from '../panels/InteractionOverlays'
+import { RemoteActionBanner } from '../panels/RemoteActionBanner'
 import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
 import { deriveActionStatus } from '../panels/actionStatus'
 import { buildActionProgress } from '../panels/actionProgress'
@@ -504,6 +505,12 @@ export function OnlineBattleView({
 
       <StatusToast message={commandRejectedReason ?? match.message} />
       <OnlineActivityFeed game={game} viewerPlayerId={viewerPlayerId} />
+      {!centerPreviewCard && (
+        <RemoteActionBanner
+          status={actionStatus}
+          connectionNotice={connectionNotice}
+        />
+      )}
 
       <BattleTable
         ariaLabel="Braverse 線上對戰桌"
