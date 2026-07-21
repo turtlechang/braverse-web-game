@@ -23,6 +23,7 @@ export interface BattleTableProps {
   attackPreviewArrow: AttackPreviewArrowProps
   previewCard: GameCard | null
   previewContextLabel?: string
+  onDismissPreview?: () => void
   attackPaymentPanel: AttackPaymentPanelProps | null
   centerPreview?: CenterCardPreviewProps | null
 }
@@ -34,12 +35,17 @@ export function BattleTable({
   attackPreviewArrow,
   previewCard,
   previewContextLabel,
+  onDismissPreview,
   attackPaymentPanel,
   centerPreview,
 }: BattleTableProps) {
   return (
     <>
-      <CardPreviewPanel card={previewCard} contextLabel={previewContextLabel} />
+      <CardPreviewPanel
+        card={previewCard}
+        contextLabel={previewContextLabel}
+        onDismiss={onDismissPreview}
+      />
 
       <section className="table-area" aria-label={ariaLabel}>
         <BattleRow {...topBattleRow} />

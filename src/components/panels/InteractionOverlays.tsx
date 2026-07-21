@@ -6,11 +6,13 @@ import './InteractionOverlays.css'
 export interface CardPreviewPanelProps {
   card: GameCard | null
   contextLabel?: string
+  onDismiss?: () => void
 }
 
 export function CardPreviewPanel({
   card,
   contextLabel,
+  onDismiss,
 }: CardPreviewPanelProps) {
   if (!card) return null
 
@@ -22,11 +24,12 @@ export function CardPreviewPanel({
     card.stageAbility?.text ??
     (card.type === 'cookie' ? card.attackText : undefined)
 
-  return (
+  const preview = (
     <aside
-      className="card-preview-panel"
+      className={`card-preview-panel${onDismiss ? ' is-transient' : ''}`}
       aria-label={`${card.name}快速預覽`}
       data-testid="card-preview-panel"
+      onPointerDown={onDismiss ? (event) => event.stopPropagation() : undefined}
     >
       <CardFace card={card} className="preview-card" />
       <div>
@@ -40,6 +43,19 @@ export function CardPreviewPanel({
         )}
       </div>
     </aside>
+  )
+
+  if (!onDismiss) return preview
+
+  return (
+    <div
+      className="card-preview-dismiss-layer"
+      data-testid="card-preview-dismiss-layer"
+      role="presentation"
+      onPointerDown={onDismiss}
+    >
+      {preview}
+    </div>
   )
 }
 

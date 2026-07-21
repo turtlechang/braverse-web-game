@@ -7,6 +7,7 @@ import { useOnlinePendingEffect } from '../../hooks/useOnlinePendingEffect'
 import { useMatchDialogs } from '../../hooks/useMatchDialogs'
 import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
+import { useFlipCardPreview } from '../../hooks/useFlipCardPreview'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
 import { PhaseRail } from '../layout/PhaseRail'
@@ -141,6 +142,7 @@ export function OnlineBattleView({
   ])
 
   const pendingBattle = game.pendingBattle
+  const flipPreview = useFlipCardPreview(pendingBattle, viewerPlayerId)
   const optionalCostAttackPrompt =
     game.pendingEffectOrder && !game.pendingEffectOrder.resolvedOrder
       ? null
@@ -523,12 +525,15 @@ export function OnlineBattleView({
               ? '攻擊宣告'
               : '目標選擇',
         }}
-        previewCard={hoveredCard ?? opponentPreviewCard}
+        previewCard={flipPreview.card ?? hoveredCard ?? opponentPreviewCard}
         previewContextLabel={
-          hoveredCard || hoveredOpponentCard || !opponentSourcePreviewCard
-            ? undefined
-            : '對手目前操作'
+          flipPreview.card
+            ? 'FLIP 效果觸發 · 點擊預覽外側關閉'
+            : hoveredCard || hoveredOpponentCard || !opponentSourcePreviewCard
+              ? undefined
+              : '對手目前操作'
         }
+        onDismissPreview={flipPreview.card ? flipPreview.dismiss : undefined}
         attackPaymentPanel={
           match.selectedAttacker && !pending.pendingEffect
             ? {

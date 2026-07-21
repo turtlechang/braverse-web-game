@@ -16,6 +16,16 @@
   pointer-events: none;
 }
 
+.card-preview-dismiss-layer {
+  position: absolute;
+  z-index: 27;
+  inset: 0;
+}
+
+.card-preview-panel.is-transient {
+  pointer-events: auto;
+}
+
 .card-preview-panel .preview-card {
   width: min(100%, 188px);
 }
@@ -85,6 +95,10 @@
 }
 
 @container game-shell (max-width: 900px) {
+  .card-preview-dismiss-layer {
+    display: none;
+  }
+
   .card-preview-panel {
     display: none;
   }

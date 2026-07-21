@@ -31,6 +31,7 @@ import { useAiTurn } from './hooks/useAiTurn'
 import { useMatchController } from './hooks/useMatchController'
 import { useHandSelectionDismissal } from './hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from './hooks/deriveInteractionLocked'
+import { useFlipCardPreview } from './hooks/useFlipCardPreview'
 import type { AiLevel } from './game'
 
 const InformationModals = lazy(async () => {
@@ -201,6 +202,10 @@ function App() {
       ? findCardInGame(match.game, actionStatus.sourceCard?.instanceId) ?? null
       : null
   const opponentPreviewCard = hoveredOpponentCard ?? opponentSourcePreviewCard
+  const flipPreview = useFlipCardPreview(
+    match.game.pendingBattle,
+    match.viewerPlayerId,
+  )
   const centerPreviewCard =
     actionStatus.mode === 'opponent-thinking' ||
     actionStatus.mode === 'resolving' ||
@@ -447,12 +452,15 @@ function App() {
               ? '攻擊宣告'
               : '目標選擇',
         }}
-        previewCard={hoveredCard ?? opponentPreviewCard}
+        previewCard={flipPreview.card ?? hoveredCard ?? opponentPreviewCard}
         previewContextLabel={
-          hoveredCard || hoveredOpponentCard || !opponentSourcePreviewCard
-            ? undefined
-            : '對手目前操作'
+          flipPreview.card
+            ? 'FLIP 效果觸發 · 點擊預覽外側關閉'
+            : hoveredCard || hoveredOpponentCard || !opponentSourcePreviewCard
+              ? undefined
+              : '對手目前操作'
         }
+        onDismissPreview={flipPreview.card ? flipPreview.dismiss : undefined}
         attackPaymentPanel={
           match.selectedAttacker && !pending.pendingEffect
             ? {
