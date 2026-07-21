@@ -1440,7 +1440,10 @@ try {
     '我方戰鬥區餅乾下方應展開 HP 卡',
   )
 
-  await page.getByRole('button', { name: '暫停資訊' }).click()
+  // "暫停資訊" now lives inside the MatchToolbar's collapsed dropdown menu
+  // (role="menuitem", not role="button") — open the toolbar trigger first.
+  await page.getByRole('button', { name: '對局工具' }).click()
+  await page.getByRole('menuitem', { name: '暫停資訊' }).click()
   await page.locator('.pause-modal').waitFor({ state: 'visible' })
   await page.getByRole('button', { name: '執行 20 場 AI 驗證' }).click()
   await page.getByTestId('ai-simulation-report').waitFor()
