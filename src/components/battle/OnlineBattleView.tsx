@@ -7,8 +7,10 @@ import { useOnlinePendingEffect } from '../../hooks/useOnlinePendingEffect'
 import { useMatchDialogs } from '../../hooks/useMatchDialogs'
 import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
+import { useFlipCardPreview } from '../../hooks/useFlipCardPreview'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
+import { PhaseRail } from '../layout/PhaseRail'
 import { findCardInGame } from './publicCardLookup'
 import { StatusToast } from '../panels/InteractionOverlays'
 import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
@@ -140,6 +142,7 @@ export function OnlineBattleView({
   ])
 
   const pendingBattle = game.pendingBattle
+  const flipPreview = useFlipCardPreview(pendingBattle, viewerPlayerId)
   const optionalCostAttackPrompt =
     game.pendingEffectOrder && !game.pendingEffectOrder.resolvedOrder
       ? null
@@ -504,31 +507,12 @@ export function OnlineBattleView({
 
       <BattleTable
         ariaLabel="Braverse 線上對戰桌"
-        phaseRail={{
-          phase: game.phase,
-          turnNumber: game.turnNumber,
-          activePlayerName: match.activePlayer.name,
-          isPlayerTurn: game.activePlayerId === viewerPlayerId,
-          disabled:
-            phaseDisabled ||
-            game.activePlayerId !== viewerPlayerId ||
-            game.phase === 'active' ||
-            game.phase === 'draw',
-          onAdvance: () => {
-            if (pending.pendingEffect) return
-            match.handleAdvancePhase()
-          },
-        }}
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
-        remoteActionBanner={{
-          status: actionStatus,
-          compact: true,
-          connectionNotice,
-        }}
         attackPreviewArrow={{
           sourceInstanceId:
             opponentAttackSelection.attackerInstanceId ??
+            pendingBattle?.attackerInstanceId ??
             (actionStatus.mode === 'opponent-thinking'
               ? actionStatus.sourceCard?.instanceId ?? null
               : null),
@@ -541,13 +525,15 @@ export function OnlineBattleView({
               ? '攻擊宣告'
               : '目標選擇',
         }}
-        opponentPreviewCard={opponentPreviewCard}
-        opponentPreviewContextLabel={
-          hoveredOpponentCard || !opponentSourcePreviewCard
-            ? undefined
-            : '對手目前操作'
+        previewCard={flipPreview.card ?? hoveredCard ?? opponentPreviewCard}
+        previewContextLabel={
+          flipPreview.card
+            ? 'FLIP 效果觸發 · 點擊預覽外側關閉'
+            : hoveredCard || hoveredOpponentCard || !opponentSourcePreviewCard
+              ? undefined
+              : '對手目前操作'
         }
-        hoveredCard={hoveredCard}
+        onDismissPreview={flipPreview.card ? flipPreview.dismiss : undefined}
         attackPaymentPanel={
           match.selectedAttacker && !pending.pendingEffect
             ? {
@@ -569,6 +555,22 @@ export function OnlineBattleView({
             ? { card: centerPreviewCard, label: actionStatus.headline }
             : null
         }
+      />
+
+      <PhaseRail
+        phase={game.phase}
+        turnNumber={game.turnNumber}
+        isPlayerTurn={game.activePlayerId === viewerPlayerId}
+        disabled={
+          phaseDisabled ||
+          game.activePlayerId !== viewerPlayerId ||
+          game.phase === 'active' ||
+          game.phase === 'draw'
+        }
+        onAdvance={() => {
+          if (pending.pendingEffect) return
+          match.handleAdvancePhase()
+        }}
       />
 
       {openingSnapshot && (

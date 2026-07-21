@@ -25,18 +25,54 @@ const previewCard: GameCard = {
 }
 
 describe('interaction overlays', () => {
-  it('renders the selected card in the requested safe-area position', async () => {
+  it('renders the selected card', async () => {
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(() => root.render(<CardPreviewPanel card={previewCard} />))
+
+    expect(container.querySelector('.card-preview-panel')).not.toBeNull()
+    expect(container.textContent).toContain('快速預覽卡')
+    await act(() => root.unmount())
+  })
+
+  it('renders nothing when no card is given', async () => {
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(() => root.render(<CardPreviewPanel card={null} />))
+
+    expect(container.querySelector('.card-preview-panel')).toBeNull()
+    await act(() => root.unmount())
+  })
+
+  it('lets a transient preview dismiss from outside the large card', async () => {
+    const onDismiss = vi.fn()
     const container = document.createElement('div')
     containers.push(container)
     document.body.append(container)
     const root = createRoot(container)
 
     await act(() =>
-      root.render(<CardPreviewPanel card={previewCard} position="top" />),
+      root.render(<CardPreviewPanel card={previewCard} onDismiss={onDismiss} />),
     )
 
-    expect(container.querySelector('.card-preview-panel.is-top')).not.toBeNull()
-    expect(container.textContent).toContain('快速預覽卡')
+    const panel = container.querySelector('.card-preview-panel')!
+    await act(() =>
+      panel.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })),
+    )
+    expect(onDismiss).not.toHaveBeenCalled()
+
+    const layer = container.querySelector('[data-testid="card-preview-dismiss-layer"]')!
+    await act(() =>
+      layer.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })),
+    )
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+
     await act(() => root.unmount())
   })
 

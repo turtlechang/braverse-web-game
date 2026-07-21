@@ -7,29 +7,47 @@ const normalizedPhaseRailCss = readFileSync(
 ).replace(/\r\n/g, '\n')
 
 describe('PhaseRail CSS grid-row assignments', () => {
-  it('brand-mark specifies grid-row: 1 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.brand-mark\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/)
+  it('turn-indicator specifies grid-row: 1 in base rules', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.turn-indicator\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/)
   })
 
-  it('turn-indicator specifies grid-row: 2 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.turn-indicator\s*\{[^}]*grid-row\s*:\s*2[^}]*\}/)
+  it('next-phase-button specifies grid-row: 2 in base rules', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*2[^}]*\}/)
   })
 
-  it('phase-rail ol specifies grid-row: 3 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s+ol\s*\{[^}]*grid-row\s*:\s*3[^}]*\}/)
-  })
-
-  it('next-phase-button specifies grid-row: 5 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.next-phase-button\s*\{[^}]*grid-row\s*:\s*5[^}]*\}/)
-  })
-
-  it('turn-counter specifies grid-row: 6 in base rules', () => {
-    expect(normalizedPhaseRailCss).toMatch(/\.turn-counter\s*\{[^}]*grid-row\s*:\s*6[^}]*\}/)
-  })
-
-  it('max-width:900px block resets grid-row to 1 for all six children', () => {
+  it('max-width:900px block resets grid-row to 1 for the two remaining children', () => {
     expect(normalizedPhaseRailCss).toMatch(
-      /\.brand-mark\s*,\s*\.turn-indicator\s*,\s*\.phase-rail\s+ol\s*,\s*\.phase-hint\s*,\s*\.next-phase-button\s*,\s*\.turn-counter\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
+      /\.turn-indicator\s*,\s*\.next-phase-button\s*\{[^}]*grid-row\s*:\s*1[^}]*\}/
     )
+  })
+
+  it('floats as a vertically-centered block anchored to the right edge of its container', () => {
+    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*top\s*:\s*50%[^}]*\}/)
+    expect(normalizedPhaseRailCss).toMatch(/\.phase-rail\s*\{[^}]*right\s*:\s*0[^}]*\}/)
+  })
+
+  it('keeps the desktop rail vertically centered against the game-shell right edge', () => {
+    expect(normalizedPhaseRailCss).toMatch(
+      /@container game-shell \(min-width: 901px\)\s*\{\s*\.phase-rail\s*\{[^}]*top\s*:\s*50%[^}]*right\s*:\s*0[^}]*bottom\s*:\s*auto[^}]*transform\s*:\s*translateY\(-50%\)[^}]*\}/,
+    )
+  })
+
+  it('uses a deep navy background with a gold frame while preserving turn ownership colors', () => {
+    expect(normalizedPhaseRailCss).toContain('background: #12365F')
+    expect(normalizedPhaseRailCss).toContain('border: 2px solid #d4af37')
+    expect(normalizedPhaseRailCss).toContain('rgba(37, 99, 235, 0.78)')
+    expect(normalizedPhaseRailCss).toContain('rgba(220, 38, 38, 0.76)')
+  })
+
+  it('uses blue for the player turn and red for the opponent turn on desktop', () => {
+    const desktopPlayerRule = normalizedPhaseRailCss.match(
+      /@container game-shell \(min-width: 901px\)\s*\{[\s\S]*?\.turn-indicator\.is-player\s*\{[\s\S]*?\n {2}}/,
+    )?.[0]
+    const desktopOpponentRule = normalizedPhaseRailCss.match(
+      /@container game-shell \(min-width: 901px\)\s*\{[\s\S]*?\.turn-indicator\.is-opponent\s*\{[\s\S]*?\n {2}}/,
+    )?.[0]
+
+    expect(desktopPlayerRule).toContain('rgba(37, 99, 235, 0.78)')
+    expect(desktopOpponentRule).toContain('rgba(220, 38, 38, 0.76)')
   })
 })

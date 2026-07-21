@@ -1,8 +1,8 @@
 .battle-log-toggle {
   position: absolute;
   z-index: 30;
-  top: 10px;
   right: 10px;
+  bottom: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -37,9 +37,9 @@
 .battle-log-sidebar {
   position: absolute;
   z-index: 32;
-  top: 46px;
-  right: 10px;
-  bottom: 12px;
+  top: 10px;
+  right: calc(var(--phase-rail-width) + 10px);
+  bottom: 92px;
   width: min(280px, 32vw);
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -115,11 +115,20 @@
 }
 
 @container game-shell (max-width: 900px) {
+  .battle-log-toggle {
+    top: 10px;
+    right: 10px;
+    bottom: auto;
+  }
+
   .battle-log-toggle span {
     display: none;
   }
 
   .battle-log-sidebar {
+    top: 46px;
+    right: 10px;
+    bottom: 12px;
     width: min(240px, 70vw);
   }
 }

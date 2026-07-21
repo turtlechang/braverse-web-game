@@ -15,6 +15,7 @@ import {
 } from '../../game'
 import { CardFace } from '../cards/CardVisuals'
 import { computeOpponentFan } from './opponentFan'
+import { computePlayerHandFan } from './playerHandFan'
 import './BattleRow.css'
 
 export type BattleResourceKind = 'deck' | 'stage' | 'break'
@@ -122,8 +123,25 @@ export function BattleRow({
   const canOperate = isActivePlayer && !isOpponent && !interactionLocked
   const toggleResource = (kind: BattleResourceKind) =>
     onToggleResource?.(kind)
+  const selectedHandCard = !isOpponent
+    ? (player.hand.find((card) => card.instanceId === selectedHandCardId) ?? null)
+    : null
+  const selectedHandCardCanSupport =
+    Boolean(selectedHandCard) &&
+    canOperate &&
+    game.phase === 'support' &&
+    !game.supportPlacedThisTurn
+  const selectedHandCardCanDeploy =
+    Boolean(selectedHandCard) &&
+    canOperate &&
+    game.phase === 'main' &&
+    selectedHandCard?.type === 'cookie' &&
+    player.battleArea.length < 2
+  const breakLevel = getBreakAreaLevel(game, playerId)
+  const breakLevelBand =
+    breakLevel >= 10 ? 'critical' : breakLevel >= 8 ? 'danger' : breakLevel >= 6 ? 'caution' : 'safe'
   const supportZone = (
-    <div className="support-zone">
+    <div className={`support-zone${selectedHandCardCanSupport ? ' is-legal-target' : ''}`}>
       <span className="zone-watermark">支援區</span>
       <strong className="support-count">支援 {player.supportArea.length} 張</strong>
       <div className="support-cards">
@@ -215,17 +233,17 @@ export function BattleRow({
       aria-label={`${player.name}場地`}
     >
       <div className="break-zone resource-dock">
-        <div className="zone-heading">
+        <div className="zone-heading" data-level-band={breakLevelBand}>
           <span>休息</span>
-          <strong>LV. {getBreakAreaLevel(game, playerId)}</strong>
-          <b>{player.breakArea.length}</b>
+          <strong>LV. {breakLevel}/10</strong>
+          <b>{player.breakArea.length} 張</b>
         </div>
         <button
           className="resource-summary break-summary"
           type="button"
           aria-label={`${player.name}休息區摘要`}
           aria-expanded={openResourceKind === 'break'}
-          title={`休息區 LV.${getBreakAreaLevel(game, playerId)} · ${player.breakArea.length} 張`}
+          title={`休息區 LV.${breakLevel}/10 · ${player.breakArea.length} 張`}
           onClick={() => toggleResource('break')}
         >
           <div className="mini-break-stack" aria-hidden="true">
@@ -277,7 +295,7 @@ export function BattleRow({
           >
             <span>{player.name}休息區</span>
             <strong>
-              LV. {getBreakAreaLevel(game, playerId)} · {player.breakArea.length} 張
+              LV. {breakLevel}/10 · {player.breakArea.length} 張
             </strong>
             {player.breakArea.length > 0 ? (
               <div className="resource-card-list">
@@ -303,17 +321,11 @@ export function BattleRow({
         {position === 'top' && supportZone}
         {isOpponent && player.hand.length > 0 && (() => {
           const baseFan = computeOpponentFan(player.hand.length, 0)
-          const count = player.hand.length
           return (
             <div
               className="hand-fan top-hand"
               aria-label="對手手牌"
-              style={{
-                '--safety-ratio': baseFan.safetyRatio,
-                ...(count === 1
-                  ? { left: '50%', transform: 'translateX(-50%)', width: 'var(--opponent-card-width)' }
-                  : {}),
-              } as React.CSSProperties}
+              style={{ '--safety-ratio': baseFan.safetyRatio } as React.CSSProperties}
             >
               {player.hand.map((card, index) => {
                 const fan = computeOpponentFan(player.hand.length, index)
@@ -322,7 +334,8 @@ export function BattleRow({
                     className={`hand-card-wrap opponent-hand-card${player.hand.length === 1 ? ' single-card' : ''}`}
                     key={card.instanceId}
                     style={{
-                      '--opponent-angle': `${fan.opponentAngle}deg`,
+                      '--opponent-x': `${fan.opponentX}px`,
+                      '--opponent-y': `${fan.opponentY}px`,
                       '--fan-z-index': fan.fanZIndex,
                     } as React.CSSProperties}
                   >
@@ -337,11 +350,14 @@ export function BattleRow({
             </div>
           )
         })()}
-        <div className="combat-zone">
-          <div
-            className="row-meta"
-            data-active={isActivePlayer ? 'true' : 'false'}
-          >
+        <div
+          className="row-meta"
+          data-active={isActivePlayer ? 'true' : 'false'}
+        >
+          <span className="row-avatar" aria-hidden="true">
+            {player.name.trim().charAt(0).toUpperCase() || '?'}
+          </span>
+          <div className="row-meta-info">
             <span className="row-role">{isOpponent ? 'OPPONENT' : 'PLAYER'}</span>
             <strong>{player.name}</strong>
             <b className="turn-order-badge">
@@ -350,7 +366,7 @@ export function BattleRow({
             <div
               className="row-status"
               data-active={isActivePlayer ? 'true' : 'false'}
-              aria-label={`${player.name}狀態：${isActivePlayer ? '行動中' : '等待'}，手牌 ${player.hand.length}，牌庫 ${player.deck.length}，棄牌 ${player.discardPile.length}，休息 LV.${getBreakAreaLevel(game, playerId)}`}
+              aria-label={`${player.name}狀態：${isActivePlayer ? '行動中' : '等待'}，手牌 ${player.hand.length}`}
             >
               <span
                 className={`row-stat row-stat-status ${isActivePlayer ? 'is-active' : 'is-waiting'}`}
@@ -362,20 +378,10 @@ export function BattleRow({
                 <span className="row-stat-label">手牌</span>
                 <b className="row-stat-value">{player.hand.length}</b>
               </span>
-              <span className="row-stat row-stat-secondary row-stat-deck" aria-label={`牌庫 ${player.deck.length}`}>
-                <span className="row-stat-label">牌庫</span>
-                <b className="row-stat-value">{player.deck.length}</b>
-              </span>
-              <span className="row-stat row-stat-secondary row-stat-discard" aria-label={`棄牌 ${player.discardPile.length}`}>
-                <span className="row-stat-label">棄牌</span>
-                <b className="row-stat-value">{player.discardPile.length}</b>
-              </span>
-              <span className="row-stat row-stat-rest" aria-label={`休息 LV.${getBreakAreaLevel(game, playerId)}`}>
-                <span className="row-stat-label">休息</span>
-                <b className="row-stat-value">LV.{getBreakAreaLevel(game, playerId)}</b>
-              </span>
             </div>
           </div>
+        </div>
+        <div className={`combat-zone${selectedHandCardCanDeploy ? ' is-legal-target' : ''}`}>
           <span className="zone-watermark">戰鬥區</span>
           <div className="combat-slots">
             {player.battleArea.map((cookie) => {
@@ -421,11 +427,14 @@ export function BattleRow({
                 revealTargetId === cookie.card.instanceId
                   ? game.pendingBattle.revealedHpCard
                   : null
+              const isPendingAttackTarget =
+                game.pendingBattle?.targetInstanceId === cookie.card.instanceId
 
               const animClasses = [
                 faintAnimIds?.has(cookie.card.instanceId) && 'animate-faint-shrink',
                 attackShakeId === cookie.card.instanceId && 'animate-attack-shake',
                 damageFlashId === cookie.card.instanceId && 'animate-damage-flash',
+                isPendingAttackTarget && 'is-attack-target',
               ]
                 .filter(Boolean)
                 .join(' ')
@@ -454,7 +463,11 @@ export function BattleRow({
                         cookie.card.instanceId,
                       )
                     }
-                    attackable={canSelectAttack}
+                    attackable={
+                      canSelectAttack &&
+                      (!selectedAttackerId ||
+                        selectedAttackerId === cookie.card.instanceId)
+                    }
                     onClick={
                       canSelectEffectTarget
                         ? () => onEffectTarget?.(cookie.card.instanceId)
@@ -697,15 +710,7 @@ export function BattleRow({
                     : null
             const isSelected = selectedHandCardId === card.instanceId
             const count = player.hand.length
-            const center = (count - 1) / 2
-            const offset = index - center
-            const baseStep = count <= 1 ? 0 : Math.max(20, Math.min(30, 150 / count))
-            const fanX = offset * baseStep
-            const maxNorm = (count - 1) / 2 || 1
-            const normOffset = offset / maxNorm
-            const fanY = normOffset * normOffset * 50
-            const angleStep = count <= 1 ? 0 : Math.min(12, 60 / count)
-            const fanRotation = offset * angleStep
+            const { fanX, fanY, fanRotation } = computePlayerHandFan(count, index)
 
             return (
               <div

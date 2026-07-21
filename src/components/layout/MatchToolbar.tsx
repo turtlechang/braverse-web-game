@@ -1,4 +1,5 @@
-import { List, Pause, RotateCcw } from 'lucide-react'
+import { useState } from 'react'
+import { List, Pause, RotateCcw, Settings } from 'lucide-react'
 import './MatchToolbar.css'
 
 export interface MatchToolbarProps {
@@ -12,17 +13,43 @@ export function MatchToolbar({
   onViewDeck,
   onPause,
 }: MatchToolbarProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const runAction = (action: () => void) => {
+    setIsOpen(false)
+    action()
+  }
+
   return (
     <header className="match-toolbar" aria-label="對局工具">
-      <button type="button" title="重新開始" onClick={onReset}>
-        <RotateCcw aria-hidden="true" />
+      <button
+        type="button"
+        className="match-toolbar-trigger"
+        title="對局工具"
+        aria-label="對局工具"
+        aria-expanded={isOpen}
+        aria-controls="match-toolbar-menu"
+        onClick={() => setIsOpen((value) => !value)}
+      >
+        <Settings aria-hidden="true" />
       </button>
-      <button type="button" title="查看官方範例牌組" onClick={onViewDeck}>
-        <List aria-hidden="true" />
-      </button>
-      <button type="button" title="暫停資訊" onClick={onPause}>
-        <Pause aria-hidden="true" />
-      </button>
+
+      {isOpen && (
+        <div id="match-toolbar-menu" className="match-toolbar-menu" role="menu">
+          <button type="button" role="menuitem" onClick={() => runAction(onReset)}>
+            <RotateCcw aria-hidden="true" />
+            重新開始
+          </button>
+          <button type="button" role="menuitem" onClick={() => runAction(onViewDeck)}>
+            <List aria-hidden="true" />
+            查看官方範例牌組
+          </button>
+          <button type="button" role="menuitem" onClick={() => runAction(onPause)}>
+            <Pause aria-hidden="true" />
+            暫停資訊
+          </button>
+        </div>
+      )}
     </header>
   )
 }

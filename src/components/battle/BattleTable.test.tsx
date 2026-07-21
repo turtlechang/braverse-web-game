@@ -34,20 +34,10 @@ const baseProps = (
   overrides: Partial<BattleTableProps> = {},
 ): BattleTableProps => ({
   ariaLabel: 'Braverse 對戰桌',
-  phaseRail: {
-    phase: 'main',
-    turnNumber: 1,
-    activePlayerName: 'Player One',
-    isPlayerTurn: true,
-    disabled: false,
-    onAdvance: vi.fn(),
-  },
   topBattleRow: battleRowProps({ playerId: 'player-two', position: 'top' }),
   bottomBattleRow: battleRowProps({ playerId: 'player-one', position: 'bottom' }),
-  remoteActionBanner: { status: null, compact: true },
   attackPreviewArrow: { sourceInstanceId: null, targetInstanceIds: [] },
-  opponentPreviewCard: null,
-  hoveredCard: null,
+  previewCard: null,
   attackPaymentPanel: null,
   ...overrides,
 })
@@ -72,10 +62,10 @@ const previewCard: GameCard = {
 }
 
 describe('BattleTable', () => {
-  it('renders the phase rail and both battle rows with the given aria-label', async () => {
+  it('renders both battle rows with the given aria-label without owning the phase rail', async () => {
     const { container, cleanup } = await render(baseProps())
 
-    expect(container.querySelector('.phase-rail')).not.toBeNull()
+    expect(container.querySelector('.phase-rail')).toBeNull()
     expect(
       container.querySelector('.table-area')?.getAttribute('aria-label'),
     ).toBe('Braverse 對戰桌')
@@ -85,52 +75,11 @@ describe('BattleTable', () => {
     await cleanup()
   })
 
-  it('forwards phaseRail props so onAdvance fires from the next-phase button', async () => {
-    const onAdvance = vi.fn()
-    const { container, cleanup } = await render(
-      baseProps({
-        phaseRail: {
-          phase: 'main',
-          turnNumber: 3,
-          activePlayerName: 'Player One',
-          isPlayerTurn: true,
-          disabled: false,
-          onAdvance,
-        },
-      }),
-    )
+  it('omits the obsolete status banner and table divider', async () => {
+    const { container, cleanup } = await render(baseProps())
 
-    expect(container.querySelector('.turn-counter')?.textContent).toBe(
-      'TURN 3',
-    )
-    const button = container.querySelector<HTMLButtonElement>(
-      '.next-phase-button',
-    )
-    await act(() => button!.click())
-    expect(onAdvance).toHaveBeenCalledTimes(1)
-
-    await cleanup()
-  })
-
-  it('renders the remote action banner when a status is given, inside the table divider', async () => {
-    const { container, cleanup } = await render(
-      baseProps({
-        remoteActionBanner: {
-          status: {
-            mode: 'resolving',
-            actorId: null,
-            actorLabel: '',
-            phaseLabel: '',
-            headline: '效果結算中',
-          },
-          compact: true,
-        },
-      }),
-    )
-
-    expect(
-      container.querySelector('.table-divider .remote-action-banner'),
-    ).not.toBeNull()
+    expect(container.querySelector('.table-status-banner')).toBeNull()
+    expect(container.querySelector('.table-divider')).toBeNull()
 
     await cleanup()
   })
@@ -153,36 +102,27 @@ describe('BattleTable', () => {
     await cleanup()
   })
 
-  it('omits card preview panels when no card is hovered or previewed', async () => {
+  it('omits the preview panel when no card is hovered or previewed', async () => {
     const { container, cleanup } = await render(baseProps())
 
-    expect(container.querySelectorAll('.card-preview-panel')).toHaveLength(0)
+    expect(container.querySelector('.card-preview-panel')).toBeNull()
 
     await cleanup()
   })
 
-  it('shows the opponent preview panel with its context label when provided', async () => {
+  it('shows the preview panel with its context label when provided', async () => {
     const { container, cleanup } = await render(
       baseProps({
-        opponentPreviewCard: previewCard,
-        opponentPreviewContextLabel: '對手目前操作',
+        previewCard,
+        previewContextLabel: '對手目前操作',
       }),
     )
 
-    const panel = container.querySelector('.card-preview-panel.is-top')
+    const panel = container.querySelector('.card-preview-panel')
     expect(panel).not.toBeNull()
+    expect(panel?.classList.contains('is-empty')).toBe(false)
     expect(panel?.textContent).toContain('對手目前操作')
     expect(panel?.textContent).toContain('Preview Cookie')
-
-    await cleanup()
-  })
-
-  it('shows the hovered-card preview panel at the bottom position', async () => {
-    const { container, cleanup } = await render(
-      baseProps({ hoveredCard: previewCard }),
-    )
-
-    expect(container.querySelector('.card-preview-panel.is-bottom')).not.toBeNull()
 
     await cleanup()
   })

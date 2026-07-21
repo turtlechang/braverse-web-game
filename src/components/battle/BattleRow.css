@@ -39,22 +39,23 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
+  grid-template-rows: minmax(0, 62fr) minmax(0, 38fr);
   gap: 7px;
 }
 
 .field-stack > .hand-fan.top-hand {
   position: absolute;
   top: 0;
-  left: calc(var(--opponent-card-width) * var(--safety-ratio) + var(--opponent-card-width) * 0.5 + 2px);
-  width: calc(var(--opponent-card-width) * 2);
-  height: 160px;
+  left: 50%;
+  width: min(600px, calc(100% - 32px));
+  height: 63px;
   pointer-events: none;
   z-index: 10;
+  transform: translateX(-50%);
 }
 
 .bottom-field .field-stack {
-  grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+  grid-template-rows: minmax(0, 38fr) minmax(0, 62fr);
 }
 
 .combat-zone,
@@ -71,6 +72,8 @@
 
 .combat-zone {
   z-index: 2;
+  container-name: combat-zone;
+  container-type: size;
   border-color: rgba(132, 220, 255, 0.3);
 }
 
@@ -89,28 +92,49 @@
   position: absolute;
   z-index: 5;
   top: 9px;
-  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 236px;
+  padding: 5px 12px 5px 9px;
+  border-right: 3px solid #65e8ff;
+  border-radius: 7px 0 0 7px;
+  background: rgba(3, 22, 58, 0.72);
+  box-shadow: -8px 8px 20px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(7px);
+}
+
+.row-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: linear-gradient(160deg, #1d3f74, #0c1e3e);
+  color: #d9f3ff;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.row-meta-info {
   display: grid;
   grid-template-columns: auto auto;
   align-items: baseline;
   gap: 1px 7px;
-  max-width: 200px;
-  padding: 5px 9px 5px 12px;
-  border-left: 3px solid #65e8ff;
-  border-radius: 0 7px 7px 0;
-  background: rgba(3, 22, 58, 0.72);
-  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.12);
-  backdrop-filter: blur(7px);
+  min-width: 0;
 }
 
-.row-meta > .row-role {
+.row-meta-info > .row-role {
   grid-column: 1;
   color: #65e8ff;
   font-size: 0.49rem;
   font-weight: 900;
 }
 
-.row-meta strong {
+.row-meta-info strong {
   grid-column: 1;
   overflow: hidden;
   font-size: 0.78rem;
@@ -159,11 +183,27 @@
 }
 
 .row-meta[data-active='true'] {
-  border-left-color: #75f1bb;
+  border-right-color: #75f1bb;
 }
 
 .row-meta[data-active='false'] .row-stat-status {
   color: rgba(255, 255, 255, 0.62);
+}
+
+.bottom-field .row-meta {
+  top: auto;
+  bottom: 9px;
+  right: auto;
+  left: 0;
+  padding: 5px 9px 5px 12px;
+  border-right: none;
+  border-left: 3px solid #65e8ff;
+  border-radius: 0 7px 7px 0;
+  box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.bottom-field .row-meta[data-active='true'] {
+  border-left-color: #2179d1;
 }
 
 .turn-order-badge {
@@ -181,16 +221,11 @@
   color: #71e9ff;
 }
 
-.top-field .row-meta {
-  top: auto;
-  bottom: 9px;
-}
-
 .zone-watermark {
   position: absolute;
   inset: 50% auto auto 50%;
   transform: translate(-50%, -50%);
-  color: rgba(255, 255, 255, 0.1);
+  color: rgba(211, 238, 255, 0.2);
   font-size: clamp(0.82rem, 1.1vw, 1.12rem);
   font-weight: 900;
   letter-spacing: 0.16em;
@@ -218,16 +253,15 @@
 
 .combat-card-wrap {
   position: relative;
-  width: 155px;
-  height: 215px;
-  padding-bottom: 38px;
+  width: 132px;
+  aspect-ratio: 0.7;
 }
 
 .combat-card-wrap > .card-face {
   position: absolute;
   top: 0;
   left: 0;
-  width: 155px;
+  width: 132px;
   transform-origin: center;
 }
 
@@ -358,7 +392,8 @@
 .energy-shortfall-hint {
   position: absolute;
   z-index: 6;
-  bottom: 0;
+  top: 100%;
+  bottom: auto;
   left: 50%;
   width: max-content;
   max-width: 150px;
@@ -407,7 +442,7 @@
   top: 6px;
   left: 8px;
   color: #fff3a6;
-  font-size: 0.58rem;
+  font-size: 0.66rem;
   letter-spacing: 0.04em;
 }
 
@@ -519,8 +554,8 @@
 
 .resource-summary span,
 .zone-heading span {
-  color: rgba(227, 242, 255, 0.56);
-  font-size: 0.54rem;
+  color: rgba(227, 242, 255, 0.76);
+  font-size: 0.6rem;
   font-weight: 800;
 }
 
@@ -788,12 +823,13 @@
   position: absolute;
   z-index: 20;
   width: min(560px, 52%);
-  height: 160px;
+  height: 189px;
+  overflow: hidden;
   pointer-events: none;
 }
 
 .top-hand {
-  --opponent-card-width: 112px;
+  --opponent-card-width: 132px;
   top: 8px;
 }
 
@@ -802,10 +838,198 @@
 }
 
 .hand-fan.bottom-hand {
-  right: 16px;
-  left: auto;
-  width: min(500px, calc(100% - 32px));
+  left: 50%;
+  right: auto;
+  bottom: 102px;
+  width: min(680px, calc(100% - 32px));
+  height: 95px;
   box-sizing: border-box;
+  transform: translateX(-50%);
+}
+
+/* Cookie-table desktop skin: retains the existing semantic zones and their
+ * interactive cards while making their hierarchy match the tabletop board. */
+@container game-shell (min-width: 901px) {
+  .top-field {
+    --break-summary-start: 72px;
+    --field-stack-reserve: var(--break-summary-start);
+  }
+
+  .bottom-field {
+    --break-summary-end: 112px;
+    --field-stack-reserve: 72px;
+  }
+
+  .top-field .break-zone,
+  .top-field .utility-zones {
+    align-self: end;
+    height: calc(100% - var(--break-summary-start));
+  }
+
+  .bottom-field .break-zone,
+  .bottom-field .utility-zones {
+    align-self: start;
+    height: calc(100% - var(--break-summary-end));
+  }
+
+  .battle-row {
+    grid-template-columns: 96px minmax(0, 1fr) 96px;
+    gap: 12px;
+  }
+
+  .field-stack {
+    gap: 10px;
+  }
+
+  .top-field .field-stack {
+    grid-template-rows: minmax(0, calc(30% + 35px)) minmax(0, calc(70% - 45px));
+  }
+
+  /* The top field reserves 72px above its stack, while the combat track is
+   * 70% of that remaining height minus 45px. Mirror that exact size for the
+   * visible opponent break dock. */
+  .top-field .break-zone {
+    height: calc(70% - 95.4px);
+    top: -30px;
+  }
+
+  .bottom-field .break-zone {
+    height: calc(70% - 95.4px);
+    top: -30px;
+  }
+
+  .bottom-field .field-stack {
+    grid-template-rows: minmax(0, calc(70% - 45px)) minmax(0, calc(30% + 35px));
+    gap: 10px;
+    top: -30px;
+  }
+
+  .combat-zone,
+  .support-zone {
+    border: 2px solid rgba(115, 204, 255, 0.52);
+    border-radius: 16px;
+    background: rgba(4, 41, 99, 0.28);
+    box-shadow: inset 0 0 0 2px rgba(177, 231, 255, 0.12), inset 0 0 28px rgba(1, 17, 56, 0.28);
+  }
+
+  .combat-zone,
+  .bottom-field .combat-zone {
+    border-color: rgba(126, 231, 240, 0.68);
+    box-shadow: inset 0 0 0 2px rgba(177, 231, 255, 0.16), inset 0 0 28px rgba(1, 17, 56, 0.28);
+  }
+
+  .top-field .combat-zone {
+    border-radius: 16px 16px 0 0;
+    border-bottom-width: 1px;
+    border-bottom-color: transparent;
+  }
+
+  .bottom-field .combat-zone {
+    border-top-width: 0;
+    border-top-color: transparent;
+    border-radius: 0 0 16px 16px;
+  }
+
+  /* Keep the opponent field and the shared battlefield visually closer to the
+   * opponent side without changing either field stack's flow height. */
+  .top-field .support-zone,
+  .top-field .combat-zone {
+    transform: translateY(-30px);
+  }
+
+  .row-meta {
+    top: 8px;
+    right: 8px;
+    max-width: 250px;
+    border: 1px solid rgba(129, 224, 255, 0.52);
+    border-right: 4px solid #65e8ff;
+    border-radius: 10px 0 0 10px;
+    background: rgba(3, 22, 58, 0.84);
+    box-shadow: -8px 8px 18px rgba(1, 8, 28, 0.3);
+  }
+
+  .row-avatar {
+    border-color: rgba(177, 231, 255, 0.7);
+    background: #1d4d91;
+    color: #e7f8ff;
+  }
+
+  .row-meta-info > .row-role,
+  .row-stat-label {
+    color: #8eeeff;
+  }
+
+  .row-status {
+    color: rgba(216, 239, 255, 0.72);
+  }
+
+  .zone-watermark {
+    color: rgba(166, 224, 255, 0.32);
+  }
+
+  .support-count,
+  .zone-heading {
+    color: #d9f3ff;
+    text-shadow: 0 1px 0 #08285f;
+  }
+
+  .resource-dock {
+    border-color: rgba(115, 204, 255, 0.46);
+    background: rgba(3, 25, 69, 0.78);
+    box-shadow: inset 0 0 0 1px rgba(177, 231, 255, 0.13), 0 10px 18px rgba(1, 10, 36, 0.28);
+  }
+}
+
+@container combat-zone (max-height: 220px) {
+  .combat-slots {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .hp-card-stack {
+    width: 100px;
+    height: 26px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 28px;
+  }
+
+  .hp-card-stack .hp-card:nth-child(2) { left: 18px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 36px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 54px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 72px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 86px; }
+
+  .card-badges {
+    bottom: 28px;
+  }
+
+  .card-badges span {
+    padding: 2px 5px;
+    font-size: 0.58rem;
+  }
+}
+
+@container combat-zone (max-height: 160px) {
+  .hp-card-stack {
+    width: 90px;
+  }
+}
+
+@container combat-zone (max-height: 140px) {
+  .hp-card-stack {
+    width: 80px;
+  }
+
+  .card-badges span {
+    padding: 1px 4px;
+    font-size: 0.52rem;
+  }
+}
+
+.hand-fan.bottom-hand .hand-card-wrap {
+  bottom: -94px;
 }
 
 .hand-card-wrap {
@@ -825,17 +1049,16 @@
 .hand-card-wrap.opponent-hand-card {
   position: absolute;
   top: 0;
-  left: 0;
+  left: 50%;
   bottom: auto;
   pointer-events: none;
   transform-origin: center top;
   transition: none;
   z-index: calc(10 + var(--fan-z-index, 0));
-  transform: rotate(var(--opponent-angle));
+  transform: translateX(calc(-50% + var(--opponent-x))) translateY(var(--opponent-y, 0px));
 }
 
 .hand-card-wrap.opponent-hand-card.single-card {
-  left: 50%;
   transform: translateX(-50%);
 }
 
@@ -866,13 +1089,13 @@
   filter:
     drop-shadow(0 0 10px rgba(255, 236, 104, 0.85))
     brightness(1.1);
-  transform: translateX(calc(-50% + var(--fan-x))) translateY(-28px) rotate(0deg) scale(1.07);
+  transform: translateX(calc(-50% + var(--fan-x))) translateY(var(--fan-y)) rotate(var(--fan-rotation)) scale(1.07);
 }
 
 
 
 .hand-card {
-  width: 112px;
+  width: 132px;
 }
 
 .hand-card-actions {
@@ -908,13 +1131,12 @@
 
 @container game-shell (min-width: 1500px) and (min-height: 850px) {
   .combat-card-wrap {
-    width: 175px;
-    height: 243px;
-    padding-bottom: 44px;
+    width: 150px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face {
-    width: 175px;
+    width: 150px;
   }
 
   .hp-card-stack {
@@ -954,23 +1176,30 @@
   }
 
   .hand-card {
-    width: 128px;
+    width: 150px;
   }
 
   .top-hand {
-    --opponent-card-width: 128px;
+    --opponent-card-width: 150px;
   }
 
   .hand-fan {
     width: min(640px, 54%);
-    height: 180px;
+    height: 214px;
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    left: 50%;
+    right: auto;
+    bottom: 115px;
+    width: min(680px, calc(100% - 32px));
+    height: 107px;
     box-sizing: border-box;
+    transform: translateX(-50%);
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -107px;
   }
 
   .support-cards {
@@ -985,8 +1214,7 @@
 @container game-shell (max-height: 800px) {
   .combat-card-wrap {
     width: 140px;
-    height: 194px;
-    padding-bottom: 34px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face {
@@ -1007,15 +1235,24 @@
   }
 
   .hand-card {
-    width: 96px;
+    width: 113px;
   }
 
   .top-hand {
-    --opponent-card-width: 96px;
+    --opponent-card-width: 113px;
   }
 
   .hand-fan {
-    height: 140px;
+    height: 161px;
+  }
+
+  .hand-fan.bottom-hand {
+    bottom: 89px;
+    height: 80px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -80px;
   }
 
 }
@@ -1027,28 +1264,30 @@
   }
 
   .combat-slots {
-    gap: 100px;
-    padding: 6px 60px;
+    gap: 72px;
+    padding: 6px 48px;
   }
 
   .combat-card-wrap {
-    width: 110px;
-    height: 152px;
-    padding-bottom: 26px;
+    width: 118px;
+    aspect-ratio: 0.7;
   }
 
-  .combat-card-wrap > .card-face,
+  .combat-card-wrap > .card-face {
+    width: 118px;
+  }
+
   .hand-card {
-    width: 110px;
+    width: 130px;
   }
 
   .top-hand {
-    --opponent-card-width: 110px;
+    --opponent-card-width: 130px;
   }
 
   .hp-card-stack {
-    width: 110px;
-    height: 24px;
+    width: 118px;
+    height: 26px;
   }
 
   .hp-card-stack .hp-card {
@@ -1068,19 +1307,22 @@
     padding-block: 3px;
   }
 
-  .row-stat-secondary {
-    display: none;
-  }
-
   .hand-fan {
-    height: 120px;
+    height: 186px;
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    left: 50%;
+    right: auto;
+    bottom: 101px;
+    width: min(680px, calc(100% - 32px));
+    height: 93px;
     box-sizing: border-box;
+    transform: translateX(-50%);
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -93px;
   }
 
   .break-cards {
@@ -1108,27 +1350,30 @@
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    left: 50%;
+    right: auto;
+    width: min(680px, calc(100% - 32px));
     box-sizing: border-box;
+    transform: translateX(-50%);
   }
 }
 
 @container game-shell (max-height: 620px) {
   .combat-card-wrap {
     width: 96px;
-    height: 133px;
-    padding-bottom: 22px;
+    aspect-ratio: 0.7;
   }
 
-  .combat-card-wrap > .card-face,
-  .hand-card {
+  .combat-card-wrap > .card-face {
     width: 96px;
   }
 
+  .hand-card {
+    width: 113px;
+  }
+
   .top-hand {
-    --opponent-card-width: 96px;
+    --opponent-card-width: 113px;
   }
 
   .support-cards {
@@ -1141,7 +1386,16 @@
   }
 
   .hand-fan {
-    height: 100px;
+    height: 161px;
+  }
+
+  .hand-fan.bottom-hand {
+    bottom: 89px;
+    height: 80px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -80px;
   }
 
 }
@@ -1155,12 +1409,12 @@
 
   .field-stack,
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
+    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
     gap: 3px;
   }
 
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   }
 
   .combat-zone,
@@ -1184,8 +1438,7 @@
 
   .combat-card-wrap {
     width: 80px;
-    height: 111px;
-    padding-bottom: 18px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face,
@@ -1215,12 +1468,17 @@
   .row-meta {
     top: 2px;
     max-width: 96px;
-    padding: 2px 4px 2px 6px;
+    padding: 2px 6px 2px 4px;
   }
 
-  .top-field .row-meta {
+  .row-avatar {
+    display: none;
+  }
+
+  .bottom-field .row-meta {
     top: auto;
     bottom: 3px;
+    padding: 2px 4px 2px 6px;
   }
 
   .row-role,
@@ -1235,10 +1493,6 @@
 
   .row-status {
     gap: 1px 4px;
-  }
-
-  .row-stat-secondary {
-    display: none;
   }
 
   .turn-order-badge {
@@ -1345,6 +1599,7 @@
     width: min(500px, calc(100% - 32px));
     box-sizing: border-box;
     bottom: 4px;
+    transform: none;
   }
 
   .top-hand {
@@ -1377,18 +1632,17 @@
 
   .field-stack,
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
+    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
     gap: 2px;
   }
 
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 55fr) minmax(0, 45fr);
+    grid-template-rows: minmax(0, 45fr) minmax(0, 55fr);
   }
 
   .combat-card-wrap {
     width: 46px;
-    height: 64px;
-    padding-bottom: 16px;
+    aspect-ratio: 0.7;
   }
 
   .combat-card-wrap > .card-face,
@@ -1422,10 +1676,6 @@
   .row-status {
     display: flex;
     gap: 1px 3px;
-  }
-
-  .row-stat-secondary {
-    display: none;
   }
 
   .row-meta strong {
@@ -1469,6 +1719,7 @@
     width: min(500px, calc(100% - 32px));
     box-sizing: border-box;
     bottom: 2px;
+    transform: none;
   }
 
   .bottom-hand {
@@ -1479,4 +1730,460 @@
     top: 2px;
   }
 
+}
+
+@container game-shell (min-width: 901px) {
+  .utility-zones {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .top-field .utility-zones {
+    width: 176px;
+    justify-self: end;
+  }
+
+  .bottom-field .utility-zones {
+    width: 176px;
+    justify-self: start;
+  }
+
+  .top-field .deck-zone {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .top-field .discard-zone {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .top-field .stage-zone {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 96px;
+    justify-self: end;
+  }
+
+  .bottom-field .stage-zone {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 96px;
+    justify-self: start;
+  }
+
+  .bottom-field .discard-zone {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  .bottom-field .discard-zone.resource-summary {
+    height: 80px;
+    align-self: end;
+  }
+
+  .bottom-field .deck-zone {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  .bottom-field .deck-zone.resource-dock {
+    width: 86px;
+    height: 80px;
+    justify-self: end;
+    align-self: end;
+  }
+
+  .top-field .row-meta {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    bottom: auto;
+    left: auto;
+    transform: scale(1.44);
+    transform-origin: top right;
+  }
+
+  .bottom-field .row-meta {
+    position: fixed;
+    top: auto;
+    right: auto;
+    bottom: 16px;
+    left: 16px;
+    transform: scale(1.44);
+    transform-origin: bottom left;
+  }
+
+  .top-field .field-stack {
+    height: calc(100% - var(--field-stack-reserve));
+    align-self: end;
+  }
+
+  .field-stack > .hand-fan.top-hand {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    height: 72px;
+    overflow: hidden;
+    transform: translateX(-50%);
+  }
+
+  .top-hand .hand-card-wrap.opponent-hand-card {
+    top: -142px;
+  }
+
+  .bottom-field .field-stack {
+    height: calc(100% - var(--field-stack-reserve));
+    align-self: start;
+  }
+
+  .hand-fan.bottom-hand {
+    z-index: 40;
+    bottom: 2px;
+    height: 180px;
+    overflow: visible;
+  }
+
+  .bottom-hand .hand-card {
+    width: 100px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -60px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap:hover,
+  .hand-fan.bottom-hand .hand-card-wrap:focus-within {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 76px))
+      rotate(var(--fan-rotation))
+      scale(1.04);
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap.is-selected {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 60px))
+      rotate(var(--fan-rotation))
+      scale(1.07);
+  }
+}
+
+/* This must follow every game-shell breakpoint: combat-zone height is the
+ * final authority for card size when the board is vertically constrained. */
+@container combat-zone (max-height: 220px) {
+  .combat-slots {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 100px;
+  }
+
+  .hp-card-stack {
+    width: 100px;
+    height: 26px;
+  }
+
+  .hp-card-stack .hp-card {
+    width: 28px;
+  }
+
+  .hp-card-stack .hp-card:nth-child(2) { left: 18px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 36px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 54px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 72px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 86px; }
+
+  .card-badges {
+    bottom: 28px;
+  }
+
+  .card-badges span {
+    padding: 2px 5px;
+    font-size: 0.58rem;
+  }
+}
+
+@container combat-zone (max-height: 160px) {
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 90px;
+  }
+
+  .hp-card-stack {
+    width: 90px;
+  }
+}
+
+@container combat-zone (max-height: 140px) {
+  .combat-card-wrap,
+  .combat-card-wrap > .card-face {
+    width: 80px;
+  }
+
+  .hp-card-stack {
+    width: 80px;
+  }
+
+  .card-badges span {
+    padding: 1px 4px;
+    font-size: 0.52rem;
+  }
+}
+
+/* Support cards retain their agreed fixed board size. */
+.card-face.support-card {
+  width: 70px;
+  height: 100px;
+  aspect-ratio: 0.7;
+}
+
+/* Combat cards expand to each combat zone's inner height. The 18px reserve
+ * matches the desktop combat-slot vertical padding, leaving room for the HP
+ * stack without either side's card crossing its combat-zone boundary. */
+@container combat-zone (min-height: 0px) {
+  .combat-card-wrap {
+    --combat-card-height: max(0px, calc(100cqh - 18px));
+    width: calc(var(--combat-card-height) * 0.7);
+    height: var(--combat-card-height);
+    max-height: var(--combat-card-height);
+    aspect-ratio: 0.7;
+  }
+
+  .combat-card-wrap > .card-face {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    aspect-ratio: 0.7;
+  }
+
+  .combat-card-wrap .hp-card-stack {
+    max-width: 100%;
+  }
+}
+
+/* Combat stat badges are anchored to the card itself so HP remains visible at
+ * the upper-right corner while the attack badge keeps its lower-right slot. */
+.combat-card-wrap .card-badges {
+  inset: 0;
+  display: block;
+  padding: 0;
+}
+
+.combat-card-wrap .badge-hp {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  transform: scale(1.1);
+  transform-origin: top right;
+}
+
+.combat-card-wrap .badge-atk {
+  position: absolute;
+  right: 3px;
+  bottom: 40px;
+  transform: scale(1.1);
+  transform-origin: bottom right;
+}
+
+.combat-card-wrap.is-attack-target::before {
+  content: '攻擊目標';
+  position: absolute;
+  z-index: 7;
+  top: 4px;
+  left: 4px;
+  padding: 2px 5px;
+  border: 1px solid #fff17c;
+  border-radius: 4px;
+  color: #1f2937;
+  background: #fff17c;
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.combat-card-wrap.is-attack-target::after {
+  content: '';
+  position: absolute;
+  z-index: 6;
+  inset: -5px;
+  border: 3px solid #fff17c;
+  border-radius: 8px;
+  box-shadow: 0 0 18px rgba(255, 241, 124, 0.92);
+  animation: attack-target-pulse 0.9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes attack-target-pulse {
+  50% {
+    border-color: #ff9b45;
+    box-shadow: 0 0 28px rgba(255, 155, 69, 0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combat-card-wrap.is-attack-target::after {
+    animation: none;
+  }
+}
+
+.top-field .card-face.support-card {
+  transform: none;
+  bottom: 6px;
+}
+
+.top-field .card-face.support-card.is-rested {
+  transform: rotate(-90deg) scale(0.82);
+}
+
+.bottom-field .support-count {
+  top: auto;
+  bottom: -25px;
+  left: 0;
+}
+
+.top-field .support-count {
+  top: -25px;
+  right: 0;
+  bottom: auto;
+  left: auto;
+}
+
+.bottom-hand .hand-card-wrap {
+  opacity: 1;
+}
+
+.top-hand .hand-card-wrap {
+  opacity: 1;
+}
+
+.support-count {
+  font-size: 0.95rem;
+}
+
+.top-field .row-meta {
+  border-right-color: rgba(220, 38, 38, 0.76);
+}
+
+/* Opponent zones share the same red side identity as the opponent nameplate. */
+.top-field .combat-zone,
+.top-field .support-zone,
+.top-field .break-zone > .resource-summary,
+.top-field .deck-zone > .resource-summary,
+.top-field .stage-zone > .resource-summary,
+.top-field .discard-zone.resource-summary {
+  border-color: rgba(220, 38, 38, 0.76);
+}
+
+.bottom-field .combat-zone,
+.bottom-field .support-zone,
+.bottom-field .break-zone > .resource-summary,
+.bottom-field .deck-zone > .resource-summary,
+.bottom-field .stage-zone > .resource-summary,
+.bottom-field .discard-zone.resource-summary {
+  border-color: #2179d1;
+}
+
+/* These rules intentionally follow the side-color rules so the joined combat
+ * field never regains a colored seam through border-color shorthand. */
+.top-field .combat-zone {
+  border-bottom-color: transparent;
+}
+
+.bottom-field .combat-zone {
+  border-top-color: transparent;
+}
+
+/* Tactical-clean 主題：敵我場區外框降為低亮度識別，避免整框搶過操作高亮；
+ * 戰鬥區改用比支援區更亮一階的底色，兩區不再共用同一份漸層。 */
+:root[data-theme="tactical-clean"] .top-field .row-meta {
+  border-right-color: rgba(248, 113, 113, 0.45);
+}
+
+:root[data-theme="tactical-clean"] .top-field .combat-zone,
+:root[data-theme="tactical-clean"] .top-field .support-zone,
+:root[data-theme="tactical-clean"] .top-field .break-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .top-field .deck-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .top-field .stage-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .top-field .discard-zone.resource-summary {
+  border-color: rgba(248, 113, 113, 0.30);
+}
+
+:root[data-theme="tactical-clean"] .bottom-field .combat-zone,
+:root[data-theme="tactical-clean"] .bottom-field .support-zone,
+:root[data-theme="tactical-clean"] .bottom-field .break-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .bottom-field .deck-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .bottom-field .stage-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .bottom-field .discard-zone.resource-summary {
+  border-color: rgba(96, 165, 250, 0.32);
+}
+
+:root[data-theme="tactical-clean"] .top-field .combat-zone {
+  border-bottom-color: transparent;
+}
+
+:root[data-theme="tactical-clean"] .bottom-field .combat-zone {
+  border-top-color: transparent;
+}
+
+:root[data-theme="tactical-clean"] .combat-zone {
+  background:
+    radial-gradient(circle at center, rgba(41, 105, 151, 0.18), transparent 65%),
+    #0d1c2c;
+}
+
+:root[data-theme="tactical-clean"] .support-zone {
+  background: rgba(11, 30, 48, 0.92);
+}
+
+/* Tactical-clean 主題：手牌底部加暗角，讓卡牌自然從底色浮出 */
+:root[data-theme="tactical-clean"] .hand-fan.bottom-hand {
+  box-shadow: inset 0 -70px 60px rgba(0, 0, 0, 0.34);
+}
+
+/* Tactical-clean 主題：我方陣營資訊框補上和對手一致的常駐識別色，
+ * 修正原本只有對手框常駐紅、我方框只在輪到自己回合才變藍的不對稱。 */
+:root[data-theme="tactical-clean"] .bottom-field .row-meta {
+  border-left-color: rgba(96, 165, 250, 0.45);
+}
+
+/* Tactical-clean 主題：場區名稱基礎對比度略提高；成為合法放置目標時再升高亮度。 */
+:root[data-theme="tactical-clean"] .zone-watermark {
+  color: rgba(175, 211, 232, 0.38);
+}
+
+:root[data-theme="tactical-clean"] .support-zone.is-legal-target .zone-watermark,
+:root[data-theme="tactical-clean"] .combat-zone.is-legal-target .zone-watermark {
+  color: rgba(82, 229, 245, 0.88);
+}
+
+/* Tactical-clean 主題：休息區 LV. 文字依風險分級變色。 */
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="safe"] strong {
+  color: #a9c4dd;
+}
+
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="caution"] strong {
+  color: #ffe066;
+}
+
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="danger"] strong {
+  color: #ff9d4d;
+}
+
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="critical"] strong {
+  color: #ff5263;
+}
+
+/* Tactical-clean 主題：戰鬥格加極淡的圓形戰術定位紋，不新增框線。 */
+:root[data-theme="tactical-clean"] .combat-card-wrap {
+  background: radial-gradient(circle, rgba(82, 229, 245, 0.07), transparent 66%);
 }

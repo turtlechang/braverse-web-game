@@ -75,6 +75,54 @@
   padding-bottom: 80px;
 }
 
+.attack-declaration-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 241, 124, 0.54);
+  border-radius: 8px;
+  background: rgba(2, 16, 45, 0.42);
+}
+
+.attack-declaration-card {
+  min-width: 84px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.attack-declaration-card > span {
+  color: #bbdaf3;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.attack-declaration-target > span {
+  color: #ffb8b8;
+}
+
+.attack-declaration-card .card-face {
+  width: 72px;
+}
+
+.attack-declaration-card strong {
+  max-width: 112px;
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.attack-declaration-arrow {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  color: #fff17c;
+  filter: drop-shadow(0 0 6px rgba(255, 241, 124, 0.72));
+}
+
 .trap-response-dual {
   display: grid;
   grid-template-columns: 1fr 1fr;

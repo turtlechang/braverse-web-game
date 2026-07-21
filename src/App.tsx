@@ -13,6 +13,7 @@ import {
 import { BattleTable } from './components/battle/BattleTable'
 import type { BattleRowProps } from './components/battle/BattleRow'
 import { MatchToolbar } from './components/layout/MatchToolbar'
+import { PhaseRail } from './components/layout/PhaseRail'
 import { SimulationReport } from './components/panels/GameStatusPanels'
 import { deckChoiceLabel } from './components/gameUiLabels'
 import { EffectPanel } from './components/effects/EffectPanel'
@@ -30,6 +31,7 @@ import { useAiTurn } from './hooks/useAiTurn'
 import { useMatchController } from './hooks/useMatchController'
 import { useHandSelectionDismissal } from './hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from './hooks/deriveInteractionLocked'
+import { useFlipCardPreview } from './hooks/useFlipCardPreview'
 import type { AiLevel } from './game'
 
 const InformationModals = lazy(async () => {
@@ -200,6 +202,10 @@ function App() {
       ? findCardInGame(match.game, actionStatus.sourceCard?.instanceId) ?? null
       : null
   const opponentPreviewCard = hoveredOpponentCard ?? opponentSourcePreviewCard
+  const flipPreview = useFlipCardPreview(
+    match.game.pendingBattle,
+    match.viewerPlayerId,
+  )
   const centerPreviewCard =
     actionStatus.mode === 'opponent-thinking' ||
     actionStatus.mode === 'resolving' ||
@@ -429,27 +435,12 @@ function App() {
 
       <BattleTable
         ariaLabel="Braverse 對戰桌"
-        phaseRail={{
-          phase: match.game.phase,
-          turnNumber: match.game.turnNumber,
-          activePlayerName: match.activePlayer.name,
-          isPlayerTurn: match.game.activePlayerId === match.viewerPlayerId,
-          disabled:
-            phaseDisabled ||
-            match.game.activePlayerId !== match.viewerPlayerId ||
-            match.game.phase === 'active' ||
-            match.game.phase === 'draw',
-          onAdvance: () => {
-            if (pending.pendingEffect || faintActive) return
-            match.handleAdvancePhase()
-          },
-        }}
         topBattleRow={topBattleRowProps}
         bottomBattleRow={bottomBattleRowProps}
-        remoteActionBanner={{ status: actionStatus, compact: true }}
         attackPreviewArrow={{
           sourceInstanceId:
             match.selectedAttackerId ??
+            match.game.pendingBattle?.attackerInstanceId ??
             (actionStatus.mode === 'opponent-thinking'
               ? actionStatus.sourceCard?.instanceId ?? null
               : null),
@@ -461,13 +452,15 @@ function App() {
               ? '攻擊宣告'
               : '目標選擇',
         }}
-        opponentPreviewCard={opponentPreviewCard}
-        opponentPreviewContextLabel={
-          hoveredOpponentCard || !opponentSourcePreviewCard
-            ? undefined
-            : '對手目前操作'
+        previewCard={flipPreview.card ?? hoveredCard ?? opponentPreviewCard}
+        previewContextLabel={
+          flipPreview.card
+            ? 'FLIP 效果觸發 · 點擊預覽外側關閉'
+            : hoveredCard || hoveredOpponentCard || !opponentSourcePreviewCard
+              ? undefined
+              : '對手目前操作'
         }
-        hoveredCard={hoveredCard}
+        onDismissPreview={flipPreview.card ? flipPreview.dismiss : undefined}
         attackPaymentPanel={
           match.selectedAttacker && !pending.pendingEffect
             ? {
@@ -489,6 +482,22 @@ function App() {
             ? { card: centerPreviewCard, label: actionStatus.headline }
             : null
         }
+      />
+
+      <PhaseRail
+        phase={match.game.phase}
+        turnNumber={match.game.turnNumber}
+        isPlayerTurn={match.game.activePlayerId === match.viewerPlayerId}
+        disabled={
+          phaseDisabled ||
+          match.game.activePlayerId !== match.viewerPlayerId ||
+          match.game.phase === 'active' ||
+          match.game.phase === 'draw'
+        }
+        onAdvance={() => {
+          if (pending.pendingEffect || faintActive) return
+          match.handleAdvancePhase()
+        }}
       />
 
       {ai.simulationResults && (
