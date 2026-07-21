@@ -179,6 +179,12 @@
   }
 }
 
+/* Tactical-clean 主題：拿掉外圈金色框，改用和 CTA 一致的青藍色系，
+ * 回合資訊仍保留藍/紅底色以標示現在輪到誰。 */
+:root[data-theme="tactical-clean"] .phase-rail {
+  border-color: rgba(82, 229, 245, 0.32);
+}
+
 @container game-shell (min-width: 901px) {
   .phase-rail {
     top: 50%;

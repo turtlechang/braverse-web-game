@@ -2085,3 +2085,50 @@
 .bottom-field .combat-zone {
   border-top-color: transparent;
 }
+
+/* Tactical-clean 主題：敵我場區外框降為低亮度識別，避免整框搶過操作高亮；
+ * 戰鬥區改用比支援區更亮一階的底色，兩區不再共用同一份漸層。 */
+:root[data-theme="tactical-clean"] .top-field .row-meta {
+  border-right-color: rgba(248, 113, 113, 0.45);
+}
+
+:root[data-theme="tactical-clean"] .top-field .combat-zone,
+:root[data-theme="tactical-clean"] .top-field .support-zone,
+:root[data-theme="tactical-clean"] .top-field .break-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .top-field .deck-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .top-field .stage-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .top-field .discard-zone.resource-summary {
+  border-color: rgba(248, 113, 113, 0.30);
+}
+
+:root[data-theme="tactical-clean"] .bottom-field .combat-zone,
+:root[data-theme="tactical-clean"] .bottom-field .support-zone,
+:root[data-theme="tactical-clean"] .bottom-field .break-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .bottom-field .deck-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .bottom-field .stage-zone > .resource-summary,
+:root[data-theme="tactical-clean"] .bottom-field .discard-zone.resource-summary {
+  border-color: rgba(96, 165, 250, 0.32);
+}
+
+:root[data-theme="tactical-clean"] .top-field .combat-zone {
+  border-bottom-color: transparent;
+}
+
+:root[data-theme="tactical-clean"] .bottom-field .combat-zone {
+  border-top-color: transparent;
+}
+
+:root[data-theme="tactical-clean"] .combat-zone {
+  background:
+    radial-gradient(circle at center, rgba(41, 105, 151, 0.18), transparent 65%),
+    #0d1c2c;
+}
+
+:root[data-theme="tactical-clean"] .support-zone {
+  background: rgba(11, 30, 48, 0.92);
+}
+
+/* Tactical-clean 主題：手牌底部加暗角，讓卡牌自然從底色浮出 */
+:root[data-theme="tactical-clean"] .hand-fan.bottom-hand {
+  box-shadow: inset 0 -70px 60px rgba(0, 0, 0, 0.34);
+}
