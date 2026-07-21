@@ -1840,7 +1840,15 @@
     height: calc(100% - var(--field-stack-reserve));
     align-self: start;
   }
+}
 
+/* Full unclipped hand reveal only once there's enough vertical room; below
+ * this height it falls through to the max-height:800px tier's peek window
+ * (BattleRow.css:1249-1256), which was getting clobbered at common desktop
+ * sizes like 1366x768 (768px < the old unconditional min-width:901px rule
+ * meant this ran there too, pushing the hand card art up over the support
+ * zone). */
+@container game-shell (min-width: 901px) and (min-height: 820px) {
   .hand-fan.bottom-hand {
     z-index: 40;
     bottom: 2px;
@@ -2131,4 +2139,42 @@
 /* Tactical-clean 主題：手牌底部加暗角，讓卡牌自然從底色浮出 */
 :root[data-theme="tactical-clean"] .hand-fan.bottom-hand {
   box-shadow: inset 0 -70px 60px rgba(0, 0, 0, 0.34);
+}
+
+/* Tactical-clean 主題：我方陣營資訊框補上和對手一致的常駐識別色，
+ * 修正原本只有對手框常駐紅、我方框只在輪到自己回合才變藍的不對稱。 */
+:root[data-theme="tactical-clean"] .bottom-field .row-meta {
+  border-left-color: rgba(96, 165, 250, 0.45);
+}
+
+/* Tactical-clean 主題：場區名稱基礎對比度略提高；成為合法放置目標時再升高亮度。 */
+:root[data-theme="tactical-clean"] .zone-watermark {
+  color: rgba(175, 211, 232, 0.38);
+}
+
+:root[data-theme="tactical-clean"] .support-zone.is-legal-target .zone-watermark,
+:root[data-theme="tactical-clean"] .combat-zone.is-legal-target .zone-watermark {
+  color: rgba(82, 229, 245, 0.88);
+}
+
+/* Tactical-clean 主題：休息區 LV. 文字依風險分級變色。 */
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="safe"] strong {
+  color: #a9c4dd;
+}
+
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="caution"] strong {
+  color: #ffe066;
+}
+
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="danger"] strong {
+  color: #ff9d4d;
+}
+
+:root[data-theme="tactical-clean"] .zone-heading[data-level-band="critical"] strong {
+  color: #ff5263;
+}
+
+/* Tactical-clean 主題：戰鬥格加極淡的圓形戰術定位紋，不新增框線。 */
+:root[data-theme="tactical-clean"] .combat-card-wrap {
+  background: radial-gradient(circle, rgba(82, 229, 245, 0.07), transparent 66%);
 }

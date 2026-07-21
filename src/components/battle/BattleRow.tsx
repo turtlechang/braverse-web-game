@@ -123,8 +123,25 @@ export function BattleRow({
   const canOperate = isActivePlayer && !isOpponent && !interactionLocked
   const toggleResource = (kind: BattleResourceKind) =>
     onToggleResource?.(kind)
+  const selectedHandCard = !isOpponent
+    ? (player.hand.find((card) => card.instanceId === selectedHandCardId) ?? null)
+    : null
+  const selectedHandCardCanSupport =
+    Boolean(selectedHandCard) &&
+    canOperate &&
+    game.phase === 'support' &&
+    !game.supportPlacedThisTurn
+  const selectedHandCardCanDeploy =
+    Boolean(selectedHandCard) &&
+    canOperate &&
+    game.phase === 'main' &&
+    selectedHandCard?.type === 'cookie' &&
+    player.battleArea.length < 2
+  const breakLevel = getBreakAreaLevel(game, playerId)
+  const breakLevelBand =
+    breakLevel >= 10 ? 'critical' : breakLevel >= 8 ? 'danger' : breakLevel >= 6 ? 'caution' : 'safe'
   const supportZone = (
-    <div className="support-zone">
+    <div className={`support-zone${selectedHandCardCanSupport ? ' is-legal-target' : ''}`}>
       <span className="zone-watermark">支援區</span>
       <strong className="support-count">支援 {player.supportArea.length} 張</strong>
       <div className="support-cards">
@@ -216,17 +233,17 @@ export function BattleRow({
       aria-label={`${player.name}場地`}
     >
       <div className="break-zone resource-dock">
-        <div className="zone-heading">
+        <div className="zone-heading" data-level-band={breakLevelBand}>
           <span>休息</span>
-          <b>×{player.breakArea.length}</b>
-          <strong>LV. {getBreakAreaLevel(game, playerId)}</strong>
+          <strong>LV. {breakLevel}/10</strong>
+          <b>{player.breakArea.length} 張</b>
         </div>
         <button
           className="resource-summary break-summary"
           type="button"
           aria-label={`${player.name}休息區摘要`}
           aria-expanded={openResourceKind === 'break'}
-          title={`休息區 LV.${getBreakAreaLevel(game, playerId)} · ${player.breakArea.length} 張`}
+          title={`休息區 LV.${breakLevel}/10 · ${player.breakArea.length} 張`}
           onClick={() => toggleResource('break')}
         >
           <div className="mini-break-stack" aria-hidden="true">
@@ -278,7 +295,7 @@ export function BattleRow({
           >
             <span>{player.name}休息區</span>
             <strong>
-              LV. {getBreakAreaLevel(game, playerId)} · {player.breakArea.length} 張
+              LV. {breakLevel}/10 · {player.breakArea.length} 張
             </strong>
             {player.breakArea.length > 0 ? (
               <div className="resource-card-list">
@@ -364,7 +381,7 @@ export function BattleRow({
             </div>
           </div>
         </div>
-        <div className="combat-zone">
+        <div className={`combat-zone${selectedHandCardCanDeploy ? ' is-legal-target' : ''}`}>
           <span className="zone-watermark">戰鬥區</span>
           <div className="combat-slots">
             {player.battleArea.map((cookie) => {
@@ -446,7 +463,11 @@ export function BattleRow({
                         cookie.card.instanceId,
                       )
                     }
-                    attackable={canSelectAttack}
+                    attackable={
+                      canSelectAttack &&
+                      (!selectedAttackerId ||
+                        selectedAttackerId === cookie.card.instanceId)
+                    }
                     onClick={
                       canSelectEffectTarget
                         ? () => onEffectTarget?.(cookie.card.instanceId)
