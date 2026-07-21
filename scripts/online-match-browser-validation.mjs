@@ -368,7 +368,7 @@ try {
     '後攻',
   )
   assert.match(
-    (await guestPage.locator('.table-divider').textContent()) ?? '',
+    (await guestPage.locator('.remote-action-banner').textContent()) ?? '',
     /對手 Host Player 正在進行活躍階段/,
   )
   for (const zone of ['deck', 'stage', 'break']) {
@@ -396,20 +396,20 @@ try {
   await hostActivityFeed.waitFor({ state: 'hidden' })
   await hostPage.waitForFunction(() => {
     const button = document.querySelector('.next-phase-button')
-    const phase = document.querySelector('.phase-rail li.is-current strong')
+    const phase = document.querySelector('.phase-rail .turn-indicator strong')
     return button instanceof HTMLButtonElement && !button.disabled &&
       phase?.textContent?.includes('支援階段')
   })
   await guestPage.waitForFunction(() =>
-    document.querySelector('.phase-rail li.is-current strong')?.textContent
+    document.querySelector('.phase-rail .turn-indicator strong')?.textContent
       ?.includes('支援階段'),
   )
   assert.match(
-    (await guestPage.locator('.table-divider').textContent()) ?? '',
+    (await guestPage.locator('.remote-action-banner').textContent()) ?? '',
     /對手 Host Player 正在進行支援階段/,
   )
-  const hostTurn = (await hostPage.locator('.turn-counter').textContent())?.trim()
-  const guestTurn = (await guestPage.locator('.turn-counter').textContent())?.trim()
+  const hostTurn = (await hostPage.locator('.phase-rail .turn-indicator span').textContent())?.trim()
+  const guestTurn = (await guestPage.locator('.phase-rail .turn-indicator span').textContent())?.trim()
   assert.equal(hostTurn, guestTurn)
 
   const hostSupportHandCard = hostPage.locator('.bottom-hand .hand-card').first()
@@ -417,19 +417,19 @@ try {
   await hostPage.locator('.bottom-hand .hand-card-action', { hasText: '支援' }).click()
   await Promise.all([
     hostPage.waitForFunction(() =>
-      document.querySelector('.phase-rail li.is-current strong')?.textContent
+      document.querySelector('.phase-rail .turn-indicator strong')?.textContent
         ?.includes('主要階段'),
     ),
     guestPage.waitForFunction(() =>
-      document.querySelector('.phase-rail li.is-current strong')?.textContent
+      document.querySelector('.phase-rail .turn-indicator strong')?.textContent
         ?.includes('主要階段'),
     ),
   ])
   const hostPhase = (
-    await hostPage.locator('.phase-rail li.is-current strong').textContent()
+    await hostPage.locator('.phase-rail .turn-indicator strong').textContent()
   )?.trim()
   const guestPhase = (
-    await guestPage.locator('.phase-rail li.is-current strong').textContent()
+    await guestPage.locator('.phase-rail .turn-indicator strong').textContent()
   )?.trim()
   assert.equal(hostPhase, '主要階段')
   assert.equal(guestPhase, hostPhase)
@@ -439,7 +439,7 @@ try {
     .last()
   await hostHandCard.click({ force: true })
   await hostPage.locator('.bottom-hand .hand-card-wrap.is-selected').first().waitFor()
-  await hostPage.locator('.table-divider').click({ position: { x: 5, y: 5 } })
+  await hostPage.locator('.table-area').click({ position: { x: 5, y: 5 } })
   assert.equal(
     await hostPage.locator('.bottom-hand .hand-card-wrap.is-selected').count(),
     0,
@@ -458,11 +458,11 @@ try {
   await hostPhaseButton.click()
   await Promise.all([
     hostPage.waitForFunction(() =>
-      document.querySelector('.phase-rail li.is-current strong')?.textContent
+      document.querySelector('.phase-rail .turn-indicator strong')?.textContent
         ?.includes('結束階段'),
     ),
     guestPage.waitForFunction(() =>
-      document.querySelector('.phase-rail li.is-current strong')?.textContent
+      document.querySelector('.phase-rail .turn-indicator strong')?.textContent
         ?.includes('結束階段'),
     ),
   ])
@@ -470,12 +470,12 @@ try {
   await hostPhaseButton.click()
   await Promise.all([
     hostPage.waitForFunction(() =>
-      document.querySelector('.phase-rail li.is-current strong')?.textContent
+      document.querySelector('.phase-rail .turn-indicator strong')?.textContent
         ?.includes('支援階段'),
     ),
     guestPage.waitForFunction(() => {
       const button = document.querySelector('.next-phase-button')
-      const phase = document.querySelector('.phase-rail li.is-current strong')
+      const phase = document.querySelector('.phase-rail .turn-indicator strong')
       return button instanceof HTMLButtonElement && !button.disabled &&
         phase?.textContent?.includes('支援階段')
     }),
@@ -486,11 +486,11 @@ try {
   await guestPage.locator('.bottom-hand .hand-card-action', { hasText: '支援' }).click()
   await Promise.all([
     hostPage.waitForFunction(() =>
-      document.querySelector('.phase-rail li.is-current strong')?.textContent
+      document.querySelector('.phase-rail .turn-indicator strong')?.textContent
         ?.includes('主要階段'),
     ),
     guestPage.waitForFunction(() =>
-      document.querySelector('.phase-rail li.is-current strong')?.textContent
+      document.querySelector('.phase-rail .turn-indicator strong')?.textContent
         ?.includes('主要階段'),
     ),
   ])
@@ -520,11 +520,11 @@ try {
   assert.ok(previewIds)
   await hostPage.locator('.top-field .combat-card-wrap .card-face.is-selected').waitFor()
   assert.match(
-    (await hostPage.locator('.table-divider').textContent()) ?? '',
+    (await hostPage.locator('.center-card-preview-label').textContent()) ?? '',
     /對手正在選擇支援卡支付攻擊費用/,
   )
   await hostPage.locator('[data-testid="attack-preview-arrow"] svg').waitFor({ state: 'visible' })
-  await hostPage.locator('.card-preview-panel.is-top').waitFor({ state: 'visible' })
+  await hostPage.locator('.card-preview-panel').waitFor({ state: 'visible' })
   await guestPage.evaluate(({ attackerInstanceId, supportInstanceId }) => {
     const socket = window.__braverseTestSockets?.at(-1)
     socket?.send(JSON.stringify({
