@@ -472,7 +472,7 @@
 }
 
 .card-face.support-card.is-rested {
-  transform: rotate(90deg) scale(0.82);
+  transform: rotate(90deg);
   left: calc(var(--support-index, 0) * 28px + 20px);
   bottom: 60px;
 }
@@ -488,7 +488,7 @@
 .top-field .card-face.support-card.is-rested {
   right: calc(var(--support-index, 0) * 28px + 20px);
   bottom: 80px;
-  transform: rotate(-90deg) scale(0.8);
+  transform: rotate(-90deg);
 }
 
 .side-zones,
@@ -2040,7 +2040,7 @@
 }
 
 .top-field .card-face.support-card.is-rested {
-  transform: rotate(-90deg) scale(0.82);
+  transform: rotate(-90deg);
 }
 
 .bottom-field .support-count {
