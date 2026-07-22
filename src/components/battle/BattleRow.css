@@ -472,7 +472,7 @@
 }
 
 .card-face.support-card.is-rested {
-  transform: rotate(90deg) scale(0.82);
+  transform: rotate(90deg);
   left: calc(var(--support-index, 0) * 28px + 20px);
   bottom: 60px;
 }
@@ -483,14 +483,12 @@
   bottom: 30px;
   transform-origin: center bottom;
   transform: scale(0.9);
-  opacity: 0.8;
 }
 
 .top-field .card-face.support-card.is-rested {
   right: calc(var(--support-index, 0) * 28px + 20px);
-  bottom: 80px;
-  transform: rotate(-90deg) scale(0.8);
-  opacity: 0.8;
+  bottom: 60px;
+  transform: rotate(-90deg);
 }
 
 .side-zones,
@@ -2042,7 +2040,7 @@
 }
 
 .top-field .card-face.support-card.is-rested {
-  transform: rotate(-90deg) scale(0.82);
+  transform: rotate(-90deg);
 }
 
 .bottom-field .support-count {
@@ -2143,11 +2141,12 @@
 
 :root[data-theme="tactical-clean"] .support-zone {
   background: rgba(11, 30, 48, 0.92);
-}
-
-/* Tactical-clean 主題：手牌底部加暗角，讓卡牌自然從底色浮出 */
-:root[data-theme="tactical-clean"] .hand-fan.bottom-hand {
-  box-shadow: inset 0 -70px 60px rgba(0, 0, 0, 0.34);
+  /* The inherited desktop-tier inset ring + 28px vignette box-shadow was
+   * tuned to blend into the old gradient background; against this flatter
+   * fill it reads as a visible double-edge/band near the top and bottom
+   * on a zone this short. Drop it since the flat fill already reads as
+   * "dimmer than combat zone" on its own. */
+  box-shadow: none;
 }
 
 /* Tactical-clean 主題：我方陣營資訊框補上和對手一致的常駐識別色，
