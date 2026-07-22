@@ -172,11 +172,11 @@ export function OnlineActivityFeed({
         className="online-activity-toggle"
         onClick={() => setIsOpen((value) => !value)}
         aria-expanded={isOpen}
-        aria-label="開啟對戰動態與紀錄"
+        aria-label="開啟對戰紀錄"
         data-testid="online-activity-toggle"
       >
         <ScrollText size={16} aria-hidden="true" />
-        <span>對戰動態</span>
+        <span>對戰紀錄</span>
         {game.commandLog && game.commandLog.length > 0 && (
           <em>{game.commandLog.length}</em>
         )}
@@ -194,18 +194,18 @@ export function OnlineActivityFeed({
       {isOpen && (
         <aside
           className="online-activity-panel"
-          aria-label="對戰動態與紀錄"
+          aria-label="對戰紀錄"
           data-testid="online-activity-feed"
         >
           <header>
             <span>
               <Swords size={15} aria-hidden="true" />
-              <strong>對戰動態</strong>
+              <strong>對戰紀錄</strong>
             </span>
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              aria-label="關閉對戰動態與紀錄"
+              aria-label="關閉對戰紀錄"
             >
               <X size={15} aria-hidden="true" />
             </button>

@@ -1,7 +1,7 @@
 .online-activity-toggle {
   position: absolute;
   z-index: 30;
-  top: 10px;
+  bottom: 10px;
   right: 10px;
   display: flex;
   align-items: center;
@@ -38,7 +38,7 @@
 .online-activity-peek {
   position: absolute;
   z-index: 29;
-  top: 46px;
+  bottom: 46px;
   right: 10px;
   width: min(310px, 28vw);
   margin: 0;
@@ -68,9 +68,9 @@
 .online-activity-panel {
   position: absolute;
   z-index: 32;
-  top: 46px;
-  right: 10px;
-  bottom: 12px;
+  top: 10px;
+  right: calc(var(--phase-rail-width) + 10px);
+  bottom: 52px;
   width: min(310px, 30vw);
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);

@@ -15,7 +15,6 @@ import { findCardInGame } from './publicCardLookup'
 import { StatusToast } from '../panels/InteractionOverlays'
 import { RemoteActionBanner } from '../panels/RemoteActionBanner'
 import { OnlineActivityFeed } from '../panels/OnlineActivityFeed'
-import { BattleLogSidebar } from '../panels/BattleLogSidebar'
 import { deriveActionStatus } from '../panels/actionStatus'
 import { buildActionProgress } from '../panels/actionProgress'
 import { EffectPanel } from '../effects/EffectPanel'
@@ -508,15 +507,7 @@ export function OnlineBattleView({
       <StatusToast message={commandRejectedReason ?? match.message} />
       <OnlineActivityFeed game={game} viewerPlayerId={viewerPlayerId} />
 
-      <BattleLogSidebar
-        entries={game.commandLog ?? []}
-        playerNames={{
-          'player-one': game.players['player-one'].name,
-          'player-two': game.players['player-two'].name,
-        }}
-      />
-
-      {!centerPreviewCard && (
+      {!centerPreviewCard && actionStatus.mode !== 'awaiting-local-decision' && (
         <RemoteActionBanner
           status={actionStatus}
           connectionNotice={connectionNotice}
@@ -586,7 +577,7 @@ export function OnlineBattleView({
           game.phase === 'draw'
         }
         onAdvance={() => {
-          if (pending.pendingEffect) return
+          if (pending.pendingEffect || pending.faintActive) return
           match.handleAdvancePhase()
         }}
       />
