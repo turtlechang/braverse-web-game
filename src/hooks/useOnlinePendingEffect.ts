@@ -24,6 +24,11 @@ import {
 import type { DispatchGameCommand } from './useBattleActions'
 import type { PendingEffect } from '../components/effects/effectUiTypes'
 
+interface HpPileInfo {
+  title: string
+  cards: GameCard[]
+}
+
 type AbilityCostDraft = {
   sourceKind: 'cookie' | 'item' | 'stage'
   card: GameCard
@@ -110,8 +115,9 @@ export function useOnlinePendingEffect(params: {
   dispatch: DispatchGameCommand
   hasFaint: boolean
   hasAfterDamage: boolean
+  setInspectedHpPile?: (info: HpPileInfo) => void
 }) {
-  const { game, viewerPlayerId, dispatch, hasFaint, hasAfterDamage } = params
+  const { game, viewerPlayerId, dispatch, hasFaint, hasAfterDamage, setInspectedHpPile } = params
   const [effectHistory, setEffectHistory] = useState<string[]>([])
   const [abilityCostDraft, setAbilityCostDraft] =
     useState<AbilityCostDraft | null>(null)
@@ -474,6 +480,24 @@ export function useOnlinePendingEffect(params: {
         submittedEffectKeyRef.current = null
       }
     }, 1500)
+    if (
+      setInspectedHpPile &&
+      currentEffect?.kind === 'view-hp' &&
+      selectedTargetIds.length === 1 &&
+      currentTargetSelector
+    ) {
+      const target = getEffectTargetCandidates(
+        game,
+        context,
+        currentTargetSelector,
+      ).find((candidate) => candidate.card.instanceId === selectedTargetIds[0])
+      if (target) {
+        setInspectedHpPile({
+          title: `${target.card.name}的 HP 卡`,
+          cards: target.hpCards,
+        })
+      }
+    }
     if (attackEffectActive) {
       dispatch(
         {
