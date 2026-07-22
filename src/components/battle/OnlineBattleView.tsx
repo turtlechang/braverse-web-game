@@ -8,6 +8,7 @@ import { useMatchDialogs } from '../../hooks/useMatchDialogs'
 import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from '../../hooks/useFlipCardPreview'
+import { useTurnTabIndicator } from '../../hooks/useTurnTabIndicator'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
 import { PhaseRail } from '../layout/PhaseRail'
@@ -102,6 +103,9 @@ export function OnlineBattleView({
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
+
+  const isPlayerTurn = game.activePlayerId === viewerPlayerId
+  useTurnTabIndicator(isPlayerTurn, true)
 
   const match = useOnlineMatchController({ game, viewerPlayerId, sendCommand })
   const pending = useOnlinePendingEffect({
@@ -501,7 +505,9 @@ export function OnlineBattleView({
   }
 
   return (
-    <main className="game-shell">
+    <main
+      className={`game-shell ${isPlayerTurn ? 'is-player-turn' : 'is-opponent-turn'}`}
+    >
       <div className="board-texture" />
 
       <StatusToast message={commandRejectedReason ?? match.message} />
@@ -569,7 +575,7 @@ export function OnlineBattleView({
       <PhaseRail
         phase={game.phase}
         turnNumber={game.turnNumber}
-        isPlayerTurn={game.activePlayerId === viewerPlayerId}
+        isPlayerTurn={isPlayerTurn}
         disabled={
           phaseDisabled ||
           game.activePlayerId !== viewerPlayerId ||
