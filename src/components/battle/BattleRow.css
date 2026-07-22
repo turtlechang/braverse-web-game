@@ -487,7 +487,7 @@
 
 .top-field .card-face.support-card.is-rested {
   right: calc(var(--support-index, 0) * 28px + 20px);
-  bottom: 80px;
+  bottom: 60px;
   transform: rotate(-90deg);
 }
 
