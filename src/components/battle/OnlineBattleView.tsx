@@ -8,6 +8,7 @@ import { useMatchDialogs } from '../../hooks/useMatchDialogs'
 import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from '../../hooks/useFlipCardPreview'
+import { useTurnTabIndicator } from '../../hooks/useTurnTabIndicator'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
 import { PhaseRail } from '../layout/PhaseRail'
@@ -103,6 +104,9 @@ export function OnlineBattleView({
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
 
+  const isPlayerTurn = game.activePlayerId === viewerPlayerId
+  useTurnTabIndicator(isPlayerTurn, true)
+
   const match = useOnlineMatchController({ game, viewerPlayerId, sendCommand })
   const pending = useOnlinePendingEffect({
     game,
@@ -110,6 +114,7 @@ export function OnlineBattleView({
     dispatch: match.dispatch,
     hasFaint: match.hasFaint,
     hasAfterDamage: match.hasAfterDamage,
+    setInspectedHpPile: dialogs.openHpPile,
   })
 
   const opponentId = match.opponentId
@@ -500,12 +505,15 @@ export function OnlineBattleView({
   }
 
   return (
-    <main className="game-shell">
+    <main
+      className={`game-shell ${isPlayerTurn ? 'is-player-turn' : 'is-opponent-turn'}`}
+    >
       <div className="board-texture" />
 
       <StatusToast message={commandRejectedReason ?? match.message} />
       <OnlineActivityFeed game={game} viewerPlayerId={viewerPlayerId} />
-      {!centerPreviewCard && (
+
+      {!centerPreviewCard && actionStatus.mode !== 'awaiting-local-decision' && (
         <RemoteActionBanner
           status={actionStatus}
           connectionNotice={connectionNotice}
@@ -567,7 +575,7 @@ export function OnlineBattleView({
       <PhaseRail
         phase={game.phase}
         turnNumber={game.turnNumber}
-        isPlayerTurn={game.activePlayerId === viewerPlayerId}
+        isPlayerTurn={isPlayerTurn}
         disabled={
           phaseDisabled ||
           game.activePlayerId !== viewerPlayerId ||
@@ -575,7 +583,7 @@ export function OnlineBattleView({
           game.phase === 'draw'
         }
         onAdvance={() => {
-          if (pending.pendingEffect) return
+          if (pending.pendingEffect || pending.faintActive) return
           match.handleAdvancePhase()
         }}
       />
@@ -689,6 +697,15 @@ export function OnlineBattleView({
             dialogs.openCardDetail(card)
           }}
           onClose={dialogs.closeDiscardPile}
+        />
+      )}
+
+      {dialogs.inspectedHpPile && (
+        <CardPileModal
+          title={dialogs.inspectedHpPile.title}
+          cards={dialogs.inspectedHpPile.cards}
+          onInspect={dialogs.openCardDetail}
+          onClose={dialogs.closeHpPile}
         />
       )}
 

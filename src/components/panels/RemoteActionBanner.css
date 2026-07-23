@@ -1,4 +1,8 @@
 .remote-action-banner {
+  position: absolute;
+  z-index: 40;
+  top: 10px;
+  left: 12px;
   min-width: 0;
   max-width: min(580px, 52vw);
   display: grid;

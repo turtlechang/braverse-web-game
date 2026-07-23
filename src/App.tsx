@@ -32,6 +32,7 @@ import { useMatchController } from './hooks/useMatchController'
 import { useHandSelectionDismissal } from './hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from './hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from './hooks/useFlipCardPreview'
+import { useTurnTabIndicator } from './hooks/useTurnTabIndicator'
 import type { AiLevel } from './game'
 
 const InformationModals = lazy(async () => {
@@ -212,6 +213,9 @@ function App() {
     actionStatus.mode === 'awaiting-opponent-decision'
       ? findCardInGame(match.game, actionStatus.sourceCard?.instanceId) ?? null
       : null
+
+  const isPlayerTurn = match.game.activePlayerId === match.viewerPlayerId
+  useTurnTabIndicator(isPlayerTurn, screen === 'battle')
 
   if (screen === 'menu') {
     return (
@@ -409,7 +413,9 @@ function App() {
   }
 
   return (
-    <main className="game-shell">
+    <main
+      className={`game-shell ${isPlayerTurn ? 'is-player-turn' : 'is-opponent-turn'}`}
+    >
       <div className="board-texture" />
 
       <MatchToolbar
@@ -487,7 +493,7 @@ function App() {
       <PhaseRail
         phase={match.game.phase}
         turnNumber={match.game.turnNumber}
-        isPlayerTurn={match.game.activePlayerId === match.viewerPlayerId}
+        isPlayerTurn={isPlayerTurn}
         disabled={
           phaseDisabled ||
           match.game.activePlayerId !== match.viewerPlayerId ||
