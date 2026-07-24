@@ -2344,3 +2344,201 @@
 :root[data-theme="tactical-clean"] .combat-card-wrap {
   background: radial-gradient(circle, rgba(82, 229, 245, 0.07), transparent 66%);
 }
+
+/* 已確認的 battlefield mockup 桌面規格。BattleRow 為本機與線上對局共用，
+ * 因此在這裡統一場區、休息區與功能欄的視覺與幾何，避免兩種對局漂移。 */
+@container game-shell (min-width: 901px) {
+  :root[data-theme="tactical-clean"] .combat-zone {
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(43, 134, 230, 0.16), transparent 68%),
+      linear-gradient(180deg, #0a2858 0%, #04142f 100%);
+    box-shadow:
+      inset 0 0 30px rgba(1, 12, 37, 0.42),
+      inset 0 1px rgba(126, 199, 255, 0.08);
+  }
+
+  :root[data-theme="tactical-clean"] .support-zone {
+    background: linear-gradient(180deg, rgba(13, 62, 132, 0.88), rgba(6, 33, 75, 0.92));
+    box-shadow: inset 0 1px rgba(145, 208, 255, 0.09);
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .combat-zone,
+  :root[data-theme="tactical-clean"] .top-field .support-zone {
+    border-color: rgba(255, 105, 120, 0.72);
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .combat-zone {
+    box-sizing: border-box;
+    border: 2px solid rgba(255, 105, 120, 0.72);
+    border-radius: 18px;
+    box-shadow:
+      inset 0 0 30px rgba(1, 12, 37, 0.42),
+      inset 0 1px rgba(126, 199, 255, 0.08),
+      0 0 18px rgba(255, 84, 104, 0.14);
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .support-zone {
+    box-shadow:
+      inset 0 1px rgba(145, 208, 255, 0.09),
+      0 0 14px rgba(255, 84, 104, 0.1);
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .combat-zone,
+  :root[data-theme="tactical-clean"] .bottom-field .support-zone {
+    border-color: rgba(74, 213, 255, 0.78);
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .combat-zone {
+    box-sizing: border-box;
+    border: 2px solid rgba(74, 213, 255, 0.78);
+    border-radius: 18px;
+    box-shadow:
+      inset 0 0 30px rgba(1, 12, 37, 0.42),
+      inset 0 1px rgba(126, 199, 255, 0.08),
+      0 0 18px rgba(45, 191, 255, 0.16);
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .support-zone {
+    box-shadow:
+      inset 0 1px rgba(145, 208, 255, 0.09),
+      0 0 14px rgba(45, 191, 255, 0.12);
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .row-meta {
+    border-right-color: #ff6978;
+    box-shadow:
+      -8px 8px 20px rgba(0, 0, 0, 0.24),
+      inset -2px 0 rgba(255, 105, 120, 0.16),
+      inset 0 0 14px rgba(128, 20, 37, 0.14);
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .row-meta {
+    border-left-color: #4ad5ff;
+    box-shadow:
+      8px -8px 20px rgba(0, 0, 0, 0.24),
+      inset 2px 0 rgba(74, 213, 255, 0.16),
+      inset 0 0 14px rgba(0, 128, 255, 0.14);
+  }
+
+  :root[data-theme="tactical-clean"] .zone-watermark {
+    color: rgba(218, 241, 255, 0.78);
+    font-size: clamp(1.05rem, 1.55vw, 1.45rem);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-shadow: none;
+    -webkit-text-stroke: 0.35px rgba(1, 18, 49, 0.94);
+    paint-order: stroke fill;
+  }
+
+  :root[data-theme="tactical-clean"] .support-count {
+    font-size: 1.08rem;
+    font-weight: 800;
+    letter-spacing: 0.035em;
+    text-shadow: none;
+    -webkit-text-stroke: 0.3px rgba(1, 18, 49, 0.8);
+    paint-order: stroke fill;
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .support-count {
+    color: #f0dadf;
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .support-count {
+    color: #d2e5f1;
+  }
+
+  :root[data-theme="tactical-clean"] .break-zone .zone-heading {
+    z-index: 4;
+    width: max-content;
+    padding: 2px 6px;
+    background: rgba(1, 18, 49, 0.72);
+    border-radius: 4px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  :root[data-theme="tactical-clean"] .break-zone .zone-heading > :not(strong) {
+    display: none;
+  }
+
+  :root[data-theme="tactical-clean"] .break-zone .zone-heading strong {
+    font-size: 1.08rem;
+    font-weight: 900;
+    letter-spacing: 0.03em;
+    text-shadow: none;
+    -webkit-text-stroke: 0.3px rgba(1, 18, 49, 0.8);
+    paint-order: stroke fill;
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .break-zone .zone-heading {
+    top: auto;
+    bottom: 8px;
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .break-zone .zone-heading {
+    top: 8px;
+    bottom: auto;
+  }
+
+  :root[data-theme="tactical-clean"] .utility-zones {
+    position: relative;
+    top: -30px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    width: 96px;
+    gap: 4px;
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .utility-zones {
+    height: calc(100% - var(--field-stack-reserve));
+    align-self: end;
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .utility-zones {
+    height: calc(100% - var(--field-stack-reserve));
+    align-self: start;
+  }
+
+  :root[data-theme="tactical-clean"] .utility-zones > .resource-dock,
+  :root[data-theme="tactical-clean"] .utility-zones > .discard-zone {
+    grid-column: 1;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    justify-self: stretch;
+    align-self: stretch;
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .discard-zone {
+    grid-row: 1;
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .deck-zone {
+    grid-row: 2;
+  }
+
+  :root[data-theme="tactical-clean"] .top-field .stage-zone {
+    grid-row: 3;
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .stage-zone {
+    grid-row: 1;
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .deck-zone {
+    grid-row: 2;
+  }
+
+  :root[data-theme="tactical-clean"] .bottom-field .discard-zone {
+    grid-row: 3;
+  }
+
+  :root[data-theme="tactical-clean"] .card-badges .badge-hp,
+  :root[data-theme="tactical-clean"] .card-badges .badge-atk,
+  :root[data-theme="tactical-clean"] .energy-shortfall-hint,
+  :root[data-theme="tactical-clean"] .skill-action {
+    border-color: rgba(68, 202, 255, 0.8);
+    background: rgba(1, 14, 45, 0.94);
+    box-shadow: 0 0 14px rgba(0, 143, 255, 0.24);
+  }
+}

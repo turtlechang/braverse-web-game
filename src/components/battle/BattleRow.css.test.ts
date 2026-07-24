@@ -96,15 +96,15 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('ends the player break-zone at the visible field-stack lower edge on desktop', () => {
+  it('matches both utility columns to their visible battle and support stacks on desktop', () => {
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.break-zone\s*,\s*\.bottom-field \.utility-zones\s*\{[^}]*align-self:\s*start[^}]*height:\s*calc\(100% - var\(--break-summary-end\)\)[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.utility-zones\s*\{[^}]*position:\s*relative[^}]*top:\s*-30px[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*width:\s*96px[^}]*}/,
     )
-  })
-
-  it('starts the opponent break-zone at the visible field-stack upper edge on desktop', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.break-zone\s*,\s*\.top-field \.utility-zones\s*\{[^}]*align-self:\s*end[^}]*height:\s*calc\(100% - var\(--break-summary-start\)\)[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.top-field \.utility-zones\s*\{[^}]*height:\s*calc\(100% - var\(--field-stack-reserve\)\)[^}]*align-self:\s*end[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /:root\[data-theme="tactical-clean"\] \.bottom-field \.utility-zones\s*\{[^}]*height:\s*calc\(100% - var\(--field-stack-reserve\)\)[^}]*align-self:\s*start[^}]*}/,
     )
   })
 
@@ -120,46 +120,27 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('uses the same bounds for each break-zone and visible field-stack on desktop', () => {
-    expect(normalizedCss).toContain('--break-summary-start: 72px')
-    expect(normalizedCss).toContain('--break-summary-end: 112px')
-    expect(normalizedCss).toContain('height: calc(100% - var(--break-summary-start))')
-    expect(normalizedCss).toContain('height: calc(100% - var(--break-summary-end))')
-  })
-
-  it('places deck and discard piles beside each other on their respective player sides', () => {
+  it('uses the approved vertical utility order and makes every cell fill its row', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.deck-zone\s*\{[^}]*grid-column:\s*1[^}]*grid-row:\s*1[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.utility-zones > \.resource-dock,\s*:root\[data-theme="tactical-clean"\] \.utility-zones > \.discard-zone\s*\{[^}]*grid-column:\s*1[^}]*justify-self:\s*stretch[^}]*align-self:\s*stretch[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.top-field \.discard-zone\s*\{[^}]*grid-column:\s*2[^}]*grid-row:\s*1[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.top-field \.discard-zone\s*\{[^}]*grid-row:\s*1[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.discard-zone\s*\{[^}]*grid-column:\s*1[^}]*grid-row:\s*3[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.top-field \.deck-zone\s*\{[^}]*grid-row:\s*2[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.discard-zone\.resource-summary\s*\{[^}]*height:\s*80px[^}]*align-self:\s*end[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.top-field \.stage-zone\s*\{[^}]*grid-row:\s*3[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.deck-zone\s*\{[^}]*grid-column:\s*2[^}]*grid-row:\s*3[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.bottom-field \.stage-zone\s*\{[^}]*grid-row:\s*1[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.deck-zone\.resource-dock\s*\{[^}]*width:\s*86px[^}]*height:\s*80px[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.bottom-field \.deck-zone\s*\{[^}]*grid-row:\s*2[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.top-field \.utility-zones\s*\{[^}]*width:\s*176px[^}]*justify-self:\s*end[^}]*}/,
-    )
-    expect(normalizedCss).toMatch(
-      /\.bottom-field \.utility-zones\s*\{[^}]*width:\s*176px[^}]*justify-self:\s*start[^}]*}/,
-    )
-  })
-
-  it('aligns stage zones toward their respective combat areas without stretching them', () => {
-    expect(normalizedCss).toMatch(
-      /\.top-field \.stage-zone\s*\{[^}]*grid-row:\s*2[^}]*justify-self:\s*end[^}]*}/,
-    )
-    expect(normalizedCss).toMatch(
-      /\.bottom-field \.stage-zone\s*\{[^}]*grid-row:\s*2[^}]*justify-self:\s*start[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.bottom-field \.discard-zone\s*\{[^}]*grid-row:\s*3[^}]*}/,
     )
   })
 
@@ -175,12 +156,30 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('enlarges both support counts by another 20 percent', () => {
-    expect(normalizedCss.lastIndexOf('.support-count {')).toBeGreaterThan(
-      normalizedCss.lastIndexOf('.top-field .support-count {'),
+  it('uses restrained side tints and a larger no-glow support count', () => {
+    expect(normalizedCss).toMatch(
+      /:root\[data-theme="tactical-clean"\] \.support-count\s*\{[^}]*font-size:\s*1\.08rem[^}]*font-weight:\s*800[^}]*text-shadow:\s*none[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.support-count\s*\{[^}]*font-size:\s*0\.95rem[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.top-field \.support-count\s*\{[^}]*color:\s*#f0dadf[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /:root\[data-theme="tactical-clean"\] \.bottom-field \.support-count\s*\{[^}]*color:\s*#d2e5f1[^}]*}/,
+    )
+  })
+
+  it('keeps only the enlarged level inside each break dock', () => {
+    expect(normalizedCss).toMatch(
+      /:root\[data-theme="tactical-clean"\] \.break-zone \.zone-heading > :not\(strong\)\s*\{[^}]*display:\s*none[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /:root\[data-theme="tactical-clean"\] \.break-zone \.zone-heading strong\s*\{[^}]*font-size:\s*1\.08rem[^}]*font-weight:\s*900[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /:root\[data-theme="tactical-clean"\] \.top-field \.break-zone \.zone-heading\s*\{[^}]*top:\s*auto[^}]*bottom:\s*8px[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /:root\[data-theme="tactical-clean"\] \.bottom-field \.break-zone \.zone-heading\s*\{[^}]*top:\s*8px[^}]*bottom:\s*auto[^}]*}/,
     )
   })
 
@@ -223,18 +222,12 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('visually joins the opponent and player combat zones into one shared battlefield on desktop', () => {
+  it('gives both combat zones complete rounded opponent and player frames on desktop', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.combat-zone\s*\{[^}]*border-radius:\s*16px 16px 0 0[^}]*border-bottom-width:\s*1px[^}]*border-bottom-color:\s*transparent[^}]*}/,
+      /:root\[data-theme="tactical-clean"\] \.top-field \.combat-zone\s*\{[^}]*border:\s*2px solid rgba\(255, 105, 120, 0\.72\)[^}]*border-radius:\s*18px[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.combat-zone\s*\{[^}]*border-top-width:\s*0[^}]*border-top-color:\s*transparent[^}]*border-radius:\s*0 0 16px 16px[^}]*}/,
-    )
-    expect(normalizedCss.lastIndexOf('border-bottom-color: transparent;')).toBeGreaterThan(
-      normalizedCss.lastIndexOf('border-color: rgba(220, 38, 38, 0.76);'),
-    )
-    expect(normalizedCss.lastIndexOf('border-top-color: transparent;')).toBeGreaterThan(
-      normalizedCss.lastIndexOf('border-color: #2179d1;'),
+      /:root\[data-theme="tactical-clean"\] \.bottom-field \.combat-zone\s*\{[^}]*border:\s*2px solid rgba\(74, 213, 255, 0\.78\)[^}]*border-radius:\s*18px[^}]*}/,
     )
   })
 
