@@ -110,13 +110,13 @@ describe('player hand hover styles', () => {
 
   it('matches the opponent break dock height to the opponent combat zone', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 95\.4px\)[^}]*top:\s*-30px[^}]*}/,
+      /\.top-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 73\.4px\)[^}]*top:\s*-30px[^}]*}/,
     )
   })
 
   it('matches the player break dock height and position to the player combat zone', () => {
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 95\.4px\)[^}]*top:\s*-30px[^}]*}/,
+      /\.bottom-field \.break-zone\s*\{[^}]*height:\s*calc\(70% - 73\.4px\)[^}]*top:\s*-30px[^}]*}/,
     )
   })
 
@@ -210,10 +210,10 @@ describe('player hand hover styles', () => {
 
   it('matches combat and support zone heights with a shared desktop field-stack reserve', () => {
     expect(normalizedCss).toMatch(
-      /\.top-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(30% \+ 35px\)\) minmax\(0, calc\(70% - 45px\)\)[^}]*}/,
+      /\.top-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(30% \+ 13px\)\) minmax\(0, calc\(70% - 23px\)\)[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.bottom-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(70% - 45px\)\) minmax\(0, calc\(30% \+ 35px\)\)[^}]*}/,
+      /\.bottom-field \.field-stack\s*\{[^}]*grid-template-rows:\s*minmax\(0, calc\(70% - 23px\)\) minmax\(0, calc\(30% \+ 13px\)\)[^}]*}/,
     )
     expect(normalizedCss).toMatch(
       /\.top-field \.field-stack\s*\{[^}]*height:\s*calc\(100% - var\(--field-stack-reserve\)\)[^}]*}/,
@@ -247,29 +247,80 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('keeps support cards at their agreed fixed board size', () => {
-    const fixedSupportCardRule = normalizedCss.match(
-      /\/\* Support cards retain their agreed fixed board size\. \*\/\s*\.card-face\.support-card\s*\{[\s\S]*?\n}/,
+  it('keeps support cards smaller than combat cards at a target board height', () => {
+    const supportCardRule = normalizedCss.match(
+      /Support cards stay smaller[\s\S]*?\.card-face\.support-card\s*\{[\s\S]*?\n}/,
     )?.[0]
 
-    expect(fixedSupportCardRule).toContain('width: 70px')
-    expect(fixedSupportCardRule).toContain('height: 100px')
-    expect(fixedSupportCardRule).toContain('aspect-ratio: 0.7')
-    expect(normalizedCss).toContain(
-      '.top-field .card-face.support-card {\n  transform: none;\n  bottom: 6px;',
+    expect(supportCardRule).toContain(
+      '--support-card-height: clamp(88px, 11.1vh, 100px)',
     )
+    expect(supportCardRule).toContain('height: var(--support-card-height)')
+    expect(supportCardRule).toContain(
+      'width: calc(var(--support-card-height) * 0.7)',
+    )
+    expect(supportCardRule).toContain('aspect-ratio: 0.7')
     expect(normalizedCss).not.toContain('padding-bottom: 32px')
     expect(normalizedCss).not.toContain('padding-bottom: 38px')
   })
 
-  it('scales both combat card faces to their combat-zone inner height without overflow', () => {
+  it('vertically centers support cards instead of anchoring to a fixed bottom offset', () => {
+    const baseRule = normalizedCss.match(
+      /支援卡以垂直置中錨定[\s\S]*?\.card-face\.support-card\s*\{[\s\S]*?\n}/,
+    )?.[0]
+    expect(baseRule).toContain('top: 50%')
+    expect(baseRule).toContain('transform: translateY(-50%)')
+    expect(baseRule).not.toContain('bottom:')
+
+    const restedRule = normalizedCss.match(
+      /\.card-face\.support-card\.is-rested\s*\{[\s\S]*?\n}/,
+    )?.[0]
+    expect(restedRule).toContain('transform: translateY(-50%) rotate(90deg)')
+    expect(restedRule).not.toContain('bottom:')
+
+    expect(normalizedCss).toMatch(
+      /\.top-field \.card-face\.support-card\.is-rested\s*\{[^}]*transform:\s*translateY\(-50%\) rotate\(-90deg\)[^}]*}/,
+    )
+  })
+
+  it('keeps rested battle-zone cookies the same size as upright ones', () => {
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap > \.card-face\.is-rested\s*\{\s*transform:\s*rotate\(90deg\);\s*\}/,
+    )
+  })
+
+  it('gives hand cards a target board height that beats the old per-breakpoint tiers', () => {
+    const handCardRule = normalizedCss.match(
+      /\.hand-fan \.hand-card\s*\{[\s\S]*?\n}/,
+    )?.[0]
+
+    expect(handCardRule).toContain(
+      '--hand-card-height: clamp(168px, 20.4vh, 180px)',
+    )
+    expect(handCardRule).toContain('height: var(--hand-card-height)')
+    expect(handCardRule).toContain(
+      'width: calc(var(--hand-card-height) * 0.7)',
+    )
+  })
+
+  it('scales both combat card faces to a target height, capped by the combat-zone inner height to avoid overflow', () => {
     expect(normalizedCss).toContain('container-name: combat-zone')
     expect(normalizedCss).toContain('container-type: size')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 220px)')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 160px)')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 140px)')
-    expect(normalizedCss).toMatch(
-      /@container combat-zone \(min-height: 0px\)\s*\{\s*\.combat-card-wrap\s*\{[^}]*--combat-card-height:\s*max\(0px, calc\(100cqh - 18px\)\)[^}]*width:\s*calc\(var\(--combat-card-height\) \* 0\.7\)[^}]*height:\s*var\(--combat-card-height\)[^}]*max-height:\s*var\(--combat-card-height\)[^}]*}/,
+    const fluidCombatCardRule = normalizedCss.match(
+      /@container combat-zone \(min-height: 0px\)\s*\{\s*\.combat-card-wrap\s*\{[\s\S]*?\n {2}\}/,
+    )?.[0]
+    expect(fluidCombatCardRule).toContain(
+      '--combat-card-height: min(\n      clamp(148px, 17.8vh, 158px),\n      max(0px, calc(100cqh - 18px))\n    );',
+    )
+    expect(fluidCombatCardRule).toContain(
+      'width: calc(var(--combat-card-height) * 0.7)',
+    )
+    expect(fluidCombatCardRule).toContain('height: var(--combat-card-height)')
+    expect(fluidCombatCardRule).toContain(
+      'max-height: var(--combat-card-height)',
     )
     expect(normalizedCss).toMatch(
       /\.combat-card-wrap > \.card-face\s*\{[^}]*width:\s*100%[^}]*height:\s*100%[^}]*max-height:\s*100%[^}]*}/,

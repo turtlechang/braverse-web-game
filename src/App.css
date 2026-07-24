@@ -428,20 +428,37 @@ button {
   background-size: 52px 52px, 52px 52px, 100% 100%;
 }
 
-/* 回合提示：整個對戰畫布邊緣依現在輪到誰上色，切分頁/視窗回來時
- * 靠餘光就能感知，不必盯著 PhaseRail 徽章。 */
-.game-shell.is-player-turn {
+/* 回合提示：整個對戰畫布邊緣依現在該注意誰上色（誰的回合／需要我方回應／
+ * 等待網路同步），切分頁/視窗回來時靠餘光就能感知，不必盯著 PhaseRail
+ * 徽章。只用細外框＋低強度偏光，不整片染色，避免蓋掉卡圖對比。AI 思考中
+ * 沿用跟一般對手回合相同的紅色，不再另外用紫色區分。 */
+.game-shell {
+  --attention-color: transparent;
+  --attention-glow: transparent;
   box-shadow:
-    inset 0 0 0 3px rgba(37, 99, 235, 0.55),
-    inset 0 0 90px rgba(59, 130, 246, 0.16);
-  transition: box-shadow 0.5s ease;
+    inset 0 0 0 2px var(--attention-color),
+    inset 0 0 60px var(--attention-glow);
+  transition: box-shadow 0.8s ease;
 }
 
-.game-shell.is-opponent-turn {
-  box-shadow:
-    inset 0 0 0 3px rgba(220, 38, 38, 0.55),
-    inset 0 0 90px rgba(220, 38, 38, 0.16);
-  transition: box-shadow 0.5s ease;
+.game-shell[data-attention-state="player-turn"] {
+  --attention-color: #35c8ff;
+  --attention-glow: rgba(53, 200, 255, 0.12);
+}
+
+.game-shell[data-attention-state="opponent-turn"] {
+  --attention-color: #dc2626;
+  --attention-glow: rgba(220, 38, 38, 0.08);
+}
+
+.game-shell[data-attention-state="player-response-required"] {
+  --attention-color: #f2b84b;
+  --attention-glow: rgba(242, 184, 75, 0.16);
+}
+
+.game-shell[data-attention-state="network-waiting"] {
+  --attention-color: #94a3b8;
+  --attention-glow: rgba(148, 163, 184, 0.08);
 }
 
 .board-texture {
@@ -1230,8 +1247,7 @@ button {
     transition: none;
   }
 
-  .game-shell.is-player-turn,
-  .game-shell.is-opponent-turn {
+  .game-shell {
     transition: none;
   }
 }
