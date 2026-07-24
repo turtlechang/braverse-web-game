@@ -8,7 +8,8 @@ import { useMatchDialogs } from '../../hooks/useMatchDialogs'
 import { useHandSelectionDismissal } from '../../hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from '../../hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from '../../hooks/useFlipCardPreview'
-import { useTurnTabIndicator } from '../../hooks/useTurnTabIndicator'
+import { useAttentionIndicator } from '../../hooks/useAttentionIndicator'
+import { deriveAttentionState } from '../panels/attentionState'
 import { BattleTable } from './BattleTable'
 import type { BattleRowProps } from './BattleRow'
 import { PhaseRail } from '../layout/PhaseRail'
@@ -105,7 +106,6 @@ export function OnlineBattleView({
   const { closeResourcePopover } = dialogs
 
   const isPlayerTurn = game.activePlayerId === viewerPlayerId
-  useTurnTabIndicator(isPlayerTurn, true)
 
   const match = useOnlineMatchController({ game, viewerPlayerId, sendCommand })
   const pending = useOnlinePendingEffect({
@@ -135,6 +135,12 @@ export function OnlineBattleView({
       connectionNotice,
     },
   })
+
+  const attentionState = deriveAttentionState({
+    mode: actionStatus.mode,
+    isPlayerTurn,
+  })
+  useAttentionIndicator(isPlayerTurn, true)
 
   useEffect(() => {
     sendAttackSelection({
@@ -505,9 +511,7 @@ export function OnlineBattleView({
   }
 
   return (
-    <main
-      className={`game-shell ${isPlayerTurn ? 'is-player-turn' : 'is-opponent-turn'}`}
-    >
+    <main className="game-shell" data-attention-state={attentionState}>
       <div className="board-texture" />
 
       <StatusToast message={commandRejectedReason ?? match.message} />

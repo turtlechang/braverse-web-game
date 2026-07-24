@@ -32,7 +32,8 @@ import { useMatchController } from './hooks/useMatchController'
 import { useHandSelectionDismissal } from './hooks/useHandSelectionDismissal'
 import { deriveInteractionLocked } from './hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from './hooks/useFlipCardPreview'
-import { useTurnTabIndicator } from './hooks/useTurnTabIndicator'
+import { useAttentionIndicator } from './hooks/useAttentionIndicator'
+import { deriveAttentionState } from './components/panels/attentionState'
 import type { AiLevel } from './game'
 
 const InformationModals = lazy(async () => {
@@ -215,7 +216,11 @@ function App() {
       : null
 
   const isPlayerTurn = match.game.activePlayerId === match.viewerPlayerId
-  useTurnTabIndicator(isPlayerTurn, screen === 'battle')
+  const attentionState = deriveAttentionState({
+    mode: actionStatus.mode,
+    isPlayerTurn,
+  })
+  useAttentionIndicator(isPlayerTurn, screen === 'battle')
 
   if (screen === 'menu') {
     return (
@@ -413,9 +418,7 @@ function App() {
   }
 
   return (
-    <main
-      className={`game-shell ${isPlayerTurn ? 'is-player-turn' : 'is-opponent-turn'}`}
-    >
+    <main className="game-shell" data-attention-state={attentionState}>
       <div className="board-texture" />
 
       <MatchToolbar

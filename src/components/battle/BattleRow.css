@@ -462,33 +462,32 @@
   direction: rtl;
 }
 
+/* 支援卡以垂直置中錨定（而非貼底固定像素），這樣不論卡片實際高度
+ * （見下方 clamp() 尺寸規則）或支援區高度怎麼變，直立卡都不會被
+ * overflow:hidden 裁到，橫置（is-rested）卡旋轉後也自然置中，不需要
+ * 另外調整偏移量。 */
 .card-face.support-card {
   position: absolute;
-  bottom: 4px;
+  top: 50%;
   left: calc(var(--support-index, 0) * 28px + 10px);
-  width: 108px;
   flex: none;
-  transform-origin: center bottom;
+  transform: translateY(-50%);
+  transform-origin: center center;
 }
 
 .card-face.support-card.is-rested {
-  transform: rotate(90deg);
   left: calc(var(--support-index, 0) * 28px + 20px);
-  bottom: 60px;
+  transform: translateY(-50%) rotate(90deg);
 }
 
 .top-field .card-face.support-card {
   left: auto;
   right: calc(var(--support-index, 0) * 28px + 10px);
-  bottom: 30px;
-  transform-origin: center bottom;
-  transform: scale(0.9);
 }
 
 .top-field .card-face.support-card.is-rested {
   right: calc(var(--support-index, 0) * 28px + 20px);
-  bottom: 60px;
-  transform: rotate(-90deg);
+  transform: translateY(-50%) rotate(-90deg);
 }
 
 .side-zones,
@@ -880,24 +879,26 @@
   }
 
   .top-field .field-stack {
-    grid-template-rows: minmax(0, calc(30% + 35px)) minmax(0, calc(70% - 45px));
+    grid-template-rows: minmax(0, calc(30% + 13px)) minmax(0, calc(70% - 23px));
   }
 
   /* The top field reserves 72px above its stack, while the combat track is
-   * 70% of that remaining height minus 45px. Mirror that exact size for the
-   * visible opponent break dock. */
+   * 70% of that remaining height minus 23px (shifted 22px from the support
+   * track so the combat zone has more headroom on short viewports — support
+   * cards are deliberately smaller and don't need the space). Mirror that
+   * exact size for the visible opponent break dock. */
   .top-field .break-zone {
-    height: calc(70% - 95.4px);
+    height: calc(70% - 73.4px);
     top: -30px;
   }
 
   .bottom-field .break-zone {
-    height: calc(70% - 95.4px);
+    height: calc(70% - 73.4px);
     top: -30px;
   }
 
   .bottom-field .field-stack {
-    grid-template-rows: minmax(0, calc(70% - 45px)) minmax(0, calc(30% + 35px));
+    grid-template-rows: minmax(0, calc(70% - 23px)) minmax(0, calc(30% + 13px));
     gap: 10px;
     top: -30px;
   }
@@ -1937,19 +1938,36 @@
   }
 }
 
-/* Support cards retain their agreed fixed board size. */
+/* Support cards stay smaller than combat cards on purpose — the board only
+ * needs color/rest-state/payment at a glance here, not a readable card face. */
 .card-face.support-card {
-  width: 70px;
-  height: 100px;
+  --support-card-height: clamp(88px, 11.1vh, 100px);
+  height: var(--support-card-height);
+  width: calc(var(--support-card-height) * 0.7);
   aspect-ratio: 0.7;
 }
 
-/* Combat cards expand to each combat zone's inner height. The 18px reserve
- * matches the desktop combat-slot vertical padding, leaving room for the HP
- * stack without either side's card crossing its combat-zone boundary. */
+/* Hand cards target a comfortable reading size (~176px high at a
+ * 1536x864 viewport). `.hand-fan .hand-card` matches the specificity of the
+ * old `.bottom-hand .hand-card` tier override below and wins on source order,
+ * replacing every earlier per-breakpoint hand-card width in this file. */
+.hand-fan .hand-card {
+  --hand-card-height: clamp(168px, 20.4vh, 180px);
+  height: var(--hand-card-height);
+  width: calc(var(--hand-card-height) * 0.7);
+  aspect-ratio: 0.7;
+}
+
+/* Combat cards target a comfortable reading size (~154px high at a
+ * 1536x864 viewport) but never exceed the combat zone's own inner height —
+ * the 18px reserve matches the desktop combat-slot vertical padding, leaving
+ * room for the HP stack without either side's card crossing its boundary. */
 @container combat-zone (min-height: 0px) {
   .combat-card-wrap {
-    --combat-card-height: max(0px, calc(100cqh - 18px));
+    --combat-card-height: min(
+      clamp(148px, 17.8vh, 158px),
+      max(0px, calc(100cqh - 18px))
+    );
     width: calc(var(--combat-card-height) * 0.7);
     height: var(--combat-card-height);
     max-height: var(--combat-card-height);
@@ -1966,6 +1984,14 @@
   .combat-card-wrap .hp-card-stack {
     max-width: 100%;
   }
+}
+
+/* The shared .card-face.is-rested rule (CardVisuals.css) shrinks rested cards
+ * to 82% so they still fit their original upright footprint when rotated.
+ * Battle-zone cookies don't share that footprint constraint — keep them the
+ * same size as an upright cookie, just rotated. */
+.combat-card-wrap > .card-face.is-rested {
+  transform: rotate(90deg);
 }
 
 /* Combat stat badges are anchored to the card itself so HP remains visible at
@@ -2032,15 +2058,6 @@
   .combat-card-wrap.is-attack-target::after {
     animation: none;
   }
-}
-
-.top-field .card-face.support-card {
-  transform: none;
-  bottom: 6px;
-}
-
-.top-field .card-face.support-card.is-rested {
-  transform: rotate(-90deg);
 }
 
 .bottom-field .support-count {
