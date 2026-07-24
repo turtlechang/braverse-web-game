@@ -303,29 +303,43 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('scales both combat card faces to a target height, capped by the combat-zone inner height to avoid overflow', () => {
+  it('keeps the compact-layout combat card zone-fit formula unscoped (untouched below 901px)', () => {
     expect(normalizedCss).toContain('container-name: combat-zone')
     expect(normalizedCss).toContain('container-type: size')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 220px)')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 160px)')
     expect(normalizedCss).toContain('@container combat-zone (max-height: 140px)')
-    const fluidCombatCardRule = normalizedCss.match(
+    const baseFluidRule = normalizedCss.match(
       /@container combat-zone \(min-height: 0px\)\s*\{\s*\.combat-card-wrap\s*\{[\s\S]*?\n {2}\}/,
     )?.[0]
-    expect(fluidCombatCardRule).toContain(
-      '--combat-card-height: min(\n      clamp(148px, 17.8vh, 158px),\n      max(0px, calc(100cqh - 18px))\n    );',
+    expect(baseFluidRule).toContain(
+      '--combat-card-height: max(0px, calc(100cqh - 18px));',
     )
-    expect(fluidCombatCardRule).toContain(
+    expect(baseFluidRule).toContain(
       'width: calc(var(--combat-card-height) * 0.7)',
     )
-    expect(fluidCombatCardRule).toContain('height: var(--combat-card-height)')
-    expect(fluidCombatCardRule).toContain(
-      'max-height: var(--combat-card-height)',
-    )
+    expect(baseFluidRule).toContain('height: var(--combat-card-height)')
+    expect(baseFluidRule).toContain('max-height: var(--combat-card-height)')
     expect(normalizedCss).toMatch(
       /\.combat-card-wrap > \.card-face\s*\{[^}]*width:\s*100%[^}]*height:\s*100%[^}]*max-height:\s*100%[^}]*}/,
     )
     expect(normalizedCss).toMatch(/\.combat-card-wrap \.hp-card-stack\s*\{[^}]*max-width:\s*100%[^}]*}/)
+  })
+
+  it('layers a target-height clamp on top of the compact formula for the desktop tier only', () => {
+    const desktopFluidRule = normalizedCss.match(
+      /is layered on top[\s\S]*?@container combat-zone \(min-height: 0px\)\s*\{\s*\.combat-card-wrap\s*\{[\s\S]*?\n {4}\}/,
+    )?.[0]
+    expect(desktopFluidRule).toContain(
+      '--combat-card-height: min(\n        clamp(148px, 17.8vh, 158px),\n        max(0px, calc(100cqh - 18px))\n      );',
+    )
+    expect(desktopFluidRule).toContain(
+      'width: calc(var(--combat-card-height) * 0.7)',
+    )
+    expect(desktopFluidRule).toContain('height: var(--combat-card-height)')
+    expect(desktopFluidRule).toContain(
+      'max-height: var(--combat-card-height)',
+    )
   })
 
   it('pins the HP badge to the card upper-right and enlarges both combat stat badges by 10%', () => {

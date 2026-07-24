@@ -1938,36 +1938,21 @@
   }
 }
 
-/* Support cards stay smaller than combat cards on purpose — the board only
- * needs color/rest-state/payment at a glance here, not a readable card face. */
+/* Support cards retain their agreed fixed board size in the <900px compact
+ * layout (untouched by the redesign below). */
 .card-face.support-card {
-  --support-card-height: clamp(88px, 11.1vh, 100px);
-  height: var(--support-card-height);
-  width: calc(var(--support-card-height) * 0.7);
+  width: 70px;
+  height: 100px;
   aspect-ratio: 0.7;
 }
 
-/* Hand cards target a comfortable reading size (~176px high at a
- * 1536x864 viewport). `.hand-fan .hand-card` matches the specificity of the
- * old `.bottom-hand .hand-card` tier override below and wins on source order,
- * replacing every earlier per-breakpoint hand-card width in this file. */
-.hand-fan .hand-card {
-  --hand-card-height: clamp(168px, 20.4vh, 180px);
-  height: var(--hand-card-height);
-  width: calc(var(--hand-card-height) * 0.7);
-  aspect-ratio: 0.7;
-}
-
-/* Combat cards target a comfortable reading size (~154px high at a
- * 1536x864 viewport) but never exceed the combat zone's own inner height —
- * the 18px reserve matches the desktop combat-slot vertical padding, leaving
- * room for the HP stack without either side's card crossing its boundary. */
+/* Combat cards expand to each combat zone's inner height in the <900px
+ * compact layout (untouched by the redesign below). The 18px reserve matches
+ * the desktop combat-slot vertical padding, leaving room for the HP stack
+ * without either side's card crossing its combat-zone boundary. */
 @container combat-zone (min-height: 0px) {
   .combat-card-wrap {
-    --combat-card-height: min(
-      clamp(148px, 17.8vh, 158px),
-      max(0px, calc(100cqh - 18px))
-    );
+    --combat-card-height: max(0px, calc(100cqh - 18px));
     width: calc(var(--combat-card-height) * 0.7);
     height: var(--combat-card-height);
     max-height: var(--combat-card-height);
@@ -1983,6 +1968,61 @@
 
   .combat-card-wrap .hp-card-stack {
     max-width: 100%;
+  }
+}
+
+/* The clamp()-driven board-card sizing below is layered on top of the fixed
+ * compact-layout rules above, and scoped to the desktop tier on purpose —
+ * the <900px compact layout intentionally keeps its own pre-redesign sizing
+ * untouched (re-scoping the base rules above instead of layering on top of
+ * them would exclude their existing compact-mode behavior too, not just
+ * this new desktop enlargement). */
+@container game-shell (min-width: 901px) {
+  /* Support cards stay smaller than combat cards on purpose — the board only
+   * needs color/rest-state/payment at a glance here, not a readable card face. */
+  .card-face.support-card {
+    --support-card-height: clamp(88px, 11.1vh, 100px);
+    height: var(--support-card-height);
+    width: calc(var(--support-card-height) * 0.7);
+    aspect-ratio: 0.7;
+  }
+
+  /* Hand cards target a comfortable reading size (~176px high at a
+   * 1536x864 viewport). `.hand-fan .hand-card` matches the specificity of the
+   * old `.bottom-hand .hand-card` tier override below and wins on source
+   * order, replacing every earlier per-breakpoint hand-card width in this
+   * file. */
+  .hand-fan .hand-card {
+    --hand-card-height: clamp(168px, 20.4vh, 180px);
+    height: var(--hand-card-height);
+    width: calc(var(--hand-card-height) * 0.7);
+    aspect-ratio: 0.7;
+  }
+
+  /* Below the 168px floor's comfortable range there isn't enough vertical
+   * room left for the hand to sit under the battle row without overlapping
+   * it — let the hand shrink further on short viewports instead of forcing
+   * the 168px floor and covering the combat cards. */
+  @container game-shell (max-height: 620px) {
+    .hand-fan .hand-card {
+      --hand-card-height: 20.4vh;
+    }
+  }
+
+  /* Combat cards target a comfortable reading size (~154px high at a
+   * 1536x864 viewport) but never exceed the combat zone's own inner height —
+   * matches the base rule above's 18px reserve. */
+  @container combat-zone (min-height: 0px) {
+    .combat-card-wrap {
+      --combat-card-height: min(
+        clamp(148px, 17.8vh, 158px),
+        max(0px, calc(100cqh - 18px))
+      );
+      width: calc(var(--combat-card-height) * 0.7);
+      height: var(--combat-card-height);
+      max-height: var(--combat-card-height);
+      aspect-ratio: 0.7;
+    }
   }
 }
 
