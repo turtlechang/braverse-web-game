@@ -1,0 +1,299 @@
+.mock-bf-root,
+:root[data-theme="tactical-clean"] .mock-bf-root {
+  isolation: isolate;
+  /* PR #70（c722f7a）的遊戲場底色，僅供 mockup 比對。 */
+  background-color: #08285f;
+  background-image:
+    radial-gradient(circle at 52% 42%, rgba(70, 145, 226, 0.28), transparent 32%),
+    linear-gradient(135deg, #0a367f 0%, #123f90 44%, #08285f 100%);
+  background-size: auto;
+  color: #eaf7ff;
+  box-shadow:
+    inset 0 0 0 2px rgba(32, 153, 255, 0.74),
+    inset 0 0 72px rgba(0, 91, 230, 0.22),
+    inset 0 0 180px rgba(0, 14, 48, 0.82);
+}
+
+.mock-bf-root .board-texture,
+:root[data-theme="tactical-clean"] .mock-bf-root .board-texture {
+  opacity: 0.3;
+  filter: none;
+  background-image:
+    linear-gradient(45deg, transparent 47%, rgba(255, 255, 255, 0.08) 49%, transparent 51%),
+    linear-gradient(-45deg, transparent 47%, rgba(255, 255, 255, 0.05) 49%, transparent 51%);
+  background-size: 54px 54px;
+}
+
+.mock-bf-root .combat-zone,
+.mock-bf-root .support-zone {
+  border-color: rgba(46, 171, 255, 0.52);
+  background: rgba(2, 19, 52, 0.68);
+  box-shadow:
+    inset 0 0 28px rgba(0, 48, 129, 0.36),
+    0 0 20px rgba(0, 105, 255, 0.08);
+}
+
+.mock-bf-root .bottom-field .combat-zone {
+  border-color: rgba(81, 194, 255, 0.76);
+  box-shadow:
+    inset 0 0 30px rgba(0, 54, 142, 0.42),
+    0 0 22px rgba(0, 161, 255, 0.18);
+}
+
+/* Mockup color hierarchy: combat remains the deepest playable surface;
+ * support is one luminance step brighter so it reads as a secondary tray. */
+:root[data-theme="tactical-clean"] .mock-bf-root .combat-zone {
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(43, 134, 230, 0.16), transparent 68%),
+    linear-gradient(180deg, #0a2858 0%, #04142f 100%);
+  box-shadow:
+    inset 0 0 30px rgba(1, 12, 37, 0.42),
+    inset 0 1px rgba(126, 199, 255, 0.08);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .support-zone {
+  background: linear-gradient(180deg, rgba(13, 62, 132, 0.88), rgba(6, 33, 75, 0.92));
+  box-shadow: inset 0 1px rgba(145, 208, 255, 0.09);
+}
+
+/* Enemy and player fields use a restrained but persistent red / cyan outline.
+ * The glow stays outside the zones so cards and HP docks keep their contrast. */
+:root[data-theme="tactical-clean"] .mock-bf-root .top-field .combat-zone,
+:root[data-theme="tactical-clean"] .mock-bf-root .top-field .support-zone {
+  border-color: rgba(255, 105, 120, 0.72);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .top-field .combat-zone {
+  box-sizing: border-box;
+  border: 2px solid rgba(255, 105, 120, 0.72);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 0 30px rgba(1, 12, 37, 0.42),
+    inset 0 1px rgba(126, 199, 255, 0.08),
+    0 0 18px rgba(255, 84, 104, 0.14);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .top-field .support-zone {
+  box-shadow:
+    inset 0 1px rgba(145, 208, 255, 0.09),
+    0 0 14px rgba(255, 84, 104, 0.1);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .combat-zone,
+:root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .support-zone {
+  border-color: rgba(74, 213, 255, 0.78);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .combat-zone {
+  box-sizing: border-box;
+  border: 2px solid rgba(74, 213, 255, 0.78);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 0 30px rgba(1, 12, 37, 0.42),
+    inset 0 1px rgba(126, 199, 255, 0.08),
+    0 0 18px rgba(45, 191, 255, 0.16);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .support-zone {
+  box-shadow:
+    inset 0 1px rgba(145, 208, 255, 0.09),
+    0 0 14px rgba(45, 191, 255, 0.12);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .top-field .row-meta {
+  border-right-color: #ff6978;
+  box-shadow:
+    -8px 8px 20px rgba(0, 0, 0, 0.24),
+    inset -2px 0 rgba(255, 105, 120, 0.16),
+    inset 0 0 14px rgba(128, 20, 37, 0.14);
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .row-meta {
+  border-left-color: #4ad5ff;
+  box-shadow:
+    8px -8px 20px rgba(0, 0, 0, 0.24),
+    inset 2px 0 rgba(74, 213, 255, 0.16),
+    inset 0 0 14px rgba(0, 128, 255, 0.14);
+}
+
+.mock-bf-root .zone-watermark,
+.mock-bf-root .support-count,
+.mock-bf-root .row-role {
+  color: #a9e8ff;
+  text-shadow: 0 0 12px rgba(41, 197, 255, 0.5);
+}
+
+/* Zone labels must stay readable without looking like a light source. */
+:root[data-theme="tactical-clean"] .mock-bf-root .zone-watermark {
+  color: rgba(218, 241, 255, 0.78);
+  font-size: clamp(1.05rem, 1.55vw, 1.45rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-shadow: none;
+  -webkit-text-stroke: 0.35px rgba(1, 18, 49, 0.94);
+  paint-order: stroke fill;
+}
+
+/* Support count is secondary state: use subdued side tints instead of neon
+ * cyan so it reinforces ownership without competing with playable cards. */
+:root[data-theme="tactical-clean"] .mock-bf-root .support-count {
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-shadow: none;
+  -webkit-text-stroke: 0.3px rgba(1, 18, 49, 0.8);
+  paint-order: stroke fill;
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .top-field .support-count {
+  color: #f0dadf;
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .support-count {
+  color: #d2e5f1;
+}
+
+/* Keep the break dock focused on the level threshold. The player reads it at
+ * the dock's inner upper edge, while the opponent's level sits at its inner
+ * lower edge, clear of the card stack in the center. */
+:root[data-theme="tactical-clean"] .mock-bf-root .break-zone .zone-heading {
+  z-index: 4;
+  width: max-content;
+  padding: 2px 6px;
+  background: rgba(1, 18, 49, 0.72);
+  border-radius: 4px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .break-zone .zone-heading > :not(strong) {
+  display: none;
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .break-zone .zone-heading strong {
+  font-size: 1.08rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-shadow: none;
+  -webkit-text-stroke: 0.3px rgba(1, 18, 49, 0.8);
+  paint-order: stroke fill;
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .top-field .break-zone .zone-heading {
+  top: auto;
+  bottom: 8px;
+}
+
+:root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .break-zone .zone-heading {
+  top: 8px;
+  bottom: auto;
+}
+
+/* Desktop mockup: make every side utility a single three-block column with
+ * the same usable height as its combat and support field stack. */
+@container game-shell (min-width: 901px) {
+  :root[data-theme="tactical-clean"] .mock-bf-root .utility-zones {
+    position: relative;
+    top: -30px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    width: 96px;
+    gap: 4px;
+  }
+
+  :root[data-theme="tactical-clean"] .mock-bf-root .top-field .utility-zones {
+    height: calc(100% - var(--field-stack-reserve));
+    align-self: end;
+  }
+
+  :root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .utility-zones {
+    height: calc(100% - var(--field-stack-reserve));
+    align-self: start;
+  }
+
+  :root[data-theme="tactical-clean"] .mock-bf-root .utility-zones > .resource-dock,
+  :root[data-theme="tactical-clean"] .mock-bf-root .utility-zones > .discard-zone {
+    grid-column: 1;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    justify-self: stretch;
+    align-self: stretch;
+  }
+
+  /* Opponent: discard → deck → stage. */
+  :root[data-theme="tactical-clean"] .mock-bf-root .top-field .discard-zone {
+    grid-row: 1;
+  }
+
+  :root[data-theme="tactical-clean"] .mock-bf-root .top-field .deck-zone {
+    grid-row: 2;
+  }
+
+  :root[data-theme="tactical-clean"] .mock-bf-root .top-field .stage-zone {
+    grid-row: 3;
+  }
+
+  /* Player: stage → deck → discard. */
+  :root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .stage-zone {
+    grid-row: 1;
+  }
+
+  :root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .deck-zone {
+    grid-row: 2;
+  }
+
+  :root[data-theme="tactical-clean"] .mock-bf-root .bottom-field .discard-zone {
+    grid-row: 3;
+  }
+}
+
+.mock-bf-root .row-meta {
+  border-right-color: #28c9ff;
+  background: rgba(2, 14, 39, 0.88);
+  box-shadow:
+    -8px 8px 20px rgba(0, 0, 0, 0.24),
+    inset 0 0 14px rgba(0, 128, 255, 0.12);
+}
+
+.mock-bf-root .row-avatar,
+.mock-bf-root .phase-rail,
+.mock-bf-root .turn-indicator,
+.mock-bf-root .next-phase-button {
+  border-color: rgba(40, 196, 255, 0.66);
+  background: rgba(2, 14, 39, 0.9);
+  color: #eaf7ff;
+  box-shadow: inset 0 0 14px rgba(0, 128, 255, 0.16);
+}
+
+.mock-bf-root .card-badges .badge-hp,
+.mock-bf-root .card-badges .badge-atk,
+.mock-bf-root .energy-shortfall-hint,
+.mock-bf-root .skill-action {
+  border-color: rgba(68, 202, 255, 0.8);
+  background: rgba(1, 14, 45, 0.94);
+  box-shadow: 0 0 14px rgba(0, 143, 255, 0.24);
+}
+
+.mock-bf-caption {
+  position: absolute;
+  z-index: 21;
+  bottom: 12px;
+  left: 50%;
+  max-width: min(540px, 58vw);
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid rgba(40, 181, 255, 0.44);
+  background: rgba(1, 10, 30, 0.82);
+  color: #c9efff;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+@container game-shell (max-width: 900px) {
+  .mock-bf-caption {
+    display: none;
+  }
+}
