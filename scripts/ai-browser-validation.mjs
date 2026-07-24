@@ -484,12 +484,14 @@ try {
       metrics.compactHudValid,
       `${viewport.width}x${viewport.height} 的窄版 HUD 應為頂部階段列、中央牌桌、底部工具列：${JSON.stringify(metrics.compactHudRects)}`,
     )
-    // The P1-3b redesign no longer holds a fixed 55/45 combat/support split
-    // at every breakpoint: desktop tiers run closer to 60/40 while mobile
-    // tiers (<900px, deliberately left on the pre-redesign layout) run
-    // closer to 45/55. This is a broad sanity bound, not a precision check.
+    // The card-size redesign shifted more of the desktop field-stack height
+    // to the combat zone (support cards are deliberately smaller and don't
+    // need as much room), so desktop tiers now run closer to 65/35 instead
+    // of the old ~60/40; mobile tiers (<900px, deliberately left on the
+    // pre-redesign layout) stay at ~45/55. This is a broad sanity bound, not
+    // a precision check.
     assert.ok(
-      metrics.fieldRatio >= 0.38 && metrics.fieldRatio <= 0.57,
+      metrics.fieldRatio >= 0.32 && metrics.fieldRatio <= 0.57,
       `${viewport.width}x${viewport.height} 的支援區佔比超出合理範圍，實際 ${metrics.fieldRatio}`,
     )
     if (metrics.supportCardCount > 0) {
@@ -522,20 +524,21 @@ try {
       )
     }
     if (viewport.width >= 1500 && viewport.height >= 850) {
-      // The game-shell-level breakpoint declares width:150px here, but the
-      // nested @container combat-zone rules (driven by the combat-zone's
-      // own rendered height, which is squeezed by the wider support-zone
-      // share at this tier) clamp it back down in practice; 125px still
-      // confirms this tier renders meaningfully larger than the ~118px
-      // baseline tier.
+      // Combat card height is now clamp(148px, 17.8vh, 158px), so it caps out
+      // at a fixed ~158px-tall / ~111px-wide card rather than continuing to
+      // grow with the viewport; 100px still confirms this tier renders
+      // meaningfully larger than the compact (<900px) baseline tier.
       assert.ok(
-        metrics.combatCardWidth >= 125,
+        metrics.combatCardWidth >= 100,
         `${viewport.width}x${viewport.height} 的戰鬥卡尺寸應明顯放大，實際寬度 ${metrics.combatCardWidth}`,
       )
       if (metrics.supportCardCount > 0) {
+        // Support cards are deliberately smaller than combat cards now
+        // (clamp(88px, 11.1vh, 100px) high / ~62-70px wide) — this only
+        // confirms they're not being squeezed below that intentional range.
         assert.ok(
-          metrics.supportCardWidthActual >= 74,
-          `${viewport.width}x${viewport.height} 的支援卡尺寸應明顯放大，實際寬度 ${metrics.supportCardWidthActual}`,
+          metrics.supportCardWidthActual >= 60,
+          `${viewport.width}x${viewport.height} 的支援卡尺寸不可過小，實際寬度 ${metrics.supportCardWidthActual}`,
         )
       }
     }
