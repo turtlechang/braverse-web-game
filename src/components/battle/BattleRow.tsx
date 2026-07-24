@@ -381,10 +381,12 @@ export function BattleRow({
             </div>
           </div>
         </div>
-        <div className={`combat-zone${selectedHandCardCanDeploy ? ' is-legal-target' : ''}`}>
+        <div
+          className={`combat-zone battle-count-${player.battleArea.length}${selectedHandCardCanDeploy ? ' is-legal-target' : ''}`}
+        >
           <span className="zone-watermark">戰鬥區</span>
           <div className="combat-slots">
-            {player.battleArea.map((cookie) => {
+            {player.battleArea.map((cookie, cookieIndex) => {
               const canSelectEffectTarget = effectTargetIds.has(
                 cookie.card.instanceId,
               )
@@ -429,12 +431,20 @@ export function BattleRow({
                   : null
               const isPendingAttackTarget =
                 game.pendingBattle?.targetInstanceId === cookie.card.instanceId
+              const battleSlotClass =
+                player.battleArea.length === 2
+                  ? cookieIndex === 0
+                    ? 'is-left-slot'
+                    : 'is-right-slot'
+                  : 'is-single-slot is-left-slot'
 
               const animClasses = [
                 faintAnimIds?.has(cookie.card.instanceId) && 'animate-faint-shrink',
                 attackShakeId === cookie.card.instanceId && 'animate-attack-shake',
                 damageFlashId === cookie.card.instanceId && 'animate-damage-flash',
                 isPendingAttackTarget && 'is-attack-target',
+                revealedHpCard && 'has-hp-reveal',
+                battleSlotClass,
               ]
                 .filter(Boolean)
                 .join(' ')
@@ -518,22 +528,26 @@ export function BattleRow({
                       {canSelectEffectTarget ? '效果目標' : '攻擊目標'}
                     </span>
                   )}
-                  {showEnergyShortfallHint && (
-                    <span className="energy-shortfall-hint">
-                      能量不足：需要 {getEnergyCostTotal(attackEnergyCost)}，
-                      目前可用 {availableEnergyCount}
-                    </span>
-                  )}
-                  {canActivateSkill && (
-                    <button
-                      className="skill-action"
-                      type="button"
-                      onClick={() =>
-                        onActivateSkill?.(cookie.card.instanceId)
-                      }
-                    >
-                      啟動技能
-                    </button>
+                  {(showEnergyShortfallHint || canActivateSkill) && (
+                    <div className="combat-action-stack">
+                      {showEnergyShortfallHint && (
+                        <span className="energy-shortfall-hint">
+                          能量不足：需要 {getEnergyCostTotal(attackEnergyCost)}，
+                          目前可用 {availableEnergyCount}
+                        </span>
+                      )}
+                      {canActivateSkill && (
+                        <button
+                          className="skill-action"
+                          type="button"
+                          onClick={() =>
+                            onActivateSkill?.(cookie.card.instanceId)
+                          }
+                        >
+                          啟動技能
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )

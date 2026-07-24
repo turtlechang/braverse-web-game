@@ -354,9 +354,75 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('aligns the energy shortfall hint immediately below the card lower edge', () => {
+  it('aligns the energy shortfall hint through the shared combat action stack', () => {
     expect(normalizedCss).toMatch(
-      /\.energy-shortfall-hint\s*\{[^}]*position:\s*absolute[^}]*top:\s*100%[^}]*bottom:\s*auto[^}]*left:\s*50%[^}]*transform:\s*translateX\(-50%\)[^}]*}/,
+      /\.combat-action-stack\s+\.energy-shortfall-hint\s*\{[^}]*position:\s*static[^}]*transform:\s*none[^}]*}/,
+    )
+  })
+
+  it('keeps the energy hint and skill action in one non-overlapping action stack', () => {
+    expect(normalizedCss).toMatch(
+      /\.combat-action-stack\s*\{[^}]*position:\s*absolute[^}]*top:\s*calc\(100% \+ var\(--hp-dock-height\) \+ 4px\)[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-action-stack\s+\.energy-shortfall-hint\s*\{[^}]*position:\s*static[^}]*transform:\s*none[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-action-stack\s+\.skill-action\s*\{[^}]*position:\s*static[^}]*transform:\s*none[^}]*}/,
+    )
+  })
+
+  it('moves both action prompts to the outer side of their battle card slot', () => {
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap\.is-left-slot \.combat-action-stack\s*\{[^}]*top:\s*50%[^}]*right:\s*calc\(100% \+ 8px\)[^}]*left:\s*auto[^}]*transform:\s*translateY\(-50%\)[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap\.is-right-slot \.combat-action-stack\s*\{[^}]*top:\s*50%[^}]*right:\s*auto[^}]*left:\s*calc\(100% \+ 8px\)[^}]*transform:\s*translateY\(-50%\)[^}]*}/,
+    )
+  })
+
+  it('places the HP card dock below the combat card instead of using the action area', () => {
+    expect(normalizedCss).toMatch(
+      /\.hp-card-stack\s*\{[^}]*top:\s*calc\(100% - var\(--hp-dock-overlap\)\)[^}]*bottom:\s*auto[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.hp-card-stack\s+\.hp-card\s*\{[^}]*bottom:\s*0[^}]*}/,
+    )
+  })
+
+  it('reserves lower-edge space for the opponent HP dock and widens two-cookie spacing', () => {
+    expect(normalizedCss).toMatch(
+      /\.top-field \.combat-card-wrap\s*\{[^}]*margin-bottom:\s*clamp\(2px, 0\.35vh, 3px\)[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-slots\s*\{[^}]*--battle-card-gap:\s*clamp\(166px, 14vw, 196px\)[^}]*gap:\s*var\(--battle-card-gap\)[^}]*}/,
+    )
+  })
+
+  it('keeps the battle-zone label centered while a single cookie uses the left slot', () => {
+    expect(normalizedCss).toMatch(
+      /\.combat-zone > \.zone-watermark\s*\{[^}]*z-index:\s*2[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.zone-watermark\s*\{[^}]*inset:\s*50% auto auto 50%[^}]*transform:\s*translate\(-50%, -50%\)[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-zone\.battle-count-1 \.combat-slots\s*\{[^}]*justify-content:\s*center[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.combat-card-wrap\.is-single-slot\s*\{[^}]*translate:\s*calc\(-50% - \(var\(--battle-card-gap\) \/ 2\)\) 0[^}]*}/,
+    )
+  })
+
+  it('enlarges the standard HP dock without changing the compact dock cap', () => {
+    expect(normalizedCss).toMatch(
+      /\.hp-card-stack \.hp-card\s*\{[^}]*width:\s*50px[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /\.hp-card-stack \.hp-card\s*\{[^}]*width:\s*50px[^}]*}/,
+    )
+    expect(normalizedCss).toMatch(
+      /@container combat-zone \(max-height: 220px\)\s*\{[\s\S]*?\.hp-card-stack \.hp-card\s*\{[^}]*width:\s*32px[^}]*}/,
     )
   })
 
