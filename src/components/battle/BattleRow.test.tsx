@@ -4,7 +4,8 @@ import {
   createItemUsageDemoState,
   createStageUsageDemoState,
 } from '../../game/demo'
-import type { GameState, PendingBattle } from '../../game'
+import { createBattleState } from '../../game/test-helpers/battle-helpers'
+import type { CardSkill, GameState, PendingBattle } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
 import { computePlayerHandFan } from './playerHandFan'
@@ -129,6 +130,78 @@ describe('player hand fan pure functions', () => {
 })
 
 describe('BattleRow desktop interactions', () => {
+  it('marks a single battle cookie so its zone label can avoid the card', () => {
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps()} />,
+    )
+
+    expect(markup).toContain('combat-zone battle-count-1')
+    expect(markup).toContain('combat-card-wrap is-single-slot is-left-slot')
+  })
+
+  it('marks two battle cookies with matching left and right action slots', () => {
+    const game = createBattleState()
+    const firstCookie = game.players['player-two'].battleArea[0]
+    game.players['player-two'].battleArea.push({
+      ...firstCookie,
+      card: {
+        ...firstCookie.card,
+        id: 'attacker-right',
+        instanceId: 'attacker-right',
+      },
+      hpCards: [],
+      battleEntryId: 'attacker:right',
+    })
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-two',
+          position: 'bottom',
+        })}
+      />,
+    )
+
+    expect(markup).toContain('combat-zone battle-count-2')
+    expect(markup).toContain('combat-card-wrap is-left-slot')
+    expect(markup).toContain('combat-card-wrap is-right-slot')
+  })
+
+  it('keeps an activatable skill visible beside an unaffordable attack hint', () => {
+    const game = createBattleState()
+    const activeCookie = game.players['player-two'].battleArea[0]
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {} },
+      text: 'Skill',
+      effects: [],
+    }
+    activeCookie.card = {
+      ...activeCookie.card,
+      attackEnergyCost: { red: 2 },
+      skill,
+    }
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-two',
+          position: 'bottom',
+        })}
+      />,
+    )
+
+    expect(markup).toContain('combat-action-stack')
+    expect(markup).toContain('energy-shortfall-hint')
+    expect(markup).toContain('skill-action')
+    expect(markup).toContain('combat-card-wrap is-single-slot is-left-slot')
+  })
+
   it('highlights an opponent attack preview and rests its selected support', () => {
     const game = createItemUsageDemoState(true)
     const player = game.players['player-one']

@@ -385,8 +385,11 @@ try {
           topSupportCards.length === 0 ||
           topSupportRect.right - topSupportCards[0].right <
             topSupportRect.width / 3,
+        // The opponent's card keeps a little more room from the middle so its
+        // HP dock remains inside the field; the player card stays on the
+        // original near-center threshold.
         combatCardsNearCenter:
-          topFieldRect.bottom - topCombatCardRect.bottom < 40 &&
+          topFieldRect.bottom - topCombatCardRect.bottom < 56 &&
           bottomCombatCardRect.top - bottomFieldRect.top < 40,
         // Nameplates are now corner-anchored (opponent near the field's own
         // top edge, player near its own bottom edge) rather than hugging the

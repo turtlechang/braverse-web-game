@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 🎨 戰鬥區卡槽與提示版面校正（2026-07-24）：中央「戰鬥區」文字固定；單張餅乾落在左槽，雙張餅乾以加大間隔分居左右槽。HP dock 移至卡片下緣並放大；能量不足與啟動技能改為置於卡片外側垂直中線（左卡向左、右卡向右），本機與線上共用 `BattleRow`。新增卡槽與提示定位回歸；`npm test -- --maxWorkers=1`、lint、build 與 AI 瀏覽器驗證通過（125 檔／1794 項、20 場完成、stuck=0）。
+
 - 🎨 線上戰場桌機版面收斂（2026-07-20）：對手手牌改為貼齊頂緣的淺弧牌背；雙方戰鬥區、支援區與休息區改採同高鏡射排列，對手區域統一紅色邊框、我方區域統一藍色邊框，並移除共享戰鬥區中央邊線。支援數量文字與資源區對齊同步調整，`table-status-banner`／`RemoteActionBanner` 不再掛載於 `BattleTable` 以避免遮蔽戰場，`PhaseRail` 改為深藍底、金色外框。測試基線升至 **124 檔／1771 項**；`npm test`、`npm run lint`、`npm run build` 通過，主 bundle **520.53 KiB raw／137.38 KiB gzip**（僅保留既有超過 500 KiB 的建置警告）。
 - 🎨 `/?mockup=battlefield` 同步大卡圖 hover 浮窗改版（2026-07-19）：`BattlefieldMockup.tsx` 移除常駐的 `mock-bf-preview-rail` aside（原本佔用固定 180px 左欄），改為 hover 才渲染、寬度維持 180px 的浮動面板，行為與實際戰場的 `CardPreviewPanel` 一致；主要區域改用全寬版面。
 - 🎨 戰場版面重新設計－參考 Master Duel 排版的第三輪調整（2026-07-19）：**大卡圖預覽改為純 hover 浮窗**：`CardPreviewPanel` 不再是常駐佔用左欄寬度的元件（無 hover 時完全不渲染，取消原本的「Hover Preview」佔位提示），改成 hover 時才顯示、疊在畫面左側的浮動面板（`min(300px,24vw)`，位置貼近左上角），視覺樣式沿用既有深藍玻璃風格；`.table-area` 因此不再需要保留任何側欄寬度，戰場本體改用全螢幕寬度（移除 `--side-panel-width` 變數與所有相關 calc）。**手牌尺寸適度放大**：`.hand-card` 寬度從 112px 提升到 132px（各響應式斷點依比例同步放大），連動調整先前為手牌局部露出（對手 1/3、我方 1/2）所計算的開窗高度與補償位移，確保裁切邊界仍對齊卡片新尺寸；過程中發現 800px／620px 高度斷點先前縮小卡片尺寸時沒有對應調整開窗參數，一併修正。**玩家/對手角落資訊卡新增佔位頭像**：`row-meta` 新增 `.row-avatar` 圓形徽章，內容為玩家名稱首字母（無頭像素材，先以文字佔位），桌機顯示、行動裝置隱藏（維持既有精簡版面）。測試基線維持 123 檔／1738 項，含更新的 `BattleTable.test.tsx`／`InteractionOverlays.test.tsx` 斷言。
