@@ -78,6 +78,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               (support) => support.card,
             )}
             trapEnergyCostTotal={match.trapEnergyCostTotal}
+            trapPaymentValid={match.trapPaymentValid}
             selectedPaymentIds={match.selectedTrapPaymentIds}
             onTogglePayment={match.toggleTrapPayment}
             targetCards={match.selectedTrapTargets.map(

@@ -129,6 +129,35 @@ export const normalizeOfficialCard = (rawCard, sourceUrl) => {
   }
 }
 
+/**
+ * Official art variants occasionally omit gameplay fields that are identical
+ * to their base printing. Fill only missing values so candidate imports stay
+ * faithful to the source while remaining convertible once the runtime supports
+ * the card's mechanic.
+ */
+export const backfillVariantStats = (cards) => {
+  const baseByNumber = new Map(
+    cards
+      .filter((card) => card.variant === null)
+      .map((card) => [card.baseCardNumber, card]),
+  )
+
+  return cards.map((card) => {
+    if (card.variant === null) return card
+
+    const base = baseByNumber.get(card.baseCardNumber)
+    if (!base) return card
+
+    return {
+      ...card,
+      level: card.level ?? base.level,
+      hp: card.hp ?? base.hp,
+      energyType: card.energyType ?? base.energyType,
+      color: card.color ?? base.color,
+    }
+  })
+}
+
 export const createImportDocument = ({
   rawCards,
   locale,

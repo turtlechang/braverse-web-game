@@ -12,6 +12,7 @@ const ENERGY_COLORS: EnergyColor[] = [
   'blue',
   'purple',
   'black',
+  'pure',
 ]
 
 export interface EnergyPaymentValidation {

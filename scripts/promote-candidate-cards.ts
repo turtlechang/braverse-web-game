@@ -81,7 +81,7 @@ const tsxBin = join(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs')
 const validateScript = join(projectRoot, 'scripts', 'validate-candidate-cards.ts')
 
 try {
-  execFileSync('node', [tsxBin, validateScript], {
+  execFileSync('node', [tsxBin, validateScript, '--require-promotion-ready'], {
     stdio: 'inherit',
     cwd: projectRoot,
   })

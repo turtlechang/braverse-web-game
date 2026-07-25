@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
+import officialBS3Inventory from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {
@@ -98,6 +99,63 @@ describe('official text parser', () => {
 })
 
 describe('official card adapter', () => {
+  it('preserves BS3 PURE, Ancient, Soul Jam, and special-victory runtime data', () => {
+    const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
+    const findBs3Card = (cardNumber: string) => {
+      const card = bs3Cards.find(
+        (candidate) => candidate.cardNumber === cardNumber,
+      )
+
+      if (!card) throw new Error(`Missing BS3 inventory card ${cardNumber}`)
+      return card
+    }
+
+    const ancient = convertOfficialCardToGameCard(findBs3Card('BS3-017'))
+    const soulJam = convertOfficialCardToGameCard(findBs3Card('BS3-019'))
+    const stage = convertOfficialCardToGameCard(findBs3Card('BS3-121'))
+    const promoStage = convertOfficialCardToGameCard(findBs3Card('BS3-121@5'))
+
+    expect(ancient).toMatchObject({
+      status: 'converted',
+      gameCard: { keywords: ['ancient'] },
+    })
+    expect(soulJam).toMatchObject({
+      status: 'converted',
+      gameCard: { keywords: ['soul-jam'] },
+    })
+    expect(stage).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        cardColor: 'pure',
+        stageAbility: {
+          placementCost: { red: 1, yellow: 1, green: 1, blue: 1, purple: 1 },
+          cost: { red: 1, yellow: 1, green: 1, blue: 1, purple: 1 },
+          restSource: true,
+          specialVictory: {
+            kind: 'distinct-named-keywords',
+            requirements: [
+              { keyword: 'ancient', cardType: 'cookie', count: 5 },
+              { keyword: 'soul-jam', count: 5 },
+            ],
+          },
+        },
+      },
+    })
+    if (stage.status === 'converted') {
+      expect(stage.gameCard.energyColor).toBe('pure')
+    }
+    expect(promoStage).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        stageAbility: {
+          cost: { red: 1, yellow: 1, green: 1, blue: 1, purple: 1 },
+          restSource: false,
+          specialVictory: { kind: 'distinct-named-keywords' },
+        },
+      },
+    })
+  })
+
   it('converts all 22 records from the Starter Deck RED sample', () => {
     const records = officialSample.cards as OfficialCardRecord[]
     const results = convertOfficialCards(records)
@@ -158,6 +216,7 @@ describe('official card adapter', () => {
         name: 'Icicle Yeti Cookie',
         imageUrl:
           'https://cookierunbraverse.com/data/en_storage/example.webp',
+        cardColor: 'red',
         energyColor: 'red',
         officialType: 'flip',
         type: 'cookie',

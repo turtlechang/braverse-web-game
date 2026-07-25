@@ -29,6 +29,7 @@ export type OfficialEffectConversion =
 
 // 官方文字對「Rest this card.」的措辭不一致，BS2-051 用「Card Rests.」，需一併比對
 const RESTS_THIS_CARD_PATTERN = /Rest this card|Card Rests/i
+const STAGE_ACTIVATE_MARKER_PATTERN = /\{mob\}|【Activate】/i
 
 const getEffectText = (card: OfficialCardRecord): string | null => {
   if (card.type === 'cookie') {
@@ -1486,10 +1487,34 @@ export const convertOfficialStageAbility = (
   card: OfficialCardRecord,
 ): StageAbility | undefined => {
   if (card.type !== 'stage' || !card.attackText) return undefined
-  const [placementText, activationText] = card.attackText.split(/\{mob\}/i)
+  const sourceText = [card.skill.text, card.attackText]
+    .filter((text): text is string => Boolean(text?.trim()))
+    .join('\n')
+  const [placementText, activationText] = sourceText.split(
+    STAGE_ACTIVATE_MARKER_PATTERN,
+  )
   const placement = parseOfficialCardText(placementText)
   const activation = parseOfficialCardText(activationText ?? '')
   if (!placement) return undefined
+
+  if (card.baseCardNumber === 'BS3-121') {
+    if (!activation) return undefined
+
+    return {
+      placementCost: placement.cost,
+      cost: activation.cost,
+      text: sourceText,
+      effects: [],
+      restSource: RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
+      specialVictory: {
+        kind: 'distinct-named-keywords',
+        requirements: [
+          { keyword: 'ancient', cardType: 'cookie', count: 5 },
+          { keyword: 'soul-jam', count: 5 },
+        ],
+      },
+    }
+  }
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {

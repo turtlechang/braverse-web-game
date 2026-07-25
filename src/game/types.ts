@@ -15,6 +15,12 @@ export type EnergyColor =
   | 'blue'
   | 'purple'
   | 'black'
+  | 'pure'
+
+/**
+ * 官方卡片分類；PURE 是通用卡牌族群與特殊能量類型，不是核心五色或萬用能量。
+ */
+export type CardColor = EnergyColor
 
 export type EnergyCost = Partial<Record<EnergyColor | 'neutral', number>>
 
@@ -43,14 +49,36 @@ export interface StageAbility extends CardAbility {
   placementCost: EnergyCost
   restSource: boolean
   triggered?: boolean
+  specialVictory?: SpecialVictoryCondition
 }
+
+export type CardKeyword = 'ancient' | 'soul-jam'
+
+export interface DistinctNamedKeywordRequirement {
+  keyword: CardKeyword
+  count: number
+  cardType?: CardType
+}
+
+/**
+ * 由主動發動的卡牌能力檢查；不會在條件自然成立時自動結束對局。
+ */
+export interface DistinctNamedKeywordsVictoryCondition {
+  kind: 'distinct-named-keywords'
+  requirements: DistinctNamedKeywordRequirement[]
+}
+
+export type SpecialVictoryCondition =
+  | DistinctNamedKeywordsVictoryCondition
 
 export interface BaseCard {
   id: string
   instanceId: string
   name: string
   imageUrl?: string
+  cardColor?: CardColor
   energyColor?: EnergyColor | 'wild'
+  keywords?: CardKeyword[]
   effectText?: string
   effects?: CardEffect[]
   skill?: CardSkill
@@ -675,10 +703,14 @@ export type DefeatReason =
   | 'no-cookie-available'
   | 'refresh-unavailable'
 
+export type VictoryReason = 'special-victory'
+
+export type GameEndReason = DefeatReason | VictoryReason
+
 export interface GameResult {
   winnerId: PlayerId
   loserId: PlayerId
-  reason: DefeatReason
+  reason: GameEndReason
 }
 
 export interface ReplacementTask {

@@ -62,6 +62,24 @@ npm run validate:candidate
 npm run promote:candidate
 ```
 
+### 盤點中的候選資料
+
+尚未具備 runtime 規則支援的新系列，先以 `inventory` 候選資料保存官方來源與卡表盤點。這類資料會通過結構驗證，但 `promote:candidate` 一律拒絕，避免尚未轉接的效果進入正式卡池。
+
+BS3 使用卡號前綴而非產品標題篩選，以完整保留 `BS3-*` 異圖與促銷變體：
+
+```bash
+npm run cards:import:bs3-candidate
+npm run validate:candidate
+```
+
+指令會更新：
+
+- `data/candidates/official-age-of-heroes-and-kingdoms-bs3.en.json`
+- `docs/bs3-card-inventory.md`
+
+完成每張卡的 runtime 轉接、測試與人工覆核後，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
+
 ### 流程說明
 
 1. **隔離**：候選 JSON 放入 `data/candidates/` 目錄，不影響 `data/cards/`
@@ -72,8 +90,8 @@ npm run promote:candidate
    - 子物件結構檢查（`flags`/`restrictions`/`product` 含必要 boolean/number 欄位）
    - 同一檔案內不得有重複 cardNumber
    - 不得與現有正式卡池卡號重複
-   - 每張可玩卡牌必須能轉換為 GameCard
-   - 有效果文字的卡牌必須轉出對應效果
+   - `promotion-ready` 候選的每張可玩卡牌必須能轉換為 GameCard，且有效果文字時必須轉出對應效果
+   - `inventory` 候選僅驗證來源、schema、卡號與欄位結構；它們仍明確禁止 promote
 3. **Promote**：`promote:candidate`：
    - 先檢查檔名碰撞（不得與既有 `data/cards/` 檔案同名）
    - 通過後執行驗證（fail-fast）

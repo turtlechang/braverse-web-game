@@ -25,6 +25,7 @@ import {
   getTrashToDeckCandidates,
   getEnergyCostTotal,
   hasBlockingPending,
+  isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
   selectEnergyPayment,
   validateEnergyPayment,
@@ -281,17 +282,10 @@ export function useOnlineMatchController(params: {
     trapEnergyCostTotal > 0
       ? game.players[viewerPlayerId].supportArea.filter((support) => {
           if (support.rested) return false
-          const color = support.card.energyColor
-          if (!color) return false
-          if (color === 'wild') return true
-          const requiredColors = Object.keys(trapEnergyCost).filter(
-            (key) =>
-              (trapEnergyCost[key as keyof typeof trapEnergyCost] ?? 0) > 0,
+          return isEnergyColorCompatibleWithCost(
+            trapEnergyCost,
+            support.card.energyColor,
           )
-          if (requiredColors.length === 1 && requiredColors[0] === 'neutral') {
-            return true
-          }
-          return requiredColors.includes(color)
         })
       : []
   const trapPaymentTargetIds = new Set(

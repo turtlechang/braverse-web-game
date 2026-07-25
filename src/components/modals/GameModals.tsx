@@ -10,7 +10,7 @@ import {
 import type {
   BuiltInDeckChoice,
   DeckChoice,
-  DefeatReason,
+  GameEndReason,
   GameCard,
   PlayerId,
 } from '../../game'
@@ -500,6 +500,7 @@ export interface TrapResponseModalProps {
   selectedTrapId: string | null
   paymentCards: GameCard[]
   trapEnergyCostTotal?: number
+  trapPaymentValid?: boolean
   selectedPaymentIds?: string[]
   onTogglePayment?: (instanceId: string) => void
   targetCards: GameCard[]
@@ -581,6 +582,7 @@ export function TrapResponseModal({
   selectedTrapId,
   paymentCards,
   trapEnergyCostTotal = 0,
+  trapPaymentValid = true,
   selectedPaymentIds = [],
   onTogglePayment,
   targetCards,
@@ -651,7 +653,7 @@ export function TrapResponseModal({
 
   const energyReady =
     trapEnergyCostTotal === 0 ||
-    selectedPaymentIds.length === trapEnergyCostTotal
+    (selectedPaymentIds.length === trapEnergyCostTotal && trapPaymentValid)
   const costReady =
     selectedDiscardHandIds.length === discardHandCost &&
     selectedBattleCookieIds.length === battleCookieCost
@@ -1756,7 +1758,7 @@ export interface ResultModalProps {
   winnerName: string
   loserId: PlayerId
   viewerPlayerId: PlayerId
-  reason: DefeatReason
+  reason: GameEndReason
   onRestart: () => void
 }
 
@@ -1769,7 +1771,9 @@ export function ResultModal({
 }: ResultModalProps) {
   const defeatedSide = loserId === viewerPlayerId ? '我方' : '對方'
   const reasonText =
-    reason === 'break-level-limit'
+    reason === 'special-victory'
+      ? `${winnerName}達成了特殊勝利條件。`
+      : reason === 'break-level-limit'
       ? `${defeatedSide}休息區的等級達到 10。`
       : reason === 'refresh-unavailable'
         ? `${defeatedSide}無法完成牌庫 Refresh。`

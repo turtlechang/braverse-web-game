@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  backfillVariantStats,
   createImportDocument,
   getDatasetUrl,
   normalizeOfficialCard,
@@ -99,6 +100,32 @@ describe('official card importer', () => {
     expect(document.cards.map((card) => card.cardNumber)).toEqual([
       'ST1-001',
     ])
+  })
+
+  it('backfills only missing gameplay fields for art variants', () => {
+    const [base, variant] = backfillVariantStats([
+      normalizeOfficialCard(
+        { ...rawCard, card_no: 'BS9-001' },
+        getDatasetUrl('en'),
+      ),
+      normalizeOfficialCard(
+        {
+          ...rawCard,
+          card_idx: 3,
+          card_no: 'BS9-001@2',
+          card_level: '',
+          card_hp: '',
+          card_energy_type: '',
+          card_color: '',
+        },
+        getDatasetUrl('en'),
+      ),
+    ])
+
+    expect(variant.level).toBe(base.level)
+    expect(variant.hp).toBe(base.hp)
+    expect(variant.energyType).toBe(base.energyType)
+    expect(variant.color).toBe(base.color)
   })
 
   it('rejects unsupported locales', () => {

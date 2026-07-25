@@ -19,8 +19,10 @@ import {
   getTrashToDeckCandidates,
   buildReplayIssueBundle,
   getEnergyCostTotal,
+  isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
   selectEnergyPayment,
+  validateEnergyPayment,
   type BuiltInDeckChoice,
   type DeckChoice,
 } from '../game'
@@ -480,22 +482,10 @@ export function useMatchController(params: {
     trapEnergyCostTotal > 0
       ? game.players[viewerPlayerId].supportArea.filter((support) => {
           if (support.rested) return false
-          const color = support.card.energyColor
-          if (!color) return false
-          if (color === 'wild') return true
-          const requiredColors = (
-            Object.keys(trapEnergyCost) as string[]
-          ).filter(
-            (k) =>
-              (trapEnergyCost[k as keyof typeof trapEnergyCost] ?? 0) > 0,
+          return isEnergyColorCompatibleWithCost(
+            trapEnergyCost,
+            support.card.energyColor,
           )
-          if (requiredColors.length === 0) return false
-          if (
-            requiredColors.length === 1 &&
-            requiredColors[0] === 'neutral'
-          )
-            return true
-          return requiredColors.includes(color)
         })
       : []
   const trapPaymentTargetIds = new Set(
@@ -507,29 +497,21 @@ export function useMatchController(params: {
               return true
             if (selectedTrapPaymentIds.length >= trapEnergyCostTotal)
               return false
-            const color = support.card.energyColor
-            if (!color) return false
-            if (color === 'wild') return true
-            const requiredColors = (
-              Object.keys(trapEnergyCost) as string[]
-            ).filter(
-              (k) =>
-                (trapEnergyCost[k as keyof typeof trapEnergyCost] ?? 0) > 0,
+            return isEnergyColorCompatibleWithCost(
+              trapEnergyCost,
+              support.card.energyColor,
             )
-            if (requiredColors.length === 0) return false
-            if (
-              requiredColors.length === 1 &&
-              requiredColors[0] === 'neutral'
-            )
-              return true
-            return requiredColors.includes(color)
           })
           .map((support) => support.card.instanceId)
       : [],
   )
   const trapPaymentValid =
     trapEnergyCostTotal > 0
-      ? selectedTrapPaymentIds.length === trapEnergyCostTotal
+      ? validateEnergyPayment(
+          trapEnergyCost,
+          game.players[viewerPlayerId].supportArea,
+          selectedTrapPaymentIds,
+        ).valid
       : true
   const toggleTrapPayment = (instanceId: string) => {
     setSelectedTrapPaymentIds((current) => {
@@ -540,24 +522,13 @@ export function useMatchController(params: {
           (s) => s.card.instanceId === instanceId,
         )
         if (!supportCard) return current
-        const color = supportCard.card.energyColor
-        if (!color) return current
-        if (color !== 'wild') {
-          const requiredColors = (
-            Object.keys(trapEnergyCost) as string[]
-          ).filter(
-            (k) =>
-              (trapEnergyCost[k as keyof typeof trapEnergyCost] ?? 0) > 0,
+        if (
+          !isEnergyColorCompatibleWithCost(
+            trapEnergyCost,
+            supportCard.card.energyColor,
           )
-          if (
-            !(
-              requiredColors.length === 1 &&
-              requiredColors[0] === 'neutral'
-            ) &&
-            !requiredColors.includes(color)
-          )
-            return current
-        }
+        )
+          return current
       }
       return isSelected
         ? current.filter((id) => id !== instanceId)

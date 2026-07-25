@@ -41,6 +41,9 @@
             "categoryTitle": { "$ref": "#/$defs/nullableString" }
           }
         },
+        "candidateStatus": {
+          "enum": ["inventory", "promotion-ready"]
+        },
         "imagesDownloaded": { "const": false }
       }
     },

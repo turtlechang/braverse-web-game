@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type {
   CardAbility,
-  EnergyColor,
   EnergyCost,
   EffectTargetSelector,
   GameCard,
@@ -24,6 +23,7 @@ import {
   getTrashToDeckCandidates,
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
+  isEnergyColorCompatibleWithCost,
   isEffectConditionMet,
   isEffectUntargeted,
   validateEnergyPayment,
@@ -278,25 +278,9 @@ export function usePendingEffect(params: {
         pendingEffect.selectedPaymentIds,
       ).valid
     : false
-  const skillEnergyRequiredColors = new Set(
-    (Object.keys(skillEnergyCost) as (EnergyColor | 'neutral')[]).filter(
-      (k): k is EnergyColor | 'neutral' =>
-        (skillEnergyCost[k] ?? 0) > 0,
-    ),
-  )
   const isSkillEnergyColorCompatible = (
-    cardColor: EnergyColor | 'wild' | undefined,
-  ): boolean => {
-    if (!cardColor) return false
-    if (cardColor === 'wild') return true
-    if (skillEnergyRequiredColors.size === 0) return false
-    if (
-      skillEnergyRequiredColors.size === 1 &&
-      skillEnergyRequiredColors.has('neutral')
-    )
-      return true
-    return skillEnergyRequiredColors.has(cardColor)
-  }
+    cardColor: GameCard['energyColor'],
+  ): boolean => isEnergyColorCompatibleWithCost(skillEnergyCost, cardColor)
   const skillPaymentTargetIds = new Set(
     pendingEffect && !pendingEffect.skillActivated && skillEnergyCostTotal > 0
       ? pendingSupportArea

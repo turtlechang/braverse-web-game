@@ -16,6 +16,7 @@ import {
   recordCookieDepartures,
 } from './replacement'
 import { payTrashBattleCookieCost } from './skills'
+import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
 import type {
   AbilityCost,
   CardAbility,
@@ -530,7 +531,15 @@ export const canActivateStage = (
     if (!stage || stage.rested || !ability || ability.triggered) return false
     return (
       canPayAbilityCost(state, playerId, ability.cost) &&
-      hasUsableEffect(state, playerId, stage.card.instanceId, ability)
+      (
+        hasUsableEffect(state, playerId, stage.card.instanceId, ability) ||
+        (ability.specialVictory !== undefined &&
+          isSpecialVictoryConditionMet(
+            state,
+            playerId,
+            ability.specialVictory,
+          ))
+      )
     )
   } catch {
     return false
@@ -560,11 +569,16 @@ export const activateStage = (
     hpToTrashTargetIds,
   })
   const paidPlayer = paidState.players[playerId]
-  return updatePlayer(paidState, {
+  const activatedState = updatePlayer(paidState, {
     ...paidPlayer,
     stage: {
       ...stage,
       rested: ability.restSource ? true : stage.rested,
     },
   })
+
+  return ability.specialVictory &&
+    isSpecialVictoryConditionMet(activatedState, playerId, ability.specialVictory)
+    ? finishWithVictory(activatedState, playerId, 'special-victory')
+    : activatedState
 }

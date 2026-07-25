@@ -11,6 +11,7 @@ const createSupport = (
   instanceId: string,
   energyColor: GameCard['energyColor'],
   rested = false,
+  cardColor?: GameCard['cardColor'],
 ): SupportCard => ({
   card: {
     id: instanceId,
@@ -18,6 +19,7 @@ const createSupport = (
     name: instanceId,
     type: 'item',
     energyColor,
+    ...(cardColor ? { cardColor } : {}),
   },
   rested,
 })
@@ -66,6 +68,37 @@ describe('energy payment', () => {
     expect(
       selectEnergyPayment({ red: 2 }, supports),
     ).toEqual(['red', 'wild'])
+  })
+
+  it('uses PURE support cards for Mix Cost but not specified colors', () => {
+    const pureSupports = [createSupport('pure', 'pure', false, 'pure')]
+
+    expect(
+      validateEnergyPayment({ pure: 1 }, pureSupports, ['pure']),
+    ).toMatchObject({ valid: true })
+    expect(
+      validateEnergyPayment({ red: 1 }, pureSupports, ['pure']),
+    ).toMatchObject({ valid: false })
+    expect(isEnergyColorCompatibleWithCost({ red: 1 }, 'pure')).toBe(false)
+    expect(
+      validateEnergyPayment({ neutral: 1 }, pureSupports, ['pure']),
+    ).toMatchObject({ valid: true })
+    expect(selectEnergyPayment({ pure: 1 }, pureSupports)).toEqual(['pure'])
+    expect(selectEnergyPayment({ neutral: 1 }, pureSupports)).toEqual(['pure'])
+  })
+
+  it('treats BLACK as its own specified color while allowing it for Mix Cost', () => {
+    const blackSupports = [createSupport('black', 'black')]
+
+    expect(
+      validateEnergyPayment({ black: 1 }, blackSupports, ['black']),
+    ).toMatchObject({ valid: true })
+    expect(
+      validateEnergyPayment({ red: 1 }, blackSupports, ['black']),
+    ).toMatchObject({ valid: false })
+    expect(
+      validateEnergyPayment({ neutral: 1 }, blackSupports, ['black']),
+    ).toMatchObject({ valid: true })
   })
 
   it('allows every active support as a candidate for neutral attack costs', () => {

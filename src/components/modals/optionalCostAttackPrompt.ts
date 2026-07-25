@@ -1,8 +1,8 @@
 import {
   getEffectTargetCandidatesForEffect,
   getEnergyCostTotal,
+  isEnergyColorCompatibleWithCost,
   requiresTargetSelection,
-  type EnergyColor,
   type EnergyCost,
   type GameCard,
   type GameState,
@@ -48,20 +48,14 @@ export function getOptionalCostAttackPrompt(
 
   const energyCost = pending.cost.energy ?? ({} as EnergyCost)
   const energyCostTotal = getEnergyCostTotal(energyCost)
-  const requiredColors = new Set(
-    (Object.keys(energyCost) as (EnergyColor | 'neutral')[]).filter(
-      (key) => (energyCost[key] ?? 0) > 0,
-    ),
-  )
   const supportCandidates = game.players[viewerPlayerId].supportArea
     .filter((support) => !support.rested)
     .filter((support) => {
       if (energyCostTotal <= 0) return true
-      if (!support.card.energyColor) return false
-      if (support.card.energyColor === 'wild') return true
-      if (requiredColors.size === 0) return false
-      if (requiredColors.size === 1 && requiredColors.has('neutral')) return true
-      return requiredColors.has(support.card.energyColor)
+      return isEnergyColorCompatibleWithCost(
+        energyCost,
+        support.card.energyColor,
+      )
     })
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 

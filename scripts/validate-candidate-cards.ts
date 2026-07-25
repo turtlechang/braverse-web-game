@@ -18,6 +18,7 @@ const validCardTypes = new Set([
   'unknown',
 ])
 const nonPlayableTypes = new Set(['extra', 'unknown'])
+type CandidateStatus = 'inventory' | 'promotion-ready'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -30,10 +31,14 @@ const isNullableString = (value: unknown): boolean =>
 const isNullableNumber = (value: unknown): boolean =>
   value === null || (typeof value === 'number' && Number.isFinite(value))
 
-const validateSource = (source: unknown, file: string, errors: string[]) => {
+const validateSource = (
+  source: unknown,
+  file: string,
+  errors: string[],
+): CandidateStatus => {
   if (!isRecord(source)) {
     errors.push(`${file}: source 必須為物件`)
-    return
+    return 'promotion-ready'
   }
 
   for (const key of ['provider', 'pageUrl', 'datasetUrl', 'locale', 'fetchedAt']) {
@@ -62,6 +67,18 @@ const validateSource = (source: unknown, file: string, errors: string[]) => {
   if (typeof source.imagesDownloaded !== 'boolean') {
     errors.push(`${file}: source.imagesDownloaded 必須為 boolean`)
   }
+
+  if (
+    source.candidateStatus !== undefined &&
+    source.candidateStatus !== 'inventory' &&
+    source.candidateStatus !== 'promotion-ready'
+  ) {
+    errors.push(`${file}: source.candidateStatus 必須為 inventory 或 promotion-ready`)
+  }
+
+  return source.candidateStatus === 'inventory'
+    ? 'inventory'
+    : 'promotion-ready'
 }
 
 const validateCardStructure = (
@@ -146,21 +163,21 @@ const validateCandidateDocument = (
   file: string,
   existingPoolNumbers: ReadonlySet<string>,
   errors: string[],
-): number => {
+): { convertedCount: number; status: CandidateStatus } => {
   if (!isRecord(parsed)) {
     errors.push(`${file}: 頂層必須為物件`)
-    return 0
+    return { convertedCount: 0, status: 'promotion-ready' }
   }
   if (typeof parsed.schemaVersion !== 'number') {
     errors.push(`${file}: schemaVersion 必須為 number`)
   } else if (parsed.schemaVersion !== 1) {
     errors.push(`${file}: schemaVersion 必須為 1`)
   }
-  validateSource(parsed.source, file, errors)
+  const status = validateSource(parsed.source, file, errors)
 
   if (!Array.isArray(parsed.cards)) {
     errors.push(`${file}: 缺少 cards 陣列`)
-    return 0
+    return { convertedCount: 0, status }
   }
 
   const seen = new Map<string, number>()
@@ -186,46 +203,56 @@ const validateCandidateDocument = (
   })
 
   let convertedCount = 0
-  for (const card of cards) {
-    if (nonPlayableTypes.has(card.type) || !card.flags.enabled || card.flags.hidden) {
-      continue
-    }
-    const conversion = convertOfficialCardToGameCard(card)
-    if (conversion.status === 'unsupported') {
-      errors.push(`${card.cardNumber} ${card.name}: 無法轉換為 GameCard（${conversion.reason}）`)
-      continue
-    }
-    convertedCount += 1
-    const { gameCard } = conversion
-    if (card.type === 'flip' && card.flipText && !gameCard.flip) {
-      errors.push(`${card.cardNumber} ${card.name}: 有 FLIP 文字但未轉出 flip 效果`)
-    }
-    if (card.type === 'cookie' && card.skill.text && !gameCard.skill && !gameCard.effects?.length) {
-      errors.push(`${card.cardNumber} ${card.name}: 有技能文字但未轉出 skill/effects`)
-    }
-    if (
-      ['trap', 'item', 'stage'].includes(card.type) &&
-      (card.skill.text || card.attackText) &&
-      !gameCard.effects?.length &&
-      !gameCard.skill &&
-      !gameCard.flip
-    ) {
-      errors.push(`${card.cardNumber} ${card.name}: 有效果文字但未轉出效果`)
+  if (status === 'promotion-ready') {
+    for (const card of cards) {
+      if (nonPlayableTypes.has(card.type) || !card.flags.enabled || card.flags.hidden) {
+        continue
+      }
+      const conversion = convertOfficialCardToGameCard(card)
+      if (conversion.status === 'unsupported') {
+        errors.push(`${card.cardNumber} ${card.name}: 無法轉換為 GameCard（${conversion.reason}）`)
+        continue
+      }
+      convertedCount += 1
+      const { gameCard } = conversion
+      if (card.type === 'flip' && card.flipText && !gameCard.flip) {
+        errors.push(`${card.cardNumber} ${card.name}: 有 FLIP 文字但未轉出 flip 效果`)
+      }
+      if (card.type === 'cookie' && card.skill.text && !gameCard.skill && !gameCard.effects?.length) {
+        errors.push(`${card.cardNumber} ${card.name}: 有技能文字但未轉出 skill/effects`)
+      }
+      if (
+        ['trap', 'item', 'stage'].includes(card.type) &&
+        (card.skill.text || card.attackText) &&
+        !gameCard.effects?.length &&
+        !gameCard.skill &&
+        !gameCard.flip
+      ) {
+        errors.push(`${card.cardNumber} ${card.name}: 有效果文字但未轉出效果`)
+      }
     }
   }
-  return convertedCount
+  return { convertedCount, status }
 }
 
 export const validateCandidates = (
   directory = candidatesDir,
   existingPoolNumbers = new Set(getAllCardPoolEntries().map((entry) => entry.cardNumber)),
-): { files: string[]; totalCards: number; convertedCount: number; errors: string[] } => {
+  requirePromotionReady = false,
+): {
+  files: string[]
+  totalCards: number
+  convertedCount: number
+  inventoryFiles: string[]
+  errors: string[]
+} => {
   const files = readdirSync(directory)
     .filter((file) => file.endsWith('.json'))
     .sort((left, right) => left.localeCompare(right))
   const errors: string[] = []
   let totalCards = 0
   let convertedCount = 0
+  const inventoryFiles: string[] = []
   for (const file of files) {
     let parsed: unknown
     try {
@@ -235,12 +262,23 @@ export const validateCandidates = (
       continue
     }
     if (isRecord(parsed) && Array.isArray(parsed.cards)) totalCards += parsed.cards.length
-    convertedCount += validateCandidateDocument(parsed, file, existingPoolNumbers, errors)
+    const result = validateCandidateDocument(parsed, file, existingPoolNumbers, errors)
+    convertedCount += result.convertedCount
+    if (result.status === 'inventory') {
+      inventoryFiles.push(file)
+      if (requirePromotionReady) {
+        errors.push(`${file}: 仍為 inventory 候選，尚未完成 runtime 轉接，不能 promote`)
+      }
+    }
   }
-  return { files, totalCards, convertedCount, errors }
+  return { files, totalCards, convertedCount, inventoryFiles, errors }
 }
 
-const result = validateCandidates()
+const result = validateCandidates(
+  candidatesDir,
+  new Set(getAllCardPoolEntries().map((entry) => entry.cardNumber)),
+  process.argv.includes('--require-promotion-ready'),
+)
 if (result.files.length === 0) {
   console.log('data/candidates/ 中無 .json 檔案，無候選資料需驗證。')
   process.exit(0)
@@ -251,4 +289,7 @@ if (result.errors.length > 0) {
   process.exit(1)
 }
 console.log(`候選資料驗證：${result.files.length} 個檔案、${result.totalCards} 張卡牌、成功轉換 ${result.convertedCount} 張`)
+if (result.inventoryFiles.length > 0) {
+  console.log(`ℹ ${result.inventoryFiles.length} 個檔案為 inventory 候選，僅完成來源與結構驗證，禁止 promote。`)
+}
 console.log('✓ 候選資料全部通過驗證')

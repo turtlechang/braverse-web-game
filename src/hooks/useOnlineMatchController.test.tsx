@@ -126,6 +126,66 @@ describe('useOnlineMatchController', () => {
     await act(() => root.unmount())
   })
 
+  it('allows PURE support to pay only the Mix portion of a combined trap cost', async () => {
+    const trap: GameCard = {
+      id: 'pure-mix-trap',
+      instanceId: 'pure-mix-trap-online',
+      name: 'PURE Mix Cost Trap',
+      type: 'trap',
+      trap: {
+        text: 'Test payment.',
+        cost: { energy: { red: 1, neutral: 1 } },
+        effects: [],
+      },
+    }
+    let game = createBattleState()
+    game.players['player-one'].hand = [trap, ...game.players['player-one'].hand]
+    game.players['player-one'].supportArea = [
+      { card: item('red-support', 'red'), rested: false },
+      {
+        card: {
+          ...item('pure-support', 'pure'),
+          cardColor: 'pure',
+        },
+        rested: false,
+      },
+      { card: item('blue-support', 'blue'), rested: false },
+    ]
+    game = declareAttack(game)
+
+    const sendCommand = vi.fn<(command: GameCommand) => void>()
+    let latest: ReturnType<typeof useOnlineMatchController> | undefined
+
+    function TestHarness() {
+      latest = useOnlineMatchController({
+        game,
+        viewerPlayerId: 'player-one',
+        sendCommand,
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => latest!.setSelectedTrapId(trap.instanceId))
+
+    expect(
+      latest!.trapPaymentCandidates.map((support) => support.card.instanceId),
+    ).toEqual(['red-support', 'pure-support', 'blue-support'])
+
+    await act(() => latest!.toggleTrapPayment('pure-support'))
+    await act(() => latest!.toggleTrapPayment('red-support'))
+
+    expect(latest!.selectedTrapPaymentIds).toEqual([
+      'pure-support',
+      'red-support',
+    ])
+    expect(latest!.trapPaymentValid).toBe(true)
+
+    await act(() => root.unmount())
+  })
+
   it('offers BS2-021-style support-to-hand and hand-to-support follow-up selections online', async () => {
     const trap: GameCard = {
       id: 'BS2-021',

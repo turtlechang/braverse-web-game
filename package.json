@@ -23,6 +23,7 @@
     "cards:import:blue-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck BLUE\" --output data/cards/official-starter-deck-blue.en.json --limit 100",
     "cards:import:purple-sample": "node scripts/import-official-cards.mjs --category-title \"Starter Deck PURPLE\" --output data/cards/official-starter-deck-purple.en.json --limit 100",
     "cards:import:brave-beginning": "node scripts/import-brave-beginning.mjs",
+    "cards:import:bs3-candidate": "node scripts/import-bs3-candidates.mjs",
     "lint": "eslint .",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test": "vitest run",
