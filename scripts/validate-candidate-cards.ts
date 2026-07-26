@@ -226,7 +226,9 @@ const validateCandidateDocument = (
         (card.skill.text || card.attackText) &&
         !gameCard.effects?.length &&
         !gameCard.skill &&
-        !gameCard.flip
+        !gameCard.flip &&
+        // 場景卡的特殊勝利條件（如 BS3-121）本身就是效果，effects 刻意留空。
+        !gameCard.stageAbility?.specialVictory
       ) {
         errors.push(`${card.cardNumber} ${card.name}: 有效果文字但未轉出效果`)
       }

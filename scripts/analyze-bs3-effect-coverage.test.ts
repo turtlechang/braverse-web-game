@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import inventory from '../data/candidates/official-age-of-heroes-and-kingdoms-bs3.en.json'
+import inventory from '../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import type { OfficialCardRecord } from '../src/cards/types'
 import {
   analyzeBs3EffectCoverage,

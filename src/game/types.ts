@@ -639,6 +639,13 @@ export interface BreakSourceToBattleEffect {
   condition?: EffectCondition
 }
 
+/** 來源場景卡自己離開場景區、送回牌庫頂或底（BS3-095「Then」分支）。 */
+export interface StageSourceToDeckEffect {
+  kind: 'stage-source-to-deck'
+  destination: 'top' | 'bottom'
+  condition?: EffectCondition
+}
+
 /** 讓選定的餅乾解除休息；`set-active` 只處理支援區，兩者不共用。 */
 export interface SetCookieActiveEffect {
   kind: 'set-cookie-active'
@@ -863,6 +870,7 @@ export type CardEffect =
   | OpponentTrashToBreakEffect
   | ChooseOneEffect
   | BreakSourceToBattleEffect
+  | StageSourceToDeckEffect
 
 export type TargetedCardEffect =
   | DamageEffect

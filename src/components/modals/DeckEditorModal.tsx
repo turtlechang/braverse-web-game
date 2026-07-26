@@ -88,6 +88,7 @@ const SERIES_OPTIONS = [
   { value: 'Starter Deck PURPLE', label: 'Starter Deck PURPLE' },
   { value: 'BOOSTER PACK [BRAVE BEGINNING] BS1', label: 'BS1' },
   { value: 'BOOSTER PACK [BRAVE BEGINNING] BS2', label: 'BS2' },
+  { value: 'BOOSTER PACK [Age of Heroes and Kingdoms]', label: 'BS3' },
 ]
 
 export function DeckEditorModal({

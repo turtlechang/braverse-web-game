@@ -1792,6 +1792,22 @@ export const executeCardEffect = (
     }
   }
 
+  if (effect.kind === 'stage-source-to-deck') {
+    const player = state.players[context.sourcePlayerId]
+    const sourceStage = player.stage
+    if (!sourceStage || sourceStage.card.instanceId !== context.sourceInstanceId) {
+      throw new GameRuleError('來源場景卡不在場景區中。')
+    }
+    return updatePlayer(state, {
+      ...player,
+      stage: null,
+      deck:
+        effect.destination === 'top'
+          ? [sourceStage.card, ...player.deck]
+          : [...player.deck, sourceStage.card],
+    })
+  }
+
   if (effect.kind === 'battle-to-break') {
     const targets = selectEffectTargets(
       state,

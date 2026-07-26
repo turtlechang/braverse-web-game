@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import inventory from '../data/candidates/official-age-of-heroes-and-kingdoms-bs3.en.json'
+import inventory from '../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import {
   convertOfficialAttackEffects,
   convertOfficialCardEffects,
