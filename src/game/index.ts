@@ -7,6 +7,8 @@ export {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
@@ -17,12 +19,15 @@ export {
   isEffectConditionMet,
   isEffectTargeted,
   isEffectUntargeted,
+  requiresEffectCardSelection,
   requiresTargetSelection,
   resolveOpponentHandDiscard,
   resolveInspectDeck,
   resolveDrawUpTo,
   selectEffectTargets,
   validateBreakToTrashTargets,
+  expandChooseOne,
+  expandChooseOneSequence,
 } from './effects'
 export {
   createBlueActivateSkillDemoState,
@@ -46,6 +51,7 @@ export { maskGameStateForViewer } from './masked-state'
 export {
   getAttackEnergyCost,
   getEnergyCostTotal,
+  getRemainingEnergyCost,
   isEnergyColorCompatibleWithCost,
   selectEnergyPayment,
   validateEnergyPayment,
@@ -173,6 +179,7 @@ export {
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckBottomCostCandidates,
   skipCookieOnPlay,
 } from './skills'
 export {
@@ -218,8 +225,10 @@ export type {
   EffectContext,
   EffectDuration,
   EffectTargetSelector,
+  EffectTargetSelectorSide,
   EffectTargetSide,
   EnergyColor,
+  InspectDeckRestDestination,
   EnergyCost,
   BattleToBreakEffect,
   BreakToBattleEffect,

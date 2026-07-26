@@ -3,6 +3,7 @@ import type { AttackCommand, PlayerActionCommand } from '../commands'
 import { beginAttack, resolveBattleAutomatically } from '../battle'
 import { getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
+import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
 import type { PlayerView } from '../player-view'
 import type { CookieCard, GameState, PlayerId } from '../types'
@@ -378,7 +379,7 @@ export const handleAiEvaluatedTurnState = (
   }
 
   if (state.phase === 'main') {
-    for (const source of state.players[playerId].battleArea) {
+    for (const source of getActivatableSkillSources(state.players[playerId])) {
       try {
         const decision = strategy.resolveSkill(state, playerId, source, 'activate')
         if (decision) {
@@ -675,7 +676,7 @@ export const handleAiTwoPlyTurnState = (
   }
 
   if (state.phase === 'main') {
-    for (const source of state.players[playerId].battleArea) {
+    for (const source of getActivatableSkillSources(state.players[playerId])) {
       try {
         const decision = strategy.resolveSkill(state, playerId, source, 'activate')
         if (decision) {

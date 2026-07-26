@@ -154,6 +154,11 @@ const payAbilityCost = (
 ): GameState => {
   validateAbilityPayment(state, playerId, cost, options.paymentIds)
 
+  if (cost.trashToDeckBottom) {
+    // 只有餅乾技能路徑實作這個代價；item／stage 若之後用到必須先補上支付流程。
+    throw new GameRuleError('此代價尚未支援於物品或場景能力。')
+  }
+
   const player = state.players[playerId]
   const supportToTrashIds = [...new Set(options.supportToTrashIds ?? [])]
   const supportToHandIds = [...new Set(options.supportToHandIds ?? [])]
@@ -269,35 +274,45 @@ const payAbilityCost = (
     const targetIndex = updatedPlayer.battleArea.findIndex(
       (cookie) => cookie.card.instanceId === target.card.instanceId,
     )
-    const removeCount =
+    const removeCount = Math.max(
+      0,
       cost.hpToTrash.untilRemainingHp !== undefined
         ? target.hpCards.length - cost.hpToTrash.untilRemainingHp
-        : (cost.hpToTrash.amount ?? 1)
-    const removedHpCards = target.hpCards.slice(-removeCount)
-    const remainingHpCards = target.hpCards.slice(
-      0,
-      Math.max(0, target.hpCards.length - removeCount),
+        : (cost.hpToTrash.amount ?? 1),
     )
 
-    if (remainingHpCards.length === 0) {
-      departedCount = 1
-      updatedPlayer = {
-        ...updatedPlayer,
-        battleArea: updatedPlayer.battleArea.filter(
-          (_, index) => index !== targetIndex,
-        ),
-        breakArea: [...updatedPlayer.breakArea, target.card],
-        discardPile: [...updatedPlayer.discardPile, ...removedHpCards],
-      }
+    // removeCount 為 0（例如 untilRemainingHp 剛好等於目前剩餘 HP）時必須
+    // 提前結束：JS 的 slice(-0) 等同 slice(0)，會把整疊 HP 卡當成「被移除」，
+    // 導致同一張卡同時留在 hpCards 又被複製進棄牌區。
+    if (removeCount === 0) {
+      departedCount = 0
     } else {
-      updatedPlayer = {
-        ...updatedPlayer,
-        battleArea: updatedPlayer.battleArea.map((cookie, index) =>
-          index === targetIndex
-            ? { ...cookie, hpCards: remainingHpCards }
-            : cookie,
-        ),
-        discardPile: [...updatedPlayer.discardPile, ...removedHpCards],
+      const removedHpCards = target.hpCards.slice(-removeCount)
+      const remainingHpCards = target.hpCards.slice(
+        0,
+        Math.max(0, target.hpCards.length - removeCount),
+      )
+
+      if (remainingHpCards.length === 0) {
+        departedCount = 1
+        updatedPlayer = {
+          ...updatedPlayer,
+          battleArea: updatedPlayer.battleArea.filter(
+            (_, index) => index !== targetIndex,
+          ),
+          breakArea: [...updatedPlayer.breakArea, target.card],
+          discardPile: [...updatedPlayer.discardPile, ...removedHpCards],
+        }
+      } else {
+        updatedPlayer = {
+          ...updatedPlayer,
+          battleArea: updatedPlayer.battleArea.map((cookie, index) =>
+            index === targetIndex
+              ? { ...cookie, hpCards: remainingHpCards }
+              : cookie,
+          ),
+          discardPile: [...updatedPlayer.discardPile, ...removedHpCards],
+        }
       }
     }
   }

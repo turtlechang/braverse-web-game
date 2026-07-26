@@ -274,8 +274,10 @@ describe('OptionalCostAttackModal', () => {
           energyCostTotal={0}
           supportCandidates={[]}
           playerHand={hand}
-          opponentBattleCards={opponents}
+          targetCandidates={opponents}
           needsTarget={true}
+          targetMin={1}
+          targetLabel="對手餅乾"
           onSkip={onSkip}
           onPay={onPay}
         />,
@@ -347,6 +349,56 @@ describe('OptionalCostAttackModal', () => {
     container.remove()
   })
 
+  it('allows confirming an up-to-one target selection without selecting a card', async () => {
+    const onPay = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Target Test"
+          effectText="Select up to one friendly Cookie."
+          discardHandCost={0}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[]}
+          targetCandidates={[
+            { card: createCookieCard(1), instanceId: 'friendly-cookie-1' },
+          ]}
+          needsTarget={true}
+          targetMin={0}
+          targetLabel="friendly Cookie"
+          onSkip={() => undefined}
+          onPay={onPay}
+        />,
+      ),
+    )
+
+    const decisionButtons = container.querySelectorAll<HTMLButtonElement>(
+      '.modal-actions-decision button',
+    )
+    await act(() => {
+      decisionButtons[1].click()
+    })
+
+    expect(container.textContent).toContain('最多選擇 1 個friendly Cookie作為目標')
+    const confirmButton = container.querySelector<HTMLButtonElement>(
+      '.modal-actions-sticky button:last-child',
+    )
+    expect(confirmButton?.disabled).toBe(false)
+
+    await act(() => {
+      confirmButton!.click()
+    })
+
+    expect(onPay).toHaveBeenCalledWith([], '', [])
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('disables pay button when hand is less than cost', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -361,10 +413,12 @@ describe('OptionalCostAttackModal', () => {
           energyCostTotal={0}
           supportCandidates={[]}
           playerHand={[createHandCard(1)]}
-          opponentBattleCards={[
+          targetCandidates={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
           needsTarget={true}
+          targetMin={1}
+          targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}
         />,
@@ -392,10 +446,12 @@ describe('OptionalCostAttackModal', () => {
           energyCostTotal={0}
           supportCandidates={[]}
           playerHand={[createHandCard(1), createHandCard(2)]}
-          opponentBattleCards={[
+          targetCandidates={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
           needsTarget={true}
+          targetMin={1}
+          targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}
         />,
@@ -453,10 +509,12 @@ describe('OptionalCostAttackModal', () => {
           energyCostTotal={0}
           supportCandidates={[]}
           playerHand={[createHandCard(1), createHandCard(2)]}
-          opponentBattleCards={[
+          targetCandidates={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
           needsTarget={true}
+          targetMin={1}
+          targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}
         />,
@@ -512,10 +570,12 @@ describe('OptionalCostAttackModal', () => {
           energyCostTotal={0}
           supportCandidates={[]}
           playerHand={[createHandCard(1), createHandCard(2)]}
-          opponentBattleCards={[
+          targetCandidates={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
           needsTarget={true}
+          targetMin={1}
+          targetLabel="對手餅乾"
           onSkip={onSkip}
           onPay={() => undefined}
         />,
@@ -547,10 +607,12 @@ describe('OptionalCostAttackModal', () => {
           energyCostTotal={0}
           supportCandidates={[]}
           playerHand={[createHandCard(1), createHandCard(2)]}
-          opponentBattleCards={[
+          targetCandidates={[
             { card: createCookieCard(1), instanceId: 'cookie-1' },
           ]}
           needsTarget={true}
+          targetMin={1}
+          targetLabel="對手餅乾"
           onSkip={onSkip}
           onPay={() => undefined}
         />,

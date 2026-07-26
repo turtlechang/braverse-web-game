@@ -179,8 +179,10 @@ describe('EffectPanel', () => {
           energyCostTotal: 1,
           playerHand: [hand],
           supportCandidates: [{ card: support, instanceId: support.instanceId }],
-          opponentBattleCards: [{ card: target, instanceId: target.instanceId }],
+          targetCandidates: [{ card: target, instanceId: target.instanceId }],
           needsTarget: true,
+          targetMin: 1,
+          targetLabel: '對手餅乾',
           onSkip: () => undefined,
           onPay: () => undefined,
         }}

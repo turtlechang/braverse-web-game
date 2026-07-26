@@ -74,6 +74,8 @@ describe('BS3 candidate importer', () => {
     expect(markdown).toContain('| `PURE` 顏色 | 1 | BS3-121 |')
     expect(markdown).toContain('| `Soul Jam` 名稱 | 0 | — |')
     expect(markdown).toContain('| 特殊勝利文字 | 1 | BS3-121 |')
+    expect(markdown).toContain('攻擊後「can be used as」的來源能量付款')
+    expect(markdown).toContain('[BS3 效果轉接覆蓋盤點](bs3-effect-coverage.md)')
   })
 
   it('rejects a source payload without BS3 records', () => {

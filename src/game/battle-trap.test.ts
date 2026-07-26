@@ -667,7 +667,7 @@ describe('TRAP response window', () => {
             kind: 'inspect-deck',
             lookCount: 3,
             pickCount: 1,
-            restToBottom: true,
+            restDestination: 'bottom',
             filterColor: 'blue',
           },
         ],

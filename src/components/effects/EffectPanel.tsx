@@ -49,8 +49,14 @@ export interface EffectPanelProps {
   selectedTrashBattleCookieIds?: Set<string>
   onToggleTrashBattleCookie?: (instanceId: string) => void
   trashBattleCookieCost?: number
+  trashToDeckBottomCandidates?: GameCard[]
+  selectedTrashToDeckBottomIds?: Set<string>
+  onToggleTrashToDeckBottom?: (instanceId: string) => void
+  trashToDeckBottomCost?: number
   showTargetSelection?: boolean
   optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
+  /** 目前效果是「選擇一項」時，由呼叫端接手展開選定的模式。 */
+  onChooseMode?: (modeIndex: number) => void
 }
 
 function CandidateButtons({
@@ -111,8 +117,13 @@ function EffectPanelContent({
   selectedTrashBattleCookieIds = new Set<string>(),
   onToggleTrashBattleCookie,
   trashBattleCookieCost = 0,
+  trashToDeckBottomCandidates = [],
+  selectedTrashToDeckBottomIds = new Set<string>(),
+  onToggleTrashToDeckBottom,
+  trashToDeckBottomCost = 0,
   showTargetSelection = true,
   optionalCostAttack = null,
+  onChooseMode,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
@@ -127,6 +138,18 @@ function EffectPanelContent({
         ? { min: 1, max: 1 }
       : currentEffect?.kind === 'break-to-battle'
         ? { min: 0, max: currentEffect.amount }
+        : currentEffect?.kind === 'hand-to-break' ||
+            currentEffect?.kind === 'break-to-hand' ||
+            currentEffect?.kind === 'rest-support'
+          ? {
+              min: currentEffect.optional ? 0 : currentEffect.amount,
+              max: currentEffect.amount,
+            }
+          : currentEffect?.kind === 'hand-to-hp' ||
+              currentEffect?.kind === 'support-to-hp'
+            ? { min: currentEffect.optional ? 0 : 1, max: 1 }
+            : currentEffect?.kind === 'set-active' && currentEffect.selectable
+              ? { min: 0, max: currentEffect.supportCount }
         : currentEffect?.kind === 'support-to-trash' ||
           currentEffect?.kind === 'support-to-hand' ||
           currentEffect?.kind === 'hand-to-support' ||
@@ -141,6 +164,8 @@ function EffectPanelContent({
         currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
             currentEffect.kind !== 'disable-block' &&
+            currentEffect.kind !== 'hand-to-battle' &&
+            currentEffect.kind !== 'opponent-trash-to-break' &&
             currentEffect.kind !== 'flip-to-support'
           ? currentEffect.target
           : null
@@ -157,7 +182,12 @@ function EffectPanelContent({
   const trashBattleCookiePaid =
     trashBattleCookieCost === 0 ||
     pendingEffect?.selectedTrashBattleCookieIds.length === trashBattleCookieCost
-  const extraCostReady = supportPaid && discardPaid && trashBattleCookiePaid
+  const trashToDeckBottomPaid =
+    trashToDeckBottomCost === 0 ||
+    (pendingEffect?.selectedTrashToDeckBottomIds ?? []).length ===
+      trashToDeckBottomCost
+  const extraCostReady =
+    supportPaid && discardPaid && trashBattleCookiePaid && trashToDeckBottomPaid
 
   const targetReady =
     !showTargetSelection ||
@@ -188,6 +218,8 @@ function EffectPanelContent({
       supportAreaCost > 0 ||
       discardHandCost > 0 ||
       trashBattleCookieCost > 0 ||
+      trashToDeckBottomCandidates.length > 0 ||
+      trashToDeckBottomCost > 0 ||
       automaticCostDescriptions.length > 0)
   const hasTargetContent =
     showTargetSelection && selectionLimits !== null
@@ -240,6 +272,11 @@ function EffectPanelContent({
   const goToPhase = (phase: GuidedPhaseId) => {
     setPhaseState({ signature: phaseSignature, phase })
   }
+  // 「選擇一項」不走一般的確認流程，改成每個模式各一顆按鈕。
+  const chooseOneModes =
+    currentEffect?.kind === 'choose-one' && onChooseMode
+      ? currentEffect.modes
+      : null
   const handlePrimaryAction = () => {
     if (hasNextPhase) {
       goToPhase(phaseIds[activePhaseIndex + 1])
@@ -398,6 +435,23 @@ function EffectPanelContent({
                     />
                   </>
                 )}
+                {trashToDeckBottomCost > 0 && (
+                  <small>
+                    已選 {(pendingEffect.selectedTrashToDeckBottomIds ?? []).length}／
+                    {trashToDeckBottomCost} 張棄牌區代價（依選取順序放到牌庫底）
+                  </small>
+                )}
+                {trashToDeckBottomCandidates.length > 0 && (
+                  <>
+                    <small>選擇要作為代價放到牌庫底的棄牌區卡牌</small>
+                    <CandidateButtons
+                      cards={trashToDeckBottomCandidates}
+                      selectedIds={selectedTrashToDeckBottomIds}
+                      onToggle={onToggleTrashToDeckBottom}
+                      className="effect-candidates-trash-deck-bottom"
+                    />
+                  </>
+                )}
               </section>
             )}
 
@@ -461,6 +515,19 @@ function EffectPanelContent({
               上一步
             </button>
           )}
+          {chooseOneModes ? (
+            chooseOneModes.map((mode, modeIndex) => (
+              <button
+                key={mode.label}
+                className="effect-panel-primary-action"
+                type="button"
+                onClick={() => onChooseMode?.(modeIndex)}
+              >
+                <Check aria-hidden="true" />
+                {mode.label}
+              </button>
+            ))
+          ) : (
           <button
             className="effect-panel-primary-action"
             type="button"
@@ -479,6 +546,7 @@ function EffectPanelContent({
               </>
             )}
           </button>
+          )}
         </div>
       </>
     )

@@ -1,8 +1,10 @@
 import {
-  getEffectTargetCandidatesForEffect,
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
   getEnergyCostTotal,
+  getRemainingEnergyCost,
   isEnergyColorCompatibleWithCost,
-  requiresTargetSelection,
+  requiresEffectCardSelection,
   type EnergyCost,
   type GameCard,
   type GameState,
@@ -17,8 +19,10 @@ export interface OptionalCostAttackPromptData {
   energyCostTotal: number
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
-  opponentBattleCards: { card: GameCard; instanceId: string }[]
+  targetCandidates: { card: GameCard; instanceId: string }[]
   needsTarget: boolean
+  targetMin: number
+  targetLabel: string
 }
 
 export function getOptionalCostAttackPrompt(
@@ -29,34 +33,47 @@ export function getOptionalCostAttackPrompt(
   if (!pending || pending.playerId !== viewerPlayerId) return null
 
   const targetedEffect = pending.effects.find((effect) =>
-    requiresTargetSelection(effect),
+    requiresEffectCardSelection(effect),
   )
   const needsTarget = Boolean(targetedEffect)
-  const opponentId = viewerPlayerId === 'player-one' ? 'player-two' : 'player-one'
-  const opponentBattleCards = (
+  const targetCandidates = (
     targetedEffect
-      ? getEffectTargetCandidatesForEffect(
+      ? getEffectSelectionCandidates(
           game,
           {
             sourcePlayerId: viewerPlayerId,
             sourceInstanceId: pending.sourceInstanceId,
           },
           targetedEffect,
-        ).map((cookie) => cookie.card)
-      : game.players[opponentId].battleArea.map((cookie) => cookie.card)
+        )
+      : []
   ).map((card) => ({ card, instanceId: card.instanceId }))
+  const targetMin = targetedEffect
+    ? getEffectSelectionLimits(targetedEffect)?.min ?? 0
+    : 0
+  const targetSelector =
+    targetedEffect && 'target' in targetedEffect ? targetedEffect.target : undefined
+  const targetLabel = targetedEffect?.kind === 'opponent-battle-to-trash'
+    ? '對手餅乾'
+    : targetSelector?.side === 'self'
+      ? '己方餅乾'
+      : '對手餅乾'
 
-  const energyCost = pending.cost.energy ?? ({} as EnergyCost)
+  const energyCost = getRemainingEnergyCost(
+    pending.cost.energy ?? ({} as EnergyCost),
+    pending.sourceEnergy,
+  )
   const energyCostTotal = getEnergyCostTotal(energyCost)
-  const supportCandidates = game.players[viewerPlayerId].supportArea
+  const supportCandidates = energyCostTotal === 0
+    ? []
+    : game.players[viewerPlayerId].supportArea
     .filter((support) => !support.rested)
-    .filter((support) => {
-      if (energyCostTotal <= 0) return true
-      return isEnergyColorCompatibleWithCost(
+    .filter((support) =>
+      isEnergyColorCompatibleWithCost(
         energyCost,
         support.card.energyColor,
-      )
-    })
+      ),
+    )
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return {
@@ -69,7 +86,9 @@ export function getOptionalCostAttackPrompt(
     energyCostTotal,
     playerHand: game.players[viewerPlayerId].hand,
     supportCandidates,
-    opponentBattleCards,
+    targetCandidates,
     needsTarget,
+    targetMin,
+    targetLabel,
   }
 }

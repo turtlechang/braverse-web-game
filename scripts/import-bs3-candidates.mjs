@@ -158,11 +158,13 @@ ${tableRows(countBy(cards.map((card) => card.product.title)))}
 - 已將 \`PURE\` 保存為通用卡牌分類與特殊能量；PURE 支援卡可支付 \`pure\` 或 Mix Cost（runtime 的 \`neutral\`），但不能支付紅、黃、綠、藍、紫等指定色費用。
 - 已將 \`Ancient\`／\`Soul Jam\` 保存為可判定的 runtime 關鍵字。
 - 已實作 \`BS3-121\` 的 Activate 特殊勝利：戰鬥區與支援區各合計 5 種不同名稱的 Ancient Cookie 與 Soul Jam 卡，只有主動發動能力後才結束對局。
+- 已支援攻擊後「can be used as」的來源能量付款；來源餅乾先提供印刷的指定能量，只有剩餘費用才由支援區支付。
+- 效果轉接覆蓋與尚未支援的來源文字，另見 [BS3 效果轉接覆蓋盤點](bs3-effect-coverage.md)。
 
 ## 後續轉接門檻
 
-1. 逐卡完成效果與其他專屬機制轉接，並補齊回歸測試。
-2. 將候選檔改為 \`promotion-ready\` 前，確認每筆資料均可轉換為 runtime 卡片。
+1. 依效果覆蓋盤點逐卡完成效果與其他專屬機制轉接，並補齊回歸測試。
+2. 將候選檔改為 \`promotion-ready\` 前，確認每筆資料均可轉換為 runtime 卡片，且沒有未裁決的規則文字。
 3. 執行嚴格 \`validate:candidate\` 與 \`promote:candidate\`，再重新生成正式 card pool。
 `
 }

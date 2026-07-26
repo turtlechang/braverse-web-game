@@ -61,6 +61,9 @@ export function useOnlineMatchController(params: {
 
   const [message, setMessage] = useState('對局已開始。')
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapHandToBreakIds, setSelectedTrapHandToBreakIds] = useState<
+    string[]
+  >([])
   const [selectedTrapDiscardIds, setSelectedTrapDiscardIds] = useState<
     string[]
   >([])
@@ -179,6 +182,7 @@ export function useOnlineMatchController(params: {
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
+      setSelectedTrapHandToBreakIds([])
       setSelectedTrapTargetId(null)
       dispatch(
         { kind: 'skip-trap', playerId: viewerPlayerId },
@@ -334,6 +338,18 @@ export function useOnlineMatchController(params: {
     ? getTrashBattleCookieCostCandidates(
         selectedTrap.trap.cost,
         game.players[viewerPlayerId].battleArea,
+      )
+    : []
+  const selectedTrapHandToBreakCost =
+    selectedTrap?.trap?.cost.handToBreakArea?.count ?? 0
+  const selectedTrapHandToBreakCandidates = selectedTrap
+    ? game.players[viewerPlayerId].hand.filter(
+        (card) =>
+          card.instanceId !== selectedTrap.instanceId &&
+          card.type === 'cookie' &&
+          (!selectedTrap.trap?.cost.handToBreakArea?.energyColor ||
+            card.energyColor ===
+              selectedTrap.trap.cost.handToBreakArea.energyColor),
       )
     : []
   const selectedTrapDiscardCandidates = selectedTrap
@@ -533,6 +549,8 @@ export function useOnlineMatchController(params: {
     setSelectedTrapId,
     selectedTrapDiscardIds,
     setSelectedTrapDiscardIds,
+    selectedTrapHandToBreakIds,
+    setSelectedTrapHandToBreakIds,
     selectedTrapTrashBattleCookieIds,
     setSelectedTrapTrashBattleCookieIds,
     trapSelectNoTarget,
@@ -548,6 +566,8 @@ export function useOnlineMatchController(params: {
     toggleTrapPayment,
     selectedTrapDiscardCost,
     selectedTrapDiscardCandidates,
+    selectedTrapHandToBreakCost,
+    selectedTrapHandToBreakCandidates,
     selectedTrapTrashBattleCookieCost,
     selectedTrapTrashBattleCookieCandidates,
     trapAllowEmptyTarget,

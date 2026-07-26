@@ -272,6 +272,9 @@ export function useMatchController(params: {
   const animations = useMatchAnimations()
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
+  const [selectedTrapHandToBreakIds, setSelectedTrapHandToBreakIds] = useState<
+    string[]
+  >([])
   const [selectedTrapDiscardIds, setSelectedTrapDiscardIds] = useState<
     string[]
   >([])
@@ -542,6 +545,18 @@ export function useMatchController(params: {
     ? getTrashBattleCookieCostCandidates(
         selectedTrap.trap.cost,
         game.players[viewerPlayerId].battleArea,
+      )
+    : []
+  const selectedTrapHandToBreakCost =
+    selectedTrap?.trap?.cost.handToBreakArea?.count ?? 0
+  const selectedTrapHandToBreakCandidates = selectedTrap
+    ? game.players[viewerPlayerId].hand.filter(
+        (card) =>
+          card.instanceId !== selectedTrap.instanceId &&
+          card.type === 'cookie' &&
+          (!selectedTrap.trap?.cost.handToBreakArea?.energyColor ||
+            card.energyColor ===
+              selectedTrap.trap.cost.handToBreakArea.energyColor),
       )
     : []
   const selectedTrapDiscardCandidates = selectedTrap
@@ -918,6 +933,10 @@ export function useMatchController(params: {
     toggleTrapPayment,
     selectedTrapDiscardCost,
     selectedTrapDiscardCandidates,
+    selectedTrapHandToBreakIds,
+    setSelectedTrapHandToBreakIds,
+    selectedTrapHandToBreakCost,
+    selectedTrapHandToBreakCandidates,
     selectedTrapTrashBattleCookieCost,
     selectedTrapTrashBattleCookieCandidates,
     trapAllowEmptyTarget,

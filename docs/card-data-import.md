@@ -70,6 +70,7 @@ BS3 使用卡號前綴而非產品標題篩選，以完整保留 `BS3-*` 異圖�
 
 ```bash
 npm run cards:import:bs3-candidate
+npm run cards:analyze:bs3-candidate
 npm run validate:candidate
 ```
 
@@ -77,8 +78,9 @@ npm run validate:candidate
 
 - `data/candidates/official-age-of-heroes-and-kingdoms-bs3.en.json`
 - `docs/bs3-card-inventory.md`
+- `docs/bs3-effect-coverage.md`（只報告 runtime 轉接覆蓋，不表示可 promote）
 
-完成每張卡的 runtime 轉接、測試與人工覆核後，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
+完成每張卡的 runtime 轉接、測試與人工覆核後，確認效果覆蓋盤點沒有待裁決或未支援的規則文字，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
 
 ### 流程說明
 

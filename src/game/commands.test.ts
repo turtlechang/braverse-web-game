@@ -749,7 +749,7 @@ describe('applyGameCommand replacement finalization', () => {
             kind: 'inspect-deck',
             lookCount: 2,
             pickCount: 1,
-            restToBottom: true,
+            restDestination: 'bottom',
           },
           { kind: 'draw', amount: 1 },
         ],

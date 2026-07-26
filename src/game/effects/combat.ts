@@ -1,5 +1,9 @@
 import { GameRuleError } from '../errors'
-import type { GameState, ModifyAttackEffect } from '../types'
+import type {
+  GameState,
+  ModifyAttackEffect,
+  ModifyDamageReceivedEffect,
+} from '../types'
 import { isEffectConditionMet } from './targeting'
 
 export const getEffectiveAttack = (
@@ -54,12 +58,45 @@ export const getAttackDamageAgainst = (
   attackerInstanceId: string,
   targetInstanceId: string,
 ): number => {
-  const receivedModifierTotal = state.damageReceivedModifiers
-    .filter((modifier) => modifier.targetInstanceId === targetInstanceId)
-    .reduce((total, modifier) => total + modifier.amount, 0)
+  const baseDamage = getEffectiveAttack(state, attackerInstanceId)
 
-  return Math.max(
-    0,
-    getEffectiveAttack(state, attackerInstanceId) + receivedModifierTotal,
+  const modifiedDamage = state.damageReceivedModifiers
+    .filter((modifier) => modifier.targetInstanceId === targetInstanceId)
+    .reduce((damage, modifier) => {
+      const adjustedDamage = Math.max(0, damage + modifier.amount)
+
+      return modifier.minimumDamage !== undefined &&
+        modifier.setDamageTo !== undefined &&
+        adjustedDamage >= modifier.minimumDamage
+        ? modifier.setDamageTo
+        : adjustedDamage
+    }, baseDamage)
+  const defenderOwner = Object.values(state.players).find((player) =>
+    player.battleArea.some((cookie) => cookie.card.instanceId === targetInstanceId),
   )
+  const defender = defenderOwner?.battleArea.find(
+    (cookie) => cookie.card.instanceId === targetInstanceId,
+  )
+  if (!defender || !defenderOwner || defender.card.skill?.trigger !== 'passive') {
+    return modifiedDamage
+  }
+  const passiveDamageModifiers = defender.card.skill.effects.filter(
+      (effect): effect is ModifyDamageReceivedEffect =>
+        effect.kind === 'modify-damage-received' &&
+        effect.target.sourceOnly === true &&
+        isEffectConditionMet(state, {
+          sourcePlayerId: defenderOwner.id,
+          sourceInstanceId: targetInstanceId,
+        }, effect),
+    )
+  return passiveDamageModifiers.reduce((damage, effect) => {
+      if (
+        effect.minimumDamage !== undefined &&
+        effect.setDamageTo !== undefined &&
+        damage >= effect.minimumDamage
+      ) {
+        return effect.setDamageTo
+      }
+      return Math.max(0, damage + effect.amount)
+    }, modifiedDamage)
 }

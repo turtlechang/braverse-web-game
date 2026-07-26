@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { takeAiStep, simulateAiMatch } from './ai'
+import { handleAiPendingDecision } from './ai/pending-handler'
 import { advancePhase } from './turn'
 import { deployCookie } from './actions'
+import { createBattleState } from './test-helpers/battle-helpers'
 import type {
   CardSkill,
   CookieCard,
@@ -96,6 +98,60 @@ const buildTestState = (
     pendingOptionalCostAttack: undefined,
   }
 }
+
+describe('AI optional attack source energy', () => {
+  it('pays no support cards when the attacker covers the entire optional cost', () => {
+    let state = createBattleState()
+    const defenderId = state.players['player-one'].battleArea[0].card.instanceId
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          supportArea: [],
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: defenderId,
+        declaredDamage: 0,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Source Energy Attacker',
+        cost: { energy: { red: 1 } },
+        sourceEnergy: { red: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+        effectText: 'Use this Cookie as {R}.',
+      },
+    }
+
+    const decision = handleAiPendingDecision(state, 'player-two')
+
+    expect(decision?.action).toBe('resolve-optional-cost-attack')
+    expect(decision?.state.pendingOptionalCostAttack).toBeNull()
+    expect(decision?.state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+  })
+})
 
 describe('resolveAiSkill discardHand', () => {
   it('discards first N hand cards deterministically for discardHand cost', () => {

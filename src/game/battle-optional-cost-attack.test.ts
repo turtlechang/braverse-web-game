@@ -698,6 +698,52 @@ describe('optional-cost-attack integration', () => {
     expect(state.pendingBattle).toBeFalsy()
   })
 
+  it('allows an up-to-one opponent-battle target effect to resolve with no target', () => {
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].card.level = 2
+    state = {
+      ...state,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        declaredDamage: 0,
+        remainingDamage: 0,
+        stage: 'attack-effect' as const,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [
+          {
+            kind: 'optional-cost-attack' as const,
+            cost: { energy: {}, discardHand: 0 },
+            effects: [
+              {
+                kind: 'opponent-battle-to-trash' as const,
+                min: 0,
+                maxLevel: 1,
+                destination: 'break' as const,
+              },
+            ],
+            effectText: 'Select up to 1 opposing LV.1 Cookie.',
+          },
+        ],
+        attackEffectIndex: 0,
+      },
+    }
+
+    state = resolveAttackEffect(state, 'player-two', [])
+    expect(state.pendingOptionalCostAttack).toBeDefined()
+
+    state = resolveOptionalCostAttack(state, 'player-two', 'pay', [], [])
+
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-one'].battleArea).toHaveLength(1)
+    expect(state.players['player-one'].breakArea).toHaveLength(0)
+  })
+
   it('resolveBattleAutomatically completes battle with optional-cost-attack and damage effect', () => {
     let state = createBattleState()
     const hc1 = handCookie('hc1')
@@ -720,9 +766,11 @@ describe('optional-cost-attack integration', () => {
     expect(state.status).toBe('playing')
   })
 
-  it('resolveBattleAutomatically pays energy cost when support is available', () => {
+  it('resolveBattleAutomatically uses source energy before support payments', () => {
     let state = createBattleState()
-    state.players['player-two'].supportArea[0].card.energyColor = 'blue'
+    state.players['player-two'].supportArea.forEach((support) => {
+      support.rested = true
+    })
     state.players['player-two'].battleArea[0].card.attackEnergyCost = {}
     state.players['player-two'].battleArea[0].card.attackCost = 0
     state.players['player-two'].battleArea[0].card.attackEffects = [
@@ -733,7 +781,7 @@ describe('optional-cost-attack integration', () => {
           { kind: 'damage', amount: 3, target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 } },
         ],
         effectText: 'Pay {B} to deal 3 damage.',
-        sourceAsEnergy: true,
+        sourceEnergy: { blue: 1 },
       },
     ]
     state = beginAttack(state, 'attacker', 'defender', [])
@@ -743,7 +791,7 @@ describe('optional-cost-attack integration', () => {
     expect(state.status).toBe('playing')
   })
 
-  it('resolveBattleAutomatically skips when energy payment is impossible', () => {
+  it('resolveBattleAutomatically skips when neither source nor support can pay', () => {
     let state = createBattleState()
     state.players['player-two'].supportArea.forEach((s) => { s.rested = true })
     state.players['player-two'].battleArea[0].card.attackEnergyCost = {}
@@ -756,7 +804,6 @@ describe('optional-cost-attack integration', () => {
           { kind: 'damage', amount: 3, target: { side: 'opponent', min: 1, max: 1, maxLevel: 1 } },
         ],
         effectText: 'Pay {B} to deal 3 damage.',
-        sourceAsEnergy: true,
       },
     ]
     state = beginAttack(state, 'attacker', 'defender', [])

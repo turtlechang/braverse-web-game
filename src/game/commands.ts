@@ -28,8 +28,13 @@ import {
   replaceDefeatedCookie,
   skipDefeatedCookieReplacement,
 } from './actions'
+import {
+  asChooseOneEffect,
+  expandChooseOne,
+  expandChooseOneSequence,
+} from './effects/choose-one'
 import { advancePhase } from './turn'
-import { activateCookieSkill, skipCookieOnPlay } from './skills'
+import { activateCookieSkill, findSkillSource, skipCookieOnPlay } from './skills'
 import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
@@ -48,8 +53,11 @@ import type {
   CardEffect,
   CommandLogEntry,
   EffectContext,
+  EnergyCost,
   EnergyColor,
+  GameCard,
   GameState,
+  InspectDeckRestDestination,
   PendingEffectOrderItem,
   PlayerId,
   Shuffle,
@@ -83,7 +91,11 @@ export interface InspectDeckDecision {
   lookCount: number
   pickCount: number
   revealedCardIds: string[]
+  restDestination?: InspectDeckRestDestination
+  pickDestination?: 'hand' | 'battle'
   filterColor?: EnergyColor
+  filterType?: GameCard['type']
+  optionalPick?: boolean
 }
 
 export interface OptionalCostAttackDecision {
@@ -95,7 +107,7 @@ export interface OptionalCostAttackDecision {
   cost: AbilityCost
   effects: CardEffect[]
   effectText: string
-  sourceAsEnergy?: boolean
+  sourceEnergy?: EnergyCost
 }
 
 export interface DrawUpToDecision {
@@ -277,7 +289,11 @@ export interface ActivateSkillCommand {
   costSupportToTrashIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
+  /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
+  trashToDeckBottomIds?: string[]
   effectTargets?: string[][]
+  /** 依序對應每個「選擇一項」所選的模式索引。 */
+  chooseOneModes?: number[]
 }
 
 /**
@@ -293,8 +309,12 @@ export interface BeginActivateSkillCommand {
   costSupportToTrashIds?: string[]
   discardHandIds?: string[]
   trashBattleCookieIds?: string[]
+  /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
+  trashToDeckBottomIds?: string[]
   /** 提供時會在支付完成後一併解析第一個效果，供導引式 UI 最後確認使用。 */
   targetIds?: string[]
+  /** 依序對應每個「選擇一項」所選的模式索引。 */
+  chooseOneModes?: number[]
 }
 
 export interface SkipOnPlayCommand {
@@ -314,6 +334,8 @@ export interface PlayItemCommand {
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   effectTargets?: string[][]
+  /** 依序對應每個「選擇一項」所選的模式索引。 */
+  chooseOneModes?: number[]
 }
 
 export interface BeginPlayItemCommand {
@@ -327,6 +349,8 @@ export interface BeginPlayItemCommand {
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   targetIds?: string[]
+  /** 依序對應每個「選擇一項」所選的模式索引。 */
+  chooseOneModes?: number[]
 }
 
 export interface PlayStageCommand {
@@ -345,6 +369,8 @@ export interface ActivateStageCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   effectTargets?: string[][]
+  /** 依序對應每個「選擇一項」所選的模式索引。 */
+  chooseOneModes?: number[]
 }
 
 export interface BeginActivateStageCommand {
@@ -356,6 +382,8 @@ export interface BeginActivateStageCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   targetIds?: string[]
+  /** 依序對應每個「選擇一項」所選的模式索引。 */
+  chooseOneModes?: number[]
 }
 
 /**
@@ -366,6 +394,16 @@ export interface ResolveAbilityEffectCommand {
   kind: 'resolve-ability-effect'
   playerId: PlayerId
   targetIds: string[]
+}
+
+/**
+ * 「選擇一項」只改寫待處理效果佇列：把 `choose-one` 換成選定模式的效果，
+ * `effectIndex` 不動，接著仍由 `resolve-ability-effect` 逐一結算。
+ */
+export interface ResolveChooseOneCommand {
+  kind: 'resolve-choose-one'
+  playerId: PlayerId
+  modeIndex: number
 }
 
 export interface ReplaceCookieCommand {
@@ -397,6 +435,8 @@ export interface PlayTrapCommand {
   supportToHandIds?: string[]
   handToSupportIds?: string[]
   discardHandIds?: string[]
+  /** 放進自己休息區的手牌餅乾代價（BS3-046）。 */
+  handToBreakIds?: string[]
   trashBattleCookieIds?: string[]
   trashToDeckIds?: string[]
 }
@@ -456,6 +496,7 @@ export type PlayerActionCommand =
   | ActivateStageCommand
   | BeginActivateStageCommand
   | ResolveAbilityEffectCommand
+  | ResolveChooseOneCommand
   | ReplaceCookieCommand
   | SkipReplacementCommand
   | RefreshDeckCommand
@@ -639,7 +680,11 @@ export const getPendingDecision = (
       lookCount: pending.lookCount,
       pickCount: pending.pickCount,
       revealedCardIds: pending.revealedCards.map((c) => c.instanceId),
+      restDestination: pending.restDestination,
+      pickDestination: pending.pickDestination,
       filterColor: pending.filterColor,
+      filterType: pending.filterType,
+      optionalPick: pending.optionalPick,
     }
   }
 
@@ -654,7 +699,7 @@ export const getPendingDecision = (
       cost: pending.cost,
       effects: pending.effects,
       effectText: pending.effectText,
-      sourceAsEnergy: pending.sourceAsEnergy,
+      sourceEnergy: pending.sourceEnergy,
     }
   }
 
@@ -927,11 +972,22 @@ const executeAbilityEffects = (
   effects: readonly CardEffect[],
   effectTargets: string[][] | undefined,
   shuffle?: Shuffle,
+  chooseOneModes?: number[],
 ): GameState => {
   let nextState = state
-  for (let index = 0; index < effects.length; index += 1) {
+  // 迴圈骨架必須與 ai/ability-effects.ts 的 simulateAbilityEffects 一致，
+  // 包含「選擇一項」的就地展開，否則 effectTargets 的索引會對不上。
+  let queue: CardEffect[] = [...effects]
+  let modeCursor = 0
+  for (let index = 0; index < queue.length; index += 1) {
     if (nextState.status !== 'playing') break
-    const effect = effects[index]
+    const effect = queue[index]
+    if (asChooseOneEffect(effect)) {
+      queue = expandChooseOne(queue, index, chooseOneModes?.[modeCursor] ?? 0)
+      modeCursor += 1
+      index -= 1
+      continue
+    }
     if (!isEffectConditionMet(nextState, context, effect)) continue
     nextState = executeCardEffect(
       nextState,
@@ -1053,8 +1109,9 @@ const applyPlayerActionCommand = (
         command.supportPaymentIds,
       )
     case 'activate-skill': {
-      const source = state.players[command.playerId].battleArea.find(
-        (cookie) => cookie.card.instanceId === command.sourceInstanceId,
+      const source = findSkillSource(
+        state.players[command.playerId],
+        command.sourceInstanceId,
       )
       const skill = source?.card.skill
       const activated = activateCookieSkill(
@@ -1066,6 +1123,7 @@ const applyPlayerActionCommand = (
         command.costSupportToTrashIds ?? [],
         command.discardHandIds ?? [],
         command.trashBattleCookieIds ?? [],
+        command.trashToDeckBottomIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -1078,11 +1136,13 @@ const applyPlayerActionCommand = (
         skill?.effects ?? [],
         command.effectTargets,
         options.shuffle,
+        command.chooseOneModes,
       )
     }
     case 'begin-activate-skill': {
-      const source = state.players[command.playerId].battleArea.find(
-        (cookie) => cookie.card.instanceId === command.sourceInstanceId,
+      const source = findSkillSource(
+        state.players[command.playerId],
+        command.sourceInstanceId,
       )
       const skill = source?.card.skill
       const activated = activateCookieSkill(
@@ -1094,13 +1154,17 @@ const applyPlayerActionCommand = (
         command.costSupportToTrashIds ?? [],
         command.discardHandIds ?? [],
         command.trashBattleCookieIds ?? [],
+        command.trashToDeckBottomIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
         sourceInstanceId: command.sourceInstanceId,
         sourceCardName: source?.card.name,
       }
-      const effects = filterActiveEffects(activated, context, skill?.effects ?? [])
+      const effects = expandChooseOneSequence(
+        filterActiveEffects(activated, context, skill?.effects ?? []),
+        command.chooseOneModes,
+      )
       if (activated.status !== 'playing' || effects.length === 0) {
         return activated
       }
@@ -1154,6 +1218,7 @@ const applyPlayerActionCommand = (
         card?.item?.effects ?? [],
         command.effectTargets,
         options.shuffle,
+        command.chooseOneModes,
       )
     }
     case 'begin-play-item': {
@@ -1176,7 +1241,10 @@ const applyPlayerActionCommand = (
         sourceInstanceId: command.instanceId,
         sourceCardName: card?.name,
       }
-      const effects = filterActiveEffects(played, context, card?.item?.effects ?? [])
+      const effects = expandChooseOneSequence(
+        filterActiveEffects(played, context, card?.item?.effects ?? []),
+        command.chooseOneModes,
+      )
       if (played.status !== 'playing' || effects.length === 0) {
         return played
       }
@@ -1230,6 +1298,7 @@ const applyPlayerActionCommand = (
         stage?.card.stageAbility?.effects ?? [],
         command.effectTargets,
         options.shuffle,
+        command.chooseOneModes,
       )
     }
     case 'begin-activate-stage': {
@@ -1248,10 +1317,13 @@ const applyPlayerActionCommand = (
         sourceInstanceId: stage?.card.instanceId ?? '',
         sourceCardName: stage?.card.name,
       }
-      const effects = filterActiveEffects(
-        activated,
-        context,
-        stage?.card.stageAbility?.effects ?? [],
+      const effects = expandChooseOneSequence(
+        filterActiveEffects(
+          activated,
+          context,
+          stage?.card.stageAbility?.effects ?? [],
+        ),
+        command.chooseOneModes,
       )
       if (activated.status !== 'playing' || effects.length === 0) {
         return activated
@@ -1284,6 +1356,26 @@ const applyPlayerActionCommand = (
         command.targetIds,
         options,
       )
+    }
+    case 'resolve-choose-one': {
+      const pending = state.pendingAbilityEffect
+      if (!pending) {
+        throw new GameRuleError('目前沒有待處理的效果。')
+      }
+      if (pending.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要選擇項目的玩家。')
+      }
+      return {
+        ...state,
+        pendingAbilityEffect: {
+          ...pending,
+          effects: expandChooseOne(
+            pending.effects,
+            pending.effectIndex,
+            command.modeIndex,
+          ),
+        },
+      }
     }
     case 'replace-cookie': {
       const task = getCurrentReplacementTask(state)
@@ -1320,6 +1412,7 @@ const applyPlayerActionCommand = (
         supportToHandIds: command.supportToHandIds,
         handToSupportIds: command.handToSupportIds,
         discardHandIds: command.discardHandIds,
+        handToBreakIds: command.handToBreakIds,
         trashBattleCookieIds: command.trashBattleCookieIds,
         trashToDeckIds: command.trashToDeckIds,
       })

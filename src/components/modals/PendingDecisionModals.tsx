@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
-import type { EnergyColor, GameCard, PendingEffectOrderItem } from '../../game'
+import type {
+  EnergyColor,
+  GameCard,
+  InspectDeckRestDestination,
+  PendingEffectOrderItem,
+} from '../../game'
 import { CardEffectText, CardFace } from '../cards/CardVisuals'
 import {
   GuidedPhaseSteps,
@@ -296,8 +301,10 @@ export interface OptionalCostAttackModalProps {
   energyCostTotal: number
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
-  opponentBattleCards: { card: GameCard; instanceId: string }[]
+  targetCandidates: { card: GameCard; instanceId: string }[]
   needsTarget: boolean
+  targetMin: number
+  targetLabel: string
   onSkip: () => void
   onPay: (discardIds: string[], targetId: string, paymentIds: string[]) => void
   embedded?: boolean
@@ -312,8 +319,10 @@ export function OptionalCostAttackModal({
   energyCostTotal,
   playerHand,
   supportCandidates,
-  opponentBattleCards,
+  targetCandidates,
   needsTarget,
+  targetMin,
+  targetLabel,
   onSkip,
   onPay,
   embedded = false,
@@ -328,7 +337,7 @@ export function OptionalCostAttackModal({
   const canPay =
     playerHand.length >= discardHandCost &&
     supportCandidates.length >= energyCostTotal &&
-    (!needsTarget || opponentBattleCards.length >= 1)
+    (!needsTarget || targetCandidates.length >= targetMin)
 
   const toggleDiscard = useCallback((instanceId: string) => {
     setSelectedDiscardIds((current) =>
@@ -359,7 +368,7 @@ export function OptionalCostAttackModal({
   const readyToConfirm =
     selectedDiscardIds.length === discardHandCost &&
     selectedPaymentIds.length === energyCostTotal &&
-    (!needsTarget || Boolean(selectedTargetId))
+    (!needsTarget || targetMin === 0 || Boolean(selectedTargetId))
 
   const handlePay = useCallback(() => {
     if (!readyToConfirm) return
@@ -385,7 +394,7 @@ export function OptionalCostAttackModal({
       : activePhase === 'cost'
         ? selectedDiscardIds.length === discardHandCost
         : activePhase === 'target'
-          ? Boolean(selectedTargetId)
+          ? targetMin === 0 || Boolean(selectedTargetId)
           : true
   const hasPreviousPhase = phaseIndex > 0
   const hasNextPhase = phaseIndex < phaseIds.length - 1
@@ -530,9 +539,13 @@ export function OptionalCostAttackModal({
             {activePhase === 'target' && (
               <div className="optional-cost-col">
                 <span className="optional-cost-col-label">目標</span>
-                <strong>選擇 1 個對手餅乾作為目標</strong>
+                <strong>
+                  {targetMin === 0
+                    ? `最多選擇 1 個${targetLabel}作為目標`
+                    : `選擇 1 個${targetLabel}作為目標`}
+                </strong>
                 <div className="modal-card-options">
-                  {opponentBattleCards.map((entry) => (
+                  {targetCandidates.map((entry) => (
                     <button
                       type="button"
                       key={entry.instanceId}
@@ -592,70 +605,77 @@ export interface InspectDeckModalProps {
   sourceCardName: string
   revealedCards: GameCard[]
   pickCount: number
+  restDestination?: InspectDeckRestDestination
+  pickDestination?: 'hand' | 'battle'
   filterColor?: EnergyColor
+  filterType?: GameCard['type']
+  optionalPick?: boolean
   onConfirm: (pickedId: string | null, restOrder: string[]) => void
+}
+
+const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
+  bottom: '牌庫底',
+  top: '牌庫頂',
+  trash: '棄牌區',
 }
 
 export function InspectDeckModal({
   sourceCardName,
   revealedCards,
   pickCount,
+  restDestination = 'bottom',
+  pickDestination = 'hand',
   filterColor,
+  filterType,
+  optionalPick,
   onConfirm,
 }: InspectDeckModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [pickedId, setPickedId] = useState<string | null>(null)
+  // restOrder 只保存「未被選走」的卡，順序就是玩家決定的放回順序。
   const [restOrder, setRestOrder] = useState<string[]>(
-    () => revealedCards.map((c) => c.instanceId),
+    () => revealedCards.map((card) => card.instanceId),
   )
 
-  const handlePick = (instanceId: string) => {
-    if (pickedId === instanceId) {
-      setPickedId(null)
-      setRestOrder(revealedCards.map((c) => c.instanceId))
-      return
-    }
-    setRestOrder(
-      revealedCards.map((c) => c.instanceId).filter((id) => id !== instanceId),
-    )
-    setPickedId(instanceId)
-  }
-
-  const nonPickedOrder = restOrder.filter((id) => id !== pickedId)
-
-  const hasNoMatchingColor =
-    filterColor != null &&
-    revealedCards.every((c) => c.energyColor !== filterColor)
+  const canPick = pickCount > 0
+  const isPickable = (card: GameCard) =>
+    (filterColor == null || card.energyColor === filterColor) &&
+    (filterType == null || card.type === filterType)
+  const hasNoPickableCard = !revealedCards.some(isPickable)
+  const restLabel = REST_DESTINATION_LABEL[restDestination]
+  const showReorder = restDestination !== 'trash' && restOrder.length > 1
 
   const resetPick = () => {
     setPickedId(null)
-    setRestOrder(revealedCards.map((c) => c.instanceId))
+    setRestOrder(revealedCards.map((card) => card.instanceId))
   }
 
-  const moveUp = (index: number) => {
-    if (index <= 0 || !pickedId) return
-    const fullOrder = [...nonPickedOrder]
-    ;[fullOrder[index - 1], fullOrder[index]] =
-      [fullOrder[index], fullOrder[index - 1]]
-    setRestOrder([pickedId, ...fullOrder])
-  }
-
-  const moveDown = (index: number) => {
-    if (index >= nonPickedOrder.length - 1 || !pickedId) return
-    const fullOrder = [...nonPickedOrder]
-    ;[fullOrder[index], fullOrder[index + 1]] =
-      [fullOrder[index + 1], fullOrder[index]]
-    setRestOrder([pickedId, ...fullOrder])
-  }
-
-  const handleConfirm = () => {
-    if (hasNoMatchingColor) {
-      onConfirm(null, restOrder)
+  const handlePick = (instanceId: string) => {
+    if (pickedId === instanceId) {
+      resetPick()
       return
     }
-    if (!pickedId) return
-    const finalRest = restOrder.filter((id) => id !== pickedId)
-    onConfirm(pickedId, finalRest)
+    setPickedId(instanceId)
+    setRestOrder(
+      revealedCards
+        .map((card) => card.instanceId)
+        .filter((id) => id !== instanceId),
+    )
+  }
+
+  const swap = (index: number, otherIndex: number) => {
+    if (otherIndex < 0 || otherIndex >= restOrder.length) return
+    const next = [...restOrder]
+    ;[next[index], next[otherIndex]] = [next[otherIndex], next[index]]
+    setRestOrder(next)
+  }
+
+  const canConfirm =
+    !canPick || optionalPick || hasNoPickableCard || pickedId !== null
+
+  const handleConfirm = () => {
+    if (!canConfirm) return
+    onConfirm(pickedId, restOrder)
   }
 
   if (minimized) {
@@ -696,41 +716,44 @@ export function InspectDeckModal({
         <span>牌庫檢視</span>
         <h2>{sourceCardName}</h2>
         <p>
-          查看 {revealedCards.length} 張牌，選擇 {pickCount} 張加入手牌，其餘以指定順序放回牌庫底。
+          查看 {revealedCards.length} 張牌
+          {canPick
+            ? `，${optionalPick ? '最多選' : '選擇'} ${pickCount} 張${
+                pickDestination === 'battle' ? '登場' : '加入手牌'
+              }`
+            : ''}
+          ，其餘
+          {restDestination === 'trash' ? '放入' : '以指定順序放回'}
+          {restLabel}。
         </p>
-        {hasNoMatchingColor && (
+        {canPick && hasNoPickableCard && (
           <p className="inspect-deck-no-match">
-            沒有符合 {filterColor} 顏色的卡牌，將全部放回牌庫底。
+            沒有符合條件的卡牌，將全部放入{restLabel}。
           </p>
         )}
-        <div className="inspect-deck-grid">
-          {revealedCards.map((card) => {
-            const isDisabled = filterColor != null && card.energyColor !== filterColor
-            return (
+        {canPick && (
+          <div className="inspect-deck-grid">
+            {revealedCards.map((card) => (
               <button
                 type="button"
                 key={card.instanceId}
-                className={
-                  pickedId === card.instanceId ? 'is-selected' : ''
-                }
-                disabled={isDisabled}
+                className={pickedId === card.instanceId ? 'is-selected' : ''}
+                disabled={!isPickable(card)}
                 onClick={() => handlePick(card.instanceId)}
                 aria-label={`選擇${card.name}`}
               >
                 <CardFace card={card} />
                 <span>{card.name}</span>
               </button>
-            )
-          })}
-        </div>
-        {pickedId && nonPickedOrder.length > 0 && (
+            ))}
+          </div>
+        )}
+        {showReorder && (
           <div className="inspect-deck-sort">
-            <strong>排序剩餘牌（上到下 = 牌庫頂到底）</strong>
+            <strong>排序剩餘牌（上到下 = {restLabel}方向由先到後）</strong>
             <div className="inspect-deck-sort-list">
-              {nonPickedOrder.map((id, index) => {
-                const card = revealedCards.find(
-                  (c) => c.instanceId === id,
-                )
+              {restOrder.map((id, index) => {
+                const card = revealedCards.find((c) => c.instanceId === id)
                 return (
                   <div key={id} className="inspect-deck-sort-row">
                     <span>{card?.name ?? id}</span>
@@ -739,17 +762,15 @@ export function InspectDeckModal({
                         type="button"
                         aria-label={`${card?.name ?? id} 上移`}
                         disabled={index === 0}
-                        onClick={() => moveUp(index)}
+                        onClick={() => swap(index, index - 1)}
                       >
                         <ChevronUp aria-hidden="true" />
                       </button>
                       <button
                         type="button"
                         aria-label={`${card?.name ?? id} 下移`}
-                        disabled={
-                          index === nonPickedOrder.length - 1
-                        }
-                        onClick={() => moveDown(index)}
+                        disabled={index === restOrder.length - 1}
+                        onClick={() => swap(index, index + 1)}
                       >
                         <ChevronDown aria-hidden="true" />
                       </button>
@@ -771,10 +792,10 @@ export function InspectDeckModal({
           )}
           <button
             type="button"
-            disabled={!pickedId && !hasNoMatchingColor}
+            disabled={!canConfirm}
             onClick={handleConfirm}
           >
-            {hasNoMatchingColor ? '確認並放回' : '確認並放回'}
+            確認並放回
           </button>
         </div>
       </section>
