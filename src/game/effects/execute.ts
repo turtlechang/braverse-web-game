@@ -33,6 +33,7 @@ import {
   getOpponentTrashToBreakCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
+  getTrashToBreakCandidates,
   getTrashToDeckCandidates,
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
@@ -448,7 +449,9 @@ export const executeCardEffect = (
           cookie,
           targetPlayerId,
           context.sourcePlayerId,
-        ) && !isEffectDamagePrevented(state, cookie.card.instanceId),
+        ) &&
+        !isEffectDamagePrevented(state, cookie.card.instanceId) &&
+        (!effect.excludeSource || cookie.card.instanceId !== context.sourceInstanceId),
     )
     const damagedPlayer = targets.reduce(
       (player, target) =>
@@ -634,6 +637,29 @@ export const executeCardEffect = (
     }
 
     return resolveBasicVictory(updatedState)
+  }
+
+  if (effect.kind === 'trash-to-break') {
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== effect.amount) {
+      throw new GameRuleError('選擇的棄牌區餅乾數量不合法。')
+    }
+    const candidates = getTrashToBreakCandidates(state, context, effect)
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的棄牌區餅乾不合法。')
+    }
+    const player = state.players[context.sourcePlayerId]
+    const selected = player.discardPile.filter((card) =>
+      uniqueIds.includes(card.instanceId),
+    ) as CookieCard[]
+    return updatePlayer(state, {
+      ...player,
+      discardPile: player.discardPile.filter(
+        (card) => !uniqueIds.includes(card.instanceId),
+      ),
+      breakArea: [...player.breakArea, ...selected],
+    })
   }
 
   if (effect.kind === 'gain-hp') {

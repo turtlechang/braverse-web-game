@@ -12,6 +12,7 @@ export {
   getTargetPlayerId,
   getSupportEffectCandidates,
   getTrashCookieCandidates,
+  getTrashToBreakCandidates,
   getTrashToDeckCandidates,
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
