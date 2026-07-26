@@ -355,9 +355,7 @@ export const createCard = (
       type: 'cookie',
       level: source.level,
       hp: source.hp,
-      attack: Number(
-        source.attackText?.match(/Deals?\s+(\d+)\s+damage/i)?.[1] ?? 1,
-      ),
+      attack: parsedAttack?.damage ?? 1,
       attackCost: parsedAttack?.totalCost ?? 0,
       attackEnergyCost: parsedAttack?.cost ?? {},
       attackText: source.attackText ?? undefined,

@@ -129,6 +129,30 @@ describe('validateCustomDeck', () => {
     })
   })
 
+  /**
+   * 回歸測試：createCard（starter-deck.ts，createDeckFromCustomDeck 實際
+   * 呼叫的卡片建構函式）原本用自己的正規表示式 /Deals?\s+(\d+)\s+damage/i
+   * 從 attackText 抓攻擊力，但 SR/UR 稀有度卡常見的「{da} N」標記寫法
+   * （例如 BS3-017「{da} 3」）不符合這個正規表示式，抓不到就靜默退回預設值
+   * 1——即使旁邊的 attackCost/attackEnergyCost 是用 parseOfficialCardText
+   * 正確解析出來的。已改成直接使用 parseOfficialCardText 算出的
+   * parsedAttack.damage，跟 attackCost 用同一份解析結果。
+   */
+  it('parses attack damage from the {da} marker format, not only literal "Deals N damage" text', () => {
+    const deck: CustomDeck = {
+      id: 'test-da-marker',
+      name: 'da marker test',
+      entries: [{ cardNumber: 'BS3-017', count: 1 }],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+
+    const [card] = createDeckFromCustomDeck(deck, 'player-one')
+
+    expect(card.attack).toBe(3)
+    expect(card.attackCost).toBe(3)
+  })
+
   it('imports @ variant entries and keeps base and variant as separate rows under shared 4-copy limit', () => {
     const cookieNumbers = getAllCardPoolEntries()
       .filter((entry) => entry.type === 'cookie' && !entry.cardNumber.includes('@'))
