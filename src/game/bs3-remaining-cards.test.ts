@@ -134,7 +134,57 @@ describe('BS3 剩餘陷阱卡', () => {
     expect(trap!.effects[1]).toMatchObject({
       kind: 'reveal-top-deck',
       match: { type: 'cookie', energyColor: 'blue', level: 2 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
     })
+  })
+
+  /**
+   * 官方 Q&A：展示牌庫頂後放回牌庫頂（實作以 peek 不離庫等價）；
+   * 僅當展示卡為 {B} LV.2 餅乾時，才可執行後方 -1 攻擊效果。
+   */
+  it('BS3-093 reveal keeps the card on top and only then applies nested -1', () => {
+    const trap = convertOfficialTrapAbility(findBs3Card('BS3-093'))
+    const reveal = trap!.effects[1]
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: 'bs3-093',
+      sourceCardName: 'Convocation of Elders',
+    }
+
+    const matchingTop = levelledCookie('blue-lv2', 2, 'blue')
+    let state = createBattleState()
+    state.players['player-two'].deck = [
+      matchingTop,
+      item('under-match'),
+    ]
+    const beforeDeck = state.players['player-two'].deck.map((c) => c.instanceId)
+    const matched = executeCardEffect(state, context, reveal, ['defender'])
+    expect(matched.players['player-two'].deck.map((c) => c.instanceId)).toEqual(
+      beforeDeck,
+    )
+    expect(matched.players['player-two'].hand).toHaveLength(
+      state.players['player-two'].hand.length,
+    )
+    expect(matched.attackModifiers).toContainEqual(
+      expect.objectContaining({
+        targetInstanceId: 'defender',
+        amount: -1,
+      }),
+    )
+
+    const nonMatchTop = levelledCookie('blue-lv1', 1, 'blue')
+    state = createBattleState()
+    state.players['player-two'].deck = [nonMatchTop, item('under-miss')]
+    const missed = executeCardEffect(state, context, reveal, ['defender'])
+    expect(missed.players['player-two'].deck[0].instanceId).toBe('blue-lv1')
+    expect(missed.attackModifiers).toEqual([])
   })
 
   it('BS3-094 Radiant Coronation: -2 attack + inspect top 3', () => {

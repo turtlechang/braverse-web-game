@@ -5,7 +5,11 @@ import {
   convertOfficialCookieSkill,
 } from '../cards/official-effect-adapter'
 import type { OfficialCardRecord } from '../cards/types'
-import { executeCardEffect, getEffectTargetCandidates } from './effects'
+import {
+  executeCardEffect,
+  getEffectTargetCandidates,
+  resolveDrawUpTo,
+} from './effects'
 import type { CardEffect, CookieCard, EffectContext, GameState } from './types'
 import { cookie, createBattleState, item } from './test-helpers/battle-helpers'
 
@@ -308,6 +312,62 @@ describe('BS3-092 Old Vanilla Orchid Locket: draw-up-to-battle-cookie-count', ()
     )
 
     expect(next.pendingDrawUpTo).toBeUndefined()
+  })
+
+  /**
+   * 官方 Q&A：雙方戰鬥區共 3 個 LV.2 時上限為 3，可選抽 3／2／1／0。
+   * 己方 LV.2-a + 對手 LV.2-a + 對手 LV.2-b = 3
+   */
+  it('lets the player draw any amount up to the combined LV.2 count', () => {
+    let state = withAlly(createBattleState(), levelledCookie('ally-lv2-a', 2), [
+      'ally-a-hp',
+    ])
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            {
+              card: levelledCookie('foe-lv2-a', 2),
+              hpCards: [item('foe-a-hp')],
+              rested: false,
+              battleEntryId: 'foe-lv2-a:battle:8',
+            },
+            {
+              card: levelledCookie('foe-lv2-b', 2),
+              hpCards: [item('foe-b-hp')],
+              rested: false,
+              battleEntryId: 'foe-lv2-b:battle:9',
+            },
+          ],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          deck: [item('d1'), item('d2'), item('d3'), item('d4')],
+        },
+      },
+    }
+
+    const pending = executeCardEffect(
+      state,
+      sourceContext(),
+      effectsOf('BS3-092')[0],
+      [],
+    )
+    expect(pending.pendingDrawUpTo?.max).toBe(3)
+
+    const drawTwo = resolveDrawUpTo(pending, 'player-two', 2)
+    expect(drawTwo.players['player-two'].hand.length).toBe(
+      state.players['player-two'].hand.length + 2,
+    )
+    expect(drawTwo.pendingDrawUpTo).toBeNull()
+
+    const drawZero = resolveDrawUpTo(pending, 'player-two', 0)
+    expect(drawZero.players['player-two'].hand.length).toBe(
+      state.players['player-two'].hand.length,
+    )
   })
 })
 

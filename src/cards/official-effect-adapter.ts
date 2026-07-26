@@ -1152,7 +1152,7 @@ export const convertOfficialCardEffects = (
       },
     ],
     'BS3-091': [
-      { kind: 'inspect-deck', lookCount: 3, pickCount: 2, restDestination: 'bottom' },
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 2, restDestination: 'top' },
       {
         kind: 'equip-source',
         target: { side: 'self', min: 0, max: 1 },

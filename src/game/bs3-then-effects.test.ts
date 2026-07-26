@@ -68,6 +68,93 @@ describe('BS3 attack Then effects', () => {
     expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
   })
 
+  /**
+   * 官方 Q&A：BS3-111 的「支援區有 [靈魂果醬]」可由五色任一張靈魂果醬滿足，
+   * 條件只看 soul-jam keyword，不限顏色。
+   */
+  it('BS3-111 accepts any-color Soul Jam in support (official Q&A)', () => {
+    const chocoChip = asCookie('BS3-111')
+    const yellowSoulJam = convertOfficialCardToGameCard(findBs3Card('BS3-043'))
+    if (
+      yellowSoulJam.status !== 'converted' ||
+      yellowSoulJam.gameCard.type !== 'item'
+    ) {
+      throw new Error('BS3-043 should convert to an item with soul-jam')
+    }
+    expect(yellowSoulJam.gameCard.keywords).toContain('soul-jam')
+    expect(yellowSoulJam.gameCard.energyColor).toBe('yellow')
+
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = Array.from(
+      { length: 4 },
+      (_, index) => item(`defender-hp-${index + 1}`),
+    )
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: { ...chocoChip, instanceId: 'choco-chip' },
+      hpCards: [item('choco-hp')],
+    }
+    state.players['player-two'].supportArea = [
+      {
+        card: {
+          ...yellowSoulJam.gameCard,
+          instanceId: 'yellow-soul-jam-support',
+        },
+        rested: false,
+      },
+      // 攻擊費用 {P}{N}：紫色支付指定色，黃色靈魂果醬同時當 {N} 與條件來源
+      { card: item('choco-pay-p', 'purple'), rested: false },
+    ]
+
+    state = beginAttack(state, 'choco-chip', 'defender', [
+      'choco-pay-p',
+      'yellow-soul-jam-support',
+    ])
+    state = skipTrap(state, 'player-one')
+    while (state.pendingBattle?.stage === 'damage') {
+      state = resolveNextDamage(state)
+    }
+
+    // 攻擊本體 1 傷害後剩 3；Then 再選對手造成 2 傷害 → 剩 1
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
+    state = resolveAttackEffect(state, 'player-two', ['defender'])
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
+  it('BS3-111 skips Then damage when support has no Soul Jam', () => {
+    const chocoChip = asCookie('BS3-111')
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = Array.from(
+      { length: 4 },
+      (_, index) => item(`defender-hp-${index + 1}`),
+    )
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: { ...chocoChip, instanceId: 'choco-chip' },
+      hpCards: [item('choco-hp')],
+    }
+    state.players['player-two'].supportArea = [
+      { card: item('choco-pay-p', 'purple'), rested: false },
+      { card: item('choco-pay-n', 'red'), rested: false },
+    ]
+
+    state = beginAttack(state, 'choco-chip', 'defender', [
+      'choco-pay-p',
+      'choco-pay-n',
+    ])
+    state = skipTrap(state, 'player-one')
+    while (state.pendingBattle?.stage === 'damage') {
+      state = resolveNextDamage(state)
+    }
+
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
+    // 無靈魂果醬時 Then 自動略過
+    if (state.pendingBattle?.stage === 'attack-effect') {
+      state = resolveAttackEffect(state, 'player-two', ['defender'])
+    }
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
+  })
+
   it('resolves BS3-028 after normal damage when its source has five or fewer HP', () => {
     const mozzarella = asCookie('BS3-028')
     let state = createBattleState()
