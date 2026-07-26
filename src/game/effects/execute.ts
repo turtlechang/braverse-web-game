@@ -249,6 +249,14 @@ const markSupportAreaDecreased = (
   },
 })
 
+const isEffectDamagePrevented = (
+  state: GameState,
+  targetInstanceId: string,
+): boolean => {
+  const expiration = state.effectDamagePreventedUntilTurn?.[targetInstanceId]
+  return expiration !== undefined && state.turnNumber <= expiration
+}
+
 export const executeCardEffect = (
   state: GameState,
   context: EffectContext,
@@ -433,13 +441,14 @@ export const executeCardEffect = (
     const targetPlayer = state.players[targetPlayerId]
     const previousBattleAreaCount = targetPlayer.battleArea.length
     // 官方裁定：即使不「選擇」目標的全場效果，仍屬對手效果，不能影響 BS3-115 保護餅乾。
+    // BS3-082：prevent-effect-damage 保護的餅乾也不受效果傷害。
     const targets = targetPlayer.battleArea.filter(
       (cookie) =>
         !isBlockedByOpponentEffectProtection(
           cookie,
           targetPlayerId,
           context.sourcePlayerId,
-        ),
+        ) && !isEffectDamagePrevented(state, cookie.card.instanceId),
     )
     const damagedPlayer = targets.reduce(
       (player, target) =>
@@ -2257,14 +2266,17 @@ export const executeCardEffect = (
           effect.perCount
     const previousBattleAreaCount =
       state.players[targetPlayerId].battleArea.length
-    const damagedPlayer = targets.reduce(
+    const protectedTargets = targets.filter(
+      (target) => !isEffectDamagePrevented(state, target.card.instanceId),
+    )
+    const damagedPlayer = protectedTargets.reduce(
       (player, target) =>
         damagePlayerCookie(player, target.card.instanceId, amount),
       state.players[targetPlayerId],
     )
 
     const departedCount = previousBattleAreaCount - damagedPlayer.battleArea.length
-    const departedCookieCards = targets
+    const departedCookieCards = protectedTargets
       .filter((target) => !damagedPlayer.battleArea.some(
         (cookie) => cookie.card.instanceId === target.card.instanceId,
       ))
@@ -2289,29 +2301,32 @@ export const executeCardEffect = (
   if (effect.kind === 'split-damage') {
     const previousBattleAreaCount =
       state.players[targetPlayerId].battleArea.length
+    const protectedTargets = targets.filter(
+      (target) => !isEffectDamagePrevented(state, target.card.instanceId),
+    )
     let damagedPlayer = state.players[targetPlayerId]
     
-    if (targets.length === 1) {
+    if (protectedTargets.length === 1) {
       damagedPlayer = damagePlayerCookie(
         damagedPlayer,
-        targets[0].card.instanceId,
+        protectedTargets[0].card.instanceId,
         effect.primaryAmount,
       )
-    } else if (targets.length === 2) {
+    } else if (protectedTargets.length === 2) {
       damagedPlayer = damagePlayerCookie(
         damagedPlayer,
-        targets[0].card.instanceId,
+        protectedTargets[0].card.instanceId,
         effect.primaryAmount,
       )
       damagedPlayer = damagePlayerCookie(
         damagedPlayer,
-        targets[1].card.instanceId,
+        protectedTargets[1].card.instanceId,
         effect.secondaryAmount,
       )
     }
 
     const departedCount = previousBattleAreaCount - damagedPlayer.battleArea.length
-    const departedCookieCards = targets
+    const departedCookieCards = protectedTargets
       .filter((target) => !damagedPlayer.battleArea.some(
         (cookie) => cookie.card.instanceId === target.card.instanceId,
       ))

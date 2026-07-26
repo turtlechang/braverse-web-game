@@ -63,6 +63,7 @@
 | 休息區→棄牌區 | `break-to-trash` | 從效果來源玩家休息區選最多 N 張 LV.X 卡移至棄牌區；不需選擇目標時玩家可選 0 張確認。移動後以 resolveBasicVictory 檢查勝負。僅接受等價於「Select up to N LV.X card(s) from your break area and place it/them in the trash」的文字，不接受 Then/FLIP/額外子效果 |
 | 增加 HP | `gain-hp` | 目前供起始牌組 FLIP 使用，從牌庫頂補入 HP 卡 |
 | HP 下限保護 | `prevent-knockout` | 目前供 TRAP 使用，本次戰鬥保留至少 1 張 HP 卡。官方裁定（BS3-100 vs ST3-020）：這個保護擋的是「這次戰鬥中 HP 不會變 0」，不是只擋一般傷害——只要 `state.pendingBattle` 還在（戰鬥尚未結束）且目標在 `preventKnockoutTargetIds` 內，任何會讓 HP 卡歸零的移除都要擋下，包括攻擊後續效果的 `hp-to-trash`。`hp-to-trash` 執行器已對此加上檢查：保護生效且剩餘 HP 卡數 ≤ 欲移除數時直接不執行，回傳原狀態；不能算出 `removeCount=0` 後照舊呼叫 `slice(-removeCount)`——JS 的 `slice(-0)` 等同 `slice(0)`，會把整疊 HP 卡誤判成「被移除」，導致同一張卡同時留在 `hpCards` 又被複製進棄牌區 |
+| 效果傷害免疫 | `prevent-effect-damage` | 被影響餅乾在持續期間內不受任何效果傷害（技能、攻擊附加效果等），基本攻擊傷害仍正常結算。`damage`、`damage-all`、`split-damage` 執行器會檢查 `effectDamagePreventedUntilTurn`，受保護餅乾直接跳過（BS3-082） |
 | 禁止 FLIP | `disable-flip` | 被影響玩家本回合不能發動 FLIP 效果 |
 | 檢視 HP | `view-hp` | 查看目標餅乾的 HP 卡內容（可選） |
 | 戰鬥區→支援區 | `battle-to-support` | 將目標餅乾從戰鬥區移至支援區 |

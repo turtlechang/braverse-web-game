@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- 🐛 BS3-082《勇敢餅乾》`prevent-effect-damage` 執行器 bug 修正（2026-07-26）：官方確認「基礎攻擊傷害以外的傷害來源皆無法對這個餅乾造成傷害」，但 `effectDamagePreventedUntilTurn` 只被寫入、從未在傷害結算時檢查。修正 `damage`、`damage-all`、`split-damage` 三條路徑，受保護餅乾不再承受效果傷害；新增 `isEffectDamagePrevented` 輔助函式。lint、build 通過。
+- ✅ BS3-087《濃縮奶油餅乾》官方 Q&A 核對（2026-07-26）：官方確認五色靈魂果醬任一即可滿足條件，且只檢視本次攻擊對象的等級。`support-keyword-at-least` 條件以 `keywords.includes('soul-jam')` 判定不限顏色，`attackTargetOnly: true` + `maxLevel: 1` 鎖定當次攻擊目標 LV.1，實作已正確。
 - 🐛 BS3-091《靈魂果醬:真理之光》官方 Q&A 修正（2026-07-26）：**（1）** `inspect-deck` 的 `restDestination` 錯誤設為 `'bottom'`，卡片文字明確寫「未選擇的牌以任意順序放回牌庫**最上方**」，已修正為 `'top'`。**（2）** 官方確認「查看」是玩家自己看（不展示給對手），`inspect-deck` 的 peek 行為已正確。**（3）** 裝載後的攻擊觸發「抽 1 張牌」是**必定發動**而非選擇性，`getEquipAttackEffects` 回傳的 `draw` 效果會直接加入 `attackEffects`，無可選標記，已正確。`bs3-soul-jam.test.ts`（15 項）、`inspect-deck.test.ts`（19 項）通過。
 - ✅ BS3-090《光之護佑配劍》官方 Q&A 核對（2026-07-26）：官方確認效果執行完畢後展示的牌須放回牌庫頂，且僅當條件匹配時才能執行後方效果。`reveal-top-deck` 執行器以 `deck[0]` peek（不移除牌庫頂卡），條件不匹配時直接回傳原狀態、匹配時才執行 nested effect，卡始終留在牌庫頂，行為已正確。
 - ✅ BS3-092《古典香草花墜飾》官方 Q&A 核對（2026-07-26）：官方確認「雙方戰鬥區每有 1 個 LV.2 餅乾抽最多 1 張」是指檢視雙方戰鬥區後，玩家可自行決定抽 0 至該數量之間的任意張數。既有實作已正確——`draw-up-to-battle-cookie-count` 執行器掃描雙方 `battleArea` 計算匹配 LV.2 數量、乘以 `amountPerCookie` 得到 `pendingDrawUpTo.max`，玩家透過 `resolveDrawUpTo` 自選 0–max 張。新增 1 項回歸測試覆蓋「雙方共 3 隻 LV.2 → 可抽 0–3」場景；`bs3-runtime-effects.test.ts`（17 項）、lint、build 通過。
