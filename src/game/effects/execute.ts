@@ -36,6 +36,7 @@ import {
   getTrashToDeckCandidates,
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
+  isBlockedByOpponentEffectProtection,
   isEffectConditionMet,
   selectEffectTargets,
   validateBreakToTrashTargets,
@@ -431,7 +432,15 @@ export const executeCardEffect = (
         : getOpponentId(context.sourcePlayerId)
     const targetPlayer = state.players[targetPlayerId]
     const previousBattleAreaCount = targetPlayer.battleArea.length
-    const targets = targetPlayer.battleArea
+    // 官方裁定：即使不「選擇」目標的全場效果，仍屬對手效果，不能影響 BS3-115 保護餅乾。
+    const targets = targetPlayer.battleArea.filter(
+      (cookie) =>
+        !isBlockedByOpponentEffectProtection(
+          cookie,
+          targetPlayerId,
+          context.sourcePlayerId,
+        ),
+    )
     const damagedPlayer = targets.reduce(
       (player, target) =>
         damagePlayerCookie(player, target.card.instanceId, effect.amount),
@@ -1200,12 +1209,21 @@ export const executeCardEffect = (
       effect.side === 'self'
         ? context.sourcePlayerId
         : getOpponentId(context.sourcePlayerId)
-    const modifiers = state.players[playerId].battleArea.map((cookie) => ({
-      sourceInstanceId: context.sourceInstanceId,
-      targetInstanceId: cookie.card.instanceId,
-      amount: effect.amount,
-      expiresAfterTurn: getExpirationTurn(state, effect.duration),
-    }))
+    const modifiers = state.players[playerId].battleArea
+      .filter(
+        (cookie) =>
+          !isBlockedByOpponentEffectProtection(
+            cookie,
+            playerId,
+            context.sourcePlayerId,
+          ),
+      )
+      .map((cookie) => ({
+        sourceInstanceId: context.sourceInstanceId,
+        targetInstanceId: cookie.card.instanceId,
+        amount: effect.amount,
+        expiresAfterTurn: getExpirationTurn(state, effect.duration),
+      }))
     return {
       ...state,
       attackModifiers: [...state.attackModifiers, ...modifiers],
@@ -1354,6 +1372,15 @@ export const executeCardEffect = (
     const targetPlayerId = getOpponentId(context.sourcePlayerId)
     const targetPlayer = state.players[targetPlayerId]
     const candidates = targetPlayer.battleArea.filter((cookie) => {
+      if (
+        isBlockedByOpponentEffectProtection(
+          cookie,
+          targetPlayerId,
+          context.sourcePlayerId,
+        )
+      ) {
+        return false
+      }
       if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
       if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
       if (effect.remainingHp !== undefined && cookie.hpCards.length > effect.remainingHp) return false
@@ -1407,6 +1434,15 @@ export const executeCardEffect = (
 
     const stageOnly = effect.stageOnly ?? false
     const battleCandidates = stageOnly ? [] : targetPlayer.battleArea.filter((cookie) => {
+      if (
+        isBlockedByOpponentEffectProtection(
+          cookie,
+          targetPlayerId,
+          context.sourcePlayerId,
+        )
+      ) {
+        return false
+      }
       if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
       if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
       if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
@@ -1475,6 +1511,15 @@ export const executeCardEffect = (
     for (const playerId of playerIds) {
       const player = nextState.players[playerId]
       const matching = player.battleArea.filter((cookie) => {
+        if (
+          isBlockedByOpponentEffectProtection(
+            cookie,
+            playerId,
+            context.sourcePlayerId,
+          )
+        ) {
+          return false
+        }
         if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
         if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
         return true

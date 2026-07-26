@@ -77,6 +77,38 @@ export const getTargetPlayerId = (
     : getOpponentId(context.sourcePlayerId)
 }
 
+/** BS3-115 裝載後：該餅乾不能被對手效果選為目標，也不能被對手效果送入棄牌區。 */
+export const isProtectedBySoulJamResolution = (
+  cookie: CookieInBattle,
+): boolean => cookie.equippedCards?.some((card) => card.id === 'BS3-115') ?? false
+
+/**
+ * 對手效果是否被 BS3-115 擋下。
+ * 例外：攻擊附加效果若以 `attackTargetOnly` 保持同一攻擊對象（未重新選擇），
+ * 官方裁定仍可對該餅乾造成附加傷害。
+ */
+export const isBlockedByOpponentEffectProtection = (
+  cookie: CookieInBattle,
+  ownerId: PlayerId,
+  sourcePlayerId: PlayerId,
+  options: {
+    attackTargetOnly?: boolean
+    attackTargetInstanceId?: string | null
+  } = {},
+): boolean => {
+  if (ownerId === sourcePlayerId) return false
+  if (!isProtectedBySoulJamResolution(cookie)) return false
+  if (
+    options.attackTargetOnly &&
+    options.attackTargetInstanceId !== undefined &&
+    options.attackTargetInstanceId !== null &&
+    cookie.card.instanceId === options.attackTargetInstanceId
+  ) {
+    return false
+  }
+  return true
+}
+
 const matchesSelector = (
   cookie: CookieInBattle,
   selector: EffectTargetSelector,
@@ -85,8 +117,10 @@ const matchesSelector = (
   ownerId: PlayerId,
 ): boolean => {
   if (
-    ownerId !== context.sourcePlayerId &&
-    cookie.equippedCards?.some((card) => card.id === 'BS3-115')
+    isBlockedByOpponentEffectProtection(cookie, ownerId, context.sourcePlayerId, {
+      attackTargetOnly: selector.attackTargetOnly,
+      attackTargetInstanceId: state.pendingBattle?.targetInstanceId,
+    })
   ) {
     return false
   }
@@ -183,10 +217,17 @@ export const getEffectTargetCandidatesForEffect = (
   effect: CardEffect,
 ): CookieInBattle[] => {
   if (effect.kind === 'opponent-battle-to-trash') {
-    const targetPlayer = state.players[getOpponentId(context.sourcePlayerId)]
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    const targetPlayer = state.players[targetPlayerId]
     const bttEffect: OpponentBattleToTrashEffect = effect
     return targetPlayer.battleArea.filter((cookie) => {
-      if (cookie.equippedCards?.some((card) => card.id === 'BS3-115')) {
+      if (
+        isBlockedByOpponentEffectProtection(
+          cookie,
+          targetPlayerId,
+          context.sourcePlayerId,
+        )
+      ) {
         return false
       }
       if (

@@ -1,4 +1,10 @@
-import { executeCardEffect, isEffectConditionMet, isEffectUntargeted } from '../effects'
+import {
+  executeCardEffect,
+  getEffectTargetCandidatesForEffect,
+  isEffectConditionMet,
+  isEffectUntargeted,
+  requiresTargetSelection,
+} from '../effects'
 import { asChooseOneEffect, expandChooseOne } from '../effects/choose-one'
 import type { CardEffect, EffectContext, GameState, Shuffle } from '../types'
 import type { AiEffectSelection } from './types'
@@ -63,6 +69,15 @@ export const simulateAbilityEffects = (
     if (!isEffectConditionMet(nextState, context, effect)) {
       effectTargets.push([])
       continue
+    }
+    // 與 commands.executeAbilityEffects 一致：無合法目標時整段 Then 中止，
+    // 但動作本身仍成立（費用已付、卡已進棄牌），故 aborted 維持 false。
+    if (
+      requiresTargetSelection(effect) &&
+      getEffectTargetCandidatesForEffect(nextState, context, effect).length === 0
+    ) {
+      effectTargets.push([])
+      break
     }
     const targetIds = isEffectUntargeted(effect)
       ? []

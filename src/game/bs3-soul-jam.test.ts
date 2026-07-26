@@ -4,9 +4,13 @@ import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import { convertOfficialItemAbility } from '../cards/official-effect-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import { beginAttack, resolveAttackEffect, resolveNextDamage, skipTrap } from './battle'
-import { executeCardEffect, getEffectTargetCandidates } from './effects'
+import { applyGameCommand } from './commands'
+import {
+  executeCardEffect,
+  getEffectTargetCandidates,
+} from './effects'
 import type { CookieCard, EffectContext, GameCard, GameState } from './types'
-import { createBattleState, item } from './test-helpers/battle-helpers'
+import { createBattleState, cookie, item } from './test-helpers/battle-helpers'
 
 const findBs3Card = (cardNumber: string) => {
   const card = (officialBS3Inventory.cards as OfficialCardRecord[]).find(
@@ -199,8 +203,12 @@ describe('BS3-091 Soul Jam: Light of Truth triggers a draw on attack', () => {
 
 /**
  * BS3-115《靈魂果醬:抉擇之光》裝載後：「那隻餅乾不能被對手的效果選為目標，
- * 也不能被送入棄牌區」——由 targeting.ts 的 matchesSelector 依裝備卡 id
- * 在來源不是擁有者本人時排除候選。
+ * 也不能被送入棄牌區」。
+ *
+ * 官方裁定補充：
+ * - 普通攻擊可打；攻擊附加若保持同一對象（attackTargetOnly）仍可造成附加傷害
+ * - 不選擇目標的全場效果（如 damage-all）仍屬效果，不能影響它
+ * - 只有對手效果被擋；自己的效果不受影響
  */
 describe('BS3-115 Soul Jam: Light of Resolution blocks opponent targeting', () => {
   const createProtectedState = (): GameState => {
@@ -214,21 +222,22 @@ describe('BS3-115 Soul Jam: Light of Resolution blocks opponent targeting', () =
     return state
   }
 
+  const opponentContext = (): EffectContext => ({
+    sourcePlayerId: 'player-two',
+    sourceInstanceId: 'attacker',
+    sourceCardName: 'attacker',
+  })
+
   it('excludes the equipped Cookie from an opponent-sourced target selector', () => {
     const state = createProtectedState()
-    const opponentContext: EffectContext = {
-      sourcePlayerId: 'player-two',
-      sourceInstanceId: 'attacker',
-      sourceCardName: 'attacker',
-    }
-    const candidates = getEffectTargetCandidates(state, opponentContext, {
+    const candidates = getEffectTargetCandidates(state, opponentContext(), {
       side: 'opponent',
       min: 0,
       max: 1,
     })
 
     expect(
-      candidates.some((cookie) => cookie.card.instanceId === 'defender'),
+      candidates.some((c) => c.card.instanceId === 'defender'),
     ).toBe(false)
   })
 
@@ -246,7 +255,282 @@ describe('BS3-115 Soul Jam: Light of Resolution blocks opponent targeting', () =
     })
 
     expect(
-      candidates.some((cookie) => cookie.card.instanceId === 'defender'),
+      candidates.some((c) => c.card.instanceId === 'defender'),
+    ).toBe(true)
+  })
+
+  it('still allows attackTargetOnly bonus damage against the current attack target', () => {
+    const state = createProtectedState()
+    state.pendingBattle = {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      declaredDamage: 1,
+      remainingDamage: 0,
+      stage: 'attack-effect',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
+    }
+
+    const candidates = getEffectTargetCandidates(state, opponentContext(), {
+      side: 'opponent',
+      min: 1,
+      max: 1,
+      attackTargetOnly: true,
+    })
+    expect(candidates.map((c) => c.card.instanceId)).toEqual(['defender'])
+
+    const beforeHp = state.players['player-one'].battleArea[0].hpCards.length
+    const damaged = executeCardEffect(
+      state,
+      opponentContext(),
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+      },
+      ['defender'],
+    )
+    expect(damaged.players['player-one'].battleArea[0].hpCards.length).toBe(
+      beforeHp - 1,
+    )
+  })
+
+  it('blocks damage-all from an opponent-sourced effect', () => {
+    const state = createProtectedState()
+    // 場上再放一隻未保護餅乾，確認全場效果只略過受保護者
+    state.players['player-one'].battleArea.push({
+      card: cookie('unprotected', 1, 2),
+      hpCards: [item('unprotected-hp-a'), item('unprotected-hp-b')],
+      rested: false,
+      battleEntryId: 'unprotected:battle:1',
+    })
+
+    const beforeProtected =
+      state.players['player-one'].battleArea[0].hpCards.length
+    const beforeOther = state.players['player-one'].battleArea[1].hpCards.length
+
+    const next = executeCardEffect(
+      state,
+      opponentContext(),
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      [],
+    )
+
+    const protectedCookie = next.players['player-one'].battleArea.find(
+      (c) => c.card.instanceId === 'defender',
+    )
+    const otherCookie = next.players['player-one'].battleArea.find(
+      (c) => c.card.instanceId === 'unprotected',
+    )
+    expect(protectedCookie?.hpCards.length).toBe(beforeProtected)
+    expect(otherCookie?.hpCards.length).toBe(beforeOther - 1)
+  })
+
+  it('blocks field-to-trash-all from trashing the protected Cookie', () => {
+    const state = createProtectedState()
+    state.players['player-one'].battleArea.push({
+      card: cookie('unprotected-lv1', 1, 1),
+      hpCards: [item('unprotected-lv1-hp')],
+      rested: false,
+      battleEntryId: 'unprotected-lv1:battle:1',
+    })
+
+    const next = executeCardEffect(
+      state,
+      opponentContext(),
+      { kind: 'field-to-trash-all', maxLevel: 2 },
+      [],
+    )
+
+    expect(
+      next.players['player-one'].battleArea.some(
+        (c) => c.card.instanceId === 'defender',
+      ),
+    ).toBe(true)
+    expect(
+      next.players['player-one'].battleArea.some(
+        (c) => c.card.instanceId === 'unprotected-lv1',
+      ),
+    ).toBe(false)
+  })
+
+  it('rejects opponent field-to-trash targeting the protected Cookie', () => {
+    const state = createProtectedState()
+    expect(() =>
+      executeCardEffect(
+        state,
+        opponentContext(),
+        {
+          kind: 'field-to-trash',
+          target: { side: 'opponent', min: 1, max: 1 },
+        },
+        ['defender'],
+      ),
+    ).toThrow()
+  })
+})
+
+/**
+ * 官方 Q&A：對手場上只有已裝載 BS3-115 的黑可可時，仍可使用 BS3-019
+ * （付費、進棄牌區），但傷害與後續裝載整段皆不執行。
+ */
+describe('official ruling: BS3-019 with no legal target aborts Then equip', () => {
+  it('pays cost and discards the item, but neither damages nor equips', () => {
+    const hollyberry = asCookie('BS3-017')
+    hollyberry.instanceId = 'hollyberry'
+    const darkCacao = asCookie('BS3-100')
+    darkCacao.instanceId = 'dark-cacao'
+    const soulJam019 = convertOfficialCardToGameCard(findBs3Card('BS3-019'))
+    if (soulJam019.status !== 'converted' || soulJam019.gameCard.type !== 'item') {
+      throw new Error('BS3-019 should convert to an item')
+    }
+    const itemCard = {
+      ...soulJam019.gameCard,
+      instanceId: 'bs3-019-hand',
+    } satisfies GameCard
+
+    let state = createBattleState()
+    state = {
+      ...state,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            {
+              card: darkCacao,
+              hpCards: [
+                item('dc-hp-a'),
+                item('dc-hp-b'),
+                item('dc-hp-c'),
+              ],
+              rested: false,
+              battleEntryId: 'dark-cacao:battle:1',
+              equippedCards: [
+                { ...item('equipped-bs3-115'), id: 'BS3-115' } satisfies GameCard,
+              ],
+            },
+          ],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [itemCard],
+          battleArea: [
+            {
+              card: hollyberry,
+              hpCards: [item('hb-hp-a'), item('hb-hp-b')],
+              rested: false,
+              battleEntryId: 'hollyberry:battle:2',
+            },
+          ],
+          supportArea: [
+            { card: item('pay-r1', 'red'), rested: false },
+            { card: item('pay-r2', 'red'), rested: false },
+            { card: item('pay-r3', 'red'), rested: false },
+          ],
+        },
+      },
+    }
+
+    const beforeHp =
+      state.players['player-one'].battleArea[0].hpCards.length
+
+    state = applyGameCommand(state, {
+      kind: 'play-item',
+      playerId: 'player-two',
+      instanceId: 'bs3-019-hand',
+      paymentIds: ['pay-r1', 'pay-r2', 'pay-r3'],
+      effectTargets: [[], []],
+    })
+
+    expect(
+      state.players['player-two'].discardPile.some(
+        (card) => card.instanceId === 'bs3-019-hand',
+      ),
+    ).toBe(true)
+    expect(state.players['player-one'].battleArea[0].hpCards.length).toBe(
+      beforeHp,
+    )
+    expect(
+      state.players['player-two'].battleArea[0].equippedCards ?? [],
+    ).toHaveLength(0)
+    expect(state.pendingAbilityEffect).toBeUndefined()
+  })
+
+  it('still allows Then equip when the player voluntarily selects 0 of available targets', () => {
+    const hollyberry = asCookie('BS3-017')
+    hollyberry.instanceId = 'hollyberry'
+    const legalTarget = asCookie('BS3-002')
+    legalTarget.instanceId = 'legal-target'
+    const soulJam019 = convertOfficialCardToGameCard(findBs3Card('BS3-019'))
+    if (soulJam019.status !== 'converted' || soulJam019.gameCard.type !== 'item') {
+      throw new Error('BS3-019 should convert to an item')
+    }
+    const itemCard = {
+      ...soulJam019.gameCard,
+      instanceId: 'bs3-019-hand',
+    } satisfies GameCard
+
+    let state = createBattleState()
+    state = {
+      ...state,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            {
+              card: legalTarget,
+              hpCards: [item('lt-hp-a'), item('lt-hp-b')],
+              rested: false,
+              battleEntryId: 'legal-target:battle:1',
+            },
+          ],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [itemCard],
+          battleArea: [
+            {
+              card: hollyberry,
+              hpCards: [item('hb-hp-a'), item('hb-hp-b')],
+              rested: false,
+              battleEntryId: 'hollyberry:battle:2',
+            },
+          ],
+          supportArea: [
+            { card: item('pay-r1', 'red'), rested: false },
+            { card: item('pay-r2', 'red'), rested: false },
+            { card: item('pay-r3', 'red'), rested: false },
+          ],
+        },
+      },
+    }
+
+    state = applyGameCommand(state, {
+      kind: 'play-item',
+      playerId: 'player-two',
+      instanceId: 'bs3-019-hand',
+      paymentIds: ['pay-r1', 'pay-r2', 'pay-r3'],
+      // 有合法目標但選擇 0 → 傷害略過，Then 裝載仍可執行
+      effectTargets: [[], ['hollyberry']],
+    })
+
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    expect(
+      state.players['player-two'].battleArea[0].equippedCards?.some(
+        (card) => card.id === 'BS3-019',
+      ),
     ).toBe(true)
   })
 })

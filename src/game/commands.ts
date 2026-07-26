@@ -16,7 +16,9 @@ import {
 } from './battle'
 import {
   executeCardEffect,
+  getEffectTargetCandidatesForEffect,
   isEffectConditionMet,
+  requiresTargetSelection,
   resolveDrawUpTo,
   resolveInspectDeck,
   resolveOpponentHandDiscard,
@@ -966,6 +968,18 @@ const assertNoPendingDecision = (
   throw new GameRuleError('必須先處理待處理的決策。')
 }
 
+/**
+ * 官方 Q&A（BS3-019）：需要指定目標的效果若當場沒有任何合法候選，
+ * 該效果與後續 Then 皆不執行（費用已付、卡已進棄牌區不回溯）。
+ */
+const hasNoLegalSelectableTargets = (
+  state: GameState,
+  context: EffectContext,
+  effect: CardEffect,
+): boolean =>
+  requiresTargetSelection(effect) &&
+  getEffectTargetCandidatesForEffect(state, context, effect).length === 0
+
 const executeAbilityEffects = (
   state: GameState,
   context: EffectContext,
@@ -989,6 +1003,7 @@ const executeAbilityEffects = (
       continue
     }
     if (!isEffectConditionMet(nextState, context, effect)) continue
+    if (hasNoLegalSelectableTargets(nextState, context, effect)) break
     nextState = executeCardEffect(
       nextState,
       context,
@@ -1040,6 +1055,10 @@ const resolvePendingAbilityEffect = (
     sourceCardName: pending.sourceCardName,
   }
   const effect = pending.effects[pending.effectIndex]
+  // 官方 Q&A（BS3-019）：無合法目標時當前效果與後續 Then 整段中止。
+  if (hasNoLegalSelectableTargets(state, context, effect)) {
+    return { ...state, pendingAbilityEffect: undefined }
+  }
   const resolved = executeCardEffect(
     state,
     context,
