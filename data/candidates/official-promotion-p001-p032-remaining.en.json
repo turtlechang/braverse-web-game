@@ -1,0 +1,341 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-07-26T13:52:06.869Z",
+    "totalAvailable": 2092,
+    "matchedAvailable": 8,
+    "importedCount": 8,
+    "filter": {
+      "categoryTitle": "PROMOTION CARD",
+      "cardNumberRange": "P-001 ~ P-032"
+    },
+    "imagesDownloaded": false,
+    "candidateStatus": "inventory"
+  },
+  "cards": [
+    {
+      "sourceId": 45190,
+      "locale": "en",
+      "cardNumber": "P-017",
+      "baseCardNumber": "P-017",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mt} {t1} If a card from your support area is placed in your trash, 《can be used as {G}.》 Take 1 card from the top of your deck and place it in your support area as rested."
+      },
+      "attackText": "《{G}{G}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/SADBsqXZ56dRlKilv42AGg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45194,
+      "locale": "en",
+      "cardNumber": "P-024",
+      "baseCardNumber": "P-024",
+      "variant": null,
+      "name": "Caramel Choux Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": null,
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6I9GPtCnxJQglL_vqPG7sA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:19.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45195,
+      "locale": "en",
+      "cardNumber": "P-025",
+      "baseCardNumber": "P-025",
+      "variant": null,
+      "name": "Marzipan Cookie 2",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Protect. Protect.",
+        "text": "If you have 2 different kinds of [Marzipan Cookie] cards in your battle area and 4 different kinds of [Marzipan Cookie] cards in your support area, this Cookie gains x2 attack damage."
+      },
+      "attackText": "<{Y}{Y}{Y}> Containment Protocol {da} 3",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/QIUaryVZITcjJ1jvQ_znDA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:19.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45196,
+      "locale": "en",
+      "cardNumber": "P-026",
+      "baseCardNumber": "P-026",
+      "variant": null,
+      "name": "Marzipan Cookie 3",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Protect. Protect.",
+        "text": "If you have 2 different kinds of [Marzipan Cookie] cards in your battle area and 4 different kinds of [Marzipan Cookie] cards in your support area, this Cookie gains x2 attack damage."
+      },
+      "attackText": "<{Y}{Y}{Y}> Containment Protocol {da} 3",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JLG_OvlVmHShtKKska6kVw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:19.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45197,
+      "locale": "en",
+      "cardNumber": "P-027",
+      "baseCardNumber": "P-027",
+      "variant": null,
+      "name": "Marzipan Cookie 4",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Protect. Protect.",
+        "text": "If you have 2 different kinds of [Marzipan Cookie] cards in your battle area and 4 different kinds of [Marzipan Cookie] cards in your support area, this Cookie gains x2 attack damage."
+      },
+      "attackText": "<{Y}{Y}{Y}> Containment Protocol {da} 3",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/vfAhH-ADFnks_xKREC5XaA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:19.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45198,
+      "locale": "en",
+      "cardNumber": "P-028",
+      "baseCardNumber": "P-028",
+      "variant": null,
+      "name": "Golden Cheese Warehouse",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "<{Y}{Y}> Place in your stage area."
+      },
+      "attackText": "{mob} <{Y}> <Rest this card.> <Place 1 {Y} LV.2 or higher Cookie from your hand into your break area.> Return up to 1 {Y} LV.1 Cookie from your break area to your hand.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sFHdQPWST_ks-VEYj0DMqw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45199,
+      "locale": "en",
+      "cardNumber": "P-029",
+      "baseCardNumber": "P-029",
+      "variant": null,
+      "name": "Ritual of Life",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> If your Cookie faints during this battle, play 1 {G} Cookie from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VeJ7bPLmtrFnUGgiOTlJhA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45202,
+      "locale": "en",
+      "cardNumber": "P-032",
+      "baseCardNumber": "P-032",
+      "variant": null,
+      "name": "Hall of Ancient Heroes",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "RED YELLOW GREEN BLUE PURPLE MIX",
+      "color": "PURE",
+      "skill": {
+        "name": null,
+        "text": "<{R}{Y}{G}{B}{P}> Place in your stage area."
+      },
+      "attackText": "{mob} <{N}{N}> <Rest this card.> Select up to 1 of your [Ancient] Cookies in your battle area. During this turn, that Cookie's attack costs are all changed to {N}.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6UTRxJGVqkbQCUDUxqUQKw.webp",
+      "officialUpdatedAt": "2026-03-20T01:57:03.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}
