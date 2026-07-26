@@ -148,6 +148,7 @@ describe('validateCustomDeck', () => {
     }
 
     const [card] = createDeckFromCustomDeck(deck, 'player-one')
+    if (card.type !== 'cookie') throw new Error('BS3-017 should be a cookie card.')
 
     expect(card.attack).toBe(3)
     expect(card.attackCost).toBe(3)
