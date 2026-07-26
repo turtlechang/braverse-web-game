@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+- 🐛 BS3-006《花小龍餅乾》`modify-all-attack` 缺少顏色與等級過濾（2026-07-26）：官方確認持續效果僅適用於紅色 LV.2 以上餅乾，但 `modify-all-attack` 執行器將 +1 攻擊加成套用至所有己方餅乾。新增 `energyColor` 與 `minLevel` 欄位至 `ModifyAllAttackEffect`，執行器過濾後才建立 modifier；adapter 同步補上 `energyColor: 'red', minLevel: 2`。lint、build 通過。
+- ✅ BS3-017《暗黑餅乾》官方 Q&A 核對（2026-07-26）：`modify-damage-received` with `minimumDamage: 3, setDamageTo: 2, duration: 'persistent'`，傷害≥3 改為 2，攻擊與效果傷害皆適用。✅
+- ✅ BS3-016《黑莓餅乾》官方 Q&A 核對（2026-07-26）：攻擊附加 `set-active` + `opponent-cookie-fainted-in-current-battle` 條件，戰鬥結束後回到主要階段時啟動。✅
+- ✅ BS3-008《巧克力奶油餅乾》官方 Q&A 核對（2026-07-26）：OnPlay `opponent-battle-to-trash` + `destination: 'break'` + `maxLevel: 1`，使暈倒效果正確（HP 卡全數放入棄牌區 + 餅乾放入休息區）。✅
+- ✅ BS3-014《黑森林餅乾》官方 Q&A 核對（2026-07-26）：被動 `modify-attack` + `any-battle-area-has-blocker` 條件，雙方戰鬥區任一有阻擋者即滿足。✅
+- ✅ BS3-009《奶油起司餅乾》官方 Q&A 核對（2026-07-26）：攻擊 `damage` + `support-keyword-at-least` 條件，不限顏色（五色靈魂果醬任一皆可）。✅
+- ✅ BS3-010《奶油起司披薩餅乾》官方 Q&A 核對（2026-07-26）：OnPlay `opponent-battle-to-trash` + `destination: 'break'`，使暈倒效果正確（HP 卡全數放入棄牌區 + 餅乾放入休息區）。✅
 - ✅ BS3 官方 Q&A 批次核對（2026-07-26）：7 張卡牌全數正確。BS3-076《草莓可麗餅餅乾》reveal-top-deck peek + 條件 damage 已正確；BS3-060《妖精王餅乾》hp-to-trash 移除 2 HP 後若 HP=0 直接送休息區，source-in-break-area 條件成立時 rest support 已正確；BS3-042《黃金起司護者泥人》battle-to-break 代價先結算、破裂等級先達 10 則先輸；BS3-041《義大利寬麵餅乾》基礎攻擊 3 傷害先結算（對手先暈），battle-to-break 後執行；BS3-040《探險家餅乾》battle-to-break + side: 'either' + maxLevel: 1 雙方戰鬥區 LV.1 選擇已正確；BS3-037《天使餅乾》optional-cost-attack + gain-hp 含 opponent-cookie-fainted-in-current-battle 條件已正確；BS3-029《巴斯克起司餅乾》hand-to-battle 暈倒觸發，技能補充計入離場數量、再登場互斥已正確。
 - ✅ BS3-080《濃縮咖啡餅乾》官方 Q&A 核對（2026-07-26）：官方確認效果執行完畢後展示的牌須放回牌庫頂，且僅當條件匹配時才能執行後方效果。`optional-cost-attack` 含 `reveal-top-deck`（`match: { type: 'cookie', energyColor: 'blue', level: 2 }`）+ nested `draw-up-to`，`reveal-top-deck` 以 `deck[0]` peek 不移除牌庫頂卡、條件匹配才執行 nested effect，卡始終留在牌庫頂，行為已正確。新增 1 項回歸測試覆蓋匹配／不匹配場景；`bs3-then-effects.test.ts`（16 項）、lint、build 通過。
 - 🐛 BS3-082《勇敢餅乾》`prevent-effect-damage` 執行器 bug 修正（2026-07-26）：官方確認「基礎攻擊傷害以外的傷害來源皆無法對這個餅乾造成傷害」，但 `effectDamagePreventedUntilTurn` 只被寫入、從未在傷害結算時檢查。修正 `damage`、`damage-all`、`split-damage` 三條路徑，受保護餅乾不再承受效果傷害；新增 `isEffectDamagePrevented` 輔助函式。lint、build 通過。

@@ -249,6 +249,8 @@ describe('BS3 剩餘餅乾技能', () => {
       amount: 1,
       duration: 'persistent',
       side: 'self',
+      energyColor: 'red',
+      minLevel: 2,
     })
   })
 

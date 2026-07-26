@@ -1334,6 +1334,8 @@ export const convertOfficialCardEffects = (
         amount: 1,
         duration: 'persistent',
         side: 'self',
+        energyColor: 'red',
+        minLevel: 2,
       },
     ],
     'BS3-007': [

@@ -441,6 +441,8 @@ export interface ModifyAllAttackEffect {
   duration: EffectDuration
   side: EffectTargetSide
   condition?: EffectCondition
+  energyColor?: CookieCard['energyColor']
+  minLevel?: number
 }
 
 export interface BattleToSupportEffect {

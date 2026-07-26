@@ -1225,7 +1225,9 @@ export const executeCardEffect = (
             cookie,
             playerId,
             context.sourcePlayerId,
-          ),
+          ) &&
+          (!effect.energyColor || cookie.card.energyColor === effect.energyColor) &&
+          (!effect.minLevel || cookie.card.level >= effect.minLevel),
       )
       .map((cookie) => ({
         sourceInstanceId: context.sourceInstanceId,
