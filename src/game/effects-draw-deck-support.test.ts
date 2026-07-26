@@ -42,6 +42,35 @@ describe('draw effect', () => {
     ).toBeDefined()
   })
 
+  it('moves available top deck cards directly to either discard pile without Refresh', () => {
+    let state = createDemoGame()
+    const sourceTopCards = state.players['player-one'].deck.slice(0, 2)
+    const opponentTopCards = state.players['player-two'].deck.slice(0, 2)
+
+    state = executeCardEffect(
+      state,
+      drawContext,
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      [],
+    )
+    state = executeCardEffect(
+      state,
+      drawContext,
+      { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+      [],
+    )
+
+    expect(
+      state.players['player-one'].discardPile.map((card) => card.instanceId),
+    ).toEqual(expect.arrayContaining(sourceTopCards.map((card) => card.instanceId)))
+    expect(
+      state.players['player-two'].discardPile.map((card) => card.instanceId),
+    ).toEqual(expect.arrayContaining(opponentTopCards.map((card) => card.instanceId)))
+    expect(state.pendingRefresh).toBeNull()
+    expect(isEffectUntargeted({ kind: 'deck-to-trash', amount: 1, side: 'self' }))
+      .toBe(true)
+  })
+
   it('draws multiple cards in one effect', () => {
     const state = createDemoGame()
     const deckLen = state.players['player-one'].deck.length

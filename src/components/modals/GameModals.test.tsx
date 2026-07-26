@@ -1033,6 +1033,21 @@ describe('ResultModal', () => {
 
     expect(markup).toContain('對方休息區的等級達到 10。')
   })
+
+  it('shows a special-victory reason without describing a defeat condition', () => {
+    const markup = renderToStaticMarkup(
+      <ResultModal
+        winnerName="玩家"
+        loserId="player-two"
+        viewerPlayerId="player-one"
+        reason="special-victory"
+        onRestart={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('玩家達成了特殊勝利條件。')
+    expect(markup).not.toContain('休息區')
+  })
 })
 
 describe('PauseModal', () => {

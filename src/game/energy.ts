@@ -12,6 +12,7 @@ const ENERGY_COLORS: EnergyColor[] = [
   'blue',
   'purple',
   'black',
+  'pure',
 ]
 
 export interface EnergyPaymentValidation {
@@ -24,6 +25,38 @@ export const getEnergyCostTotal = (cost: EnergyCost): number =>
     (total, amount) => total + (amount ?? 0),
     0,
   )
+
+/**
+ * 將來源卡已提供的指定能量扣除，回傳仍須由支援區支付的費用。
+ * 來源能量會優先支付同色指定費用，剩餘部分才可支付 Mix Cost。
+ */
+export const getRemainingEnergyCost = (
+  cost: EnergyCost,
+  sourceEnergy: EnergyCost | undefined,
+): EnergyCost => {
+  if (!sourceEnergy || getEnergyCostTotal(sourceEnergy) === 0) {
+    return { ...cost }
+  }
+
+  const remaining: EnergyCost = {}
+  let unusedSourceEnergy = getEnergyCostTotal(sourceEnergy)
+
+  for (const color of ENERGY_COLORS) {
+    const required = cost[color] ?? 0
+    const contributed = Math.min(required, sourceEnergy[color] ?? 0)
+    const unmet = required - contributed
+    unusedSourceEnergy -= contributed
+    if (unmet > 0) remaining[color] = unmet
+  }
+
+  const remainingNeutral = Math.max(
+    0,
+    (cost.neutral ?? 0) - unusedSourceEnergy,
+  )
+  if (remainingNeutral > 0) remaining.neutral = remainingNeutral
+
+  return remaining
+}
 
 export const getAttackEnergyCost = (card: CookieCard): EnergyCost =>
   card.attackEnergyCost ?? { neutral: card.attackCost }

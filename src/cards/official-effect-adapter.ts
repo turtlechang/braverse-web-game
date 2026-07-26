@@ -9,6 +9,7 @@ import type {
   TrapAbility,
   StageAbility,
   ReturnToHandEffect,
+  SkillTrigger,
 } from '../game'
 import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
@@ -29,6 +30,7 @@ export type OfficialEffectConversion =
 
 // 官方文字對「Rest this card.」的措辭不一致，BS2-051 用「Card Rests.」，需一併比對
 const RESTS_THIS_CARD_PATTERN = /Rest this card|Card Rests/i
+const STAGE_ACTIVATE_MARKER_PATTERN = /\{mob\}|【Activate】/i
 
 const getEffectText = (card: OfficialCardRecord): string | null => {
   if (card.type === 'cookie') {
@@ -100,8 +102,9 @@ const parseCondition = (text: string): EffectCondition | undefined => {
     }
   }
 
+  // 官方文字用詞順序不一致：「contains N or more cards」與「contains N cards or more」都有。
   const supportCountMatch = text.match(
-    /support area contains? (\d+) or more cards/i,
+    /support area contains?\s+(\d+)\s+(?:cards?\s+or\s+more|or\s+more\s+cards?)/i,
   )
   if (supportCountMatch) {
     return {
@@ -146,6 +149,14 @@ const isUnsupportedBracketCost = (text: string): boolean => {
       continue
     }
 
+    if (
+      /^Place\s+\d+\s+(?:\{[A-Z]\}\s+)?Cookie\s+from\s+your\s+hand\s+into\s+your\s+break\s+area\.?$/i.test(
+        inner,
+      )
+    ) {
+      continue
+    }
+
     if (/(?:Place|Take|Discard)/i.test(inner)) {
       return true
     }
@@ -174,6 +185,9 @@ const parseAbilityCost = (text: string): AbilityCost => {
   const trashBattleMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?LV\.(\d+)\s+Cookie\s+from\s+your\s+battle\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
   )
+  const handToBreakMatch = text.match(
+    /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?Cookie\s+from\s+your\s+hand\s+into\s+your\s+break\s+area\.?\s*(?:>|》)/i,
+  )
   const costColors = {
     R: 'red',
     Y: 'yellow',
@@ -192,6 +206,19 @@ const parseAbilityCost = (text: string): AbilityCost => {
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
+    ...(handToBreakMatch ? {
+      handToBreakArea: {
+        count: Number(handToBreakMatch[1]),
+        ...(handToBreakMatch[2]
+          ? {
+              energyColor:
+                costColors[
+                  handToBreakMatch[2].toUpperCase() as keyof typeof costColors
+                ],
+            }
+          : {}),
+      },
+    } : {}),
     ...(trashBattleMatch ? {
       trashBattleCookie: {
         count: Number(trashBattleMatch[1]),
@@ -315,7 +342,7 @@ export const convertOfficialCardEffects = (
       { kind: 'set-active' as const, supportCount: 1 } satisfies CardEffect as CardEffect,
     ],
     'ST4-013': [
-      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restToBottom: true },
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restDestination: 'bottom' },
     ],
     'ST4-016': [
       {
@@ -684,7 +711,7 @@ export const convertOfficialCardEffects = (
       },
     ],
     'BS2-040': [
-      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restToBottom: true, filterColor: 'blue' },
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restDestination: 'bottom', filterColor: 'blue' },
     ],
     'BS2-043': [
       {
@@ -872,6 +899,424 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
       } satisfies CardEffect as CardEffect,
     ],
+    'BS3-008': [
+      {
+        kind: 'opponent-battle-to-trash',
+        min: 0,
+        maxLevel: 1,
+        destination: 'break',
+      },
+    ],
+    'BS3-016': [
+      {
+        kind: 'set-active',
+        supportCount: 0,
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+    ],
+    'BS3-017': [
+      {
+        kind: 'modify-damage-received',
+        amount: 0,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        minimumDamage: 3,
+        setDamageTo: 2,
+      },
+    ],
+    'BS3-010': [
+      {
+        kind: 'opponent-battle-to-trash',
+        min: 0,
+        maxLevel: 1,
+        destination: 'break',
+      },
+    ],
+    'BS3-019': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1 },
+        requiredCookieId: 'BS3-017',
+        attackBonus: 1,
+      },
+    ],
+    'BS3-020': [
+      {
+        kind: 'hp-to-hand',
+        amount: 3,
+        target: { side: 'self', min: 0, max: 1, energyColor: 'red' },
+      },
+    ],
+    'BS3-026': [
+      {
+        kind: 'view-hp',
+        target: { side: 'self', min: 0, max: 1 },
+        optional: true,
+      },
+    ],
+    'BS3-030': [
+      {
+        kind: 'hand-to-hp',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        optional: true,
+      },
+    ],
+    'BS3-036': [
+      {
+        kind: 'battle-to-break',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'yellow',
+        },
+      },
+      { kind: 'draw-up-to', max: 2 },
+    ],
+    'BS3-042': [
+      {
+        kind: 'battle-to-break',
+        target: { side: 'self', min: 1, max: 1, energyColor: 'yellow' },
+      },
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS3-044': [
+      {
+        kind: 'break-to-hand',
+        amount: 1,
+        energyColor: 'yellow',
+        maxLevel: 2,
+        optional: true,
+      },
+    ],
+    'BS3-043': [
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1 },
+        requiredCookieId: 'BS3-025',
+        gainHp: 2,
+      },
+    ],
+    'BS3-038': [
+      { kind: 'hand-to-break', amount: 1, minLevel: 2 },
+      {
+        kind: 'break-to-hand',
+        amount: 1,
+        energyColor: 'yellow',
+        maxLevel: 2,
+        optional: true,
+      },
+    ],
+    'BS3-054': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'active-support-count-at-least', count: 2 },
+      },
+    ],
+    'BS3-075': [
+      {
+        kind: 'battle-to-deck-top',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS3-081': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'battle-to-deck-top',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS3-082': [
+      {
+        kind: 'prevent-effect-damage',
+        duration: 'until-source-next-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS3-055': [
+      {
+        kind: 'support-to-hp',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        energyColor: 'green',
+        optional: true,
+      },
+    ],
+    'BS3-060': [
+      {
+        kind: 'rest-support',
+        side: 'opponent',
+        amount: 1,
+        activeOnly: true,
+        optional: true,
+      },
+    ],
+    'BS3-061': [
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        condition: { kind: 'support-count-at-least', count: 5 },
+      },
+    ],
+    'BS3-062': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'green',
+        },
+        condition: { kind: 'support-count-at-least', count: 5 },
+      },
+    ],
+    'BS3-063': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'hand-to-support', amount: 1, rested: true },
+    ],
+    'BS3-064': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS3-065': [
+      { kind: 'hand-to-support', amount: 1, rested: true },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'support-count-at-least', count: 8 },
+      },
+    ],
+    'BS3-066': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'deck-to-support', amount: 1, rested: false },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1 },
+        requiredCookieId: 'BS3-055',
+      },
+    ],
+    'BS3-067': [
+      { kind: 'draw-up-to', max: 2 },
+      { kind: 'set-active', supportCount: 1, selectable: true },
+    ],
+    'BS3-072': [
+      {
+        kind: 'rest-support',
+        side: 'opponent',
+        amount: 1,
+        activeOnly: true,
+        optional: true,
+      },
+    ],
+    'BS3-077': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      { kind: 'set-active', supportCount: 0 },
+    ],
+    'BS3-097': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      { kind: 'deck-to-trash', amount: 1, side: 'opponent' },
+    ],
+    'BS3-100': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 2 },
+      },
+    ],
+    'BS3-091': [
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 2, restDestination: 'top' },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1 },
+        requiredCookieId: 'BS3-088',
+      },
+    ],
+    'BS3-104': [
+      { kind: 'opponent-random-discard', count: 2 },
+    ],
+    'BS3-105': [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+    ],
+    'BS3-115': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 2, maxLevel: 2 },
+      },
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 0, max: 1 },
+        requiredCookieId: 'BS3-100',
+      },
+    ],
+    'BS3-119': [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+    'BS3-028': [
+      {
+        kind: 'opponent-trash-to-break',
+        max: 1,
+        exactLevel: 1,
+        condition: { kind: 'opponent-break-level-at-most', level: 6 },
+      },
+    ],
+    'BS3-029': [
+      {
+        kind: 'hand-to-battle',
+        amount: 1,
+        energyColor: 'yellow',
+        optional: true,
+        gainHp: 1,
+      },
+    ],
+    'BS3-073': [
+      {
+        kind: 'reveal-bottom-deck',
+        cookieDestination: 'deck-top',
+        otherwiseDestination: 'hand',
+      },
+    ],
+    'BS3-088': [
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 3,
+        discardCount: 1,
+        handDestination: 'deck-top',
+      },
+    ],
+    'BS3-083': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 0,
+        restDestination: 'top',
+      },
+    ],
+    'BS3-112': [
+      { kind: 'trash-to-hand', max: 1, energyColor: 'purple', cookieOnly: true },
+    ],
+    'BS3-068': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '將這張卡以休息狀態放入支援區',
+            effects: [{ kind: 'place-source-to-support', rested: true }],
+          },
+          {
+            label: '對手全體受到 1 傷害，然後棄 2 張支援區卡',
+            effects: [
+              { kind: 'damage-all', amount: 1, side: 'opponent' },
+              { kind: 'support-to-trash', amount: 2 },
+            ],
+          },
+        ],
+      },
+    ],
+    'BS3-114': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 5,
+        pickCount: 1,
+        restDestination: 'trash',
+        pickDestination: 'battle',
+        filterColor: 'purple',
+        filterType: 'cookie',
+        optionalPick: true,
+      },
+    ],
+    'BS3-040': [
+      {
+        kind: 'battle-to-break',
+        target: { side: 'either', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
+    'BS3-076': [
+      {
+        kind: 'battle-to-deck-top',
+        target: { side: 'either', min: 0, max: 1, maxLevel: 2 },
+      },
+    ],
+    'BS3-031': [
+      {
+        kind: 'transfer-hp',
+        amount: 1,
+        direction: 'to-source',
+        target: { side: 'self', min: 0, max: 1, excludeSource: true },
+      },
+    ],
+    'BS3-053': [
+      {
+        kind: 'set-cookie-active',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'green',
+          restedOnly: true,
+        },
+      },
+    ],
+    'BS3-089': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'transfer-hp',
+        amount: 1,
+        direction: 'from-source',
+        target: { side: 'self', min: 0, max: 1, excludeSource: true },
+      },
+    ],
+    'BS3-092': [
+      {
+        kind: 'draw-up-to-battle-cookie-count',
+        level: 2,
+        amountPerCookie: 1,
+      },
+    ],
+    'BS3-113': [
+      {
+        kind: 'trash-to-deck-all',
+        condition: {
+          kind: 'trash-color-count-at-least',
+          color: 'purple',
+          count: 15,
+        },
+        // 洗回牌庫會清空棄牌區，傷害必須內嵌才不會被條件重判時跳過。
+        thenEffects: [{ kind: 'damage-all', amount: 2, side: 'opponent' }],
+      },
+    ],
     'BS2-013': [
       {
         kind: 'battle-to-break',
@@ -882,6 +1327,116 @@ export const convertOfficialCardEffects = (
         amount: 1,
         exactLevel: 1,
       } satisfies CardEffect as CardEffect,
+    ],
+    'BS3-006': [
+      {
+        kind: 'modify-all-attack',
+        amount: 1,
+        duration: 'persistent',
+        side: 'self',
+        energyColor: 'red',
+        minLevel: 2,
+      },
+    ],
+    'BS3-007': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'break-level-at-least', level: 7 },
+      },
+    ],
+    'BS3-014': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'any-battle-area-has-blocker' },
+      },
+    ],
+    'BS3-098': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS3-103': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'trash-count-at-least', count: 10 },
+      },
+    ],
+    'BS3-051': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'support-count-at-least', count: 5 },
+      },
+    ],
+    'BS3-001': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS3-018': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'During this turn, your opponent cannot activate Blocker.',
+            effects: [{ kind: 'disable-block', duration: 'this-turn', side: 'opponent' }],
+          },
+          {
+            label: 'Deal 1 damage to 1 opponent Cookie.',
+            effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+          },
+        ],
+      },
+    ],
+    'BS3-090': [
+      {
+        kind: 'reveal-top-deck',
+        match: { type: 'cookie', energyColor: 'blue', level: 2 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 2,
+            duration: 'this-turn',
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+      },
+    ],
+    'BS3-116': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Place 1 card from the top of 1 opponent Cookie HP in the trash.',
+            effects: [{ kind: 'hp-to-trash', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+          },
+          {
+            label: 'Place 1 random card from opponent hand into the trash.',
+            effects: [{ kind: 'opponent-random-discard' as const, count: 1 }],
+          },
+        ],
+      },
+    ],
+    'BS3-025': [
+      {
+        kind: 'break-source-to-battle',
+        hpCount: 1,
+      },
     ],
   }
   const exactEffects = exactStarterEffects[cardKey]
@@ -1486,10 +2041,34 @@ export const convertOfficialStageAbility = (
   card: OfficialCardRecord,
 ): StageAbility | undefined => {
   if (card.type !== 'stage' || !card.attackText) return undefined
-  const [placementText, activationText] = card.attackText.split(/\{mob\}/i)
+  const sourceText = [card.skill.text, card.attackText]
+    .filter((text): text is string => Boolean(text?.trim()))
+    .join('\n')
+  const [placementText, activationText] = sourceText.split(
+    STAGE_ACTIVATE_MARKER_PATTERN,
+  )
   const placement = parseOfficialCardText(placementText)
   const activation = parseOfficialCardText(activationText ?? '')
   if (!placement) return undefined
+
+  if (card.baseCardNumber === 'BS3-121') {
+    if (!activation) return undefined
+
+    return {
+      placementCost: placement.cost,
+      cost: activation.cost,
+      text: sourceText,
+      effects: [],
+      restSource: RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
+      specialVictory: {
+        kind: 'distinct-named-keywords',
+        requirements: [
+          { keyword: 'ancient', cardType: 'cookie', count: 5 },
+          { keyword: 'soul-jam', count: 5 },
+        ],
+      },
+    }
+  }
 
   // 複合效果（含 Then）仍需硬編碼；被動觸發階段（無 {mob}）也在此定義
   const exactStageEffects: Partial<Record<string, CardEffect[]>> = {
@@ -1534,6 +2113,72 @@ export const convertOfficialStageAbility = (
         kind: 'damage',
         amount: 1,
         target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS3-023': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    'BS3-047': [
+      {
+        kind: 'hand-to-break',
+        amount: 3,
+        energyColor: 'yellow',
+        optional: true,
+      },
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 3,
+        energyColor: 'yellow',
+      },
+    ],
+    'BS3-048': [
+      {
+        kind: 'modify-attack-by-break-count',
+        target: { side: 'self', min: 0, max: 1, minLevel: 2 },
+        duration: 'this-turn',
+        perCount: 1,
+        exactBreakLevel: 3,
+        breakEnergyColor: 'yellow',
+      },
+    ],
+    'BS3-071': [
+      {
+        kind: 'disable-flip',
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 2 },
+      },
+    ],
+    'BS3-072': [
+      {
+        kind: 'rest-support',
+        side: 'opponent',
+        amount: 1,
+        activeOnly: true,
+        optional: true,
+      },
+    ],
+    'BS3-095': [{ kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'bottom' }],
+    'BS3-096': [
+      {
+        kind: 'draw',
+        amount: 2,
+        condition: { kind: 'hand-count-at-most', count: 2 },
+      },
+    ],
+    'BS3-119': [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+    'BS3-120': [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+    'BS3-024': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
       },
     ],
   }
@@ -1592,8 +2237,7 @@ export const convertOfficialAttackEffects = (
 ): CardEffect[] | undefined => {
   if (
     (card.type !== 'cookie' && card.type !== 'flip') ||
-    !card.attackText ||
-    !/\bThen\b/i.test(card.attackText)
+    !card.attackText
   ) {
     return undefined
   }
@@ -1602,6 +2246,352 @@ export const convertOfficialAttackEffects = (
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
   const exactAttackEffects: Partial<Record<string, CardEffect[]>> = {
+    // 已確認的 BS3 攻擊後續效果皆由既有 attack-effect pipeline 依序處理。
+    // Soul Jam 僅可作為支援區 keyword 條件；附著仍待完整規則與 runtime 區域模型。
+    'BS3-009': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: {
+          side: 'opponent',
+          min: 1,
+          max: 1,
+          attackTargetOnly: true,
+        },
+        condition: {
+          kind: 'support-keyword-at-least',
+          keyword: 'soul-jam',
+          count: 1,
+        },
+      },
+    ],
+    'BS3-016': [
+      {
+        kind: 'set-active',
+        supportCount: 0,
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+    ],
+    'BS3-002': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        sourceEnergy: { red: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: {
+              side: 'opponent',
+              min: 1,
+              max: 1,
+              attackTargetOnly: true,
+            },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {R} to deal 1 damage to the attacked Cookie.',
+      },
+    ],
+    'BS3-010': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        sourceEnergy: { red: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {R} to deal 1 damage to 1 opponent Cookie.',
+      },
+    ],
+    'BS3-011': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 2 } },
+        sourceEnergy: { red: 2 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {R}{R} to deal 1 damage to 1 opponent Cookie.',
+      },
+    ],
+    'BS3-013': [
+      {
+        kind: 'modify-damage-received',
+        amount: 0,
+        duration: 'opponent-next-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        minimumDamage: 2,
+        setDamageTo: 1,
+      },
+    ],
+    'BS3-017': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, excludeSource: true },
+      },
+    ],
+    'BS3-028': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 6 },
+      },
+    ],
+    'BS3-032': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        sourceEnergy: { yellow: 1 },
+        effects: [
+          {
+            kind: 'break-to-battle',
+            amount: 1,
+            exactLevel: 1,
+            energyColor: 'yellow',
+          },
+        ],
+        effectText:
+          'Use this Cookie as {Y} to play up to 1 {Y} LV.1 Cookie from your break area.',
+      },
+    ],
+    'BS3-037': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        sourceEnergy: { yellow: 1 },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+          },
+        ],
+        effectText:
+          "When your opponent's Cookie faints from this Cookie's attack, use this Cookie as {Y} to gain +1 HP.",
+      },
+    ],
+    'BS3-033': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        sourceEnergy: { yellow: 1 },
+        effects: [
+          {
+            kind: 'opponent-battle-to-trash',
+            min: 0,
+            remainingHp: 1,
+            destination: 'break',
+          },
+        ],
+        effectText:
+          'Use this Cookie as {Y} to place up to 1 opponent Cookie with 1 remaining HP in its break area.',
+      },
+    ],
+    'BS3-041': [
+      {
+        kind: 'battle-to-break',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS3-055': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { green: 1 } },
+        sourceEnergy: { green: 1 },
+        effects: [
+          {
+            kind: 'support-to-trash',
+            amount: 1,
+            side: 'opponent',
+            activeOnly: true,
+            optional: true,
+            condition: { kind: 'source-hp-at-least', amount: 5 },
+          },
+        ],
+        effectText:
+          "Use this Cookie as {G}; if it has 5 or more HP, place up to 1 active opponent support card in the trash.",
+      },
+    ],
+    'BS3-060': [
+      {
+        kind: 'hp-to-trash',
+        amount: 2,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      {
+        kind: 'set-active',
+        supportCount: 2,
+        selectable: true,
+        condition: { kind: 'source-in-break-area' },
+      },
+    ],
+    'BS3-076': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        sourceEnergy: { blue: 1 },
+        effects: [
+          {
+            kind: 'reveal-top-deck',
+            match: { type: 'cookie', energyColor: 'blue', level: 2 },
+            effects: [
+              {
+                kind: 'damage',
+                amount: 2,
+                target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+              },
+            ],
+          },
+        ],
+        effectText:
+          'Use this Cookie as {B}; reveal the top card of your deck. If it is a {B} LV.2 Cookie, deal 2 damage to the attacked Cookie.',
+      },
+    ],
+    'BS3-080': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        sourceEnergy: { blue: 1 },
+        effects: [
+          {
+            kind: 'reveal-top-deck',
+            match: { type: 'cookie', energyColor: 'blue', level: 2 },
+            effects: [{ kind: 'draw-up-to', max: 2 }],
+          },
+        ],
+        effectText:
+          'Use this Cookie as {B}; reveal the top card of your deck. If it is a {B} LV.2 Cookie, draw up to 2 cards.',
+      },
+    ],
+    'BS3-086': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: {
+              side: 'opponent',
+              min: 1,
+              max: 1,
+              attackTargetOnly: true,
+            },
+            condition: {
+              kind: 'battle-area-has-cookie-with-level',
+              side: 'self',
+              level: 3,
+            },
+          },
+        ],
+        effectText:
+          'If you have a LV.3 Cookie in your battle area, discard 1 card to deal 1 damage to the attacked Cookie.',
+      },
+    ],
+    'BS3-087': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: {
+          side: 'opponent',
+          min: 1,
+          max: 1,
+          maxLevel: 1,
+          attackTargetOnly: true,
+        },
+        condition: {
+          kind: 'support-keyword-at-least',
+          keyword: 'soul-jam',
+          count: 1,
+        },
+      },
+    ],
+    'BS3-088': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+        effectText:
+          'Discard 1 card to give up to 1 Cookie in your battle area +1 HP.',
+      },
+    ],
+    'BS3-099': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'trash-count-at-least', count: 15 },
+      },
+    ],
+    'BS3-100': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS3-101': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        sourceEnergy: { purple: 1 },
+        effects: [
+          {
+            kind: 'opponent-battle-to-trash',
+            min: 0,
+            remainingHp: 2,
+          },
+        ],
+        effectText:
+          'Use this Cookie as {P} to place up to 1 opponent Cookie with 2 or less remaining HP in the trash.',
+      },
+    ],
+    'BS3-102': [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+    ],
+    'BS3-105': [{ kind: 'deck-to-trash', amount: 1, side: 'opponent' }],
+    'BS3-109': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS3-111': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'support-keyword-at-least',
+          keyword: 'soul-jam',
+          count: 1,
+        },
+      },
+    ],
+    'BS3-113': [{ kind: 'deck-to-trash', amount: 1, side: 'self' }],
     'ST2-003': [{ kind: 'break-to-trash', max: 1, exactLevel: 1 }],
     'ST2-015': [
       {
@@ -1702,7 +2692,7 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceAsEnergy: true,
+        sourceEnergy: { red: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     // === BS1/BS2 黃綠藍紫攻擊 Then 效果 ===
@@ -1718,7 +2708,7 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {Y} to select up to 1 of your opponent\'s LV.1 Cookies and place that Cookie in the break area.',
-        sourceAsEnergy: true,
+        sourceEnergy: { yellow: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-010': [
@@ -1734,7 +2724,7 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {Y} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceAsEnergy: true,
+        sourceEnergy: { yellow: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-017': [
@@ -1750,7 +2740,7 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {G} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceAsEnergy: true,
+        sourceEnergy: { green: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-044': [
@@ -1766,7 +2756,7 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {B} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceAsEnergy: true,
+        sourceEnergy: { blue: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-045': [
@@ -1797,9 +2787,17 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {P} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceAsEnergy: true,
+        sourceEnergy: { purple: 1 },
       } satisfies CardEffect as CardEffect,
     ],
+  }
+
+  if (exactAttackEffects[cardKey]) {
+    return exactAttackEffects[cardKey]
+  }
+
+  if (!/\bThen\b/i.test(card.attackText)) {
+    return undefined
   }
 
   return exactAttackEffects[cardKey]
@@ -2145,7 +3143,32 @@ export const convertOfficialTrapAbility = (
     })
   }
 
-  const exactTrapEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
+  const exactTrapEffects: Partial<
+    Record<
+      string,
+      {
+        effects: CardEffect[]
+        cost?: AbilityCost
+        condition?: TrapAbility['condition']
+      }
+    >
+  > = {
+    'BS3-046': {
+      // 條件在戰鬥中延後判定：本次戰鬥有己方 {Y} LV.2 以上餅乾昏厥才發動。
+      condition: {
+        kind: 'friendly-color-fainted-this-battle',
+        color: 'yellow',
+        minLevel: 2,
+      },
+      effects: [
+        {
+          kind: 'break-to-battle',
+          amount: 1,
+          exactLevel: 1,
+          energyColor: 'yellow',
+        },
+      ],
+    },
     'BS2-050': {
       effects: [
         {
@@ -2166,6 +3189,153 @@ export const convertOfficialTrapAbility = (
         { kind: 'trash-to-deck', max: 5, excludeFlip: true },
       ],
     },
+    'BS3-021': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1 },
+        },
+      ],
+    },
+    'BS3-022': {
+      condition: {
+        kind: 'break-level-at-least',
+        level: 6,
+      },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+    'BS3-045': {
+      effects: [
+        {
+          kind: 'damage-by-break-count',
+          perCount: 1,
+          exactBreakLevel: 3,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+    'BS3-069': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'support-to-trash',
+          amount: 2,
+        },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+    'BS3-070': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 2 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: { kind: 'support-count-at-least', count: 5 },
+        },
+        {
+          kind: 'discard-hand',
+          count: 1,
+          condition: { kind: 'support-count-at-least', count: 5 },
+        },
+      ],
+    },
+    'BS3-093': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'reveal-top-deck',
+          match: { type: 'cookie', energyColor: 'blue', level: 2 },
+          effects: [
+            {
+              kind: 'modify-attack',
+              amount: -1,
+              duration: 'this-turn',
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        },
+      ],
+    },
+    'BS3-094': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'inspect-deck',
+          lookCount: 3,
+          pickCount: 0,
+          restDestination: 'top',
+        },
+      ],
+    },
+    'BS3-117': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'field-to-trash',
+          target: { side: 'opponent', min: 0, max: 1, remainingHp: 2 },
+          condition: { kind: 'trash-count-at-least', count: 15 },
+        } satisfies CardEffect as CardEffect,
+      ],
+    },
+    'BS3-118': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      ],
+    },
   }
 
   const exactTrap = exactTrapEffects[card.cardNumber]
@@ -2173,7 +3343,7 @@ export const convertOfficialTrapAbility = (
     return {
       text,
       cost: exactTrap.cost ?? parseAbilityCost(text),
-      condition,
+      condition: exactTrap.condition ?? condition,
       effects: exactTrap.effects,
     }
   }
@@ -2211,6 +3381,25 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     discardHand: 0,
     trashBattleCookie: { count: 1, sourceOnly: true },
   },
+  'BS3-075': { energy: {}, discardHand: 1 },
+  'BS3-081': { energy: { blue: 2 }, discardHand: 1 },
+  'BS3-112': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashToDeckBottom: { count: 2, nonCookieOnly: true },
+  },
+  'BS3-051': { energy: { green: 1 }, discardHand: 0 },
+  'BS3-098': { energy: { purple: 1 }, discardHand: 0 },
+  'BS3-025': { energy: { yellow: 1 }, discardHand: 0 },
+}
+
+/**
+ * 通用觸發判斷靠 `{mob}`／`{ap}` 標記，但 BS3-025 的文字沒有這兩種標記
+ * （只有 `{mt}`），只以「once per game」與「休息區」文意表達可主動發動，
+ * 一般解析會誤判成 passive，需要明確覆寫。
+ */
+const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
+  'BS3-025': 'activate',
 }
 
 export const convertOfficialCookieSkill = (
@@ -2236,14 +3425,15 @@ export const convertOfficialCookieSkill = (
 
   return {
     trigger:
-      parsed.markers.includes('bl') &&
+      exactCookieSkillTriggers[cardKey] ??
+      (parsed.markers.includes('bl') &&
       /redirect\s+the\s+attack\s+to\s+this\s+Cookie/i.test(card.skill.text)
         ? 'block'
         : parsed.markers.includes('mob')
           ? 'activate'
           : parsed.markers.includes('ap')
             ? 'on-play'
-            : 'passive',
+            : 'passive'),
     oncePerTurn: parsed.markers.includes('t1'),
     yourTurn: parsed.markers.includes('mt'),
     restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
@@ -2257,5 +3447,7 @@ export const convertOfficialCookieSkill = (
     afterDamage: /(?:after|when)\s+(?:receiving|taking)\s+damage/i.test(
       card.skill.text,
     ),
+    oncePerGame: /once per game/i.test(card.skill.text),
+    fromBreakArea: /in your break area/i.test(card.skill.text),
   }
 }

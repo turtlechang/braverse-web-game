@@ -25,6 +25,7 @@ import {
   getTrashToDeckCandidates,
   getEnergyCostTotal,
   hasBlockingPending,
+  isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
   selectEnergyPayment,
   validateEnergyPayment,
@@ -60,6 +61,9 @@ export function useOnlineMatchController(params: {
 
   const [message, setMessage] = useState('對局已開始。')
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapHandToBreakIds, setSelectedTrapHandToBreakIds] = useState<
+    string[]
+  >([])
   const [selectedTrapDiscardIds, setSelectedTrapDiscardIds] = useState<
     string[]
   >([])
@@ -178,6 +182,7 @@ export function useOnlineMatchController(params: {
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
+      setSelectedTrapHandToBreakIds([])
       setSelectedTrapTargetId(null)
       dispatch(
         { kind: 'skip-trap', playerId: viewerPlayerId },
@@ -281,17 +286,10 @@ export function useOnlineMatchController(params: {
     trapEnergyCostTotal > 0
       ? game.players[viewerPlayerId].supportArea.filter((support) => {
           if (support.rested) return false
-          const color = support.card.energyColor
-          if (!color) return false
-          if (color === 'wild') return true
-          const requiredColors = Object.keys(trapEnergyCost).filter(
-            (key) =>
-              (trapEnergyCost[key as keyof typeof trapEnergyCost] ?? 0) > 0,
+          return isEnergyColorCompatibleWithCost(
+            trapEnergyCost,
+            support.card.energyColor,
           )
-          if (requiredColors.length === 1 && requiredColors[0] === 'neutral') {
-            return true
-          }
-          return requiredColors.includes(color)
         })
       : []
   const trapPaymentTargetIds = new Set(
@@ -340,6 +338,18 @@ export function useOnlineMatchController(params: {
     ? getTrashBattleCookieCostCandidates(
         selectedTrap.trap.cost,
         game.players[viewerPlayerId].battleArea,
+      )
+    : []
+  const selectedTrapHandToBreakCost =
+    selectedTrap?.trap?.cost.handToBreakArea?.count ?? 0
+  const selectedTrapHandToBreakCandidates = selectedTrap
+    ? game.players[viewerPlayerId].hand.filter(
+        (card) =>
+          card.instanceId !== selectedTrap.instanceId &&
+          card.type === 'cookie' &&
+          (!selectedTrap.trap?.cost.handToBreakArea?.energyColor ||
+            card.energyColor ===
+              selectedTrap.trap.cost.handToBreakArea.energyColor),
       )
     : []
   const selectedTrapDiscardCandidates = selectedTrap
@@ -539,6 +549,8 @@ export function useOnlineMatchController(params: {
     setSelectedTrapId,
     selectedTrapDiscardIds,
     setSelectedTrapDiscardIds,
+    selectedTrapHandToBreakIds,
+    setSelectedTrapHandToBreakIds,
     selectedTrapTrashBattleCookieIds,
     setSelectedTrapTrashBattleCookieIds,
     trapSelectNoTarget,
@@ -554,6 +566,8 @@ export function useOnlineMatchController(params: {
     toggleTrapPayment,
     selectedTrapDiscardCost,
     selectedTrapDiscardCandidates,
+    selectedTrapHandToBreakCost,
+    selectedTrapHandToBreakCandidates,
     selectedTrapTrashBattleCookieCost,
     selectedTrapTrashBattleCookieCandidates,
     trapAllowEmptyTarget,

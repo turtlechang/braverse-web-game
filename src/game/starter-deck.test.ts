@@ -692,7 +692,7 @@ describe('ST4-012 and ST4-013 card skills', () => {
     expect(caviar!.skill).toBeDefined()
     expect(caviar!.skill!.trigger).toBe('on-play')
     expect(caviar!.skill!.effects).toEqual([
-      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restToBottom: true },
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 1, restDestination: 'bottom' },
     ])
   })
 

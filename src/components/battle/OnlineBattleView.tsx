@@ -457,9 +457,14 @@ export function OnlineBattleView({
       ),
     onAttackPayment: match.toggleAttackPayment,
     onActivateSkill: (instanceId) => {
-      const card = viewerPlayer.battleArea.find(
-        (cookie) => cookie.card.instanceId === instanceId,
-      )?.card
+      // 一般技能來源在戰鬥區；BS3-025 這類 fromBreakArea 技能來源在休息區。
+      const card =
+        viewerPlayer.battleArea.find(
+          (cookie) => cookie.card.instanceId === instanceId,
+        )?.card ??
+        viewerPlayer.breakArea.find(
+          (breakCard) => breakCard.instanceId === instanceId,
+        )
       if (card) pending.beginCookieSkill(card, 'activate')
     },
     onDeployCookie: (instanceId) =>
@@ -609,6 +614,7 @@ export function OnlineBattleView({
         currentEffect={pending.currentEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
+        onChooseMode={pending.chooseEffectMode}
         onSkip={() => {
           if (pending.pendingEffect?.sourceKind !== 'attack') return
           match.dispatch(

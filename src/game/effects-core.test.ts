@@ -200,6 +200,45 @@ describe('card effect engine', () => {
     ).toBe(Math.max(0, attacker.card.attack - 1))
   })
 
+  it('sets attack damage meeting a threshold to the specified amount', () => {
+    let state = createDemoGame()
+    const attacker = state.players['player-two'].battleArea[0]
+    const target = state.players['player-one'].battleArea[0]
+
+    state = {
+      ...state,
+      attackModifiers: [
+        {
+          sourceInstanceId: context.sourceInstanceId,
+          targetInstanceId: attacker.card.instanceId,
+          amount: 3,
+          expiresAfterTurn: null,
+        },
+      ],
+    }
+    state = executeCardEffect(
+      state,
+      context,
+      {
+        kind: 'modify-damage-received',
+        amount: 0,
+        duration: 'opponent-next-turn',
+        target: { side: 'self', min: 1, max: 1 },
+        minimumDamage: 2,
+        setDamageTo: 1,
+      },
+      [target.card.instanceId],
+    )
+
+    expect(
+      getAttackDamageAgainst(
+        state,
+        attacker.card.instanceId,
+        target.card.instanceId,
+      ),
+    ).toBe(1)
+  })
+
   it('enforces break-level activation conditions', () => {
     let state = createDemoGame()
     const target = {
@@ -255,6 +294,86 @@ describe('card effect engine', () => {
       ]).players['player-two'].battleArea[0].hpCards,
     ).toHaveLength(target.hpCards.length - 1)
     expect(isEffectConditionMet(state, context, effect)).toBe(true)
+  })
+
+  it('checks keyword conditions against cards in the source support area', () => {
+    let state = createDemoGame()
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      condition: {
+        kind: 'support-keyword-at-least',
+        keyword: 'soul-jam',
+        count: 1,
+      },
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+
+    expect(isEffectConditionMet(state, context, effect)).toBe(false)
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [
+            ...state.players['player-one'].supportArea,
+            {
+              card: {
+                ...createSupport('soul-jam-support'),
+                keywords: ['soul-jam'],
+              },
+              rested: false,
+            },
+          ],
+        },
+      },
+    }
+
+    expect(isEffectConditionMet(state, context, effect)).toBe(true)
+  })
+
+  it('checks battle-area level conditions for either player', () => {
+    let state = createDemoGame()
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      condition: {
+        kind: 'battle-area-has-cookie-with-level',
+        side: 'self',
+        level: 3,
+      },
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+
+    expect(isEffectConditionMet(state, context, effect)).toBe(false)
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: state.players['player-one'].battleArea.map((cookie) => ({
+            ...cookie,
+            card: { ...cookie.card, level: 3 },
+          })),
+        },
+      },
+    }
+
+    expect(isEffectConditionMet(state, context, effect)).toBe(true)
+    expect(
+      isEffectConditionMet(state, context, {
+        ...effect,
+        condition: {
+          kind: 'battle-area-has-cookie-with-level',
+          side: 'opponent',
+          level: 3,
+        },
+      }),
+    ).toBe(false)
   })
 
   it('attaches supported official effects to demo cards', () => {

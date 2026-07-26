@@ -3,18 +3,65 @@ import {
   getFaintEffectCandidates,
 } from '../battle'
 import { applyGameCommand, getPendingDecision } from '../commands'
-import { selectEnergyPayment } from '../energy'
-import { getEffectTargetCandidates, isEffectTargeted } from '../effects'
+import { getRemainingEnergyCost, selectEnergyPayment } from '../energy'
+import {
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
+  requiresEffectCardSelection,
+} from '../effects'
 import { getRefreshCandidates } from '../refresh'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
+
+/** 與 commands.ts 的 resolvePendingAbilityEffect 前置檢查一致。 */
+const hasBlockingAbilityPending = (state: GameState): boolean =>
+  Boolean(
+    state.pendingRefresh ||
+      state.pendingOnPlay ||
+      state.pendingReplacement ||
+      state.pendingBattle,
+  )
 
 export const handleAiPendingDecision = (
   state: GameState,
   playerId: PlayerId,
 ): AiDecision | null => {
   const pendingDecision = getPendingDecision(state)
+
+  // 陷阱的延遲效果會留下 pendingAbilityEffect（BS3-046 的休息區登場）。
+  // 技能／物品走的是批次的 activate-skill／play-item，只有這條路徑會讓 AI
+  // 面對逐步的效果佇列，沒有處理的話 AI 迴圈會卡住。
+  const pendingAbility = state.pendingAbilityEffect
+  if (pendingAbility && !hasBlockingAbilityPending(state)) {
+    if (pendingAbility.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingAbility.playerId].name} 處理卡牌效果。`,
+      }
+    }
+    const effect = pendingAbility.effects[pendingAbility.effectIndex]
+    const context: EffectContext = {
+      sourcePlayerId: pendingAbility.sourcePlayerId,
+      sourceInstanceId: pendingAbility.sourceInstanceId,
+      sourceCardName: pendingAbility.sourceCardName,
+    }
+    const targetIds = requiresEffectCardSelection(effect)
+      ? getEffectSelectionCandidates(state, context, effect)
+          .slice(0, getEffectSelectionLimits(effect)?.max ?? 0)
+          .map((card) => card.instanceId)
+      : []
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-ability-effect',
+        playerId,
+        targetIds,
+      }),
+      action: 'idle',
+      description: `${state.players[playerId].name}結算${pendingAbility.sourceCardName ?? '卡牌'}的效果。`,
+    }
+  }
 
   if (
     state.pendingReplacement &&
@@ -170,20 +217,26 @@ export const handleAiPendingDecision = (
       }
     }
     const allIds = pendingDecision.revealedCardIds
-    let pickedId: string | null = allIds[0]
-    let restIds = allIds.slice(1)
-    if (pendingDecision.filterColor) {
-      const matching = state.pendingInspectDeck?.revealedCards.find(
-        (c) => c.energyColor === pendingDecision.filterColor,
-      )
-      if (matching) {
-        pickedId = matching.instanceId
-        restIds = allIds.filter((id) => id !== matching.instanceId)
-      } else {
-        pickedId = null
-        restIds = [...allIds]
-      }
-    }
+    const revealed = state.pendingInspectDeck?.revealedCards ?? []
+    const hasFilter =
+      pendingDecision.filterColor !== undefined ||
+      pendingDecision.filterType !== undefined
+    const matching = revealed.find(
+      (card) =>
+        (pendingDecision.filterColor === undefined ||
+          card.energyColor === pendingDecision.filterColor) &&
+        (pendingDecision.filterType === undefined ||
+          card.type === pendingDecision.filterType),
+    )
+    // pickCount 為 0 的檢視（例如只重排牌庫頂）不選任何一張。
+    const pickedId: string | null =
+      pendingDecision.pickCount === 0
+        ? null
+        : hasFilter
+          ? (matching?.instanceId ?? null)
+          : (allIds[0] ?? null)
+    const restIds =
+      pickedId === null ? [...allIds] : allIds.filter((id) => id !== pickedId)
     return {
       state: applyGameCommand(state, {
         kind: 'resolve-inspect-deck',
@@ -208,7 +261,10 @@ export const handleAiPendingDecision = (
       }
     }
     const hand = state.players[playerId].hand
-    const effectiveEnergyCost = pendingDecision.cost.energy ?? pendingDecision.cost
+    const effectiveEnergyCost = getRemainingEnergyCost(
+      pendingDecision.cost.energy ?? pendingDecision.cost,
+      pendingDecision.sourceEnergy,
+    )
     const paymentIds = selectEnergyPayment(
       effectiveEnergyCost,
       state.players[playerId].supportArea,
@@ -217,47 +273,25 @@ export const handleAiPendingDecision = (
       hand.length >= (pendingDecision.cost.discardHand ?? 0) &&
       Boolean(paymentIds)
     const targetedEffect = pendingDecision.effects.find((effect) =>
-      isEffectTargeted(effect),
+      requiresEffectCardSelection(effect),
     )
     const context: EffectContext = {
       sourcePlayerId: playerId,
       sourceInstanceId: pendingDecision.sourceInstanceId,
     }
     const targetIds = targetedEffect
-      ? getEffectTargetCandidates(
+      ? getEffectSelectionCandidates(
           state,
           context,
-          targetedEffect.target,
+          targetedEffect,
         )
-          .slice(0, targetedEffect.target.max)
-          .map((cookie) => cookie.card.instanceId)
-      : (() => {
-          const bttEffect = pendingDecision.effects.find(
-            (e) => e.kind === 'opponent-battle-to-trash',
-          )
-          if (!bttEffect || bttEffect.kind !== 'opponent-battle-to-trash') return []
-          const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
-          return state.players[opponentId].battleArea
-            .filter((cookie) => {
-              if (bttEffect.maxLevel !== undefined && cookie.card.level > bttEffect.maxLevel) return false
-              if (bttEffect.minLevel !== undefined && cookie.card.level < bttEffect.minLevel) return false
-              if (bttEffect.remainingHp !== undefined && cookie.hpCards.length > bttEffect.remainingHp) return false
-              return true
-            })
-            .sort((left, right) => right.hpCards.length - left.hpCards.length)
-            .slice(0, 1)
-            .map((cookie) => cookie.card.instanceId)
-        })()
+          .slice(0, getEffectSelectionLimits(targetedEffect)?.max ?? 0)
+          .map((card) => card.instanceId)
+      : []
     const hasTarget =
       targetedEffect
-        ? targetIds.length >= targetedEffect.target.min
-        : (() => {
-            const bttEffect = pendingDecision.effects.find(
-              (e) => e.kind === 'opponent-battle-to-trash',
-            )
-            if (!bttEffect || bttEffect.kind !== 'opponent-battle-to-trash') return true
-            return targetIds.length >= 1
-          })()
+      ? targetIds.length >= (getEffectSelectionLimits(targetedEffect)?.min ?? 0)
+        : true
     if (canPay && hasTarget) {
       return {
         state: applyGameCommand(state, {

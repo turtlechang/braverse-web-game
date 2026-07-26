@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import officialBS3Inventory from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
@@ -25,6 +26,7 @@ const blueCards = officialBlueSample.cards as OfficialCardRecord[]
 const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
 const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
 const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRecord[]
+const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
 
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
@@ -103,6 +105,16 @@ const findBraveBeginningBS2Card = (baseCardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing Brave Beginning BS2 sample card ${baseCardNumber}`)
+  }
+
+  return card
+}
+
+const findBs3Card = (cardNumber: string) => {
+  const card = bs3Cards.find((candidate) => candidate.cardNumber === cardNumber)
+
+  if (!card) {
+    throw new Error(`Missing BS3 inventory card ${cardNumber}`)
   }
 
   return card
@@ -1728,7 +1740,7 @@ describe('Starter Deck RED official effect adapter', () => {
               },
             ],
             effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-            sourceAsEnergy: true,
+            sourceEnergy: { red: 1 },
           },
         ])
     })
@@ -1846,6 +1858,246 @@ describe('Starter Deck RED official effect adapter', () => {
   })
 
   describe('previously-unsupported cards now convert successfully', () => {
+    it('converts the first BS3 attack-then slice with existing runtime effects', () => {
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-009'))).toEqual([
+        {
+          kind: 'damage',
+          amount: 1,
+          target: {
+            side: 'opponent',
+            min: 1,
+            max: 1,
+            attackTargetOnly: true,
+          },
+          condition: {
+            kind: 'support-keyword-at-least',
+            keyword: 'soul-jam',
+            count: 1,
+          },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-002'))).toEqual([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: { red: 1 } },
+          sourceEnergy: { red: 1 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: {
+                side: 'opponent',
+                min: 1,
+                max: 1,
+                attackTargetOnly: true,
+              },
+            },
+          ],
+          effectText:
+            'Use this Cookie as {R} to deal 1 damage to the attacked Cookie.',
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-010'))).toEqual([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: { red: 1 } },
+          sourceEnergy: { red: 1 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 1, max: 1 },
+            },
+          ],
+          effectText:
+            'Use this Cookie as {R} to deal 1 damage to 1 opponent Cookie.',
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-011'))).toEqual([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: { red: 2 } },
+          sourceEnergy: { red: 2 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 1, max: 1 },
+            },
+          ],
+          effectText:
+            'Use this Cookie as {R}{R} to deal 1 damage to 1 opponent Cookie.',
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-013'))).toEqual([
+        {
+          kind: 'modify-damage-received',
+          amount: 0,
+          duration: 'opponent-next-turn',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          minimumDamage: 2,
+          setDamageTo: 1,
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-017'))).toEqual([
+        {
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 0, max: 1, excludeSource: true },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-028'))).toEqual([
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'source-hp-less-than', amount: 6 },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-033'))).toEqual([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: { yellow: 1 } },
+          sourceEnergy: { yellow: 1 },
+          effects: [
+            {
+              kind: 'opponent-battle-to-trash',
+              min: 0,
+              remainingHp: 1,
+              destination: 'break',
+            },
+          ],
+          effectText:
+            'Use this Cookie as {Y} to place up to 1 opponent Cookie with 1 remaining HP in its break area.',
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-041'))).toEqual([
+        {
+          kind: 'battle-to-break',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-086'))).toEqual([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, discardHand: 1 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: {
+                side: 'opponent',
+                min: 1,
+                max: 1,
+                attackTargetOnly: true,
+              },
+              condition: {
+                kind: 'battle-area-has-cookie-with-level',
+                side: 'self',
+                level: 3,
+              },
+            },
+          ],
+          effectText:
+            'If you have a LV.3 Cookie in your battle area, discard 1 card to deal 1 damage to the attacked Cookie.',
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-100'))).toEqual([
+        {
+          kind: 'hp-to-trash',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-101'))).toEqual([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: { purple: 1 } },
+          sourceEnergy: { purple: 1 },
+          effects: [
+            {
+              kind: 'opponent-battle-to-trash',
+              min: 0,
+              remainingHp: 2,
+            },
+          ],
+          effectText:
+            'Use this Cookie as {P} to place up to 1 opponent Cookie with 2 or less remaining HP in the trash.',
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-102'))).toEqual([
+        { kind: 'deck-to-trash', amount: 2, side: 'self' },
+        { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-105'))).toEqual([
+        { kind: 'deck-to-trash', amount: 1, side: 'opponent' },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-113'))).toEqual([
+        { kind: 'deck-to-trash', amount: 1, side: 'self' },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-087'))).toEqual([
+        {
+          kind: 'damage',
+          amount: 1,
+          target: {
+            side: 'opponent',
+            min: 1,
+            max: 1,
+            maxLevel: 1,
+            attackTargetOnly: true,
+          },
+          condition: {
+            kind: 'support-keyword-at-least',
+            keyword: 'soul-jam',
+            count: 1,
+          },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-088'))).toEqual([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, discardHand: 1 },
+          effects: [
+            {
+              kind: 'gain-hp',
+              amount: 1,
+              target: { side: 'self', min: 0, max: 1 },
+            },
+          ],
+          effectText:
+            'Discard 1 card to give up to 1 Cookie in your battle area +1 HP.',
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-099'))).toEqual([
+        {
+          kind: 'hp-to-trash',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'trash-count-at-least', count: 15 },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-109'))).toEqual([
+        {
+          kind: 'hp-to-trash',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs3Card('BS3-111'))).toEqual([
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: {
+            kind: 'support-keyword-at-least',
+            keyword: 'soul-jam',
+            count: 1,
+          },
+        },
+      ])
+    })
+
     it('ST2-015 Hero Cookie attack-then damage plus disable-attack', () => {
       expect(convertOfficialAttackEffects(findYellowCard('ST2-015')))
         .toMatchObject([

@@ -321,9 +321,14 @@ function App() {
     onSkillTrashBattleCookie: pending.toggleSkillTrashBattleCookie,
     onAttackPayment: match.toggleAttackPayment,
     onActivateSkill: (instanceId) => {
-      const card = match.activePlayer.battleArea.find(
-        (cookie) => cookie.card.instanceId === instanceId,
-      )?.card
+      // 一般技能來源在戰鬥區；BS3-025 這類 fromBreakArea 技能來源在休息區。
+      const card =
+        match.activePlayer.battleArea.find(
+          (cookie) => cookie.card.instanceId === instanceId,
+        )?.card ??
+        match.activePlayer.breakArea.find(
+          (breakCard) => breakCard.instanceId === instanceId,
+        )
       pending.beginCookieSkill(
         match.game,
         card,
@@ -522,6 +527,11 @@ function App() {
         currentEffect={currentJsxEffect}
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
+        onChooseMode={pending.chooseEffectMode}
+        trashToDeckBottomCandidates={pending.skillTrashToDeckBottomCandidates}
+        selectedTrashToDeckBottomIds={pending.selectedSkillTrashToDeckBottomIds}
+        onToggleTrashToDeckBottom={pending.toggleSkillTrashToDeckBottom}
+        trashToDeckBottomCost={pending.trashToDeckBottomCost}
         onSkip={() => {
           if (pending.pendingEffect?.sourceKind === 'attack') {
             pending.skipAttackEffect()

@@ -47,6 +47,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setPendingResponseMode('trap')
               match.setSelectedTrapId(id)
               match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
@@ -78,6 +79,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               (support) => support.card,
             )}
             trapEnergyCostTotal={match.trapEnergyCostTotal}
+            trapPaymentValid={match.trapPaymentValid}
             selectedPaymentIds={match.selectedTrapPaymentIds}
             onTogglePayment={match.toggleTrapPayment}
             targetCards={match.selectedTrapTargets.map(
@@ -86,6 +88,18 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             discardHandCards={match.selectedTrapDiscardCandidates}
             discardHandCost={match.selectedTrapDiscardCost}
             selectedDiscardHandIds={match.selectedTrapDiscardIds}
+            handToBreakCards={match.selectedTrapHandToBreakCandidates}
+            handToBreakCost={match.selectedTrapHandToBreakCost}
+            selectedHandToBreakIds={match.selectedTrapHandToBreakIds}
+            onToggleHandToBreak={(id) =>
+              match.setSelectedTrapHandToBreakIds((current) =>
+                current.includes(id)
+                  ? current.filter((cardId) => cardId !== id)
+                  : current.length < match.selectedTrapHandToBreakCost
+                    ? [...current, id]
+                    : current,
+              )
+            }
             battleCookieCostCards={match.selectedTrapTrashBattleCookieCandidates.map(
               (cookie) => cookie.card,
             )}
@@ -105,6 +119,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapId(id)
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
@@ -140,6 +155,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 ? () => {
                     match.setSelectedTrapId(null)
                     match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapHandToBreakIds([])
                     match.setSelectedTrapTrashBattleCookieIds([])
                     match.setSelectedTrapTargetId(null)
                     match.setTrapSelectNoTarget(false)
@@ -153,6 +169,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapId(null)
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setPendingResponseMode(null)
@@ -171,6 +188,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapId(null)
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
+              match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
               match.setTrapSelectNoTarget(false)
@@ -191,6 +209,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 supportToHandIds: match.selectedTrapSupportToHandIds,
                 handToSupportIds: match.selectedTrapHandToSupportIds,
                 discardHandIds: match.selectedTrapDiscardIds,
+                handToBreakIds: match.selectedTrapHandToBreakIds,
                 trashBattleCookieIds: match.selectedTrapTrashBattleCookieIds,
                 trashToDeckIds: match.selectedTrapTrashToDeckIds,
               }

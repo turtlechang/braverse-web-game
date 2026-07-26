@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type {
   CardAbility,
-  EnergyColor,
   EnergyCost,
   EffectTargetSelector,
   GameCard,
@@ -16,18 +15,22 @@ import {
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
   getBreakToTrashCandidates,
+  getEffectSelectionCandidates,
   getEffectTargetCandidates,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckBottomCostCandidates,
   getTrashCookieCandidates,
   getTrashToDeckCandidates,
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
+  isEnergyColorCompatibleWithCost,
   isEffectConditionMet,
   isEffectUntargeted,
   validateEnergyPayment,
 } from '../game'
+import { expandChooseOne } from '../game'
 import { describeEffectResult } from '../components/effects/effectUiUtils'
 import type { PendingEffect } from '../components/effects/effectUiTypes'
 import type { DispatchGameCommand } from './useBattleActions'
@@ -122,6 +125,8 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'trash-to-hand' ||
           currentEffect.kind === 'trash-to-deck' ||
           currentEffect.kind === 'flip-to-support' ||
+          currentEffect.kind === 'hand-to-battle' ||
+          currentEffect.kind === 'opponent-trash-to-break' ||
           currentEffect.kind === 'inspect-deck' ||
           currentEffect.kind === 'optional-cost-attack' ||
           currentEffect.kind === 'disable-block'
@@ -184,10 +189,29 @@ export function usePendingEffect(params: {
         })()
       : []
 
+  const genericEffectCandidateCards =
+    pendingEffect &&
+    currentEffect &&
+    (currentEffect.kind === 'hand-to-break' ||
+      currentEffect.kind === 'break-to-hand' ||
+      currentEffect.kind === 'hand-to-hp' ||
+      currentEffect.kind === 'rest-support' ||
+      currentEffect.kind === 'support-to-hp' ||
+      currentEffect.kind === 'hand-to-battle' ||
+      currentEffect.kind === 'opponent-trash-to-break' ||
+      (currentEffect.kind === 'set-active' && currentEffect.selectable))
+      ? getEffectSelectionCandidates(
+          game,
+          pendingEffect.context,
+          currentEffect,
+        )
+      : []
+
   const nonBattleEffectCandidateCards = [
     ...supportEffectCandidates.map((support) => support.card),
     ...trashCookieCandidates,
     ...fieldToTrashStageCandidate,
+    ...genericEffectCandidateCards,
   ]
 
   const breakToTrashCandidates =
@@ -226,6 +250,7 @@ export function usePendingEffect(params: {
       : new Set([
           ...effectTargetCandidates.map((cookie) => cookie.card.instanceId),
           ...fieldToTrashStageCandidate.map((c) => c.instanceId),
+          ...genericEffectCandidateCards.map((card) => card.instanceId),
         ])
 
   const breakEffectTargetIds = faintActive
@@ -278,25 +303,9 @@ export function usePendingEffect(params: {
         pendingEffect.selectedPaymentIds,
       ).valid
     : false
-  const skillEnergyRequiredColors = new Set(
-    (Object.keys(skillEnergyCost) as (EnergyColor | 'neutral')[]).filter(
-      (k): k is EnergyColor | 'neutral' =>
-        (skillEnergyCost[k] ?? 0) > 0,
-    ),
-  )
   const isSkillEnergyColorCompatible = (
-    cardColor: EnergyColor | 'wild' | undefined,
-  ): boolean => {
-    if (!cardColor) return false
-    if (cardColor === 'wild') return true
-    if (skillEnergyRequiredColors.size === 0) return false
-    if (
-      skillEnergyRequiredColors.size === 1 &&
-      skillEnergyRequiredColors.has('neutral')
-    )
-      return true
-    return skillEnergyRequiredColors.has(cardColor)
-  }
+    cardColor: GameCard['energyColor'],
+  ): boolean => isEnergyColorCompatibleWithCost(skillEnergyCost, cardColor)
   const skillPaymentTargetIds = new Set(
     pendingEffect && !pendingEffect.skillActivated && skillEnergyCostTotal > 0
       ? pendingSupportArea
@@ -390,12 +399,102 @@ export function usePendingEffect(params: {
     skillTrashBattleCookieCandidates.map((card) => card.instanceId),
   )
 
+  const selectedSkillTrashToDeckBottomIds = new Set(
+    pendingEffect?.selectedTrashToDeckBottomIds ?? [],
+  )
+  const skillTrashToDeckBottomCandidates =
+    pendingEffect &&
+    !pendingEffect.skillActivated &&
+    pendingEffect.skill.cost.trashToDeckBottom
+      ? getTrashToDeckBottomCostCandidates(
+          pendingEffect.skill.cost,
+          game.players[pendingEffect.context.sourcePlayerId].discardPile,
+        )
+      : []
+  const skillTrashToDeckBottomTargetIds = new Set(
+    skillTrashToDeckBottomCandidates.map((card) => card.instanceId),
+  )
+  const trashToDeckBottomCost =
+    pendingEffect?.skill.cost.trashToDeckBottom?.count ?? 0
+
   useEffect(() => {
     if (pendingEffect || effectHistory.length === 0) return
 
     const timer = window.setTimeout(() => setEffectHistory([]), 1000)
     return () => window.clearTimeout(timer)
   }, [effectHistory, pendingEffect])
+
+  /**
+   * 陷阱的延遲效果（BS3-046）不是由本機 UI 發起的，規則層會直接留下
+   * `pendingAbilityEffect`。技能／物品是 UI 與規則層並行建佇列，這裡則要
+   * 反過來從規則層補建本機的 pendingEffect，否則玩家看不到選擇畫面。
+   */
+  useEffect(() => {
+    const pendingAbility = game.pendingAbilityEffect
+    if (
+      !pendingAbility ||
+      pendingAbility.sourceKind !== 'trap' ||
+      pendingAbility.playerId !== viewerPlayerId ||
+      pendingEffect ||
+      suspendedEffect ||
+      game.status !== 'playing' ||
+      game.pendingBattle ||
+      game.pendingReplacement ||
+      game.pendingRefresh ||
+      game.pendingOnPlay
+    ) {
+      return
+    }
+
+    const sourceCard =
+      game.players[viewerPlayerId].discardPile.find(
+        (card) => card.instanceId === pendingAbility.sourceInstanceId,
+      ) ?? {
+        id: 'unknown',
+        instanceId: pendingAbility.sourceInstanceId,
+        name: pendingAbility.sourceCardName ?? '陷阱效果',
+        type: 'trap' as const,
+      }
+
+    const timer = window.setTimeout(() => {
+      setPendingEffect({
+        sourceCard,
+        context: {
+          sourcePlayerId: pendingAbility.sourcePlayerId,
+          sourceInstanceId: pendingAbility.sourceInstanceId,
+          sourceCardName: pendingAbility.sourceCardName,
+        },
+        skill: {
+          trigger: 'activate',
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: {},
+          text: '',
+          effects: pendingAbility.effects,
+        },
+        trigger: 'activate',
+        effects: pendingAbility.effects,
+        effectIndex: pendingAbility.effectIndex,
+        selectedTargetIds: [],
+        selectedPaymentIds: [],
+        selectedCostSupportToTrashIds: [],
+        selectedDiscardHandIds: [],
+        selectedTrashBattleCookieIds: [],
+        // 代價在 playTrap 就付清了，這裡只剩效果結算。
+        skillActivated: true,
+        optional: false,
+        triggerLabel: '陷阱延遲效果',
+        sourceKind: 'item',
+      })
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [
+    game,
+    pendingEffect,
+    suspendedEffect,
+    viewerPlayerId,
+  ])
 
   useEffect(() => {
     if (
@@ -844,6 +943,15 @@ export function usePendingEffect(params: {
             currentEffect.kind === 'trash-to-support' ||
             currentEffect.kind === 'break-to-battle'
           ? currentEffect.amount
+        : currentEffect.kind === 'hand-to-break' ||
+            currentEffect.kind === 'break-to-hand' ||
+            currentEffect.kind === 'rest-support'
+          ? currentEffect.amount
+        : currentEffect.kind === 'hand-to-hp' ||
+            currentEffect.kind === 'support-to-hp'
+          ? 1
+        : currentEffect.kind === 'set-active' && currentEffect.selectable
+          ? currentEffect.supportCount
         : isEffectUntargeted(currentEffect)
           ? currentEffect.kind === 'gain-hp'
             ? currentEffect.target?.max ?? 0
@@ -855,6 +963,10 @@ export function usePendingEffect(params: {
               currentEffect.kind === 'disable-block' ||
               currentEffect.kind === 'flip-to-support'
             ? 0
+            : currentEffect.kind === 'hand-to-battle'
+            ? currentEffect.amount
+            : currentEffect.kind === 'opponent-trash-to-break'
+            ? currentEffect.max
           : currentEffect.target?.max ?? 0
 
     const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
@@ -948,6 +1060,22 @@ export function usePendingEffect(params: {
       : [...pendingEffect.selectedDiscardHandIds, instanceId]
 
     setPendingEffect({ ...pendingEffect, selectedDiscardHandIds })
+  }
+
+  const toggleSkillTrashToDeckBottom = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+    const cost = pendingEffect.skill.cost.trashToDeckBottom
+    if (!cost) return
+    if (!skillTrashToDeckBottomTargetIds.has(instanceId)) return
+    const selected = pendingEffect.selectedTrashToDeckBottomIds ?? []
+    const isSelected = selected.includes(instanceId)
+    if (!isSelected && selected.length >= cost.count) return
+    setPendingEffect({
+      ...pendingEffect,
+      selectedTrashToDeckBottomIds: isSelected
+        ? selected.filter((id) => id !== instanceId)
+        : [...selected, instanceId],
+    })
   }
 
   const toggleSkillTrashBattleCookie = (instanceId: string) => {
@@ -1150,6 +1278,7 @@ export function usePendingEffect(params: {
               supportToHandIds,
               discardHandIds,
               trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+              chooseOneModes: pendingEffect.chooseOneModes,
             })
           : pendingEffect.sourceKind === 'stage'
             ? applyGameCommand(game, {
@@ -1159,6 +1288,7 @@ export function usePendingEffect(params: {
                 supportToTrashIds,
                 supportToHandIds,
                 discardHandIds,
+                chooseOneModes: pendingEffect.chooseOneModes,
               })
             : applyGameCommand(game, {
                 kind: 'begin-activate-skill',
@@ -1169,6 +1299,8 @@ export function usePendingEffect(params: {
                 costSupportToTrashIds: pendingEffect.selectedCostSupportToTrashIds,
                 discardHandIds,
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+                trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds,
+                chooseOneModes: pendingEffect.chooseOneModes,
               })
       const nextGame = applyGameCommand(activatedGame, {
         kind: 'resolve-ability-effect',
@@ -1290,9 +1422,41 @@ export function usePendingEffect(params: {
     setEffectHistory([])
   }
 
+  /**
+   * 「選擇一項」：把佇列就地展開成選定模式的效果。
+   * 能力尚未啟動時只改本機佇列，模式索引會隨之後的 `begin-*` 指令送進規則層；
+   * 已啟動時（choose-one 不是第一個效果）則要另外送 `resolve-choose-one`
+   * 讓規則層的 `pendingAbilityEffect` 一起展開。
+   */
+  const chooseEffectMode = (modeIndex: number) => {
+    if (!pendingEffect || currentEffect?.kind !== 'choose-one') return
+    const expanded = expandChooseOne(
+      pendingEffect.effects,
+      pendingEffect.effectIndex,
+      modeIndex,
+    )
+    if (pendingEffect.skillActivated) {
+      dispatch(
+        {
+          kind: 'resolve-choose-one',
+          playerId: pendingEffect.context.sourcePlayerId,
+          modeIndex,
+        },
+        `已選擇「${currentEffect.modes[modeIndex]?.label ?? ''}」。`,
+      )
+    }
+    setPendingEffect({
+      ...pendingEffect,
+      effects: expanded,
+      chooseOneModes: [...(pendingEffect.chooseOneModes ?? []), modeIndex],
+      selectedTargetIds: [],
+    })
+  }
+
   return {
     pendingEffect,
     setPendingEffect,
+    chooseEffectMode,
     suspendedEffect,
     setSuspendedEffect,
     effectHistory,
@@ -1306,6 +1470,7 @@ export function usePendingEffect(params: {
     toggleSkillCostSupport,
     toggleSkillDiscardHand,
     toggleSkillTrashBattleCookie,
+    toggleSkillTrashToDeckBottom,
     confirmEffect,
     skipOptionalSkill,
     skipAttackEffect,
@@ -1320,6 +1485,7 @@ export function usePendingEffect(params: {
     breakToHandBySumCandidates,
     trashToHandCandidates,
     trashToDeckCandidates,
+    genericEffectCandidateCards,
     skillCostSupportCandidates,
     skillEnergyPaymentValid,
     skillPaymentTargetIds,
@@ -1337,6 +1503,10 @@ export function usePendingEffect(params: {
     selectedSkillTrashBattleCookieIds,
     skillTrashBattleCookieCandidates,
     skillTrashBattleCookieTargetIds,
+    selectedSkillTrashToDeckBottomIds,
+    skillTrashToDeckBottomCandidates,
+    skillTrashToDeckBottomTargetIds,
+    trashToDeckBottomCost,
     faintActive,
     afterDamageActive,
   } as const

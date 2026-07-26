@@ -10,7 +10,7 @@ import {
 import type {
   BuiltInDeckChoice,
   DeckChoice,
-  DefeatReason,
+  GameEndReason,
   GameCard,
   PlayerId,
 } from '../../game'
@@ -500,12 +500,17 @@ export interface TrapResponseModalProps {
   selectedTrapId: string | null
   paymentCards: GameCard[]
   trapEnergyCostTotal?: number
+  trapPaymentValid?: boolean
   selectedPaymentIds?: string[]
   onTogglePayment?: (instanceId: string) => void
   targetCards: GameCard[]
   discardHandCards: GameCard[]
   discardHandCost: number
   selectedDiscardHandIds: string[]
+  handToBreakCards?: GameCard[]
+  handToBreakCost?: number
+  selectedHandToBreakIds?: string[]
+  onToggleHandToBreak?: (instanceId: string) => void
   battleCookieCostCards?: GameCard[]
   battleCookieCost?: number
   selectedBattleCookieIds?: string[]
@@ -581,12 +586,17 @@ export function TrapResponseModal({
   selectedTrapId,
   paymentCards,
   trapEnergyCostTotal = 0,
+  trapPaymentValid = true,
   selectedPaymentIds = [],
   onTogglePayment,
   targetCards,
   discardHandCards,
   discardHandCost,
   selectedDiscardHandIds,
+  handToBreakCards = [],
+  handToBreakCost = 0,
+  selectedHandToBreakIds = [],
+  onToggleHandToBreak,
   battleCookieCostCards = [],
   battleCookieCost = 0,
   selectedBattleCookieIds = [],
@@ -629,7 +639,8 @@ export function TrapResponseModal({
   const selectedTrapText = selectedTrap?.trap?.text ?? selectedTrap?.effectText
 
   const hasEnergyPhase = trapEnergyCostTotal > 0
-  const hasCostPhase = discardHandCost > 0 || battleCookieCost > 0
+  const hasCostPhase =
+    discardHandCost > 0 || battleCookieCost > 0 || handToBreakCost > 0
   const hasTargetPhase =
     (trapTargetCandidates.length > 0 && Boolean(onSelectTrapTarget)) ||
     supportTrashAmount > 0 ||
@@ -651,9 +662,10 @@ export function TrapResponseModal({
 
   const energyReady =
     trapEnergyCostTotal === 0 ||
-    selectedPaymentIds.length === trapEnergyCostTotal
+    (selectedPaymentIds.length === trapEnergyCostTotal && trapPaymentValid)
   const costReady =
     selectedDiscardHandIds.length === discardHandCost &&
+    selectedHandToBreakIds.length === handToBreakCost &&
     selectedBattleCookieIds.length === battleCookieCost
   const targetReady =
     (supportTrashAmount === 0 ||
@@ -852,6 +864,25 @@ export function TrapResponseModal({
                       ))}
                     </div>
                     <span>已選 {selectedDiscardHandIds.length}／{discardHandCost}</span>
+                  </>
+                )}
+                {handToBreakCost > 0 && (
+                  <>
+                    <strong>選擇 {handToBreakCost} 張手牌餅乾放入休息區</strong>
+                    <div className="modal-card-options compact trap-discard-options">
+                      {handToBreakCards.map((card) => (
+                        <button
+                          type="button"
+                          className={selectedHandToBreakIds.includes(card.instanceId) ? 'is-selected' : ''}
+                          key={card.instanceId}
+                          onClick={() => onToggleHandToBreak?.(card.instanceId)}
+                        >
+                          <CardFace card={card} selected={selectedHandToBreakIds.includes(card.instanceId)} />
+                          <span>{card.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <span>已選 {selectedHandToBreakIds.length}／{handToBreakCost}</span>
                   </>
                 )}
                 {battleCookieCost > 0 && (
@@ -1756,7 +1787,7 @@ export interface ResultModalProps {
   winnerName: string
   loserId: PlayerId
   viewerPlayerId: PlayerId
-  reason: DefeatReason
+  reason: GameEndReason
   onRestart: () => void
 }
 
@@ -1769,7 +1800,9 @@ export function ResultModal({
 }: ResultModalProps) {
   const defeatedSide = loserId === viewerPlayerId ? '我方' : '對方'
   const reasonText =
-    reason === 'break-level-limit'
+    reason === 'special-victory'
+      ? `${winnerName}達成了特殊勝利條件。`
+      : reason === 'break-level-limit'
       ? `${defeatedSide}休息區的等級達到 10。`
       : reason === 'refresh-unavailable'
         ? `${defeatedSide}無法完成牌庫 Refresh。`

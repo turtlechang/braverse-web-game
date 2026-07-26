@@ -13,7 +13,12 @@ export const getSkillLabels = (skill: CardSkill) => [
 const targetText = (
   effect: Extract<CardEffect, { target: unknown }>,
 ): { target: string; count: string } => ({
-  target: effect.target.side === 'self' ? '我方餅乾' : '對手餅乾',
+  target:
+    effect.target.side === 'self'
+      ? '我方餅乾'
+      : effect.target.side === 'opponent'
+        ? '對手餅乾'
+        : '雙方餅乾',
   count:
     effect.target.min === effect.target.max
       ? `${effect.target.max} 張`
@@ -95,6 +100,26 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'trash-to-deck') {
     return `從棄牌區選最多 ${effect.max} 張卡洗回牌庫。`
   }
+  if (effect.kind === 'trash-to-deck-all') {
+    return '將棄牌區所有卡牌洗回牌庫。'
+  }
+  if (effect.kind === 'draw-up-to-battle-cookie-count') {
+    return `雙方戰鬥區每有 1 隻 LV.${effect.level} 餅乾，最多抽 ${effect.amountPerCookie} 張牌。`
+  }
+  if (effect.kind === 'choose-one') {
+    return `選擇一項：${effect.modes.map((mode) => mode.label).join('／')}。`
+  }
+  if (effect.kind === 'reveal-bottom-deck') {
+    return '揭示牌庫底 1 張，餅乾放到牌庫頂，其他卡加入手牌。'
+  }
+  if (effect.kind === 'hand-to-battle') {
+    return `從手牌選最多 ${effect.amount} 張餅乾登場${
+      effect.gainHp ? `，並額外獲得 ${effect.gainHp} HP` : ''
+    }。`
+  }
+  if (effect.kind === 'opponent-trash-to-break') {
+    return `從對手棄牌區選最多 ${effect.max} 張餅乾放入對手休息區。`
+  }
   if (effect.kind === 'break-to-battle') {
     return `從 break 區選最多 ${effect.amount} 張餅乾登場。`
   }
@@ -145,6 +170,14 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'hp-to-support') {
     return `選擇 ${count}${target}，將其 1 張 HP 卡放入支援區。`
+  }
+  if (effect.kind === 'transfer-hp') {
+    return effect.direction === 'to-source'
+      ? `選擇 ${count}${target}，將其 ${effect.amount} 張 HP 卡移到這張餅乾上。`
+      : `選擇 ${count}${target}，將這張餅乾的 ${effect.amount} 張 HP 卡移過去。`
+  }
+  if (effect.kind === 'set-cookie-active') {
+    return `選擇 ${count}${target}，設為活躍。`
   }
 
   if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
@@ -202,11 +235,27 @@ export const describeEffectResult = (
   if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入棄牌區。'
   if (effect.kind === 'trash-to-hand') return '棄牌區卡牌已返回手牌。'
   if (effect.kind === 'trash-to-deck') return '棄牌區卡牌已洗回牌庫。'
+  if (effect.kind === 'trash-to-deck-all') return '棄牌區已全部洗回牌庫。'
+  if (effect.kind === 'draw-up-to-battle-cookie-count') {
+    return '已依戰鬥區餅乾數量建立抽牌決策。'
+  }
+  if (effect.kind === 'choose-one') return '已選擇要執行的項目。'
+  if (effect.kind === 'reveal-bottom-deck') return '已揭示牌庫底卡牌。'
+  if (effect.kind === 'hand-to-battle') return '手牌餅乾已登場。'
+  if (effect.kind === 'opponent-trash-to-break') {
+    return '對手棄牌區餅乾已放入對手休息區。'
+  }
   if (effect.kind === 'break-to-battle') return 'break 區餅乾已登場。'
   if (effect.kind === 'break-to-hand-by-level-sum') return 'break 區餅乾已返回手牌。'
   if (effect.kind === 'battle-to-break') return `${names} 已放入 break 區。`
   if (effect.kind === 'disable-attack') return `${names} 下回合不能攻擊。`
   if (effect.kind === 'hp-to-support') return `${names} 的 HP 卡已放入支援區。`
+  if (effect.kind === 'transfer-hp') {
+    return effect.direction === 'to-source'
+      ? `已從 ${names} 移走 ${effect.amount} 張 HP 卡。`
+      : `已將 ${effect.amount} 張 HP 卡移給 ${names}。`
+  }
+  if (effect.kind === 'set-cookie-active') return `${names} 已設為活躍。`
 
   if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
     const amount = effect.amount

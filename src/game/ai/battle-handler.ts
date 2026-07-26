@@ -358,6 +358,32 @@ export const handleAiPendingBattle = (
         )
         .slice(0, trapCard.trap.cost.discardHand ?? 0)
         .map((card) => card.instanceId)
+      const handToBreakCost = trapCard.trap.cost.handToBreakArea
+      const handToBreakIds = state.players[playerId].hand
+        .filter(
+          (card) =>
+            card.instanceId !== trapCard.instanceId &&
+            !discardHandIds.includes(card.instanceId) &&
+            card.type === 'cookie' &&
+            (!handToBreakCost?.energyColor ||
+              card.energyColor === handToBreakCost.energyColor),
+        )
+        // 進休息區等於送對手 break 進度，優先付等級最低的。
+        .sort(
+          (left, right) =>
+            (left.type === 'cookie' ? left.level : 0) -
+            (right.type === 'cookie' ? right.level : 0),
+        )
+        .slice(0, handToBreakCost?.count ?? 0)
+        .map((card) => card.instanceId)
+      if (handToBreakCost && handToBreakIds.length < handToBreakCost.count) {
+        return {
+          state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
+          action: 'play-trap',
+          description: `${state.players[playerId].name}無法支付陷阱代價。`,
+        }
+      }
+
       const trashBattleCookieIds = getTrashBattleCookieCostCandidates(
         trapCard.trap.cost,
         state.players[playerId].battleArea,
@@ -411,6 +437,7 @@ export const handleAiPendingBattle = (
           supportToHandIds,
           handToSupportIds,
           discardHandIds,
+          handToBreakIds,
           trashBattleCookieIds,
           trashToDeckIds,
         }),

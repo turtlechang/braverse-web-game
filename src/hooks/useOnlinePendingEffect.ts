@@ -21,6 +21,7 @@ import {
   type GameState,
   type PlayerId,
 } from '../game'
+import { expandChooseOneSequence } from '../game'
 import type { DispatchGameCommand } from './useBattleActions'
 import type { PendingEffect } from '../components/effects/effectUiTypes'
 
@@ -38,6 +39,8 @@ type AbilityCostDraft = {
   selectedCostSupportToTrashIds: string[]
   selectedDiscardHandIds: string[]
   selectedTrashBattleCookieIds: string[]
+  /** 玩家為「選擇一項」挑過的模式，依序累積後隨 begin-* 指令送出。 */
+  chooseOneModes: number[]
 }
 
 const getTargetSelector = (
@@ -436,6 +439,10 @@ export function useOnlinePendingEffect(params: {
         discardHandIds: abilityCostDraft.selectedDiscardHandIds,
         trashBattleCookieIds: abilityCostDraft.selectedTrashBattleCookieIds,
         targetIds: selectedTargetIds,
+        // 沒有「選擇一項」時就不要多送一個空陣列上線。
+        ...(abilityCostDraft.chooseOneModes.length > 0
+          ? { chooseOneModes: abilityCostDraft.chooseOneModes }
+          : {}),
       }
       if (abilityCostDraft.sourceKind === 'cookie') {
         dispatch(
@@ -601,6 +608,7 @@ export function useOnlinePendingEffect(params: {
             selectedCostSupportToTrashIds: [],
             selectedDiscardHandIds: [],
             selectedTrashBattleCookieIds: [],
+            chooseOneModes: [],
           },
     )
   }
@@ -774,7 +782,10 @@ export function useOnlinePendingEffect(params: {
           context: draftContext,
           skill: draftSkill,
           trigger: abilityCostDraft.trigger,
-          effects: draftSkill.effects,
+          effects: expandChooseOneSequence(
+            draftSkill.effects,
+            abilityCostDraft.chooseOneModes,
+          ),
           effectIndex: 0,
           selectedTargetIds,
           selectedPaymentIds: abilityCostDraft.selectedPaymentIds,
@@ -860,11 +871,32 @@ export function useOnlinePendingEffect(params: {
         }
       : null
 
+  /**
+   * 「選擇一項」：代價草稿階段只記在本機，模式索引會隨 begin-* 指令送進規則層；
+   * 能力已啟動時改送 `resolve-choose-one`，由伺服器端的
+   * `pendingAbilityEffect` 展開後同步回來。
+   */
+  const chooseEffectMode = (modeIndex: number) => {
+    if (displayedEffect?.kind !== 'choose-one') return
+    if (abilityCostDraft) {
+      setAbilityCostDraft({
+        ...abilityCostDraft,
+        chooseOneModes: [...abilityCostDraft.chooseOneModes, modeIndex],
+      })
+      return
+    }
+    dispatch(
+      { kind: 'resolve-choose-one', playerId: viewerPlayerId, modeIndex },
+      `已選擇「${displayedEffect.modes[modeIndex]?.label ?? ''}」。`,
+    )
+  }
+
   return {
     currentEffect: displayedEffect,
     candidateCards,
     selectedTargetIds,
     toggleTarget,
+    chooseEffectMode,
     confirmEffect,
     beginCookieSkill,
     handleOnPlayTrigger,

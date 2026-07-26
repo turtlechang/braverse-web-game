@@ -29,6 +29,10 @@ export interface BattleUiMatchLike {
   setSelectedTrapDiscardIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
+  selectedTrapHandToBreakIds: string[]
+  setSelectedTrapHandToBreakIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
   selectedTrapTrashBattleCookieIds: string[]
   setSelectedTrapTrashBattleCookieIds: (
     value: string[] | ((current: string[]) => string[]),
@@ -47,6 +51,8 @@ export interface BattleUiMatchLike {
   toggleTrapPayment: (instanceId: string) => void
   selectedTrapDiscardCost: number
   selectedTrapDiscardCandidates: GameCard[]
+  selectedTrapHandToBreakCost: number
+  selectedTrapHandToBreakCandidates: GameCard[]
   selectedTrapTrashBattleCookieCost: number
   selectedTrapTrashBattleCookieCandidates: CookieInBattle[]
   trapAllowEmptyTarget: boolean

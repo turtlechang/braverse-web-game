@@ -6,16 +6,20 @@ import {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
   hasRequiredEffectTargets,
   getTargetPlayerId,
   isEffectConditionMet,
   requiresTargetSelection,
   isEffectTargeted,
+  requiresEffectCardSelection,
   resolveDrawUpTo,
   selectEffectTargets,
 } from './effects'
 import {
   getAttackEnergyCost,
+  getRemainingEnergyCost,
   selectEnergyPayment,
   validateEnergyPayment,
 } from './energy'
@@ -39,13 +43,14 @@ import type {
   EnergyColor,
   GameCard,
   GameState,
+  CookieCard,
   PendingBattle,
   PendingEffectOrderItem,
   PlayerId,
   PlayerState,
   TrapAbility,
 } from './types'
-import { getBreakAreaLevel } from './victory'
+import { getBreakAreaLevel, resolveBreakLevelVictory } from './victory'
 
 const requirePendingBattle = (state: GameState): PendingBattle => {
   if (!state.pendingBattle) {
@@ -92,6 +97,17 @@ const assertNoBlockingDecision = (state: GameState) => {
     throw new GameRuleError('Invalid battle action.')
   }
 }
+
+const getEquipAttackEffects = (attacker: CookieInBattle): CardEffect[] =>
+  (attacker.equippedCards ?? []).flatMap<CardEffect>((card) => {
+    if (card.id === 'BS3-066') {
+      return [{ kind: 'set-active', supportCount: 1, selectable: true }]
+    }
+    if (card.id === 'BS3-091') {
+      return [{ kind: 'draw', amount: 1 }]
+    }
+    return []
+  })
 
 export const beginAttack = (
   state: GameState,
@@ -175,7 +191,10 @@ export const beginAttack = (
       revealedHpCard: null,
       preventKnockoutTargetIds: [],
       faintedColors: [],
-      attackEffects: attacker.card.attackEffects ?? [],
+      attackEffects: [
+        ...(attacker.card.attackEffects ?? []),
+        ...getEquipAttackEffects(attacker),
+      ],
       attackEffectIndex: 0,
     },
   }
@@ -438,6 +457,8 @@ export interface PlayTrapOptions {
   supportToHandIds?: string[]
   handToSupportIds?: string[]
   discardHandIds?: string[]
+  /** 放進自己休息區的手牌餅乾代價（BS3-046）。 */
+  handToBreakIds?: string[]
   trashBattleCookieIds?: string[]
   /**
    * trash-to-deck 效果的獨立目標欄位（例如 BS2-079 第二段「洗回牌庫」）。
@@ -591,13 +612,44 @@ export const playTrap = (
     }
   }
 
+  // 手牌餅乾放進自己的休息區，與 discardHand（進棄牌區）不同，會推進自己的 break 等級。
+  const handToBreakCost = trap.cost.handToBreakArea
+  const uniqueHandToBreakIds = [...new Set(options.handToBreakIds ?? [])]
+  if (uniqueHandToBreakIds.length !== (options.handToBreakIds ?? []).length) {
+    throw new GameRuleError('休息區代價不能重複選同一張手牌。')
+  }
+  if (uniqueHandToBreakIds.length !== (handToBreakCost?.count ?? 0)) {
+    throw new GameRuleError(
+      `必須將 ${handToBreakCost?.count ?? 0} 張手牌餅乾放入休息區。`,
+    )
+  }
+  const handToBreakCards = player.hand.filter(
+    (card) =>
+      card.instanceId !== trapCard.instanceId &&
+      uniqueHandToBreakIds.includes(card.instanceId) &&
+      card.type === 'cookie' &&
+      (handToBreakCost?.energyColor === undefined ||
+        card.energyColor === handToBreakCost.energyColor),
+  )
+  if (handToBreakCards.length !== uniqueHandToBreakIds.length) {
+    throw new GameRuleError('選擇的休息區代價手牌不合法。')
+  }
+  if (uniqueDiscardHandIds.some((id) => uniqueHandToBreakIds.includes(id))) {
+    throw new GameRuleError('同一張手牌不能同時支付兩種代價。')
+  }
+
   const paymentSet = new Set(options.paymentIds)
   let updatedPlayer: PlayerState = {
     ...player,
+    breakArea: [
+      ...player.breakArea,
+      ...(handToBreakCards as CookieCard[]),
+    ],
     hand: player.hand.filter(
       (card, index) =>
         index !== trapIndex &&
-        !uniqueDiscardHandIds.includes(card.instanceId),
+        !uniqueDiscardHandIds.includes(card.instanceId) &&
+        !uniqueHandToBreakIds.includes(card.instanceId),
     ),
     supportArea: player.supportArea.map((support) =>
       paymentSet.has(support.card.instanceId)
@@ -683,6 +735,9 @@ export const playTrap = (
               sourceInstanceId: trapCard.instanceId,
               sourceCardName: trapCard.name,
               color: trap.condition.color,
+              ...(trap.condition.minLevel !== undefined
+                ? { minLevel: trap.condition.minLevel }
+                : {}),
               effects: trap.effects,
             },
           }
@@ -696,6 +751,11 @@ export const playTrap = (
       playerId,
       trashBattlePayment.departedCount,
     )
+  }
+
+  if (handToBreakCards.length > 0) {
+    // 手牌進休息區會推進自己的 break 等級，必須立刻結算勝負。
+    nextState = resolveBreakLevelVictory(nextState)
   }
 
   if (supportToTrash?.kind === 'support-to-trash') {
@@ -941,11 +1001,20 @@ const removeFaintedCookie = (
             (cookie) => cookie.card.instanceId !== targetInstanceId,
           ),
           breakArea: [...player.breakArea, target.card],
+          discardPile: [...player.discardPile, ...(target.equippedCards ?? [])],
         },
       },
       pendingBattle: {
         ...battle,
         faintedColors: addFaintedColor(battle.faintedColors, target.card),
+        faintedCookies: [
+          ...(battle.faintedCookies ?? []),
+          {
+            playerId,
+            energyColor: target.card.energyColor,
+            level: target.card.level,
+          },
+        ],
       },
       cookiesFaintedThisTurn: {
         ...(state.cookiesFaintedThisTurn ?? {}),
@@ -1010,18 +1079,53 @@ const removeFaintedCookie = (
 
   return continuePendingReplacements(nextState)
 }
+/**
+ * 延遲陷阱是否成立。未指定 `minLevel` 時沿用舊行為（只看本次戰鬥有沒有該顏色
+ * 的餅乾昏厥）；指定時改用 `faintedCookies`，額外要求昏厥的是陷阱擁有者自己的
+ * 餅乾且等級達標（BS3-046 的「your {Y} LV.2 or higher Cookies」）。
+ */
+const isDelayedTrapTriggered = (battle: PendingBattle): boolean => {
+  const delayed = battle.delayedTrap
+  if (!delayed) return false
+  if (delayed.minLevel === undefined) {
+    return battle.faintedColors.includes(delayed.color)
+  }
+  return (battle.faintedCookies ?? []).some(
+    (fainted) =>
+      fainted.playerId === delayed.playerId &&
+      fainted.energyColor === delayed.color &&
+      fainted.level >= delayed.minLevel!,
+  )
+}
+
 const finishBattle = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   let completedState = state
-  if (
-    battle.delayedTrap &&
-    battle.faintedColors.includes(battle.delayedTrap.color)
-  ) {
+  if (battle.delayedTrap && isDelayedTrapTriggered(battle)) {
     const context = {
       sourcePlayerId: battle.delayedTrap.playerId,
       sourceInstanceId: battle.delayedTrap.sourceInstanceId,
       sourceCardName: battle.delayedTrap.sourceCardName,
     }
+
+    // 需要玩家選卡的效果不能在這裡直接執行（會被當成「選 0 張」而失效），
+    // 改交給既有的 pendingAbilityEffect 逐步流程處理。
+    if (battle.delayedTrap.effects.some(requiresEffectCardSelection)) {
+      return finalizePendingReplacements({
+        ...buildPendingEffectOrder(completedState),
+        pendingBattle: null,
+        pendingAbilityEffect: {
+          playerId: battle.delayedTrap.playerId,
+          sourcePlayerId: battle.delayedTrap.playerId,
+          sourceInstanceId: battle.delayedTrap.sourceInstanceId,
+          sourceCardName: battle.delayedTrap.sourceCardName,
+          sourceKind: 'trap',
+          effects: battle.delayedTrap.effects,
+          effectIndex: 0,
+        },
+      })
+    }
+
     for (let i = 0; i < battle.delayedTrap.effects.length; i += 1) {
       const effect = battle.delayedTrap.effects[i]
       completedState = executeCardEffect(
@@ -1313,7 +1417,7 @@ export const resolveAttackEffect = (
         cost: effect.cost,
         effects: effect.effects,
         effectText: effect.effectText,
-        sourceAsEnergy: effect.sourceAsEnergy,
+        sourceEnergy: effect.sourceEnergy,
       },
     }
   }
@@ -1379,7 +1483,10 @@ export const resolveOptionalCostAttack = (
   if (!allInHand) {
     throw new GameRuleError('Invalid battle action.')
   }
-  const energyCost = { ...(pending.cost.energy ?? {}) }
+  const energyCost = getRemainingEnergyCost(
+    pending.cost.energy ?? {},
+    pending.sourceEnergy,
+  )
   const uniquePaymentIds = [...new Set(paymentIds)]
   if (uniquePaymentIds.length !== paymentIds.length) {
     throw new GameRuleError('Invalid battle action.')
@@ -1417,26 +1524,30 @@ export const resolveOptionalCostAttack = (
           pendingBattle: { ...battle, attackEffectIndex: nextIndex },
         })
   }
-  const hasTargetedEffect = applicableEffects.some((e) =>
-    requiresTargetSelection(e),
+  const selectableEffects = applicableEffects.filter((effect) =>
+    requiresEffectCardSelection(effect),
   )
-  if (hasTargetedEffect) {
+  if (selectableEffects.length > 0) {
     const uniqueTargetIds = [...new Set(targetIds)]
     if (uniqueTargetIds.length !== targetIds.length) {
-    throw new GameRuleError('Invalid battle action.')
+      throw new GameRuleError('Invalid battle action.')
     }
-    if (uniqueTargetIds.length !== 1) {
-    throw new GameRuleError('Invalid battle action.')
-    }
-    const hasValidTarget = applicableEffects
-      .filter((effect) => requiresTargetSelection(effect))
-      .every((effect) =>
-        getEffectTargetCandidatesForEffect(
+    const hasValidTarget = selectableEffects.every((effect) => {
+        const limits = getEffectSelectionLimits(effect)
+        if (!limits) return false
+        const { min, max } = limits
+        if (uniqueTargetIds.length < min || uniqueTargetIds.length > max) {
+          return false
+        }
+        const candidates = getEffectSelectionCandidates(
           state,
           effectContext,
           effect,
-        ).some((cookie) => cookie.card.instanceId === uniqueTargetIds[0]),
-      )
+        )
+        return uniqueTargetIds.every((targetId) =>
+          candidates.some((card) => card.instanceId === targetId),
+        )
+      })
     if (!hasValidTarget) {
       throw new GameRuleError('Invalid battle action.')
     }
@@ -1853,7 +1964,10 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const pending = nextState.pendingOptionalCostAttack
       const hand = nextState.players[pending.playerId].hand
       const canPayHand = hand.length >= (pending.cost.discardHand ?? 0)
-      const effectiveEnergyCost = pending.cost.energy ?? pending.cost
+      const effectiveEnergyCost = getRemainingEnergyCost(
+        pending.cost.energy ?? pending.cost,
+        pending.sourceEnergy,
+      )
       const paymentIds = selectEnergyPayment(
         effectiveEnergyCost,
         nextState.players[pending.playerId].supportArea,
@@ -1883,7 +1997,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const hasTarget = targetedEffect
         ? autoTargetIds.length >=
           (targetedEffect.kind === 'opponent-battle-to-trash'
-            ? 1
+            ? targetedEffect.min ?? 1
             : targetedEffect.target.min)
         : applicableEffects.length > 0
       if (canPayHand && canPayEnergy && hasTarget) {

@@ -15,6 +15,7 @@ import type {
   AbilityCost,
   CardSkill,
   CookieInBattle,
+  GameCard,
   GameState,
   PlayerId,
   PlayerState,
@@ -30,6 +31,53 @@ import {
 const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
 ) => source.battleEntryId ?? source.card.instanceId
+
+/**
+ * 官方釋疑：「本場遊戲只能使用 1 次」是每位玩家限定一次，即使同一位玩家的
+ * 休息區有多張同名卡（例如兩張 BS3-025），也只能共用這一次額度——不是每張
+ * 卡各自的 instanceId 各算一次。因此用 `playerId + card.id`（卡片編號，
+ * 同名卡共用）而非 `card.instanceId`（每張實體卡各自不同）當 key。
+ */
+const getOncePerGameKey = (playerId: PlayerId, cardId: string) =>
+  `${playerId}:${cardId}`
+
+/**
+ * 尋找要發動技能的來源餅乾。一般技能只能從戰鬥區發動；`fromBreakArea` 技能
+ * （BS3-025）額外允許來源在休息區。休息區餅乾包成與 `CookieInBattle` 相容
+ * 的形狀以便沿用既有的代價／條件檢查，但休息區沒有「橫置」語意，固定回傳
+ * `rested: false`——目前唯一的休息區技能 `restSource` 也是 false，不影響
+ * 正確性；若未來新增 `restSource` 且 `fromBreakArea` 都為真的技能，這裡需要
+ * 另外設計「已用過仍視為不可用」的判定，而不能只靠 rested。
+ */
+export const findSkillSource = (
+  player: PlayerState,
+  sourceInstanceId: string,
+): CookieInBattle | undefined => {
+  const battleSource = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === sourceInstanceId,
+  )
+  if (battleSource) return battleSource
+
+  const breakCard = player.breakArea.find(
+    (card) => card.instanceId === sourceInstanceId,
+  )
+  return breakCard?.skill?.fromBreakArea
+    ? { card: breakCard, hpCards: [], rested: false }
+    : undefined
+}
+
+/**
+ * AI 的「主動發動技能」決策迴圈要考慮的候選來源：戰鬥區照舊，另外加上休息區
+ * 帶 `fromBreakArea` 的餅乾（BS3-025），否則 AI 永遠不會發動這類技能。
+ */
+export const getActivatableSkillSources = (
+  player: PlayerState,
+): CookieInBattle[] => [
+  ...player.battleArea,
+  ...player.breakArea
+    .filter((card) => card.skill?.fromBreakArea)
+    .map((card) => ({ card, hpCards: [], rested: false })),
+]
 
 export const canPayEnergyCost = (
   cost: AbilityCost,
@@ -48,6 +96,24 @@ export const canPaySupportToTrashCost = (
     ).length >= cost.supportToTrash
   )
 }
+
+export const getTrashToDeckBottomCostCandidates = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): GameCard[] => {
+  if (!cost.trashToDeckBottom) return []
+  return discardPile.filter(
+    (card) => !cost.trashToDeckBottom!.nonCookieOnly || card.type !== 'cookie',
+  )
+}
+
+export const canPayTrashToDeckBottomCost = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): boolean =>
+  !cost.trashToDeckBottom ||
+  getTrashToDeckBottomCostCandidates(cost, discardPile).length >=
+    cost.trashToDeckBottom.count
 
 export const getTrashBattleCookieCostCandidates = (
   cost: AbilityCost,
@@ -157,9 +223,7 @@ export const canActivateCookieSkill = (
   trigger: SkillTrigger,
 ): boolean => {
   const player = state.players[playerId]
-  const source = player.battleArea.find(
-    (cookie) => cookie.card.instanceId === sourceInstanceId,
-  )
+  const source = findSkillSource(player, sourceInstanceId)
   const skill = source?.card.skill
 
   if (!source || !skill || skill.trigger !== trigger) {
@@ -212,6 +276,15 @@ export const canActivateCookieSkill = (
     return false
   }
 
+  if (
+    skill.oncePerGame &&
+    (state.skillUsesThisGame ?? []).includes(
+      getOncePerGameKey(playerId, source.card.id),
+    )
+  ) {
+    return false
+  }
+
   if (skill.restSource && source.rested) {
     return false
   }
@@ -234,6 +307,10 @@ export const canActivateCookieSkill = (
     player.supportArea,
     new Set(energyPayment),
   )) {
+    return false
+  }
+
+  if (!canPayTrashToDeckBottomCost(skill.cost, player.discardPile)) {
     return false
   }
 
@@ -265,6 +342,12 @@ export const canActivateCookieSkill = (
     ) {
       return false
     }
+    if (
+      effect.kind === 'break-source-to-battle' &&
+      player.battleArea.length >= 2
+    ) {
+      return false
+    }
     if (isEffectTargeted(effect) && effect.target.min > 0) {
       const candidates = getEffectTargetCandidates(state, context, effect.target)
       if (candidates.length < effect.target.min) {
@@ -285,6 +368,7 @@ export const activateCookieSkill = (
   costSupportToTrashIds: string[] = [],
   discardHandIds: string[] = [],
   trashBattleCookieIds: string[] = [],
+  trashToDeckBottomIds: string[] = [],
 ): GameState => {
   if (
     !canActivateCookieSkill(state, playerId, sourceInstanceId, trigger)
@@ -293,9 +377,7 @@ export const activateCookieSkill = (
   }
 
   const player = state.players[playerId]
-  const source = player.battleArea.find(
-    (cookie) => cookie.card.instanceId === sourceInstanceId,
-  )
+  const source = findSkillSource(player, sourceInstanceId)
 
   if (!source?.card.skill) {
     throw new GameRuleError('找不到要發動的餅乾技能。')
@@ -343,6 +425,28 @@ export const activateCookieSkill = (
     }
   } else if (uniqueDiscardHandIds.length > 0) {
     throw new GameRuleError('此技能不需要棄手牌代價。')
+  }
+
+  const uniqueTrashToDeckBottomIds = [...new Set(trashToDeckBottomIds)]
+  if (uniqueTrashToDeckBottomIds.length !== trashToDeckBottomIds.length) {
+    throw new GameRuleError('不能重複選擇同一張棄牌區卡牌作為代價。')
+  }
+  if (cost.trashToDeckBottom) {
+    if (uniqueTrashToDeckBottomIds.length !== cost.trashToDeckBottom.count) {
+      throw new GameRuleError(
+        `必須選擇 ${cost.trashToDeckBottom.count} 張棄牌區卡牌放到牌庫底作為代價。`,
+      )
+    }
+    const candidateIds = new Set(
+      getTrashToDeckBottomCostCandidates(cost, player.discardPile).map(
+        (card) => card.instanceId,
+      ),
+    )
+    if (uniqueTrashToDeckBottomIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的棄牌區代價不合法。')
+    }
+  } else if (uniqueTrashToDeckBottomIds.length > 0) {
+    throw new GameRuleError('此技能不需要支付棄牌區代價。')
   }
 
   const trashBattlePayment = payTrashBattleCookieCost(
@@ -393,6 +497,15 @@ export const activateCookieSkill = (
     costSupportSet.has(support.card.instanceId),
   )
 
+  // uniqueTrashToDeckBottomIds 的順序就是玩家決定的牌庫底順序。
+  const trashToDeckBottomSet = new Set(uniqueTrashToDeckBottomIds)
+  const trashToDeckBottomCards = uniqueTrashToDeckBottomIds.flatMap((id) => {
+    const card = playerAfterCosts.discardPile.find(
+      (candidate) => candidate.instanceId === id,
+    )
+    return card ? [card] : []
+  })
+
   const discardedCards = player.hand.filter((card) =>
     uniqueDiscardHandIds.includes(card.instanceId),
   )
@@ -421,8 +534,11 @@ export const activateCookieSkill = (
         hand: player.hand.filter(
           (card) => !uniqueDiscardHandIds.includes(card.instanceId),
         ),
+        deck: [...playerAfterCosts.deck, ...trashToDeckBottomCards],
         discardPile: [
-          ...playerAfterCosts.discardPile,
+          ...playerAfterCosts.discardPile.filter(
+            (card) => !trashToDeckBottomSet.has(card.instanceId),
+          ),
           ...trashedCards.map((support) => support.card),
           ...discardedCards,
         ],
@@ -431,6 +547,12 @@ export const activateCookieSkill = (
     skillUsesThisTurn: source.card.skill.oncePerTurn
       ? [...state.skillUsesThisTurn, getSkillUseKey(source)]
       : state.skillUsesThisTurn,
+    skillUsesThisGame: source.card.skill.oncePerGame
+      ? [
+          ...(state.skillUsesThisGame ?? []),
+          getOncePerGameKey(playerId, source.card.id),
+        ]
+      : state.skillUsesThisGame,
   }
 
   const totalDepartedCount =

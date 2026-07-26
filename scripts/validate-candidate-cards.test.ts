@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, beforeAll, beforeEach, afterAll, afterEach } from 'vitest'
 import {
   mkdirSync,
   writeFileSync,
@@ -153,6 +153,7 @@ const VALID_FILE = {
 }
 
 let generatedPoolBackup: string | null = null
+let candidateFilesBackup: Map<string, string> = new Map()
 
 const backupGeneratedPool = () => {
   generatedPoolBackup = existsSync(GENERATED_POOL_PATH)
@@ -168,6 +169,17 @@ const restoreGeneratedPool = () => {
 }
 
 describe.sequential('candidate card pipeline', () => {
+  beforeAll(() => {
+    if (!existsSync(CANDIDATES_DIR)) {
+      mkdirSync(CANDIDATES_DIR, { recursive: true })
+    }
+    candidateFilesBackup = new Map(
+      readdirSync(CANDIDATES_DIR)
+        .filter((file) => file.endsWith('.json'))
+        .map((file) => [file, readFileSync(join(CANDIDATES_DIR, file), 'utf8')]),
+    )
+  })
+
   beforeEach(() => {
     if (!existsSync(CANDIDATES_DIR)) {
       mkdirSync(CANDIDATES_DIR, { recursive: true })
@@ -186,6 +198,18 @@ describe.sequential('candidate card pipeline', () => {
       : []
     for (const file of files) {
       removeCandidateFile(file)
+    }
+  })
+
+  afterAll(() => {
+    const files = existsSync(CANDIDATES_DIR)
+      ? readdirSync(CANDIDATES_DIR).filter((file) => file.endsWith('.json'))
+      : []
+    for (const file of files) {
+      removeCandidateFile(file)
+    }
+    for (const [file, content] of candidateFilesBackup) {
+      writeFileSync(join(CANDIDATES_DIR, file), content, 'utf8')
     }
   })
 
@@ -523,6 +547,25 @@ describe.sequential('candidate card pipeline', () => {
       expect(result.exitCode).toBe(0)
       expect(result.output).toContain('✓ 候選資料全部通過驗證')
     })
+
+    it('accepts inventory candidates without runtime conversion', () => {
+      createCandidateFile('inventory-candidate.json', {
+        ...VALID_FILE,
+        source: { ...VALID_FILE.source, candidateStatus: 'inventory' },
+        cards: [
+          {
+            ...VALID_CARD,
+            cardNumber: 'CANDIDATE-INVENTORY-001',
+            level: null,
+            hp: null,
+          },
+        ],
+      })
+
+      const result = runValidate()
+      expect(result.exitCode).toBe(0)
+      expect(result.output).toContain('inventory 候選')
+    })
   })
 
   describe('promote:candidate', () => {
@@ -559,6 +602,20 @@ describe.sequential('candidate card pipeline', () => {
           join(CANDIDATES_DIR, 'official-starter-deck-green.en.json'),
         ),
       ).toBe(true)
+    })
+
+    it('rejects promote for inventory-only candidates', () => {
+      const inventoryFilename = 'inventory-not-ready.json'
+      createCandidateFile(inventoryFilename, {
+        ...VALID_FILE,
+        source: { ...VALID_FILE.source, candidateStatus: 'inventory' },
+        cards: [{ ...VALID_CARD, cardNumber: 'CANDIDATE-INVENTORY-PROMOTE-001' }],
+      })
+
+      const result = runPromote()
+      expect(result.exitCode).toBe(1)
+      expect(result.errors).toContain('不能 promote')
+      expect(existsSync(join(CANDIDATES_DIR, inventoryFilename))).toBe(true)
     })
 
     it('promotes valid candidate to official cards', () => {

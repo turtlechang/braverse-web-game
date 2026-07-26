@@ -4,6 +4,9 @@ import { getActingPlayerId } from './controller'
 import { createSeededRandom, createSeededShuffle } from './helpers'
 import {
   getBreakToTrashCandidates,
+  getCookieOwnerId,
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
   getEffectTargetCandidates,
   getSupportEffectCandidates,
   getTargetPlayerId,
@@ -20,6 +23,7 @@ import {
   activateCookieSkill,
   canActivateCookieSkill,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckBottomCostCandidates,
 } from './skills'
 import { simulateAbilityEffects } from './ai/ability-effects'
 import type {
@@ -82,6 +86,22 @@ const chooseEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): string[] => {
+  if (
+    effect.kind === 'hand-to-break' ||
+    effect.kind === 'break-to-hand' ||
+    effect.kind === 'hand-to-hp' ||
+    effect.kind === 'rest-support' ||
+    effect.kind === 'support-to-hp' ||
+    effect.kind === 'hand-to-battle' ||
+    effect.kind === 'opponent-trash-to-break' ||
+    (effect.kind === 'set-active' && effect.selectable)
+  ) {
+    const max = getEffectSelectionLimits(effect)?.max ?? 0
+    return getEffectSelectionCandidates(state, context, effect)
+      .slice(0, max)
+      .map((card) => card.instanceId)
+  }
+
   if (
     effect.kind === 'support-to-trash' ||
     effect.kind === 'support-to-hand'
@@ -311,6 +331,48 @@ const chooseEffectTargets = (
         left.hpCards.length - right.hpCards.length
       )
     })
+  } else if (effect.kind === 'transfer-hp') {
+    if (effect.direction === 'to-source') {
+      // 供牌方是被選中的我方餅乾，抽乾它等於送對手 break 進度，只挑撐得住的。
+      const survivors = ordered.filter(
+        (cookie) => cookie.hpCards.length > effect.amount,
+      )
+      if (survivors.length === 0) return []
+      survivors.sort((left, right) => right.hpCards.length - left.hpCards.length)
+      return survivors
+        .slice(0, Math.min(effect.target.max, survivors.length))
+        .map((cookie) => cookie.card.instanceId)
+    }
+    // from-source：供牌方是來源自己，HP 不夠就別搬，否則來源直接昏厥。
+    const source = state.players[context.sourcePlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    )
+    if (!source || source.hpCards.length <= effect.amount) return []
+    ordered.sort((left, right) => left.hpCards.length - right.hpCards.length)
+  } else if (
+    (effect.kind === 'battle-to-break' ||
+      effect.kind === 'battle-to-deck-top') &&
+    effect.target.side === 'either'
+  ) {
+    // 兩者都是把餅乾趕出戰鬥區，只值得對對手用；沒有對手目標時寧可不選。
+    const opponentId =
+      context.sourcePlayerId === 'player-one' ? 'player-two' : 'player-one'
+    const opponentCandidates = ordered.filter(
+      (cookie) => getCookieOwnerId(state, cookie.card.instanceId) === opponentId,
+    )
+    if (opponentCandidates.length === 0) return []
+    opponentCandidates.sort(
+      (left, right) => right.hpCards.length - left.hpCards.length,
+    )
+    return opponentCandidates
+      .slice(0, Math.min(effect.target.max, opponentCandidates.length))
+      .map((cookie) => cookie.card.instanceId)
+  } else if (effect.kind === 'set-cookie-active') {
+    ordered.sort(
+      (left, right) =>
+        getEffectiveAttack(state, right.card.instanceId) -
+        getEffectiveAttack(state, left.card.instanceId),
+    )
   } else if (
     (effect.kind === 'modify-attack' ||
       effect.kind === 'modify-damage-received') &&
@@ -402,6 +464,18 @@ const chooseAbilityCostIds = (
     return null
   }
 
+  const trashToDeckBottomIds = cost.trashToDeckBottom
+    ? getTrashToDeckBottomCostCandidates(cost, player.discardPile)
+        .slice(0, cost.trashToDeckBottom.count)
+        .map((card) => card.instanceId)
+    : []
+  if (
+    cost.trashToDeckBottom &&
+    trashToDeckBottomIds.length < cost.trashToDeckBottom.count
+  ) {
+    return null
+  }
+
   return {
     paymentIds,
     supportToTrashIds,
@@ -409,6 +483,7 @@ const chooseAbilityCostIds = (
     discardHandIds,
     hpToTrashTargetIds,
     trashBattleCookieIds,
+    trashToDeckBottomIds,
   }
 }
 
@@ -523,6 +598,7 @@ const resolveAiCardAbility = (
       hpToTrashTargetIds: costIds.hpToTrashTargetIds,
       trashBattleCookieIds: costIds.trashBattleCookieIds,
       effectTargets: sim.effectTargets,
+      chooseOneModes: sim.chooseOneModes,
     }),
     action: 'play-item',
     description: `${state.players[playerId].name}使用${card.name}。`,
@@ -535,6 +611,16 @@ const isItemEffectTargetCountSufficient = (
   effect: CardEffect,
   targetIds: string[],
 ): boolean => {
+  if (
+    effect.kind === 'hand-to-break' ||
+    effect.kind === 'break-to-hand' ||
+    effect.kind === 'hand-to-hp' ||
+    effect.kind === 'rest-support' ||
+    effect.kind === 'support-to-hp' ||
+    (effect.kind === 'set-active' && effect.selectable)
+  ) {
+    return targetIds.length >= (getEffectSelectionLimits(effect)?.min ?? 0)
+  }
   if (
     (effect.kind === 'support-to-trash' ||
       effect.kind === 'support-to-hand' ||
@@ -559,6 +645,8 @@ const isItemEffectTargetCountSufficient = (
     effect.kind !== 'trash-to-hand' &&
     effect.kind !== 'trash-to-deck' &&
     effect.kind !== 'flip-to-support' &&
+    effect.kind !== 'hand-to-battle' &&
+    effect.kind !== 'opponent-trash-to-break' &&
     effect.kind !== 'opponent-battle-to-trash' &&
     effect.target &&
     targetIds.length < effect.target.min
@@ -654,6 +742,18 @@ const resolveAiSkill = (
     }
   }
 
+  const trashToDeckBottomIds = skill.cost.trashToDeckBottom
+    ? getTrashToDeckBottomCostCandidates(skill.cost, player.discardPile)
+        .slice(0, skill.cost.trashToDeckBottom.count)
+        .map((card) => card.instanceId)
+    : []
+  if (
+    skill.cost.trashToDeckBottom &&
+    trashToDeckBottomIds.length < skill.cost.trashToDeckBottom.count
+  ) {
+    return null
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: source.card.instanceId,
@@ -672,6 +772,7 @@ const resolveAiSkill = (
     costSupportToTrashIds,
     discardHandIds,
     trashBattleCookieIds,
+    trashToDeckBottomIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -693,7 +794,9 @@ const resolveAiSkill = (
       costSupportToTrashIds,
       discardHandIds,
       trashBattleCookieIds,
+      trashToDeckBottomIds,
       effectTargets: sim.effectTargets,
+      chooseOneModes: sim.chooseOneModes,
     }),
     action: 'activate-skill',
     description: `${state.players[playerId].name}發動${source.card.name}的技能。`,
@@ -705,6 +808,16 @@ const isSkillEffectTargetCountSufficient = (
   effect: CardEffect,
   targetIds: string[],
 ): boolean => {
+  if (
+    effect.kind === 'hand-to-break' ||
+    effect.kind === 'break-to-hand' ||
+    effect.kind === 'hand-to-hp' ||
+    effect.kind === 'rest-support' ||
+    effect.kind === 'support-to-hp' ||
+    (effect.kind === 'set-active' && effect.selectable)
+  ) {
+    return targetIds.length >= (getEffectSelectionLimits(effect)?.min ?? 0)
+  }
   if (effect.kind === 'gain-hp' && effect.target && !effect.target.sourceOnly) {
     return targetIds.length >= effect.target.min
   }
@@ -738,6 +851,8 @@ const isSkillEffectTargetCountSufficient = (
     effect.kind !== 'trash-to-hand' &&
     effect.kind !== 'trash-to-deck' &&
     effect.kind !== 'flip-to-support' &&
+    effect.kind !== 'hand-to-battle' &&
+    effect.kind !== 'opponent-trash-to-break' &&
     effect.target &&
     targetIds.length < effect.target.min
   ) {

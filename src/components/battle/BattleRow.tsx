@@ -257,6 +257,11 @@ export function BattleRow({
             const canSelectBreakEffectTarget = breakEffectTargetIds.has(
               card.instanceId,
             )
+            // BS3-025 這類技能允許來源在休息區發動；一般休息區卡牌沒有這個按鈕。
+            const canActivateFromBreak =
+              canOperate &&
+              !canSelectBreakEffectTarget &&
+              canActivateCookieSkill(game, playerId, card.instanceId, 'activate')
             return (
               <div
                 className="break-card-wrap"
@@ -279,6 +284,15 @@ export function BattleRow({
                 />
                 {canSelectBreakEffectTarget && (
                   <span className="target-hint">效果目標</span>
+                )}
+                {canActivateFromBreak && (
+                  <button
+                    className="skill-action"
+                    type="button"
+                    onClick={() => onActivateSkill?.(card.instanceId)}
+                  >
+                    啟動技能
+                  </button>
                 )}
               </div>
             )

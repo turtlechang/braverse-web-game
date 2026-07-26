@@ -32,7 +32,7 @@ describe('inspect-deck', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     expect(result.pendingInspectDeck).toBeDefined()
     expect(result.pendingInspectDeck!.revealedCards).toHaveLength(3)
@@ -51,7 +51,7 @@ describe('inspect-deck', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     const pending = withPending.pendingInspectDeck!
     const pickedId = pending.revealedCards[0].instanceId
@@ -71,7 +71,7 @@ describe('inspect-deck', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     const pending = withPending.pendingInspectDeck!
     const pickedId = pending.revealedCards[0].instanceId
@@ -87,7 +87,7 @@ describe('inspect-deck', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     const pending = withPending.pendingInspectDeck!
     const pickedId = pending.revealedCards[0].instanceId
@@ -103,7 +103,7 @@ describe('inspect-deck', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     expect(() =>
       resolveInspectDeck(withPending, 'player-one', 'non-existent', ['a', 'b']),
@@ -130,7 +130,7 @@ describe('inspect-deck', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     expect(result.pendingRefresh).toBeDefined()
     expect(result.pendingRefresh!.remainingDraws).toBe(0)
@@ -157,7 +157,7 @@ describe('inspect-deck', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     expect(result.status).toBe('finished')
     expect(result.result?.loserId).toBe('player-one')
@@ -379,7 +379,7 @@ describe('inspect-deck integration', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     expect(result.pendingRefresh).toBeDefined()
     expect(result.pendingRefresh!.playerId).toBe('player-one')
@@ -416,7 +416,7 @@ describe('inspect-deck integration', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     expect(result.pendingRefresh).toBeDefined()
     expect(result.pendingInspectDeck!.revealedCards).toHaveLength(1)
@@ -457,7 +457,7 @@ describe('inspect-deck integration', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
     }, [])
     expect(result.pendingRefresh).toBeDefined()
     expect(result.pendingInspectDeck!.revealedCards).toHaveLength(2)
@@ -568,7 +568,7 @@ describe('inspect-deck with filterColor', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
       filterColor: 'blue',
     }, [])
     expect(result.pendingInspectDeck).toBeDefined()
@@ -585,7 +585,7 @@ describe('inspect-deck with filterColor', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
       filterColor: 'blue',
     }, [])
     const pending = withPending.pendingInspectDeck!
@@ -609,7 +609,7 @@ describe('inspect-deck with filterColor', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
       filterColor: 'blue',
     }, [])
     const pending = withPending.pendingInspectDeck!
@@ -631,7 +631,7 @@ describe('inspect-deck with filterColor', () => {
       kind: 'inspect-deck',
       lookCount: 3,
       pickCount: 1,
-      restToBottom: true,
+      restDestination: 'bottom',
       filterColor: 'blue',
     }, [])
     const pending = withPending.pendingInspectDeck!

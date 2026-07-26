@@ -56,6 +56,7 @@ export const commandActionTypes: Record<
   'activate-stage': 'activate-stage',
   'begin-activate-stage': 'activate-stage',
   'resolve-ability-effect': 'idle',
+  'resolve-choose-one': 'idle',
   'replace-cookie': 'replace-cookie',
   'skip-replacement': 'skip-replacement',
   'refresh-deck': 'refresh',

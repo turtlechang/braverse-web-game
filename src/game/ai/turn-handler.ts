@@ -7,6 +7,7 @@ import { getAttackEnergyCost, selectEnergyPayment } from '../energy'
 import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
 import { advancePhase, canAttack } from '../turn'
+import { getActivatableSkillSources } from '../skills'
 import { simulateAbilityEffects } from './ability-effects'
 import type {
   CardEffect,
@@ -264,6 +265,7 @@ export const handleAiTurnState = (
               playerId,
               paymentIds,
               effectTargets: sim.effectTargets,
+              chooseOneModes: sim.chooseOneModes,
             }),
             action: 'activate-stage',
             description: `${player.name}啟動${stage.card.name}。`,
@@ -326,7 +328,7 @@ export const handleAiTurnState = (
       }
     }
 
-    for (const source of player.battleArea) {
+    for (const source of getActivatableSkillSources(player)) {
       const skillDecision = strategy.resolveSkill(
         state,
         playerId,
