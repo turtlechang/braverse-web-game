@@ -70,9 +70,16 @@ export const simulateAbilityEffects = (
       effectTargets.push([])
       continue
     }
-    // 與 commands.executeAbilityEffects 一致：無合法目標時整段 Then 中止，
-    // 但動作本身仍成立（費用已付、卡已進棄牌），故 aborted 維持 false。
+    // 與 commands.executeAbilityEffects 一致：只有緊接著 equip-source 的
+    // 選目標效果，在沒有合法候選時才整段中止（官方 Q&A 只針對 BS3-019 這種
+    // 「Select…Then equip」的靈魂果醬寫法）；動作本身仍成立（費用已付、卡已
+    // 進棄牌），故 aborted 維持 false。不能廣泛套用到任一效果——後面若接的是
+    // 彼此獨立的效果（例如 BS3-081「傷害，然後把來源送回牌庫頂」），對手沒有
+    // 合法傷害目標不代表後面的自身效果也不該執行。兩邊的判斷必須同步，否則
+    // AI 這裡算出的「提前中止」效果目標陣列，交給 commands.ts 執行時因為沒有
+    // 中止而拿到不足的目標數，會直接丟錯。
     if (
+      queue[index + 1]?.kind === 'equip-source' &&
       requiresTargetSelection(effect) &&
       getEffectTargetCandidatesForEffect(nextState, context, effect).length === 0
     ) {

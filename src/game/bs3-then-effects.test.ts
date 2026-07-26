@@ -9,8 +9,10 @@ import {
   resolveNextDamage,
   skipTrap,
 } from './battle'
+import { applyGameCommand } from './commands'
 import { executeCardEffect } from './effects'
-import type { CardEffect, CookieCard, EffectContext, GameCard } from './types'
+import { simulateAbilityEffects } from './ai/ability-effects'
+import type { CardEffect, CookieCard, EffectContext, GameCard, GameState } from './types'
 import { createBattleState, cookie as baseCookie, item } from './test-helpers/battle-helpers'
 
 const findBs3Card = (cardNumber: string) => {
@@ -732,5 +734,127 @@ describe('BS3 attack Then effects', () => {
         amount: 1,
       }),
     )
+  })
+})
+
+/**
+ * 回歸測試：官方 Q&A（BS3-019 vs BS3-115）要求「Select…Then equip」在沒有
+ * 合法目標時整段中止，但這個中止**只**能綁定在緊接著的 equip-source 上。
+ * BS3-081「對手 0～1 傷害，然後把來源自己送回牌庫頂」是同樣「傷害＋後續
+ * 效果」的形狀，但兩段彼此獨立——對手戰鬥區剛好淨空只代表傷害沒有目標可選，
+ * 不代表後面的自身效果也不該執行。commands.ts 的 executeAbilityEffects 與
+ * ai/ability-effects.ts 的 simulateAbilityEffects 必須用同一份判斷條件，
+ * 否則 AI 算出的 effectTargets 會跟正式執行時的中止時機對不上而丟錯。
+ */
+describe('independent multi-effect chains do not abort on an unrelated empty opponent side', () => {
+  const bs3081 = (instanceId: string): CookieCard => ({
+    ...baseCookie(instanceId, 2, 3),
+    id: 'BS3-081',
+    level: 2,
+    energyColor: 'blue',
+    skill: {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: true,
+      restSource: false,
+      cost: { energy: { blue: 2 }, discardHand: 1 },
+      text: 'BS3-081',
+      effects: [
+        { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
+        {
+          kind: 'battle-to-deck-top',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    },
+  })
+
+  it('still sends the source to the deck top when the opponent battle area is empty', () => {
+    const base = createBattleState()
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': { ...base.players['player-one'], battleArea: [] },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            {
+              card: bs3081('gcc-081'),
+              hpCards: [item('hp-a'), item('hp-b'), item('hp-c')],
+              rested: false,
+              battleEntryId: 'gcc-081:battle:1',
+            },
+          ],
+          supportArea: [
+            { card: item('p2-blue-1', 'blue'), rested: false },
+            { card: item('p2-blue-2', 'blue'), rested: false },
+          ],
+          hand: [item('p2-discard-fodder')],
+        },
+      },
+    }
+
+    const result = applyGameCommand(state, {
+      kind: 'activate-skill',
+      playerId: 'player-two',
+      sourceInstanceId: 'gcc-081',
+      trigger: 'activate',
+      paymentIds: ['p2-blue-1', 'p2-blue-2'],
+      discardHandIds: ['p2-discard-fodder'],
+      effectTargets: [[], ['gcc-081']],
+    })
+
+    const player = result.players['player-two']
+    expect(player.battleArea.some((entry) => entry.card.instanceId === 'gcc-081')).toBe(
+      false,
+    )
+    expect(player.deck[0]?.instanceId).toBe('gcc-081')
+  })
+
+  it('the AI-simulation path computes the same effectTargets shape as execution expects', () => {
+    const base = createBattleState()
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': { ...base.players['player-one'], battleArea: [] },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            {
+              card: bs3081('gcc-081'),
+              hpCards: [item('hp-a'), item('hp-b'), item('hp-c')],
+              rested: false,
+              battleEntryId: 'gcc-081:battle:1',
+            },
+          ],
+        },
+      },
+    }
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: 'gcc-081',
+      sourceCardName: 'gcc-081',
+    }
+
+    // 兩份模擬邏輯必須用同一個「何時中止」判斷；這裡不需要真的選出對手目標
+    // （對手戰鬥區已清空，理應選不到），重點是第二個效果仍要拿到自己的
+    // sourceOnly 目標，不能因為第一個效果沒有候選就整段被跳過。
+    const sim = simulateAbilityEffects(
+      state,
+      context,
+      bs3081('gcc-081').skill!.effects,
+      (_s, _ctx, effect) => (effect.kind === 'battle-to-deck-top' ? ['gcc-081'] : []),
+      () => true,
+      { sourceInstanceId: 'gcc-081', paymentIds: [] },
+    )
+
+    expect(sim.aborted).toBe(false)
+    expect(sim.effectTargets).toHaveLength(2)
+    expect(sim.effectTargets[1]).toEqual(['gcc-081'])
+    expect(
+      sim.effectSelections.some((selection) => selection.effect.kind === 'battle-to-deck-top'),
+    ).toBe(true)
   })
 })

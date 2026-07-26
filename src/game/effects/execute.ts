@@ -2296,39 +2296,41 @@ export const executeCardEffect = (
       departedCount,
       departedCookieCards,
     )
-    const damagedInstanceIds = targets.map((t) => t.card.instanceId)
+    const damagedInstanceIds = protectedTargets.map((t) => t.card.instanceId)
     return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 
   if (effect.kind === 'split-damage') {
     const previousBattleAreaCount =
       state.players[targetPlayerId].battleArea.length
-    const protectedTargets = targets.filter(
-      (target) => !isEffectDamagePrevented(state, target.card.instanceId),
-    )
     let damagedPlayer = state.players[targetPlayerId]
-    
-    if (protectedTargets.length === 1) {
+
+    // 保護篩掉的目標直接跳過，不重新編號——primary/secondary 傷害量是綁在
+    // 玩家選擇的第一/第二個目標上，若把被保護者濾掉後重新從 0 編號，會讓
+    // 原本該拿 secondaryAmount 的第二目標錯拿成 primaryAmount。
+    const appliedTargets = [
+      targets[0] && !isEffectDamagePrevented(state, targets[0].card.instanceId)
+        ? targets[0]
+        : undefined,
+      targets[1] && !isEffectDamagePrevented(state, targets[1].card.instanceId)
+        ? targets[1]
+        : undefined,
+    ] as const
+    const amounts = [effect.primaryAmount, effect.secondaryAmount] as const
+    const appliedList = appliedTargets.flatMap((target, index) =>
+      target ? [{ target, amount: amounts[index] }] : [],
+    )
+    for (const { target, amount } of appliedList) {
       damagedPlayer = damagePlayerCookie(
         damagedPlayer,
-        protectedTargets[0].card.instanceId,
-        effect.primaryAmount,
-      )
-    } else if (protectedTargets.length === 2) {
-      damagedPlayer = damagePlayerCookie(
-        damagedPlayer,
-        protectedTargets[0].card.instanceId,
-        effect.primaryAmount,
-      )
-      damagedPlayer = damagePlayerCookie(
-        damagedPlayer,
-        protectedTargets[1].card.instanceId,
-        effect.secondaryAmount,
+        target.card.instanceId,
+        amount,
       )
     }
 
     const departedCount = previousBattleAreaCount - damagedPlayer.battleArea.length
-    const departedCookieCards = protectedTargets
+    const departedCookieCards = appliedList
+      .map(({ target }) => target)
       .filter((target) => !damagedPlayer.battleArea.some(
         (cookie) => cookie.card.instanceId === target.card.instanceId,
       ))
@@ -2346,7 +2348,7 @@ export const executeCardEffect = (
       departedCount,
       departedCookieCards,
     )
-    const damagedInstanceIds = targets.map((t) => t.card.instanceId)
+    const damagedInstanceIds = appliedList.map(({ target }) => target.card.instanceId)
     return collectAfterDamageEffectsFromIds(damageState, damagedInstanceIds, 'effect')
   }
 

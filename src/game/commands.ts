@@ -969,16 +969,31 @@ const assertNoPendingDecision = (
 }
 
 /**
- * 官方 Q&A（BS3-019）：需要指定目標的效果若當場沒有任何合法候選，
- * 該效果與後續 Then 皆不執行（費用已付、卡已進棄牌區不回溯）。
+ * 官方 Q&A（BS3-019）：靈魂果醬「Select…That Cookie receives damage. Then,
+ * you can {mou} this card to your [Cookie]」這種寫法，裝載跟在選目標效果
+ * 後面、依附於它——若選目標效果當場沒有任何合法候選，裝載也不執行（費用已付、
+ * 卡已進棄牌區不回溯）。
+ *
+ * 這個中止**只**在下一個效果是 `equip-source` 時才成立，不能廣泛套用到「任一
+ * 效果沒有合法目標就中止整條鏈」——多數卡牌的後續效果彼此獨立（例如
+ * BS3-081「對手 0～1 傷害，然後把來源自己送回牌庫頂」），對手戰鬥區剛好淨空
+ * 只代表傷害沒有目標可選，不代表後面自身效果也不該執行；BS3-089／097 也是
+ * 同樣的形狀。曾經廣泛套用過一次並造成這三張的回歸，靠 bs3-then-effects.test.ts
+ * 的新增案例抓到。
  */
 const hasNoLegalSelectableTargets = (
   state: GameState,
   context: EffectContext,
-  effect: CardEffect,
-): boolean =>
-  requiresTargetSelection(effect) &&
-  getEffectTargetCandidatesForEffect(state, context, effect).length === 0
+  effects: readonly CardEffect[],
+  effectIndex: number,
+): boolean => {
+  if (effects[effectIndex + 1]?.kind !== 'equip-source') return false
+  const effect = effects[effectIndex]
+  return (
+    requiresTargetSelection(effect) &&
+    getEffectTargetCandidatesForEffect(state, context, effect).length === 0
+  )
+}
 
 const executeAbilityEffects = (
   state: GameState,
@@ -1003,7 +1018,7 @@ const executeAbilityEffects = (
       continue
     }
     if (!isEffectConditionMet(nextState, context, effect)) continue
-    if (hasNoLegalSelectableTargets(nextState, context, effect)) break
+    if (hasNoLegalSelectableTargets(nextState, context, queue, index)) break
     nextState = executeCardEffect(
       nextState,
       context,
@@ -1055,8 +1070,8 @@ const resolvePendingAbilityEffect = (
     sourceCardName: pending.sourceCardName,
   }
   const effect = pending.effects[pending.effectIndex]
-  // 官方 Q&A（BS3-019）：無合法目標時當前效果與後續 Then 整段中止。
-  if (hasNoLegalSelectableTargets(state, context, effect)) {
+  // 官方 Q&A（BS3-019）：無合法目標時，緊接在後的裝載一併中止（見上方函式註解）。
+  if (hasNoLegalSelectableTargets(state, context, pending.effects, pending.effectIndex)) {
     return { ...state, pendingAbilityEffect: undefined }
   }
   const resolved = executeCardEffect(
