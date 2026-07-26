@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- ✅ BS3 官方 Q&A 批次核對（2026-07-26）：7 張卡牌全數正確。BS3-076《草莓可麗餅餅乾》reveal-top-deck peek + 條件 damage 已正確；BS3-060《妖精王餅乾》hp-to-trash 移除 2 HP 後若 HP=0 直接送休息區，source-in-break-area 條件成立時 rest support 已正確；BS3-042《黃金起司護者泥人》battle-to-break 代價先結算、破裂等級先達 10 則先輸；BS3-041《義大利寬麵餅乾》基礎攻擊 3 傷害先結算（對手先暈），battle-to-break 後執行；BS3-040《探險家餅乾》battle-to-break + side: 'either' + maxLevel: 1 雙方戰鬥區 LV.1 選擇已正確；BS3-037《天使餅乾》optional-cost-attack + gain-hp 含 opponent-cookie-fainted-in-current-battle 條件已正確；BS3-029《巴斯克起司餅乾》hand-to-battle 暈倒觸發，技能補充計入離場數量、再登場互斥已正確。
+- ✅ BS3-080《濃縮咖啡餅乾》官方 Q&A 核對（2026-07-26）：官方確認效果執行完畢後展示的牌須放回牌庫頂，且僅當條件匹配時才能執行後方效果。`optional-cost-attack` 含 `reveal-top-deck`（`match: { type: 'cookie', energyColor: 'blue', level: 2 }`）+ nested `draw-up-to`，`reveal-top-deck` 以 `deck[0]` peek 不移除牌庫頂卡、條件匹配才執行 nested effect，卡始終留在牌庫頂，行為已正確。新增 1 項回歸測試覆蓋匹配／不匹配場景；`bs3-then-effects.test.ts`（16 項）、lint、build 通過。
 - 🐛 BS3-082《勇敢餅乾》`prevent-effect-damage` 執行器 bug 修正（2026-07-26）：官方確認「基礎攻擊傷害以外的傷害來源皆無法對這個餅乾造成傷害」，但 `effectDamagePreventedUntilTurn` 只被寫入、從未在傷害結算時檢查。修正 `damage`、`damage-all`、`split-damage` 三條路徑，受保護餅乾不再承受效果傷害；新增 `isEffectDamagePrevented` 輔助函式。lint、build 通過。
 - ✅ BS3-087《濃縮奶油餅乾》官方 Q&A 核對（2026-07-26）：官方確認五色靈魂果醬任一即可滿足條件，且只檢視本次攻擊對象的等級。`support-keyword-at-least` 條件以 `keywords.includes('soul-jam')` 判定不限顏色，`attackTargetOnly: true` + `maxLevel: 1` 鎖定當次攻擊目標 LV.1，實作已正確。
 - 🐛 BS3-091《靈魂果醬:真理之光》官方 Q&A 修正（2026-07-26）：**（1）** `inspect-deck` 的 `restDestination` 錯誤設為 `'bottom'`，卡片文字明確寫「未選擇的牌以任意順序放回牌庫**最上方**」，已修正為 `'top'`。**（2）** 官方確認「查看」是玩家自己看（不展示給對手），`inspect-deck` 的 peek 行為已正確。**（3）** 裝載後的攻擊觸發「抽 1 張牌」是**必定發動**而非選擇性，`getEquipAttackEffects` 回傳的 `draw` 效果會直接加入 `attackEffects`，無可選標記，已正確。`bs3-soul-jam.test.ts`（15 項）、`inspect-deck.test.ts`（19 項）通過。

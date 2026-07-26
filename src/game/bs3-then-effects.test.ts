@@ -10,8 +10,8 @@ import {
   skipTrap,
 } from './battle'
 import { executeCardEffect } from './effects'
-import type { CookieCard, GameCard } from './types'
-import { createBattleState, item } from './test-helpers/battle-helpers'
+import type { CardEffect, CookieCard, EffectContext, GameCard } from './types'
+import { createBattleState, cookie as baseCookie, item } from './test-helpers/battle-helpers'
 
 const findBs3Card = (cardNumber: string) => {
   const card = (officialBS3Inventory.cards as OfficialCardRecord[]).find(
@@ -635,6 +635,65 @@ describe('BS3 attack Then effects', () => {
         match: { type: 'cookie', energyColor: 'blue', level: 2 },
       }],
     })
+  })
+
+  /**
+   * 官方 Q&A：BS3-080 的 reveal-top-deck peek 後卡留在牌庫頂，
+   * 條件匹配時才執行 nested draw-up-to。
+   */
+  it('BS3-080 reveal keeps card on top and draws only when matched', () => {
+    const espresso = asCookie('BS3-080')
+    const optionalCost = espresso.attackEffects?.[0]
+    expect(optionalCost).toBeDefined()
+    expect(optionalCost!.kind).toBe('optional-cost-attack')
+
+    // optional-cost-attack 的 nested effects 包含 reveal-top-deck
+    const optionalCostEffect = optionalCost as Extract<CardEffect, { kind: 'optional-cost-attack' }>
+    const revealEffect = optionalCostEffect.effects[0]
+    expect(revealEffect).toBeDefined()
+    expect(revealEffect.kind).toBe('reveal-top-deck')
+
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: 'espresso',
+      sourceCardName: 'Espresso Cookie',
+    }
+
+    const blueLv2: CookieCard = {
+      ...baseCookie('blue-lv2'),
+      level: 2,
+      energyColor: 'blue',
+    }
+    const blueLv1: CookieCard = {
+      ...baseCookie('blue-lv1'),
+      level: 1,
+      energyColor: 'blue',
+    }
+
+    // 匹配場景：牌庫頂為 Blue LV.2
+    let state = createBattleState()
+    state.players['player-two'].deck = [
+      blueLv2,
+      item('draw-1'),
+      item('draw-2'),
+      item('draw-3'),
+    ]
+    const beforeDeck = state.players['player-two'].deck.map((c) => c.instanceId)
+    const matched = executeCardEffect(state, context, revealEffect, ['defender'])
+    expect(matched.players['player-two'].deck.map((c) => c.instanceId)).toEqual(
+      beforeDeck,
+    )
+    expect(matched.pendingDrawUpTo).toBeDefined()
+    expect(matched.pendingDrawUpTo?.max).toBe(2)
+
+    // 不匹配場景：牌庫頂為 Blue LV.1
+    state = createBattleState()
+    state.players['player-two'].deck = [blueLv1, item('under-miss')]
+    const handBefore = state.players['player-two'].hand.length
+    const missed = executeCardEffect(state, context, revealEffect, ['defender'])
+    expect(missed.players['player-two'].deck[0].instanceId).toBe('blue-lv1')
+    expect(missed.pendingDrawUpTo).toBeUndefined()
+    expect(missed.players['player-two'].hand.length).toBe(handBefore)
   })
 
   it('attaches a Soul Jam below its matching Ancient Cookie and applies its bonus', () => {
