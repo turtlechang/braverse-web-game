@@ -148,7 +148,12 @@ export const validateCardEffectSemantics = (
   if (entry.type === 'trap' && entry.attackText && (!card.trap || card.trap.effects.length === 0)) {
     errors.push(`${label}: 陷阱文字必須轉出含至少 1 個效果的 trap`)
   }
-  if (entry.type === 'stage' && entry.attackText && (!card.stageAbility || card.stageAbility.effects.length === 0)) {
+  if (
+    entry.type === 'stage' &&
+    entry.attackText &&
+    (!card.stageAbility ||
+      (card.stageAbility.effects.length === 0 && !card.stageAbility.specialVictory))
+  ) {
     errors.push(`${label}: 場景文字必須轉出含至少 1 個效果的 stageAbility`)
   }
 
@@ -166,10 +171,20 @@ export const validateCardEffectSemantics = (
     }
   }
 
-  if (/rest this card|card rests/i.test(entry.skill.text ?? '') && card.skill?.restSource !== true) {
+  if (
+    entry.type !== 'stage' &&
+    /rest this card|card rests/i.test(entry.skill.text ?? '') &&
+    card.skill?.restSource !== true
+  ) {
     errors.push(`${label}: 技能文字要求橫置來源，但 skill.restSource 未設定`)
   }
-  if (/rest this card|card rests/i.test(entry.attackText ?? '') && entry.type === 'stage' && card.stageAbility?.restSource !== true) {
+  // 場景卡的橫置文字可能落在 skill.text 或 attackText 任一欄位（例如 BS3-095@2
+  // 這個異畫版本，官方來源把安置與啟動文字都塞進 skill.text、attackText 是 null）。
+  if (
+    entry.type === 'stage' &&
+    /rest this card|card rests/i.test(`${entry.skill.text ?? ''}\n${entry.attackText ?? ''}`) &&
+    card.stageAbility?.restSource !== true
+  ) {
     errors.push(`${label}: 場景文字要求橫置來源，但 stageAbility.restSource 未設定`)
   }
 

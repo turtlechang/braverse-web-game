@@ -2040,10 +2040,11 @@ export const convertOfficialItemAbility = (
 export const convertOfficialStageAbility = (
   card: OfficialCardRecord,
 ): StageAbility | undefined => {
-  if (card.type !== 'stage' || !card.attackText) return undefined
+  if (card.type !== 'stage') return undefined
   const sourceText = [card.skill.text, card.attackText]
     .filter((text): text is string => Boolean(text?.trim()))
     .join('\n')
+  if (!sourceText) return undefined
   const [placementText, activationText] = sourceText.split(
     STAGE_ACTIVATE_MARKER_PATTERN,
   )
@@ -2163,7 +2164,24 @@ export const convertOfficialStageAbility = (
         optional: true,
       },
     ],
-    'BS3-095': [{ kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'bottom' }],
+    'BS3-095': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'View 3 cards from the top of your deck; place them back to the top of your deck in any order.',
+            effects: [{ kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' }],
+          },
+          {
+            label: 'Draw 1 card from your deck and place this card at the bottom of your deck.',
+            effects: [
+              { kind: 'draw', amount: 1 },
+              { kind: 'stage-source-to-deck', destination: 'bottom' },
+            ],
+          },
+        ],
+      },
+    ],
     'BS3-096': [
       {
         kind: 'draw',
@@ -2193,17 +2211,20 @@ export const convertOfficialStageAbility = (
     'BS2-051': { energy: {}, discardHand: 1 },
     'BS2-081': { energy: { purple: 1 }, discardHand: 0 },
   }
-  const stageEffects = exactStageEffects[card.cardNumber]
+  const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {
     return {
       placementCost: placement.cost,
       cost:
-        exactStageCosts[card.cardNumber] ??
+        exactStageCosts[card.baseCardNumber] ??
         (activation?.cost ?? {}),
-      text: card.attackText,
+      text: sourceText,
       effects: stageEffects,
+      // BS3-095@1 這個異畫版本的官方文字缺了「<Rest this card.>」（base／@2 都有），
+      // 判斷是來源網站對該版本的資料缺漏，不是規則差異，固定以 baseCardNumber 覆寫。
       restSource:
         card.cardNumber === 'ST5-022' ||
+        card.baseCardNumber === 'BS3-095' ||
         RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
       ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
     }
@@ -2222,7 +2243,7 @@ export const convertOfficialStageAbility = (
   return {
     placementCost: placement.cost,
     cost: activation.cost,
-    text: card.attackText,
+    text: sourceText,
     effects: conversion.effects,
     restSource: RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
   }

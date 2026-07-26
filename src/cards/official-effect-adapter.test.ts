@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import officialBS3Inventory from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs3.en.json'
+import officialBS3Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
