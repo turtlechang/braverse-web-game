@@ -12,6 +12,7 @@ import {
   convertOfficialStageAbility,
   convertOfficialTrapAbility,
 } from '../cards/official-effect-adapter'
+import { getRuntimeKeywords } from '../cards/official-card-adapter'
 import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { CardEffect, GameCard, PlayerId } from './types'
@@ -331,6 +332,8 @@ export const createCard = (
     effects = flip.effects
   }
 
+  const keywords = getRuntimeKeywords(source)
+
   const base = {
     id: source.baseCardNumber,
     instanceId: `${playerId}-${source.cardNumber}-${copyNumber}`,
@@ -340,6 +343,7 @@ export const createCard = (
     officialType: (source.type === 'flip'
       ? 'flip'
       : 'cookie') as GameCard['officialType'],
+    ...(keywords.length > 0 ? { keywords } : {}),
     ...(effectText ? { effectText, effects } : {}),
   }
 

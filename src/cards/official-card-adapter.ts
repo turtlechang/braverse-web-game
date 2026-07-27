@@ -57,7 +57,7 @@ const getEnergyColor = (
   return undefined
 }
 
-const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
+export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
   const keywords = new Set<CardKeyword>()
 
   if (card.keywords.some((keyword) => keyword.replace(/[{}]/g, '').trim().toLowerCase() === 'ancient')) {
