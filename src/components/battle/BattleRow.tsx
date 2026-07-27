@@ -1,4 +1,4 @@
-import { Layers3, Heart, Swords } from 'lucide-react'
+import { Layers3, Heart, Swords, Gem } from 'lucide-react'
 import {
   canActivateCookieSkill,
   canActivateStage,
@@ -510,6 +510,14 @@ export function BattleRow({
                       <Swords size={12} aria-hidden="true" /> {getEffectiveAttack(game, cookie.card.instanceId)}
                     </span>
                   </div>
+                  {cookie.equippedCards && cookie.equippedCards.length > 0 && (
+                    <span
+                      className="badge-equip"
+                      title={`已裝備：${cookie.equippedCards.map((equipped) => equipped.name).join('、')}`}
+                    >
+                      <Gem size={12} aria-hidden="true" /> {cookie.equippedCards.length}
+                    </span>
+                  )}
                   <div
                     className="hp-card-stack"
                     aria-label={`${cookie.card.name} HP 卡 ${cookie.hpCards.length} 張`}
