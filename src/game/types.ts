@@ -206,6 +206,11 @@ export interface OpponentBreakLevelAtMostCondition {
   level: number
 }
 
+/** 己方休息區等級總和高於對手（P-009 的「if your break area LV. is higher than your opponent's」）。 */
+export interface BreakLevelHigherThanOpponentCondition {
+  kind: 'break-level-higher-than-opponent'
+}
+
 export interface SourceHpLessThanCondition {
   kind: 'source-hp-less-than'
   amount: number
@@ -254,6 +259,7 @@ export type EffectCondition =
   | OpponentCookieFaintedInCurrentBattleCondition
   | SupportKeywordAtLeastCondition
   | AnyBattleAreaHasBlockerCondition
+  | BreakLevelHigherThanOpponentCondition
 
 export interface DamageEffect {
   kind: 'damage'
@@ -275,6 +281,8 @@ export interface DamageAllEffect {
   amount: number
   side: EffectTargetSide
   condition?: EffectCondition
+  /** 排除來源自己（P-018「Deals damage to all Cookies other than this Cookie」）。 */
+  excludeSource?: boolean
 }
 
 export interface DamageByBreakCountEffect {
@@ -374,9 +382,19 @@ export interface DeckToTrashEffect {
 export interface BreakToTrashEffect {
   kind: 'break-to-trash'
   max: number
+  energyColor?: EnergyColor
   exactLevel?: number
   maxLevel?: number
   condition?: EffectCondition
+}
+
+/** 從棄牌區選餅乾放進自己的休息區（P-016，跟 `break-to-trash` 方向相反）。 */
+export interface TrashToBreakEffect {
+  kind: 'trash-to-break'
+  amount: number
+  energyColor?: EnergyColor
+  exactLevel?: number
+  maxLevel?: number
 }
 
 export interface GainHpEffect {
@@ -871,6 +889,7 @@ export type CardEffect =
   | ChooseOneEffect
   | BreakSourceToBattleEffect
   | StageSourceToDeckEffect
+  | TrashToBreakEffect
 
 export type TargetedCardEffect =
   | DamageEffect

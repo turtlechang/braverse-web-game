@@ -31,6 +31,8 @@ export type OfficialEffectConversion =
 // 官方文字對「Rest this card.」的措辭不一致，BS2-051 用「Card Rests.」，需一併比對
 const RESTS_THIS_CARD_PATTERN = /Rest this card|Card Rests/i
 const STAGE_ACTIVATE_MARKER_PATTERN = /\{mob\}|【Activate】/i
+// 昏厥觸發措辭不一致：多數卡是「When this Cookie faints」，P-011 用「If this Cookie has fainted」
+const FAINT_TRIGGER_PATTERN = /When this Cookie faints|If this Cookie has fainted/i
 
 const getEffectText = (card: OfficialCardRecord): string | null => {
   if (card.type === 'cookie') {
@@ -1438,6 +1440,106 @@ export const convertOfficialCardEffects = (
         hpCount: 1,
       },
     ],
+    // === P-0XX 促銷卡 ===
+    'P-001': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    'P-002': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    'P-003': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    'P-013': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    'P-014': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    'P-007': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'P-008': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 4 },
+      },
+    ],
+    'P-010': [
+      {
+        kind: 'disable-attack',
+        duration: 'opponent-next-turn',
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
+    'P-011': [
+      { kind: 'support-to-hand', amount: 1 },
+      { kind: 'hand-to-support', amount: 1, rested: true },
+    ],
+    'P-012': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      { kind: 'place-source-to-support', rested: true },
+    ],
+    'P-016': [
+      {
+        kind: 'trash-to-break',
+        amount: 1,
+        energyColor: 'yellow',
+        exactLevel: 2,
+      },
+      {
+        kind: 'break-to-trash',
+        max: 2,
+        energyColor: 'yellow',
+        exactLevel: 1,
+      },
+    ],
+    'P-018': [
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      { kind: 'damage-all', amount: 1, side: 'self', excludeSource: true },
+    ],
+    'P-030': [
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -1478,7 +1580,7 @@ export const convertOfficialCardEffects = (
     }
   }
 
-  const isFaintSkill = /When this Cookie faints/i.test(sourceText)
+  const isFaintSkill = FAINT_TRIGGER_PATTERN.test(sourceText)
   if (isFaintSkill && card.type !== 'cookie') {
     return {
       status: 'unsupported',
@@ -2811,6 +2913,54 @@ export const convertOfficialAttackEffects = (
         sourceEnergy: { purple: 1 },
       } satisfies CardEffect as CardEffect,
     ],
+    // === P-0XX 促銷卡 ===
+    'P-009': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'break-level-higher-than-opponent' },
+      },
+    ],
+    'P-015': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        sourceEnergy: { red: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'hp-to-trash',
+            amount: 2,
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {R} to deal 1 damage to 1 of your opponent\'s Cookies, then place 2 cards from the top of 1 of your Cookie\'s HP into the trash.',
+      },
+    ],
+    'P-019': [
+      { kind: 'trash-to-deck', max: 3, excludeFlip: true },
+    ],
+    'P-030': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        effectText:
+          'You can discard 1 card to deal 1 damage to 1 of your opponent\'s Cookies.',
+      },
+    ],
   }
 
   if (exactAttackEffects[cardKey]) {
@@ -3357,6 +3507,21 @@ export const convertOfficialTrapAbility = (
         { kind: 'deck-to-trash', amount: 2, side: 'self' },
       ],
     },
+    'P-031': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+        },
+        {
+          kind: 'hp-to-trash',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+        },
+      ],
+    },
   }
 
   const exactTrap = exactTrapEffects[card.cardNumber]
@@ -3412,6 +3577,9 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   'BS3-051': { energy: { green: 1 }, discardHand: 0 },
   'BS3-098': { energy: { purple: 1 }, discardHand: 0 },
   'BS3-025': { energy: { yellow: 1 }, discardHand: 0 },
+  'P-016': { energy: { yellow: 1 }, discardHand: 0 },
+  'P-018': { energy: {}, discardHand: 1 },
+  'P-030': { energy: {}, discardHand: 2 },
 }
 
 /**
@@ -3421,6 +3589,18 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
  */
 const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS3-025': 'activate',
+}
+
+/**
+ * P-002／P-003／P-013／P-014（GingerBright 黃/綠/藍/紫版本）的官方文字把
+ * `{mt}` 誤植成 `{mt)`（少了右大括號），一般的 token 解析抓不到合法標記，
+ * 導致 yourTurn 被判成 false。P-001（紅版本）文字正確，不需要覆寫。
+ */
+const exactCookieSkillYourTurn: Partial<Record<string, boolean>> = {
+  'P-002': true,
+  'P-003': true,
+  'P-013': true,
+  'P-014': true,
 }
 
 export const convertOfficialCookieSkill = (
@@ -3456,12 +3636,12 @@ export const convertOfficialCookieSkill = (
             ? 'on-play'
             : 'passive'),
     oncePerTurn: parsed.markers.includes('t1'),
-    yourTurn: parsed.markers.includes('mt'),
+    yourTurn: exactCookieSkillYourTurn[cardKey] ?? parsed.markers.includes('mt'),
     restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
     cost,
     text: conversion.sourceText,
     effects: conversion.effects,
-    faint: /When this Cookie faints/i.test(card.skill.text),
+    faint: FAINT_TRIGGER_PATTERN.test(card.skill.text),
     endPhase: /(?:at the )?end of (?:your|this) turn|your turn ends/i.test(
       card.skill.text,
     ),
@@ -3469,6 +3649,11 @@ export const convertOfficialCookieSkill = (
       card.skill.text,
     ),
     oncePerGame: /once per game/i.test(card.skill.text),
-    fromBreakArea: /in your break area/i.test(card.skill.text),
+    // 只認「來源自己目前在休息區」這個前提句式（BS3-025），不能用寬鬆的
+    // 「文字裡有提到 break area」去比對——P-016／BS3-036／BS1-035／BS1-038
+    // 的文字都提到 break area，但那是效果的目標／去向（送某張卡進休息區），
+    // 不是這個技能本身只能從休息區發動的前提，誤判會讓 findSkillSource 在
+    // 這些卡意外流落休息區時把它們當成可發動的技能來源。
+    fromBreakArea: /this Cookie is in your break area/i.test(card.skill.text),
   }
 }

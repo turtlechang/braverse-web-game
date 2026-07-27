@@ -89,6 +89,7 @@ const SERIES_OPTIONS = [
   { value: 'BOOSTER PACK [BRAVE BEGINNING] BS1', label: 'BS1' },
   { value: 'BOOSTER PACK [BRAVE BEGINNING] BS2', label: 'BS2' },
   { value: 'BOOSTER PACK [Age of Heroes and Kingdoms]', label: 'BS3' },
+  { value: 'PROMOTION CARD', label: '特典卡' },
 ]
 
 export function DeckEditorModal({

@@ -811,6 +811,55 @@ describe('BattleRow desktop interactions', () => {
   })
 })
 
+describe('equipped item badge', () => {
+  it('shows a badge with a name tooltip when a battle cookie has an equipped card', () => {
+    const game = createBattleState()
+    const cookie = game.players['player-two'].battleArea[0]
+    cookie.equippedCards = [
+      {
+        id: 'BS3-019',
+        instanceId: 'soul-jam-1',
+        name: 'Soul Jam: Light of Passion',
+        type: 'item',
+      },
+    ]
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({ game, playerId: 'player-two', position: 'bottom' })}
+      />,
+    )
+
+    expect(markup).toContain('badge-equip')
+    expect(markup).toContain('已裝備：Soul Jam: Light of Passion')
+  })
+
+  it('lists every equipped card name in the tooltip when there is more than one', () => {
+    const game = createBattleState()
+    const cookie = game.players['player-two'].battleArea[0]
+    cookie.equippedCards = [
+      { id: 'BS3-019', instanceId: 'soul-jam-1', name: 'Soul Jam: Light of Passion', type: 'item' },
+      { id: 'BS3-091', instanceId: 'soul-jam-2', name: 'Soul Jam: Light of Truth', type: 'item' },
+    ]
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({ game, playerId: 'player-two', position: 'bottom' })}
+      />,
+    )
+
+    expect(markup).toContain('已裝備：Soul Jam: Light of Passion、Soul Jam: Light of Truth')
+  })
+
+  it('omits the badge when the cookie has no equipped cards', () => {
+    const markup = renderToStaticMarkup(
+      <BattleRow {...createProps()} />,
+    )
+
+    expect(markup).not.toContain('badge-equip')
+  })
+})
+
 describe('HP flip chain reveal indicator', () => {
   const revealedCard = {
     id: 'revealed-hp',

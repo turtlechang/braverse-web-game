@@ -365,6 +365,7 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'support-to-hp' ||
   effect.kind === 'hand-to-battle' ||
   effect.kind === 'opponent-trash-to-break' ||
+  effect.kind === 'trash-to-break' ||
   (effect.kind === 'set-active' && Boolean(effect.selectable))
 
 export const getEffectSelectionLimits = (
@@ -393,6 +394,9 @@ export const getEffectSelectionLimits = (
   }
   if (effect.kind === 'opponent-trash-to-break') {
     return { min: 0, max: effect.max }
+  }
+  if (effect.kind === 'trash-to-break') {
+    return { min: effect.amount, max: effect.amount }
   }
   if (effect.kind === 'opponent-battle-to-trash') {
     return { min: effect.min ?? 1, max: 1 }
@@ -494,6 +498,9 @@ export const getEffectSelectionCandidates = (
   if (effect.kind === 'opponent-trash-to-break') {
     return getOpponentTrashToBreakCandidates(state, context, effect)
   }
+  if (effect.kind === 'trash-to-break') {
+    return getTrashToBreakCandidates(state, context, effect)
+  }
   return getEffectTargetCandidatesForEffect(state, context, effect).map(
     (cookie) => cookie.card,
   )
@@ -580,6 +587,9 @@ export const getBreakToTrashCandidates = (
   effect: BreakToTrashEffect,
 ): CookieCard[] =>
   state.players[context.sourcePlayerId].breakArea.filter((card) => {
+    if (effect.energyColor !== undefined && card.energyColor !== effect.energyColor) {
+      return false
+    }
     if (effect.exactLevel !== undefined && card.level !== effect.exactLevel) {
       return false
     }
@@ -588,6 +598,19 @@ export const getBreakToTrashCandidates = (
     }
     return true
   })
+
+export const getTrashToBreakCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: Extract<CardEffect, { kind: 'trash-to-break' }>,
+): CookieCard[] =>
+  state.players[context.sourcePlayerId].discardPile.filter(
+    (card): card is CookieCard =>
+      card.type === 'cookie' &&
+      (effect.energyColor === undefined || card.energyColor === effect.energyColor) &&
+      (effect.exactLevel === undefined || card.level === effect.exactLevel) &&
+      (effect.maxLevel === undefined || card.level <= effect.maxLevel),
+  )
 
 export const getTrashToHandCandidates = (
   state: GameState,
@@ -768,6 +791,13 @@ export const isEffectConditionMet = (
     return (
       getBreakAreaLevel(state, getOpponentId(context.sourcePlayerId)) <=
       condition.level
+    )
+  }
+
+  if (condition?.kind === 'break-level-higher-than-opponent') {
+    return (
+      getBreakAreaLevel(state, context.sourcePlayerId) >
+      getBreakAreaLevel(state, getOpponentId(context.sourcePlayerId))
     )
   }
 

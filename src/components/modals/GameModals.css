@@ -715,6 +715,34 @@
 .modal-card-options.trap-target-options > button {
   width: 100%;
   min-width: 0;
+  font-size: 0.82rem;
+}
+
+.modal-card-options.trap-target-options > button.is-attacker {
+  border: 2px solid #ff6b6b;
+  background: rgba(180, 40, 40, 0.85);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
+}
+
+.modal-card-options.trap-target-options > button.is-attacker.is-selected {
+  border-color: #ffd700;
+  background: rgba(140, 100, 10, 0.85);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+.attacker-badge {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #ff6b6b;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
 }
 
 .modal-card-options .card-face {

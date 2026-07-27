@@ -452,4 +452,95 @@ describe('card effect engine', () => {
       extendedTarget.hpCards.length - attacker.card.attack - 1,
     )
   })
+
+  /**
+   * 回歸測試（BS3-006）：`modify-all-attack` 掛在 `trigger: 'passive'` 技能上
+   * 是「只要來源還在戰鬥區」的條件式光環，不會被 executeAbilityEffects 執行、
+   * 寫進 attackModifiers——被動技能從未走過那條指令派送路徑。getEffectiveAttack
+   * 必須額外掃描雙方戰鬥區的被動技能來源即時套用，而不是只看
+   * attackModifiers 與目標自己的被動技能。
+   */
+  it('applies a passive modify-all-attack aura from another battle-area cookie', () => {
+    let state = createDemoGame()
+    const auraSource: GameCard = {
+      ...state.players['player-one'].battleArea[0].card,
+      id: 'aura-source',
+      instanceId: 'aura-source-1',
+      level: 1,
+      energyColor: 'red',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'aura',
+        effects: [
+          {
+            kind: 'modify-all-attack',
+            amount: 1,
+            duration: 'persistent',
+            side: 'self',
+            energyColor: 'red',
+            minLevel: 2,
+          },
+        ],
+      },
+    }
+    const buffedAlly: GameCard = {
+      ...state.players['player-one'].battleArea[0].card,
+      id: 'buffed-ally',
+      instanceId: 'buffed-ally-1',
+      level: 2,
+      energyColor: 'red',
+      attack: 3,
+    }
+    const tooLowLevelAlly: GameCard = {
+      ...buffedAlly,
+      id: 'low-level-ally',
+      instanceId: 'low-level-ally-1',
+      level: 1,
+    }
+    const wrongColorAlly: GameCard = {
+      ...buffedAlly,
+      id: 'wrong-color-ally',
+      instanceId: 'wrong-color-ally-1',
+      energyColor: 'blue',
+    }
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            { card: auraSource, hpCards: [], rested: false, battleEntryId: 'aura-source-1:battle:1' },
+            { card: buffedAlly, hpCards: [], rested: false, battleEntryId: 'buffed-ally-1:battle:2' },
+            { card: tooLowLevelAlly, hpCards: [], rested: false, battleEntryId: 'low-level-ally-1:battle:3' },
+            { card: wrongColorAlly, hpCards: [], rested: false, battleEntryId: 'wrong-color-ally-1:battle:4' },
+          ],
+        },
+      },
+    }
+
+    expect(getEffectiveAttack(state, 'buffed-ally-1')).toBe(4)
+    expect(getEffectiveAttack(state, 'low-level-ally-1')).toBe(3)
+    expect(getEffectiveAttack(state, 'wrong-color-ally-1')).toBe(3)
+    expect(getEffectiveAttack(state, 'aura-source-1')).toBe(auraSource.attack)
+
+    const withoutAuraSource: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: state.players['player-one'].battleArea.filter(
+            (cookie) => cookie.card.instanceId !== 'aura-source-1',
+          ),
+        },
+      },
+    }
+    expect(getEffectiveAttack(withoutAuraSource, 'buffed-ally-1')).toBe(3)
+  })
 })

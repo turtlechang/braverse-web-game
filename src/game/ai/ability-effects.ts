@@ -96,6 +96,15 @@ export const simulateAbilityEffects = (
     effectTargets.push(targetIds)
     effectSelections.push({ ...effectSelectionMeta, targetIds, effect })
     if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    const nextEffect = queue[index + 1]
+    if (
+      nextEffect?.kind === 'equip-source' &&
+      !nextState.players[context.sourcePlayerId].battleArea.some(
+        (c) => c.card.id === nextEffect.requiredCookieId,
+      )
+    ) {
+      index += 1
+    }
   }
 
   return { effectTargets, effectSelections, aborted: false, chooseOneModes }

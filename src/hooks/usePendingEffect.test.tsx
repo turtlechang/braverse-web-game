@@ -982,3 +982,142 @@ describe('usePendingEffect optional-cost-attack', () => {
     vi.useRealTimers()
   })
 })
+
+/**
+ * 靈魂果醬（BS3-019 等）的效果鏈是「造成傷害，Then 裝載到指定的餅乾」，
+ * equip-source 用 requiredCookieId 鎖定唯一能裝載的目標卡號。執行層
+ * （game/effects/execute.ts）本就會拒絕裝載到其他卡號，但本機互動精靈
+ * 算候選名單時，equip-source 落入通用的 target 選擇器分支，完全沒套用
+ * requiredCookieId 篩選——玩家戰鬥區只要有其他餅乾，UI 就會把它們也列成
+ * 可裝載的候選，點下去才會在執行層被拒絕。
+ */
+describe('usePendingEffect equip-source candidate filtering', () => {
+  const requiredCookie: CookieCard = {
+    id: 'BS3-017',
+    instanceId: 'hollyberry-1',
+    name: 'Hollyberry Cookie',
+    type: 'cookie',
+    level: 3,
+    hp: 5,
+    attack: 3,
+    attackCost: 2,
+  }
+
+  const otherCookie: CookieCard = {
+    id: 'BS3-002',
+    instanceId: 'other-cookie-1',
+    name: 'Other Cookie',
+    type: 'cookie',
+    level: 1,
+    hp: 3,
+    attack: 1,
+    attackCost: 1,
+  }
+
+  const soulJamCard: GameCard = {
+    id: 'BS3-019',
+    instanceId: 'soul-jam-1',
+    name: 'Soul Jam: Light of Passion',
+    type: 'item',
+  }
+
+  const equipAbility = {
+    cost: {},
+    text: '測試裝載',
+    effects: [
+      {
+        kind: 'equip-source' as const,
+        target: { side: 'self' as const, min: 0, max: 1 },
+        requiredCookieId: 'BS3-017',
+        attackBonus: 1,
+      },
+    ],
+  }
+
+  const renderWithBattleArea = async (
+    battleArea: GameState['players']['player-one']['battleArea'],
+  ) => {
+    const baseGame = createItemUsageDemoState(true)
+    const state: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          battleArea,
+        },
+      },
+    }
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: state,
+        setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => {
+      captured!.beginCardAbility(soulJamCard, equipAbility, 'item', '使用物品')
+    })
+
+    return { captured: captured!, root }
+  }
+
+  it('only offers the required Cookie, even when other Cookies share the battle area', async () => {
+    const { captured, root } = await renderWithBattleArea([
+      {
+        card: requiredCookie,
+        hpCards: [],
+        rested: false,
+        battleEntryId: 'hollyberry-1:battle:1',
+      },
+      {
+        card: otherCookie,
+        hpCards: [],
+        rested: false,
+        battleEntryId: 'other-cookie-1:battle:2',
+      },
+    ])
+
+    expect(
+      captured.effectTargetCandidates.map((cookie) => cookie.card.instanceId),
+    ).toEqual(['hollyberry-1'])
+
+    await act(() => root.unmount())
+  })
+
+  it('offers no candidates when the required Cookie is absent, even though other Cookies are present', async () => {
+    const { captured, root } = await renderWithBattleArea([
+      {
+        card: otherCookie,
+        hpCards: [],
+        rested: false,
+        battleEntryId: 'other-cookie-1:battle:1',
+      },
+    ])
+
+    expect(captured.effectTargetCandidates).toEqual([])
+
+    await act(() => root.unmount())
+  })
+})

@@ -393,6 +393,26 @@
   border-right: 3px solid #ffcc33;
 }
 
+/* 顯示這張餅乾目前裝備了幾張道具（如靈魂果醬），懸停可看到裝備卡名。
+ * 跟 .card-badges 的 HP／攻擊力徽章共用視覺語彙，但因為只在有裝備時才
+ * 出現、不是固定兩欄版面，獨立定位而不是塞進 .card-badges 的 flex 容器。 */
+.badge-equip {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.2;
+  background: rgba(20, 20, 20, 0.9);
+  color: #d9b3ff;
+  border-left: 3px solid #b366ff;
+  pointer-events: none;
+}
+
 .target-hint {
   position: absolute;
   z-index: 6;
@@ -1038,58 +1058,9 @@
   }
 }
 
-@container combat-zone (max-height: 220px) {
-  .combat-slots {
-    padding-top: 6px;
-    padding-bottom: 6px;
-  }
-
-  .combat-card-wrap {
-    --hp-dock-overlap: 14px;
-    --hp-dock-height: 36px;
-  }
-
-  .hp-card-stack {
-    width: 100px;
-    height: var(--hp-dock-height);
-  }
-
-  .hp-card-stack .hp-card {
-    width: 32px;
-  }
-
-  .hp-card-stack .hp-card:nth-child(2) { left: 20px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 40px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 60px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 76px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 84px; }
-
-  .card-badges {
-    bottom: 28px;
-  }
-
-  .card-badges span {
-    padding: 2px 5px;
-    font-size: 0.58rem;
-  }
-}
-
-@container combat-zone (max-height: 160px) {
-  .hp-card-stack {
-    width: 90px;
-  }
-}
-
-@container combat-zone (max-height: 140px) {
-  .hp-card-stack {
-    width: 80px;
-  }
-
-  .card-badges span {
-    padding: 1px 4px;
-    font-size: 0.52rem;
-  }
-}
+/* combat-zone 版本的完整定義（含 hp-card-stack 卡背間距）在檔案下方，
+ * 標記「the final authority」的區塊——這裡原本有三個重複、且卡背間距
+ * 計算錯誤（最後一兩張卡背間距被壓縮到比前面窄）的舊版本，已移除。 */
 
 .hand-fan.bottom-hand .hand-card-wrap {
   bottom: -94px;
@@ -1731,6 +1702,12 @@
     width: 14px;
   }
 
+  .hp-card-stack .hp-card:nth-child(2) { left: 8px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 16px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 24px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 32px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 40px; }
+
   .zone-watermark,
   .empty-zone {
     display: none;
@@ -1964,11 +1941,11 @@
     width: 32px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 20px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 40px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 60px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 76px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 84px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 17px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 34px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 51px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 68px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 85px; }
 
   .card-badges {
     bottom: 28px;
@@ -2000,11 +1977,11 @@
     width: 30px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 18px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 36px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 54px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 64px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 70px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 15px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 30px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 45px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 60px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 75px; }
 }
 
 @container combat-zone (max-height: 140px) {
@@ -2027,11 +2004,11 @@
     width: 26px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 16px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 32px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 48px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 13.5px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 27px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 40.5px; }
   .hp-card-stack .hp-card:nth-child(5) { left: 54px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 58px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 67.5px; }
 
   .card-badges span {
     padding: 1px 4px;
@@ -2135,6 +2112,13 @@
   transform: rotate(90deg);
 }
 
+/* Attack-target border must rotate together with the rested card
+ * so the gold frame stays aligned with the card edges.
+ * The label stays upright for readability. */
+.combat-card-wrap.is-attack-target.is-rested::after {
+  transform: rotate(90deg);
+}
+
 /* Combat stat badges are anchored to the card itself so HP remains visible at
  * the upper-right corner while the attack badge keeps its lower-right slot. */
 .combat-card-wrap .card-badges {
@@ -2147,15 +2131,22 @@
   position: absolute;
   top: 3px;
   right: 3px;
-  transform: scale(1.1);
+  transform: scale(1.32);
   transform-origin: top right;
+}
+
+.combat-card-wrap .badge-equip {
+  top: 3px;
+  left: 3px;
+  transform: scale(1.1);
+  transform-origin: top left;
 }
 
 .combat-card-wrap .badge-atk {
   position: absolute;
   right: 3px;
   bottom: 40px;
-  transform: scale(1.1);
+  transform: scale(1.32);
   transform-origin: bottom right;
 }
 

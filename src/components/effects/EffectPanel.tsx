@@ -154,7 +154,8 @@ function EffectPanelContent({
           currentEffect?.kind === 'support-to-hand' ||
           currentEffect?.kind === 'hand-to-support' ||
           currentEffect?.kind === 'trash-to-battle' ||
-          currentEffect?.kind === 'trash-to-support'
+          currentEffect?.kind === 'trash-to-support' ||
+          currentEffect?.kind === 'trash-to-break'
         ? { min: currentEffect.amount, max: currentEffect.amount }
         : currentEffect?.kind === 'gain-hp' &&
             currentEffect.target &&

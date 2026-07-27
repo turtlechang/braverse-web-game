@@ -11,6 +11,7 @@ import {
   getSupportEffectCandidates,
   getTargetPlayerId,
   getTrashCookieCandidates,
+  getTrashToBreakCandidates,
   getTrashToDeckCandidates,
   getTrashToSupportCandidates,
   getEffectiveAttack,
@@ -223,6 +224,14 @@ const chooseEffectTargets = (
     const count = Math.min(effect.max, candidates.length)
     return candidates
       .slice(0, count)
+      .map((card) => card.instanceId)
+  }
+
+  if (effect.kind === 'trash-to-break') {
+    const candidates = getTrashToBreakCandidates(state, context, effect)
+    if (candidates.length < effect.amount) return []
+    return candidates
+      .slice(0, effect.amount)
       .map((card) => card.instanceId)
   }
 
@@ -626,7 +635,8 @@ const isItemEffectTargetCountSufficient = (
       effect.kind === 'support-to-hand' ||
       effect.kind === 'hand-to-support' ||
       effect.kind === 'trash-to-battle' ||
-      effect.kind === 'trash-to-support') &&
+      effect.kind === 'trash-to-support' ||
+      effect.kind === 'trash-to-break') &&
     targetIds.length < effect.amount
   ) {
     return false
@@ -639,6 +649,7 @@ const isItemEffectTargetCountSufficient = (
     effect.kind !== 'hand-to-support' &&
     effect.kind !== 'trash-to-battle' &&
     effect.kind !== 'trash-to-support' &&
+    effect.kind !== 'trash-to-break' &&
     effect.kind !== 'inspect-deck' &&
     effect.kind !== 'optional-cost-attack' &&
     effect.kind !== 'disable-block' &&
@@ -832,7 +843,8 @@ const isSkillEffectTargetCountSufficient = (
       effect.kind === 'support-to-hand' ||
       effect.kind === 'hand-to-support' ||
       effect.kind === 'trash-to-battle' ||
-      effect.kind === 'trash-to-support') &&
+      effect.kind === 'trash-to-support' ||
+      effect.kind === 'trash-to-break') &&
     targetIds.length < effect.amount
   ) {
     return false
@@ -844,6 +856,7 @@ const isSkillEffectTargetCountSufficient = (
     effect.kind !== 'hand-to-support' &&
     effect.kind !== 'trash-to-battle' &&
     effect.kind !== 'trash-to-support' &&
+    effect.kind !== 'trash-to-break' &&
     effect.kind !== 'inspect-deck' &&
     effect.kind !== 'optional-cost-attack' &&
     effect.kind !== 'field-to-trash' &&
