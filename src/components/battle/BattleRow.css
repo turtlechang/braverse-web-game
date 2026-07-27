@@ -2112,6 +2112,13 @@
   transform: rotate(90deg);
 }
 
+/* Attack-target label and border must rotate together with the rested card
+ * so the gold frame stays aligned with the card edges. */
+.combat-card-wrap.is-attack-target.is-rested::before,
+.combat-card-wrap.is-attack-target.is-rested::after {
+  transform: rotate(90deg);
+}
+
 /* Combat stat badges are anchored to the card itself so HP remains visible at
  * the upper-right corner while the attack badge keeps its lower-right slot. */
 .combat-card-wrap .card-badges {

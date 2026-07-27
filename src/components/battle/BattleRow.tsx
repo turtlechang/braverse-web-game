@@ -459,6 +459,7 @@ export function BattleRow({
                 isPendingAttackTarget && 'is-attack-target',
                 revealedHpCard && 'has-hp-reveal',
                 battleSlotClass,
+                cookie.rested && 'is-rested',
               ]
                 .filter(Boolean)
                 .join(' ')
