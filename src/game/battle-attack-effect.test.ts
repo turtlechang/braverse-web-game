@@ -139,4 +139,30 @@ describe('post-attack effects', () => {
     // 條件不成立，防守方餅乾 HP 停在主傷害結算後的數字，沒有再多扣 1 點。
     expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
   })
+
+  it('skips optional attack effect with no valid candidates when attacker is the only cookie', () => {
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, excludeSource: true },
+      },
+    ]
+
+    state = skipTrap(declareAttack(state), 'player-one')
+    state = resolveNextDamage(state)
+    state = resolveNextDamage(state)
+    state = resolveNextDamage(state)
+
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackEffectIndex: 0,
+    })
+
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingBattle).toBeNull()
+  })
 })

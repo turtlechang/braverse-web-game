@@ -533,4 +533,85 @@ describe('official ruling: BS3-019 with no legal target aborts Then equip', () =
       ),
     ).toBe(true)
   })
+
+  it('skips equip-source when Hollyberry Cookie is not in the battle zone', () => {
+    const legalTarget = asCookie('BS3-002')
+    legalTarget.instanceId = 'legal-target'
+    const otherCookie = asCookie('BS3-003')
+    otherCookie.instanceId = 'other-cookie'
+    const soulJam019 = convertOfficialCardToGameCard(findBs3Card('BS3-019'))
+    if (soulJam019.status !== 'converted' || soulJam019.gameCard.type !== 'item') {
+      throw new Error('BS3-019 should convert to an item')
+    }
+    const itemCard = {
+      ...soulJam019.gameCard,
+      instanceId: 'bs3-019-hand',
+    } satisfies GameCard
+
+    let state = createBattleState()
+    state = {
+      ...state,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            {
+              card: legalTarget,
+              hpCards: [
+                item('lt-hp-a'),
+                item('lt-hp-b'),
+                item('lt-hp-c'),
+                item('lt-hp-d'),
+              ],
+              rested: false,
+              battleEntryId: 'legal-target:battle:1',
+            },
+          ],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [itemCard],
+          battleArea: [
+            {
+              card: otherCookie,
+              hpCards: [item('oc-hp-a'), item('oc-hp-b')],
+              rested: false,
+              battleEntryId: 'other-cookie:battle:2',
+            },
+          ],
+          supportArea: [
+            { card: item('pay-r1', 'red'), rested: false },
+            { card: item('pay-r2', 'red'), rested: false },
+            { card: item('pay-r3', 'red'), rested: false },
+          ],
+        },
+      },
+    }
+
+    state = applyGameCommand(state, {
+      kind: 'play-item',
+      playerId: 'player-two',
+      instanceId: 'bs3-019-hand',
+      paymentIds: ['pay-r1', 'pay-r2', 'pay-r3'],
+      // 傷害選 1 個目標，equip-source 因 BS3-017 不在戰鬥區被自動跳過
+      effectTargets: [['legal-target']],
+    })
+
+    // 傷害已執行：目標 HP 從 4 減為 2（受到 2 點傷害）
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    // 裝載被跳過：BS3-019 仍在棄牌區，不在任何餅乾的 equippedCards 上
+    expect(
+      state.players['player-two'].discardPile.some(
+        (card) => card.instanceId === 'bs3-019-hand',
+      ),
+    ).toBe(true)
+    expect(
+      state.players['player-two'].battleArea[0].equippedCards ?? [],
+    ).toHaveLength(0)
+    // pendingAbilityEffect 已清除（效果鏈結束）
+    expect(state.pendingAbilityEffect).toBeUndefined()
+  })
 })

@@ -17,6 +17,7 @@ import {
   getBreakToTrashCandidates,
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
@@ -770,7 +771,18 @@ export function usePendingEffect(params: {
               hasRequiredEffectTargets(game, attackContext, effect),
           )
         : isEffectConditionMet(game, attackContext, currentAttackEffect) &&
-          hasRequiredEffectTargets(game, attackContext, currentAttackEffect)
+          hasRequiredEffectTargets(game, attackContext, currentAttackEffect) &&
+          !(
+            currentAttackEffect.kind !== 'optional-cost-attack' &&
+            'target' in currentAttackEffect &&
+            currentAttackEffect.target &&
+            (currentAttackEffect.target.min ?? 0) === 0 &&
+            getEffectTargetCandidatesForEffect(
+              game,
+              attackContext,
+              currentAttackEffect,
+            ).length === 0
+          )
 
     if (!hasApplicableEffect) {
       const timer = window.setTimeout(() => {
@@ -1144,8 +1156,20 @@ export function usePendingEffect(params: {
       currentEffect.optional
     ) {
       const nextEffectIndex = pendingEffect.effectIndex + 1
-      const hasNextEffect =
+      const nextEffect =
         nextEffectIndex < pendingEffect.effects.length
+          ? pendingEffect.effects[nextEffectIndex]
+          : null
+      const skipNextEquip =
+        nextEffect?.kind === 'equip-source' &&
+        !game.players[pendingEffect.context.sourcePlayerId].battleArea.some(
+          (c) => c.card.id === nextEffect.requiredCookieId,
+        )
+      const effectiveNextIndex = skipNextEquip
+        ? nextEffectIndex + 1
+        : nextEffectIndex
+      const hasNextEffect =
+        effectiveNextIndex < pendingEffect.effects.length
       const viewerMustAct =
         (game.pendingRefresh?.playerId === viewerPlayerId) ||
         (game.pendingOnPlay?.playerId === viewerPlayerId) ||
@@ -1161,7 +1185,7 @@ export function usePendingEffect(params: {
         setPendingEffect(null)
         setSuspendedEffect({
           ...pendingEffect,
-          effectIndex: nextEffectIndex,
+          effectIndex: effectiveNextIndex,
           selectedTargetIds: [],
           skillActivated: true,
           selectedDiscardHandIds: [],
@@ -1175,7 +1199,7 @@ export function usePendingEffect(params: {
         hasNextEffect
           ? {
               ...pendingEffect,
-              effectIndex: nextEffectIndex,
+              effectIndex: effectiveNextIndex,
               selectedTargetIds: [],
               selectedDiscardHandIds: [],
               selectedTrashBattleCookieIds: [],
@@ -1332,9 +1356,22 @@ export function usePendingEffect(params: {
         }
       }
       const nextEffectIndex = pendingEffect.effectIndex + 1
-      const hasNextEffect =
+      const nextEffect =
         nextGame.status === 'playing' &&
         nextEffectIndex < pendingEffect.effects.length
+          ? pendingEffect.effects[nextEffectIndex]
+          : null
+      const skipNextEquip =
+        nextEffect?.kind === 'equip-source' &&
+        !nextGame.players[pendingEffect.context.sourcePlayerId].battleArea.some(
+          (c) => c.card.id === nextEffect.requiredCookieId,
+        )
+      const effectiveNextIndex = skipNextEquip
+        ? nextEffectIndex + 1
+        : nextEffectIndex
+      const hasNextEffect =
+        nextGame.status === 'playing' &&
+        effectiveNextIndex < pendingEffect.effects.length
       const viewerMustAct =
         (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
         (nextGame.pendingOnPlay?.playerId === viewerPlayerId) ||
@@ -1353,7 +1390,7 @@ export function usePendingEffect(params: {
         setPendingEffect(null)
         setSuspendedEffect({
           ...pendingEffect,
-          effectIndex: nextEffectIndex,
+          effectIndex: effectiveNextIndex,
           selectedTargetIds: [],
           selectedDiscardHandIds: [],
           selectedTrashBattleCookieIds: [],
@@ -1389,7 +1426,7 @@ export function usePendingEffect(params: {
         hasNextEffect
           ? {
               ...pendingEffect,
-              effectIndex: nextEffectIndex,
+              effectIndex: effectiveNextIndex,
               selectedTargetIds: [],
               selectedDiscardHandIds: [],
               selectedTrashBattleCookieIds: [],

@@ -817,6 +817,10 @@ export function TrapResponseModal({
               </div>
             )}
             <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
+            <AttackDeclarationSummary
+              attackerCard={attackerCard}
+              attackTargetCard={attackTargetCard}
+            />
 
             {activePhase === 'energy' && (
               <div className="trap-guided-section">
@@ -990,18 +994,40 @@ export function TrapResponseModal({
                   <>
                     <strong>選擇目標餅乾</strong>
                     <div className="modal-card-options compact trap-target-options">
-                      {trapTargetCandidates.map((candidate) => (
-                        <button
-                          type="button"
-                          className={selectedTrapTargetId === candidate.card.instanceId ? 'is-selected' : ''}
-                          key={candidate.card.instanceId}
-                          onClick={() => onSelectTrapTarget(candidate.card.instanceId)}
-                        >
-                          <CardFace card={candidate.card} selected={selectedTrapTargetId === candidate.card.instanceId} />
-                          <span>{candidate.card.name}</span>
-                          {attackerCard?.instanceId === candidate.card.instanceId && <small>（攻擊中）</small>}
-                        </button>
-                      ))}
+                      {trapTargetCandidates.map((candidate) => {
+                        const isAttacker =
+                          attackerCard?.instanceId === candidate.card.instanceId
+                        return (
+                          <button
+                            type="button"
+                            className={[
+                              selectedTrapTargetId === candidate.card.instanceId
+                                ? 'is-selected'
+                                : '',
+                              isAttacker ? 'is-attacker' : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ')}
+                            key={candidate.card.instanceId}
+                            onClick={() =>
+                              onSelectTrapTarget(candidate.card.instanceId)
+                            }
+                          >
+                            <CardFace
+                              card={candidate.card}
+                              selected={
+                                selectedTrapTargetId === candidate.card.instanceId
+                              }
+                            />
+                            <span>{candidate.card.name}</span>
+                            {isAttacker && (
+                              <small className="attacker-badge">
+                                ⚔ 攻擊中
+                              </small>
+                            )}
+                          </button>
+                        )
+                      })}
                     </div>
                   </>
                 ) : targetCards.length > 0 ? (

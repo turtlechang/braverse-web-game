@@ -995,6 +995,22 @@ const hasNoLegalSelectableTargets = (
   )
 }
 
+/**
+ * 當下一個效果是 equip-source，但 requiredCookieId 不在戰鬥區時，
+ * 該裝載效果沒有合法目標，應自動跳過（不需要顯示 UI 讓玩家取消）。
+ */
+const hasNoEquipTarget = (
+  state: GameState,
+  context: EffectContext,
+  effects: readonly CardEffect[],
+  effectIndex: number,
+): boolean => {
+  const next = effects[effectIndex + 1]
+  if (!next || next.kind !== 'equip-source') return false
+  const player = state.players[context.sourcePlayerId]
+  return !player.battleArea.some((c) => c.card.id === next.requiredCookieId)
+}
+
 const executeAbilityEffects = (
   state: GameState,
   context: EffectContext,
@@ -1027,6 +1043,9 @@ const executeAbilityEffects = (
       shuffle,
     )
     if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    if (hasNoEquipTarget(nextState, context, queue, index)) {
+      index += 1
+    }
   }
   return nextState
 }
@@ -1083,6 +1102,9 @@ const resolvePendingAbilityEffect = (
   )
   const nextIndex = pending.effectIndex + 1
   if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
+    return { ...resolved, pendingAbilityEffect: undefined }
+  }
+  if (hasNoEquipTarget(resolved, context, pending.effects, pending.effectIndex)) {
     return { ...resolved, pendingAbilityEffect: undefined }
   }
   return {
