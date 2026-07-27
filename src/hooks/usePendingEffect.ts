@@ -140,7 +140,13 @@ export function usePendingEffect(params: {
     currentEffect &&
     currentTargetSelector
       ? (currentEffect.kind === 'field-to-trash' && currentEffect.stageOnly)
-          ? []
+        ? []
+        : currentEffect.kind === 'equip-source'
+          ? getEffectTargetCandidates(
+              game,
+              pendingEffect.context,
+              currentTargetSelector,
+            ).filter((cookie) => cookie.card.id === currentEffect.requiredCookieId)
           : getEffectTargetCandidates(
               game,
               pendingEffect.context,
