@@ -335,15 +335,15 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('pins the HP badge to the card upper-right and enlarges both combat stat badges by 10%', () => {
+  it('pins the HP badge to the card upper-right and enlarges both combat stat badges by 32%', () => {
     expect(normalizedCss).toMatch(
       /\.combat-card-wrap \.card-badges\s*\{[^}]*inset:\s*0[^}]*display:\s*block[^}]*padding:\s*0[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.combat-card-wrap \.badge-hp\s*\{[^}]*position:\s*absolute[^}]*top:\s*3px[^}]*right:\s*3px[^}]*transform:\s*scale\(1\.1\)[^}]*transform-origin:\s*top right[^}]*}/,
+      /\.combat-card-wrap \.badge-hp\s*\{[^}]*position:\s*absolute[^}]*top:\s*3px[^}]*right:\s*3px[^}]*transform:\s*scale\(1\.32\)[^}]*transform-origin:\s*top right[^}]*}/,
     )
     expect(normalizedCss).toMatch(
-      /\.combat-card-wrap \.badge-atk\s*\{[^}]*position:\s*absolute[^}]*right:\s*3px[^}]*bottom:\s*40px[^}]*transform:\s*scale\(1\.1\)[^}]*transform-origin:\s*bottom right[^}]*}/,
+      /\.combat-card-wrap \.badge-atk\s*\{[^}]*position:\s*absolute[^}]*right:\s*3px[^}]*bottom:\s*40px[^}]*transform:\s*scale\(1\.32\)[^}]*transform-origin:\s*bottom right[^}]*}/,
     )
   })
 

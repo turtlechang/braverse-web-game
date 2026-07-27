@@ -96,10 +96,11 @@ export const simulateAbilityEffects = (
     effectTargets.push(targetIds)
     effectSelections.push({ ...effectSelectionMeta, targetIds, effect })
     if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    const nextEffect = queue[index + 1]
     if (
-      queue[index + 1]?.kind === 'equip-source' &&
+      nextEffect?.kind === 'equip-source' &&
       !nextState.players[context.sourcePlayerId].battleArea.some(
-        (c) => c.card.id === queue[index + 1]!.requiredCookieId,
+        (c) => c.card.id === nextEffect.requiredCookieId,
       )
     ) {
       index += 1

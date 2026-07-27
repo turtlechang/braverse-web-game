@@ -773,7 +773,6 @@ export function usePendingEffect(params: {
         : isEffectConditionMet(game, attackContext, currentAttackEffect) &&
           hasRequiredEffectTargets(game, attackContext, currentAttackEffect) &&
           !(
-            currentAttackEffect.kind !== 'optional-cost-attack' &&
             'target' in currentAttackEffect &&
             currentAttackEffect.target &&
             (currentAttackEffect.target.min ?? 0) === 0 &&
