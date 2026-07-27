@@ -2112,9 +2112,9 @@
   transform: rotate(90deg);
 }
 
-/* Attack-target label and border must rotate together with the rested card
- * so the gold frame stays aligned with the card edges. */
-.combat-card-wrap.is-attack-target.is-rested::before,
+/* Attack-target border must rotate together with the rested card
+ * so the gold frame stays aligned with the card edges.
+ * The label stays upright for readability. */
 .combat-card-wrap.is-attack-target.is-rested::after {
   transform: rotate(90deg);
 }
