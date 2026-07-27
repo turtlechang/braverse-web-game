@@ -1038,58 +1038,9 @@
   }
 }
 
-@container combat-zone (max-height: 220px) {
-  .combat-slots {
-    padding-top: 6px;
-    padding-bottom: 6px;
-  }
-
-  .combat-card-wrap {
-    --hp-dock-overlap: 14px;
-    --hp-dock-height: 36px;
-  }
-
-  .hp-card-stack {
-    width: 100px;
-    height: var(--hp-dock-height);
-  }
-
-  .hp-card-stack .hp-card {
-    width: 32px;
-  }
-
-  .hp-card-stack .hp-card:nth-child(2) { left: 20px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 40px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 60px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 76px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 84px; }
-
-  .card-badges {
-    bottom: 28px;
-  }
-
-  .card-badges span {
-    padding: 2px 5px;
-    font-size: 0.58rem;
-  }
-}
-
-@container combat-zone (max-height: 160px) {
-  .hp-card-stack {
-    width: 90px;
-  }
-}
-
-@container combat-zone (max-height: 140px) {
-  .hp-card-stack {
-    width: 80px;
-  }
-
-  .card-badges span {
-    padding: 1px 4px;
-    font-size: 0.52rem;
-  }
-}
+/* combat-zone 版本的完整定義（含 hp-card-stack 卡背間距）在檔案下方，
+ * 標記「the final authority」的區塊——這裡原本有三個重複、且卡背間距
+ * 計算錯誤（最後一兩張卡背間距被壓縮到比前面窄）的舊版本，已移除。 */
 
 .hand-fan.bottom-hand .hand-card-wrap {
   bottom: -94px;
@@ -1731,6 +1682,12 @@
     width: 14px;
   }
 
+  .hp-card-stack .hp-card:nth-child(2) { left: 8px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 16px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 24px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 32px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 40px; }
+
   .zone-watermark,
   .empty-zone {
     display: none;
@@ -1964,11 +1921,11 @@
     width: 32px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 20px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 40px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 60px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 76px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 84px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 17px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 34px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 51px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 68px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 85px; }
 
   .card-badges {
     bottom: 28px;
@@ -2000,11 +1957,11 @@
     width: 30px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 18px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 36px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 54px; }
-  .hp-card-stack .hp-card:nth-child(5) { left: 64px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 70px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 15px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 30px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 45px; }
+  .hp-card-stack .hp-card:nth-child(5) { left: 60px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 75px; }
 }
 
 @container combat-zone (max-height: 140px) {
@@ -2027,11 +1984,11 @@
     width: 26px;
   }
 
-  .hp-card-stack .hp-card:nth-child(2) { left: 16px; }
-  .hp-card-stack .hp-card:nth-child(3) { left: 32px; }
-  .hp-card-stack .hp-card:nth-child(4) { left: 48px; }
+  .hp-card-stack .hp-card:nth-child(2) { left: 13.5px; }
+  .hp-card-stack .hp-card:nth-child(3) { left: 27px; }
+  .hp-card-stack .hp-card:nth-child(4) { left: 40.5px; }
   .hp-card-stack .hp-card:nth-child(5) { left: 54px; }
-  .hp-card-stack .hp-card:nth-child(n + 6) { left: 58px; }
+  .hp-card-stack .hp-card:nth-child(n + 6) { left: 67.5px; }
 
   .card-badges span {
     padding: 1px 4px;
