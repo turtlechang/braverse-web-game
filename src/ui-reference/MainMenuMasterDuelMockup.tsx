@@ -236,7 +236,7 @@ export function MainMenuMasterDuelMockup() {
         }
         @media (max-width: 900px) {
           .mock-md-shell { grid-template-columns: 1fr; }
-          .mock-md-hero { inset: 0; opacity: .3; }
+          .mock-md-hero { inset: 0; opacity: .7; }
           .mock-md-hero::after { width: 100%;
             background: linear-gradient(180deg, rgba(5,12,28,.55), rgba(5,12,28,.9)); }
           .mock-md-left { overflow-y: auto; }
@@ -271,7 +271,13 @@ export function MainMenuMasterDuelMockup() {
       {/* 右側主視覺：目前牌組的代表卡，隨切換器連動 */}
       <div className="mock-md-hero" aria-hidden="true">
         <div className="mock-md-hero-glow" />
-        <div className="mock-md-hero-fallback">主視覺卡圖</div>
+        {!deck && (
+          <img
+            className="mock-md-hero-card"
+            src="https://cookierunbraverse.com/data/en_storage/2HgB5QrG10BzWXr00hCI0w.webp"
+            alt="勇敢餅乾"
+          />
+        )}
         {deck && (
           <img
             className="mock-md-hero-card"
@@ -294,7 +300,7 @@ export function MainMenuMasterDuelMockup() {
         <nav className="mock-md-nav" aria-label="主選單">
           {hasDecks ? (
             <button type="button" className="mock-md-navitem lv1 primary">
-              對戰入口
+              AI 對戰
               {showError && <span className="mock-md-badge">!</span>}
             </button>
           ) : (
@@ -308,7 +314,7 @@ export function MainMenuMasterDuelMockup() {
                 disabled
                 aria-describedby="md-reason-battle"
               >
-                對戰入口
+                AI 對戰
               </button>
               <p className="mock-md-reason" id="md-reason-battle">
                 尚無自訂牌組，請先建立牌組後再開始對戰。
@@ -327,13 +333,13 @@ export function MainMenuMasterDuelMockup() {
           </button>
           {!hasDecks && (
             <p className="mock-md-reason" id="md-reason-online">
-              尚無自訂牌組，請先建立牌組後再進行線上對戰。
+              建立房間或加入房間，與好友進行對戰。
             </p>
           )}
 
           {/* 牌組管理已獨立成「我的牌組」畫面（/?mockup=my-decks） */}
           <a className="mock-md-navitem lv2" href="/?mockup=my-decks">
-            我的牌組
+            牌組
           </a>
         </nav>
 
@@ -441,7 +447,6 @@ export function MainMenuMasterDuelMockup() {
           <nav className="mock-md-utility" aria-label="開發者工具">
             <span className="mock-md-utility-label">開發者工具</span>
             <button type="button">測試對局設定</button>
-            <button type="button">重新讀取</button>
           </nav>
           <p className="mock-md-disclaimer">
             本作品為非官方粉絲研究專案，與 Devsisters Corporation 無任何關聯、合作或授權。

@@ -87,9 +87,10 @@ export function MyDecksMockup() {
     <div className="mock-dk-shell">
       <style>{`
         .mock-dk-shell { position: fixed; inset: 0; overflow: hidden;
-          display: grid; grid-template-rows: auto minmax(0,1fr) auto;
+          display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto;
           color: #eef9ff; font-family: system-ui, 'Noto Sans TC', sans-serif;
-          background: #070818; }
+          background: #070818; height: 100vh; min-height: 100vh; }
+
         /* MD 的斜切導光背景 */
         .mock-dk-shell::before { content: ''; position: absolute; inset: 0; z-index: 0;
           background:
@@ -117,14 +118,16 @@ export function MyDecksMockup() {
         .mock-dk-topbtn.on { background: rgba(226,69,92,.22); border-color: #ff9db8; color: #ff9db8; }
 
         /* ── 牌組磚格 ── */
-        .mock-dk-grid { position: relative; z-index: 2; overflow: auto; padding: 4px 22px 16px;
-          display: grid; gap: 14px; align-content: start;
-          grid-template-columns: repeat(auto-fill, minmax(186px, 1fr)); }
+        .mock-dk-grid { position: relative; z-index: 2; overflow-y: auto; overflow-x: hidden;
+          padding: 4px 22px 16px; min-height: 0;
+          display: grid; gap: 24px 20px; align-content: start;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          grid-auto-rows: minmax(220px, auto); }
 
         .mock-dk-tile { position: relative; display: grid; grid-template-rows: 1fr auto;
-          aspect-ratio: 186 / 186; border-radius: 6px; cursor: pointer; overflow: hidden;
+          aspect-ratio: 1; border-radius: 6px; cursor: pointer; overflow: hidden;
           background: rgba(6,10,28,.86); border: 1px solid rgba(150,180,255,.22);
-          transition: border-color .12s, transform .12s; }
+          transition: border-color .12s, transform .12s; min-height: 220px; }
         .mock-dk-tile:hover { border-color: rgba(126,231,240,.65); transform: translateY(-2px); }
         .mock-dk-tile.is-selected { border-color: #a8e832;
           box-shadow: 0 0 0 1px #a8e832, 0 0 22px rgba(168,232,50,.24); }
@@ -176,9 +179,10 @@ export function MyDecksMockup() {
         .mock-dk-tile.is-checked .mock-dk-check span { background: #e2455c; border-color: #ff9db8; color: #fff; }
 
         /* 新增磚 */
-        .mock-dk-add { display: grid; place-items: center; aspect-ratio: 186 / 186;
+        .mock-dk-add { display: grid; place-items: center; aspect-ratio: 1;
           border-radius: 6px; cursor: pointer; background: rgba(6,10,28,.7);
-          border: 1px solid rgba(168,232,50,.42); transition: background .12s; }
+          border: 1px solid rgba(168,232,50,.42); transition: background .12s;
+          min-height: 220px; }
         .mock-dk-add:hover { background: rgba(168,232,50,.1); }
         .mock-dk-add span { display: grid; place-items: center; width: 72px; height: 72px;
           border-radius: 999px; border: 3px solid #a8e832; color: #a8e832;
@@ -190,21 +194,24 @@ export function MyDecksMockup() {
 
         /* ── 底列 ── */
         .mock-dk-bottom { position: relative; z-index: 2; display: flex; justify-content: flex-end;
-          align-items: center; gap: 12px; padding: 12px 22px 16px; flex-wrap: wrap; }
-        .mock-dk-bigbtn { position: relative; min-width: 208px; padding: 12px 22px 12px 26px;
+          align-items: center; gap: 12px; padding: 8px 22px 10px; flex-wrap: wrap;
+          background: rgba(7,8,24,.95); border-top: 1px solid rgba(150,180,255,.15);
+          flex-shrink: 0; min-height: 44px; }
+        .mock-dk-bigbtn { position: relative; min-width: 160px; padding: 8px 18px 8px 22px;
           border-radius: 4px; cursor: pointer; font-size: .88rem; font-weight: 800;
-          background: rgba(8,16,40,.94); border: 1px solid rgba(150,180,255,.3); color: #eef9ff; }
+          background: rgba(8,16,40,.94); border: 1px solid rgba(150,180,255,.3); color: #eef9ff;
+          writing-mode: horizontal-tb; text-orientation: mixed; }
         .mock-dk-bigbtn::before { content: ''; position: absolute; left: 10px; top: 50%;
           transform: translateY(-50%) skewX(-14deg); width: 4px; height: 46%; background: #a8e832; }
         .mock-dk-bigbtn:hover:not(:disabled) { border-color: #a8e832; }
         .mock-dk-bigbtn:disabled { opacity: .4; cursor: not-allowed; }
-        .mock-dk-danger { min-width: 208px; padding: 12px 22px; border-radius: 4px; cursor: pointer;
+        .mock-dk-danger { min-width: 160px; padding: 8px 18px; border-radius: 4px; cursor: pointer;
           font-size: .88rem; font-weight: 800; color: #fff;
-          background: rgba(226,69,92,.34); border: 1px solid #ff9db8; }
+          background: rgba(226,69,92,.34); border: 1px solid #ff9db8;
+          writing-mode: horizontal-tb; text-orientation: mixed; }
         .mock-dk-danger:disabled { opacity: .4; cursor: not-allowed; }
-        .mock-dk-hint { margin-right: auto; font-size: .74rem; color: rgba(159,195,232,.72); }
 
-        .mock-dk-notice { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+        .mock-dk-notice { position: fixed; left: 50%; bottom: 56px; transform: translateX(-50%);
           z-index: 18; display: flex; align-items: center; gap: 12px;
           max-width: min(560px, calc(100vw - 32px)); padding: 10px 12px 10px 16px;
           border-radius: 4px; background: rgba(9,20,48,.97);
@@ -214,14 +221,51 @@ export function MyDecksMockup() {
           background: transparent; color: #9fc3e8; border: 1px solid rgba(255,255,255,.14);
           cursor: pointer; font-size: .7rem; }
 
-        .mock-dk-foot { position: relative; z-index: 2; padding: 0 22px 10px;
-          font-size: .62rem; color: rgba(210,226,252,.4); line-height: 1.5; }
+        .mock-dk-foot { position: relative; z-index: 2; padding: 0 22px 8px;
+          font-size: .58rem; color: rgba(210,226,252,.4); line-height: 1.4;
+          flex-shrink: 0; }
 
-        @media (max-width: 680px) {
-          .mock-dk-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); padding: 4px 14px 12px; }
-          .mock-dk-top { padding: 12px 14px; gap: 10px; }
-          .mock-dk-bottom { padding: 10px 14px 14px; }
-          .mock-dk-bigbtn, .mock-dk-danger { min-width: 0; flex: 1; }
+        /* ── RWD 斷點（桌面優先） ── */
+
+        /* lg: ≥ 992px 平版橫向／小筆電 */
+        @media (max-width: 1199px) {
+          .mock-dk-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+          .mock-dk-tile { min-height: 190px; }
+          .mock-dk-add { min-height: 190px; }
+        }
+
+        /* md: 平板直向 */
+        @media (max-width: 991px) {
+          .mock-dk-grid { grid-template-columns: repeat(3, 1fr); gap: 32px 14px; padding: 4px 16px 16px; grid-auto-rows: 240px; }
+          .mock-dk-tile { min-height: 240px; aspect-ratio: auto; }
+          .mock-dk-add { min-height: 240px; aspect-ratio: auto; }
+          .mock-dk-bottom { padding: 8px 16px 10px; }
+        }
+
+        /* sm: 大手機 */
+        @media (max-width: 767px) {
+          .mock-dk-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 4px 14px 12px; }
+          .mock-dk-tile { min-height: 180px; }
+          .mock-dk-add { min-height: 180px; }
+          .mock-dk-top { padding: 10px 14px; gap: 10px; }
+          .mock-dk-bottom { padding: 6px 14px 8px; min-height: 40px; gap: 8px; }
+          .mock-dk-bigbtn, .mock-dk-danger { min-width: 0; flex: 1; padding: 7px 12px; font-size: .82rem; }
+          .mock-dk-title { font-size: 1.2rem; }
+          .mock-dk-back { width: 36px; height: 36px; }
+        }
+
+        /* xs: 手機 */
+        @media (max-width: 575px) {
+          .mock-dk-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 4px 10px 10px; }
+          .mock-dk-tile { min-height: 150px; }
+          .mock-dk-add { min-height: 150px; }
+          .mock-dk-top { padding: 8px 10px; gap: 6px; }
+          .mock-dk-topbtn { min-width: 44px; height: 30px; padding: 0 8px; font-size: .82rem; }
+          .mock-dk-bottom { padding: 6px 10px 8px; min-height: 36px; gap: 6px; }
+          .mock-dk-bigbtn, .mock-dk-danger { min-width: 0; flex: 1; padding: 6px 10px; font-size: .74rem; }
+          .mock-dk-title { font-size: 1.05rem; }
+          .mock-dk-count { font-size: .9rem; }
+          .mock-dk-back { width: 30px; height: 30px; font-size: 1rem; }
         }
       `}</style>
 
@@ -340,9 +384,6 @@ export function MyDecksMockup() {
       <div className="mock-dk-bottom">
         {bulkMode ? (
           <>
-            <span className="mock-dk-hint">
-              已選擇 {checked.length} 副。刪除後無法復原。
-            </span>
             <button type="button" className="mock-dk-bigbtn" onClick={exitBulk}>
               取消
             </button>
@@ -357,9 +398,6 @@ export function MyDecksMockup() {
           </>
         ) : (
           <>
-            <span className="mock-dk-hint">
-              點磚＝設為目前牌組；滑過磚面可編輯／複製
-            </span>
             <button
               type="button"
               className="mock-dk-bigbtn"
