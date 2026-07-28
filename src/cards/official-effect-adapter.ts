@@ -187,6 +187,9 @@ const parseAbilityCost = (text: string): AbilityCost => {
   const trashBattleMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?LV\.(\d+)\s+Cookie\s+from\s+your\s+battle\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
   )
+  const makeFaintMatch = text.match(
+    /(?:<|《)\s*Make\s+(\d+)\s+of\s+your\s+(?:\{([RYGBPK])\}\s+)?Cookies?\s+faint\.?\s*(?:>|》)/i,
+  )
   const handToBreakMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?Cookie\s+from\s+your\s+hand\s+into\s+your\s+break\s+area\.?\s*(?:>|》)/i,
   )
@@ -230,6 +233,18 @@ const parseAbilityCost = (text: string): AbilityCost => {
               energyColor:
                 costColors[
                   trashBattleMatch[2].toUpperCase() as keyof typeof costColors
+                ],
+            }
+          : {}),
+      },
+    } : makeFaintMatch ? {
+      trashBattleCookie: {
+        count: Number(makeFaintMatch[1]),
+        ...(makeFaintMatch[2]
+          ? {
+              energyColor:
+                costColors[
+                  makeFaintMatch[2].toUpperCase() as keyof typeof costColors
                 ],
             }
           : {}),
@@ -2220,10 +2235,30 @@ export const convertOfficialStageAbility = (
     ],
     'BS3-023': [
       {
-        kind: 'modify-attack',
-        amount: 1,
-        duration: 'this-turn',
-        target: { side: 'self', min: 0, max: 1 },
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'During this turn, that Cookie gains +1 attack damage.',
+            effects: [
+              {
+                kind: 'modify-attack',
+                amount: 1,
+                duration: 'this-turn',
+                target: { side: 'self', min: 0, max: 1 },
+              },
+            ],
+          },
+          {
+            label: 'Return 1 card from the top of this Cookie\'s HP to your hand.',
+            effects: [
+              {
+                kind: 'hp-to-hand',
+                amount: 1,
+                target: { side: 'self', min: 0, max: 1 },
+              },
+            ],
+          },
+        ],
       },
     ],
     'BS3-047': [
@@ -2312,6 +2347,10 @@ export const convertOfficialStageAbility = (
     'BS1-078': { energy: {}, discardHand: 0 },
     'BS2-051': { energy: {}, discardHand: 1 },
     'BS2-081': { energy: { purple: 1 }, discardHand: 0 },
+    'BS3-024': {
+      energy: { red: 2 },
+      trashBattleCookie: { count: 1, energyColor: 'red' },
+    },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {

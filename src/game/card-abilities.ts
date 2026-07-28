@@ -569,6 +569,7 @@ export const activateStage = (
   supportToHandIds: string[] = [],
   discardHandIds: string[] = [],
   hpToTrashTargetIds: string[] = [],
+  trashBattleCookieIds: string[] = [],
 ): GameState => {
   if (!canActivateStage(state, playerId)) {
     throw new GameRuleError('目前無法啟動場景卡。')
@@ -582,6 +583,7 @@ export const activateStage = (
     supportToHandIds,
     discardHandIds,
     hpToTrashTargetIds,
+    trashBattleCookieIds,
   })
   const paidPlayer = paidState.players[playerId]
   const activatedState = updatePlayer(paidState, {

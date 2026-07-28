@@ -370,6 +370,7 @@ export interface ActivateStageCommand {
   supportToHandIds?: string[]
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
+  trashBattleCookieIds?: string[]
   effectTargets?: string[][]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -383,6 +384,7 @@ export interface BeginActivateStageCommand {
   supportToHandIds?: string[]
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
+  trashBattleCookieIds?: string[]
   targetIds?: string[]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -1342,6 +1344,7 @@ const applyPlayerActionCommand = (
         command.supportToHandIds ?? [],
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
+        command.trashBattleCookieIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -1367,6 +1370,7 @@ const applyPlayerActionCommand = (
         command.supportToHandIds ?? [],
         command.discardHandIds ?? [],
         command.hpToTrashTargetIds ?? [],
+        command.trashBattleCookieIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
