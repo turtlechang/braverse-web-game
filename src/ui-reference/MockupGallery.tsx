@@ -8,14 +8,20 @@ import type { ComponentType } from 'react'
 import { useEffect } from 'react'
 import { BattlefieldMockup } from './BattlefieldMockup'
 import { DeckEditorMockup } from './DeckEditorMockup'
+import { MainMenuMasterDuelMockup } from './MainMenuMasterDuelMockup'
 import { MainMenuMockup } from './MainMenuMockup'
+import { MainMenuRedesignMockup } from './MainMenuRedesignMockup'
+import { MyDecksMockup } from './MyDecksMockup'
 import { ThemeVariantsMockup } from './ThemeVariantsMockup'
 import { designThemes } from '../styles/tokens'
 import { readThemeFromQuery } from '../styles/themeQuery'
 
 const MOCKUPS: { id: string; title: string; component: ComponentType }[] = [
   { id: 'battlefield', title: '戰場（wireframe 01）', component: BattlefieldMockup },
-  { id: 'main-menu', title: '主選單（wireframe 02）', component: MainMenuMockup },
+  { id: 'main-menu', title: '主選單（wireframe 02，現行版面）', component: MainMenuMockup },
+  { id: 'main-menu-redesign', title: '主選單重新設計提案 A：雙欄保留牌組庫（P2-5）', component: MainMenuRedesignMockup },
+  { id: 'main-menu-md', title: '主選單重新設計提案 B：Master Duel 風格', component: MainMenuMasterDuelMockup },
+  { id: 'my-decks', title: '我的牌組（提案 B 配套：獨立牌組管理畫面）', component: MyDecksMockup },
   { id: 'deck-editor', title: '牌組編輯器（wireframe 03）', component: DeckEditorMockup },
   { id: 'themes', title: '主題變體展示（Phase 1）', component: ThemeVariantsMockup },
 ]
