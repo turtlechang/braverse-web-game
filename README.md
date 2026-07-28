@@ -117,7 +117,7 @@ npm run cards:analyze:bs3-candidate
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-07-28 | 修正 BS3-023 場景卡 choose-one（補 hp-to-hand 選項）、BS3-024 啟動代價 `Make faint` 模式解析與 `activateStage()` 犧牲代價參數；新增 BS3-018~024 整合測試。 |
+| 2026-07-28 | 修正 BS3-023 場景卡 choose-one（補 hp-to-hand 選項）、BS3-024 啟動代價 `Make faint` 模式解析與 `activateStage()` 犧牲代價參數；新增 BS3-001~024 完整整合測試。 |
 | 2026-07-26 | 依官方 Q&A 補齊 BS3-115 保護：`attackTargetOnly` 附加傷害例外、全場／棄置路徑排除，以及 BS3-019 無合法目標時 Then 裝載整段中止。 |
 | 2026-07-25 | 新增 BS3 官方英文卡表候選盤點匯入與 `PURE` 通用分類／特殊費用／Mix Cost、Ancient／Soul Jam／BS3-121 runtime 基礎，追加效果覆蓋報表、來源能量付款與 18 張攻擊後 `Then` 效果；`inventory` 候選仍禁止直接 promote。 |
 | 2026-07-25 | 戰場 mockup 與正式桌面對局同步採深藍桌墊、紅／青場區框、區域資訊與鏡射功能欄；移除會穿過手牌的全畫面裝飾框。 |
