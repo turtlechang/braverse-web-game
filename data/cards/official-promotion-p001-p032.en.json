@@ -1,0 +1,741 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-07-26T13:52:06.869Z",
+    "totalAvailable": 2092,
+    "matchedAvailable": 18,
+    "importedCount": 18,
+    "filter": {
+      "categoryTitle": "PROMOTION CARD",
+      "cardNumberRange": "P-001 ~ P-032"
+    },
+    "imagesDownloaded": false,
+    "candidateStatus": "promotion-ready"
+  },
+  "cards": [
+    {
+      "sourceId": 45177,
+      "locale": "en",
+      "cardNumber": "P-001",
+      "baseCardNumber": "P-001",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{mt} If there are 3 cards or less in your hand, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{R}{R}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mU_cf6uDL7Xi7Gsaa9OmLQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45178,
+      "locale": "en",
+      "cardNumber": "P-002",
+      "baseCardNumber": "P-002",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{mt) If there are 3 cards or less in your hand, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{Y}{Y}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BWYZGFxrQfIY4I0siExf5g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45179,
+      "locale": "en",
+      "cardNumber": "P-003",
+      "baseCardNumber": "P-003",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "{mt) If there are 3 cards or less in your hand, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{G}{G}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/a1NsGdyS99tRK9tx8VYZBA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45180,
+      "locale": "en",
+      "cardNumber": "P-007",
+      "baseCardNumber": "P-007",
+      "variant": null,
+      "name": "Chestnut Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 1,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "{ap} Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "《{R}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ggi_5uWdO0D1ksjTkkQTag.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45181,
+      "locale": "en",
+      "cardNumber": "P-008",
+      "baseCardNumber": "P-008",
+      "variant": null,
+      "name": "Macaron Hammer",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}》 Select up to 1 of your opponent's Cookies whose remaining HP is 4 or more. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/m9dh2L4JnWMqBVNkRGbqWw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45182,
+      "locale": "en",
+      "cardNumber": "P-009",
+      "baseCardNumber": "P-009",
+      "variant": null,
+      "name": "Stardust Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 6,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{Y}{Y}{Y}》 Deals 2 damage. Then, if your break area LV. is higher than your opponent's, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/2TBZXB8_8iyr9hCEXC3yrw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45183,
+      "locale": "en",
+      "cardNumber": "P-010",
+      "baseCardNumber": "P-010",
+      "variant": null,
+      "name": "Adventurer Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{ap} Select up to 1 of your opponent's LV.1 Cookies. That Cookie cannot attack until the start of the next turn."
+      },
+      "attackText": "《{Y}{Y}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/XiDFgWaViXN-ccmeQ0txDw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45184,
+      "locale": "en",
+      "cardNumber": "P-011",
+      "baseCardNumber": "P-011",
+      "variant": null,
+      "name": "Strawberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": "If this Cookie has fainted, take 1 card from your support area to your hand. Then, place 1 card from your hand in your support area as rested."
+      },
+      "attackText": "《{G}{G}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/dqfNC5Jgh3MalJvET22P9g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45185,
+      "locale": "en",
+      "cardNumber": "P-012",
+      "baseCardNumber": "P-012",
+      "variant": null,
+      "name": "Mischievous Ladybug",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}{G}》 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage. Then, place this card in your support area as rested.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/A0ydFDiVrOroFF_vpPnrtQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45186,
+      "locale": "en",
+      "cardNumber": "P-013",
+      "baseCardNumber": "P-013",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mt) If there are 3 cards or less in your hand, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{B}{B}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/FMokedRG527Yupmi14g-lw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45187,
+      "locale": "en",
+      "cardNumber": "P-014",
+      "baseCardNumber": "P-014",
+      "variant": null,
+      "name": "GingerBright",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": "{mt) If there are 3 cards or less in your hand, this Cookie gains +1 attack damage."
+      },
+      "attackText": "《{P}{P}》 Deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Wp9L7yXT51znl9rfchp4Yw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45188,
+      "locale": "en",
+      "cardNumber": "P-015",
+      "baseCardNumber": "P-015",
+      "variant": null,
+      "name": "Muscle Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 5,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{R}{R}{R}》 Deals 3 damage. Then, 《can be used as {R}.》 Choose 1 of your opponent's Cookies. That Cookie receives 1 damage. Then, select up to 1 of your Cookies and place 2 of their HP attached cards in your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/D4hN_4H9QBjYcqePPYi-vw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45189,
+      "locale": "en",
+      "cardNumber": "P-016",
+      "baseCardNumber": "P-016",
+      "variant": null,
+      "name": "Gumball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": "{ap} 《{Y}》 Choose 1 {Y} LV.2 Cookie from your trash and place them in your break area. Then, select up to 2 {Y} LV.1 Cookies from your break area and place them in your trash."
+      },
+      "attackText": "《{Y}{Y}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/aG4OAKBpKzxwh7ErMy-xxQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45191,
+      "locale": "en",
+      "cardNumber": "P-018",
+      "baseCardNumber": "P-018",
+      "variant": null,
+      "name": "Mustard Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "{mt} {ap} 《Discard 1 card.》 Deals 1 damage to all Cookies other than this Cookie."
+      },
+      "attackText": "《{B}{B}》 Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/c7ZVURpyhIpmVsBCoPBa5Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45192,
+      "locale": "en",
+      "cardNumber": "P-019",
+      "baseCardNumber": "P-019",
+      "variant": null,
+      "name": "Hero Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 2,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{P}》 Deals 1 damage. Then, select up to 3 Cookies from your trash that do not have FLIP, return them to your deck, and shuffle it.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WfALT0JDhqE_gxVUslQ-vw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:22.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45193,
+      "locale": "en",
+      "cardNumber": "P-022",
+      "baseCardNumber": "P-022",
+      "variant": null,
+      "name": "Milky Way Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "《{G}{G}{G}》 Deals 3 damage.",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/vsH7bx5xKbt-3vJk_AJwOw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45200,
+      "locale": "en",
+      "cardNumber": "P-030",
+      "baseCardNumber": "P-030",
+      "variant": null,
+      "name": "Sherbet Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Piercing Blizzard",
+        "text": "{mt} {ap} <Discard 2 cards.> Deals 1 damage to all of your opponent's Cookies."
+      },
+      "attackText": "<{B}{N}> Frost shards, away! {da} 3\r\nThen <discard 1 card.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uPCmQdiKfLRUpqo9yf8OcQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 45201,
+      "locale": "en",
+      "cardNumber": "P-031",
+      "baseCardNumber": "P-031",
+      "variant": null,
+      "name": "The Heir's Betrayal",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}> If there are 15 cards or more in your trash, select up to 1 of your opponent's LV.3 Cookies. During this turn, that Cookie deals -1 attack damage. Then, place up to 1 of that Cookie's top HP card in the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/snuFy7dLHX9_7IfoTH7F4g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:20.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}
