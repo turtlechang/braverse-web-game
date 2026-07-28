@@ -21,6 +21,7 @@ import {
   getRefreshCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
+  getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCandidates,
   getEnergyCostTotal,
@@ -71,6 +72,7 @@ export function useOnlineMatchController(params: {
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
+  const [selectedTrapSelfTargetId, setSelectedTrapSelfTargetId] = useState<string | null>(null)
   const [selectedTrapSupportTrashIds, setSelectedTrapSupportTrashIds] = useState<string[]>([])
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
@@ -389,6 +391,18 @@ export function useOnlineMatchController(params: {
   const selectedTrapTargets = selectedTrapTarget
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
+  const trapSelfTargetCandidates =
+    selectedTrap && !trapSelectNoTarget
+      ? getTrapSelfTargetCandidates(game, viewerPlayerId, selectedTrap.instanceId)
+      : []
+  const selectedTrapSelfTarget = selectedTrapSelfTargetId
+    ? trapSelfTargetCandidates.find(
+        (candidate) => candidate.card.instanceId === selectedTrapSelfTargetId,
+      )
+    : undefined
+  const selectedTrapSelfTargets = selectedTrapSelfTarget
+    ? [selectedTrapSelfTarget]
+    : trapSelfTargetCandidates.slice(0, 1)
   const trapSupportTrashEffect = selectedTrap?.trap?.effects.find(
     (effect) => effect.kind === 'support-to-trash',
   )
@@ -576,6 +590,10 @@ export function useOnlineMatchController(params: {
     selectedTrapTargetId,
     setSelectedTrapTargetId,
     selectedTrapTargets,
+    trapSelfTargetCandidates,
+    selectedTrapSelfTargetId,
+    setSelectedTrapSelfTargetId,
+    selectedTrapSelfTargets,
     selectedTrapSupportTrashIds,
     setSelectedTrapSupportTrashIds,
     trapSupportTrashCandidates,

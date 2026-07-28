@@ -15,6 +15,7 @@ import {
   getRefreshCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
+  getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCandidates,
   buildReplayIssueBundle,
@@ -282,6 +283,7 @@ export function useMatchController(params: {
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
+  const [selectedTrapSelfTargetId, setSelectedTrapSelfTargetId] = useState<string | null>(null)
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
   const [selectedTrapSupportTrashIds, setSelectedTrapSupportTrashIds] = useState<string[]>([])
@@ -595,6 +597,18 @@ export function useMatchController(params: {
   const selectedTrapTargets = selectedTrapTarget
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
+  const trapSelfTargetCandidates =
+    selectedTrap && !trapSelectNoTarget
+      ? getTrapSelfTargetCandidates(game, viewerPlayerId, selectedTrap.instanceId)
+      : []
+  const selectedTrapSelfTarget = selectedTrapSelfTargetId
+    ? trapSelfTargetCandidates.find(
+        (candidate) => candidate.card.instanceId === selectedTrapSelfTargetId,
+      )
+    : undefined
+  const selectedTrapSelfTargets = selectedTrapSelfTarget
+    ? [selectedTrapSelfTarget]
+    : trapSelfTargetCandidates.slice(0, 1)
   const trapSupportTrashEffect = selectedTrap?.trap?.effects.find(
     (effect) => effect.kind === 'support-to-trash',
   )
@@ -816,6 +830,7 @@ export function useMatchController(params: {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
       setSelectedTrapTargetId(null)
+      setSelectedTrapSelfTargetId(null)
       setGame((current: GameState) => {
         const currentBattle = current.pendingBattle
         if (
@@ -945,6 +960,10 @@ export function useMatchController(params: {
     selectedTrapTargetId,
     setSelectedTrapTargetId,
     selectedTrapTargets,
+    trapSelfTargetCandidates,
+    selectedTrapSelfTargetId,
+    setSelectedTrapSelfTargetId,
+    selectedTrapSelfTargets,
     selectedTrapSupportTrashIds,
     setSelectedTrapSupportTrashIds,
     trapSupportTrashCandidates,

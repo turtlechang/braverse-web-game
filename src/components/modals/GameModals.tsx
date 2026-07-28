@@ -520,6 +520,9 @@ export interface TrapResponseModalProps {
   selectedTrapTargetId?: string | null
   onSelectTrap: (instanceId: string) => void
   onSelectTrapTarget?: (instanceId: string) => void
+  trapSelfTargetCandidates?: CookieInBattle[]
+  selectedTrapSelfTargetId?: string | null
+  onSelectTrapSelfTarget?: (instanceId: string) => void
   onToggleDiscardHand: (instanceId: string) => void
   onToggleBattleCookie?: (instanceId: string) => void
   onConfirm: () => void
@@ -606,6 +609,9 @@ export function TrapResponseModal({
   selectedTrapTargetId = null,
   onSelectTrap,
   onSelectTrapTarget,
+  trapSelfTargetCandidates = [],
+  selectedTrapSelfTargetId = null,
+  onSelectTrapSelfTarget,
   onToggleDiscardHand,
   onToggleBattleCookie,
   onConfirm,
@@ -648,11 +654,14 @@ export function TrapResponseModal({
     handToSupportAmount > 0 ||
     trashToDeckAmount > 0 ||
     Boolean(allowEmptyTarget)
+  const hasSelfTargetPhase =
+    trapSelfTargetCandidates.length > 0 && Boolean(onSelectTrapSelfTarget)
 
   const phaseIds: GuidedPhaseId[] = [
     ...(hasEnergyPhase ? (['energy'] as const) : []),
     ...(hasCostPhase ? (['cost'] as const) : []),
     ...(hasTargetPhase ? (['target'] as const) : []),
+    ...(hasSelfTargetPhase ? (['selfTarget'] as const) : []),
   ]
   const activePhase =
     step !== 'select' && phaseIds.includes(step)
@@ -677,6 +686,9 @@ export function TrapResponseModal({
     (handToSupportAmount === 0 ||
       handToSupportCards.length === 0 ||
       selectedHandToSupportIds.length === handToSupportAmount)
+  const selfTargetReady =
+    trapSelfTargetCandidates.length === 0 ||
+    Boolean(selectedTrapSelfTargetId)
   const activePhaseReady =
     activePhase === 'energy'
       ? energyReady
@@ -684,10 +696,12 @@ export function TrapResponseModal({
         ? costReady
         : activePhase === 'target'
           ? targetReady
-          : true
+          : activePhase === 'selfTarget'
+            ? selfTargetReady
+            : true
   const phases: GuidedPhase[] = phaseIds.map((id, index) => ({
     id,
-    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : '目標',
+    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : id === 'selfTarget' ? '自身目標' : '目標',
     complete: index < activePhaseIndex,
   }))
   const hasPreviousPhase = activePhaseIndex > 0
@@ -1043,6 +1057,36 @@ export function TrapResponseModal({
                     不選擇目標（略過傷害效果）
                   </label>
                 )}
+              </div>
+            )}
+
+            {activePhase === 'selfTarget' && trapSelfTargetCandidates.length > 0 && (
+              <div>
+                <strong>選擇自身目標餅乾</strong>
+                <div className="modal-card-options compact trap-target-options">
+                  {trapSelfTargetCandidates.map((candidate) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedTrapSelfTargetId === candidate.card.instanceId
+                          ? 'is-selected'
+                          : ''
+                      }
+                      key={candidate.card.instanceId}
+                      onClick={() =>
+                        onSelectTrapSelfTarget?.(candidate.card.instanceId)
+                      }
+                    >
+                      <CardFace
+                        card={candidate.card}
+                        selected={
+                          selectedTrapSelfTargetId === candidate.card.instanceId
+                        }
+                      />
+                      <span>{candidate.card.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

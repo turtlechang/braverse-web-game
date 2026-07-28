@@ -353,6 +353,7 @@ const validateTrapTargets = (
   playerId: PlayerId,
   effects: CardEffect[],
   targetIds: string[],
+  selfTargetIds?: string[],
 ) => {
   const targetEffects = effects.filter(
     (effect) =>
@@ -373,6 +374,28 @@ const validateTrapTargets = (
   for (const effect of targetEffects) {
     const target = 'target' in effect ? effect.target : undefined
     if (!target) continue
+    const isSelfTarget = target.side === 'self'
+    let effectiveIds: string[]
+    if (isSelfTarget) {
+      if (selfTargetIds && selfTargetIds.length > 0) {
+        effectiveIds = selfTargetIds
+      } else {
+        const selfCandidates = getEffectTargetCandidates(
+          state,
+          { sourcePlayerId: playerId, sourceInstanceId: 'pending-trap' },
+          target,
+        )
+        const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+        const validTargetIds = targetIds.filter((id) => selfCandidateIds.has(id))
+        effectiveIds = validTargetIds.length > 0
+          ? validTargetIds
+          : selfCandidates.length > 0
+            ? [selfCandidates[0].card.instanceId]
+            : []
+      }
+    } else {
+      effectiveIds = targetIds
+    }
     selectEffectTargets(
       state,
       {
@@ -380,7 +403,7 @@ const validateTrapTargets = (
         sourceInstanceId: 'pending-trap',
       },
       target,
-      targetIds,
+      effectiveIds,
     )
   }
 }
@@ -468,6 +491,11 @@ export interface PlayTrapOptions {
    * targetIds 並存，不會互相覆蓋。
    */
   trashToDeckIds?: string[]
+  /**
+   * 自身目標效果的獨立目標欄位（例如 BS3-021 的「1 of your Cookies takes
+   * 1 damage」）。與 targetIds（通常瞄準對手）的目標側不同，不能共用。
+   */
+  selfTargetIds?: string[]
 }
 
 export interface PlayBlockerOptions {
@@ -581,7 +609,7 @@ export const playTrap = (
     throw new GameRuleError(`Invalid trap payment: ${paymentValidation.reason}`)
   }
 
-  validateTrapTargets(state, playerId, trap.effects, options.targetIds)
+  validateTrapTargets(state, playerId, trap.effects, options.targetIds, options.selfTargetIds)
 
   const discardHandIds = options.discardHandIds ?? []
   const uniqueDiscardHandIds = [...new Set(discardHandIds)]
@@ -809,11 +837,33 @@ export const playTrap = (
     }
 
     if (effect.kind === 'redirect-attack') {
+      const isSelfTarget = effect.target?.side === 'self'
+      let redirectTargetIds: string[]
+      if (isSelfTarget) {
+        if (options.selfTargetIds && options.selfTargetIds.length > 0) {
+          redirectTargetIds = options.selfTargetIds
+        } else {
+          const selfCandidates = getEffectTargetCandidates(
+            nextState,
+            context,
+            effect.target,
+          )
+          const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+          const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
+          redirectTargetIds = validTargetIds.length > 0
+            ? validTargetIds
+            : selfCandidates.length > 0
+              ? [selfCandidates[0].card.instanceId]
+              : []
+        }
+      } else {
+        redirectTargetIds = options.targetIds
+      }
       const targets = selectEffectTargets(
         nextState,
         context,
         effect.target,
-        options.targetIds,
+        redirectTargetIds,
       )
       const redirectTarget = targets[0]
       const activeBattle = requirePendingBattle(nextState)
@@ -841,11 +891,33 @@ export const playTrap = (
     }
 
     if (effect.kind === 'damage') {
+      const isSelfTarget = effect.target?.side === 'self'
+      let damageTargetIds: string[]
+      if (isSelfTarget) {
+        if (options.selfTargetIds && options.selfTargetIds.length > 0) {
+          damageTargetIds = options.selfTargetIds
+        } else {
+          const selfCandidates = getEffectTargetCandidates(
+            nextState,
+            context,
+            effect.target,
+          )
+          const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+          const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
+          damageTargetIds = validTargetIds.length > 0
+            ? validTargetIds
+            : selfCandidates.length > 0
+              ? [selfCandidates[0].card.instanceId]
+              : []
+        }
+      } else {
+        damageTargetIds = options.targetIds
+      }
       const targets = selectEffectTargets(
         nextState,
         context,
         effect.target,
-        options.targetIds,
+        damageTargetIds,
       )
       if (targets.length === 0) {
         continue
@@ -893,7 +965,26 @@ export const playTrap = (
         effect.kind === 'deck-to-support' ||
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
-        : options.targetIds,
+        : (() => {
+            if ('target' in effect && effect.target?.side === 'self') {
+              if (options.selfTargetIds && options.selfTargetIds.length > 0) {
+                return options.selfTargetIds
+              }
+              const selfCandidates = getEffectTargetCandidates(
+                nextState,
+                context,
+                effect.target,
+              )
+              const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+              const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
+              return validTargetIds.length > 0
+                ? validTargetIds
+                : selfCandidates.length > 0
+                  ? [selfCandidates[0].card.instanceId]
+                  : []
+            }
+            return options.targetIds
+          })(),
     )
   }
 
@@ -2107,6 +2198,39 @@ export const getTrapTargetCandidates = (
   )
   const target =
     targetEffect && 'target' in targetEffect ? targetEffect.target : undefined
+  return target
+    ? getEffectTargetCandidates(
+        state,
+        {
+          sourcePlayerId: playerId,
+          sourceInstanceId: card!.instanceId,
+        },
+        target,
+      )
+    : []
+}
+
+export const getTrapSelfTargetCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+  trapInstanceId: string,
+): CookieInBattle[] => {
+  const card = state.players[playerId].hand.find(
+    (candidate) => candidate.instanceId === trapInstanceId,
+  )
+  const selfEffects = card?.trap?.effects.filter(
+    (effect) =>
+      (effect.kind === 'damage' || effect.kind === 'gain-hp') &&
+      'target' in effect &&
+      effect.target?.side === 'self' &&
+      (effect.target.min ?? 0) > 0,
+  )
+  if (!selfEffects || selfEffects.length === 0) return []
+  const firstSelfEffect = selfEffects[0]
+  const target =
+    firstSelfEffect && 'target' in firstSelfEffect
+      ? firstSelfEffect.target
+      : undefined
   return target
     ? getEffectTargetCandidates(
         state,

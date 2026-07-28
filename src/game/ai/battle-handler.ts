@@ -1,6 +1,7 @@
 import {
   getTrapCandidates,
   getTrapTargetCandidates,
+  getTrapSelfTargetCandidates,
   getBlockerCandidates,
 } from '../battle'
 import { applyGameCommand } from '../commands'
@@ -309,6 +310,15 @@ export const handleAiPendingBattle = (
       const targetIds = preferredTarget
         ? [preferredTarget.card.instanceId]
         : []
+      const selfTargetCandidates = getTrapSelfTargetCandidates(
+        state,
+        playerId,
+        trapCard.instanceId,
+      )
+      const selfTargetIds =
+        selfTargetCandidates.length > 0
+          ? [selfTargetCandidates[0].card.instanceId]
+          : []
       const supportTrashEffect = trapCard.trap.effects.find(
         (effect) => effect.kind === 'support-to-trash',
       )
@@ -433,6 +443,7 @@ export const handleAiPendingBattle = (
           trapInstanceId: trapCard.instanceId,
           paymentIds,
           targetIds,
+          selfTargetIds,
           supportTrashIds,
           supportToHandIds,
           handToSupportIds,

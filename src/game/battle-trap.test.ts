@@ -1139,3 +1139,130 @@ describe('R15: trap multi-effect targeting (BS2-079)', () => {
     ).toBe(true)
   })
 })
+
+describe('BS3-021 Oath on the Shield: modify-attack + self-damage', () => {
+  const bs3021Trap = (): GameCard => ({
+    id: 'BS3-021',
+    instanceId: 'bs3-021-test',
+    name: 'Oath on the Shield',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: 'Select up to 1 of your opponent\'s Cookies. During this turn, that Cookie deals -3 attack damage. Then, select 1 of your Cookies. That Cookie receives 1 damage.',
+      cost: { energy: { red: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1 },
+        },
+      ],
+    },
+  })
+
+  it('reduces attacker attack by 3 and damages own cookie when both targets provided', () => {
+    const trap = bs3021Trap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('self-hp-1'),
+      item('self-hp-2'),
+      item('self-hp-3'),
+    ]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: ['attacker'],
+      selfTargetIds: ['defender'],
+    })
+
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -3 }),
+    )
+    expect(result.pendingBattle?.stage).toBe('damage')
+    expect(result.pendingBattle?.damageTargetInstanceId).toBe('defender')
+    expect(result.pendingBattle?.remainingDamage).toBe(1)
+  })
+
+  it('still applies modify-attack even without selfTargetIds (backward compatible)', () => {
+    const trap = bs3021Trap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: ['attacker'],
+    })
+
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -3 }),
+    )
+  })
+})
+
+describe('BS1-050 Broken Signpost: redirect-attack self target', () => {
+  it('redirects attack to a self cookie using selfTargetIds', () => {
+    const trap: GameCard = {
+      id: 'BS1-050',
+      instanceId: 'bs1-050-test',
+      name: 'Broken Signpost',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: 'Redirect',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'redirect-attack',
+            target: { side: 'self', min: 1, max: 1, excludeAttackTarget: true },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+    state.players['player-one'].battleArea.push({
+      card: cookie('redirect-target', 1, 3),
+      hpCards: [item('rt-hp')],
+      rested: false,
+      battleEntryId: 'redirect-target:battle:1',
+    })
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: [],
+      selfTargetIds: ['redirect-target'],
+    })
+
+    expect(result.pendingBattle?.targetInstanceId).toBe('redirect-target')
+  })
+})

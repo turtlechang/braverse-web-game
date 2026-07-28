@@ -131,6 +131,7 @@ export {
   getBlockerCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
+  getTrapSelfTargetCandidates,
   isBlockDisabled,
   playBlocker,
   playTrap,

@@ -510,6 +510,7 @@ const commandShapes = {
       'handToBreakIds',
       'trashBattleCookieIds',
       'trashToDeckIds',
+      'selfTargetIds',
     ],
   },
   'skip-trap': {},
