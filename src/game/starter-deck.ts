@@ -202,7 +202,6 @@ export const AI_PRESET_BS2_YELLOW_DECK: StarterDeckEntry[] = [
 ]
 
 export const AI_PRESET_BS2_BEAN_DECK: StarterDeckEntry[] = [
-  { cardNumber: 'BS2-018', count: 2 },
   { cardNumber: 'BS2-021', count: 2 },
   { cardNumber: 'BS1-075', count: 4 },
   { cardNumber: 'BS1-069', count: 2 },
@@ -213,14 +212,15 @@ export const AI_PRESET_BS2_BEAN_DECK: StarterDeckEntry[] = [
   { cardNumber: 'ST3-011', count: 2 },
   { cardNumber: 'ST3-008', count: 2 },
   { cardNumber: 'BS1-055', count: 2 },
-  { cardNumber: 'BS1-054', count: 4 },
+  { cardNumber: 'BS1-054', count: 3 },
   { cardNumber: 'BS1-007', count: 4 },
   { cardNumber: 'BS1-032', count: 4 },
   { cardNumber: 'BS2-035', count: 4 },
   { cardNumber: 'BS2-053', count: 4 },
-  { cardNumber: 'ST3-016', count: 2 },
+  { cardNumber: 'ST3-016', count: 3 },
   { cardNumber: 'BS2-015', count: 4 },
-  { cardNumber: 'ST3-017', count: 2 },
+  { cardNumber: 'P-012', count: 3 },
+  { cardNumber: 'ST3-002', count: 1 },
 ]
 
 export const AI_PRESET_BS2_BLUE_DECK: StarterDeckEntry[] = [
