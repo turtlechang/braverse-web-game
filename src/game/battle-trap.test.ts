@@ -1265,4 +1265,71 @@ describe('BS1-050 Broken Signpost: redirect-attack self target', () => {
 
     expect(result.pendingBattle?.targetInstanceId).toBe('redirect-target')
   })
+
+  it('BS3-021 modify-attack -3 actually reduces attack damage to 0 when attacker has 2', () => {
+    const trap: GameCard = {
+      id: 'BS3-021',
+      instanceId: 'bs3-021-test',
+      name: 'Oath on the Shield',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: '-3 this turn; deal 1 to 1 of your Cookies',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -3,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1 },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].card = {
+      ...state.players['player-two'].battleArea[0].card,
+      attack: 2,
+    } as CookieCard
+
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+
+    const attackerInstanceId = state.players['player-two'].battleArea[0].card.instanceId
+    const targetCookie = state.players['player-one'].battleArea[0]
+
+    state = declareAttack(state)
+    expect(state.pendingBattle?.stage).toBe('trap')
+
+    let result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: [attackerInstanceId],
+      selfTargetIds: [targetCookie.card.instanceId],
+    })
+
+    expect(result.pendingBattle?.stage).toBe('damage')
+    expect(result.pendingBattle?.remainingDamage).toBe(1)
+    expect(result.pendingBattle?.suspendedAttackDamage).toBeDefined()
+
+    while (
+      result.pendingBattle &&
+      result.pendingBattle.stage === 'damage' &&
+      result.pendingBattle.remainingDamage > 0
+    ) {
+      result = resolveNextDamage(result)
+    }
+
+    expect(result.pendingBattle?.suspendedAttackDamage).toBeUndefined()
+
+    const finalDamage = result.pendingBattle?.remainingDamage ?? 0
+    expect(finalDamage).toBe(0)
+  })
 })

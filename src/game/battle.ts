@@ -1429,12 +1429,18 @@ const finishDamageSequence = (state: GameState): GameState => {
       }
       return finishBattle(state)
     }
+    const resumedDamage = getAttackDamageAgainst(
+      state,
+      battle.attackerInstanceId,
+      battle.targetInstanceId,
+    )
     return {
       ...state,
       pendingBattle: {
         ...battle,
         stage: 'damage',
-        remainingDamage: battle.suspendedAttackDamage,
+        declaredDamage: resumedDamage,
+        remainingDamage: resumedDamage,
         damagePlayerId: undefined,
         damageTargetInstanceId: undefined,
         suspendedAttackDamage: undefined,
