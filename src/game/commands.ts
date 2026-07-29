@@ -100,6 +100,16 @@ export interface InspectDeckDecision {
   optionalPick?: boolean
 }
 
+export interface RevealTopDeckDecision {
+  kind: 'reveal-top-deck'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  revealedCardId: string
+  matched: boolean
+}
+
 export interface OptionalCostAttackDecision {
   kind: 'optional-cost-attack'
   playerId: PlayerId
@@ -151,6 +161,7 @@ export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
   | InspectDeckDecision
+  | RevealTopDeckDecision
   | OptionalCostAttackDecision
   | DrawUpToDecision
   | StageTriggerDecision
@@ -174,6 +185,12 @@ export interface ResolveInspectDeckCommand {
   playerId: PlayerId
   pickedCardId: string | null
   restOrder: string[]
+}
+
+export interface ResolveRevealTopDeckCommand {
+  kind: 'resolve-reveal-top-deck'
+  playerId: PlayerId
+  targetIds?: string[]
 }
 
 export interface ResolveOptionalCostAttackCommand {
@@ -213,6 +230,7 @@ export type PendingDecisionCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
   | ResolveInspectDeckCommand
+  | ResolveRevealTopDeckCommand
   | ResolveOptionalCostAttackCommand
   | ResolveDrawUpToCommand
   | ResolveStageTriggerCommand
@@ -693,6 +711,19 @@ export const getPendingDecision = (
     }
   }
 
+  if (state.pendingRevealTopDeck) {
+    const pending = state.pendingRevealTopDeck
+    return {
+      kind: 'reveal-top-deck',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      revealedCardId: pending.revealedCard.instanceId,
+      matched: pending.matched,
+    }
+  }
+
   if (state.pendingOptionalCostAttack) {
     const pending = state.pendingOptionalCostAttack
     return {
@@ -754,6 +785,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-faint-effect': 'faint-effect',
   'resolve-opponent-hand-discard': 'opponent-hand-discard',
   'resolve-inspect-deck': 'inspect-deck',
+  'resolve-reveal-top-deck': 'reveal-top-deck',
   'resolve-optional-cost-attack': 'optional-cost-attack',
   'resolve-draw-up-to': 'draw-up-to',
   'resolve-stage-trigger': 'stage-trigger',
@@ -789,7 +821,7 @@ export const applyGameCommand = (
   options: ApplyGameCommandOptions = {},
 ): GameState => {
   const next = isPendingDecisionCommand(command)
-    ? applyPendingDecisionCommand(state, command)
+    ? applyPendingDecisionCommand(state, command, options)
     : applyPlayerActionCommand(state, command, options)
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.
@@ -804,6 +836,7 @@ export const applyGameCommand = (
 const applyPendingDecisionCommand = (
   state: GameState,
   command: PendingDecisionCommand,
+  options: ApplyGameCommandOptions = {},
 ): GameState => {
   const decision = getPendingDecision(state)
 
@@ -851,6 +884,48 @@ const applyPendingDecisionCommand = (
       return resolveOpponentHandDiscard(state, command.playerId, command.cardIds)
     case 'resolve-inspect-deck':
       return resolveInspectDeck(state, command.playerId, command.pickedCardId, command.restOrder)
+    case 'resolve-reveal-top-deck': {
+      const pending = state.pendingRevealTopDeck
+      if (!pending || pending.playerId !== command.playerId) {
+        throw new GameRuleError('目前沒有待處理的翻牌展示效果。')
+      }
+      const context: EffectContext = {
+        sourcePlayerId: pending.playerId,
+        sourceInstanceId: pending.sourceInstanceId,
+        sourceCardName: pending.sourceCardName,
+      }
+      let nextState: GameState = { ...state, pendingRevealTopDeck: null }
+      if (pending.matched) {
+        for (const nestedEffect of pending.nestedEffects) {
+          if (nextState.status !== 'playing') break
+          nextState = executeCardEffect(
+            nextState,
+            context,
+            nestedEffect,
+            command.targetIds ?? [],
+            options.shuffle,
+          )
+        }
+      }
+      // 若有 pendingAbilityEffect，推進到下一個效果
+      if (
+        nextState.status === 'playing' &&
+        nextState.pendingAbilityEffect &&
+        nextState.pendingAbilityEffect.sourceInstanceId === pending.sourceInstanceId
+      ) {
+        const ab = nextState.pendingAbilityEffect
+        const nextIndex = ab.effectIndex + 1
+        if (nextIndex >= ab.effects.length) {
+          nextState = { ...nextState, pendingAbilityEffect: undefined }
+        } else {
+          nextState = {
+            ...nextState,
+            pendingAbilityEffect: { ...ab, effectIndex: nextIndex },
+          }
+        }
+      }
+      return nextState
+    }
     case 'resolve-optional-cost-attack':
       return resolveOptionalCostAttack(
         state, command.playerId, command.action,

@@ -37,7 +37,7 @@ const DeckEditorModal = lazy(async () => {
   return { default: module.DeckEditorModal }
 })
 
-export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, DrawUpToResponseModal, HandDiscardResponseModal } from './PendingDecisionModals'
+export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, RevealTopDeckModal, DrawUpToResponseModal, HandDiscardResponseModal } from './PendingDecisionModals'
 
 export type OpeningSetupStep =
   | 'deck-selection'

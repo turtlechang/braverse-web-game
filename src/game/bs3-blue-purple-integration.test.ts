@@ -15,6 +15,7 @@ import type {
   ChooseOneEffect,
   DamageEffect,
   EffectContext,
+  GameCard,
   GameState,
   RevealTopDeckEffect,
 } from './types'
@@ -235,5 +236,82 @@ describe('BS3 紫色卡片整合測試', () => {
     const next = executeCardEffect(state, sourceContext(), modeEffect, [])
     expect(next.players['player-one'].discardPile.length).toBe(beforeTrash + 2)
     expect(next.players['player-one'].deck.length).toBe(beforeDeck - 2)
+  })
+
+  it('BS3-087 reveal-top-deck: match sets pendingRevealTopDeck with matched=true', () => {
+    const state = createBattleState()
+    const blueCookie = cookie('BS3-088-inst', 1, 3)
+    const blueCookieAsCard: GameCard = {
+      ...blueCookie,
+      energyColor: 'blue',
+      level: 2,
+    }
+    const withDeck: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [blueCookieAsCard, ...state.players['player-one'].deck],
+        },
+      },
+    }
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-087'))
+    const revealEffect = skill!.effects[0] as RevealTopDeckEffect
+    const next = executeCardEffect(withDeck, sourceContext(), revealEffect, [])
+    expect(next.pendingRevealTopDeck).toBeDefined()
+    expect(next.pendingRevealTopDeck!.matched).toBe(true)
+    expect(next.pendingRevealTopDeck!.revealedCard.instanceId).toBe('BS3-088-inst')
+    expect(next.pendingRevealTopDeck!.nestedEffects).toHaveLength(1)
+    expect(next.pendingRevealTopDeck!.nestedEffects[0]).toMatchObject({
+      kind: 'damage',
+      amount: 1,
+    })
+  })
+
+  it('BS3-087 reveal-top-deck: no match sets pendingRevealTopDeck with matched=false', () => {
+    const state = createBattleState()
+    const redItem: GameCard = {
+      id: 'item-red',
+      instanceId: 'item-red-inst',
+      name: 'Red Item',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const withDeck: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [redItem, ...state.players['player-one'].deck],
+        },
+      },
+    }
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-087'))
+    const revealEffect = skill!.effects[0] as RevealTopDeckEffect
+    const next = executeCardEffect(withDeck, sourceContext(), revealEffect, [])
+    expect(next.pendingRevealTopDeck).toBeDefined()
+    expect(next.pendingRevealTopDeck!.matched).toBe(false)
+    expect(next.pendingRevealTopDeck!.revealedCard.instanceId).toBe('item-red-inst')
+    expect(next.pendingRevealTopDeck!.nestedEffects).toHaveLength(0)
+  })
+
+  it('BS3-087 reveal-top-deck: no deck cards returns unchanged state', () => {
+    const state = createBattleState()
+    const emptyDeck: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [],
+        },
+      },
+    }
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-087'))
+    const revealEffect = skill!.effects[0] as RevealTopDeckEffect
+    const next = executeCardEffect(emptyDeck, sourceContext(), revealEffect, [])
+    expect(next.pendingRevealTopDeck ?? undefined).toBeUndefined()
   })
 })

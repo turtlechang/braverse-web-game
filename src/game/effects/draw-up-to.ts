@@ -58,6 +58,7 @@ export const resolveDrawUpTo = (
         updatedState.pendingDrawUpTo ||
         updatedState.pendingOpponentHandDiscard ||
         updatedState.pendingInspectDeck ||
+        updatedState.pendingRevealTopDeck ||
         updatedState.pendingOptionalCostAttack ||
         updatedState.pendingStageTrigger
       ) {

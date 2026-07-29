@@ -85,6 +85,10 @@ const assertNoBlockingDecision = (state: GameState) => {
     throw new GameRuleError('Invalid battle action.')
   }
 
+  if (state.pendingRevealTopDeck) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
   if (state.pendingOptionalCostAttack) {
     throw new GameRuleError('Invalid battle action.')
   }
@@ -986,6 +990,7 @@ export const playTrap = (
             return options.targetIds
           })(),
     )
+    if (nextState.pendingRevealTopDeck) break
   }
 
   if (nextState.status !== 'playing') {
@@ -1374,6 +1379,17 @@ const buildPendingEffectOrder = (
     items.push({
       id: `inspect-deck:${pending.sourceInstanceId}`,
       kind: 'inspect-deck',
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+    })
+  }
+
+  if (state.pendingRevealTopDeck) {
+    const pending = state.pendingRevealTopDeck
+    items.push({
+      id: `reveal-top-deck:${pending.sourceInstanceId}`,
+      kind: 'reveal-top-deck',
       sourcePlayerId: pending.playerId,
       sourceInstanceId: pending.sourceInstanceId,
       sourceCardName: pending.sourceCardName,

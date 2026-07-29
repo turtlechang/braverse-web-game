@@ -523,6 +523,7 @@ const commandShapes = {
     optionalStringArrays: ['discardHandIds'],
   },
   'resolve-attack-effect': { requiredStringArrays: ['targetIds'] },
+  'resolve-reveal-top-deck': { optionalStringArrays: ['targetIds'] },
   'resolve-next-damage': {},
   'resolve-battle': {},
 } as const satisfies Record<GameCommand['kind'], CommandShape>

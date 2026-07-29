@@ -2164,36 +2164,35 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'reveal-top-deck') {
-    const topCard = state.players[context.sourcePlayerId].deck[0]
+    const player = state.players[context.sourcePlayerId]
+    const topCard = player.deck[0]
     if (!topCard) return { ...state }
-    if (
-      (effect.match.type !== undefined && topCard.type !== effect.match.type) ||
-      (effect.match.energyColor !== undefined &&
-        topCard.energyColor !== effect.match.energyColor) ||
-      (effect.match.level !== undefined &&
-        (topCard.type !== 'cookie' || topCard.level !== effect.match.level))
-    ) {
-      return { ...state }
-    }
 
-    let nextState = state
-    for (const nestedEffect of effect.effects) {
-      const nestedTargets =
-        selectedTargetIds.length > 0
-          ? selectedTargetIds
-          : nestedEffect.kind === 'damage' && nestedEffect.target.attackTargetOnly
-            ? [state.pendingBattle?.targetInstanceId ?? ''].filter(Boolean)
-            : []
-      nextState = executeCardEffect(
-        nextState,
-        context,
-        nestedEffect,
-        nestedTargets,
-        shuffle,
-      )
-      if (nextState.status !== 'playing') break
+    const matched =
+      (effect.match.type === undefined || topCard.type === effect.match.type) &&
+      (effect.match.energyColor === undefined ||
+        topCard.energyColor === effect.match.energyColor) &&
+      (effect.match.level === undefined ||
+        (topCard.type === 'cookie' && topCard.level === effect.match.level))
+
+    const sourceCardName =
+      context.sourceCardName ??
+      player.battleArea.find(
+        (c) => c.card.instanceId === context.sourceInstanceId,
+      )?.card.name ??
+      'Unknown'
+
+    return {
+      ...state,
+      pendingRevealTopDeck: {
+        playerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName,
+        revealedCard: topCard,
+        matched,
+        nestedEffects: matched ? effect.effects : [],
+      },
     }
-    return nextState
   }
 
   if (effect.kind === 'inspect-deck') {

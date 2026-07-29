@@ -3,6 +3,7 @@ import { getRefreshCandidates } from '../../game'
 import {
   DecisionModal,
   InspectDeckModal,
+  RevealTopDeckModal,
   DrawUpToResponseModal,
   HandDiscardResponseModal,
   EffectOrderModal,
@@ -27,6 +28,15 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       !match.game.pendingEffectOrder.resolvedOrder
     )
       ? match.game.pendingInspectDeck
+      : null
+
+  const pendingReveal =
+    match.game.pendingRevealTopDeck &&
+    !(
+      match.game.pendingEffectOrder &&
+      !match.game.pendingEffectOrder.resolvedOrder
+    )
+      ? match.game.pendingRevealTopDeck
       : null
 
   const pendingEffectOrder =
@@ -337,6 +347,27 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
                       : '加入手牌'
                   }，其餘放入${restLabel}。`
                 : `沒有選擇卡牌，全部放入${restLabel}。`,
+            )
+          }}
+        />
+      )}
+
+      {pendingReveal && (
+        <RevealTopDeckModal
+          key={pendingReveal.sourceInstanceId}
+          sourceCardName={pendingReveal.sourceCardName}
+          revealedCard={pendingReveal.revealedCard}
+          matched={pendingReveal.matched}
+          onConfirm={() => {
+            if (pendingReveal.playerId !== match.viewerPlayerId) return
+            match.dispatch(
+              {
+                kind: 'resolve-reveal-top-deck',
+                playerId: match.viewerPlayerId,
+              },
+              pendingReveal.matched
+                ? `翻到 ${pendingReveal.revealedCard.name}，條件匹配！`
+                : `翻到 ${pendingReveal.revealedCard.name}，條件未匹配。`,
             )
           }}
         />

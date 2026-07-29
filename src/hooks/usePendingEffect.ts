@@ -517,6 +517,7 @@ export function usePendingEffect(params: {
       (game.pendingRefresh?.playerId === viewerPlayerId) ||
       (game.pendingOnPlay?.playerId === viewerPlayerId) ||
       (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
+      (game.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
       (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
       (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
       (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
@@ -536,6 +537,7 @@ export function usePendingEffect(params: {
     game.pendingRefresh,
     game.pendingOnPlay,
     game.pendingInspectDeck,
+    game.pendingRevealTopDeck,
     game.pendingOptionalCostAttack,
     game.pendingDrawUpTo,
     game.pendingStageTrigger,
@@ -1173,6 +1175,7 @@ export function usePendingEffect(params: {
         (game.pendingRefresh?.playerId === viewerPlayerId) ||
         (game.pendingOnPlay?.playerId === viewerPlayerId) ||
         (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
+        (game.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
         (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
         (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
         (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
@@ -1375,6 +1378,7 @@ export function usePendingEffect(params: {
         (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
         (nextGame.pendingOnPlay?.playerId === viewerPlayerId) ||
         (nextGame.pendingInspectDeck?.playerId === viewerPlayerId) ||
+        (nextGame.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
         (nextGame.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
         (nextGame.pendingDrawUpTo?.playerId === viewerPlayerId) ||
         (nextGame.pendingStageTrigger?.playerId === viewerPlayerId) ||

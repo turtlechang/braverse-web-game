@@ -155,6 +155,20 @@ describe('hasBlockingPending', () => {
     expect(
       hasBlockingPending({
         ...base,
+        pendingRevealTopDeck: {
+          playerId: 'player-one',
+          sourceInstanceId: 'test-source',
+          sourceCardName: 'Test',
+          revealedCard: { id: 'test', instanceId: 'test', name: 'Test', type: 'item' },
+          matched: false,
+          nestedEffects: [],
+        },
+      }),
+    ).toBe(true)
+
+    expect(
+      hasBlockingPending({
+        ...base,
         pendingOptionalCostAttack: {
           playerId: 'player-one',
           sourceInstanceId: 'test-source',

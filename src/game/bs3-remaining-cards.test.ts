@@ -149,7 +149,7 @@ describe('BS3 剩餘陷阱卡', () => {
    * 官方 Q&A：展示牌庫頂後放回牌庫頂（實作以 peek 不離庫等價）；
    * 僅當展示卡為 {B} LV.2 餅乾時，才可執行後方 -1 攻擊效果。
    */
-  it('BS3-093 reveal keeps the card on top and only then applies nested -1', () => {
+  it('BS3-093 reveal keeps the card on top and sets pendingRevealTopDeck for confirmation', () => {
     const trap = convertOfficialTrapAbility(findBs3Card('BS3-093'))
     const reveal = trap!.effects[1]
     const context: EffectContext = {
@@ -169,10 +169,22 @@ describe('BS3 剩餘陷阱卡', () => {
     expect(matched.players['player-two'].deck.map((c) => c.instanceId)).toEqual(
       beforeDeck,
     )
-    expect(matched.players['player-two'].hand).toHaveLength(
-      state.players['player-two'].hand.length,
-    )
-    expect(matched.attackModifiers).toContainEqual(
+    expect(matched.pendingRevealTopDeck).toBeDefined()
+    expect(matched.pendingRevealTopDeck!.matched).toBe(true)
+    expect(matched.pendingRevealTopDeck!.revealedCard.instanceId).toBe('blue-lv2')
+    expect(matched.pendingRevealTopDeck!.nestedEffects).toHaveLength(1)
+    expect(matched.pendingRevealTopDeck!.nestedEffects[0]).toMatchObject({
+      kind: 'modify-attack',
+      amount: -1,
+    })
+
+    const resolved = applyGameCommand(matched, {
+      kind: 'resolve-reveal-top-deck',
+      playerId: 'player-two',
+      targetIds: ['defender'],
+    })
+    expect(resolved.pendingRevealTopDeck).toBeNull()
+    expect(resolved.attackModifiers).toContainEqual(
       expect.objectContaining({
         targetInstanceId: 'defender',
         amount: -1,
@@ -184,7 +196,15 @@ describe('BS3 剩餘陷阱卡', () => {
     state.players['player-two'].deck = [nonMatchTop, item('under-miss')]
     const missed = executeCardEffect(state, context, reveal, ['defender'])
     expect(missed.players['player-two'].deck[0].instanceId).toBe('blue-lv1')
-    expect(missed.attackModifiers).toEqual([])
+    expect(missed.pendingRevealTopDeck).toBeDefined()
+    expect(missed.pendingRevealTopDeck!.matched).toBe(false)
+
+    const resolvedMissed = applyGameCommand(missed, {
+      kind: 'resolve-reveal-top-deck',
+      playerId: 'player-two',
+    })
+    expect(resolvedMissed.pendingRevealTopDeck).toBeNull()
+    expect(resolvedMissed.attackModifiers).toEqual([])
   })
 
   it('BS3-094 Radiant Coronation: -2 attack + inspect top 3', () => {

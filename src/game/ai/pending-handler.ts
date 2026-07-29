@@ -88,9 +88,10 @@ export const handleAiPendingDecision = (
         const priority = {
           'draw-up-to': 0,
           'inspect-deck': 1,
-          'faint-effect': 2,
-          'after-damage-effect': 3,
-          'stage-trigger': 4,
+          'reveal-top-deck': 2,
+          'faint-effect': 3,
+          'after-damage-effect': 4,
+          'stage-trigger': 5,
         } as const
         return priority[left.kind] - priority[right.kind]
       })
@@ -246,6 +247,24 @@ export const handleAiPendingDecision = (
       }),
       action: 'resolve-inspect-deck',
       description: `${state.players[playerId].name}從檢視牌中選取卡片。`,
+    }
+  }
+
+  if (pendingDecision?.kind === 'reveal-top-deck') {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 確認翻牌展示。`,
+      }
+    }
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-reveal-top-deck',
+        playerId,
+      }),
+      action: 'resolve-reveal-top-deck',
+      description: `${state.players[playerId].name}確認翻牌展示結果。`,
     }
   }
 

@@ -1108,6 +1108,7 @@ export type PendingEffectOrderKind =
   | 'after-damage-effect'
   | 'draw-up-to'
   | 'inspect-deck'
+  | 'reveal-top-deck'
   | 'stage-trigger'
 
 export interface PendingEffectOrderItem {
@@ -1209,6 +1210,14 @@ export interface GameState {
     filterColor?: EnergyColor
     filterType?: GameCard['type']
     optionalPick?: boolean
+  } | null
+  pendingRevealTopDeck?: {
+    playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
+    revealedCard: GameCard
+    matched: boolean
+    nestedEffects: CardEffect[]
   } | null
   pendingOptionalCostAttack?: {
     playerId: PlayerId

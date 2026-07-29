@@ -19,6 +19,7 @@ const effectOrderLabels: Record<PendingEffectOrderItem['kind'], string> = {
   'after-damage-effect': '受傷後效果',
   'draw-up-to': '抽牌效果',
   'inspect-deck': '檢視牌庫',
+  'reveal-top-deck': '展示牌庫頂',
   'stage-trigger': '場景效果',
 }
 
@@ -798,6 +799,63 @@ export function InspectDeckModal({
             確認並放回
           </button>
         </div>
+      </section>
+    </div>
+  )
+}
+
+export interface RevealTopDeckModalProps {
+  sourceCardName: string
+  revealedCard: GameCard
+  matched: boolean
+  onConfirm: () => void
+}
+
+export function RevealTopDeckModal({
+  sourceCardName,
+  revealedCard,
+  matched,
+  onConfirm,
+}: RevealTopDeckModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <CardFace card={revealedCard} />
+        <span>
+          <strong>{revealedCard.name}</strong>
+          <small>翻牌展示</small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop card-reveal-backdrop" role="presentation">
+      <section className="card-reveal-modal" role="alertdialog">
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小卡牌展示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <span>{sourceCardName} — 翻開牌庫頂</span>
+        <h2>{matched ? '條件匹配！' : '條件未匹配'}</h2>
+        <CardFace card={revealedCard} className="reveal-card" />
+        <strong>{revealedCard.name}</strong>
+        <p>{matched ? '翻到的卡牌符合條件，效果發動。' : '翻到的卡牌不符合條件，效果不發動。'}</p>
+        <button type="button" className="reveal-confirm" onClick={onConfirm}>
+          確認並繼續
+        </button>
       </section>
     </div>
   )
