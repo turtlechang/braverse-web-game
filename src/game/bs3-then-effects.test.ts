@@ -199,7 +199,7 @@ describe('BS3 attack Then effects', () => {
     expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(6)
   })
 
-  it('uses BS3-011 source energy for its full optional follow-up cost', () => {
+  it('pays BS3-011 optional follow-up cost from the support area', () => {
     const knight = asCookie('BS3-011')
     let state = createBattleState()
 
@@ -212,6 +212,11 @@ describe('BS3 attack Then effects', () => {
       card: knight,
     }
     state.players['player-two'].supportArea[0].card.energyColor = 'red'
+    // 〈可以支付 {R}{R}〉的代價要從支援區出，攻擊費用之外還得多備 2 張紅。
+    state.players['player-two'].supportArea.push(
+      { card: item('p2-then-r1', 'red'), rested: false },
+      { card: item('p2-then-r2', 'red'), rested: false },
+    )
 
     state = beginAttack(
       state,
@@ -227,7 +232,6 @@ describe('BS3 attack Then effects', () => {
     state = resolveAttackEffect(state, 'player-two', [])
     expect(state.pendingOptionalCostAttack).toMatchObject({
       cost: { energy: { red: 2 } },
-      sourceEnergy: { red: 2 },
     })
 
     state = resolveOptionalCostAttack(
@@ -236,7 +240,7 @@ describe('BS3 attack Then effects', () => {
       'pay',
       [],
       ['defender'],
-      [],
+      ['p2-then-r1', 'p2-then-r2'],
     )
 
     expect(state.pendingBattle).toBeNull()
@@ -298,6 +302,8 @@ describe('BS3 attack Then effects', () => {
     state.players['player-two'].supportArea = [
       { card: item('stardust-support-1', 'yellow'), rested: false },
       { card: item('stardust-support-2', 'yellow'), rested: false },
+      // 〈可以支付 {Y}〉的代價要另外從支援區出。
+      { card: item('stardust-then-1', 'yellow'), rested: false },
     ]
 
     state = beginAttack(
@@ -314,7 +320,6 @@ describe('BS3 attack Then effects', () => {
     state = resolveAttackEffect(state, 'player-two', [])
     expect(state.pendingOptionalCostAttack).toMatchObject({
       cost: { energy: { yellow: 1 } },
-      sourceEnergy: { yellow: 1 },
     })
 
     state = resolveOptionalCostAttack(
@@ -323,7 +328,7 @@ describe('BS3 attack Then effects', () => {
       'pay',
       [],
       ['defender'],
-      [],
+      ['stardust-then-1'],
     )
 
     expect(state.players['player-one'].battleArea).toHaveLength(0)
@@ -383,7 +388,7 @@ describe('BS3 attack Then effects', () => {
       .toContain(discard.instanceId)
   })
 
-  it('uses BS3-101 source energy to trash an opponent Cookie with two or less HP', () => {
+  it('pays BS3-101 optional cost to trash an opponent Cookie with two or less HP', () => {
     const moonRabbit = asCookie('BS3-101')
     let state = createBattleState()
 
@@ -394,6 +399,8 @@ describe('BS3 attack Then effects', () => {
     state.players['player-two'].supportArea = [
       { card: item('moon-rabbit-support-1', 'purple'), rested: false },
       { card: item('moon-rabbit-support-2', 'purple'), rested: false },
+      // 〈可以支付 {P}〉的代價要另外從支援區出。
+      { card: item('moon-rabbit-then-1', 'purple'), rested: false },
     ]
 
     state = beginAttack(
@@ -414,7 +421,7 @@ describe('BS3 attack Then effects', () => {
       'pay',
       [],
       ['defender'],
-      [],
+      ['moon-rabbit-then-1'],
     )
 
     expect(state.players['player-one'].battleArea).toHaveLength(0)
@@ -625,7 +632,6 @@ describe('BS3 attack Then effects', () => {
     const smokedFollowUp = smokedCheese.attackEffects?.[0]
     expect(smokedFollowUp).toMatchObject({
       kind: 'optional-cost-attack',
-      sourceEnergy: { yellow: 1 },
       effects: [{ kind: 'break-to-battle', exactLevel: 1, energyColor: 'yellow' }],
     })
 

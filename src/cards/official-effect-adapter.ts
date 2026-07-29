@@ -2476,7 +2476,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 1 } },
-        sourceEnergy: { red: 1 },
         effects: [
           {
             kind: 'damage',
@@ -2497,7 +2496,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 1 } },
-        sourceEnergy: { red: 1 },
         effects: [
           {
             kind: 'damage',
@@ -2513,7 +2511,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 2 } },
-        sourceEnergy: { red: 2 },
         effects: [
           {
             kind: 'damage',
@@ -2555,7 +2552,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { yellow: 1 } },
-        sourceEnergy: { yellow: 1 },
         effects: [
           {
             kind: 'break-to-battle',
@@ -2572,7 +2568,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { yellow: 1 } },
-        sourceEnergy: { yellow: 1 },
         effects: [
           {
             kind: 'gain-hp',
@@ -2589,7 +2584,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { yellow: 1 } },
-        sourceEnergy: { yellow: 1 },
         effects: [
           {
             kind: 'opponent-battle-to-trash',
@@ -2612,7 +2606,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { green: 1 } },
-        sourceEnergy: { green: 1 },
         effects: [
           {
             kind: 'support-to-trash',
@@ -2644,7 +2637,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { blue: 1 } },
-        sourceEnergy: { blue: 1 },
         effects: [
           {
             kind: 'reveal-top-deck',
@@ -2666,7 +2658,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { blue: 1 } },
-        sourceEnergy: { blue: 1 },
         effects: [
           {
             kind: 'reveal-top-deck',
@@ -2755,7 +2746,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { purple: 1 } },
-        sourceEnergy: { purple: 1 },
         effects: [
           {
             kind: 'opponent-battle-to-trash',
@@ -2892,7 +2882,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { red: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     // === BS1/BS2 黃綠藍紫攻擊 Then 效果 ===
@@ -2908,7 +2897,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {Y} to select up to 1 of your opponent\'s LV.1 Cookies and place that Cookie in the break area.',
-        sourceEnergy: { yellow: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-010': [
@@ -2924,7 +2912,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {Y} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { yellow: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-017': [
@@ -2940,7 +2927,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {G} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { green: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-044': [
@@ -2956,7 +2942,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {B} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { blue: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-045': [
@@ -2987,7 +2972,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {P} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { purple: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     // === P-0XX 促銷卡 ===
@@ -3003,7 +2987,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 1 } },
-        sourceEnergy: { red: 1 },
         effects: [
           {
             kind: 'damage',

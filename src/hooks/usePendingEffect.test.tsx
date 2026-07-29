@@ -26,6 +26,7 @@ import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import {
   createBattleState,
+  cookie as battleCookie,
   item as battleItem,
 } from '../game/test-helpers/battle-helpers'
 import type { DispatchGameCommand } from './useBattleActions'
@@ -1151,7 +1152,7 @@ describe('usePendingEffect equip-source candidate filtering', () => {
  * 玩家看不到追加傷害的目標選擇畫面，對局直接卡死在攻擊後階段。
  */
 describe('usePendingEffect nested attack effect during a preserved battle', () => {
-  const buildStuckState = (): GameState => {
+  const buildState = (defenderHpCount: number): GameState => {
     const bs3076 = (officialBS3.cards as OfficialCardRecord[]).find(
       (card) => card.cardNumber === 'BS3-076',
     )
@@ -1170,13 +1171,22 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
       ...state.players['player-two'].battleArea[0],
       card: crepe,
     }
-    // 攻擊目標要撐得過普通攻擊傷害才輪得到追加傷害（重現使用者的實際盤面）。
     state.players['player-one'].battleArea[0] = {
       ...state.players['player-one'].battleArea[0],
-      hpCards: Array.from({ length: 8 }, (_, index) =>
+      hpCards: Array.from({ length: defenderHpCount }, (_, index) =>
         battleItem(`defender-hp-${index}`),
       ),
     }
+    // 再放一隻旁觀餅乾：攻擊對象昏厥時對手才不會直接落敗，才驗得到
+    // 「追加傷害沒有合法目標」而不是「對局結束」。
+    state.players['player-one'].battleArea.push({
+      card: battleCookie('bystander', 1, 5),
+      hpCards: Array.from({ length: 5 }, (_, index) =>
+        battleItem(`bystander-hp-${index}`),
+      ),
+      rested: false,
+      battleEntryId: 'bystander:battle:2',
+    })
     // 牌庫頂放藍色 LV.2 餅乾，讓 reveal-top-deck 命中條件。
     state.players['player-two'].deck = [
       {
@@ -1215,8 +1225,15 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
     state = resolveAttackEffect(state, 'player-two', [])
     expect(state.pendingOptionalCostAttack).toBeTruthy()
 
-    // 代價是「將這隻餅乾當作 {B}」，不需另外選支援卡付費。
-    state = resolveOptionalCostAttack(state, 'player-two', 'pay', [], [], [])
+    // 〈可以支付 {B}〉的代價要從支援區出（攻擊費用之外再一張藍）。
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      [],
+      ['blue-sup-4'],
+    )
     expect(state.pendingRevealTopDeck?.matched).toBe(true)
 
     state = applyGameCommand(state, {
@@ -1228,7 +1245,7 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
 
   it('builds the local pendingEffect even though pendingBattle is still held open', async () => {
     vi.useFakeTimers()
-    const gameState = buildStuckState()
+    const gameState = buildState(8)
 
     // 前提：規則層確實留下了待結算效果，且刻意保留 pendingBattle。
     expect(gameState.pendingAbilityEffect).toBeDefined()
@@ -1276,4 +1293,5 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
     await act(() => root.unmount())
     vi.useRealTimers()
   })
+
 })
