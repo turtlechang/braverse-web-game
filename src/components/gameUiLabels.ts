@@ -17,6 +17,19 @@ export const phaseAdvanceLabels: Record<TurnPhase, string> = {
   end: '結束回合',
 }
 
+/** 能量顏色的中文顯示名，供代價／費用說明文字共用。 */
+export const energyColorLabel: Record<string, string> = {
+  red: '紅色',
+  yellow: '黃色',
+  green: '綠色',
+  blue: '藍色',
+  purple: '紫色',
+  black: '黑色',
+  pure: '純色',
+  wild: '萬用',
+  neutral: '無色',
+}
+
 export const deckChoiceLabel: Record<DeckChoice, string> = {
   red: '紅色',
   yellow: '黃色',

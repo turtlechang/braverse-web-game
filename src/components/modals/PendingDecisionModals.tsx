@@ -300,6 +300,8 @@ export interface OptionalCostAttackModalProps {
   effectText: string
   discardHandCost: number
   energyCostTotal: number
+  /** 代價的完整說明；省略時退回依張數自行組字（來源餅乾自付的能量會顯示不出來）。 */
+  costText?: string
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
   targetCandidates: { card: GameCard; instanceId: string }[]
@@ -318,6 +320,7 @@ export function OptionalCostAttackModal({
   effectText,
   discardHandCost,
   energyCostTotal,
+  costText,
   playerHand,
   supportCandidates,
   targetCandidates,
@@ -441,6 +444,16 @@ export function OptionalCostAttackModal({
     )
   }
 
+  // costText 未提供時退回依張數組字；兩者都沒有內容就顯示「無」，
+  // 避免畫面出現一個空白的「代價：」看起來像壞掉。
+  const fallbackCostText = [
+    energyCostTotal > 0 ? `支付 ${energyCostTotal} 張能量支援卡` : null,
+    discardHandCost > 0 ? `棄置 ${discardHandCost} 張手牌` : null,
+  ]
+    .filter(Boolean)
+    .join('、')
+  const resolvedCostText = costText ?? (fallbackCostText || '無')
+
   const optionalCostAttackContent = (
     <>
       {!embedded && (
@@ -459,12 +472,7 @@ export function OptionalCostAttackModal({
         {!embedded && (
           <p className="optional-cost-attack-text">{effectText}</p>
         )}
-        <p className="optional-cost-attack-cost">
-          代價：
-          {discardHandCost > 0 && `棄置 ${discardHandCost} 張手牌`}
-          {discardHandCost > 0 && energyCostTotal > 0 && '、'}
-          {energyCostTotal > 0 && `支付 ${energyCostTotal} 張能量支援卡`}
-        </p>
+        <p className="optional-cost-attack-cost">代價：{resolvedCostText}</p>
 
         {step === 'decision' && (
           <div className="modal-actions modal-actions-decision">
