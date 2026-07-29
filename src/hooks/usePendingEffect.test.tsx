@@ -1294,4 +1294,20 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
     vi.useRealTimers()
   })
 
+  /**
+   * 攻擊對象若被普通攻擊直接打到昏厥，追加傷害的 attackTargetOnly 就一個候選
+   * 都沒有。這種情況必須直接略過整段效果並收掉戰鬥，不能開出一個「已選 0／1、
+   * 確認鍵灰掉」的面板——那個面板沒有取消鍵，玩家會完全卡死。
+   */
+  it('skips the follow-up entirely when the attacked Cookie already fainted', () => {
+    const gameState = buildState(1)
+
+    expect(
+      gameState.players['player-one'].battleArea.some(
+        (cookie) => cookie.card.instanceId === 'defender',
+      ),
+    ).toBe(false)
+    expect(gameState.pendingAbilityEffect).toBeUndefined()
+    expect(gameState.pendingBattle).toBeNull()
+  })
 })

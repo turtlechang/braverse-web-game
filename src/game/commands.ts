@@ -18,6 +18,7 @@ import {
 import {
   executeCardEffect,
   getEffectTargetCandidatesForEffect,
+  hasRequiredEffectTargets,
   isEffectConditionMet,
   requiresEffectCardSelection,
   requiresTargetSelection,
@@ -901,10 +902,23 @@ const applyPendingDecisionCommand = (
         // 未匹配或無巢狀效果，直接完成戰鬥（若存在）。
         return nextState.pendingBattle ? finishBattle(nextState) : nextState
       }
+      // 巢狀效果可能在傷害結算後就失去合法目標——BS3-076 的追加傷害鎖定
+      // attackTargetOnly，攻擊對象若已被普通攻擊打到昏厥離場就一個候選都沒有。
+      // 這種效果必須直接略過，否則 UI 會開出一個「已選 0／1、確認鍵永遠灰掉」
+      // 的死結，玩家既不能確認也不能取消。判斷條件與 battle.ts 的
+      // resolveAttackEffect 一致。
+      const applicableEffects = pending.nestedEffects.filter(
+        (effect) =>
+          isEffectConditionMet(nextState, context, effect) &&
+          hasRequiredEffectTargets(nextState, context, effect),
+      )
+      if (applicableEffects.length === 0) {
+        return nextState.pendingBattle ? finishBattle(nextState) : nextState
+      }
       // 若嵌套效果需要目標選擇，暫存在 pendingAbilityEffect 讓 UI/AI 逐步處理。
       // pendingBattle 保留，讓 attackTargetOnly 能找到攻擊目標；
       // pendingAbilityEffect 結算完畢後由 resolvePendingAbilityEffect 完成戰鬥。
-      const needsTargeting = pending.nestedEffects.some(requiresEffectCardSelection)
+      const needsTargeting = applicableEffects.some(requiresEffectCardSelection)
       if (needsTargeting) {
         return {
           ...nextState,
@@ -914,14 +928,14 @@ const applyPendingDecisionCommand = (
             sourceInstanceId: pending.sourceInstanceId,
             sourceCardName: pending.sourceCardName,
             sourceKind: 'item',
-            effects: pending.nestedEffects,
+            effects: applicableEffects,
             effectIndex: 0,
           },
         }
       }
       // 不需目標選擇的效果直接執行。
       let resolved = nextState
-      for (const nestedEffect of pending.nestedEffects) {
+      for (const nestedEffect of applicableEffects) {
         if (resolved.status !== 'playing') break
         resolved = executeCardEffect(
           resolved,
