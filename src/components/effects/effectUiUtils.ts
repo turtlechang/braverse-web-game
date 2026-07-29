@@ -112,6 +112,18 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'reveal-bottom-deck') {
     return '揭示牌庫底 1 張，餅乾放到牌庫頂，其他卡加入手牌。'
   }
+  if (effect.kind === 'reveal-top-deck') {
+    const matchDesc = effect.match
+      ? [
+          effect.match.type && `類型:${effect.match.type}`,
+          effect.match.energyColor && `顏色:${effect.match.energyColor}`,
+          effect.match.level && `LV.${effect.match.level}`,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : '無條件'
+    return `翻開牌庫頂 1 張，若為 ${matchDesc}，則發動後續效果。`
+  }
   if (effect.kind === 'hand-to-battle') {
     return `從手牌選最多 ${effect.amount} 張餅乾登場${
       effect.gainHp ? `，並額外獲得 ${effect.gainHp} HP` : ''
