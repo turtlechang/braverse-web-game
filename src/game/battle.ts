@@ -276,6 +276,86 @@ const hasRequiredTrapTargets = (
   })
 }
 
+export type TrapUnavailableReason =
+  | 'not-trap-stage'
+  | 'condition-not-met'
+  | 'no-legal-targets'
+  | 'not-enough-support-to-trash'
+  | 'not-enough-hand-to-discard'
+  | 'cannot-pay-energy'
+  | 'cannot-trash-battle-cookie'
+  | 'unknown'
+
+export interface UnavailableTrap {
+  instanceId: string
+  cardId: string
+  reason: TrapUnavailableReason
+}
+
+/**
+ * 逐一說明手上的陷阱卡為什麼進不了 `getTrapCandidates`。
+ *
+ * 檢查順序必須與 `getTrapCandidates` 的 filter 完全一致，回報的才會是「真正
+ * 第一個擋下它的那道關卡」。若所有已知關卡都通過卻仍不在候選名單，回報
+ * `unknown`——那才代表引擎真的有問題，值得示警。
+ *
+ * 存在的理由：被攻擊時支援卡多半還是橫置的（支援區要到自己回合的活躍階段
+ * 才會重置），所以「手上有陷阱但付不出代價」是再正常不過的日常狀況，不該
+ * 每次都對主控台大喊。
+ */
+export const explainUnavailableTraps = (
+  state: GameState,
+  playerId: PlayerId,
+): UnavailableTrap[] => {
+  const player = state.players[playerId]
+  const available = new Set(
+    getTrapCandidates(state, playerId).map((card) => card.instanceId),
+  )
+  const battle = state.pendingBattle
+  const inTrapStage =
+    battle?.stage === 'trap' &&
+    !battle.trapUsed &&
+    battle.defenderPlayerId === playerId
+
+  return player.hand
+    .filter((card) => card.type === 'trap' && Boolean(card.trap))
+    .filter((card) => !available.has(card.instanceId))
+    .map((card) => {
+      const trap = card.trap!
+      const reason: TrapUnavailableReason = !inTrapStage
+        ? 'not-trap-stage'
+        : !isTrapConditionMet(state, playerId, trap)
+          ? 'condition-not-met'
+          : !hasRequiredTrapTargets(state, playerId, card)
+            ? 'no-legal-targets'
+            : player.supportArea.length <
+                trap.effects.reduce(
+                  (total, effect) =>
+                    effect.kind === 'support-to-trash'
+                      ? total + effect.amount
+                      : total,
+                  0,
+                )
+              ? 'not-enough-support-to-trash'
+              : player.hand.filter(
+                    (handCard) =>
+                      handCard.instanceId !== card.instanceId &&
+                      (!trap.cost.discardHandColor ||
+                        handCard.energyColor === trap.cost.discardHandColor),
+                  ).length < (trap.cost.discardHand ?? 0)
+                ? 'not-enough-hand-to-discard'
+                : selectEnergyPayment(
+                      trap.cost.energy ?? trap.cost,
+                      player.supportArea,
+                    ) === null
+                  ? 'cannot-pay-energy'
+                  : !canPayTrashBattleCookieCost(trap.cost, player.battleArea)
+                    ? 'cannot-trash-battle-cookie'
+                    : 'unknown'
+      return { instanceId: card.instanceId, cardId: card.id, reason }
+    })
+}
+
 export const getTrapCandidates = (
   state: GameState,
   playerId: PlayerId,

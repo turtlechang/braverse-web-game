@@ -129,6 +129,7 @@ export {
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   getBlockerCandidates,
+  explainUnavailableTraps,
   getTrapCandidates,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,

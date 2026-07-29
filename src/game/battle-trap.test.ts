@@ -3,6 +3,7 @@ import {
   beginAttack,
   applyGameCommand,
   createOfficialRedStarterDeck,
+  explainUnavailableTraps,
   getPendingDecision,
   getTrapCandidates,
   playTrap,
@@ -1331,5 +1332,101 @@ describe('BS1-050 Broken Signpost: redirect-attack self target', () => {
 
     const finalDamage = result.pendingBattle?.remainingDamage ?? 0
     expect(finalDamage).toBe(0)
+  })
+})
+
+/**
+ * `[auto-skip-trap]` 的診斷示警原本只要「手上有陷阱卡卻沒有候選」就印，於是
+ * 每次被攻擊而付不出代價都會噴一則假警報——被攻擊時支援卡多半還橫置著
+ * （支援區要到自己回合的活躍階段才重置），這是日常狀況而非 bug。
+ * explainUnavailableTraps 要能把這些日常情形明確歸因，示警才只會在真正
+ * 無法解釋時出現。
+ */
+describe('explainUnavailableTraps', () => {
+  const blueTrap = (instanceId: string, energy: number): GameCard => ({
+    id: 'BS3-094',
+    instanceId,
+    name: 'Radiant Coronation',
+    type: 'trap',
+    officialType: 'trap',
+    energyColor: 'blue',
+    trap: {
+      text: '<{B}{B}> 對手餅乾攻擊力 -2。',
+      cost: { energy: { blue: energy }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+  })
+
+  const trapStageState = (): GameState => {
+    const state = createBattleState()
+    state.players['player-one'].hand = [blueTrap('trap-1', 2)]
+    return declareAttack(state)
+  }
+
+  it('blames rested support energy rather than reporting an unknown engine fault', () => {
+    const state = trapStageState()
+    // 支援卡全部橫置＝沒有可用能量，正是使用者 log 裡的兩則情形。
+    state.players['player-one'].supportArea = [
+      { card: { ...item('p1-sup-a'), energyColor: 'blue' }, rested: true },
+      { card: { ...item('p1-sup-b'), energyColor: 'blue' }, rested: true },
+    ]
+
+    expect(getTrapCandidates(state, 'player-one')).toHaveLength(0)
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([
+      { instanceId: 'trap-1', cardId: 'BS3-094', reason: 'cannot-pay-energy' },
+    ])
+  })
+
+  it('blames an unmet trap condition when energy alone would be payable', () => {
+    const state = trapStageState()
+    state.players['player-one'].hand = [
+      {
+        ...blueTrap('trap-cond', 1),
+        id: 'ST2-020',
+        trap: {
+          text: '《{Y}{Y}》 休息區 LV.5 以上才能發動。',
+          cost: { energy: { blue: 1 }, discardHand: 0 },
+          condition: { kind: 'break-level-at-least', level: 5 },
+          effects: [
+            {
+              kind: 'modify-attack',
+              amount: -3,
+              duration: 'this-turn',
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        },
+      },
+    ]
+    state.players['player-one'].breakArea = []
+    state.players['player-one'].supportArea = [
+      { card: { ...item('p1-sup-a'), energyColor: 'blue' }, rested: false },
+    ]
+
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([
+      {
+        instanceId: 'trap-cond',
+        cardId: 'ST2-020',
+        reason: 'condition-not-met',
+      },
+    ])
+  })
+
+  it('omits traps that are actually usable', () => {
+    const state = trapStageState()
+    state.players['player-one'].supportArea = [
+      { card: { ...item('p1-sup-a'), energyColor: 'blue' }, rested: false },
+      { card: { ...item('p1-sup-b'), energyColor: 'blue' }, rested: false },
+    ]
+
+    expect(getTrapCandidates(state, 'player-one')).toHaveLength(1)
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([])
   })
 })

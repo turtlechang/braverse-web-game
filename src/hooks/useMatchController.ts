@@ -13,6 +13,7 @@ import {
   hasBlockingPending,
   getReplacementCandidates,
   getRefreshCandidates,
+  explainUnavailableTraps,
   getTrapCandidates,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
@@ -802,19 +803,18 @@ export function useMatchController(params: {
       return
     }
 
-    const trapCardsInHand = game.players[viewerPlayerId].hand.filter(
-      (card) => card.type === 'trap' && Boolean(card.trap),
-    )
-    if (trapCardsInHand.length > 0) {
+    // 只在「所有已知關卡都通過、卻還是進不了候選名單」時示警。手上有陷阱卡
+    // 但付不出代價／條件未成立是日常狀況（被攻擊時支援卡通常還橫置著），
+    // 每次都印會把主控台灌滿假警報，真的出問題時反而看不見。
+    const unexplainedTraps = explainUnavailableTraps(
+      game,
+      viewerPlayerId,
+    ).filter((entry) => entry.reason === 'unknown')
+    if (unexplainedTraps.length > 0) {
       console.warn(
-        '[auto-skip-trap] 手上有陷阱卡但 getTrapCandidates 判定為 0，即將自動略過。診斷資訊：',
+        '[auto-skip-trap] 陷阱卡通過所有已知可用性檢查卻仍不在候選名單，即將自動略過。診斷資訊：',
         {
-          hand: trapCardsInHand.map((card) => ({
-            id: card.id,
-            cost: card.trap?.cost,
-            condition: card.trap?.condition,
-            effects: card.trap?.effects,
-          })),
+          traps: unexplainedTraps,
           breakArea: game.players[viewerPlayerId].breakArea.map(
             (c) => ({ id: c.id, level: c.level }),
           ),
