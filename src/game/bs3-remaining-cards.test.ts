@@ -181,10 +181,18 @@ describe('BS3 剩餘陷阱卡', () => {
     const resolved = applyGameCommand(matched, {
       kind: 'resolve-reveal-top-deck',
       playerId: 'player-two',
-      targetIds: ['defender'],
     })
     expect(resolved.pendingRevealTopDeck).toBeNull()
-    expect(resolved.attackModifiers).toContainEqual(
+    expect(resolved.pendingAbilityEffect).toBeDefined()
+    expect(resolved.pendingAbilityEffect!.effectIndex).toBe(0)
+
+    const afterTarget = applyGameCommand(resolved, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: ['defender'],
+    })
+    expect(afterTarget.pendingAbilityEffect).toBeUndefined()
+    expect(afterTarget.attackModifiers).toContainEqual(
       expect.objectContaining({
         targetInstanceId: 'defender',
         amount: -1,
@@ -390,6 +398,72 @@ describe('BS3 剩餘物品卡', () => {
       kind: 'reveal-top-deck',
       match: { type: 'cookie', energyColor: 'blue', level: 2 },
     })
+  })
+
+  it('BS3-090: resolve-reveal-top-deck pauses for target selection when nested effect requires it', () => {
+    const effects = effectsOf('BS3-090')
+    const reveal = effects[0]
+    const context: EffectContext = {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: 'bs3-090',
+      sourceCardName: 'Sword of Radiant Light',
+    }
+    const matchingTop = levelledCookie('blue-lv2', 2, 'blue')
+    let state = createBattleState()
+    state = {
+      ...state,
+      activePlayer: 'player-one',
+      turnPlayerId: 'player-one',
+      phase: 'main',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [matchingTop, item('under-match')],
+          battleArea: [
+            {
+              card: cookie('battle-1'),
+              hpCards: [],
+              rested: false,
+              battleEntryId: 'battle-1:entry',
+            },
+          ],
+        },
+      },
+    }
+
+    const afterReveal = executeCardEffect(state, context, reveal, [])
+    expect(afterReveal.pendingRevealTopDeck).toBeDefined()
+    expect(afterReveal.pendingRevealTopDeck!.matched).toBe(true)
+    expect(afterReveal.pendingRevealTopDeck!.nestedEffects[0]).toMatchObject({
+      kind: 'modify-attack',
+      target: { side: 'self', min: 0, max: 1 },
+    })
+
+    const afterResolve = applyGameCommand(afterReveal, {
+      kind: 'resolve-reveal-top-deck',
+      playerId: 'player-one',
+    })
+    expect(afterResolve.pendingRevealTopDeck).toBeNull()
+    expect(afterResolve.pendingAbilityEffect).toBeDefined()
+    expect(afterResolve.pendingAbilityEffect!.effectIndex).toBe(0)
+    expect(afterResolve.pendingAbilityEffect!.effects[0]).toMatchObject({
+      kind: 'modify-attack',
+      amount: 2,
+    })
+
+    const afterTarget = applyGameCommand(afterResolve, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: ['battle-1'],
+    })
+    expect(afterTarget.pendingAbilityEffect).toBeUndefined()
+    expect(afterTarget.attackModifiers).toContainEqual(
+      expect.objectContaining({
+        targetInstanceId: 'battle-1',
+        amount: 2,
+      }),
+    )
   })
 
   it('BS3-116 First Watcher Bow: choose-one (hp-to-trash or random discard)', () => {

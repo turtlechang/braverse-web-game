@@ -18,6 +18,7 @@ import {
   executeCardEffect,
   getEffectTargetCandidatesForEffect,
   isEffectConditionMet,
+  requiresEffectCardSelection,
   requiresTargetSelection,
   resolveDrawUpTo,
   resolveInspectDeck,
@@ -894,37 +895,39 @@ const applyPendingDecisionCommand = (
         sourceInstanceId: pending.sourceInstanceId,
         sourceCardName: pending.sourceCardName,
       }
-      let nextState: GameState = { ...state, pendingRevealTopDeck: null }
-      if (pending.matched) {
-        for (const nestedEffect of pending.nestedEffects) {
-          if (nextState.status !== 'playing') break
-          nextState = executeCardEffect(
-            nextState,
-            context,
-            nestedEffect,
-            command.targetIds ?? [],
-            options.shuffle,
-          )
+      const nextState: GameState = { ...state, pendingRevealTopDeck: null }
+      if (!pending.matched || pending.nestedEffects.length === 0) {
+        return nextState
+      }
+      // 若嵌套效果需要目標選擇，暫存在 pendingAbilityEffect 讓 UI/AI 逐步處理。
+      const needsTargeting = pending.nestedEffects.some(requiresEffectCardSelection)
+      if (needsTargeting) {
+        return {
+          ...nextState,
+          pendingAbilityEffect: {
+            playerId: pending.playerId,
+            sourcePlayerId: pending.playerId,
+            sourceInstanceId: pending.sourceInstanceId,
+            sourceCardName: pending.sourceCardName,
+            sourceKind: 'item',
+            effects: pending.nestedEffects,
+            effectIndex: 0,
+          },
         }
       }
-      // 若有 pendingAbilityEffect，推進到下一個效果
-      if (
-        nextState.status === 'playing' &&
-        nextState.pendingAbilityEffect &&
-        nextState.pendingAbilityEffect.sourceInstanceId === pending.sourceInstanceId
-      ) {
-        const ab = nextState.pendingAbilityEffect
-        const nextIndex = ab.effectIndex + 1
-        if (nextIndex >= ab.effects.length) {
-          nextState = { ...nextState, pendingAbilityEffect: undefined }
-        } else {
-          nextState = {
-            ...nextState,
-            pendingAbilityEffect: { ...ab, effectIndex: nextIndex },
-          }
-        }
+      // 不需目標選擇的效果直接執行。
+      let resolved = nextState
+      for (const nestedEffect of pending.nestedEffects) {
+        if (resolved.status !== 'playing') break
+        resolved = executeCardEffect(
+          resolved,
+          context,
+          nestedEffect,
+          command.targetIds ?? [],
+          options.shuffle,
+        )
       }
-      return nextState
+      return resolved
     }
     case 'resolve-optional-cost-attack':
       return resolveOptionalCostAttack(
