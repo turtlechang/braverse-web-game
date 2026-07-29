@@ -797,6 +797,7 @@ export const playTrap = (
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: trapCard.instanceId,
+    sourceCardName: trapCard.name,
   }
 
   for (const effect of trap.effects) {
