@@ -1,6 +1,7 @@
 import { GameRuleError } from './errors'
 import {
   beginAttack,
+  finishBattle,
   getAfterDamageEffectMinMax,
   getFaintEffectMinMax,
   playBlocker,
@@ -897,9 +898,12 @@ const applyPendingDecisionCommand = (
       }
       const nextState: GameState = { ...state, pendingRevealTopDeck: null }
       if (!pending.matched || pending.nestedEffects.length === 0) {
-        return nextState
+        // 未匹配或無巢狀效果，直接完成戰鬥（若存在）。
+        return nextState.pendingBattle ? finishBattle(nextState) : nextState
       }
       // 若嵌套效果需要目標選擇，暫存在 pendingAbilityEffect 讓 UI/AI 逐步處理。
+      // pendingBattle 保留，讓 attackTargetOnly 能找到攻擊目標；
+      // pendingAbilityEffect 結算完畢後由 resolvePendingAbilityEffect 完成戰鬥。
       const needsTargeting = pending.nestedEffects.some(requiresEffectCardSelection)
       if (needsTargeting) {
         return {
@@ -927,7 +931,7 @@ const applyPendingDecisionCommand = (
           options.shuffle,
         )
       }
-      return resolved
+      return resolved.pendingBattle ? finishBattle(resolved) : resolved
     }
     case 'resolve-optional-cost-attack':
       return resolveOptionalCostAttack(
@@ -1159,8 +1163,7 @@ const resolvePendingAbilityEffect = (
   if (
     state.pendingRefresh ||
     state.pendingOnPlay ||
-    state.pendingReplacement ||
-    state.pendingBattle
+    state.pendingReplacement
   ) {
     throw new GameRuleError('必須先處理其他待處理的決策。')
   }
@@ -1183,10 +1186,12 @@ const resolvePendingAbilityEffect = (
   )
   const nextIndex = pending.effectIndex + 1
   if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
-    return { ...resolved, pendingAbilityEffect: undefined }
+    const cleared = { ...resolved, pendingAbilityEffect: undefined }
+    return cleared.pendingBattle ? finishBattle(cleared) : cleared
   }
   if (hasNoEquipTarget(resolved, context, pending.effects, pending.effectIndex)) {
-    return { ...resolved, pendingAbilityEffect: undefined }
+    const cleared = { ...resolved, pendingAbilityEffect: undefined }
+    return cleared.pendingBattle ? finishBattle(cleared) : cleared
   }
   return {
     ...resolved,

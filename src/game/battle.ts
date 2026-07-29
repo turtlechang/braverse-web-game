@@ -1195,7 +1195,7 @@ const isDelayedTrapTriggered = (battle: PendingBattle): boolean => {
   )
 }
 
-const finishBattle = (state: GameState): GameState => {
+export const finishBattle = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   let completedState = state
   if (battle.delayedTrap && isDelayedTrapTriggered(battle)) {
@@ -1248,7 +1248,11 @@ const finishBattle = (state: GameState): GameState => {
 
   return finalizePendingReplacements({
     ...buildPendingEffectOrder(completedState),
-    pendingBattle: null,
+    // reveal-top-deck 需要玩家確認後才執行巢狀效果，此處保留 pendingBattle
+    // 讓巢狀 damage 的 attackTargetOnly 能找到攻擊目標。
+    ...(completedState.pendingRevealTopDeck
+      ? {}
+      : { pendingBattle: null }),
   })
 }
 
