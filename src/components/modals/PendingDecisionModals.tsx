@@ -757,24 +757,27 @@ export function InspectDeckModal({
                 const card = revealedCards.find((c) => c.instanceId === id)
                 return (
                   <div key={id} className="inspect-deck-sort-row">
-                    <span>{card?.name ?? id}</span>
-                    <div className="inspect-deck-sort-actions">
-                      <button
-                        type="button"
-                        aria-label={`${card?.name ?? id} 上移`}
-                        disabled={index === 0}
-                        onClick={() => swap(index, index - 1)}
-                      >
-                        <ChevronUp aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`${card?.name ?? id} 下移`}
-                        disabled={index === restOrder.length - 1}
-                        onClick={() => swap(index, index + 1)}
-                      >
-                        <ChevronDown aria-hidden="true" />
-                      </button>
+                    <CardFace card={card ?? { id: '', instanceId: id, name: id, type: 'item' }} />
+                    <div className="inspect-deck-sort-info">
+                      <span>{card?.name ?? id}</span>
+                      <div className="inspect-deck-sort-actions">
+                        <button
+                          type="button"
+                          aria-label={`${card?.name ?? id} 上移`}
+                          disabled={index === 0}
+                          onClick={() => swap(index, index - 1)}
+                        >
+                          <ChevronUp aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${card?.name ?? id} 下移`}
+                          disabled={index === restOrder.length - 1}
+                          onClick={() => swap(index, index + 1)}
+                        >
+                          <ChevronDown aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )
