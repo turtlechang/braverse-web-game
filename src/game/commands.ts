@@ -183,7 +183,7 @@ export interface ResolveOpponentHandDiscardCommand {
 export interface ResolveInspectDeckCommand {
   kind: 'resolve-inspect-deck'
   playerId: PlayerId
-  pickedCardId: string | null
+  pickedCardIds: string[]
   restOrder: string[]
 }
 
@@ -883,7 +883,7 @@ const applyPendingDecisionCommand = (
     case 'resolve-opponent-hand-discard':
       return resolveOpponentHandDiscard(state, command.playerId, command.cardIds)
     case 'resolve-inspect-deck':
-      return resolveInspectDeck(state, command.playerId, command.pickedCardId, command.restOrder)
+      return resolveInspectDeck(state, command.playerId, command.pickedCardIds, command.restOrder)
     case 'resolve-reveal-top-deck': {
       const pending = state.pendingRevealTopDeck
       if (!pending || pending.playerId !== command.playerId) {

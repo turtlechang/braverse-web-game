@@ -561,7 +561,7 @@ describe('applyGameCommand', () => {
     const result = applyGameCommand(withPending, {
       kind: 'resolve-inspect-deck',
       playerId: 'player-two',
-      pickedCardId: deck[0].instanceId,
+      pickedCardIds: [deck[0].instanceId],
       restOrder: [deck[1].instanceId, deck[2].instanceId],
     })
     expect(result.pendingInspectDeck).toBeNull()
@@ -772,7 +772,7 @@ describe('applyGameCommand replacement finalization', () => {
     const resolveInspect = {
       kind: 'resolve-inspect-deck' as const,
       playerId: 'player-one' as const,
-      pickedCardId: revealedCards[0].instanceId,
+      pickedCardIds: [revealedCards[0].instanceId],
       restOrder: [revealedCards[1].instanceId],
     }
     const afterInspect = applyGameCommand(awaitingInspect, resolveInspect)

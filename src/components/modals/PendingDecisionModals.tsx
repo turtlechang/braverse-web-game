@@ -611,7 +611,7 @@ export interface InspectDeckModalProps {
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   optionalPick?: boolean
-  onConfirm: (pickedId: string | null, restOrder: string[]) => void
+  onConfirm: (pickedCardIds: string[], restOrder: string[]) => void
 }
 
 const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
@@ -632,7 +632,7 @@ export function InspectDeckModal({
   onConfirm,
 }: InspectDeckModalProps) {
   const [minimized, setMinimized] = useState(false)
-  const [pickedId, setPickedId] = useState<string | null>(null)
+  const [pickedIds, setPickedIds] = useState<string[]>([])
   // restOrder 只保存「未被選走」的卡，順序就是玩家決定的放回順序。
   const [restOrder, setRestOrder] = useState<string[]>(
     () => revealedCards.map((card) => card.instanceId),
@@ -647,21 +647,30 @@ export function InspectDeckModal({
   const showReorder = restDestination !== 'trash' && restOrder.length > 1
 
   const resetPick = () => {
-    setPickedId(null)
+    setPickedIds([])
     setRestOrder(revealedCards.map((card) => card.instanceId))
   }
 
   const handlePick = (instanceId: string) => {
-    if (pickedId === instanceId) {
-      resetPick()
-      return
-    }
-    setPickedId(instanceId)
-    setRestOrder(
-      revealedCards
-        .map((card) => card.instanceId)
-        .filter((id) => id !== instanceId),
-    )
+    setPickedIds((prev) => {
+      if (prev.includes(instanceId)) {
+        const next = prev.filter((id) => id !== instanceId)
+        setRestOrder(
+          revealedCards
+            .map((card) => card.instanceId)
+            .filter((id) => !next.includes(id)),
+        )
+        return next
+      }
+      if (prev.length >= pickCount) return prev
+      const next = [...prev, instanceId]
+      setRestOrder(
+        revealedCards
+          .map((card) => card.instanceId)
+          .filter((id) => !next.includes(id)),
+      )
+      return next
+    })
   }
 
   const swap = (index: number, otherIndex: number) => {
@@ -672,11 +681,11 @@ export function InspectDeckModal({
   }
 
   const canConfirm =
-    !canPick || optionalPick || hasNoPickableCard || pickedId !== null
+    !canPick || optionalPick || hasNoPickableCard || pickedIds.length > 0
 
   const handleConfirm = () => {
     if (!canConfirm) return
-    onConfirm(pickedId, restOrder)
+    onConfirm(pickedIds, restOrder)
   }
 
   if (minimized) {
@@ -689,8 +698,8 @@ export function InspectDeckModal({
         <span>
           <strong>{sourceCardName}</strong>
           <small>
-            {pickedId
-              ? '已選 1 張，等待確認'
+            {pickedIds.length > 0
+              ? `已選 ${pickedIds.length} 張，等待確認`
               : `查看 ${revealedCards.length} 張牌`}
           </small>
         </span>
@@ -738,8 +747,8 @@ export function InspectDeckModal({
               <button
                 type="button"
                 key={card.instanceId}
-                className={pickedId === card.instanceId ? 'is-selected' : ''}
-                disabled={!isPickable(card)}
+                className={pickedIds.includes(card.instanceId) ? 'is-selected' : ''}
+                disabled={!isPickable(card) || (!pickedIds.includes(card.instanceId) && pickedIds.length >= pickCount)}
                 onClick={() => handlePick(card.instanceId)}
                 aria-label={`選擇${card.name}`}
               >
@@ -786,7 +795,7 @@ export function InspectDeckModal({
           </div>
         )}
         <div className="modal-actions">
-          {pickedId && (
+          {pickedIds.length > 0 && (
             <button
               type="button"
               onClick={resetPick}

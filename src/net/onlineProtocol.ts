@@ -390,8 +390,7 @@ const commandShapes = {
   'resolve-faint-effect': { requiredStringArrays: ['targetIds'] },
   'resolve-opponent-hand-discard': { requiredStringArrays: ['cardIds'] },
   'resolve-inspect-deck': {
-    requiredNullableStrings: ['pickedCardId'],
-    requiredStringArrays: ['restOrder'],
+    requiredStringArrays: ['pickedCardIds', 'restOrder'],
   },
   'resolve-optional-cost-attack': {
     optionalStringArrays: ['discardCardIds', 'targetIds', 'paymentIds'],

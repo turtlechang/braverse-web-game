@@ -222,27 +222,29 @@ export const handleAiPendingDecision = (
     const hasFilter =
       pendingDecision.filterColor !== undefined ||
       pendingDecision.filterType !== undefined
-    const matching = revealed.find(
-      (card) =>
-        (pendingDecision.filterColor === undefined ||
-          card.energyColor === pendingDecision.filterColor) &&
-        (pendingDecision.filterType === undefined ||
-          card.type === pendingDecision.filterType),
-    )
     // pickCount 為 0 的檢視（例如只重排牌庫頂）不選任何一張。
-    const pickedId: string | null =
+    const pickedIds: string[] =
       pendingDecision.pickCount === 0
-        ? null
+        ? []
         : hasFilter
-          ? (matching?.instanceId ?? null)
-          : (allIds[0] ?? null)
-    const restIds =
-      pickedId === null ? [...allIds] : allIds.filter((id) => id !== pickedId)
+          ? revealed
+              .filter(
+                (card) =>
+                  (pendingDecision.filterColor === undefined ||
+                    card.energyColor === pendingDecision.filterColor) &&
+                  (pendingDecision.filterType === undefined ||
+                    card.type === pendingDecision.filterType),
+              )
+              .slice(0, pendingDecision.pickCount)
+              .map((c) => c.instanceId)
+          : allIds.slice(0, pendingDecision.pickCount)
+    const pickedSet = new Set(pickedIds)
+    const restIds = allIds.filter((id) => !pickedSet.has(id))
     return {
       state: applyGameCommand(state, {
         kind: 'resolve-inspect-deck',
         playerId,
-        pickedCardId: pickedId,
+        pickedCardIds: pickedIds,
         restOrder: restIds,
       }),
       action: 'resolve-inspect-deck',

@@ -392,7 +392,7 @@ describe('BS3-083 Captain Caviar Cookie: reorder the top of the deck', () => {
       revealed.players['player-two'].deck.map((card) => card.instanceId),
     ).toEqual(['rest-d'])
 
-    const resolved = resolveInspectDeck(revealed, 'player-two', null, [
+    const resolved = resolveInspectDeck(revealed, 'player-two', [], [
       'top-c',
       'top-a',
       'top-b',
@@ -494,7 +494,7 @@ describe('BS3-114 Bittersweet Incense: view five, play one, trash the rest', () 
       effectsOf('BS3-114')[0],
       [],
     )
-    const resolved = resolveInspectDeck(revealed, 'player-two', 'purple-cookie', [
+    const resolved = resolveInspectDeck(revealed, 'player-two', ['purple-cookie'], [
       'view-b',
       'view-c',
       'view-d',
@@ -532,7 +532,7 @@ describe('BS3-114 Bittersweet Incense: view five, play one, trash the rest', () 
       effectsOf('BS3-114')[0],
       [],
     )
-    const resolved = resolveInspectDeck(revealed, 'player-two', null, [
+    const resolved = resolveInspectDeck(revealed, 'player-two', [], [
       'view-a',
       'view-b',
       'view-c',
@@ -561,7 +561,7 @@ describe('BS3-114 Bittersweet Incense: view five, play one, trash the rest', () 
     )
 
     expect(() =>
-      resolveInspectDeck(revealed, 'player-two', 'blue-cookie', [
+      resolveInspectDeck(revealed, 'player-two', ['blue-cookie'], [
         'view-b',
         'view-c',
         'view-d',

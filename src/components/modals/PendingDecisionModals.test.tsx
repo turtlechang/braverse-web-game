@@ -692,8 +692,8 @@ describe('InspectDeckModal', () => {
     })
 
     expect(onConfirm).toHaveBeenCalledTimes(1)
-    const [pickedId, restOrder] = onConfirm.mock.calls[0]
-    expect(pickedId).toBe('reveal-a')
+    const [pickedCardIds, restOrder] = onConfirm.mock.calls[0]
+    expect(pickedCardIds).toEqual(['reveal-a'])
     expect(restOrder).toEqual(['reveal-b', 'reveal-c'])
 
     await act(() => root.unmount())
@@ -722,6 +722,11 @@ describe('InspectDeckModal', () => {
       btnA.click()
     })
 
+    // Deselect A by clicking again, then select B
+    await act(() => {
+      btnA.click()
+    })
+
     const btnB = findButtonByText(container, '牌B')!
     await act(() => {
       btnB.click()
@@ -733,8 +738,8 @@ describe('InspectDeckModal', () => {
     })
 
     expect(onConfirm).toHaveBeenCalledTimes(1)
-    const [pickedId, restOrder] = onConfirm.mock.calls[0]
-    expect(pickedId).toBe('reveal-b')
+    const [pickedCardIds, restOrder] = onConfirm.mock.calls[0]
+    expect(pickedCardIds).toEqual(['reveal-b'])
     expect(restOrder).toHaveLength(2)
     expect(restOrder).toContain('reveal-a')
     expect(restOrder).toContain('reveal-c')
@@ -742,7 +747,7 @@ describe('InspectDeckModal', () => {
 
     const allIds = revealedCards.map((c) => c.instanceId)
     const restSet = new Set(restOrder as string[])
-    const expectedRest = allIds.filter((id) => id !== pickedId)
+    const expectedRest = allIds.filter((id) => !pickedCardIds.includes(id))
     expect(restSet.size).toBe(expectedRest.length)
     for (const id of expectedRest) {
       expect(restSet.has(id)).toBe(true)
@@ -900,8 +905,8 @@ describe('InspectDeckModal', () => {
       confirmBtn!.click()
     })
 
-    const [pickedId, restOrder] = onConfirm.mock.calls[0]
-    expect(pickedId).toBe('id-a')
+    const [pickedCardIds, restOrder] = onConfirm.mock.calls[0]
+    expect(pickedCardIds).toEqual(['id-a'])
     expect(restOrder).toEqual(['id-c', 'id-b', 'id-d'])
 
     await act(() => root.unmount())

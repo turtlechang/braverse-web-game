@@ -326,7 +326,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           filterColor={pendingInspect.filterColor}
           filterType={pendingInspect.filterType}
           optionalPick={pendingInspect.optionalPick}
-          onConfirm={(pickedId, restOrder) => {
+          onConfirm={(pickedCardIds, restOrder) => {
             const restLabel =
               pendingInspect.restDestination === 'trash'
                 ? '棄牌區'
@@ -337,10 +337,10 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               {
                 kind: 'resolve-inspect-deck',
                 playerId: match.viewerPlayerId,
-                pickedCardId: pickedId,
+                pickedCardIds,
                 restOrder,
               },
-              pickedId !== null
+              pickedCardIds.length > 0
                 ? `已選擇卡牌${
                     pendingInspect.pickDestination === 'battle'
                       ? '登場'
