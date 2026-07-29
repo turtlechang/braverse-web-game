@@ -18,6 +18,7 @@ import {
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getPendingDecision,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
@@ -779,7 +780,15 @@ export function usePendingEffect(params: {
       battle.attackerPlayerId !== viewerPlayerId ||
       game.pendingOptionalCostAttack ||
       pendingEffect ||
-      faintActive
+      faintActive ||
+      // resolve-attack-effect 是 player-action 指令，規則層的
+      // assertNoPendingDecision 要求「完全沒有待處理決策」才放行。這裡必須用
+      // 同一份判斷，不能只看 faintActive——faintActive 只在昏厥效果屬於**檢視者**
+      // 時為真，攻擊打死帶昏厥觸發的對手餅乾時（如 Cherry Cookie），決策擁有者
+      // 是對手，檢視者這邊看起來一片乾淨，於是照送指令、直接被規則層擋下拋錯，
+      // 而且是在 setGame updater 裡拋出，整個 App 會被 error boundary 接走。
+      // 有待處理決策時就先讓出，等擁有者（AI 或對手）解完再由本 effect 接手。
+      getPendingDecision(game)
     ) {
       return
     }

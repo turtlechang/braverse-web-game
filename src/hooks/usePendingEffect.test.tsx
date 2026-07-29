@@ -1311,3 +1311,154 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
     expect(gameState.pendingBattle).toBeNull()
   })
 })
+
+/**
+ * 攻擊打死一隻帶昏厥觸發的對手餅乾（如 Cherry Cookie）時，戰鬥會停在
+ * attack-effect 階段，同時規則層留下一個屬於**對手**的 pendingFaintEffects。
+ *
+ * `resolve-attack-effect` 是 player-action 指令，commands.ts 的
+ * assertNoPendingDecision 要求「完全沒有待處理決策」才放行。但本機 UI 的自動
+ * 推進 useEffect 原本只看 faintActive，而 useMatchController 的 hasFaint 是
+ * `pendingFaint.sourcePlayerId === viewerPlayerId`——決策屬於對手時它是 false，
+ * 檢視者這邊看起來一片乾淨，於是照送指令、被規則層擋下拋 GameRuleError。
+ * 那個 throw 發生在 setGame 的 updater 裡，會一路衝到 error boundary，整個
+ * 對局畫面直接崩掉（使用者回報的當機）。
+ */
+describe('usePendingEffect attack-effect auto-advance vs opponent pending decision', () => {
+  const buildOpponentFaintPendingState = (): GameState => {
+    let state = createBattleState()
+
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: {
+        ...battleCookie('attacker', 3, 5),
+        attackEffects: [
+          {
+            kind: 'optional-cost-attack',
+            cost: { energy: {}, discardHand: 1 },
+            effects: [
+              {
+                kind: 'damage',
+                amount: 1,
+                target: { side: 'opponent', min: 0, max: 1 },
+              },
+            ],
+            effectText: '可以棄 1 張手牌造成 1 點傷害。',
+          },
+        ],
+      },
+    }
+    state.players['player-two'].hand = [battleItem('p2-hand-1')]
+
+    // 防守方餅乾帶昏厥觸發，且會被這次攻擊打死。
+    state.players['player-one'].battleArea[0] = {
+      ...state.players['player-one'].battleArea[0],
+      card: {
+        ...battleCookie('defender', 1, 2),
+        skill: {
+          trigger: 'passive',
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: { energy: {}, discardHand: 0 },
+          text: 'When this Cookie faints, deal 1 damage.',
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+          faint: true,
+          endPhase: false,
+          afterDamage: false,
+          oncePerGame: false,
+          fromBreakArea: false,
+        },
+      },
+      hpCards: [battleItem('def-hp-1')],
+    }
+    // 旁觀餅乾：避免對手因為場上淨空而直接落敗。
+    state.players['player-one'].battleArea.push({
+      card: battleCookie('bystander', 1, 5),
+      hpCards: Array.from({ length: 5 }, (_, index) =>
+        battleItem(`by-hp-${index}`),
+      ),
+      rested: false,
+      battleEntryId: 'bystander:battle:9',
+    })
+
+    state = beginAttack(state, 'attacker', 'defender', ['p2-support'])
+    state = skipTrap(state, 'player-one')
+    let guard = 0
+    while (state.pendingBattle?.stage === 'damage' && guard++ < 20) {
+      state = resolveNextDamage(state)
+    }
+    return state
+  }
+
+  it('yields instead of dispatching while the opponent still owns a faint decision', async () => {
+    vi.useFakeTimers()
+    const gameState = buildOpponentFaintPendingState()
+
+    // 前提：戰鬥停在 attack-effect，而待處理決策屬於對手（player-one）。
+    expect(gameState.pendingBattle?.stage).toBe('attack-effect')
+    expect(gameState.pendingFaintEffects?.[0]?.sourcePlayerId).toBe('player-one')
+
+    const setGameMock = vi.fn()
+    function TestHarness() {
+      usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
+        viewerPlayerId: 'player-two',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        // 決策屬於對手，所以檢視者這邊的 hasFaint 是 false（與正式推導一致）。
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.runAllTimers())
+
+    // 沒有送出任何指令——送了就會被 assertNoPendingDecision 擋下並在
+    // setGame updater 裡拋錯，讓整個畫面崩潰。
+    expect(setGameMock).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
+  })
+
+  it('lets the battle resume once the owner resolves that decision', () => {
+    const stuck = buildOpponentFaintPendingState()
+
+    const afterFaint = applyGameCommand(stuck, {
+      kind: 'resolve-faint-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(afterFaint.pendingFaintEffects ?? []).toHaveLength(0)
+    expect(afterFaint.pendingBattle?.stage).toBe('attack-effect')
+
+    const resumed = applyGameCommand(afterFaint, {
+      kind: 'resolve-attack-effect',
+      playerId: 'player-two',
+      targetIds: [],
+    })
+    expect(resumed.pendingOptionalCostAttack).toBeTruthy()
+  })
+})
