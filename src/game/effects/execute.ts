@@ -272,7 +272,13 @@ export const executeCardEffect = (
   assertCondition(state, context, effect)
 
   if (effect.kind === 'draw') {
-    const player = state.players[context.sourcePlayerId]
+    const targetPlayerId =
+      effect.side === 'opponent'
+        ? context.sourcePlayerId === 'player-one'
+          ? 'player-two'
+          : 'player-one'
+        : context.sourcePlayerId
+    const player = state.players[targetPlayerId]
     const drawAmount = Math.min(player.deck.length, effect.amount)
     const updatedState = updatePlayer(
       state,
@@ -281,7 +287,7 @@ export const executeCardEffect = (
     const remainingDraws = effect.amount - drawAmount
 
     if (
-      updatedState.players[context.sourcePlayerId].deck.length > 0
+      updatedState.players[targetPlayerId].deck.length > 0
     ) {
       return updatedState
     }
@@ -289,12 +295,12 @@ export const executeCardEffect = (
     if (
       getRefreshCandidates(
         updatedState,
-        context.sourcePlayerId,
+        targetPlayerId,
       ).length === 0
     ) {
       return finishWithDefeat(
         updatedState,
-        context.sourcePlayerId,
+        targetPlayerId,
         'refresh-unavailable',
       )
     }
@@ -302,7 +308,7 @@ export const executeCardEffect = (
     return {
       ...updatedState,
       pendingRefresh: {
-        playerId: context.sourcePlayerId,
+        playerId: targetPlayerId,
         remainingDraws,
       },
     }
@@ -1831,6 +1837,19 @@ export const executeCardEffect = (
         effect.destination === 'top'
           ? [sourceStage.card, ...player.deck]
           : [...player.deck, sourceStage.card],
+    })
+  }
+
+  if (effect.kind === 'stage-source-to-trash') {
+    const player = state.players[context.sourcePlayerId]
+    const sourceStage = player.stage
+    if (!sourceStage || sourceStage.card.instanceId !== context.sourceInstanceId) {
+      throw new GameRuleError('來源場景卡不在場景區中。')
+    }
+    return updatePlayer(state, {
+      ...player,
+      stage: null,
+      discardPile: [...player.discardPile, sourceStage.card],
     })
   }
 

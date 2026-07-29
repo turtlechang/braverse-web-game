@@ -334,6 +334,7 @@ export interface ModifyDamageReceivedEffect {
 export interface DrawEffect {
   kind: 'draw'
   amount: number
+  side?: 'self' | 'opponent'
   condition?: EffectCondition
 }
 
@@ -664,6 +665,14 @@ export interface StageSourceToDeckEffect {
   condition?: EffectCondition
 }
 
+/** 來源場景卡自己離開場景區、送入棄牌區（BS3-120「Then」分支）。 */
+export interface StageSourceToTrashEffect {
+  kind: 'stage-source-to-trash'
+  condition?: EffectCondition
+  /** 此效果無可選目標，但為了與 CardEffect union 中其他帶 target 的型別相容，保留 target = undefined。 */
+  target?: undefined
+}
+
 /** 讓選定的餅乾解除休息；`set-active` 只處理支援區，兩者不共用。 */
 export interface SetCookieActiveEffect {
   kind: 'set-cookie-active'
@@ -889,6 +898,7 @@ export type CardEffect =
   | ChooseOneEffect
   | BreakSourceToBattleEffect
   | StageSourceToDeckEffect
+  | StageSourceToTrashEffect
   | TrashToBreakEffect
 
 export type TargetedCardEffect =

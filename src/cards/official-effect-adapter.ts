@@ -1178,6 +1178,7 @@ export const convertOfficialCardEffects = (
     ],
     'BS3-104': [
       { kind: 'opponent-random-discard', count: 2 },
+      { kind: 'draw', amount: 2, side: 'opponent' },
     ],
     'BS3-105': [
       { kind: 'deck-to-trash', amount: 2, side: 'self' },
@@ -1218,6 +1219,19 @@ export const convertOfficialCardEffects = (
         kind: 'reveal-bottom-deck',
         cookieDestination: 'deck-top',
         otherwiseDestination: 'hand',
+      },
+    ],
+    'BS3-087': [
+      {
+        kind: 'reveal-top-deck',
+        match: { type: 'cookie', energyColor: 'blue', level: 2 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       },
     ],
     'BS3-088': [
@@ -2327,7 +2341,31 @@ export const convertOfficialStageAbility = (
       },
     ],
     'BS3-119': [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
-    'BS3-120': [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+    'BS3-120': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Place up to 2 cards from the top of your deck into the trash.',
+            effects: [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+          },
+          {
+            label: 'View 3 cards from the top of your deck. Out of the 3 cards, reveal up to 1 {P} card and add that card to your hand. Then, place the remaining cards and this card in the trash.',
+            effects: [
+              {
+                kind: 'inspect-deck',
+                lookCount: 3,
+                pickCount: 1,
+                filterColor: 'purple',
+                optionalPick: true,
+                restDestination: 'trash',
+              },
+              { kind: 'stage-source-to-trash' },
+            ],
+          },
+        ],
+      },
+    ],
     'BS3-024': [
       {
         kind: 'modify-attack',
@@ -3614,7 +3652,7 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     trashToDeckBottom: { count: 2, nonCookieOnly: true },
   },
   'BS3-051': { energy: { green: 1 }, discardHand: 0 },
-  'BS3-098': { energy: { purple: 1 }, discardHand: 0 },
+  'BS3-098': { energy: { purple: 1 }, discardHand: 0 }, // TODO: bracket cost 'Select5 {P} cards from trash without FLIP; return to deck & shuffle' not yet modeled
   'BS3-025': { energy: { yellow: 1 }, discardHand: 0 },
   'P-016': { energy: { yellow: 1 }, discardHand: 0 },
   'P-018': { energy: {}, discardHand: 1 },
