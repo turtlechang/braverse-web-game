@@ -531,6 +531,106 @@ describe('usePendingEffect cancelPendingSkill', () => {
     await act(() => root.unmount())
   })
 
+  it('passes a stage trashBattleCookie cost through to the game command', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const stageCard: GameCard = {
+      id: 'test-stage-sacrifice',
+      instanceId: 'test-stage-sacrifice-1',
+      name: 'Stage Sacrifice',
+      type: 'stage',
+      stageAbility: {
+        placementCost: {},
+        cost: {
+          energy: { red: 1 },
+          trashBattleCookie: { count: 1, energyColor: 'red' },
+        },
+        text: 'Pay with a red battle Cookie, then draw 1 card.',
+        restSource: false,
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    const redCookie = {
+      ...baseGame.players['player-one'].battleArea[0],
+      card: {
+        ...baseGame.players['player-one'].battleArea[0].card,
+        id: 'red-sacrifice',
+        instanceId: 'red-sacrifice-1',
+        name: 'Red Sacrifice',
+        type: 'cookie' as const,
+        energyColor: 'red' as const,
+      },
+    }
+    const energySupport = createTestSupportCard('stage-energy', 'red')
+    const state: GameState = {
+      ...baseGame,
+      phase: 'main',
+      activePlayerId: 'player-one',
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          stage: { card: stageCard, rested: false },
+          battleArea: [redCookie],
+          supportArea: [{ card: energySupport, rested: false }],
+        },
+      },
+    }
+
+    const setGameMock = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: state,
+        setGame: setGameMock,
+        dispatch: createDispatch(state, setGameMock),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    await act(() => {
+      captured!.beginCardAbility(
+        stageCard,
+        stageCard.stageAbility!,
+        'stage',
+        'Activate stage',
+      )
+    })
+    await act(() => captured!.toggleSkillPayment('stage-energy'))
+    await act(() => captured!.toggleSkillTrashBattleCookie('red-sacrifice-1'))
+    await act(() => captured!.confirmEffect())
+
+    expect(setGameMock).toHaveBeenCalledTimes(1)
+    expect(setGameMock.mock.calls[0][0]).toMatchObject({
+      players: {
+        'player-one': {
+          battleArea: [],
+        },
+      },
+    })
+
+    await act(() => root.unmount())
+  })
+
   it('confirm is disabled when discardHand selection is insufficient', async () => {
     const gameState = createDiscardHandSkillGameState()
     let captured: ReturnType<typeof usePendingEffect> | null = null

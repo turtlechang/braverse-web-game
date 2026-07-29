@@ -24,6 +24,7 @@ import {
   activateCookieSkill,
   canActivateCookieSkill,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
 } from './skills'
 import { simulateAbilityEffects } from './ai/ability-effects'
@@ -485,6 +486,18 @@ const chooseAbilityCostIds = (
     return null
   }
 
+  const trashToDeckIds = cost.trashToDeck
+    ? getTrashToDeckCostCandidates(cost, player.discardPile)
+        .slice(0, cost.trashToDeck.count)
+        .map((card) => card.instanceId)
+    : []
+  if (
+    cost.trashToDeck &&
+    trashToDeckIds.length < cost.trashToDeck.count
+  ) {
+    return null
+  }
+
   return {
     paymentIds,
     supportToTrashIds,
@@ -493,6 +506,7 @@ const chooseAbilityCostIds = (
     hpToTrashTargetIds,
     trashBattleCookieIds,
     trashToDeckBottomIds,
+    trashToDeckIds,
   }
 }
 
@@ -765,6 +779,18 @@ const resolveAiSkill = (
     return null
   }
 
+  const trashToDeckIds = skill.cost.trashToDeck
+    ? getTrashToDeckCostCandidates(skill.cost, player.discardPile)
+        .slice(0, skill.cost.trashToDeck.count)
+        .map((card) => card.instanceId)
+    : []
+  if (
+    skill.cost.trashToDeck &&
+    trashToDeckIds.length < skill.cost.trashToDeck.count
+  ) {
+    return null
+  }
+
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: source.card.instanceId,
@@ -784,6 +810,7 @@ const resolveAiSkill = (
     discardHandIds,
     trashBattleCookieIds,
     trashToDeckBottomIds,
+    trashToDeckIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -806,6 +833,7 @@ const resolveAiSkill = (
       discardHandIds,
       trashBattleCookieIds,
       trashToDeckBottomIds,
+      trashToDeckIds,
       effectTargets: sim.effectTargets,
       chooseOneModes: sim.chooseOneModes,
     }),

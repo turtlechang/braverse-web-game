@@ -917,6 +917,7 @@
   left: 50%;
   right: auto;
   bottom: 102px;
+  z-index: 40;
   width: min(680px, calc(100% - 32px));
   height: 95px;
   box-sizing: border-box;
@@ -1628,12 +1629,17 @@
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    right: auto;
+    left: 50%;
+    width: calc(100% - 32px);
     box-sizing: border-box;
     bottom: 4px;
-    transform: none;
+    overflow: visible;
+    transform: translateX(-50%);
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: 0;
   }
 
   .top-hand {
@@ -1754,9 +1760,9 @@
   }
 
   .hand-fan.bottom-hand {
-    right: 16px;
-    left: auto;
-    width: min(500px, calc(100% - 32px));
+    right: 49px;
+    left: 49px;
+    width: auto;
     box-sizing: border-box;
     bottom: 2px;
     transform: none;

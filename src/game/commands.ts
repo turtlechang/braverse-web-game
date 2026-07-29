@@ -316,6 +316,8 @@ export interface ActivateSkillCommand {
   trashBattleCookieIds?: string[]
   /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
   trashToDeckBottomIds?: string[]
+  /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
+  trashToDeckIds?: string[]
   effectTargets?: string[][]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -336,6 +338,8 @@ export interface BeginActivateSkillCommand {
   trashBattleCookieIds?: string[]
   /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
   trashToDeckBottomIds?: string[]
+  /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
+  trashToDeckIds?: string[]
   /** 提供時會在支付完成後一併解析第一個效果，供導引式 UI 最後確認使用。 */
   targetIds?: string[]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
@@ -1302,6 +1306,8 @@ const applyPlayerActionCommand = (
         command.discardHandIds ?? [],
         command.trashBattleCookieIds ?? [],
         command.trashToDeckBottomIds ?? [],
+        command.trashToDeckIds ?? [],
+        options.shuffle,
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -1333,6 +1339,8 @@ const applyPlayerActionCommand = (
         command.discardHandIds ?? [],
         command.trashBattleCookieIds ?? [],
         command.trashToDeckBottomIds ?? [],
+        command.trashToDeckIds ?? [],
+        options.shuffle,
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,

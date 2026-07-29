@@ -22,6 +22,7 @@ import {
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
   getTrashCookieCandidates,
   getTrashToDeckCandidates,
@@ -425,6 +426,22 @@ export function usePendingEffect(params: {
   )
   const trashToDeckBottomCost =
     pendingEffect?.skill.cost.trashToDeckBottom?.count ?? 0
+  const selectedSkillTrashToDeckIds = new Set(
+    pendingEffect?.selectedTrashToDeckIds ?? [],
+  )
+  const skillTrashToDeckCandidates =
+    pendingEffect &&
+    !pendingEffect.skillActivated &&
+    pendingEffect.skill.cost.trashToDeck
+      ? getTrashToDeckCostCandidates(
+          pendingEffect.skill.cost,
+          game.players[pendingEffect.context.sourcePlayerId].discardPile,
+        )
+      : []
+  const skillTrashToDeckTargetIds = new Set(
+    skillTrashToDeckCandidates.map((card) => card.instanceId),
+  )
+  const trashToDeckCost = pendingEffect?.skill.cost.trashToDeck?.count ?? 0
 
   useEffect(() => {
     if (pendingEffect || effectHistory.length === 0) return
@@ -1138,6 +1155,21 @@ export function usePendingEffect(params: {
     })
   }
 
+  const toggleSkillTrashToDeck = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+    const cost = pendingEffect.skill.cost.trashToDeck
+    if (!cost || !skillTrashToDeckTargetIds.has(instanceId)) return
+    const selected = pendingEffect.selectedTrashToDeckIds ?? []
+    const isSelected = selected.includes(instanceId)
+    if (!isSelected && selected.length >= cost.count) return
+    setPendingEffect({
+      ...pendingEffect,
+      selectedTrashToDeckIds: isSelected
+        ? selected.filter((id) => id !== instanceId)
+        : [...selected, instanceId],
+    })
+  }
+
   const toggleSkillTrashBattleCookie = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
     const trashCost = pendingEffect.skill.cost.trashBattleCookie
@@ -1361,6 +1393,7 @@ export function usePendingEffect(params: {
                 supportToTrashIds,
                 supportToHandIds,
                 discardHandIds,
+                trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
             : applyGameCommand(game, {
@@ -1373,6 +1406,7 @@ export function usePendingEffect(params: {
                 discardHandIds,
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
                 trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds,
+                trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
       const nextGame = applyGameCommand(activatedGame, {
@@ -1558,6 +1592,7 @@ export function usePendingEffect(params: {
     toggleSkillDiscardHand,
     toggleSkillTrashBattleCookie,
     toggleSkillTrashToDeckBottom,
+    toggleSkillTrashToDeck,
     confirmEffect,
     skipOptionalSkill,
     skipAttackEffect,
@@ -1594,6 +1629,10 @@ export function usePendingEffect(params: {
     skillTrashToDeckBottomCandidates,
     skillTrashToDeckBottomTargetIds,
     trashToDeckBottomCost,
+    selectedSkillTrashToDeckIds,
+    skillTrashToDeckCandidates,
+    skillTrashToDeckTargetIds,
+    trashToDeckCost,
     faintActive,
     afterDamageActive,
   } as const

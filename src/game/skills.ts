@@ -27,6 +27,8 @@ import {
   continuePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
+import { defaultShuffle } from './helpers'
+import type { Shuffle } from './types'
 
 const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
@@ -114,6 +116,29 @@ export const canPayTrashToDeckBottomCost = (
   !cost.trashToDeckBottom ||
   getTrashToDeckBottomCostCandidates(cost, discardPile).length >=
     cost.trashToDeckBottom.count
+
+export const getTrashToDeckCostCandidates = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): GameCard[] => {
+  const trashCost = cost.trashToDeck
+  if (!trashCost) return []
+  return discardPile.filter((card) => {
+    if (trashCost.energyColor !== undefined && card.energyColor !== trashCost.energyColor) {
+      return false
+    }
+    if (trashCost.excludeFlip && card.flip) return false
+    return true
+  })
+}
+
+export const canPayTrashToDeckCost = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): boolean =>
+  !cost.trashToDeck ||
+  getTrashToDeckCostCandidates(cost, discardPile).length >=
+    cost.trashToDeck.count
 
 export const getTrashBattleCookieCostCandidates = (
   cost: AbilityCost,
@@ -314,6 +339,10 @@ export const canActivateCookieSkill = (
     return false
   }
 
+  if (!canPayTrashToDeckCost(skill.cost, player.discardPile)) {
+    return false
+  }
+
   if (!canPayTrashBattleCookieCost(skill.cost, player.battleArea, sourceInstanceId)) {
     return false
   }
@@ -369,6 +398,8 @@ export const activateCookieSkill = (
   discardHandIds: string[] = [],
   trashBattleCookieIds: string[] = [],
   trashToDeckBottomIds: string[] = [],
+  trashToDeckIds: string[] = [],
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   if (
     !canActivateCookieSkill(state, playerId, sourceInstanceId, trigger)
@@ -449,6 +480,28 @@ export const activateCookieSkill = (
     throw new GameRuleError('此技能不需要支付棄牌區代價。')
   }
 
+  const uniqueTrashToDeckIds = [...new Set(trashToDeckIds)]
+  if (uniqueTrashToDeckIds.length !== trashToDeckIds.length) {
+    throw new GameRuleError('不能重複選擇同一張棄牌區卡牌作為代價。')
+  }
+  if (cost.trashToDeck) {
+    if (uniqueTrashToDeckIds.length !== cost.trashToDeck.count) {
+      throw new GameRuleError(
+        `必須選擇 ${cost.trashToDeck.count} 張棄牌區卡牌作為代價。`,
+      )
+    }
+    const candidateIds = new Set(
+      getTrashToDeckCostCandidates(cost, player.discardPile).map(
+        (card) => card.instanceId,
+      ),
+    )
+    if (uniqueTrashToDeckIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的棄牌區卡牌不符合洗回牌庫代價條件。')
+    }
+  } else if (uniqueTrashToDeckIds.length > 0) {
+    throw new GameRuleError('此技能不需要支付洗回牌庫的棄牌區代價。')
+  }
+
   const trashBattlePayment = payTrashBattleCookieCost(
     player,
     cost,
@@ -505,6 +558,13 @@ export const activateCookieSkill = (
     )
     return card ? [card] : []
   })
+  const trashToDeckSet = new Set(uniqueTrashToDeckIds)
+  const trashToDeckCards = uniqueTrashToDeckIds.flatMap((id) => {
+    const card = playerAfterCosts.discardPile.find(
+      (candidate) => candidate.instanceId === id,
+    )
+    return card ? [card] : []
+  })
 
   const discardedCards = player.hand.filter((card) =>
     uniqueDiscardHandIds.includes(card.instanceId),
@@ -534,10 +594,14 @@ export const activateCookieSkill = (
         hand: player.hand.filter(
           (card) => !uniqueDiscardHandIds.includes(card.instanceId),
         ),
-        deck: [...playerAfterCosts.deck, ...trashToDeckBottomCards],
+        deck: cost.trashToDeck
+          ? shuffle([...playerAfterCosts.deck, ...trashToDeckCards])
+          : [...playerAfterCosts.deck, ...trashToDeckBottomCards],
         discardPile: [
           ...playerAfterCosts.discardPile.filter(
-            (card) => !trashToDeckBottomSet.has(card.instanceId),
+            (card) =>
+              !trashToDeckBottomSet.has(card.instanceId) &&
+              !trashToDeckSet.has(card.instanceId),
           ),
           ...trashedCards.map((support) => support.card),
           ...discardedCards,

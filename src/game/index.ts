@@ -180,6 +180,8 @@ export {
   canActivateCookieSkill,
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
+  canPayTrashToDeckCost,
+  getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckBottomCostCandidates,
   skipCookieOnPlay,

@@ -3635,7 +3635,11 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     trashToDeckBottom: { count: 2, nonCookieOnly: true },
   },
   'BS3-051': { energy: { green: 1 }, discardHand: 0 },
-  'BS3-098': { energy: { purple: 1 }, discardHand: 0 }, // TODO: bracket cost 'Select5 {P} cards from trash without FLIP; return to deck & shuffle' not yet modeled
+  'BS3-098': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashToDeck: { count: 5, energyColor: 'purple', excludeFlip: true },
+  },
   'BS3-025': { energy: { yellow: 1 }, discardHand: 0 },
   'P-016': { energy: { yellow: 1 }, discardHand: 0 },
   'P-018': { energy: {}, discardHand: 1 },

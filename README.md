@@ -38,6 +38,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 攻擊宣告期間已在場上保留攻擊箭頭、以目標黃框標示被攻擊餅乾，並在陷阱與 Blocker 回應視窗直接呈現「攻擊者 → 攻擊目標」摘要；陷阱目標選擇步驟同步顯示攻擊者資訊，攻擊中餅乾以紅色邊框與「⚔ 攻擊中」徽章明顯標示。我方攻擊觸發對手 FLIP 時，翻出的 HP 卡會以左側大卡短暫固定呈現 3 秒，並可點擊外側關閉。本機 AI 與線上對戰共用此回饋邏輯。BS3-019 靈魂果醬在聖梅果餅乾不在戰鬥區時自動跳過裝載步驟；BS3-017 攻擊後效果在戰鬥區無其他餅乾時自動略過。陷阱卡同時含對手與自身目標效果（如 BS3-021 盾之誓言 -3 攻擊 + 自身 1 傷害）時，導引步驟自動補齊自身目標選取，不再因缺少 `selfTargetIds` 而無法發動。
 
+BS3 全系列本輪完成 121 張基礎卡的瀏覽器載入掃描，並針對餅乾技能／FLIP、攻擊後效果、物品、陷阱、場景、Soul Jam、特殊勝利與 AI 對局補做代表性實戰驗證；修正 BS3-024、BS3-098、BS3-121 的可重現問題。BS3 候選資料仍維持 `inventory`，尚未 promote 到正式卡池。
+
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
 
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
@@ -57,7 +59,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 優先以實際本機與好友房對局檢視新版桌面戰場在多張手牌、單／雙戰鬥餅乾、能量不足與技能提示同時出現時的可讀性，持續確保場區外框不會與手牌或操作提示重疊。
 
-BS3 已建立候選卡表盤點與可重複匯入流程，並完成 `PURE` 通用分類／特殊費用／Mix Cost 相容性、`Ancient`／`Soul Jam` runtime 追蹤與 `BS3-121` 的主動特殊勝利判定。攻擊後 `Then`、額外能力來源轉接與靈魂果醬裝載家族已有 runtime；BS3-115 保護已依官方 Q&A 補齊 `attackTargetOnly` 例外、全場／棄置路徑排除，以及無合法目標時能力 Then 整段中止。`reveal-top-deck` 已從靜默執行改為兩階段流程（展示 → 確認 → 執行），巢狀效果含目標選擇時正確暫停於 `pendingAbilityEffect`，UI 與 AI 均可正常選取目標。下一步是其餘條件／揭示與多段效果驗證、候選 promote 前閘門；完成前仍不得 promote。
+BS3 已建立候選卡表盤點與可重複匯入流程，並完成 `PURE` 通用分類／特殊費用／Mix Cost 相容性、`Ancient`／`Soul Jam` runtime 追蹤與 `BS3-121` 的主動特殊勝利判定。攻擊後 `Then`、額外能力來源轉接與靈魂果醬裝載家族已有 runtime；BS3-115 保護已依官方 Q&A 補齊 `attackTargetOnly` 例外、全場／棄置路徑排除，以及無合法目標時能力 Then 整段中止。`reveal-top-deck` 已從靜默執行改為兩階段流程（展示 → 確認 → 執行），巢狀效果含目標選擇時正確暫停於 `pendingAbilityEffect`，UI 與 AI 均可正常選取目標。下一步是依 [BS3 效果轉接覆蓋盤點](docs/bs3-effect-coverage.md) 逐項確認候選 promote 前閘門與剩餘來源資料；完成前仍不得 promote。
 
 待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；WebSocket 入站驗證、玩家名稱、攻擊選取預覽、開局整合、導引式效果操作、對戰中指令拒絕提示、公開互動意圖與 P0–P2 對戰可視化第一版已完成，並補上 ST3-019、BS2-021、BS2-044、BS1-007 攻擊支付與 BS1-037 攻擊後效果的提示框回歸。下一步是以真人好友房驗證攻擊箭頭、卡牌預覽、活動紀錄與回應狀態在 BS2-069、OnPlay、陷阱／FLIP／物品／場景多段決策中的文案與高光邊界，並覆核 600×338 窄畫面下的手牌可讀性；伺服器期限目前只提供顯示，不自動替玩家作決策。R5 已建立語意驗證與官方更新回歸防線，但仍須在新卡或新版規則進入時擴充契約。近期應以 Vercel Preview 完成 1–2 場真人好友房試玩，特別確認開局節奏、ST5-007／ST5-022 的雙方提示、窄畫面可讀性與 Render 冷啟動後的完整流程，再稽核 GitHub Actions／Vercel／Render 健康。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
 
@@ -117,7 +119,7 @@ npm run cards:analyze:bs3-candidate
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-07-29 | 修正 `reveal-top-deck` 巢狀效果含目標選擇時未暫停的 bug（BS3-090）；修正 `usePendingEffect` 未處理非陷阱來源 `pendingAbilityEffect` 導致 UI 不顯示目標選擇框；修正 BS3-076 攻擊後 `reveal-top-deck` 匹配時 `pendingBattle` 被提前清除導致 `attackTargetOnly` 找不到攻擊目標。 |
+| 2026-07-29 | 完成 BS3 基礎卡瀏覽器載入與代表性對戰稽核；修正 BS3-024、BS3-098、BS3-121 效果流程、窄版手牌重疊與 AI 瀏覽器驗證競速；另修正 `reveal-top-deck` 巢狀效果含目標選擇時未暫停的 bug（BS3-090）及 BS3-076 攻擊後 `pendingBattle` 提前清除。 |
 | 2026-07-28 | BS3-025~048 黃色卡牌全數轉換驗證；修正 BS3-023 場景卡 choose-one（補 hp-to-hand 選項）、BS3-024 啟動代價 `Make faint` 模式解析與 `activateStage()` 犧牲代價參數；新增 BS3-001~048 完整整合測試。 |
 | 2026-07-26 | 依官方 Q&A 補齊 BS3-115 保護：`attackTargetOnly` 附加傷害例外、全場／棄置路徑排除，以及 BS3-019 無合法目標時 Then 裝載整段中止。 |
 | 2026-07-25 | 新增 BS3 官方英文卡表候選盤點匯入與 `PURE` 通用分類／特殊費用／Mix Cost、Ancient／Soul Jam／BS3-121 runtime 基礎，追加效果覆蓋報表、來源能量付款與 18 張攻擊後 `Then` 效果；`inventory` 候選仍禁止直接 promote。 |

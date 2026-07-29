@@ -61,6 +61,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'bs3-121-special-victory' }
   | { kind: 'soul-jam-019-equipped' }
   | { kind: 'soul-jam-043-equipped' }
   | { kind: 'soul-jam-066-equipped' }
@@ -171,6 +172,9 @@ export const parseTestStateConfig = (
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber }
     }
+  }
+  if (testState === 'bs3-121-special-victory') {
+    return { kind: 'bs3-121-special-victory' }
   }
   if (testState === 'soul-jam-019-equipped') return { kind: 'soul-jam-019-equipped' }
   if (testState === 'soul-jam-043-equipped') return { kind: 'soul-jam-043-equipped' }
@@ -2095,11 +2099,25 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   const handFillers = Array.from({ length: 4 }, (_, i) =>
     testSupportCard(`hand-filler-${i}`, i % 2 === 0 ? payColor : 'wild'),
   )
+  // Some OnPlay effects require an additional Cookie in hand (for example,
+  // BS3-038 places a level-2-or-higher Cookie from hand into the break area).
+  // Keep that legal candidate in the browser card-check fixture without
+  // changing any production deck or runtime rule.
+  const handCookieFiller = cardCheckFillerCookie(
+    'hand-cookie-filler',
+    2,
+    4,
+    0,
+    payColor,
+  ).cookie
   // Trash (discard pile) filler for skills that select from trash.
   const trashFillers: GameCard[] = [
     cardCheckFillerCookie('trash-cookie-1', 1, 3).cookie,
     cardCheckFillerCookie('trash-cookie-2', 2, 4, 0, payColor).cookie,
     testSupportCard('trash-item-1', payColor),
+    ...Array.from({ length: 5 }, (_, i) =>
+      testSupportCard(`trash-purple-cost-${i}`, 'purple'),
+    ),
   ]
   // Deploying a cookie draws HP cards from the top of the deck
   // (see deployCookie in actions.ts); an empty deck immediately triggers
@@ -2263,11 +2281,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   if (card.flip) {
     const defender = cardCheckFillerCookie('flip-defender', 2, 5, 4, payColor) // 1 HP card left: the flip card itself
     const attacker = cardCheckFillerCookie('flip-attacker', 2, 5, 0, 'black')
-    // breakArea totalling level 6 so "break area level >= N" flip
-    // conditions (Frost Queen/Space Doughnut) have a fair chance of being met.
+    // Keep the break area above the thresholds used by conditional FLIP
+    // effects, but below the level-10 defeat limit.  The generic card-check
+    // state must remain playable after FLIP resolves; otherwise
+    // `resolveDrawUpTo` can correctly detect a break-level defeat and clear
+    // `pendingBattle` before `resolveFlip` finishes its transition.
     const bigOwnBreakArea: CookieCard[] = [
       cardCheckFillerCookie('self-break-big-1', 3, 5).cookie,
-      cardCheckFillerCookie('self-break-big-2', 3, 5).cookie,
+      cardCheckFillerCookie('self-break-big-2', 2, 5).cookie,
       ...ownBreakArea,
     ]
     const state = baseState()
@@ -2451,7 +2472,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players,
           'player-one': {
             ...state.players['player-one'],
-            hand: [card, ...handFillers],
+            hand: [card, handCookieFiller, ...handFillers],
             battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)],
             supportArea: energySupports.map((c) => ({ card: c, rested: false })),
             breakArea: ownBreakArea,
@@ -2512,6 +2533,65 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       'player-two': {
         ...state.players['player-two'],
         battleArea: opponentBattleArea,
+      },
+    },
+  }
+}
+
+/**
+ * Builds a browser-only BS3-121 scenario from the real card pool. The five
+ * Ancient Cookies intentionally provide the five exact energy colours needed
+ * by the stage, while five different Soul Jam cards satisfy its special
+ * victory condition. This fixture does not alter any production deck.
+ */
+export const createBs3SpecialVictoryDemoState = (): GameState => {
+  const ancientCardNumbers = [
+    'BS3-017',
+    'BS3-025',
+    'BS3-055',
+    'BS3-088',
+    'BS3-100',
+  ]
+  const soulJamCardNumbers = [
+    'BS3-019',
+    'BS3-043',
+    'BS3-066',
+    'BS3-091',
+    'BS3-115',
+  ]
+  const cardNumbers = ['BS3-121', ...ancientCardNumbers, ...soulJamCardNumbers]
+  const entries = cardNumbers.map((cardNumber) => {
+    const entry = getCardPoolEntry(cardNumber)
+    if (!entry) throw new Error(`找不到 BS3 特殊勝利測試卡片 ${cardNumber}。`)
+    return entry
+  })
+  const stage = createCard(entries[0], 'player-one', 1)
+  const ancientSupports = ancientCardNumbers.map((_, index) => ({
+    card: createCard(entries[index + 1], 'player-one', index + 2),
+    rested: false,
+  }))
+  const soulJamSupports = soulJamCardNumbers.map((_, index) => ({
+    card: createCard(entries[index + 6], 'player-one', index + 7),
+    rested: false,
+  }))
+  const state = createDemoGame(20260725)
+
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        hand: [],
+        battleArea: [],
+        supportArea: [...ancientSupports, ...soulJamSupports],
+        breakArea: [],
+        discardPile: [],
+        stage: { card: stage, rested: false },
       },
     },
   }

@@ -52,6 +52,7 @@ import {
   createTrapResponseDemoState,
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
+  createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
 import { useMatchSetup } from './useMatchSetup'
@@ -162,6 +163,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'bs3-121-special-victory') {
+      return createBs3SpecialVictoryDemoState()
     }
     if (testStateConfig?.kind === 'soul-jam-019-equipped') {
       return createSoulJamEquippedDemoState('BS3-019', 'BS3-017')

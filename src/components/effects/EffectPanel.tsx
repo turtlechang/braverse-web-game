@@ -53,6 +53,10 @@ export interface EffectPanelProps {
   selectedTrashToDeckBottomIds?: Set<string>
   onToggleTrashToDeckBottom?: (instanceId: string) => void
   trashToDeckBottomCost?: number
+  trashToDeckCandidates?: GameCard[]
+  selectedTrashToDeckIds?: Set<string>
+  onToggleTrashToDeck?: (instanceId: string) => void
+  trashToDeckCost?: number
   showTargetSelection?: boolean
   optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
   /** 目前效果是「選擇一項」時，由呼叫端接手展開選定的模式。 */
@@ -121,6 +125,10 @@ function EffectPanelContent({
   selectedTrashToDeckBottomIds = new Set<string>(),
   onToggleTrashToDeckBottom,
   trashToDeckBottomCost = 0,
+  trashToDeckCandidates = [],
+  selectedTrashToDeckIds = new Set<string>(),
+  onToggleTrashToDeck,
+  trashToDeckCost = 0,
   showTargetSelection = true,
   optionalCostAttack = null,
   onChooseMode,
@@ -187,8 +195,15 @@ function EffectPanelContent({
     trashToDeckBottomCost === 0 ||
     (pendingEffect?.selectedTrashToDeckBottomIds ?? []).length ===
       trashToDeckBottomCost
+  const trashToDeckPaid =
+    trashToDeckCost === 0 ||
+    (pendingEffect?.selectedTrashToDeckIds ?? []).length === trashToDeckCost
   const extraCostReady =
-    supportPaid && discardPaid && trashBattleCookiePaid && trashToDeckBottomPaid
+    supportPaid &&
+    discardPaid &&
+    trashBattleCookiePaid &&
+    trashToDeckBottomPaid &&
+    trashToDeckPaid
 
   const targetReady =
     !showTargetSelection ||
@@ -221,6 +236,8 @@ function EffectPanelContent({
       trashBattleCookieCost > 0 ||
       trashToDeckBottomCandidates.length > 0 ||
       trashToDeckBottomCost > 0 ||
+      trashToDeckCandidates.length > 0 ||
+      trashToDeckCost > 0 ||
       automaticCostDescriptions.length > 0)
   const hasTargetContent =
     showTargetSelection && selectionLimits !== null
@@ -450,6 +467,25 @@ function EffectPanelContent({
                       selectedIds={selectedTrashToDeckBottomIds}
                       onToggle={onToggleTrashToDeckBottom}
                       className="effect-candidates-trash-deck-bottom"
+                    />
+                  </>
+                )}
+                {trashToDeckCost > 0 && (
+                  <small>
+                    已選 {(pendingEffect.selectedTrashToDeckIds ?? []).length}／
+                    {trashToDeckCost} 張符合條件的棄牌區卡牌（洗回牌庫）
+                  </small>
+                )}
+                {trashToDeckCandidates.length > 0 && (
+                  <>
+                    <small>
+                      選擇要作為代價洗回牌庫的紫色、非 FLIP 棄牌區卡牌
+                    </small>
+                    <CandidateButtons
+                      cards={trashToDeckCandidates}
+                      selectedIds={selectedTrashToDeckIds}
+                      onToggle={onToggleTrashToDeck}
+                      className="effect-candidates-trash-deck"
                     />
                   </>
                 )}

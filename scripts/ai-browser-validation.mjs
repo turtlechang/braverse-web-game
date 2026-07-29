@@ -656,6 +656,10 @@ try {
     const deployButton = handCardWrap.locator('.hand-card-action', { hasText: '登場' })
     await deployButton.waitFor({ state: 'visible' })
     await deployButton.click()
+    // deploy-cookie dispatches the OnPlay prompt through a synchronous
+    // command callback, but React may commit the effect panel on the next
+    // turn when the page has just been navigated to a fixture route.
+    await page.waitForTimeout(100)
 
     const effectPanel = page.locator('.effect-panel')
     await effectPanel.waitFor({ state: 'visible' })

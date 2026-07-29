@@ -23,6 +23,7 @@ describe('player hand hover styles', () => {
     )?.[0]
 
     expect(baseFanRule).toContain('bottom: 102px')
+    expect(baseFanRule).toContain('z-index: 40')
     expect(baseFanRule).toContain('height: 95px')
     expect(baseCardRule).toContain('bottom: -94px')
     expect(baseCardRule).not.toContain('overflow: hidden')
@@ -50,6 +51,21 @@ describe('player hand hover styles', () => {
     expect(normalizedCss).toContain('.bottom-hand .hand-card')
     expect(normalizedCss).toContain('width: 100px')
     expect(normalizedCss).not.toContain('bottom: -50px')
+  })
+
+  it('centers and exposes the compact player hand above the support cards', () => {
+    expect(normalizedCss).toContain('right: auto;\n    left: 50%;\n    width: calc(100% - 32px)')
+    expect(normalizedCss).toContain('overflow: visible;\n    transform: translateX(-50%)')
+    expect(normalizedCss).toContain('.hand-fan.bottom-hand .hand-card-wrap {\n    bottom: 0;')
+  })
+
+  it('keeps the shortest compact hand inside the two 46px utility columns', () => {
+    expect(normalizedCss).toContain(
+      '@container game-shell (max-width: 900px) and (max-height: 400px)',
+    )
+    expect(normalizedCss).toContain(
+      '.hand-fan.bottom-hand {\n    right: 49px;\n    left: 49px;\n    width: auto;',
+    )
   })
 
   it('pins one-third of the opponent hand to the game-shell top center on desktop', () => {

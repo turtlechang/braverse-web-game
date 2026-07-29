@@ -943,6 +943,15 @@ export type AbilityCost = EnergyCost & {
     }
   selfToBreakArea?: boolean
   /**
+   * 從棄牌區選指定條件的卡牌洗回牌庫作為代價（BS3-098）。
+   * 與 `trashToDeckBottom` 不同，結算後會將選取卡牌與牌庫合併並洗牌。
+   */
+  trashToDeck?: {
+    count: number
+    energyColor?: EnergyColor
+    excludeFlip?: boolean
+  }
+  /**
    * 從棄牌區選卡放到牌庫底作為代價（BS3-112）。
    * 目前只有餅乾技能路徑（activate-skill／begin-activate-skill）實作，
    * item／stage 的 payAbilityCost 會直接拒絕，避免被靜默忽略。

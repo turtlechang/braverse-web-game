@@ -158,6 +158,11 @@ const payAbilityCost = (
     // 只有餅乾技能路徑實作這個代價；item／stage 若之後用到必須先補上支付流程。
     throw new GameRuleError('此代價尚未支援於物品或場景能力。')
   }
+  if (cost.trashToDeck) {
+    // BS3-098 目前只出現在餅乾 OnPlay 技能；避免未來 item／stage
+    // 沿用 AbilityCost 時把洗回牌庫成本靜默忽略。
+    throw new GameRuleError('此代價尚未支援於物品或場景能力。')
+  }
 
   const player = state.players[playerId]
   const supportToTrashIds = [...new Set(options.supportToTrashIds ?? [])]

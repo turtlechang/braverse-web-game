@@ -8,6 +8,7 @@ import type { OfficialCardRecord } from '../cards/types'
 import { applyGameCommand } from './commands'
 import { executeCardEffect, expandChooseOne, expandChooseOneSequence } from './effects'
 import { activateCookieSkill, canActivateCookieSkill } from './skills'
+import { createSeededShuffle } from './helpers'
 import { chooseAiEffectMode } from './ai/choose-one-mode'
 import type {
   CardEffect,
@@ -279,6 +280,106 @@ describe('BS3-112 Prune Juice Cookie: trash-to-deck-bottom cost', () => {
         [],
         [],
         ['trash-item-a'],
+      ),
+    ).toThrowError()
+  })
+})
+
+describe('BS3-098 Kumiho Cookie: trash-to-deck cost', () => {
+  const skill = () => {
+    const converted = convertOfficialCookieSkill(findBs3Card('BS3-098'))
+    if (!converted) throw new Error('BS3-098 skill should convert.')
+    return converted
+  }
+
+  const withKumihoSource = (state: GameState): GameState => ({
+    ...state,
+    pendingOnPlay: { playerId: 'player-two', sourceInstanceId: 'attacker' },
+    players: {
+      ...state.players,
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: state.players['player-two'].battleArea.map((entry) =>
+          entry.card.instanceId === 'attacker'
+            ? { ...entry, card: { ...entry.card, skill: skill() } }
+            : entry,
+        ),
+        supportArea: [
+          { card: item('purple-support', 'purple'), rested: false },
+        ],
+      },
+    },
+  })
+
+  const eligibleTrash = () =>
+    Array.from({ length: 5 }, (_, index) =>
+      item(`kumiho-trash-${index}`, 'purple'),
+    )
+
+  it('converts the five purple non-FLIP cards requirement', () => {
+    expect(skill().cost.trashToDeck).toEqual({
+      count: 5,
+      energyColor: 'purple',
+      excludeFlip: true,
+    })
+  })
+
+  it('requires five eligible cards and shuffles them into the deck', () => {
+    const flipCard = {
+      ...item('kumiho-flip-trash', 'purple'),
+      flip: { text: 'FLIP', cost: { energy: {} }, effects: [] },
+    }
+    const state = withKumihoSource(
+      withTrash(createBattleState(), [...eligibleTrash(), flipCard]),
+    )
+
+    expect(
+      canActivateCookieSkill(state, 'player-two', 'attacker', 'on-play'),
+    ).toBe(true)
+
+    const selectedIds = eligibleTrash().map((card) => card.instanceId)
+    const activated = activateCookieSkill(
+      state,
+      'player-two',
+      'attacker',
+      'on-play',
+      ['purple-support'],
+      [],
+      [],
+      [],
+      [],
+      selectedIds,
+      createSeededShuffle(98),
+    )
+
+    const player = activated.players['player-two']
+    expect(player.deck).toHaveLength(6)
+    expect(player.deck.map((card) => card.instanceId)).toEqual(
+      expect.arrayContaining(selectedIds),
+    )
+    expect(player.discardPile.map((card) => card.instanceId)).toEqual([
+      'kumiho-flip-trash',
+    ])
+  })
+
+  it('rejects a non-purple or FLIP card as the cost', () => {
+    const nonPurple = item('kumiho-red-trash', 'red')
+    const state = withKumihoSource(
+      withTrash(createBattleState(), [...eligibleTrash().slice(0, 4), nonPurple]),
+    )
+
+    expect(() =>
+      activateCookieSkill(
+        state,
+        'player-two',
+        'attacker',
+        'on-play',
+        ['purple-support'],
+        [],
+        [],
+        [],
+        [],
+        [...eligibleTrash().slice(0, 4).map((card) => card.instanceId), 'kumiho-red-trash'],
       ),
     ).toThrowError()
   })

@@ -4,7 +4,9 @@ import {
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
   createAiDiscardRevealDemoState,
+  createBs3SpecialVictoryDemoState,
   createBreakToTrashDemoState,
+  createCardCheckDemoState,
   createReplacementChoiceDemoState,
   createSt5010OnPlayDemoState,
   createSupportToTrashSkillDemoState,
@@ -12,9 +14,11 @@ import {
   isLocalhost,
   parseTestStateConfig,
 } from './demo'
-import { getTrapCandidates } from './battle'
+import { getTrapCandidates, resolveFlip } from './battle'
+import { canActivateStage } from './card-abilities'
 import { isEffectConditionMet } from './effects'
 import { canActivateCookieSkill } from './skills'
+import { isSpecialVictoryConditionMet } from './victory'
 
 describe('isLocalhost', () => {
   it('allows localhost', () => {
@@ -256,6 +260,27 @@ describe('createTrapResponseDemoState', () => {
   })
 })
 
+describe('createCardCheckDemoState', () => {
+  it('keeps the generic FLIP scenario below the break-level defeat limit', () => {
+    const state = createCardCheckDemoState('BS3-004')
+    const breakLevel = state.players['player-one'].breakArea.reduce(
+      (total, cookie) => total + cookie.level,
+      0,
+    )
+
+    expect(breakLevel).toBe(9)
+
+    const resolved = resolveFlip(state, 'player-one', { activate: true })
+
+    expect(resolved.status).toBe('playing')
+    expect(resolved.pendingBattle).toBeNull()
+    expect(resolved.players['player-one'].hand).toHaveLength(5)
+    expect(resolved.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ id: 'BS3-004' }),
+    )
+  })
+})
+
 describe('createBlueActivateSkillDemoState', () => {
   it('payable: ST4-012 in battle with hand cards ready to activate', () => {
     const state = createBlueActivateSkillDemoState(true)
@@ -420,7 +445,27 @@ describe('parseTestStateConfig blue states', () => {
   it('returns soul-jam-115-protection-demo', () => {
     expect(parseTestStateConfig('?test-state=soul-jam-115-protection-demo', 'localhost')).toEqual({ kind: 'soul-jam-115-protection-demo' })
   })
+  it('returns the BS3-121 special victory config', () => {
+    expect(parseTestStateConfig('?test-state=bs3-121-special-victory', 'localhost')).toEqual({ kind: 'bs3-121-special-victory' })
+  })
   it('returns null for non-localhost', () => {
     expect(parseTestStateConfig('?test-state=blue-inspect-deck', 'example.com')).toBeNull()
+  })
+})
+
+describe('createBs3SpecialVictoryDemoState', () => {
+  it('uses real BS3 cards and provides the exact victory requirements', () => {
+    const state = createBs3SpecialVictoryDemoState()
+    const player = state.players['player-one']
+    const supportCards = player.supportArea.map(({ card }) => card)
+
+    expect(player.stage?.card.id).toBe('BS3-121')
+    expect(supportCards.filter((card) => card.keywords?.includes('ancient'))).toHaveLength(5)
+    expect(supportCards.filter((card) => card.keywords?.includes('soul-jam'))).toHaveLength(5)
+    expect(new Set(supportCards.map((card) => card.name)).size).toBe(10)
+    const condition = player.stage?.card.stageAbility?.specialVictory
+    expect(condition).toBeDefined()
+    expect(isSpecialVictoryConditionMet(state, 'player-one', condition!)).toBe(true)
+    expect(canActivateStage(state, 'player-one')).toBe(true)
   })
 })
