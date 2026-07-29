@@ -358,6 +358,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           sourceCardName={pendingReveal.sourceCardName}
           revealedCard={pendingReveal.revealedCard}
           matched={pendingReveal.matched}
+          canConfirm={pendingReveal.playerId === match.viewerPlayerId}
           onConfirm={() => {
             if (pendingReveal.playerId !== match.viewerPlayerId) return
             match.dispatch(

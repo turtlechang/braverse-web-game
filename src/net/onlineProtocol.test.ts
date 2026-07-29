@@ -130,6 +130,31 @@ describe('online protocol validation', () => {
       }),
     ).toBe(false)
   })
+
+  it('validates the stage activation faint cost (BS3-024)', () => {
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'activate-stage',
+          playerId: 'player-one',
+          paymentIds: ['red-support-1', 'red-support-2'],
+          trashBattleCookieIds: ['red-cookie'],
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'begin-activate-stage',
+          playerId: 'player-one',
+          paymentIds: ['red-support-1', 'red-support-2'],
+          trashBattleCookieIds: [42],
+        },
+      }),
+    ).toBe(false)
+  })
 })
 
 describe('公開互動意圖協定', () => {

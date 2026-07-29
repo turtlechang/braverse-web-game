@@ -828,6 +828,12 @@ export interface RevealTopDeckModalProps {
   sourceCardName: string
   revealedCard: GameCard
   matched: boolean
+  /**
+   * 檢視者是不是這次翻牌的擁有者。翻牌是公開資訊，對手也看得到同一張卡，
+   * 但只有擁有者能按確認——非擁有者若照樣顯示可按的按鈕，按下去只會靜靜地
+   * 什麼都不發生。
+   */
+  canConfirm?: boolean
   onConfirm: () => void
 }
 
@@ -835,6 +841,7 @@ export function RevealTopDeckModal({
   sourceCardName,
   revealedCard,
   matched,
+  canConfirm = true,
   onConfirm,
 }: RevealTopDeckModalProps) {
   const [minimized, setMinimized] = useState(false)
@@ -873,8 +880,13 @@ export function RevealTopDeckModal({
         <CardFace card={revealedCard} className="reveal-card" />
         <strong>{revealedCard.name}</strong>
         <p>{matched ? '翻到的卡牌符合條件，效果發動。' : '翻到的卡牌不符合條件，效果不發動。'}</p>
-        <button type="button" className="reveal-confirm" onClick={onConfirm}>
-          確認並繼續
+        <button
+          type="button"
+          className="reveal-confirm"
+          onClick={canConfirm ? onConfirm : undefined}
+          disabled={!canConfirm}
+        >
+          {canConfirm ? '確認並繼續' : '等待對手確認…'}
         </button>
       </section>
     </div>

@@ -1218,6 +1218,19 @@ export interface GameState {
     revealedCard: GameCard
     matched: boolean
     nestedEffects: CardEffect[]
+    /**
+     * 翻牌結算完之後欠戰鬥流程什麼動作。少了這個欄位就分不出兩種來源的 reveal，
+     * 會拿攻擊後的收尾邏輯去處理陷阱裡的翻牌，把還沒打的傷害整個吃掉。
+     *
+     * - `finish`：BS3-076／080 這種攻擊後的 reveal。`finishBattle` 為了讓巢狀
+     *   damage 的 `attackTargetOnly` 找得到攻擊目標而刻意保留 `pendingBattle`，
+     *   翻牌結算完要回頭收尾。
+     * - `after-trap`：BS3-093 這種陷阱裡的 reveal。戰鬥還停在陷阱視窗，巢狀效果
+     *   可能再改一次攻擊力，結算完才由 `advanceBattleAfterTrap` 重算傷害並推進到
+     *   傷害階段。
+     * - `undefined`：這次翻牌與戰鬥無關（主要階段的技能／道具）。
+     */
+    battleContinuation?: BattleContinuation
   } | null
   pendingOptionalCostAttack?: {
     playerId: PlayerId
@@ -1247,9 +1260,20 @@ export interface GameState {
     trigger?: 'activate' | 'on-play'
     effects: CardEffect[]
     effectIndex: number
+    /**
+     * 效果鏈跑完後欠戰鬥流程什麼動作。由
+     * `pendingRevealTopDeck.battleContinuation` 傳遞下來，語意與該欄位相同。
+     */
+    battleContinuation?: BattleContinuation
   }
   supportAreaDecreasedThisTurn?: Partial<Record<PlayerId, boolean>>
 }
+
+/**
+ * 待處理決策結算完之後，欠戰鬥流程的動作。
+ * 見 `GameState.pendingRevealTopDeck.battleContinuation`。
+ */
+export type BattleContinuation = 'finish' | 'after-trap'
 
 export type PendingBattleStage =
   | 'trap'

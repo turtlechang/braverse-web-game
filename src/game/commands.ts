@@ -1,5 +1,6 @@
 import { GameRuleError } from './errors'
 import {
+  advanceBattleAfterTrap,
   beginAttack,
   finishBattle,
   getAfterDamageEffectMinMax,
@@ -55,6 +56,7 @@ import {
 } from './setup'
 import type {
   AbilityCost,
+  BattleContinuation,
   CardEffect,
   CommandLogEntry,
   EffectContext,
@@ -800,6 +802,23 @@ const isPendingDecisionCommand = (
   command: GameCommand,
 ): command is PendingDecisionCommand => command.kind in cmdToDecisionKind
 
+/**
+ * 待處理決策結算完之後，把欠戰鬥流程的那一步補上。
+ *
+ * 「還有 pendingBattle 就代表戰鬥在等我收尾」這個假設是錯的：陷阱裡的
+ * reveal-top-deck（BS3-093）結算時戰鬥根本還沒打到傷害，收尾會讓整次攻擊的
+ * 傷害消失。要做什麼一律由建立決策的地方標記在 `battleContinuation` 上。
+ */
+const continueBattleAfterPending = (
+  state: GameState,
+  continuation: BattleContinuation | undefined,
+): GameState => {
+  if (!continuation || !state.pendingBattle) return state
+  return continuation === 'finish'
+    ? finishBattle(state)
+    : advanceBattleAfterTrap(state)
+}
+
 export const appendCommandLogEntry = (
   previous: GameState,
   next: GameState,
@@ -898,9 +917,10 @@ const applyPendingDecisionCommand = (
         sourceCardName: pending.sourceCardName,
       }
       const nextState: GameState = { ...state, pendingRevealTopDeck: null }
+      const continueBattle = (candidate: GameState): GameState =>
+        continueBattleAfterPending(candidate, pending.battleContinuation)
       if (!pending.matched || pending.nestedEffects.length === 0) {
-        // 未匹配或無巢狀效果，直接完成戰鬥（若存在）。
-        return nextState.pendingBattle ? finishBattle(nextState) : nextState
+        return continueBattle(nextState)
       }
       // 巢狀效果可能在傷害結算後就失去合法目標——BS3-076 的追加傷害鎖定
       // attackTargetOnly，攻擊對象若已被普通攻擊打到昏厥離場就一個候選都沒有。
@@ -913,11 +933,12 @@ const applyPendingDecisionCommand = (
           hasRequiredEffectTargets(nextState, context, effect),
       )
       if (applicableEffects.length === 0) {
-        return nextState.pendingBattle ? finishBattle(nextState) : nextState
+        return continueBattle(nextState)
       }
       // 若嵌套效果需要目標選擇，暫存在 pendingAbilityEffect 讓 UI/AI 逐步處理。
-      // pendingBattle 保留，讓 attackTargetOnly 能找到攻擊目標；
-      // pendingAbilityEffect 結算完畢後由 resolvePendingAbilityEffect 完成戰鬥。
+      // pendingBattle 保留，讓 attackTargetOnly 能找到攻擊目標；欠著的戰鬥動作由
+      // battleContinuation 一起傳下去，結算完才由 resolvePendingAbilityEffect
+      // 接手。
       const needsTargeting = applicableEffects.some(requiresEffectCardSelection)
       if (needsTargeting) {
         return {
@@ -930,6 +951,7 @@ const applyPendingDecisionCommand = (
             sourceKind: 'item',
             effects: applicableEffects,
             effectIndex: 0,
+            battleContinuation: pending.battleContinuation,
           },
         }
       }
@@ -945,7 +967,7 @@ const applyPendingDecisionCommand = (
           options.shuffle,
         )
       }
-      return resolved.pendingBattle ? finishBattle(resolved) : resolved
+      return continueBattle(resolved)
     }
     case 'resolve-optional-cost-attack':
       return resolveOptionalCostAttack(
@@ -1186,10 +1208,12 @@ const resolvePendingAbilityEffect = (
     sourceInstanceId: pending.sourceInstanceId,
     sourceCardName: pending.sourceCardName,
   }
+  const continueBattle = (candidate: GameState): GameState =>
+    continueBattleAfterPending(candidate, pending.battleContinuation)
   const effect = pending.effects[pending.effectIndex]
   // 官方 Q&A（BS3-019）：無合法目標時，緊接在後的裝載一併中止（見上方函式註解）。
   if (hasNoLegalSelectableTargets(state, context, pending.effects, pending.effectIndex)) {
-    return { ...state, pendingAbilityEffect: undefined }
+    return continueBattle({ ...state, pendingAbilityEffect: undefined })
   }
   const resolved = executeCardEffect(
     state,
@@ -1200,12 +1224,10 @@ const resolvePendingAbilityEffect = (
   )
   const nextIndex = pending.effectIndex + 1
   if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
-    const cleared = { ...resolved, pendingAbilityEffect: undefined }
-    return cleared.pendingBattle ? finishBattle(cleared) : cleared
+    return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
   }
   if (hasNoEquipTarget(resolved, context, pending.effects, pending.effectIndex)) {
-    const cleared = { ...resolved, pendingAbilityEffect: undefined }
-    return cleared.pendingBattle ? finishBattle(cleared) : cleared
+    return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
   }
   return {
     ...resolved,

@@ -1083,27 +1083,52 @@ export const playTrap = (
     return nextState
   }
 
+  // 陷阱裡的 reveal-top-deck（BS3-093）還沒確認，巢狀效果可能再改一次攻擊力，
+  // 現在鎖傷害的話那個 -1 就永遠打不到。改由 resolve-reveal-top-deck 結算完
+  // 巢狀效果後呼叫 advanceBattleAfterTrap 推進。
+  if (nextState.pendingRevealTopDeck) {
+    return {
+      ...nextState,
+      pendingRevealTopDeck: {
+        ...nextState.pendingRevealTopDeck,
+        battleContinuation: 'after-trap',
+      },
+    }
+  }
+
+  return advanceBattleAfterTrap(nextState)
+}
+
+/**
+ * 陷阱視窗結束後把戰鬥推進到傷害階段；攻守任一方已離場就直接收尾。
+ *
+ * 傷害要在這裡才重算：陷阱效果（含 BS3-093 翻牌後的巢狀 modify-attack）會改動
+ * 攻擊力，提早鎖住 `remainingDamage` 等於讓那些效果失效。
+ */
+export const advanceBattleAfterTrap = (state: GameState): GameState => {
+  const activeBattle = requirePendingBattle(state)
+
   const attackerExists = battleParticipantExists(
-    nextState,
+    state,
     activeBattle.attackerInstanceId,
   )
   const targetExists = battleParticipantExists(
-    nextState,
+    state,
     activeBattle.targetInstanceId,
   )
 
   if (!attackerExists || !targetExists) {
-    return finishBattle(nextState)
+    return finishBattle(state)
   }
 
   const recalculatedDamage = getAttackDamageAgainst(
-    nextState,
+    state,
     activeBattle.attackerInstanceId,
     activeBattle.targetInstanceId,
   )
 
   return {
-    ...nextState,
+    ...state,
     pendingBattle: {
       ...activeBattle,
       declaredDamage: recalculatedDamage,
@@ -1326,13 +1351,33 @@ export const finishBattle = (state: GameState): GameState => {
     }
   }
 
+  // reveal-top-deck 需要玩家確認後才執行巢狀效果，此處保留 pendingBattle
+  // 讓巢狀 damage 的 attackTargetOnly 能找到攻擊目標，戰鬥改由
+  // resolve-reveal-top-deck 收尾。
+  //
+  // 保留 pendingBattle 就代表 finishBattle 會對同一場戰鬥跑第二次，所以延後前
+  // 必須：
+  //   1. 用 battleContinuation: 'finish' 標記「這次翻牌欠一個收尾」，好跟陷阱
+  //      （BS3-093）裡的翻牌區分開——後者的戰鬥還沒打到傷害，不能收尾。
+  //   2. 把上面已經執行過的 delayedTrap 拿掉，否則第二次 finishBattle 會讓延遲
+  //      陷阱的效果再結算一次。
+  if (completedState.pendingRevealTopDeck) {
+    const deferredBattle = completedState.pendingBattle
+    return finalizePendingReplacements({
+      ...buildPendingEffectOrder(completedState),
+      pendingRevealTopDeck: {
+        ...completedState.pendingRevealTopDeck,
+        battleContinuation: 'finish',
+      },
+      ...(deferredBattle
+        ? { pendingBattle: { ...deferredBattle, delayedTrap: undefined } }
+        : {}),
+    })
+  }
+
   return finalizePendingReplacements({
     ...buildPendingEffectOrder(completedState),
-    // reveal-top-deck 需要玩家確認後才執行巢狀效果，此處保留 pendingBattle
-    // 讓巢狀 damage 的 attackTargetOnly 能找到攻擊目標。
-    ...(completedState.pendingRevealTopDeck
-      ? {}
-      : { pendingBattle: null }),
+    pendingBattle: null,
   })
 }
 
@@ -2155,6 +2200,12 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
     guard += 1
 
     if (nextState.status !== 'playing') {
+      break
+    }
+
+    // 翻牌展示要玩家確認才能往下走（BS3-076／080 的攻擊後效果、BS3-093 的陷阱）。
+    // 自動結算沒辦法代為確認，不讓出的話會停在同一個階段空轉到 guard 上限拋錯。
+    if (nextState.pendingRevealTopDeck) {
       break
     }
 
