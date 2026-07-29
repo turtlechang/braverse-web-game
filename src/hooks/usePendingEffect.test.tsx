@@ -10,7 +10,24 @@ import {
   createItemUsageDemoState,
 } from '../game/demo'
 import { usePendingEffect } from './usePendingEffect'
-import { applyGameCommand, type CookieCard, type GameCard, type GameState } from '../game'
+import {
+  applyGameCommand,
+  beginAttack,
+  resolveAttackEffect,
+  resolveNextDamage,
+  resolveOptionalCostAttack,
+  skipTrap,
+  type CookieCard,
+  type GameCard,
+  type GameState,
+} from '../game'
+import officialBS3 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
+import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
+import type { OfficialCardRecord } from '../cards/types'
+import {
+  createBattleState,
+  item as battleItem,
+} from '../game/test-helpers/battle-helpers'
 import type { DispatchGameCommand } from './useBattleActions'
 
 const createDispatch = (
@@ -1119,5 +1136,144 @@ describe('usePendingEffect equip-source candidate filtering', () => {
     expect(captured.effectTargetCandidates).toEqual([])
 
     await act(() => root.unmount())
+  })
+})
+
+/**
+ * BS3-076《草莓可麗餅餅乾》的攻擊後續是「可選代價 → 展示牌庫頂 → 若為藍色
+ * LV.2 餅乾，對攻擊對象追加 2 傷害」。巢狀 damage 帶 attackTargetOnly，所以
+ * 規則層（battle.ts 的 finishBattle）會刻意保留 pendingBattle 讓它找得到攻擊
+ * 目標，戰鬥要等 pendingAbilityEffect 結算完才收尾——commands.ts 的
+ * resolvePendingAbilityEffect 也因此拿掉了 pendingBattle 前置檢查。
+ *
+ * 但本機互動精靈的 useEffect 仍然把 game.pendingBattle 當成阻擋條件，於是
+ * pendingAbilityEffect 一旦在戰鬥中出現就永遠補建不出本機 pendingEffect：
+ * 玩家看不到追加傷害的目標選擇畫面，對局直接卡死在攻擊後階段。
+ */
+describe('usePendingEffect nested attack effect during a preserved battle', () => {
+  const buildStuckState = (): GameState => {
+    const bs3076 = (officialBS3.cards as OfficialCardRecord[]).find(
+      (card) => card.cardNumber === 'BS3-076',
+    )
+    if (!bs3076) throw new Error('Missing BS3-076 in the BS3 card data.')
+    const conversion = convertOfficialCardToGameCard(bs3076)
+    if (
+      conversion.status !== 'converted' ||
+      conversion.gameCard.type !== 'cookie'
+    ) {
+      throw new Error('BS3-076 should convert to a CookieCard.')
+    }
+    const crepe = { ...conversion.gameCard, instanceId: 'attacker' }
+
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: crepe,
+    }
+    // 攻擊目標要撐得過普通攻擊傷害才輪得到追加傷害（重現使用者的實際盤面）。
+    state.players['player-one'].battleArea[0] = {
+      ...state.players['player-one'].battleArea[0],
+      hpCards: Array.from({ length: 8 }, (_, index) =>
+        battleItem(`defender-hp-${index}`),
+      ),
+    }
+    // 牌庫頂放藍色 LV.2 餅乾，讓 reveal-top-deck 命中條件。
+    state.players['player-two'].deck = [
+      {
+        id: 'blue-lv2',
+        instanceId: 'blue-lv2',
+        name: 'Blue LV2',
+        type: 'cookie',
+        level: 2,
+        energyColor: 'blue',
+        hp: 1,
+        attack: 0,
+        attackCost: 0,
+      },
+      battleItem('deck-filler'),
+    ]
+    state.players['player-two'].supportArea = Array.from(
+      { length: 6 },
+      (_, index) => ({
+        card: { ...battleItem(`blue-sup-${index + 1}`), energyColor: 'blue' as const },
+        rested: false,
+      }),
+    )
+
+    state = beginAttack(
+      state,
+      'attacker',
+      'defender',
+      ['blue-sup-1', 'blue-sup-2', 'blue-sup-3'].slice(0, crepe.attackCost),
+    )
+    state = skipTrap(state, 'player-one')
+    let guard = 0
+    while (state.pendingBattle?.stage === 'damage' && guard++ < 20) {
+      state = resolveNextDamage(state)
+    }
+
+    state = resolveAttackEffect(state, 'player-two', [])
+    expect(state.pendingOptionalCostAttack).toBeTruthy()
+
+    // 代價是「將這隻餅乾當作 {B}」，不需另外選支援卡付費。
+    state = resolveOptionalCostAttack(state, 'player-two', 'pay', [], [], [])
+    expect(state.pendingRevealTopDeck?.matched).toBe(true)
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-reveal-top-deck',
+      playerId: 'player-two',
+    })
+    return state
+  }
+
+  it('builds the local pendingEffect even though pendingBattle is still held open', async () => {
+    vi.useFakeTimers()
+    const gameState = buildStuckState()
+
+    // 前提：規則層確實留下了待結算效果，且刻意保留 pendingBattle。
+    expect(gameState.pendingAbilityEffect).toBeDefined()
+    expect(gameState.pendingBattle).not.toBeNull()
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: () => {},
+        dispatch: createDispatch(gameState, () => {}),
+        viewerPlayerId: 'player-two',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.runAllTimers())
+
+    expect(captured!.pendingEffect).not.toBeNull()
+    expect(captured!.currentEffect).toMatchObject({
+      kind: 'damage',
+      amount: 2,
+    })
+    // attackTargetOnly 要能鎖定當次攻擊目標，才有得選。
+    expect(
+      captured!.effectTargetCandidates.map((cookie) => cookie.card.instanceId),
+    ).toEqual(['defender'])
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
   })
 })

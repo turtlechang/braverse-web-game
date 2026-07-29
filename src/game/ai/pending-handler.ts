@@ -14,13 +14,19 @@ import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 
-/** 與 commands.ts 的 resolvePendingAbilityEffect 前置檢查一致。 */
+/**
+ * 與 commands.ts 的 resolvePendingAbilityEffect 前置檢查一致。
+ *
+ * 不含 `pendingBattle`：BS3-076 這類「攻擊後可選代價 → reveal-top-deck →
+ * 巢狀 damage(attackTargetOnly)」的效果，規則層會刻意保留 `pendingBattle`
+ * 讓 attackTargetOnly 找得到攻擊目標；列進來的話 AI 會判定自己不能結算
+ * pendingAbilityEffect，整個 AI 迴圈就卡在攻擊後階段。
+ */
 const hasBlockingAbilityPending = (state: GameState): boolean =>
   Boolean(
     state.pendingRefresh ||
       state.pendingOnPlay ||
-      state.pendingReplacement ||
-      state.pendingBattle,
+      state.pendingReplacement,
   )
 
 export const handleAiPendingDecision = (

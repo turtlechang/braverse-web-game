@@ -436,6 +436,13 @@ export function usePendingEffect(params: {
    * 規則層直接設定 `pendingAbilityEffect` 時（陷阱延遲效果、reveal-top-deck 巢狀
    * 目標選擇），UI 必須從規則層補建本機的 pendingEffect，否則玩家看不到選擇畫面。
    * 技能／物品的一般啟動由本機 UI 先建 pendingEffect，這裡不會觸發。
+   *
+   * 這裡的前置條件必須與 `commands.ts` 的 `resolvePendingAbilityEffect` 一致。
+   * 特別是**不能**擋 `pendingBattle`：BS3-076 這類「攻擊後可選代價 →
+   * reveal-top-deck → 巢狀 damage(attackTargetOnly)」的效果，規則層會刻意保留
+   * `pendingBattle` 讓 `attackTargetOnly` 找得到攻擊目標，戰鬥要等巢狀效果結算
+   * 完才由 `resolvePendingAbilityEffect` 收尾。擋掉的話這個 pendingEffect 永遠
+   * 建不起來，玩家看不到追加傷害的目標選擇畫面，整局就卡死在攻擊後階段。
    */
   useEffect(() => {
     const pendingAbility = game.pendingAbilityEffect
@@ -445,7 +452,6 @@ export function usePendingEffect(params: {
       pendingEffect ||
       suspendedEffect ||
       game.status !== 'playing' ||
-      game.pendingBattle ||
       game.pendingReplacement ||
       game.pendingRefresh ||
       game.pendingOnPlay
