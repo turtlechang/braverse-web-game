@@ -37,6 +37,8 @@ import {
   createBlueOptionalCostAttackDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
+  createSoulJamEquippedDemoState,
+  createSoulJam115ProtectionDemoState,
   createFaintDamageDemoState,
   createFlipResponseDemoState,
   createItemUsageDemoState,
@@ -161,6 +163,24 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
     }
+    if (testStateConfig?.kind === 'soul-jam-019-equipped') {
+      return createSoulJamEquippedDemoState('BS3-019', 'BS3-017')
+    }
+    if (testStateConfig?.kind === 'soul-jam-043-equipped') {
+      return createSoulJamEquippedDemoState('BS3-043', 'BS3-025')
+    }
+    if (testStateConfig?.kind === 'soul-jam-066-equipped') {
+      return createSoulJamEquippedDemoState('BS3-066', 'BS3-055')
+    }
+    if (testStateConfig?.kind === 'soul-jam-091-equipped') {
+      return createSoulJamEquippedDemoState('BS3-091', 'BS3-088')
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-equipped') {
+      return createSoulJamEquippedDemoState('BS3-115', 'BS3-100')
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-protection-demo') {
+      return createSoulJam115ProtectionDemoState()
+    }
     return createDemoSetupGame('player-one')
   })
   const [message, setMessage] = useState(() => {
@@ -247,6 +267,24 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
+    }
+    if (testStateConfig?.kind === 'soul-jam-019-equipped') {
+      return '靈魂果醬測試：BS3-019 已裝備於 Hollyberry，攻擊力 +1。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-043-equipped') {
+      return '靈魂果醬測試：BS3-043 已裝備於 Golden Cheese，HP +2。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-066-equipped') {
+      return '靈魂果醬測試：BS3-066 已裝備，攻擊時 set-active。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-091-equipped') {
+      return '靈魂果醬測試：BS3-091 已裝備於 Pure Vanilla，攻擊時抽牌。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-equipped') {
+      return '靈魂果醬測試：BS3-115 已裝備於 Dark Cacao，對手效果保護。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-protection-demo') {
+      return '保護示範：對手 P-030（4 張藍能量），Dark Cacao（BS3-115 保護）vs Pure Vanilla（無保護）。'
     }
     return '推進階段，開始這場對戰。'
   })

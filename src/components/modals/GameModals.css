@@ -877,6 +877,39 @@
   margin: 10px 0 0;
 }
 
+.card-equip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.card-equip-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: border-color 0.15s;
+}
+
+.card-equip-item:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.card-equip-item .card-face {
+  width: 80px;
+}
+
+.card-equip-item span {
+  color: #bbdaf3;
+  font-size: 0.72rem;
+}
+
 .card-attack-copy {
   display: flex;
   align-items: center;

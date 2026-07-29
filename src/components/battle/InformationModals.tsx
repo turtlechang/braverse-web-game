@@ -1,5 +1,6 @@
 import { phaseLabels } from '../gameUiLabels'
 import { serializeReplayIssueBundle } from '../../game'
+import type { GameCard } from '../../game'
 import {
   DiscardRevealModal,
   CardDetailModal,
@@ -20,6 +21,21 @@ export interface InformationModalsProps {
 }
 
 export function InformationModals({ match, ai, dialogs }: InformationModalsProps) {
+  const findCookieEquips = (card: GameCard): GameCard[] | undefined => {
+    if (card.type !== 'cookie') return undefined
+    for (const player of Object.values(match.game.players)) {
+      const cookie = player.battleArea.find(
+        (c) => c.card.instanceId === card.instanceId,
+      )
+      if (cookie?.equippedCards?.length) return cookie.equippedCards
+    }
+    return undefined
+  }
+
+  const inspectedEquippedCards = dialogs.inspectedCard
+    ? findCookieEquips(dialogs.inspectedCard)
+    : undefined
+
   return (
     <>
       {ai.pendingAiDecision?.revealedCard && (
@@ -45,6 +61,8 @@ export function InformationModals({ match, ai, dialogs }: InformationModalsProps
       {dialogs.inspectedCard && (
         <CardDetailModal
           card={dialogs.inspectedCard}
+          equippedCards={inspectedEquippedCards}
+          onInspectEquip={dialogs.openCardDetail}
           onClose={dialogs.closeCardDetail}
         />
       )}

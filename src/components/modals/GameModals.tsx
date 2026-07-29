@@ -322,6 +322,8 @@ export function DecisionModal({
 
 export interface CardDetailModalProps {
   card: GameCard
+  equippedCards?: GameCard[]
+  onInspectEquip?: (card: GameCard) => void
   onClose: () => void
 }
 
@@ -1585,6 +1587,8 @@ export function FlipResponseModal({
 
 export function CardDetailModal({
   card,
+  equippedCards,
+  onInspectEquip,
   onClose,
 }: CardDetailModalProps) {
   const hasSkillSection = Boolean(card.skill && card.effectText)
@@ -1662,6 +1666,24 @@ export function CardDetailModal({
                     </>
                   )}
                 </p>
+              </section>
+            )}
+            {equippedCards && equippedCards.length > 0 && (
+              <section className="card-rule-section card-equip-section">
+                <strong>已裝備</strong>
+                <div className="card-equip-list">
+                  {equippedCards.map((equip) => (
+                    <button
+                      type="button"
+                      key={equip.instanceId}
+                      className="card-equip-item"
+                      onClick={() => onInspectEquip?.(equip)}
+                    >
+                      <CardFace card={equip} />
+                      <span>{equip.name}</span>
+                    </button>
+                  ))}
+                </div>
               </section>
             )}
           </div>

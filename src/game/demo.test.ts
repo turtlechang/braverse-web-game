@@ -401,6 +401,25 @@ describe('parseTestStateConfig blue states', () => {
     const r = parseTestStateConfig('?test-state=blue-inspect-deck', 'localhost')
     expect(r).toEqual({ kind: 'blue-inspect-deck' })
   })
+  it('returns soul-jam-019-equipped', () => {
+    const r = parseTestStateConfig('?test-state=soul-jam-019-equipped', 'localhost')
+    expect(r).toEqual({ kind: 'soul-jam-019-equipped' })
+  })
+  it('returns soul-jam-043-equipped', () => {
+    expect(parseTestStateConfig('?test-state=soul-jam-043-equipped', 'localhost')).toEqual({ kind: 'soul-jam-043-equipped' })
+  })
+  it('returns soul-jam-066-equipped', () => {
+    expect(parseTestStateConfig('?test-state=soul-jam-066-equipped', 'localhost')).toEqual({ kind: 'soul-jam-066-equipped' })
+  })
+  it('returns soul-jam-091-equipped', () => {
+    expect(parseTestStateConfig('?test-state=soul-jam-091-equipped', 'localhost')).toEqual({ kind: 'soul-jam-091-equipped' })
+  })
+  it('returns soul-jam-115-equipped', () => {
+    expect(parseTestStateConfig('?test-state=soul-jam-115-equipped', 'localhost')).toEqual({ kind: 'soul-jam-115-equipped' })
+  })
+  it('returns soul-jam-115-protection-demo', () => {
+    expect(parseTestStateConfig('?test-state=soul-jam-115-protection-demo', 'localhost')).toEqual({ kind: 'soul-jam-115-protection-demo' })
+  })
   it('returns null for non-localhost', () => {
     expect(parseTestStateConfig('?test-state=blue-inspect-deck', 'example.com')).toBeNull()
   })

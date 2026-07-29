@@ -512,12 +512,14 @@ export function BattleRow({
                     </span>
                   </div>
                   {cookie.equippedCards && cookie.equippedCards.length > 0 && (
-                    <span
+                    <button
+                      type="button"
                       className="badge-equip"
                       title={`已裝備：${cookie.equippedCards.map((equipped) => equipped.name).join('、')}`}
+                      onClick={(e) => { e.stopPropagation(); onInspectCard(cookie.card) }}
                     >
                       <Gem size={12} aria-hidden="true" /> {cookie.equippedCards.length}
-                    </span>
+                    </button>
                   )}
                   <div
                     className="hp-card-stack"

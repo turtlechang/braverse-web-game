@@ -61,6 +61,12 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'soul-jam-019-equipped' }
+  | { kind: 'soul-jam-043-equipped' }
+  | { kind: 'soul-jam-066-equipped' }
+  | { kind: 'soul-jam-091-equipped' }
+  | { kind: 'soul-jam-115-equipped' }
+  | { kind: 'soul-jam-115-protection-demo' }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -166,6 +172,12 @@ export const parseTestStateConfig = (
       return { kind: 'card-check', cardNumber }
     }
   }
+  if (testState === 'soul-jam-019-equipped') return { kind: 'soul-jam-019-equipped' }
+  if (testState === 'soul-jam-043-equipped') return { kind: 'soul-jam-043-equipped' }
+  if (testState === 'soul-jam-066-equipped') return { kind: 'soul-jam-066-equipped' }
+  if (testState === 'soul-jam-091-equipped') return { kind: 'soul-jam-091-equipped' }
+  if (testState === 'soul-jam-115-equipped') return { kind: 'soul-jam-115-equipped' }
+  if (testState === 'soul-jam-115-protection-demo') return { kind: 'soul-jam-115-protection-demo' }
   return null
 }
 
@@ -2502,5 +2514,210 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         battleArea: opponentBattleArea,
       },
     },
+  }
+}
+
+export const createSoulJamEquippedDemoState = (
+  soulJamCardNumber: string,
+  targetCookieCardNumber: string,
+): GameState => {
+  const sjEntry = getCardPoolEntry(soulJamCardNumber)
+  const tcEntry = getCardPoolEntry(targetCookieCardNumber)
+  if (!sjEntry || !tcEntry) {
+    throw new Error(
+      `無法從卡池找到卡片 ${!sjEntry ? soulJamCardNumber : targetCookieCardNumber}。`,
+    )
+  }
+  const soulJam = createCard(sjEntry, 'player-one', 1)
+  const targetCookie = createCard(tcEntry, 'player-one', 2) as CookieCard
+  const payColor: EnergyColor =
+    targetCookie.energyColor && targetCookie.energyColor !== 'wild'
+      ? targetCookie.energyColor
+      : 'red'
+
+  const hpCards = Array.from({ length: targetCookie.hp }, (_, i) =>
+    testSupportCard(`${targetCookie.instanceId}-hp-${i}`, payColor),
+  )
+  const energySupports = Array.from({ length: 5 }, (_, i) =>
+    testSupportCard(`sj-support-${i}`, payColor),
+  )
+  const deckFiller = Array.from({ length: 10 }, (_, i) =>
+    testSupportCard(`sj-deck-${i}`, payColor),
+  )
+  const oppCookie = cardCheckFillerCookie('sj-opp-lv1', 1, 4, 0, 'red')
+
+  let attackModifiers: GameState['attackModifiers'] = []
+  let bonusHpCards: GameCard[] = []
+
+  if (soulJamCardNumber === 'BS3-019') {
+    attackModifiers = [
+      {
+        sourceInstanceId: soulJam.instanceId,
+        targetInstanceId: targetCookie.instanceId,
+        amount: 1,
+        expiresAfterTurn: null,
+      },
+    ]
+  }
+  if (soulJamCardNumber === 'BS3-043') {
+    bonusHpCards = [
+      testSupportCard('sj-gain-hp-1', payColor),
+      testSupportCard('sj-gain-hp-2', payColor),
+    ]
+  }
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: targetCookie,
+            hpCards: [...hpCards, ...bonusHpCards],
+            rested: false,
+            battleEntryId: `${targetCookie.instanceId}:battle:1`,
+            equippedCards: [soulJam],
+          },
+        ],
+        supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: oppCookie.cookie,
+            hpCards: oppCookie.hpCards,
+            rested: false,
+            battleEntryId: `${oppCookie.cookie.instanceId}:battle:1`,
+          },
+        ],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers,
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+}
+
+/**
+ * 展示 BS3-115 裝載後的對手效果保護：
+ * - 對手為 P-030 Sherbet Cookie（4 張藍色能量）。
+ * - BS3-100 Dark Cacao（已裝備 BS3-115）HP 全滿，
+ *   BS3-088 Pure Vanilla（無保護）HP -1。
+ */
+export const createSoulJam115ProtectionDemoState = (): GameState => {
+  const sj115Entry = getCardPoolEntry('BS3-115')
+  const dcEntry = getCardPoolEntry('BS3-100')
+  const pvEntry = getCardPoolEntry('BS3-088')
+  const p030Entry = getCardPoolEntry('P-030')
+  if (!sj115Entry || !dcEntry || !pvEntry || !p030Entry) {
+    throw new Error('無法從卡池找到 BS3-115／BS3-100／BS3-088／P-030。')
+  }
+  const soulJam115 = createCard(sj115Entry, 'player-one', 1)
+  const darkCacao = createCard(dcEntry, 'player-one', 2) as CookieCard
+  const pureVanilla = createCard(pvEntry, 'player-one', 3) as CookieCard
+  const p030 = createCard(p030Entry, 'player-two', 1) as CookieCard
+
+  const dcPayColor: EnergyColor =
+    darkCacao.energyColor && darkCacao.energyColor !== 'wild'
+      ? darkCacao.energyColor
+      : 'purple'
+
+  const dcHpCards = Array.from({ length: darkCacao.hp }, (_, i) =>
+    testSupportCard(`dc-hp-${i}`, dcPayColor),
+  )
+  const pvHpCards = Array.from({ length: pureVanilla.hp - 1 }, (_, i) =>
+    testSupportCard(`pv-hp-${i}`, 'blue'),
+  )
+  const p030HpCards = Array.from({ length: p030.hp }, (_, i) =>
+    testSupportCard(`p030-hp-${i}`, 'blue'),
+  )
+  const energySupports = Array.from({ length: 5 }, (_, i) =>
+    testSupportCard(`support-${i}`, dcPayColor),
+  )
+  const oppSupports = Array.from({ length: 4 }, (_, i) =>
+    testSupportCard(`opp-support-${i}`, 'blue'),
+  )
+  const deckFiller = Array.from({ length: 10 }, (_, i) =>
+    testSupportCard(`deck-${i}`, dcPayColor),
+  )
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: darkCacao,
+            hpCards: dcHpCards,
+            rested: false,
+            battleEntryId: `${darkCacao.instanceId}:battle:1`,
+            equippedCards: [soulJam115],
+          },
+          {
+            card: pureVanilla,
+            hpCards: pvHpCards,
+            rested: false,
+            battleEntryId: `${pureVanilla.instanceId}:battle:2`,
+          },
+        ],
+        supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: p030,
+            hpCards: p030HpCards,
+            rested: false,
+            battleEntryId: `${p030.instanceId}:battle:1`,
+          },
+        ],
+        supportArea: oppSupports.map((c) => ({ card: c, rested: false })),
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 4,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
   }
 }

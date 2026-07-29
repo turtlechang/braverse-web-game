@@ -157,6 +157,54 @@ describe('BS3 attack Then effects', () => {
     expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
   })
 
+  it('BS3-087 deals +1 damage to LV.1 target when a Soul Jam is in support', () => {
+    const clottedCream = asCookie('BS3-087')
+    const soulJam091 = convertOfficialCardToGameCard(findBs3Card('BS3-091'))
+    if (
+      soulJam091.status !== 'converted' ||
+      soulJam091.gameCard.type !== 'item'
+    ) {
+      throw new Error('BS3-091 should convert to an item with soul-jam')
+    }
+    expect(soulJam091.gameCard.keywords).toContain('soul-jam')
+
+    let state = createBattleState()
+    // 預設 defender 為 LV.1；給 5 張 HP 卡方便驗證 3+1 點傷害
+    state.players['player-one'].battleArea[0].hpCards = Array.from(
+      { length: 5 },
+      (_, index) => item(`defender-hp-${index + 1}`),
+    )
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: { ...clottedCream, instanceId: 'clotted-cream' },
+      hpCards: [item('clotted-hp')],
+    }
+    state.players['player-two'].supportArea = [
+      {
+        card: { ...soulJam091.gameCard, instanceId: 'bs3-091-support' },
+        rested: false,
+      },
+      { card: item('clotted-pay-b1', 'blue'), rested: false },
+      { card: item('clotted-pay-b2', 'blue'), rested: false },
+    ]
+
+    state = beginAttack(state, 'clotted-cream', 'defender', [
+      'bs3-091-support',
+      'clotted-pay-b1',
+      'clotted-pay-b2',
+    ])
+    state = skipTrap(state, 'player-one')
+    while (state.pendingBattle?.stage === 'damage') {
+      state = resolveNextDamage(state)
+    }
+
+    // BS3-087 基礎傷害 3 → 5 - 3 = 2
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    // Then 效果：攻擊對象為 LV.1 且支援區有 Soul Jam，再造成 1 點傷害 → 2 - 1 = 1
+    state = resolveAttackEffect(state, 'player-two', ['defender'])
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
   it('resolves BS3-028 after normal damage when its source has five or fewer HP', () => {
     const mozzarella = asCookie('BS3-028')
     let state = createBattleState()
