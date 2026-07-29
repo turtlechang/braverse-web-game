@@ -7,6 +7,7 @@ import {
   resolveNextDamage,
   beginAttack,
 } from './battle'
+import { applyGameCommand } from './commands'
 import { deployCookie } from './actions'
 import type { GameState } from './types'
 import { createBattleState, declareAttack } from './test-helpers/battle-helpers'
@@ -810,6 +811,76 @@ describe('optional-cost-attack integration', () => {
     state = resolveBattleAutomatically(state)
     expect(state.pendingBattle).toBeNull()
     expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.status).toBe('playing')
+  })
+
+  it('reveal-top-deck match with attackTargetOnly preserves pendingBattle until ability effect resolves', () => {
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'optional-cost-attack',
+        // 〈can be used as {B}〉是「你可以支付 {B}」，代價要從支援區實際付出來
+        // （見 47bed64）——這裡跟著真實卡片的付費方式，別再用 sourceEnergy 抵掉。
+        cost: { energy: { blue: 1 } },
+        effects: [
+          {
+            kind: 'reveal-top-deck',
+            match: { type: 'cookie', energyColor: 'blue', level: 2 },
+            effects: [
+              {
+                kind: 'damage',
+                amount: 2,
+                target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+              },
+            ],
+          },
+        ],
+        effectText: 'Reveal top card. If blue LV2, deal 2 damage to attacked cookie.',
+      },
+    ]
+    state.players['player-two'].battleArea[0].card.attackCost = 0
+    state.players['player-two'].battleArea[0].card.attackEnergyCost = {}
+    state.players['player-two'].battleArea[0].card.attack = 1
+
+    const blueLv2: GameCard = {
+      id: 'blue-lv2', instanceId: 'blue-lv2', name: 'Blue LV2',
+      type: 'cookie', level: 2, energyColor: 'blue', hp: 1, attack: 0, attackCost: 0,
+    }
+    state.players['player-two'].deck = [blueLv2]
+    state.players['player-two'].supportArea = [
+      { card: { id: 'sup', instanceId: 'sup', name: 'sup', type: 'item', energyColor: 'blue' }, rested: false },
+    ]
+
+    state = beginAttack(state, 'attacker', 'defender', [])
+    state = advanceToAttackEffect(state)
+    expect(state.pendingBattle!.stage).toBe('attack-effect')
+
+    state = resolveAttackEffect(state, 'player-two', [])
+    expect(state.pendingOptionalCostAttack).toBeDefined()
+
+    state = resolveOptionalCostAttack(state, 'player-two', 'pay', [], [], ['sup'])
+    // 代價確實付了：支援卡被橫置。
+    expect(state.players['player-two'].supportArea[0].rested).toBe(true)
+    expect(state.pendingRevealTopDeck).toBeDefined()
+    expect(state.pendingRevealTopDeck!.matched).toBe(true)
+    expect(state.pendingBattle).toBeDefined()
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-reveal-top-deck',
+      playerId: 'player-two',
+    })
+    expect(state.pendingRevealTopDeck).toBeNull()
+    expect(state.pendingAbilityEffect).toBeDefined()
+    expect(state.pendingBattle).toBeDefined()
+    expect(state.pendingBattle!.targetInstanceId).toBe('defender')
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: ['defender'],
+    })
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(state.pendingBattle).toBeNull()
     expect(state.status).toBe('playing')
   })
 })
