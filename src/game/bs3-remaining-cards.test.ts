@@ -412,8 +412,7 @@ describe('BS3 剩餘物品卡', () => {
     let state = createBattleState()
     state = {
       ...state,
-      activePlayer: 'player-one',
-      turnPlayerId: 'player-one',
+      activePlayerId: 'player-one',
       phase: 'main',
       players: {
         ...state.players,

@@ -433,15 +433,14 @@ export function usePendingEffect(params: {
   }, [effectHistory, pendingEffect])
 
   /**
-   * 陷阱的延遲效果（BS3-046）不是由本機 UI 發起的，規則層會直接留下
-   * `pendingAbilityEffect`。技能／物品是 UI 與規則層並行建佇列，這裡則要
-   * 反過來從規則層補建本機的 pendingEffect，否則玩家看不到選擇畫面。
+   * 規則層直接設定 `pendingAbilityEffect` 時（陷阱延遲效果、reveal-top-deck 巢狀
+   * 目標選擇），UI 必須從規則層補建本機的 pendingEffect，否則玩家看不到選擇畫面。
+   * 技能／物品的一般啟動由本機 UI 先建 pendingEffect，這裡不會觸發。
    */
   useEffect(() => {
     const pendingAbility = game.pendingAbilityEffect
     if (
       !pendingAbility ||
-      pendingAbility.sourceKind !== 'trap' ||
       pendingAbility.playerId !== viewerPlayerId ||
       pendingEffect ||
       suspendedEffect ||
@@ -454,15 +453,38 @@ export function usePendingEffect(params: {
       return
     }
 
+    const playerId = pendingAbility.playerId
+    const player = game.players[playerId]
     const sourceCard =
-      game.players[viewerPlayerId].discardPile.find(
+      player.discardPile.find(
         (card) => card.instanceId === pendingAbility.sourceInstanceId,
-      ) ?? {
+      ) ??
+      player.supportArea.find(
+        (support) => support.card.instanceId === pendingAbility.sourceInstanceId,
+      )?.card ??
+      player.hand.find(
+        (card) => card.instanceId === pendingAbility.sourceInstanceId,
+      ) ??
+      player.battleArea.find(
+        (cookie) => cookie.card.instanceId === pendingAbility.sourceInstanceId,
+      )?.card ??
+      (player.stage?.card.instanceId === pendingAbility.sourceInstanceId
+        ? player.stage.card
+        : null) ?? {
         id: 'unknown',
         instanceId: pendingAbility.sourceInstanceId,
-        name: pendingAbility.sourceCardName ?? '陷阱效果',
-        type: 'trap' as const,
+        name: pendingAbility.sourceCardName ?? '效果',
+        type: 'item' as const,
       }
+
+    const triggerLabel =
+      pendingAbility.sourceKind === 'trap'
+        ? '陷阱延遲效果'
+        : pendingAbility.sourceKind === 'stage'
+          ? '場景效果'
+          : pendingAbility.sourceKind === 'skill'
+            ? '技能效果'
+            : '物品效果'
 
     const timer = window.setTimeout(() => {
       setPendingEffect({
@@ -492,8 +514,10 @@ export function usePendingEffect(params: {
         // 代價在 playTrap 就付清了，這裡只剩效果結算。
         skillActivated: true,
         optional: false,
-        triggerLabel: '陷阱延遲效果',
-        sourceKind: 'item',
+        triggerLabel,
+        sourceKind: pendingAbility.sourceKind === 'trap' ? 'item'
+          : pendingAbility.sourceKind === 'skill' ? 'cookie'
+          : pendingAbility.sourceKind,
       })
     }, 0)
     return () => window.clearTimeout(timer)
