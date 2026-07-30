@@ -727,6 +727,32 @@ describe('CardDetailModal', () => {
     )
   })
 
+  it('keeps stage placement and activation effects on separate lines', () => {
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={{
+          id: 'BS3-096',
+          instanceId: 'test-BS3-096',
+          name: 'Peaceful Vanilla Kingdom',
+          type: 'stage',
+          effectText:
+            '<{B}{B}> Place in your stage area.\r\n{mob} <Rest this card.> If your hand contains 2 cards or less, draw 2 cards from your deck.',
+        }}
+        onClose={() => undefined}
+      />,
+    )
+
+    const lineStarts = [...markup.matchAll(/<span class="card-stage-effect-line">/g)].map(
+      (match) => match.index ?? -1,
+    )
+
+    expect(lineStarts).toHaveLength(2)
+    expect(markup.slice(lineStarts[0], lineStarts[1])).toContain(
+      'Place in your stage area.',
+    )
+    expect(markup.slice(lineStarts[1])).toContain('/card-tags/activate.webp')
+  })
+
   it('centers a trap description when there is no skill section', () => {
     const markup = renderToStaticMarkup(
       <CardDetailModal

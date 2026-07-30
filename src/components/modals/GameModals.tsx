@@ -339,6 +339,12 @@ const splitNormalAttackText = (attackText: string) => {
   }
 }
 
+const splitStageEffectText = (effectText: string) =>
+  effectText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+
 export interface CardPileModalProps {
   title: string
   cards: GameCard[]
@@ -1606,6 +1612,10 @@ export function CardDetailModal({
   const normalAttack = card.type === 'cookie' && card.attackText
     ? splitNormalAttackText(card.attackText)
     : null
+  const stageEffectLines =
+    card.type === 'stage' && card.effectText
+      ? splitStageEffectText(card.effectText)
+      : null
   const hasSkillSection = Boolean(card.skill && card.effectText)
   const hasSecondaryAttackSection =
     card.type === 'cookie' && Boolean(card.effectText)
@@ -1656,7 +1666,16 @@ export function CardDetailModal({
               <section className="card-rule-section card-skill-section">
                 <strong>{effectHeading}</strong>
                 <p>
-                  <CardEffectText text={card.effectText} />
+                  {stageEffectLines
+                    ? stageEffectLines.map((line, index) => (
+                        <span
+                          className="card-stage-effect-line"
+                          key={`${line}-${index}`}
+                        >
+                          <CardEffectText text={line} />
+                        </span>
+                      ))
+                    : <CardEffectText text={card.effectText} />}
                 </p>
               </section>
             )}

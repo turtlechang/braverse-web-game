@@ -885,6 +885,10 @@
   margin: 10px 0 0;
 }
 
+.card-stage-effect-line {
+  display: block;
+}
+
 .card-equip-list {
   display: flex;
   flex-wrap: wrap;
