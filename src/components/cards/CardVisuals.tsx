@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import type { CardSkill, EnergyCost, GameCard } from '../../game'
-import { getCardEffectTokenLabel } from './cardVisualUtils'
+import {
+  getCardEffectTokenLabel,
+  getCardEffectTokenVisual,
+  normalizeCardEffectToken,
+} from './cardVisualUtils'
 import './CardVisuals.css'
 
 const energyLabels = {
@@ -23,6 +27,7 @@ const energyVisuals: Partial<
   green: { symbol: 'G', imageUrl: '/energy/{G}.webp' },
   blue: { symbol: 'B', imageUrl: '/energy/{B}.webp' },
   purple: { symbol: 'P', imageUrl: '/energy/{P}.webp' },
+  black: { symbol: 'K', imageUrl: '/energy/{K}.webp' },
   neutral: { symbol: 'N', imageUrl: '/energy/{N}.webp' },
 }
 
@@ -32,6 +37,7 @@ const energyTokens: Partial<Record<string, EnergyKey>> = {
   G: 'green',
   B: 'blue',
   P: 'purple',
+  K: 'black',
   N: 'neutral',
 }
 
@@ -97,16 +103,63 @@ export function EnergyCostIcons({ cost }: { cost: EnergyCost }) {
   )
 }
 
+const effectTokenPattern =
+  /(\{[A-Za-z0-9_]+\}|【(?:Equip|On Play|Your Turn|Once Per Turn|Activate|Blocker)】)/gi
+
+const getEffectToken = (part: string) => {
+  const braceToken = part.match(/^\{(.+)\}$/)?.[1]
+  if (braceToken) return braceToken
+
+  return part.match(/^【(.+)】$/)?.[1]
+}
+
+function CardEffectTokenImage({
+  token,
+  label,
+}: {
+  token: string
+  label: string
+}) {
+  const [imageFailed, setImageFailed] = useState(false)
+  const visual = getCardEffectTokenVisual(token)
+
+  if (!visual || imageFailed) {
+    return (
+      <span className="inline-skill-label" title={label}>
+        {label}
+      </span>
+    )
+  }
+
+  return (
+    <span className="inline-skill-label-image" title={label}>
+      <img
+        className="card-effect-token-image"
+        src={visual.imageUrl}
+        alt={visual.alt}
+        onError={() => setImageFailed(true)}
+      />
+      <span className="card-effect-token-accessible-label">{label}</span>
+    </span>
+  )
+}
+
 export function CardEffectText({ text }: { text: string }) {
-  const parts = text.split(/(\{[A-Za-z0-9_]+\})/g)
+  const parts = text.split(effectTokenPattern)
 
   return (
     <>
       {parts.map((part, index) => {
-        const token = part.match(/^\{(.+)\}$/)?.[1]
-        const energy = token ? energyTokens[token] : undefined
-        const label = token
-          ? getCardEffectTokenLabel(token)
+        const token = getEffectToken(part)
+        const normalizedToken = token
+          ? normalizeCardEffectToken(token)
+          : undefined
+        const energy = token?.match(/^[A-Z]$/) ? energyTokens[token] : undefined
+        const label = normalizedToken
+          ? getCardEffectTokenLabel(normalizedToken)
+          : undefined
+        const visual = normalizedToken
+          ? getCardEffectTokenVisual(normalizedToken)
           : undefined
 
         if (energy) {
@@ -115,6 +168,16 @@ export function CardEffectText({ text }: { text: string }) {
 
         if (label !== undefined) {
           if (label === '') return null
+
+          if (visual) {
+            return (
+              <CardEffectTokenImage
+                key={`${part}-${index}`}
+                token={normalizedToken ?? token ?? ''}
+                label={label}
+              />
+            )
+          }
 
           return (
             <span className="inline-skill-label" key={`${part}-${index}`}>

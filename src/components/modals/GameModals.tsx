@@ -327,6 +327,18 @@ export interface CardDetailModalProps {
   onClose: () => void
 }
 
+const splitNormalAttackText = (attackText: string) => {
+  const match = attackText.match(/^([\s\S]*?\{da\})\s*(\d+)([\s\S]*)$/i)
+
+  if (!match) return null
+
+  return {
+    mainText: match[1],
+    attackPower: Number(match[2]),
+    followUpText: match[3].trim(),
+  }
+}
+
 export interface CardPileModalProps {
   title: string
   cards: GameCard[]
@@ -1591,6 +1603,9 @@ export function CardDetailModal({
   onInspectEquip,
   onClose,
 }: CardDetailModalProps) {
+  const normalAttack = card.type === 'cookie' && card.attackText
+    ? splitNormalAttackText(card.attackText)
+    : null
   const hasSkillSection = Boolean(card.skill && card.effectText)
   const hasSecondaryAttackSection =
     card.type === 'cookie' && Boolean(card.effectText)
@@ -1655,7 +1670,24 @@ export function CardDetailModal({
               >
                 <strong>攻擊</strong>
                 <p className="card-attack-copy">
-                  {card.attackText ? (
+                  {normalAttack ? (
+                    <>
+                      <span className="card-attack-main">
+                        <CardEffectText text={normalAttack.mainText} />
+                        <span
+                          className="attack-power-value"
+                          title={`普通攻擊力 ${normalAttack.attackPower}`}
+                        >
+                          {normalAttack.attackPower}
+                        </span>
+                      </span>
+                      {normalAttack.followUpText && (
+                        <span className="card-attack-follow-up">
+                          <CardEffectText text={normalAttack.followUpText} />
+                        </span>
+                      )}
+                    </>
+                  ) : card.attackText ? (
                     <CardEffectText text={card.attackText} />
                   ) : (
                     <>

@@ -16,9 +16,12 @@ const ENERGY_SYMBOLS: Record<string, EnergySymbol> = {
 
 const DISPLAY_MARKERS: Record<string, string> = {
   sk: '',
+  eq: '[Equip]',
+  mou: '[Equip]',
   mob: '[Activate]',
   ap: '[OnPlay]',
   t1: '[Once per turn]',
+  mt: '[Your Turn]',
   bl: '[Blocker]',
 }
 
@@ -30,6 +33,7 @@ const KNOWN_NON_ENERGY_TOKENS = new Set([
   't1',
   'bl',
   'mt',
+  'eq',
   'mou',
 ])
 

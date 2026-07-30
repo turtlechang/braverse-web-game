@@ -919,10 +919,36 @@
 }
 
 .card-attack-copy {
-  display: flex;
+  display: block;
+}
+
+.card-attack-main {
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  max-width: 100%;
   gap: 5px;
+  vertical-align: middle;
+}
+
+.card-attack-follow-up {
+  display: block;
+  margin-top: 6px;
+}
+
+.attack-power-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35em;
+  padding: 1px 5px;
+  color: #000;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  background: #fff;
+  font-weight: 900;
+  line-height: 1.15;
+  vertical-align: middle;
 }
 
 .close-modal {

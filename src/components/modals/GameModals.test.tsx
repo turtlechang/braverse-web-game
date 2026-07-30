@@ -697,6 +697,36 @@ describe('CardDetailModal', () => {
     expect(markup).toContain('Deals 1 damage.')
   })
 
+  it('keeps ordinary attack power beside the attack name before Then text', () => {
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={{
+          id: 'BS3-088',
+          instanceId: 'test-BS3-088',
+          name: 'Pure Vanilla Cookie',
+          type: 'cookie',
+          level: 3,
+          hp: 4,
+          attack: 4,
+          attackCost: 4,
+          attackEnergyCost: { blue: 4 },
+          attackText:
+            '<{B}{B}{B}{B}> I Will Not Falter! {da} 4\r\nThen, <discard 1 card.> Select up to 1 Cookie in your battle area. That Cookie gains +1 HP.',
+        }}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('class="card-attack-main"')
+    expect(markup).toContain('class="attack-power-value"')
+    expect(markup).toContain('title="普通攻擊力 4"')
+    expect(markup).toContain('class="card-attack-follow-up">Then,')
+    expect(markup).not.toContain('card-attack-follow-up">4 Then')
+    expect(markup.indexOf('class="attack-power-value"')).toBeLessThan(
+      markup.indexOf('class="card-attack-follow-up"'),
+    )
+  })
+
   it('centers a trap description when there is no skill section', () => {
     const markup = renderToStaticMarkup(
       <CardDetailModal
