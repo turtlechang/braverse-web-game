@@ -18,7 +18,7 @@ import {
   selectEffectTargets,
 } from './effects'
 import {
-  getAttackEnergyCost,
+  getAttackEnergyCostForState,
   getRemainingEnergyCost,
   selectEnergyPayment,
   validateEnergyPayment,
@@ -32,6 +32,7 @@ import {
 } from './replacement'
 import {
   canPayTrashBattleCookieCost,
+  markSupportAreaDecreased,
   payTrashBattleCookieCost,
 } from './skills'
 import { canAttack } from './turn'
@@ -131,7 +132,7 @@ export const beginAttack = (
   )
   const attacker = attackerPlayer.battleArea[attackerIndex]
 
-  if (!attacker || attacker.rested) {
+  if (!attacker || attacker.rested || attacker.card.nonAttackable) {
     throw new GameRuleError('Invalid battle action.')
   }
 
@@ -152,7 +153,7 @@ export const beginAttack = (
   }
 
   const paymentValidation = validateEnergyPayment(
-    getAttackEnergyCost(attacker.card),
+    getAttackEnergyCostForState(state, attackerInstanceId),
     attackerPlayer.supportArea,
     supportPaymentIds,
   )
@@ -240,6 +241,10 @@ const isTrapConditionMet = (
     return true
   }
 
+  if (condition.kind === 'friendly-cookie-fainted-this-battle') {
+    return true
+  }
+
   return true
 }
 
@@ -254,6 +259,16 @@ const hasRequiredTrapTargets = (
   }
 
   return card.trap!.effects.every((effect) => {
+    if (effect.kind === 'trash-to-battle') {
+      const available = state.players[playerId].discardPile.filter(
+        (discarded) =>
+          discarded.type === 'cookie' &&
+          (effect.energyColor === undefined ||
+            discarded.energyColor === effect.energyColor),
+      ).length
+      return available >= effect.amount
+    }
+
     const isTargetedGainHp =
       effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly
     if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target || effect.target.min === 0) {
@@ -545,17 +560,6 @@ const moveSupportsToHand = (
   }
 }
 
-const markSupportAreaDecreased = (
-  state: GameState,
-  playerId: PlayerId,
-): GameState => ({
-  ...state,
-  supportAreaDecreasedThisTurn: {
-    ...(state.supportAreaDecreasedThisTurn ?? {}),
-    [playerId]: true,
-  },
-})
-
 export interface PlayTrapOptions {
   trapInstanceId: string
   paymentIds: string[]
@@ -839,8 +843,7 @@ export const playTrap = (
     pendingBattle: {
       ...battle,
       trapUsed: true,
-      ...(trap.condition?.kind ===
-      'friendly-color-fainted-this-battle'
+      ...(trap.condition?.kind === 'friendly-color-fainted-this-battle'
         ? {
             delayedTrap: {
               playerId,
@@ -853,7 +856,17 @@ export const playTrap = (
               effects: trap.effects,
             },
           }
-        : {}),
+        : trap.condition?.kind === 'friendly-cookie-fainted-this-battle'
+          ? {
+              delayedTrap: {
+                playerId,
+                sourceInstanceId: trapCard.instanceId,
+                sourceCardName: trapCard.name,
+                anyFriendlyCookie: true,
+                effects: trap.effects,
+              },
+            }
+          : {}),
     },
   }
 
@@ -871,7 +884,9 @@ export const playTrap = (
   }
 
   if (supportToTrash?.kind === 'support-to-trash') {
-    nextState = markSupportAreaDecreased(nextState, playerId)
+    nextState = markSupportAreaDecreased(nextState, playerId, {
+      triggerSkill: (options.supportTrashIds ?? []).length > 0,
+    })
   }
 
   const context = {
@@ -882,8 +897,8 @@ export const playTrap = (
 
   for (const effect of trap.effects) {
     if (
-      trap.condition?.kind ===
-      'friendly-color-fainted-this-battle'
+      trap.condition?.kind === 'friendly-color-fainted-this-battle' ||
+      trap.condition?.kind === 'friendly-cookie-fainted-this-battle'
     ) {
       continue
     }
@@ -1289,6 +1304,12 @@ const removeFaintedCookie = (
 const isDelayedTrapTriggered = (battle: PendingBattle): boolean => {
   const delayed = battle.delayedTrap
   if (!delayed) return false
+  if (delayed.anyFriendlyCookie) {
+    return (battle.faintedCookies ?? []).some(
+      (fainted) => fainted.playerId === delayed.playerId,
+    )
+  }
+  if (!delayed.color) return false
   if (delayed.minLevel === undefined) {
     return battle.faintedColors.includes(delayed.color)
   }

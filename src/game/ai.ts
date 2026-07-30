@@ -18,7 +18,7 @@ import {
   isEffectConditionMet,
   isEffectUntargeted,
 } from './effects'
-import { getAttackEnergyCost, selectEnergyPayment } from './energy'
+import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
@@ -124,7 +124,7 @@ const chooseEffectTargets = (
   }
 
   if (effect.kind === 'trash-to-battle') {
-    return getTrashCookieCandidates(state, context)
+    return getTrashCookieCandidates(state, context, effect)
       .slice(0, effect.amount)
       .map((card) => card.instanceId)
   }
@@ -576,7 +576,7 @@ const resolveAiCardAbility = (
       (support) => !costIds.paymentIds.includes(support.card.instanceId),
     )
     const canAttackAfterItem = player.battleArea.some((cookie) => {
-      const attackCost = getAttackEnergyCost(cookie.card)
+      const attackCost = getAttackEnergyCostForState(state, cookie.card.instanceId)
       return selectEnergyPayment(attackCost, remainingSupportsAfterItem)
     })
     if (!canAttackAfterItem) return null
@@ -759,7 +759,7 @@ const resolveAiSkill = (
         !costSupportToTrashIds.includes(support.card.instanceId),
     )
     const canStillAttackAfterSkill = player.battleArea.some((cookie) => {
-      const attackCost = getAttackEnergyCost(cookie.card)
+      const attackCost = getAttackEnergyCostForState(state, cookie.card.instanceId)
       return selectEnergyPayment(attackCost, remainingSupportAfterSkillCost)
     })
     if (!canStillAttackAfterSkill) {

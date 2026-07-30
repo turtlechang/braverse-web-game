@@ -30,7 +30,7 @@ import {
 import { defaultShuffle } from './helpers'
 import type { Shuffle } from './types'
 
-const getSkillUseKey = (
+export const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
 ) => source.battleEntryId ?? source.card.instanceId
 
@@ -66,6 +66,86 @@ export const findSkillSource = (
   return breakCard?.skill?.fromBreakArea
     ? { card: breakCard, hpCards: [], rested: false }
     : undefined
+}
+
+/**
+ * 記錄支援區減少，並在指定情況下排入「支援卡進入棄牌區」的被動餅乾技能。
+ * 共用既有 pendingStageTrigger 通道，讓效果排序、AI、線上同步與 UI 維持同一套待處理協定。
+ */
+export const markSupportAreaDecreased = (
+  state: GameState,
+  playerId: PlayerId,
+  options: { triggerSkill?: boolean } = {},
+): GameState => {
+  const nextState: GameState = {
+    ...state,
+    supportAreaDecreasedThisTurn: {
+      ...(state.supportAreaDecreasedThisTurn ?? {}),
+      [playerId]: true,
+    },
+  }
+
+  if (!options.triggerSkill || nextState.pendingStageTrigger) {
+    return nextState
+  }
+
+  const player = nextState.players[playerId]
+  if (nextState.activePlayerId !== playerId) return nextState
+
+  const source = player.battleArea.find((cookie) => {
+    const skill = cookie.card.skill
+    const triggerEffects = skill?.effects.filter(
+      (effect) =>
+        'condition' in effect &&
+        effect.condition?.kind === 'support-area-decreased-this-turn',
+    ) ?? []
+    return (
+      skill?.trigger === 'passive' &&
+      (!skill.yourTurn || nextState.activePlayerId === playerId) &&
+      (!skill.restSource || !cookie.rested) &&
+      (!skill.oncePerTurn ||
+        !nextState.skillUsesThisTurn.includes(getSkillUseKey(cookie))) &&
+      triggerEffects.some((effect) =>
+        isEffectConditionMet(
+          nextState,
+          {
+            sourcePlayerId: playerId,
+            sourceInstanceId: cookie.card.instanceId,
+          },
+          effect,
+        ),
+      )
+    )
+  })
+
+  if (!source?.card.skill) return nextState
+
+  const context = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: source.card.instanceId,
+  }
+  const effects = source.card.skill.effects.filter(
+    (effect) =>
+      'condition' in effect &&
+      effect.condition?.kind === 'support-area-decreased-this-turn' &&
+      isEffectConditionMet(nextState, context, effect),
+  )
+  if (effects.length === 0) return nextState
+
+  return {
+    ...nextState,
+    pendingStageTrigger: {
+      playerId,
+      sourceInstanceId: source.card.instanceId,
+      sourceCardName: source.card.name,
+      effectText: source.card.skill.text,
+      sourceKind: 'cookie-skill',
+      effects,
+      ...(source.card.skill.sourceEnergy
+        ? { sourceEnergy: source.card.skill.sourceEnergy }
+        : {}),
+    },
+  }
 }
 
 /**

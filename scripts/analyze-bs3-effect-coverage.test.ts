@@ -37,7 +37,7 @@ describe('BS3 effect coverage analysis', () => {
     )
 
     expect(markdown).toContain('# BS3 效果轉接覆蓋盤點')
-    expect(markdown).toContain('不得 promote')
+    expect(markdown).toContain('已正式 promote')
     // 額外能力來源已全數轉接，待轉接表格改為顯示空狀態的佔位列。
     expect(markdown).toContain('| — | — | — | — |')
   })

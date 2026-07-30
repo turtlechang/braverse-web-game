@@ -40,7 +40,12 @@ import {
   expandChooseOneSequence,
 } from './effects/choose-one'
 import { advancePhase } from './turn'
-import { activateCookieSkill, findSkillSource, skipCookieOnPlay } from './skills'
+import {
+  activateCookieSkill,
+  findSkillSource,
+  getSkillUseKey,
+  skipCookieOnPlay,
+} from './skills'
 import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
@@ -990,6 +995,69 @@ const applyPendingDecisionCommand = (
       if (command.action === 'skip') {
         return { ...state, pendingStageTrigger: null }
       }
+
+      if (pending.sourceKind === 'cookie-skill') {
+        const playerId = pending.playerId
+        const player = state.players[playerId]
+        const source = player.battleArea.find(
+          (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+        )
+        const skill = source?.card.skill
+        if (
+          !source ||
+          !skill ||
+          skill.trigger !== 'passive' ||
+          (skill.yourTurn && state.activePlayerId !== playerId) ||
+          (skill.restSource && source.rested) ||
+          (skill.oncePerTurn &&
+            state.skillUsesThisTurn.includes(getSkillUseKey(source)))
+        ) {
+          throw new GameRuleError('被動餅乾技能已不再符合發動條件。')
+        }
+
+        const context: EffectContext = {
+          sourcePlayerId: playerId,
+          sourceInstanceId: source.card.instanceId,
+          sourceCardName: source.card.name,
+        }
+        const effects = (pending.effects ?? skill.effects).filter((effect) =>
+          isEffectConditionMet(state, context, effect),
+        )
+        if (effects.length === 0) {
+          return { ...state, pendingStageTrigger: null }
+        }
+
+        const activatedState: GameState = {
+          ...state,
+          pendingStageTrigger: null,
+          skillUsesThisTurn: skill.oncePerTurn
+            ? [...state.skillUsesThisTurn, getSkillUseKey(source)]
+            : state.skillUsesThisTurn,
+        }
+        if (effects.some(requiresEffectCardSelection)) {
+          return {
+            ...activatedState,
+            pendingAbilityEffect: {
+              playerId,
+              sourcePlayerId: playerId,
+              sourceInstanceId: source.card.instanceId,
+              sourceCardName: source.card.name,
+              sourceKind: 'skill',
+              effects,
+              effectIndex: 0,
+            },
+          }
+        }
+
+        return effects.reduce(
+          (nextState, effect) =>
+            nextState.status === 'playing'
+              ? executeCardEffect(nextState, context, effect, [])
+              : nextState,
+          activatedState,
+        )
+      }
+
       const playerId = pending.playerId
       const player = state.players[playerId]
       const stage = player.stage

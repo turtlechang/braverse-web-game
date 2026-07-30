@@ -4,7 +4,7 @@ import type {
   PlayerId,
   PendingBattleStage,
 } from '../../game'
-import { getAttackEnergyCost, getEnergyCostTotal } from '../../game'
+import { getAttackEnergyCostForState, getEnergyCostTotal } from '../../game'
 import { phaseLabels } from '../gameUiLabels'
 import { buildActionProgress } from './actionProgress'
 import type {
@@ -367,7 +367,9 @@ export const deriveActionStatus = ({
       (cookie) => cookie.card.instanceId === opponentAttackSelection.attackerInstanceId,
     )
     const requiredPayment = attacker
-      ? getEnergyCostTotal(getAttackEnergyCost(attacker.card))
+      ? getEnergyCostTotal(
+          getAttackEnergyCostForState(game, attacker.card.instanceId),
+        )
       : opponentAttackSelection.supportPaymentIds.length
     const selectedPayment = opponentAttackSelection.supportPaymentIds.length
     const paymentComplete = selectedPayment >= requiredPayment

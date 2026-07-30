@@ -32,6 +32,12 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'deck-to-support') {
     return `從牌庫頂放 ${effect.amount} 張到支援區。`
   }
+  if (effect.kind === 'modify-attack-cost') {
+    return '選擇符合條件的餅乾，令其本回合攻擊費用改為任意能量。'
+  }
+  if (effect.kind === 'multiply-attack-damage') {
+    return `符合條件時攻擊傷害乘以 ${effect.multiplier}。`
+  }
   if (effect.kind === 'break-to-trash') {
     return `從 break 區選最多 ${effect.max} 張 LV.${effect.exactLevel} 放入棄牌區。`
   }
@@ -241,6 +247,8 @@ export const describeEffectResult = (
   if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
   if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
   if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
+  if (effect.kind === 'modify-attack-cost') return `${names} 本回合攻擊費用已改變。`
+  if (effect.kind === 'multiply-attack-damage') return `攻擊傷害乘以 ${effect.multiplier}。`
   if (effect.kind === 'break-to-trash') {
     if (targetNames.length === 0) return '沒有選擇休息區目標。'
     return 'break 區卡已放入棄牌區。'

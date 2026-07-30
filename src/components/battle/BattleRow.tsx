@@ -5,7 +5,7 @@ import {
   canAttack,
   canPlayItem,
   canPlayStage,
-  getAttackEnergyCost,
+  getAttackEnergyCostForState,
   getBreakAreaLevel,
   getEffectiveAttack,
   getEnergyCostTotal,
@@ -408,8 +408,12 @@ export function BattleRow({
                 canOperate &&
                 game.phase === 'main' &&
                 canAttack(game) &&
-                !cookie.rested
-              const attackEnergyCost = getAttackEnergyCost(cookie.card)
+                !cookie.rested &&
+                !cookie.card.nonAttackable
+              const attackEnergyCost = getAttackEnergyCostForState(
+                game,
+                cookie.card.instanceId,
+              )
               const canAffordAttack =
                 selectEnergyPayment(attackEnergyCost, player.supportArea) !==
                 null

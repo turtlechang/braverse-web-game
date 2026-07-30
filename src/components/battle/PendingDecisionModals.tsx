@@ -58,6 +58,8 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       : null
 
   const autoResolveDrawUpTo = pendingDrawUpTo?.max === 1
+  const pendingStageTrigger = match.game.pendingStageTrigger
+  const isCookieSkillTrigger = pendingStageTrigger?.sourceKind === 'cookie-skill'
 
   useEffect(() => {
     if (!autoResolveDrawUpTo || !pendingDrawUpTo) return
@@ -198,12 +200,17 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               role="dialog"
               style={{ pointerEvents: 'auto' }}
             >
-              <h2>{match.game.pendingStageTrigger.sourceCardName} 效果</h2>
+              <h2>
+                {pendingStageTrigger?.sourceCardName}{' '}
+                {isCookieSkillTrigger ? '技能' : '效果'}
+              </h2>
               <p className="faint-effect-text">
-                {match.game.pendingStageTrigger.effectText}
+                {pendingStageTrigger?.effectText}
               </p>
               <p className="faint-target-hint">
-                是否發動效果抽 1 張牌？
+                {isCookieSkillTrigger
+                  ? '是否發動此技能？'
+                  : '是否發動效果抽 1 張牌？'}
               </p>
               <div className="faint-modal-actions">
                 <button

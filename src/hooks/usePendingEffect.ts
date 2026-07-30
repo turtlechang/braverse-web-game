@@ -176,7 +176,7 @@ export function usePendingEffect(params: {
     (currentEffect?.kind === 'trash-to-battle' ||
       currentEffect?.kind === 'trash-to-support')
       ? currentEffect.kind === 'trash-to-battle'
-        ? getTrashCookieCandidates(game, pendingEffect.context)
+        ? getTrashCookieCandidates(game, pendingEffect.context, currentEffect)
         : getTrashToSupportCandidates(game, pendingEffect.context)
       : []
 

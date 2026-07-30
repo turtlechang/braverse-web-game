@@ -353,15 +353,20 @@ export const createCard = (
     source.hp !== null
   ) {
     const parsedAttack = parseOfficialCardText(source.attackText)
+    const hpOnlyFlip =
+      source.type === 'flip' &&
+      source.baseCardNumber === 'P-024' &&
+      Boolean(flip)
 
     return {
       ...base,
       type: 'cookie',
       level: source.level,
       hp: source.hp,
-      attack: parsedAttack?.damage ?? 1,
+      attack: parsedAttack?.damage ?? (hpOnlyFlip ? 0 : 1),
       attackCost: parsedAttack?.totalCost ?? 0,
       attackEnergyCost: parsedAttack?.cost ?? {},
+      ...(hpOnlyFlip ? { nonAttackable: true } : {}),
       attackText: source.attackText ?? undefined,
       ...(attackEffects ? { attackEffects: attackEffects satisfies CardEffect[] } : {}),
       ...(skill ? { skill } : {}),

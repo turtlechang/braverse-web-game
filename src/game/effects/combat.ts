@@ -128,26 +128,64 @@ export const getAttackDamageAgainst = (
   const defender = defenderOwner?.battleArea.find(
     (cookie) => cookie.card.instanceId === targetInstanceId,
   )
-  if (!defender || !defenderOwner || defender.card.skill?.trigger !== 'passive') {
-    return modifiedDamage
+  const damageAfterDefenderModifiers =
+    !defender || !defenderOwner || defender.card.skill?.trigger !== 'passive'
+      ? modifiedDamage
+      : defender.card.skill.effects
+          .filter(
+            (effect): effect is ModifyDamageReceivedEffect =>
+              effect.kind === 'modify-damage-received' &&
+              effect.target.sourceOnly === true &&
+              isEffectConditionMet(
+                state,
+                {
+                  sourcePlayerId: defenderOwner.id,
+                  sourceInstanceId: targetInstanceId,
+                },
+                effect,
+              ),
+          )
+          .reduce((damage, effect) => {
+            if (
+              effect.minimumDamage !== undefined &&
+              effect.setDamageTo !== undefined &&
+              damage >= effect.minimumDamage
+            ) {
+              return effect.setDamageTo
+            }
+            return Math.max(0, damage + effect.amount)
+          }, modifiedDamage)
+
+  const attackerOwner = Object.values(state.players).find((player) =>
+    player.battleArea.some(
+      (cookie) => cookie.card.instanceId === attackerInstanceId,
+    ),
+  )
+  const attacker = attackerOwner?.battleArea.find(
+    (cookie) => cookie.card.instanceId === attackerInstanceId,
+  )
+  if (
+    !attacker ||
+    !attackerOwner ||
+    attacker.card.skill?.trigger !== 'passive' ||
+    (attacker.card.skill.yourTurn && state.activePlayerId !== attackerOwner.id)
+  ) {
+    return damageAfterDefenderModifiers
   }
-  const passiveDamageModifiers = defender.card.skill.effects.filter(
-      (effect): effect is ModifyDamageReceivedEffect =>
-        effect.kind === 'modify-damage-received' &&
-        effect.target.sourceOnly === true &&
-        isEffectConditionMet(state, {
-          sourcePlayerId: defenderOwner.id,
-          sourceInstanceId: targetInstanceId,
-        }, effect),
+
+  const multiplier = attacker.card.skill.effects.reduce((total, effect) => {
+    if (effect.kind !== 'multiply-attack-damage') return total
+    return isEffectConditionMet(
+      state,
+      {
+        sourcePlayerId: attackerOwner.id,
+        sourceInstanceId: attackerInstanceId,
+      },
+      effect,
     )
-  return passiveDamageModifiers.reduce((damage, effect) => {
-      if (
-        effect.minimumDamage !== undefined &&
-        effect.setDamageTo !== undefined &&
-        damage >= effect.minimumDamage
-      ) {
-        return effect.setDamageTo
-      }
-      return Math.max(0, damage + effect.amount)
-    }, modifiedDamage)
+      ? total * effect.multiplier
+      : total
+  }, 1)
+
+  return Math.max(0, damageAfterDefenderModifiers * multiplier)
 }

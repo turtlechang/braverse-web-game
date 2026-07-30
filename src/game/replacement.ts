@@ -80,6 +80,9 @@ export const clearDepartedCookieModifiers = (state: GameState): GameState => {
     damageReceivedModifiers: state.damageReceivedModifiers.filter((modifier) =>
       livingCookieIds.has(modifier.targetInstanceId),
     ),
+    attackCostModifiers: (state.attackCostModifiers ?? []).filter((modifier) =>
+      livingCookieIds.has(modifier.targetInstanceId),
+    ),
   }
 }
 

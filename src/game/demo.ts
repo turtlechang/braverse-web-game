@@ -2092,8 +2092,11 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   const selfExtra1 = cardCheckFillerCookie('self-extra-1', 1, 4, 0, payColor)
 
   // Generous energy support to pay any skill/item/trap/stage energy cost.
-  const energySupports = Array.from({ length: 6 }, (_, i) =>
-    testSupportCard(`support-pay-${i}`, payColor),
+  const energySupportColors: EnergyColor[] = card.id === 'P-032'
+    ? ['red', 'yellow', 'green', 'blue', 'purple', 'red', 'yellow']
+    : Array.from({ length: 6 }, () => payColor)
+  const energySupports = energySupportColors.map((color, i) =>
+    testSupportCard(`support-pay-${i}`, color),
   )
   // Hand filler cards for discard-hand style costs, beyond the tested card.
   const handFillers = Array.from({ length: 4 }, (_, i) =>
@@ -2200,6 +2203,18 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   }
 
   if (card.type === 'stage') {
+    const stageBattleCookie = card.id === 'P-032'
+      ? { ...selfExtra1.cookie, keywords: ['ancient'] as ['ancient'] }
+      : selfExtra1.cookie
+    const stageHand = card.id === 'P-028'
+      ? [card, handCookieFiller, ...handFillers]
+      : [card, ...handFillers]
+    const stageBreakArea = card.id === 'P-028'
+      ? [
+          cardCheckFillerCookie('p028-break-lv1', 1, 2, 0, 'yellow').cookie,
+          ...ownBreakArea,
+        ]
+      : ownBreakArea
     const oldStage: GameCard = { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
     const state = baseState()
     return {
@@ -2208,10 +2223,11 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          hand: [card, ...handFillers],
-          battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+          hand: stageHand,
+          battleArea: [cardCheckBattleEntry(stageBattleCookie, selfExtra1.hpCards, 4)],
           supportArea: energySupports.map((c) => ({ card: c, rested: false })),
           stage: { card: oldStage, rested: false },
+          breakArea: stageBreakArea,
           discardPile: trashFillers,
         },
         'player-two': {

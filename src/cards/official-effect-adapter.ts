@@ -1569,6 +1569,50 @@ export const convertOfficialCardEffects = (
     'P-030': [
       { kind: 'damage-all', amount: 1, side: 'opponent' },
     ],
+    'P-017': [
+      {
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'support-area-decreased-this-turn' },
+      },
+    ],
+    'P-025': [
+      {
+        kind: 'multiply-attack-damage',
+        multiplier: 2,
+        condition: {
+          kind: 'distinct-named-family-count',
+          family: 'marzipan-cookie',
+          battleAreaCount: 2,
+          supportAreaCount: 4,
+        },
+      },
+    ],
+    'P-026': [
+      {
+        kind: 'multiply-attack-damage',
+        multiplier: 2,
+        condition: {
+          kind: 'distinct-named-family-count',
+          family: 'marzipan-cookie',
+          battleAreaCount: 2,
+          supportAreaCount: 4,
+        },
+      },
+    ],
+    'P-027': [
+      {
+        kind: 'multiply-attack-damage',
+        multiplier: 2,
+        condition: {
+          kind: 'distinct-named-family-count',
+          family: 'marzipan-cookie',
+          battleAreaCount: 2,
+          supportAreaCount: 4,
+        },
+      },
+    ],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -2374,6 +2418,34 @@ export const convertOfficialStageAbility = (
         target: { side: 'self', min: 0, max: 1 },
       },
     ],
+    'P-028': [
+      {
+        kind: 'hand-to-break',
+        amount: 1,
+        energyColor: 'yellow',
+        minLevel: 2,
+      },
+      {
+        kind: 'break-to-hand',
+        amount: 1,
+        energyColor: 'yellow',
+        maxLevel: 1,
+        optional: true,
+      },
+    ],
+    'P-032': [
+      {
+        kind: 'modify-attack-cost',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          keyword: 'ancient',
+        },
+        energyCost: { neutral: 1 },
+        duration: 'this-turn',
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -2389,6 +2461,8 @@ export const convertOfficialStageAbility = (
       energy: { red: 2 },
       trashBattleCookie: { count: 1, energyColor: 'red' },
     },
+    'P-028': { energy: { yellow: 1 } },
+    'P-032': { energy: { neutral: 2 } },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {
@@ -3046,6 +3120,16 @@ export const convertOfficialFlipAbility = (
     : card.cardNumber
 
   const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
+    'P-024': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    },
     'BS1-040': {
       effects: [
         {
@@ -3582,6 +3666,16 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'P-029': {
+      condition: { kind: 'friendly-cookie-fainted-this-battle' },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          energyColor: 'green',
+        },
+      ],
+    },
   }
 
   const exactTrap = exactTrapEffects[card.cardNumber]
@@ -3646,6 +3740,12 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   'P-030': { energy: {}, discardHand: 2 },
 }
 
+const exactCookieSkillSourceEnergy: Partial<
+  Record<string, CardSkill['sourceEnergy']>
+> = {
+  'P-017': { green: 1 },
+}
+
 /**
  * 通用觸發判斷靠 `{mob}`／`{ap}` 標記，但 BS3-025 的文字沒有這兩種標記
  * （只有 `{mt}`），只以「once per game」與「休息區」文意表達可主動發動，
@@ -3670,14 +3770,16 @@ const exactCookieSkillYourTurn: Partial<Record<string, boolean>> = {
 export const convertOfficialCookieSkill = (
   card: OfficialCardRecord,
 ): CardSkill | undefined => {
-  if (card.type !== 'cookie' || !card.skill.text) {
+  if ((card.type !== 'cookie' && card.type !== 'flip') || !card.skill.text) {
     return undefined
   }
 
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
-  const conversion = convertOfficialCardEffects(card)
+  const conversion = convertOfficialCardEffects(
+    card.type === 'flip' ? { ...card, type: 'cookie' } : card,
+  )
   const cost = exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
   const parsed = parseOfficialCardText(card.skill.text)
 
@@ -3703,6 +3805,9 @@ export const convertOfficialCookieSkill = (
     yourTurn: exactCookieSkillYourTurn[cardKey] ?? parsed.markers.includes('mt'),
     restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
     cost,
+    ...(exactCookieSkillSourceEnergy[cardKey]
+      ? { sourceEnergy: exactCookieSkillSourceEnergy[cardKey] }
+      : {}),
     text: conversion.sourceText,
     effects: conversion.effects,
     faint: FAINT_TRIGGER_PATTERN.test(card.skill.text),

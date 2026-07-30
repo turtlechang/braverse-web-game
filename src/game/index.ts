@@ -50,6 +50,7 @@ export type {
 export { maskGameStateForViewer } from './masked-state'
 export {
   getAttackEnergyCost,
+  getAttackEnergyCostForState,
   getEnergyCostTotal,
   getRemainingEnergyCost,
   isEnergyColorCompatibleWithCost,

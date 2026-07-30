@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
-  getAttackEnergyCost,
+  getAttackEnergyCostForState,
   getEnergyCostTotal,
   isEnergyColorCompatibleWithCost,
   validateEnergyPayment,
@@ -42,7 +42,7 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
     (cookie) => cookie.card.instanceId === selectedAttackerId,
   )
   const selectedAttackCost = selectedAttacker
-    ? getAttackEnergyCost(selectedAttacker.card)
+    ? getAttackEnergyCostForState(game, selectedAttacker.card.instanceId)
     : {}
 
   const attackPaymentTargetIds = useMemo(() => {
@@ -51,7 +51,7 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
       (cookie) => cookie.card.instanceId === selectedAttackerId,
     )
     if (!attacker) return new Set<string>()
-    const cost = getAttackEnergyCost(attacker.card)
+    const cost = getAttackEnergyCostForState(game, attacker.card.instanceId)
     const totalCost = getEnergyCostTotal(cost)
     if (totalCost <= 0) return new Set<string>()
     return new Set(
@@ -85,7 +85,7 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
         const isSelected = current.includes(instanceId)
         if (!isSelected) {
           const cost = selectedAttacker
-            ? getAttackEnergyCost(selectedAttacker.card)
+            ? getAttackEnergyCostForState(game, selectedAttacker.card.instanceId)
             : {}
           const totalCost = getEnergyCostTotal(cost)
           if (current.length >= totalCost) return current
@@ -103,7 +103,7 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
           : [...current, instanceId]
       })
     },
-    [selectedAttacker, activePlayer.supportArea],
+    [selectedAttacker, activePlayer.supportArea, game],
   )
 
   const handleAttackTarget = useCallback(

@@ -118,11 +118,18 @@ export const convertOfficialCardToGameCard = (
       }
     }
 
+    const hpOnlyFlip =
+      card.type === 'flip' &&
+      card.baseCardNumber === 'P-024' &&
+      Boolean(flip)
+
     if (!parsedText.attack || parsedText.attack.damage === null) {
-      return {
-        status: 'unsupported',
-        cardNumber: card.cardNumber,
-        reason: 'missing-attack-definition',
+      if (!hpOnlyFlip) {
+        return {
+          status: 'unsupported',
+          cardNumber: card.cardNumber,
+          reason: 'missing-attack-definition',
+        }
       }
     }
 
@@ -140,9 +147,10 @@ export const convertOfficialCardToGameCard = (
       type: 'cookie',
       level: card.level,
       hp: card.hp,
-      attack: parsedText.attack.damage,
-      attackCost: parsedText.attack.totalCost,
-      attackEnergyCost: parsedText.attack.cost,
+      attack: parsedText.attack?.damage ?? 0,
+      attackCost: parsedText.attack?.totalCost ?? 0,
+      attackEnergyCost: parsedText.attack?.cost ?? {},
+      ...(hpOnlyFlip ? { nonAttackable: true } : {}),
       attackText: card.attackText ?? undefined,
       ...effectData,
       ...(skill ? { skill } : {}),

@@ -5,6 +5,7 @@ import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
 } from '../replacement'
+import { markSupportAreaDecreased } from '../skills'
 import { getRefreshCandidates } from '../refresh'
 import type {
   CardEffect,
@@ -238,17 +239,6 @@ const getExpirationTurn = (
     ? state.turnNumber
     : state.turnNumber + 1
 }
-
-const markSupportAreaDecreased = (
-  state: GameState,
-  playerId: PlayerId,
-): GameState => ({
-  ...state,
-  supportAreaDecreasedThisTurn: {
-    ...(state.supportAreaDecreasedThisTurn ?? {}),
-    [playerId]: true,
-  },
-})
 
 const isEffectDamagePrevented = (
   state: GameState,
@@ -1193,10 +1183,10 @@ export const executeCardEffect = (
         ...player.discardPile,
         ...selected.map((support) => support.card),
       ],
-    }), targetPlayerId)
+    }), targetPlayerId, { triggerSkill: selected.length > 0 })
   }
 
-    if (effect.kind === 'support-to-hand') {
+  if (effect.kind === 'support-to-hand') {
     const player = state.players[context.sourcePlayerId]
     const uniqueIds = [...new Set(selectedTargetIds)]
     if (uniqueIds.length !== effect.amount) {
@@ -1274,7 +1264,7 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'trash-to-battle') {
-    const candidates = getTrashCookieCandidates(state, context)
+    const candidates = getTrashCookieCandidates(state, context, effect)
     const uniqueIds = [...new Set(selectedTargetIds)]
     if (uniqueIds.length !== effect.amount) {
       throw new GameRuleError(`必須選擇 ${effect.amount} 張棄牌區餅乾。`)
@@ -2293,7 +2283,8 @@ export const executeCardEffect = (
 
   if (
     effect.kind === 'optional-cost-attack' ||
-    effect.kind === 'disable-block'
+    effect.kind === 'disable-block' ||
+    effect.kind === 'multiply-attack-damage'
   ) {
     if (effect.kind === 'disable-block') {
       const opponentId = context.sourcePlayerId === 'player-one' ? 'player-two' : 'player-one'
@@ -2482,6 +2473,21 @@ export const executeCardEffect = (
         ? effect.setDamageTo
         : undefined,
   }))
+
+  if (effect.kind === 'modify-attack-cost') {
+    return {
+      ...state,
+      attackCostModifiers: [
+        ...(state.attackCostModifiers ?? []),
+        ...targets.map((target) => ({
+          sourceInstanceId: context.sourceInstanceId,
+          targetInstanceId: target.card.instanceId,
+          energyCost: { ...effect.energyCost },
+          expiresAfterTurn: getExpirationTurn(state, effect.duration),
+        })),
+      ],
+    }
+  }
 
   return effect.kind === 'modify-attack' ||
     effect.kind === 'modify-attack-by-break-count'

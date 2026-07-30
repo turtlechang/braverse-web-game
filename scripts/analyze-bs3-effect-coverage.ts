@@ -161,7 +161,7 @@ export const createBs3EffectCoverageMarkdown = (
 
 > 以 \`npm run cards:analyze:bs3-candidate\` 重新生成。
 >
-> 此文件只追蹤 runtime adapter 的轉接狀態；不代表候選卡已可 promote。
+> 此文件只追蹤 runtime adapter 的轉接狀態；目前 BS3 已正式 promote 至 \`data/cards/\`，本報表不取代 \`validate:cards\` 與 \`check:card-pool\` 的正式卡池驗證。
 
 ## 摘要
 
@@ -189,7 +189,7 @@ ${tableRows(report.pendingAbilityCards) || '| — | — | — | — |'}
 
 1. 先依此盤點選擇可由既有 runtime 表達的一小批卡牌。
 2. 涉及附著、未知標記或新狀態區的卡牌保持候選，先確認官方規則後另開引擎切片。
-3. 全部效果、時機與候選驗證均完成前，\`data/candidates\` 的 BS3 資料仍維持 \`inventory\`，不得 promote。
+3. BS3 已完成首次 promote；若官方新版本重新匯入，新增候選資料仍須維持 \`inventory\`，完成 runtime 轉接與嚴格驗證後才可 promote。
 `
 
 export const writeBs3EffectCoverage = async (

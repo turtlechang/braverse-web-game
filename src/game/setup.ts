@@ -75,6 +75,7 @@ export const createGame = (
     skillUsesThisTurn: [],
     nextBattleEntrySequence: 1,
     attackModifiers: [],
+    attackCostModifiers: [],
     damageReceivedModifiers: [],
     flipDisabledUntilTurn: {},
     attackDisabledUntilTurn: {},

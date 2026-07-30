@@ -34,6 +34,8 @@ export interface CardSkill {
   cost: AbilityCost
   text: string
   effects: CardEffect[]
+  /** Energy supplied by the Cookie itself when a triggered skill is used. */
+  sourceEnergy?: EnergyCost
   faint?: boolean
   endPhase?: boolean
   afterDamage?: boolean
@@ -104,6 +106,8 @@ export interface CookieCard extends BaseCard {
   attack: number
   attackCost: number
   attackEnergyCost?: EnergyCost
+  /** Some official FLIP cards can be attached as HP but have no attack. */
+  nonAttackable?: boolean
   attackText?: string
   attackEffects?: CardEffect[]
 }
@@ -147,6 +151,8 @@ export interface EffectTargetSelector {
   excludeAttackTarget?: boolean
   /** 只有休息中的餅乾是合法目標，用於「設為活躍」類效果。 */
   restedOnly?: boolean
+  /** Restrict Cookie targets to cards carrying an official runtime keyword. */
+  keyword?: CardKeyword
 }
 
 export interface BreakLevelCondition {
@@ -237,6 +243,13 @@ export interface SupportKeywordAtLeastCondition {
   count: number
 }
 
+export interface DistinctNamedFamilyCountCondition {
+  kind: 'distinct-named-family-count'
+  family: 'marzipan-cookie'
+  battleAreaCount: number
+  supportAreaCount: number
+}
+
 export interface AnyBattleAreaHasBlockerCondition {
   kind: 'any-battle-area-has-blocker'
 }
@@ -258,6 +271,7 @@ export type EffectCondition =
   | SourceInBreakAreaCondition
   | OpponentCookieFaintedInCurrentBattleCondition
   | SupportKeywordAtLeastCondition
+  | DistinctNamedFamilyCountCondition
   | AnyBattleAreaHasBlockerCondition
   | BreakLevelHigherThanOpponentCondition
 
@@ -318,6 +332,20 @@ export interface ModifyAttackEffect {
   amount: number
   duration: EffectDuration
   target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+export interface ModifyAttackCostEffect {
+  kind: 'modify-attack-cost'
+  target: EffectTargetSelector
+  energyCost: EnergyCost
+  duration: EffectDuration
+  condition?: EffectCondition
+}
+
+export interface MultiplyAttackDamageEffect {
+  kind: 'multiply-attack-damage'
+  multiplier: number
   condition?: EffectCondition
 }
 
@@ -472,6 +500,7 @@ export interface BattleToSupportEffect {
 export interface TrashToBattleEffect {
   kind: 'trash-to-battle'
   amount: number
+  energyColor?: EnergyColor
 }
 
 export interface SupportToHandEffect {
@@ -835,6 +864,8 @@ export type CardEffect =
   | DamageByBreakCountEffect
   | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
+  | ModifyAttackCostEffect
+  | MultiplyAttackDamageEffect
   | ModifyDamageReceivedEffect
   | DrawEffect
   | DrawUpToEffect
@@ -907,6 +938,7 @@ export type TargetedCardEffect =
   | DamageByBreakCountEffect
   | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
+  | ModifyAttackCostEffect
   | ModifyDamageReceivedEffect
   | PreventKnockoutEffect
   | PreventEffectDamageEffect
@@ -1009,6 +1041,9 @@ export type TrapCondition =
       minLevel?: number
     }
   | {
+      kind: 'friendly-cookie-fainted-this-battle'
+    }
+  | {
       kind: 'self-cookie-hp-equals'
       amount: number
     }
@@ -1028,6 +1063,13 @@ export interface AttackModifier {
   sourceInstanceId: string
   targetInstanceId: string
   amount: number
+  expiresAfterTurn: number | null
+}
+
+export interface AttackCostModifier {
+  sourceInstanceId: string
+  targetInstanceId: string
+  energyCost: EnergyCost
   expiresAfterTurn: number | null
 }
 
@@ -1174,6 +1216,7 @@ export interface GameState {
   skillUsesThisGame?: string[]
   nextBattleEntrySequence: number
   attackModifiers: AttackModifier[]
+  attackCostModifiers?: AttackCostModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   flipDisabledUntilTurn?: Record<string, number>
   attackDisabledUntilTurn?: Record<string, number>
@@ -1255,6 +1298,9 @@ export interface GameState {
     sourceInstanceId: string
     sourceCardName: string
     effectText: string
+    sourceKind?: 'stage' | 'cookie-skill'
+    effects?: CardEffect[]
+    sourceEnergy?: EnergyCost
   } | null
   /**
    * 技能/道具/場景卡多效果的逐步待處理效果鏈。中途若出現其他待處理決策
@@ -1321,7 +1367,8 @@ export interface PendingBattle {
     playerId: PlayerId
     sourceInstanceId: string
     sourceCardName: string
-    color: EnergyColor
+    color?: EnergyColor
+    anyFriendlyCookie?: boolean
     /** 對應 TrapCondition 的 minLevel；設定時改以 faintedCookies 判定擁有者與等級。 */
     minLevel?: number
     effects: CardEffect[]

@@ -15,7 +15,10 @@ import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
 } from './replacement'
-import { payTrashBattleCookieCost } from './skills'
+import {
+  markSupportAreaDecreased,
+  payTrashBattleCookieCost,
+} from './skills'
 import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
 import type {
   AbilityCost,
@@ -89,17 +92,6 @@ export interface AbilityPaymentOptions {
   trashBattleCookieIds?: string[]
   sourceInstanceId?: string
 }
-
-const markSupportAreaDecreased = (
-  state: GameState,
-  playerId: PlayerId,
-): GameState => ({
-  ...state,
-  supportAreaDecreasedThisTurn: {
-    ...(state.supportAreaDecreasedThisTurn ?? {}),
-    [playerId]: true,
-  },
-})
 
 const getHpToTrashCostCandidates = (
   cost: AbilityCost,
@@ -340,7 +332,9 @@ const payAbilityCost = (
   }
 
   if (supportToTrashIds.length > 0 || supportToHandIds.length > 0) {
-    nextState = markSupportAreaDecreased(nextState, playerId)
+    nextState = markSupportAreaDecreased(nextState, playerId, {
+      triggerSkill: supportToTrashIds.length > 0,
+    })
   }
 
   return departedCount > 0
