@@ -373,6 +373,80 @@ describe('BS3-115 Soul Jam: Light of Resolution blocks opponent targeting', () =
         ['defender'],
       ),
     ).toThrow()
+  }  )
+})
+
+/**
+ * BS3-019《靈魂果醬:熱情之光》裝載後：「那隻餅乾攻擊力 +1」。
+ * attackBonus: 1 寫入 attackModifiers，由 getEffectiveAttack 計算。
+ */
+describe('BS3-019 Soul Jam: Light of Passion grants +1 attack', () => {
+  it('adds attackBonus: 1 to attackModifiers when equipped', () => {
+    const hollyberry = asCookie('BS3-017')
+    const soulJam = convertOfficialCardToGameCard(findBs3Card('BS3-019'))
+    if (soulJam.status !== 'converted') throw new Error('Soul Jam must convert.')
+
+    const state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: hollyberry,
+    }
+    state.players['player-two'].discardPile = [soulJam.gameCard]
+
+    const result = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: soulJam.gameCard.instanceId,
+      },
+      equipSourceEffect('BS3-019'),
+      [hollyberry.instanceId],
+    )
+
+    expect(result.attackModifiers).toEqual([
+      {
+        sourceInstanceId: soulJam.gameCard.instanceId,
+        targetInstanceId: hollyberry.instanceId,
+        amount: 1,
+        expiresAfterTurn: null,
+      },
+    ])
+  })
+
+  it('increases effective attack damage by 1', () => {
+    const hollyberry = asCookie('BS3-017')
+    const soulJam = convertOfficialCardToGameCard(findBs3Card('BS3-019'))
+    if (soulJam.status !== 'converted') throw new Error('Soul Jam must convert.')
+
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: hollyberry,
+      hpCards: [item('hb-hp')],
+    }
+    state.players['player-two'].discardPile = [soulJam.gameCard]
+    state.players['player-two'].supportArea = [
+      { card: item('atk-pay-1', 'red'), rested: false },
+      { card: item('atk-pay-2', 'red'), rested: false },
+      { card: item('atk-pay-3', 'red'), rested: false },
+    ]
+
+    state = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: soulJam.gameCard.instanceId,
+      },
+      equipSourceEffect('BS3-019'),
+      [hollyberry.instanceId],
+    )
+
+    const attacked = beginAttack(state, hollyberry.instanceId, 'defender', [
+      'atk-pay-1',
+      'atk-pay-2',
+      'atk-pay-3',
+    ])
+    expect(attacked.pendingBattle?.declaredDamage).toBe(hollyberry.attack + 1)
   })
 })
 

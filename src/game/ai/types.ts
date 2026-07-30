@@ -42,6 +42,7 @@ export type AiActionType =
   | 'resolve-after-damage'
   | 'resolve-effect-order'
   | 'resolve-inspect-deck'
+  | 'resolve-reveal-top-deck'
   | 'resolve-optional-cost-attack'
   | 'resolve-stage-trigger'
   | 'error'

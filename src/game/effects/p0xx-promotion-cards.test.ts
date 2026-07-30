@@ -1,6 +1,19 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { executeCardEffect, type CardEffect, type EffectContext, type GameState } from '..'
+import {
+  advancePhase,
+  applyGameCommand,
+  beginAttack,
+  executeCardEffect,
+  getAttackDamageAgainst,
+  getAttackEnergyCostForState,
+  playTrap,
+  resolveBattleAutomatically,
+  resolveFlip,
+  type CardEffect,
+  type EffectContext,
+  type GameState,
+} from '..'
 import { convertOfficialCardToGameCard } from '../../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../../cards/types'
 import { isEffectConditionMet } from '../effects/targeting'
@@ -128,9 +141,59 @@ const P0XX_FIXTURES: Record<string, OfficialCardRecord> = {
     cardNumber: 'P-031', type: 'trap', officialType: 'TRAP', energyType: 'PURPLE', color: 'PURPLE',
     attackText: "<{P}{P}> If there are 15 cards or more in your trash, select up to 1 of your opponent's LV.3 Cookies. During this turn, that Cookie deals -1 attack damage. Then, place up to 1 of that Cookie's top HP card in the trash.",
   }),
+  'P-017': makeOfficialCard({
+    cardNumber: 'P-017', level: 1, hp: 3, energyType: 'GREEN', color: 'GREEN',
+    name: 'Purple Yam Cookie',
+    skill: { name: null, text: '{mt} {t1} If a card from your support area is placed in your trash, <can be used as {G}.> Take 1 card from the top of your deck and place it in your support area as rested.' },
+    attackText: '<{G}{G}> Deals 1 damage.',
+  }),
+  'P-024': makeOfficialCard({
+    cardNumber: 'P-024', type: 'flip', officialType: 'FLIP', level: 2, hp: 2,
+    energyType: 'RED', color: 'RED', name: 'Caramel Choux Cookie',
+    flipText: '<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.',
+    attackText: null,
+  }),
+  'P-025': makeOfficialCard({
+    cardNumber: 'P-025', type: 'flip', officialType: 'FLIP', level: 3, hp: 3,
+    energyType: 'YELLOW', color: 'YELLOW', name: 'Marzipan Cookie 2',
+    skill: { name: '{sk} Protect. Protect.', text: 'If you have 2 different kinds of [Marzipan Cookie] cards in your battle area and 4 different kinds of [Marzipan Cookie] cards in your support area, this Cookie gains x2 attack damage.' },
+    attackText: '<{Y}{Y}{Y}> Containment Protocol {da} 3',
+    flipText: 'Draw up to 1 card from your deck.',
+  }),
+  'P-026': makeOfficialCard({
+    cardNumber: 'P-026', type: 'flip', officialType: 'FLIP', level: 3, hp: 3,
+    energyType: 'YELLOW', color: 'YELLOW', name: 'Marzipan Cookie 3',
+    skill: { name: '{sk} Protect. Protect.', text: 'If you have 2 different kinds of [Marzipan Cookie] cards in your battle area and 4 different kinds of [Marzipan Cookie] cards in your support area, this Cookie gains x2 attack damage.' },
+    attackText: '<{Y}{Y}{Y}> Containment Protocol {da} 3',
+    flipText: 'Draw up to 1 card from your deck.',
+  }),
+  'P-027': makeOfficialCard({
+    cardNumber: 'P-027', type: 'flip', officialType: 'FLIP', level: 3, hp: 3,
+    energyType: 'YELLOW', color: 'YELLOW', name: 'Marzipan Cookie 4',
+    skill: { name: '{sk} Protect. Protect.', text: 'If you have 2 different kinds of [Marzipan Cookie] cards in your battle area and 4 different kinds of [Marzipan Cookie] cards in your support area, this Cookie gains x2 attack damage.' },
+    attackText: '<{Y}{Y}{Y}> Containment Protocol {da} 3',
+    flipText: 'Draw up to 1 card from your deck.',
+  }),
+  'P-028': makeOfficialCard({
+    cardNumber: 'P-028', type: 'stage', officialType: 'STAGE', energyType: 'YELLOW', color: 'YELLOW',
+    name: 'Golden Cheese Warehouse',
+    skill: { name: null, text: '<{Y}{Y}> Place in your stage area.' },
+    attackText: '{mob} <{Y}> <Rest this card.> <Place 1 {Y} LV.2 or higher Cookie from your hand into your break area.> Return up to 1 {Y} LV.1 Cookie from your break area to your hand.',
+  }),
+  'P-029': makeOfficialCard({
+    cardNumber: 'P-029', type: 'trap', officialType: 'TRAP', energyType: 'GREEN', color: 'GREEN',
+    name: 'Ritual of Life',
+    attackText: '<{G}{G}> If your Cookie faints during this battle, play 1 {G} Cookie from your trash.',
+  }),
+  'P-032': makeOfficialCard({
+    cardNumber: 'P-032', type: 'stage', officialType: 'STAGE', energyType: 'MIX', color: 'PURE',
+    name: 'Hall of Ancient Heroes',
+    skill: { name: null, text: '<{R}{Y}{G}{B}{P}> Place in your stage area.' },
+    attackText: '{mob} <{N}{N}> <Rest this card.> Select up to 1 of your [Ancient] Cookies in your battle area. During this turn, that Cookie\'s attack costs are all changed to {N}.',
+  }),
 }
 
-describe('P-0XX promotion candidate conversion (first slice, 19 of 26 cards)', () => {
+describe('P-0XX promotion card conversion (all 26 cards)', () => {
   it.each(Object.keys(P0XX_FIXTURES))(
     '%s converts without error and produces at least one effect',
     (cardNumber) => {
@@ -144,6 +207,7 @@ describe('P-0XX promotion candidate conversion (first slice, 19 of 26 cards)', (
           gameCard.flip ||
           gameCard.item?.effects.length ||
           gameCard.trap?.effects.length ||
+          gameCard.stageAbility?.effects.length ||
           (gameCard.type === 'cookie' && gameCard.attackEffects?.length),
       )
       expect(hasAnyEffectPayload).toBe(true)
@@ -297,5 +361,452 @@ describe('break-level-higher-than-opponent condition (P-009)', () => {
       },
     }
     expect(isEffectConditionMet(higherBreak, context, effect)).toBe(true)
+  })
+})
+
+const getP0xxGameCard = (cardNumber: string) => {
+  const conversion = convertOfficialCardToGameCard(P0XX_FIXTURES[cardNumber])
+  if (conversion.status !== 'converted') {
+    throw new Error(`${cardNumber} should convert to a GameCard.`)
+  }
+  return conversion.gameCard
+}
+
+describe('P-017 passive support-area trigger', () => {
+  it('queues the skill after support-to-trash and resolves it once per turn', () => {
+    const p017 = getP0xxGameCard('P-017')
+    if (p017.type !== 'cookie') throw new Error('P-017 should be a Cookie.')
+
+    let state: GameState = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [],
+          deck: [item('p017-top-a', 'blue'), item('p017-top-b', 'red')],
+          battleArea: [
+            {
+              card: p017,
+              hpCards: [item('p017-hp')],
+              rested: false,
+              battleEntryId: 'p017:battle:1',
+            },
+          ],
+          supportArea: [
+            { card: item('p017-trash-a', 'green'), rested: false },
+            { card: item('p017-trash-b', 'yellow'), rested: false },
+          ],
+        },
+      },
+    }
+
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: p017.instanceId,
+      sourceCardName: p017.name,
+    }
+    state = executeCardEffect(
+      state,
+      context,
+      { kind: 'support-to-trash', amount: 1 },
+      ['p017-trash-a'],
+    )
+
+    expect(state.pendingStageTrigger).toMatchObject({
+      sourceKind: 'cookie-skill',
+      sourceInstanceId: p017.instanceId,
+    })
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-stage-trigger',
+      playerId: 'player-two',
+      action: 'activate',
+    })
+
+    expect(state.pendingStageTrigger).toBeFalsy()
+    expect(state.players['player-two'].supportArea).toContainEqual({
+      card: expect.objectContaining({ instanceId: 'p017-top-a' }),
+      rested: true,
+    })
+    expect(state.skillUsesThisTurn).toContain('p017:battle:1')
+
+    state = executeCardEffect(
+      state,
+      context,
+      { kind: 'support-to-trash', amount: 1 },
+      ['p017-trash-b'],
+    )
+    expect(state.pendingStageTrigger).toBeFalsy()
+    expect(state.players['player-two'].supportArea).not.toContainEqual(
+      expect.objectContaining({ card: expect.objectContaining({ instanceId: 'p017-trash-b' }) }),
+    )
+  })
+
+  it('records support-area decrease without triggering when a support card returns to hand', () => {
+    const p017 = getP0xxGameCard('P-017')
+    if (p017.type !== 'cookie') throw new Error('P-017 should be a Cookie.')
+
+    let state: GameState = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [
+            {
+              card: p017,
+              hpCards: [item('p017-hand-hp')],
+              rested: false,
+              battleEntryId: 'p017:hand:battle',
+            },
+          ],
+          supportArea: [{ card: item('p017-return'), rested: false }],
+        },
+      },
+    }
+
+    state = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: p017.instanceId,
+      },
+      { kind: 'support-to-hand', amount: 1 },
+      ['p017-return'],
+    )
+
+    expect(state.supportAreaDecreasedThisTurn?.['player-two']).toBe(true)
+    expect(state.pendingStageTrigger).toBeFalsy()
+  })
+})
+
+describe('P-024 HP-only FLIP', () => {
+  it('discards its activation cost and adds one HP to the attached Cookie', () => {
+    const p024 = getP0xxGameCard('P-024')
+    if (p024.type !== 'cookie') throw new Error('P-024 should be a Cookie.')
+
+    let state: GameState = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          deck: [item('p024-new-hp')],
+          hand: [item('p024-discard')],
+          battleArea: state.players['player-one'].battleArea.map((cookie) => ({
+            ...cookie,
+            hpCards: [item('p024-existing-hp')],
+          })),
+        },
+      },
+    }
+    state = beginAttack(state, 'attacker', 'defender', ['p2-support'])
+    state = {
+      ...state,
+      pendingBattle: {
+        ...state.pendingBattle!,
+        stage: 'flip',
+        damagePlayerId: 'player-one',
+        damageTargetInstanceId: 'defender',
+        revealedHpCard: p024,
+        remainingDamage: 1,
+      },
+    }
+
+    state = resolveFlip(state, 'player-one', {
+      activate: true,
+      discardHandIds: ['p024-discard'],
+    })
+
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    expect(state.players['player-one'].deck).toHaveLength(0)
+    expect(state.players['player-one'].discardPile.map((card) => card.instanceId)).toEqual(
+      expect.arrayContaining(['p024-discard', p024.instanceId]),
+    )
+  })
+
+  it('cannot be declared as an attacker', () => {
+    const p024 = getP0xxGameCard('P-024')
+    if (p024.type !== 'cookie') throw new Error('P-024 should be a Cookie.')
+
+    const state: GameState = {
+      ...createBattleState(),
+      players: {
+        ...createBattleState().players,
+        'player-two': {
+          ...createBattleState().players['player-two'],
+          battleArea: [
+            {
+              card: p024,
+              hpCards: [item('p024-attacker-hp')],
+              rested: false,
+              battleEntryId: 'p024:battle:1',
+            },
+          ],
+        },
+      },
+    }
+
+    expect(() => beginAttack(state, p024.instanceId, 'defender', ['p2-support'])).toThrow(
+      'Invalid battle action.',
+    )
+  })
+})
+
+describe('P-025/P-026/P-027 Marzipan FLIP skills', () => {
+  it('doubles attack damage only when both distinct-name requirements are met', () => {
+    const p025 = getP0xxGameCard('P-025')
+    const p026 = getP0xxGameCard('P-026')
+    const p027 = getP0xxGameCard('P-027')
+    if (p025.type !== 'cookie' || p026.type !== 'cookie' || p027.type !== 'cookie') {
+      throw new Error('Marzipan cards should convert to Cookie cards.')
+    }
+
+    const marzipanSupport = (instanceId: string, name: string) => ({
+      card: {
+        ...cookie(instanceId, 1, 2),
+        name,
+        energyColor: 'yellow' as const,
+        level: 3,
+      },
+      rested: false,
+    })
+
+    let state: GameState = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [
+            {
+              card: p025,
+              hpCards: [item('p025-hp')],
+              rested: false,
+              battleEntryId: 'p025:battle:1',
+            },
+            {
+              card: p026,
+              hpCards: [item('p026-hp')],
+              rested: false,
+              battleEntryId: 'p026:battle:2',
+            },
+          ],
+          supportArea: [
+            marzipanSupport('marzipan-base', 'Marzipan Cookie'),
+            marzipanSupport('marzipan-2', 'Marzipan Cookie 2'),
+            marzipanSupport('marzipan-3', 'Marzipan Cookie 3'),
+            marzipanSupport('marzipan-4', 'Marzipan Cookie 4'),
+          ],
+        },
+      },
+    }
+
+    for (const card of [p025, p026, p027]) {
+      expect(card.skill?.effects.some((effect) => effect.kind === 'multiply-attack-damage')).toBe(true)
+    }
+    expect(getAttackDamageAgainst(state, p025.instanceId, 'defender')).toBe(6)
+
+    const missingSupport = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          supportArea: state.players['player-two'].supportArea.slice(0, 3),
+        },
+      },
+    }
+    expect(getAttackDamageAgainst(missingSupport, p025.instanceId, 'defender')).toBe(3)
+  })
+})
+
+describe('P-028 Golden Cheese Warehouse', () => {
+  it('moves a yellow LV.2 Cookie from hand to break and returns a yellow LV.1 Cookie', () => {
+    const p028 = getP0xxGameCard('P-028')
+    if (p028.type !== 'stage') throw new Error('P-028 should be a Stage.')
+    const handLv2 = { ...cookie('p028-hand-lv2', 1, 4), energyColor: 'yellow' as const, level: 2 }
+    const breakLv1 = { ...cookie('p028-break-lv1', 1, 2), energyColor: 'yellow' as const, level: 1 }
+
+    let state: GameState = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [p028, handLv2],
+          breakArea: [breakLv1],
+          supportArea: [
+            { card: item('p028-place-a', 'yellow'), rested: false },
+            { card: item('p028-place-b', 'yellow'), rested: false },
+            { card: item('p028-activate', 'yellow'), rested: false },
+          ],
+        },
+      },
+    }
+
+    state = applyGameCommand(state, {
+      kind: 'play-stage',
+      playerId: 'player-two',
+      instanceId: p028.instanceId,
+      paymentIds: ['p028-place-a', 'p028-place-b'],
+    })
+    state = applyGameCommand(state, {
+      kind: 'activate-stage',
+      playerId: 'player-two',
+      paymentIds: ['p028-activate'],
+      effectTargets: [[handLv2.instanceId], [breakLv1.instanceId]],
+    })
+
+    expect(state.players['player-two'].stage?.rested).toBe(true)
+    expect(state.players['player-two'].breakArea.map((card) => card.instanceId)).toEqual([
+      handLv2.instanceId,
+    ])
+    expect(state.players['player-two'].hand.map((card) => card.instanceId)).toContain(
+      breakLv1.instanceId,
+    )
+  })
+})
+
+describe('P-029 Ritual of Life', () => {
+  it('waits for a friendly faint and then plays a green Cookie from the trash', () => {
+    const p029 = getP0xxGameCard('P-029')
+    if (p029.type !== 'trap') throw new Error('P-029 should be a Trap.')
+    const greenTrashCookie = {
+      ...cookie('p029-green-trash', 1, 2),
+      energyColor: 'green' as const,
+    }
+
+    let state: GameState = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [p029],
+          deck: [item('p029-hp-a'), item('p029-hp-b'), item('p029-hp-c')],
+          battleArea: [
+            {
+              ...state.players['player-one'].battleArea[0],
+              hpCards: [item('p029-target-hp')],
+            },
+            {
+              card: cookie('p029-alive', 1, 2),
+              hpCards: [item('p029-alive-hp')],
+              rested: false,
+              battleEntryId: 'p029:alive:battle',
+            },
+          ],
+          supportArea: [
+            { card: item('p029-cost-a', 'green'), rested: false },
+            { card: item('p029-cost-b', 'green'), rested: false },
+          ],
+          discardPile: [greenTrashCookie],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          supportArea: [{ card: item('p029-attack-cost', 'red'), rested: false }],
+        },
+      },
+    }
+
+    state = beginAttack(state, 'attacker', 'defender', ['p029-attack-cost'])
+    state = playTrap(state, 'player-one', {
+      trapInstanceId: p029.instanceId,
+      paymentIds: ['p029-cost-a', 'p029-cost-b'],
+      targetIds: [],
+    })
+    expect(state.pendingBattle?.delayedTrap?.anyFriendlyCookie).toBe(true)
+
+    state = resolveBattleAutomatically(state)
+    expect(state.pendingBattle).toBeNull()
+    expect(state.pendingAbilityEffect?.effects[0]).toMatchObject({
+      kind: 'trash-to-battle',
+      energyColor: 'green',
+    })
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [greenTrashCookie.instanceId],
+    })
+
+    expect(state.pendingAbilityEffect).toBeFalsy()
+    expect(state.players['player-one'].battleArea).toContainEqual(
+      expect.objectContaining({ card: expect.objectContaining({ instanceId: greenTrashCookie.instanceId }) }),
+    )
+  })
+})
+
+describe('P-032 Hall of Ancient Heroes', () => {
+  it('changes an Ancient Cookie attack cost to neutral for this turn only', () => {
+    const p032 = getP0xxGameCard('P-032')
+    if (p032.type !== 'stage') throw new Error('P-032 should be a Stage.')
+    const ancient = {
+      ...cookie('p032-ancient', 2, 3),
+      name: 'Ancient Cookie',
+      keywords: ['ancient'] as ['ancient'],
+      attackEnergyCost: { red: 2 },
+      attackCost: 2,
+    }
+
+    let state: GameState = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [p032],
+          battleArea: [
+            {
+              card: ancient,
+              hpCards: [item('p032-ancient-hp')],
+              rested: false,
+              battleEntryId: 'p032:ancient:battle',
+            },
+          ],
+          supportArea: [
+            { card: item('p032-red', 'red'), rested: false },
+            { card: item('p032-yellow', 'yellow'), rested: false },
+            { card: item('p032-green', 'green'), rested: false },
+            { card: item('p032-blue', 'blue'), rested: false },
+            { card: item('p032-purple', 'purple'), rested: false },
+            { card: item('p032-activate-a', 'red'), rested: false },
+            { card: item('p032-activate-b', 'yellow'), rested: false },
+          ],
+        },
+      },
+    }
+
+    state = applyGameCommand(state, {
+      kind: 'play-stage',
+      playerId: 'player-two',
+      instanceId: p032.instanceId,
+      paymentIds: ['p032-red', 'p032-yellow', 'p032-green', 'p032-blue', 'p032-purple'],
+    })
+    state = applyGameCommand(state, {
+      kind: 'activate-stage',
+      playerId: 'player-two',
+      paymentIds: ['p032-activate-a', 'p032-activate-b'],
+      effectTargets: [[ancient.instanceId]],
+    })
+
+    expect(getAttackEnergyCostForState(state, ancient.instanceId)).toEqual({ neutral: 1 })
+    expect(state.attackCostModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: ancient.instanceId, energyCost: { neutral: 1 } }),
+    )
+
+    state = advancePhase(state)
+    state = advancePhase(state)
+    expect(state.attackCostModifiers).toEqual([])
+    expect(getAttackEnergyCostForState(state, ancient.instanceId)).toEqual({ red: 2 })
   })
 })

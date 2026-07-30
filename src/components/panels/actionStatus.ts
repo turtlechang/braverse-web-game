@@ -4,7 +4,7 @@ import type {
   PlayerId,
   PendingBattleStage,
 } from '../../game'
-import { getAttackEnergyCost, getEnergyCostTotal } from '../../game'
+import { getAttackEnergyCostForState, getEnergyCostTotal } from '../../game'
 import { phaseLabels } from '../gameUiLabels'
 import { buildActionProgress } from './actionProgress'
 import type {
@@ -167,6 +167,7 @@ const pendingActor = (game: GameState): PlayerId | null => {
   if (game.pendingOnPlay) return game.pendingOnPlay.playerId
   if (game.pendingOpponentHandDiscard) return game.pendingOpponentHandDiscard.playerId
   if (game.pendingInspectDeck) return game.pendingInspectDeck.playerId
+  if (game.pendingRevealTopDeck) return game.pendingRevealTopDeck.playerId
   if (game.pendingOptionalCostAttack) return game.pendingOptionalCostAttack.playerId
   if (game.pendingDrawUpTo) return game.pendingDrawUpTo.playerId
   if (game.pendingEffectOrder && !game.pendingEffectOrder.resolvedOrder) {
@@ -201,6 +202,7 @@ const pendingHeadline = (game: GameState, actorId: PlayerId): string => {
   if (game.pendingAbilityEffect) return '正在處理技能效果'
   if (game.pendingOpponentHandDiscard) return '正在選擇要丟棄的手牌'
   if (game.pendingInspectDeck) return '正在查看牌庫'
+  if (game.pendingRevealTopDeck) return '正在展示牌庫頂'
   if (game.pendingOptionalCostAttack) return '正在選擇攻擊代價'
   if (game.pendingDrawUpTo) return '正在選擇抽牌數量'
   if (game.pendingEffectOrder) return '正在排列效果順序'
@@ -365,7 +367,9 @@ export const deriveActionStatus = ({
       (cookie) => cookie.card.instanceId === opponentAttackSelection.attackerInstanceId,
     )
     const requiredPayment = attacker
-      ? getEnergyCostTotal(getAttackEnergyCost(attacker.card))
+      ? getEnergyCostTotal(
+          getAttackEnergyCostForState(game, attacker.card.instanceId),
+        )
       : opponentAttackSelection.supportPaymentIds.length
     const selectedPayment = opponentAttackSelection.supportPaymentIds.length
     const paymentComplete = selectedPayment >= requiredPayment

@@ -115,6 +115,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             attackTargetCard={attackTargetCard}
             trapTargetCandidates={match.trapTargetCandidates}
             selectedTrapTargetId={match.selectedTrapTargetId}
+            trapSelfTargetCandidates={match.trapSelfTargetCandidates}
+            selectedTrapSelfTargetId={match.selectedTrapSelfTargetId}
             onSelectTrap={(id) => {
               match.setSelectedTrapId(id)
               match.setSelectedTrapPaymentIds([])
@@ -122,6 +124,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
               match.setSelectedTrapTargetId(null)
+              match.setSelectedTrapSelfTargetId(null)
               match.setTrapSelectNoTarget(false)
               match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapSupportToHandIds([])
@@ -131,6 +134,9 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onSelectTrapTarget={(id) => {
               match.setSelectedTrapTargetId(id)
               match.setTrapSelectNoTarget(false)
+            }}
+            onSelectTrapSelfTarget={(id) => {
+              match.setSelectedTrapSelfTargetId(id)
             }}
             onToggleDiscardHand={(id) =>
               match.setSelectedTrapDiscardIds((current) =>
@@ -203,6 +209,9 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 trapInstanceId: trap.instanceId,
                 paymentIds: match.selectedTrapPaymentIds,
                 targetIds: match.selectedTrapTargets.map(
+                  (target) => target.card.instanceId,
+                ),
+                selfTargetIds: match.selectedTrapSelfTargets.map(
                   (target) => target.card.instanceId,
                 ),
                 supportTrashIds: match.selectedTrapSupportTrashIds,

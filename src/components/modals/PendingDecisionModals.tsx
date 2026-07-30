@@ -19,6 +19,7 @@ const effectOrderLabels: Record<PendingEffectOrderItem['kind'], string> = {
   'after-damage-effect': '受傷後效果',
   'draw-up-to': '抽牌效果',
   'inspect-deck': '檢視牌庫',
+  'reveal-top-deck': '展示牌庫頂',
   'stage-trigger': '場景效果',
 }
 
@@ -299,6 +300,8 @@ export interface OptionalCostAttackModalProps {
   effectText: string
   discardHandCost: number
   energyCostTotal: number
+  /** 代價的完整說明；省略時退回依張數自行組字（來源餅乾自付的能量會顯示不出來）。 */
+  costText?: string
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
   targetCandidates: { card: GameCard; instanceId: string }[]
@@ -317,6 +320,7 @@ export function OptionalCostAttackModal({
   effectText,
   discardHandCost,
   energyCostTotal,
+  costText,
   playerHand,
   supportCandidates,
   targetCandidates,
@@ -440,6 +444,16 @@ export function OptionalCostAttackModal({
     )
   }
 
+  // costText 未提供時退回依張數組字；兩者都沒有內容就顯示「無」，
+  // 避免畫面出現一個空白的「代價：」看起來像壞掉。
+  const fallbackCostText = [
+    energyCostTotal > 0 ? `支付 ${energyCostTotal} 張能量支援卡` : null,
+    discardHandCost > 0 ? `棄置 ${discardHandCost} 張手牌` : null,
+  ]
+    .filter(Boolean)
+    .join('、')
+  const resolvedCostText = costText ?? (fallbackCostText || '無')
+
   const optionalCostAttackContent = (
     <>
       {!embedded && (
@@ -458,12 +472,7 @@ export function OptionalCostAttackModal({
         {!embedded && (
           <p className="optional-cost-attack-text">{effectText}</p>
         )}
-        <p className="optional-cost-attack-cost">
-          代價：
-          {discardHandCost > 0 && `棄置 ${discardHandCost} 張手牌`}
-          {discardHandCost > 0 && energyCostTotal > 0 && '、'}
-          {energyCostTotal > 0 && `支付 ${energyCostTotal} 張能量支援卡`}
-        </p>
+        <p className="optional-cost-attack-cost">代價：{resolvedCostText}</p>
 
         {step === 'decision' && (
           <div className="modal-actions modal-actions-decision">
@@ -610,7 +619,7 @@ export interface InspectDeckModalProps {
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   optionalPick?: boolean
-  onConfirm: (pickedId: string | null, restOrder: string[]) => void
+  onConfirm: (pickedCardIds: string[], restOrder: string[]) => void
 }
 
 const REST_DESTINATION_LABEL: Record<InspectDeckRestDestination, string> = {
@@ -631,7 +640,7 @@ export function InspectDeckModal({
   onConfirm,
 }: InspectDeckModalProps) {
   const [minimized, setMinimized] = useState(false)
-  const [pickedId, setPickedId] = useState<string | null>(null)
+  const [pickedIds, setPickedIds] = useState<string[]>([])
   // restOrder 只保存「未被選走」的卡，順序就是玩家決定的放回順序。
   const [restOrder, setRestOrder] = useState<string[]>(
     () => revealedCards.map((card) => card.instanceId),
@@ -646,21 +655,30 @@ export function InspectDeckModal({
   const showReorder = restDestination !== 'trash' && restOrder.length > 1
 
   const resetPick = () => {
-    setPickedId(null)
+    setPickedIds([])
     setRestOrder(revealedCards.map((card) => card.instanceId))
   }
 
   const handlePick = (instanceId: string) => {
-    if (pickedId === instanceId) {
-      resetPick()
-      return
-    }
-    setPickedId(instanceId)
-    setRestOrder(
-      revealedCards
-        .map((card) => card.instanceId)
-        .filter((id) => id !== instanceId),
-    )
+    setPickedIds((prev) => {
+      if (prev.includes(instanceId)) {
+        const next = prev.filter((id) => id !== instanceId)
+        setRestOrder(
+          revealedCards
+            .map((card) => card.instanceId)
+            .filter((id) => !next.includes(id)),
+        )
+        return next
+      }
+      if (prev.length >= pickCount) return prev
+      const next = [...prev, instanceId]
+      setRestOrder(
+        revealedCards
+          .map((card) => card.instanceId)
+          .filter((id) => !next.includes(id)),
+      )
+      return next
+    })
   }
 
   const swap = (index: number, otherIndex: number) => {
@@ -671,11 +689,11 @@ export function InspectDeckModal({
   }
 
   const canConfirm =
-    !canPick || optionalPick || hasNoPickableCard || pickedId !== null
+    !canPick || optionalPick || hasNoPickableCard || pickedIds.length > 0
 
   const handleConfirm = () => {
     if (!canConfirm) return
-    onConfirm(pickedId, restOrder)
+    onConfirm(pickedIds, restOrder)
   }
 
   if (minimized) {
@@ -688,8 +706,8 @@ export function InspectDeckModal({
         <span>
           <strong>{sourceCardName}</strong>
           <small>
-            {pickedId
-              ? '已選 1 張，等待確認'
+            {pickedIds.length > 0
+              ? `已選 ${pickedIds.length} 張，等待確認`
               : `查看 ${revealedCards.length} 張牌`}
           </small>
         </span>
@@ -737,8 +755,8 @@ export function InspectDeckModal({
               <button
                 type="button"
                 key={card.instanceId}
-                className={pickedId === card.instanceId ? 'is-selected' : ''}
-                disabled={!isPickable(card)}
+                className={pickedIds.includes(card.instanceId) ? 'is-selected' : ''}
+                disabled={!isPickable(card) || (!pickedIds.includes(card.instanceId) && pickedIds.length >= pickCount)}
                 onClick={() => handlePick(card.instanceId)}
                 aria-label={`選擇${card.name}`}
               >
@@ -756,24 +774,27 @@ export function InspectDeckModal({
                 const card = revealedCards.find((c) => c.instanceId === id)
                 return (
                   <div key={id} className="inspect-deck-sort-row">
-                    <span>{card?.name ?? id}</span>
-                    <div className="inspect-deck-sort-actions">
-                      <button
-                        type="button"
-                        aria-label={`${card?.name ?? id} 上移`}
-                        disabled={index === 0}
-                        onClick={() => swap(index, index - 1)}
-                      >
-                        <ChevronUp aria-hidden="true" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`${card?.name ?? id} 下移`}
-                        disabled={index === restOrder.length - 1}
-                        onClick={() => swap(index, index + 1)}
-                      >
-                        <ChevronDown aria-hidden="true" />
-                      </button>
+                    <CardFace card={card ?? { id: '', instanceId: id, name: id, type: 'item' }} />
+                    <div className="inspect-deck-sort-info">
+                      <span>{card?.name ?? id}</span>
+                      <div className="inspect-deck-sort-actions">
+                        <button
+                          type="button"
+                          aria-label={`${card?.name ?? id} 上移`}
+                          disabled={index === 0}
+                          onClick={() => swap(index, index - 1)}
+                        >
+                          <ChevronUp aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`${card?.name ?? id} 下移`}
+                          disabled={index === restOrder.length - 1}
+                          onClick={() => swap(index, index + 1)}
+                        >
+                          <ChevronDown aria-hidden="true" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )
@@ -782,7 +803,7 @@ export function InspectDeckModal({
           </div>
         )}
         <div className="modal-actions">
-          {pickedId && (
+          {pickedIds.length > 0 && (
             <button
               type="button"
               onClick={resetPick}
@@ -798,6 +819,75 @@ export function InspectDeckModal({
             確認並放回
           </button>
         </div>
+      </section>
+    </div>
+  )
+}
+
+export interface RevealTopDeckModalProps {
+  sourceCardName: string
+  revealedCard: GameCard
+  matched: boolean
+  /**
+   * 檢視者是不是這次翻牌的擁有者。翻牌是公開資訊，對手也看得到同一張卡，
+   * 但只有擁有者能按確認——非擁有者若照樣顯示可按的按鈕，按下去只會靜靜地
+   * 什麼都不發生。
+   */
+  canConfirm?: boolean
+  onConfirm: () => void
+}
+
+export function RevealTopDeckModal({
+  sourceCardName,
+  revealedCard,
+  matched,
+  canConfirm = true,
+  onConfirm,
+}: RevealTopDeckModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <CardFace card={revealedCard} />
+        <span>
+          <strong>{revealedCard.name}</strong>
+          <small>翻牌展示</small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop card-reveal-backdrop" role="presentation">
+      <section className="card-reveal-modal" role="alertdialog">
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小卡牌展示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <span>{sourceCardName} — 翻開牌庫頂</span>
+        <h2>{matched ? '條件匹配！' : '條件未匹配'}</h2>
+        <CardFace card={revealedCard} className="reveal-card" />
+        <strong>{revealedCard.name}</strong>
+        <p>{matched ? '翻到的卡牌符合條件，效果發動。' : '翻到的卡牌不符合條件，效果不發動。'}</p>
+        <button
+          type="button"
+          className="reveal-confirm"
+          onClick={canConfirm ? onConfirm : undefined}
+          disabled={!canConfirm}
+        >
+          {canConfirm ? '確認並繼續' : '等待對手確認…'}
+        </button>
       </section>
     </div>
   )

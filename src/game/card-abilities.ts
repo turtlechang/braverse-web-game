@@ -15,7 +15,10 @@ import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
 } from './replacement'
-import { payTrashBattleCookieCost } from './skills'
+import {
+  markSupportAreaDecreased,
+  payTrashBattleCookieCost,
+} from './skills'
 import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
 import type {
   AbilityCost,
@@ -90,17 +93,6 @@ export interface AbilityPaymentOptions {
   sourceInstanceId?: string
 }
 
-const markSupportAreaDecreased = (
-  state: GameState,
-  playerId: PlayerId,
-): GameState => ({
-  ...state,
-  supportAreaDecreasedThisTurn: {
-    ...(state.supportAreaDecreasedThisTurn ?? {}),
-    [playerId]: true,
-  },
-})
-
 const getHpToTrashCostCandidates = (
   cost: AbilityCost,
   battleArea: CookieInBattle[],
@@ -156,6 +148,11 @@ const payAbilityCost = (
 
   if (cost.trashToDeckBottom) {
     // 只有餅乾技能路徑實作這個代價；item／stage 若之後用到必須先補上支付流程。
+    throw new GameRuleError('此代價尚未支援於物品或場景能力。')
+  }
+  if (cost.trashToDeck) {
+    // BS3-098 目前只出現在餅乾 OnPlay 技能；避免未來 item／stage
+    // 沿用 AbilityCost 時把洗回牌庫成本靜默忽略。
     throw new GameRuleError('此代價尚未支援於物品或場景能力。')
   }
 
@@ -335,7 +332,9 @@ const payAbilityCost = (
   }
 
   if (supportToTrashIds.length > 0 || supportToHandIds.length > 0) {
-    nextState = markSupportAreaDecreased(nextState, playerId)
+    nextState = markSupportAreaDecreased(nextState, playerId, {
+      triggerSkill: supportToTrashIds.length > 0,
+    })
   }
 
   return departedCount > 0
@@ -569,6 +568,7 @@ export const activateStage = (
   supportToHandIds: string[] = [],
   discardHandIds: string[] = [],
   hpToTrashTargetIds: string[] = [],
+  trashBattleCookieIds: string[] = [],
 ): GameState => {
   if (!canActivateStage(state, playerId)) {
     throw new GameRuleError('目前無法啟動場景卡。')
@@ -582,6 +582,7 @@ export const activateStage = (
     supportToHandIds,
     discardHandIds,
     hpToTrashTargetIds,
+    trashBattleCookieIds,
   })
   const paidPlayer = paidState.players[playerId]
   const activatedState = updatePlayer(paidState, {

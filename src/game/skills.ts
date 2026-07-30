@@ -27,8 +27,10 @@ import {
   continuePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
+import { defaultShuffle } from './helpers'
+import type { Shuffle } from './types'
 
-const getSkillUseKey = (
+export const getSkillUseKey = (
   source: GameState['players'][PlayerId]['battleArea'][number],
 ) => source.battleEntryId ?? source.card.instanceId
 
@@ -64,6 +66,86 @@ export const findSkillSource = (
   return breakCard?.skill?.fromBreakArea
     ? { card: breakCard, hpCards: [], rested: false }
     : undefined
+}
+
+/**
+ * 記錄支援區減少，並在指定情況下排入「支援卡進入棄牌區」的被動餅乾技能。
+ * 共用既有 pendingStageTrigger 通道，讓效果排序、AI、線上同步與 UI 維持同一套待處理協定。
+ */
+export const markSupportAreaDecreased = (
+  state: GameState,
+  playerId: PlayerId,
+  options: { triggerSkill?: boolean } = {},
+): GameState => {
+  const nextState: GameState = {
+    ...state,
+    supportAreaDecreasedThisTurn: {
+      ...(state.supportAreaDecreasedThisTurn ?? {}),
+      [playerId]: true,
+    },
+  }
+
+  if (!options.triggerSkill || nextState.pendingStageTrigger) {
+    return nextState
+  }
+
+  const player = nextState.players[playerId]
+  if (nextState.activePlayerId !== playerId) return nextState
+
+  const source = player.battleArea.find((cookie) => {
+    const skill = cookie.card.skill
+    const triggerEffects = skill?.effects.filter(
+      (effect) =>
+        'condition' in effect &&
+        effect.condition?.kind === 'support-area-decreased-this-turn',
+    ) ?? []
+    return (
+      skill?.trigger === 'passive' &&
+      (!skill.yourTurn || nextState.activePlayerId === playerId) &&
+      (!skill.restSource || !cookie.rested) &&
+      (!skill.oncePerTurn ||
+        !nextState.skillUsesThisTurn.includes(getSkillUseKey(cookie))) &&
+      triggerEffects.some((effect) =>
+        isEffectConditionMet(
+          nextState,
+          {
+            sourcePlayerId: playerId,
+            sourceInstanceId: cookie.card.instanceId,
+          },
+          effect,
+        ),
+      )
+    )
+  })
+
+  if (!source?.card.skill) return nextState
+
+  const context = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: source.card.instanceId,
+  }
+  const effects = source.card.skill.effects.filter(
+    (effect) =>
+      'condition' in effect &&
+      effect.condition?.kind === 'support-area-decreased-this-turn' &&
+      isEffectConditionMet(nextState, context, effect),
+  )
+  if (effects.length === 0) return nextState
+
+  return {
+    ...nextState,
+    pendingStageTrigger: {
+      playerId,
+      sourceInstanceId: source.card.instanceId,
+      sourceCardName: source.card.name,
+      effectText: source.card.skill.text,
+      sourceKind: 'cookie-skill',
+      effects,
+      ...(source.card.skill.sourceEnergy
+        ? { sourceEnergy: source.card.skill.sourceEnergy }
+        : {}),
+    },
+  }
 }
 
 /**
@@ -114,6 +196,29 @@ export const canPayTrashToDeckBottomCost = (
   !cost.trashToDeckBottom ||
   getTrashToDeckBottomCostCandidates(cost, discardPile).length >=
     cost.trashToDeckBottom.count
+
+export const getTrashToDeckCostCandidates = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): GameCard[] => {
+  const trashCost = cost.trashToDeck
+  if (!trashCost) return []
+  return discardPile.filter((card) => {
+    if (trashCost.energyColor !== undefined && card.energyColor !== trashCost.energyColor) {
+      return false
+    }
+    if (trashCost.excludeFlip && card.flip) return false
+    return true
+  })
+}
+
+export const canPayTrashToDeckCost = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): boolean =>
+  !cost.trashToDeck ||
+  getTrashToDeckCostCandidates(cost, discardPile).length >=
+    cost.trashToDeck.count
 
 export const getTrashBattleCookieCostCandidates = (
   cost: AbilityCost,
@@ -314,6 +419,10 @@ export const canActivateCookieSkill = (
     return false
   }
 
+  if (!canPayTrashToDeckCost(skill.cost, player.discardPile)) {
+    return false
+  }
+
   if (!canPayTrashBattleCookieCost(skill.cost, player.battleArea, sourceInstanceId)) {
     return false
   }
@@ -369,6 +478,8 @@ export const activateCookieSkill = (
   discardHandIds: string[] = [],
   trashBattleCookieIds: string[] = [],
   trashToDeckBottomIds: string[] = [],
+  trashToDeckIds: string[] = [],
+  shuffle: Shuffle = defaultShuffle,
 ): GameState => {
   if (
     !canActivateCookieSkill(state, playerId, sourceInstanceId, trigger)
@@ -449,6 +560,28 @@ export const activateCookieSkill = (
     throw new GameRuleError('此技能不需要支付棄牌區代價。')
   }
 
+  const uniqueTrashToDeckIds = [...new Set(trashToDeckIds)]
+  if (uniqueTrashToDeckIds.length !== trashToDeckIds.length) {
+    throw new GameRuleError('不能重複選擇同一張棄牌區卡牌作為代價。')
+  }
+  if (cost.trashToDeck) {
+    if (uniqueTrashToDeckIds.length !== cost.trashToDeck.count) {
+      throw new GameRuleError(
+        `必須選擇 ${cost.trashToDeck.count} 張棄牌區卡牌作為代價。`,
+      )
+    }
+    const candidateIds = new Set(
+      getTrashToDeckCostCandidates(cost, player.discardPile).map(
+        (card) => card.instanceId,
+      ),
+    )
+    if (uniqueTrashToDeckIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的棄牌區卡牌不符合洗回牌庫代價條件。')
+    }
+  } else if (uniqueTrashToDeckIds.length > 0) {
+    throw new GameRuleError('此技能不需要支付洗回牌庫的棄牌區代價。')
+  }
+
   const trashBattlePayment = payTrashBattleCookieCost(
     player,
     cost,
@@ -505,6 +638,13 @@ export const activateCookieSkill = (
     )
     return card ? [card] : []
   })
+  const trashToDeckSet = new Set(uniqueTrashToDeckIds)
+  const trashToDeckCards = uniqueTrashToDeckIds.flatMap((id) => {
+    const card = playerAfterCosts.discardPile.find(
+      (candidate) => candidate.instanceId === id,
+    )
+    return card ? [card] : []
+  })
 
   const discardedCards = player.hand.filter((card) =>
     uniqueDiscardHandIds.includes(card.instanceId),
@@ -534,10 +674,14 @@ export const activateCookieSkill = (
         hand: player.hand.filter(
           (card) => !uniqueDiscardHandIds.includes(card.instanceId),
         ),
-        deck: [...playerAfterCosts.deck, ...trashToDeckBottomCards],
+        deck: cost.trashToDeck
+          ? shuffle([...playerAfterCosts.deck, ...trashToDeckCards])
+          : [...playerAfterCosts.deck, ...trashToDeckBottomCards],
         discardPile: [
           ...playerAfterCosts.discardPile.filter(
-            (card) => !trashToDeckBottomSet.has(card.instanceId),
+            (card) =>
+              !trashToDeckBottomSet.has(card.instanceId) &&
+              !trashToDeckSet.has(card.instanceId),
           ),
           ...trashedCards.map((support) => support.card),
           ...discardedCards,

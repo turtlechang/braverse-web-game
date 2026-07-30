@@ -390,8 +390,7 @@ const commandShapes = {
   'resolve-faint-effect': { requiredStringArrays: ['targetIds'] },
   'resolve-opponent-hand-discard': { requiredStringArrays: ['cardIds'] },
   'resolve-inspect-deck': {
-    requiredNullableStrings: ['pickedCardId'],
-    requiredStringArrays: ['restOrder'],
+    requiredStringArrays: ['pickedCardIds', 'restOrder'],
   },
   'resolve-optional-cost-attack': {
     optionalStringArrays: ['discardCardIds', 'targetIds', 'paymentIds'],
@@ -477,6 +476,7 @@ const commandShapes = {
       'supportToHandIds',
       'discardHandIds',
       'hpToTrashTargetIds',
+      'trashBattleCookieIds',
       'targetIds',
     ],
     optionalStringMatrices: ['effectTargets'],
@@ -488,6 +488,7 @@ const commandShapes = {
       'supportToHandIds',
       'discardHandIds',
       'hpToTrashTargetIds',
+      'trashBattleCookieIds',
       'targetIds',
     ],
   },
@@ -510,6 +511,7 @@ const commandShapes = {
       'handToBreakIds',
       'trashBattleCookieIds',
       'trashToDeckIds',
+      'selfTargetIds',
     ],
   },
   'skip-trap': {},
@@ -522,6 +524,7 @@ const commandShapes = {
     optionalStringArrays: ['discardHandIds'],
   },
   'resolve-attack-effect': { requiredStringArrays: ['targetIds'] },
+  'resolve-reveal-top-deck': { optionalStringArrays: ['targetIds'] },
   'resolve-next-damage': {},
   'resolve-battle': {},
 } as const satisfies Record<GameCommand['kind'], CommandShape>

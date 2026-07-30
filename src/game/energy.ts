@@ -2,6 +2,7 @@ import type {
   CookieCard,
   EnergyColor,
   EnergyCost,
+  GameState,
   SupportCard,
 } from './types'
 
@@ -60,6 +61,33 @@ export const getRemainingEnergyCost = (
 
 export const getAttackEnergyCost = (card: CookieCard): EnergyCost =>
   card.attackEnergyCost ?? { neutral: card.attackCost }
+
+/**
+ * Resolve an attack cost after turn-scoped effects such as P-032 have been
+ * applied. UI, AI, and the authoritative battle command all use this helper
+ * so a cost override cannot be displayed differently from the rule result.
+ */
+export const getAttackEnergyCostForState = (
+  state: GameState,
+  attackerInstanceId: string,
+): EnergyCost => {
+  const attacker = Object.values(state.players)
+    .flatMap((player) => player.battleArea)
+    .find((cookie) => cookie.card.instanceId === attackerInstanceId)
+  if (!attacker) {
+    throw new Error(`Unknown attacker: ${attackerInstanceId}`)
+  }
+
+  const modifier = [...(state.attackCostModifiers ?? [])]
+    .reverse()
+    .find(
+      (candidate) =>
+        candidate.targetInstanceId === attackerInstanceId &&
+        (candidate.expiresAfterTurn === null ||
+          candidate.expiresAfterTurn >= state.turnNumber),
+    )
+  return modifier ? { ...modifier.energyCost } : getAttackEnergyCost(attacker.card)
+}
 
 /**
  * 判斷支援卡是否值得在目前費用中列為可選候選。

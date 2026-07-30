@@ -408,6 +408,14 @@
   cursor: pointer;
 }
 
+/* 翻牌是公開資訊，對手也會看到這個 modal，但只有擁有者能確認。 */
+.reveal-confirm:disabled {
+  border-color: rgba(255, 230, 117, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: default;
+}
+
 .card-reveal-dock {
   position: fixed;
   z-index: 140;
@@ -877,11 +885,74 @@
   margin: 10px 0 0;
 }
 
-.card-attack-copy {
+.card-stage-effect-line {
+  display: block;
+}
+
+.card-equip-list {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.card-equip-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: border-color 0.15s;
+}
+
+.card-equip-item:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.card-equip-item .card-face {
+  width: 80px;
+}
+
+.card-equip-item span {
+  color: #bbdaf3;
+  font-size: 0.72rem;
+}
+
+.card-attack-copy {
+  display: block;
+}
+
+.card-attack-main {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  max-width: 100%;
   gap: 5px;
+  vertical-align: middle;
+}
+
+.card-attack-follow-up {
+  display: block;
+  margin-top: 6px;
+}
+
+.attack-power-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35em;
+  padding: 1px 5px;
+  color: #000;
+  border: 2px solid #fff;
+  border-radius: 4px;
+  background: #fff;
+  font-weight: 900;
+  line-height: 1.15;
+  vertical-align: middle;
 }
 
 .close-modal {

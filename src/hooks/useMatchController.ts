@@ -13,8 +13,10 @@ import {
   hasBlockingPending,
   getReplacementCandidates,
   getRefreshCandidates,
+  explainUnavailableTraps,
   getTrapCandidates,
   getTrapTargetCandidates,
+  getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCandidates,
   buildReplayIssueBundle,
@@ -35,6 +37,8 @@ import {
   createBlueOptionalCostAttackDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
+  createSoulJamEquippedDemoState,
+  createSoulJam115ProtectionDemoState,
   createFaintDamageDemoState,
   createFlipResponseDemoState,
   createItemUsageDemoState,
@@ -48,6 +52,7 @@ import {
   createTrapResponseDemoState,
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
+  createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
 import { useMatchSetup } from './useMatchSetup'
@@ -159,6 +164,27 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
     }
+    if (testStateConfig?.kind === 'bs3-121-special-victory') {
+      return createBs3SpecialVictoryDemoState()
+    }
+    if (testStateConfig?.kind === 'soul-jam-019-equipped') {
+      return createSoulJamEquippedDemoState('BS3-019', 'BS3-017')
+    }
+    if (testStateConfig?.kind === 'soul-jam-043-equipped') {
+      return createSoulJamEquippedDemoState('BS3-043', 'BS3-025')
+    }
+    if (testStateConfig?.kind === 'soul-jam-066-equipped') {
+      return createSoulJamEquippedDemoState('BS3-066', 'BS3-055')
+    }
+    if (testStateConfig?.kind === 'soul-jam-091-equipped') {
+      return createSoulJamEquippedDemoState('BS3-091', 'BS3-088')
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-equipped') {
+      return createSoulJamEquippedDemoState('BS3-115', 'BS3-100')
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-protection-demo') {
+      return createSoulJam115ProtectionDemoState()
+    }
     return createDemoSetupGame('player-one')
   })
   const [message, setMessage] = useState(() => {
@@ -246,6 +272,24 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-check') {
       return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
     }
+    if (testStateConfig?.kind === 'soul-jam-019-equipped') {
+      return '靈魂果醬測試：BS3-019 已裝備於 Hollyberry，攻擊力 +1。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-043-equipped') {
+      return '靈魂果醬測試：BS3-043 已裝備於 Golden Cheese，HP +2。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-066-equipped') {
+      return '靈魂果醬測試：BS3-066 已裝備，攻擊時 set-active。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-091-equipped') {
+      return '靈魂果醬測試：BS3-091 已裝備於 Pure Vanilla，攻擊時抽牌。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-equipped') {
+      return '靈魂果醬測試：BS3-115 已裝備於 Dark Cacao，對手效果保護。'
+    }
+    if (testStateConfig?.kind === 'soul-jam-115-protection-demo') {
+      return '保護示範：對手 P-030（4 張藍能量），Dark Cacao（BS3-115 保護）vs Pure Vanilla（無保護）。'
+    }
     return '推進階段，開始這場對戰。'
   })
   const setup = useMatchSetup({
@@ -282,6 +326,7 @@ export function useMatchController(params: {
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
+  const [selectedTrapSelfTargetId, setSelectedTrapSelfTargetId] = useState<string | null>(null)
   const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
   const [selectedTrapSupportToHandIds, setSelectedTrapSupportToHandIds] = useState<string[]>([])
   const [selectedTrapSupportTrashIds, setSelectedTrapSupportTrashIds] = useState<string[]>([])
@@ -595,6 +640,18 @@ export function useMatchController(params: {
   const selectedTrapTargets = selectedTrapTarget
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
+  const trapSelfTargetCandidates =
+    selectedTrap && !trapSelectNoTarget
+      ? getTrapSelfTargetCandidates(game, viewerPlayerId, selectedTrap.instanceId)
+      : []
+  const selectedTrapSelfTarget = selectedTrapSelfTargetId
+    ? trapSelfTargetCandidates.find(
+        (candidate) => candidate.card.instanceId === selectedTrapSelfTargetId,
+      )
+    : undefined
+  const selectedTrapSelfTargets = selectedTrapSelfTarget
+    ? [selectedTrapSelfTarget]
+    : trapSelfTargetCandidates.slice(0, 1)
   const trapSupportTrashEffect = selectedTrap?.trap?.effects.find(
     (effect) => effect.kind === 'support-to-trash',
   )
@@ -788,19 +845,18 @@ export function useMatchController(params: {
       return
     }
 
-    const trapCardsInHand = game.players[viewerPlayerId].hand.filter(
-      (card) => card.type === 'trap' && Boolean(card.trap),
-    )
-    if (trapCardsInHand.length > 0) {
+    // 只在「所有已知關卡都通過、卻還是進不了候選名單」時示警。手上有陷阱卡
+    // 但付不出代價／條件未成立是日常狀況（被攻擊時支援卡通常還橫置著），
+    // 每次都印會把主控台灌滿假警報，真的出問題時反而看不見。
+    const unexplainedTraps = explainUnavailableTraps(
+      game,
+      viewerPlayerId,
+    ).filter((entry) => entry.reason === 'unknown')
+    if (unexplainedTraps.length > 0) {
       console.warn(
-        '[auto-skip-trap] 手上有陷阱卡但 getTrapCandidates 判定為 0，即將自動略過。診斷資訊：',
+        '[auto-skip-trap] 陷阱卡通過所有已知可用性檢查卻仍不在候選名單，即將自動略過。診斷資訊：',
         {
-          hand: trapCardsInHand.map((card) => ({
-            id: card.id,
-            cost: card.trap?.cost,
-            condition: card.trap?.condition,
-            effects: card.trap?.effects,
-          })),
+          traps: unexplainedTraps,
           breakArea: game.players[viewerPlayerId].breakArea.map(
             (c) => ({ id: c.id, level: c.level }),
           ),
@@ -816,6 +872,7 @@ export function useMatchController(params: {
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
       setSelectedTrapTargetId(null)
+      setSelectedTrapSelfTargetId(null)
       setGame((current: GameState) => {
         const currentBattle = current.pendingBattle
         if (
@@ -945,6 +1002,10 @@ export function useMatchController(params: {
     selectedTrapTargetId,
     setSelectedTrapTargetId,
     selectedTrapTargets,
+    trapSelfTargetCandidates,
+    selectedTrapSelfTargetId,
+    setSelectedTrapSelfTargetId,
+    selectedTrapSelfTargets,
     selectedTrapSupportTrashIds,
     setSelectedTrapSupportTrashIds,
     trapSupportTrashCandidates,

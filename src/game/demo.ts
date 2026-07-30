@@ -61,6 +61,13 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'bs3-121-special-victory' }
+  | { kind: 'soul-jam-019-equipped' }
+  | { kind: 'soul-jam-043-equipped' }
+  | { kind: 'soul-jam-066-equipped' }
+  | { kind: 'soul-jam-091-equipped' }
+  | { kind: 'soul-jam-115-equipped' }
+  | { kind: 'soul-jam-115-protection-demo' }
   | null => {
   if (!isLocalhost(hostname)) return null
   const params = new URLSearchParams(searchString)
@@ -166,6 +173,15 @@ export const parseTestStateConfig = (
       return { kind: 'card-check', cardNumber }
     }
   }
+  if (testState === 'bs3-121-special-victory') {
+    return { kind: 'bs3-121-special-victory' }
+  }
+  if (testState === 'soul-jam-019-equipped') return { kind: 'soul-jam-019-equipped' }
+  if (testState === 'soul-jam-043-equipped') return { kind: 'soul-jam-043-equipped' }
+  if (testState === 'soul-jam-066-equipped') return { kind: 'soul-jam-066-equipped' }
+  if (testState === 'soul-jam-091-equipped') return { kind: 'soul-jam-091-equipped' }
+  if (testState === 'soul-jam-115-equipped') return { kind: 'soul-jam-115-equipped' }
+  if (testState === 'soul-jam-115-protection-demo') return { kind: 'soul-jam-115-protection-demo' }
   return null
 }
 
@@ -2076,18 +2092,35 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   const selfExtra1 = cardCheckFillerCookie('self-extra-1', 1, 4, 0, payColor)
 
   // Generous energy support to pay any skill/item/trap/stage energy cost.
-  const energySupports = Array.from({ length: 6 }, (_, i) =>
-    testSupportCard(`support-pay-${i}`, payColor),
+  const energySupportColors: EnergyColor[] = card.id === 'P-032'
+    ? ['red', 'yellow', 'green', 'blue', 'purple', 'red', 'yellow']
+    : Array.from({ length: 6 }, () => payColor)
+  const energySupports = energySupportColors.map((color, i) =>
+    testSupportCard(`support-pay-${i}`, color),
   )
   // Hand filler cards for discard-hand style costs, beyond the tested card.
   const handFillers = Array.from({ length: 4 }, (_, i) =>
     testSupportCard(`hand-filler-${i}`, i % 2 === 0 ? payColor : 'wild'),
   )
+  // Some OnPlay effects require an additional Cookie in hand (for example,
+  // BS3-038 places a level-2-or-higher Cookie from hand into the break area).
+  // Keep that legal candidate in the browser card-check fixture without
+  // changing any production deck or runtime rule.
+  const handCookieFiller = cardCheckFillerCookie(
+    'hand-cookie-filler',
+    2,
+    4,
+    0,
+    payColor,
+  ).cookie
   // Trash (discard pile) filler for skills that select from trash.
   const trashFillers: GameCard[] = [
     cardCheckFillerCookie('trash-cookie-1', 1, 3).cookie,
     cardCheckFillerCookie('trash-cookie-2', 2, 4, 0, payColor).cookie,
     testSupportCard('trash-item-1', payColor),
+    ...Array.from({ length: 5 }, (_, i) =>
+      testSupportCard(`trash-purple-cost-${i}`, 'purple'),
+    ),
   ]
   // Deploying a cookie draws HP cards from the top of the deck
   // (see deployCookie in actions.ts); an empty deck immediately triggers
@@ -2170,6 +2203,18 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   }
 
   if (card.type === 'stage') {
+    const stageBattleCookie = card.id === 'P-032'
+      ? { ...selfExtra1.cookie, keywords: ['ancient'] as ['ancient'] }
+      : selfExtra1.cookie
+    const stageHand = card.id === 'P-028'
+      ? [card, handCookieFiller, ...handFillers]
+      : [card, ...handFillers]
+    const stageBreakArea = card.id === 'P-028'
+      ? [
+          cardCheckFillerCookie('p028-break-lv1', 1, 2, 0, 'yellow').cookie,
+          ...ownBreakArea,
+        ]
+      : ownBreakArea
     const oldStage: GameCard = { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
     const state = baseState()
     return {
@@ -2178,10 +2223,11 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          hand: [card, ...handFillers],
-          battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+          hand: stageHand,
+          battleArea: [cardCheckBattleEntry(stageBattleCookie, selfExtra1.hpCards, 4)],
           supportArea: energySupports.map((c) => ({ card: c, rested: false })),
           stage: { card: oldStage, rested: false },
+          breakArea: stageBreakArea,
           discardPile: trashFillers,
         },
         'player-two': {
@@ -2251,11 +2297,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   if (card.flip) {
     const defender = cardCheckFillerCookie('flip-defender', 2, 5, 4, payColor) // 1 HP card left: the flip card itself
     const attacker = cardCheckFillerCookie('flip-attacker', 2, 5, 0, 'black')
-    // breakArea totalling level 6 so "break area level >= N" flip
-    // conditions (Frost Queen/Space Doughnut) have a fair chance of being met.
+    // Keep the break area above the thresholds used by conditional FLIP
+    // effects, but below the level-10 defeat limit.  The generic card-check
+    // state must remain playable after FLIP resolves; otherwise
+    // `resolveDrawUpTo` can correctly detect a break-level defeat and clear
+    // `pendingBattle` before `resolveFlip` finishes its transition.
     const bigOwnBreakArea: CookieCard[] = [
       cardCheckFillerCookie('self-break-big-1', 3, 5).cookie,
-      cardCheckFillerCookie('self-break-big-2', 3, 5).cookie,
+      cardCheckFillerCookie('self-break-big-2', 2, 5).cookie,
       ...ownBreakArea,
     ]
     const state = baseState()
@@ -2439,7 +2488,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players,
           'player-one': {
             ...state.players['player-one'],
-            hand: [card, ...handFillers],
+            hand: [card, handCookieFiller, ...handFillers],
             battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)],
             supportArea: energySupports.map((c) => ({ card: c, rested: false })),
             breakArea: ownBreakArea,
@@ -2502,5 +2551,269 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         battleArea: opponentBattleArea,
       },
     },
+  }
+}
+
+/**
+ * Builds a browser-only BS3-121 scenario from the real card pool. The five
+ * Ancient Cookies intentionally provide the five exact energy colours needed
+ * by the stage, while five different Soul Jam cards satisfy its special
+ * victory condition. This fixture does not alter any production deck.
+ */
+export const createBs3SpecialVictoryDemoState = (): GameState => {
+  const ancientCardNumbers = [
+    'BS3-017',
+    'BS3-025',
+    'BS3-055',
+    'BS3-088',
+    'BS3-100',
+  ]
+  const soulJamCardNumbers = [
+    'BS3-019',
+    'BS3-043',
+    'BS3-066',
+    'BS3-091',
+    'BS3-115',
+  ]
+  const cardNumbers = ['BS3-121', ...ancientCardNumbers, ...soulJamCardNumbers]
+  const entries = cardNumbers.map((cardNumber) => {
+    const entry = getCardPoolEntry(cardNumber)
+    if (!entry) throw new Error(`找不到 BS3 特殊勝利測試卡片 ${cardNumber}。`)
+    return entry
+  })
+  const stage = createCard(entries[0], 'player-one', 1)
+  const ancientSupports = ancientCardNumbers.map((_, index) => ({
+    card: createCard(entries[index + 1], 'player-one', index + 2),
+    rested: false,
+  }))
+  const soulJamSupports = soulJamCardNumbers.map((_, index) => ({
+    card: createCard(entries[index + 6], 'player-one', index + 7),
+    rested: false,
+  }))
+  const state = createDemoGame(20260725)
+
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        hand: [],
+        battleArea: [],
+        supportArea: [...ancientSupports, ...soulJamSupports],
+        breakArea: [],
+        discardPile: [],
+        stage: { card: stage, rested: false },
+      },
+    },
+  }
+}
+
+export const createSoulJamEquippedDemoState = (
+  soulJamCardNumber: string,
+  targetCookieCardNumber: string,
+): GameState => {
+  const sjEntry = getCardPoolEntry(soulJamCardNumber)
+  const tcEntry = getCardPoolEntry(targetCookieCardNumber)
+  if (!sjEntry || !tcEntry) {
+    throw new Error(
+      `無法從卡池找到卡片 ${!sjEntry ? soulJamCardNumber : targetCookieCardNumber}。`,
+    )
+  }
+  const soulJam = createCard(sjEntry, 'player-one', 1)
+  const targetCookie = createCard(tcEntry, 'player-one', 2) as CookieCard
+  const payColor: EnergyColor =
+    targetCookie.energyColor && targetCookie.energyColor !== 'wild'
+      ? targetCookie.energyColor
+      : 'red'
+
+  const hpCards = Array.from({ length: targetCookie.hp }, (_, i) =>
+    testSupportCard(`${targetCookie.instanceId}-hp-${i}`, payColor),
+  )
+  const energySupports = Array.from({ length: 5 }, (_, i) =>
+    testSupportCard(`sj-support-${i}`, payColor),
+  )
+  const deckFiller = Array.from({ length: 10 }, (_, i) =>
+    testSupportCard(`sj-deck-${i}`, payColor),
+  )
+  const oppCookie = cardCheckFillerCookie('sj-opp-lv1', 1, 4, 0, 'red')
+
+  let attackModifiers: GameState['attackModifiers'] = []
+  let bonusHpCards: GameCard[] = []
+
+  if (soulJamCardNumber === 'BS3-019') {
+    attackModifiers = [
+      {
+        sourceInstanceId: soulJam.instanceId,
+        targetInstanceId: targetCookie.instanceId,
+        amount: 1,
+        expiresAfterTurn: null,
+      },
+    ]
+  }
+  if (soulJamCardNumber === 'BS3-043') {
+    bonusHpCards = [
+      testSupportCard('sj-gain-hp-1', payColor),
+      testSupportCard('sj-gain-hp-2', payColor),
+    ]
+  }
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: targetCookie,
+            hpCards: [...hpCards, ...bonusHpCards],
+            rested: false,
+            battleEntryId: `${targetCookie.instanceId}:battle:1`,
+            equippedCards: [soulJam],
+          },
+        ],
+        supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: oppCookie.cookie,
+            hpCards: oppCookie.hpCards,
+            rested: false,
+            battleEntryId: `${oppCookie.cookie.instanceId}:battle:1`,
+          },
+        ],
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 3,
+    attackModifiers,
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
+  }
+}
+
+/**
+ * 展示 BS3-115 裝載後的對手效果保護：
+ * - 對手為 P-030 Sherbet Cookie（4 張藍色能量）。
+ * - BS3-100 Dark Cacao（已裝備 BS3-115）HP 全滿，
+ *   BS3-088 Pure Vanilla（無保護）HP -1。
+ */
+export const createSoulJam115ProtectionDemoState = (): GameState => {
+  const sj115Entry = getCardPoolEntry('BS3-115')
+  const dcEntry = getCardPoolEntry('BS3-100')
+  const pvEntry = getCardPoolEntry('BS3-088')
+  const p030Entry = getCardPoolEntry('P-030')
+  if (!sj115Entry || !dcEntry || !pvEntry || !p030Entry) {
+    throw new Error('無法從卡池找到 BS3-115／BS3-100／BS3-088／P-030。')
+  }
+  const soulJam115 = createCard(sj115Entry, 'player-one', 1)
+  const darkCacao = createCard(dcEntry, 'player-one', 2) as CookieCard
+  const pureVanilla = createCard(pvEntry, 'player-one', 3) as CookieCard
+  const p030 = createCard(p030Entry, 'player-two', 1) as CookieCard
+
+  const dcPayColor: EnergyColor =
+    darkCacao.energyColor && darkCacao.energyColor !== 'wild'
+      ? darkCacao.energyColor
+      : 'purple'
+
+  const dcHpCards = Array.from({ length: darkCacao.hp }, (_, i) =>
+    testSupportCard(`dc-hp-${i}`, dcPayColor),
+  )
+  const pvHpCards = Array.from({ length: pureVanilla.hp - 1 }, (_, i) =>
+    testSupportCard(`pv-hp-${i}`, 'blue'),
+  )
+  const p030HpCards = Array.from({ length: p030.hp }, (_, i) =>
+    testSupportCard(`p030-hp-${i}`, 'blue'),
+  )
+  const energySupports = Array.from({ length: 5 }, (_, i) =>
+    testSupportCard(`support-${i}`, dcPayColor),
+  )
+  const oppSupports = Array.from({ length: 4 }, (_, i) =>
+    testSupportCard(`opp-support-${i}`, 'blue'),
+  )
+  const deckFiller = Array.from({ length: 10 }, (_, i) =>
+    testSupportCard(`deck-${i}`, dcPayColor),
+  )
+
+  return {
+    players: {
+      'player-one': {
+        id: 'player-one',
+        name: '玩家',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: darkCacao,
+            hpCards: dcHpCards,
+            rested: false,
+            battleEntryId: `${darkCacao.instanceId}:battle:1`,
+            equippedCards: [soulJam115],
+          },
+          {
+            card: pureVanilla,
+            hpCards: pvHpCards,
+            rested: false,
+            battleEntryId: `${pureVanilla.instanceId}:battle:2`,
+          },
+        ],
+        supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+      },
+      'player-two': {
+        id: 'player-two',
+        name: 'AI 對手',
+        ...createTestPlayerState(),
+        deck: deckFiller,
+        battleArea: [
+          {
+            card: p030,
+            hpCards: p030HpCards,
+            rested: false,
+            battleEntryId: `${p030.instanceId}:battle:1`,
+          },
+        ],
+        supportArea: oppSupports.map((c) => ({ card: c, rested: false })),
+      },
+    },
+    firstPlayerId: 'player-one',
+    activePlayerId: 'player-one',
+    turnNumber: 1,
+    phase: 'main',
+    status: 'playing',
+    result: null,
+    supportPlacedThisTurn: false,
+    skillUsesThisTurn: [],
+    nextBattleEntrySequence: 4,
+    attackModifiers: [],
+    damageReceivedModifiers: [],
+    flipDisabledUntilTurn: {},
+    pendingReplacement: null,
+    departedCookieCounts: { 'player-one': 0, 'player-two': 0 },
+    pendingOnPlay: null,
+    pendingRefresh: null,
+    pendingBattle: null,
   }
 }

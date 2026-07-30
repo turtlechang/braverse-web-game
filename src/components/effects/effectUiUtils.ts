@@ -32,6 +32,12 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'deck-to-support') {
     return `從牌庫頂放 ${effect.amount} 張到支援區。`
   }
+  if (effect.kind === 'modify-attack-cost') {
+    return '選擇符合條件的餅乾，令其本回合攻擊費用改為任意能量。'
+  }
+  if (effect.kind === 'multiply-attack-damage') {
+    return `符合條件時攻擊傷害乘以 ${effect.multiplier}。`
+  }
   if (effect.kind === 'break-to-trash') {
     return `從 break 區選最多 ${effect.max} 張 LV.${effect.exactLevel} 放入棄牌區。`
   }
@@ -112,6 +118,18 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'reveal-bottom-deck') {
     return '揭示牌庫底 1 張，餅乾放到牌庫頂，其他卡加入手牌。'
   }
+  if (effect.kind === 'reveal-top-deck') {
+    const matchDesc = effect.match
+      ? [
+          effect.match.type && `類型:${effect.match.type}`,
+          effect.match.energyColor && `顏色:${effect.match.energyColor}`,
+          effect.match.level && `LV.${effect.match.level}`,
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : '無條件'
+    return `翻開牌庫頂 1 張，若為 ${matchDesc}，則發動後續效果。`
+  }
   if (effect.kind === 'hand-to-battle') {
     return `從手牌選最多 ${effect.amount} 張餅乾登場${
       effect.gainHp ? `，並額外獲得 ${effect.gainHp} HP` : ''
@@ -126,70 +144,99 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'break-to-hand-by-level-sum') {
     return `從 break 區選擇餅乾，等級總和需為 ${effect.targetSum}，返回手牌。`
   }
+  if (effect.kind === 'set-cookie-active') return '將餅乾設為活躍。'
+  if (effect.kind === 'deck-to-trash') return `牌庫頂 ${effect.amount} 張放入棄牌區。`
+  if (effect.kind === 'rest-support') return `休息 ${effect.amount} 張支援區卡。`
+  if (effect.kind === 'stage-source-to-deck') return '場景卡已放回牌庫。'
+  if (effect.kind === 'stage-source-to-trash') return '場景卡已放入棄牌區。'
+  if (effect.kind === 'break-source-to-battle') return '從休息區登場。'
+  if (effect.kind === 'hand-to-break') return '手牌餅乾已放入休息區。'
+  if (effect.kind === 'flip-to-support') return 'FLIP 卡已放入支援區。'
+  if (effect.kind === 'trash-to-break') return '棄牌區卡已放入休息區。'
 
-  const { target, count } = targetText(effect as Extract<CardEffect, { target: unknown }>)
-  if (effect.kind === 'damage') {
-    return `選擇 ${count}${target}，造成 ${effect.amount} 傷害。`
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const t = (effect as any).target != null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ? targetText(effect as any)
+    : null
+  if (effect.kind === 'damage' && t) {
+    return `選擇 ${t.count}${t.target}，造成 ${effect.amount} 傷害。`
   }
-  if (effect.kind === 'split-damage') {
-    return `選擇 ${count}${target}，第一個目標造成 ${effect.primaryAmount} 傷害，第二個目標造成 ${effect.secondaryAmount} 傷害。`
+  if (effect.kind === 'split-damage' && t) {
+    return `選擇 ${t.count}${t.target}，第一個目標造成 ${effect.primaryAmount} 傷害，第二個目標造成 ${effect.secondaryAmount} 傷害。`
   }
-  if (effect.kind === 'damage-by-break-count') {
-    return `選擇 ${count}${target}，依 break 區條件造成傷害。`
+  if (effect.kind === 'damage-by-break-count' && t) {
+    return `選擇 ${t.count}${t.target}，依 break 區條件造成傷害。`
   }
-  if (effect.kind === 'modify-attack-by-break-count') {
-    return `選擇 ${count}${target}，依 break 區條件調整攻擊傷害。`
+  if (effect.kind === 'modify-attack-by-break-count' && t) {
+    return `選擇 ${t.count}${t.target}，依 break 區條件調整攻擊傷害。`
   }
-  if (effect.kind === 'redirect-attack') {
-    return `選擇 ${count}${target}，將本次攻擊改向該餅乾。`
+  if (effect.kind === 'redirect-attack' && t) {
+    return `選擇 ${t.count}${t.target}，將本次攻擊改向該餅乾。`
   }
-  if (effect.kind === 'prevent-knockout') {
-    return `選擇 ${count}${target}，本次戰鬥 HP 不會降到 0。`
+  if (effect.kind === 'prevent-knockout' && t) {
+    return `選擇 ${t.count}${t.target}，本次戰鬥 HP 不會降到 0。`
   }
-  if (effect.kind === 'field-to-trash') {
-    return `選擇 ${count}${target}或場景，放入棄牌區。`
+  if (effect.kind === 'field-to-trash' && t) {
+    return `選擇 ${t.count}${t.target}或場景，放入棄牌區。`
   }
-  if (effect.kind === 'return-to-hand') {
-    return `選擇 ${count}${target}返回手牌。`
+  if (effect.kind === 'return-to-hand' && t) {
+    return `選擇 ${t.count}${t.target}返回手牌。`
   }
-  if (effect.kind === 'return-to-deck-bottom') {
-    return `選擇 ${count}${target}返回牌庫底。`
+  if (effect.kind === 'return-to-deck-bottom' && t) {
+    return `選擇 ${t.count}${t.target}返回牌庫底。`
   }
-  if (effect.kind === 'disable-flip') {
-    return `選擇 ${count}${target}，本回合不能發動 FLIP。`
+  if (effect.kind === 'disable-flip' && t) {
+    return `選擇 ${t.count}${t.target}，本回合不能發動 FLIP。`
   }
-  if (effect.kind === 'view-hp') return `查看 ${count}${target}的 HP。`
-  if (effect.kind === 'battle-to-support') {
-    return `選擇 ${count}${target}放入支援區。`
+  if (effect.kind === 'view-hp' && t) return `查看 ${t.count}${t.target}的 HP。`
+  if (effect.kind === 'battle-to-support' && t) {
+    return `選擇 ${t.count}${t.target}放入支援區。`
   }
-  if (effect.kind === 'battle-to-break') {
-    return `選擇 ${count}${target}放入 break 區。`
+  if (effect.kind === 'battle-to-break' && t) {
+    return `選擇 ${t.count}${t.target}放入 break 區。`
   }
-  if (effect.kind === 'disable-attack') {
-    return `選擇 ${count}${target}，下回合不能攻擊。`
+  if (effect.kind === 'disable-attack' && t) {
+    return `選擇 ${t.count}${t.target}，下回合不能攻擊。`
   }
-  if (effect.kind === 'hp-to-support') {
-    return `選擇 ${count}${target}，將其 1 張 HP 卡放入支援區。`
+  if (effect.kind === 'hand-to-support' && t) {
+    return `選擇 ${t.count}${t.target}，將手牌卡放入支援區。`
   }
-  if (effect.kind === 'transfer-hp') {
+  if (effect.kind === 'break-to-hand' && t) {
+    return `選擇 ${t.count}${t.target}從休息區返回手牌。`
+  }
+  if (effect.kind === 'hp-to-support' && t) {
+    return `選擇 ${t.count}${t.target}，將其 1 張 HP 卡放入支援區。`
+  }
+  if (effect.kind === 'hand-to-hp' && t) {
+    return `選擇 ${t.count}${t.target}，將 1 張手牌當作 HP 卡。`
+  }
+  if (effect.kind === 'hp-to-hand' && t) {
+    return `選擇 ${t.count}${t.target}，將 1 張 HP 卡加入手牌。`
+  }
+  if (effect.kind === 'support-to-hp' && t) {
+    return `選擇 ${t.count}${t.target}，支援區卡成為 HP。`
+  }
+  if (effect.kind === 'equip-source' && t) {
+    return `選擇 ${t.count}${t.target}，裝載這張卡。`
+  }
+  if (effect.kind === 'battle-to-deck-top' && t) {
+    return `選擇 ${t.count}${t.target}放回牌庫頂。`
+  }
+  if (effect.kind === 'transfer-hp' && t) {
     return effect.direction === 'to-source'
-      ? `選擇 ${count}${target}，將其 ${effect.amount} 張 HP 卡移到這張餅乾上。`
-      : `選擇 ${count}${target}，將這張餅乾的 ${effect.amount} 張 HP 卡移過去。`
+      ? `選擇 ${t.count}${t.target}，將其 ${effect.amount} 張 HP 卡移到這張餅乾上。`
+      : `選擇 ${t.count}${t.target}，將這張餅乾的 ${effect.amount} 張 HP 卡移過去。`
   }
-  if (effect.kind === 'set-cookie-active') {
-    return `選擇 ${count}${target}，設為活躍。`
-  }
-
-  if (effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') {
+  if ((effect.kind === 'modify-attack' || effect.kind === 'modify-damage-received') && t) {
     const amount = effect.amount
     return effect.kind === 'modify-attack'
-      ? `選擇 ${count}${target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
-      : `選擇 ${count}${target}，受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      ? `選擇 ${t.count}${t.target}，攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
+      : `選擇 ${t.count}${t.target}，受到的攻擊傷害 ${amount >= 0 ? '+' : ''}${amount}。`
   }
 
   return `效果已處理。`
 }
-
 export const describeEffectResult = (
   effect: CardEffect,
   targetNames: string[],
@@ -200,6 +247,8 @@ export const describeEffectResult = (
   if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
   if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
   if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
+  if (effect.kind === 'modify-attack-cost') return `${names} 本回合攻擊費用已改變。`
+  if (effect.kind === 'multiply-attack-damage') return `攻擊傷害乘以 ${effect.multiplier}。`
   if (effect.kind === 'break-to-trash') {
     if (targetNames.length === 0) return '沒有選擇休息區目標。'
     return 'break 區卡已放入棄牌區。'

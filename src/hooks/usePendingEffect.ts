@@ -18,9 +18,11 @@ import {
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getPendingDecision,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
   getTrashCookieCandidates,
   getTrashToDeckCandidates,
@@ -174,7 +176,7 @@ export function usePendingEffect(params: {
     (currentEffect?.kind === 'trash-to-battle' ||
       currentEffect?.kind === 'trash-to-support')
       ? currentEffect.kind === 'trash-to-battle'
-        ? getTrashCookieCandidates(game, pendingEffect.context)
+        ? getTrashCookieCandidates(game, pendingEffect.context, currentEffect)
         : getTrashToSupportCandidates(game, pendingEffect.context)
       : []
 
@@ -424,6 +426,22 @@ export function usePendingEffect(params: {
   )
   const trashToDeckBottomCost =
     pendingEffect?.skill.cost.trashToDeckBottom?.count ?? 0
+  const selectedSkillTrashToDeckIds = new Set(
+    pendingEffect?.selectedTrashToDeckIds ?? [],
+  )
+  const skillTrashToDeckCandidates =
+    pendingEffect &&
+    !pendingEffect.skillActivated &&
+    pendingEffect.skill.cost.trashToDeck
+      ? getTrashToDeckCostCandidates(
+          pendingEffect.skill.cost,
+          game.players[pendingEffect.context.sourcePlayerId].discardPile,
+        )
+      : []
+  const skillTrashToDeckTargetIds = new Set(
+    skillTrashToDeckCandidates.map((card) => card.instanceId),
+  )
+  const trashToDeckCost = pendingEffect?.skill.cost.trashToDeck?.count ?? 0
 
   useEffect(() => {
     if (pendingEffect || effectHistory.length === 0) return
@@ -433,20 +451,25 @@ export function usePendingEffect(params: {
   }, [effectHistory, pendingEffect])
 
   /**
-   * 陷阱的延遲效果（BS3-046）不是由本機 UI 發起的，規則層會直接留下
-   * `pendingAbilityEffect`。技能／物品是 UI 與規則層並行建佇列，這裡則要
-   * 反過來從規則層補建本機的 pendingEffect，否則玩家看不到選擇畫面。
+   * 規則層直接設定 `pendingAbilityEffect` 時（陷阱延遲效果、reveal-top-deck 巢狀
+   * 目標選擇），UI 必須從規則層補建本機的 pendingEffect，否則玩家看不到選擇畫面。
+   * 技能／物品的一般啟動由本機 UI 先建 pendingEffect，這裡不會觸發。
+   *
+   * 這裡的前置條件必須與 `commands.ts` 的 `resolvePendingAbilityEffect` 一致。
+   * 特別是**不能**擋 `pendingBattle`：BS3-076 這類「攻擊後可選代價 →
+   * reveal-top-deck → 巢狀 damage(attackTargetOnly)」的效果，規則層會刻意保留
+   * `pendingBattle` 讓 `attackTargetOnly` 找得到攻擊目標，戰鬥要等巢狀效果結算
+   * 完才由 `resolvePendingAbilityEffect` 收尾。擋掉的話這個 pendingEffect 永遠
+   * 建不起來，玩家看不到追加傷害的目標選擇畫面，整局就卡死在攻擊後階段。
    */
   useEffect(() => {
     const pendingAbility = game.pendingAbilityEffect
     if (
       !pendingAbility ||
-      pendingAbility.sourceKind !== 'trap' ||
       pendingAbility.playerId !== viewerPlayerId ||
       pendingEffect ||
       suspendedEffect ||
       game.status !== 'playing' ||
-      game.pendingBattle ||
       game.pendingReplacement ||
       game.pendingRefresh ||
       game.pendingOnPlay
@@ -454,15 +477,38 @@ export function usePendingEffect(params: {
       return
     }
 
+    const playerId = pendingAbility.playerId
+    const player = game.players[playerId]
     const sourceCard =
-      game.players[viewerPlayerId].discardPile.find(
+      player.discardPile.find(
         (card) => card.instanceId === pendingAbility.sourceInstanceId,
-      ) ?? {
+      ) ??
+      player.supportArea.find(
+        (support) => support.card.instanceId === pendingAbility.sourceInstanceId,
+      )?.card ??
+      player.hand.find(
+        (card) => card.instanceId === pendingAbility.sourceInstanceId,
+      ) ??
+      player.battleArea.find(
+        (cookie) => cookie.card.instanceId === pendingAbility.sourceInstanceId,
+      )?.card ??
+      (player.stage?.card.instanceId === pendingAbility.sourceInstanceId
+        ? player.stage.card
+        : null) ?? {
         id: 'unknown',
         instanceId: pendingAbility.sourceInstanceId,
-        name: pendingAbility.sourceCardName ?? '陷阱效果',
-        type: 'trap' as const,
+        name: pendingAbility.sourceCardName ?? '效果',
+        type: 'item' as const,
       }
+
+    const triggerLabel =
+      pendingAbility.sourceKind === 'trap'
+        ? '陷阱延遲效果'
+        : pendingAbility.sourceKind === 'stage'
+          ? '場景效果'
+          : pendingAbility.sourceKind === 'skill'
+            ? '技能效果'
+            : '物品效果'
 
     const timer = window.setTimeout(() => {
       setPendingEffect({
@@ -492,8 +538,10 @@ export function usePendingEffect(params: {
         // 代價在 playTrap 就付清了，這裡只剩效果結算。
         skillActivated: true,
         optional: false,
-        triggerLabel: '陷阱延遲效果',
-        sourceKind: 'item',
+        triggerLabel,
+        sourceKind: pendingAbility.sourceKind === 'trap' ? 'item'
+          : pendingAbility.sourceKind === 'skill' ? 'cookie'
+          : pendingAbility.sourceKind,
       })
     }, 0)
     return () => window.clearTimeout(timer)
@@ -517,6 +565,7 @@ export function usePendingEffect(params: {
       (game.pendingRefresh?.playerId === viewerPlayerId) ||
       (game.pendingOnPlay?.playerId === viewerPlayerId) ||
       (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
+      (game.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
       (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
       (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
       (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
@@ -536,6 +585,7 @@ export function usePendingEffect(params: {
     game.pendingRefresh,
     game.pendingOnPlay,
     game.pendingInspectDeck,
+    game.pendingRevealTopDeck,
     game.pendingOptionalCostAttack,
     game.pendingDrawUpTo,
     game.pendingStageTrigger,
@@ -747,7 +797,15 @@ export function usePendingEffect(params: {
       battle.attackerPlayerId !== viewerPlayerId ||
       game.pendingOptionalCostAttack ||
       pendingEffect ||
-      faintActive
+      faintActive ||
+      // resolve-attack-effect 是 player-action 指令，規則層的
+      // assertNoPendingDecision 要求「完全沒有待處理決策」才放行。這裡必須用
+      // 同一份判斷，不能只看 faintActive——faintActive 只在昏厥效果屬於**檢視者**
+      // 時為真，攻擊打死帶昏厥觸發的對手餅乾時（如 Cherry Cookie），決策擁有者
+      // 是對手，檢視者這邊看起來一片乾淨，於是照送指令、直接被規則層擋下拋錯，
+      // 而且是在 setGame updater 裡拋出，整個 App 會被 error boundary 接走。
+      // 有待處理決策時就先讓出，等擁有者（AI 或對手）解完再由本 effect 接手。
+      getPendingDecision(game)
     ) {
       return
     }
@@ -1097,6 +1155,21 @@ export function usePendingEffect(params: {
     })
   }
 
+  const toggleSkillTrashToDeck = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+    const cost = pendingEffect.skill.cost.trashToDeck
+    if (!cost || !skillTrashToDeckTargetIds.has(instanceId)) return
+    const selected = pendingEffect.selectedTrashToDeckIds ?? []
+    const isSelected = selected.includes(instanceId)
+    if (!isSelected && selected.length >= cost.count) return
+    setPendingEffect({
+      ...pendingEffect,
+      selectedTrashToDeckIds: isSelected
+        ? selected.filter((id) => id !== instanceId)
+        : [...selected, instanceId],
+    })
+  }
+
   const toggleSkillTrashBattleCookie = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
     const trashCost = pendingEffect.skill.cost.trashBattleCookie
@@ -1173,6 +1246,7 @@ export function usePendingEffect(params: {
         (game.pendingRefresh?.playerId === viewerPlayerId) ||
         (game.pendingOnPlay?.playerId === viewerPlayerId) ||
         (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
+        (game.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
         (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
         (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
         (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
@@ -1319,6 +1393,7 @@ export function usePendingEffect(params: {
                 supportToTrashIds,
                 supportToHandIds,
                 discardHandIds,
+                trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
             : applyGameCommand(game, {
@@ -1331,6 +1406,7 @@ export function usePendingEffect(params: {
                 discardHandIds,
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
                 trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds,
+                trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
       const nextGame = applyGameCommand(activatedGame, {
@@ -1375,6 +1451,7 @@ export function usePendingEffect(params: {
         (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
         (nextGame.pendingOnPlay?.playerId === viewerPlayerId) ||
         (nextGame.pendingInspectDeck?.playerId === viewerPlayerId) ||
+        (nextGame.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
         (nextGame.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
         (nextGame.pendingDrawUpTo?.playerId === viewerPlayerId) ||
         (nextGame.pendingStageTrigger?.playerId === viewerPlayerId) ||
@@ -1515,6 +1592,7 @@ export function usePendingEffect(params: {
     toggleSkillDiscardHand,
     toggleSkillTrashBattleCookie,
     toggleSkillTrashToDeckBottom,
+    toggleSkillTrashToDeck,
     confirmEffect,
     skipOptionalSkill,
     skipAttackEffect,
@@ -1551,6 +1629,10 @@ export function usePendingEffect(params: {
     skillTrashToDeckBottomCandidates,
     skillTrashToDeckBottomTargetIds,
     trashToDeckBottomCost,
+    selectedSkillTrashToDeckIds,
+    skillTrashToDeckCandidates,
+    skillTrashToDeckTargetIds,
+    trashToDeckCost,
     faintActive,
     afterDamageActive,
   } as const

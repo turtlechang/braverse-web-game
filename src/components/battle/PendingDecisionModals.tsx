@@ -3,6 +3,7 @@ import { getRefreshCandidates } from '../../game'
 import {
   DecisionModal,
   InspectDeckModal,
+  RevealTopDeckModal,
   DrawUpToResponseModal,
   HandDiscardResponseModal,
   EffectOrderModal,
@@ -29,6 +30,15 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       ? match.game.pendingInspectDeck
       : null
 
+  const pendingReveal =
+    match.game.pendingRevealTopDeck &&
+    !(
+      match.game.pendingEffectOrder &&
+      !match.game.pendingEffectOrder.resolvedOrder
+    )
+      ? match.game.pendingRevealTopDeck
+      : null
+
   const pendingEffectOrder =
     match.game.pendingEffectOrder &&
     !match.game.pendingEffectOrder.resolvedOrder &&
@@ -48,6 +58,8 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       : null
 
   const autoResolveDrawUpTo = pendingDrawUpTo?.max === 1
+  const pendingStageTrigger = match.game.pendingStageTrigger
+  const isCookieSkillTrigger = pendingStageTrigger?.sourceKind === 'cookie-skill'
 
   useEffect(() => {
     if (!autoResolveDrawUpTo || !pendingDrawUpTo) return
@@ -188,12 +200,17 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               role="dialog"
               style={{ pointerEvents: 'auto' }}
             >
-              <h2>{match.game.pendingStageTrigger.sourceCardName} 效果</h2>
+              <h2>
+                {pendingStageTrigger?.sourceCardName}{' '}
+                {isCookieSkillTrigger ? '技能' : '效果'}
+              </h2>
               <p className="faint-effect-text">
-                {match.game.pendingStageTrigger.effectText}
+                {pendingStageTrigger?.effectText}
               </p>
               <p className="faint-target-hint">
-                是否發動效果抽 1 張牌？
+                {isCookieSkillTrigger
+                  ? '是否發動此技能？'
+                  : '是否發動效果抽 1 張牌？'}
               </p>
               <div className="faint-modal-actions">
                 <button
@@ -316,7 +333,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
           filterColor={pendingInspect.filterColor}
           filterType={pendingInspect.filterType}
           optionalPick={pendingInspect.optionalPick}
-          onConfirm={(pickedId, restOrder) => {
+          onConfirm={(pickedCardIds, restOrder) => {
             const restLabel =
               pendingInspect.restDestination === 'trash'
                 ? '棄牌區'
@@ -327,16 +344,38 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               {
                 kind: 'resolve-inspect-deck',
                 playerId: match.viewerPlayerId,
-                pickedCardId: pickedId,
+                pickedCardIds,
                 restOrder,
               },
-              pickedId !== null
+              pickedCardIds.length > 0
                 ? `已選擇卡牌${
                     pendingInspect.pickDestination === 'battle'
                       ? '登場'
                       : '加入手牌'
                   }，其餘放入${restLabel}。`
                 : `沒有選擇卡牌，全部放入${restLabel}。`,
+            )
+          }}
+        />
+      )}
+
+      {pendingReveal && (
+        <RevealTopDeckModal
+          key={pendingReveal.sourceInstanceId}
+          sourceCardName={pendingReveal.sourceCardName}
+          revealedCard={pendingReveal.revealedCard}
+          matched={pendingReveal.matched}
+          canConfirm={pendingReveal.playerId === match.viewerPlayerId}
+          onConfirm={() => {
+            if (pendingReveal.playerId !== match.viewerPlayerId) return
+            match.dispatch(
+              {
+                kind: 'resolve-reveal-top-deck',
+                playerId: match.viewerPlayerId,
+              },
+              pendingReveal.matched
+                ? `翻到 ${pendingReveal.revealedCard.name}，條件匹配！`
+                : `翻到 ${pendingReveal.revealedCard.name}，條件未匹配。`,
             )
           }}
         />

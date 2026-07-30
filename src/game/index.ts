@@ -50,6 +50,7 @@ export type {
 export { maskGameStateForViewer } from './masked-state'
 export {
   getAttackEnergyCost,
+  getAttackEnergyCostForState,
   getEnergyCostTotal,
   getRemainingEnergyCost,
   isEnergyColorCompatibleWithCost,
@@ -129,8 +130,10 @@ export {
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   getBlockerCandidates,
+  explainUnavailableTraps,
   getTrapCandidates,
   getTrapTargetCandidates,
+  getTrapSelfTargetCandidates,
   isBlockDisabled,
   playBlocker,
   playTrap,
@@ -178,6 +181,8 @@ export {
   canActivateCookieSkill,
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
+  canPayTrashToDeckCost,
+  getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckBottomCostCandidates,
   skipCookieOnPlay,

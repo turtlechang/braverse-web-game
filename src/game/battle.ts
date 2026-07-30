@@ -18,7 +18,7 @@ import {
   selectEffectTargets,
 } from './effects'
 import {
-  getAttackEnergyCost,
+  getAttackEnergyCostForState,
   getRemainingEnergyCost,
   selectEnergyPayment,
   validateEnergyPayment,
@@ -32,6 +32,7 @@ import {
 } from './replacement'
 import {
   canPayTrashBattleCookieCost,
+  markSupportAreaDecreased,
   payTrashBattleCookieCost,
 } from './skills'
 import { canAttack } from './turn'
@@ -85,6 +86,10 @@ const assertNoBlockingDecision = (state: GameState) => {
     throw new GameRuleError('Invalid battle action.')
   }
 
+  if (state.pendingRevealTopDeck) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
   if (state.pendingOptionalCostAttack) {
     throw new GameRuleError('Invalid battle action.')
   }
@@ -127,7 +132,7 @@ export const beginAttack = (
   )
   const attacker = attackerPlayer.battleArea[attackerIndex]
 
-  if (!attacker || attacker.rested) {
+  if (!attacker || attacker.rested || attacker.card.nonAttackable) {
     throw new GameRuleError('Invalid battle action.')
   }
 
@@ -148,7 +153,7 @@ export const beginAttack = (
   }
 
   const paymentValidation = validateEnergyPayment(
-    getAttackEnergyCost(attacker.card),
+    getAttackEnergyCostForState(state, attackerInstanceId),
     attackerPlayer.supportArea,
     supportPaymentIds,
   )
@@ -236,6 +241,10 @@ const isTrapConditionMet = (
     return true
   }
 
+  if (condition.kind === 'friendly-cookie-fainted-this-battle') {
+    return true
+  }
+
   return true
 }
 
@@ -250,6 +259,16 @@ const hasRequiredTrapTargets = (
   }
 
   return card.trap!.effects.every((effect) => {
+    if (effect.kind === 'trash-to-battle') {
+      const available = state.players[playerId].discardPile.filter(
+        (discarded) =>
+          discarded.type === 'cookie' &&
+          (effect.energyColor === undefined ||
+            discarded.energyColor === effect.energyColor),
+      ).length
+      return available >= effect.amount
+    }
+
     const isTargetedGainHp =
       effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly
     if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target || effect.target.min === 0) {
@@ -270,6 +289,86 @@ const hasRequiredTrapTargets = (
 
     return battleCandidateCount + stageCandidateCount >= effect.target.min
   })
+}
+
+export type TrapUnavailableReason =
+  | 'not-trap-stage'
+  | 'condition-not-met'
+  | 'no-legal-targets'
+  | 'not-enough-support-to-trash'
+  | 'not-enough-hand-to-discard'
+  | 'cannot-pay-energy'
+  | 'cannot-trash-battle-cookie'
+  | 'unknown'
+
+export interface UnavailableTrap {
+  instanceId: string
+  cardId: string
+  reason: TrapUnavailableReason
+}
+
+/**
+ * 逐一說明手上的陷阱卡為什麼進不了 `getTrapCandidates`。
+ *
+ * 檢查順序必須與 `getTrapCandidates` 的 filter 完全一致，回報的才會是「真正
+ * 第一個擋下它的那道關卡」。若所有已知關卡都通過卻仍不在候選名單，回報
+ * `unknown`——那才代表引擎真的有問題，值得示警。
+ *
+ * 存在的理由：被攻擊時支援卡多半還是橫置的（支援區要到自己回合的活躍階段
+ * 才會重置），所以「手上有陷阱但付不出代價」是再正常不過的日常狀況，不該
+ * 每次都對主控台大喊。
+ */
+export const explainUnavailableTraps = (
+  state: GameState,
+  playerId: PlayerId,
+): UnavailableTrap[] => {
+  const player = state.players[playerId]
+  const available = new Set(
+    getTrapCandidates(state, playerId).map((card) => card.instanceId),
+  )
+  const battle = state.pendingBattle
+  const inTrapStage =
+    battle?.stage === 'trap' &&
+    !battle.trapUsed &&
+    battle.defenderPlayerId === playerId
+
+  return player.hand
+    .filter((card) => card.type === 'trap' && Boolean(card.trap))
+    .filter((card) => !available.has(card.instanceId))
+    .map((card) => {
+      const trap = card.trap!
+      const reason: TrapUnavailableReason = !inTrapStage
+        ? 'not-trap-stage'
+        : !isTrapConditionMet(state, playerId, trap)
+          ? 'condition-not-met'
+          : !hasRequiredTrapTargets(state, playerId, card)
+            ? 'no-legal-targets'
+            : player.supportArea.length <
+                trap.effects.reduce(
+                  (total, effect) =>
+                    effect.kind === 'support-to-trash'
+                      ? total + effect.amount
+                      : total,
+                  0,
+                )
+              ? 'not-enough-support-to-trash'
+              : player.hand.filter(
+                    (handCard) =>
+                      handCard.instanceId !== card.instanceId &&
+                      (!trap.cost.discardHandColor ||
+                        handCard.energyColor === trap.cost.discardHandColor),
+                  ).length < (trap.cost.discardHand ?? 0)
+                ? 'not-enough-hand-to-discard'
+                : selectEnergyPayment(
+                      trap.cost.energy ?? trap.cost,
+                      player.supportArea,
+                    ) === null
+                  ? 'cannot-pay-energy'
+                  : !canPayTrashBattleCookieCost(trap.cost, player.battleArea)
+                    ? 'cannot-trash-battle-cookie'
+                    : 'unknown'
+      return { instanceId: card.instanceId, cardId: card.id, reason }
+    })
 }
 
 export const getTrapCandidates = (
@@ -353,6 +452,7 @@ const validateTrapTargets = (
   playerId: PlayerId,
   effects: CardEffect[],
   targetIds: string[],
+  selfTargetIds?: string[],
 ) => {
   const targetEffects = effects.filter(
     (effect) =>
@@ -373,6 +473,28 @@ const validateTrapTargets = (
   for (const effect of targetEffects) {
     const target = 'target' in effect ? effect.target : undefined
     if (!target) continue
+    const isSelfTarget = target.side === 'self'
+    let effectiveIds: string[]
+    if (isSelfTarget) {
+      if (selfTargetIds && selfTargetIds.length > 0) {
+        effectiveIds = selfTargetIds
+      } else {
+        const selfCandidates = getEffectTargetCandidates(
+          state,
+          { sourcePlayerId: playerId, sourceInstanceId: 'pending-trap' },
+          target,
+        )
+        const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+        const validTargetIds = targetIds.filter((id) => selfCandidateIds.has(id))
+        effectiveIds = validTargetIds.length > 0
+          ? validTargetIds
+          : selfCandidates.length > 0
+            ? [selfCandidates[0].card.instanceId]
+            : []
+      }
+    } else {
+      effectiveIds = targetIds
+    }
     selectEffectTargets(
       state,
       {
@@ -380,7 +502,7 @@ const validateTrapTargets = (
         sourceInstanceId: 'pending-trap',
       },
       target,
-      targetIds,
+      effectiveIds,
     )
   }
 }
@@ -438,17 +560,6 @@ const moveSupportsToHand = (
   }
 }
 
-const markSupportAreaDecreased = (
-  state: GameState,
-  playerId: PlayerId,
-): GameState => ({
-  ...state,
-  supportAreaDecreasedThisTurn: {
-    ...(state.supportAreaDecreasedThisTurn ?? {}),
-    [playerId]: true,
-  },
-})
-
 export interface PlayTrapOptions {
   trapInstanceId: string
   paymentIds: string[]
@@ -468,6 +579,11 @@ export interface PlayTrapOptions {
    * targetIds 並存，不會互相覆蓋。
    */
   trashToDeckIds?: string[]
+  /**
+   * 自身目標效果的獨立目標欄位（例如 BS3-021 的「1 of your Cookies takes
+   * 1 damage」）。與 targetIds（通常瞄準對手）的目標側不同，不能共用。
+   */
+  selfTargetIds?: string[]
 }
 
 export interface PlayBlockerOptions {
@@ -581,7 +697,7 @@ export const playTrap = (
     throw new GameRuleError(`Invalid trap payment: ${paymentValidation.reason}`)
   }
 
-  validateTrapTargets(state, playerId, trap.effects, options.targetIds)
+  validateTrapTargets(state, playerId, trap.effects, options.targetIds, options.selfTargetIds)
 
   const discardHandIds = options.discardHandIds ?? []
   const uniqueDiscardHandIds = [...new Set(discardHandIds)]
@@ -727,8 +843,7 @@ export const playTrap = (
     pendingBattle: {
       ...battle,
       trapUsed: true,
-      ...(trap.condition?.kind ===
-      'friendly-color-fainted-this-battle'
+      ...(trap.condition?.kind === 'friendly-color-fainted-this-battle'
         ? {
             delayedTrap: {
               playerId,
@@ -741,7 +856,17 @@ export const playTrap = (
               effects: trap.effects,
             },
           }
-        : {}),
+        : trap.condition?.kind === 'friendly-cookie-fainted-this-battle'
+          ? {
+              delayedTrap: {
+                playerId,
+                sourceInstanceId: trapCard.instanceId,
+                sourceCardName: trapCard.name,
+                anyFriendlyCookie: true,
+                effects: trap.effects,
+              },
+            }
+          : {}),
     },
   }
 
@@ -759,18 +884,21 @@ export const playTrap = (
   }
 
   if (supportToTrash?.kind === 'support-to-trash') {
-    nextState = markSupportAreaDecreased(nextState, playerId)
+    nextState = markSupportAreaDecreased(nextState, playerId, {
+      triggerSkill: (options.supportTrashIds ?? []).length > 0,
+    })
   }
 
   const context = {
     sourcePlayerId: playerId,
     sourceInstanceId: trapCard.instanceId,
+    sourceCardName: trapCard.name,
   }
 
   for (const effect of trap.effects) {
     if (
-      trap.condition?.kind ===
-      'friendly-color-fainted-this-battle'
+      trap.condition?.kind === 'friendly-color-fainted-this-battle' ||
+      trap.condition?.kind === 'friendly-cookie-fainted-this-battle'
     ) {
       continue
     }
@@ -809,11 +937,33 @@ export const playTrap = (
     }
 
     if (effect.kind === 'redirect-attack') {
+      const isSelfTarget = effect.target?.side === 'self'
+      let redirectTargetIds: string[]
+      if (isSelfTarget) {
+        if (options.selfTargetIds && options.selfTargetIds.length > 0) {
+          redirectTargetIds = options.selfTargetIds
+        } else {
+          const selfCandidates = getEffectTargetCandidates(
+            nextState,
+            context,
+            effect.target,
+          )
+          const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+          const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
+          redirectTargetIds = validTargetIds.length > 0
+            ? validTargetIds
+            : selfCandidates.length > 0
+              ? [selfCandidates[0].card.instanceId]
+              : []
+        }
+      } else {
+        redirectTargetIds = options.targetIds
+      }
       const targets = selectEffectTargets(
         nextState,
         context,
         effect.target,
-        options.targetIds,
+        redirectTargetIds,
       )
       const redirectTarget = targets[0]
       const activeBattle = requirePendingBattle(nextState)
@@ -841,11 +991,33 @@ export const playTrap = (
     }
 
     if (effect.kind === 'damage') {
+      const isSelfTarget = effect.target?.side === 'self'
+      let damageTargetIds: string[]
+      if (isSelfTarget) {
+        if (options.selfTargetIds && options.selfTargetIds.length > 0) {
+          damageTargetIds = options.selfTargetIds
+        } else {
+          const selfCandidates = getEffectTargetCandidates(
+            nextState,
+            context,
+            effect.target,
+          )
+          const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+          const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
+          damageTargetIds = validTargetIds.length > 0
+            ? validTargetIds
+            : selfCandidates.length > 0
+              ? [selfCandidates[0].card.instanceId]
+              : []
+        }
+      } else {
+        damageTargetIds = options.targetIds
+      }
       const targets = selectEffectTargets(
         nextState,
         context,
         effect.target,
-        options.targetIds,
+        damageTargetIds,
       )
       if (targets.length === 0) {
         continue
@@ -893,8 +1065,28 @@ export const playTrap = (
         effect.kind === 'deck-to-support' ||
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
-        : options.targetIds,
+        : (() => {
+            if ('target' in effect && effect.target?.side === 'self') {
+              if (options.selfTargetIds && options.selfTargetIds.length > 0) {
+                return options.selfTargetIds
+              }
+              const selfCandidates = getEffectTargetCandidates(
+                nextState,
+                context,
+                effect.target,
+              )
+              const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
+              const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
+              return validTargetIds.length > 0
+                ? validTargetIds
+                : selfCandidates.length > 0
+                  ? [selfCandidates[0].card.instanceId]
+                  : []
+            }
+            return options.targetIds
+          })(),
     )
+    if (nextState.pendingRevealTopDeck) break
   }
 
   if (nextState.status !== 'playing') {
@@ -906,27 +1098,52 @@ export const playTrap = (
     return nextState
   }
 
+  // 陷阱裡的 reveal-top-deck（BS3-093）還沒確認，巢狀效果可能再改一次攻擊力，
+  // 現在鎖傷害的話那個 -1 就永遠打不到。改由 resolve-reveal-top-deck 結算完
+  // 巢狀效果後呼叫 advanceBattleAfterTrap 推進。
+  if (nextState.pendingRevealTopDeck) {
+    return {
+      ...nextState,
+      pendingRevealTopDeck: {
+        ...nextState.pendingRevealTopDeck,
+        battleContinuation: 'after-trap',
+      },
+    }
+  }
+
+  return advanceBattleAfterTrap(nextState)
+}
+
+/**
+ * 陷阱視窗結束後把戰鬥推進到傷害階段；攻守任一方已離場就直接收尾。
+ *
+ * 傷害要在這裡才重算：陷阱效果（含 BS3-093 翻牌後的巢狀 modify-attack）會改動
+ * 攻擊力，提早鎖住 `remainingDamage` 等於讓那些效果失效。
+ */
+export const advanceBattleAfterTrap = (state: GameState): GameState => {
+  const activeBattle = requirePendingBattle(state)
+
   const attackerExists = battleParticipantExists(
-    nextState,
+    state,
     activeBattle.attackerInstanceId,
   )
   const targetExists = battleParticipantExists(
-    nextState,
+    state,
     activeBattle.targetInstanceId,
   )
 
   if (!attackerExists || !targetExists) {
-    return finishBattle(nextState)
+    return finishBattle(state)
   }
 
   const recalculatedDamage = getAttackDamageAgainst(
-    nextState,
+    state,
     activeBattle.attackerInstanceId,
     activeBattle.targetInstanceId,
   )
 
   return {
-    ...nextState,
+    ...state,
     pendingBattle: {
       ...activeBattle,
       declaredDamage: recalculatedDamage,
@@ -1087,6 +1304,12 @@ const removeFaintedCookie = (
 const isDelayedTrapTriggered = (battle: PendingBattle): boolean => {
   const delayed = battle.delayedTrap
   if (!delayed) return false
+  if (delayed.anyFriendlyCookie) {
+    return (battle.faintedCookies ?? []).some(
+      (fainted) => fainted.playerId === delayed.playerId,
+    )
+  }
+  if (!delayed.color) return false
   if (delayed.minLevel === undefined) {
     return battle.faintedColors.includes(delayed.color)
   }
@@ -1098,7 +1321,7 @@ const isDelayedTrapTriggered = (battle: PendingBattle): boolean => {
   )
 }
 
-const finishBattle = (state: GameState): GameState => {
+export const finishBattle = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
   let completedState = state
   if (battle.delayedTrap && isDelayedTrapTriggered(battle)) {
@@ -1147,6 +1370,30 @@ const finishBattle = (state: GameState): GameState => {
         break
       }
     }
+  }
+
+  // reveal-top-deck 需要玩家確認後才執行巢狀效果，此處保留 pendingBattle
+  // 讓巢狀 damage 的 attackTargetOnly 能找到攻擊目標，戰鬥改由
+  // resolve-reveal-top-deck 收尾。
+  //
+  // 保留 pendingBattle 就代表 finishBattle 會對同一場戰鬥跑第二次，所以延後前
+  // 必須：
+  //   1. 用 battleContinuation: 'finish' 標記「這次翻牌欠一個收尾」，好跟陷阱
+  //      （BS3-093）裡的翻牌區分開——後者的戰鬥還沒打到傷害，不能收尾。
+  //   2. 把上面已經執行過的 delayedTrap 拿掉，否則第二次 finishBattle 會讓延遲
+  //      陷阱的效果再結算一次。
+  if (completedState.pendingRevealTopDeck) {
+    const deferredBattle = completedState.pendingBattle
+    return finalizePendingReplacements({
+      ...buildPendingEffectOrder(completedState),
+      pendingRevealTopDeck: {
+        ...completedState.pendingRevealTopDeck,
+        battleContinuation: 'finish',
+      },
+      ...(deferredBattle
+        ? { pendingBattle: { ...deferredBattle, delayedTrap: undefined } }
+        : {}),
+    })
   }
 
   return finalizePendingReplacements({
@@ -1289,6 +1536,17 @@ const buildPendingEffectOrder = (
     })
   }
 
+  if (state.pendingRevealTopDeck) {
+    const pending = state.pendingRevealTopDeck
+    items.push({
+      id: `reveal-top-deck:${pending.sourceInstanceId}`,
+      kind: 'reveal-top-deck',
+      sourcePlayerId: pending.playerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+    })
+  }
+
   if (state.pendingStageTrigger) {
     const pending = state.pendingStageTrigger
     items.push({
@@ -1338,12 +1596,18 @@ const finishDamageSequence = (state: GameState): GameState => {
       }
       return finishBattle(state)
     }
+    const resumedDamage = getAttackDamageAgainst(
+      state,
+      battle.attackerInstanceId,
+      battle.targetInstanceId,
+    )
     return {
       ...state,
       pendingBattle: {
         ...battle,
         stage: 'damage',
-        remainingDamage: battle.suspendedAttackDamage,
+        declaredDamage: resumedDamage,
+        remainingDamage: resumedDamage,
         damagePlayerId: undefined,
         damageTargetInstanceId: undefined,
         suspendedAttackDamage: undefined,
@@ -1960,6 +2224,12 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       break
     }
 
+    // 翻牌展示要玩家確認才能往下走（BS3-076／080 的攻擊後效果、BS3-093 的陷阱）。
+    // 自動結算沒辦法代為確認，不讓出的話會停在同一個階段空轉到 guard 上限拋錯。
+    if (nextState.pendingRevealTopDeck) {
+      break
+    }
+
     if (nextState.pendingOptionalCostAttack) {
       const pending = nextState.pendingOptionalCostAttack
       const hand = nextState.players[pending.playerId].hand
@@ -2107,6 +2377,39 @@ export const getTrapTargetCandidates = (
   )
   const target =
     targetEffect && 'target' in targetEffect ? targetEffect.target : undefined
+  return target
+    ? getEffectTargetCandidates(
+        state,
+        {
+          sourcePlayerId: playerId,
+          sourceInstanceId: card!.instanceId,
+        },
+        target,
+      )
+    : []
+}
+
+export const getTrapSelfTargetCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+  trapInstanceId: string,
+): CookieInBattle[] => {
+  const card = state.players[playerId].hand.find(
+    (candidate) => candidate.instanceId === trapInstanceId,
+  )
+  const selfEffects = card?.trap?.effects.filter(
+    (effect) =>
+      (effect.kind === 'damage' || effect.kind === 'gain-hp') &&
+      'target' in effect &&
+      effect.target?.side === 'self' &&
+      (effect.target.min ?? 0) > 0,
+  )
+  if (!selfEffects || selfEffects.length === 0) return []
+  const firstSelfEffect = selfEffects[0]
+  const target =
+    firstSelfEffect && 'target' in firstSelfEffect
+      ? firstSelfEffect.target
+      : undefined
   return target
     ? getEffectTargetCandidates(
         state,

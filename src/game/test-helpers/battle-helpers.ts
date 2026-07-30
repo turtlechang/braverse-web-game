@@ -108,6 +108,7 @@ export const createBattleState = (): GameState => {
     },
     pendingRefresh: null,
     pendingBattle: null,
+    pendingRevealTopDeck: null,
   }
 }
 

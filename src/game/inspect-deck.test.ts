@@ -56,7 +56,7 @@ describe('inspect-deck', () => {
     const pending = withPending.pendingInspectDeck!
     const pickedId = pending.revealedCards[0].instanceId
     const restOrder = [pending.revealedCards[2].instanceId, pending.revealedCards[1].instanceId]
-    const result = resolveInspectDeck(withPending, 'player-one', pickedId, restOrder)
+    const result = resolveInspectDeck(withPending, 'player-one', [pickedId], restOrder)
     expect(result.pendingInspectDeck).toBeNull()
     expect(result.players['player-one'].hand.map((c) => c.instanceId)).toContain(pickedId)
     const bottomCards = result.players['player-one'].deck.slice(-2)
@@ -64,7 +64,7 @@ describe('inspect-deck', () => {
     expect(bottomCards[1].instanceId).toBe(restOrder[1])
   })
 
-  it('rejects duplicate IDs in pickedCardId + restOrder', () => {
+  it('rejects duplicate IDs in pickedCardIds', () => {
     const state = createDemoGame()
     const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'test-source' }
     const withPending = executeCardEffect(state, context, {
@@ -76,7 +76,7 @@ describe('inspect-deck', () => {
     const pending = withPending.pendingInspectDeck!
     const pickedId = pending.revealedCards[0].instanceId
     expect(() =>
-      resolveInspectDeck(withPending, 'player-one', pickedId, [pickedId, pending.revealedCards[1].instanceId]),
+      resolveInspectDeck(withPending, 'player-one', [pickedId, pickedId], [pending.revealedCards[1].instanceId]),
     ).toThrow('不能重複選取同一張卡牌')
   })
 
@@ -92,11 +92,11 @@ describe('inspect-deck', () => {
     const pending = withPending.pendingInspectDeck!
     const pickedId = pending.revealedCards[0].instanceId
     expect(() =>
-      resolveInspectDeck(withPending, 'player-one', pickedId, [pending.revealedCards[1].instanceId]),
+      resolveInspectDeck(withPending, 'player-one', [pickedId], [pending.revealedCards[1].instanceId]),
     ).toThrow('剩餘牌順序必須包含所有未選取的檢視卡牌')
   })
 
-  it('rejects if pickedCardId is not in revealedCards', () => {
+  it('rejects if pickedCardIds contains ID not in revealedCards', () => {
     const state = createDemoGame()
     const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'test-source' }
     const withPending = executeCardEffect(state, context, {
@@ -105,8 +105,9 @@ describe('inspect-deck', () => {
       pickCount: 1,
       restDestination: 'bottom',
     }, [])
+    const pending = withPending.pendingInspectDeck!
     expect(() =>
-      resolveInspectDeck(withPending, 'player-one', 'non-existent', ['a', 'b']),
+      resolveInspectDeck(withPending, 'player-one', ['non-existent'], [pending.revealedCards[0].instanceId, pending.revealedCards[1].instanceId]),
     ).toThrow('選取的卡牌不在檢視清單中')
   })
 
@@ -400,7 +401,7 @@ describe('inspect-deck integration', () => {
 
     const pickedId = revealed[0].instanceId
     const restOrder = [revealed[2].instanceId, revealed[1].instanceId]
-    const final = resolveInspectDeck(refreshed, 'player-one', pickedId, restOrder)
+    const final = resolveInspectDeck(refreshed, 'player-one', [pickedId], restOrder)
     expect(final.pendingInspectDeck).toBeNull()
     expect(final.players['player-one'].hand.map((c) => c.instanceId)).toContain(pickedId)
     const bottom = final.players['player-one'].deck.slice(-2)
@@ -438,7 +439,7 @@ describe('inspect-deck integration', () => {
 
     const pickedId = revealed[0].instanceId
     const restOrder = [revealed[2].instanceId, revealed[1].instanceId]
-    const final = resolveInspectDeck(refreshed, 'player-one', pickedId, restOrder)
+    const final = resolveInspectDeck(refreshed, 'player-one', [pickedId], restOrder)
     expect(final.pendingInspectDeck).toBeNull()
     expect(final.players['player-one'].hand.map((c) => c.instanceId)).toContain(pickedId)
     const bottom = final.players['player-one'].deck.slice(-2)
@@ -481,7 +482,7 @@ describe('inspect-deck integration', () => {
 
     const pickedId = revealed[1].instanceId
     const restOrder = [revealed[0].instanceId, revealed[2].instanceId]
-    const final = resolveInspectDeck(refreshed, 'player-one', pickedId, restOrder)
+    const final = resolveInspectDeck(refreshed, 'player-one', [pickedId], restOrder)
     expect(final.pendingInspectDeck).toBeNull()
     expect(final.players['player-one'].hand.map((c) => c.instanceId)).toContain(pickedId)
     const bottom = final.players['player-one'].deck.slice(-2)
@@ -594,7 +595,7 @@ describe('inspect-deck with filterColor', () => {
     const restOrder = pending.revealedCards
       .filter((c) => c.instanceId !== pickedCard.instanceId)
       .map((c) => c.instanceId)
-    const result = resolveInspectDeck(withPending, 'player-one', pickedCard.instanceId, restOrder)
+    const result = resolveInspectDeck(withPending, 'player-one', [pickedCard.instanceId], restOrder)
     expect(result.pendingInspectDeck).toBeNull()
     expect(result.players['player-one'].hand).toContainEqual(pickedCard)
   })
@@ -617,7 +618,7 @@ describe('inspect-deck with filterColor', () => {
     const restOrder = pending.revealedCards
       .filter((c) => c.instanceId !== nonBlueCard.instanceId)
       .map((c) => c.instanceId)
-    expect(() => resolveInspectDeck(withPending, 'player-one', nonBlueCard.instanceId, restOrder))
+    expect(() => resolveInspectDeck(withPending, 'player-one', [nonBlueCard.instanceId], restOrder))
       .toThrow('只能選擇顏色為 blue 的卡牌。')
   })
 
@@ -637,7 +638,7 @@ describe('inspect-deck with filterColor', () => {
     const pending = withPending.pendingInspectDeck!
     expect(pending.revealedCards.every((c) => c.energyColor !== 'blue')).toBe(true)
     const allIds = pending.revealedCards.map((c) => c.instanceId)
-    const result = resolveInspectDeck(withPending, 'player-one', null, allIds)
+    const result = resolveInspectDeck(withPending, 'player-one', [], allIds)
     expect(result.pendingInspectDeck).toBeNull()
     expect(result.players['player-one'].hand).toHaveLength(0)
     expect(result.players['player-one'].deck).toHaveLength(3)

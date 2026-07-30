@@ -172,6 +172,34 @@ button.card-face {
   vertical-align: middle;
 }
 
+.inline-skill-label-image {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 3px;
+  vertical-align: middle;
+  line-height: 0;
+}
+
+.card-effect-token-image {
+  width: auto;
+  height: 1.35em;
+  max-width: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.card-effect-token-accessible-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .skill-cost {
   display: grid;
   grid-template-columns: auto 1fr;

@@ -14,13 +14,19 @@ import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 
-/** 與 commands.ts 的 resolvePendingAbilityEffect 前置檢查一致。 */
+/**
+ * 與 commands.ts 的 resolvePendingAbilityEffect 前置檢查一致。
+ *
+ * 不含 `pendingBattle`：BS3-076 這類「攻擊後可選代價 → reveal-top-deck →
+ * 巢狀 damage(attackTargetOnly)」的效果，規則層會刻意保留 `pendingBattle`
+ * 讓 attackTargetOnly 找得到攻擊目標；列進來的話 AI 會判定自己不能結算
+ * pendingAbilityEffect，整個 AI 迴圈就卡在攻擊後階段。
+ */
 const hasBlockingAbilityPending = (state: GameState): boolean =>
   Boolean(
     state.pendingRefresh ||
       state.pendingOnPlay ||
-      state.pendingReplacement ||
-      state.pendingBattle,
+      state.pendingReplacement,
   )
 
 export const handleAiPendingDecision = (
@@ -88,9 +94,10 @@ export const handleAiPendingDecision = (
         const priority = {
           'draw-up-to': 0,
           'inspect-deck': 1,
-          'faint-effect': 2,
-          'after-damage-effect': 3,
-          'stage-trigger': 4,
+          'reveal-top-deck': 2,
+          'faint-effect': 3,
+          'after-damage-effect': 4,
+          'stage-trigger': 5,
         } as const
         return priority[left.kind] - priority[right.kind]
       })
@@ -221,31 +228,51 @@ export const handleAiPendingDecision = (
     const hasFilter =
       pendingDecision.filterColor !== undefined ||
       pendingDecision.filterType !== undefined
-    const matching = revealed.find(
-      (card) =>
-        (pendingDecision.filterColor === undefined ||
-          card.energyColor === pendingDecision.filterColor) &&
-        (pendingDecision.filterType === undefined ||
-          card.type === pendingDecision.filterType),
-    )
     // pickCount 為 0 的檢視（例如只重排牌庫頂）不選任何一張。
-    const pickedId: string | null =
+    const pickedIds: string[] =
       pendingDecision.pickCount === 0
-        ? null
+        ? []
         : hasFilter
-          ? (matching?.instanceId ?? null)
-          : (allIds[0] ?? null)
-    const restIds =
-      pickedId === null ? [...allIds] : allIds.filter((id) => id !== pickedId)
+          ? revealed
+              .filter(
+                (card) =>
+                  (pendingDecision.filterColor === undefined ||
+                    card.energyColor === pendingDecision.filterColor) &&
+                  (pendingDecision.filterType === undefined ||
+                    card.type === pendingDecision.filterType),
+              )
+              .slice(0, pendingDecision.pickCount)
+              .map((c) => c.instanceId)
+          : allIds.slice(0, pendingDecision.pickCount)
+    const pickedSet = new Set(pickedIds)
+    const restIds = allIds.filter((id) => !pickedSet.has(id))
     return {
       state: applyGameCommand(state, {
         kind: 'resolve-inspect-deck',
         playerId,
-        pickedCardId: pickedId,
+        pickedCardIds: pickedIds,
         restOrder: restIds,
       }),
       action: 'resolve-inspect-deck',
       description: `${state.players[playerId].name}從檢視牌中選取卡片。`,
+    }
+  }
+
+  if (pendingDecision?.kind === 'reveal-top-deck') {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 確認翻牌展示。`,
+      }
+    }
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-reveal-top-deck',
+        playerId,
+      }),
+      action: 'resolve-reveal-top-deck',
+      description: `${state.players[playerId].name}確認翻牌展示結果。`,
     }
   }
 

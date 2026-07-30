@@ -173,6 +173,13 @@ const matchesSelector = (
     return false
   }
 
+  if (
+    selector.keyword !== undefined &&
+    !cookie.card.keywords?.includes(selector.keyword)
+  ) {
+    return false
+  }
+
   if (selector.restedOnly && !cookie.rested) {
     return false
   }
@@ -301,7 +308,7 @@ export const isEffectUntargeted = (
   | DeckToSupportEffect
   | Extract<CardEffect, { kind: 'deck-to-trash' }>
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'rest-support' | 'support-to-hp' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'rest-support' | 'support-to-hp' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -309,6 +316,7 @@ export const isEffectUntargeted = (
   effect.kind === 'gain-hp' ||
   effect.kind === 'damage-all' ||
   effect.kind === 'modify-all-attack' ||
+  effect.kind === 'multiply-attack-damage' ||
   effect.kind === 'place-source-to-support' ||
   effect.kind === 'discard-hand' ||
   effect.kind === 'opponent-discard-hand' ||
@@ -357,6 +365,7 @@ export const requiresTargetSelection = (
 export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   requiresTargetSelection(effect) ||
   effect.kind === 'break-to-battle' ||
+  effect.kind === 'trash-to-battle' ||
   effect.kind === 'support-to-trash' ||
   effect.kind === 'hand-to-break' ||
   effect.kind === 'break-to-hand' ||
@@ -373,6 +382,9 @@ export const getEffectSelectionLimits = (
 ): { min: number; max: number } | null => {
   if (effect.kind === 'break-to-battle') {
     return { min: 0, max: effect.amount }
+  }
+  if (effect.kind === 'trash-to-battle') {
+    return { min: effect.amount, max: effect.amount }
   }
   if (effect.kind === 'support-to-trash') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
@@ -440,6 +452,9 @@ export const getEffectSelectionCandidates = (
 ): GameCard[] => {
   if (effect.kind === 'break-to-battle') {
     return getBreakToBattleCandidates(state, context, effect)
+  }
+  if (effect.kind === 'trash-to-battle') {
+    return getTrashCookieCandidates(state, context, effect)
   }
   if (effect.kind === 'support-to-trash') {
     return getSupportEffectCandidates(state, context, {
@@ -525,6 +540,7 @@ export const isEffectTargeted = (
   effect.kind === 'damage-by-break-count' ||
   effect.kind === 'modify-attack-by-break-count' ||
   effect.kind === 'modify-attack' ||
+  effect.kind === 'modify-attack-cost' ||
   effect.kind === 'modify-damage-received' ||
   effect.kind === 'prevent-knockout' ||
   effect.kind === 'disable-flip' ||
@@ -566,10 +582,12 @@ export const getSupportEffectCandidates = (
 export const getTrashCookieCandidates = (
   state: GameState,
   context: EffectContext,
+  effect?: Extract<CardEffect, { kind: 'trash-to-battle' }>,
 ): CookieCard[] =>
   state.players[context.sourcePlayerId].discardPile.filter(
     (card): card is CookieCard =>
       card.type === 'cookie' &&
+      (effect?.energyColor === undefined || card.energyColor === effect.energyColor) &&
       state.players[context.sourcePlayerId].battleArea.length < 2,
   )
 
@@ -761,6 +779,30 @@ export const isEffectConditionMet = (
     return state.players[context.sourcePlayerId].supportArea.filter((support) =>
       support.card.keywords?.includes(condition.keyword),
     ).length >= condition.count
+  }
+
+  if (condition?.kind === 'distinct-named-family-count') {
+    const isMarzipanCookie = (card: GameCard) =>
+      card.type === 'cookie' &&
+      (card.name === 'Marzipan Cookie' ||
+        /^Marzipan Cookie \d+$/i.test(card.name))
+    const player = state.players[context.sourcePlayerId]
+    const battleNames = new Set(
+      player.battleArea
+        .map((cookie) => cookie.card)
+        .filter(isMarzipanCookie)
+        .map((card) => card.name),
+    )
+    const supportNames = new Set(
+      player.supportArea
+        .map((support) => support.card)
+        .filter(isMarzipanCookie)
+        .map((card) => card.name),
+    )
+    return (
+      battleNames.size >= condition.battleAreaCount &&
+      supportNames.size >= condition.supportAreaCount
+    )
   }
 
   if (condition?.kind === 'any-battle-area-has-blocker') {

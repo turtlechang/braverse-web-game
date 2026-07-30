@@ -3,7 +3,7 @@ import {
   canActivateStage,
 } from '../card-abilities'
 import { applyGameCommand } from '../commands'
-import { getAttackEnergyCost, selectEnergyPayment } from '../energy'
+import { getAttackEnergyCostForState, selectEnergyPayment } from '../energy'
 import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
 import { advancePhase, canAttack } from '../turn'
@@ -343,14 +343,14 @@ export const handleAiTurnState = (
       if (target) {
         // 選擇最適合攻擊此目標的餅乾（優先選能一擊擊殺的）
         const eligibleAttackers = player.battleArea.filter((attacker) => {
-          if (attacker.rested) return false
+          if (attacker.rested || attacker.card.nonAttackable) return false
           if (
             state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
             state.turnNumber
           )
             return false
           const paymentIds = selectEnergyPayment(
-            getAttackEnergyCost(attacker.card),
+            getAttackEnergyCostForState(state, attacker.card.instanceId),
             player.supportArea,
           )
           return !!paymentIds
@@ -368,7 +368,7 @@ export const handleAiTurnState = (
 
           for (const attacker of sortedAttackers) {
             const paymentIds = selectEnergyPayment(
-              getAttackEnergyCost(attacker.card),
+              getAttackEnergyCostForState(state, attacker.card.instanceId),
               player.supportArea,
             )
             if (paymentIds) {

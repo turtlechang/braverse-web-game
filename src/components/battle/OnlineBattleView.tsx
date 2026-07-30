@@ -108,6 +108,17 @@ export function OnlineBattleView({
   const isPlayerTurn = game.activePlayerId === viewerPlayerId
 
   const match = useOnlineMatchController({ game, viewerPlayerId, sendCommand })
+  const inspectedEquippedCards = (() => {
+    const card = dialogs.inspectedCard
+    if (!card || card.type !== 'cookie') return undefined
+    for (const player of Object.values(game.players)) {
+      const cookie = player.battleArea.find(
+        (c) => c.card.instanceId === card.instanceId,
+      )
+      if (cookie?.equippedCards?.length) return cookie.equippedCards
+    }
+    return undefined
+  })()
   const pending = useOnlinePendingEffect({
     game,
     viewerPlayerId,
@@ -722,6 +733,8 @@ export function OnlineBattleView({
       {dialogs.inspectedCard && (
         <CardDetailModal
           card={dialogs.inspectedCard}
+          equippedCards={inspectedEquippedCards}
+          onInspectEquip={dialogs.openCardDetail}
           onClose={dialogs.closeCardDetail}
         />
       )}

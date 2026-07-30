@@ -34,6 +34,8 @@ export interface CardSkill {
   cost: AbilityCost
   text: string
   effects: CardEffect[]
+  /** Energy supplied by the Cookie itself when a triggered skill is used. */
+  sourceEnergy?: EnergyCost
   faint?: boolean
   endPhase?: boolean
   afterDamage?: boolean
@@ -104,6 +106,8 @@ export interface CookieCard extends BaseCard {
   attack: number
   attackCost: number
   attackEnergyCost?: EnergyCost
+  /** Some official FLIP cards can be attached as HP but have no attack. */
+  nonAttackable?: boolean
   attackText?: string
   attackEffects?: CardEffect[]
 }
@@ -147,6 +151,8 @@ export interface EffectTargetSelector {
   excludeAttackTarget?: boolean
   /** 只有休息中的餅乾是合法目標，用於「設為活躍」類效果。 */
   restedOnly?: boolean
+  /** Restrict Cookie targets to cards carrying an official runtime keyword. */
+  keyword?: CardKeyword
 }
 
 export interface BreakLevelCondition {
@@ -237,6 +243,13 @@ export interface SupportKeywordAtLeastCondition {
   count: number
 }
 
+export interface DistinctNamedFamilyCountCondition {
+  kind: 'distinct-named-family-count'
+  family: 'marzipan-cookie'
+  battleAreaCount: number
+  supportAreaCount: number
+}
+
 export interface AnyBattleAreaHasBlockerCondition {
   kind: 'any-battle-area-has-blocker'
 }
@@ -258,6 +271,7 @@ export type EffectCondition =
   | SourceInBreakAreaCondition
   | OpponentCookieFaintedInCurrentBattleCondition
   | SupportKeywordAtLeastCondition
+  | DistinctNamedFamilyCountCondition
   | AnyBattleAreaHasBlockerCondition
   | BreakLevelHigherThanOpponentCondition
 
@@ -321,6 +335,20 @@ export interface ModifyAttackEffect {
   condition?: EffectCondition
 }
 
+export interface ModifyAttackCostEffect {
+  kind: 'modify-attack-cost'
+  target: EffectTargetSelector
+  energyCost: EnergyCost
+  duration: EffectDuration
+  condition?: EffectCondition
+}
+
+export interface MultiplyAttackDamageEffect {
+  kind: 'multiply-attack-damage'
+  multiplier: number
+  condition?: EffectCondition
+}
+
 export interface ModifyDamageReceivedEffect {
   kind: 'modify-damage-received'
   amount: number
@@ -334,6 +362,7 @@ export interface ModifyDamageReceivedEffect {
 export interface DrawEffect {
   kind: 'draw'
   amount: number
+  side?: 'self' | 'opponent'
   condition?: EffectCondition
 }
 
@@ -471,6 +500,7 @@ export interface BattleToSupportEffect {
 export interface TrashToBattleEffect {
   kind: 'trash-to-battle'
   amount: number
+  energyColor?: EnergyColor
 }
 
 export interface SupportToHandEffect {
@@ -664,6 +694,14 @@ export interface StageSourceToDeckEffect {
   condition?: EffectCondition
 }
 
+/** 來源場景卡自己離開場景區、送入棄牌區（BS3-120「Then」分支）。 */
+export interface StageSourceToTrashEffect {
+  kind: 'stage-source-to-trash'
+  condition?: EffectCondition
+  /** 此效果無可選目標，但為了與 CardEffect union 中其他帶 target 的型別相容，保留 target = undefined。 */
+  target?: undefined
+}
+
 /** 讓選定的餅乾解除休息；`set-active` 只處理支援區，兩者不共用。 */
 export interface SetCookieActiveEffect {
   kind: 'set-cookie-active'
@@ -826,6 +864,8 @@ export type CardEffect =
   | DamageByBreakCountEffect
   | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
+  | ModifyAttackCostEffect
+  | MultiplyAttackDamageEffect
   | ModifyDamageReceivedEffect
   | DrawEffect
   | DrawUpToEffect
@@ -889,6 +929,7 @@ export type CardEffect =
   | ChooseOneEffect
   | BreakSourceToBattleEffect
   | StageSourceToDeckEffect
+  | StageSourceToTrashEffect
   | TrashToBreakEffect
 
 export type TargetedCardEffect =
@@ -897,6 +938,7 @@ export type TargetedCardEffect =
   | DamageByBreakCountEffect
   | ModifyAttackByBreakCountEffect
   | ModifyAttackEffect
+  | ModifyAttackCostEffect
   | ModifyDamageReceivedEffect
   | PreventKnockoutEffect
   | PreventEffectDamageEffect
@@ -932,6 +974,15 @@ export type AbilityCost = EnergyCost & {
       sourceOnly?: boolean
     }
   selfToBreakArea?: boolean
+  /**
+   * 從棄牌區選指定條件的卡牌洗回牌庫作為代價（BS3-098）。
+   * 與 `trashToDeckBottom` 不同，結算後會將選取卡牌與牌庫合併並洗牌。
+   */
+  trashToDeck?: {
+    count: number
+    energyColor?: EnergyColor
+    excludeFlip?: boolean
+  }
   /**
    * 從棄牌區選卡放到牌庫底作為代價（BS3-112）。
    * 目前只有餅乾技能路徑（activate-skill／begin-activate-skill）實作，
@@ -990,6 +1041,9 @@ export type TrapCondition =
       minLevel?: number
     }
   | {
+      kind: 'friendly-cookie-fainted-this-battle'
+    }
+  | {
       kind: 'self-cookie-hp-equals'
       amount: number
     }
@@ -1009,6 +1063,13 @@ export interface AttackModifier {
   sourceInstanceId: string
   targetInstanceId: string
   amount: number
+  expiresAfterTurn: number | null
+}
+
+export interface AttackCostModifier {
+  sourceInstanceId: string
+  targetInstanceId: string
+  energyCost: EnergyCost
   expiresAfterTurn: number | null
 }
 
@@ -1098,6 +1159,7 @@ export type PendingEffectOrderKind =
   | 'after-damage-effect'
   | 'draw-up-to'
   | 'inspect-deck'
+  | 'reveal-top-deck'
   | 'stage-trigger'
 
 export interface PendingEffectOrderItem {
@@ -1154,6 +1216,7 @@ export interface GameState {
   skillUsesThisGame?: string[]
   nextBattleEntrySequence: number
   attackModifiers: AttackModifier[]
+  attackCostModifiers?: AttackCostModifier[]
   damageReceivedModifiers: DamageReceivedModifier[]
   flipDisabledUntilTurn?: Record<string, number>
   attackDisabledUntilTurn?: Record<string, number>
@@ -1200,6 +1263,27 @@ export interface GameState {
     filterType?: GameCard['type']
     optionalPick?: boolean
   } | null
+  pendingRevealTopDeck?: {
+    playerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
+    revealedCard: GameCard
+    matched: boolean
+    nestedEffects: CardEffect[]
+    /**
+     * 翻牌結算完之後欠戰鬥流程什麼動作。少了這個欄位就分不出兩種來源的 reveal，
+     * 會拿攻擊後的收尾邏輯去處理陷阱裡的翻牌，把還沒打的傷害整個吃掉。
+     *
+     * - `finish`：BS3-076／080 這種攻擊後的 reveal。`finishBattle` 為了讓巢狀
+     *   damage 的 `attackTargetOnly` 找得到攻擊目標而刻意保留 `pendingBattle`，
+     *   翻牌結算完要回頭收尾。
+     * - `after-trap`：BS3-093 這種陷阱裡的 reveal。戰鬥還停在陷阱視窗，巢狀效果
+     *   可能再改一次攻擊力，結算完才由 `advanceBattleAfterTrap` 重算傷害並推進到
+     *   傷害階段。
+     * - `undefined`：這次翻牌與戰鬥無關（主要階段的技能／道具）。
+     */
+    battleContinuation?: BattleContinuation
+  } | null
   pendingOptionalCostAttack?: {
     playerId: PlayerId
     sourceInstanceId: string
@@ -1214,6 +1298,9 @@ export interface GameState {
     sourceInstanceId: string
     sourceCardName: string
     effectText: string
+    sourceKind?: 'stage' | 'cookie-skill'
+    effects?: CardEffect[]
+    sourceEnergy?: EnergyCost
   } | null
   /**
    * 技能/道具/場景卡多效果的逐步待處理效果鏈。中途若出現其他待處理決策
@@ -1228,9 +1315,20 @@ export interface GameState {
     trigger?: 'activate' | 'on-play'
     effects: CardEffect[]
     effectIndex: number
+    /**
+     * 效果鏈跑完後欠戰鬥流程什麼動作。由
+     * `pendingRevealTopDeck.battleContinuation` 傳遞下來，語意與該欄位相同。
+     */
+    battleContinuation?: BattleContinuation
   }
   supportAreaDecreasedThisTurn?: Partial<Record<PlayerId, boolean>>
 }
+
+/**
+ * 待處理決策結算完之後，欠戰鬥流程的動作。
+ * 見 `GameState.pendingRevealTopDeck.battleContinuation`。
+ */
+export type BattleContinuation = 'finish' | 'after-trap'
 
 export type PendingBattleStage =
   | 'trap'
@@ -1269,7 +1367,8 @@ export interface PendingBattle {
     playerId: PlayerId
     sourceInstanceId: string
     sourceCardName: string
-    color: EnergyColor
+    color?: EnergyColor
+    anyFriendlyCookie?: boolean
     /** 對應 TrapCondition 的 minLevel；設定時改以 faintedCookies 判定擁有者與等級。 */
     minLevel?: number
     effects: CardEffect[]

@@ -37,7 +37,7 @@ const DeckEditorModal = lazy(async () => {
   return { default: module.DeckEditorModal }
 })
 
-export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, DrawUpToResponseModal, HandDiscardResponseModal } from './PendingDecisionModals'
+export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, RevealTopDeckModal, DrawUpToResponseModal, HandDiscardResponseModal } from './PendingDecisionModals'
 
 export type OpeningSetupStep =
   | 'deck-selection'
@@ -322,8 +322,28 @@ export function DecisionModal({
 
 export interface CardDetailModalProps {
   card: GameCard
+  equippedCards?: GameCard[]
+  onInspectEquip?: (card: GameCard) => void
   onClose: () => void
 }
+
+const splitNormalAttackText = (attackText: string) => {
+  const match = attackText.match(/^([\s\S]*?\{da\})\s*(\d+)([\s\S]*)$/i)
+
+  if (!match) return null
+
+  return {
+    mainText: match[1],
+    attackPower: Number(match[2]),
+    followUpText: match[3].trim(),
+  }
+}
+
+const splitStageEffectText = (effectText: string) =>
+  effectText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
 
 export interface CardPileModalProps {
   title: string
@@ -520,6 +540,9 @@ export interface TrapResponseModalProps {
   selectedTrapTargetId?: string | null
   onSelectTrap: (instanceId: string) => void
   onSelectTrapTarget?: (instanceId: string) => void
+  trapSelfTargetCandidates?: CookieInBattle[]
+  selectedTrapSelfTargetId?: string | null
+  onSelectTrapSelfTarget?: (instanceId: string) => void
   onToggleDiscardHand: (instanceId: string) => void
   onToggleBattleCookie?: (instanceId: string) => void
   onConfirm: () => void
@@ -606,6 +629,9 @@ export function TrapResponseModal({
   selectedTrapTargetId = null,
   onSelectTrap,
   onSelectTrapTarget,
+  trapSelfTargetCandidates = [],
+  selectedTrapSelfTargetId = null,
+  onSelectTrapSelfTarget,
   onToggleDiscardHand,
   onToggleBattleCookie,
   onConfirm,
@@ -648,11 +674,14 @@ export function TrapResponseModal({
     handToSupportAmount > 0 ||
     trashToDeckAmount > 0 ||
     Boolean(allowEmptyTarget)
+  const hasSelfTargetPhase =
+    trapSelfTargetCandidates.length > 0 && Boolean(onSelectTrapSelfTarget)
 
   const phaseIds: GuidedPhaseId[] = [
     ...(hasEnergyPhase ? (['energy'] as const) : []),
     ...(hasCostPhase ? (['cost'] as const) : []),
     ...(hasTargetPhase ? (['target'] as const) : []),
+    ...(hasSelfTargetPhase ? (['selfTarget'] as const) : []),
   ]
   const activePhase =
     step !== 'select' && phaseIds.includes(step)
@@ -677,6 +706,9 @@ export function TrapResponseModal({
     (handToSupportAmount === 0 ||
       handToSupportCards.length === 0 ||
       selectedHandToSupportIds.length === handToSupportAmount)
+  const selfTargetReady =
+    trapSelfTargetCandidates.length === 0 ||
+    Boolean(selectedTrapSelfTargetId)
   const activePhaseReady =
     activePhase === 'energy'
       ? energyReady
@@ -684,10 +716,12 @@ export function TrapResponseModal({
         ? costReady
         : activePhase === 'target'
           ? targetReady
-          : true
+          : activePhase === 'selfTarget'
+            ? selfTargetReady
+            : true
   const phases: GuidedPhase[] = phaseIds.map((id, index) => ({
     id,
-    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : '目標',
+    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : id === 'selfTarget' ? '自身目標' : '目標',
     complete: index < activePhaseIndex,
   }))
   const hasPreviousPhase = activePhaseIndex > 0
@@ -1043,6 +1077,36 @@ export function TrapResponseModal({
                     不選擇目標（略過傷害效果）
                   </label>
                 )}
+              </div>
+            )}
+
+            {activePhase === 'selfTarget' && trapSelfTargetCandidates.length > 0 && (
+              <div>
+                <strong>選擇自身目標餅乾</strong>
+                <div className="modal-card-options compact trap-target-options">
+                  {trapSelfTargetCandidates.map((candidate) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedTrapSelfTargetId === candidate.card.instanceId
+                          ? 'is-selected'
+                          : ''
+                      }
+                      key={candidate.card.instanceId}
+                      onClick={() =>
+                        onSelectTrapSelfTarget?.(candidate.card.instanceId)
+                      }
+                    >
+                      <CardFace
+                        card={candidate.card}
+                        selected={
+                          selectedTrapSelfTargetId === candidate.card.instanceId
+                        }
+                      />
+                      <span>{candidate.card.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -1541,8 +1605,17 @@ export function FlipResponseModal({
 
 export function CardDetailModal({
   card,
+  equippedCards,
+  onInspectEquip,
   onClose,
 }: CardDetailModalProps) {
+  const normalAttack = card.type === 'cookie' && card.attackText
+    ? splitNormalAttackText(card.attackText)
+    : null
+  const stageEffectLines =
+    card.type === 'stage' && card.effectText
+      ? splitStageEffectText(card.effectText)
+      : null
   const hasSkillSection = Boolean(card.skill && card.effectText)
   const hasSecondaryAttackSection =
     card.type === 'cookie' && Boolean(card.effectText)
@@ -1593,7 +1666,16 @@ export function CardDetailModal({
               <section className="card-rule-section card-skill-section">
                 <strong>{effectHeading}</strong>
                 <p>
-                  <CardEffectText text={card.effectText} />
+                  {stageEffectLines
+                    ? stageEffectLines.map((line, index) => (
+                        <span
+                          className="card-stage-effect-line"
+                          key={`${line}-${index}`}
+                        >
+                          <CardEffectText text={line} />
+                        </span>
+                      ))
+                    : <CardEffectText text={card.effectText} />}
                 </p>
               </section>
             )}
@@ -1607,7 +1689,24 @@ export function CardDetailModal({
               >
                 <strong>攻擊</strong>
                 <p className="card-attack-copy">
-                  {card.attackText ? (
+                  {normalAttack ? (
+                    <>
+                      <span className="card-attack-main">
+                        <CardEffectText text={normalAttack.mainText} />
+                        <span
+                          className="attack-power-value"
+                          title={`普通攻擊力 ${normalAttack.attackPower}`}
+                        >
+                          {normalAttack.attackPower}
+                        </span>
+                      </span>
+                      {normalAttack.followUpText && (
+                        <span className="card-attack-follow-up">
+                          <CardEffectText text={normalAttack.followUpText} />
+                        </span>
+                      )}
+                    </>
+                  ) : card.attackText ? (
                     <CardEffectText text={card.attackText} />
                   ) : (
                     <>
@@ -1618,6 +1717,24 @@ export function CardDetailModal({
                     </>
                   )}
                 </p>
+              </section>
+            )}
+            {equippedCards && equippedCards.length > 0 && (
+              <section className="card-rule-section card-equip-section">
+                <strong>已裝備</strong>
+                <div className="card-equip-list">
+                  {equippedCards.map((equip) => (
+                    <button
+                      type="button"
+                      key={equip.instanceId}
+                      className="card-equip-item"
+                      onClick={() => onInspectEquip?.(equip)}
+                    >
+                      <CardFace card={equip} />
+                      <span>{equip.name}</span>
+                    </button>
+                  ))}
+                </div>
               </section>
             )}
           </div>

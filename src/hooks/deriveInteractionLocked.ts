@@ -34,6 +34,10 @@ export function deriveInteractionLocked(
         game.pendingInspectDeck.playerId === viewerPlayerId,
     ) ||
     Boolean(
+      game.pendingRevealTopDeck &&
+        game.pendingRevealTopDeck.playerId === viewerPlayerId,
+    ) ||
+    Boolean(
       game.pendingOptionalCostAttack &&
         game.pendingOptionalCostAttack.playerId === viewerPlayerId,
     ) ||

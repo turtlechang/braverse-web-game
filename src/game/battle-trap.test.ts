@@ -3,6 +3,7 @@ import {
   beginAttack,
   applyGameCommand,
   createOfficialRedStarterDeck,
+  explainUnavailableTraps,
   getPendingDecision,
   getTrapCandidates,
   playTrap,
@@ -1137,5 +1138,295 @@ describe('R15: trap multi-effect targeting (BS2-079)', () => {
     expect(
       defenderAfter.deck.some((card) => card.instanceId === 'p2-trash-2'),
     ).toBe(true)
+  })
+})
+
+describe('BS3-021 Oath on the Shield: modify-attack + self-damage', () => {
+  const bs3021Trap = (): GameCard => ({
+    id: 'BS3-021',
+    instanceId: 'bs3-021-test',
+    name: 'Oath on the Shield',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: 'Select up to 1 of your opponent\'s Cookies. During this turn, that Cookie deals -3 attack damage. Then, select 1 of your Cookies. That Cookie receives 1 damage.',
+      cost: { energy: { red: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -3,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1 },
+        },
+      ],
+    },
+  })
+
+  it('reduces attacker attack by 3 and damages own cookie when both targets provided', () => {
+    const trap = bs3021Trap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('self-hp-1'),
+      item('self-hp-2'),
+      item('self-hp-3'),
+    ]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: ['attacker'],
+      selfTargetIds: ['defender'],
+    })
+
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -3 }),
+    )
+    expect(result.pendingBattle?.stage).toBe('damage')
+    expect(result.pendingBattle?.damageTargetInstanceId).toBe('defender')
+    expect(result.pendingBattle?.remainingDamage).toBe(1)
+  })
+
+  it('still applies modify-attack even without selfTargetIds (backward compatible)', () => {
+    const trap = bs3021Trap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: ['attacker'],
+    })
+
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -3 }),
+    )
+  })
+})
+
+describe('BS1-050 Broken Signpost: redirect-attack self target', () => {
+  it('redirects attack to a self cookie using selfTargetIds', () => {
+    const trap: GameCard = {
+      id: 'BS1-050',
+      instanceId: 'bs1-050-test',
+      name: 'Broken Signpost',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: 'Redirect',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'redirect-attack',
+            target: { side: 'self', min: 1, max: 1, excludeAttackTarget: true },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+    state.players['player-one'].battleArea.push({
+      card: cookie('redirect-target', 1, 3),
+      hpCards: [item('rt-hp')],
+      rested: false,
+      battleEntryId: 'redirect-target:battle:1',
+    })
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: [],
+      selfTargetIds: ['redirect-target'],
+    })
+
+    expect(result.pendingBattle?.targetInstanceId).toBe('redirect-target')
+  })
+
+  it('BS3-021 modify-attack -3 actually reduces attack damage to 0 when attacker has 2', () => {
+    const trap: GameCard = {
+      id: 'BS3-021',
+      instanceId: 'bs3-021-test',
+      name: 'Oath on the Shield',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: '-3 this turn; deal 1 to 1 of your Cookies',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -3,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1 },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].card = {
+      ...state.players['player-two'].battleArea[0].card,
+      attack: 2,
+    } as CookieCard
+
+    state.players['player-one'].hand = [
+      trap,
+      ...state.players['player-one'].hand,
+    ]
+
+    const attackerInstanceId = state.players['player-two'].battleArea[0].card.instanceId
+    const targetCookie = state.players['player-one'].battleArea[0]
+
+    state = declareAttack(state)
+    expect(state.pendingBattle?.stage).toBe('trap')
+
+    let result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: [],
+      targetIds: [attackerInstanceId],
+      selfTargetIds: [targetCookie.card.instanceId],
+    })
+
+    expect(result.pendingBattle?.stage).toBe('damage')
+    expect(result.pendingBattle?.remainingDamage).toBe(1)
+    expect(result.pendingBattle?.suspendedAttackDamage).toBeDefined()
+
+    while (
+      result.pendingBattle &&
+      result.pendingBattle.stage === 'damage' &&
+      result.pendingBattle.remainingDamage > 0
+    ) {
+      result = resolveNextDamage(result)
+    }
+
+    expect(result.pendingBattle?.suspendedAttackDamage).toBeUndefined()
+
+    const finalDamage = result.pendingBattle?.remainingDamage ?? 0
+    expect(finalDamage).toBe(0)
+  })
+})
+
+/**
+ * `[auto-skip-trap]` 的診斷示警原本只要「手上有陷阱卡卻沒有候選」就印，於是
+ * 每次被攻擊而付不出代價都會噴一則假警報——被攻擊時支援卡多半還橫置著
+ * （支援區要到自己回合的活躍階段才重置），這是日常狀況而非 bug。
+ * explainUnavailableTraps 要能把這些日常情形明確歸因，示警才只會在真正
+ * 無法解釋時出現。
+ */
+describe('explainUnavailableTraps', () => {
+  const blueTrap = (instanceId: string, energy: number): GameCard => ({
+    id: 'BS3-094',
+    instanceId,
+    name: 'Radiant Coronation',
+    type: 'trap',
+    officialType: 'trap',
+    energyColor: 'blue',
+    trap: {
+      text: '<{B}{B}> 對手餅乾攻擊力 -2。',
+      cost: { energy: { blue: energy }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    },
+  })
+
+  const trapStageState = (): GameState => {
+    const state = createBattleState()
+    state.players['player-one'].hand = [blueTrap('trap-1', 2)]
+    return declareAttack(state)
+  }
+
+  it('blames rested support energy rather than reporting an unknown engine fault', () => {
+    const state = trapStageState()
+    // 支援卡全部橫置＝沒有可用能量，正是使用者 log 裡的兩則情形。
+    state.players['player-one'].supportArea = [
+      { card: { ...item('p1-sup-a'), energyColor: 'blue' }, rested: true },
+      { card: { ...item('p1-sup-b'), energyColor: 'blue' }, rested: true },
+    ]
+
+    expect(getTrapCandidates(state, 'player-one')).toHaveLength(0)
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([
+      { instanceId: 'trap-1', cardId: 'BS3-094', reason: 'cannot-pay-energy' },
+    ])
+  })
+
+  it('blames an unmet trap condition when energy alone would be payable', () => {
+    const state = trapStageState()
+    state.players['player-one'].hand = [
+      {
+        ...blueTrap('trap-cond', 1),
+        id: 'ST2-020',
+        trap: {
+          text: '《{Y}{Y}》 休息區 LV.5 以上才能發動。',
+          cost: { energy: { blue: 1 }, discardHand: 0 },
+          condition: { kind: 'break-level-at-least', level: 5 },
+          effects: [
+            {
+              kind: 'modify-attack',
+              amount: -3,
+              duration: 'this-turn',
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+        },
+      },
+    ]
+    state.players['player-one'].breakArea = []
+    state.players['player-one'].supportArea = [
+      { card: { ...item('p1-sup-a'), energyColor: 'blue' }, rested: false },
+    ]
+
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([
+      {
+        instanceId: 'trap-cond',
+        cardId: 'ST2-020',
+        reason: 'condition-not-met',
+      },
+    ])
+  })
+
+  it('omits traps that are actually usable', () => {
+    const state = trapStageState()
+    state.players['player-one'].supportArea = [
+      { card: { ...item('p1-sup-a'), energyColor: 'blue' }, rested: false },
+      { card: { ...item('p1-sup-b'), energyColor: 'blue' }, rested: false },
+    ]
+
+    expect(getTrapCandidates(state, 'player-one')).toHaveLength(1)
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([])
   })
 })

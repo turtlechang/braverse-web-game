@@ -401,17 +401,31 @@ function App() {
     },
     onActivateStage: () => {
       const stage = match.activePlayer.stage
-      if (
-        stage?.card.stageAbility &&
-        canActivateStage(match.game, match.activePlayer.id)
-      ) {
-        pending.beginCardAbility(
-          stage.card,
-          stage.card.stageAbility,
-          'stage',
-          '啟動場景',
+      const ability = stage?.card.stageAbility
+      if (!stage || !ability || !canActivateStage(match.game, match.activePlayer.id)) return
+
+      // Special-victory stages such as BS3-121 have no ordinary effects to
+      // show in EffectPanel. Resolve their Activate through the normal game
+      // command so the condition and five-colour payment stay authoritative
+      // in the rules engine instead of being rejected as an empty effect list.
+      if (ability.specialVictory && ability.effects.length === 0) {
+        const paymentIds = selectEnergyPayment(
+          ability.cost.energy ?? ability.cost,
+          match.activePlayer.supportArea,
         )
+        if (!paymentIds) return
+        match.dispatch(
+          {
+            kind: 'activate-stage',
+            playerId: match.activePlayer.id,
+            paymentIds,
+          },
+          `${stage.card.name}已發動特殊勝利。`,
+        )
+        return
       }
+
+      pending.beginCardAbility(stage.card, ability, 'stage', '啟動場景')
     },
     onSelectHandCard: setSelectedHandCardId,
     onToggleResource: (kind) =>
@@ -532,6 +546,10 @@ function App() {
         selectedTrashToDeckBottomIds={pending.selectedSkillTrashToDeckBottomIds}
         onToggleTrashToDeckBottom={pending.toggleSkillTrashToDeckBottom}
         trashToDeckBottomCost={pending.trashToDeckBottomCost}
+        trashToDeckCandidates={pending.skillTrashToDeckCandidates}
+        selectedTrashToDeckIds={pending.selectedSkillTrashToDeckIds}
+        onToggleTrashToDeck={pending.toggleSkillTrashToDeck}
+        trashToDeckCost={pending.trashToDeckCost}
         onSkip={() => {
           if (pending.pendingEffect?.sourceKind === 'attack') {
             pending.skipAttackEffect()

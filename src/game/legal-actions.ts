@@ -1,7 +1,7 @@
 import { getPendingDecision } from './commands'
 import type { PlayerActionCommand } from './commands'
 import { canPlayStage } from './card-abilities'
-import { getAttackEnergyCost, selectEnergyPayment } from './energy'
+import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getOpponentId } from './helpers'
 import { getRefreshCandidates } from './refresh'
 import {
@@ -114,7 +114,7 @@ export const getLegalTurnCommands = (
     if (canAttack(state)) {
       const opponent = state.players[getOpponentId(playerId)]
       for (const attacker of player.battleArea) {
-        if (attacker.rested) continue
+        if (attacker.rested || attacker.card.nonAttackable) continue
         if (
           state.attackDisabledUntilTurn?.[attacker.card.instanceId] ===
           state.turnNumber
@@ -122,7 +122,7 @@ export const getLegalTurnCommands = (
           continue
         }
         const paymentIds = selectEnergyPayment(
-          getAttackEnergyCost(attacker.card),
+          getAttackEnergyCostForState(state, attacker.card.instanceId),
           player.supportArea,
         )
         if (!paymentIds) continue

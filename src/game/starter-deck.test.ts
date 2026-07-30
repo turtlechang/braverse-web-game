@@ -10,12 +10,14 @@ import {
   createAiPresetBs2PurpleDeck,
   createAiPresetBs2RedDeck,
   createAiPresetBs2YellowDeck,
+  createCard,
   createDemoGame,
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
   createOfficialPurpleStarterDeck,
   createOfficialRedStarterDeck,
   createOfficialYellowStarterDeck,
+  getCardPoolEntry,
   OFFICIAL_BLUE_STARTER_DECK,
   OFFICIAL_GREEN_STARTER_DECK,
   OFFICIAL_PURPLE_STARTER_DECK,
@@ -511,9 +513,13 @@ describe('AI second set preset decks', () => {
   it('does not let a red MIX card pay BS2-018 green attack energy', () => {
     const redDeck = createAiPresetBs2RedDeck('player-one')
     const greenDeck = createOfficialGreenStarterDeck('player-one')
-    const beanDeck = createAiPresetBs2BeanDeck('player-one')
     const redSupport = redDeck.find((card) => card.id === 'BS1-007')
-    const greenAttacker = beanDeck.find((card) => card.id === 'BS2-018')
+    // BS2-018 不再屬於任何內建牌組配方，直接從卡池建卡，不依賴哪副牌組
+    // 剛好收錄它——牌組配方本身會持續調整，這裡只是借用它的綠色攻擊費用。
+    const bs2018Entry = getCardPoolEntry('BS2-018')
+    const greenAttacker = bs2018Entry
+      ? createCard(bs2018Entry, 'player-one', 1)
+      : undefined
     const greenSupports = greenDeck
       .filter((card) => card.energyColor === 'green')
       .slice(0, 2)

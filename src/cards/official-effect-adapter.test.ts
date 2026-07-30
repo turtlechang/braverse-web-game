@@ -1740,7 +1740,6 @@ describe('Starter Deck RED official effect adapter', () => {
               },
             ],
             effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-            sourceEnergy: { red: 1 },
           },
         ])
     })
@@ -1880,7 +1879,6 @@ describe('Starter Deck RED official effect adapter', () => {
         {
           kind: 'optional-cost-attack',
           cost: { energy: { red: 1 } },
-          sourceEnergy: { red: 1 },
           effects: [
             {
               kind: 'damage',
@@ -1901,7 +1899,6 @@ describe('Starter Deck RED official effect adapter', () => {
         {
           kind: 'optional-cost-attack',
           cost: { energy: { red: 1 } },
-          sourceEnergy: { red: 1 },
           effects: [
             {
               kind: 'damage',
@@ -1917,7 +1914,6 @@ describe('Starter Deck RED official effect adapter', () => {
         {
           kind: 'optional-cost-attack',
           cost: { energy: { red: 2 } },
-          sourceEnergy: { red: 2 },
           effects: [
             {
               kind: 'damage',
@@ -1959,7 +1955,6 @@ describe('Starter Deck RED official effect adapter', () => {
         {
           kind: 'optional-cost-attack',
           cost: { energy: { yellow: 1 } },
-          sourceEnergy: { yellow: 1 },
           effects: [
             {
               kind: 'opponent-battle-to-trash',
@@ -2014,7 +2009,6 @@ describe('Starter Deck RED official effect adapter', () => {
         {
           kind: 'optional-cost-attack',
           cost: { energy: { purple: 1 } },
-          sourceEnergy: { purple: 1 },
           effects: [
             {
               kind: 'opponent-battle-to-trash',

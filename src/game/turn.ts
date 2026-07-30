@@ -190,6 +190,11 @@ export const advancePhase = (state: GameState): GameState => {
             modifier.expiresAfterTurn === null ||
             modifier.expiresAfterTurn > state.turnNumber,
         ),
+        attackCostModifiers: (endPhaseState.attackCostModifiers ?? []).filter(
+          (modifier) =>
+            modifier.expiresAfterTurn === null ||
+            modifier.expiresAfterTurn > state.turnNumber,
+        ),
         flipDisabledUntilTurn: Object.fromEntries(
           Object.entries(endPhaseState.flipDisabledUntilTurn ?? {}).filter(
             ([, turn]) => turn > state.turnNumber,

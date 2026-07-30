@@ -187,6 +187,9 @@ const parseAbilityCost = (text: string): AbilityCost => {
   const trashBattleMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?LV\.(\d+)\s+Cookie\s+from\s+your\s+battle\s+area\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
   )
+  const makeFaintMatch = text.match(
+    /(?:<|《)\s*Make\s+(\d+)\s+of\s+your\s+(?:\{([RYGBPK])\}\s+)?Cookies?\s+faint\.?\s*(?:>|》)/i,
+  )
   const handToBreakMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?Cookie\s+from\s+your\s+hand\s+into\s+your\s+break\s+area\.?\s*(?:>|》)/i,
   )
@@ -230,6 +233,18 @@ const parseAbilityCost = (text: string): AbilityCost => {
               energyColor:
                 costColors[
                   trashBattleMatch[2].toUpperCase() as keyof typeof costColors
+                ],
+            }
+          : {}),
+      },
+    } : makeFaintMatch ? {
+      trashBattleCookie: {
+        count: Number(makeFaintMatch[1]),
+        ...(makeFaintMatch[2]
+          ? {
+              energyColor:
+                costColors[
+                  makeFaintMatch[2].toUpperCase() as keyof typeof costColors
                 ],
             }
           : {}),
@@ -1163,6 +1178,7 @@ export const convertOfficialCardEffects = (
     ],
     'BS3-104': [
       { kind: 'opponent-random-discard', count: 2 },
+      { kind: 'draw', amount: 2, side: 'opponent' },
     ],
     'BS3-105': [
       { kind: 'deck-to-trash', amount: 2, side: 'self' },
@@ -1203,6 +1219,19 @@ export const convertOfficialCardEffects = (
         kind: 'reveal-bottom-deck',
         cookieDestination: 'deck-top',
         otherwiseDestination: 'hand',
+      },
+    ],
+    'BS3-087': [
+      {
+        kind: 'reveal-top-deck',
+        match: { type: 'cookie', energyColor: 'blue', level: 2 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       },
     ],
     'BS3-088': [
@@ -1539,6 +1568,50 @@ export const convertOfficialCardEffects = (
     ],
     'P-030': [
       { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
+    'P-017': [
+      {
+        kind: 'deck-to-support',
+        amount: 1,
+        rested: true,
+        condition: { kind: 'support-area-decreased-this-turn' },
+      },
+    ],
+    'P-025': [
+      {
+        kind: 'multiply-attack-damage',
+        multiplier: 2,
+        condition: {
+          kind: 'distinct-named-family-count',
+          family: 'marzipan-cookie',
+          battleAreaCount: 2,
+          supportAreaCount: 4,
+        },
+      },
+    ],
+    'P-026': [
+      {
+        kind: 'multiply-attack-damage',
+        multiplier: 2,
+        condition: {
+          kind: 'distinct-named-family-count',
+          family: 'marzipan-cookie',
+          battleAreaCount: 2,
+          supportAreaCount: 4,
+        },
+      },
+    ],
+    'P-027': [
+      {
+        kind: 'multiply-attack-damage',
+        multiplier: 2,
+        condition: {
+          kind: 'distinct-named-family-count',
+          family: 'marzipan-cookie',
+          battleAreaCount: 2,
+          supportAreaCount: 4,
+        },
+      },
     ],
   }
   const exactEffects = exactStarterEffects[cardKey]
@@ -2220,10 +2293,30 @@ export const convertOfficialStageAbility = (
     ],
     'BS3-023': [
       {
-        kind: 'modify-attack',
-        amount: 1,
-        duration: 'this-turn',
-        target: { side: 'self', min: 0, max: 1 },
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'During this turn, that Cookie gains +1 attack damage.',
+            effects: [
+              {
+                kind: 'modify-attack',
+                amount: 1,
+                duration: 'this-turn',
+                target: { side: 'self', min: 0, max: 1 },
+              },
+            ],
+          },
+          {
+            label: 'Return 1 card from the top of this Cookie\'s HP to your hand.',
+            effects: [
+              {
+                kind: 'hp-to-hand',
+                amount: 1,
+                target: { side: 'self', min: 0, max: 1 },
+              },
+            ],
+          },
+        ],
       },
     ],
     'BS3-047': [
@@ -2292,13 +2385,65 @@ export const convertOfficialStageAbility = (
       },
     ],
     'BS3-119': [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
-    'BS3-120': [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+    'BS3-120': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: 'Place up to 2 cards from the top of your deck into the trash.',
+            effects: [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+          },
+          {
+            label: 'View 3 cards from the top of your deck. Out of the 3 cards, reveal up to 1 {P} card and add that card to your hand. Then, place the remaining cards and this card in the trash.',
+            effects: [
+              {
+                kind: 'inspect-deck',
+                lookCount: 3,
+                pickCount: 1,
+                filterColor: 'purple',
+                optionalPick: true,
+                restDestination: 'trash',
+              },
+              { kind: 'stage-source-to-trash' },
+            ],
+          },
+        ],
+      },
+    ],
     'BS3-024': [
       {
         kind: 'modify-attack',
         amount: 2,
         duration: 'this-turn',
         target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    'P-028': [
+      {
+        kind: 'hand-to-break',
+        amount: 1,
+        energyColor: 'yellow',
+        minLevel: 2,
+      },
+      {
+        kind: 'break-to-hand',
+        amount: 1,
+        energyColor: 'yellow',
+        maxLevel: 1,
+        optional: true,
+      },
+    ],
+    'P-032': [
+      {
+        kind: 'modify-attack-cost',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          keyword: 'ancient',
+        },
+        energyCost: { neutral: 1 },
+        duration: 'this-turn',
       },
     ],
   }
@@ -2312,6 +2457,12 @@ export const convertOfficialStageAbility = (
     'BS1-078': { energy: {}, discardHand: 0 },
     'BS2-051': { energy: {}, discardHand: 1 },
     'BS2-081': { energy: { purple: 1 }, discardHand: 0 },
+    'BS3-024': {
+      energy: { red: 2 },
+      trashBattleCookie: { count: 1, energyColor: 'red' },
+    },
+    'P-028': { energy: { yellow: 1 } },
+    'P-032': { energy: { neutral: 2 } },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {
@@ -2399,7 +2550,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 1 } },
-        sourceEnergy: { red: 1 },
         effects: [
           {
             kind: 'damage',
@@ -2420,7 +2570,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 1 } },
-        sourceEnergy: { red: 1 },
         effects: [
           {
             kind: 'damage',
@@ -2436,7 +2585,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 2 } },
-        sourceEnergy: { red: 2 },
         effects: [
           {
             kind: 'damage',
@@ -2478,7 +2626,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { yellow: 1 } },
-        sourceEnergy: { yellow: 1 },
         effects: [
           {
             kind: 'break-to-battle',
@@ -2495,7 +2642,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { yellow: 1 } },
-        sourceEnergy: { yellow: 1 },
         effects: [
           {
             kind: 'gain-hp',
@@ -2512,7 +2658,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { yellow: 1 } },
-        sourceEnergy: { yellow: 1 },
         effects: [
           {
             kind: 'opponent-battle-to-trash',
@@ -2535,7 +2680,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { green: 1 } },
-        sourceEnergy: { green: 1 },
         effects: [
           {
             kind: 'support-to-trash',
@@ -2567,7 +2711,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { blue: 1 } },
-        sourceEnergy: { blue: 1 },
         effects: [
           {
             kind: 'reveal-top-deck',
@@ -2589,7 +2732,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { blue: 1 } },
-        sourceEnergy: { blue: 1 },
         effects: [
           {
             kind: 'reveal-top-deck',
@@ -2678,7 +2820,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { purple: 1 } },
-        sourceEnergy: { purple: 1 },
         effects: [
           {
             kind: 'opponent-battle-to-trash',
@@ -2815,7 +2956,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {R} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { red: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     // === BS1/BS2 黃綠藍紫攻擊 Then 效果 ===
@@ -2831,7 +2971,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {Y} to select up to 1 of your opponent\'s LV.1 Cookies and place that Cookie in the break area.',
-        sourceEnergy: { yellow: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-010': [
@@ -2847,7 +2986,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {Y} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { yellow: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-017': [
@@ -2863,7 +3001,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {G} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { green: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-044': [
@@ -2879,7 +3016,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {B} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { blue: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-045': [
@@ -2910,7 +3046,6 @@ export const convertOfficialAttackEffects = (
           },
         ],
         effectText: 'You can use this Cookie as {P} to deal 3 damage to 1 of your opponent\'s LV.1 Cookies.',
-        sourceEnergy: { purple: 1 },
       } satisfies CardEffect as CardEffect,
     ],
     // === P-0XX 促銷卡 ===
@@ -2926,7 +3061,6 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: { red: 1 } },
-        sourceEnergy: { red: 1 },
         effects: [
           {
             kind: 'damage',
@@ -2986,6 +3120,16 @@ export const convertOfficialFlipAbility = (
     : card.cardNumber
 
   const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
+    'P-024': {
+      cost: { energy: {}, discardHand: 1 },
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    },
     'BS1-040': {
       effects: [
         {
@@ -3522,6 +3666,16 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'P-029': {
+      condition: { kind: 'friendly-cookie-fainted-this-battle' },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          energyColor: 'green',
+        },
+      ],
+    },
   }
 
   const exactTrap = exactTrapEffects[card.cardNumber]
@@ -3575,11 +3729,21 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     trashToDeckBottom: { count: 2, nonCookieOnly: true },
   },
   'BS3-051': { energy: { green: 1 }, discardHand: 0 },
-  'BS3-098': { energy: { purple: 1 }, discardHand: 0 },
+  'BS3-098': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashToDeck: { count: 5, energyColor: 'purple', excludeFlip: true },
+  },
   'BS3-025': { energy: { yellow: 1 }, discardHand: 0 },
   'P-016': { energy: { yellow: 1 }, discardHand: 0 },
   'P-018': { energy: {}, discardHand: 1 },
   'P-030': { energy: {}, discardHand: 2 },
+}
+
+const exactCookieSkillSourceEnergy: Partial<
+  Record<string, CardSkill['sourceEnergy']>
+> = {
+  'P-017': { green: 1 },
 }
 
 /**
@@ -3606,14 +3770,16 @@ const exactCookieSkillYourTurn: Partial<Record<string, boolean>> = {
 export const convertOfficialCookieSkill = (
   card: OfficialCardRecord,
 ): CardSkill | undefined => {
-  if (card.type !== 'cookie' || !card.skill.text) {
+  if ((card.type !== 'cookie' && card.type !== 'flip') || !card.skill.text) {
     return undefined
   }
 
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
-  const conversion = convertOfficialCardEffects(card)
+  const conversion = convertOfficialCardEffects(
+    card.type === 'flip' ? { ...card, type: 'cookie' } : card,
+  )
   const cost = exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
   const parsed = parseOfficialCardText(card.skill.text)
 
@@ -3639,6 +3805,9 @@ export const convertOfficialCookieSkill = (
     yourTurn: exactCookieSkillYourTurn[cardKey] ?? parsed.markers.includes('mt'),
     restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
     cost,
+    ...(exactCookieSkillSourceEnergy[cardKey]
+      ? { sourceEnergy: exactCookieSkillSourceEnergy[cardKey] }
+      : {}),
     text: conversion.sourceText,
     effects: conversion.effects,
     faint: FAINT_TRIGGER_PATTERN.test(card.skill.text),

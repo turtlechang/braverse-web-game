@@ -157,6 +157,54 @@ describe('BS3 attack Then effects', () => {
     expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
   })
 
+  it('BS3-087 deals +1 damage to LV.1 target when a Soul Jam is in support', () => {
+    const clottedCream = asCookie('BS3-087')
+    const soulJam091 = convertOfficialCardToGameCard(findBs3Card('BS3-091'))
+    if (
+      soulJam091.status !== 'converted' ||
+      soulJam091.gameCard.type !== 'item'
+    ) {
+      throw new Error('BS3-091 should convert to an item with soul-jam')
+    }
+    expect(soulJam091.gameCard.keywords).toContain('soul-jam')
+
+    let state = createBattleState()
+    // 預設 defender 為 LV.1；給 5 張 HP 卡方便驗證 3+1 點傷害
+    state.players['player-one'].battleArea[0].hpCards = Array.from(
+      { length: 5 },
+      (_, index) => item(`defender-hp-${index + 1}`),
+    )
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: { ...clottedCream, instanceId: 'clotted-cream' },
+      hpCards: [item('clotted-hp')],
+    }
+    state.players['player-two'].supportArea = [
+      {
+        card: { ...soulJam091.gameCard, instanceId: 'bs3-091-support' },
+        rested: false,
+      },
+      { card: item('clotted-pay-b1', 'blue'), rested: false },
+      { card: item('clotted-pay-b2', 'blue'), rested: false },
+    ]
+
+    state = beginAttack(state, 'clotted-cream', 'defender', [
+      'bs3-091-support',
+      'clotted-pay-b1',
+      'clotted-pay-b2',
+    ])
+    state = skipTrap(state, 'player-one')
+    while (state.pendingBattle?.stage === 'damage') {
+      state = resolveNextDamage(state)
+    }
+
+    // BS3-087 基礎傷害 3 → 5 - 3 = 2
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+    // Then 效果：攻擊對象為 LV.1 且支援區有 Soul Jam，再造成 1 點傷害 → 2 - 1 = 1
+    state = resolveAttackEffect(state, 'player-two', ['defender'])
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
   it('resolves BS3-028 after normal damage when its source has five or fewer HP', () => {
     const mozzarella = asCookie('BS3-028')
     let state = createBattleState()
@@ -199,7 +247,7 @@ describe('BS3 attack Then effects', () => {
     expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(6)
   })
 
-  it('uses BS3-011 source energy for its full optional follow-up cost', () => {
+  it('pays BS3-011 optional follow-up cost from the support area', () => {
     const knight = asCookie('BS3-011')
     let state = createBattleState()
 
@@ -212,6 +260,11 @@ describe('BS3 attack Then effects', () => {
       card: knight,
     }
     state.players['player-two'].supportArea[0].card.energyColor = 'red'
+    // 〈可以支付 {R}{R}〉的代價要從支援區出，攻擊費用之外還得多備 2 張紅。
+    state.players['player-two'].supportArea.push(
+      { card: item('p2-then-r1', 'red'), rested: false },
+      { card: item('p2-then-r2', 'red'), rested: false },
+    )
 
     state = beginAttack(
       state,
@@ -227,7 +280,6 @@ describe('BS3 attack Then effects', () => {
     state = resolveAttackEffect(state, 'player-two', [])
     expect(state.pendingOptionalCostAttack).toMatchObject({
       cost: { energy: { red: 2 } },
-      sourceEnergy: { red: 2 },
     })
 
     state = resolveOptionalCostAttack(
@@ -236,7 +288,7 @@ describe('BS3 attack Then effects', () => {
       'pay',
       [],
       ['defender'],
-      [],
+      ['p2-then-r1', 'p2-then-r2'],
     )
 
     expect(state.pendingBattle).toBeNull()
@@ -298,6 +350,8 @@ describe('BS3 attack Then effects', () => {
     state.players['player-two'].supportArea = [
       { card: item('stardust-support-1', 'yellow'), rested: false },
       { card: item('stardust-support-2', 'yellow'), rested: false },
+      // 〈可以支付 {Y}〉的代價要另外從支援區出。
+      { card: item('stardust-then-1', 'yellow'), rested: false },
     ]
 
     state = beginAttack(
@@ -314,7 +368,6 @@ describe('BS3 attack Then effects', () => {
     state = resolveAttackEffect(state, 'player-two', [])
     expect(state.pendingOptionalCostAttack).toMatchObject({
       cost: { energy: { yellow: 1 } },
-      sourceEnergy: { yellow: 1 },
     })
 
     state = resolveOptionalCostAttack(
@@ -323,7 +376,7 @@ describe('BS3 attack Then effects', () => {
       'pay',
       [],
       ['defender'],
-      [],
+      ['stardust-then-1'],
     )
 
     expect(state.players['player-one'].battleArea).toHaveLength(0)
@@ -383,7 +436,7 @@ describe('BS3 attack Then effects', () => {
       .toContain(discard.instanceId)
   })
 
-  it('uses BS3-101 source energy to trash an opponent Cookie with two or less HP', () => {
+  it('pays BS3-101 optional cost to trash an opponent Cookie with two or less HP', () => {
     const moonRabbit = asCookie('BS3-101')
     let state = createBattleState()
 
@@ -394,6 +447,8 @@ describe('BS3 attack Then effects', () => {
     state.players['player-two'].supportArea = [
       { card: item('moon-rabbit-support-1', 'purple'), rested: false },
       { card: item('moon-rabbit-support-2', 'purple'), rested: false },
+      // 〈可以支付 {P}〉的代價要另外從支援區出。
+      { card: item('moon-rabbit-then-1', 'purple'), rested: false },
     ]
 
     state = beginAttack(
@@ -414,7 +469,7 @@ describe('BS3 attack Then effects', () => {
       'pay',
       [],
       ['defender'],
-      [],
+      ['moon-rabbit-then-1'],
     )
 
     expect(state.players['player-one'].battleArea).toHaveLength(0)
@@ -625,7 +680,6 @@ describe('BS3 attack Then effects', () => {
     const smokedFollowUp = smokedCheese.attackEffects?.[0]
     expect(smokedFollowUp).toMatchObject({
       kind: 'optional-cost-attack',
-      sourceEnergy: { yellow: 1 },
       effects: [{ kind: 'break-to-battle', exactLevel: 1, energyColor: 'yellow' }],
     })
 
@@ -643,13 +697,12 @@ describe('BS3 attack Then effects', () => {
    * 官方 Q&A：BS3-080 的 reveal-top-deck peek 後卡留在牌庫頂，
    * 條件匹配時才執行 nested draw-up-to。
    */
-  it('BS3-080 reveal keeps card on top and draws only when matched', () => {
+  it('BS3-080 reveal keeps card on top and sets pendingRevealTopDeck for confirmation', () => {
     const espresso = asCookie('BS3-080')
     const optionalCost = espresso.attackEffects?.[0]
     expect(optionalCost).toBeDefined()
     expect(optionalCost!.kind).toBe('optional-cost-attack')
 
-    // optional-cost-attack 的 nested effects 包含 reveal-top-deck
     const optionalCostEffect = optionalCost as Extract<CardEffect, { kind: 'optional-cost-attack' }>
     const revealEffect = optionalCostEffect.effects[0]
     expect(revealEffect).toBeDefined()
@@ -666,13 +719,7 @@ describe('BS3 attack Then effects', () => {
       level: 2,
       energyColor: 'blue',
     }
-    const blueLv1: CookieCard = {
-      ...baseCookie('blue-lv1'),
-      level: 1,
-      energyColor: 'blue',
-    }
 
-    // 匹配場景：牌庫頂為 Blue LV.2
     let state = createBattleState()
     state.players['player-two'].deck = [
       blueLv2,
@@ -685,17 +732,41 @@ describe('BS3 attack Then effects', () => {
     expect(matched.players['player-two'].deck.map((c) => c.instanceId)).toEqual(
       beforeDeck,
     )
-    expect(matched.pendingDrawUpTo).toBeDefined()
-    expect(matched.pendingDrawUpTo?.max).toBe(2)
+    expect(matched.pendingRevealTopDeck).toBeDefined()
+    expect(matched.pendingRevealTopDeck!.matched).toBe(true)
+    expect(matched.pendingRevealTopDeck!.revealedCard.instanceId).toBe('blue-lv2')
+    expect(matched.pendingRevealTopDeck!.nestedEffects).toHaveLength(1)
 
-    // 不匹配場景：牌庫頂為 Blue LV.1
+    const resolved = applyGameCommand(matched, {
+      kind: 'resolve-reveal-top-deck',
+      playerId: 'player-two',
+      targetIds: ['defender'],
+    })
+    expect(resolved.pendingRevealTopDeck).toBeNull()
+    expect(resolved.pendingDrawUpTo).toBeDefined()
+    expect(resolved.pendingDrawUpTo?.max).toBe(2)
+
+    const blueLv1: CookieCard = {
+      ...baseCookie('blue-lv1'),
+      level: 1,
+      energyColor: 'blue',
+    }
+
     state = createBattleState()
     state.players['player-two'].deck = [blueLv1, item('under-miss')]
     const handBefore = state.players['player-two'].hand.length
     const missed = executeCardEffect(state, context, revealEffect, ['defender'])
     expect(missed.players['player-two'].deck[0].instanceId).toBe('blue-lv1')
-    expect(missed.pendingDrawUpTo).toBeUndefined()
+    expect(missed.pendingRevealTopDeck).toBeDefined()
+    expect(missed.pendingRevealTopDeck!.matched).toBe(false)
     expect(missed.players['player-two'].hand.length).toBe(handBefore)
+
+    const resolvedMissed = applyGameCommand(missed, {
+      kind: 'resolve-reveal-top-deck',
+      playerId: 'player-two',
+    })
+    expect(resolvedMissed.pendingRevealTopDeck).toBeNull()
+    expect(resolvedMissed.pendingDrawUpTo).toBeUndefined()
   })
 
   it('attaches a Soul Jam below its matching Ancient Cookie and applies its bonus', () => {

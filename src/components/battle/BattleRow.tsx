@@ -5,7 +5,7 @@ import {
   canAttack,
   canPlayItem,
   canPlayStage,
-  getAttackEnergyCost,
+  getAttackEnergyCostForState,
   getBreakAreaLevel,
   getEffectiveAttack,
   getEnergyCostTotal,
@@ -408,8 +408,12 @@ export function BattleRow({
                 canOperate &&
                 game.phase === 'main' &&
                 canAttack(game) &&
-                !cookie.rested
-              const attackEnergyCost = getAttackEnergyCost(cookie.card)
+                !cookie.rested &&
+                !cookie.card.nonAttackable
+              const attackEnergyCost = getAttackEnergyCostForState(
+                game,
+                cookie.card.instanceId,
+              )
               const canAffordAttack =
                 selectEnergyPayment(attackEnergyCost, player.supportArea) !==
                 null
@@ -512,12 +516,14 @@ export function BattleRow({
                     </span>
                   </div>
                   {cookie.equippedCards && cookie.equippedCards.length > 0 && (
-                    <span
+                    <button
+                      type="button"
                       className="badge-equip"
                       title={`已裝備：${cookie.equippedCards.map((equipped) => equipped.name).join('、')}`}
+                      onClick={(e) => { e.stopPropagation(); onInspectCard(cookie.card) }}
                     >
                       <Gem size={12} aria-hidden="true" /> {cookie.equippedCards.length}
-                    </span>
+                    </button>
                   )}
                   <div
                     className="hp-card-stack"
