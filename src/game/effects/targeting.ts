@@ -526,6 +526,21 @@ export const hasRequiredEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): boolean => {
+  // reveal-top-deck 本身沒有 target 欄位（`requiresTargetSelection` 因此
+  // 一律放行），但巢狀 effects 常常有——例如 BS3-076「攻擊後可選付費翻牌，
+  // 翻到符合條件就對被攻擊的餅乾追加傷害」，巢狀的 damage 效果鎖定
+  // `attackTargetOnly`。如果攻擊本身已經把目標打到昏厥離場，這個巢狀效果
+  // 不管翻到什麼都不可能有合法目標，整張 reveal-top-deck 形同無效，不該
+  // 被判定為「可以套用」。這裡遞迴檢查巢狀效果，跟 resolve-reveal-top-deck
+  // 翻牌後篩選 applicableEffects 用的同一組判斷（isEffectConditionMet +
+  // hasRequiredEffectTargets）一致，只是提前到「決定要不要開放付費」這一步。
+  if (effect.kind === 'reveal-top-deck') {
+    return effect.effects.some(
+      (nested) =>
+        isEffectConditionMet(state, context, nested) &&
+        hasRequiredEffectTargets(state, context, nested),
+    )
+  }
   if (!requiresTargetSelection(effect)) return true
   const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
   const min =

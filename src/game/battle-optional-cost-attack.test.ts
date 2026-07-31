@@ -883,4 +883,49 @@ describe('optional-cost-attack integration', () => {
     expect(state.pendingBattle).toBeNull()
     expect(state.status).toBe('playing')
   })
+
+  it('BS3-076: skips the optional reveal-top-deck prompt when the base attack already fainted the attacked cookie', () => {
+    let state = createBattleState()
+    // 預設 attacker 攻擊力 3 恰好等於 defender 的 3 張 HP 卡，普通攻擊本身
+    // 就會讓 defender 昏厥離場；巢狀 damage 效果鎖定 attackTargetOnly，
+    // 目標消失後不可能再有合法目標，不該再詢問是否要付費翻牌。
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          {
+            kind: 'reveal-top-deck',
+            match: { type: 'cookie', energyColor: 'blue', level: 2 },
+            effects: [
+              {
+                kind: 'damage',
+                amount: 2,
+                target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+              },
+            ],
+          },
+        ],
+        effectText: 'Reveal top card. If blue LV2, deal 2 damage to attacked cookie.',
+      },
+    ]
+    state.players['player-two'].supportArea = [
+      ...state.players['player-two'].supportArea,
+      { card: { id: 'sup', instanceId: 'sup', name: 'sup', type: 'item', energyColor: 'blue' }, rested: false },
+    ]
+
+    state = declareAttack(state)
+    state = advanceToAttackEffect(state)
+
+    expect(
+      state.players['player-one'].battleArea.some(
+        (cookie) => cookie.card.instanceId === 'defender',
+      ),
+    ).toBe(false)
+    expect(state.pendingBattle!.stage).toBe('attack-effect')
+
+    state = resolveAttackEffect(state, 'player-two', [])
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeNull()
+  })
 })
