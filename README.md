@@ -141,7 +141,7 @@ npm run cards:analyze:bs3-candidate
 | --- | --- |
 | 2026-07-31 | R10 完整版：新增 Attacker 反擊暴露罰分（捕獲 lv4RiskBonus 不讀對手手牌與攻擊力的缺口），修正 `-= responseRiskPenalty(...)` 方向 bug；新增 r10ExposureRisk 指標與 11 條純函式行為測試。 |
 | 2026-07-31 | Lv.4 回合層 beam search（w=3, d=3）：取代逐指令 greedy 評分，改以 beam 探索同一回合內的行動序列並取終端 state 最高分。300 seeds benchmark 全 PASS 且無回歸。AI 對戰預設等級改為 Lv.4。 |
-| 2026-07-31 | BS3 Yellow Counter 牌組驗證：新增 60 seeds benchmark（Lv.4 mirror）與 Playwright 瀏覽器對戰驗證腳本 `npm run test:bs3-yellow:browser`。 |
+| 2026-07-31 | BS3 全五色 benchmark（各 60 seeds, Lv.4 mirror）與 Playwright 瀏覽器對戰驗證腳本（`test:bs3-*:browser`）。 |
 | 2026-07-30 | 完善正式卡池測試對局設定，可指定牌庫順序、HP／手牌／支援卡與能量／場景／棄牌，並新增 BS3-018／BS3-020 快速測試案例與回歸測試。 |
 | 2026-07-30 | 修正場景卡詳情的官方換行，將放置場景文字與 Activate 效果分列顯示，並補上 BS3-096 回歸測試。 |
 | 2026-07-30 | 調整卡牌詳情普通攻擊排版，將攻擊力徽章固定於能量／招式名稱行並保留 `Then` 後續效果。 |
