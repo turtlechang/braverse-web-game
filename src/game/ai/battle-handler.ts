@@ -92,6 +92,15 @@ const EFFECT_VALUE_MAP: Record<string, number> = {
   'support-to-hand': 5,
 }
 
+/**
+ * 陷阱值不值得發動的門檻。沿用原本只套用在「Lv.1 且 HP1」目標上的
+ * 50 分門檻（已驗證過的數字，見下方 R7 說明），改成對所有目標一律
+ * 套用。用小一點的門檻（例如 10）試過：多數「非致命、目標普通」的
+ * 陷阱淨值都落在 20–50 之間，門檻太低等於形同虛設（300 局 benchmark
+ * 裡幾乎沒有陷阱被跳過），沒有真正過濾到「代價大於保護價值」的案例。
+ */
+const TRAP_SKIP_THRESHOLD = 50
+
 export const evaluateTrapWorth = (
   state: GameState,
   playerId: PlayerId,
@@ -283,12 +292,14 @@ export const handleAiPendingBattle = (
           bestCandidate = candidate
         }
       }
-      // R7: 只在目標明顯無價值（Lv.1 HP1）且分數偏低時跳過
-      const target = state.players[battle.defenderPlayerId].battleArea.find(
-        (c) => c.card.instanceId === battle.targetInstanceId,
-      )
-      const isExpendable = (target?.card.level ?? 0) <= 1 && (target?.hpCards.length ?? 0) <= 1
-      if (isExpendable && bestScore < 50) {
+      // R7: evaluateTrapWorth 的分數已經把代價（能量／棄牌／送battle cookie）
+      // 扣進去了，所以「淨值是否為正」本身就是該不該發動的判斷依據。
+      // 原本只在目標明顯無價值（Lv.1 且 HP1）時才檢查分數，代表任何非
+      // 垃圾目標、就算陷阱代價明顯大於保護到的價值，也會無條件發動——
+      // 等於陷阱評分只在「要不要浪費在雜牌上」時有作用，其餘時候形同虛設。
+      // 改成統一門檻：分數低於 TRAP_SKIP_THRESHOLD 一律跳過，垃圾目標會
+      // 自然因為 lowValueWastePenalty 落在門檻以下，不需要再另外判斷。
+      if (bestScore < TRAP_SKIP_THRESHOLD) {
         trapCard = undefined
       } else {
         trapCard = bestCandidate

@@ -5,7 +5,7 @@ import { getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
 import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
-import type { PlayerView } from '../player-view'
+import type { CookieInBattleView, PlayerView } from '../player-view'
 import type { CookieCard, GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 import {
@@ -19,6 +19,25 @@ const sumBreakLevel = (cards: CookieCard[]): number =>
   cards.reduce((sum, card) => sum + card.level, 0)
 
 /**
+ * 場上單張餅乾的存在價值：舊版是不分等級一律 60 分，等於 Lv.1 雜牌
+ * 跟 Lv.4 王牌一樣重要，AI 因此不會特別想保留高等級餅乾。改成
+ * 40 + level*10——Level 2（最常見的中段餅乾）維持原本的 60 分不變，
+ * 只有 Level 1（50）與 Level 3/4（70/80）往兩側拉開，盡量不動到
+ * 已經調校過的既有數值尺度。
+ */
+const boardPresenceValue = (cookies: CookieInBattleView[]): number =>
+  cookies.reduce((sum, cookie) => sum + 40 + cookie.card.level * 10, 0)
+
+/**
+ * 場上總攻擊力：卡面攻擊力皆為公開資訊。舊版評分只看戰鬥區張數與
+ * HP，兩個攻守分佈不同但張數/HP 相同的場面會拿到同分，AI 分不出
+ * 「這場面比較能打」。加成幅度刻意壓低（每點攻擊力 3 分），只用來
+ * 在既有分數打平時提供額外解析度，不喧賓奪主。
+ */
+const attackPotentialValue = (cookies: CookieInBattleView[]): number =>
+  cookies.reduce((sum, cookie) => sum + (cookie.card.attack ?? 0), 0)
+
+/**
  * 場面評分：只讀 PlayerView，型別上保證不使用隱藏資訊。
  * 分數對 viewer 而言越高越好。
  */
@@ -30,8 +49,10 @@ export const evaluatePlayerView = (view: PlayerView): number => {
 
   const { self, opponent } = view
   let score = 0
-  score += self.battleArea.length * 60
-  score -= opponent.battleArea.length * 60
+  score += boardPresenceValue(self.battleArea)
+  score -= boardPresenceValue(opponent.battleArea)
+  score += attackPotentialValue(self.battleArea) * 3
+  score -= attackPotentialValue(opponent.battleArea) * 3
   score += self.battleArea.reduce((sum, cookie) => sum + cookie.hpCount, 0) * 25
   score -=
     opponent.battleArea.reduce((sum, cookie) => sum + cookie.hpCount, 0) * 25
