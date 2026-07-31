@@ -332,6 +332,58 @@ describe('new card-effect mechanics', () => {
     )
   })
 
+  it('hand-to-break-by-level-sum requires the selected levels to sum exactly (BS3-047)', () => {
+    const base = asMainPhase(createDemoGame())
+    const one = makeCookie({ instanceId: 'lv1', level: 1, energyColor: 'yellow' })
+    const two = makeCookie({ instanceId: 'lv2', level: 2, energyColor: 'yellow' })
+    const offColor = makeCookie({ instanceId: 'lv1-red', level: 1, energyColor: 'red' })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [one, two, offColor],
+        },
+      },
+    }
+
+    // 選 1 張不足以達到目標總和 3。
+    expect(() =>
+      executeCardEffect(
+        state,
+        { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+        { kind: 'hand-to-break-by-level-sum', targetSum: 3, energyColor: 'yellow' },
+        [one.instanceId],
+      ),
+    ).toThrow(GameRuleError)
+
+    // 非黃色的卡不在合法候選範圍內，即使等級總和湊得起來也不能選。
+    expect(() =>
+      executeCardEffect(
+        state,
+        { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+        { kind: 'hand-to-break-by-level-sum', targetSum: 3, energyColor: 'yellow' },
+        [two.instanceId, offColor.instanceId],
+      ),
+    ).toThrow(GameRuleError)
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+      { kind: 'hand-to-break-by-level-sum', targetSum: 3, energyColor: 'yellow' },
+      [one.instanceId, two.instanceId],
+    )
+
+    expect(resolved.players['player-one'].hand).toEqual(
+      expect.arrayContaining([offColor]),
+    )
+    expect(resolved.players['player-one'].hand).toHaveLength(1)
+    expect(resolved.players['player-one'].breakArea).toEqual(
+      expect.arrayContaining([one, two]),
+    )
+  })
+
   it('break-to-trash now supports a maxLevel ceiling instead of only exact level', () => {
     const base = asMainPhase(createDemoGame())
     const low = makeCookie({ instanceId: 'low-break', level: 1 })

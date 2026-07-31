@@ -4,6 +4,7 @@ import {
   getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getHandToBreakBySumCandidates,
   getEffectTargetCandidates,
   getTargetPlayerId,
   isEffectConditionMet,
@@ -410,6 +411,9 @@ const hasUsableEffect = (
     }
     if (effect.kind === 'break-to-hand-by-level-sum') {
       return getBreakToHandBySumCandidates(state, context, effect).length > 0
+    }
+    if (effect.kind === 'hand-to-break-by-level-sum') {
+      return getHandToBreakBySumCandidates(state, context, effect).length > 0
     }
     if (
       !isEffectTargeted(effect) ||

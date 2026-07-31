@@ -14,6 +14,7 @@ import {
   getEnergyCostTotal,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
@@ -247,6 +248,11 @@ export function usePendingEffect(params: {
       ? getBreakToHandBySumCandidates(game, pendingEffect.context, currentEffect)
       : []
 
+  const handToBreakBySumCandidates =
+    pendingEffect && currentEffect?.kind === 'hand-to-break-by-level-sum'
+      ? getHandToBreakBySumCandidates(game, pendingEffect.context, currentEffect)
+      : []
+
   const trashToHandCandidates =
     pendingEffect && currentEffect?.kind === 'trash-to-hand'
       ? getTrashToHandCandidates(game, pendingEffect.context, currentEffect)
@@ -265,6 +271,7 @@ export function usePendingEffect(params: {
           ...effectTargetCandidates.map((cookie) => cookie.card.instanceId),
           ...fieldToTrashStageCandidate.map((c) => c.instanceId),
           ...genericEffectCandidateCards.map((card) => card.instanceId),
+          ...handToBreakBySumCandidates.map((card) => card.instanceId),
         ])
 
   const breakEffectTargetIds = faintActive
@@ -1014,7 +1021,8 @@ export function usePendingEffect(params: {
         currentEffect.kind === 'trash-to-hand' ||
         currentEffect.kind === 'trash-to-deck'
         ? currentEffect.max
-        : currentEffect.kind === 'break-to-hand-by-level-sum'
+        : currentEffect.kind === 'break-to-hand-by-level-sum' ||
+            currentEffect.kind === 'hand-to-break-by-level-sum'
           ? Number.MAX_SAFE_INTEGER
         : currentEffect.kind === 'support-to-trash' ||
             currentEffect.kind === 'support-to-hand' ||
@@ -1620,6 +1628,7 @@ export function usePendingEffect(params: {
     breakToTrashCandidates,
     breakToBattleCandidates,
     breakToHandBySumCandidates,
+    handToBreakBySumCandidates,
     trashToHandCandidates,
     trashToDeckCandidates,
     genericEffectCandidateCards,

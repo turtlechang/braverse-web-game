@@ -27,6 +27,7 @@ import {
   getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getHandToBreakBySumCandidates,
   getEffectTargetCandidates,
   getSupportEffectCandidates,
   getCookieOwnerId,
@@ -1904,6 +1905,30 @@ export const executeCardEffect = (
         (card) => !selectedSet.has(card.instanceId),
       ),
       hand: [...player.hand, ...selected],
+    })
+  }
+
+  if (effect.kind === 'hand-to-break-by-level-sum') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getHandToBreakBySumCandidates(state, context, effect)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的卡牌不在手牌的合法範圍內。')
+    }
+    const selectedSet = new Set(uniqueIds)
+    const selected = candidates.filter((card) => selectedSet.has(card.instanceId)) as CookieCard[]
+    const levelSum = selected.reduce((sum, card) => sum + card.level, 0)
+    if (levelSum !== effect.targetSum) {
+      throw new GameRuleError(`選擇的餅乾等級總和必須恰好為 ${effect.targetSum}。`)
+    }
+    return updatePlayer(state, {
+      ...player,
+      hand: player.hand.filter((card) => !selectedSet.has(card.instanceId)),
+      breakArea: [...player.breakArea, ...selected],
     })
   }
 

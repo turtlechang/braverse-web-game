@@ -148,6 +148,8 @@ function EffectPanelContent({
         ? { min: 1, max: 1 }
       : currentEffect?.kind === 'break-to-battle'
         ? { min: 0, max: currentEffect.amount }
+        : currentEffect?.kind === 'hand-to-break-by-level-sum'
+          ? { min: 1, max: candidateCards.length }
         : currentEffect?.kind === 'hand-to-break' ||
             currentEffect?.kind === 'break-to-hand' ||
             currentEffect?.kind === 'rest-support'
@@ -207,12 +209,28 @@ function EffectPanelContent({
     trashToDeckBottomPaid &&
     trashToDeckPaid
 
+  const selectedLevelSum =
+    currentEffect?.kind === 'hand-to-break-by-level-sum'
+      ? candidateCards
+          .filter((card) =>
+            pendingEffect?.selectedTargetIds.includes(card.instanceId),
+          )
+          .reduce(
+            (sum, card) => sum + (card.type === 'cookie' ? card.level : 0),
+            0,
+          )
+      : 0
+
   const targetReady =
     !showTargetSelection ||
     !selectionLimits ||
-    (pendingEffect &&
-      pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
-      pendingEffect.selectedTargetIds.length <= selectionLimits.max)
+    (currentEffect?.kind === 'hand-to-break-by-level-sum'
+      ? selectedLevelSum === currentEffect.targetSum
+      : Boolean(
+          pendingEffect &&
+            pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
+            pendingEffect.selectedTargetIds.length <= selectionLimits.max,
+        ))
 
   const isChooseOneEffect =
     currentEffect?.kind === 'choose-one' && Boolean(onChooseMode)
@@ -599,11 +617,17 @@ function EffectPanelContent({
                   onToggle={onToggleCandidate}
                   className="effect-candidates-target"
                 />
-                {selectionLimits && (
+                {currentEffect.kind === 'hand-to-break-by-level-sum' ? (
                   <small>
-                    已選 {pendingEffect.selectedTargetIds.length}／
-                    {selectionLimits.max}
+                    已選等級總和 {selectedLevelSum}／{currentEffect.targetSum}
                   </small>
+                ) : (
+                  selectionLimits && (
+                    <small>
+                      已選 {pendingEffect.selectedTargetIds.length}／
+                      {selectionLimits.max}
+                    </small>
+                  )
                 )}
               </section>
             )}
@@ -684,6 +708,11 @@ function EffectPanelContent({
 export function EffectPanel(props: EffectPanelProps) {
   const [minimized, setMinimized] = useState(false)
   const hasPendingPrompt = Boolean(props.pendingEffect || props.optionalCostAttack)
+  const minimizedSourceName =
+    props.pendingEffect?.sourceCard.name ??
+    props.optionalCostAttack?.sourceCardName
+  const minimizedPromptLabel =
+    props.pendingEffect?.triggerLabel ?? '攻擊後續效果'
 
   if (
     !props.pendingEffect &&
@@ -693,7 +722,11 @@ export function EffectPanel(props: EffectPanelProps) {
     return null
   }
 
-  if (minimized && props.pendingEffect) {
+  if (
+    minimized &&
+    (props.pendingEffect || props.optionalCostAttack) &&
+    minimizedSourceName
+  ) {
     return (
       <button
         type="button"
@@ -701,8 +734,8 @@ export function EffectPanel(props: EffectPanelProps) {
         onClick={() => setMinimized(false)}
       >
         <span>
-          <strong>{props.pendingEffect.sourceCard.name}</strong>
-          <small>{props.pendingEffect.triggerLabel}</small>
+          <strong>{minimizedSourceName}</strong>
+          <small>{minimizedPromptLabel}</small>
         </span>
         <Maximize2 aria-hidden="true" />
       </button>
@@ -720,12 +753,14 @@ export function EffectPanel(props: EffectPanelProps) {
         role={hasPendingPrompt ? 'alertdialog' : 'status'}
         aria-live="polite"
       >
-        {props.pendingEffect && (
+        {(props.pendingEffect || props.optionalCostAttack) && (
           <button
             type="button"
             className="minimize-reveal"
             onClick={() => setMinimized(true)}
-            title="縮小技能效果"
+            title={
+              props.pendingEffect ? '縮小技能效果' : '縮小攻擊後續效果'
+            }
           >
             <Minimize2 aria-hidden="true" />
             縮小

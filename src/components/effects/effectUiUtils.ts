@@ -144,6 +144,9 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'break-to-hand-by-level-sum') {
     return `從 break 區選擇餅乾，等級總和需為 ${effect.targetSum}，返回手牌。`
   }
+  if (effect.kind === 'hand-to-break-by-level-sum') {
+    return `從手牌選擇餅乾，等級總和需恰好為 ${effect.targetSum}，放入休息區。`
+  }
   if (effect.kind === 'set-cookie-active') return '將餅乾設為活躍。'
   if (effect.kind === 'deck-to-trash') return `牌庫頂 ${effect.amount} 張放入棄牌區。`
   if (effect.kind === 'rest-support') return `休息 ${effect.amount} 張支援區卡。`
@@ -296,6 +299,7 @@ export const describeEffectResult = (
   }
   if (effect.kind === 'break-to-battle') return 'break 區餅乾已登場。'
   if (effect.kind === 'break-to-hand-by-level-sum') return 'break 區餅乾已返回手牌。'
+  if (effect.kind === 'hand-to-break-by-level-sum') return '手牌餅乾已放入休息區。'
   if (effect.kind === 'battle-to-break') return `${names} 已放入 break 區。`
   if (effect.kind === 'disable-attack') return `${names} 下回合不能攻擊。`
   if (effect.kind === 'hp-to-support') return `${names} 的 HP 卡已放入支援區。`

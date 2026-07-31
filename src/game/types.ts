@@ -552,6 +552,8 @@ export interface HandToBattleEffect {
   kind: 'hand-to-battle'
   amount: number
   energyColor?: EnergyColor
+  /** 登場前需支付的能量（BS3-029）。 */
+  energyCost?: EnergyCost
   minLevel?: number
   maxLevel?: number
   optional?: boolean
@@ -644,6 +646,12 @@ export interface HandToBreakEffect {
   maxLevel?: number
   nonCookieOnly?: boolean
   optional?: boolean
+}
+
+export interface HandToBreakBySumEffect {
+  kind: 'hand-to-break-by-level-sum'
+  targetSum: number
+  energyColor?: EnergyColor
 }
 
 export interface BreakToHandEffect {
@@ -914,6 +922,7 @@ export type CardEffect =
   | BreakToBattleEffect
   | BattleToBreakEffect
   | BreakToHandBySumEffect
+  | HandToBreakBySumEffect
   | FlipToSupportEffect
   | RevealTopDeckEffect
   | HandToBreakEffect

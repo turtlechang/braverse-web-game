@@ -1008,6 +1008,7 @@ export const convertOfficialCardEffects = (
       },
     ],
     'BS3-044': [
+      { kind: 'hand-to-break', amount: 1, minLevel: 2 },
       {
         kind: 'break-to-hand',
         amount: 1,
@@ -2327,10 +2328,9 @@ export const convertOfficialStageAbility = (
     ],
     'BS3-047': [
       {
-        kind: 'hand-to-break',
-        amount: 3,
+        kind: 'hand-to-break-by-level-sum',
+        targetSum: 3,
         energyColor: 'yellow',
-        optional: true,
       },
       {
         kind: 'break-to-battle',

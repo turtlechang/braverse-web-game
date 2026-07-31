@@ -308,7 +308,7 @@ export const isEffectUntargeted = (
   | DeckToSupportEffect
   | Extract<CardEffect, { kind: 'deck-to-trash' }>
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'rest-support' | 'support-to-hp' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'rest-support' | 'support-to-hp' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -328,6 +328,7 @@ export const isEffectUntargeted = (
   effect.kind === 'field-to-trash-all' ||
   effect.kind === 'break-to-battle' ||
   effect.kind === 'break-to-hand-by-level-sum' ||
+  effect.kind === 'hand-to-break-by-level-sum' ||
   effect.kind === 'reveal-top-deck' ||
   effect.kind === 'hand-to-break' ||
   effect.kind === 'break-to-hand' ||
@@ -368,6 +369,7 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'trash-to-battle' ||
   effect.kind === 'support-to-trash' ||
   effect.kind === 'hand-to-break' ||
+  effect.kind === 'hand-to-break-by-level-sum' ||
   effect.kind === 'break-to-hand' ||
   effect.kind === 'hand-to-hp' ||
   effect.kind === 'rest-support' ||
@@ -700,6 +702,18 @@ export const getBreakToHandBySumCandidates = (
     (card) =>
       effect.energyColor === undefined ||
       card.energyColor === effect.energyColor,
+  )
+
+export const getHandToBreakBySumCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: { energyColor?: EnergyColor },
+): GameCard[] =>
+  state.players[context.sourcePlayerId].hand.filter(
+    (card) =>
+      card.type === 'cookie' &&
+      (effect.energyColor === undefined ||
+        card.energyColor === effect.energyColor),
   )
 
 export const validateBreakToTrashTargets = (
