@@ -536,15 +536,53 @@ const applyBeamAction = (
 interface BeamEntry {
   state: GameState
   firstCommand: PlayerActionCommand | null
+  /** 沿路徑累加的單步修正分（R8/R9/R10/attackBonus/cookieSupportPenalty）。 */
+  pathBonus: number
   score: number
   isTerminal: boolean
+}
+
+/**
+ * 單步過渡（preState → postState，套用 command）的風險／機會修正，
+ * 跟 twoPlyCandidateScore 用同一套規則（attackBonus、R9 致命偵測、
+ * R10 對手回應風險、R8 手牌管理、支援放置懲罰）。
+ *
+ * 背景：beam search 原本只用 stateScore（evaluatePlayerView +
+ * lv4RiskBonus）幫每個展開節點打分，這些單步修正只留在
+ * twoPlyCandidateScore 這條 fallback 路徑裡——但 getLegalTurnCommands
+ * 永遠至少含 advance-phase，beam 幾乎不可能回傳 null，fallback 在真實
+ * 對局中打不到，等於 R8/R9/R10 對 Lv.4 主路徑完全失效（2026-07-31
+ * review：60 局 Lv.4 vs Lv.3 benchmark 裡 R10 相關計數器全部為 0）。
+ * 這裡把同一套修正搬進 beam 的每一步展開，讓序列規劃真的吃得到。
+ *
+ * 對局結束的過渡不疊加任何修正——跟 twoPlyCandidateScore 一致，終局
+ * 分數只看 evaluatePlayerView 的 ±100000。
+ */
+const beamStepBonus = (
+  preState: GameState,
+  postState: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+): number => {
+  if (postState.status === 'finished') return 0
+
+  let bonus = 0
+  if (command.kind === 'attack') {
+    bonus += attackBonus(preState, playerId, command)
+    bonus += lethalDetectionBonus(preState, playerId, command)
+  }
+  bonus += responseRiskPenalty(preState, postState, playerId, command)
+  bonus += handManagementBonus(preState, postState, playerId, command.kind)
+  bonus -= cookieSupportPenalty(preState, playerId, command)
+  return bonus
 }
 
 /**
  * 回合層 beam search（Lv.4 核心增強）。
  *
  * 從當前 state 出發，以 beamWidth × maxDepth 枚舉同一回合內可能的
- * 行動序列，取終局 state 分數最高者，回傳該序列的「第一個動作」。
+ * 行動序列，取「終局 state 分數 + 沿路單步修正總和」最高者，回傳該
+ * 序列的「第一個動作」。
  *
  * 若回傳 null 代表 beam 尚未展開出有效動作（合法命令清單為空或全部
  * 拋例），caller 應 fallback 回傳統單步評估。
@@ -559,6 +597,7 @@ const beamSearchBestFirstCommand = (
     {
       state,
       firstCommand: null,
+      pathBonus: 0,
       score: stateScore(state, playerId),
       isTerminal: false,
     },
@@ -579,10 +618,13 @@ const beamSearchBestFirstCommand = (
       for (const cmd of commands) {
         try {
           const { nextState, isTerminal } = applyBeamAction(beam.state, cmd, playerId)
-          const score = stateScore(nextState, playerId)
+          const pathBonus =
+            beam.pathBonus + beamStepBonus(beam.state, nextState, playerId, cmd)
+          const score = stateScore(nextState, playerId) + pathBonus
           nextBeams.push({
             state: nextState,
             firstCommand: beam.firstCommand ?? cmd,
+            pathBonus,
             score,
             isTerminal,
           })

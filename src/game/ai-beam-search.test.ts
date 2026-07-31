@@ -7,11 +7,14 @@ import {
   type PlayerId,
 } from '.'
 import {
+  getR10Counters,
   handleAiEvaluatedTurnState,
   handleAiTwoPlyTurnState,
+  resetR10Counters,
 } from './ai/evaluated-turn-handler'
 import type { AiTurnStrategy } from './ai/turn-handler'
 import { applyChosenTurnCommand } from './ai/random-turn-handler'
+import { cookie, createBattleState, item } from './test-helpers/battle-helpers'
 
 const minimalStrategy: AiTurnStrategy = {
   chooseEffectTargets: () => [],
@@ -181,5 +184,87 @@ describe('Beam Search 回合層序列規劃', () => {
       expect(decision.action).not.toBe('error')
       // 無論選誰，應該是合法命令
     }
+  })
+
+  /**
+   * 回歸測試：2026-07-31 review 發現 beam search 上線後，
+   * attackBonus／R9 lethalDetectionBonus／R10 responseRiskPenalty／
+   * R8 handManagementBonus／cookieSupportPenalty 全部只存在於
+   * twoPlyCandidateScore 這條 fallback 路徑——但 getLegalTurnCommands
+   * 一定含 advance-phase，beam 幾乎不可能回傳 null，fallback 在真實
+   * 對局中打不到。實測 60 局 Lv.4 vs Lv.3，r10 相關計數器全部是 0。
+   *
+   * 這裡直接呼叫 handleAiTwoPlyTurnState（Lv.4 真正的入口，不是
+   * responseRiskPenalty 純函式）驗證：只要合法命令裡有會觸發 R10 F1
+   * 的攻擊候選，計數器就該增加——證明修正後 R10 真的被 beam search
+   * 的評分路徑用到，不再是死碼。
+   */
+  it('R10 沒有在 beam search 上線後變成死碼：合法攻擊候選會讓 responseRiskPenalty 真的被呼叫', () => {
+    const base = createBattleState()
+
+    // 高 Level（3）、未休息的攻擊者：攻擊後會休息，符合 F1「攻擊者仍
+    // 存活但休息」的條件；HP=2 讓對手未休息攻擊力（2）剛好打得死它。
+    const attacker = { ...cookie('my-attacker', 2, 2), level: 3 }
+    // 攻擊目標：HP 夠高，這次攻擊不會致命，戰局不會提前結束。
+    const target = cookie('opp-target', 1, 5)
+    // 對手另一隻未休息的反擊者，貢獻 F1 需要的「未休息攻擊力」。
+    const counter = { ...cookie('opp-counter', 2, 2), level: 2 }
+
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-one',
+      turnNumber: 5,
+      phase: 'main',
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          // preMyBreak = 3+3 = 6，達到 F1 的「中等以上」門檻。
+          breakArea: [
+            { ...cookie('my-br1', 0, 1), level: 3 },
+            { ...cookie('my-br2', 0, 1), level: 3 },
+          ],
+          battleArea: [
+            {
+              card: attacker,
+              hpCards: [item('atk-hp-1'), item('atk-hp-2')],
+              rested: false,
+              battleEntryId: 'attacker:battle:test',
+            },
+          ],
+          supportArea: [{ card: item('my-support', 'red'), rested: false }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          hand: [item('opp-hand-1'), item('opp-hand-2'), item('opp-hand-3')],
+          battleArea: [
+            {
+              card: target,
+              hpCards: [
+                item('target-hp-1'),
+                item('target-hp-2'),
+                item('target-hp-3'),
+                item('target-hp-4'),
+                item('target-hp-5'),
+              ],
+              rested: false,
+              battleEntryId: 'target:battle:test',
+            },
+            {
+              card: counter,
+              hpCards: [item('counter-hp-1'), item('counter-hp-2')],
+              rested: false,
+              battleEntryId: 'counter:battle:test',
+            },
+          ],
+        },
+      },
+    }
+
+    resetR10Counters()
+    const decision = handleAiTwoPlyTurnState(state, 'player-one', minimalStrategy)
+
+    expect(decision.action).not.toBe('error')
+    expect(getR10Counters().penaltyApplied).toBeGreaterThan(0)
   })
 })
