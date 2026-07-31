@@ -1,5 +1,6 @@
 import {
   getAfterDamageEffectCandidates,
+  getFaintEffectCardCandidates,
   getFaintEffectCandidates,
 } from '../battle'
 import { applyGameCommand, getPendingDecision } from '../commands'
@@ -127,26 +128,51 @@ export const handleAiPendingDecision = (
         description: `等待 ${state.players[pendingDecision.playerId].name} 選擇昏厥效果目標。`,
       }
     }
+    const cardCandidates = getFaintEffectCardCandidates(state)
     const candidates = getFaintEffectCandidates(state)
     const ordered = [...candidates].sort(
       (left, right) => left.hpCards.length - right.hpCards.length,
     )
+    const orderedCards = [...cardCandidates].sort((left, right) =>
+      left.name.localeCompare(right.name),
+    )
+    const faintEffect = state.pendingFaintEffects?.[0]?.effect
+    const faintEnergyCost =
+      faintEffect?.kind === 'hand-to-battle'
+        ? faintEffect.energyCost
+        : undefined
+    const selectedPaymentIds = faintEnergyCost
+      ? selectEnergyPayment(
+          faintEnergyCost,
+          state.players[playerId].supportArea,
+        )
+      : []
+    const canPayFaintCost = selectedPaymentIds !== null
+    const shouldPayFaintCost =
+      Boolean(faintEnergyCost) && cardCandidates.length > 0 && canPayFaintCost
     const targetIds =
-      candidates.length >= pendingDecision.min
-        ? ordered
+      cardCandidates.length > 0 && (!faintEnergyCost || shouldPayFaintCost)
+        ? orderedCards
             .slice(0, pendingDecision.max)
-            .map((cookie) => cookie.card.instanceId)
-        : []
+            .map((card) => card.instanceId)
+        : candidates.length >= pendingDecision.min
+          ? ordered
+              .slice(0, pendingDecision.max)
+              .map((cookie) => cookie.card.instanceId)
+          : []
     return {
       state: applyGameCommand(state, {
         kind: 'resolve-faint-effect',
         playerId,
         targetIds,
+        ...(shouldPayFaintCost
+          ? { paymentIds: selectedPaymentIds ?? [] }
+          : {}),
       }),
       action: 'resolve-faint',
       description:
         targetIds.length > 0
-          ? `${state.players[playerId].name}發動對${ordered[0].card.name}的昏厥效果。`
+          ? `${state.players[playerId].name}發動對${ordered[0]?.card.name ?? orderedCards[0]?.name ?? '目標'}的昏厥效果。`
           : `${state.players[playerId].name}略過昏厥效果。`,
     }
   }

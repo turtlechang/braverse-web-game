@@ -155,6 +155,31 @@ describe('online protocol validation', () => {
       }),
     ).toBe(false)
   })
+
+  it('accepts BS3-029 faint-effect payment ids and rejects non-string ids', () => {
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'resolve-faint-effect',
+          playerId: 'player-one',
+          targetIds: ['yellow-cookie'],
+          paymentIds: ['yellow-support'],
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'resolve-faint-effect',
+          playerId: 'player-one',
+          targetIds: ['yellow-cookie'],
+          paymentIds: [42],
+        },
+      }),
+    ).toBe(false)
+  })
 })
 
 describe('公開互動意圖協定', () => {

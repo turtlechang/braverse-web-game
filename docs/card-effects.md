@@ -84,7 +84,7 @@
 | 棄牌區全部→牌庫 | `trash-to-deck-all` | 不需選擇，將棄牌區整批洗回牌庫。後續的「Then」必須放在 `thenEffects` 內嵌執行——本效果會清空棄牌區，同層的下一個效果若重掛同一個棄牌區條件，重新判定時必定失敗而被跳過（BS3-113） |
 | 揭示牌庫底 | `reveal-bottom-deck` | 揭示牌庫底 1 張，依是否為 Cookie 分別送往牌庫頂或手牌；牌庫為空時直接略過，對應官方文字的「up to 1」（BS3-073） |
 | 揭示牌庫頂 | `reveal-top-deck` | peek 牌庫頂 1 張（不移除），檢查 `match` 條件；匹配時執行 `effects` 內嵌效果，不匹配時直接略過。卡始終留在牌庫頂，等價於官方文字的「抽 1 張展示，執行完放回牌庫頂」（BS3-090、BS3-093） |
-| 手牌→戰鬥區 | `hand-to-battle` | 從手牌選餅乾登場，HP 卡照常自牌庫頂補入；`gainHp` 對應「Then, that Cookie gains +N HP」。登場後照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定（BS3-029） |
+| 手牌→戰鬥區 | `hand-to-battle` | 從手牌選餅乾登場，HP 卡照常自牌庫頂補入；`energyCost` 需先由活躍支援卡支付；`gainHp` 對應「Then, that Cookie gains +N HP」。登場後照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定（BS3-029） |
 | 對手棄牌區→對手休息區 | `opponent-trash-to-break` | 從對手棄牌區選餅乾放進**對手**休息區；會推進對手 break 等級，因此走與其他休息區移動相同的勝負判定（BS3-028） |
 | 牌庫檢視 | `inspect-deck` | 查看牌庫頂 N 張。`restDestination` 決定未選走的卡去 `bottom`／`top`／`trash`（前兩者由玩家排序），`pickDestination` 決定選走的卡加入手牌或直接登場，`filterColor`／`filterType`／`optionalPick` 控制可選範圍（BS1/BS2 既有卡、BS3-095、BS3-083、BS3-114） |
 

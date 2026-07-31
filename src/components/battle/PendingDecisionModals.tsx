@@ -60,6 +60,10 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
   const autoResolveDrawUpTo = pendingDrawUpTo?.max === 1
   const pendingStageTrigger = match.game.pendingStageTrigger
   const isCookieSkillTrigger = pendingStageTrigger?.sourceKind === 'cookie-skill'
+  const mustReplaceEmptyBattleArea =
+    !match.game.pendingRefresh &&
+    match.pendingPlayer?.battleArea.length === 0 &&
+    match.pendingOptions.length > 0
 
   useEffect(() => {
     if (!autoResolveDrawUpTo || !pendingDrawUpTo) return
@@ -266,7 +270,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             options={match.pendingOptions}
             isOptionDisabled={() => false}
             onSkipReplacement={
-              match.game.pendingRefresh
+              match.game.pendingRefresh || mustReplaceEmptyBattleArea
                 ? undefined
                 : () =>
                     match.dispatch(

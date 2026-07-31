@@ -128,6 +128,80 @@ describe('AI break-to-trash target selection', () => {
     ).toBe(targetCookie.hpCards.length - 1)
   })
 
+  it('pays BS3-029 yellow energy before playing the selected hand Cookie', () => {
+    const base = createDemoGame()
+    const energyCard: GameCard = {
+      id: 'yellow-energy',
+      instanceId: 'yellow-energy',
+      name: 'Yellow Support',
+      type: 'item',
+      energyColor: 'yellow',
+    }
+    const targetCookie = {
+      ...base.players['player-two'].battleArea[0].card,
+      id: 'yellow-hand',
+      instanceId: 'yellow-hand',
+      name: 'Yellow Cookie',
+      energyColor: 'yellow' as const,
+    }
+    const effect: CardEffect = {
+      kind: 'hand-to-battle',
+      amount: 1,
+      energyColor: 'yellow',
+      energyCost: { yellow: 1 },
+      optional: true,
+      gainHp: 1,
+    }
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'bs3-029',
+          sourceCardName: 'Burnt Cheese Cookie',
+          effect,
+          context: {
+            sourcePlayerId: 'player-two',
+            sourceInstanceId: 'bs3-029',
+          },
+        },
+      ],
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          deck: [
+            ...base.players['player-two'].deck,
+            energyCard,
+            energyCard,
+            energyCard,
+          ],
+          hand: [targetCookie],
+          battleArea: [],
+          breakArea: [
+            {
+              ...base.players['player-two'].battleArea[0].card,
+              id: 'bs3-029',
+              instanceId: 'bs3-029',
+              name: 'Burnt Cheese Cookie',
+            },
+          ],
+          supportArea: [{ card: energyCard, rested: false }],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('resolve-faint')
+    expect(decision.state.players['player-two'].supportArea[0].rested).toBe(true)
+    expect(
+      decision.state.players['player-two'].battleArea[0].hpCards,
+    ).toHaveLength(targetCookie.hp + 1)
+  })
+
   it('skips faint effect when target min is 0 and no candidates wanted', () => {
     const base = createDemoGame()
     const state: GameState = {

@@ -8,6 +8,7 @@ import {
   consumeReplacementTask,
   continuePendingReplacements,
   getCurrentReplacementTask,
+  getReplacementCandidates,
 } from './replacement'
 
 const assertActiveGame = (state: GameState) => {
@@ -256,6 +257,12 @@ export const skipDefeatedCookieReplacement = (
   }
 
   const playerId = currentTask.playerId
+  if (
+    state.players[playerId].battleArea.length === 0 &&
+    getReplacementCandidates(state, playerId).length > 0
+  ) {
+    throw new GameRuleError('戰鬥區沒有餅乾時必須先補位。')
+  }
   const replacementState = consumeReplacementTask(state, playerId)
 
   if (state.players[playerId].battleArea.length === 0) {

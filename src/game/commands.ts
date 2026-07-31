@@ -182,6 +182,7 @@ export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
   playerId: PlayerId
   targetIds: string[]
+  paymentIds?: string[]
 }
 
 export interface ResolveOpponentHandDiscardCommand {
@@ -910,7 +911,7 @@ const applyPendingDecisionCommand = (
       }
     }
     case 'resolve-faint-effect':
-      return resolveFaintEffect(state, command.targetIds)
+      return resolveFaintEffect(state, command.targetIds, command.paymentIds ?? [])
     case 'resolve-opponent-hand-discard':
       return resolveOpponentHandDiscard(state, command.playerId, command.cardIds)
     case 'resolve-inspect-deck':

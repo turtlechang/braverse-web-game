@@ -457,7 +457,9 @@ const validateTrapTargets = (
   const targetEffects = effects.filter(
     (effect) =>
       effect.kind === 'damage' ||
+      effect.kind === 'damage-by-break-count' ||
       effect.kind === 'modify-attack' ||
+      effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
       effect.kind === 'redirect-attack' ||
@@ -1244,17 +1246,19 @@ const removeFaintedCookie = (
 
   const faintSkill = target.card.skill
   if (faintSkill && faintSkill.faint) {
+    const context = {
+      sourcePlayerId: playerId,
+      sourceInstanceId: target.card.instanceId,
+      sourceCardName: target.card.name,
+    }
     for (const effect of faintSkill.effects) {
+      if (!isEffectConditionMet(nextState, context, effect)) continue
+
       if (
         effect.kind === 'damage' ||
         effect.kind === 'modify-attack' ||
         effect.kind === 'modify-damage-received'
       ) {
-        const context = {
-          sourcePlayerId: playerId,
-          sourceInstanceId: target.card.instanceId,
-          sourceCardName: target.card.name,
-        }
         const candidates = getEffectTargetCandidates(nextState, context, effect.target)
         if (candidates.length > 0) {
           nextState = {
@@ -1272,11 +1276,6 @@ const removeFaintedCookie = (
           }
         }
       } else {
-        const context = {
-          sourcePlayerId: playerId,
-          sourceInstanceId: target.card.instanceId,
-          sourceCardName: target.card.name,
-        }
         nextState = {
           ...nextState,
           pendingFaintEffects: [
@@ -2230,6 +2229,14 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       break
     }
 
+    if (
+      nextState.pendingReplacement ||
+      nextState.pendingRefresh ||
+      nextState.pendingOnPlay
+    ) {
+      break
+    }
+
     if (nextState.pendingOptionalCostAttack) {
       const pending = nextState.pendingOptionalCostAttack
       const hand = nextState.players[pending.playerId].hand
@@ -2369,7 +2376,9 @@ export const getTrapTargetCandidates = (
   const targetEffect = card?.trap?.effects.find(
     (effect) =>
       effect.kind === 'damage' ||
+      effect.kind === 'damage-by-break-count' ||
       effect.kind === 'modify-attack' ||
+      effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
       effect.kind === 'redirect-attack' ||
@@ -2437,23 +2446,56 @@ export const getFaintEffectCandidates = (
   return getEffectTargetCandidates(state, faint.context, faint.effect.target)
 }
 
+/**
+ * 回傳昏厥效果需要從非戰鬥區選取的卡牌候選。
+ * 傷害類效果沿用戰鬥區目標選擇，其他需要卡牌選擇的效果則共用一般效果候選。
+ */
+export const getFaintEffectCardCandidates = (state: GameState): GameCard[] => {
+  const faint = state.pendingFaintEffects?.[0]
+  if (!faint) return []
+
+  if (
+    faint.effect.kind === 'damage' ||
+    faint.effect.kind === 'modify-attack' ||
+    faint.effect.kind === 'modify-damage-received'
+  ) {
+    return []
+  }
+
+  if (
+    !requiresEffectCardSelection(faint.effect) ||
+    getEffectSelectionLimits(faint.effect) === null
+  ) {
+    return []
+  }
+
+  return getEffectSelectionCandidates(
+    state,
+    faint.context,
+    faint.effect,
+  )
+}
+
 export const getFaintEffectMinMax = (
   effect: CardEffect,
-): { min: number; max: number } => {
-  if (
-    effect.kind === 'damage' ||
-    effect.kind === 'modify-attack' ||
-    effect.kind === 'modify-damage-received'
-  ) {
-    return { min: effect.target.min ?? 0, max: effect.target.max ?? 1 }
-  }
-  return { min: 0, max: 0 }
-}
+): { min: number; max: number } =>
+  getEffectSelectionLimits(effect) ?? { min: 0, max: 0 }
 
 export const resolveFaintEffect = (
   state: GameState,
   targetIds: string[],
+  paymentIds: string[] = [],
 ): GameState => {
+  if (state.pendingReplacement) {
+    throw new GameRuleError('必須先完成補位。')
+  }
+  if (state.pendingOnPlay) {
+    throw new GameRuleError('必須先處理餅乾的登場效果。')
+  }
+  if (state.pendingRefresh) {
+    throw new GameRuleError('必須先完成牌庫 Refresh。')
+  }
+
   const faints = state.pendingFaintEffects
   if (!faints || faints.length === 0) {
     throw new GameRuleError('Invalid battle action.')
@@ -2464,6 +2506,53 @@ export const resolveFaintEffect = (
   let nextState: GameState = {
     ...state,
     pendingFaintEffects: remaining.length > 0 ? remaining : undefined,
+  }
+
+  if (!isEffectConditionMet(nextState, faint.context, faint.effect)) {
+    return continuePendingReplacements(nextState)
+  }
+
+  const faintEnergyCost =
+    faint.effect.kind === 'hand-to-battle'
+      ? faint.effect.energyCost
+      : undefined
+  if (!faintEnergyCost && paymentIds.length > 0) {
+    throw new GameRuleError('此昏厥效果不需要能量費用。')
+  }
+  if (faintEnergyCost) {
+    if (
+      targetIds.length === 0 &&
+      paymentIds.length === 0 &&
+      faint.effect.kind === 'hand-to-battle' &&
+      faint.effect.optional
+    ) {
+      return continuePendingReplacements(nextState)
+    }
+
+    const sourcePlayer = nextState.players[faint.context.sourcePlayerId]
+    const paymentValidation = validateEnergyPayment(
+      faintEnergyCost,
+      sourcePlayer.supportArea,
+      paymentIds,
+    )
+    if (!paymentValidation.valid) {
+      throw new GameRuleError(`昏厥效果能量費用不合法：${paymentValidation.reason}`)
+    }
+    const paymentSet = new Set(paymentIds)
+    nextState = {
+      ...nextState,
+      players: {
+        ...nextState.players,
+        [faint.context.sourcePlayerId]: {
+          ...sourcePlayer,
+          supportArea: sourcePlayer.supportArea.map((support) =>
+            paymentSet.has(support.card.instanceId)
+              ? { ...support, rested: true }
+              : support,
+          ),
+        },
+      },
+    }
   }
 
   if (
@@ -2487,7 +2576,7 @@ export const resolveFaintEffect = (
       nextState,
       faint.context,
       faint.effect,
-      [],
+      targetIds,
     )
   }
 
