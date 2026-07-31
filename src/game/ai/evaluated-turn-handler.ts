@@ -458,15 +458,18 @@ export const handleAiEvaluatedTurnState = (
 
 let r10PenaltyAppliedCount = 0
 let r10BreakRaceRiskCount = 0
+let r10ExposureRiskCount = 0
 
 export const resetR10Counters = () => {
   r10PenaltyAppliedCount = 0
   r10BreakRaceRiskCount = 0
+  r10ExposureRiskCount = 0
 }
 
 export const getR10Counters = () => ({
   penaltyApplied: r10PenaltyAppliedCount,
   breakRaceRisk: r10BreakRaceRiskCount,
+  exposureRisk: r10ExposureRiskCount,
 })
 
 // ---------------------------------------------------------------------------
@@ -543,16 +546,31 @@ const lv4RiskBonus = (
 /**
  * R10: 對手回應風險扣分（Lv.4 專用）
  *
- * 僅在最明確的高風險場景扣分：我方 break area 偏高時，行動導致 break 惡化。
- * 不讀取對手隱藏資訊，只比較行動前後的公開場面變化。
- * 以 penalty 為主，不做正向加分。
+ * 完整版——逐步落實 docs/ai-training-rules-refined.md R10 的四項 ACTION：
+ * 1) Break race risk：我方 break area 偏高時，行動導致 break 惡化 → 扣分（保留原有 guardrail）
+ * 2) 攻擊者反擊暴露：攻擊動作讓 attacker 休息、且為高 Level（>=2）餅乾；
+ *    若對手公開可見之反擊潛力（未休息戰鬥區攻擊力 + 手牌張數）足以擊倒
+ *    該 attacker，且我方 break 中等以上（被反擊破會擴大 break race）→ 扣分。
+ *
+ * 此項補 lv4RiskBonus 的缺口：lv4RiskBonus 只看靜態戰鬥區 HP/數量，
+ * 不讀對手 hand 與未休息 attacker 攻擊力作為「下一步反擊潛力」。
+ *
+ * 約定：以「負值＝風險」回傳，caller 以 `+= responseRiskPenalty(...)` 疊加，
+ * score 自然被往下扣。不要在 caller 用 `-= responseRiskPenalty(...)`—
+ * 那會把負號反過來、把風險變加分（歷史方向 bug 已於完整版修正）。
+ *
+ * 不讀取對手隱藏資訊（只讀 break area、戰鬥區、手牌張數等公開資訊）。
+ * 以 penalty 為主，不做正向加分。只疊加在 lv4RiskBonus 之上，不取代。
  */
-const responseRiskPenalty = (
+export const responseRiskPenalty = (
   preState: GameState,
   postState: GameState,
   playerId: PlayerId,
+  command: PlayerActionCommand,
 ): number => {
   let penalty = 0
+  const opponentId: PlayerId =
+    playerId === 'player-one' ? 'player-two' : 'player-one'
 
   const preMyBreak = preState.players[playerId].breakArea.reduce(
     (s, c) => s + c.level, 0,
@@ -562,9 +580,41 @@ const responseRiskPenalty = (
   )
   const breakWorsened = postMyBreak - preMyBreak
 
+  // F0 — Break race risk（保留既有 guardrail）
   if (preMyBreak >= 8 && breakWorsened > 0) {
     penalty -= breakWorsened * 12
     r10BreakRaceRiskCount++
+  }
+
+  // F1 — 攻擊者反擊暴露（完整版新增；covers the action '短期賺分但長期崩盤'）
+  if (command.kind === 'attack') {
+    const postAttacker = postState.players[playerId].battleArea.find(
+      (c) => c.card.instanceId === command.attackerInstanceId,
+    )
+    // 攻擊者若已破壞則無後續反擊窗口；F1 只關心「活著但休息且高價值」的 attacker
+    if (postAttacker && postAttacker.rested && postAttacker.card.level >= 2) {
+      const oppUnrestedAtk = postState.players[opponentId].battleArea
+        .filter((c) => !c.rested)
+        .reduce((s, c) => s + c.card.attack, 0)
+      const oppHandCount = postState.players[opponentId].hand.length
+
+      // 觸發條件全部用公開資訊：
+      //  - 我方 break 中等以上（反擊破會擴大 break race）
+      //  - 對手有足夠未休息攻擊力可擊倒 attacker
+      //  - 對手手牌資源 proxy 達到門檻（暗示有 FLIP/trap 加碼反擊）
+      const attackerHp = postAttacker.hpCards.length
+      if (
+        preMyBreak >= 6 &&
+        oppUnrestedAtk >= attackerHp &&
+        oppHandCount >= 3
+      ) {
+        // 罰分幅度刻意保守：基礎 12、level>=3 再加 6、opp 手牌每多 1 張加 2（最多 +6）
+        penalty -= 12
+        penalty -= (postAttacker.card.level - 2) * 6
+        penalty -= Math.min(oppHandCount - 3, 3) * 2
+        r10ExposureRiskCount++
+      }
+    }
   }
 
   if (penalty !== 0) {
@@ -625,8 +675,8 @@ const twoPlyCandidateScore = (
     }
 
     // R10: 對手回應風險扣分（Lv.4 專用）
-    // 僅在最明確的高風險場景扣分，不影響正常行動
-    score -= responseRiskPenalty(state, resolved, playerId)
+    // responseRiskPenalty 回傳非正值（負＝風險），以 += 疊加做扣分。
+    score += responseRiskPenalty(state, resolved, playerId, command)
 
     // R8: 手牌數量管理
     score += handManagementBonus(state, resolved, playerId, command.kind)

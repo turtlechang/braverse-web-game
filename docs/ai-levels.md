@@ -47,7 +47,7 @@
 | R7 | 陷阱防護高價值目標 | Lv.3+ | ✅ Done |
 | R8 | 手牌數量管理 | Lv.3+ | ✅ Done |
 | R9 | 致命傷害偵測 | Lv.4 | ✅ Done |
-| R10 | 對手回應風險評估 | Lv.4 | ✅ Guardrail |
+| R10 | 對手回應風險評估 | Lv.4 | ✅ 完整版（F0 + F1） |
 
 ### R6c Deferred 理由
 
@@ -73,7 +73,7 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 |---|---|---|
 | `lv4RiskBonus` | evaluated-turn-handler.ts | 核心風險評分（不可刪除） |
 | `lethalDetectionBonus` | evaluated-turn-handler.ts | R9 致命偵測 |
-| `responseRiskPenalty` | evaluated-turn-handler.ts | R10 break 惡化 guardrail |
+| `responseRiskPenalty` | evaluated-turn-handler.ts | R10 完整版：F0 break race risk guardrail + F1 attacker 反擊暴露（修正了原本 `-= responseRiskPenalty(...)` 造成負號反向加分的方向 bug） |
 
 ## 已知問題
 

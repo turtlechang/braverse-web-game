@@ -271,7 +271,34 @@ RATIONALE: AI 不是單人遊戲，必須考慮對手回應。
 
 **來源**: 訓練分析中「對手反擊風險」觀察 + Lv.5 設計稿簡化
 **適用等級**: Lv.4+
-**實作位置**: `evaluated-turn-handler.ts` (lv4RiskBonus)
+**實作位置**: `evaluated-turn-handler.ts` (`responseRiskPenalty`，疊加於 `lv4RiskBonus` 之上)
+
+**實作細節（完整版，2026-07-31）**:
+
+`responseRiskPenalty` 純函式只讀取**公開資訊**（自我/對手戰鬥區、break area、對手 `hand.length`），回傳非正值（負 = 風險）。caller 以 `+= responseRiskPenalty(...)` 疊加做扣分（修正了先前 caller 用 `-= responseRiskPenalty(...)` 導致「負 × 負 = 加分」的方向 bug）。
+
+兩個 factor：
+
+1. **F0 Break race risk**（保留既有 guardrail）
+   - 觸發：`preMyBreak >= 8` 且 `postMyBreak > preMyBreak`（我方行動後 break 惡化）
+   - 罰分：`-breakWorsened * 12`
+   - 計數：`r10BreakRaceRiskCount`
+2. **F1 Attacker 反擊暴露**（完整版新增，補 `lv4RiskBonus` 不讀對手手牌與未休息攻擊力的缺口）
+   - 觸發（全部用公開資訊）：
+     - `command.kind === 'attack'`
+     - `post` attacker 仍存活、休息中（`rested === true`）、`level >= 2`
+     - 我方 `preMyBreak >= 6`（被反擊破會擴大 break race）
+     - 對手未休息戰鬥區總攻擊力 `>= attacker.hpCards.length`（可擊倒 attacker）
+     - `oppHandCount >= 3`（FLIP／陷阱反擊加碼的 proxy）
+   - 罰分：`-(12 + (level - 2) * 6 + min(oppHandCount - 3, 3) * 2)`，封頂約 -24
+   - 計數：`r10ExposureRiskCount`
+
+**設計取捨**: 純把罰分組合疊在 score，不做 condition gate（門檻式開關）。case 3 lesson 已驗證「門檻式 gating 會在 600 seeds 顯現真實 regression」，組合式 penalty 才安全。
+
+**驗證**:
+- 11 條 `ai-r10-risk.test.ts` 純函式行為測試覆蓋 F0 / F1 全部分支與邊界（觸發、level < 2、opp 攻擊不足、oppHand < 3、preMyBreak < 6、post attacker 已破、F0 累積、F0+F1 合計、手牌加成封頂）
+- 2370 套全綠（2359 + 11）
+- 300 seeds 對稱／非對稱 benchmark 五場全 PASS：Lv.4 vs Lv.3 = 59.3%（與 case 3 baseline 完全一致），Lv.4 vs Lv.1 = 96.7%。R10 完整版在 300 seeds 下 F1 於 Lv.4 vs Lv.3 對局觸發 108 次（case 3 baseline 同場觸發 0 次），但勝率不變——因 penalty 純疊加 design 確保只做小幅度 refine，不致改變策略選擇。
 
 ---
 
@@ -318,6 +345,7 @@ RATIONALE: AI 不是單人遊戲，必須考慮對手回應。
 | Phase 3c-1.5 | R9 行為指標補齊 | ✅ 完成 |
 | Phase 3c-2 | R10 對手回應風險評估 | ✅ 完成 |
 | Phase 3c-2.5 | R10 行為指標補齊 | ✅ 完成 |
+| Phase 3c-2.6 | R10 完整版（F1 attacker 反擊暴露 + 方向 bug 修正 + 行為測試） | ✅ 完成（2026-07-31） |
 | Phase 3c-3a | R6c 必要性審查 → 決定不實作 | ✅ 完成（Deferred） |
 | Phase 4 | 完整驗收測試 | ⬜ 待執行 |
 | Phase 5 | 報告與文件更新 | ⬜ 待執行 |

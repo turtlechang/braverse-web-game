@@ -91,6 +91,7 @@ interface AggregatedReport {
   directWinCount: number
   r10PenaltyAppliedCount: number
   r10BreakRaceRiskCount: number
+  r10ExposureRiskCount: number
   r6cReplacementCount: number
   r6cLowQualityCount: number
   r6cForcedCount: number
@@ -158,6 +159,7 @@ const runBenchmark = (
     directWinCount: 0,
     r10PenaltyAppliedCount: 0,
     r10BreakRaceRiskCount: 0,
+    r10ExposureRiskCount: 0,
     r6cReplacementCount: 0,
     r6cLowQualityCount: 0,
     r6cForcedCount: 0,
@@ -289,6 +291,7 @@ const runBenchmark = (
     // R10 risk tracking
     agg.r10PenaltyAppliedCount += result.behavior.r10PenaltyAppliedCount
     agg.r10BreakRaceRiskCount += result.behavior.r10BreakRaceRiskCount
+    agg.r10ExposureRiskCount += result.behavior.r10ExposureRiskCount
 
     // R6c audit tracking
     agg.r6cReplacementCount += result.behavior.r6cReplacementCount
@@ -430,6 +433,7 @@ const printFullReport = (r: AggregatedReport) => {
   console.log(`  --- R10 Risk Management ---`)
   console.log(`  Penalty Applied: ${r.r10PenaltyAppliedCount}`)
   console.log(`  Break Race Risk: ${r.r10BreakRaceRiskCount}`)
+  console.log(`  Exposure Risk:   ${r.r10ExposureRiskCount}`)
   console.log(``)
   console.log(`  --- R6c Replacement Audit ---`)
   console.log(`  Replacements:    ${r.r6cReplacementCount}`)
