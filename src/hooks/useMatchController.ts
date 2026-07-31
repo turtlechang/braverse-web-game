@@ -838,6 +838,12 @@ export function useMatchController(params: {
     const battle = game.pendingBattle
     if (
       battle?.stage !== 'trap' ||
+      // 陷阱已經打出去了（例如 BS3-093），戰鬥還停在 'trap' 階段只是為了等玩家
+      // 確認 reveal-top-deck 的巢狀效果——getTrapCandidates 在 trapUsed 之後
+      // 一律回傳空陣列，不代表「沒有陷阱可用該自動略過」，若不排除這種情況會
+      // 對著一個待處理決策再送一次 skip-trap，被規則層的 assertNoPendingDecision
+      // 擋下拋錯，把整個 App 炸掉。
+      battle.trapUsed ||
       battle.defenderPlayerId !== viewerPlayerId ||
       getTrapCandidates(game, viewerPlayerId).length > 0 ||
       getBlockerCandidates(game, viewerPlayerId).length > 0
@@ -877,6 +883,7 @@ export function useMatchController(params: {
         const currentBattle = current.pendingBattle
         if (
           currentBattle?.stage !== 'trap' ||
+          currentBattle.trapUsed ||
           currentBattle.defenderPlayerId !== viewerPlayerId ||
           getTrapCandidates(current, viewerPlayerId).length > 0 ||
           getBlockerCandidates(current, viewerPlayerId).length > 0
