@@ -44,28 +44,28 @@ const RED_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
   'BS2-001': { baseScore: 80, reason: '穩定' }, // Muscle Cookie
   'BS2-004': { baseScore: 70, reason: '有效果但 HP 較低' }, // Cherry Cookie
   'BS1-006': { baseScore: 70, reason: '有效果但 HP 較低' }, // Mala Sauce Cookie
-  'BS1-021': { baseScore: 65, reason: '有效果但 HP 較低' }, // Whipped Cream Cookie
+  'BS1-021': { baseScore: 65, reason: '無技能，純數值攻擊，HP 尚可' }, // Whipped Cream Cookie
   'BS1-012': { baseScore: 60, reason: 'Lv3 但要小心使用' }, // Wildberry Cookie
   'BS1-002': { baseScore: 60, reason: 'Lv3 但要小心使用' }, // Kumiho Cookie
   'BS1-018': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Popcorn Cookie
   'ST1-013': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Adventurer Cookie
   'ST1-004': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Carrot Cookie
-  'BS1-007': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Melon Bun Cookie
+  'BS1-007': { baseScore: 10, reason: '實際 HP 4，僅純數值無技能，非本色主力' }, // Melon Bun Cookie
 }
 
 // 黃色餅乾替補評分（對手：紅色/綠色）
 const YELLOW_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
   'BS1-032': { baseScore: 95, reason: 'HP 高，能撐很久' }, // Banana Cookie
-  'BS2-010': { baseScore: 95, reason: 'HP 高，有回復能力' }, // Vampire Cookie
+  'BS2-010': { baseScore: 95, reason: '可選代價對 LV1 目標追加傷害' }, // Vampire Cookie
   'BS1-031': { baseScore: 85, reason: 'HP 高，穩定' }, // Marshmallow Cookie
-  'BS1-036': { baseScore: 75, reason: '有效果但 HP 較低' }, // Snake Fruit Cookie
+  'BS1-036': { baseScore: 75, reason: '有效果，HP 尚可（休息區重新登場）' }, // Snake Fruit Cookie
   'BS1-030': { baseScore: 75, reason: '攻擊力高但 HP 較低' }, // Rockstar Cookie
   'ST2-008': { baseScore: 70, reason: '高等級但要小心使用' }, // Eclair Cookie
   'BS1-040': { baseScore: 70, reason: '高等級但要小心使用' }, // Earl Grey Cookie
   'BS2-011': { baseScore: 65, reason: '高等級但要小心使用' }, // Blackberry Cookie
   'ST2-007': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Chestnut Cookie
   'ST2-005': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Mustard Cookie
-  'BS1-033': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Cyborg Cookie
+  'BS1-033': { baseScore: 10, reason: '實際 HP 2，仍偏低容易被換掉' }, // Cyborg Cookie
 }
 
 // 綠色餅乾替補評分（對手：紅色/黃色）
@@ -75,15 +75,15 @@ const GREEN_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
   'ST3-009': { baseScore: 85, reason: '穩定' }, // Avocado Cookie
   'BS1-054': { baseScore: 75, reason: '高等級但要小心' }, // Blue Lily Cookie
   'BS2-015': { baseScore: 70, reason: '有效果但 HP 較低' }, // Lemon Thyme Cookie
-  'BS2-053': { baseScore: 60, reason: '有效果但 HP 較低' }, // Ninja Cookie
+  'BS2-053': { baseScore: 60, reason: '無技能，純數值攻擊，HP 尚可' }, // Ninja Cookie
   'ST3-014': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Angel Cookie
   'ST3-008': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Spinach Cookie
-  'BS1-057': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Bellflower Cookie
+  'BS1-057': { baseScore: 10, reason: '實際 HP 4，僅純數值無技能，非本色主力' }, // Bellflower Cookie
   'BS1-069': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Cookiemals
-  'BS1-032': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Banana Cookie（綠色牌組僅少量搭配）
-  'BS1-007': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Melon Bun Cookie
-  'BS2-018': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Candlelight Cookie
-  'BS2-035': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Salt Cookie
+  'BS1-032': { baseScore: 10, reason: '實際 HP 4，僅純數值無技能，非本色主力' }, // Banana Cookie（綠色牌組僅少量搭配）
+  'BS1-007': { baseScore: 10, reason: '實際 HP 4，僅純數值無技能，非本色主力' }, // Melon Bun Cookie
+  'BS2-018': { baseScore: 10, reason: '實際 HP 3 且有技能（清對手場景），非本色主力' }, // Candlelight Cookie
+  'BS2-035': { baseScore: 10, reason: '實際 HP 4，僅純數值無技能，非本色主力' }, // Salt Cookie
 }
 
 // 藍色餅乾替補評分（對手：紅色/黃色/綠色/紫色）
@@ -105,10 +105,10 @@ const BLUE_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
 const PURPLE_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
   'BS2-058': { baseScore: 95, reason: 'HP 高，攻擊力強，後期核心' }, // Wind Archer Cookie
   'BS2-055': { baseScore: 90, reason: 'HP 高，登場清場' }, // Poison Mushroom Cookie
-  'BS2-068': { baseScore: 85, reason: 'HP 高，破壞區回收' }, // Cream Unicorn Cookie
-  'BS2-069': { baseScore: 80, reason: '有效果，送對手 Lv1 進破壞區' }, // Clotted Cream Cookie
+  'BS2-068': { baseScore: 85, reason: 'HP 高，棄牌區卡片回收' }, // Cream Unicorn Cookie
+  'BS2-069': { baseScore: 80, reason: '有效果，送對手 Lv1 進棄牌區' }, // Clotted Cream Cookie
   'BS2-075': { baseScore: 75, reason: '有效果，對 Lv1 餅乾額外傷害' }, // White Choco Cookie
-  'BS2-061': { baseScore: 70, reason: '破壞區回收效果' }, // Hydrangea Cookie
+  'BS2-061': { baseScore: 70, reason: '棄牌區卡片回收效果' }, // Hydrangea Cookie
   'ST5-007': { baseScore: 65, reason: '有效果但 HP 較低' }, // Yoga Cookie
   'BS2-062': { baseScore: 60, reason: '犧牲效果需謹慎使用' }, // Starfruit Cookie
   'BS2-056': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Raspberry Mousse Cookie
@@ -134,7 +134,7 @@ const RED_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
   'BS2-015': { threatValue: 80, reason: '有效果' }, // Lemon Thyme Cookie
   'ST3-009': { threatValue: 75, reason: 'HP 高，穩定' }, // Avocado Cookie
   'BS1-032': { threatValue: 70, reason: 'HP 高' }, // Banana Cookie
-  'BS2-010': { threatValue: 70, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'BS2-010': { threatValue: 70, reason: '可選代價對 LV1 目標追加傷害' }, // Vampire Cookie
   'ST2-008': { threatValue: 65, reason: 'Lv3 但要小心' }, // Eclair Cookie
   'BS1-037': { threatValue: 65, reason: 'Lv3 但要小心' }, // Timekeeper Cookie
   'BS1-030': { threatValue: 60, reason: '攻擊力高' }, // Rockstar Cookie
@@ -166,7 +166,7 @@ const GREEN_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
   'BS1-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Dark Choco Cookie
   'ST1-001': { threatValue: 80, reason: 'HP 高，穩定' }, // Princess Cookie
   'BS1-032': { threatValue: 85, reason: 'HP 高' }, // Banana Cookie
-  'BS2-010': { threatValue: 85, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'BS2-010': { threatValue: 85, reason: '可選代價對 LV1 目標追加傷害' }, // Vampire Cookie
   'ST2-008': { threatValue: 75, reason: 'Lv3 但要小心' }, // Eclair Cookie
   'BS1-037': { threatValue: 75, reason: 'Lv3 但要小心' }, // Timekeeper Cookie
   'BS1-030': { threatValue: 70, reason: '攻擊力高' }, // Rockstar Cookie
@@ -187,9 +187,9 @@ const BLUE_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
   'BS2-058': { threatValue: 90, reason: 'HP 高，直接移除 Lv3' }, // Wind Archer Cookie
   'BS2-055': { threatValue: 85, reason: 'HP 高，登場清場' }, // Poison Mushroom Cookie
   'BS1-032': { threatValue: 85, reason: 'HP 高' }, // Banana Cookie
-  'BS2-010': { threatValue: 85, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'BS2-010': { threatValue: 85, reason: '可選代價對 LV1 目標追加傷害' }, // Vampire Cookie
   'ST1-001': { threatValue: 80, reason: 'HP 高，穩定' }, // Princess Cookie
-  'BS2-068': { threatValue: 80, reason: 'HP 高，破壞區回收' }, // Cream Unicorn Cookie
+  'BS2-068': { threatValue: 80, reason: 'HP 高，棄牌區卡片回收' }, // Cream Unicorn Cookie
   'BS1-055': { threatValue: 75, reason: 'HP 高，攻擊力強' }, // Red Bean Cookie
   'BS2-069': { threatValue: 75, reason: '有效果' }, // Clotted Cream Cookie
   'ST3-011': { threatValue: 70, reason: '穩定' }, // Onion Cookie
@@ -216,7 +216,7 @@ const PURPLE_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
   'BS2-029': { threatValue: 90, reason: 'HP 高，回手效果' }, // Sea Fairy Cookie
   'BS2-031': { threatValue: 85, reason: 'HP 高，AOE 傷害' }, // Black Raisin Cookie
   'BS1-032': { threatValue: 85, reason: 'HP 高' }, // Banana Cookie
-  'BS2-010': { threatValue: 85, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'BS2-010': { threatValue: 85, reason: '可選代價對 LV1 目標追加傷害' }, // Vampire Cookie
   'ST1-001': { threatValue: 80, reason: 'HP 高，穩定' }, // Princess Cookie
   'BS1-055': { threatValue: 80, reason: 'HP 高，攻擊力強' }, // Red Bean Cookie
   'BS2-036': { threatValue: 75, reason: 'HP 高，回手效果' }, // Sherbet Cookie
@@ -627,9 +627,9 @@ const EFFECT_VALUE_BONUS: Record<string, number> = {
   'BS1-006': 4, // Mala Sauce Cookie
   'BS2-044': 4, // Tiramisu Cookie
   'BS2-075': 4, // White Choco Cookie
+  'BS2-010': 6, // Vampire Cookie（實際是可選代價對 LV1 目標追加傷害，不是回復——原本誤放在防守型）
   // 防守型：可回血或保護
   'BS1-032': 6, // Banana Cookie
-  'BS2-010': 6, // Vampire Cookie
   'BS2-068': 5, // Cream Unicorn Cookie
   'BS1-031': 4, // Marshmallow Cookie
   'BS2-061': 4, // Hydrangea Cookie
@@ -661,10 +661,9 @@ const EFFECT_VALUE_BONUS: Record<string, number> = {
   'ST5-008': 0, // Fairy Cookie
 }
 
-/** R6b「防守型」判定用——與 EFFECT_VALUE_BONUS 裡對應的 5 個 id 一致。 */
+/** R6b「防守型」判定用——與 EFFECT_VALUE_BONUS 裡對應的 4 個 id 一致。 */
 const DEFENSIVE_COOKIE_IDS = new Set([
   'BS1-032', // Banana Cookie
-  'BS2-010', // Vampire Cookie
   'BS2-068', // Cream Unicorn Cookie
   'BS1-031', // Marshmallow Cookie
   'BS2-061', // Hydrangea Cookie
