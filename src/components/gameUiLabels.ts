@@ -41,6 +41,11 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs2-bean': '第二彈豆子',
   'bs2-blue': '第二彈藍色',
   'bs2-purple': '第二彈紫色',
+  'bs3-green-lily': '第三彈綠色・聖百合餅乾',
+  'bs3-blue-sorbet': '第三彈藍色・PR 雪酪',
+  'bs3-red-pitaya': '第三彈紅色・火龍果龍族餅乾',
+  'bs3-purple-dark-cacao': '第三彈紫色・黑可可餅乾',
+  'bs3-yellow-counter': '第三彈黃色・反擊流',
   custom: '自訂',
 }
 

@@ -18,6 +18,11 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'bs2-bean', label: '第二彈豆子牌組' },
   { value: 'bs2-blue', label: '第二彈藍色牌組' },
   { value: 'bs2-purple', label: '第二彈紫色牌組' },
+  { value: 'bs3-green-lily', label: '第三彈綠色・聖百合餅乾' },
+  { value: 'bs3-blue-sorbet', label: '第三彈藍色・PR 雪酪' },
+  { value: 'bs3-red-pitaya', label: '第三彈紅色・火龍果龍族餅乾' },
+  { value: 'bs3-purple-dark-cacao', label: '第三彈紫色・黑可可餅乾' },
+  { value: 'bs3-yellow-counter', label: '第三彈黃色・反擊流' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [

@@ -19,12 +19,25 @@ import type { CardEffect, GameCard, PlayerId } from './types'
 import { getCardPoolEntry } from './card-pool'
 
 export type StarterDeckChoice = 'red' | 'yellow' | 'green' | 'blue' | 'purple'
+
+export const BS3_AI_PRESET_DECK_CHOICES = [
+  'bs3-green-lily',
+  'bs3-blue-sorbet',
+  'bs3-red-pitaya',
+  'bs3-purple-dark-cacao',
+  'bs3-yellow-counter',
+] as const
+
+export type Bs3AiPresetDeckChoice =
+  (typeof BS3_AI_PRESET_DECK_CHOICES)[number]
+
 export type AiPresetDeckChoice =
   | 'bs2-red'
   | 'bs2-yellow'
   | 'bs2-bean'
   | 'bs2-blue'
   | 'bs2-purple'
+  | Bs3AiPresetDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
@@ -266,6 +279,127 @@ export const AI_PRESET_BS2_PURPLE_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS2-077', count: 3 },
 ]
 
+/** 使用者提供的第三彈綠色－聖百合餅乾牌組。 */
+export const AI_PRESET_BS3_GREEN_LILY_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS3-061', count: 2 },
+  { cardNumber: 'BS1-053', count: 2 },
+  { cardNumber: 'BS1-062', count: 4 },
+  { cardNumber: 'BS1-057', count: 4 },
+  { cardNumber: 'BS2-015', count: 4 },
+  { cardNumber: 'BS3-050@1', count: 4 },
+  { cardNumber: 'BS3-055', count: 2 },
+  { cardNumber: 'BS3-060@1', count: 1 },
+  { cardNumber: 'BS3-056', count: 2 },
+  { cardNumber: 'BS1-069', count: 4 },
+  { cardNumber: 'BS2-019', count: 4 },
+  { cardNumber: 'BS1-055', count: 2 },
+  { cardNumber: 'BS1-067', count: 2 },
+  { cardNumber: 'P-012', count: 2 },
+  { cardNumber: 'ST3-016', count: 3 },
+  { cardNumber: 'BS1-075', count: 4 },
+  { cardNumber: 'BS3-070', count: 2 },
+  { cardNumber: 'BS3-069', count: 1 },
+  { cardNumber: 'ST3-019', count: 3 },
+  { cardNumber: 'ST3-020', count: 1 },
+  { cardNumber: 'BS2-021', count: 3 },
+  { cardNumber: 'ST3-022', count: 4 },
+]
+
+/** 使用者提供的第三彈藍色－PR 雪酪牌組。 */
+export const AI_PRESET_BS3_BLUE_SORBET_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS2-036', count: 4 },
+  { cardNumber: 'BS2-040', count: 4 },
+  { cardNumber: 'BS2-049', count: 2 },
+  { cardNumber: 'ST4-021', count: 4 },
+  { cardNumber: 'ST4-016', count: 4 },
+  { cardNumber: 'ST4-007', count: 3 },
+  { cardNumber: 'BS2-051', count: 3 },
+  { cardNumber: 'ST4-020', count: 2 },
+  { cardNumber: 'P-030', count: 4 },
+  { cardNumber: 'BS3-076', count: 2 },
+  { cardNumber: 'BS2-026', count: 2 },
+  { cardNumber: 'BS3-093', count: 4 },
+  { cardNumber: 'BS2-047', count: 1 },
+  { cardNumber: 'ST4-019', count: 1 },
+  { cardNumber: 'ST4-022', count: 4 },
+  { cardNumber: 'BS3-085', count: 4 },
+  { cardNumber: 'BS3-074', count: 4 },
+  { cardNumber: 'ST4-014', count: 4 },
+  { cardNumber: 'ST4-009', count: 4 },
+]
+
+/** 使用者提供的第三彈紅色－火龍果龍族餅乾牌組。 */
+export const AI_PRESET_BS3_RED_PITAYA_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS3-010', count: 3 },
+  { cardNumber: 'BS3-017', count: 4 },
+  { cardNumber: 'BS3-006', count: 4 },
+  { cardNumber: 'BS3-013', count: 4 },
+  { cardNumber: 'BS3-019', count: 3 },
+  { cardNumber: 'BS3-009', count: 3 },
+  { cardNumber: 'BS1-002', count: 1 },
+  { cardNumber: 'ST1-004', count: 1 },
+  { cardNumber: 'BS2-001', count: 1 },
+  { cardNumber: 'ST1-013', count: 4 },
+  { cardNumber: 'BS1-018', count: 4 },
+  { cardNumber: 'BS1-040', count: 1 },
+  { cardNumber: 'BS1-003', count: 3 },
+  { cardNumber: 'BS2-003', count: 4 },
+  { cardNumber: 'BS2-006', count: 3 },
+  { cardNumber: 'BS1-022', count: 4 },
+  { cardNumber: 'BS3-022', count: 1 },
+  { cardNumber: 'BS2-007', count: 2 },
+  { cardNumber: 'ST1-020', count: 4 },
+  { cardNumber: 'ST1-001', count: 4 },
+  { cardNumber: 'BS1-012', count: 2 },
+]
+
+/** 使用者提供的第三彈紫色－黑可可餅乾牌組。 */
+export const AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS2-061', count: 4 },
+  { cardNumber: 'BS3-105', count: 4 },
+  { cardNumber: 'BS3-103', count: 3 },
+  { cardNumber: 'BS2-062', count: 4 },
+  { cardNumber: 'BS2-071', count: 4 },
+  { cardNumber: 'BS3-099', count: 2 },
+  { cardNumber: 'BS2-053', count: 4 },
+  { cardNumber: 'BS2-069', count: 4 },
+  { cardNumber: 'BS2-068', count: 4 },
+  { cardNumber: 'BS2-058', count: 2 },
+  { cardNumber: 'BS3-113', count: 1 },
+  { cardNumber: 'BS3-100', count: 1 },
+  { cardNumber: 'BS3-107', count: 4 },
+  { cardNumber: 'BS2-056', count: 4 },
+  { cardNumber: 'ST5-003', count: 4 },
+  { cardNumber: 'ST5-008', count: 1 },
+  { cardNumber: 'BS2-072', count: 3 },
+  { cardNumber: 'BS2-077', count: 4 },
+  { cardNumber: 'BS2-078', count: 1 },
+  { cardNumber: 'BS2-081', count: 2 },
+]
+
+/** 使用者提供的第三彈黃色－反擊流牌組。 */
+export const AI_PRESET_BS3_YELLOW_COUNTER_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS3-029', count: 3 },
+  { cardNumber: 'BS2-012', count: 3 },
+  { cardNumber: 'BS1-031', count: 4 },
+  { cardNumber: 'BS1-032', count: 4 },
+  { cardNumber: 'BS1-036', count: 4 },
+  { cardNumber: 'BS1-037', count: 2 },
+  { cardNumber: 'ST2-008', count: 2 },
+  { cardNumber: 'BS2-011', count: 3 },
+  { cardNumber: 'ST2-016', count: 1 },
+  { cardNumber: 'BS1-049', count: 4 },
+  { cardNumber: 'ST2-020', count: 4 },
+  { cardNumber: 'BS3-045', count: 4 },
+  { cardNumber: 'BS1-051', count: 3 },
+  { cardNumber: 'BS1-052', count: 3 },
+  { cardNumber: 'ST2-007', count: 4 },
+  { cardNumber: 'BS1-030', count: 2 },
+  { cardNumber: 'BS2-009', count: 2 },
+  { cardNumber: 'ST2-005', count: 4 },
+  { cardNumber: 'BS1-040', count: 4 },
+]
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
@@ -279,6 +413,11 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs2-bean': AI_PRESET_BS2_BEAN_DECK,
   'bs2-blue': AI_PRESET_BS2_BLUE_DECK,
   'bs2-purple': AI_PRESET_BS2_PURPLE_DECK,
+  'bs3-green-lily': AI_PRESET_BS3_GREEN_LILY_DECK,
+  'bs3-blue-sorbet': AI_PRESET_BS3_BLUE_SORBET_DECK,
+  'bs3-red-pitaya': AI_PRESET_BS3_RED_PITAYA_DECK,
+  'bs3-purple-dark-cacao': AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK,
+  'bs3-yellow-counter': AI_PRESET_BS3_YELLOW_COUNTER_DECK,
 }
 
 const getEnergyColor = (
@@ -472,6 +611,33 @@ export const createAiPresetBs2BlueDeck = (playerId: PlayerId): GameCard[] =>
 export const createAiPresetBs2PurpleDeck = (playerId: PlayerId): GameCard[] =>
   createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS2_PURPLE_DECK, [])
 
+export const createAiPresetBs3GreenLilyDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS3_GREEN_LILY_DECK, [])
+
+export const createAiPresetBs3BlueSorbetDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS3_BLUE_SORBET_DECK, [])
+
+export const createAiPresetBs3RedPitayaDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS3_RED_PITAYA_DECK, [])
+
+export const createAiPresetBs3PurpleDarkCacaoDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK,
+    [],
+  )
+
+export const createAiPresetBs3YellowCounterDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS3_YELLOW_COUNTER_DECK,
+    [],
+  )
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
@@ -488,6 +654,11 @@ export const DECK_CREATORS: Record<
   'bs2-bean': createAiPresetBs2BeanDeck,
   'bs2-blue': createAiPresetBs2BlueDeck,
   'bs2-purple': createAiPresetBs2PurpleDeck,
+  'bs3-green-lily': createAiPresetBs3GreenLilyDeck,
+  'bs3-blue-sorbet': createAiPresetBs3BlueSorbetDeck,
+  'bs3-red-pitaya': createAiPresetBs3RedPitayaDeck,
+  'bs3-purple-dark-cacao': createAiPresetBs3PurpleDarkCacaoDeck,
+  'bs3-yellow-counter': createAiPresetBs3YellowCounterDeck,
 }
 
 export const createDeckForChoice = (
