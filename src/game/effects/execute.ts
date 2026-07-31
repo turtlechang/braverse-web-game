@@ -2462,7 +2462,7 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'disable-flip') {
-    return {
+    const nextState: GameState = {
       ...state,
       flipDisabledUntilTurn: {
         ...(state.flipDisabledUntilTurn ?? {}),
@@ -2474,6 +2474,21 @@ export const executeCardEffect = (
         ),
       },
     }
+    if (
+      effect.trashSourceIfTargetLevel !== undefined &&
+      targets.some((target) => target.card.level === effect.trashSourceIfTargetLevel)
+    ) {
+      const sourcePlayer = nextState.players[context.sourcePlayerId]
+      const sourceStage = sourcePlayer.stage
+      if (sourceStage?.card.instanceId === context.sourceInstanceId) {
+        return updatePlayer(nextState, {
+          ...sourcePlayer,
+          stage: null,
+          discardPile: [...sourcePlayer.discardPile, sourceStage.card],
+        })
+      }
+    }
+    return nextState
   }
 
   if (effect.kind === 'battle-to-support') {

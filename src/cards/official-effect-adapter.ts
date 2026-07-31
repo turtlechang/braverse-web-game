@@ -2367,6 +2367,10 @@ export const convertOfficialStageAbility = (
         kind: 'disable-flip',
         duration: 'this-turn',
         target: { side: 'opponent', min: 0, max: 2 },
+        // 官方文字「If a selected Cookie is LV.3, place this card in the
+        // trash.」是依附在這次選擇結果上的場景卡自我送棄，不是看場面狀態
+        // 的一般條件，見 DisableFlipEffect.trashSourceIfTargetLevel 註解。
+        trashSourceIfTargetLevel: 3,
       },
     ],
     'BS3-072': [

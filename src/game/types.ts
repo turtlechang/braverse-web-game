@@ -492,6 +492,13 @@ export interface DisableFlipEffect {
   kind: 'disable-flip'
   duration: 'this-turn'
   target: EffectTargetSelector
+  /**
+   * BS3-071：若被選中的目標之一等級剛好是這個數字，來源場景卡本回合結算後
+   * 直接送入棄牌區。目標是攻擊當下才選定的，這個條件依附在選擇結果上，
+   * 不是一般看場面狀態的 EffectCondition，所以直接掛在效果本身而不是
+   * `condition` 欄位。
+   */
+  trashSourceIfTargetLevel?: number
 }
 
 export interface DisableBlockEffect {

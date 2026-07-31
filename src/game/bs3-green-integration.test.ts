@@ -601,7 +601,11 @@ describe('BS3-070 Puppet Theater of Chaos: trap', () => {
 })
 
 describe('BS3-071 Ancient Silver Tree: stage disable-flip', () => {
-  it('converts correctly', () => {
+  it('converts correctly, including the missing "selected Cookie is LV.3" self-trash', () => {
+    // 官方文字最後一句「If a selected Cookie is LV.3, place this card in the
+    // trash.」過去完全沒轉換——這個場景卡選好目標關閉 FLIP 之後，若選到的
+    // 是 LV.3 餅乾，場景卡本身要送入棄牌區，之前的轉換只有 disable-flip，
+    // 這個自我送棄完全遺漏。新增 trashSourceIfTargetLevel 欄位涵蓋。
     const stage = convertOfficialStageAbility(findBs3Card('BS3-071'))
     expect(stage).toBeTruthy()
     expect(stage!.effects).toEqual([
@@ -609,6 +613,7 @@ describe('BS3-071 Ancient Silver Tree: stage disable-flip', () => {
         kind: 'disable-flip',
         duration: 'this-turn',
         target: { side: 'opponent', min: 0, max: 2 },
+        trashSourceIfTargetLevel: 3,
       },
     ])
   })
@@ -625,6 +630,59 @@ describe('BS3-071 Ancient Silver Tree: stage disable-flip', () => {
     const next = executeCardEffect(state, ctx, effect, ['opp-flip'])
     expect(next.flipDisabledUntilTurn).toBeDefined()
     expect(next.flipDisabledUntilTurn!['opp-flip']).toBe(state.turnNumber)
+  })
+
+  it('selecting a LV.3 Cookie also sends the stage itself to the trash', () => {
+    let state = createBattleState()
+    state = withOpponentAlly(state, levelledCookie('opp-lv3', 3, 'red'), ['flip-hp'])
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          stage: { card: item('attacker'), rested: false },
+        },
+      },
+    }
+
+    const stage = convertOfficialStageAbility(findBs3Card('BS3-071'))
+    const effect = stage!.effects[0]
+    if (effect.kind !== 'disable-flip') throw new Error('unexpected effect')
+
+    const ctx: EffectContext = { sourcePlayerId: 'player-two', sourceInstanceId: 'attacker' }
+    const next = executeCardEffect(state, ctx, effect, ['opp-lv3'])
+    expect(next.flipDisabledUntilTurn!['opp-lv3']).toBe(state.turnNumber)
+    expect(next.players['player-two'].stage).toBeNull()
+    expect(
+      next.players['player-two'].discardPile.some(
+        (card) => card.instanceId === 'attacker',
+      ),
+    ).toBe(true)
+  })
+
+  it('selecting a non-LV.3 Cookie keeps the stage in play', () => {
+    let state = createBattleState()
+    state = withOpponentAlly(state, levelledCookie('opp-lv1', 1, 'red'), ['flip-hp'])
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          stage: { card: item('attacker'), rested: false },
+        },
+      },
+    }
+
+    const stage = convertOfficialStageAbility(findBs3Card('BS3-071'))
+    const effect = stage!.effects[0]
+    if (effect.kind !== 'disable-flip') throw new Error('unexpected effect')
+
+    const ctx: EffectContext = { sourcePlayerId: 'player-two', sourceInstanceId: 'attacker' }
+    const next = executeCardEffect(state, ctx, effect, ['opp-lv1'])
+    expect(next.flipDisabledUntilTurn!['opp-lv1']).toBe(state.turnNumber)
+    expect(next.players['player-two'].stage?.card.instanceId).toBe('attacker')
   })
 })
 
