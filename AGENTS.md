@@ -70,6 +70,7 @@ public/          # 本機 UI 素材（卡背、能量圖示、參考圖片）
 | `npm test` | 執行所有單元測試（Vitest） |
 | `npm run test:watch` | 監聽模式執行測試 |
 | `npm run test:ai:browser` | Playwright 瀏覽器 AI 驗證（需先 `npm run build`） |
+| `npm run test:bs3-yellow:browser` | Playwright BS3 Yellow 牌組瀏覽器對戰驗證（需先 `npm run build`） |
 | `npm run test:online:browser` | Playwright 線上對戰 modal RWD／可用性驗證（需先 `npm run build`） |
 | `npm run test:online:match:browser` | Playwright 本機雙瀏覽器好友房建房／加入／私密猜拳／勝者選順位／依序調度與補償／起始餅乾同步揭示／先後攻與階段狀態／雙方對戰動態與完整紀錄／支援→主要→結束同步／卡牌詳情關閉／伺服器拒絕提示／斷線驗證（需先 `npm run build`） |
 | `npm run cards:import:sample` | 匯入官方 Starter Deck 卡牌資料範例（預設 GREEN） |

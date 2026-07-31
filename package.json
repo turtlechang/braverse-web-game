@@ -29,6 +29,7 @@
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test": "vitest run",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",
+    "test:bs3-yellow:browser": "node scripts/bs3-yellow-battle-validation.mjs",
     "test:deck:browser": "node scripts/deck-editor-browser-validation.mjs",
     "test:online:browser": "node scripts/online-modal-browser-validation.mjs",
     "test:online:match:browser": "node scripts/online-match-browser-validation.mjs",

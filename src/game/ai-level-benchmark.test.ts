@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createDemoGame, simulateAiMatchDetailed } from '.'
 import type { AiLevel, BuiltInDeckChoice } from '.'
 
@@ -497,5 +497,30 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
     printFullReport(r)
     const wr = r.wins / (r.wins + r.losses)
     console.log(`\n  Target >= 70%: ${(wr * 100).toFixed(1)}% ${wr >= 0.7 ? 'PASS' : 'FAIL'}`)
+  })
+})
+
+describe('BS3 Yellow Counter Deck — 完整性驗證（60 seeds, Lv.4 mirror）', () => {
+  const yellowSeeds = Array.from({ length: 60 }, (_, i) => i + 1)
+
+  it('BS3 Yellow Lv.4 vs Lv.4 — 無卡死、無異常中斷', () => {
+    const r = runBenchmark(
+      'BS3 YELLOW Mirror',
+      4,
+      4,
+      yellowSeeds,
+      { player: 'bs3-yellow-counter', ai: 'bs3-yellow-counter' },
+    )
+    printFullReport(r)
+
+    // 核心驗證：60 局全部正常結束，不卡死
+    expect(r.stuck).toBe(0)
+    expect(r.deadlocks).toBe(0)
+
+    // 對局都有分出勝負
+    const completed = r.wins + r.losses
+    expect(completed).toBe(yellowSeeds.length)
+
+    console.log(`\n  Stuck: ${r.stuck} | Completed: ${completed}/${yellowSeeds.length} | All games finished cleanly`)
   })
 })
