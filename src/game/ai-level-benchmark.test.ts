@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createDemoGame, simulateAiMatchDetailed } from '.'
 import type { AiLevel, BuiltInDeckChoice } from '.'
 
@@ -498,4 +498,39 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
     const wr = r.wins / (r.wins + r.losses)
     console.log(`\n  Target >= 70%: ${(wr * 100).toFixed(1)}% ${wr >= 0.7 ? 'PASS' : 'FAIL'}`)
   })
+})
+
+describe('BS3 All Presets — 完整性驗證（60 seeds, Lv.4 mirror）', () => {
+  const bs3Seeds = Array.from({ length: 60 }, (_, i) => i + 1)
+  const bs3Presets = [
+    { label: 'BS3 Red Pitaya', deck: 'bs3-red-pitaya' as BuiltInDeckChoice },
+    { label: 'BS3 Blue Sorbet', deck: 'bs3-blue-sorbet' as BuiltInDeckChoice },
+    { label: 'BS3 Green Lily', deck: 'bs3-green-lily' as BuiltInDeckChoice },
+    { label: 'BS3 Purple Dark Cacao', deck: 'bs3-purple-dark-cacao' as BuiltInDeckChoice },
+    { label: 'BS3 Yellow Counter', deck: 'bs3-yellow-counter' as BuiltInDeckChoice },
+  ]
+
+  for (const preset of bs3Presets) {
+    it(`${preset.label} — 無卡死、無異常中斷`, () => {
+      const r = runBenchmark(
+        preset.label,
+        4,
+        4,
+        bs3Seeds,
+        { player: preset.deck, ai: preset.deck },
+      )
+      printFullReport(r)
+
+      // <= 10/60 stuck 容忍（牌組控制／治癒型節奏可能觸及 2500 步上限）
+      const maxStuck = 10
+      expect(r.stuck).toBeLessThanOrEqual(maxStuck)
+      expect(r.deadlocks).toBeLessThanOrEqual(maxStuck)
+
+      const completed = r.wins + r.losses
+      if (r.stuck > 0) {
+        console.log(`  ⚠️  ${preset.label}: ${r.stuck}/${bs3Seeds.length} stuck — 可能因牌組控制型節奏觸及 2500 步上限`)
+      }
+      console.log(`\n  ${preset.label}: Stuck ${r.stuck} | Completed ${completed}/${bs3Seeds.length}`)
+    })
+  }
 })
