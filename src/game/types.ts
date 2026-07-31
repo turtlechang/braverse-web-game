@@ -170,6 +170,18 @@ export interface SupportCountAtLeastCondition {
   count: number
 }
 
+/** 支援區張數不超過門檻（BS3-067 的「support area contains 6 cards or less」）。 */
+export interface SupportCountAtMostCondition {
+  kind: 'support-count-at-most'
+  count: number
+}
+
+/** 對手支援區張數達到門檻（BS3-072 的「if your opponent's support area contains 5 or more」）。 */
+export interface OpponentSupportCountAtLeastCondition {
+  kind: 'opponent-support-count-at-least'
+  count: number
+}
+
 export interface ActiveSupportCountAtLeastCondition {
   kind: 'active-support-count-at-least'
   count: number
@@ -273,6 +285,8 @@ export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
   | SupportCountAtLeastCondition
+  | SupportCountAtMostCondition
+  | OpponentSupportCountAtLeastCondition
   | ActiveSupportCountAtLeastCondition
   | TrashColorCountAtLeastCondition
   | HandCountAtMostCondition
@@ -765,6 +779,7 @@ export interface RestSupportEffect {
   amount: number
   activeOnly?: boolean
   optional?: boolean
+  condition?: EffectCondition
 }
 
 export interface SupportToHpEffect {

@@ -770,6 +770,15 @@ export const isEffectConditionMet = (
     return state.players[context.sourcePlayerId].supportArea.length >= condition.count
   }
 
+  if (condition?.kind === 'support-count-at-most') {
+    return state.players[context.sourcePlayerId].supportArea.length <= condition.count
+  }
+
+  if (condition?.kind === 'opponent-support-count-at-least') {
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    return state.players[opponentId].supportArea.length >= condition.count
+  }
+
   if (condition?.kind === 'active-support-count-at-least') {
     return state.players[context.sourcePlayerId].supportArea.filter(
       (support) => !support.rested,

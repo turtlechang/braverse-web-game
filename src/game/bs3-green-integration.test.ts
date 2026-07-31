@@ -12,7 +12,9 @@ import type { OfficialCardRecord } from '../cards/types'
 import {
   executeCardEffect,
   getEffectTargetCandidates,
+  isEffectConditionMet,
 } from './effects'
+import { resolveFaintEffect } from './battle'
 import type { CardEffect, CookieCard, EffectContext, GameState } from './types'
 import { cookie, createBattleState, item } from './test-helpers/battle-helpers'
 
@@ -309,12 +311,20 @@ describe('BS3-060 Elder Faerie Cookie: OnPlay rest-support + attack Then', () =>
 })
 
 describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
-  it('converts correctly', () => {
+  it('converts the support-area cost as a mandatory leading effect, not CardSkill.cost', () => {
+    // 「place 1 card from your support area into the trash」是這個昏厥觸發
+    // 技能的代價，但 resolveFaintEffect 只讀 hand-to-battle 的 energyCost，
+    // 完全不會去看 CardSkill.cost（同一類問題見 BS3-029）。改成陣列最前面
+    // 一個非 optional 的 support-to-trash 效果，才能真正被扣掉。
     const skill = convertOfficialCookieSkill(findBs3Card('BS3-061'))
     expect(skill).toBeTruthy()
     expect(skill!.trigger).toBe('passive')
-    expect(skill!.cost.supportToTrash).toBe(1)
+    expect(skill!.effects).toHaveLength(2)
     expect(skill!.effects[0]).toMatchObject({
+      kind: 'support-to-trash',
+      amount: 1,
+    })
+    expect(skill!.effects[1]).toMatchObject({
       kind: 'damage-all',
       amount: 1,
       side: 'opponent',
@@ -322,18 +332,82 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
     })
   })
 
-  it('damage-all targets all opponent cookies', () => {
+  it('damage-all targets all opponent cookies once the sacrifice leaves 5+ remaining', () => {
     let state = createBattleState()
     state = withSupport(state, 'player-two', Array.from({ length: 6 }, (_, i) => ({ id: `sup-${i}` })))
     state = withOpponentAlly(state, levelledCookie('opp-ally', 1, 'red'), ['opp-hp'])
 
-    const [effect] = effectsOf('BS3-061')
-    if (effect.kind !== 'damage-all') throw new Error('unexpected effect')
+    const [, damageAllEffect] = effectsOf('BS3-061')
+    if (damageAllEffect.kind !== 'damage-all') throw new Error('unexpected effect')
 
     const ctx: EffectContext = { sourcePlayerId: 'player-two', sourceInstanceId: 'attacker' }
-    const next = executeCardEffect(state, ctx, effect, [])
+    const next = executeCardEffect(state, ctx, damageAllEffect, [])
     const oppCookies = next.players['player-one'].battleArea
     expect(oppCookies.every((c) => c.hpCards.length === 2)).toBe(true)
+  })
+
+  it('faint queue actually requires sacrificing a support card before checking the 5+ threshold', () => {
+    const source: CookieCard = {
+      ...cookie('silverbell'),
+      id: 'BS3-061',
+      name: 'Silverbell Cookie',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0, supportToTrash: 1 },
+        text: '',
+        effects: effectsOf('BS3-061'),
+        faint: true,
+      },
+    }
+    const [supportToTrashEffect, damageAllEffect] = effectsOf('BS3-061')
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: source.instanceId,
+      sourceCardName: source.name,
+    }
+
+    let state = createBattleState()
+    // createBattleState 預設已給 player-two 1 張支援卡，這裡再補 4 張湊到
+    // 恰好 5 張：真的犧牲 1 張後只剩 4 張，未達門檻，不該打群體傷害。
+    state = withSupport(state, 'player-two', Array.from({ length: 4 }, (_, i) => ({ id: `sup-${i}` })))
+    state.pendingFaintEffects = [
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: source.instanceId,
+        sourceCardName: source.name,
+        effect: supportToTrashEffect,
+        context,
+      },
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: source.instanceId,
+        sourceCardName: source.name,
+        effect: damageAllEffect,
+        context,
+      },
+    ]
+
+    const supportIdToSacrifice =
+      state.players['player-two'].supportArea[0].card.instanceId
+    let next = resolveFaintEffect(state, [supportIdToSacrifice])
+    expect(
+      next.players['player-two'].supportArea.some(
+        (support) => support.card.instanceId === supportIdToSacrifice,
+      ),
+    ).toBe(false)
+    expect(next.players['player-two'].supportArea).toHaveLength(4)
+    expect(next.pendingFaintEffects).toHaveLength(1)
+
+    const defenderHpBefore =
+      next.players['player-one'].battleArea[0].hpCards.length
+    next = resolveFaintEffect(next, [])
+    expect(next.pendingFaintEffects).toBeUndefined()
+    expect(next.players['player-one'].battleArea[0].hpCards.length).toBe(
+      defenderHpBefore,
+    )
   })
 })
 
@@ -425,13 +499,47 @@ describe('BS3-066 Soul Jam: Light of Freedom', () => {
 })
 
 describe('BS3-067 Faerie Kingdom Music: item draw + set-active', () => {
-  it('converts correctly', () => {
+  it('converts correctly, including the missing "6 or less" threshold', () => {
+    // 官方文字「Then, if your support area contains 6 cards or less, set up to
+    // 1 card in your support area as active.」——set-active 過去完全沒有這個
+    // 條件，等於支援區隨便幾張都會生效。parseCondition 原本只認得「N or
+    // more」，沒有對應的「N or less」條件種類，這裡新增 support-count-at-most
+    // 並直接寫進這張卡的覆寫。
     const conversion = convertOfficialItemAbility(findBs3Card('BS3-067'))
     expect(conversion).toBeTruthy()
     expect(conversion!.effects).toEqual([
       { kind: 'draw-up-to', max: 2 },
-      { kind: 'set-active', supportCount: 1, selectable: true },
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        selectable: true,
+        condition: { kind: 'support-count-at-most', count: 6 },
+      },
     ])
+  })
+
+  it('skips set-active when support area has more than 6 cards, applies it at 6 or fewer', () => {
+    const [, setActiveEffect] = convertOfficialItemAbility(findBs3Card('BS3-067'))!.effects
+    const context: EffectContext = { sourcePlayerId: 'player-two', sourceInstanceId: 'attacker' }
+
+    let state = createBattleState()
+    state = withSupport(state, 'player-two', Array.from({ length: 6 }, (_, i) => ({ id: `over-${i}` })))
+    // createBattleState 預設已給 1 張，加 6 張變 7 張（> 6），不該生效。
+    expect(state.players['player-two'].supportArea).toHaveLength(7)
+    expect(isEffectConditionMet(state, context, setActiveEffect)).toBe(false)
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          supportArea: state.players['player-two'].supportArea.slice(0, 6),
+        },
+      },
+    }
+    expect(state.players['player-two'].supportArea).toHaveLength(6)
+    expect(isEffectConditionMet(state, context, setActiveEffect)).toBe(true)
   })
 })
 
@@ -521,7 +629,12 @@ describe('BS3-071 Ancient Silver Tree: stage disable-flip', () => {
 })
 
 describe('BS3-072 Mystical Faerie Kingdom: stage rest-support', () => {
-  it('converts correctly via stage ability', () => {
+  it('converts correctly via stage ability, including the missing "opponent support 5+" threshold', () => {
+    // 官方文字「If your opponent's support area contains 5 or more, select up
+    // to 1 active card from your opponent's support area. Rest that card.」
+    // ——這個門檻檢查的是「對手」支援區張數，跟既有的 support-count-at-least
+    // （檢查來源自己的支援區）是不同對象，過去完全沒編碼，等於對手支援區
+    // 隨便幾張都能被壓制。新增 opponent-support-count-at-least 條件種類。
     const stage = convertOfficialStageAbility(findBs3Card('BS3-072'))
     expect(stage).toBeTruthy()
     expect(stage!.effects).toEqual([
@@ -531,13 +644,19 @@ describe('BS3-072 Mystical Faerie Kingdom: stage rest-support', () => {
         amount: 1,
         activeOnly: true,
         optional: true,
+        condition: { kind: 'opponent-support-count-at-least', count: 5 },
       },
     ])
   })
 
   it('rest-support rests an active opponent support card', () => {
     let state = createBattleState()
-    state = withSupport(state, 'player-one', [{ id: 'opp-sup', rested: false }])
+    // 支付門檻要求對手支援區至少 5 張，先補到位再驗證執行結果。
+    state = withSupport(state, 'player-one', [
+      { id: 'filler-1' },
+      { id: 'filler-2' },
+      { id: 'opp-sup', rested: false },
+    ])
 
     const stage = convertOfficialStageAbility(findBs3Card('BS3-072'))
     const effect = stage!.effects[0]
@@ -549,5 +668,21 @@ describe('BS3-072 Mystical Faerie Kingdom: stage rest-support', () => {
       (s) => s.card.instanceId === 'opp-sup',
     )
     expect(oppSupport?.rested).toBe(true)
+  })
+
+  it('is only usable when the opponent has 5 or more support cards', () => {
+    const stage = convertOfficialStageAbility(findBs3Card('BS3-072'))
+    const effect = stage!.effects[0]
+    const context: EffectContext = { sourcePlayerId: 'player-two', sourceInstanceId: 'attacker' }
+
+    let state = createBattleState()
+    // createBattleState 預設已給 player-one 2 張支援卡，加 2 張變 4 張（< 5）。
+    state = withSupport(state, 'player-one', Array.from({ length: 2 }, (_, i) => ({ id: `opp-sup-${i}` })))
+    expect(state.players['player-one'].supportArea).toHaveLength(4)
+    expect(isEffectConditionMet(state, context, effect)).toBe(false)
+
+    state = withSupport(state, 'player-one', [{ id: 'opp-sup-4' }])
+    expect(state.players['player-one'].supportArea).toHaveLength(5)
+    expect(isEffectConditionMet(state, context, effect)).toBe(true)
   })
 })

@@ -1086,6 +1086,12 @@ export const convertOfficialCardEffects = (
       },
     ],
     'BS3-061': [
+      // 「place 1 card from your support area into the trash」是這個昏厥觸發
+      // 技能的代價，但 resolveFaintEffect 只讀 hand-to-battle 的 energyCost，
+      // 完全不會去看 CardSkill.cost（同一類問題見 BS3-029 修正）；跟 BS3-064
+      // 一樣，把代價改成陣列最前面一個非 optional 的效果，讓犧牲確實發生，
+      // 且讓後面「支援區至少 5 張」的條件是用犧牲後的張數判定。
+      { kind: 'support-to-trash', amount: 1 },
       {
         kind: 'damage-all',
         amount: 1,
@@ -1135,7 +1141,12 @@ export const convertOfficialCardEffects = (
     ],
     'BS3-067': [
       { kind: 'draw-up-to', max: 2 },
-      { kind: 'set-active', supportCount: 1, selectable: true },
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        selectable: true,
+        condition: { kind: 'support-count-at-most', count: 6 },
+      },
     ],
     'BS3-072': [
       {
@@ -2365,6 +2376,7 @@ export const convertOfficialStageAbility = (
         amount: 1,
         activeOnly: true,
         optional: true,
+        condition: { kind: 'opponent-support-count-at-least', count: 5 },
       },
     ],
     'BS3-095': [
