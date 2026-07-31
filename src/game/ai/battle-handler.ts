@@ -6,6 +6,7 @@ import {
 } from '../battle'
 import { applyGameCommand } from '../commands'
 import {
+  getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectiveAttack,
@@ -14,7 +15,7 @@ import {
 } from '../effects'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
-import type { CardEffect, EffectContext, GameState, GameCard, PlayerId } from '../types'
+import type { CardEffect, CookieInBattle, EffectContext, GameState, GameCard, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
 import { isRuleEnabled } from './rule-profiles'
 import { getCardEffectValue } from './bs2MatchupProfiles'
@@ -188,6 +189,124 @@ export const evaluateTrapWorth = (
   return score
 }
 
+/**
+ * Block 值不值得使用的門檻。跟陷阱不同，「不擋」的基準行為本來就是
+ * 讓原目標正常受傷，沒有陷阱那種「暴露資訊」的隱性代價，所以直接用 0：
+ * 只要 evaluateBlockWorth 算出來的淨值為正（救到的價值 > 犧牲的價值 +
+ * 代價），才值得把攻擊導到 Blocker 身上。
+ */
+const BLOCK_SKIP_THRESHOLD = 0
+
+/**
+ * 單張戰鬥區餅乾的靜態價值，供 evaluateBlockWorth 比較「保住原目標」
+ * 跟「犧牲 Blocker」何者划算。公式跟 evaluateTrapWorth 的
+ * protectedTargetValue 一致（Level*15 + HP*10 + 高效果價值 +20），
+ * 兩者評的都是「這隻餅乾值多少」，沒有理由用不同尺度。
+ */
+const cookieValue = (cookie: CookieInBattle): number => {
+  let value = cookie.card.level * 15 + cookie.hpCards.length * 10
+  if (getCardEffectValue(cookie.card) >= 5) value += 20
+  return value
+}
+
+/**
+ * 評估用某隻 Blocker 把攻擊導過去值不值得。
+ *
+ * 原本 AI 直接取 getBlockerCandidates()[0]，完全沒比較「擋下來省了
+ * 多少」跟「Blocker 頂上去可能賠掉多少」，導致用高價值餅乾去擋一次
+ * 對方明顯打不死原目標的攻擊、或是白白犧牲一隻能打死的 Blocker 去救
+ * 一隻其實扛得住的雜牌。
+ *
+ * 分數組成（只用公開資訊：雙方戰鬥區、HP 張數、卡面攻擊力／技能）：
+ * 1. preventedTargetLoss：原目標會被打死時，救下來的價值
+ * 2. sacrificeCost：Blocker 頂上去會死時，賠掉的價值
+ * 3. extraEffectBonus：block 技能除了 redirect-attack 以外的額外效果
+ * 4. costPenalty：技能發動的能量代價
+ */
+export const evaluateBlockWorth = (
+  state: GameState,
+  playerId: PlayerId,
+  blocker: CookieInBattle,
+  battle: NonNullable<GameState['pendingBattle']>,
+): number => {
+  const originalTarget = state.players[battle.defenderPlayerId].battleArea.find(
+    (c) => c.card.instanceId === battle.targetInstanceId,
+  )
+  const skill = blocker.card.skill
+  if (!originalTarget || !skill) return -Infinity
+
+  const originalDamage = getAttackDamageAgainst(
+    state,
+    battle.attackerInstanceId,
+    originalTarget.card.instanceId,
+  )
+  const originalWouldDie = originalTarget.hpCards.length <= originalDamage
+
+  const redirectedDamage = getAttackDamageAgainst(
+    state,
+    battle.attackerInstanceId,
+    blocker.card.instanceId,
+  )
+  const blockerWouldDie = blocker.hpCards.length <= redirectedDamage
+
+  let score = 0
+
+  // 1. preventedTargetLoss：原目標本來會死，擋下來就是救到這份價值
+  if (originalWouldDie) {
+    score += cookieValue(originalTarget)
+  }
+
+  // 2. sacrificeCost：Blocker 頂上去反而會死，扣掉它的價值
+  if (blockerWouldDie) {
+    score -= cookieValue(blocker)
+  } else if (!originalWouldDie) {
+    // 雙方都不會死：純粹是把傷害從原目標轉移到 Blocker 身上，
+    // 值不值得看兩邊的價值差——把傷害轉去更便宜的餅乾上才划算，
+    // 轉去更貴的餅乾上（負值）會被這裡自然壓低分數。
+    score += (cookieValue(originalTarget) - cookieValue(blocker)) * 0.3
+  }
+
+  // 3. extraEffectBonus：block 技能本身若還帶其他效果（redirect-attack
+  // 以外），一併計分，讓「這張 Blocker 卡本身多划算」也影響選擇。
+  for (const effect of skill.effects) {
+    if (effect.kind === 'redirect-attack') continue
+    score += EFFECT_VALUE_MAP[effect.kind] ?? 5
+  }
+
+  // 4. costPenalty：技能發動代價
+  const energyCost = Object.values(skill.cost.energy ?? {}).reduce(
+    (sum, n) => sum + n, 0,
+  )
+  score -= energyCost * 8
+
+  return score
+}
+
+/**
+ * 手牌卡片被拿去付 FLIP 棄牌代價時的「捨得丟」程度：分數越低越該優先
+ * 棄。餅乾用跟 cookieValue 一致的量尺（level*15，用卡面滿版 HP 而非
+ * 戰鬥區剩餘 HP，故權重減半避免虛高）；道具／陷阱／舞台卡沒有
+ * level/HP，改讀各自的 effects（跟 skill.effects 同一種 CardEffect[]
+ * 結構）套用 EFFECT_VALUE_MAP 估效果強度。
+ *
+ * 只處理「棄哪張」，不判斷「值不值得發動 FLIP」：FLIP 的棄牌代價是
+ * 拿到傷害已經發生後才付，不像陷阱有「提前暴露資訊」的隱性成本，
+ * 用跟陷阱同一套 EFFECT_VALUE_MAP 門檻硬套會系統性低估（試過用同一
+ * 套邏輯擋下發動，300 局 benchmark 顯示連 Lv.4 vs Lv.1 都從 100% 掉到
+ * 95%，代表原本「有效果就發動」才是符合設計的正確預設，這裡不重新
+ * 發明一個沒有校準基準的門檻）。
+ */
+const handCardDiscardValue = (card: GameCard): number => {
+  if (card.type === 'cookie') {
+    let value = card.level * 15 + card.hp * 5
+    if (getCardEffectValue(card) >= 5) value += 20
+    return value
+  }
+  const effects = card.trap?.effects ?? card.item?.effects ?? card.stageAbility?.effects
+  if (!effects || effects.length === 0) return 5
+  return effects.reduce((sum, effect) => sum + (EFFECT_VALUE_MAP[effect.kind] ?? 5), 0)
+}
+
 export const handleAiPendingBattle = (
   state: GameState,
   playerId: PlayerId,
@@ -203,6 +322,7 @@ export const handleAiPendingBattle = (
   }
 
   const battle = state.pendingBattle
+  const useR7 = level !== undefined && isRuleEnabled(level, 'R7')
   if (
     battle.stage === 'attack-effect' &&
     battle.attackerPlayerId === playerId
@@ -246,10 +366,17 @@ export const handleAiPendingBattle = (
   ) {
     const revealed = battle.revealedHpCard
     const discardCount = revealed?.flip?.cost.discardHand ?? 0
-    const discardHandIds = state.players[playerId].hand
+    // R7: Lv.3+ 優先棄「捨得丟」的卡（手牌品質最低的），而不是照手牌
+    // 順序砍前 N 張——後者等於把要不要丟到關鍵卡交給手牌排列運氣。
+    const discardCandidates = useR7
+      ? [...state.players[playerId].hand].sort(
+          (a, b) => handCardDiscardValue(a) - handCardDiscardValue(b),
+        )
+      : state.players[playerId].hand
+    const discardHandIds = discardCandidates
       .slice(0, discardCount)
       .map((card) => card.instanceId)
-    const flipContext = {
+    const flipContext: EffectContext = {
       sourcePlayerId: playerId,
       sourceInstanceId: revealed?.instanceId ?? '',
       sourceCardName: revealed?.name ?? '',
@@ -277,7 +404,6 @@ export const handleAiPendingBattle = (
 
   if (battle.stage === 'trap' && battle.defenderPlayerId === playerId) {
     const trapCandidates = getTrapCandidates(state, playerId)
-    const useR7 = level !== undefined && isRuleEnabled(level, 'R7')
 
     let trapCard: GameCard | undefined
     if (useR7 && trapCandidates.length > 0) {
@@ -479,22 +605,42 @@ export const handleAiPendingBattle = (
 
     const blockerCandidates = getBlockerCandidates(state, playerId)
     if (blockerCandidates.length > 0) {
-      const blocker = blockerCandidates[0]
-      const skill = blocker.card.skill!
-      const paymentIds =
-        selectEnergyPayment(
-          skill.cost.energy ?? skill.cost,
-          state.players[playerId].supportArea,
-        ) ?? []
-      return {
-        state: applyGameCommand(state, {
-          kind: 'play-blocker',
-          playerId,
-          sourceInstanceId: blocker.card.instanceId,
-          paymentIds,
-        }),
-        action: 'play-blocker',
-        description: `${state.players[playerId].name}使用${blocker.card.name}阻擋攻擊。`,
+      let blocker: CookieInBattle | undefined
+      if (useR7) {
+        // R7: 評估每個候選 Blocker，只在淨值為正時才擋——避免用高價值
+        // 餅乾去擋一次原目標其實扛得住的攻擊、或白白犧牲擋得住的
+        // Blocker 去救一隻其實會死的雜牌。
+        let bestScore = -Infinity
+        let bestCandidate: CookieInBattle | undefined
+        for (const candidate of blockerCandidates) {
+          const score = evaluateBlockWorth(state, playerId, candidate, battle)
+          if (score > bestScore) {
+            bestScore = score
+            bestCandidate = candidate
+          }
+        }
+        blocker = bestScore >= BLOCK_SKIP_THRESHOLD ? bestCandidate : undefined
+      } else {
+        blocker = blockerCandidates[0]
+      }
+
+      if (blocker) {
+        const skill = blocker.card.skill!
+        const paymentIds =
+          selectEnergyPayment(
+            skill.cost.energy ?? skill.cost,
+            state.players[playerId].supportArea,
+          ) ?? []
+        return {
+          state: applyGameCommand(state, {
+            kind: 'play-blocker',
+            playerId,
+            sourceInstanceId: blocker.card.instanceId,
+            paymentIds,
+          }),
+          action: 'play-blocker',
+          description: `${state.players[playerId].name}使用${blocker.card.name}阻擋攻擊。`,
+        }
       }
     }
 
