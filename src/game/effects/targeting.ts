@@ -795,6 +795,23 @@ export const isEffectConditionMet = (
     )
   }
 
+  if (condition?.kind === 'attack-target-remaining-hp-at-least') {
+    const battle = state.pendingBattle
+    const targetInstanceId =
+      context.attackTargetInstanceId ??
+      (battle &&
+        battle.attackerPlayerId === context.sourcePlayerId &&
+        battle.attackerInstanceId === context.sourceInstanceId
+        ? battle.targetInstanceId
+        : undefined)
+    if (!targetInstanceId) return false
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    const target = state.players[opponentId].battleArea.find(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    )
+    return Boolean(target && target.hpCards.length >= condition.amount)
+  }
+
   if (condition?.kind === 'opponent-cookie-fainted-in-current-battle') {
     const battle = state.pendingBattle
     return Boolean(

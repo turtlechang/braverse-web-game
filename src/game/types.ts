@@ -237,6 +237,17 @@ export interface OpponentCookieFaintedInCurrentBattleCondition {
   kind: 'opponent-cookie-fainted-in-current-battle'
 }
 
+/**
+ * 本次攻擊宣告的目標，攻擊當下的剩餘 HP 卡數達到門檻（BS3-001「when this
+ * Cookie attacks your opponent's Cookie whose remaining HP is 4 or more」）。
+ * 只在來源正是 `state.pendingBattle` 的攻擊者時成立，沒有進行中的戰鬥（或
+ * 來源不是攻擊者）一律視為不成立。
+ */
+export interface AttackTargetRemainingHpAtLeastCondition {
+  kind: 'attack-target-remaining-hp-at-least'
+  amount: number
+}
+
 export interface SupportKeywordAtLeastCondition {
   kind: 'support-keyword-at-least'
   keyword: CardKeyword
@@ -274,6 +285,7 @@ export type EffectCondition =
   | SourceHpAtLeastCondition
   | SourceInBreakAreaCondition
   | OpponentCookieFaintedInCurrentBattleCondition
+  | AttackTargetRemainingHpAtLeastCondition
   | SupportKeywordAtLeastCondition
   | DistinctNamedFamilyCountCondition
   | AnyBattleAreaHasBlockerCondition
@@ -1100,6 +1112,12 @@ export interface EffectContext {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   sourceCardName?: string
+  /**
+   * 攻擊宣告當下明確傳入的目標，優先於 `state.pendingBattle`（BS3-001）。
+   * `beginAttack` 計算宣告傷害時，`pendingBattle` 尚未寫入 state，
+   * 這時只能靠呼叫端把當次目標直接帶進 context。
+   */
+  attackTargetInstanceId?: string
 }
 
 export interface SupportCard {

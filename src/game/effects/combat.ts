@@ -59,6 +59,7 @@ const getAuraAttackBonus = (
 export const getEffectiveAttack = (
   state: GameState,
   targetInstanceId: string,
+  attackTargetInstanceId?: string,
 ): number => {
   const owner = Object.values(state.players).find((player) =>
     player.battleArea.some(
@@ -90,6 +91,7 @@ export const getEffectiveAttack = (
                 {
                   sourcePlayerId: owner.id,
                   sourceInstanceId: targetInstanceId,
+                  attackTargetInstanceId,
                 },
                 effect,
               ),
@@ -109,7 +111,7 @@ export const getAttackDamageAgainst = (
   attackerInstanceId: string,
   targetInstanceId: string,
 ): number => {
-  const baseDamage = getEffectiveAttack(state, attackerInstanceId)
+  const baseDamage = getEffectiveAttack(state, attackerInstanceId, targetInstanceId)
 
   const modifiedDamage = state.damageReceivedModifiers
     .filter((modifier) => modifier.targetInstanceId === targetInstanceId)

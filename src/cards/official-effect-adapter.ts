@@ -1419,6 +1419,7 @@ export const convertOfficialCardEffects = (
         amount: 1,
         duration: 'persistent',
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'attack-target-remaining-hp-at-least', amount: 4 },
       },
     ],
     'BS3-018': [
