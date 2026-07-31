@@ -3,7 +3,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { CookieCard, EnergyColor, GameCard } from '../../game'
+import type { CardEffect, CookieCard, EnergyColor, GameCard } from '../../game'
 import { EffectPanel } from './EffectPanel'
 import type { PendingEffect } from './effectUiTypes'
 
@@ -274,6 +274,7 @@ describe('EffectPanel', () => {
 
     expect(container.querySelectorAll('.phase-step')).toHaveLength(3)
     expect(container.textContent).toContain('能量支付')
+    expect(container.querySelector('.effect-candidates-choice')).toBeNull()
     expect(container.querySelector('.effect-panel-extra-cost-col')).toBeNull()
     expect(container.querySelector('.effect-panel-target-col')).toBeNull()
 
@@ -293,6 +294,173 @@ describe('EffectPanel', () => {
       container.querySelector<HTMLButtonElement>('.effect-panel-back-action')!.click()
     })
     expect(container.textContent).toContain('額外代價')
+
+    await act(() => root.unmount())
+  })
+
+  it('stages every choose-one effect after payment and before its selected follow-up', async () => {
+    const paymentCard = createSupportCard(4, 'red')
+    const target = createCookieCard(5)
+    const damageEffect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 1, max: 1 },
+    }
+    const chooseOneEffect: CardEffect = {
+      kind: 'choose-one',
+      modes: [
+        {
+          label: 'Draw 1 card',
+          effects: [{ kind: 'draw', amount: 1 }],
+        },
+        {
+          label: 'Deal 1 damage',
+          effects: [damageEffect],
+        },
+      ],
+    }
+    const pending = createPendingEffect({
+      effects: [chooseOneEffect],
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { red: 1 }, discardHand: 0 },
+        text: 'Select 1 of the following.',
+        effects: [chooseOneEffect],
+      },
+    })
+    const onChooseMode = vi.fn()
+    const onConfirm = vi.fn()
+    let energyPaymentValid = false
+    let currentPending = pending
+    let currentEffect: CardEffect = chooseOneEffect
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    const renderPanel = async () => {
+      await act(() => root.render(
+        <EffectPanel
+          pendingEffect={currentPending}
+          currentEffect={currentEffect}
+          effectHistory={[]}
+          onConfirm={onConfirm}
+          onSkip={() => undefined}
+          onChooseMode={onChooseMode}
+          paymentCandidates={[paymentCard]}
+          selectedPaymentIds={new Set([paymentCard.instanceId])}
+          onTogglePayment={() => undefined}
+          energyPaymentValid={energyPaymentValid}
+          candidateCards={[target]}
+          onToggleCandidate={() => undefined}
+        />,
+      ))
+    }
+
+    await renderPanel()
+    expect(container.querySelectorAll('.phase-step')).toHaveLength(2)
+    expect(container.querySelector('.effect-panel-payment-col')).not.toBeNull()
+    expect(container.querySelector('.effect-panel-choice-col')).toBeNull()
+    expect(
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')
+        ?.disabled,
+    ).toBe(true)
+
+    energyPaymentValid = true
+    await renderPanel()
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.click()
+    })
+    expect(container.querySelector('.effect-panel-payment-col')).toBeNull()
+    expect(container.querySelector('.effect-panel-choice-col')).not.toBeNull()
+    expect(container.querySelectorAll('.effect-candidates-choice button')).toHaveLength(2)
+    expect(onChooseMode).not.toHaveBeenCalled()
+    expect(
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')
+        ?.disabled,
+    ).toBe(true)
+
+    await act(() => {
+      container.querySelectorAll<HTMLButtonElement>('.effect-candidates-choice button')[1].click()
+    })
+    expect(onChooseMode).not.toHaveBeenCalled()
+    expect(
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')
+        ?.disabled,
+    ).toBe(false)
+
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.click()
+    })
+    expect(onChooseMode).toHaveBeenCalledWith(1)
+
+    currentPending = {
+      ...pending,
+      chooseOneModes: [1],
+      selectedTargetIds: [],
+    }
+    currentEffect = damageEffect
+    await renderPanel()
+    expect(container.querySelector('.effect-panel-payment-col')).toBeNull()
+    expect(container.querySelector('.effect-panel-choice-col')).toBeNull()
+    expect(container.querySelector('.effect-panel-target-col')).not.toBeNull()
+    expect(
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')
+        ?.disabled,
+    ).toBe(true)
+
+    currentPending = { ...currentPending, selectedTargetIds: [target.instanceId] }
+    await renderPanel()
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.click()
+    })
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+
+    await act(() => root.unmount())
+  })
+
+  it('skips target selection when a selected effect condition is unmet', async () => {
+    const pending = createPendingEffect({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'Conditional damage',
+        effects: [],
+      },
+    })
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'opponent-battle-area-has-no-blocker' },
+        }}
+        effectHistory={[]}
+        onConfirm={onConfirm}
+        onSkip={() => undefined}
+        effectConditionMet={false}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-panel-target-col')).toBeNull()
+    expect(container.querySelector('.effect-resolution-summary')?.textContent).toContain(
+      '目前條件不成立',
+    )
+    const confirmButton = container.querySelector<HTMLButtonElement>(
+      '.effect-panel-primary-action',
+    )
+    expect(confirmButton?.disabled).toBe(false)
+
+    await act(() => confirmButton!.click())
+    expect(onConfirm).toHaveBeenCalledTimes(1)
 
     await act(() => root.unmount())
   })

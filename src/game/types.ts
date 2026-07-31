@@ -254,6 +254,10 @@ export interface AnyBattleAreaHasBlockerCondition {
   kind: 'any-battle-area-has-blocker'
 }
 
+export interface OpponentBattleAreaHasNoBlockerCondition {
+  kind: 'opponent-battle-area-has-no-blocker'
+}
+
 export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
@@ -273,6 +277,7 @@ export type EffectCondition =
   | SupportKeywordAtLeastCondition
   | DistinctNamedFamilyCountCondition
   | AnyBattleAreaHasBlockerCondition
+  | OpponentBattleAreaHasNoBlockerCondition
   | BreakLevelHigherThanOpponentCondition
 
 export interface DamageEffect {

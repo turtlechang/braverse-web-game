@@ -58,6 +58,7 @@ export interface EffectPanelProps {
   onToggleTrashToDeck?: (instanceId: string) => void
   trashToDeckCost?: number
   showTargetSelection?: boolean
+  effectConditionMet?: boolean
   optionalCostAttack?: Omit<OptionalCostAttackModalProps, 'embedded'> | null
   /** 目前效果是「選擇一項」時，由呼叫端接手展開選定的模式。 */
   onChooseMode?: (modeIndex: number) => void
@@ -130,6 +131,7 @@ function EffectPanelContent({
   onToggleTrashToDeck,
   trashToDeckCost = 0,
   showTargetSelection = true,
+  effectConditionMet = true,
   optionalCostAttack = null,
   onChooseMode,
 }: EffectPanelProps) {
@@ -212,8 +214,26 @@ function EffectPanelContent({
       pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
       pendingEffect.selectedTargetIds.length <= selectionLimits.max)
 
+  const isChooseOneEffect =
+    currentEffect?.kind === 'choose-one' && Boolean(onChooseMode)
+  const hasSelectedChooseOneMode =
+    (pendingEffect?.chooseOneModes?.length ?? 0) > 0
+  const chooseOneModes = isChooseOneEffect ? currentEffect.modes : null
+  const chooseOneSignature = pendingEffect
+    ? `${pendingEffect.sourceCard.instanceId}:${pendingEffect.effectIndex}`
+    : 'none'
+  const [chooseOneSelection, setChooseOneSelection] = useState<{
+    signature: string
+    modeIndex: number | null
+  }>({ signature: '', modeIndex: null })
+  const selectedChooseOneMode =
+    chooseOneSelection.signature === chooseOneSignature
+      ? chooseOneSelection.modeIndex
+      : null
+
   const hasPaymentContent =
-    !pendingEffect?.skillActivated && totalEnergyCost > 0
+    !pendingEffect?.skillActivated &&
+    totalEnergyCost > 0
   const automaticCostDescriptions = pendingEffect?.skillActivated
     ? []
     : [
@@ -240,13 +260,26 @@ function EffectPanelContent({
       trashToDeckCost > 0 ||
       automaticCostDescriptions.length > 0)
   const hasTargetContent =
-    showTargetSelection && selectionLimits !== null
+    effectConditionMet && showTargetSelection && selectionLimits !== null
+  const hasChooseOneContent =
+    chooseOneModes !== null && !hasSelectedChooseOneMode
+  const visiblePaymentPhase = hasPaymentContent && !hasSelectedChooseOneMode
+  const visibleExtraCostPhase = hasExtraCostContent && !hasSelectedChooseOneMode
 
   const phaseIds: GuidedPhaseId[] = [
-    ...(hasPaymentContent ? (['energy'] as const) : []),
-    ...(hasExtraCostContent ? (['cost'] as const) : []),
+    ...(visiblePaymentPhase ? (['energy'] as const) : []),
+    ...(visibleExtraCostPhase ? (['cost'] as const) : []),
+    ...(hasChooseOneContent ? (['choice'] as const) : []),
     ...(hasTargetContent ? (['target'] as const) : []),
   ]
+  const progressPhaseIds: GuidedPhaseId[] = hasSelectedChooseOneMode
+    ? [
+        ...(hasPaymentContent ? (['energy'] as const) : []),
+        ...(hasExtraCostContent ? (['cost'] as const) : []),
+        ...(['choice'] as const),
+        ...(hasTargetContent ? (['target'] as const) : []),
+      ]
+    : phaseIds
   const phaseSignature = pendingEffect
     ? `${pendingEffect.sourceCard.instanceId}:${pendingEffect.effectIndex}:${pendingEffect.skillActivated}:${phaseIds.join('-')}`
     : 'none'
@@ -261,19 +294,31 @@ function EffectPanelContent({
       ? phaseState.phase
       : (phaseIds[0] ?? null)
   const activePhaseIndex = activePhase ? phaseIds.indexOf(activePhase) : -1
-  const phases: GuidedPhase[] = phaseIds.map((id, index) => ({
+  const progressActivePhaseIndex = activePhase
+    ? progressPhaseIds.indexOf(activePhase)
+    : -1
+  const phases: GuidedPhase[] = progressPhaseIds.map((id, index) => ({
     id,
-    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : '目標',
-    complete: index < activePhaseIndex,
+    label:
+      id === 'energy'
+        ? '能量'
+        : id === 'cost'
+          ? '代價'
+          : id === 'choice'
+            ? '效果'
+            : '目標',
+    complete: index < progressActivePhaseIndex,
   }))
   const activePhaseReady =
     activePhase === 'energy'
       ? energyPaid
       : activePhase === 'cost'
         ? extraCostReady
-        : activePhase === 'target'
-          ? targetReady
-          : true
+        : activePhase === 'choice'
+          ? selectedChooseOneMode !== null
+          : activePhase === 'target'
+            ? targetReady
+            : true
   const hasPreviousPhase = activePhaseIndex > 0
   const hasNextPhase =
     activePhaseIndex >= 0 && activePhaseIndex < phaseIds.length - 1
@@ -290,12 +335,12 @@ function EffectPanelContent({
   const goToPhase = (phase: GuidedPhaseId) => {
     setPhaseState({ signature: phaseSignature, phase })
   }
-  // 「選擇一項」不走一般的確認流程，改成每個模式各一顆按鈕。
-  const chooseOneModes =
-    currentEffect?.kind === 'choose-one' && onChooseMode
-      ? currentEffect.modes
-      : null
   const handlePrimaryAction = () => {
+    if (activePhase === 'choice') {
+      if (selectedChooseOneMode === null) return
+      onChooseMode?.(selectedChooseOneMode)
+      return
+    }
     if (hasNextPhase) {
       goToPhase(phaseIds[activePhaseIndex + 1])
       return
@@ -363,7 +408,11 @@ function EffectPanelContent({
           {phaseIds.length === 0 && (
             <div className="effect-instruction effect-resolution-summary">
               <Sparkles aria-hidden="true" />
-              <span>{describeEffect(currentEffect)}</span>
+              <span>
+                {effectConditionMet
+                  ? describeEffect(currentEffect)
+                  : '目前條件不成立，確認後會略過此效果。'}
+              </span>
             </div>
           )}
 
@@ -492,6 +541,51 @@ function EffectPanelContent({
               </section>
             )}
 
+            {activePhase === 'choice' && chooseOneModes && (
+              <section className="effect-panel-col effect-panel-choice-col">
+                <span className="effect-panel-col-label">選擇一項效果</span>
+                <div className="effect-instruction">
+                  <Sparkles aria-hidden="true" />
+                  <span>請選擇一項效果，再按下一步繼續。</span>
+                </div>
+                <div
+                  className="effect-candidates-choice"
+                  role="group"
+                  aria-label="選擇一項效果"
+                >
+                  {chooseOneModes.map((mode, modeIndex) => {
+                    const selected = selectedChooseOneMode === modeIndex
+                    return (
+                      <button
+                        key={`${chooseOneSignature}-${modeIndex}`}
+                        type="button"
+                        className={selected ? 'is-selected' : ''}
+                        aria-pressed={selected}
+                        onClick={() =>
+                          setChooseOneSelection({
+                            signature: chooseOneSignature,
+                            modeIndex,
+                          })
+                        }
+                      >
+                        <span className="effect-choice-option-number">
+                          {modeIndex + 1}
+                        </span>
+                        <span className="effect-choice-option-label">
+                          {mode.label}
+                        </span>
+                        {selected ? (
+                          <Check aria-hidden="true" />
+                        ) : (
+                          <ArrowRight aria-hidden="true" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
             {activePhase === 'target' && (
               <section className="effect-panel-col effect-panel-target-col">
                 <span className="effect-panel-col-label">目標</span>
@@ -552,26 +646,13 @@ function EffectPanelContent({
               上一步
             </button>
           )}
-          {chooseOneModes ? (
-            chooseOneModes.map((mode, modeIndex) => (
-              <button
-                key={mode.label}
-                className="effect-panel-primary-action"
-                type="button"
-                onClick={() => onChooseMode?.(modeIndex)}
-              >
-                <Check aria-hidden="true" />
-                {mode.label}
-              </button>
-            ))
-          ) : (
           <button
             className="effect-panel-primary-action"
             type="button"
             disabled={!activePhaseReady}
             onClick={handlePrimaryAction}
           >
-            {hasNextPhase ? (
+            {hasNextPhase || activePhase === 'choice' ? (
               <>
                 下一步
                 <ArrowRight aria-hidden="true" />
@@ -583,7 +664,6 @@ function EffectPanelContent({
               </>
             )}
           </button>
-          )}
         </div>
       </>
     )

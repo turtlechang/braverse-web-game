@@ -8,7 +8,7 @@ import {
 } from '../cards/official-effect-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import { applyGameCommand } from './commands'
-import type { GameCard } from './types'
+import type { CookieCard, GameCard } from './types'
 import { createBattleState, cookie, item } from './test-helpers/battle-helpers'
 
 const findBs3Card = (cardNumber: string) => {
@@ -36,6 +36,20 @@ describe('BS3-018 Mushroom Spore Punch (item integration)', () => {
     expect(itemAbility).toBeTruthy()
     expect(itemAbility!.effects).toHaveLength(1)
     expect(itemAbility!.effects[0]).toMatchObject({ kind: 'choose-one' })
+    expect(itemAbility!.effects[0]).toMatchObject({
+      modes: [
+        {
+          label: 'During this turn, your opponent cannot activate Blocker.',
+        },
+        {
+          label:
+            'If there are no Cookies that have Blocker in your opponent\'s battle area, select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+          effects: [
+            { condition: { kind: 'opponent-battle-area-has-no-blocker' } },
+          ],
+        },
+      ],
+    })
   })
 
   it('can be played and execute disable-block mode', () => {
@@ -44,12 +58,8 @@ describe('BS3-018 Mushroom Spore Punch (item integration)', () => {
     const itemCard: GameCard = {
       ...bs3Item,
       item: {
+        ...bs3Item.item!,
         cost: { red: 2 },
-        text: bs3Item.item?.text ?? '',
-        effects: [{ kind: 'choose-one', modes: [
-          { label: 'disable block', effects: [{ kind: 'disable-block', duration: 'this-turn', side: 'opponent' }] },
-          { label: 'damage', effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }] },
-        ] }],
       },
     }
 
@@ -77,12 +87,8 @@ describe('BS3-018 Mushroom Spore Punch (item integration)', () => {
     const itemCard: GameCard = {
       ...bs3Item,
       item: {
+        ...bs3Item.item!,
         cost: { red: 2 },
-        text: bs3Item.item?.text ?? '',
-        effects: [{ kind: 'choose-one', modes: [
-          { label: 'disable block', effects: [{ kind: 'disable-block', duration: 'this-turn', side: 'opponent' }] },
-          { label: 'damage', effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }] },
-        ] }],
       },
     }
 
@@ -101,6 +107,77 @@ describe('BS3-018 Mushroom Spore Punch (item integration)', () => {
       chooseOneModes: [1],
     })
 
+    expect(next.players['player-two'].discardPile.some(c => c.instanceId === itemCard.instanceId)).toBe(true)
+  })
+
+  it('skips damage mode when the opponent has a Blocker, even if that mode is selected', () => {
+    const state = createBattleState()
+    const bs3Item = asGameCard('BS3-018')
+    const itemCard: GameCard = {
+      ...bs3Item,
+      item: {
+        ...bs3Item.item!,
+        cost: { red: 2 },
+      },
+    }
+    const blockerCookie: CookieCard = {
+      ...cookie('blocker'),
+      skill: {
+        trigger: 'block',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'Blocker',
+        effects: [],
+      },
+    }
+
+    const s1 = {
+      ...state,
+      activePlayerId: 'player-two' as const,
+      phase: 'main' as const,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            ...state.players['player-one'].battleArea,
+            {
+              card: blockerCookie,
+              hpCards: [],
+              rested: false,
+              battleEntryId: 'blocker:battle:1',
+            },
+          ],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          hand: [itemCard],
+          supportArea: [
+            { card: item('pay-1'), rested: false },
+            { card: item('pay-2'), rested: false },
+          ],
+        },
+      },
+    }
+
+    const pending = applyGameCommand(s1, {
+      kind: 'begin-play-item',
+      playerId: 'player-two',
+      instanceId: itemCard.instanceId,
+      paymentIds: ['pay-1', 'pay-2'],
+      chooseOneModes: [1],
+    })
+    expect(pending.pendingAbilityEffect).toBeDefined()
+
+    const next = applyGameCommand(pending, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: ['defender'],
+    })
+
+    expect(next.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
     expect(next.players['player-two'].discardPile.some(c => c.instanceId === itemCard.instanceId)).toBe(true)
   })
 })

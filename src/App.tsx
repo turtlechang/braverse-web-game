@@ -542,6 +542,7 @@ function App() {
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
+        effectConditionMet={pending.currentEffectConditionMet}
         trashToDeckBottomCandidates={pending.skillTrashToDeckBottomCandidates}
         selectedTrashToDeckBottomIds={pending.selectedSkillTrashToDeckBottomIds}
         onToggleTrashToDeckBottom={pending.toggleSkillTrashToDeckBottom}

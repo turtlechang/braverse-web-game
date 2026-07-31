@@ -815,6 +815,13 @@ export const isEffectConditionMet = (
     )
   }
 
+  if (condition?.kind === 'opponent-battle-area-has-no-blocker') {
+    const opponent = state.players[getOpponentId(context.sourcePlayerId)]
+    return !opponent.battleArea.some(
+      (cookie) => cookie.card.skill?.trigger === 'block',
+    )
+  }
+
   if (condition?.kind === 'hand-count-at-most') {
     return state.players[context.sourcePlayerId].hand.length <= condition.count
   }

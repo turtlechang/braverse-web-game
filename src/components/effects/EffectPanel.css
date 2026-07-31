@@ -315,6 +315,57 @@
   color: #ff6b6b;
 }
 
+.effect-panel .effect-candidates-choice {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.effect-panel .effect-candidates-choice button {
+  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  min-height: 68px;
+  margin-top: 0;
+  padding: 12px 14px;
+  border-color: rgba(113, 236, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8f7ff;
+  font-size: 0.84rem;
+  text-align: left;
+}
+
+.effect-panel .effect-candidates-choice button:hover {
+  border-color: rgba(113, 236, 255, 0.76);
+  background: rgba(113, 236, 255, 0.12);
+}
+
+.effect-panel .effect-candidates-choice button.is-selected {
+  border-color: #ffe66e;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 230, 110, 0.2),
+    rgba(113, 236, 255, 0.12)
+  );
+  color: #ffe66e;
+  box-shadow: 0 0 0 1px rgba(255, 230, 110, 0.18);
+}
+
+.effect-choice-option-number {
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.effect-choice-option-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
 .effect-panel-scroll {
   flex: 1;
   min-height: 0;

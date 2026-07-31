@@ -626,6 +626,7 @@ export function OnlineBattleView({
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
+        effectConditionMet={pending.effectConditionMet}
         onSkip={() => {
           if (pending.pendingEffect?.sourceKind !== 'attack') return
           match.dispatch(

@@ -8,6 +8,7 @@ import type { ComponentType } from 'react'
 import { useEffect } from 'react'
 import { BattlefieldMockup } from './BattlefieldMockup'
 import { DeckEditorMockup } from './DeckEditorMockup'
+import { EffectChoiceMockup } from './EffectChoiceMockup'
 import { MainMenuMasterDuelMockup } from './MainMenuMasterDuelMockup'
 import { MainMenuMockup } from './MainMenuMockup'
 import { MainMenuRedesignMockup } from './MainMenuRedesignMockup'
@@ -17,6 +18,7 @@ import { designThemes } from '../styles/tokens'
 import { readThemeFromQuery } from '../styles/themeQuery'
 
 const MOCKUPS: { id: string; title: string; component: ComponentType }[] = [
+  { id: 'effect-choice', title: 'BS3-018 二選一效果提示框研究', component: EffectChoiceMockup },
   { id: 'battlefield', title: '戰場（wireframe 01）', component: BattlefieldMockup },
   { id: 'main-menu', title: '主選單（wireframe 02，現行版面）', component: MainMenuMockup },
   { id: 'main-menu-redesign', title: '主選單重新設計提案 A：雙欄保留牌組庫（P2-5）', component: MainMenuRedesignMockup },

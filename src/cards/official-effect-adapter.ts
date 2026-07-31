@@ -1428,8 +1428,14 @@ export const convertOfficialCardEffects = (
             effects: [{ kind: 'disable-block', duration: 'this-turn', side: 'opponent' }],
           },
           {
-            label: 'Deal 1 damage to 1 opponent Cookie.',
-            effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } }],
+            label:
+              'If there are no Cookies that have Blocker in your opponent\'s battle area, select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+            effects: [{
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 0, max: 1 },
+              condition: { kind: 'opponent-battle-area-has-no-blocker' },
+            }],
           },
         ],
       },

@@ -72,7 +72,8 @@
 | 對手手牌→棄牌區 | `opponent-discard-hand` | 對手必須選擇指定數量的手牌放入棄牌區；對手無手牌時效果直接完成 |
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
-| 條件 | `condition` | 目前支援 Break Area 最低等級檢測 |
+| 條件 | `condition` | 依遊戲狀態檢查效果是否可結算；不成立時略過該效果 |
+| 對手戰鬥區無 Blocker | `opponent-battle-area-has-no-blocker` | BS3-018 第二分支的條件；可選取該分支，但條件不成立時不造成傷害 |
 | 支援區 keyword 條件 | `support-keyword-at-least` | 檢查來源玩家支援區是否至少有指定數量的 keyword 卡，例如 `[Soul Jam]` |
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |
 | HP 送棄牌區 | `hp-to-trash` | 選擇己方 1 隻餅乾，將指定數量的 HP 卡送入棄牌區；非傷害不觸發 FLIP/afterDamage，HP 歸 0 時餅乾進入休息區並沿用離場/補位/勝負流程 |
@@ -106,6 +107,7 @@
 - ST2-003 Wizard Cookie 已支援「造成 3 點傷害，之後可選最多 1 張己方 LV.1 休息區卡牌移至棄牌區」。
 - BS3-002、BS3-010、BS3-011 已支援「can be used as」來源能量，分別以來源餅乾支付 {R}、{R}、{R}{R} 的可選攻擊後續費用。
 - BS3-009、BS3-087、BS3-111 已支援「支援區有 `[Soul Jam]`」的攻擊後條件；僅檢查支援區現存卡的 keyword，`{mou}` 附著本身仍待專屬狀態模型。
+- BS3-018 的第二個選項已保留「選擇最多 1 個對手餅乾造成 1 點傷害」的 `min: 0` 語意，並在結算時檢查對手戰鬥區不得有 `[Blocker]`；條件不成立時費用仍照常支付，但傷害效果略過。
 - 另一種「{mou} this card to your [指定 Cookie 名稱]」是把道具卡直接附著到特定 Cookie（不進支援區），走 `equip-source` 效果，附著後放進 `CookieInBattle.equippedCards`（見 `docs/game-rules.md` 或 `equip-source` 執行器）。已依官方 Q&A 逐張核對 BS3-019／043／066／091／115 五張「靈魂果醬」的裝載後效果，全數已正確：BS3-019 是持續攻擊加成（`attackBonus`，寫入 `attackModifiers`）；BS3-043 是裝載當下的一次性 +2 HP（只有 `gainHp`，不建立任何持續修正，官方 Q&A 已確認）；BS3-066／091 是「該餅乾攻擊時」的自動觸發效果，由 `battle.ts` 的 `getEquipAttackEffects` 依裝備卡 id 查表，`beginAttack` 建立 `pendingBattle.attackEffects` 時附加在來源餅乾自身攻擊後效果之後；BS3-115 是「不能被對手效果選為目標／不能被送入棄牌區」的保護，集中於 `isBlockedByOpponentEffectProtection`：`matchesSelector` 排除對手選擇候選；`damage-all`／`field-to-trash`／`field-to-trash-all`／`opponent-battle-to-trash`／`modify-all-attack` 執行器同樣略過受保護餅乾。例外：`attackTargetOnly` 攻擊附加傷害保持同一攻擊對象時不算重新選擇，仍可造成傷害。官方 Q&A（BS3-019）：需要指定目標的效果若當場沒有合法候選，能力效果鏈（含後續 Then 裝載）整段中止，但費用與棄牌不回溯；若有合法目標卻自願選 0（`min: 0`），Then 仍可繼續。
 - BS3-033、BS3-101 已支援「can be used as」後選最多 1 個符合剩餘 HP 的對手餅乾，分別移至休息區與棄牌區；BS3-088 已支援棄 1 張手牌後選最多 1 個己方戰鬥區餅乾增加 1 HP。
 - BS3-086 已支援己方戰鬥區存在 LV.3 餅乾時，棄 1 張手牌對被攻擊餅乾追加 1 點傷害；BS3-102 已支援雙方各將牌庫頂 2 張卡直接送入棄牌區；BS3-105／BS3-113 分別將對手／己方牌庫頂最多 1 張卡直接送入棄牌區。
