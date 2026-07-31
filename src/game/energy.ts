@@ -202,11 +202,35 @@ export const selectEnergyPayment = (
     }
   }
 
-  for (const support of available) {
+  // 指定顏色付完後剩下的是 Mix Cost（neutral），任何未橫置的支援卡都能付。
+  // 原本是照支援區順序抓，等於隨機把稀有色或 wild 燒掉，同一回合後面要打的
+  // 卡就付不出指定色了。改成先付「同色張數最多」的顏色，wild 留到最後——
+  // 在只看得到支援區的前提下，這是保留最多後續選項的支付順序。
+  const leftovers = available.filter(
+    (support) => !selected.has(support.card.instanceId),
+  )
+  const colorSupply = new Map<string, number>()
+  for (const support of leftovers) {
+    const color = support.card.energyColor ?? 'untyped'
+    colorSupply.set(color, (colorSupply.get(color) ?? 0) + 1)
+  }
+  const neutralOrder = leftovers
+    .map((support, index) => ({ support, index }))
+    .sort((left, right) => {
+      const leftWild = left.support.card.energyColor === 'wild' ? 1 : 0
+      const rightWild = right.support.card.energyColor === 'wild' ? 1 : 0
+      if (leftWild !== rightWild) return leftWild - rightWild
+      const leftSupply =
+        colorSupply.get(left.support.card.energyColor ?? 'untyped') ?? 0
+      const rightSupply =
+        colorSupply.get(right.support.card.energyColor ?? 'untyped') ?? 0
+      if (leftSupply !== rightSupply) return rightSupply - leftSupply
+      return left.index - right.index
+    })
+
+  for (const { support } of neutralOrder) {
     if (selected.size >= getEnergyCostTotal(cost)) break
-    if (!selected.has(support.card.instanceId)) {
-      selected.add(support.card.instanceId)
-    }
+    selected.add(support.card.instanceId)
   }
 
   const paymentIds = [...selected]

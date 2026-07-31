@@ -1880,9 +1880,12 @@
 
 .test-scenario-modal {
   position: relative;
-  width: min(920px, 100%);
-  max-height: calc(100vh - 48px);
+  width: min(1120px, calc(100vw - 32px));
+  max-height: min(calc(100dvh - 32px), 860px);
+  min-width: 0;
+  box-sizing: border-box;
   overflow-y: auto;
+  overflow-x: hidden;
   border: 2px solid rgba(105, 220, 255, 0.68);
   border-radius: 8px;
   background: linear-gradient(135deg, #071c44, #123f82);
@@ -1901,16 +1904,75 @@
   font-size: 0.9rem;
 }
 
+.scenario-presets {
+  margin: 0 0 20px;
+  padding: 14px;
+  border: 1px solid rgba(255, 230, 117, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 230, 117, 0.06);
+}
+
+.scenario-presets h3 {
+  margin: 0;
+  color: #ffe675;
+  font-size: 1rem;
+}
+
+.scenario-presets p {
+  margin: 6px 0 10px;
+  color: #bbdaf3;
+  font-size: 0.8rem;
+}
+
+.scenario-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scenario-preset-btn {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 230, 117, 0.36);
+  border-radius: 6px;
+  background: rgba(4, 20, 57, 0.54);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.scenario-preset-btn:hover,
+.scenario-preset-btn:focus-visible {
+  border-color: #ffe675;
+  background: rgba(255, 230, 117, 0.12);
+}
+
+.scenario-preset-btn span {
+  display: block;
+  color: #ffe675;
+  font-weight: 800;
+}
+
+.scenario-preset-btn small {
+  display: block;
+  margin-top: 4px;
+  color: #bbdaf3;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 .scenario-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
+  min-width: 0;
 }
 
 .scenario-side {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
   padding: 16px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
@@ -1934,18 +1996,25 @@
 
 .scenario-battle-slot {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 8px;
 }
 
 .scenario-field-group input[type='text'],
 .scenario-field-group input[type='number'],
 .scenario-battle-slot input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   background: rgba(1, 8, 28, 0.4);
   color: #fff;
+}
+
+.scenario-battle-slot .scenario-hp-cards-input {
+  grid-column: 1 / -1;
 }
 
 .scenario-break-preview {
@@ -1990,7 +2059,17 @@
 }
 
 @media (max-width: 800px) {
+  .test-scenario-modal {
+    width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
+    padding: 18px;
+  }
+
   .scenario-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .scenario-preset-grid {
     grid-template-columns: 1fr;
   }
 }

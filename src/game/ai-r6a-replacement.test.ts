@@ -6,13 +6,29 @@ import {
 } from './ai/bs2MatchupProfiles'
 import type { GameCard } from './types'
 
+/**
+ * bs2MatchupProfiles 的評分表以官方卡號（card.id）為 key，不是卡名
+ * （同名卡跨彈重印會是不同卡）。這裡對應到 RED_REPLACEMENT_SCORES 實際
+ * 收錄的卡號，讓下面測試真的能命中低價值懲罰／效果加成等 by-id 邏輯，
+ * 而不是每次都落回「查無資料」的通用公式分數。
+ */
+const REAL_CARD_IDS: Record<string, string> = {
+  'Popcorn Cookie': 'BS1-018',
+  'Cherry Cookie': 'BS2-004',
+  'Princess Cookie': 'ST1-001',
+  'Rebel Cookie': 'BS2-003',
+  'Dark Choco Cookie': 'BS1-003',
+  'Adventurer Cookie': 'ST1-013',
+  'Carrot Cookie': 'ST1-004',
+}
+
 const makeCookie = (
   name: string,
   level: number,
   hp: number,
   instanceId?: string,
 ): GameCard => ({
-  id: `test-${name}`,
+  id: REAL_CARD_IDS[name] ?? `test-${name}`,
   instanceId: instanceId ?? `inst-${name}`,
   name,
   type: 'cookie',

@@ -168,7 +168,13 @@ export function useOnlinePendingEffect(params: {
           effects: abilityCostDraft.ability.effects,
         }
     : null
-  const draftEffect = draftSkill?.effects[0] ?? null
+  const draftEffects = draftSkill
+    ? expandChooseOneSequence(
+        draftSkill.effects,
+        abilityCostDraft?.chooseOneModes,
+      )
+    : []
+  const draftEffect = draftEffects[0] ?? null
   const draftContext: EffectContext | null = abilityCostDraft
     ? {
         sourcePlayerId: viewerPlayerId,
@@ -178,6 +184,10 @@ export function useOnlinePendingEffect(params: {
     : null
   const displayedEffect = currentEffect ?? draftEffect
   const displayedContext = context ?? draftContext
+  const displayedEffectConditionMet =
+    displayedEffect && displayedContext
+      ? isEffectConditionMet(game, displayedContext, displayedEffect)
+      : true
 
   const currentTargetSelector = getTargetSelector(displayedEffect)
 
@@ -794,6 +804,7 @@ export function useOnlinePendingEffect(params: {
           selectedDiscardHandIds: abilityCostDraft.selectedDiscardHandIds,
           selectedTrashBattleCookieIds:
             abilityCostDraft.selectedTrashBattleCookieIds,
+          chooseOneModes: abilityCostDraft.chooseOneModes,
           skillActivated: false,
           optional: false,
           triggerLabel:
@@ -893,6 +904,7 @@ export function useOnlinePendingEffect(params: {
 
   return {
     currentEffect: displayedEffect,
+    effectConditionMet: displayedEffectConditionMet,
     candidateCards,
     selectedTargetIds,
     toggleTarget,

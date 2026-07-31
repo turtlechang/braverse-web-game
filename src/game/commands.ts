@@ -1283,6 +1283,15 @@ const resolvePendingAbilityEffect = (
   const continueBattle = (candidate: GameState): GameState =>
     continueBattleAfterPending(candidate, pending.battleContinuation)
   const effect = pending.effects[pending.effectIndex]
+  if (!isEffectConditionMet(state, context, effect)) {
+    const nextIndex = pending.effectIndex + 1
+    return nextIndex >= pending.effects.length
+      ? continueBattle({ ...state, pendingAbilityEffect: undefined })
+      : {
+          ...state,
+          pendingAbilityEffect: { ...pending, effectIndex: nextIndex },
+        }
+  }
   // 官方 Q&A（BS3-019）：無合法目標時，緊接在後的裝載一併中止（見上方函式註解）。
   if (hasNoLegalSelectableTargets(state, context, pending.effects, pending.effectIndex)) {
     return continueBattle({ ...state, pendingAbilityEffect: undefined })

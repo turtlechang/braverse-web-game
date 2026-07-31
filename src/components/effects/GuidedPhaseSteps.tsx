@@ -1,7 +1,12 @@
 import { Fragment } from 'react'
 import './GuidedPhaseSteps.css'
 
-export type GuidedPhaseId = 'energy' | 'cost' | 'target' | 'selfTarget'
+export type GuidedPhaseId =
+  | 'energy'
+  | 'cost'
+  | 'choice'
+  | 'target'
+  | 'selfTarget'
 
 export interface GuidedPhase {
   id: GuidedPhaseId

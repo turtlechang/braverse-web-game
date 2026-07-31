@@ -98,6 +98,10 @@ export function usePendingEffect(params: {
 
   const currentEffect =
     pendingEffect?.effects[pendingEffect.effectIndex] ?? null
+  const currentEffectConditionMet =
+    pendingEffect && currentEffect
+      ? isEffectConditionMet(game, pendingEffect.context, currentEffect)
+      : true
   const currentTargetSelector: EffectTargetSelector | null =
     currentEffect?.kind === 'gain-hp'
       ? currentEffect.target?.sourceOnly
@@ -1313,6 +1317,12 @@ export function usePendingEffect(params: {
   const confirmEffect = () => {
     if (!pendingEffect || !currentEffect) return
 
+    const currentConditionMet = isEffectConditionMet(
+      game,
+      pendingEffect.context,
+      currentEffect,
+    )
+
     const targetNames =
       currentEffect.kind === 'break-to-trash'
         ? pendingEffect.selectedTargetIds.map(
@@ -1346,7 +1356,9 @@ export function usePendingEffect(params: {
 
     try {
       if (pendingEffect.sourceKind === 'attack') {
-        const result = describeEffectResult(currentEffect, targetNames)
+        const result = currentConditionMet
+          ? describeEffectResult(currentEffect, targetNames)
+          : `${pendingEffect.sourceCard.name} 的效果條件未滿足，已略過。`
         dispatch(
           {
             kind: 'resolve-attack-effect',
@@ -1414,7 +1426,9 @@ export function usePendingEffect(params: {
         playerId: pendingEffect.context.sourcePlayerId,
         targetIds: pendingEffect.selectedTargetIds,
       })
-      const result = describeEffectResult(currentEffect, targetNames)
+      const result = currentConditionMet
+        ? describeEffectResult(currentEffect, targetNames)
+        : `${pendingEffect.sourceCard.name} 的效果條件未滿足，已略過。`
       if (
         currentEffect.kind === 'view-hp' &&
         pendingEffect.selectedTargetIds.length === 1
@@ -1598,6 +1612,7 @@ export function usePendingEffect(params: {
     skipAttackEffect,
     cancelPendingSkill,
     currentEffect,
+    currentEffectConditionMet,
     effectTargetCandidates,
     supportEffectCandidates,
     trashCookieCandidates,

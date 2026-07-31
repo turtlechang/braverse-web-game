@@ -174,6 +174,11 @@ export function useOnlineMatchController(params: {
 
     if (
       battle?.stage !== 'trap' ||
+      // 陷阱已經打出去了（例如 BS3-093），戰鬥還停在 'trap' 階段只是為了等玩家
+      // 確認 reveal-top-deck 的巢狀效果——getTrapCandidates 在 trapUsed 之後
+      // 一律回傳空陣列，不代表「沒有陷阱可用該自動略過」，見 useMatchController.ts
+      // 同名效果的註解。
+      battle.trapUsed ||
       battle.defenderPlayerId !== viewerPlayerId ||
       getTrapCandidates(game, viewerPlayerId).length > 0 ||
       getBlockerCandidates(game, viewerPlayerId).length > 0

@@ -34,7 +34,7 @@ export function useAiTurn(params: {
     faintActive,
     afterDamageActive,
     deckConfig,
-    aiLevel = 2,
+    aiLevel = 4,
     maxConsecutiveActions = 200,
   } = params
 

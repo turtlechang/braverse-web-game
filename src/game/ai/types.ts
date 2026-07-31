@@ -161,6 +161,7 @@ export interface BehaviorMetrics {
   directWinCount: number
   r10PenaltyAppliedCount: number
   r10BreakRaceRiskCount: number
+  r10ExposureRiskCount: number
   r6cReplacementCount: number
   r6cLowQualityCount: number
   r6cForcedCount: number

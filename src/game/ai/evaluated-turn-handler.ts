@@ -5,7 +5,7 @@ import { getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
 import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
-import type { PlayerView } from '../player-view'
+import type { CookieInBattleView, PlayerView } from '../player-view'
 import type { CookieCard, GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
 import {
@@ -19,6 +19,25 @@ const sumBreakLevel = (cards: CookieCard[]): number =>
   cards.reduce((sum, card) => sum + card.level, 0)
 
 /**
+ * 場上單張餅乾的存在價值：舊版是不分等級一律 60 分，等於 Lv.1 雜牌
+ * 跟 Lv.4 王牌一樣重要，AI 因此不會特別想保留高等級餅乾。改成
+ * 40 + level*10——Level 2（最常見的中段餅乾）維持原本的 60 分不變，
+ * 只有 Level 1（50）與 Level 3/4（70/80）往兩側拉開，盡量不動到
+ * 已經調校過的既有數值尺度。
+ */
+const boardPresenceValue = (cookies: CookieInBattleView[]): number =>
+  cookies.reduce((sum, cookie) => sum + 40 + cookie.card.level * 10, 0)
+
+/**
+ * 場上總攻擊力：卡面攻擊力皆為公開資訊。舊版評分只看戰鬥區張數與
+ * HP，兩個攻守分佈不同但張數/HP 相同的場面會拿到同分，AI 分不出
+ * 「這場面比較能打」。加成幅度刻意壓低（每點攻擊力 3 分），只用來
+ * 在既有分數打平時提供額外解析度，不喧賓奪主。
+ */
+const attackPotentialValue = (cookies: CookieInBattleView[]): number =>
+  cookies.reduce((sum, cookie) => sum + (cookie.card.attack ?? 0), 0)
+
+/**
  * 場面評分：只讀 PlayerView，型別上保證不使用隱藏資訊。
  * 分數對 viewer 而言越高越好。
  */
@@ -30,8 +49,10 @@ export const evaluatePlayerView = (view: PlayerView): number => {
 
   const { self, opponent } = view
   let score = 0
-  score += self.battleArea.length * 60
-  score -= opponent.battleArea.length * 60
+  score += boardPresenceValue(self.battleArea)
+  score -= boardPresenceValue(opponent.battleArea)
+  score += attackPotentialValue(self.battleArea) * 3
+  score -= attackPotentialValue(opponent.battleArea) * 3
   score += self.battleArea.reduce((sum, cookie) => sum + cookie.hpCount, 0) * 25
   score -=
     opponent.battleArea.reduce((sum, cookie) => sum + cookie.hpCount, 0) * 25
@@ -437,20 +458,197 @@ export const handleAiEvaluatedTurnState = (
 
 let r10PenaltyAppliedCount = 0
 let r10BreakRaceRiskCount = 0
+let r10ExposureRiskCount = 0
 
 export const resetR10Counters = () => {
   r10PenaltyAppliedCount = 0
   r10BreakRaceRiskCount = 0
+  r10ExposureRiskCount = 0
 }
 
 export const getR10Counters = () => ({
   penaltyApplied: r10PenaltyAppliedCount,
   breakRaceRisk: r10BreakRaceRiskCount,
+  exposureRisk: r10ExposureRiskCount,
 })
 
 // ---------------------------------------------------------------------------
-// Lv.4 — Two-ply lookahead with battle resolution + risk management
+// Beam search — 回合層最佳行動序列規劃
 // ---------------------------------------------------------------------------
+
+/**
+ * 從指定玩家視角對終局場面打分。反覆使用的基本評分單元。
+ */
+const stateScore = (state: GameState, playerId: PlayerId): number => {
+  if (state.status === 'finished') {
+    const view = createPlayerView(state, playerId)
+    return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+  }
+  const view = createPlayerView(state, playerId)
+  return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+}
+
+/**
+ * 判定一個狀態是否不適合繼續展開 beam（回合結束、換人、有 pending、
+ * 對局結束等）。
+ */
+const isBeamTerminal = (state: GameState, playerId: PlayerId): boolean =>
+  state.status === 'finished' ||
+  state.activePlayerId !== playerId ||
+  !!state.pendingBattle ||
+  !!state.pendingRefresh ||
+  !!state.pendingReplacement ||
+  !!state.pendingOnPlay
+
+/**
+ * 把單一命令應用到當前狀態，若為攻擊則自動結算整場戰鬥。
+ * 回傳 (nextState, isTerminal) 供 beam 展開使用。
+ */
+const applyBeamAction = (
+  state: GameState,
+  command: PlayerActionCommand,
+  playerId: PlayerId,
+): { nextState: GameState; isTerminal: boolean } => {
+  let next: GameState
+  if (command.kind === 'attack') {
+    next = beginAttack(
+      state,
+      command.attackerInstanceId,
+      command.targetInstanceId,
+      command.supportPaymentIds,
+    )
+  } else {
+    next = applyGameCommand(state, command)
+  }
+  if (next.status === 'finished') return { nextState: next, isTerminal: true }
+
+  if (command.kind === 'attack') {
+    next = resolveBattleAutomatically(next)
+  }
+  if (next.status === 'finished') return { nextState: next, isTerminal: true }
+
+  // advance-phase 之後 phase 會變（e.g. main → end），即終端
+  const phaseChanged = next.phase !== state.phase
+  const terminal = phaseChanged || isBeamTerminal(next, playerId)
+  return { nextState: next, isTerminal: terminal }
+}
+
+interface BeamEntry {
+  state: GameState
+  firstCommand: PlayerActionCommand | null
+  /** 沿路徑累加的單步修正分（R8/R9/R10/attackBonus/cookieSupportPenalty）。 */
+  pathBonus: number
+  score: number
+  isTerminal: boolean
+}
+
+/**
+ * 單步過渡（preState → postState，套用 command）的風險／機會修正，
+ * 跟 twoPlyCandidateScore 用同一套規則（attackBonus、R9 致命偵測、
+ * R10 對手回應風險、R8 手牌管理、支援放置懲罰）。
+ *
+ * 背景：beam search 原本只用 stateScore（evaluatePlayerView +
+ * lv4RiskBonus）幫每個展開節點打分，這些單步修正只留在
+ * twoPlyCandidateScore 這條 fallback 路徑裡——但 getLegalTurnCommands
+ * 永遠至少含 advance-phase，beam 幾乎不可能回傳 null，fallback 在真實
+ * 對局中打不到，等於 R8/R9/R10 對 Lv.4 主路徑完全失效（2026-07-31
+ * review：60 局 Lv.4 vs Lv.3 benchmark 裡 R10 相關計數器全部為 0）。
+ * 這裡把同一套修正搬進 beam 的每一步展開，讓序列規劃真的吃得到。
+ *
+ * 對局結束的過渡不疊加任何修正——跟 twoPlyCandidateScore 一致，終局
+ * 分數只看 evaluatePlayerView 的 ±100000。
+ */
+const beamStepBonus = (
+  preState: GameState,
+  postState: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+): number => {
+  if (postState.status === 'finished') return 0
+
+  let bonus = 0
+  if (command.kind === 'attack') {
+    bonus += attackBonus(preState, playerId, command)
+    bonus += lethalDetectionBonus(preState, playerId, command)
+  }
+  bonus += responseRiskPenalty(preState, postState, playerId, command)
+  bonus += handManagementBonus(preState, postState, playerId, command.kind)
+  bonus -= cookieSupportPenalty(preState, playerId, command)
+  return bonus
+}
+
+/**
+ * 回合層 beam search（Lv.4 核心增強）。
+ *
+ * 從當前 state 出發，以 beamWidth × maxDepth 枚舉同一回合內可能的
+ * 行動序列，取「終局 state 分數 + 沿路單步修正總和」最高者，回傳該
+ * 序列的「第一個動作」。
+ *
+ * 若回傳 null 代表 beam 尚未展開出有效動作（合法命令清單為空或全部
+ * 拋例），caller 應 fallback 回傳統單步評估。
+ */
+const beamSearchBestFirstCommand = (
+  state: GameState,
+  playerId: PlayerId,
+  beamWidth: number,
+  maxDepth: number,
+): { firstCommand: PlayerActionCommand | null; beamScore: number } => {
+  let beams: BeamEntry[] = [
+    {
+      state,
+      firstCommand: null,
+      pathBonus: 0,
+      score: stateScore(state, playerId),
+      isTerminal: false,
+    },
+  ]
+
+  for (let depth = 0; depth < maxDepth; depth += 1) {
+    if (beams.every((b) => b.isTerminal)) break
+
+    const nextBeams: BeamEntry[] = []
+
+    for (const beam of beams) {
+      if (beam.isTerminal) {
+        nextBeams.push(beam)
+        continue
+      }
+
+      const commands = getLegalTurnCommands(beam.state, playerId)
+      for (const cmd of commands) {
+        try {
+          const { nextState, isTerminal } = applyBeamAction(beam.state, cmd, playerId)
+          const pathBonus =
+            beam.pathBonus + beamStepBonus(beam.state, nextState, playerId, cmd)
+          const score = stateScore(nextState, playerId) + pathBonus
+          nextBeams.push({
+            state: nextState,
+            firstCommand: beam.firstCommand ?? cmd,
+            pathBonus,
+            score,
+            isTerminal,
+          })
+        } catch {
+          // invalid action within beam — skip
+        }
+      }
+    }
+
+    if (nextBeams.length === 0) break
+
+    // 穩定排序（deterministic tie-break）
+    nextBeams.sort((a, b) => b.score - a.score)
+    beams = nextBeams.slice(0, beamWidth)
+  }
+
+  const best = beams[0]
+  const bestScore = best?.score ?? -Infinity
+  if (!best?.firstCommand) return { firstCommand: null, beamScore: bestScore }
+  // 當 beam 的「最佳序列」根本沒做事（advance-phase 是第一個命令），
+  // best.firstCommand 其實就是 advance-phase；但如果 beams 只有初始
+  // entry（no expansion），firstCommand 為 null，退回 fallback。
+  return { firstCommand: best.firstCommand, beamScore: bestScore }
+}
 
 /**
  * Lv.4 既有核心風險評分（不可刪除）。
@@ -522,16 +720,31 @@ const lv4RiskBonus = (
 /**
  * R10: 對手回應風險扣分（Lv.4 專用）
  *
- * 僅在最明確的高風險場景扣分：我方 break area 偏高時，行動導致 break 惡化。
- * 不讀取對手隱藏資訊，只比較行動前後的公開場面變化。
- * 以 penalty 為主，不做正向加分。
+ * 完整版——逐步落實 docs/ai-training-rules-refined.md R10 的四項 ACTION：
+ * 1) Break race risk：我方 break area 偏高時，行動導致 break 惡化 → 扣分（保留原有 guardrail）
+ * 2) 攻擊者反擊暴露：攻擊動作讓 attacker 休息、且為高 Level（>=2）餅乾；
+ *    若對手公開可見之反擊潛力（未休息戰鬥區攻擊力 + 手牌張數）足以擊倒
+ *    該 attacker，且我方 break 中等以上（被反擊破會擴大 break race）→ 扣分。
+ *
+ * 此項補 lv4RiskBonus 的缺口：lv4RiskBonus 只看靜態戰鬥區 HP/數量，
+ * 不讀對手 hand 與未休息 attacker 攻擊力作為「下一步反擊潛力」。
+ *
+ * 約定：以「負值＝風險」回傳，caller 以 `+= responseRiskPenalty(...)` 疊加，
+ * score 自然被往下扣。不要在 caller 用 `-= responseRiskPenalty(...)`—
+ * 那會把負號反過來、把風險變加分（歷史方向 bug 已於完整版修正）。
+ *
+ * 不讀取對手隱藏資訊（只讀 break area、戰鬥區、手牌張數等公開資訊）。
+ * 以 penalty 為主，不做正向加分。只疊加在 lv4RiskBonus 之上，不取代。
  */
-const responseRiskPenalty = (
+export const responseRiskPenalty = (
   preState: GameState,
   postState: GameState,
   playerId: PlayerId,
+  command: PlayerActionCommand,
 ): number => {
   let penalty = 0
+  const opponentId: PlayerId =
+    playerId === 'player-one' ? 'player-two' : 'player-one'
 
   const preMyBreak = preState.players[playerId].breakArea.reduce(
     (s, c) => s + c.level, 0,
@@ -541,9 +754,41 @@ const responseRiskPenalty = (
   )
   const breakWorsened = postMyBreak - preMyBreak
 
+  // F0 — Break race risk（保留既有 guardrail）
   if (preMyBreak >= 8 && breakWorsened > 0) {
     penalty -= breakWorsened * 12
     r10BreakRaceRiskCount++
+  }
+
+  // F1 — 攻擊者反擊暴露（完整版新增；covers the action '短期賺分但長期崩盤'）
+  if (command.kind === 'attack') {
+    const postAttacker = postState.players[playerId].battleArea.find(
+      (c) => c.card.instanceId === command.attackerInstanceId,
+    )
+    // 攻擊者若已破壞則無後續反擊窗口；F1 只關心「活著但休息且高價值」的 attacker
+    if (postAttacker && postAttacker.rested && postAttacker.card.level >= 2) {
+      const oppUnrestedAtk = postState.players[opponentId].battleArea
+        .filter((c) => !c.rested)
+        .reduce((s, c) => s + c.card.attack, 0)
+      const oppHandCount = postState.players[opponentId].hand.length
+
+      // 觸發條件全部用公開資訊：
+      //  - 我方 break 中等以上（反擊破會擴大 break race）
+      //  - 對手有足夠未休息攻擊力可擊倒 attacker
+      //  - 對手手牌資源 proxy 達到門檻（暗示有 FLIP/trap 加碼反擊）
+      const attackerHp = postAttacker.hpCards.length
+      if (
+        preMyBreak >= 6 &&
+        oppUnrestedAtk >= attackerHp &&
+        oppHandCount >= 3
+      ) {
+        // 罰分幅度刻意保守：基礎 12、level>=3 再加 6、opp 手牌每多 1 張加 2（最多 +6）
+        penalty -= 12
+        penalty -= (postAttacker.card.level - 2) * 6
+        penalty -= Math.min(oppHandCount - 3, 3) * 2
+        r10ExposureRiskCount++
+      }
+    }
   }
 
   if (penalty !== 0) {
@@ -604,8 +849,8 @@ const twoPlyCandidateScore = (
     }
 
     // R10: 對手回應風險扣分（Lv.4 專用）
-    // 僅在最明確的高風險場景扣分，不影響正常行動
-    score -= responseRiskPenalty(state, resolved, playerId)
+    // responseRiskPenalty 回傳非正值（負＝風險），以 += 疊加做扣分。
+    score += responseRiskPenalty(state, resolved, playerId, command)
 
     // R8: 手牌數量管理
     score += handManagementBonus(state, resolved, playerId, command.kind)
@@ -619,15 +864,6 @@ const twoPlyCandidateScore = (
   }
 }
 
-/**
- * Lv.4 兩層前瞻 AI：在支援／主要階段對每個候選動作執行
- * 「apply → resolveBattle（攻擊時）→ 評分 + 風險修正」流程，
- * 取最高分動作。其餘強制流程委派給 Lv.2 turn handler。
- *
- * 核心改進（相較 Lv.3）：
- * 1. 攻擊使用 resolveBattleAutomatically 而非 attackBonus 啟發式
- * 2. 所有評分疊加 lv4RiskBonus（破壞區壓力、低 HP 暴露、高威脅未清除等）
- */
 export const handleAiTwoPlyTurnState = (
   state: GameState,
   playerId: PlayerId,
@@ -655,23 +891,48 @@ export const handleAiTwoPlyTurnState = (
     }
   }
 
+  // ── Beam search 回合層序列規劃 ──
+  // beam 探索最多 3 步 deep，同層保留 top 3 序列。
+  // 攻擊自動結算整場戰鬥；終端 state 直接以 stateScore 打分。
+  const beamWidth = 3
+  const maxBeamDepth = 3
+  const beamResult = beamSearchBestFirstCommand(
+    state,
+    playerId,
+    beamWidth,
+    maxBeamDepth,
+  )
+
   const candidates: TwoPlyCandidate[] = []
 
-  for (const command of getLegalTurnCommands(state, playerId)) {
-    const score = twoPlyCandidateScore(state, playerId, command)
-    try {
-      candidates.push({
-        decision: {
-          // 攻擊停在 trap 階段讓防守方回應；評分已在
-          // twoPlyCandidateScore 內用 resolveBattleAutomatically 完整解析。
-          state: applyChosenTurnCommand(state, command),
-          action: commandActionTypes[command.kind],
-          description: describeCommand(state, playerId, command),
-        },
-        score,
-      })
-    } catch {
-      // skip invalid command
+  if (beamResult.firstCommand) {
+    const decisionState = applyChosenTurnCommand(state, beamResult.firstCommand)
+    candidates.push({
+      decision: {
+        state: decisionState,
+        action: commandActionTypes[beamResult.firstCommand.kind],
+        description: describeCommand(state, playerId, beamResult.firstCommand),
+      },
+      score: beamResult.beamScore,
+    })
+  }
+
+  // fallback：beam 若找不到有效動作，退一步用單指令枚舉
+  if (candidates.length === 0) {
+    for (const command of getLegalTurnCommands(state, playerId)) {
+      const score = twoPlyCandidateScore(state, playerId, command)
+      try {
+        candidates.push({
+          decision: {
+            state: applyChosenTurnCommand(state, command),
+            action: commandActionTypes[command.kind],
+            description: describeCommand(state, playerId, command),
+          },
+          score,
+        })
+      } catch {
+        // skip invalid command
+      }
     }
   }
 

@@ -3,6 +3,7 @@ import { getCardPoolEntry } from './card-pool'
 import type {
   CookieCard,
   CookieInBattle,
+  EnergyColor,
   GameCard,
   GameState,
   PlayerId,
@@ -15,12 +16,26 @@ export const SCENARIO_MAX_BATTLE_SLOTS = 2
 export interface ScenarioCookieSlot {
   cardNumber: string
   hp?: number
+  /** 指定每張 HP 卡；未指定時以 `hp` 或餅乾原始 HP 產生填充卡。 */
+  hpCards?: string[]
 }
 
 export interface ScenarioSideConfig {
   battle: ScenarioCookieSlot[]
+  /** 測試開始時直接放入手牌的卡號。 */
+  hand?: string[]
+  /** 牌庫頂端到尾端的指定卡號；未指定的尾端以測試填充卡補足。 */
+  deck?: string[]
   breakArea: string[]
   supportCount: number
+  /** 支援區能量顏色；未指定或不足的張數以萬用能量補足。 */
+  supportColors?: string[]
+  /** 指定支援區實際卡片；不足的張數由 `supportColors`／萬用能量補足。 */
+  supportCards?: string[]
+  /** 測試開始時放置在場景區的卡片。 */
+  stageCard?: string
+  /** 測試開始時直接放入棄牌區的卡片。 */
+  discardPile?: string[]
 }
 
 export interface ScenarioConfig {
@@ -62,20 +77,143 @@ const createFillerHpCard = (
   officialType: 'item',
 })
 
+const SCENARIO_ENERGY_NAMES: Record<EnergyColor | 'wild', string> = {
+  red: '紅色能量',
+  yellow: '黃色能量',
+  green: '綠色能量',
+  blue: '藍色能量',
+  purple: '紫色能量',
+  black: '黑色能量',
+  pure: '純色能量',
+  wild: '萬用能量',
+}
+
 const createEnergyToken = (
   playerId: PlayerId,
   index: number,
+  energyColor: EnergyColor | 'wild' = 'wild',
 ): SupportCard => ({
   card: {
     id: 'scenario-energy-token',
     instanceId: `scenario-energy-${playerId}-${index}`,
-    name: '萬能能量（測試用）',
+    name: `${SCENARIO_ENERGY_NAMES[energyColor]}（測試用）`,
     type: 'item',
     officialType: 'item',
-    energyColor: 'wild',
+    energyColor,
   },
   rested: false,
 })
+
+const SCENARIO_SUPPORT_COLOR_ALIASES: Record<
+  string,
+  EnergyColor | 'wild'
+> = {
+  r: 'red',
+  red: 'red',
+  紅: 'red',
+  y: 'yellow',
+  yellow: 'yellow',
+  黃: 'yellow',
+  g: 'green',
+  green: 'green',
+  綠: 'green',
+  b: 'blue',
+  blue: 'blue',
+  藍: 'blue',
+  p: 'purple',
+  purple: 'purple',
+  紫: 'purple',
+  k: 'black',
+  black: 'black',
+  黑: 'black',
+  pure: 'pure',
+  純: 'pure',
+  n: 'wild',
+  w: 'wild',
+  wild: 'wild',
+  any: 'wild',
+  neutral: 'wild',
+  萬用: 'wild',
+}
+
+const resolveScenarioSupportColor = (
+  rawColor: string,
+): EnergyColor | 'wild' | null =>
+  SCENARIO_SUPPORT_COLOR_ALIASES[rawColor.trim().toLowerCase()] ?? null
+
+const buildCardList = (
+  cardNumbers: string[] | undefined,
+  playerId: PlayerId,
+  copyIndexBase: number,
+  errors: string[],
+): GameCard[] =>
+  (cardNumbers ?? [])
+    .map((cardNumber, index) =>
+      resolveCard(cardNumber, playerId, copyIndexBase + index, errors),
+    )
+    .filter((card): card is GameCard => card !== null)
+
+const buildSupportArea = (
+  playerId: PlayerId,
+  count: number,
+  rawColors: string[] | undefined,
+  explicitCardNumbers: string[] | undefined,
+  errors: string[],
+): SupportCard[] => {
+  const supportCount = Math.max(0, Math.floor(count))
+  const explicitEntries = (explicitCardNumbers ?? [])
+    .map((cardNumber, index) => ({
+      rawCardNumber: cardNumber.trim(),
+      card: resolveCard(cardNumber, playerId, 300 + index, errors),
+    }))
+    .filter(
+      (entry): entry is { rawCardNumber: string; card: GameCard } =>
+        entry.card !== null,
+    )
+  const explicitCards = explicitEntries.map(({ card }) => card)
+
+  if (explicitCards.length > supportCount) {
+    errors.push('支援區指定卡片數量不可超過支援區張數。')
+  }
+
+  explicitEntries.forEach(({ card, rawCardNumber }) => {
+    if (!card.energyColor) {
+      errors.push(`支援區卡片「${rawCardNumber}」沒有可支付的能量顏色。`)
+    }
+  })
+
+  const colors: Array<EnergyColor | 'wild'> = []
+  for (const rawColor of rawColors ?? []) {
+    const trimmedColor = rawColor.trim()
+    if (!trimmedColor) continue
+
+    const color = resolveScenarioSupportColor(trimmedColor)
+    if (!color) {
+      errors.push(`無法辨識支援區能量顏色「${trimmedColor}」。`)
+      continue
+    }
+    colors.push(color)
+  }
+
+  const generatedCount = Math.max(0, supportCount - explicitCards.length)
+  if (colors.length > generatedCount) {
+    errors.push('支援區能量顏色數量不可超過未指定卡片的張數。')
+  }
+
+  return [
+    ...explicitCards.slice(0, supportCount).map((card) => ({
+      card,
+      rested: false,
+    })),
+    ...Array.from({ length: generatedCount }, (_, index) =>
+      createEnergyToken(
+        playerId,
+        explicitCards.length + index,
+        colors[index] ?? 'wild',
+      ),
+    ),
+  ]
+}
 
 const createFillerDeckCard = (playerId: PlayerId, index: number): GameCard => ({
   id: 'scenario-filler-deck-card',
@@ -84,6 +222,26 @@ const createFillerDeckCard = (playerId: PlayerId, index: number): GameCard => ({
   type: 'item',
   officialType: 'item',
 })
+
+const buildDeck = (
+  deckNumbers: string[] | undefined,
+  playerId: PlayerId,
+  errors: string[],
+): GameCard[] => {
+  const configuredCards = buildCardList(deckNumbers, playerId, 100, errors)
+  if (configuredCards.length > FILLER_DECK_SIZE) {
+    errors.push(`牌庫指定卡片數量不可超過 ${FILLER_DECK_SIZE} 張。`)
+  }
+
+  const cards = configuredCards.slice(0, FILLER_DECK_SIZE)
+  return [
+    ...cards,
+    ...Array.from(
+      { length: Math.max(0, FILLER_DECK_SIZE - cards.length) },
+      (_, index) => createFillerDeckCard(playerId, cards.length + index),
+    ),
+  ]
+}
 
 const buildBattleArea = (
   slots: ScenarioCookieSlot[],
@@ -106,12 +264,24 @@ const buildBattleArea = (
       0,
       Math.min(slot.hp ?? cookieCard.hp, cookieCard.hp),
     )
+    const hpCards = slot.hpCards !== undefined
+      ? buildCardList(
+          slot.hpCards,
+          playerId,
+          1200 + index * 100,
+          errors,
+        )
+      : Array.from({ length: hp }, (_, hpIndex) =>
+          createFillerHpCard(cookieCard.instanceId, hpIndex),
+        )
+
+    if (slot.hpCards !== undefined && slot.hpCards.length > cookieCard.hp) {
+      errors.push(`餅乾「${cookieCard.name}」的指定 HP 卡不可超過 ${cookieCard.hp} 張。`)
+    }
 
     battle.push({
       card: cookieCard,
-      hpCards: Array.from({ length: hp }, (_, hpIndex) =>
-        createFillerHpCard(cookieCard.instanceId, hpIndex),
-      ),
+      hpCards,
       rested: false,
       battleEntryId: `${cookieCard.instanceId}:battle:${index + 1}`,
     })
@@ -142,6 +312,23 @@ const buildBreakArea = (
   return cards
 }
 
+const buildStage = (
+  cardNumber: string | undefined,
+  playerId: PlayerId,
+  errors: string[],
+): PlayerState['stage'] => {
+  if (!cardNumber?.trim()) return null
+
+  const card = resolveCard(cardNumber, playerId, 1100, errors)
+  if (!card) return null
+  if (card.type !== 'stage') {
+    errors.push(`場景區卡片「${card.name}」不是場景卡。`)
+    return null
+  }
+
+  return { card, rested: false }
+}
+
 const FILLER_DECK_SIZE = 40
 
 const buildPlayerState = (
@@ -149,26 +336,32 @@ const buildPlayerState = (
   name: string,
   side: ScenarioSideConfig,
   errors: string[],
-): PlayerState => ({
-  id: playerId,
-  name,
-  deck: Array.from({ length: FILLER_DECK_SIZE }, (_, index) =>
-    createFillerDeckCard(playerId, index),
-  ),
-  hand: [],
-  battleArea: buildBattleArea(side.battle, playerId, errors),
-  supportArea: Array.from(
-    { length: Math.max(0, Math.floor(side.supportCount)) },
-    (_, index) => createEnergyToken(playerId, index),
-  ),
-  breakArea: buildBreakArea(side.breakArea, playerId, errors),
-  discardPile: [],
-  stage: null,
-  hasMulliganed: true,
-  startingCookieSelected: true,
-  freeMulliganDecided: true,
-  forcedMulliganCount: 0,
-})
+): PlayerState => {
+  const hand = buildCardList(side.hand, playerId, 500, errors)
+  const discardPile = buildCardList(side.discardPile, playerId, 600, errors)
+
+  return {
+    id: playerId,
+    name,
+    deck: buildDeck(side.deck, playerId, errors),
+    hand,
+    battleArea: buildBattleArea(side.battle, playerId, errors),
+    supportArea: buildSupportArea(
+      playerId,
+      side.supportCount,
+      side.supportColors,
+      side.supportCards,
+      errors,
+    ),
+    breakArea: buildBreakArea(side.breakArea, playerId, errors),
+    discardPile,
+    stage: buildStage(side.stageCard, playerId, errors),
+    hasMulliganed: true,
+    startingCookieSelected: true,
+    freeMulliganDecided: true,
+    forcedMulliganCount: 0,
+  }
+}
 
 export const getBreakAreaLevelPreview = (
   cardNumbers: string[],

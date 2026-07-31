@@ -162,7 +162,11 @@ describe('MainMenu AI opponent options', () => {
     expect([...selects[0].options].map((option) => option.value)).toContain(
       'bs2-purple',
     )
+    expect([...selects[0].options].map((option) => option.value)).toContain(
+      'bs3-green-lily',
+    )
     expect(container.textContent).toContain('第二彈藍色牌組')
+    expect(container.textContent).toContain('第三彈綠色・聖百合餅乾')
 
     await act(() => root.unmount())
   })

@@ -87,7 +87,7 @@ function App() {
   const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
     testStateConfig ? 'battle' : 'menu',
   )
-  const [aiLevel, setAiLevel] = useState<AiLevel>(2)
+  const [aiLevel, setAiLevel] = useState<AiLevel>(4)
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
   const dialogs = useMatchDialogs()
@@ -542,6 +542,7 @@ function App() {
         effectHistory={pending.effectHistory}
         onConfirm={pending.confirmEffect}
         onChooseMode={pending.chooseEffectMode}
+        effectConditionMet={pending.currentEffectConditionMet}
         trashToDeckBottomCandidates={pending.skillTrashToDeckBottomCandidates}
         selectedTrashToDeckBottomIds={pending.selectedSkillTrashToDeckBottomIds}
         onToggleTrashToDeckBottom={pending.toggleSkillTrashToDeckBottom}

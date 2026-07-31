@@ -1,7 +1,7 @@
 # AI 等級分級設計
 
-> **狀態：Lv.1–Lv.4 已實作完成；Lv.5 為設計稿，未實作。**
-> **最後更新：2026-07-08（Phase 5）；2026-07-11 補充體感觀察結論。**
+> **狀態：Lv.1–Lv.4 已實作完成；Lv.4 採用 beam search 回合層序列規劃。Lv.5 為設計稿，未實作。**
+> **最後更新：2026-07-31（beam search 上線後修正 R8/R9/R10 死碼 bug）。**
 
 ## Lv.5 投入前觀察（2026-07-11）
 
@@ -14,7 +14,7 @@
 | Lv.1 | 隨機出招 | 從合法動作中隨機挑選；不主動使用技能 | 無 | ✅ 完成 |
 | Lv.2 | 基礎戰術 | 啟發式：能出牌就出牌、攻擊最低 HP 目標、斬殺優先 | R1–R4, R6a | ✅ 完成 |
 | Lv.3 | 評估式 | 對候選動作套用後以 PlayerView 評分，取最高分 | +R5, R6b, R7, R8 | ✅ 完成 |
-| Lv.4 | 兩層前瞻 | 枚舉動作序列，對回合終局狀態評分 + 風險管理 | +R9, R10, lv4RiskBonus | ✅ 完成 |
+| Lv.4 | 兩層前瞻 | beam search 回合層序列規劃（w=3, d=3），終局 state 評分 + 風險管理 | +R9, R10, lv4RiskBonus | ✅ 完成 |
 | Lv.5 | 對抗性 | 在 Lv.4 之上加入對手回應期望值 | 未實作 | ⬜ 設計稿 |
 
 ## 勝率驗收（seeds 1–30）
@@ -47,7 +47,7 @@
 | R7 | 陷阱防護高價值目標 | Lv.3+ | ✅ Done |
 | R8 | 手牌數量管理 | Lv.3+ | ✅ Done |
 | R9 | 致命傷害偵測 | Lv.4 | ✅ Done |
-| R10 | 對手回應風險評估 | Lv.4 | ✅ Guardrail |
+| R10 | 對手回應風險評估 | Lv.4 | ✅ 完整版（F0 + F1） |
 
 ### R6c Deferred 理由
 
@@ -70,10 +70,12 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 ### Lv.4 特殊組件
 
 | 組件 | 位置 | 說明 |
-|---|---|---|
+|---|---|---|---|
+| `beamSearchBestFirstCommand` | evaluated-turn-handler.ts | 回合層 beam search（w=3, d=3, attacks auto-resolved）+ `stateScore` + `beamStepBonus` |
+| `beamStepBonus` | evaluated-turn-handler.ts | beam 每一步展開的單步修正（attackBonus/R9/R10/R8/cookieSupportPenalty），沿路徑累加進 `pathBonus` |
 | `lv4RiskBonus` | evaluated-turn-handler.ts | 核心風險評分（不可刪除） |
 | `lethalDetectionBonus` | evaluated-turn-handler.ts | R9 致命偵測 |
-| `responseRiskPenalty` | evaluated-turn-handler.ts | R10 break 惡化 guardrail |
+| `responseRiskPenalty` | evaluated-turn-handler.ts | R10 完整版：F0 break race risk guardrail + F1 attacker 反擊暴露 |
 
 ## 已知問題
 
@@ -81,6 +83,28 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 2. Lv.4 vs Lv.3 = 73.3%，接近 75% 警戒線
 3. Lv.3 vs Lv.1 = 100%（ceiling effect，擴大牌組池後需重新驗證）
 4. 勝利條件為 `break >= 10`（非 12），所有規則已修正為正確閾值
+
+### 2026-07-31：beam search 上線曾讓 R8/R9/R10 變成死碼（已修正）
+
+R10 完整版（F1 attacker 反擊暴露）與回合層 beam search 是同一天先後兩個 commit。
+beam search 把 `handleAiTwoPlyTurnState` 的主要評分路徑換成
+`beamSearchBestFirstCommand`（只用 `stateScore` = `evaluatePlayerView` +
+`lv4RiskBonus`），而 `attackBonus`／`lethalDetectionBonus`（R9）／
+`responseRiskPenalty`（R10）／`handManagementBonus`（R8）／
+`cookieSupportPenalty` 全部只存在於 `twoPlyCandidateScore` 這條
+fallback 路徑。由於 `getLegalTurnCommands` 一律含 `advance-phase`
+（見 legal-actions.ts），beam 幾乎不可能回傳 `null`，fallback 在真實
+對局中打不到——實測 60 局 Lv.4 vs Lv.3，`r10ExposureRiskCount` /
+`r10BreakRaceRiskCount` / `r10PenaltyAppliedCount` 全部是 0。
+
+修正：新增 `beamStepBonus`，在 beam 展開每一步（`preState → postState`
+套用 `command`）都疊加同一套單步修正，沿路徑累加進 `BeamEntry.pathBonus`，
+最終分數為 `stateScore(終局) + pathBonus`。已補上整合層回歸測試
+（`ai-beam-search.test.ts`：直接呼叫 `handleAiTwoPlyTurnState`，驗證
+`getR10Counters()` 真的會變化，而不是只測 `responseRiskPenalty`
+純函式）。300 seeds 驗證：Lv.4 vs Lv.3 從（死碼狀態下）59.3% 降為
+56.7%——R10 開始真的抑制某些會暴露反擊風險的攻擊，屬預期內的保守化，
+未觸發任何上限或下限警戒。
 
 ## 測試狀態
 
