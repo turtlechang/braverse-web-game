@@ -16,6 +16,7 @@ import { getTrashBattleCookieCostCandidates } from '../skills'
 import type { CardEffect, EffectContext, GameState, GameCard, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
 import { isRuleEnabled } from './rule-profiles'
+import { getCardEffectValue } from './bs2MatchupProfiles'
 
 const chooseAttackEffectTargets = (
   state: GameState,
@@ -90,7 +91,7 @@ const EFFECT_VALUE_MAP: Record<string, number> = {
   'support-to-hand': 5,
 }
 
-const evaluateTrapWorth = (
+export const evaluateTrapWorth = (
   state: GameState,
   playerId: PlayerId,
   trapCard: GameCard,
@@ -115,12 +116,15 @@ const evaluateTrapWorth = (
   score += targetLevel * 15
   score += targetHp * 10
 
-  // 高效果價值餅乾加分
-  const highEffectNames = [
-    'Rebel', 'Dark Choco', 'Sea Fairy', 'Wind Archer', 'Banana',
-    'Vampire', 'Red Bean', 'Cream Unicorn', 'Black Raisin',
-  ]
-  if (highEffectNames.some((n) => defender.card.name.includes(n))) {
+  // 高效果價值餅乾加分——原本是寫死的卡名子字串清單，只涵蓋 BS1／BS2 少數
+  // 幾張卡，且用 `name.includes(...)` 比對；同名跨彈重印卡（例如 BS1-012／
+  // BS3-009 都叫 Wildberry Cookie）會被誤套，BS3 卡片不管技能多強都拿不到
+  // 這個加分。改用 getCardEffectValue：已收錄的卡沿用調校過的數字，查無
+  // 資料的新卡改讀 card.skill.effects 直接推算，門檻 >= 5 對應原本清單裡
+  // 那些卡在 EFFECT_VALUE_BONUS 的實際分數（Rebel/Dark Choco 8、Red
+  // Bean/Sea Fairy/Wind Archer 7、Black Raisin/Banana/Vampire 6、Cream
+  // Unicorn 5）。
+  if (getCardEffectValue(defender.card) >= 5) {
     score += 20
   }
 

@@ -683,6 +683,16 @@ const DEFENSIVE_COOKIE_IDS = new Set([
 ])
 
 /**
+ * 「這張卡效果強不強」的統一入口：手刻表格查得到就用調校過的數字，查不到
+ * 才用 estimateSkillEffectValue 從技能結構推算。battle-handler.ts 的 R7
+ * 陷阱評分（判斷保護目標值不值得）也共用這個，避免同一個判斷各自維護一份
+ * ——那邊原本是另一份寫死的卡名清單，一樣只涵蓋 BS1／BS2，也一樣用卡名
+ * 子字串比對而不是卡號，見該檔案的說明。
+ */
+export const getCardEffectValue = (card: GameCard): number =>
+  card.id in EFFECT_VALUE_BONUS ? EFFECT_VALUE_BONUS[card.id] : estimateSkillEffectValue(card)
+
+/**
  * R6b: 計算替補進階分數
  *
  * 分數組成：
@@ -712,9 +722,7 @@ export const scoreReplacementAdvanced = (
   // estimateSkillEffectValue 從 card.skill.effects 直接推算，不再假裝一律
   // 中等（2）。
   const isKnownCard = card.id in EFFECT_VALUE_BONUS
-  const effectBonus = isKnownCard
-    ? EFFECT_VALUE_BONUS[card.id]
-    : estimateSkillEffectValue(card)
+  const effectBonus = getCardEffectValue(card)
 
   // R6b: boardNeedBonus
   let boardNeedBonus = 0
