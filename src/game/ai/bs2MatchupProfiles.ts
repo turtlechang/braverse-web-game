@@ -34,84 +34,87 @@ export interface ReplacementScore {
 }
 
 // 紅色餅乾替補評分（對手：綠色/黃色）
+// 以官方卡號（card.id）為 key，不用卡名——同名卡在不同彈會重印成完全不同的
+// 卡（例如 BS1-012／BS3-009 都叫 Wildberry Cookie），用卡名當 key 會讓新彈
+// 重印卡誤套到舊彈的評分。key 旁的卡名註解僅供閱讀，不參與比對。
 const RED_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
-  'Rebel Cookie': { baseScore: 95, reason: '高攻擊，能創造節奏' },
-  'Dark Choco Cookie': { baseScore: 95, reason: '高攻擊，穩定輸出' },
-  'Princess Cookie': { baseScore: 85, reason: '穩定的二級餅乾' },
-  'Muscle Cookie': { baseScore: 80, reason: '穩定' },
-  'Cherry Cookie': { baseScore: 70, reason: '有效果但 HP 較低' },
-  'Mala Sauce Cookie': { baseScore: 70, reason: '有效果但 HP 較低' },
-  'Whipped Cream Cookie': { baseScore: 65, reason: '有效果但 HP 較低' },
-  'Wildberry Cookie': { baseScore: 60, reason: 'Lv3 但要小心使用' },
-  'Kumiho Cookie': { baseScore: 60, reason: 'Lv3 但要小心使用' },
-  'Popcorn Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Adventurer Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Carrot Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Melon Bun Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
+  'BS2-003': { baseScore: 95, reason: '高攻擊，能創造節奏' }, // Rebel Cookie
+  'BS1-003': { baseScore: 95, reason: '高攻擊，穩定輸出' }, // Dark Choco Cookie
+  'ST1-001': { baseScore: 85, reason: '穩定的二級餅乾' }, // Princess Cookie
+  'BS2-001': { baseScore: 80, reason: '穩定' }, // Muscle Cookie
+  'BS2-004': { baseScore: 70, reason: '有效果但 HP 較低' }, // Cherry Cookie
+  'BS1-006': { baseScore: 70, reason: '有效果但 HP 較低' }, // Mala Sauce Cookie
+  'BS1-021': { baseScore: 65, reason: '有效果但 HP 較低' }, // Whipped Cream Cookie
+  'BS1-012': { baseScore: 60, reason: 'Lv3 但要小心使用' }, // Wildberry Cookie
+  'BS1-002': { baseScore: 60, reason: 'Lv3 但要小心使用' }, // Kumiho Cookie
+  'BS1-018': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Popcorn Cookie
+  'ST1-013': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Adventurer Cookie
+  'ST1-004': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Carrot Cookie
+  'BS1-007': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Melon Bun Cookie
 }
 
 // 黃色餅乾替補評分（對手：紅色/綠色）
 const YELLOW_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
-  'Banana Cookie': { baseScore: 95, reason: 'HP 高，能撐很久' },
-  'Vampire Cookie': { baseScore: 95, reason: 'HP 高，有回復能力' },
-  'Marshmallow Cookie': { baseScore: 85, reason: 'HP 高，穩定' },
-  'Snake Fruit Cookie': { baseScore: 75, reason: '有效果但 HP 較低' },
-  'Rockstar Cookie': { baseScore: 75, reason: '攻擊力高但 HP 較低' },
-  'Eclair Cookie': { baseScore: 70, reason: '高等級但要小心使用' },
-  'Earl Grey Cookie': { baseScore: 70, reason: '高等級但要小心使用' },
-  'Blackberry Cookie': { baseScore: 65, reason: '高等級但要小心使用' },
-  'Chestnut Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Mustard Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Cyborg Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
+  'BS1-032': { baseScore: 95, reason: 'HP 高，能撐很久' }, // Banana Cookie
+  'BS2-010': { baseScore: 95, reason: 'HP 高，有回復能力' }, // Vampire Cookie
+  'BS1-031': { baseScore: 85, reason: 'HP 高，穩定' }, // Marshmallow Cookie
+  'BS1-036': { baseScore: 75, reason: '有效果但 HP 較低' }, // Snake Fruit Cookie
+  'BS1-030': { baseScore: 75, reason: '攻擊力高但 HP 較低' }, // Rockstar Cookie
+  'ST2-008': { baseScore: 70, reason: '高等級但要小心使用' }, // Eclair Cookie
+  'BS1-040': { baseScore: 70, reason: '高等級但要小心使用' }, // Earl Grey Cookie
+  'BS2-011': { baseScore: 65, reason: '高等級但要小心使用' }, // Blackberry Cookie
+  'ST2-007': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Chestnut Cookie
+  'ST2-005': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Mustard Cookie
+  'BS1-033': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Cyborg Cookie
 }
 
 // 綠色餅乾替補評分（對手：紅色/黃色）
 const GREEN_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
-  'Red Bean Cookie': { baseScore: 95, reason: '高攻擊，穩定' },
-  'Onion Cookie': { baseScore: 90, reason: '穩定的二級餅乾' },
-  'Avocado Cookie': { baseScore: 85, reason: '穩定' },
-  'Blue Lily Cookie': { baseScore: 75, reason: '高等級但要小心' },
-  'Lemon Thyme Cookie': { baseScore: 70, reason: '有效果但 HP 較低' },
-  'Ninja Cookie': { baseScore: 60, reason: '有效果但 HP 較低' },
-  'Angel Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Spinach Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Bellflower Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Cookiemals': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Banana Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Melon Bun Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Candlelight Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Salt Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
+  'BS1-055': { baseScore: 95, reason: '高攻擊，穩定' }, // Red Bean Cookie
+  'ST3-011': { baseScore: 90, reason: '穩定的二級餅乾' }, // Onion Cookie
+  'ST3-009': { baseScore: 85, reason: '穩定' }, // Avocado Cookie
+  'BS1-054': { baseScore: 75, reason: '高等級但要小心' }, // Blue Lily Cookie
+  'BS2-015': { baseScore: 70, reason: '有效果但 HP 較低' }, // Lemon Thyme Cookie
+  'BS2-053': { baseScore: 60, reason: '有效果但 HP 較低' }, // Ninja Cookie
+  'ST3-014': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Angel Cookie
+  'ST3-008': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Spinach Cookie
+  'BS1-057': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Bellflower Cookie
+  'BS1-069': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Cookiemals
+  'BS1-032': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Banana Cookie（綠色牌組僅少量搭配）
+  'BS1-007': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Melon Bun Cookie
+  'BS2-018': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Candlelight Cookie
+  'BS2-035': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Salt Cookie
 }
 
 // 藍色餅乾替補評分（對手：紅色/黃色/綠色/紫色）
 const BLUE_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
-  'Sea Fairy Cookie': { baseScore: 95, reason: 'HP 高，攻擊力強，後期核心' },
-  'Black Raisin Cookie': { baseScore: 90, reason: 'HP 高，AOE 傷害' },
-  'Sherbet Cookie': { baseScore: 85, reason: 'HP 高，回手效果' },
-  'Tiramisu Cookie': { baseScore: 80, reason: '有效果，對 Lv1 餅乾額外傷害' },
-  'Salt Cookie': { baseScore: 75, reason: 'HP 高，穩定' },
-  'Chocolate Bonbon Cookie': { baseScore: 70, reason: '高等級但 Flip 需手牌' },
-  'Sour Belt Cookie': { baseScore: 65, reason: '抽牌效果但 HP 較低' },
-  'Aloe Cookie': { baseScore: 60, reason: '滅亡效果但 HP 低' },
-  'Milk Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Skating Queen Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Peppermint Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
+  'BS2-029': { baseScore: 95, reason: 'HP 高，攻擊力強，後期核心' }, // Sea Fairy Cookie
+  'BS2-031': { baseScore: 90, reason: 'HP 高，AOE 傷害' }, // Black Raisin Cookie
+  'BS2-036': { baseScore: 85, reason: 'HP 高，回手效果' }, // Sherbet Cookie
+  'BS2-044': { baseScore: 80, reason: '有效果，對 Lv1 餅乾額外傷害' }, // Tiramisu Cookie
+  'BS2-035': { baseScore: 75, reason: 'HP 高，穩定' }, // Salt Cookie
+  'BS2-037': { baseScore: 70, reason: '高等級但 Flip 需手牌' }, // Chocolate Bonbon Cookie
+  'ST4-007': { baseScore: 65, reason: '抽牌效果但 HP 較低' }, // Sour Belt Cookie
+  'BS2-040': { baseScore: 60, reason: '滅亡效果但 HP 低' }, // Aloe Cookie
+  'BS2-042': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Milk Cookie
+  'ST4-014': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Skating Queen Cookie
+  'ST4-006': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Peppermint Cookie
 }
 
 // 紫色餅乾替補評分（對手：紅色/黃色/綠色/藍色）
 const PURPLE_REPLACEMENT_SCORES: Record<string, ReplacementScore> = {
-  'Wind Archer Cookie': { baseScore: 95, reason: 'HP 高，攻擊力強，後期核心' },
-  'Poison Mushroom Cookie': { baseScore: 90, reason: 'HP 高，登場清場' },
-  'Cream Unicorn Cookie': { baseScore: 85, reason: 'HP 高，破壞區回收' },
-  'Clotted Cream Cookie': { baseScore: 80, reason: '有效果，送對手 Lv1 進破壞區' },
-  'White Choco Cookie': { baseScore: 75, reason: '有效果，對 Lv1 餅乾額外傷害' },
-  'Hydrangea Cookie': { baseScore: 70, reason: '破壞區回收效果' },
-  'Yoga Cookie': { baseScore: 65, reason: '有效果但 HP 較低' },
-  'Starfruit Cookie': { baseScore: 60, reason: '犧牲效果需謹慎使用' },
-  'Raspberry Mousse Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Fig Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Fairy Cookie': { baseScore: 10, reason: 'HP 1 太容易被換掉' },
-  'Pastry Cookie': { baseScore: 55, reason: 'Flip 需手牌，HP 較低' },
+  'BS2-058': { baseScore: 95, reason: 'HP 高，攻擊力強，後期核心' }, // Wind Archer Cookie
+  'BS2-055': { baseScore: 90, reason: 'HP 高，登場清場' }, // Poison Mushroom Cookie
+  'BS2-068': { baseScore: 85, reason: 'HP 高，破壞區回收' }, // Cream Unicorn Cookie
+  'BS2-069': { baseScore: 80, reason: '有效果，送對手 Lv1 進破壞區' }, // Clotted Cream Cookie
+  'BS2-075': { baseScore: 75, reason: '有效果，對 Lv1 餅乾額外傷害' }, // White Choco Cookie
+  'BS2-061': { baseScore: 70, reason: '破壞區回收效果' }, // Hydrangea Cookie
+  'ST5-007': { baseScore: 65, reason: '有效果但 HP 較低' }, // Yoga Cookie
+  'BS2-062': { baseScore: 60, reason: '犧牲效果需謹慎使用' }, // Starfruit Cookie
+  'BS2-056': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Raspberry Mousse Cookie
+  'ST5-003': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Fig Cookie
+  'ST5-008': { baseScore: 10, reason: 'HP 1 太容易被換掉' }, // Fairy Cookie
+  'BS2-072': { baseScore: 55, reason: 'Flip 需手牌，HP 較低' }, // Pastry Cookie
 }
 
 // ============================================================================
@@ -125,133 +128,137 @@ export interface AttackThreatScore {
 
 // 紅色對手（綠色/黃色）的威脅值
 const RED_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
-  'Red Bean Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Onion Cookie': { threatValue: 90, reason: 'HP 高，穩定' },
-  'Blue Lily Cookie': { threatValue: 85, reason: 'Lv3，強力效果' },
-  'Lemon Thyme Cookie': { threatValue: 80, reason: '有效果' },
-  'Avocado Cookie': { threatValue: 75, reason: 'HP 高，穩定' },
-  'Banana Cookie': { threatValue: 70, reason: 'HP 高' },
-  'Vampire Cookie': { threatValue: 70, reason: 'HP 高，有回復' },
-  'Eclair Cookie': { threatValue: 65, reason: 'Lv3 但要小心' },
-  'Timekeeper Cookie': { threatValue: 65, reason: 'Lv3 但要小心' },
-  'Rockstar Cookie': { threatValue: 60, reason: '攻擊力高' },
-  'Angel Cookie': { threatValue: 10, reason: '價值低' },
-  'Spinach Cookie': { threatValue: 10, reason: '價值低' },
-  'Bellflower Cookie': { threatValue: 10, reason: '價值低' },
-  'Cookiemals': { threatValue: 10, reason: '價值低' },
-  'Candlelight Cookie': { threatValue: 10, reason: '價值低' },
-  'Salt Cookie': { threatValue: 10, reason: '價值低' },
-  'Melon Bun Cookie': { threatValue: 10, reason: '價值低' },
+  'BS1-055': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Red Bean Cookie
+  'ST3-011': { threatValue: 90, reason: 'HP 高，穩定' }, // Onion Cookie
+  'BS1-054': { threatValue: 85, reason: 'Lv3，強力效果' }, // Blue Lily Cookie
+  'BS2-015': { threatValue: 80, reason: '有效果' }, // Lemon Thyme Cookie
+  'ST3-009': { threatValue: 75, reason: 'HP 高，穩定' }, // Avocado Cookie
+  'BS1-032': { threatValue: 70, reason: 'HP 高' }, // Banana Cookie
+  'BS2-010': { threatValue: 70, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'ST2-008': { threatValue: 65, reason: 'Lv3 但要小心' }, // Eclair Cookie
+  'BS1-037': { threatValue: 65, reason: 'Lv3 但要小心' }, // Timekeeper Cookie
+  'BS1-030': { threatValue: 60, reason: '攻擊力高' }, // Rockstar Cookie
+  'ST3-014': { threatValue: 10, reason: '價值低' }, // Angel Cookie
+  'ST3-008': { threatValue: 10, reason: '價值低' }, // Spinach Cookie
+  'BS1-057': { threatValue: 10, reason: '價值低' }, // Bellflower Cookie
+  'BS1-069': { threatValue: 10, reason: '價值低' }, // Cookiemals
+  'BS2-018': { threatValue: 10, reason: '價值低' }, // Candlelight Cookie
+  'BS2-035': { threatValue: 10, reason: '價值低' }, // Salt Cookie
+  'BS1-007': { threatValue: 10, reason: '價值低' }, // Melon Bun Cookie
 }
 
 // 黃色對手（紅色）的威脅值
 const YELLOW_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
-  'Rebel Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Dark Choco Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Princess Cookie': { threatValue: 80, reason: 'HP 高，穩定' },
-  'Mala Sauce Cookie': { threatValue: 75, reason: '有效果' },
-  'Cherry Cookie': { threatValue: 70, reason: '有效果' },
-  'Muscle Cookie': { threatValue: 65, reason: '穩定' },
-  'Popcorn Cookie': { threatValue: 10, reason: '價值低' },
-  'Carrot Cookie': { threatValue: 10, reason: '價值低' },
-  'Adventurer Cookie': { threatValue: 10, reason: '價值低' },
+  'BS2-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Rebel Cookie
+  'BS1-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Dark Choco Cookie
+  'ST1-001': { threatValue: 80, reason: 'HP 高，穩定' }, // Princess Cookie
+  'BS1-006': { threatValue: 75, reason: '有效果' }, // Mala Sauce Cookie
+  'BS2-004': { threatValue: 70, reason: '有效果' }, // Cherry Cookie
+  'BS2-001': { threatValue: 65, reason: '穩定' }, // Muscle Cookie
+  'BS1-018': { threatValue: 10, reason: '價值低' }, // Popcorn Cookie
+  'ST1-004': { threatValue: 10, reason: '價值低' }, // Carrot Cookie
+  'ST1-013': { threatValue: 10, reason: '價值低' }, // Adventurer Cookie
 }
 
 // 綠色對手（紅色/黃色）的威脅值
 const GREEN_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
-  'Rebel Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Dark Choco Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Princess Cookie': { threatValue: 80, reason: 'HP 高，穩定' },
-  'Banana Cookie': { threatValue: 85, reason: 'HP 高' },
-  'Vampire Cookie': { threatValue: 85, reason: 'HP 高，有回復' },
-  'Eclair Cookie': { threatValue: 75, reason: 'Lv3 但要小心' },
-  'Timekeeper Cookie': { threatValue: 75, reason: 'Lv3 但要小心' },
-  'Rockstar Cookie': { threatValue: 70, reason: '攻擊力高' },
-  'Mala Sauce Cookie': { threatValue: 65, reason: '有效果' },
-  'Cherry Cookie': { threatValue: 60, reason: '有效果' },
-  'Popcorn Cookie': { threatValue: 10, reason: '價值低' },
-  'Carrot Cookie': { threatValue: 10, reason: '價值低' },
-  'Adventurer Cookie': { threatValue: 10, reason: '價值低' },
-  'Chestnut Cookie': { threatValue: 10, reason: '價值低' },
-  'Mustard Cookie': { threatValue: 10, reason: '價值低' },
-  'Cyborg Cookie': { threatValue: 10, reason: '價值低' },
+  'BS2-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Rebel Cookie
+  'BS1-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Dark Choco Cookie
+  'ST1-001': { threatValue: 80, reason: 'HP 高，穩定' }, // Princess Cookie
+  'BS1-032': { threatValue: 85, reason: 'HP 高' }, // Banana Cookie
+  'BS2-010': { threatValue: 85, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'ST2-008': { threatValue: 75, reason: 'Lv3 但要小心' }, // Eclair Cookie
+  'BS1-037': { threatValue: 75, reason: 'Lv3 但要小心' }, // Timekeeper Cookie
+  'BS1-030': { threatValue: 70, reason: '攻擊力高' }, // Rockstar Cookie
+  'BS1-006': { threatValue: 65, reason: '有效果' }, // Mala Sauce Cookie
+  'BS2-004': { threatValue: 60, reason: '有效果' }, // Cherry Cookie
+  'BS1-018': { threatValue: 10, reason: '價值低' }, // Popcorn Cookie
+  'ST1-004': { threatValue: 10, reason: '價值低' }, // Carrot Cookie
+  'ST1-013': { threatValue: 10, reason: '價值低' }, // Adventurer Cookie
+  'ST2-007': { threatValue: 10, reason: '價值低' }, // Chestnut Cookie
+  'ST2-005': { threatValue: 10, reason: '價值低' }, // Mustard Cookie
+  'BS1-033': { threatValue: 10, reason: '價值低' }, // Cyborg Cookie
 }
 
 // 藍色對手（紅色/黃色/綠色/紫色）的威脅值
 const BLUE_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
-  'Rebel Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Dark Choco Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Wind Archer Cookie': { threatValue: 90, reason: 'HP 高，直接移除 Lv3' },
-  'Poison Mushroom Cookie': { threatValue: 85, reason: 'HP 高，登場清場' },
-  'Banana Cookie': { threatValue: 85, reason: 'HP 高' },
-  'Vampire Cookie': { threatValue: 85, reason: 'HP 高，有回復' },
-  'Princess Cookie': { threatValue: 80, reason: 'HP 高，穩定' },
-  'Cream Unicorn Cookie': { threatValue: 80, reason: 'HP 高，破壞區回收' },
-  'Red Bean Cookie': { threatValue: 75, reason: 'HP 高，攻擊力強' },
-  'Clotted Cream Cookie': { threatValue: 75, reason: '有效果' },
-  'Onion Cookie': { threatValue: 70, reason: '穩定' },
-  'Eclair Cookie': { threatValue: 70, reason: 'Lv3 但要小心' },
-  'Timekeeper Cookie': { threatValue: 70, reason: 'Lv3 但要小心' },
-  'Rockstar Cookie': { threatValue: 65, reason: '攻擊力高' },
-  'White Choco Cookie': { threatValue: 65, reason: '有效果' },
-  'Mala Sauce Cookie': { threatValue: 60, reason: '有效果' },
-  'Cherry Cookie': { threatValue: 55, reason: '有效果' },
-  'Popcorn Cookie': { threatValue: 10, reason: '價值低' },
-  'Carrot Cookie': { threatValue: 10, reason: '價值低' },
-  'Adventurer Cookie': { threatValue: 10, reason: '價值低' },
-  'Chestnut Cookie': { threatValue: 10, reason: '價值低' },
-  'Mustard Cookie': { threatValue: 10, reason: '價值低' },
-  'Cyborg Cookie': { threatValue: 10, reason: '價值低' },
-  'Angel Cookie': { threatValue: 10, reason: '價值低' },
-  'Spinach Cookie': { threatValue: 10, reason: '價值低' },
+  'BS2-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Rebel Cookie
+  'BS1-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Dark Choco Cookie
+  'BS2-058': { threatValue: 90, reason: 'HP 高，直接移除 Lv3' }, // Wind Archer Cookie
+  'BS2-055': { threatValue: 85, reason: 'HP 高，登場清場' }, // Poison Mushroom Cookie
+  'BS1-032': { threatValue: 85, reason: 'HP 高' }, // Banana Cookie
+  'BS2-010': { threatValue: 85, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'ST1-001': { threatValue: 80, reason: 'HP 高，穩定' }, // Princess Cookie
+  'BS2-068': { threatValue: 80, reason: 'HP 高，破壞區回收' }, // Cream Unicorn Cookie
+  'BS1-055': { threatValue: 75, reason: 'HP 高，攻擊力強' }, // Red Bean Cookie
+  'BS2-069': { threatValue: 75, reason: '有效果' }, // Clotted Cream Cookie
+  'ST3-011': { threatValue: 70, reason: '穩定' }, // Onion Cookie
+  'ST2-008': { threatValue: 70, reason: 'Lv3 但要小心' }, // Eclair Cookie
+  'BS1-037': { threatValue: 70, reason: 'Lv3 但要小心' }, // Timekeeper Cookie
+  'BS1-030': { threatValue: 65, reason: '攻擊力高' }, // Rockstar Cookie
+  'BS2-075': { threatValue: 65, reason: '有效果' }, // White Choco Cookie
+  'BS1-006': { threatValue: 60, reason: '有效果' }, // Mala Sauce Cookie
+  'BS2-004': { threatValue: 55, reason: '有效果' }, // Cherry Cookie
+  'BS1-018': { threatValue: 10, reason: '價值低' }, // Popcorn Cookie
+  'ST1-004': { threatValue: 10, reason: '價值低' }, // Carrot Cookie
+  'ST1-013': { threatValue: 10, reason: '價值低' }, // Adventurer Cookie
+  'ST2-007': { threatValue: 10, reason: '價值低' }, // Chestnut Cookie
+  'ST2-005': { threatValue: 10, reason: '價值低' }, // Mustard Cookie
+  'BS1-033': { threatValue: 10, reason: '價值低' }, // Cyborg Cookie
+  'ST3-014': { threatValue: 10, reason: '價值低' }, // Angel Cookie
+  'ST3-008': { threatValue: 10, reason: '價值低' }, // Spinach Cookie
 }
 
 // 紫色對手（紅色/黃色/綠色/藍色）的威脅值
 const PURPLE_OPPONENT_THREAT_VALUES: Record<string, AttackThreatScore> = {
-  'Rebel Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Dark Choco Cookie': { threatValue: 95, reason: 'HP 高，攻擊力強' },
-  'Sea Fairy Cookie': { threatValue: 90, reason: 'HP 高，回手效果' },
-  'Black Raisin Cookie': { threatValue: 85, reason: 'HP 高，AOE 傷害' },
-  'Banana Cookie': { threatValue: 85, reason: 'HP 高' },
-  'Vampire Cookie': { threatValue: 85, reason: 'HP 高，有回復' },
-  'Princess Cookie': { threatValue: 80, reason: 'HP 高，穩定' },
-  'Red Bean Cookie': { threatValue: 80, reason: 'HP 高，攻擊力強' },
-  'Sherbet Cookie': { threatValue: 75, reason: 'HP 高，回手效果' },
-  'Onion Cookie': { threatValue: 75, reason: '穩定' },
-  'Tiramisu Cookie': { threatValue: 70, reason: '有效果' },
-  'Eclair Cookie': { threatValue: 70, reason: 'Lv3 但要小心' },
-  'Timekeeper Cookie': { threatValue: 70, reason: 'Lv3 但要小心' },
-  'Rockstar Cookie': { threatValue: 65, reason: '攻擊力高' },
-  'Mala Sauce Cookie': { threatValue: 60, reason: '有效果' },
-  'Cherry Cookie': { threatValue: 55, reason: '有效果' },
-  'Popcorn Cookie': { threatValue: 10, reason: '價值低' },
-  'Carrot Cookie': { threatValue: 10, reason: '價值低' },
-  'Adventurer Cookie': { threatValue: 10, reason: '價值低' },
-  'Chestnut Cookie': { threatValue: 10, reason: '價值低' },
-  'Mustard Cookie': { threatValue: 10, reason: '價值低' },
-  'Cyborg Cookie': { threatValue: 10, reason: '價值低' },
-  'Milk Cookie': { threatValue: 10, reason: '價值低' },
-  'Skating Queen Cookie': { threatValue: 10, reason: '價值低' },
+  'BS2-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Rebel Cookie
+  'BS1-003': { threatValue: 95, reason: 'HP 高，攻擊力強' }, // Dark Choco Cookie
+  'BS2-029': { threatValue: 90, reason: 'HP 高，回手效果' }, // Sea Fairy Cookie
+  'BS2-031': { threatValue: 85, reason: 'HP 高，AOE 傷害' }, // Black Raisin Cookie
+  'BS1-032': { threatValue: 85, reason: 'HP 高' }, // Banana Cookie
+  'BS2-010': { threatValue: 85, reason: 'HP 高，有回復' }, // Vampire Cookie
+  'ST1-001': { threatValue: 80, reason: 'HP 高，穩定' }, // Princess Cookie
+  'BS1-055': { threatValue: 80, reason: 'HP 高，攻擊力強' }, // Red Bean Cookie
+  'BS2-036': { threatValue: 75, reason: 'HP 高，回手效果' }, // Sherbet Cookie
+  'ST3-011': { threatValue: 75, reason: '穩定' }, // Onion Cookie
+  'BS2-044': { threatValue: 70, reason: '有效果' }, // Tiramisu Cookie
+  'ST2-008': { threatValue: 70, reason: 'Lv3 但要小心' }, // Eclair Cookie
+  'BS1-037': { threatValue: 70, reason: 'Lv3 但要小心' }, // Timekeeper Cookie
+  'BS1-030': { threatValue: 65, reason: '攻擊力高' }, // Rockstar Cookie
+  'BS1-006': { threatValue: 60, reason: '有效果' }, // Mala Sauce Cookie
+  'BS2-004': { threatValue: 55, reason: '有效果' }, // Cherry Cookie
+  'BS1-018': { threatValue: 10, reason: '價值低' }, // Popcorn Cookie
+  'ST1-004': { threatValue: 10, reason: '價值低' }, // Carrot Cookie
+  'ST1-013': { threatValue: 10, reason: '價值低' }, // Adventurer Cookie
+  'ST2-007': { threatValue: 10, reason: '價值低' }, // Chestnut Cookie
+  'ST2-005': { threatValue: 10, reason: '價值低' }, // Mustard Cookie
+  'BS1-033': { threatValue: 10, reason: '價值低' }, // Cyborg Cookie
+  'BS2-042': { threatValue: 10, reason: '價值低' }, // Milk Cookie
+  'ST4-014': { threatValue: 10, reason: '價值低' }, // Skating Queen Cookie
 }
 
 // ============================================================================
 // 低價值餅乾（不該鋪第二隻）
 // ============================================================================
 
+/**
+ * 未被任何函式消費——實際判斷走的是下面 MATCHUP_PROFILES 各色自己的
+ * lowValueCookies。保留只是避免動到匯出介面，未來若要接上就地啟用即可。
+ */
 export const LOW_VALUE_COOKIES = [
-  'Popcorn Cookie',
-  'Adventurer Cookie',
-  'Carrot Cookie',
-  'Melon Bun Cookie',
-  'Chestnut Cookie',
-  'Mustard Cookie',
-  'Cyborg Cookie',
-  'Angel Cookie',
-  'Spinach Cookie',
-  'Bellflower Cookie',
-  'Cookiemals',
-  'Candlelight Cookie',
-  'Salt Cookie',
+  'BS1-018', // Popcorn Cookie
+  'ST1-013', // Adventurer Cookie
+  'ST1-004', // Carrot Cookie
+  'BS1-007', // Melon Bun Cookie
+  'ST2-007', // Chestnut Cookie
+  'ST2-005', // Mustard Cookie
+  'BS1-033', // Cyborg Cookie
+  'ST3-014', // Angel Cookie
+  'ST3-008', // Spinach Cookie
+  'BS1-057', // Bellflower Cookie
+  'BS1-069', // Cookiemals
+  'BS2-018', // Candlelight Cookie
+  'BS2-035', // Salt Cookie
 ]
 
 // ============================================================================
@@ -262,6 +269,7 @@ export interface MatchupProfile {
   color: 'red' | 'yellow' | 'green' | 'blue' | 'purple'
   replacementScores: Record<string, ReplacementScore>
   attackThreatValues: Record<string, AttackThreatScore>
+  /** card.id（官方卡號），不是卡名——同名跨彈重印卡才不會互相誤套。 */
   lowValueCookies: string[]
   breakPressureThresholds: typeof BREAK_PRESSURE_THRESHOLDS
 }
@@ -276,10 +284,10 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
     replacementScores: RED_REPLACEMENT_SCORES,
     attackThreatValues: RED_OPPONENT_THREAT_VALUES,
     lowValueCookies: [
-      'Popcorn Cookie',
-      'Adventurer Cookie',
-      'Carrot Cookie',
-      'Melon Bun Cookie',
+      'BS1-018', // Popcorn Cookie
+      'ST1-013', // Adventurer Cookie
+      'ST1-004', // Carrot Cookie
+      'BS1-007', // Melon Bun Cookie
     ],
     breakPressureThresholds: BREAK_PRESSURE_THRESHOLDS,
   },
@@ -288,9 +296,9 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
     replacementScores: YELLOW_REPLACEMENT_SCORES,
     attackThreatValues: YELLOW_OPPONENT_THREAT_VALUES,
     lowValueCookies: [
-      'Chestnut Cookie',
-      'Mustard Cookie',
-      'Cyborg Cookie',
+      'ST2-007', // Chestnut Cookie
+      'ST2-005', // Mustard Cookie
+      'BS1-033', // Cyborg Cookie
     ],
     breakPressureThresholds: BREAK_PRESSURE_THRESHOLDS,
   },
@@ -299,14 +307,14 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
     replacementScores: GREEN_REPLACEMENT_SCORES,
     attackThreatValues: GREEN_OPPONENT_THREAT_VALUES,
     lowValueCookies: [
-      'Angel Cookie',
-      'Spinach Cookie',
-      'Bellflower Cookie',
-      'Cookiemals',
-      'Banana Cookie',
-      'Melon Bun Cookie',
-      'Candlelight Cookie',
-      'Salt Cookie',
+      'ST3-014', // Angel Cookie
+      'ST3-008', // Spinach Cookie
+      'BS1-057', // Bellflower Cookie
+      'BS1-069', // Cookiemals
+      'BS1-032', // Banana Cookie
+      'BS1-007', // Melon Bun Cookie
+      'BS2-018', // Candlelight Cookie
+      'BS2-035', // Salt Cookie
     ],
     breakPressureThresholds: BREAK_PRESSURE_THRESHOLDS,
   },
@@ -315,9 +323,9 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
     replacementScores: BLUE_REPLACEMENT_SCORES,
     attackThreatValues: BLUE_OPPONENT_THREAT_VALUES,
     lowValueCookies: [
-      'Milk Cookie',
-      'Skating Queen Cookie',
-      'Peppermint Cookie',
+      'BS2-042', // Milk Cookie
+      'ST4-014', // Skating Queen Cookie
+      'ST4-006', // Peppermint Cookie
     ],
     breakPressureThresholds: BREAK_PRESSURE_THRESHOLDS,
   },
@@ -326,9 +334,9 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
     replacementScores: PURPLE_REPLACEMENT_SCORES,
     attackThreatValues: PURPLE_OPPONENT_THREAT_VALUES,
     lowValueCookies: [
-      'Raspberry Mousse Cookie',
-      'Fig Cookie',
-      'Fairy Cookie',
+      'BS2-056', // Raspberry Mousse Cookie
+      'ST5-003', // Fig Cookie
+      'ST5-008', // Fairy Cookie
     ],
     breakPressureThresholds: BREAK_PRESSURE_THRESHOLDS,
   },
@@ -339,7 +347,13 @@ export const MATCHUP_PROFILES: Record<string, MatchupProfile> = {
 // ============================================================================
 
 /**
- * 根據玩家手牌與戰鬥區餅乾推斷牌組顏色
+ * 根據玩家手牌／破損區／棄牌區的能量顏色分布推斷牌組顏色。
+ *
+ * 舊版靠 card.id 前綴／卡名子字串猜色（只認得 ST2-5、BS2 特定號碼區間），
+ * 完全沒處理 BS1／BS3 前綴；純 BS3 或純 BS1 牌組會導致每種顏色都算 0，
+ * 迴圈 tie-break 又預設落回 'red'，等於整套配置表選錯——不是覆蓋率不足，
+ * 是會誤判。card.energyColor 是引擎本來就有、每張卡都會填、且不受彈數
+ * 影響的欄位，改用它以後任何現在或未來的牌組都能正確分類。
  */
 const detectDeckColor = (state: GameState, playerId: PlayerId): 'red' | 'yellow' | 'green' | 'blue' | 'purple' => {
   const player = state.players[playerId]
@@ -352,17 +366,9 @@ const detectDeckColor = (state: GameState, playerId: PlayerId): 'red' | 'yellow'
   const colorCounts: Record<string, number> = { red: 0, yellow: 0, green: 0, blue: 0, purple: 0 }
 
   for (const card of cards) {
-    const id = card.id
-    if (id.startsWith('ST4-') || id.startsWith('BS2-0') && parseInt(id.slice(5, 7)) >= 20 && parseInt(id.slice(5, 7)) < 50) {
-      colorCounts.blue++
-    } else if (id.startsWith('ST5-') || (id.startsWith('BS2-0') && parseInt(id.slice(5, 7)) >= 50 && parseInt(id.slice(5, 7)) < 80)) {
-      colorCounts.purple++
-    } else if (id.startsWith('ST3-') || id.includes('Bean') || id.includes('Spinach') || id.includes('Angel') || id.includes('Avocado')) {
-      colorCounts.green++
-    } else if (id.startsWith('ST2-') || id.includes('Rebel') || id.includes('Dark Choco') || id.includes('Princess') || id.includes('Muscle')) {
-      colorCounts.red++
-    } else if (id.includes('Banana') || id.includes('Vampire') || id.includes('Marshmallow') || id.includes('Eclair')) {
-      colorCounts.yellow++
+    const color = card.energyColor
+    if (color === 'red' || color === 'yellow' || color === 'green' || color === 'blue' || color === 'purple') {
+      colorCounts[color]++
     }
   }
 
@@ -434,7 +440,7 @@ export const scoreReplacement = (
   }
 
   // 低價值餅乾懲罰
-  const isLowValue = profile.lowValueCookies.includes(card.name)
+  const isLowValue = profile.lowValueCookies.includes(card.id)
   const lowValuePenalty = isLowValue ? -40 : 0
 
   return baseScore + adjustment + lowValuePenalty
@@ -479,8 +485,7 @@ export const scoreAttackTarget = (
   state: GameState,
   attackerPlayerId: PlayerId,
 ): number => {
-  const cookieName = cookie.card.name
-  const threatEntry = profile.attackThreatValues[cookieName]
+  const threatEntry = profile.attackThreatValues[cookie.card.id]
   const threatValue = threatEntry?.threatValue ?? 50
 
   const attackerCookies = state.players[attackerPlayerId].battleArea
@@ -577,7 +582,7 @@ export const evaluateHandQuality = (
   let totalScore = 0
   for (const card of hand) {
     if (card.type === 'cookie') {
-      const scoreEntry = profile.replacementScores[card.name]
+      const scoreEntry = profile.replacementScores[card.id]
       totalScore += scoreEntry?.baseScore ?? 50
     }
   }
@@ -597,8 +602,8 @@ export const chooseBestCookieToDeploy = (
 
   // 按替補評分排序
   return cookieCards.sort((left, right) => {
-    const leftScore = profile.replacementScores[left.name]?.baseScore ?? 50
-    const rightScore = profile.replacementScores[right.name]?.baseScore ?? 50
+    const leftScore = profile.replacementScores[left.id]?.baseScore ?? 50
+    const rightScore = profile.replacementScores[right.id]?.baseScore ?? 50
     return rightScore - leftScore
   })[0]
 }
@@ -606,55 +611,64 @@ export const chooseBestCookieToDeploy = (
 /**
  * R6b: 替補進階效果評分 — 效果價值表
  *
- * 依卡牌公開效果給分，分為進攻型、防守型、輔助型三類。
+ * 依卡牌公開效果給分，分為進攻型、防守型、輔助型三類。key 為 card.id。
  */
 const EFFECT_VALUE_BONUS: Record<string, number> = {
   // 進攻型：可主動造成傷害
-  'Rebel Cookie': 8,
-  'Dark Choco Cookie': 8,
-  'Red Bean Cookie': 7,
-  'Sea Fairy Cookie': 7,
-  'Wind Archer Cookie': 7,
-  'Black Raisin Cookie': 6,
-  'Poison Mushroom Cookie': 6,
-  'Rockstar Cookie': 5,
-  'Cherry Cookie': 4,
-  'Mala Sauce Cookie': 4,
-  'Tiramisu Cookie': 4,
-  'White Choco Cookie': 4,
+  'BS2-003': 8, // Rebel Cookie
+  'BS1-003': 8, // Dark Choco Cookie
+  'BS1-055': 7, // Red Bean Cookie
+  'BS2-029': 7, // Sea Fairy Cookie
+  'BS2-058': 7, // Wind Archer Cookie
+  'BS2-031': 6, // Black Raisin Cookie
+  'BS2-055': 6, // Poison Mushroom Cookie
+  'BS1-030': 5, // Rockstar Cookie
+  'BS2-004': 4, // Cherry Cookie
+  'BS1-006': 4, // Mala Sauce Cookie
+  'BS2-044': 4, // Tiramisu Cookie
+  'BS2-075': 4, // White Choco Cookie
   // 防守型：可回血或保護
-  'Banana Cookie': 6,
-  'Vampire Cookie': 6,
-  'Cream Unicorn Cookie': 5,
-  'Marshmallow Cookie': 4,
-  'Hydrangea Cookie': 4,
+  'BS1-032': 6, // Banana Cookie
+  'BS2-010': 6, // Vampire Cookie
+  'BS2-068': 5, // Cream Unicorn Cookie
+  'BS1-031': 4, // Marshmallow Cookie
+  'BS2-061': 4, // Hydrangea Cookie
   // 輔助型：可抽牌、提供資源
-  'Sherbet Cookie': 5,
-  'Sour Belt Cookie': 4,
-  'Clotted Cream Cookie': 4,
-  'Eclair Cookie': 3,
-  'Earl Grey Cookie': 3,
+  'BS2-036': 5, // Sherbet Cookie
+  'ST4-007': 4, // Sour Belt Cookie
+  'BS2-069': 4, // Clotted Cream Cookie
+  'ST2-008': 3, // Eclair Cookie
+  'BS1-040': 3, // Earl Grey Cookie
   // 低效果價值
-  'Popcorn Cookie': 0,
-  'Adventurer Cookie': 0,
-  'Carrot Cookie': 0,
-  'Melon Bun Cookie': 0,
-  'Chestnut Cookie': 0,
-  'Mustard Cookie': 0,
-  'Cyborg Cookie': 0,
-  'Angel Cookie': 0,
-  'Spinach Cookie': 0,
-  'Bellflower Cookie': 0,
-  'Cookiemals': 0,
-  'Candlelight Cookie': 0,
-  'Salt Cookie': 0,
-  'Milk Cookie': 0,
-  'Skating Queen Cookie': 0,
-  'Peppermint Cookie': 0,
-  'Raspberry Mousse Cookie': 0,
-  'Fig Cookie': 0,
-  'Fairy Cookie': 0,
+  'BS1-018': 0, // Popcorn Cookie
+  'ST1-013': 0, // Adventurer Cookie
+  'ST1-004': 0, // Carrot Cookie
+  'BS1-007': 0, // Melon Bun Cookie
+  'ST2-007': 0, // Chestnut Cookie
+  'ST2-005': 0, // Mustard Cookie
+  'BS1-033': 0, // Cyborg Cookie
+  'ST3-014': 0, // Angel Cookie
+  'ST3-008': 0, // Spinach Cookie
+  'BS1-057': 0, // Bellflower Cookie
+  'BS1-069': 0, // Cookiemals
+  'BS2-018': 0, // Candlelight Cookie
+  'BS2-035': 0, // Salt Cookie
+  'BS2-042': 0, // Milk Cookie
+  'ST4-014': 0, // Skating Queen Cookie
+  'ST4-006': 0, // Peppermint Cookie
+  'BS2-056': 0, // Raspberry Mousse Cookie
+  'ST5-003': 0, // Fig Cookie
+  'ST5-008': 0, // Fairy Cookie
 }
+
+/** R6b「防守型」判定用——與 EFFECT_VALUE_BONUS 裡對應的 5 個 id 一致。 */
+const DEFENSIVE_COOKIE_IDS = new Set([
+  'BS1-032', // Banana Cookie
+  'BS2-010', // Vampire Cookie
+  'BS2-068', // Cream Unicorn Cookie
+  'BS1-031', // Marshmallow Cookie
+  'BS2-061', // Hydrangea Cookie
+])
 
 /**
  * R6b: 計算替補進階分數
@@ -683,7 +697,7 @@ export const scoreReplacementAdvanced = (
   const baseScore = scoreReplacement(card, profile, breakPressure)
 
   // R6b: effectValueBonus
-  const effectBonus = EFFECT_VALUE_BONUS[card.name] ?? 2
+  const effectBonus = EFFECT_VALUE_BONUS[card.id] ?? 2
 
   // R6b: boardNeedBonus
   let boardNeedBonus = 0
@@ -692,16 +706,12 @@ export const scoreReplacementAdvanced = (
 
   // 我方破壞區偏高 → 防守或回血單位加分
   if (myBreak >= 8) {
-    const isDefensive = EFFECT_VALUE_BONUS[card.name] !== undefined &&
-      (card.name.includes('Banana') || card.name.includes('Vampire') ||
-        card.name.includes('Cream Unicorn') || card.name.includes('Marshmallow') ||
-        card.name.includes('Hydrangea'))
-    if (isDefensive) boardNeedBonus += 6
+    if (DEFENSIVE_COOKIE_IDS.has(card.id)) boardNeedBonus += 6
   }
 
   // 對手破壞區偏高 → 進攻單位加分
   if (oppBreak >= 8) {
-    const isOffensive = (card.attack ?? 0) >= 2 || EFFECT_VALUE_BONUS[card.name] >= 5
+    const isOffensive = (card.attack ?? 0) >= 2 || (EFFECT_VALUE_BONUS[card.id] ?? 0) >= 5
     if (isOffensive) boardNeedBonus += 5
   }
 
