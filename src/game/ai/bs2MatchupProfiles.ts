@@ -1,4 +1,9 @@
 import type { CookieCard, CookieInBattle, GameCard, GameState, PlayerId } from '../types'
+import {
+  estimateAttackThreatValue,
+  estimateSkillEffectValue,
+  hasDerivedDefensiveSkill,
+} from './skill-value'
 
 // ============================================================================
 // Break Pressure 等級
@@ -486,7 +491,7 @@ export const scoreAttackTarget = (
   attackerPlayerId: PlayerId,
 ): number => {
   const threatEntry = profile.attackThreatValues[cookie.card.id]
-  const threatValue = threatEntry?.threatValue ?? 50
+  const threatValue = threatEntry?.threatValue ?? estimateAttackThreatValue(cookie.card)
 
   const attackerCookies = state.players[attackerPlayerId].battleArea
   const opponentId =
@@ -579,6 +584,12 @@ export const evaluateHandQuality = (
 ): number => {
   if (hand.length === 0) return 0
 
+  // 這裡的分數會拿去跟 turn-handler.ts 的絕對門檻（>= 30）比較，不是相對
+  // 排序——不能像 chooseBestCookieToDeploy 那樣改用 R6a 公式當 fallback。
+  // R6a 公式（level*3+hp*2）是為了「候選互相比大小」校準的，換算下來
+  // Lv.1～2 的一般起始卡多半落在 5～12 分，全部低於 30；查無資料就整批
+  // 卡當成沒有部署價值，AI 會直接拒絕鋪牌。維持舊行為的中性預設 50，讓
+  // 「查無資料」跟「這張卡普通」同義，而不是「這張卡很差」。
   let totalScore = 0
   for (const card of hand) {
     if (card.type === 'cookie') {
@@ -602,8 +613,10 @@ export const chooseBestCookieToDeploy = (
 
   // 按替補評分排序
   return cookieCards.sort((left, right) => {
-    const leftScore = profile.replacementScores[left.id]?.baseScore ?? 50
-    const rightScore = profile.replacementScores[right.id]?.baseScore ?? 50
+    const leftScore =
+      profile.replacementScores[left.id]?.baseScore ?? calculateReplacementBaseScore(left)
+    const rightScore =
+      profile.replacementScores[right.id]?.baseScore ?? calculateReplacementBaseScore(right)
     return rightScore - leftScore
   })[0]
 }
@@ -695,8 +708,13 @@ export const scoreReplacementAdvanced = (
   // R6a base
   const baseScore = scoreReplacement(card, profile, breakPressure)
 
-  // R6b: effectValueBonus
-  const effectBonus = EFFECT_VALUE_BONUS[card.id] ?? 2
+  // R6b: effectValueBonus——查無資料（未收錄的新彈卡）改用
+  // estimateSkillEffectValue 從 card.skill.effects 直接推算，不再假裝一律
+  // 中等（2）。
+  const isKnownCard = card.id in EFFECT_VALUE_BONUS
+  const effectBonus = isKnownCard
+    ? EFFECT_VALUE_BONUS[card.id]
+    : estimateSkillEffectValue(card)
 
   // R6b: boardNeedBonus
   let boardNeedBonus = 0
@@ -705,12 +723,15 @@ export const scoreReplacementAdvanced = (
 
   // 我方破壞區偏高 → 防守或回血單位加分
   if (myBreak >= 8) {
-    if (DEFENSIVE_COOKIE_IDS.has(card.id)) boardNeedBonus += 6
+    const isDefensive =
+      DEFENSIVE_COOKIE_IDS.has(card.id) ||
+      (!isKnownCard && hasDerivedDefensiveSkill(card))
+    if (isDefensive) boardNeedBonus += 6
   }
 
   // 對手破壞區偏高 → 進攻單位加分
   if (oppBreak >= 8) {
-    const isOffensive = (card.attack ?? 0) >= 2 || (EFFECT_VALUE_BONUS[card.id] ?? 0) >= 5
+    const isOffensive = (card.attack ?? 0) >= 2 || effectBonus >= 5
     if (isOffensive) boardNeedBonus += 5
   }
 
