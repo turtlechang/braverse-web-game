@@ -3754,6 +3754,16 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     discardHand: 0,
     trashToDeck: { count: 5, energyColor: 'purple', excludeFlip: true },
   },
+  // 「<Place this Cookie in the trash.>」是這個技能的代價（比照 BS2-015／
+  // BS2-071 的 trashBattleCookie 寫法），generic parseAbilityCost 只認得
+  // 「Place N (energy) LV.X Cookie from your battle area into the trash」
+  // 這種措辭，「this Cookie」是自我指涉、抓不到，沒有這個覆寫的話發動這個
+  // 技能就完全不用犧牲自己。
+  'BS3-105': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashBattleCookie: { count: 1, sourceOnly: true },
+  },
   'BS3-025': { energy: { yellow: 1 }, discardHand: 0 },
   'P-016': { energy: { yellow: 1 }, discardHand: 0 },
   'P-018': { energy: {}, discardHand: 1 },

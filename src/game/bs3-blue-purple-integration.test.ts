@@ -10,6 +10,7 @@ import {
   executeCardEffect,
   getEffectTargetCandidates,
 } from './effects'
+import { activateCookieSkill } from './skills'
 import type {
   CardEffect,
   ChooseOneEffect,
@@ -392,5 +393,52 @@ describe('BS3 紫色卡片整合測試', () => {
     const revealEffect = skill!.effects[0] as RevealTopDeckEffect
     const next = executeCardEffect(emptyDeck, sourceContext(), revealEffect, [])
     expect(next.pendingRevealTopDeck ?? undefined).toBeUndefined()
+  })
+
+  // BS3-105（Affogato Cookie）技能文字「<Place this Cookie in the trash.>」是
+  // 發動代價，比照 BS2-015／BS2-071 用 trashBattleCookie: { sourceOnly: true }
+  // 表示。generic parseAbilityCost 只認得「Place N (energy) LV.X Cookie from
+  // your battle area into the trash」這種措辭，「this Cookie」是自我指涉、
+  // 抓不到，修正前完全沒有把這個代價轉換出來，導致這個技能可以在不犧牲自己
+  // 的情況下無限發動。
+  it('BS3-105 Affogato Cookie: activating the skill must trash the source cookie', () => {
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-105'))
+    expect(skill).toBeTruthy()
+    expect(skill!.trigger).toBe('activate')
+    expect(skill!.cost.energy).toEqual({ purple: 1 })
+    expect(skill!.cost.trashBattleCookie).toEqual({ count: 1, sourceOnly: true })
+
+    const state = createBattleState()
+    state.activePlayerId = 'player-one'
+    state.players['player-one'].battleArea = [
+      {
+        card: { ...cookie('affogato', 2, 2), skill: skill! },
+        hpCards: [item('hp-1'), item('hp-2')],
+        rested: false,
+        battleEntryId: 'affogato:battle:1',
+      },
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-energy-1', 'purple'), rested: false },
+    ]
+    state.players['player-one'].deck = [item('d1'), item('d2'), item('d3')]
+    state.players['player-two'].deck = [item('e1'), item('e2'), item('e3')]
+
+    const result = activateCookieSkill(
+      state,
+      'player-one',
+      'affogato',
+      'activate',
+      ['p1-energy-1'],
+    )
+    const stillInBattle = result.players['player-one'].battleArea.some(
+      (c) => c.card.instanceId === 'affogato',
+    )
+    expect(stillInBattle).toBe(false)
+    expect(
+      result.players['player-one'].discardPile.some(
+        (c) => c.instanceId === 'affogato',
+      ),
+    ).toBe(true)
   })
 })
