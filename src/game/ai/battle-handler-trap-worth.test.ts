@@ -55,6 +55,68 @@ const withDefender = (card: CookieCard): GameState => {
   return declareAttack(state)
 }
 
+describe('evaluateTrapWorth：致命判定要用場上實際攻擊力', () => {
+  /** 攻擊者卡面 2 攻、場上有 +2 加成，對 3 HP 的防守者實際上是致命的。 */
+  const buffedAttackerState = (): GameState => {
+    const base = createBattleState()
+    const attacker = base.players['player-two'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            { ...attacker, card: { ...attacker.card, attack: 2 } },
+          ],
+        },
+      },
+      attackModifiers: [
+        {
+          sourceInstanceId: 'p2-buff',
+          targetInstanceId: 'attacker',
+          amount: 2,
+          expiresAfterTurn: null,
+        },
+      ],
+    }
+    return declareAttack(state)
+  }
+
+  it('卡面攻擊力不足、但加成後會被擊倒時，仍然算進 preventedKillBonus', () => {
+    const buffedState = buffedAttackerState()
+    const buffed = evaluateTrapWorth(
+      buffedState,
+      'player-one',
+      trapCard,
+      buffedState.pendingBattle!,
+    )
+
+    // 同一局面但沒有加成：卡面 2 攻打不死 3 HP，不該拿到防止擊倒加分。
+    const base = createBattleState()
+    const attacker = base.players['player-two'].battleArea[0]
+    const unbuffedState = declareAttack({
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [{ ...attacker, card: { ...attacker.card, attack: 2 } }],
+        },
+      },
+    })
+    const unbuffed = evaluateTrapWorth(
+      unbuffedState,
+      'player-one',
+      trapCard,
+      unbuffedState.pendingBattle!,
+    )
+
+    // 防守者是 Level 1，preventedKillBonus = 15。
+    expect(buffed).toBe(unbuffed + 15)
+  })
+})
+
 describe('evaluateTrapWorth：保護目標的效果價值加分改用 getCardEffectValue', () => {
   it('已收錄的高效果價值卡（Rebel Cookie／BS2-003）仍然拿到加分', () => {
     const defender: CookieCard = {

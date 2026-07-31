@@ -125,6 +125,30 @@ describe('energy payment', () => {
     ).toMatchObject({ valid: true })
   })
 
+  it('pays Mix Cost with the most plentiful color and saves wild energy for later', () => {
+    // 舊實作是照支援區順序抓，會先把 wild／稀有色燒在 Mix Cost 上，
+    // 同一回合後面要付指定色時就付不出來。
+    const mixed = [
+      createSupport('red-1', 'red'),
+      createSupport('wild-1', 'wild'),
+      createSupport('blue-1', 'blue'),
+      createSupport('red-2', 'red'),
+    ]
+
+    expect(selectEnergyPayment({ neutral: 2 }, mixed)).toEqual([
+      'red-1',
+      'red-2',
+    ])
+    expect(selectEnergyPayment({ blue: 1, neutral: 1 }, mixed)).toEqual([
+      'blue-1',
+      'red-1',
+    ])
+    // 只剩 wild 可用時仍然照付，不會因為想保留而付不出來。
+    expect(
+      selectEnergyPayment({ neutral: 1 }, [createSupport('wild-only', 'wild')]),
+    ).toEqual(['wild-only'])
+  })
+
   it('subtracts source-provided energy before choosing support payments', () => {
     expect(
       getRemainingEnergyCost({ red: 2 }, { red: 2 }),

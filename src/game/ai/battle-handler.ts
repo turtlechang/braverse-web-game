@@ -8,6 +8,7 @@ import { applyGameCommand } from '../commands'
 import {
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getEffectiveAttack,
   getTrashToDeckCandidates,
   isEffectConditionMet,
 } from '../effects'
@@ -129,7 +130,10 @@ export const evaluateTrapWorth = (
   }
 
   // 2. preventedKillBonus：防止被擊倒（依目標等級縮放）
-  const attackerDamage = attacker.card.attack ?? 0
+  // 用 getEffectiveAttack 而非 card.attack：場上只要有加攻／減攻效果（物品、
+  // 技能、先前的陷阱），卡面攻擊力就不等於這次戰鬥的實際傷害，會讓「這張陷阱
+  // 能不能救下這隻餅乾」整個判斷反過來——該擋的沒擋、不需要擋的卻把陷阱花掉。
+  const attackerDamage = getEffectiveAttack(state, battle.attackerInstanceId)
   const wouldBeKilled = targetHp <= attackerDamage
   if (wouldBeKilled) {
     if (targetLevel >= 3) {
