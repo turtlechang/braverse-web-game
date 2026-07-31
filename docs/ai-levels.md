@@ -1,7 +1,7 @@
 # AI 等級分級設計
 
-> **狀態：Lv.1–Lv.4 已實作完成；Lv.5 為設計稿，未實作。**
-> **最後更新：2026-07-08（Phase 5）；2026-07-11 補充體感觀察結論。**
+> **狀態：Lv.1–Lv.4 已實作完成；Lv.4 採用 beam search 回合層序列規劃。Lv.5 為設計稿，未實作。**
+> **最後更新：2026-07-31（beam search + R10 完整版）。**
 
 ## Lv.5 投入前觀察（2026-07-11）
 
@@ -14,7 +14,7 @@
 | Lv.1 | 隨機出招 | 從合法動作中隨機挑選；不主動使用技能 | 無 | ✅ 完成 |
 | Lv.2 | 基礎戰術 | 啟發式：能出牌就出牌、攻擊最低 HP 目標、斬殺優先 | R1–R4, R6a | ✅ 完成 |
 | Lv.3 | 評估式 | 對候選動作套用後以 PlayerView 評分，取最高分 | +R5, R6b, R7, R8 | ✅ 完成 |
-| Lv.4 | 兩層前瞻 | 枚舉動作序列，對回合終局狀態評分 + 風險管理 | +R9, R10, lv4RiskBonus | ✅ 完成 |
+| Lv.4 | 兩層前瞻 | beam search 回合層序列規劃（w=3, d=3），終局 state 評分 + 風險管理 | +R9, R10, lv4RiskBonus | ✅ 完成 |
 | Lv.5 | 對抗性 | 在 Lv.4 之上加入對手回應期望值 | 未實作 | ⬜ 設計稿 |
 
 ## 勝率驗收（seeds 1–30）
@@ -70,10 +70,11 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 ### Lv.4 特殊組件
 
 | 組件 | 位置 | 說明 |
-|---|---|---|
+|---|---|---|---|
+| `beamSearchBestFirstCommand` | evaluated-turn-handler.ts | 回合層 beam search（w=3, d=3, attacks auto-resolved）+ `stateScore` |
 | `lv4RiskBonus` | evaluated-turn-handler.ts | 核心風險評分（不可刪除） |
-| `lethalDetectionBonus` | evaluated-turn-handler.ts | R9 致命偵測 |
-| `responseRiskPenalty` | evaluated-turn-handler.ts | R10 完整版：F0 break race risk guardrail + F1 attacker 反擊暴露（修正了原本 `-= responseRiskPenalty(...)` 造成負號反向加分的方向 bug） |
+| `lethalDetectionBonus` | evaluated-turn-handler.ts | R9 致命偵測（fallback 路徑保留） |
+| `responseRiskPenalty` | evaluated-turn-handler.ts | R10 完整版：F0 break race risk guardrail + F1 attacker 反擊暴露 |
 
 ## 已知問題
 

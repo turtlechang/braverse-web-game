@@ -473,8 +473,140 @@ export const getR10Counters = () => ({
 })
 
 // ---------------------------------------------------------------------------
-// Lv.4 — Two-ply lookahead with battle resolution + risk management
+// Beam search — 回合層最佳行動序列規劃
 // ---------------------------------------------------------------------------
+
+/**
+ * 從指定玩家視角對終局場面打分。反覆使用的基本評分單元。
+ */
+const stateScore = (state: GameState, playerId: PlayerId): number => {
+  if (state.status === 'finished') {
+    const view = createPlayerView(state, playerId)
+    return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+  }
+  const view = createPlayerView(state, playerId)
+  return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+}
+
+/**
+ * 判定一個狀態是否不適合繼續展開 beam（回合結束、換人、有 pending、
+ * 對局結束等）。
+ */
+const isBeamTerminal = (state: GameState, playerId: PlayerId): boolean =>
+  state.status === 'finished' ||
+  state.activePlayerId !== playerId ||
+  !!state.pendingBattle ||
+  !!state.pendingRefresh ||
+  !!state.pendingReplacement ||
+  !!state.pendingOnPlay
+
+/**
+ * 把單一命令應用到當前狀態，若為攻擊則自動結算整場戰鬥。
+ * 回傳 (nextState, isTerminal) 供 beam 展開使用。
+ */
+const applyBeamAction = (
+  state: GameState,
+  command: PlayerActionCommand,
+  playerId: PlayerId,
+): { nextState: GameState; isTerminal: boolean } => {
+  let next: GameState
+  if (command.kind === 'attack') {
+    next = beginAttack(
+      state,
+      command.attackerInstanceId,
+      command.targetInstanceId,
+      command.supportPaymentIds,
+    )
+  } else {
+    next = applyGameCommand(state, command)
+  }
+  if (next.status === 'finished') return { nextState: next, isTerminal: true }
+
+  if (command.kind === 'attack') {
+    next = resolveBattleAutomatically(next)
+  }
+  if (next.status === 'finished') return { nextState: next, isTerminal: true }
+
+  // advance-phase 之後 phase 會變（e.g. main → end），即終端
+  const phaseChanged = next.phase !== state.phase
+  const terminal = phaseChanged || isBeamTerminal(next, playerId)
+  return { nextState: next, isTerminal: terminal }
+}
+
+interface BeamEntry {
+  state: GameState
+  firstCommand: PlayerActionCommand | null
+  score: number
+  isTerminal: boolean
+}
+
+/**
+ * 回合層 beam search（Lv.4 核心增強）。
+ *
+ * 從當前 state 出發，以 beamWidth × maxDepth 枚舉同一回合內可能的
+ * 行動序列，取終局 state 分數最高者，回傳該序列的「第一個動作」。
+ *
+ * 若回傳 null 代表 beam 尚未展開出有效動作（合法命令清單為空或全部
+ * 拋例），caller 應 fallback 回傳統單步評估。
+ */
+const beamSearchBestFirstCommand = (
+  state: GameState,
+  playerId: PlayerId,
+  beamWidth: number,
+  maxDepth: number,
+): { firstCommand: PlayerActionCommand | null; beamScore: number } => {
+  let beams: BeamEntry[] = [
+    {
+      state,
+      firstCommand: null,
+      score: stateScore(state, playerId),
+      isTerminal: false,
+    },
+  ]
+
+  for (let depth = 0; depth < maxDepth; depth += 1) {
+    if (beams.every((b) => b.isTerminal)) break
+
+    const nextBeams: BeamEntry[] = []
+
+    for (const beam of beams) {
+      if (beam.isTerminal) {
+        nextBeams.push(beam)
+        continue
+      }
+
+      const commands = getLegalTurnCommands(beam.state, playerId)
+      for (const cmd of commands) {
+        try {
+          const { nextState, isTerminal } = applyBeamAction(beam.state, cmd, playerId)
+          const score = stateScore(nextState, playerId)
+          nextBeams.push({
+            state: nextState,
+            firstCommand: beam.firstCommand ?? cmd,
+            score,
+            isTerminal,
+          })
+        } catch {
+          // invalid action within beam — skip
+        }
+      }
+    }
+
+    if (nextBeams.length === 0) break
+
+    // 穩定排序（deterministic tie-break）
+    nextBeams.sort((a, b) => b.score - a.score)
+    beams = nextBeams.slice(0, beamWidth)
+  }
+
+  const best = beams[0]
+  const bestScore = best?.score ?? -Infinity
+  if (!best?.firstCommand) return { firstCommand: null, beamScore: bestScore }
+  // 當 beam 的「最佳序列」根本沒做事（advance-phase 是第一個命令），
+  // best.firstCommand 其實就是 advance-phase；但如果 beams 只有初始
+  // entry（no expansion），firstCommand 為 null，退回 fallback。
+  return { firstCommand: best.firstCommand, beamScore: bestScore }
+}
 
 /**
  * Lv.4 既有核心風險評分（不可刪除）。
@@ -690,15 +822,6 @@ const twoPlyCandidateScore = (
   }
 }
 
-/**
- * Lv.4 兩層前瞻 AI：在支援／主要階段對每個候選動作執行
- * 「apply → resolveBattle（攻擊時）→ 評分 + 風險修正」流程，
- * 取最高分動作。其餘強制流程委派給 Lv.2 turn handler。
- *
- * 核心改進（相較 Lv.3）：
- * 1. 攻擊使用 resolveBattleAutomatically 而非 attackBonus 啟發式
- * 2. 所有評分疊加 lv4RiskBonus（破壞區壓力、低 HP 暴露、高威脅未清除等）
- */
 export const handleAiTwoPlyTurnState = (
   state: GameState,
   playerId: PlayerId,
@@ -726,23 +849,48 @@ export const handleAiTwoPlyTurnState = (
     }
   }
 
+  // ── Beam search 回合層序列規劃 ──
+  // beam 探索最多 3 步 deep，同層保留 top 3 序列。
+  // 攻擊自動結算整場戰鬥；終端 state 直接以 stateScore 打分。
+  const beamWidth = 3
+  const maxBeamDepth = 3
+  const beamResult = beamSearchBestFirstCommand(
+    state,
+    playerId,
+    beamWidth,
+    maxBeamDepth,
+  )
+
   const candidates: TwoPlyCandidate[] = []
 
-  for (const command of getLegalTurnCommands(state, playerId)) {
-    const score = twoPlyCandidateScore(state, playerId, command)
-    try {
-      candidates.push({
-        decision: {
-          // 攻擊停在 trap 階段讓防守方回應；評分已在
-          // twoPlyCandidateScore 內用 resolveBattleAutomatically 完整解析。
-          state: applyChosenTurnCommand(state, command),
-          action: commandActionTypes[command.kind],
-          description: describeCommand(state, playerId, command),
-        },
-        score,
-      })
-    } catch {
-      // skip invalid command
+  if (beamResult.firstCommand) {
+    const decisionState = applyChosenTurnCommand(state, beamResult.firstCommand)
+    candidates.push({
+      decision: {
+        state: decisionState,
+        action: commandActionTypes[beamResult.firstCommand.kind],
+        description: describeCommand(state, playerId, beamResult.firstCommand),
+      },
+      score: beamResult.beamScore,
+    })
+  }
+
+  // fallback：beam 若找不到有效動作，退一步用單指令枚舉
+  if (candidates.length === 0) {
+    for (const command of getLegalTurnCommands(state, playerId)) {
+      const score = twoPlyCandidateScore(state, playerId, command)
+      try {
+        candidates.push({
+          decision: {
+            state: applyChosenTurnCommand(state, command),
+            action: commandActionTypes[command.kind],
+            description: describeCommand(state, playerId, command),
+          },
+          score,
+        })
+      } catch {
+        // skip invalid command
+      }
     }
   }
 

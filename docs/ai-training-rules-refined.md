@@ -346,6 +346,7 @@ RATIONALE: AI 不是單人遊戲，必須考慮對手回應。
 | Phase 3c-2 | R10 對手回應風險評估 | ✅ 完成 |
 | Phase 3c-2.5 | R10 行為指標補齊 | ✅ 完成 |
 | Phase 3c-2.6 | R10 完整版（F1 attacker 反擊暴露 + 方向 bug 修正 + 行為測試） | ✅ 完成（2026-07-31） |
+| Phase 3c-3 | 回合層 beam search（取代單步 greedy，beam width=3 × maxDepth=3） | ✅ 完成（2026-07-31） |
 | Phase 3c-3a | R6c 必要性審查 → 決定不實作 | ✅ 完成（Deferred） |
 | Phase 4 | 完整驗收測試 | ⬜ 待執行 |
 | Phase 5 | 報告與文件更新 | ⬜ 待執行 |
@@ -353,12 +354,24 @@ RATIONALE: AI 不是單人遊戲，必須考慮對手回應。
 ### Phase 3c 基準線（R9 修正後，seeds 1–30）
 
 | 對戰組合 | 目標 | 實際 | 狀態 |
-|---|---|---|:---:|
+|---|---|---|---|:---:|
 | Lv.2 vs Lv.1 | ≥ 60% | 83.3% | ✅ |
 | Lv.3 vs Lv.2 | ≥ 58% | 66.7% | ✅ |
 | Lv.4 vs Lv.3 | 60%–75% | 73.3% | ✅ |
 | Lv.3 vs Lv.1 | ≥ 65% | 100.0% | ✅ |
 | Lv.4 vs Lv.1 | ≥ 70% | 100.0% | ✅ |
+
+### Phase 3c-3（beam search）基準線（300 seeds，2026-07-31）
+
+beam width=3, maxDepth=3。終端 state 直接用 `evaluatePlayerView + lv4RiskBonus` 打分，沒有 per-command bonus/penalty（terminal state 已捕捉序列結局；R10 下一回合風險為獨立層）。
+
+| 對戰組合 | 目標 | 實際 | vs 無 beam baseline |
+|---|---|---|---|
+| Lv.2 vs Lv.1 | ≥ 60% | 95.0% | 95.0%（不變） |
+| Lv.3 vs Lv.2 | ≥ 58% | 66.7% | 66.7%（不變） |
+| Lv.4 vs Lv.3 | ≥ 55% | 60.0% | 59.3%（+0.7%） |
+| Lv.3 vs Lv.1 | ≥ 65% | 96.7% | 96.7%（不變） |
+| Lv.4 vs Lv.1 | ≥ 70% | 96.7% | 96.7%（不變） |
 
 ### 已知問題
 
