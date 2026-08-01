@@ -1437,6 +1437,98 @@ describe('BS1-050 Broken Signpost: redirect-attack self target', () => {
 })
 
 /**
+ * 既有 bug（跟本次任何一張卡的文字轉換修正無關，是稽核 BS3 卡牌時意外發現
+ * 的 AI 陷阱決策/執行路徑問題）：像 BS3-070 這種一次帶多個子效果、各自有
+ * 自己 condition 的陷阱（例如 draw-up-to／discard-hand 都掛「支援區至少
+ * 5 張」），playTrap 對落到 fallback 分支（非 support-to-trash／
+ * prevent-knockout／support-to-hand／hand-to-support／redirect-attack／
+ * damage／trash-to-deck 這些特別處理過的效果種類）的效果會直接呼叫
+ * executeCardEffect，而它內部的 assertCondition 在條件不成立時會直接拋錯，
+ * 不是優雅跳過——導致玩家/AI 支援區不夠時，整個 playTrap（包含前面已經生效
+ * 的 modify-attack）都會連帶失敗。用 BS3 Green Lily 牌組 Lv.4 AI 互打
+ * 60 個種子可以穩定重現：防守方在 pendingBattle.stage === 'trap' 時踩到
+ * 這個錯誤，AI 判定為 stuck，整場模擬卡死不動。
+ */
+describe('BS3-070-like traps: condition-gated sub-effects should be skipped, not thrown', () => {
+  const puppetTheater = (): GameCard => ({
+    id: 'BS3-070',
+    instanceId: 'bs3-070-test',
+    name: 'Puppet Theater of Chaos',
+    type: 'trap',
+    officialType: 'trap',
+    energyColor: 'green',
+    trap: {
+      text: 'test',
+      cost: { energy: { green: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 2 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: { kind: 'support-count-at-least', count: 5 },
+        },
+        {
+          kind: 'discard-hand',
+          count: 1,
+          condition: { kind: 'support-count-at-least', count: 5 },
+        },
+      ],
+    },
+  })
+
+  it('skips condition-not-met sub-effects instead of throwing, while still applying the rest', () => {
+    const trapCard = puppetTheater()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trapCard]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-green-a', 'green'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trapCard.instanceId,
+      paymentIds: ['p1-green-a'],
+      targetIds: ['attacker'],
+    })
+    expect(result.status).toBe('playing')
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ sourceInstanceId: trapCard.instanceId, amount: -1 }),
+    )
+    expect(result.pendingDrawUpTo).toBeUndefined()
+  })
+
+  it('still applies condition-met sub-effects normally', () => {
+    const trapCard = puppetTheater()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trapCard]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-green-a', 'green'), rested: false },
+      { card: item('p1-green-b', 'green'), rested: false },
+      { card: item('p1-green-c', 'green'), rested: false },
+      { card: item('p1-green-d', 'green'), rested: false },
+      { card: item('p1-green-e', 'green'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trapCard.instanceId,
+      paymentIds: ['p1-green-a'],
+      targetIds: ['attacker'],
+    })
+    expect(result.status).toBe('playing')
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({ sourceInstanceId: trapCard.instanceId, amount: -1 }),
+    )
+    expect(result.pendingDrawUpTo).toBeDefined()
+  })
+})
+
+/**
  * `[auto-skip-trap]` 的診斷示警原本只要「手上有陷阱卡卻沒有候選」就印，於是
  * 每次被攻擊而付不出代價都會噴一則假警報——被攻擊時支援卡多半還橫置著
  * （支援區要到自己回合的活躍階段才重置），這是日常狀況而非 bug。
