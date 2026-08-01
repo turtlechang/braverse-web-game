@@ -857,7 +857,15 @@
   padding-bottom: 3px;
 }
 
-.resource-card-list > button {
+.resource-card-entry {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: center;
+  gap: 4px;
+}
+
+.resource-card-list > button,
+.resource-card-entry > button:first-child {
   width: 58px;
   display: grid;
   flex: 0 0 auto;
@@ -869,6 +877,13 @@
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
   cursor: pointer;
+}
+
+.resource-card-entry .skill-action {
+  width: 58px;
+  min-height: 20px;
+  padding-inline: 4px;
+  font-size: 0.56rem;
 }
 
 .resource-card-list .resource-card {

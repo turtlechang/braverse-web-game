@@ -257,11 +257,9 @@ export function BattleRow({
             const canSelectBreakEffectTarget = breakEffectTargetIds.has(
               card.instanceId,
             )
-            // BS3-025 這類技能允許來源在休息區發動；一般休息區卡牌沒有這個按鈕。
-            const canActivateFromBreak =
-              canOperate &&
-              !canSelectBreakEffectTarget &&
-              canActivateCookieSkill(game, playerId, card.instanceId, 'activate')
+            // 這個小格子只負責視覺摘要，不放「啟動技能」按鈕（BS3-025 這類
+            // 休息區可發動技能的卡）——格子太窄，按鈕會擠壓版面觀感。發動
+            // 入口統一收在下面的休息區摘要彈出視窗（.break-popover）。
             return (
               <div
                 className="break-card-wrap"
@@ -285,15 +283,6 @@ export function BattleRow({
                 {canSelectBreakEffectTarget && (
                   <span className="target-hint">效果目標</span>
                 )}
-                {canActivateFromBreak && (
-                  <button
-                    className="skill-action"
-                    type="button"
-                    onClick={() => onActivateSkill?.(card.instanceId)}
-                  >
-                    啟動技能
-                  </button>
-                )}
               </div>
             )
           })}
@@ -313,16 +302,33 @@ export function BattleRow({
             </strong>
             {player.breakArea.length > 0 ? (
               <div className="resource-card-list">
-                {player.breakArea.map((card) => (
-                  <button
-                    type="button"
-                    key={card.instanceId}
-                    onClick={() => onInspectCard(card)}
-                  >
-                    <CardFace card={card} className="resource-card" />
-                    <small>{card.name}</small>
-                  </button>
-                ))}
+                {player.breakArea.map((card) => {
+                  // BS3-025 這類技能允許來源在休息區發動；一般休息區卡牌沒有
+                  // 這個按鈕。跟上面 .break-cards 那個常駐小格子重複算一次，
+                  // 是因為玩家很自然會先點「休息區摘要」看清楚卡牌內容，
+                  // 若這個彈出視窗沒有發動按鈕，玩家會以為技能無法發動
+                  // （即使旁邊常駐格子上其實有）。
+                  const canActivateFromBreakPopover =
+                    canOperate &&
+                    canActivateCookieSkill(game, playerId, card.instanceId, 'activate')
+                  return (
+                    <div className="resource-card-entry" key={card.instanceId}>
+                      <button type="button" onClick={() => onInspectCard(card)}>
+                        <CardFace card={card} className="resource-card" />
+                        <small>{card.name}</small>
+                      </button>
+                      {canActivateFromBreakPopover && (
+                        <button
+                          className="skill-action"
+                          type="button"
+                          onClick={() => onActivateSkill?.(card.instanceId)}
+                        >
+                          啟動技能
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             ) : (
               <small>目前沒有卡牌。</small>
