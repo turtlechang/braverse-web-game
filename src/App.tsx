@@ -565,6 +565,7 @@ function App() {
           ...pending.breakToTrashCandidates,
           ...pending.breakToBattleCandidates,
           ...pending.breakToHandBySumCandidates,
+          ...pending.handToBreakBySumCandidates,
           ...pending.trashToHandCandidates,
           ...pending.trashToDeckCandidates,
         ]}

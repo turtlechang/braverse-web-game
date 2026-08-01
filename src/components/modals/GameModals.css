@@ -1227,6 +1227,39 @@
   color: #bbdaf3;
 }
 
+.faint-payment-section {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid rgba(113, 233, 255, 0.28);
+  background: rgba(3, 20, 53, 0.45);
+}
+
+.faint-payment-section > strong {
+  display: block;
+  color: #71e9ff;
+  font-size: 0.82rem;
+}
+
+.faint-payment-cost {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  color: #bbdaf3;
+  font-size: 0.78rem;
+}
+
+.faint-payment-candidates {
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.faint-payment-candidates > button {
+  min-width: 96px;
+  flex-basis: 96px;
+}
+
 .faint-effect-card-detail {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);

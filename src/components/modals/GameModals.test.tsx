@@ -564,6 +564,71 @@ describe('FaintEffectResponseModal', () => {
     await act(() => root.unmount())
   })
 
+  it('shows selectable card candidates for card-based faint effects', async () => {
+    const onSelectTarget = vi.fn()
+    const handCookie: CookieCard = {
+      ...aloeCard,
+      id: 'BS3-029-target',
+      instanceId: 'bs3-029-target',
+      name: 'Yellow Cookie',
+    }
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={0}
+        maxTargets={1}
+        selectedTargetCount={0}
+        selectedTargetIds={[]}
+        candidateCards={[handCookie]}
+        onSelectTarget={onSelectTarget}
+        onConfirm={() => undefined}
+      />,
+    ))
+
+    await click(findButton(container, 'Yellow Cookie'))
+    expect(onSelectTarget).toHaveBeenCalledWith('bs3-029-target')
+
+    await act(() => root.unmount())
+  })
+
+  it('blocks faint resolution until its optional energy cost is paid', async () => {
+    const onSelectPayment = vi.fn()
+    const paymentCard: GameCard = {
+      id: 'yellow-support',
+      instanceId: 'yellow-support',
+      name: 'Yellow Support',
+      type: 'item',
+      energyColor: 'yellow',
+    }
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={0}
+        maxTargets={0}
+        selectedTargetCount={0}
+        energyCost={{ yellow: 1 }}
+        paymentCandidates={[paymentCard]}
+        paymentCostTotal={1}
+        paymentValid={false}
+        onSelectPayment={onSelectPayment}
+        allowSkip
+        onSkip={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    ))
+
+    expect(findButton(container, '確認結算')?.disabled).toBe(true)
+    await click(findButton(container, 'Yellow Support'))
+    expect(onSelectPayment).toHaveBeenCalledWith('yellow-support')
+    expect(findButton(container, '不發動')).toBeDefined()
+
+    await act(() => root.unmount())
+  })
+
   it('does not block board target clicks while choosing faint targets', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)

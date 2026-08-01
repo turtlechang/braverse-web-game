@@ -198,6 +198,50 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('minimizes and restores an embedded optional attack prompt', () => {
+    const optionalCostAttack = {
+      sourceCard: createCookieCard(13),
+      sourceCardName: 'Tiramisu Cookie',
+      effectText: 'Pay to deal damage.',
+      discardHandCost: 0,
+      energyCostTotal: 0,
+      playerHand: [],
+      supportCandidates: [],
+      targetCandidates: [],
+      needsTarget: false,
+      targetMin: 0,
+      targetLabel: '對手餅乾',
+      onSkip: () => undefined,
+      onPay: () => undefined,
+    }
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={null}
+        currentEffect={null}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        optionalCostAttack={optionalCostAttack}
+      />,
+    ))
+
+    expect(container.querySelector('.minimize-reveal')).not.toBeNull()
+    act(() => {
+      container.querySelector<HTMLButtonElement>('.minimize-reveal')?.click()
+    })
+    expect(container.querySelector('.effect-panel-dock')).not.toBeNull()
+    expect(container.querySelector('.optional-cost-attack-inline')).toBeNull()
+
+    act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-dock')?.click()
+    })
+    expect(container.querySelector('.optional-cost-attack-inline')).not.toBeNull()
+
+    act(() => root.unmount())
+  })
+
   it('allows skipping an attack follow-up effect', () => {
     const pending = createPendingEffect({
       skillActivated: true,

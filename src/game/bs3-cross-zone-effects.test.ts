@@ -269,6 +269,7 @@ describe('BS3-029 Burnt Cheese Cookie: hand-to-battle on faint', () => {
         kind: 'hand-to-battle',
         amount: 1,
         energyColor: 'yellow',
+        energyCost: { yellow: 1 },
         optional: true,
         gainHp: 1,
       },

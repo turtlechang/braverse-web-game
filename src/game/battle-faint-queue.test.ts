@@ -4,7 +4,9 @@ import {
   beginAttack,
   executeCardEffect,
   finalizePendingReplacements,
+  getFaintEffectCardCandidates,
   getFaintEffectCandidates,
+  getFaintEffectMinMax,
   replaceDefeatedCookie,
   resolveFaintEffect,
   resolveNextDamage,
@@ -150,8 +152,154 @@ describe('faint effect queue', () => {
     expect(candidates[0].card.instanceId).toBe('attacker')
   })
 
+  it('resolves a hand-to-battle faint effect with the selected hand Cookie', () => {
+    const effect = {
+      kind: 'hand-to-battle' as const,
+      amount: 1,
+      energyColor: 'yellow' as const,
+      energyCost: { yellow: 1 },
+      optional: true,
+      gainHp: 1,
+    }
+    const handCookie = {
+      ...cookie('yellow-hand'),
+      energyColor: 'yellow' as const,
+    }
+    const base = createFaintState()
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [item('p1-hp-1'), item('p1-hp-2'), item('p1-hp-3'), item('p1-hp-4')],
+          hand: [handCookie],
+          supportArea: [
+            { card: item('p1-yellow-energy', 'yellow'), rested: false },
+          ],
+        },
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'faint-cookie',
+          sourceCardName: 'Faint Cookie',
+          effect,
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'faint-cookie',
+            sourceCardName: 'Faint Cookie',
+          },
+        },
+      ],
+    }
+
+    expect(getFaintEffectMinMax(effect)).toEqual({ min: 0, max: 1 })
+    expect(getFaintEffectCardCandidates(state).map((card) => card.instanceId)).toEqual([
+      'yellow-hand',
+    ])
+    expect(() => resolveFaintEffect(state, ['yellow-hand'])).toThrow(
+      '昏厥效果能量費用',
+    )
+    const skipped = resolveFaintEffect(state, [])
+    expect(skipped.pendingFaintEffects).toBeUndefined()
+    expect(skipped.players['player-one'].hand).toHaveLength(1)
+
+    const next = applyGameCommand(state, {
+      kind: 'resolve-faint-effect',
+      playerId: 'player-one',
+      targetIds: ['yellow-hand'],
+      paymentIds: ['p1-yellow-energy'],
+    })
+    const played = next.players['player-one'].battleArea.find(
+      (entry) => entry.card.instanceId === 'yellow-hand',
+    )
+    expect(played?.hpCards).toHaveLength(3)
+    expect(next.players['player-one'].supportArea[0].rested).toBe(true)
+  })
+
+  it('requires an empty battle area replacement before resolving BS3-029', () => {
+    const effect = {
+      kind: 'hand-to-battle' as const,
+      amount: 1,
+      energyColor: 'yellow' as const,
+      energyCost: { yellow: 1 },
+      optional: true,
+      gainHp: 1,
+    }
+    const base = createFaintState()
+    const sourceEntry = base.players['player-one'].battleArea[0]
+    const sourceCard = {
+      ...sourceEntry.card,
+      id: 'BS3-029',
+      name: 'Burnt Cheese Cookie',
+      skill: { ...sourceEntry.card.skill!, effects: [effect], faint: true },
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [item('replace-hp-1'), item('replace-hp-2'), item('replace-hp-3'), item('replace-hp-4')],
+          hand: [cookie('forced-replacement'), { ...cookie('yellow-follow-up'), energyColor: 'yellow' }],
+          supportArea: [
+            { card: item('yellow-energy', 'yellow'), rested: false },
+          ],
+          battleArea: [],
+          breakArea: [sourceCard],
+        },
+      },
+      departedCookieCounts: { 'player-one': 1, 'player-two': 0 },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: sourceCard.instanceId,
+          sourceCardName: sourceCard.name,
+          effect,
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: sourceCard.instanceId,
+            sourceCardName: sourceCard.name,
+          },
+        },
+      ],
+    }
+
+    let next = finalizePendingReplacements(state)
+    expect(next.pendingReplacement?.tasks).toEqual([
+      { playerId: 'player-one', remaining: 1 },
+    ])
+    expect(() => skipDefeatedCookieReplacement(next)).toThrow(
+      '戰鬥區沒有餅乾時必須先補位',
+    )
+    expect(() =>
+      resolveFaintEffect(next, ['yellow-follow-up'], ['yellow-energy']),
+    ).toThrow('必須先完成補位')
+    next = replaceDefeatedCookie(next, 'forced-replacement')
+    expect(next.pendingReplacement).toBeNull()
+    expect(next.pendingFaintEffects).toHaveLength(1)
+
+    next = resolveFaintEffect(
+      next,
+      ['yellow-follow-up'],
+      ['yellow-energy'],
+    )
+    expect(next.pendingFaintEffects).toBeUndefined()
+    expect(next.players['player-one'].battleArea.map((entry) => entry.card.instanceId)).toEqual([
+      'forced-replacement',
+      'yellow-follow-up',
+    ])
+  })
+
   it('resolveFaintEffect damages selected target', () => {
     const state = createFaintState()
+    state.players['player-one'].deck = [
+      item('p1-replace-hp-1'),
+      item('p1-replace-hp-2'),
+      item('p1-replace-hp-3'),
+      item('p1-replace-hp-4'),
+    ]
     state.players['player-two'].battleArea[0] = {
       ...state.players['player-two'].battleArea[0],
       hpCards: [item('p2-hp-a'), item('p2-hp-b')],
@@ -159,6 +307,7 @@ describe('faint effect queue', () => {
     let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
     battleState = skipTrap(battleState, 'player-one')
     let afterDamage = resolveNextDamage(battleState)
+    afterDamage = replaceDefeatedCookie(afterDamage, 'p1-replacement')
 
     afterDamage = resolveFaintEffect(afterDamage, ['attacker'])
     expect(afterDamage.pendingFaintEffects).toBeUndefined()
@@ -167,9 +316,16 @@ describe('faint effect queue', () => {
 
   it('resolveFaintEffect skips when targets empty (up to 1 → 0)', () => {
     const state = createFaintState()
+    state.players['player-one'].deck = [
+      item('p1-replace-hp-1'),
+      item('p1-replace-hp-2'),
+      item('p1-replace-hp-3'),
+      item('p1-replace-hp-4'),
+    ]
     let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
     battleState = skipTrap(battleState, 'player-one')
     let afterDamage = resolveNextDamage(battleState)
+    afterDamage = replaceDefeatedCookie(afterDamage, 'p1-replacement')
 
     afterDamage = resolveFaintEffect(afterDamage, [])
     expect(afterDamage.pendingFaintEffects).toBeUndefined()
@@ -191,6 +347,34 @@ describe('faint effect queue', () => {
 
     expect(result.pendingFaintEffects).toBeDefined()
     expect(result.pendingFaintEffects!.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('does not queue a faint effect whose condition is false at faint time', () => {
+    const state = createFaintState()
+    const faintCookie = state.players['player-one'].battleArea[0]
+    state.players['player-one'].battleArea[0] = {
+      ...faintCookie,
+      card: {
+        ...faintCookie.card,
+        skill: {
+          ...faintCookie.card.skill!,
+          effects: [
+            {
+              kind: 'damage-all',
+              amount: 1,
+              side: 'opponent',
+              condition: { kind: 'support-count-at-least', count: 5 },
+            },
+          ],
+        },
+      },
+    }
+
+    let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
+    battleState = skipTrap(battleState, 'player-one')
+    const afterDamage = resolveNextDamage(battleState)
+
+    expect(afterDamage.pendingFaintEffects).toBeUndefined()
   })
 
   it('faint respects missing candidates (empty opponent battle area)', () => {

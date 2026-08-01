@@ -946,8 +946,18 @@ export function useOnlinePendingEffect(params: {
     // 與本地 usePendingEffect 對齊的欄位名,讓 EffectPanel/BattleResponseModals/
     // DamageEffectModals/PendingDecisionModals 能原樣重用。
     pendingEffect: pendingEffectView,
-    faintActive: hasFaint && !isEffectPending,
-    afterDamageActive: hasAfterDamage && !isEffectPending,
+    faintActive:
+      hasFaint &&
+      !isEffectPending &&
+      !game.pendingReplacement &&
+      !game.pendingRefresh &&
+      !game.pendingOnPlay,
+    afterDamageActive:
+      hasAfterDamage &&
+      !isEffectPending &&
+      !game.pendingReplacement &&
+      !game.pendingRefresh &&
+      !game.pendingOnPlay,
   } as const
 }
 

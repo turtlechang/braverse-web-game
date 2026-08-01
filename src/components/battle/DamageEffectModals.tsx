@@ -22,19 +22,68 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
             match.faintCandidates.find(
               (candidate) =>
                 candidate.card.instanceId === match.selectedFaintTargetIds[0],
-            )?.card.name
+            )?.card.name ??
+              match.faintCardCandidates.find(
+                (candidate) =>
+                  candidate.instanceId === match.selectedFaintTargetIds[0],
+              )?.name
           }
+          selectedTargetIds={match.selectedFaintTargetIds}
+          candidateCards={match.faintCardCandidates}
+          candidateLabel="合法卡牌"
+          onSelectTarget={(instanceId) => {
+            if (
+              !match.faintCardCandidates.some(
+                (candidate) => candidate.instanceId === instanceId,
+              )
+            ) {
+              return
+            }
+            match.setSelectedFaintTargetIds((current) =>
+              current.includes(instanceId)
+                ? current.filter((id) => id !== instanceId)
+                : current.length < match.faintMax
+                  ? [...current, instanceId]
+                  : current,
+            )
+          }}
+          energyCost={match.faintEnergyCost}
+          paymentCandidates={match.faintPaymentCandidates}
+          selectedPaymentIds={match.selectedFaintPaymentIds}
+          paymentCostTotal={match.faintEnergyCostTotal}
+          paymentValid={match.faintPaymentValid}
+          onSelectPayment={match.toggleFaintPayment}
+          allowSkip={match.faintEnergyCostTotal > 0}
+          onSkip={() => {
+            match.setSelectedFaintTargetIds([])
+            match.setSelectedFaintPaymentIds([])
+            match.dispatch(
+              {
+                kind: 'resolve-faint-effect',
+                playerId: match.viewerPlayerId,
+                targetIds: [],
+              },
+              `${match.faintSourceCard!.name}未支付昏厥效果費用，略過效果。`,
+            )
+          }}
           onConfirm={() => {
             const targets = match.selectedFaintTargetIds
-            const targetName = match.faintCandidates.find(
-              (candidate) => candidate.card.instanceId === targets[0],
-            )?.card.name
+            const paymentIds = match.selectedFaintPaymentIds
+            const targetName =
+              match.faintCandidates.find(
+                (candidate) => candidate.card.instanceId === targets[0],
+              )?.card.name ??
+              match.faintCardCandidates.find(
+                (candidate) => candidate.instanceId === targets[0],
+              )?.name
             match.setSelectedFaintTargetIds([])
+            match.setSelectedFaintPaymentIds([])
             match.dispatch(
               {
                 kind: 'resolve-faint-effect',
                 playerId: match.viewerPlayerId,
                 targetIds: targets,
+                paymentIds,
               },
               targets.length === 0
                 ? `${match.faintSourceCard!.name}已結算昏厥效果。`

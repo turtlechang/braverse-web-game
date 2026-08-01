@@ -10,6 +10,7 @@ import {
   executeCardEffect,
   getEffectTargetCandidates,
 } from './effects'
+import { activateCookieSkill } from './skills'
 import type {
   CardEffect,
   ChooseOneEffect,
@@ -19,7 +20,7 @@ import type {
   GameState,
   RevealTopDeckEffect,
 } from './types'
-import { cookie, createBattleState } from './test-helpers/battle-helpers'
+import { cookie, createBattleState, item } from './test-helpers/battle-helpers'
 
 const findBs3Card = (cardNumber: string) => {
   const card = (officialBS3Inventory.cards as OfficialCardRecord[]).find(
@@ -124,6 +125,85 @@ describe('BS3 藍色卡片整合測試', () => {
       amount: 2,
       condition: { kind: 'hand-count-at-most', count: 2 },
     })
+  })
+
+  // BS3-082（GingerBrave）「若手牌 5 張以下，此餅乾不受任何效果傷害」是
+  // trigger: 'passive' 的持續性條件被動。在修正前，effectDamagePreventedUntilTurn
+  // 只有 executeCardEffect 直接執行 prevent-effect-damage 效果時才會寫入，
+  // 但整個引擎沒有任何操作或事件會主動對這張被動技能呼叫 executeCardEffect
+  // （不像 support-area-decreased-this-turn／ST5-022 有專用的 pendingStageTrigger
+  // 掛鉤），導致這個保護在真實對戰中永遠不會生效。修正後 isEffectDamagePrevented
+  // 除了讀快照，也會即時重新檢查目標自己身上 trigger: 'passive' 的
+  // prevent-effect-damage 技能條件是否成立。
+  it('BS3-082 GingerBrave: passive prevent-effect-damage actually protects when hand <= 5', () => {
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-082'))
+    expect(skill).toBeTruthy()
+    expect(skill!.trigger).toBe('passive')
+    expect(skill!.effects[0]).toMatchObject({
+      kind: 'prevent-effect-damage',
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    })
+
+    const state = createBattleState()
+    const gingerBrave = { ...cookie('gb', 3, 3), skill: skill! }
+    state.players['player-one'].battleArea = [
+      {
+        card: gingerBrave,
+        hpCards: [item('gb-hp-1'), item('gb-hp-2'), item('gb-hp-3')],
+        rested: false,
+        battleEntryId: 'gb:battle:1',
+      },
+    ]
+    state.players['player-one'].hand = [item('h1'), item('h2')]
+
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'attacker',
+    }
+    const result = executeCardEffect(
+      state,
+      context,
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      [],
+    )
+    const gb = result.players['player-one'].battleArea.find(
+      (c) => c.card.instanceId === 'gb',
+    )
+    expect(gb?.hpCards).toHaveLength(3)
+  })
+
+  it('BS3-082 GingerBrave: takes normal effect damage once hand exceeds 5', () => {
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-082'))
+    const state = createBattleState()
+    const gingerBrave = { ...cookie('gb', 3, 3), skill: skill! }
+    state.players['player-one'].battleArea = [
+      {
+        card: gingerBrave,
+        hpCards: [item('gb-hp-1'), item('gb-hp-2'), item('gb-hp-3')],
+        rested: false,
+        battleEntryId: 'gb:battle:1',
+      },
+    ]
+    state.players['player-one'].hand = [
+      item('h1'), item('h2'), item('h3'), item('h4'), item('h5'), item('h6'),
+    ]
+
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'attacker',
+    }
+    const result = executeCardEffect(
+      state,
+      context,
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      [],
+    )
+    const gb = result.players['player-one'].battleArea.find(
+      (c) => c.card.instanceId === 'gb',
+    )
+    expect(gb?.hpCards).toHaveLength(2)
   })
 })
 
@@ -313,5 +393,52 @@ describe('BS3 紫色卡片整合測試', () => {
     const revealEffect = skill!.effects[0] as RevealTopDeckEffect
     const next = executeCardEffect(emptyDeck, sourceContext(), revealEffect, [])
     expect(next.pendingRevealTopDeck ?? undefined).toBeUndefined()
+  })
+
+  // BS3-105（Affogato Cookie）技能文字「<Place this Cookie in the trash.>」是
+  // 發動代價，比照 BS2-015／BS2-071 用 trashBattleCookie: { sourceOnly: true }
+  // 表示。generic parseAbilityCost 只認得「Place N (energy) LV.X Cookie from
+  // your battle area into the trash」這種措辭，「this Cookie」是自我指涉、
+  // 抓不到，修正前完全沒有把這個代價轉換出來，導致這個技能可以在不犧牲自己
+  // 的情況下無限發動。
+  it('BS3-105 Affogato Cookie: activating the skill must trash the source cookie', () => {
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-105'))
+    expect(skill).toBeTruthy()
+    expect(skill!.trigger).toBe('activate')
+    expect(skill!.cost.energy).toEqual({ purple: 1 })
+    expect(skill!.cost.trashBattleCookie).toEqual({ count: 1, sourceOnly: true })
+
+    const state = createBattleState()
+    state.activePlayerId = 'player-one'
+    state.players['player-one'].battleArea = [
+      {
+        card: { ...cookie('affogato', 2, 2), skill: skill! },
+        hpCards: [item('hp-1'), item('hp-2')],
+        rested: false,
+        battleEntryId: 'affogato:battle:1',
+      },
+    ]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-energy-1', 'purple'), rested: false },
+    ]
+    state.players['player-one'].deck = [item('d1'), item('d2'), item('d3')]
+    state.players['player-two'].deck = [item('e1'), item('e2'), item('e3')]
+
+    const result = activateCookieSkill(
+      state,
+      'player-one',
+      'affogato',
+      'activate',
+      ['p1-energy-1'],
+    )
+    const stillInBattle = result.players['player-one'].battleArea.some(
+      (c) => c.card.instanceId === 'affogato',
+    )
+    expect(stillInBattle).toBe(false)
+    expect(
+      result.players['player-one'].discardPile.some(
+        (c) => c.instanceId === 'affogato',
+      ),
+    ).toBe(true)
   })
 })

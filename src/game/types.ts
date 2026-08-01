@@ -170,6 +170,18 @@ export interface SupportCountAtLeastCondition {
   count: number
 }
 
+/** 支援區張數不超過門檻（BS3-067 的「support area contains 6 cards or less」）。 */
+export interface SupportCountAtMostCondition {
+  kind: 'support-count-at-most'
+  count: number
+}
+
+/** 對手支援區張數達到門檻（BS3-072 的「if your opponent's support area contains 5 or more」）。 */
+export interface OpponentSupportCountAtLeastCondition {
+  kind: 'opponent-support-count-at-least'
+  count: number
+}
+
 export interface ActiveSupportCountAtLeastCondition {
   kind: 'active-support-count-at-least'
   count: number
@@ -237,6 +249,17 @@ export interface OpponentCookieFaintedInCurrentBattleCondition {
   kind: 'opponent-cookie-fainted-in-current-battle'
 }
 
+/**
+ * 本次攻擊宣告的目標，攻擊當下的剩餘 HP 卡數達到門檻（BS3-001「when this
+ * Cookie attacks your opponent's Cookie whose remaining HP is 4 or more」）。
+ * 只在來源正是 `state.pendingBattle` 的攻擊者時成立，沒有進行中的戰鬥（或
+ * 來源不是攻擊者）一律視為不成立。
+ */
+export interface AttackTargetRemainingHpAtLeastCondition {
+  kind: 'attack-target-remaining-hp-at-least'
+  amount: number
+}
+
 export interface SupportKeywordAtLeastCondition {
   kind: 'support-keyword-at-least'
   keyword: CardKeyword
@@ -262,6 +285,8 @@ export type EffectCondition =
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
   | SupportCountAtLeastCondition
+  | SupportCountAtMostCondition
+  | OpponentSupportCountAtLeastCondition
   | ActiveSupportCountAtLeastCondition
   | TrashColorCountAtLeastCondition
   | HandCountAtMostCondition
@@ -274,6 +299,7 @@ export type EffectCondition =
   | SourceHpAtLeastCondition
   | SourceInBreakAreaCondition
   | OpponentCookieFaintedInCurrentBattleCondition
+  | AttackTargetRemainingHpAtLeastCondition
   | SupportKeywordAtLeastCondition
   | DistinctNamedFamilyCountCondition
   | AnyBattleAreaHasBlockerCondition
@@ -466,6 +492,13 @@ export interface DisableFlipEffect {
   kind: 'disable-flip'
   duration: 'this-turn'
   target: EffectTargetSelector
+  /**
+   * BS3-071：若被選中的目標之一等級剛好是這個數字，來源場景卡本回合結算後
+   * 直接送入棄牌區。目標是攻擊當下才選定的，這個條件依附在選擇結果上，
+   * 不是一般看場面狀態的 EffectCondition，所以直接掛在效果本身而不是
+   * `condition` 欄位。
+   */
+  trashSourceIfTargetLevel?: number
 }
 
 export interface DisableBlockEffect {
@@ -552,6 +585,8 @@ export interface HandToBattleEffect {
   kind: 'hand-to-battle'
   amount: number
   energyColor?: EnergyColor
+  /** 登場前需支付的能量（BS3-029）。 */
+  energyCost?: EnergyCost
   minLevel?: number
   maxLevel?: number
   optional?: boolean
@@ -644,6 +679,12 @@ export interface HandToBreakEffect {
   maxLevel?: number
   nonCookieOnly?: boolean
   optional?: boolean
+}
+
+export interface HandToBreakBySumEffect {
+  kind: 'hand-to-break-by-level-sum'
+  targetSum: number
+  energyColor?: EnergyColor
 }
 
 export interface BreakToHandEffect {
@@ -745,6 +786,7 @@ export interface RestSupportEffect {
   amount: number
   activeOnly?: boolean
   optional?: boolean
+  condition?: EffectCondition
 }
 
 export interface SupportToHpEffect {
@@ -914,6 +956,7 @@ export type CardEffect =
   | BreakToBattleEffect
   | BattleToBreakEffect
   | BreakToHandBySumEffect
+  | HandToBreakBySumEffect
   | FlipToSupportEffect
   | RevealTopDeckEffect
   | HandToBreakEffect
@@ -1091,6 +1134,12 @@ export interface EffectContext {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   sourceCardName?: string
+  /**
+   * 攻擊宣告當下明確傳入的目標，優先於 `state.pendingBattle`（BS3-001）。
+   * `beginAttack` 計算宣告傷害時，`pendingBattle` 尚未寫入 state，
+   * 這時只能靠呼叫端把當次目標直接帶進 context。
+   */
+  attackTargetInstanceId?: string
 }
 
 export interface SupportCard {

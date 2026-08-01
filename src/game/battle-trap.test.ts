@@ -5,6 +5,7 @@ import {
   createOfficialRedStarterDeck,
   explainUnavailableTraps,
   getPendingDecision,
+  getTrapTargetCandidates,
   getTrapCandidates,
   playTrap,
   resolveDrawUpTo,
@@ -36,6 +37,106 @@ describe('TRAP response window', () => {
         },
       ],
     },
+  })
+
+  it('keeps the declared attack target when ST2-020 only modifies the attacker', () => {
+    const windingKeyShield: GameCard = {
+      id: 'ST2-020',
+      instanceId: 'st2-020-test',
+      name: 'Winding Key Shield',
+      type: 'trap',
+      officialType: 'trap',
+      energyColor: 'yellow',
+      trap: {
+        text: 'Select up to 1 of your opponent\'s Cookies. During this turn, that Cookie deals -3 attack damage.',
+        cost: { energy: { yellow: 2 }, discardHand: 0 },
+        condition: { kind: 'break-level-at-least', level: 5 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -3,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [windingKeyShield]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-yellow-a', 'yellow'), rested: false },
+      { card: item('p1-yellow-b', 'yellow'), rested: false },
+    ]
+    state.players['player-one'].breakArea = Array.from(
+      { length: 5 },
+      (_, index) => cookie(`p1-break-${index}`),
+    )
+    state = declareAttack(state)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: windingKeyShield.instanceId,
+      paymentIds: ['p1-yellow-a', 'p1-yellow-b'],
+      targetIds: ['attacker'],
+    })
+
+    expect(result.pendingBattle?.targetInstanceId).toBe('defender')
+    expect(result.attackModifiers).toContainEqual(
+      expect.objectContaining({
+        sourceInstanceId: windingKeyShield.instanceId,
+        targetInstanceId: 'attacker',
+        amount: -3,
+      }),
+    )
+  })
+
+  it('applies BS3-045 damage-by-break-count to the selected opponent Cookie', () => {
+    const counterattackTrap: GameCard = {
+      id: 'BS3-045',
+      instanceId: 'bs3-045-test',
+      name: "Golden Monarch's Counterattack",
+      type: 'trap',
+      officialType: 'trap',
+      energyColor: 'yellow',
+      trap: {
+        text: 'Select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage for each LV.3 Cookie in your break area.',
+        cost: { energy: { yellow: 2 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'damage-by-break-count',
+            perCount: 1,
+            exactBreakLevel: 3,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [counterattackTrap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-yellow-a', 'yellow'), rested: false },
+      { card: item('p1-yellow-b', 'yellow'), rested: false },
+    ]
+    state.players['player-one'].breakArea = [
+      { ...cookie('p1-lv3'), level: 3 },
+    ]
+    state.players['player-two'].battleArea[0].hpCards = [
+      item('attacker-hp-a'),
+      item('attacker-hp-b'),
+    ]
+    state = declareAttack(state)
+
+    expect(
+      getTrapTargetCandidates(state, 'player-one', counterattackTrap.instanceId)
+        .map((candidate) => candidate.card.instanceId),
+    ).toEqual(['attacker'])
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: counterattackTrap.instanceId,
+      paymentIds: ['p1-yellow-a', 'p1-yellow-b'],
+      targetIds: ['attacker'],
+    })
+
+    expect(result.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
   })
 
   const purpleCookieCostTrap = (): GameCard => ({

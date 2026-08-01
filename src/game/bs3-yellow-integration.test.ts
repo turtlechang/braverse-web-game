@@ -119,6 +119,7 @@ describe('BS3-029 Burnt Cheese Cookie', () => {
       kind: 'hand-to-battle',
       amount: 1,
       energyColor: 'yellow',
+      energyCost: { yellow: 1 },
       optional: true,
       gainHp: 1,
     })
@@ -338,10 +339,16 @@ describe('BS3-043 Soul Jam: Light of Abundance', () => {
 // BS3-044 Cheesepad Tablet (item)
 // =====================================
 describe('BS3-044 Cheesepad Tablet', () => {
-  it('converts to item ability with break-to-hand', () => {
+  it('converts to item ability with the LV.2+ hand-to-break cost effect followed by break-to-hand', () => {
     const itemAbility = convertOfficialItemAbility(findBs3Card('BS3-044'))
     expect(itemAbility).toBeTruthy()
+    expect(itemAbility!.effects).toHaveLength(2)
     expect(itemAbility!.effects[0]).toMatchObject({
+      kind: 'hand-to-break',
+      amount: 1,
+      minLevel: 2,
+    })
+    expect(itemAbility!.effects[1]).toMatchObject({
       kind: 'break-to-hand',
       amount: 1,
       energyColor: 'yellow',
@@ -391,15 +398,14 @@ describe('BS3-046 Golden Cheese Colosseum', () => {
 // BS3-047 Kingdom of Eternal Abundance (stage)
 // =====================================
 describe('BS3-047 Kingdom of Eternal Abundance', () => {
-  it('converts to stage with hand-to-break + break-to-battle', () => {
+  it('converts to stage with hand-to-break-by-level-sum + break-to-battle', () => {
     const stage = convertOfficialStageAbility(findBs3Card('BS3-047'))
     expect(stage).toBeTruthy()
     expect(stage!.effects).toHaveLength(2)
     expect(stage!.effects[0]).toMatchObject({
-      kind: 'hand-to-break',
-      amount: 3,
+      kind: 'hand-to-break-by-level-sum',
+      targetSum: 3,
       energyColor: 'yellow',
-      optional: true,
     })
     expect(stage!.effects[1]).toMatchObject({
       kind: 'break-to-battle',

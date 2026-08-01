@@ -1008,6 +1008,7 @@ export const convertOfficialCardEffects = (
       },
     ],
     'BS3-044': [
+      { kind: 'hand-to-break', amount: 1, minLevel: 2 },
       {
         kind: 'break-to-hand',
         amount: 1,
@@ -1085,6 +1086,12 @@ export const convertOfficialCardEffects = (
       },
     ],
     'BS3-061': [
+      // 「place 1 card from your support area into the trash」是這個昏厥觸發
+      // 技能的代價，但 resolveFaintEffect 只讀 hand-to-battle 的 energyCost，
+      // 完全不會去看 CardSkill.cost（同一類問題見 BS3-029 修正）；跟 BS3-064
+      // 一樣，把代價改成陣列最前面一個非 optional 的效果，讓犧牲確實發生，
+      // 且讓後面「支援區至少 5 張」的條件是用犧牲後的張數判定。
+      { kind: 'support-to-trash', amount: 1 },
       {
         kind: 'damage-all',
         amount: 1,
@@ -1134,7 +1141,12 @@ export const convertOfficialCardEffects = (
     ],
     'BS3-067': [
       { kind: 'draw-up-to', max: 2 },
-      { kind: 'set-active', supportCount: 1, selectable: true },
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        selectable: true,
+        condition: { kind: 'support-count-at-most', count: 6 },
+      },
     ],
     'BS3-072': [
       {
@@ -1210,6 +1222,7 @@ export const convertOfficialCardEffects = (
         kind: 'hand-to-battle',
         amount: 1,
         energyColor: 'yellow',
+        energyCost: { yellow: 1 },
         optional: true,
         gainHp: 1,
       },
@@ -1417,6 +1430,7 @@ export const convertOfficialCardEffects = (
         amount: 1,
         duration: 'persistent',
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'attack-target-remaining-hp-at-least', amount: 4 },
       },
     ],
     'BS3-018': [
@@ -2327,10 +2341,9 @@ export const convertOfficialStageAbility = (
     ],
     'BS3-047': [
       {
-        kind: 'hand-to-break',
-        amount: 3,
+        kind: 'hand-to-break-by-level-sum',
+        targetSum: 3,
         energyColor: 'yellow',
-        optional: true,
       },
       {
         kind: 'break-to-battle',
@@ -2354,6 +2367,10 @@ export const convertOfficialStageAbility = (
         kind: 'disable-flip',
         duration: 'this-turn',
         target: { side: 'opponent', min: 0, max: 2 },
+        // 官方文字「If a selected Cookie is LV.3, place this card in the
+        // trash.」是依附在這次選擇結果上的場景卡自我送棄，不是看場面狀態
+        // 的一般條件，見 DisableFlipEffect.trashSourceIfTargetLevel 註解。
+        trashSourceIfTargetLevel: 3,
       },
     ],
     'BS3-072': [
@@ -2363,6 +2380,7 @@ export const convertOfficialStageAbility = (
         amount: 1,
         activeOnly: true,
         optional: true,
+        condition: { kind: 'opponent-support-count-at-least', count: 5 },
       },
     ],
     'BS3-095': [
@@ -3739,6 +3757,16 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { purple: 1 },
     discardHand: 0,
     trashToDeck: { count: 5, energyColor: 'purple', excludeFlip: true },
+  },
+  // 「<Place this Cookie in the trash.>」是這個技能的代價（比照 BS2-015／
+  // BS2-071 的 trashBattleCookie 寫法），generic parseAbilityCost 只認得
+  // 「Place N (energy) LV.X Cookie from your battle area into the trash」
+  // 這種措辭，「this Cookie」是自我指涉、抓不到，沒有這個覆寫的話發動這個
+  // 技能就完全不用犧牲自己。
+  'BS3-105': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashBattleCookie: { count: 1, sourceOnly: true },
   },
   'BS3-025': { energy: { yellow: 1 }, discardHand: 0 },
   'P-016': { energy: { yellow: 1 }, discardHand: 0 },

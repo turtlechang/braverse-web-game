@@ -248,6 +248,78 @@ describe('BS3-020 Miniature Dragon Boat (item integration)', () => {
 })
 
 // =====================================
+// BS3-044 Cheesepad Tablet - Item
+// =====================================
+describe('BS3-044 Cheesepad Tablet (item integration)', () => {
+  it('can be played and sacrifices a LV.2+ hand cookie into the break area', () => {
+    const state = createBattleState()
+    const bs3Item = asGameCard('BS3-044')
+    const sacrifice: CookieCard = { ...cookie('sacrifice-cookie', 1, 3), level: 2 }
+    const itemCard: GameCard = {
+      ...bs3Item,
+      item: {
+        ...bs3Item.item!,
+        cost: { yellow: 2 },
+      },
+    }
+
+    const s1 = { ...state, activePlayerId: 'player-two' as const, phase: 'main' as const }
+    s1.players['player-two'].hand = [itemCard, sacrifice]
+    s1.players['player-two'].supportArea = [
+      { card: item('pay-1', 'yellow'), rested: false },
+      { card: item('pay-2', 'yellow'), rested: false },
+    ]
+
+    const next = applyGameCommand(s1, {
+      kind: 'play-item',
+      playerId: 'player-two',
+      instanceId: itemCard.instanceId,
+      paymentIds: ['pay-1', 'pay-2'],
+      effectTargets: [[sacrifice.instanceId], []],
+    })
+
+    expect(
+      next.players['player-two'].hand.some((c) => c.instanceId === sacrifice.instanceId),
+    ).toBe(false)
+    expect(
+      next.players['player-two'].breakArea.some((c) => c.instanceId === sacrifice.instanceId),
+    ).toBe(true)
+    expect(
+      next.players['player-two'].discardPile.some((c) => c.instanceId === itemCard.instanceId),
+    ).toBe(true)
+  })
+
+  it('rejects playing it without sacrificing exactly 1 LV.2+ hand cookie', () => {
+    const state = createBattleState()
+    const bs3Item = asGameCard('BS3-044')
+    const itemCard: GameCard = {
+      ...bs3Item,
+      item: {
+        ...bs3Item.item!,
+        cost: { yellow: 2 },
+      },
+    }
+
+    const s1 = { ...state, activePlayerId: 'player-two' as const, phase: 'main' as const }
+    s1.players['player-two'].hand = [itemCard]
+    s1.players['player-two'].supportArea = [
+      { card: item('pay-1', 'yellow'), rested: false },
+      { card: item('pay-2', 'yellow'), rested: false },
+    ]
+
+    expect(() =>
+      applyGameCommand(s1, {
+        kind: 'play-item',
+        playerId: 'player-two',
+        instanceId: itemCard.instanceId,
+        paymentIds: ['pay-1', 'pay-2'],
+        effectTargets: [[], []],
+      }),
+    ).toThrow()
+  })
+})
+
+// =====================================
 // BS3-021 Oath on the Shield - Trap
 // =====================================
 describe('BS3-021 Oath on the Shield (trap integration)', () => {
@@ -472,5 +544,75 @@ describe('BS3-024 Dragon\'s Valley (stage integration)', () => {
       paymentIds: ['pay-1', 'pay-2'],
       trashBattleCookieIds: [],
     })).toThrow()
+  })
+})
+
+// =====================================
+// BS3-047 Kingdom of Eternal Abundance - Stage
+// =====================================
+describe('BS3-047 Kingdom of Eternal Abundance (stage integration)', () => {
+  it('sends hand cookies summing to exactly LV.3 into the break area, then deploys a LV.3 break-area cookie', () => {
+    const state = createBattleState()
+    const stageCard = asGameCard('BS3-047')
+    const lv1: CookieCard = { ...cookie('sac-lv1', 1, 2), level: 1, energyColor: 'yellow' }
+    const lv2: CookieCard = { ...cookie('sac-lv2', 1, 2), level: 2, energyColor: 'yellow' }
+    const lv3InBreak: CookieCard = { ...cookie('deploy-lv3', 2, 4), level: 3, energyColor: 'yellow' }
+
+    const s1 = { ...state, activePlayerId: 'player-one' as const, phase: 'main' as const }
+    s1.players['player-one'].stage = { card: stageCard, rested: false }
+    s1.players['player-one'].hand = [lv1, lv2]
+    s1.players['player-one'].breakArea = [lv3InBreak]
+    s1.players['player-one'].supportArea = [
+      { card: item('pay-1', 'yellow'), rested: false },
+    ]
+
+    const next = applyGameCommand(s1, {
+      kind: 'activate-stage',
+      playerId: 'player-one',
+      paymentIds: ['pay-1'],
+      effectTargets: [[lv1.instanceId, lv2.instanceId], [lv3InBreak.instanceId]],
+    })
+
+    expect(
+      next.players['player-one'].hand.some((c) => c.instanceId === lv1.instanceId),
+    ).toBe(false)
+    expect(
+      next.players['player-one'].hand.some((c) => c.instanceId === lv2.instanceId),
+    ).toBe(false)
+    expect(
+      next.players['player-one'].breakArea.some((c) => c.instanceId === lv1.instanceId),
+    ).toBe(true)
+    expect(
+      next.players['player-one'].breakArea.some((c) => c.instanceId === lv2.instanceId),
+    ).toBe(true)
+    expect(
+      next.players['player-one'].battleArea.some(
+        (b) => b.card.instanceId === lv3InBreak.instanceId,
+      ),
+    ).toBe(true)
+  })
+
+  it('rejects a hand selection whose levels do not sum to exactly LV.3', () => {
+    const state = createBattleState()
+    const stageCard = asGameCard('BS3-047')
+    const lv1: CookieCard = { ...cookie('sac-lv1', 1, 2), level: 1, energyColor: 'yellow' }
+    const lv3InBreak: CookieCard = { ...cookie('deploy-lv3', 2, 4), level: 3, energyColor: 'yellow' }
+
+    const s1 = { ...state, activePlayerId: 'player-one' as const, phase: 'main' as const }
+    s1.players['player-one'].stage = { card: stageCard, rested: false }
+    s1.players['player-one'].hand = [lv1]
+    s1.players['player-one'].breakArea = [lv3InBreak]
+    s1.players['player-one'].supportArea = [
+      { card: item('pay-1', 'yellow'), rested: false },
+    ]
+
+    expect(() =>
+      applyGameCommand(s1, {
+        kind: 'activate-stage',
+        playerId: 'player-one',
+        paymentIds: ['pay-1'],
+        effectTargets: [[lv1.instanceId], [lv3InBreak.instanceId]],
+      }),
+    ).toThrow()
   })
 })

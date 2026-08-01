@@ -6,6 +6,7 @@ import {
   getCurrentReplacementTask,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
+  getFaintEffectCardCandidates,
   getBlockerCandidates,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
@@ -339,6 +340,9 @@ export function useMatchController(params: {
   const [selectedFaintTargetIds, setSelectedFaintTargetIds] = useState<
     string[]
   >([])
+  const [selectedFaintPaymentIds, setSelectedFaintPaymentIds] = useState<
+    string[]
+  >([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
 
@@ -437,6 +441,7 @@ export function useMatchController(params: {
     )
     battleActions.clearAttacker()
     setSelectedFaintTargetIds([])
+    setSelectedFaintPaymentIds([])
   }
 
   // Derived state
@@ -464,6 +469,10 @@ export function useMatchController(params: {
     pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
       ? getFaintEffectCandidates(game)
       : []
+  const faintCardCandidates =
+    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
+      ? getFaintEffectCardCandidates(game)
+      : []
   const faintTargetIds = new Set(
     faintCandidates.map((cookie) => cookie.card.instanceId),
   )
@@ -472,6 +481,51 @@ export function useMatchController(params: {
   const faintMinMax = pendingFaint
     ? getFaintEffectMinMax(pendingFaint.effect)
     : { min: 0, max: 0 }
+  const faintEnergyCost =
+    pendingFaint?.effect.kind === 'hand-to-battle'
+      ? pendingFaint.effect.energyCost ?? {}
+      : {}
+  const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
+  const faintPaymentCandidates =
+    pendingFaint &&
+    pendingFaint.sourcePlayerId === viewerPlayerId &&
+    faintEnergyCostTotal > 0
+      ? game.players[viewerPlayerId].supportArea
+          .filter((support) => {
+            if (support.rested) return false
+            if (selectedFaintPaymentIds.includes(support.card.instanceId)) {
+              return true
+            }
+            if (selectedFaintPaymentIds.length >= faintEnergyCostTotal) {
+              return false
+            }
+            return isEnergyColorCompatibleWithCost(
+              faintEnergyCost,
+              support.card.energyColor,
+            )
+          })
+          .map((support) => support.card)
+      : []
+  const faintPaymentValid =
+    faintEnergyCostTotal === 0 ||
+    validateEnergyPayment(
+      faintEnergyCost,
+      game.players[viewerPlayerId].supportArea,
+      selectedFaintPaymentIds,
+    ).valid
+  const toggleFaintPayment = (instanceId: string) => {
+    if (faintEnergyCostTotal === 0) return
+    setSelectedFaintPaymentIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= faintEnergyCostTotal) return current
+      if (!faintPaymentCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
   const currentPendingDecision = getPendingDecision(game)
 
   const [selectedAfterDamageTargetIds, setSelectedAfterDamageTargetIds] =
@@ -616,7 +670,9 @@ export function useMatchController(params: {
     selectedTrap?.trap?.effects.some(
       (effect) =>
         (effect.kind === 'damage' ||
+          effect.kind === 'damage-by-break-count' ||
           effect.kind === 'modify-attack' ||
+          effect.kind === 'modify-attack-by-break-count' ||
           effect.kind === 'prevent-knockout') &&
         (effect.target.min ?? 0) === 0,
     ) ?? false
@@ -910,6 +966,7 @@ export function useMatchController(params: {
       resetSetup()
       battleActions.clearAttacker()
       setSelectedFaintTargetIds([])
+      setSelectedFaintPaymentIds([])
       animations.resetAnimations()
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
@@ -932,6 +989,7 @@ export function useMatchController(params: {
       setMessage(scenarioMessage)
       battleActions.clearAttacker()
       setSelectedFaintTargetIds([])
+      setSelectedFaintPaymentIds([])
       animations.resetAnimations()
       setSelectedTrapId(null)
       setSelectedTrapDiscardIds([])
@@ -1046,9 +1104,17 @@ export function useMatchController(params: {
     // Faint (raw hasFaint without !pendingEffect check)
     selectedFaintTargetIds,
     setSelectedFaintTargetIds,
+    selectedFaintPaymentIds,
+    setSelectedFaintPaymentIds,
+    faintEnergyCost,
+    faintEnergyCostTotal,
+    faintPaymentCandidates,
+    faintPaymentValid,
+    toggleFaintPayment,
     pendingFaint,
     faintSourceCard,
     faintCandidates,
+    faintCardCandidates,
     faintTargetIds,
     hasFaint,
     faintMin: faintMinMax.min,

@@ -2,6 +2,7 @@ export {
   getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getCookieOwnerId,
   getEffectTargetCandidates,

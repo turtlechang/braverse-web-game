@@ -10,6 +10,7 @@ import {
 import type {
   BuiltInDeckChoice,
   DeckChoice,
+  EnergyCost,
   GameEndReason,
   GameCard,
   PlayerId,
@@ -1249,6 +1250,18 @@ export interface FaintEffectResponseModalProps {
   maxTargets: number
   selectedTargetCount: number
   selectedTargetName?: string
+  selectedTargetIds?: string[]
+  candidateCards?: GameCard[]
+  candidateLabel?: string
+  onSelectTarget?: (instanceId: string) => void
+  energyCost?: EnergyCost
+  paymentCandidates?: GameCard[]
+  selectedPaymentIds?: string[]
+  paymentCostTotal?: number
+  paymentValid?: boolean
+  onSelectPayment?: (instanceId: string) => void
+  allowSkip?: boolean
+  onSkip?: () => void
   onConfirm: () => void
 }
 
@@ -1258,16 +1271,35 @@ export function FaintEffectResponseModal({
   maxTargets,
   selectedTargetCount,
   selectedTargetName,
+  selectedTargetIds = [],
+  candidateCards = [],
+  candidateLabel = '卡牌',
+  onSelectTarget,
+  energyCost,
+  paymentCandidates = [],
+  selectedPaymentIds = [],
+  paymentCostTotal = 0,
+  paymentValid = false,
+  onSelectPayment,
+  allowSkip = false,
+  onSkip,
   onConfirm,
 }: FaintEffectResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
   const hasTargetChoice = maxTargets > 0
-  const canConfirm = selectedTargetCount >= minTargets
+  const selectedTargetIdSet = new Set(selectedTargetIds)
+  const selectedPaymentIdSet = new Set(selectedPaymentIds)
+  const paymentReady = paymentCostTotal === 0 || paymentValid
+  const canConfirm = selectedTargetCount >= minTargets && paymentReady
   const targetHint = !hasTargetChoice
     ? '此效果沒有目標選擇，確認後會繼續結算效果。'
-    : minTargets === 0
-      ? `可選擇最多 ${maxTargets} 個對手餅乾作為目標，也可以不選擇目標。`
-      : `必須選擇 ${minTargets} 個對手餅乾作為目標。`
+    : candidateCards.length > 0
+      ? minTargets === 0
+        ? `可選擇最多 ${maxTargets} 張${candidateLabel}，也可以不選擇。`
+        : `必須選擇 ${minTargets} 張${candidateLabel}。`
+      : minTargets === 0
+        ? `可選擇最多 ${maxTargets} 個對手餅乾作為目標，也可以不選擇目標。`
+        : `必須選擇 ${minTargets} 個對手餅乾作為目標。`
   const confirmLabel = !hasTargetChoice
     ? '確認結算'
     : selectedTargetCount === 0
@@ -1328,6 +1360,37 @@ export function FaintEffectResponseModal({
             </p>
           </div>
         </div>
+        {paymentCostTotal > 0 && energyCost && (
+          <div className="faint-payment-section">
+            <strong>支付昏厥效果費用</strong>
+            <div className="faint-payment-cost">
+              <EnergyCostIcons cost={energyCost} />
+              <span>
+                已選 {selectedPaymentIds.length}/{paymentCostTotal} 張支援卡
+              </span>
+            </div>
+            {paymentCandidates.length > 0 ? (
+              <div className="modal-card-options compact faint-payment-candidates">
+                {paymentCandidates.map((candidate) => {
+                  const selected = selectedPaymentIdSet.has(candidate.instanceId)
+                  return (
+                    <button
+                      type="button"
+                      key={candidate.instanceId}
+                      className={selected ? 'is-selected' : ''}
+                      onClick={() => onSelectPayment?.(candidate.instanceId)}
+                    >
+                      <CardFace card={candidate} selected={selected} />
+                      <span>{candidate.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <small>沒有可支付的黃色支援卡</small>
+            )}
+          </div>
+        )}
         <p className="faint-target-hint">{targetHint}</p>
         {selectedTargetName && (
           <div className="battle-response-summary">
@@ -1335,7 +1398,31 @@ export function FaintEffectResponseModal({
             <span>{selectedTargetName}</span>
           </div>
         )}
+        {candidateCards.length > 0 && (
+          <div className="modal-card-options faint-card-candidates">
+            {candidateCards.map((candidate) => {
+              const selected = selectedTargetIdSet.has(candidate.instanceId)
+              return (
+                <button
+                  type="button"
+                  key={candidate.instanceId}
+                  className={selected ? 'is-selected' : ''}
+                  aria-pressed={selected}
+                  onClick={() => onSelectTarget?.(candidate.instanceId)}
+                >
+                  <CardFace card={candidate} selected={selected} />
+                  <span>{candidate.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
         <div className="modal-actions">
+          {allowSkip && (
+            <button type="button" onClick={onSkip}>
+              不發動
+            </button>
+          )}
           <button type="button" disabled={!canConfirm} onClick={onConfirm}>
             {confirmLabel}
           </button>

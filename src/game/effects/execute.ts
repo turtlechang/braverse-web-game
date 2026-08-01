@@ -27,6 +27,7 @@ import {
   getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getHandToBreakBySumCandidates,
   getEffectTargetCandidates,
   getSupportEffectCandidates,
   getCookieOwnerId,
@@ -240,12 +241,37 @@ const getExpirationTurn = (
     : state.turnNumber + 1
 }
 
+// BS3-082「若手牌 5 張以下，此餅乾不受任何效果傷害」是 trigger: 'passive'
+// 的持續性條件被動，沒有任何玩家操作或系統事件會把它送進 executeCardEffect
+// 去寫入 effectDamagePreventedUntilTurn 快照（那個欄位/duration 是設計給
+// 一次性觸發、保護到某個回合為止的效果用的）。所以除了讀快照，這裡還要
+// 即時重新檢查目標身上「trigger: 'passive' 且以自己為目標」的
+// prevent-effect-damage 技能，條件成立就視為保護中，不然這張卡的被動永遠不會生效。
 const isEffectDamagePrevented = (
   state: GameState,
-  targetInstanceId: string,
+  target: CookieInBattle,
+  ownerId: PlayerId,
 ): boolean => {
-  const expiration = state.effectDamagePreventedUntilTurn?.[targetInstanceId]
-  return expiration !== undefined && state.turnNumber <= expiration
+  const expiration = state.effectDamagePreventedUntilTurn?.[target.card.instanceId]
+  if (expiration !== undefined && state.turnNumber <= expiration) {
+    return true
+  }
+
+  const skill = target.card.skill
+  if (!skill || skill.trigger !== 'passive') {
+    return false
+  }
+
+  const context: EffectContext = {
+    sourcePlayerId: ownerId,
+    sourceInstanceId: target.card.instanceId,
+  }
+  return skill.effects.some(
+    (effect) =>
+      effect.kind === 'prevent-effect-damage' &&
+      effect.target.sourceOnly &&
+      isEffectConditionMet(state, context, effect),
+  )
 }
 
 export const executeCardEffect = (
@@ -446,7 +472,7 @@ export const executeCardEffect = (
           targetPlayerId,
           context.sourcePlayerId,
         ) &&
-        !isEffectDamagePrevented(state, cookie.card.instanceId) &&
+        !isEffectDamagePrevented(state, cookie, targetPlayerId) &&
         (!effect.excludeSource || cookie.card.instanceId !== context.sourceInstanceId),
     )
     const damagedPlayer = targets.reduce(
@@ -1907,6 +1933,30 @@ export const executeCardEffect = (
     })
   }
 
+  if (effect.kind === 'hand-to-break-by-level-sum') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getHandToBreakBySumCandidates(state, context, effect)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的卡牌不在手牌的合法範圍內。')
+    }
+    const selectedSet = new Set(uniqueIds)
+    const selected = candidates.filter((card) => selectedSet.has(card.instanceId)) as CookieCard[]
+    const levelSum = selected.reduce((sum, card) => sum + card.level, 0)
+    if (levelSum !== effect.targetSum) {
+      throw new GameRuleError(`選擇的餅乾等級總和必須恰好為 ${effect.targetSum}。`)
+    }
+    return updatePlayer(state, {
+      ...player,
+      hand: player.hand.filter((card) => !selectedSet.has(card.instanceId)),
+      breakArea: [...player.breakArea, ...selected],
+    })
+  }
+
   if (effect.kind === 'hp-to-trash') {
     const targets = selectEffectTargets(
       state,
@@ -2320,7 +2370,7 @@ export const executeCardEffect = (
     const previousBattleAreaCount =
       state.players[targetPlayerId].battleArea.length
     const protectedTargets = targets.filter(
-      (target) => !isEffectDamagePrevented(state, target.card.instanceId),
+      (target) => !isEffectDamagePrevented(state, target, targetPlayerId),
     )
     const damagedPlayer = protectedTargets.reduce(
       (player, target) =>
@@ -2360,10 +2410,10 @@ export const executeCardEffect = (
     // 玩家選擇的第一/第二個目標上，若把被保護者濾掉後重新從 0 編號，會讓
     // 原本該拿 secondaryAmount 的第二目標錯拿成 primaryAmount。
     const appliedTargets = [
-      targets[0] && !isEffectDamagePrevented(state, targets[0].card.instanceId)
+      targets[0] && !isEffectDamagePrevented(state, targets[0], targetPlayerId)
         ? targets[0]
         : undefined,
-      targets[1] && !isEffectDamagePrevented(state, targets[1].card.instanceId)
+      targets[1] && !isEffectDamagePrevented(state, targets[1], targetPlayerId)
         ? targets[1]
         : undefined,
     ] as const
@@ -2412,7 +2462,7 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'disable-flip') {
-    return {
+    const nextState: GameState = {
       ...state,
       flipDisabledUntilTurn: {
         ...(state.flipDisabledUntilTurn ?? {}),
@@ -2424,6 +2474,21 @@ export const executeCardEffect = (
         ),
       },
     }
+    if (
+      effect.trashSourceIfTargetLevel !== undefined &&
+      targets.some((target) => target.card.level === effect.trashSourceIfTargetLevel)
+    ) {
+      const sourcePlayer = nextState.players[context.sourcePlayerId]
+      const sourceStage = sourcePlayer.stage
+      if (sourceStage?.card.instanceId === context.sourceInstanceId) {
+        return updatePlayer(nextState, {
+          ...sourcePlayer,
+          stage: null,
+          discardPile: [...sourcePlayer.discardPile, sourceStage.card],
+        })
+      }
+    }
+    return nextState
   }
 
   if (effect.kind === 'battle-to-support') {

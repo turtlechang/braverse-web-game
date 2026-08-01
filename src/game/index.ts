@@ -4,6 +4,7 @@ export {
   getAttackDamageAgainst,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
@@ -137,6 +138,7 @@ export {
 } from './ai'
 export {
   beginAttack,
+  getFaintEffectCardCandidates,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
@@ -250,6 +252,7 @@ export type {
   BattleToBreakEffect,
   BreakToBattleEffect,
   BreakToHandBySumEffect,
+  HandToBreakBySumEffect,
   DisableAttackEffect,
   FieldToTrashAllEffect,
   FlipToSupportEffect,

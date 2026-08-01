@@ -308,7 +308,7 @@ export const isEffectUntargeted = (
   | DeckToSupportEffect
   | Extract<CardEffect, { kind: 'deck-to-trash' }>
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'rest-support' | 'support-to-hp' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'set-active' | 'field-to-trash-all' | 'break-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'rest-support' | 'support-to-hp' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
@@ -328,6 +328,7 @@ export const isEffectUntargeted = (
   effect.kind === 'field-to-trash-all' ||
   effect.kind === 'break-to-battle' ||
   effect.kind === 'break-to-hand-by-level-sum' ||
+  effect.kind === 'hand-to-break-by-level-sum' ||
   effect.kind === 'reveal-top-deck' ||
   effect.kind === 'hand-to-break' ||
   effect.kind === 'break-to-hand' ||
@@ -368,6 +369,7 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'trash-to-battle' ||
   effect.kind === 'support-to-trash' ||
   effect.kind === 'hand-to-break' ||
+  effect.kind === 'hand-to-break-by-level-sum' ||
   effect.kind === 'break-to-hand' ||
   effect.kind === 'hand-to-hp' ||
   effect.kind === 'rest-support' ||
@@ -526,6 +528,21 @@ export const hasRequiredEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): boolean => {
+  // reveal-top-deck 本身沒有 target 欄位（`requiresTargetSelection` 因此
+  // 一律放行），但巢狀 effects 常常有——例如 BS3-076「攻擊後可選付費翻牌，
+  // 翻到符合條件就對被攻擊的餅乾追加傷害」，巢狀的 damage 效果鎖定
+  // `attackTargetOnly`。如果攻擊本身已經把目標打到昏厥離場，這個巢狀效果
+  // 不管翻到什麼都不可能有合法目標，整張 reveal-top-deck 形同無效，不該
+  // 被判定為「可以套用」。這裡遞迴檢查巢狀效果，跟 resolve-reveal-top-deck
+  // 翻牌後篩選 applicableEffects 用的同一組判斷（isEffectConditionMet +
+  // hasRequiredEffectTargets）一致，只是提前到「決定要不要開放付費」這一步。
+  if (effect.kind === 'reveal-top-deck') {
+    return effect.effects.some(
+      (nested) =>
+        isEffectConditionMet(state, context, nested) &&
+        hasRequiredEffectTargets(state, context, nested),
+    )
+  }
   if (!requiresTargetSelection(effect)) return true
   const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
   const min =
@@ -687,6 +704,18 @@ export const getBreakToHandBySumCandidates = (
       card.energyColor === effect.energyColor,
   )
 
+export const getHandToBreakBySumCandidates = (
+  state: GameState,
+  context: EffectContext,
+  effect: { energyColor?: EnergyColor },
+): GameCard[] =>
+  state.players[context.sourcePlayerId].hand.filter(
+    (card) =>
+      card.type === 'cookie' &&
+      (effect.energyColor === undefined ||
+        card.energyColor === effect.energyColor),
+  )
+
 export const validateBreakToTrashTargets = (
   state: GameState,
   context: EffectContext,
@@ -741,6 +770,15 @@ export const isEffectConditionMet = (
     return state.players[context.sourcePlayerId].supportArea.length >= condition.count
   }
 
+  if (condition?.kind === 'support-count-at-most') {
+    return state.players[context.sourcePlayerId].supportArea.length <= condition.count
+  }
+
+  if (condition?.kind === 'opponent-support-count-at-least') {
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    return state.players[opponentId].supportArea.length >= condition.count
+  }
+
   if (condition?.kind === 'active-support-count-at-least') {
     return state.players[context.sourcePlayerId].supportArea.filter(
       (support) => !support.rested,
@@ -764,6 +802,23 @@ export const isEffectConditionMet = (
     return state.players[context.sourcePlayerId].breakArea.some(
       (card) => card.instanceId === context.sourceInstanceId,
     )
+  }
+
+  if (condition?.kind === 'attack-target-remaining-hp-at-least') {
+    const battle = state.pendingBattle
+    const targetInstanceId =
+      context.attackTargetInstanceId ??
+      (battle &&
+        battle.attackerPlayerId === context.sourcePlayerId &&
+        battle.attackerInstanceId === context.sourceInstanceId
+        ? battle.targetInstanceId
+        : undefined)
+    if (!targetInstanceId) return false
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    const target = state.players[opponentId].battleArea.find(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    )
+    return Boolean(target && target.hpCards.length >= condition.amount)
   }
 
   if (condition?.kind === 'opponent-cookie-fainted-in-current-battle') {

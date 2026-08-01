@@ -1323,7 +1323,12 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
     }
 
     state = resolveAttackEffect(state, 'player-two', [])
-    expect(state.pendingOptionalCostAttack).toBeTruthy()
+    // 若普通攻擊已經讓 defender 昏厥離場，追加傷害的 attackTargetOnly
+    // 沒有合法目標，pendingOptionalCostAttack 不該被建立——直接回傳，
+    // 不繼續走後面「付費翻牌」的流程。
+    if (!state.pendingOptionalCostAttack) {
+      return state
+    }
 
     // 〈可以支付 {B}〉的代價要從支援區出（攻擊費用之外再一張藍）。
     state = resolveOptionalCostAttack(

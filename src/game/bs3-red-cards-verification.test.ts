@@ -9,8 +9,11 @@ import {
   convertOfficialAttackEffects,
   convertOfficialFlipAbility,
 } from '../cards/official-effect-adapter'
+import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
-import type { CardEffect } from './types'
+import type { CardEffect, CookieCard } from './types'
+import { beginAttack, getAttackDamageAgainst, getEffectiveAttack } from '.'
+import { createBattleState, item } from './test-helpers/battle-helpers'
 
 const findBs3Card = (cardNumber: string) => {
   const card = (officialBS3Inventory.cards as OfficialCardRecord[]).find(
@@ -18,6 +21,14 @@ const findBs3Card = (cardNumber: string) => {
   )
   if (!card) throw new Error(`Missing BS3 inventory card ${cardNumber}`)
   return card
+}
+
+const asCookie = (cardNumber: string): CookieCard => {
+  const conversion = convertOfficialCardToGameCard(findBs3Card(cardNumber))
+  if (conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') {
+    throw new Error(`${cardNumber} should convert to a CookieCard.`)
+  }
+  return conversion.gameCard
 }
 
 const effectsOf = (cardNumber: string): CardEffect[] => {
@@ -32,7 +43,7 @@ const effectsOf = (cardNumber: string): CardEffect[] => {
 // 紅色 BS3 餅乾卡 - 技能效果驗證
 // =====================================
 describe('紅色 BS3 餅乾卡技能效果', () => {
-  it('BS3-001 Princess Cookie: passive +1 attack', () => {
+  it('BS3-001 Princess Cookie: +1 attack only when attacking a Cookie with remaining HP >= 4', () => {
     const conversion = convertOfficialCardEffects(findBs3Card('BS3-001'))
     expect(conversion.status).toBe('supported')
     if (conversion.status !== 'supported') return
@@ -43,7 +54,79 @@ describe('紅色 BS3 餅乾卡技能效果', () => {
       amount: 1,
       duration: 'persistent',
       target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      condition: { kind: 'attack-target-remaining-hp-at-least', amount: 4 },
     })
+  })
+
+  it('BS3-001 Princess Cookie: does not gain +1 attack against a low-HP target, does against a 4+ HP target', () => {
+    const princess = asCookie('BS3-001')
+    const state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: { ...princess, instanceId: 'attacker' },
+    }
+
+    // 對手只剩 3 張 HP 卡（< 4），不應該加成，維持基礎攻擊力 1。
+    state.players['player-one'].battleArea[0] = {
+      ...state.players['player-one'].battleArea[0],
+      hpCards: [item('hp-1'), item('hp-2'), item('hp-3')],
+    }
+    state.pendingBattle = {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'defender',
+      declaredDamage: 0,
+      remainingDamage: 0,
+      stage: 'attack-effect',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
+    }
+    expect(getAttackDamageAgainst(state, 'attacker', 'defender')).toBe(1)
+
+    // 對手還有 4 張 HP 卡（>= 4），這次攻擊應該加成成 2。
+    state.players['player-one'].battleArea[0] = {
+      ...state.players['player-one'].battleArea[0],
+      hpCards: [item('hp-1'), item('hp-2'), item('hp-3'), item('hp-4')],
+    }
+    expect(getAttackDamageAgainst(state, 'attacker', 'defender')).toBe(2)
+
+    // 卡面顯示（getEffectiveAttack 不帶明確目標）在還沒宣告攻擊時，
+    // 不能提前顯示加成後的攻擊力——`beginAttack` 算宣告傷害時
+    // pendingBattle 尚未寫入 state，也要能靠明確傳入的目標算對（見上）。
+    state.pendingBattle = null
+    expect(getEffectiveAttack(state, 'attacker')).toBe(1)
+  })
+
+  it('BS3-001 Princess Cookie: beginAttack 算宣告傷害時 pendingBattle 還沒寫入，仍要正確加成', () => {
+    // beginAttack 呼叫 getAttackDamageAgainst 算 declaredDamage 時，
+    // state.pendingBattle 還是舊值（這裡故意留 null）——條件判斷不能只看
+    // state.pendingBattle，一定要靠 beginAttack 明確傳入的目標 id 才能算對。
+    const princess = asCookie('BS3-001')
+    const state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: { ...princess, instanceId: 'attacker' },
+    }
+    state.players['player-one'].battleArea[0] = {
+      ...state.players['player-one'].battleArea[0],
+      hpCards: [item('hp-1'), item('hp-2'), item('hp-3'), item('hp-4')],
+    }
+    state.players['player-two'].supportArea = [
+      { card: item('p2-support-1'), rested: false },
+      { card: item('p2-support-2'), rested: false },
+    ]
+    expect(state.pendingBattle).toBeNull()
+
+    const attacked = beginAttack(state, 'attacker', 'defender', [
+      'p2-support-1',
+      'p2-support-2',
+    ])
+    expect(attacked.pendingBattle!.declaredDamage).toBe(2)
   })
 
   it('BS3-002 Raspberry Cookie: on-play damage + optional-cost-attack', () => {

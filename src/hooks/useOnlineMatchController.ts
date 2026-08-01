@@ -14,6 +14,7 @@ import {
   getAfterDamageEffectMinMax,
   getBlockerCandidates,
   getCurrentReplacementTask,
+  getFaintEffectCardCandidates,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   getPendingDecision,
@@ -82,6 +83,9 @@ export function useOnlineMatchController(params: {
   const [selectedFaintTargetIds, setSelectedFaintTargetIds] = useState<
     string[]
   >([])
+  const [selectedFaintPaymentIds, setSelectedFaintPaymentIds] = useState<
+    string[]
+  >([])
   const [selectedAfterDamageTargetIds, setSelectedAfterDamageTargetIds] =
     useState<string[]>([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
@@ -128,6 +132,7 @@ export function useOnlineMatchController(params: {
     )
     battleActions.clearAttacker()
     setSelectedFaintTargetIds([])
+    setSelectedFaintPaymentIds([])
   }
 
   // 活躍/抽牌階段沒有玩家操作可做,自動推進——比照本地 useMatchController
@@ -226,6 +231,10 @@ export function useOnlineMatchController(params: {
     pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
       ? getFaintEffectCandidates(game)
       : []
+  const faintCardCandidates =
+    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
+      ? getFaintEffectCardCandidates(game)
+      : []
   const faintTargetIds = new Set(
     faintCandidates.map((cookie) => cookie.card.instanceId),
   )
@@ -234,6 +243,51 @@ export function useOnlineMatchController(params: {
   const faintMinMax = pendingFaint
     ? getFaintEffectMinMax(pendingFaint.effect)
     : { min: 0, max: 0 }
+  const faintEnergyCost =
+    pendingFaint?.effect.kind === 'hand-to-battle'
+      ? pendingFaint.effect.energyCost ?? {}
+      : {}
+  const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
+  const faintPaymentCandidates =
+    pendingFaint &&
+    pendingFaint.sourcePlayerId === viewerPlayerId &&
+    faintEnergyCostTotal > 0
+      ? game.players[viewerPlayerId].supportArea
+          .filter((support) => {
+            if (support.rested) return false
+            if (selectedFaintPaymentIds.includes(support.card.instanceId)) {
+              return true
+            }
+            if (selectedFaintPaymentIds.length >= faintEnergyCostTotal) {
+              return false
+            }
+            return isEnergyColorCompatibleWithCost(
+              faintEnergyCost,
+              support.card.energyColor,
+            )
+          })
+          .map((support) => support.card)
+      : []
+  const faintPaymentValid =
+    faintEnergyCostTotal === 0 ||
+    validateEnergyPayment(
+      faintEnergyCost,
+      game.players[viewerPlayerId].supportArea,
+      selectedFaintPaymentIds,
+    ).valid
+  const toggleFaintPayment = (instanceId: string) => {
+    if (faintEnergyCostTotal === 0) return
+    setSelectedFaintPaymentIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= faintEnergyCostTotal) return current
+      if (!faintPaymentCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
   const currentPendingDecision = getPendingDecision(game)
 
   // After-damage
@@ -371,7 +425,9 @@ export function useOnlineMatchController(params: {
     selectedTrap?.trap?.effects.some(
       (effect) =>
         (effect.kind === 'damage' ||
+          effect.kind === 'damage-by-break-count' ||
           effect.kind === 'modify-attack' ||
+          effect.kind === 'modify-attack-by-break-count' ||
           effect.kind === 'prevent-knockout') &&
         (effect.target.min ?? 0) === 0,
     ) ?? false
@@ -632,9 +688,17 @@ export function useOnlineMatchController(params: {
     // Faint
     selectedFaintTargetIds,
     setSelectedFaintTargetIds,
+    selectedFaintPaymentIds,
+    setSelectedFaintPaymentIds,
+    faintEnergyCost,
+    faintEnergyCostTotal,
+    faintPaymentCandidates,
+    faintPaymentValid,
+    toggleFaintPayment,
     pendingFaint,
     faintSourceCard,
     faintCandidates,
+    faintCardCandidates,
     faintTargetIds,
     hasFaint,
     faintMin: faintMinMax.min,
