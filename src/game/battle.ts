@@ -905,6 +905,15 @@ export const playTrap = (
       continue
     }
 
+    // 陷阱可能一次帶多個子效果，各自有自己的 condition（例如 BS3-070 的
+    // draw-up-to／discard-hand 都掛「支援區至少 5 張」）。這裡跟
+    // filterActiveEffects（item／技能路徑）一樣先濾掉條件不成立的子效果，
+    // 不然落到最後 fallback 分支的 executeCardEffect 會透過 assertCondition
+    // 直接拋錯，讓整個 playTrap 連同前面已經生效的子效果一起中止。
+    if (!isEffectConditionMet(nextState, context, effect)) {
+      continue
+    }
+
     if (
       effect.kind === 'support-to-trash' ||
       effect.kind === 'prevent-knockout'
