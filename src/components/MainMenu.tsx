@@ -148,6 +148,11 @@ export function MainMenu({
             <Wifi aria-hidden="true" />
             線上對戰
           </button>
+          {!hasDecks && (
+            <p className="main-menu-disabled-reason">
+              尚無自訂牌組，請先建立牌組後再開始線上對戰。
+            </p>
+          )}
           <button
             type="button"
             onClick={onCreateDeck}
@@ -155,14 +160,6 @@ export function MainMenu({
           >
             <Pencil aria-hidden="true" />
             {hasDecks ? '牌組編輯器' : '開啟牌組編輯器'}
-          </button>
-          <button type="button" onClick={onOpenTestScenario}>
-            <FlaskConical aria-hidden="true" />
-            測試對局設定
-          </button>
-          <button type="button" onClick={onRefreshDecks}>
-            <RefreshCw aria-hidden="true" />
-            重新讀取
           </button>
         </div>
 
@@ -181,6 +178,19 @@ export function MainMenu({
               </div>
             ) : (
               <p>請先建立或選擇一副自訂牌組。</p>
+            )}
+            {(battleError || selectedValidation?.errors.length) && (
+              <div className="main-menu-errors" role="alert">
+                <AlertTriangle aria-hidden="true" />
+                <div>
+                  <strong>{battleError ?? '目前牌組尚未合法'}</strong>
+                  <ul>
+                    {(selectedValidation?.errors ?? []).map((error) => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             )}
           </section>
 
@@ -226,20 +236,6 @@ export function MainMenu({
             </p>
           </section>
         </div>
-
-        {(battleError || selectedValidation?.errors.length) && (
-          <div className="main-menu-errors" role="alert">
-            <AlertTriangle aria-hidden="true" />
-            <div>
-              <strong>{battleError ?? '目前牌組尚未合法'}</strong>
-              <ul>
-                {(selectedValidation?.errors ?? []).map((error) => (
-                  <li key={error}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
 
         <section className="main-menu-decks" aria-label="已儲存牌組">
           <div className="main-menu-section-title">
@@ -324,9 +320,22 @@ export function MainMenu({
         </section>
       </section>
       <footer className="main-menu-footer">
-        本作品為非官方粉絲研究專案，與 Devsisters Corporation
-        無任何關聯、合作或授權；CookieRun: Braverse
-        卡牌與圖像之著作權均屬 Devsisters 所有。
+        <nav className="main-menu-dev-tools" aria-label="開發者工具">
+          <span className="main-menu-dev-tools-label">開發者工具</span>
+          <button type="button" onClick={onOpenTestScenario}>
+            <FlaskConical aria-hidden="true" />
+            測試對局設定
+          </button>
+          <button type="button" onClick={onRefreshDecks}>
+            <RefreshCw aria-hidden="true" />
+            重新讀取
+          </button>
+        </nav>
+        <p className="main-menu-disclaimer">
+          本作品為非官方粉絲研究專案，與 Devsisters Corporation
+          無任何關聯、合作或授權；CookieRun: Braverse
+          卡牌與圖像之著作權均屬 Devsisters 所有。
+        </p>
       </footer>
     </main>
   )

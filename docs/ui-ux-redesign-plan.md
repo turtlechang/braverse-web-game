@@ -155,7 +155,7 @@
 
 - 方案：HP/ATK 徽章數值變動時 200ms 縮放脈衝 + 顏色閃爍（增益綠/傷害紅）。
 
-### P2-4 主選單資訊架構整理（中，新發現）
+### P2-4 主選單資訊架構整理（中，新發現）✅ 已完成（2026-08-01）
 
 - 來源：2026-07-18 本機瀏覽器實測（1366×768）+ 程式碼走讀（`src/components/MainMenu.tsx`）。
 - 問題：
@@ -164,6 +164,14 @@
   - 「線上對戰」按鈕在無牌組時 disabled，但沒有像「對戰入口」一樣附上原因文字（`MainMenu.tsx:137-145`），與既有 P0-2 的 disabled 說明模式不一致。
 - 方案：先決定主選單的角色分工再談排版——開發者工具收進次級選單或獨立 debug 入口；「線上對戰」disabled 時補上與「對戰入口」一致的原因文字；視情況為「目前玩家牌組」等關鍵狀態區塊固定可視範圍或改用分頁。
 - 驗收：1366×768 下左欄不需捲動即可看到牌組狀態與主要 CTA；開發者工具與玩家對局動線視覺分離；所有 disabled 按鈕都有一致風格的原因文字。
+- 實作：依既有 `src/ui-reference/MainMenuRedesignMockup.tsx`（`/?mockup=main-menu-redesign` 可渲染，計畫內文件標為 P2-5 但內容就是這項的解法）落地：
+  - 「測試對局設定」「重新讀取」從 `.main-menu-actions` 移到 `<footer>` 內獨立的 `.main-menu-dev-tools` utility bar（`<nav aria-label="開發者工具">`），與「對戰入口」「線上對戰」「牌組編輯器」三個玩家動線按鈕視覺分離。
+  - 「線上對戰」disabled 時比照「對戰入口」補上 `.main-menu-disabled-reason`（「尚無自訂牌組，請先建立牌組後再開始線上對戰。」）。
+  - 錯誤區從獨立的 `grid-area: errors`（會推高整個左欄）併入「目前玩家牌組」卡片內，改成卡片內部的分隔線區塊，並加 `max-height: 92px` + `overflow: auto` 上限，不再無界推高卡片高度。
+  - `.main-menu-panel` 從 `overflow: auto`（整頁一起捲）改成 `overflow: hidden` + 明確 `height: 100%`，只有「已儲存牌組」清單（`.main-menu-decks` → `.main-menu-deck-list`）會內部捲動；`.main-menu-status-grid` 保留 `overflow: auto` 作為極端內容量下的保險，不會裁切內容。
+  - 新增 `@media (min-width: 681px) and (max-height: 780px)` 緊湊高度斷點（原本 680px 與桌機之間完全沒有高度感知斷點），縮小品牌字標、按鈕間距與卡片內距。
+  - `<680px` 既有單欄手機版行為維持不變（`overflow: auto` 還原、grid-template-areas 移除已合併的 `errors`）。
+- 驗證：`npx tsc -b`、`npx eslint`、`npx vitest run`（161 檔／2413 測試全過，含 `MainMenu.test.tsx` 新增的 2 項斷言：兩個 disabled 按鈕都有原因文字、開發者工具確實搬到 footer）、`npm run build` 皆通過。本機瀏覽器在 1366×768（空狀態／已選牌組／牌組不合法三種情境）與 1280×720 皆以 `getBoundingClientRect`/`scrollHeight` 直接量測確認左欄與整頁都不需捲動；600×338 手機斷點確認單欄版面與原有的面板內捲動行為未受影響。
 
 ---
 
