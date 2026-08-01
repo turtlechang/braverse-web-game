@@ -107,22 +107,20 @@ describe('BS3 剩餘陷阱卡', () => {
   })
 
   it('BS3-070 Puppet Theater of Chaos: up to 2 -1 attack + conditional draw/discard', () => {
+    // draw-up-to-then-discard（跟 BS3-088 同一種複合效果）而不是拆成兩個
+    // 各自獨立判斷同一條件的效果，理由見 bs3-green-integration.test.ts。
     const trap = convertOfficialTrapAbility(findBs3Card('BS3-070'))
     expect(trap).toBeTruthy()
-    expect(trap!.effects).toHaveLength(3)
+    expect(trap!.effects).toHaveLength(2)
     expect(trap!.effects[0]).toMatchObject({
       kind: 'modify-attack',
       amount: -1,
       target: { side: 'opponent', min: 0, max: 2 },
     })
     expect(trap!.effects[1]).toMatchObject({
-      kind: 'draw-up-to',
+      kind: 'draw-up-to-then-discard',
       max: 2,
-      condition: { kind: 'support-count-at-least', count: 5 },
-    })
-    expect(trap!.effects[2]).toMatchObject({
-      kind: 'discard-hand',
-      count: 1,
+      discardCount: 1,
       condition: { kind: 'support-count-at-least', count: 5 },
     })
   })

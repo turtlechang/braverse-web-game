@@ -123,6 +123,12 @@ export interface DrawUpToResponseModalProps {
   max: number
   deckSize: number
   onConfirm: (drawCount: number) => void
+  /**
+   * 這次抽牌之後還會接一個棄牌步驟（BS3-070／BS3-088 的
+   * draw-up-to-then-discard）。顯示「步驟 1/2」讓玩家知道等下彈出的棄牌
+   * 提示是同一個效果的下一步，不是另一張卡的新效果。
+   */
+  followedByDiscard?: boolean
 }
 
 export function DrawUpToResponseModal({
@@ -132,6 +138,7 @@ export function DrawUpToResponseModal({
   max,
   deckSize,
   onConfirm,
+  followedByDiscard = false,
 }: DrawUpToResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
   const effectiveMax = Math.min(max, deckSize)
@@ -167,6 +174,15 @@ export function DrawUpToResponseModal({
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
+        {followedByDiscard && (
+          <GuidedPhaseSteps
+            phases={[
+              { id: 'draw', label: '抽牌', complete: false },
+              { id: 'discard', label: '棄牌', complete: false },
+            ]}
+            activePhase="draw"
+          />
+        )}
         <span>抽牌效果</span>
         <h2>{sourceCardName}</h2>
         <div className="draw-up-to-source-card">
@@ -202,6 +218,12 @@ export interface HandDiscardResponseModalProps {
   selectedIds: string[]
   onToggleCard: (instanceId: string) => void
   onConfirm: () => void
+  /**
+   * 這個棄牌決策是同一張卡的抽牌步驟之後接著出現的（BS3-070／BS3-088 的
+   * draw-up-to-then-discard）。顯示「步驟 2/2」讓玩家知道這不是另一張卡
+   * 觸發的新效果，而是剛剛那個效果的下一步。
+   */
+  continuesFromDraw?: boolean
 }
 
 export function HandDiscardResponseModal({
@@ -213,6 +235,7 @@ export function HandDiscardResponseModal({
   selectedIds,
   onToggleCard,
   onConfirm,
+  continuesFromDraw = false,
 }: HandDiscardResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
   const canConfirm = selectedIds.length === requiredCount
@@ -250,6 +273,15 @@ export function HandDiscardResponseModal({
           <Minimize2 aria-hidden="true" />
           縮小
         </button>
+        {continuesFromDraw && (
+          <GuidedPhaseSteps
+            phases={[
+              { id: 'draw', label: '抽牌', complete: true },
+              { id: 'discard', label: '棄牌', complete: false },
+            ]}
+            activePhase="discard"
+          />
+        )}
         <span>棄置手牌</span>
         <h2>{sourceCardName} 要求你棄置手牌</h2>
         <div className="draw-up-to-source-card hand-discard-source-card">

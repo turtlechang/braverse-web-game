@@ -91,6 +91,61 @@ describe('DrawUpToResponseModal', () => {
     container.remove()
   })
 
+  // BS3-070（Puppet Theater of Chaos）「draw up to 2 cards ... and discard
+  // 1 card」過去分成兩個完全獨立的彈窗（抽牌→棄牌），使用者反映感覺像是
+  // 「跳出兩個視窗」。這裡驗證 followedByDiscard 會在抽牌彈窗上加一個
+  // 「步驟 1/2」提示，讓玩家知道接下來的棄牌提示是同一個效果的下一步。
+  it('shows a 2-step phase indicator when the draw is followed by a discard', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DrawUpToResponseModal
+          sourceCardName="Puppet Theater of Chaos"
+          max={2}
+          deckSize={40}
+          onConfirm={() => undefined}
+          followedByDiscard
+        />,
+      ),
+    )
+
+    const phaseProgress = container.querySelector('.phase-progress')
+    expect(phaseProgress).not.toBeNull()
+    expect(phaseProgress!.textContent).toContain('抽牌')
+    expect(phaseProgress!.textContent).toContain('棄牌')
+    expect(
+      container.querySelector('.phase-step.is-active')?.textContent,
+    ).toContain('抽牌')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('does not show a phase indicator for a standalone draw with no follow-up discard', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DrawUpToResponseModal
+          sourceCardName="Salt Crystal Trident"
+          max={3}
+          deckSize={40}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.phase-progress')).toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('minimizes and restores the draw-up-to prompt', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -206,6 +261,62 @@ describe('HandDiscardResponseModal', () => {
     })
 
     expect(onConfirm).toHaveBeenCalledOnce()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('shows a 2-step phase indicator continuing from the draw when chained', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Puppet Theater of Chaos"
+          hand={[createHandCard(1)]}
+          requiredCount={1}
+          selectedIds={[]}
+          onToggleCard={() => undefined}
+          onConfirm={() => undefined}
+          continuesFromDraw
+        />,
+      ),
+    )
+
+    const phaseProgress = container.querySelector('.phase-progress')
+    expect(phaseProgress).not.toBeNull()
+    expect(
+      container.querySelector('.phase-step.is-active')?.textContent,
+    ).toContain('棄牌')
+    expect(
+      container.querySelector('.phase-step.is-done')?.textContent,
+    ).toContain('抽牌')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('does not show a phase indicator for a standalone discard unrelated to any draw', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Some Other Trap"
+          hand={[createHandCard(1)]}
+          requiredCount={1}
+          selectedIds={[]}
+          onToggleCard={() => undefined}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.phase-progress')).toBeNull()
 
     await act(() => root.unmount())
     container.remove()

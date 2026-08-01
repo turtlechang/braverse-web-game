@@ -1243,6 +1243,12 @@ export interface PendingOpponentHandDiscard {
   effectText: string
   /** 未指定時視為 `trash`，與此欄位加入前的行為一致。 */
   destination?: 'trash' | 'deck-top'
+  /**
+   * 這個棄牌決策是不是緊接在同一張卡的 draw-up-to-then-discard 之後
+   * （BS3-070／BS3-088）。UI 用這個欄位判斷要不要顯示「步驟 2/2」的接續
+   * 提示，讓玩家感覺是同一個效果的兩個步驟，而不是兩個互不相關的彈窗。
+   */
+  chainedFromDrawUpTo?: boolean
 }
 
 export interface CommandLogEntry {

@@ -54,6 +54,17 @@ export const resolveDrawUpTo = (
         effect,
         [],
       )
+      // 標記這個棄牌決策接續在同一張卡的抽牌步驟之後，UI 才能把兩個彈窗
+      // 顯示成同一個效果的「步驟 1/2 → 2/2」，而不是兩個互不相關的提示。
+      if (updatedState.pendingOpponentHandDiscard) {
+        updatedState = {
+          ...updatedState,
+          pendingOpponentHandDiscard: {
+            ...updatedState.pendingOpponentHandDiscard,
+            chainedFromDrawUpTo: true,
+          },
+        }
+      }
       if (
         updatedState.pendingDrawUpTo ||
         updatedState.pendingOpponentHandDiscard ||
