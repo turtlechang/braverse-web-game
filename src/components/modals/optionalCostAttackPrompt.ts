@@ -1,10 +1,13 @@
 import {
+  getBreakCount,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEnergyCostTotal,
   getRemainingEnergyCost,
+  isEffectConditionMet,
   isEnergyColorCompatibleWithCost,
   requiresEffectCardSelection,
+  type CardEffect,
   type EnergyCost,
   type GameCard,
   type GameState,
@@ -30,6 +33,36 @@ export interface OptionalCostAttackPromptData {
    * 「還要從支援區付」的張數），少了它玩家會看到一個空白的「代價：」。
    */
   costText: string
+  /**
+   * 子效果的 condition 目前不成立時的提示文字。跟陷阱的
+   * getUnmetTrapConditionWarning 同一套邏輯：resolveOptionalCostAttack
+   * 本來就會用 isEffectConditionMet 過濾掉條件不成立的子效果（不會拋錯），
+   * 但玩家付款前完全看不到任何說明，只會覺得「付了代價卻什麼事都沒發生」。
+   */
+  unmetConditionWarning: string | null
+}
+
+const getUnmetConditionWarning = (
+  game: GameState,
+  viewerPlayerId: PlayerId,
+  sourceInstanceId: string,
+  effects: CardEffect[],
+): string | null => {
+  const context = { sourcePlayerId: viewerPlayerId, sourceInstanceId }
+  for (const effect of effects) {
+    if (effect.kind === 'damage-by-break-count' || effect.kind === 'modify-attack-by-break-count') {
+      if (getBreakCount(game, viewerPlayerId, effect) <= 0) {
+        return effect.kind === 'damage-by-break-count'
+          ? '目前休息區沒有符合條件的餅乾，這個效果將不會造成任何傷害。'
+          : '目前休息區沒有符合條件的餅乾，這個效果不會改變攻擊力。'
+      }
+      continue
+    }
+    if ('condition' in effect && effect.condition && !isEffectConditionMet(game, context, effect)) {
+      return '目前條件不成立，確認後會略過此效果。'
+    }
+  }
+  return null
 }
 
 /**
@@ -121,5 +154,11 @@ export function getOptionalCostAttackPrompt(
     needsTarget,
     targetMin,
     targetLabel,
+    unmetConditionWarning: getUnmetConditionWarning(
+      game,
+      viewerPlayerId,
+      pending.sourceInstanceId,
+      pending.effects,
+    ),
   }
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronUp, Maximize2, Minimize2 } from 'lucide-react'
 import type {
   EnergyColor,
   GameCard,
@@ -343,6 +343,12 @@ export interface OptionalCostAttackModalProps {
   onSkip: () => void
   onPay: (discardIds: string[], targetId: string, paymentIds: string[]) => void
   embedded?: boolean
+  /**
+   * 這個「Then, 付代價」攻擊附加效果裡，有子效果的 condition 目前不成立時
+   * 的提示文字。不會擋掉付款——玩家仍可能為了消耗手牌而選擇付，只是先讓
+   * 玩家知道確認後這個子效果會被略過，跟陷阱／技能效果的提示一致。
+   */
+  unmetConditionWarning?: string | null
 }
 
 type AttackPayStep = 'decision' | 'pay'
@@ -362,6 +368,7 @@ export function OptionalCostAttackModal({
   onSkip,
   onPay,
   embedded = false,
+  unmetConditionWarning = null,
 }: OptionalCostAttackModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<AttackPayStep>('decision')
@@ -505,6 +512,12 @@ export function OptionalCostAttackModal({
           <p className="optional-cost-attack-text">{effectText}</p>
         )}
         <p className="optional-cost-attack-cost">代價：{resolvedCostText}</p>
+        {unmetConditionWarning && (
+          <div className="optional-cost-attack-condition-warning" role="alert">
+            <AlertTriangle aria-hidden="true" />
+            <span>{unmetConditionWarning}</span>
+          </div>
+        )}
 
         {step === 'decision' && (
           <div className="modal-actions modal-actions-decision">

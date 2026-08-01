@@ -751,6 +751,75 @@ describe('OptionalCostAttackModal', () => {
     await act(() => root.unmount())
     container.remove()
   })
+
+  // 使用者要求把陷阱那套「目前條件不成立，確認後會略過此效果」的提醒也
+  // 套用到「Then, <付代價>」攻擊附加效果（BS3-086 這類）。
+  it('shows the unmet-condition warning before the player pays', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Kouign-Amann Cookie"
+          effectText="If you have a LV.3 Cookie in your battle area, discard 1 card to deal 1 damage."
+          discardHandCost={1}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[createHandCard(1)]}
+          targetCandidates={[]}
+          needsTarget={false}
+          targetMin={0}
+          targetLabel="對手餅乾"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+          unmetConditionWarning="目前條件不成立，確認後會略過此效果。"
+        />,
+      ),
+    )
+
+    const warning = container.querySelector(
+      '.optional-cost-attack-condition-warning',
+    )
+    expect(warning).not.toBeNull()
+    expect(warning!.textContent).toContain('目前條件不成立，確認後會略過此效果。')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('does not show the warning when there is nothing unmet', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="測試餅乾"
+          effectText="支付代價後使用效果。"
+          discardHandCost={1}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[createHandCard(1)]}
+          targetCandidates={[]}
+          needsTarget={false}
+          targetMin={0}
+          targetLabel="對手餅乾"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+        />,
+      ),
+    )
+
+    expect(
+      container.querySelector('.optional-cost-attack-condition-warning'),
+    ).toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
 })
 
 describe('InspectDeckModal', () => {

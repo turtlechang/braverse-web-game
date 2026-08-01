@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createBattleState } from '../../game/test-helpers/battle-helpers'
+import { createBattleState, cookie } from '../../game/test-helpers/battle-helpers'
 import { getOptionalCostAttackPrompt } from './optionalCostAttackPrompt'
 
 describe('getOptionalCostAttackPrompt', () => {
@@ -98,5 +98,99 @@ describe('getOptionalCostAttackPrompt', () => {
         { instanceId: state.players['player-two'].battleArea[0].card.instanceId },
       ],
     })
+  })
+
+  // 使用者問「其他類型的卡有嗎」——BS3-086 這類攻擊文字裡「Then, <discard
+  // 1 card.> if there is a LV.3 Cookie in your battle area, deal 1 damage」
+  // 是同樣的結構：optional-cost-attack 內嵌的子效果自己掛 condition，
+  // resolveOptionalCostAttack 本來就會用 isEffectConditionMet 過濾（不會
+  // 拋錯），但玩家付款前完全看不到任何說明。這裡驗證條件不成立時會產生
+  // 跟陷阱一致的提醒文字。
+  it('warns when the nested effect condition is not met (BS3-086-like battle-area-has-cookie-with-level)', () => {
+    const state = createBattleState()
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Kouign-Amann Cookie',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          condition: {
+            kind: 'battle-area-has-cookie-with-level',
+            side: 'self',
+            level: 3,
+          },
+        },
+      ],
+      effectText: 'If you have a LV.3 Cookie in your battle area, discard 1 card to deal 1 damage.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt?.unmetConditionWarning).toBe(
+      '目前條件不成立，確認後會略過此效果。',
+    )
+  })
+
+  it('does not warn when the nested effect condition is met', () => {
+    const state = createBattleState()
+    state.players['player-two'].battleArea.push({
+      card: { ...cookie('p2-lv3'), level: 3 },
+      hpCards: [],
+      rested: false,
+      battleEntryId: 'p2-lv3:battle:9',
+    })
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Kouign-Amann Cookie',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          condition: {
+            kind: 'battle-area-has-cookie-with-level',
+            side: 'self',
+            level: 3,
+          },
+        },
+      ],
+      effectText: 'If you have a LV.3 Cookie in your battle area, discard 1 card to deal 1 damage.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt?.unmetConditionWarning).toBeNull()
+  })
+
+  it('warns with the break-count-specific message when applicable', () => {
+    const state = createBattleState()
+    state.players['player-two'].breakArea = []
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Source Cookie',
+      cost: { energy: {} },
+      effects: [
+        {
+          kind: 'damage-by-break-count',
+          perCount: 1,
+          exactBreakLevel: 3,
+          target: { side: 'opponent', min: 1, max: 1 },
+        },
+      ],
+      effectText: 'Deal 1 damage for each LV.3 Cookie in your break area.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt?.unmetConditionWarning).toBe(
+      '目前休息區沒有符合條件的餅乾，這個效果將不會造成任何傷害。',
+    )
   })
 })
