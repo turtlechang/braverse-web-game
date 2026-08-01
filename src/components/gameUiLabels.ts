@@ -45,6 +45,7 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs3-blue-sorbet': '第三彈藍色・PR 雪酪',
   'bs3-red-pitaya': '第三彈紅色・火龍果龍族餅乾',
   'bs3-purple-dark-cacao': '第三彈紫色・黑可可餅乾',
+  'bs3-purple-dark-cacao-fighting': '第三彈紫色・黑可可餅乾（打架流）',
   'bs3-yellow-counter': '第三彈黃色・反擊流',
   custom: '自訂',
 }

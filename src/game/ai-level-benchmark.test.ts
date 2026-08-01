@@ -507,6 +507,7 @@ describe('BS3 All Presets — 完整性驗證（60 seeds, Lv.4 mirror）', () =>
     { label: 'BS3 Blue Sorbet', deck: 'bs3-blue-sorbet' as BuiltInDeckChoice },
     { label: 'BS3 Green Lily', deck: 'bs3-green-lily' as BuiltInDeckChoice },
     { label: 'BS3 Purple Dark Cacao', deck: 'bs3-purple-dark-cacao' as BuiltInDeckChoice },
+    { label: 'BS3 Purple Dark Cacao Fighting', deck: 'bs3-purple-dark-cacao-fighting' as BuiltInDeckChoice },
     { label: 'BS3 Yellow Counter', deck: 'bs3-yellow-counter' as BuiltInDeckChoice },
   ]
 

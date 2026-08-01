@@ -2310,6 +2310,9 @@ export const convertOfficialStageAbility = (
         amount: 1,
         target: { side: 'opponent', min: 0, max: 1 },
       },
+      // 官方文字是《Place this card in the trash.》，不是「橫置」，RESTS_THIS_CARD_PATTERN
+      // 抓不到，之前完全沒實作這個代價，變成可以每回合無限重複發動。
+      { kind: 'stage-source-to-trash' },
     ],
     'BS3-023': [
       {
