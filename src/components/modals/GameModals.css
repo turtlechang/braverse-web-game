@@ -611,6 +611,28 @@
   line-height: 1.5;
 }
 
+.trap-zero-effect-warning {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 176, 87, 0.42);
+  border-radius: 6px;
+  background: rgba(90, 58, 12, 0.32);
+  color: #ffd9a0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.trap-zero-effect-warning svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: #ffb057;
+}
+
 .battle-response-summary .trap-discard-options {
   grid-column: 1 / -1;
   justify-content: flex-start;

@@ -2,6 +2,7 @@ export { GameRuleError } from './errors'
 export {
   executeCardEffect,
   getAttackDamageAgainst,
+  getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
   getHandToBreakBySumCandidates,
