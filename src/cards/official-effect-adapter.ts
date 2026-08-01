@@ -3599,14 +3599,21 @@ export const convertOfficialTrapAbility = (
           duration: 'this-turn',
           target: { side: 'opponent', min: 0, max: 2 },
         },
+        // 官方文字「if your support area contains 5 or more, draw up to 2
+        // cards ... and discard 1 card」是單一個「若 X 則抽 N 張再棄 M 張」
+        // 的複合子句，不是兩個各自獨立判斷條件的動作。過去拆成 draw-up-to
+        // 與 discard-hand 兩個各掛同一條件的獨立效果，會被 playTrap 的
+        // 陷阱效果迴圈連續呼叫 executeCardEffect（迴圈只在 pendingRevealTopDeck
+        // 時才 break，pendingDrawUpTo 不會），導致 pendingDrawUpTo 與
+        // pendingOpponentHandDiscard 在同一次結算裡就同時被設置，UI 只是
+        // 剛好疊圖只顯示前者，玩家會覺得抽完牌後突然又跳出一個「無關」的
+        // 棄牌視窗。改用 draw-up-to-then-discard（跟 BS3-088 同一種複合效果）
+        // 才會走 resolveDrawUpTo 的 afterEffects 銜接流程，UI 才能正確顯示
+        // 「步驟 1/2 → 2/2」的接續提示。
         {
-          kind: 'draw-up-to',
+          kind: 'draw-up-to-then-discard',
           max: 2,
-          condition: { kind: 'support-count-at-least', count: 5 },
-        },
-        {
-          kind: 'discard-hand',
-          count: 1,
+          discardCount: 1,
           condition: { kind: 'support-count-at-least', count: 5 },
         },
       ],

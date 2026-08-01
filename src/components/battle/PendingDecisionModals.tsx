@@ -113,6 +113,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               effectText={effectText}
               hand={match.game.players[match.viewerPlayerId].hand}
               requiredCount={handDiscard.count}
+              continuesFromDraw={handDiscard.chainedFromDrawUpTo}
               selectedIds={match.selectedOpponentDiscardIds}
               onToggleCard={(instanceId) =>
                 match.setSelectedOpponentDiscardIds((current) =>
@@ -173,6 +174,9 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               effectText={effectText}
               max={drawUpTo.max}
               deckSize={match.game.players[match.viewerPlayerId].deck.length}
+              followedByDiscard={Boolean(
+                drawUpTo.afterEffects?.some((effect) => effect.kind === 'discard-hand'),
+              )}
               onConfirm={(drawCount) => {
                 match.dispatch(
                   {

@@ -10,6 +10,7 @@ import {
   getEffectTargetCandidates,
   getTargetPlayerId,
   isEffectConditionMet,
+  resolveDrawUpTo,
   resolveInspectDeck,
   resolveOpponentHandDiscard,
 } from './effects'
@@ -458,6 +459,33 @@ describe('BS3-088 Pure Vanilla Cookie: draw then place a hand card on top', () =
     expect(
       next.players['player-two'].hand.map((card) => card.instanceId),
     ).toEqual(['hand-a'])
+  })
+
+  // 使用者反映 BS3-070（同樣用 draw-up-to-then-discard）的抽牌／棄牌提示
+  // 過去分成兩個看起來互不相關的彈窗。UI 用 pendingOpponentHandDiscard 的
+  // chainedFromDrawUpTo 欄位判斷要不要顯示「步驟 2/2」的接續提示，這裡驗證
+  // resolveDrawUpTo 真的會在 afterEffects 觸發的棄牌決策上標記這個欄位。
+  it('tags the follow-up discard decision as chained from the draw step', () => {
+    const base = withHand(
+      withDeck(createBattleState(), 'player-two', [
+        item('deck-a'),
+        item('deck-b'),
+        item('deck-c'),
+      ]),
+      'player-two',
+      [item('hand-a')],
+    )
+    const withPending: GameState = {
+      ...executeCardEffect(base, sourceContext(), effectsOf('BS3-088')[0], []),
+    }
+    expect(withPending.pendingDrawUpTo).toBeTruthy()
+
+    const next = resolveDrawUpTo(withPending, 'player-two', 2)
+
+    expect(next.pendingOpponentHandDiscard).toMatchObject({
+      chainedFromDrawUpTo: true,
+      count: 1,
+    })
   })
 })
 

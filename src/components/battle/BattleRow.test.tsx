@@ -252,6 +252,80 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('>詳情<')
   })
 
+  // BS3-025（Golden Cheese Cookie）這類技能允許來源在休息區發動
+  // （skill.fromBreakArea）。使用者回報過看不到發動入口：常駐的
+  // 小格子（.break-cards，格子很窄）過去也塞了一個「啟動技能」按鈕，
+  // 但玩家更自然會先點「休息區摘要」看清楚卡牌內容，若彈出視窗
+  // （.break-popover）沒有發動按鈕，玩家會以為技能無法發動。使用者
+  // 之後又指出小格子上的按鈕本身「影響視覺上體感」，所以發動入口統一
+  // 收在彈出視窗，小格子只保留純視覺摘要。
+  const fromBreakAreaSkill: CardSkill = {
+    trigger: 'activate',
+    oncePerTurn: false,
+    yourTurn: true,
+    restSource: false,
+    fromBreakArea: true,
+    oncePerGame: true,
+    cost: { energy: {} },
+    text: 'Skill',
+    effects: [{ kind: 'break-source-to-battle', hpCount: 1 }],
+  }
+
+  it('does not render an activate-skill button on the compact break-area card chip', () => {
+    const game = createBattleState()
+    game.activePlayerId = 'player-one'
+    game.phase = 'main'
+    game.players['player-one'].breakArea = [
+      {
+        ...game.players['player-one'].battleArea[0].card,
+        instanceId: 'bs3-025-in-break',
+        skill: fromBreakAreaSkill,
+      },
+    ]
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+
+    expect(markup).toContain('break-cards')
+    expect(markup).not.toContain('啟動技能')
+  })
+
+  it('renders an activate-skill button for a fromBreakArea skill inside the break-area popover', () => {
+    const game = createBattleState()
+    game.activePlayerId = 'player-one'
+    game.phase = 'main'
+    game.players['player-one'].breakArea = [
+      {
+        ...game.players['player-one'].battleArea[0].card,
+        instanceId: 'bs3-025-in-break',
+        skill: fromBreakAreaSkill,
+      },
+    ]
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+          openResourceKind: 'break',
+          onToggleResource: () => undefined,
+        })}
+      />,
+    )
+
+    expect(markup).toContain('break-popover')
+    expect(markup).toContain('resource-card-entry')
+    expect(markup).toContain('啟動技能')
+  })
+
   it('renders compact resource summaries and an anchored resource popover', () => {
     const markup = renderToStaticMarkup(
       <BattleRow

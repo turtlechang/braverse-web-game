@@ -91,6 +91,61 @@ describe('DrawUpToResponseModal', () => {
     container.remove()
   })
 
+  // BS3-070（Puppet Theater of Chaos）「draw up to 2 cards ... and discard
+  // 1 card」過去分成兩個完全獨立的彈窗（抽牌→棄牌），使用者反映感覺像是
+  // 「跳出兩個視窗」。這裡驗證 followedByDiscard 會在抽牌彈窗上加一個
+  // 「步驟 1/2」提示，讓玩家知道接下來的棄牌提示是同一個效果的下一步。
+  it('shows a 2-step phase indicator when the draw is followed by a discard', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DrawUpToResponseModal
+          sourceCardName="Puppet Theater of Chaos"
+          max={2}
+          deckSize={40}
+          onConfirm={() => undefined}
+          followedByDiscard
+        />,
+      ),
+    )
+
+    const phaseProgress = container.querySelector('.phase-progress')
+    expect(phaseProgress).not.toBeNull()
+    expect(phaseProgress!.textContent).toContain('抽牌')
+    expect(phaseProgress!.textContent).toContain('棄牌')
+    expect(
+      container.querySelector('.phase-step.is-active')?.textContent,
+    ).toContain('抽牌')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('does not show a phase indicator for a standalone draw with no follow-up discard', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DrawUpToResponseModal
+          sourceCardName="Salt Crystal Trident"
+          max={3}
+          deckSize={40}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.phase-progress')).toBeNull()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('minimizes and restores the draw-up-to prompt', async () => {
     const container = document.createElement('div')
     document.body.appendChild(container)
@@ -206,6 +261,62 @@ describe('HandDiscardResponseModal', () => {
     })
 
     expect(onConfirm).toHaveBeenCalledOnce()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('shows a 2-step phase indicator continuing from the draw when chained', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Puppet Theater of Chaos"
+          hand={[createHandCard(1)]}
+          requiredCount={1}
+          selectedIds={[]}
+          onToggleCard={() => undefined}
+          onConfirm={() => undefined}
+          continuesFromDraw
+        />,
+      ),
+    )
+
+    const phaseProgress = container.querySelector('.phase-progress')
+    expect(phaseProgress).not.toBeNull()
+    expect(
+      container.querySelector('.phase-step.is-active')?.textContent,
+    ).toContain('棄牌')
+    expect(
+      container.querySelector('.phase-step.is-done')?.textContent,
+    ).toContain('抽牌')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('does not show a phase indicator for a standalone discard unrelated to any draw', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <HandDiscardResponseModal
+          sourceCardName="Some Other Trap"
+          hand={[createHandCard(1)]}
+          requiredCount={1}
+          selectedIds={[]}
+          onToggleCard={() => undefined}
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('.phase-progress')).toBeNull()
 
     await act(() => root.unmount())
     container.remove()
@@ -636,6 +747,75 @@ describe('OptionalCostAttackModal', () => {
 
     expect(container.querySelector('.optional-cost-attack-modal')).not.toBeNull()
     expect(onSkip).not.toHaveBeenCalled()
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  // 使用者要求把陷阱那套「目前條件不成立，確認後會略過此效果」的提醒也
+  // 套用到「Then, <付代價>」攻擊附加效果（BS3-086 這類）。
+  it('shows the unmet-condition warning before the player pays', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Kouign-Amann Cookie"
+          effectText="If you have a LV.3 Cookie in your battle area, discard 1 card to deal 1 damage."
+          discardHandCost={1}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[createHandCard(1)]}
+          targetCandidates={[]}
+          needsTarget={false}
+          targetMin={0}
+          targetLabel="對手餅乾"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+          unmetConditionWarning="目前條件不成立，確認後會略過此效果。"
+        />,
+      ),
+    )
+
+    const warning = container.querySelector(
+      '.optional-cost-attack-condition-warning',
+    )
+    expect(warning).not.toBeNull()
+    expect(warning!.textContent).toContain('目前條件不成立，確認後會略過此效果。')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('does not show the warning when there is nothing unmet', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="測試餅乾"
+          effectText="支付代價後使用效果。"
+          discardHandCost={1}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[createHandCard(1)]}
+          targetCandidates={[]}
+          needsTarget={false}
+          targetMin={0}
+          targetLabel="對手餅乾"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+        />,
+      ),
+    )
+
+    expect(
+      container.querySelector('.optional-cost-attack-condition-warning'),
+    ).toBeNull()
 
     await act(() => root.unmount())
     container.remove()

@@ -571,12 +571,15 @@ export interface TrapResponseModalProps {
   selectedTrashToDeckIds?: string[]
   onToggleTrashToDeck?: (instanceId: string) => void
   /**
-   * 目前選中的陷阱帶有 damage-by-break-count／modify-attack-by-break-count
-   * 這類依休息區張數縮放的效果，但目前休息區沒有符合條件的餅乾、算出來會是
-   * 0 效果時的提示文字。不會擋掉發動——玩家仍可能為了消耗手牌或觸發聯動
-   * 而選擇發動，只是先讓玩家知道不會有實質效果（BS3-045 等卡的規則裁定）。
+   * 目前選中的陷阱裡，有子效果的 condition 目前不成立時的提示文字。不會
+   * 擋掉發動——玩家仍可能為了消耗手牌或觸發聯動而選擇發動，只是先讓玩家
+   * 知道確認後這個子效果會被略過（跟 EffectPanel 對技能／物品／場景卡
+   * 效果的「目前條件不成立，確認後會略過此效果」提示一致）。
+   * damage-by-break-count／modify-attack-by-break-count 這兩種依休息區
+   * 張數縮放的效果另外用更精確的文字說明「不會造成傷害／不會改變攻擊力」
+   * （BS3-045 等卡的規則裁定），優先顯示。
    */
-  zeroBreakCountWarning?: string | null
+  unmetConditionWarning?: string | null
 }
 
 type TrapStep = 'select' | GuidedPhaseId
@@ -665,7 +668,7 @@ export function TrapResponseModal({
   trashToDeckAmount = 0,
   selectedTrashToDeckIds = [],
   onToggleTrashToDeck,
-  zeroBreakCountWarning = null,
+  unmetConditionWarning = null,
 }: TrapResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<TrapStep>(() =>
@@ -860,10 +863,10 @@ export function TrapResponseModal({
                 </div>
               </div>
             )}
-            {selectedTrap && zeroBreakCountWarning && (
+            {selectedTrap && unmetConditionWarning && (
               <div className="trap-zero-effect-warning" role="alert">
                 <AlertTriangle aria-hidden="true" />
-                <span>{zeroBreakCountWarning}</span>
+                <span>{unmetConditionWarning}</span>
               </div>
             )}
             <GuidedPhaseSteps phases={phases} activePhase={activePhase} />

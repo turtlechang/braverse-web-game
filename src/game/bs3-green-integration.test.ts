@@ -577,6 +577,17 @@ describe('BS3-069 The New Guardian Power: trap', () => {
 
 describe('BS3-070 Puppet Theater of Chaos: trap', () => {
   it('converts correctly', () => {
+    // 官方文字「if your support area contains 5 or more, draw up to 2
+    // cards ... and discard 1 card」是單一個複合子句（一個條件，抽牌接棄牌
+    // 兩個動作），不是兩個各自獨立判斷同一條件的效果。過去拆成 draw-up-to
+    // 與 discard-hand 兩個獨立效果，會被 playTrap 的陷阱效果迴圈連續呼叫
+    // executeCardEffect（迴圈只在 pendingRevealTopDeck 時 break，
+    // pendingDrawUpTo 不會），導致 pendingDrawUpTo 與
+    // pendingOpponentHandDiscard 在同一次結算裡就同時被設置，UI 只是剛好
+    // 疊圖只顯示前者，玩家看起來像是抽完牌後又跳出一個「無關」的棄牌視窗。
+    // 改用跟 BS3-088 一樣的 draw-up-to-then-discard 複合效果，才會走
+    // resolveDrawUpTo 的 afterEffects 銜接流程，UI 才能正確顯示「步驟 1/2
+    // → 2/2」的接續提示（見 chainedFromDrawUpTo）。
     const trap = convertOfficialTrapAbility(findBs3Card('BS3-070'))
     expect(trap).toBeTruthy()
     expect(trap!.effects).toEqual([
@@ -587,13 +598,9 @@ describe('BS3-070 Puppet Theater of Chaos: trap', () => {
         target: { side: 'opponent', min: 0, max: 2 },
       },
       {
-        kind: 'draw-up-to',
+        kind: 'draw-up-to-then-discard',
         max: 2,
-        condition: { kind: 'support-count-at-least', count: 5 },
-      },
-      {
-        kind: 'discard-hand',
-        count: 1,
+        discardCount: 1,
         condition: { kind: 'support-count-at-least', count: 5 },
       },
     ])
