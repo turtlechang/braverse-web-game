@@ -296,7 +296,27 @@ describe('MainMenu empty deck state', () => {
     expect(onlineBtn).toBeDefined()
     expect(onlineBtn!.disabled).toBe(true)
 
-    expect(container.textContent).toContain('尚無自訂牌組')
+    // P2-4：兩個 disabled 按鈕都要有一致風格的原因文字，不能只有對戰入口有。
+    const reasons = container.querySelectorAll('.main-menu-disabled-reason')
+    expect(reasons).toHaveLength(2)
+    expect(reasons[0].textContent).toContain('尚無自訂牌組')
+    expect(reasons[1].textContent).toContain('尚無自訂牌組')
+
+    await act(() => root.unmount())
+  })
+
+  it('P2-4: keeps developer tools (測試對局設定／重新讀取) out of the main action list, in the footer instead', async () => {
+    const { container, root } = await renderMenu([validDeck])
+
+    const actionsList = container.querySelector('.main-menu-actions')
+    expect(actionsList?.textContent).not.toContain('測試對局設定')
+    expect(actionsList?.textContent).not.toContain('重新讀取')
+
+    const devTools = container.querySelector('.main-menu-dev-tools')
+    expect(devTools).toBeTruthy()
+    expect(devTools?.closest('footer')).toBeTruthy()
+    expect(devTools?.textContent).toContain('測試對局設定')
+    expect(devTools?.textContent).toContain('重新讀取')
 
     await act(() => root.unmount())
   })
