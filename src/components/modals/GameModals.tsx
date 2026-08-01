@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useState } from 'react'
 import {
+  AlertTriangle,
   ChevronLeft,
   ChevronRight,
   Maximize2,
@@ -569,6 +570,13 @@ export interface TrapResponseModalProps {
   trashToDeckAmount?: number
   selectedTrashToDeckIds?: string[]
   onToggleTrashToDeck?: (instanceId: string) => void
+  /**
+   * 目前選中的陷阱帶有 damage-by-break-count／modify-attack-by-break-count
+   * 這類依休息區張數縮放的效果，但目前休息區沒有符合條件的餅乾、算出來會是
+   * 0 效果時的提示文字。不會擋掉發動——玩家仍可能為了消耗手牌或觸發聯動
+   * 而選擇發動，只是先讓玩家知道不會有實質效果（BS3-045 等卡的規則裁定）。
+   */
+  zeroBreakCountWarning?: string | null
 }
 
 type TrapStep = 'select' | GuidedPhaseId
@@ -657,6 +665,7 @@ export function TrapResponseModal({
   trashToDeckAmount = 0,
   selectedTrashToDeckIds = [],
   onToggleTrashToDeck,
+  zeroBreakCountWarning = null,
 }: TrapResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<TrapStep>(() =>
@@ -849,6 +858,12 @@ export function TrapResponseModal({
                     </p>
                   )}
                 </div>
+              </div>
+            )}
+            {selectedTrap && zeroBreakCountWarning && (
+              <div className="trap-zero-effect-warning" role="alert">
+                <AlertTriangle aria-hidden="true" />
+                <span>{zeroBreakCountWarning}</span>
               </div>
             )}
             <GuidedPhaseSteps phases={phases} activePhase={activePhase} />

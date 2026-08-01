@@ -139,6 +139,57 @@ describe('TRAP response window', () => {
     expect(result.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
   })
 
+  // 官方文字沒有「休息區要有 LV.3 才能發動」這種前置條件，只是傷害量按
+  // 休息區 LV.3 張數縮放（0 張時就是 0 傷害）。這張卡不該被「休息區沒有
+  // LV.3」擋在 getTrapCandidates 之外——玩家仍可能為了消耗手牌、觸發其他
+  // 聯動效果而選擇發動。
+  it('remains playable (and resolves to 0 damage) when the break area has no LV.3 Cookie', () => {
+    const counterattackTrap: GameCard = {
+      id: 'BS3-045',
+      instanceId: 'bs3-045-test-no-lv3',
+      name: "Golden Monarch's Counterattack",
+      type: 'trap',
+      officialType: 'trap',
+      energyColor: 'yellow',
+      trap: {
+        text: 'Select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage for each LV.3 Cookie in your break area.',
+        cost: { energy: { yellow: 2 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'damage-by-break-count',
+            perCount: 1,
+            exactBreakLevel: 3,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [counterattackTrap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-yellow-a', 'yellow'), rested: false },
+      { card: item('p1-yellow-b', 'yellow'), rested: false },
+    ]
+    state.players['player-one'].breakArea = []
+    state.players['player-two'].battleArea[0].hpCards = [
+      item('attacker-hp-a'),
+      item('attacker-hp-b'),
+    ]
+    state = declareAttack(state)
+
+    expect(
+      getTrapCandidates(state, 'player-one').map((card) => card.instanceId),
+    ).toContain(counterattackTrap.instanceId)
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: counterattackTrap.instanceId,
+      paymentIds: ['p1-yellow-a', 'p1-yellow-b'],
+      targetIds: ['attacker'],
+    })
+
+    expect(result.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
+  })
+
   const purpleCookieCostTrap = (): GameCard => ({
     id: 'ST5-020',
     instanceId: 'st5-020-test',

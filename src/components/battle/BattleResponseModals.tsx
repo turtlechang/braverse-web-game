@@ -7,6 +7,7 @@ import {
 } from '../modals/GameModals'
 import { parseTestStateConfig } from '../../game/demo'
 import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
+import { getZeroBreakCountWarning } from './trapWarnings'
 
 const testStateConfig = parseTestStateConfig(
   window.location.search,
@@ -109,6 +110,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             trashToDeckAmount={match.trapTrashToDeckAmount}
             selectedTrashToDeckIds={match.selectedTrapTrashToDeckIds}
             onToggleTrashToDeck={match.toggleTrapTrashToDeck}
+            zeroBreakCountWarning={getZeroBreakCountWarning(match)}
             attackerCard={
               attackAttackerCard
             }

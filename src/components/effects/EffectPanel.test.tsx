@@ -805,4 +805,71 @@ describe('EffectPanel', () => {
 
     await act(() => root.unmount())
   })
+
+  // BS2-011「Select {Y} Cookies from your break area until their total LV.
+  // sum reaches LV.3. Return those Cookies to your hand」轉換成
+  // break-to-hand-by-level-sum。修正前這個 kind 完全沒被 selectionLimits／
+  // selectedLevelSum／targetReady 涵蓋，導致：(a) 選卡時看不到等級總和
+  // 進度提示，(b) 不管選了什麼（甚至 0 張）確認按鈕都會被判定為就緒，
+  // 玩家點下去才會被後端 execute.ts 的 GameRuleError 彈回來。修正後行為
+  // 應該跟已經正確處理的姊妹效果 hand-to-break-by-level-sum（BS3-047，
+  // 方向相反：手牌→休息區）一致。
+  it('BS2-011: shows level-sum progress and gates confirm on the exact target sum (break-to-hand-by-level-sum)', async () => {
+    const breakCandidateLv1 = { ...createCookieCard(20), level: 1 }
+    const breakCandidateLv2 = { ...createCookieCard(21), level: 2 }
+    const effect: CardEffect = {
+      kind: 'break-to-hand-by-level-sum',
+      targetSum: 3,
+      energyColor: 'yellow',
+    }
+
+    const renderWithSelection = async (selectedTargetIds: string[]) => {
+      const pending = createPendingEffect({ selectedTargetIds })
+      const container = document.createElement('div')
+      const root = createRoot(container)
+      await act(() => root.render(
+        <EffectPanel
+          pendingEffect={pending}
+          currentEffect={effect}
+          effectHistory={[]}
+          onConfirm={() => undefined}
+          onSkip={() => undefined}
+          candidateCards={[breakCandidateLv1, breakCandidateLv2]}
+          onToggleCandidate={() => undefined}
+        />,
+      ))
+      return { container, root }
+    }
+
+    // 未選任何卡：進度提示顯示 0／3，確認按鈕必須是 disabled（修正前這裡
+    // selectionLimits 是 null，targetReady 會直接短路成 true）。
+    const empty = await renderWithSelection([])
+    expect(empty.container.textContent).toContain('已選等級總和 0／3')
+    expect(
+      (empty.container.querySelector('.effect-panel-primary-action') as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    await act(() => empty.root.unmount())
+
+    // 只選 LV.1，總和 1，還沒到 3，確認按鈕仍須 disabled。
+    const partial = await renderWithSelection([breakCandidateLv1.instanceId])
+    expect(partial.container.textContent).toContain('已選等級總和 1／3')
+    expect(
+      (partial.container.querySelector('.effect-panel-primary-action') as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    await act(() => partial.root.unmount())
+
+    // LV.1 + LV.2 = 3，剛好等於 targetSum，確認按鈕才應該開放。
+    const exact = await renderWithSelection([
+      breakCandidateLv1.instanceId,
+      breakCandidateLv2.instanceId,
+    ])
+    expect(exact.container.textContent).toContain('已選等級總和 3／3')
+    expect(
+      (exact.container.querySelector('.effect-panel-primary-action') as HTMLButtonElement)
+        .disabled,
+    ).toBe(false)
+    await act(() => exact.root.unmount())
+  })
 })

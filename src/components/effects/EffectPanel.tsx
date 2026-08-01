@@ -148,7 +148,8 @@ function EffectPanelContent({
         ? { min: 1, max: 1 }
       : currentEffect?.kind === 'break-to-battle'
         ? { min: 0, max: currentEffect.amount }
-        : currentEffect?.kind === 'hand-to-break-by-level-sum'
+        : currentEffect?.kind === 'hand-to-break-by-level-sum' ||
+          currentEffect?.kind === 'break-to-hand-by-level-sum'
           ? { min: 1, max: candidateCards.length }
         : currentEffect?.kind === 'hand-to-break' ||
             currentEffect?.kind === 'break-to-hand' ||
@@ -209,24 +210,27 @@ function EffectPanelContent({
     trashToDeckBottomPaid &&
     trashToDeckPaid
 
-  const selectedLevelSum =
-    currentEffect?.kind === 'hand-to-break-by-level-sum'
-      ? candidateCards
-          .filter((card) =>
-            pendingEffect?.selectedTargetIds.includes(card.instanceId),
-          )
-          .reduce(
-            (sum, card) => sum + (card.type === 'cookie' ? card.level : 0),
-            0,
-          )
-      : 0
+  const isLevelSumEffect =
+    currentEffect?.kind === 'hand-to-break-by-level-sum' ||
+    currentEffect?.kind === 'break-to-hand-by-level-sum'
+
+  const selectedLevelSum = isLevelSumEffect
+    ? candidateCards
+        .filter((card) =>
+          pendingEffect?.selectedTargetIds.includes(card.instanceId),
+        )
+        .reduce(
+          (sum, card) => sum + (card.type === 'cookie' ? card.level : 0),
+          0,
+        )
+    : 0
 
   const targetReady =
     !showTargetSelection ||
-    !selectionLimits ||
-    (currentEffect?.kind === 'hand-to-break-by-level-sum'
+    (isLevelSumEffect
       ? selectedLevelSum === currentEffect.targetSum
-      : Boolean(
+      : !selectionLimits ||
+        Boolean(
           pendingEffect &&
             pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
             pendingEffect.selectedTargetIds.length <= selectionLimits.max,
@@ -617,7 +621,8 @@ function EffectPanelContent({
                   onToggle={onToggleCandidate}
                   className="effect-candidates-target"
                 />
-                {currentEffect.kind === 'hand-to-break-by-level-sum' ? (
+                {currentEffect.kind === 'hand-to-break-by-level-sum' ||
+                currentEffect.kind === 'break-to-hand-by-level-sum' ? (
                   <small>
                     已選等級總和 {selectedLevelSum}／{currentEffect.targetSum}
                   </small>
