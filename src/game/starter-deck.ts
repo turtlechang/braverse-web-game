@@ -25,6 +25,7 @@ export const BS3_AI_PRESET_DECK_CHOICES = [
   'bs3-blue-sorbet',
   'bs3-red-pitaya',
   'bs3-purple-dark-cacao',
+  'bs3-purple-dark-cacao-fighting',
   'bs3-yellow-counter',
 ] as const
 
@@ -399,6 +400,38 @@ export const AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS2-080', count: 1 },
 ]
 
+/**
+ * 第三彈紫色－黑可可餅乾牌組（打架紫路線）。
+ *
+ * 跟上面的丟牌紫互斥：不吃棄牌區張數，純數值本體＋固定條件移除技能推進，
+ * 前中期比丟牌紫扎實（Angel Cookie 阻擋者＋Chocolate Altar 無條件 -3 攻擊，
+ * 不像丟牌紫那樣要等門檻解鎖才有防守手段），代價是沒有丟牌紫後期「一次
+ * 解決全場」的爆發力。60 張合法（已用 validateCustomDeck 驗證：flip 8／
+ * 餅乾 39／物品 5／陷阱 8）。
+ */
+export const AI_PRESET_BS3_PURPLE_DARK_CACAO_FIGHTING_DECK: StarterDeckEntry[] = [
+  { cardNumber: 'BS3-110', count: 4 },
+  { cardNumber: 'BS2-076', count: 3 },
+  { cardNumber: 'ST5-015', count: 4 },
+  { cardNumber: 'BS2-055', count: 2 },
+  { cardNumber: 'BS2-069', count: 4 },
+  { cardNumber: 'BS2-068', count: 3 },
+  { cardNumber: 'ST5-010', count: 3 },
+  { cardNumber: 'BS3-108', count: 4 },
+  { cardNumber: 'BS2-067', count: 4 },
+  { cardNumber: 'BS2-053', count: 4 },
+  { cardNumber: 'BS2-061', count: 4 },
+  { cardNumber: 'BS3-107', count: 3 },
+  { cardNumber: 'BS2-056', count: 3 },
+  { cardNumber: 'ST5-003', count: 2 },
+  { cardNumber: 'BS2-077', count: 2 },
+  { cardNumber: 'ST5-018', count: 2 },
+  { cardNumber: 'BS3-116', count: 1 },
+  { cardNumber: 'BS3-117', count: 4 },
+  { cardNumber: 'ST5-021', count: 3 },
+  { cardNumber: 'ST5-020', count: 1 },
+]
+
 /** 使用者提供的第三彈黃色－反擊流牌組。 */
 export const AI_PRESET_BS3_YELLOW_COUNTER_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS3-029', count: 3 },
@@ -439,6 +472,7 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs3-blue-sorbet': AI_PRESET_BS3_BLUE_SORBET_DECK,
   'bs3-red-pitaya': AI_PRESET_BS3_RED_PITAYA_DECK,
   'bs3-purple-dark-cacao': AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK,
+  'bs3-purple-dark-cacao-fighting': AI_PRESET_BS3_PURPLE_DARK_CACAO_FIGHTING_DECK,
   'bs3-yellow-counter': AI_PRESET_BS3_YELLOW_COUNTER_DECK,
 }
 
@@ -651,6 +685,15 @@ export const createAiPresetBs3PurpleDarkCacaoDeck = (
     [],
   )
 
+export const createAiPresetBs3PurpleDarkCacaoFightingDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS3_PURPLE_DARK_CACAO_FIGHTING_DECK,
+    [],
+  )
+
 export const createAiPresetBs3YellowCounterDeck = (
   playerId: PlayerId,
 ): GameCard[] =>
@@ -680,6 +723,7 @@ export const DECK_CREATORS: Record<
   'bs3-blue-sorbet': createAiPresetBs3BlueSorbetDeck,
   'bs3-red-pitaya': createAiPresetBs3RedPitayaDeck,
   'bs3-purple-dark-cacao': createAiPresetBs3PurpleDarkCacaoDeck,
+  'bs3-purple-dark-cacao-fighting': createAiPresetBs3PurpleDarkCacaoFightingDeck,
   'bs3-yellow-counter': createAiPresetBs3YellowCounterDeck,
 }
 

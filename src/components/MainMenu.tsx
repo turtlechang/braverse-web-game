@@ -22,6 +22,7 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'bs3-blue-sorbet', label: '第三彈藍色・PR 雪酪' },
   { value: 'bs3-red-pitaya', label: '第三彈紅色・火龍果龍族餅乾' },
   { value: 'bs3-purple-dark-cacao', label: '第三彈紫色・黑可可餅乾' },
+  { value: 'bs3-purple-dark-cacao-fighting', label: '第三彈紫色・黑可可餅乾（打架流）' },
   { value: 'bs3-yellow-counter', label: '第三彈黃色・反擊流' },
 ]
 
