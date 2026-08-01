@@ -279,29 +279,39 @@ export const AI_PRESET_BS2_PURPLE_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS2-077', count: 3 },
 ]
 
-/** 使用者提供的第三彈綠色－聖百合餅乾牌組。 */
+/**
+ * 第三彈綠色－聖百合餅乾牌組。
+ *
+ * 2026-08-01 依實戰對戰紀錄調整過一版：原始配置在對紅色火龍果龍族牌組時，
+ * 高等級（LV.3）主力反覆陣亡，很快把自己休息區等級推向 10（本作的敗北條件）。
+ * 砍掉貢獻偏低的 Silverbell／Roguefort（合計 4 張 LV.1），換成：
+ * - White Lily／Elder Faerie 各加碼一份，補強終結者密度
+ * - Blue Lily Cookie 作為第二條 LV.3 終結者線
+ * - Divine Light Crystal 從 1 張補到 2 張（本場最常抽不到的保命陷阱）
+ * - Ritual of Life 兩張新面孔，直接對應「損失餅乾＝倒數計時」這個核心弱點
+ */
 export const AI_PRESET_BS3_GREEN_LILY_DECK: StarterDeckEntry[] = [
-  { cardNumber: 'BS3-061', count: 2 },
-  { cardNumber: 'BS1-053', count: 2 },
   { cardNumber: 'BS1-062', count: 4 },
   { cardNumber: 'BS1-057', count: 4 },
   { cardNumber: 'BS2-015', count: 4 },
   { cardNumber: 'BS3-050@1', count: 4 },
-  { cardNumber: 'BS3-055', count: 2 },
-  { cardNumber: 'BS3-060@1', count: 1 },
-  { cardNumber: 'BS3-056', count: 2 },
+  { cardNumber: 'BS3-055', count: 3 },
+  { cardNumber: 'BS3-060@1', count: 2 },
+  { cardNumber: 'BS1-054', count: 2 },
   { cardNumber: 'BS1-069', count: 4 },
   { cardNumber: 'BS2-019', count: 4 },
+  { cardNumber: 'BS3-056', count: 2 },
   { cardNumber: 'BS1-055', count: 2 },
   { cardNumber: 'BS1-067', count: 2 },
-  { cardNumber: 'P-012', count: 2 },
-  { cardNumber: 'ST3-016', count: 3 },
   { cardNumber: 'BS1-075', count: 4 },
-  { cardNumber: 'BS3-070', count: 2 },
-  { cardNumber: 'BS3-069', count: 1 },
+  { cardNumber: 'ST3-016', count: 2 },
+  { cardNumber: 'P-012', count: 1 },
   { cardNumber: 'ST3-019', count: 3 },
-  { cardNumber: 'ST3-020', count: 1 },
-  { cardNumber: 'BS2-021', count: 3 },
+  { cardNumber: 'ST3-020', count: 2 },
+  { cardNumber: 'P-029', count: 2 },
+  { cardNumber: 'BS3-070', count: 2 },
+  { cardNumber: 'BS2-021', count: 2 },
+  { cardNumber: 'BS3-069', count: 1 },
   { cardNumber: 'ST3-022', count: 4 },
 ]
 
@@ -353,12 +363,22 @@ export const AI_PRESET_BS3_RED_PITAYA_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS1-012', count: 2 },
 ]
 
-/** 使用者提供的第三彈紫色－黑可可餅乾牌組。 */
+/**
+ * 第三彈紫色－黑可可餅乾牌組（丟牌紫路線）。
+ *
+ * 2026-08-01 依實戰對戰紀錄調整過一版：原始配置完全沒有陷阱卡，在「損失餅乾
+ * ＝倒數計時」的規則下是硬傷（對紅色火龍果龍族牌組時，主力在低 HP 掛在場上
+ * 太久，被道具卡直接打死也無從反應）。砍掉貢獻偏低的 Red Velvet／Starfruit
+ * （觸發條件苛刻、需要犧牲自己場上餅乾）與 1 張 Pastry Cookie，換成：
+ * - Chocolate Altar of the Fallen：無條件 -3 攻擊，門檻到了還能倒貼處決
+ * - Hidden Warpgate：可直接處決剩餘 HP≤2 的目標，選攻擊者本身等同取消攻擊
+ * - Abandoned Cloud Nest：棄牌區 15 張以上 -3 攻擊，剛好貼合這套牌自己的節奏
+ */
 export const AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS2-061', count: 4 },
   { cardNumber: 'BS3-105', count: 4 },
-  { cardNumber: 'BS3-103', count: 3 },
-  { cardNumber: 'BS2-062', count: 4 },
+  { cardNumber: 'BS3-103', count: 1 },
+  { cardNumber: 'BS2-062', count: 2 },
   { cardNumber: 'BS2-071', count: 4 },
   { cardNumber: 'BS3-099', count: 2 },
   { cardNumber: 'BS2-053', count: 4 },
@@ -370,11 +390,13 @@ export const AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS3-107', count: 4 },
   { cardNumber: 'BS2-056', count: 4 },
   { cardNumber: 'ST5-003', count: 4 },
-  { cardNumber: 'ST5-008', count: 1 },
-  { cardNumber: 'BS2-072', count: 3 },
+  { cardNumber: 'BS2-072', count: 2 },
   { cardNumber: 'BS2-077', count: 4 },
   { cardNumber: 'BS2-078', count: 1 },
   { cardNumber: 'BS2-081', count: 2 },
+  { cardNumber: 'BS3-117', count: 3 },
+  { cardNumber: 'ST5-021', count: 2 },
+  { cardNumber: 'BS2-080', count: 1 },
 ]
 
 /** 使用者提供的第三彈黃色－反擊流牌組。 */

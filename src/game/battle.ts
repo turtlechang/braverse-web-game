@@ -447,6 +447,45 @@ export const getBlockerCandidates = (
   })
 }
 
+/**
+ * 陷阱／攻擊後續效果的目標 ID 解析：AI 與部分 UI 呼叫端只會替整張卡（或整次
+ * 攻擊後續）算出「一組」targetIds（例如取自第一個符合條件的子效果），但像
+ * BS3-117 這種一張陷阱掛兩個子效果、且各自 target selector 不同（modify-attack
+ * 沒有 remainingHp 限制、field-to-trash 要求 remainingHp<=2）時，直接把同一組
+ * targetIds 套進後面每個子效果，遇到不滿足該子效果 selector 的目標就會被
+ * selectEffectTargets 判定為不合法目標而拋錯，讓整個 playTrap 中止。
+ * 這裡跟本來就存在、只用在 self-target 分支的 fallback 邏輯一致：先過濾出
+ * 這個子效果自己候選裡有效的 ID，過濾完是空的再退而求其次選它自己的最佳候選。
+ * validateTrapTargets（送出指令前的預先檢查）跟 playTrap 主迴圈（真正結算）
+ * 都要用同一套邏輯，否則前者可能比後者更嚴格，在後者本來能靠 fallback
+ * 正常結算的情況下就先擋下來拋錯。
+ *
+ * 非 self 目標刻意保留「明確送 0 個 ID」＝略過這個選填效果（例如 ST2-021
+ * Pretzel Snare 的「最多選 1」允許不選），只有在呼叫端送了非空但對「這個
+ * 子效果」而言不合法的 ID 時，才 fallback 選這個子效果自己候選裡的最佳
+ * 選項。self 目標維持原本行為：沒有專屬 selfTargetIds 時一律自動代選，
+ * 不受 requestedIds 是否為空影響（self 目標本來就不是玩家自由選擇的）。
+ */
+const resolveTrapEffectTargetIds = (
+  state: GameState,
+  context: EffectContext,
+  target: EffectTargetSelector | undefined,
+  requestedIds: string[],
+  selfTargetIds: string[] | undefined,
+): string[] => {
+  if (!target) return requestedIds
+  if (target.side === 'self') {
+    if (selfTargetIds && selfTargetIds.length > 0) return selfTargetIds
+  } else if (requestedIds.length === 0) {
+    return requestedIds
+  }
+  const candidates = getEffectTargetCandidates(state, context, target)
+  const candidateIds = new Set(candidates.map((c) => c.card.instanceId))
+  const validIds = requestedIds.filter((id) => candidateIds.has(id))
+  if (validIds.length > 0) return validIds
+  return candidates.length > 0 ? [candidates[0].card.instanceId] : []
+}
+
 const validateTrapTargets = (
   state: GameState,
   playerId: PlayerId,
@@ -472,40 +511,21 @@ const validateTrapTargets = (
     return
   }
 
+  const context: EffectContext = {
+    sourcePlayerId: playerId,
+    sourceInstanceId: 'pending-trap',
+  }
   for (const effect of targetEffects) {
     const target = 'target' in effect ? effect.target : undefined
     if (!target) continue
-    const isSelfTarget = target.side === 'self'
-    let effectiveIds: string[]
-    if (isSelfTarget) {
-      if (selfTargetIds && selfTargetIds.length > 0) {
-        effectiveIds = selfTargetIds
-      } else {
-        const selfCandidates = getEffectTargetCandidates(
-          state,
-          { sourcePlayerId: playerId, sourceInstanceId: 'pending-trap' },
-          target,
-        )
-        const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
-        const validTargetIds = targetIds.filter((id) => selfCandidateIds.has(id))
-        effectiveIds = validTargetIds.length > 0
-          ? validTargetIds
-          : selfCandidates.length > 0
-            ? [selfCandidates[0].card.instanceId]
-            : []
-      }
-    } else {
-      effectiveIds = targetIds
-    }
-    selectEffectTargets(
+    const effectiveIds = resolveTrapEffectTargetIds(
       state,
-      {
-        sourcePlayerId: playerId,
-        sourceInstanceId: 'pending-trap',
-      },
+      context,
       target,
-      effectiveIds,
+      targetIds,
+      selfTargetIds,
     )
+    selectEffectTargets(state, context, target, effectiveIds)
   }
 }
 
@@ -948,28 +968,13 @@ export const playTrap = (
     }
 
     if (effect.kind === 'redirect-attack') {
-      const isSelfTarget = effect.target?.side === 'self'
-      let redirectTargetIds: string[]
-      if (isSelfTarget) {
-        if (options.selfTargetIds && options.selfTargetIds.length > 0) {
-          redirectTargetIds = options.selfTargetIds
-        } else {
-          const selfCandidates = getEffectTargetCandidates(
-            nextState,
-            context,
-            effect.target,
-          )
-          const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
-          const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
-          redirectTargetIds = validTargetIds.length > 0
-            ? validTargetIds
-            : selfCandidates.length > 0
-              ? [selfCandidates[0].card.instanceId]
-              : []
-        }
-      } else {
-        redirectTargetIds = options.targetIds
-      }
+      const redirectTargetIds = resolveTrapEffectTargetIds(
+        nextState,
+        context,
+        effect.target,
+        options.targetIds,
+        options.selfTargetIds,
+      )
       const targets = selectEffectTargets(
         nextState,
         context,
@@ -1002,28 +1007,13 @@ export const playTrap = (
     }
 
     if (effect.kind === 'damage') {
-      const isSelfTarget = effect.target?.side === 'self'
-      let damageTargetIds: string[]
-      if (isSelfTarget) {
-        if (options.selfTargetIds && options.selfTargetIds.length > 0) {
-          damageTargetIds = options.selfTargetIds
-        } else {
-          const selfCandidates = getEffectTargetCandidates(
-            nextState,
-            context,
-            effect.target,
-          )
-          const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
-          const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
-          damageTargetIds = validTargetIds.length > 0
-            ? validTargetIds
-            : selfCandidates.length > 0
-              ? [selfCandidates[0].card.instanceId]
-              : []
-        }
-      } else {
-        damageTargetIds = options.targetIds
-      }
+      const damageTargetIds = resolveTrapEffectTargetIds(
+        nextState,
+        context,
+        effect.target,
+        options.targetIds,
+        options.selfTargetIds,
+      )
       const targets = selectEffectTargets(
         nextState,
         context,
@@ -1076,26 +1066,13 @@ export const playTrap = (
         effect.kind === 'deck-to-support' ||
         (effect.kind === 'gain-hp' && (!effect.target || effect.target.sourceOnly))
         ? []
-        : (() => {
-            if ('target' in effect && effect.target?.side === 'self') {
-              if (options.selfTargetIds && options.selfTargetIds.length > 0) {
-                return options.selfTargetIds
-              }
-              const selfCandidates = getEffectTargetCandidates(
-                nextState,
-                context,
-                effect.target,
-              )
-              const selfCandidateIds = new Set(selfCandidates.map((c) => c.card.instanceId))
-              const validTargetIds = options.targetIds.filter((id) => selfCandidateIds.has(id))
-              return validTargetIds.length > 0
-                ? validTargetIds
-                : selfCandidates.length > 0
-                  ? [selfCandidates[0].card.instanceId]
-                  : []
-            }
-            return options.targetIds
-          })(),
+        : resolveTrapEffectTargetIds(
+            nextState,
+            context,
+            'target' in effect ? effect.target : undefined,
+            options.targetIds,
+            options.selfTargetIds,
+          ),
     )
     if (nextState.pendingRevealTopDeck) break
   }
