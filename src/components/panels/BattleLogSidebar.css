@@ -86,13 +86,101 @@
   list-style: none;
 }
 
+.battle-log-group {
+  display: grid;
+  gap: 4px;
+}
+
+.battle-log-turn-divider {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 4px 2px 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 215, 107, 0.22);
+}
+
+.battle-log-turn-divider:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.battle-log-turn-badge {
+  color: #ffd76b;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.battle-log-turn-levels {
+  display: flex;
+  gap: 8px;
+  color: rgba(219, 239, 255, 0.55);
+  font-size: 0.54rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .battle-log-entry {
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  width: 100%;
   padding: 6px 8px;
   border: 1px solid rgba(138, 212, 255, 0.16);
+  border-left: 3px solid rgba(138, 212, 255, 0.3);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.03);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.battle-log-entry.is-expandable {
+  cursor: pointer;
+}
+
+.battle-log-entry.is-expandable:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(138, 212, 255, 0.32);
+}
+
+.battle-log-entry:disabled {
+  opacity: 1;
+}
+
+.battle-log-entry.category-attack,
+.battle-log-entry.category-deploy { border-left-color: #ffd76b; }
+.battle-log-entry.category-activate { border-left-color: #c9a2ff; }
+.battle-log-entry.category-damage { border-left-color: #ff7a7a; }
+.battle-log-entry.category-flip { border-left-color: #7de8b0; }
+.battle-log-entry.category-draw { border-left-color: #71e9ff; }
+.battle-log-entry.category-phase,
+.battle-log-entry.category-system { border-left-color: rgba(138, 212, 255, 0.3); }
+
+.battle-log-entry-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(219, 239, 255, 0.6);
+}
+
+.battle-log-category-tag {
+  color: #71e9ff;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.battle-log-expand-chevron {
+  margin-left: auto;
+  color: rgba(219, 239, 255, 0.5);
+  transition: transform 0.15s ease;
+}
+
+.battle-log-entry[aria-expanded='true'] .battle-log-expand-chevron {
+  transform: rotate(90deg);
 }
 
 .battle-log-entry p {
@@ -105,6 +193,31 @@
 .battle-log-meta {
   color: rgba(219, 239, 255, 0.6);
   font-size: 0.56rem;
+}
+
+.battle-log-steps {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 0 10px;
+  padding: 4px 0 4px 14px;
+  border-left: 2px solid rgba(201, 162, 255, 0.4);
+  list-style: none;
+  counter-reset: battle-log-step;
+}
+
+.battle-log-steps li {
+  position: relative;
+  color: rgba(219, 239, 255, 0.78);
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+.battle-log-steps li::before {
+  counter-increment: battle-log-step;
+  content: counter(battle-log-step) '.';
+  margin-right: 4px;
+  color: #c9a2ff;
+  font-weight: 800;
 }
 
 .battle-log-empty {

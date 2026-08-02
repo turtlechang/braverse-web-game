@@ -42,6 +42,39 @@
   grid-column: 1 / -1;
 }
 
+.command-log-category-chips {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.command-log-category-chips button {
+  padding: 3px 9px;
+  border: 1px solid rgba(138, 212, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(219, 239, 255, 0.72);
+  font: inherit;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.command-log-category-chips button:hover {
+  border-color: rgba(138, 212, 255, 0.5);
+  color: #e8f8ff;
+}
+
+.command-log-category-chips button.is-active {
+  border-color: #71e9ff;
+  background: rgba(113, 233, 255, 0.16);
+  color: #71e9ff;
+}
+
 @container game-shell (max-width: 900px) {
   .command-log-filter-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));

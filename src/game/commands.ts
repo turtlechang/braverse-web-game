@@ -51,7 +51,8 @@ import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
 import { hasBlockingPending } from './pending'
 import { createSeededShuffle } from './helpers'
-import { describeCommand } from './command-log'
+import { describeCommand, describeCommandSteps, resolveLogCategory } from './command-log'
+import { getBreakAreaLevel } from './victory'
 import {
   drawMulliganCompensation,
   forceMulliganOpeningHand,
@@ -835,14 +836,28 @@ export const appendCommandLogEntry = (
   command: GameCommand,
 ): GameState => {
   const log = next.commandLog ?? []
+  const previousEntry = log[log.length - 1]
+  const id = log.length + 1
+  // 同一個因果鏈（陷阱回應、技能/道具/場景效果的逐步驟解析……）在引擎眼中就是
+  // 「上一個指令結束時還卡著待決定事項」；用跟 applyGameCommand 本身一樣的
+  // hasBlockingPending 判斷，而不是自己再猜一套「相鄰、同一來源卡」的heuristic。
+  const groupId =
+    previousEntry && hasBlockingPending(previous) ? previousEntry.groupId : id
   const entry: CommandLogEntry = {
-    id: log.length + 1,
+    id,
     turnNumber: previous.turnNumber,
     phase: previous.phase,
     playerId: command.playerId,
     commandKind: command.kind,
     payload: { ...command },
-    summary: describeCommand(previous, command),
+    summary: describeCommand(previous, next, command),
+    groupId,
+    category: resolveLogCategory(previous, next, command),
+    steps: describeCommandSteps(previous, next, command),
+    breakLevel: {
+      'player-one': getBreakAreaLevel(next, 'player-one'),
+      'player-two': getBreakAreaLevel(next, 'player-two'),
+    },
   }
   return { ...next, commandLog: [...log, entry] }
 }

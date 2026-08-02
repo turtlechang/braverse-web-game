@@ -34,4 +34,19 @@ describe('commandLogFilterUtils', () => {
     }
     expect(filterCommandLogEntries(entries, filters).map((entry) => entry.id)).toEqual([1])
   })
+
+  it('可用 entry 本身存的 category 篩選', () => {
+    const withCategory: CommandLogEntry[] = [
+      { ...entries[0], category: 'attack' },
+      { ...entries[1], category: 'deploy' },
+    ]
+    const filters = { ...emptyCommandLogFilters(), category: 'deploy' as const }
+    expect(filterCommandLogEntries(withCategory, filters).map((entry) => entry.id)).toEqual([2])
+  })
+
+  it('沒有 category 欄位的舊資料退回用 commandKind 對照表歸類', () => {
+    const filters = { ...emptyCommandLogFilters(), category: 'attack' as const }
+    // entries[0] 是 declare-attack、沒有存 category 欄位——應該還是能歸到 'attack'。
+    expect(filterCommandLogEntries(entries, filters).map((entry) => entry.id)).toEqual([1])
+  })
 })

@@ -1,5 +1,6 @@
+import { getOpponentId } from './helpers'
 import type { GameCommand } from './commands'
-import type { GameState, PlayerId } from './types'
+import type { GameState, LogCategory, PlayerId } from './types'
 
 const playerName = (state: GameState, playerId: PlayerId): string =>
   state.players[playerId]?.name ?? playerId
@@ -28,9 +29,11 @@ const findCardName = (state: GameState, instanceId: string): string => {
 }
 
 export const describeCommand = (
-  state: GameState,
+  previous: GameState,
+  next: GameState,
   command: GameCommand,
 ): string => {
+  const state = previous
   const actor = playerName(state, command.playerId)
 
   switch (command.kind) {
@@ -68,8 +71,14 @@ export const describeCommand = (
       return `${actor} 選擇不補位`
     case 'refresh-deck':
       return `${actor} 讓「${findCardName(state, command.cookieInstanceId)}」進行調度`
-    case 'advance-phase':
-      return `${actor} 推進了階段`
+    case 'advance-phase': {
+      const drawnCount =
+        next.players[command.playerId].hand.length -
+        previous.players[command.playerId].hand.length
+      return drawnCount > 0
+        ? `${actor} 抽了 ${drawnCount} 張牌`
+        : `${actor} 推進了階段`
+    }
     case 'select-starting-cookie':
       return `${actor} 選擇了先發餅乾「${findCardName(state, command.instanceId)}」`
     case 'keep-opening-hand':
@@ -112,5 +121,160 @@ export const describeCommand = (
       return `${actor} 決定了效果的結算順序`
     default:
       return `${actor} 執行了 ${(command as GameCommand).kind}`
+  }
+}
+
+/**
+ * commandKind -> 對戰紀錄分類，供 UI 篩選 chip 使用。用 `Record<GameCommand['kind'], LogCategory>`
+ * （不是 `Partial`）讓 TS 強制窮舉——未來新增 commandKind 忘記歸類會直接編譯失敗。
+ */
+export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCategory> = {
+  'keep-opening-hand': 'system',
+  'mulligan-opening-hand': 'system',
+  'force-mulligan-opening-hand': 'system',
+  'draw-mulligan-compensation': 'draw',
+  'select-starting-cookie': 'deploy',
+
+  // advance-phase 若偵測到抽牌，由 resolveLogCategory 覆寫成 'draw'。
+  'advance-phase': 'phase',
+
+  'place-support': 'deploy',
+  'deploy-cookie': 'deploy',
+  'play-stage': 'deploy',
+  'replace-cookie': 'deploy',
+  'skip-replacement': 'system',
+  'refresh-deck': 'system',
+
+  attack: 'attack',
+  'declare-attack': 'attack',
+  'resolve-optional-cost-attack': 'attack',
+  'resolve-attack-effect': 'attack',
+  'resolve-next-damage': 'damage',
+  'resolve-battle': 'attack',
+  'resolve-after-damage-effect': 'damage',
+  'resolve-faint-effect': 'activate',
+  'resolve-flip': 'flip',
+
+  'play-trap': 'activate',
+  'skip-trap': 'system',
+  'play-blocker': 'activate',
+
+  'activate-skill': 'activate',
+  'begin-activate-skill': 'activate',
+  'skip-on-play': 'system',
+  'play-item': 'activate',
+  'begin-play-item': 'activate',
+  'activate-stage': 'activate',
+  'begin-activate-stage': 'activate',
+  'resolve-ability-effect': 'activate',
+  'resolve-choose-one': 'activate',
+  'resolve-opponent-hand-discard': 'activate',
+  'resolve-inspect-deck': 'activate',
+  'resolve-reveal-top-deck': 'activate',
+  'resolve-draw-up-to': 'draw',
+  'resolve-stage-trigger': 'activate',
+  'resolve-effect-order': 'system',
+}
+
+export const resolveLogCategory = (
+  previous: GameState,
+  next: GameState,
+  command: GameCommand,
+): LogCategory => {
+  if (command.kind === 'advance-phase') {
+    const drawnCount =
+      next.players[command.playerId].hand.length -
+      previous.players[command.playerId].hand.length
+    if (drawnCount > 0) return 'draw'
+  }
+  return LOG_CATEGORY_BY_COMMAND_KIND[command.kind]
+}
+
+const describePaymentStep = (paymentIds: string[]): string =>
+  `支付代價：橫置 ${paymentIds.length} 張支援卡`
+
+const describeTargetNamesStep = (
+  state: GameState,
+  label: string,
+  targetIds: string[] | undefined,
+): string | undefined =>
+  targetIds && targetIds.length > 0
+    ? `${label}：${targetIds.map((id) => findCardName(state, id)).join('、')}`
+    : undefined
+
+const describeEffectTargetsSteps = (
+  state: GameState,
+  effectTargets: string[][] | undefined,
+): string[] =>
+  (effectTargets ?? [])
+    .map((targetIds, index) =>
+      targetIds.length > 0
+        ? `第 ${index + 1} 個效果目標：${targetIds.map((id) => findCardName(state, id)).join('、')}`
+        : undefined,
+    )
+    .filter((step): step is string => step !== undefined)
+
+const describeChooseOneSteps = (chooseOneModes: number[] | undefined): string[] =>
+  (chooseOneModes ?? []).map(
+    (modeIndex, index) => `第 ${index + 1} 個「選擇一項」效果：選了第 ${modeIndex + 1} 個選項`,
+  )
+
+/**
+ * 針對「單筆 entry 但 payload 已經帶齊所有子步驟資料」的批次指令，合成逐步驟文字給 UI
+ * 展開用。其餘 kind（例如互動式的 begin-* 系列，步驟本來就分散在多筆各自的 log entry
+ * 裡）回傳 undefined，UI 端改用同一個 groupId 底下其他 entry 的 summary 當步驟。
+ */
+export const describeCommandSteps = (
+  previous: GameState,
+  next: GameState,
+  command: GameCommand,
+): string[] | undefined => {
+  const state = previous
+
+  switch (command.kind) {
+    case 'play-trap': {
+      const steps = [describePaymentStep(command.paymentIds)]
+      const targetStep = describeTargetNamesStep(state, '選擇目標', command.targetIds)
+      if (targetStep) steps.push(targetStep)
+      const selfTargetStep = describeTargetNamesStep(
+        state,
+        '選擇自身目標',
+        command.selfTargetIds,
+      )
+      if (selfTargetStep) steps.push(selfTargetStep)
+      return steps
+    }
+    case 'activate-skill':
+    case 'play-item':
+    case 'activate-stage': {
+      const steps = [describePaymentStep(command.paymentIds)]
+      steps.push(...describeEffectTargetsSteps(state, command.effectTargets))
+      steps.push(...describeChooseOneSteps(command.chooseOneModes))
+      return steps
+    }
+    case 'attack': {
+      const opponentId = getOpponentId(command.playerId)
+      const targetBefore = previous.players[opponentId].battleArea.find(
+        (cookie) => cookie.card.instanceId === command.targetInstanceId,
+      )
+      const targetAfter = next.players[opponentId].battleArea.find(
+        (cookie) => cookie.card.instanceId === command.targetInstanceId,
+      )
+      const hpBefore = targetBefore?.hpCards.length ?? 0
+      const hpAfter = targetAfter?.hpCards.length ?? 0
+      const damage = Math.max(0, hpBefore - hpAfter)
+      const outcome =
+        hpBefore > 0 && hpAfter === 0
+          ? `擊倒「${findCardName(state, command.targetInstanceId)}」`
+          : damage > 0
+            ? `造成 ${damage} 點傷害`
+            : '未造成傷害'
+      return [
+        `宣告攻擊：「${findCardName(state, command.attackerInstanceId)}」→「${findCardName(state, command.targetInstanceId)}」`,
+        `自動結算戰鬥，${outcome}`,
+      ]
+    }
+    default:
+      return undefined
   }
 }

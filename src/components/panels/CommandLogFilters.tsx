@@ -1,8 +1,19 @@
 import { useMemo } from 'react'
-import type { CommandLogEntry, PlayerId, TurnPhase } from '../../game'
-import { phaseLabels } from '../gameUiLabels'
+import type { CommandLogEntry, LogCategory, PlayerId, TurnPhase } from '../../game'
+import { logCategoryLabels, phaseLabels } from '../gameUiLabels'
 import './CommandLogFilters.css'
 import type { CommandLogFilterState } from './commandLogFilterUtils'
+
+const LOG_CATEGORY_FILTER_ORDER: LogCategory[] = [
+  'attack',
+  'activate',
+  'damage',
+  'flip',
+  'deploy',
+  'draw',
+  'phase',
+  'system',
+]
 
 export interface CommandLogFilterBarProps {
   entries: CommandLogEntry[]
@@ -24,6 +35,25 @@ export function CommandLogFilterBar({
 
   return (
     <div className="command-log-filter-bar" data-testid="command-log-filters">
+      <div className="command-log-category-chips" role="group" aria-label="紀錄分類篩選">
+        <button
+          type="button"
+          className={value.category === 'all' ? 'is-active' : ''}
+          onClick={() => onChange({ ...value, category: 'all' })}
+        >
+          全部
+        </button>
+        {LOG_CATEGORY_FILTER_ORDER.map((category) => (
+          <button
+            key={category}
+            type="button"
+            className={value.category === category ? 'is-active' : ''}
+            onClick={() => onChange({ ...value, category })}
+          >
+            {logCategoryLabels[category]}
+          </button>
+        ))}
+      </div>
       <label>
         <span>回合</span>
         <select
