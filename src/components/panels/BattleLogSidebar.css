@@ -123,8 +123,9 @@
 }
 
 .battle-log-entry {
-  display: grid;
-  gap: 3px;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
   width: 100%;
   padding: 6px 8px;
   border: 1px solid rgba(138, 212, 255, 0.16);
@@ -158,6 +159,29 @@
 .battle-log-entry.category-draw { border-left-color: #71e9ff; }
 .battle-log-entry.category-phase,
 .battle-log-entry.category-system { border-left-color: rgba(138, 212, 255, 0.3); }
+
+.battle-log-thumb {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: rgba(219, 239, 255, 0.55);
+}
+
+.battle-log-card-face.card-face {
+  width: 26px;
+  aspect-ratio: 0.72;
+  border-width: 1px;
+  border-radius: 4px;
+}
+
+.battle-log-entry-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
 
 .battle-log-entry-head {
   display: flex;
@@ -207,6 +231,9 @@
 
 .battle-log-steps li {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: rgba(219, 239, 255, 0.78);
   font-size: 0.62rem;
   line-height: 1.4;
@@ -215,9 +242,22 @@
 .battle-log-steps li::before {
   counter-increment: battle-log-step;
   content: counter(battle-log-step) '.';
-  margin-right: 4px;
   color: #c9a2ff;
   font-weight: 800;
+}
+
+.battle-log-step-thumbs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.battle-log-step-card-face.card-face {
+  flex: 0 0 auto;
+  width: 20px;
+  aspect-ratio: 0.72;
+  border-width: 1px;
+  border-radius: 3px;
 }
 
 .battle-log-empty {

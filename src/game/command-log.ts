@@ -1,11 +1,12 @@
 import { getOpponentId } from './helpers'
 import type { GameCommand } from './commands'
-import type { GameState, LogCategory, PlayerId } from './types'
+import type { GameCard, GameState, LogCategory, LogStepDetail, PlayerId } from './types'
 
 const playerName = (state: GameState, playerId: PlayerId): string =>
   state.players[playerId]?.name ?? playerId
 
-const findCardName = (state: GameState, instanceId: string): string => {
+/** 在雙方手牌／牌庫／休息區／棄牌區／戰鬥區（含 HP 卡）／支援區／場景區裡找一張卡。 */
+const findCard = (state: GameState, instanceId: string): GameCard | undefined => {
   for (const playerId of Object.keys(state.players) as PlayerId[]) {
     const player = state.players[playerId]
     const zones = [
@@ -19,13 +20,45 @@ const findCardName = (state: GameState, instanceId: string): string => {
     for (const zone of zones) {
       const list = Array.isArray(zone) ? zone : [zone]
       const found = list.find((card) => card.instanceId === instanceId)
-      if (found) return found.name
+      if (found) return found
     }
     if (player.stage?.card.instanceId === instanceId) {
-      return player.stage.card.name
+      return player.stage.card
     }
   }
-  return '未知卡牌'
+  return undefined
+}
+
+const findCardName = (state: GameState, instanceId: string): string =>
+  findCard(state, instanceId)?.name ?? '未知卡牌'
+
+/**
+ * 找出 resolve-next-damage 這筆指令實際翻開的 HP 卡。不能只看
+ * `pendingBattle.revealedHpCard`：沒有 FLIP 能力的卡翻開後會在同一個指令裡
+ * 立刻送進棄牌區，如果這次結算剛好讓 remainingDamage 歸零、戰鬥整個結束，
+ * pendingBattle 會在同一個指令裡被清空，讀 next.pendingBattle 就看不到剛剛
+ * 翻開的是哪張卡了。改成優先看 command.playerId 的棄牌區這次多了哪張卡
+ * （翻開後立刻進棄牌區的情況一定驗得到）；FLIP 卡翻開後會先停在
+ * revealedHpCard 等玩家決定要不要發動，還沒進棄牌區，才需要 fallback 這條。
+ */
+const resolveRevealedDamageCard = (
+  previous: GameState,
+  next: GameState,
+  playerId: PlayerId,
+): GameCard | undefined => {
+  const previousDiscardIds = new Set(
+    previous.players[playerId].discardPile.map((card) => card.instanceId),
+  )
+  const newlyDiscarded = next.players[playerId].discardPile.find(
+    (card) => !previousDiscardIds.has(card.instanceId),
+  )
+  if (newlyDiscarded) return newlyDiscarded
+
+  const revealedBefore = previous.pendingBattle?.revealedHpCard?.instanceId
+  const revealedAfter = next.pendingBattle?.revealedHpCard
+  return revealedAfter && revealedAfter.instanceId !== revealedBefore
+    ? revealedAfter
+    : undefined
 }
 
 export const describeCommand = (
@@ -89,14 +122,21 @@ export const describeCommand = (
       return `${actor} 被要求重新抽取起始手牌`
     case 'draw-mulligan-compensation':
       return `${actor} 抽取了補償手牌`
-    case 'resolve-flip':
+    case 'resolve-flip': {
+      const flippedCard = previous.pendingBattle?.revealedHpCard
+      const cardLabel = flippedCard ? `「${flippedCard.name}」` : ''
       return command.activate
-        ? `${actor} 發動了翻面效果`
-        : `${actor} 選擇不發動翻面效果`
+        ? `${actor} 翻開${cardLabel}，發動了 FLIP 效果`
+        : `${actor} 翻開${cardLabel}，選擇不發動 FLIP 效果`
+    }
     case 'resolve-attack-effect':
       return `${actor} 決定了攻擊效果的目標`
-    case 'resolve-next-damage':
-      return `${actor} 結算了下一段傷害`
+    case 'resolve-next-damage': {
+      const revealed = resolveRevealedDamageCard(previous, next, command.playerId)
+      return revealed
+        ? `${actor} 翻開了 HP 卡「${revealed.name}」`
+        : `${actor} 結算了下一段傷害`
+    }
     case 'resolve-battle':
       return `${actor} 自動結算了戰鬥`
     case 'resolve-faint-effect':
@@ -190,64 +230,167 @@ export const resolveLogCategory = (
   return LOG_CATEGORY_BY_COMMAND_KIND[command.kind]
 }
 
-const describePaymentStep = (paymentIds: string[]): string =>
-  `支付代價：橫置 ${paymentIds.length} 張支援卡`
+/** 依 instanceId 陣列找出對應卡片，找不到的直接濾掉（理論上不會發生，防呆用）。 */
+const resolveCards = (state: GameState, ids: string[]): GameCard[] =>
+  ids
+    .map((id) => findCard(state, id))
+    .filter((card): card is GameCard => card !== undefined)
 
-const describeTargetNamesStep = (
+const describeCardListStep = (
   state: GameState,
   label: string,
-  targetIds: string[] | undefined,
-): string | undefined =>
-  targetIds && targetIds.length > 0
-    ? `${label}：${targetIds.map((id) => findCardName(state, id)).join('、')}`
-    : undefined
+  ids: string[] | undefined,
+): LogStepDetail | undefined => {
+  if (!ids || ids.length === 0) return undefined
+  const cards = resolveCards(state, ids)
+  return {
+    text: `${label}：${cards.map((card) => card.name).join('、')}`,
+    cards,
+  }
+}
 
 const describeEffectTargetsSteps = (
   state: GameState,
   effectTargets: string[][] | undefined,
-): string[] =>
+): LogStepDetail[] =>
   (effectTargets ?? [])
     .map((targetIds, index) =>
-      targetIds.length > 0
-        ? `第 ${index + 1} 個效果目標：${targetIds.map((id) => findCardName(state, id)).join('、')}`
-        : undefined,
+      describeCardListStep(state, `第 ${index + 1} 個效果目標`, targetIds),
     )
-    .filter((step): step is string => step !== undefined)
+    .filter((step): step is LogStepDetail => step !== undefined)
 
-const describeChooseOneSteps = (chooseOneModes: number[] | undefined): string[] =>
-  (chooseOneModes ?? []).map(
-    (modeIndex, index) => `第 ${index + 1} 個「選擇一項」效果：選了第 ${modeIndex + 1} 個選項`,
-  )
+const describeChooseOneSteps = (chooseOneModes: number[] | undefined): LogStepDetail[] =>
+  (chooseOneModes ?? []).map((modeIndex, index) => ({
+    text: `第 ${index + 1} 個「選擇一項」效果：選了第 ${modeIndex + 1} 個選項`,
+  }))
 
 /**
- * 針對「單筆 entry 但 payload 已經帶齊所有子步驟資料」的批次指令，合成逐步驟文字給 UI
- * 展開用。其餘 kind（例如互動式的 begin-* 系列，步驟本來就分散在多筆各自的 log entry
- * 裡）回傳 undefined，UI 端改用同一個 groupId 底下其他 entry 的 summary 當步驟。
+ * 針對「單筆 entry 但 payload 已經帶齊所有子步驟資料」的批次指令，合成逐步驟文字＋
+ * 對應卡片給 UI 展開用（每個步驟都能顯示實際用了哪些卡的縮圖，不是只給數量）。
+ * 其餘 kind（例如互動式的 begin-* 系列，步驟本來就分散在多筆各自的 log entry 裡）
+ * 回傳 undefined，UI 端改用同一個 groupId 底下其他 entry 的 summary/card 當步驟。
  */
 export const describeCommandSteps = (
   previous: GameState,
   next: GameState,
   command: GameCommand,
-): string[] | undefined => {
+): LogStepDetail[] | undefined => {
   const state = previous
 
   switch (command.kind) {
     case 'play-trap': {
-      const steps = [describePaymentStep(command.paymentIds)]
-      const targetStep = describeTargetNamesStep(state, '選擇目標', command.targetIds)
-      if (targetStep) steps.push(targetStep)
-      const selfTargetStep = describeTargetNamesStep(
+      const steps: LogStepDetail[] = []
+      const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
+      if (paymentStep) steps.push(paymentStep)
+      const discardStep = describeCardListStep(state, '額外代價：棄置手牌', command.discardHandIds)
+      if (discardStep) steps.push(discardStep)
+      const handToBreakStep = describeCardListStep(
         state,
-        '選擇自身目標',
-        command.selfTargetIds,
+        '額外代價：手牌送入休息區',
+        command.handToBreakIds,
       )
+      if (handToBreakStep) steps.push(handToBreakStep)
+      const trashBattleStep = describeCardListStep(
+        state,
+        '額外代價：戰鬥區送入棄牌區',
+        command.trashBattleCookieIds,
+      )
+      if (trashBattleStep) steps.push(trashBattleStep)
+      const supportTrashStep = describeCardListStep(
+        state,
+        '額外代價：支援區送入棄牌區',
+        command.supportTrashIds,
+      )
+      if (supportTrashStep) steps.push(supportTrashStep)
+      const supportToHandStep = describeCardListStep(
+        state,
+        '額外代價：支援卡返回手牌',
+        command.supportToHandIds,
+      )
+      if (supportToHandStep) steps.push(supportToHandStep)
+      const handToSupportStep = describeCardListStep(
+        state,
+        '額外代價：手牌橫置入支援區',
+        command.handToSupportIds,
+      )
+      if (handToSupportStep) steps.push(handToSupportStep)
+      const trashToDeckStep = describeCardListStep(
+        state,
+        '額外代價：棄牌區卡片洗回牌庫',
+        command.trashToDeckIds,
+      )
+      if (trashToDeckStep) steps.push(trashToDeckStep)
+      const targetStep = describeCardListStep(state, '選擇目標', command.targetIds)
+      if (targetStep) steps.push(targetStep)
+      const selfTargetStep = describeCardListStep(state, '選擇自身目標', command.selfTargetIds)
       if (selfTargetStep) steps.push(selfTargetStep)
       return steps
     }
-    case 'activate-skill':
+    case 'activate-skill': {
+      const steps: LogStepDetail[] = []
+      const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
+      if (paymentStep) steps.push(paymentStep)
+      const supportTrashStep = describeCardListStep(
+        state,
+        '額外代價：支援區送入棄牌區',
+        command.costSupportToTrashIds,
+      )
+      if (supportTrashStep) steps.push(supportTrashStep)
+      const discardStep = describeCardListStep(state, '額外代價：棄置手牌', command.discardHandIds)
+      if (discardStep) steps.push(discardStep)
+      const trashBattleStep = describeCardListStep(
+        state,
+        '額外代價：戰鬥區送入棄牌區',
+        command.trashBattleCookieIds,
+      )
+      if (trashBattleStep) steps.push(trashBattleStep)
+      const trashToDeckBottomStep = describeCardListStep(
+        state,
+        '額外代價：棄牌區卡片洗到牌庫底',
+        command.trashToDeckBottomIds,
+      )
+      if (trashToDeckBottomStep) steps.push(trashToDeckBottomStep)
+      const trashToDeckStep = describeCardListStep(
+        state,
+        '額外代價：棄牌區卡片洗回牌庫',
+        command.trashToDeckIds,
+      )
+      if (trashToDeckStep) steps.push(trashToDeckStep)
+      steps.push(...describeEffectTargetsSteps(state, command.effectTargets))
+      steps.push(...describeChooseOneSteps(command.chooseOneModes))
+      return steps
+    }
     case 'play-item':
     case 'activate-stage': {
-      const steps = [describePaymentStep(command.paymentIds)]
+      const steps: LogStepDetail[] = []
+      const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
+      if (paymentStep) steps.push(paymentStep)
+      const supportTrashStep = describeCardListStep(
+        state,
+        '額外代價：支援區送入棄牌區',
+        command.supportToTrashIds,
+      )
+      if (supportTrashStep) steps.push(supportTrashStep)
+      const supportToHandStep = describeCardListStep(
+        state,
+        '額外代價：支援卡返回手牌',
+        command.supportToHandIds,
+      )
+      if (supportToHandStep) steps.push(supportToHandStep)
+      const discardStep = describeCardListStep(state, '額外代價：棄置手牌', command.discardHandIds)
+      if (discardStep) steps.push(discardStep)
+      const hpToTrashStep = describeCardListStep(
+        state,
+        '額外代價：HP 卡送入棄牌區',
+        command.hpToTrashTargetIds,
+      )
+      if (hpToTrashStep) steps.push(hpToTrashStep)
+      const trashBattleStep = describeCardListStep(
+        state,
+        '額外代價：戰鬥區送入棄牌區',
+        command.trashBattleCookieIds,
+      )
+      if (trashBattleStep) steps.push(trashBattleStep)
       steps.push(...describeEffectTargetsSteps(state, command.effectTargets))
       steps.push(...describeChooseOneSteps(command.chooseOneModes))
       return steps
@@ -263,17 +406,67 @@ export const describeCommandSteps = (
       const hpBefore = targetBefore?.hpCards.length ?? 0
       const hpAfter = targetAfter?.hpCards.length ?? 0
       const damage = Math.max(0, hpBefore - hpAfter)
+      const attackerCard = findCard(state, command.attackerInstanceId)
+      const targetCard = findCard(state, command.targetInstanceId)
       const outcome =
         hpBefore > 0 && hpAfter === 0
-          ? `擊倒「${findCardName(state, command.targetInstanceId)}」`
+          ? `擊倒「${targetCard?.name ?? '未知卡牌'}」`
           : damage > 0
             ? `造成 ${damage} 點傷害`
             : '未造成傷害'
       return [
-        `宣告攻擊：「${findCardName(state, command.attackerInstanceId)}」→「${findCardName(state, command.targetInstanceId)}」`,
-        `自動結算戰鬥，${outcome}`,
+        {
+          text: `宣告攻擊：「${attackerCard?.name ?? '未知卡牌'}」→「${targetCard?.name ?? '未知卡牌'}」`,
+          cards: [attackerCard, targetCard].filter(
+            (card): card is GameCard => card !== undefined,
+          ),
+        },
+        { text: `自動結算戰鬥，${outcome}`, cards: targetCard ? [targetCard] : undefined },
       ]
     }
+    default:
+      return undefined
+  }
+}
+
+/**
+ * 這筆指令主要「關於」哪一張卡——供 UI 在對戰紀錄顯示卡圖縮圖用。純系統/階段類
+ * 指令（advance-phase／skip-trap／resolve-battle……）沒有對應單一卡片，回傳
+ * undefined，UI 端只顯示分類圖示。
+ */
+export const resolveLogCard = (
+  previous: GameState,
+  next: GameState,
+  command: GameCommand,
+): GameCard | undefined => {
+  switch (command.kind) {
+    case 'play-trap':
+      return findCard(previous, command.trapInstanceId)
+    case 'skip-on-play':
+    case 'play-blocker':
+    case 'activate-skill':
+    case 'begin-activate-skill':
+      return findCard(previous, command.sourceInstanceId)
+    case 'play-item':
+    case 'begin-play-item':
+    case 'play-stage':
+    case 'place-support':
+    case 'deploy-cookie':
+    case 'select-starting-cookie':
+    case 'replace-cookie':
+      return findCard(previous, command.instanceId)
+    case 'refresh-deck':
+      return findCard(previous, command.cookieInstanceId)
+    case 'attack':
+    case 'declare-attack':
+      return findCard(previous, command.attackerInstanceId)
+    case 'activate-stage':
+    case 'begin-activate-stage':
+      return previous.players[command.playerId].stage?.card
+    case 'resolve-next-damage':
+      return resolveRevealedDamageCard(previous, next, command.playerId)
+    case 'resolve-flip':
+      return previous.pendingBattle?.revealedHpCard ?? undefined
     default:
       return undefined
   }

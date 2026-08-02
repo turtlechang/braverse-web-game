@@ -243,6 +243,7 @@ export type {
   DefeatReason,
   DrawEffect,
   LogCategory,
+  LogStepDetail,
   DrawUpToEffect,
   EffectCondition,
   EffectContext,

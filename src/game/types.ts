@@ -1262,6 +1262,12 @@ export type LogCategory =
   | 'phase'
   | 'system'
 
+/** 一個對戰紀錄步驟：說明文字＋這個步驟實際用到的卡片（供顯示縮圖用）。 */
+export interface LogStepDetail {
+  text: string
+  cards?: GameCard[]
+}
+
 export interface CommandLogEntry {
   id: number
   turnNumber: number
@@ -1286,7 +1292,12 @@ export interface CommandLogEntry {
    * ——UI 端只看得到最終 GameState，沒有每筆 entry 對應的歷史狀態可以重算。
    * 其餘 kind（步驟本來就分散在同一 groupId 底下的其他 entry）維持 undefined。
    */
-  steps?: string[]
+  steps?: LogStepDetail[]
+  /**
+   * 這筆指令主要「關於」哪一張卡，供 UI 顯示卡圖縮圖用。純系統/階段類指令
+   * （advance-phase／skip-trap……）沒有對應單一卡片，維持 undefined。
+   */
+  card?: GameCard
 }
 
 export interface GameState {

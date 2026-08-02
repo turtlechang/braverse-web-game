@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
+﻿import { describe, expect, it } from 'vitest'
 import { appendCommandLogEntry, type CommandLogEntry, type GameState } from '.'
-import { describeCommandSteps, resolveLogCategory } from './command-log'
+import {
+  describeCommand,
+  describeCommandSteps,
+  resolveLogCard,
+  resolveLogCategory,
+} from './command-log'
 import { createBattleState } from './test-helpers/battle-helpers'
 
 const withCommandLog = (
@@ -187,10 +192,16 @@ describe('describeCommandSteps', () => {
       targetIds: ['attacker'],
     })
 
-    expect(steps).toEqual([
-      '支付代價：橫置 2 張支援卡',
+    expect(steps?.map((step) => step.text)).toEqual([
+      '支付能量（橫置）：p1-support-a、p1-support-b',
       '選擇目標：attacker',
     ])
+    // 每個步驟要附上實際用到的卡片，UI 才能顯示縮圖，不是只有文字。
+    expect(steps?.[0].cards?.map((card) => card.instanceId)).toEqual([
+      'p1-support-a',
+      'p1-support-b',
+    ])
+    expect(steps?.[1].cards?.map((card) => card.instanceId)).toEqual(['attacker'])
   })
 
   it('breaks an activate-skill command into payment + effect target + choose-one steps', () => {
@@ -205,8 +216,8 @@ describe('describeCommandSteps', () => {
       chooseOneModes: [0],
     })
 
-    expect(steps).toEqual([
-      '支付代價：橫置 1 張支援卡',
+    expect(steps?.map((step) => step.text)).toEqual([
+      '支付能量（橫置）：p1-support-a',
       '第 1 個效果目標：attacker',
       '第 1 個「選擇一項」效果：選了第 1 個選項',
     ])
@@ -239,9 +250,13 @@ describe('describeCommandSteps', () => {
       supportPaymentIds: [],
     })
 
-    expect(steps).toEqual([
+    expect(steps?.map((step) => step.text)).toEqual([
       '宣告攻擊：「attacker」→「defender」',
       '自動結算戰鬥，造成 1 點傷害',
+    ])
+    expect(steps?.[0].cards?.map((card) => card.instanceId)).toEqual([
+      'attacker',
+      'defender',
     ])
   })
 
@@ -270,7 +285,7 @@ describe('describeCommandSteps', () => {
       supportPaymentIds: [],
     })
 
-    expect(steps).toEqual([
+    expect(steps?.map((step) => step.text)).toEqual([
       '宣告攻擊：「defender」→「attacker」',
       '自動結算戰鬥，擊倒「attacker」',
     ])
@@ -281,5 +296,79 @@ describe('describeCommandSteps', () => {
     expect(
       describeCommandSteps(state, state, { kind: 'skip-trap', playerId: 'player-one' }),
     ).toBeUndefined()
+  })
+
+  it('names every extra-cost field with the actual cards used, not just a count', () => {
+    const state = createBattleState()
+    const steps = describeCommandSteps(state, state, {
+      kind: 'play-trap',
+      playerId: 'player-one',
+      trapInstanceId: 'p1-hand-a',
+      paymentIds: ['p1-support-a'],
+      targetIds: [],
+      discardHandIds: ['p1-hand-a'],
+    })
+
+    expect(steps?.map((step) => step.text)).toEqual([
+      '支付能量（橫置）：p1-support-a',
+      '額外代價：棄置手牌：p1-hand-a',
+    ])
+  })
+})
+
+describe('resolveRevealedDamageCard (resolve-next-damage / resolve-flip)', () => {
+  it('names the flipped HP card even when the battle finishes in the same command (card goes straight to discard)', () => {
+    // 沒有 FLIP 能力的卡翻開後立刻進棄牌區；如果這次結算剛好讓 remainingDamage
+    // 歸零、戰鬥整個結束，pendingBattle 會在同一個指令裡被清空——不能只看
+    // next.pendingBattle.revealedHpCard，要看棄牌區這次多了哪張卡。
+    const base = createBattleState()
+    const flippedHpCard = base.players['player-one'].battleArea[0].hpCards[0]
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        damagePlayerId: 'player-one',
+        stage: 'damage',
+        declaredDamage: 1,
+        remainingDamage: 1,
+        trapUsed: false,
+        preventKnockoutTargetIds: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = {
+      ...previous,
+      pendingBattle: null,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: previous.players['player-one'].battleArea.map((cookie) =>
+            cookie.card.instanceId === 'defender'
+              ? { ...cookie, hpCards: cookie.hpCards.slice(0, -1) }
+              : cookie,
+          ),
+          discardPile: [...previous.players['player-one'].discardPile, flippedHpCard],
+        },
+      },
+    }
+    const command = { kind: 'resolve-next-damage' as const, playerId: 'player-one' as const }
+
+    expect(describeCommand(previous, next, command)).toBe(
+      `防守玩家 翻開了 HP 卡「${flippedHpCard.name}」`,
+    )
+    expect(resolveLogCard(previous, next, command)).toEqual(flippedHpCard)
+  })
+
+  it('falls back to the generic summary when this call did not reveal a new card', () => {
+    const base = createBattleState()
+    const command = { kind: 'resolve-next-damage' as const, playerId: 'player-one' as const }
+
+    expect(describeCommand(base, base, command)).toBe('防守玩家 結算了下一段傷害')
+    expect(resolveLogCard(base, base, command)).toBeUndefined()
   })
 })

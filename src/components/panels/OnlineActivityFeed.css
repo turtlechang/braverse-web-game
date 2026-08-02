@@ -197,8 +197,9 @@
 }
 
 .online-activity-history-entry {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
   width: 100%;
   padding: 6px 8px;
   border: 1px solid rgba(138, 212, 255, 0.16);
@@ -210,6 +211,29 @@
   cursor: default;
 }
 
+.online-activity-history-thumb {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: rgba(219, 239, 255, 0.55);
+}
+
+.online-activity-card-face.card-face {
+  width: 24px;
+  aspect-ratio: 0.72;
+  border-width: 1px;
+  border-radius: 4px;
+}
+
+.online-activity-history-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .online-activity-history-entry.is-expandable {
   cursor: pointer;
 }
@@ -219,7 +243,7 @@
   border-color: rgba(138, 212, 255, 0.32);
 }
 
-.online-activity-history-entry span {
+.online-activity-history-text > span {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -227,12 +251,12 @@
   font-size: 0.56rem;
 }
 
-.online-activity-history-entry span svg:last-child {
+.online-activity-history-text > span svg:last-child {
   margin-left: auto;
   transition: transform 0.15s ease;
 }
 
-.online-activity-history-entry[aria-expanded='true'] span svg:last-child {
+.online-activity-history-entry[aria-expanded='true'] .online-activity-history-text > span svg:last-child {
   transform: rotate(90deg);
 }
 
@@ -254,6 +278,9 @@
 
 .online-activity-history-steps li {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   color: rgba(219, 239, 255, 0.78);
   font-size: 0.62rem;
   line-height: 1.4;
@@ -262,9 +289,22 @@
 .online-activity-history-steps li::before {
   counter-increment: online-activity-step;
   content: counter(online-activity-step) '.';
-  margin-right: 4px;
   color: #c9a2ff;
   font-weight: 800;
+}
+
+.online-activity-step-thumbs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.online-activity-step-card-face.card-face {
+  flex: 0 0 auto;
+  width: 20px;
+  aspect-ratio: 0.72;
+  border-width: 1px;
+  border-radius: 3px;
 }
 
 .online-activity-history li.is-empty {

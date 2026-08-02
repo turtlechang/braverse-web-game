@@ -12,7 +12,8 @@ import {
   Swords,
   X,
 } from 'lucide-react'
-import type { CommandLogEntry, LogCategory, PlayerId } from '../../game'
+import type { CommandLogEntry, LogCategory, LogStepDetail, PlayerId } from '../../game'
+import { CardFace } from '../cards/CardVisuals'
 import { logCategoryLabels, phaseLabels } from '../gameUiLabels'
 import {
   CommandLogFilterBar,
@@ -42,9 +43,12 @@ const CATEGORY_ICONS: Record<LogCategory, typeof Swords> = {
   system: Settings2,
 }
 
-const stepLinesForGroup = (group: LogGroup): string[] =>
+const stepLinesForGroup = (group: LogGroup): LogStepDetail[] =>
   group.steps.length > 0
-    ? group.steps.map((entry) => entry.summary ?? entry.commandKind)
+    ? group.steps.map((entry) => ({
+        text: entry.summary ?? entry.commandKind,
+        cards: entry.card ? [entry.card] : undefined,
+      }))
     : (group.header.steps ?? [])
 
 export function BattleLogSidebar({ entries, playerNames }: BattleLogSidebarProps) {
@@ -169,28 +173,52 @@ export function BattleLogSidebar({ entries, playerNames }: BattleLogSidebarProps
                     disabled={stepLines.length === 0}
                     aria-expanded={stepLines.length > 0 ? isExpanded : undefined}
                   >
-                    <span className="battle-log-entry-head">
-                      <Icon size={12} aria-hidden="true" />
-                      <span className="battle-log-category-tag">
-                        {logCategoryLabels[category]}
-                      </span>
-                      <span className="battle-log-meta">
-                        {actorName} · {phaseLabels[group.header.phase]}
-                      </span>
-                      {stepLines.length > 0 && (
-                        <ChevronRight
-                          size={12}
-                          className="battle-log-expand-chevron"
-                          aria-hidden="true"
+                    <span className="battle-log-thumb">
+                      {group.header.card ? (
+                        <CardFace
+                          card={group.header.card}
+                          className="battle-log-card-face"
                         />
+                      ) : (
+                        <Icon size={16} aria-hidden="true" />
                       )}
                     </span>
-                    <p>{group.header.summary ?? group.header.commandKind}</p>
+                    <span className="battle-log-entry-text">
+                      <span className="battle-log-entry-head">
+                        <span className="battle-log-category-tag">
+                          {logCategoryLabels[category]}
+                        </span>
+                        <span className="battle-log-meta">
+                          {actorName} · {phaseLabels[group.header.phase]}
+                        </span>
+                        {stepLines.length > 0 && (
+                          <ChevronRight
+                            size={12}
+                            className="battle-log-expand-chevron"
+                            aria-hidden="true"
+                          />
+                        )}
+                      </span>
+                      <p>{group.header.summary ?? group.header.commandKind}</p>
+                    </span>
                   </button>
                   {stepLines.length > 0 && isExpanded && (
                     <ol className="battle-log-steps">
                       {stepLines.map((line, stepIndex) => (
-                        <li key={stepIndex}>{line}</li>
+                        <li key={stepIndex}>
+                          {line.cards && line.cards.length > 0 && (
+                            <span className="battle-log-step-thumbs">
+                              {line.cards.map((card) => (
+                                <CardFace
+                                  key={card.instanceId}
+                                  card={card}
+                                  className="battle-log-step-card-face"
+                                />
+                              ))}
+                            </span>
+                          )}
+                          <span>{line.text}</span>
+                        </li>
                       ))}
                     </ol>
                   )}

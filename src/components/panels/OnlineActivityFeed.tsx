@@ -13,9 +13,16 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CommandLogEntry, GameState, LogCategory, PlayerId } from '../../game'
+import type {
+  CommandLogEntry,
+  GameState,
+  LogCategory,
+  LogStepDetail,
+  PlayerId,
+} from '../../game'
 import { serializeReplayIssueBundle } from '../../game'
 import { buildIssueBundleFromProvider } from '../../hooks/issueBundleSource'
+import { CardFace } from '../cards/CardVisuals'
 import { copyTextToClipboard } from '../copyTextToClipboard'
 import { logCategoryLabels, phaseLabels } from '../gameUiLabels'
 import {
@@ -42,9 +49,12 @@ const CATEGORY_ICONS: Record<LogCategory, typeof Swords> = {
   system: Settings2,
 }
 
-const stepLinesForGroup = (group: LogGroup): string[] =>
+const stepLinesForGroup = (group: LogGroup): LogStepDetail[] =>
   group.steps.length > 0
-    ? group.steps.map((entry) => entry.summary ?? entry.commandKind)
+    ? group.steps.map((entry) => ({
+        text: entry.summary ?? entry.commandKind,
+        cards: entry.card ? [entry.card] : undefined,
+      }))
     : (group.header.steps ?? [])
 
 type ActivityEvent = {
@@ -335,20 +345,44 @@ export function OnlineActivityFeed({
                         disabled={stepLines.length === 0}
                         aria-expanded={stepLines.length > 0 ? isExpanded : undefined}
                       >
-                        <span>
-                          <Icon size={11} aria-hidden="true" />
-                          {logCategoryLabels[category]}・第 {group.turnNumber} 回合・
-                          {phaseLabels[group.header.phase]}
-                          {stepLines.length > 0 && (
-                            <ChevronRight size={11} aria-hidden="true" />
+                        <span className="online-activity-history-thumb">
+                          {group.header.card ? (
+                            <CardFace
+                              card={group.header.card}
+                              className="online-activity-card-face"
+                            />
+                          ) : (
+                            <Icon size={14} aria-hidden="true" />
                           )}
                         </span>
-                        <p>{group.header.summary ?? group.header.commandKind}</p>
+                        <span className="online-activity-history-text">
+                          <span>
+                            {logCategoryLabels[category]}・第 {group.turnNumber} 回合・
+                            {phaseLabels[group.header.phase]}
+                            {stepLines.length > 0 && (
+                              <ChevronRight size={11} aria-hidden="true" />
+                            )}
+                          </span>
+                          <p>{group.header.summary ?? group.header.commandKind}</p>
+                        </span>
                       </button>
                       {stepLines.length > 0 && isExpanded && (
                         <ol className="online-activity-history-steps">
                           {stepLines.map((line, index) => (
-                            <li key={index}>{line}</li>
+                            <li key={index}>
+                              {line.cards && line.cards.length > 0 && (
+                                <span className="online-activity-step-thumbs">
+                                  {line.cards.map((card) => (
+                                    <CardFace
+                                      key={card.instanceId}
+                                      card={card}
+                                      className="online-activity-step-card-face"
+                                    />
+                                  ))}
+                                </span>
+                              )}
+                              <span>{line.text}</span>
+                            </li>
                           ))}
                         </ol>
                       )}

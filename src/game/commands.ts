@@ -51,7 +51,12 @@ import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
 import { hasBlockingPending } from './pending'
 import { createSeededShuffle } from './helpers'
-import { describeCommand, describeCommandSteps, resolveLogCategory } from './command-log'
+import {
+  describeCommand,
+  describeCommandSteps,
+  resolveLogCard,
+  resolveLogCategory,
+} from './command-log'
 import { getBreakAreaLevel } from './victory'
 import {
   drawMulliganCompensation,
@@ -854,6 +859,7 @@ export const appendCommandLogEntry = (
     groupId,
     category: resolveLogCategory(previous, next, command),
     steps: describeCommandSteps(previous, next, command),
+    card: resolveLogCard(previous, next, command),
     breakLevel: {
       'player-one': getBreakAreaLevel(next, 'player-one'),
       'player-two': getBreakAreaLevel(next, 'player-two'),

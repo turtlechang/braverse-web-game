@@ -75,7 +75,10 @@ const trapEntry: CommandLogEntry = {
   category: 'activate',
   groupId: 4,
   breakLevel: { 'player-one': 2, 'player-two': 1 },
-  steps: ['支付代價：橫置 2 張支援卡', '選擇目標：Ninja Cookie'],
+  steps: [
+    { text: '支付能量（橫置）：Twizzly Gummy Cookie、Fig Cookie' },
+    { text: '選擇目標：Ninja Cookie' },
+  ],
 }
 
 const supportEntry: CommandLogEntry = {
@@ -122,7 +125,7 @@ describe('BattleLogSidebar', () => {
 
     const steps = container.querySelectorAll('.battle-log-steps li')
     expect(steps).toHaveLength(2)
-    expect(steps[0].textContent).toContain('支付代價')
+    expect(steps[0].textContent).toContain('支付能量')
     expect(steps[1].textContent).toContain('選擇目標')
   })
 
