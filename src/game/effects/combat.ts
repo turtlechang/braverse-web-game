@@ -2,6 +2,7 @@ import { GameRuleError } from '../errors'
 import { getOpponentId } from '../helpers'
 import type {
   CookieInBattle,
+  GameCard,
   GameState,
   ModifyAttackEffect,
   ModifyDamageReceivedEffect,
@@ -104,6 +105,125 @@ export const getEffectiveAttack = (
     0,
     target.card.attack + modifierTotal + passiveModifierTotal + auraModifierTotal,
   )
+}
+
+/** 在雙方場上／支援區／棄牌區／休息區／手牌／場景卡裡找一張卡的名稱，供顯示攻擊力修正來源用。 */
+const findCardNameByInstanceId = (
+  state: GameState,
+  instanceId: string,
+): string | undefined => {
+  for (const player of Object.values(state.players)) {
+    const zones: GameCard[][] = [
+      player.battleArea.map((cookie) => cookie.card),
+      player.battleArea.flatMap((cookie) => cookie.equippedCards ?? []),
+      player.supportArea.map((support) => support.card),
+      player.discardPile,
+      player.breakArea,
+      player.hand,
+      player.stage ? [player.stage.card] : [],
+    ]
+    for (const zone of zones) {
+      const found = zone.find((card) => card.instanceId === instanceId)
+      if (found) return found.name
+    }
+  }
+  return undefined
+}
+
+export interface AttackModifierBreakdownEntry {
+  sourceCardName: string
+  amount: number
+}
+
+/**
+ * 跟 `getEffectiveAttack` 算法一致，但額外回傳「是哪張卡造成的」明細，
+ * 給 UI 顯示提示用（原本只有結果數字，看不出扣分/加分的來源）。
+ */
+export const getEffectiveAttackBreakdown = (
+  state: GameState,
+  targetInstanceId: string,
+  attackTargetInstanceId?: string,
+): {
+  base: number
+  effective: number
+  entries: AttackModifierBreakdownEntry[]
+} => {
+  const owner = Object.values(state.players).find((player) =>
+    player.battleArea.some(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    ),
+  )
+  const target = owner?.battleArea.find(
+    (cookie) => cookie.card.instanceId === targetInstanceId,
+  )
+
+  if (!target || !owner) {
+    throw new GameRuleError('找不到要計算攻擊力的餅乾。')
+  }
+
+  const entries: AttackModifierBreakdownEntry[] = []
+
+  for (const modifier of state.attackModifiers) {
+    if (modifier.targetInstanceId !== targetInstanceId) continue
+    entries.push({
+      sourceCardName:
+        findCardNameByInstanceId(state, modifier.sourceInstanceId) ?? '未知效果',
+      amount: modifier.amount,
+    })
+  }
+
+  if (
+    target.card.skill?.trigger === 'passive' &&
+    (!target.card.skill.yourTurn || state.activePlayerId === owner.id)
+  ) {
+    const context = {
+      sourcePlayerId: owner.id,
+      sourceInstanceId: targetInstanceId,
+      attackTargetInstanceId,
+    }
+    for (const effect of target.card.skill.effects) {
+      if (effect.kind !== 'modify-attack' || !effect.target.sourceOnly) continue
+      if (!isEffectConditionMet(state, context, effect)) continue
+      entries.push({ sourceCardName: target.card.name, amount: effect.amount })
+    }
+  }
+
+  for (const sourcePlayer of Object.values(state.players)) {
+    for (const source of sourcePlayer.battleArea) {
+      const skill = source.card.skill
+      if (skill?.trigger !== 'passive') continue
+      if (skill.yourTurn && state.activePlayerId !== sourcePlayer.id) continue
+      const context = {
+        sourcePlayerId: sourcePlayer.id,
+        sourceInstanceId: source.card.instanceId,
+      }
+      for (const effect of skill.effects) {
+        if (effect.kind !== 'modify-all-attack') continue
+        const auraPlayerId =
+          effect.side === 'self' ? sourcePlayer.id : getOpponentId(sourcePlayer.id)
+        if (auraPlayerId !== owner.id) continue
+        if (effect.energyColor && target.card.energyColor !== effect.energyColor) {
+          continue
+        }
+        if (effect.minLevel && target.card.level < effect.minLevel) continue
+        if (
+          isBlockedByOpponentEffectProtection(target, owner.id, sourcePlayer.id)
+        ) {
+          continue
+        }
+        if (!isEffectConditionMet(state, context, effect)) continue
+        entries.push({ sourceCardName: source.card.name, amount: effect.amount })
+      }
+    }
+  }
+
+  const base = target.card.attack
+  const effective = Math.max(
+    0,
+    base + entries.reduce((sum, entry) => sum + entry.amount, 0),
+  )
+
+  return { base, effective, entries }
 }
 
 export const getAttackDamageAgainst = (

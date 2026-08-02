@@ -18,6 +18,8 @@ export {
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
   getEffectiveAttack,
+  getEffectiveAttackBreakdown,
+  type AttackModifierBreakdownEntry,
   isEffectConditionMet,
   isEffectTargeted,
   isEffectUntargeted,
