@@ -6,6 +6,7 @@ import {
   executeCardEffect,
   getAttackDamageAgainst,
   getEffectiveAttack,
+  getEffectiveAttackBreakdown,
   isEffectConditionMet,
   selectEffectTargets,
   type CardEffect,
@@ -146,6 +147,48 @@ describe('card effect engine', () => {
       ownCookie.card.attack + 2,
     )
     expect(getEffectiveAttack(state, opponent.card.instanceId)).toBe(0)
+  })
+
+  it('names the source of each active attack modifier for the UI tooltip', () => {
+    let state = createDemoGame()
+    const ownCookie = state.players['player-one'].battleArea[0]
+    const opponent = state.players['player-two'].battleArea[0]
+
+    // context.sourceInstanceId 用真的在場上的卡（跟 effects-core.test.ts
+    // 其他測試共用的 fake 'player-one-starter-1' 不同，那個不對應任何實際
+    // 卡片），才能驗證「找得到來源」這條路徑，而不是一律 fallback 成
+    // 「未知效果」。
+    state = executeCardEffect(
+      state,
+      { ...context, sourceInstanceId: ownCookie.card.instanceId },
+      {
+        kind: 'modify-attack',
+        amount: -5,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      [opponent.card.instanceId],
+    )
+
+    const untouched = getEffectiveAttackBreakdown(
+      state,
+      ownCookie.card.instanceId,
+    )
+    expect(untouched).toEqual({
+      base: ownCookie.card.attack,
+      effective: ownCookie.card.attack,
+      entries: [],
+    })
+
+    const modified = getEffectiveAttackBreakdown(
+      state,
+      opponent.card.instanceId,
+    )
+    expect(modified.base).toBe(opponent.card.attack)
+    expect(modified.effective).toBe(0)
+    expect(modified.entries).toEqual([
+      { sourceCardName: ownCookie.card.name, amount: -5 },
+    ])
   })
 
   it('expires this-turn modifiers when the turn ends', () => {

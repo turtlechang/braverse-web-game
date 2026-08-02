@@ -7,17 +7,6 @@ import { validateCustomDeck } from '../game/custom-deck'
 export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
 
 const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
-  { value: 'random', label: '隨機（五色起始）' },
-  { value: 'red', label: '紅色起始牌組' },
-  { value: 'yellow', label: '黃色起始牌組' },
-  { value: 'green', label: '綠色起始牌組' },
-  { value: 'blue', label: '藍色起始牌組' },
-  { value: 'purple', label: '紫色起始牌組' },
-  { value: 'bs2-red', label: '第二彈紅色牌組' },
-  { value: 'bs2-yellow', label: '第二彈黃色牌組' },
-  { value: 'bs2-bean', label: '第二彈豆子牌組' },
-  { value: 'bs2-blue', label: '第二彈藍色牌組' },
-  { value: 'bs2-purple', label: '第二彈紫色牌組' },
   { value: 'bs3-green-lily', label: '第三彈綠色・聖百合餅乾' },
   { value: 'bs3-blue-sorbet', label: '第三彈藍色・PR 雪酪' },
   { value: 'bs3-red-pitaya', label: '第三彈紅色・火龍果龍族餅乾' },

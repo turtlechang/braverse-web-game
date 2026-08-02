@@ -1,19 +1,61 @@
-import { Copy, ScrollText, Swords, X } from 'lucide-react'
+import {
+  Activity,
+  BookOpen,
+  ChevronRight,
+  Copy,
+  Heart,
+  Layers3,
+  Plus,
+  ScrollText,
+  Settings2,
+  Sparkles,
+  Swords,
+  X,
+} from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { CommandLogEntry, GameState, PlayerId } from '../../game'
+import type {
+  CommandLogEntry,
+  GameState,
+  LogCategory,
+  LogStepDetail,
+  PlayerId,
+} from '../../game'
 import { serializeReplayIssueBundle } from '../../game'
 import { buildIssueBundleFromProvider } from '../../hooks/issueBundleSource'
+import { CardFace } from '../cards/CardVisuals'
 import { copyTextToClipboard } from '../copyTextToClipboard'
-import { phaseLabels } from '../gameUiLabels'
+import { logCategoryLabels, phaseLabels } from '../gameUiLabels'
 import {
   CommandLogFilterBar,
 } from './CommandLogFilters'
 import {
   emptyCommandLogFilters,
   filterCommandLogEntries,
+  matchesCommandLogFilters,
+  resolveEntryCategory,
   type CommandLogFilterState,
 } from './commandLogFilterUtils'
+import { groupCommandLogEntries, type LogGroup } from './commandLogGrouping'
 import './OnlineActivityFeed.css'
+
+const CATEGORY_ICONS: Record<LogCategory, typeof Swords> = {
+  draw: BookOpen,
+  deploy: Plus,
+  attack: Swords,
+  activate: Sparkles,
+  damage: Heart,
+  flip: Layers3,
+  phase: Activity,
+  system: Settings2,
+}
+
+const stepLinesForGroup = (group: LogGroup): LogStepDetail[] =>
+  group.steps.length > 0
+    ? group.steps.map((entry) => ({
+        text: entry.summary ?? entry.commandKind,
+        cards: entry.card ? [entry.card] : undefined,
+      }))
+    : (group.header.steps ?? [])
 
 type ActivityEvent = {
   id: string
@@ -85,6 +127,20 @@ export function OnlineActivityFeed({
   const [copyResult, setCopyResult] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(
+    () => new Set(),
+  )
+  const toggleGroup = (groupId: number) => {
+    setExpandedGroupIds((current) => {
+      const next = new Set(current)
+      if (next.has(groupId)) {
+        next.delete(groupId)
+      } else {
+        next.add(groupId)
+      }
+      return next
+    })
+  }
   const handleCopyLog = () => {
     const bundle = buildIssueBundleFromProvider(null)
     if (!bundle) return
@@ -104,6 +160,21 @@ export function OnlineActivityFeed({
   const filteredEntries = useMemo(
     () => filterCommandLogEntries(game.commandLog ?? [], filters),
     [filters, game.commandLog],
+  )
+  const historyGroups = useMemo(
+    () => groupCommandLogEntries(game.commandLog ?? []),
+    [game.commandLog],
+  )
+  const visibleHistoryGroups = useMemo(
+    () =>
+      historyGroups.filter((group) =>
+        group.entries.some((entry) => matchesCommandLogFilters(entry, filters)),
+      ),
+    [historyGroups, filters],
+  )
+  const renderedHistoryGroups = useMemo(
+    () => [...visibleHistoryGroups].reverse(),
+    [visibleHistoryGroups],
   )
   const replacementPending = Boolean(game.pendingReplacement?.tasks[0])
   const peekMessage =
@@ -255,15 +326,69 @@ export function OnlineActivityFeed({
               </button>
             </div>
             <ol>
-              {filteredEntries.length ? (
-                [...filteredEntries].reverse().map((entry) => (
-                  <li key={entry.id}>
-                    <span>
-                      第 {entry.turnNumber} 回合・{phaseLabels[entry.phase]}
-                    </span>
-                    <p>{entry.summary ?? entry.commandKind}</p>
-                  </li>
-                ))
+              {renderedHistoryGroups.length ? (
+                renderedHistoryGroups.map((group) => {
+                  const category = resolveEntryCategory(group.header)
+                  const Icon = CATEGORY_ICONS[category]
+                  const stepLines = stepLinesForGroup(group)
+                  const isExpanded = expandedGroupIds.has(group.groupId)
+                  return (
+                    <li key={group.groupId}>
+                      <button
+                        type="button"
+                        className={`online-activity-history-entry${
+                          stepLines.length > 0 ? ' is-expandable' : ''
+                        }`}
+                        onClick={() =>
+                          stepLines.length > 0 && toggleGroup(group.groupId)
+                        }
+                        disabled={stepLines.length === 0}
+                        aria-expanded={stepLines.length > 0 ? isExpanded : undefined}
+                      >
+                        <span className="online-activity-history-thumb">
+                          {group.header.card ? (
+                            <CardFace
+                              card={group.header.card}
+                              className="online-activity-card-face"
+                            />
+                          ) : (
+                            <Icon size={14} aria-hidden="true" />
+                          )}
+                        </span>
+                        <span className="online-activity-history-text">
+                          <span>
+                            {logCategoryLabels[category]}・第 {group.turnNumber} 回合・
+                            {phaseLabels[group.header.phase]}
+                            {stepLines.length > 0 && (
+                              <ChevronRight size={11} aria-hidden="true" />
+                            )}
+                          </span>
+                          <p>{group.header.summary ?? group.header.commandKind}</p>
+                        </span>
+                      </button>
+                      {stepLines.length > 0 && isExpanded && (
+                        <ol className="online-activity-history-steps">
+                          {stepLines.map((line, index) => (
+                            <li key={index}>
+                              {line.cards && line.cards.length > 0 && (
+                                <span className="online-activity-step-thumbs">
+                                  {line.cards.map((card) => (
+                                    <CardFace
+                                      key={card.instanceId}
+                                      card={card}
+                                      className="online-activity-step-card-face"
+                                    />
+                                  ))}
+                                </span>
+                              )}
+                              <span>{line.text}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </li>
+                  )
+                })
               ) : (
                 <li className="is-empty">
                   {game.commandLog?.length ? '沒有符合篩選條件的紀錄。' : '尚無對戰紀錄。'}

@@ -934,6 +934,40 @@ describe('equipped item badge', () => {
   })
 })
 
+describe('attack modifier tooltip', () => {
+  it('shows a tooltip naming the source card when attack is currently modified', () => {
+    const game = createBattleState()
+    game.attackModifiers = [
+      {
+        sourceInstanceId: 'defender',
+        targetInstanceId: 'attacker',
+        amount: -2,
+        expiresAfterTurn: null,
+      },
+    ]
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({ game, playerId: 'player-two', position: 'bottom' })}
+      />,
+    )
+
+    expect(markup).toContain('badge-atk')
+    expect(markup).toContain('基礎攻擊力 3，目前 1（defender -2）')
+  })
+
+  it('omits the tooltip when the cookie has no active attack modifier', () => {
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({ game: createBattleState(), playerId: 'player-two', position: 'bottom' })}
+      />,
+    )
+
+    expect(markup).toContain('badge-atk')
+    expect(markup).not.toContain('基礎攻擊力')
+  })
+})
+
 describe('HP flip chain reveal indicator', () => {
   const revealedCard = {
     id: 'revealed-hp',

@@ -7,7 +7,7 @@ import {
   canPlayStage,
   getAttackEnergyCostForState,
   getBreakAreaLevel,
-  getEffectiveAttack,
+  getEffectiveAttackBreakdown,
   getEnergyCostTotal,
   selectEnergyPayment,
   type GameState,
@@ -517,9 +517,30 @@ export function BattleRow({
                   />
                   <div className="card-badges">
                     <span className="badge-hp"><Heart size={12} aria-hidden="true" /> {cookie.hpCards.length}/{cookie.card.hp}</span>
-                    <span className="badge-atk">
-                      <Swords size={12} aria-hidden="true" /> {getEffectiveAttack(game, cookie.card.instanceId)}
-                    </span>
+                    {(() => {
+                      const attackInfo = getEffectiveAttackBreakdown(
+                        game,
+                        cookie.card.instanceId,
+                      )
+                      const modifierSummary = attackInfo.entries
+                        .map(
+                          (entry) =>
+                            `${entry.sourceCardName} ${entry.amount > 0 ? '+' : ''}${entry.amount}`,
+                        )
+                        .join('、')
+                      return (
+                        <span
+                          className="badge-atk"
+                          title={
+                            modifierSummary
+                              ? `基礎攻擊力 ${attackInfo.base}，目前 ${attackInfo.effective}（${modifierSummary}）`
+                              : undefined
+                          }
+                        >
+                          <Swords size={12} aria-hidden="true" /> {attackInfo.effective}
+                        </span>
+                      )
+                    })()}
                   </div>
                   {cookie.equippedCards && cookie.equippedCards.length > 0 && (
                     <button

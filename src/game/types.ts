@@ -1251,6 +1251,23 @@ export interface PendingOpponentHandDiscard {
   chainedFromDrawUpTo?: boolean
 }
 
+/** 對戰紀錄的分類標籤，供 UI 篩選 chip 使用。見 command-log.ts 的 LOG_CATEGORY_BY_COMMAND_KIND。 */
+export type LogCategory =
+  | 'draw'
+  | 'deploy'
+  | 'attack'
+  | 'activate'
+  | 'damage'
+  | 'flip'
+  | 'phase'
+  | 'system'
+
+/** 一個對戰紀錄步驟：說明文字＋這個步驟實際用到的卡片（供顯示縮圖用）。 */
+export interface LogStepDetail {
+  text: string
+  cards?: GameCard[]
+}
+
 export interface CommandLogEntry {
   id: number
   turnNumber: number
@@ -1259,6 +1276,28 @@ export interface CommandLogEntry {
   commandKind: string
   payload: Record<string, unknown>
   summary?: string
+  /**
+   * 同一個因果鏈（例如攻擊宣告→陷阱回應→逐張HP結算→FLIP→戰鬥自動結算）
+   * 底下所有 entry 共用同一個 groupId，方便 UI 把它們摺疊成一組可展開的
+   * 動作。獨立、沒有後續待決定事項的動作，groupId 等於自己的 id。
+   */
+  groupId?: number
+  category?: LogCategory
+  /** 這筆指令結算完成當下，雙方的休息區等級（用於回合分隔的進度條顯示）。 */
+  breakLevel?: Record<PlayerId, number>
+  /**
+   * 「單筆 entry 但 payload 已經帶齊所有子步驟資料」的批次指令（play-trap／
+   * activate-skill／play-item／activate-stage／attack）在附加當下就合成好的
+   * 逐步驟文字，供 UI 展開顯示。必須在 appendCommandLogEntry 當下算好存起來
+   * ——UI 端只看得到最終 GameState，沒有每筆 entry 對應的歷史狀態可以重算。
+   * 其餘 kind（步驟本來就分散在同一 groupId 底下的其他 entry）維持 undefined。
+   */
+  steps?: LogStepDetail[]
+  /**
+   * 這筆指令主要「關於」哪一張卡，供 UI 顯示卡圖縮圖用。純系統/階段類指令
+   * （advance-phase／skip-trap……）沒有對應單一卡片，維持 undefined。
+   */
+  card?: GameCard
 }
 
 export interface GameState {

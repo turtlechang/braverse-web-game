@@ -18,6 +18,8 @@ export {
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
   getEffectiveAttack,
+  getEffectiveAttackBreakdown,
+  type AttackModifierBreakdownEntry,
   isEffectConditionMet,
   isEffectTargeted,
   isEffectUntargeted,
@@ -240,6 +242,8 @@ export type {
   DeckToSupportEffect,
   DefeatReason,
   DrawEffect,
+  LogCategory,
+  LogStepDetail,
   DrawUpToEffect,
   EffectCondition,
   EffectContext,
@@ -312,6 +316,11 @@ export {
   applyGameCommand,
   getPendingDecision,
 } from './commands'
+export {
+  describeCommandSteps,
+  LOG_CATEGORY_BY_COMMAND_KIND,
+  resolveLogCategory,
+} from './command-log'
 export type {
   ApplyGameCommandOptions,
   FaintEffectDecision,

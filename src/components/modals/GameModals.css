@@ -72,7 +72,25 @@
 
 .trap-response-modal {
   width: min(900px, calc(100vw - 48px));
-  padding-bottom: 80px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/*
+ * 目標／能量／代價的候選卡格數量不固定，內容常常比 modal 本身還高。
+ * 原本整張 modal 用 overflow-y:auto 捲動、按鈕列用 position:sticky
+ * 貼底，但 sticky 只會把按鈕「釘」在目前可視區域底部，不會等候選卡格
+ * 真的捲出畫面——結果按鈕列會直接疊在還沒捲到的候選卡格中間（見
+ * P2 使用者回報：Fallen Ice Statue 的目標候選卡格被按鈕列從中間切開）。
+ * 改成 modal 本身固定高度、標頭與按鈕列維持一般排版，只讓中段內容
+ * （trap-response-body）自己捲動，按鈕列就不可能疊到還沒捲完的內容。
+ */
+.trap-response-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .attack-declaration-summary {
@@ -170,8 +188,7 @@
 }
 
 .modal-actions-sticky {
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
   padding: 12px 0 4px;
   background: linear-gradient(135deg, #071c44, #123f82);
   border-top: 1px solid rgba(255, 255, 255, 0.12);

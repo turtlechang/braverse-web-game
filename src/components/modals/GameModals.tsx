@@ -870,6 +870,7 @@ export function TrapResponseModal({
               </div>
             )}
             <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
+            <div className="trap-response-body">
             <AttackDeclarationSummary
               attackerCard={attackerCard}
               attackTargetCard={attackTargetCard}
@@ -1132,6 +1133,7 @@ export function TrapResponseModal({
             {phaseIds.length === 0 && (
               <p className="trap-no-guided-step">此陷阱不需額外選擇，可直接確認發動。</p>
             )}
+            </div>
             <div className="modal-actions modal-actions-sticky">
               <button type="button" onClick={onSkip}>不發動</button>
               <button type="button" onClick={handlePrevious}>

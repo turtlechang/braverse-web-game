@@ -1,4 +1,4 @@
-import type { DeckChoice, TurnPhase } from '../game'
+import type { DeckChoice, LogCategory, TurnPhase } from '../game'
 import type { OnlineMatchStatus } from '../hooks/useOnlineMatch'
 
 export const phaseLabels: Record<TurnPhase, string> = {
@@ -7,6 +7,17 @@ export const phaseLabels: Record<TurnPhase, string> = {
   support: '支援階段',
   main: '主要階段',
   end: '結束階段',
+}
+
+export const logCategoryLabels: Record<LogCategory, string> = {
+  draw: '抽牌',
+  deploy: '部署',
+  attack: '攻擊',
+  activate: '陷阱／道具／技能',
+  damage: '傷害',
+  flip: 'FLIP',
+  phase: '階段',
+  system: '系統',
 }
 
 export const phaseAdvanceLabels: Record<TurnPhase, string> = {
