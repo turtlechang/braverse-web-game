@@ -1633,6 +1633,22 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    // BS4-070「When this Cookie faints」的棄牌代價由 parseAbilityCost 自動解析，
+    // 這裡只需要補上昏厥後的抽牌效果本身。
+    'BS4-070': [{ kind: 'draw-up-to', max: 3 }],
+    'BS4-082': [
+      { kind: 'draw-up-to-then-discard', max: 3, discardCount: 2 },
+    ],
+    // BS4-085 是複合效果（含 Then），通用解析器不處理 Then，需硬編碼；
+    // 棄 4 張的代價一樣交給 parseAbilityCost 自動解析。
+    'BS4-085': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 2 },
+      },
+      { kind: 'draw-up-to', max: 4 },
+    ],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {

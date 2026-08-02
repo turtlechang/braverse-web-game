@@ -27,6 +27,109 @@ const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
 const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
 const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRecord[]
 const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
+// BS4 尚未 promote，候選檔仍在 data/candidates/；那個目錄會被
+// validate-candidate-cards.test.ts 的 beforeEach/afterEach 清空重建（用來測試
+// promote 流程），跟它平行執行時 import 真實候選檔會有讀取競態，所以這裡直接
+// 內嵌官方原始資料的副本，不依賴那個會被清空的目錄。
+const bs4Cards: OfficialCardRecord[] = [
+  {
+    sourceId: 44531,
+    locale: 'en',
+    cardNumber: 'BS4-070',
+    baseCardNumber: 'BS4-070',
+    variant: null,
+    name: 'Lord Oyster',
+    type: 'cookie',
+    officialType: 'COOKIE',
+    rarity: 'C',
+    grade: 'COMMON',
+    level: 1,
+    hp: 2,
+    energyType: 'BLUE',
+    color: 'BLUE',
+    skill: {
+      name: '{sk} Broken Promise',
+      text: 'When this Cookie faints, <discard 2 cards.> Draw up to 3 cards from your deck.',
+    },
+    attackText: '<{B}> For Family {da} 1',
+    flipText: null,
+    keywords: [],
+    product: {
+      id: 209,
+      title: 'BOOSTER PACK [Age of Heroes and Kingdoms]',
+      category: null,
+    },
+    restrictions: { banned: false, limited: false },
+    flags: { enabled: true, hidden: false, extra: false },
+    imageUrl: 'https://cookierunbraverse.com/data/en_storage/D8VPjo1A6DEdAGWjqB3-aQ.webp',
+    officialUpdatedAt: '2026-03-13T08:54:17.000Z',
+    sourceUrl: 'https://cookierunbraverse.com/data/json/cardList_en.json',
+  },
+  {
+    sourceId: 44551,
+    locale: 'en',
+    cardNumber: 'BS4-082',
+    baseCardNumber: 'BS4-082',
+    variant: null,
+    name: 'Frilled Jellyfish Cookie',
+    type: 'cookie',
+    officialType: 'COOKIE',
+    rarity: 'U',
+    grade: 'UNCOMMON',
+    level: 1,
+    hp: 2,
+    energyType: 'BLUE',
+    color: 'BLUE',
+    skill: {
+      name: '{sk} Clean and Pristine',
+      text: '{ap} <{B}> Draw up to 3 cards from your deck and discard 2 cards.',
+    },
+    attackText: '<{B}> Frilled Snare {da} 1',
+    flipText: null,
+    keywords: [],
+    product: {
+      id: 209,
+      title: 'BOOSTER PACK [Age of Heroes and Kingdoms]',
+      category: null,
+    },
+    restrictions: { banned: false, limited: false },
+    flags: { enabled: true, hidden: false, extra: false },
+    imageUrl: 'https://cookierunbraverse.com/data/en_storage/TdNlMUiJ62loDdNwSYN2vQ.webp',
+    officialUpdatedAt: '2026-03-13T08:54:17.000Z',
+    sourceUrl: 'https://cookierunbraverse.com/data/json/cardList_en.json',
+  },
+  {
+    sourceId: 44554,
+    locale: 'en',
+    cardNumber: 'BS4-085',
+    baseCardNumber: 'BS4-085',
+    variant: null,
+    name: 'Tide Shards',
+    type: 'item',
+    officialType: 'ITEM',
+    rarity: 'SR',
+    grade: 'SUPER RARE',
+    level: null,
+    hp: null,
+    energyType: 'BLUE',
+    color: 'BLUE',
+    skill: { name: null, text: null },
+    attackText:
+      "<{B}{B}> <Discard 4 cards.> Select up to 2 of your opponent's Cookies. Those Cookies receive 1 damage each. Then, draw up to 4 cards from your deck.",
+    flipText: null,
+    keywords: [],
+    product: {
+      id: 209,
+      title: 'BOOSTER PACK [Age of Heroes and Kingdoms]',
+      category: null,
+    },
+    restrictions: { banned: false, limited: false },
+    flags: { enabled: true, hidden: false, extra: false },
+    imageUrl: 'https://cookierunbraverse.com/data/en_storage/MefIZiNv4L_KNRVPneTXLg.webp',
+    officialUpdatedAt: '2026-03-13T08:54:17.000Z',
+    sourceUrl: 'https://cookierunbraverse.com/data/json/cardList_en.json',
+  },
+]
 
 const findCard = (cardNumber: string) => {
   const card = cards.find((candidate) => candidate.cardNumber === cardNumber)
@@ -115,6 +218,16 @@ const findBs3Card = (cardNumber: string) => {
 
   if (!card) {
     throw new Error(`Missing BS3 inventory card ${cardNumber}`)
+  }
+
+  return card
+}
+
+const findBs4Card = (cardNumber: string) => {
+  const card = bs4Cards.find((candidate) => candidate.cardNumber === cardNumber)
+
+  if (!card) {
+    throw new Error(`Missing BS4 candidate card ${cardNumber}`)
   }
 
   return card
@@ -2440,6 +2553,65 @@ describe('Starter Deck RED official effect adapter', () => {
             ],
           },
         ])
+    })
+  })
+
+  describe('BS4 blue candidate cards (inventory, not yet promoted)', () => {
+    it('BS4-070 Lord Oyster draws on faint, with the discard cost parsed automatically', () => {
+      const card = findBs4Card('BS4-070')
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+        effects: [{ kind: 'draw-up-to', max: 3 }],
+      })
+      expect(convertOfficialCookieSkill(card)).toMatchObject({
+        trigger: 'passive',
+        faint: true,
+        cost: { discardHand: 2 },
+        effects: [{ kind: 'draw-up-to', max: 3 }],
+      })
+    })
+
+    it('BS4-082 Frilled Jellyfish Cookie draws 3 then discards 2 on play', () => {
+      const card = findBs4Card('BS4-082')
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+        effects: [
+          { kind: 'draw-up-to-then-discard', max: 3, discardCount: 2 },
+        ],
+      })
+      expect(convertOfficialCookieSkill(card)).toMatchObject({
+        trigger: 'on-play',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          { kind: 'draw-up-to-then-discard', max: 3, discardCount: 2 },
+        ],
+      })
+    })
+
+    it('BS4-085 Tide Shards damages up to 2 opponent Cookies then draws 4, with the discard cost parsed automatically', () => {
+      const card = findBs4Card('BS4-085')
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 2 },
+          },
+          { kind: 'draw-up-to', max: 4 },
+        ],
+      })
+      expect(convertOfficialItemAbility(card)).toMatchObject({
+        cost: { energy: { blue: 2 }, discardHand: 4 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 2 },
+          },
+          { kind: 'draw-up-to', max: 4 },
+        ],
+      })
     })
   })
 })
