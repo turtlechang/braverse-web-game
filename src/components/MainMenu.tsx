@@ -310,17 +310,19 @@ export function MainMenu({
         </section>
       </section>
       <footer className="main-menu-footer">
-        <nav className="main-menu-dev-tools" aria-label="開發者工具">
-          <span className="main-menu-dev-tools-label">開發者工具</span>
-          <button type="button" onClick={onOpenTestScenario}>
-            <FlaskConical aria-hidden="true" />
-            測試對局設定
-          </button>
-          <button type="button" onClick={onRefreshDecks}>
-            <RefreshCw aria-hidden="true" />
-            重新讀取
-          </button>
-        </nav>
+        <details className="main-menu-dev-tools-details">
+          <summary className="main-menu-dev-tools-label">開發者工具</summary>
+          <nav className="main-menu-dev-tools" aria-label="開發者工具">
+            <button type="button" onClick={onOpenTestScenario}>
+              <FlaskConical aria-hidden="true" />
+              測試對局設定
+            </button>
+            <button type="button" onClick={onRefreshDecks}>
+              <RefreshCw aria-hidden="true" />
+              重新讀取
+            </button>
+          </nav>
+        </details>
         <p className="main-menu-disclaimer">
           本作品為非官方粉絲研究專案，與 Devsisters Corporation
           無任何關聯、合作或授權；CookieRun: Braverse

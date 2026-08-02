@@ -321,6 +321,23 @@ describe('MainMenu empty deck state', () => {
     await act(() => root.unmount())
   })
 
+  it('wraps developer tools in a collapsible <details>/<summary> for mobile', async () => {
+    const { container, root } = await renderMenu([validDeck])
+
+    const details = container.querySelector('.main-menu-dev-tools-details')
+    expect(details?.tagName).toBe('DETAILS')
+
+    const summary = details?.querySelector('summary.main-menu-dev-tools-label')
+    expect(summary?.textContent).toBe('開發者工具')
+    expect(summary?.closest('details')).toBe(details)
+
+    // 開發者工具的 <nav> 要在 <details> 底下，這樣手機版才能靠原生收合行為隱藏它。
+    const devTools = details?.querySelector('.main-menu-dev-tools')
+    expect(devTools).toBeTruthy()
+
+    await act(() => root.unmount())
+  })
+
   it('shows 對戰入口 as primary CTA when decks exist', async () => {
     const { container, root } = await renderMenu([validDeck])
 

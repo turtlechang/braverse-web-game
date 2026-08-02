@@ -766,8 +766,139 @@ button {
     overflow: auto;
   }
 
+  /* 桌機版 .main-menu-status-grid／.main-menu-decks／.main-menu-deck-list 都是
+     靠 min-height:0 + overflow:auto|hidden，讓它們在桌機固定高度的
+     minmax(0,1fr) 彈性列裡「自己內部捲動」。手機版整個 panel 改成單欄、
+     隨內容自然增高、由 panel 自己捲動（見上面 grid-template-rows:none），
+     如果不把這三個一併改回自然高度，它們的「自動最小尺寸」還是會被鎖在
+     0——單欄可用空間不夠分配給每一列内容的完整高度時，grid 會把這些列
+     壓縮到遠小於實際內容（AI 對手直式堆疊後變高、牌組清單有多筆時尤其明顯），
+     而不是讓 panel 整體變高、用捲動處理超出視窗的部分。 */
   .main-menu-status-grid {
+    min-height: auto;
     overflow: visible;
+  }
+
+  .main-menu-decks {
+    min-height: auto;
+    grid-template-rows: auto auto;
+    overflow: visible;
+  }
+
+  .main-menu-deck-list {
+    min-height: auto;
+    overflow: visible;
+  }
+
+  /* 直式手機版面（P3）：品牌區壓縮，避免佔用太多首屏高度。 */
+  .main-menu-brand-line-top {
+    font-size: 1.6rem;
+  }
+
+  .main-menu-brand-line-main {
+    font-size: 2.3rem;
+  }
+
+  .main-menu-brand-badge {
+    font-size: 0.68rem;
+    padding: 3px 14px 4px;
+  }
+
+  /* AI 對手：牌組／等級改上下堆疊，不要擠在同一行。 */
+  .main-menu-ai-options {
+    flex-direction: column;
+  }
+
+  /* 目前玩家牌組：手機只留最關鍵的張數／FLIP／餅乾卡，其餘（物品/陷阱/場景）收起。 */
+  .main-menu-stat-row span:nth-child(n + 4) {
+    display: none;
+  }
+
+  /* 觸控熱區至少 44px（現行 42px/34px/30px 是桌機用滑鼠點擊夠用的尺寸）。 */
+  .main-menu-actions button,
+  .main-menu-edit-deck,
+  .main-menu-section-title button,
+  .main-menu-ai-options select {
+    min-height: 44px;
+  }
+
+  .main-menu-dev-tools button {
+    min-height: 40px;
+  }
+
+  /* 三個主要動作改成畫面底部常駐列，捲動牌組清單時仍隨時可以開戰。 */
+  .main-menu-panel {
+    padding-bottom: 96px;
+  }
+
+  .main-menu-actions {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid rgba(126, 231, 240, 0.3);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(8, 30, 66, 0.96), rgba(4, 16, 38, 0.98));
+    box-shadow: 0 -14px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  .main-menu-actions > button {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.78rem;
+  }
+
+  .main-menu-actions > .main-menu-primary,
+  .main-menu-actions > .main-menu-create-first {
+    flex: 1.6 1 0;
+  }
+
+  .main-menu-actions > .main-menu-disabled-reason {
+    flex-basis: 100%;
+    order: 5;
+  }
+
+  /* 開發者工具收合：桌機/平板完全不受影響，見下方 min-width:681px 的說明。 */
+  .main-menu-dev-tools-details:not([open]) .main-menu-dev-tools {
+    display: none;
+  }
+
+  .main-menu-dev-tools-details summary {
+    cursor: pointer;
+  }
+
+  /* footer 是 shell 自己 grid 的最後一列（跟 panel 平行，不在 panel 的捲動範圍
+     內），固定底部動作列改成 position:fixed 之後兩者會疊在同一塊「視窗最底部」
+     區域，footer 的收合開關／版權聲明會被動作列整個蓋住。留出跟動作列同高的
+     間距，把 footer 推到動作列上方。 */
+  .main-menu-footer {
+    margin-bottom: 92px;
+  }
+
+  /* 牌組卡片加單選圓點，觸控時更清楚目前選了哪一副。 */
+  .main-menu-deck-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .main-menu-deck-select::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 2px solid rgba(126, 231, 240, 0.4);
+  }
+
+  .main-menu-deck-card.is-selected .main-menu-deck-select::before {
+    border-color: #ffda62;
+    background: radial-gradient(circle, #ffda62 40%, transparent 44%);
   }
 
   .game-shell {
@@ -781,6 +912,16 @@ button {
     padding: 4px;
   }
 
+}
+
+/* 開發者工具的收合三角形只在直式手機（≤680px）有用；桌機/平板既有的
+   `.main-menu-dev-tools { display:flex }` 是無條件規則，本來就會蓋掉 <details>
+   原生收合，內容一直都會顯示，這裡只需要把展開/收合的箭頭藏起來，避免出現
+   一個「點了也沒有視覺變化」的假按鈕。 */
+@media (min-width: 681px) {
+  .main-menu-dev-tools-details summary {
+    display: none;
+  }
 }
 
 /* 緊湊高度模式：專為桌機常見的 1366×768／1280×720 補上斷點
