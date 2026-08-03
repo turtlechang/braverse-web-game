@@ -425,6 +425,7 @@ const commandShapes = {
     optionalStringArrays: [
       'costSupportToTrashIds',
       'discardHandIds',
+      'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'trashToDeckBottomIds',
     ],
@@ -437,6 +438,7 @@ const commandShapes = {
     optionalStringArrays: [
       'costSupportToTrashIds',
       'discardHandIds',
+      'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'trashToDeckBottomIds',
       'targetIds',
@@ -524,7 +526,8 @@ const commandShapes = {
   },
   'resolve-flip': {
     requiredBooleans: ['activate'],
-    optionalStringArrays: ['discardHandIds'],
+    optionalStringArrays: ['discardHandIds', 'targetIds'],
+    optionalNumbers: ['chooseOneModeIndex'],
   },
   'resolve-attack-effect': { requiredStringArrays: ['targetIds'] },
   'resolve-reveal-top-deck': { optionalStringArrays: ['targetIds'] },

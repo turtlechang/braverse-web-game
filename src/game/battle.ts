@@ -16,6 +16,7 @@ import {
   requiresEffectCardSelection,
   resolveDrawUpTo,
   selectEffectTargets,
+  expandChooseOne,
 } from './effects'
 import {
   getAttackEnergyCostForState,
@@ -2053,6 +2054,8 @@ export const resolveNextDamage = (state: GameState): GameState => {
 export interface ResolveFlipOptions {
   activate: boolean
   discardHandIds?: string[]
+  chooseOneModeIndex?: number
+  targetIds?: string[]
 }
 
 export const resolveFlip = (
@@ -2127,8 +2130,23 @@ export const resolveFlip = (
       },
     }
 
-    for (let i = 0; i < revealed.flip.effects.length; i += 1) {
-      const effect = revealed.flip.effects[i]
+    const chooseOneIndex = revealed.flip.effects.findIndex(
+      (effect) => effect.kind === 'choose-one',
+    )
+    let flipEffects = revealed.flip.effects
+    if (chooseOneIndex >= 0) {
+      if (options.chooseOneModeIndex === undefined) {
+        throw new GameRuleError('Must choose a FLIP effect mode.')
+      }
+      flipEffects = expandChooseOne(
+        flipEffects,
+        chooseOneIndex,
+        options.chooseOneModeIndex,
+      )
+    }
+
+    for (let i = 0; i < flipEffects.length; i += 1) {
+      const effect = flipEffects[i]
       const context = {
         sourcePlayerId: playerId,
         sourceInstanceId: revealed.instanceId,
@@ -2177,10 +2195,10 @@ export const resolveFlip = (
           nextState,
           context,
           effect,
-          [],
+          options.targetIds ?? [],
         )
         if (nextState.pendingDrawUpTo) {
-          const remainingEffects = revealed.flip.effects.slice(i + 1)
+          const remainingEffects = flipEffects.slice(i + 1)
           if (remainingEffects.length > 0) {
             nextState = {
               ...nextState,
@@ -2201,29 +2219,43 @@ export const resolveFlip = (
     }
   }
 
-  const player = nextState.players[playerId]
-  nextState = {
-    ...nextState,
-    players: {
-      ...nextState.players,
-      [playerId]: flipToSupportChoice
-        ? {
-            ...player,
-            supportArea: [
-              ...player.supportArea,
-              { card: revealed, rested: flipToSupportChoice.rested },
-            ],
-          }
-        : flipToBreakChoice
+  const addRevealedFlipCard = (currentState: GameState): GameState => {
+    const player = currentState.players[playerId]
+    return {
+      ...currentState,
+      players: {
+        ...currentState.players,
+        [playerId]: flipToSupportChoice
           ? {
               ...player,
-              breakArea: [...player.breakArea, revealed],
+              supportArea: [
+                ...player.supportArea,
+                { card: revealed, rested: flipToSupportChoice.rested },
+              ],
             }
-        : {
-            ...player,
-            discardPile: [...player.discardPile, revealed],
-          },
-    },
+          : flipToBreakChoice
+            ? {
+                ...player,
+                breakArea: [...player.breakArea, revealed],
+              }
+            : {
+                ...player,
+                discardPile: [...player.discardPile, revealed],
+              },
+      },
+    }
+  }
+
+  // FLIP 的效果可能讓攻擊中的餅乾昏厥，甚至直接達成勝負條件；
+  // 這時傷害效果會先清除 pendingBattle，仍須把翻開的牌送入對應區域，
+  // 但不可再以原戰鬥要求 pendingBattle。
+  if (!nextState.pendingBattle) {
+    return addRevealedFlipCard(nextState)
+  }
+
+  nextState = addRevealedFlipCard(nextState)
+  nextState = {
+    ...nextState,
     pendingBattle: {
       ...requirePendingBattle(nextState),
       stage: 'damage',

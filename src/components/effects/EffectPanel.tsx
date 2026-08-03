@@ -40,6 +40,10 @@ export interface EffectPanelProps {
   selectedDiscardHandIds?: Set<string>
   onToggleDiscardHand?: (instanceId: string) => void
   discardHandCost?: number
+  hpToTrashCandidates?: GameCard[]
+  selectedHpToTrashTargetIds?: Set<string>
+  onToggleHpToTrash?: (instanceId: string) => void
+  hpToTrashCost?: number
   showCancelSkill?: boolean
   energyPaymentValid?: boolean
   paymentCandidates?: GameCard[]
@@ -113,6 +117,10 @@ function EffectPanelContent({
   selectedDiscardHandIds = new Set<string>(),
   onToggleDiscardHand,
   discardHandCost = 0,
+  hpToTrashCandidates = [],
+  selectedHpToTrashTargetIds = new Set<string>(),
+  onToggleHpToTrash,
+  hpToTrashCost = 0,
   showCancelSkill = false,
   energyPaymentValid,
   paymentCandidates = [],
@@ -200,6 +208,9 @@ function EffectPanelContent({
   const discardPaid =
     discardHandCost === 0 ||
     pendingEffect?.selectedDiscardHandIds.length === discardHandCost
+  const hpToTrashPaid =
+    hpToTrashCost === 0 ||
+    (pendingEffect?.selectedHpToTrashTargetIds.length ?? 0) === hpToTrashCost
   const trashBattleCookiePaid =
     trashBattleCookieCost === 0 ||
     pendingEffect?.selectedTrashBattleCookieIds.length === trashBattleCookieCost
@@ -213,6 +224,7 @@ function EffectPanelContent({
   const extraCostReady =
     supportPaid &&
     discardPaid &&
+    hpToTrashPaid &&
     trashBattleCookiePaid &&
     trashToDeckBottomPaid &&
     trashToDeckPaid
@@ -279,6 +291,7 @@ function EffectPanelContent({
     !pendingEffect?.skillActivated &&
     (costSupportCandidates.length > 0 ||
       discardHandCandidates.length > 0 ||
+      hpToTrashCandidates.length > 0 ||
       trashBattleCookieCandidates.length > 0 ||
       supportAreaCost > 0 ||
       discardHandCost > 0 ||
@@ -492,6 +505,12 @@ function EffectPanelContent({
                     {discardHandCost} 張手牌代價
                   </small>
                 )}
+                {hpToTrashCost > 0 && (
+                  <small>
+                    已選 {pendingEffect.selectedHpToTrashTargetIds.length} 張／
+                    {hpToTrashCost} 張 HP 費用
+                  </small>
+                )}
                 {trashBattleCookieCost > 0 && (
                   <small>
                     已選 {pendingEffect.selectedTrashBattleCookieIds.length}／
@@ -517,6 +536,17 @@ function EffectPanelContent({
                       selectedIds={selectedDiscardHandIds}
                       onToggle={onToggleDiscardHand}
                       className="effect-candidates-discard-hand"
+                    />
+                  </>
+                )}
+                {hpToTrashCandidates.length > 0 && (
+                  <>
+                    <small>選擇要支付 HP 費用的餅乾</small>
+                    <CandidateButtons
+                      cards={hpToTrashCandidates}
+                      selectedIds={selectedHpToTrashTargetIds}
+                      onToggle={onToggleHpToTrash}
+                      className="effect-candidates-hp-cost"
                     />
                   </>
                 )}

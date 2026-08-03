@@ -12,11 +12,13 @@ import {
   getEffectiveAttack,
   getTrashToDeckCandidates,
   isEffectConditionMet,
+  requiresTargetSelection,
 } from '../effects'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
 import type { CardEffect, CookieInBattle, EffectContext, GameState, GameCard, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
+import { chooseAiEffectMode } from './choose-one-mode'
 import { isRuleEnabled } from './rule-profiles'
 import { getCardEffectValue } from './bs2MatchupProfiles'
 
@@ -387,12 +389,33 @@ export const handleAiPendingBattle = (
       )
     const canActivate = hasActivatableEffect &&
       discardHandIds.length === discardCount
+    const chooseOneEffect = revealed?.flip?.effects.find(
+      (effect): effect is Extract<CardEffect, { kind: 'choose-one' }> =>
+        effect.kind === 'choose-one',
+    )
+    const chooseOneModeIndex = chooseOneEffect
+      ? chooseAiEffectMode(state, flipContext, chooseOneEffect)
+      : undefined
+    const flipTargetEffect = revealed?.flip?.effects.find(
+      (effect) => requiresTargetSelection(effect),
+    )
+    const flipTargetSelector =
+      flipTargetEffect && 'target' in flipTargetEffect
+        ? flipTargetEffect.target
+        : null
+    const targetIds = flipTargetSelector
+      ? getEffectTargetCandidates(state, flipContext, flipTargetSelector)
+          .slice(0, flipTargetSelector.max)
+          .map((candidate) => candidate.card.instanceId)
+      : undefined
     return {
       state: applyGameCommand(state, {
         kind: 'resolve-flip',
         playerId,
         activate: canActivate,
         discardHandIds,
+        chooseOneModeIndex,
+        targetIds,
       }),
       action: 'resolve-flip',
       revealedCard: revealed ?? undefined,

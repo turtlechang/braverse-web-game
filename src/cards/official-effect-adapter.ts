@@ -48,7 +48,7 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
 
 const parseTarget = (text: string): EffectTargetSelector | null => {
   const match = text.match(
-    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?\s+(?:LV\.(\d+)\s+)?Cookies/i,
+    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?(?:\s+\{[RYGBPKN]\})?\s+(?:LV\.(\d+)\s+)?Cookies/i,
   )
 
   if (match) {
@@ -69,11 +69,17 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
     }
 
     const textAfterTarget = text.slice(match.index ?? 0)
-    const remainingHpMatch = textAfterTarget.match(/remaining HP is (\d+)/i)
+    const remainingHpMatch = textAfterTarget.match(
+      /remaining HP is (\d+)(\s+or more)?/i,
+    )
     const minimumLevelMatch = textAfterTarget.match(/LV\.(\d+) or higher/i)
 
     if (remainingHpMatch) {
-      target.remainingHp = Number(remainingHpMatch[1])
+      if (remainingHpMatch[2]) {
+        target.minRemainingHp = Number(remainingHpMatch[1])
+      } else {
+        target.remainingHp = Number(remainingHpMatch[1])
+      }
     }
 
     if (minimumLevelMatch) {
@@ -4441,6 +4447,35 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'BS4-065': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'deck-to-support', amount: 1, rested: true },
+      ],
+    },
+    'BS4-109': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'inspect-deck',
+          lookCount: 3,
+          pickCount: 1,
+          filterColor: 'purple',
+          optionalPick: true,
+          restDestination: 'trash',
+        },
+      ],
+    },
     'BS3-069': {
       effects: [
         {
@@ -4620,6 +4655,11 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { blue: 1 },
     discardHand: 0,
     selfToDeckBottom: true,
+  },
+  'BS4-001': {
+    energy: { red: 2 },
+    discardHand: 0,
+    selfToBreakArea: true,
   },
   'BS4-092': {
     energy: { purple: 1 },

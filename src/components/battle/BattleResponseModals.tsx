@@ -1,4 +1,9 @@
-import type { GameCommand } from '../../game'
+import {
+  getEffectSelectionLimits,
+  getEffectTargetCandidates,
+  requiresTargetSelection,
+} from '../../game'
+import type { CardEffect, GameCommand } from '../../game'
 import {
   AttackResponseModal,
   TrapResponseModal,
@@ -31,6 +36,40 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
   const pendingBattle = match.game.pendingBattle
   const attackAttackerCard = findBattleCard(pendingBattle?.attackerInstanceId)
   const attackTargetCard = findBattleCard(pendingBattle?.targetInstanceId)
+  const flipChooseOneEffect =
+    pendingBattle?.revealedHpCard?.flip?.effects.find(
+      (effect): effect is Extract<CardEffect, { kind: 'choose-one' }> =>
+        effect.kind === 'choose-one',
+    )
+  const flipPlayerId = pendingBattle
+    ? pendingBattle.damagePlayerId ?? pendingBattle.defenderPlayerId
+    : null
+  const flipTargetEffect = pendingBattle?.revealedHpCard?.flip?.effects.find(
+    (effect) => requiresTargetSelection(effect),
+  )
+  const flipTargetSelector =
+    flipTargetEffect && 'target' in flipTargetEffect
+      ? flipTargetEffect.target
+      : null
+  const flipTargetContext =
+    pendingBattle && flipPlayerId
+      ? {
+          sourcePlayerId: flipPlayerId,
+          sourceInstanceId: pendingBattle.revealedHpCard?.instanceId ?? '',
+          sourceCardName: pendingBattle.revealedHpCard?.name,
+        }
+      : null
+  const flipTargetCandidates =
+    flipTargetSelector && flipTargetContext
+      ? getEffectTargetCandidates(
+          match.game,
+          flipTargetContext,
+          flipTargetSelector,
+        ).map((candidate) => candidate.card)
+      : []
+  const flipTargetLimits = flipTargetEffect
+    ? getEffectSelectionLimits(flipTargetEffect)
+    : null
 
   return (
     <>
@@ -356,6 +395,10 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 .discardHand ?? 0
             }
             selectedDiscardIds={match.selectedFlipDiscardIds}
+            chooseOneModes={flipChooseOneEffect?.modes}
+            targetCandidates={flipTargetCandidates}
+            targetMin={flipTargetLimits?.min ?? 0}
+            targetMax={flipTargetLimits?.max ?? 1}
             onToggleDiscard={(instanceId) =>
               match.setSelectedFlipDiscardIds((current) =>
                 current.includes(instanceId)
@@ -374,7 +417,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 '未發動 FLIP，繼續傷害結算。',
               )
             }}
-            onActivate={() => {
+            onActivate={(chooseOneModeIndex, targetIds) => {
               match.setSelectedFlipDiscardIds([])
               match.dispatch(
                 {
@@ -382,6 +425,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                   playerId: match.viewerPlayerId,
                   activate: true,
                   discardHandIds: match.selectedFlipDiscardIds,
+                  chooseOneModeIndex,
+                  targetIds,
                 },
                 `已發動${match.game.pendingBattle?.revealedHpCard?.name ?? 'FLIP'}。`,
               )

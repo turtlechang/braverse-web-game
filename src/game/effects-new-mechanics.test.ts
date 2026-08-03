@@ -795,6 +795,68 @@ describe('new card-effect mechanics', () => {
     ).toBe(false)
   })
 
+  it('activateCookieSkill pays an HP-to-trash skill cost from the selected Cookie', () => {
+    const base = asMainPhase(createDemoGame())
+    const skillCookie = makeCookie({
+      instanceId: 'hp-cost-cookie',
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0, hpToTrash: { amount: 1 } },
+        text: 'place one HP card into the trash, draw one',
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    })
+    const hpCardA: GameCard = {
+      id: 'hp-card-a',
+      instanceId: 'hp-card-a',
+      name: 'HP Card A',
+      type: 'item',
+    }
+    const hpCardB: GameCard = {
+      id: 'hp-card-b',
+      instanceId: 'hp-card-b',
+      name: 'HP Card B',
+      type: 'item',
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            ...base.players['player-one'].battleArea,
+            { card: skillCookie, hpCards: [hpCardA, hpCardB], rested: false },
+          ],
+        },
+      },
+    }
+
+    const activated = activateCookieSkill(
+      state,
+      'player-one',
+      skillCookie.instanceId,
+      'activate',
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      [skillCookie.instanceId],
+    )
+
+    const activatedCookie = activated.players['player-one'].battleArea.find(
+      (cookie) => cookie.card.instanceId === skillCookie.instanceId,
+    )
+    expect(activatedCookie?.hpCards).toEqual([hpCardA])
+    expect(activated.players['player-one'].discardPile).toContainEqual(hpCardB)
+  })
+
   it('activateCookieSkill supports a selfToDeckBottom cost (BS4-077)', () => {
     const base = asMainPhase(createDemoGame())
     const skillCookie = makeCookie({

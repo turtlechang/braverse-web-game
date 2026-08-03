@@ -18,6 +18,7 @@ import {
   recordCookieDepartures,
 } from './replacement'
 import {
+  getHpToTrashCostCandidates,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
 } from './skills'
@@ -25,7 +26,6 @@ import { finishWithVictory, isSpecialVictoryConditionMet } from './victory'
 import type {
   AbilityCost,
   CardAbility,
-  CookieInBattle,
   EnergyCost,
   GameCard,
   GameState,
@@ -93,19 +93,6 @@ export interface AbilityPaymentOptions {
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   sourceInstanceId?: string
-}
-
-const getHpToTrashCostCandidates = (
-  cost: AbilityCost,
-  battleArea: CookieInBattle[],
-): CookieInBattle[] => {
-  if (!cost.hpToTrash) return []
-  return battleArea.filter((cookie) => {
-    if (cookie.hpCards.length === 0) return false
-    return cost.hpToTrash?.untilRemainingHp === undefined
-      ? true
-      : cookie.hpCards.length > cost.hpToTrash.untilRemainingHp
-  })
 }
 
 const canPayAbilityCost = (

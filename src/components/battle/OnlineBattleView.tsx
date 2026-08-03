@@ -645,6 +645,10 @@ export function OnlineBattleView({
         selectedDiscardHandIds={pending.selectedDraftDiscardHandIds}
         onToggleDiscardHand={pending.toggleDraftDiscardHand}
         discardHandCost={pending.draftDiscardHandCost}
+        hpToTrashCandidates={pending.draftHpToTrashCandidates}
+        selectedHpToTrashTargetIds={pending.selectedDraftHpToTrashTargetIds}
+        onToggleHpToTrash={pending.toggleDraftHpToTrash}
+        hpToTrashCost={pending.draftHpToTrashCost}
         paymentCandidates={pending.draftPaymentCandidates}
         selectedPaymentIds={pending.selectedDraftPaymentIds}
         energyPaymentValid={pending.draftPaymentValid}

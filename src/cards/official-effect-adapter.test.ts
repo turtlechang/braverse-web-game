@@ -2829,7 +2829,7 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('BS4-072 Mystic Opal Cookie reorders the top 3 cards on flip, same mechanic as BS3-083', () => {
+  it('BS4-072 Mystic Opal Cookie reorders the top 3 cards on flip, same mechanic as BS3-083', () => {
       const card = findBs4Card('BS4-072')
       expect(convertOfficialCardEffects(card)).toMatchObject({
         status: 'supported',
@@ -2846,6 +2846,27 @@ describe('Starter Deck RED official effect adapter', () => {
   })
 
   describe('BS4 red cards', () => {
+    it('BS4-001 Lilac Cookie includes its self-faint activation cost', () => {
+      const card = findBs4Card('BS4-001')
+      const skill = convertOfficialCookieSkill(card)
+      expect(skill).toMatchObject({
+        trigger: 'activate',
+        cost: { energy: { red: 2 }, selfToBreakArea: true },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', excludeSource: true },
+          },
+        ],
+      })
+      expect(skill?.effects[0]).toMatchObject({
+        target: { side: 'self', excludeSource: true },
+      })
+      expect(skill?.effects[0]).not.toHaveProperty('target.sourceOnly')
+    })
+
     it('BS4-004 Mala Sauce Cookie pings 1 damage on play, with the HP-to-trash cost parsed automatically', () => {
       const card = findBs4Card('BS4-004')
       expect(convertOfficialCardEffects(card)).toMatchObject({
@@ -3451,6 +3472,24 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
+  it('BS4-008 parses remaining HP is N or more as a minimum HP target', () => {
+    const card = findBs4Card('BS4-008')
+    expect(convertOfficialFlipAbility(card)).toMatchObject({
+      effects: [{
+        kind: 'damage',
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          minRemainingHp: 2,
+        },
+      }],
+    })
+    expect(convertOfficialFlipAbility(card)?.effects[0]).not.toHaveProperty(
+      'target.remainingHp',
+    )
+  })
+
   describe('BS4 effect audit follow-up', () => {
     it('converts the red item and stage HP/attack effects with their color and level gates', () => {
       expect(convertOfficialItemAbility(findBs4Card('BS4-020'))).toMatchObject({
@@ -3671,6 +3710,35 @@ describe('Starter Deck RED official effect adapter', () => {
           },
         ],
         cost: { energy: { yellow: 3 }, discardHand: 1 },
+      })
+      expect(convertOfficialTrapAbility(findBs4Card('BS4-065'))).toMatchObject({
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'deck-to-support', amount: 1, rested: true },
+        ],
+        cost: { energy: { green: 3 }, discardHand: 0 },
+      })
+      expect(convertOfficialTrapAbility(findBs4Card('BS4-109'))).toMatchObject({
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'inspect-deck',
+            lookCount: 3,
+            pickCount: 1,
+            filterColor: 'purple',
+            optionalPick: true,
+            restDestination: 'trash',
+          },
+        ],
+        cost: { energy: { purple: 2 }, discardHand: 0 },
       })
       expect(convertOfficialStageAbility(findBs4Card('BS4-044'))).toMatchObject({
         cost: { energy: { yellow: 2 }, discardHand: 1 },

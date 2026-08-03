@@ -201,6 +201,7 @@ export {
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
   canPayTrashToDeckCost,
+  getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckBottomCostCandidates,

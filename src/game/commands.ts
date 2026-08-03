@@ -325,6 +325,7 @@ export interface ActivateSkillCommand {
   paymentIds: string[]
   costSupportToTrashIds?: string[]
   discardHandIds?: string[]
+  hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
   trashToDeckBottomIds?: string[]
@@ -347,6 +348,7 @@ export interface BeginActivateSkillCommand {
   paymentIds: string[]
   costSupportToTrashIds?: string[]
   discardHandIds?: string[]
+  hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
   /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
   trashToDeckBottomIds?: string[]
@@ -502,6 +504,8 @@ export interface ResolveFlipCommand {
   playerId: PlayerId
   activate: boolean
   discardHandIds?: string[]
+  chooseOneModeIndex?: number
+  targetIds?: string[]
 }
 
 export interface ResolveAttackEffectCommand {
@@ -1407,6 +1411,7 @@ const applyPlayerActionCommand = (
         command.trashToDeckBottomIds ?? [],
         command.trashToDeckIds ?? [],
         options.shuffle,
+        command.hpToTrashTargetIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -1440,6 +1445,7 @@ const applyPlayerActionCommand = (
         command.trashToDeckBottomIds ?? [],
         command.trashToDeckIds ?? [],
         options.shuffle,
+        command.hpToTrashTargetIds ?? [],
       )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
@@ -1715,6 +1721,8 @@ const applyPlayerActionCommand = (
       return resolveFlip(state, command.playerId, {
         activate: command.activate,
         discardHandIds: command.discardHandIds,
+        chooseOneModeIndex: command.chooseOneModeIndex,
+        targetIds: command.targetIds,
       })
     case 'resolve-attack-effect':
       return resolveAttackEffect(state, command.playerId, command.targetIds)

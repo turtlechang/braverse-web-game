@@ -764,6 +764,20 @@ const resolveAiSkill = (
     return null
   }
 
+  const hpToTrashTargetIds = skill.cost.hpToTrash
+    ? player.battleArea
+        .filter((cookie) =>
+          skill.cost.hpToTrash?.untilRemainingHp === undefined
+            ? cookie.hpCards.length > 0
+            : cookie.hpCards.length > skill.cost.hpToTrash.untilRemainingHp,
+        )
+        .slice(0, 1)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+  if (skill.cost.hpToTrash && hpToTrashTargetIds.length === 0) {
+    return null
+  }
+
   const trashBattleCookieIds = skill.cost.trashBattleCookie
     ? player.battleArea
         .filter((cookie) => {
@@ -842,6 +856,8 @@ const resolveAiSkill = (
     trashBattleCookieIds,
     trashToDeckBottomIds,
     trashToDeckIds,
+    undefined,
+    hpToTrashTargetIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -862,6 +878,7 @@ const resolveAiSkill = (
       paymentIds,
       costSupportToTrashIds,
       discardHandIds,
+      hpToTrashTargetIds,
       trashBattleCookieIds,
       trashToDeckBottomIds,
       trashToDeckIds,

@@ -1124,6 +1124,50 @@ describe('FlipResponseModal', () => {
     expect(markup).toContain('aria-label="下一頁手牌"')
     expect(markup).toContain('1 / 2')
   })
+
+  it('shows choose-one options for FLIP effects that need a mode before activation', () => {
+    const card: CookieCard = {
+      id: 'BS4-102',
+      instanceId: 'choose-one-flip',
+      name: 'Wildberry Cookie',
+      type: 'cookie',
+      officialType: 'flip',
+      level: 1,
+      hp: 1,
+      attack: 1,
+      attackCost: 1,
+      flip: {
+        text: 'Place up to 3 cards from the top of either player deck into the trash.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{
+          kind: 'choose-one',
+          modes: [
+            { label: 'your deck', effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }] },
+            { label: "opponent's deck", effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }] },
+          ],
+        }],
+      },
+    }
+    const chooseOneModes = card.flip!.effects[0].kind === 'choose-one'
+      ? card.flip!.effects[0].modes
+      : undefined
+    const markup = renderToStaticMarkup(
+      <FlipResponseModal
+        card={card}
+        hand={[]}
+        discardCount={0}
+        selectedDiscardIds={[]}
+        onToggleDiscard={() => undefined}
+        onActivate={() => undefined}
+        onSkip={() => undefined}
+        chooseOneModes={chooseOneModes}
+      />,
+    )
+
+    expect(markup).toContain('FLIP 效果選項')
+    expect(markup).toContain('your deck')
+    expect(markup).toContain('opponent&#x27;s deck')
+  })
 })
 
 describe('ResultModal', () => {
