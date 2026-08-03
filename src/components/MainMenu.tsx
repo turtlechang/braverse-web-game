@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { AlertTriangle, Copy, FlaskConical, Pencil, Play, Plus, RefreshCw, Trash2, Wifi } from 'lucide-react'
 import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
@@ -69,8 +70,30 @@ export function MainMenu({
   onDeleteDeck,
   onRefreshDecks,
 }: MainMenuProps) {
+  const [devToolsOpen, setDevToolsOpen] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return true
+    }
+    return window.matchMedia('(min-width: 681px)').matches
+  })
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
   const hasDecks = decks.length > 0
+  const showMainMenuErrors =
+    Boolean(battleError) || (selectedValidation?.errors.length ?? 0) > 0
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return
+    }
+
+    const mediaQuery = window.matchMedia('(min-width: 681px)')
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      setDevToolsOpen(event.matches)
+    }
+
+    mediaQuery.addEventListener('change', handleViewportChange)
+    return () => mediaQuery.removeEventListener('change', handleViewportChange)
+  }, [])
 
   return (
     <main className="main-menu-shell">
@@ -169,7 +192,7 @@ export function MainMenu({
             ) : (
               <p>請先建立或選擇一副自訂牌組。</p>
             )}
-            {(battleError || selectedValidation?.errors.length) && (
+            {showMainMenuErrors && (
               <div className="main-menu-errors" role="alert">
                 <AlertTriangle aria-hidden="true" />
                 <div>
@@ -310,7 +333,11 @@ export function MainMenu({
         </section>
       </section>
       <footer className="main-menu-footer">
-        <details className="main-menu-dev-tools-details">
+        <details
+          className="main-menu-dev-tools-details"
+          open={devToolsOpen}
+          onToggle={(event) => setDevToolsOpen(event.currentTarget.open)}
+        >
           <summary className="main-menu-dev-tools-label">開發者工具</summary>
           <nav className="main-menu-dev-tools" aria-label="開發者工具">
             <button type="button" onClick={onOpenTestScenario}>
