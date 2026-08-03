@@ -33,14 +33,18 @@ const DECKS: MockDeck[] = [
 
 type MockState = 'has-decks' | 'empty' | 'invalid'
 
-export function MainMenuRedesignMockup() {
+export function MainMenuRedesignMockup({
+  layout = 'desktop',
+}: {
+  layout?: 'desktop' | 'tablet'
+} = {}) {
   const [state, setState] = useState<MockState>('has-decks')
   const hasDecks = state !== 'empty'
   const showError = state === 'invalid'
   const selectedDeck = showError ? DECKS[2] : DECKS[0]
 
   return (
-    <div className="mock-mm2-shell">
+    <div className="mock-mm2-shell" data-layout={layout}>
       <style>{`
         .mock-mm2-shell { position: fixed; inset: 0; display: grid;
           grid-template-rows: minmax(0,1fr) auto; place-items: center;
@@ -167,6 +171,49 @@ export function MainMenuRedesignMockup() {
         .mock-mm2-switch button { padding: 4px 10px; border-radius: 5px; font-size: .7rem;
           background: transparent; color: #9fc3e8; border: 0; cursor: pointer; }
         .mock-mm2-switch button.on { background: rgba(126,231,240,.18); color: #7ee7f0; font-weight: 700; }
+
+        /* 小米平板橫向 mockup：壓縮品牌與 CTA 的垂直佔位，保留 AI 設定與
+           牌組清單的獨立操作區；正式主選單不套用這組 data-layout 規則。 */
+        @media (min-width: 901px) and (max-width: 1280px) and (max-height: 840px) {
+          .mock-mm2-shell[data-layout="tablet"] { padding: 14px 18px 8px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-panel { gap: 12px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-launch { gap: 8px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-launch {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            grid-template-areas: "brand brand" "actions actions" "loadout ai";
+            align-content: start;
+          }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-launch > div:first-child { grid-area: brand; min-width: 0; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-launch > section:nth-of-type(1) { grid-area: loadout; min-width: 0; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-launch > section:nth-of-type(2) { grid-area: ai; min-width: 0; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-brand { margin-bottom: 8px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-brand-top { font-size: clamp(2rem, 4vw, 2.7rem); }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-brand-main { font-size: clamp(2.8rem, 5.5vw, 3.6rem); }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-brand-badge { margin-top: 5px; padding: 3px 12px 4px; font-size: clamp(.9rem, 1.7vw, 1.25rem); }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-tagline { margin-top: 4px; font-size: .72rem; line-height: 1.35; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-actions { grid-area: actions; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-actions button { min-height: 44px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-actions .primary { grid-column: 1 / -1; min-height: 46px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-card { padding: 10px 12px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-chips { gap: 4px; margin-top: 6px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-chips span { padding: 2px 6px; font-size: .62rem; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-ai { flex-direction: column; gap: 5px; margin-top: 4px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-ai label { min-width: 0; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-ai select { min-height: 34px; padding: 4px 6px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-hint { margin-top: 5px; font-size: .66rem; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-library { gap: 8px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-decklist { gap: 6px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-deckcard { padding: 8px 10px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-deckops { gap: 6px; margin-top: 6px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-deckops button { min-height: 28px; padding: 3px 8px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-footer { margin-top: 6px; }
+          .mock-mm2-shell[data-layout="tablet"] .mock-mm2-disclaimer { font-size: .58rem; }
+        }
+
+        .mock-mm2-tablet-badge { position: fixed; top: 10px; left: 18px; z-index: 11;
+          padding: 5px 9px; border: 1px solid rgba(126,231,240,.44); border-radius: 999px;
+          background: rgba(1,10,30,.78); color: #c9efff; font-size: .62rem;
+          font-weight: 800; letter-spacing: .04em; }
 
         /* ── 斷點 ── */
         /* 緊湊模式：專為 1366×768 / 1280×720 新增（現行版 680px 與桌機之間完全沒有斷點） */
@@ -377,8 +424,8 @@ export function MainMenuRedesignMockup() {
         </nav>
         <p className="mock-mm2-disclaimer">
           本作品為非官方粉絲研究專案，與 Devsisters Corporation 無任何關聯、合作或授權。
-          ｜Mockup：P2-5 主選單全面重新設計提案（對照組 /?mockup=main-menu）
-        </p>
+        ｜Mockup：{layout === 'tablet' ? '平板橫向版面草案 1164×777' : 'P2-5 主選單全面重新設計提案'}（對照組 /?mockup=main-menu）
+      </p>
       </footer>
     </div>
   )

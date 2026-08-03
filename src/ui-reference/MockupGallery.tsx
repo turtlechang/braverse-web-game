@@ -20,8 +20,18 @@ import { readThemeFromQuery } from '../styles/themeQuery'
 const MOCKUPS: { id: string; title: string; component: ComponentType }[] = [
   { id: 'effect-choice', title: 'BS3-018 二選一效果提示框研究', component: EffectChoiceMockup },
   { id: 'battlefield', title: '戰場（wireframe 01）', component: BattlefieldMockup },
+  {
+    id: 'battlefield-tablet',
+    title: '戰場平板橫向版面草案（1164×777）',
+    component: () => <BattlefieldMockup layout="tablet" />,
+  },
   { id: 'main-menu', title: '主選單（wireframe 02，現行版面）', component: MainMenuMockup },
   { id: 'main-menu-redesign', title: '主選單重新設計提案 A：雙欄保留牌組庫（P2-5）', component: MainMenuRedesignMockup },
+  {
+    id: 'main-menu-tablet',
+    title: '主選單平板橫向版面草案（1164×777）',
+    component: () => <MainMenuRedesignMockup layout="tablet" />,
+  },
   { id: 'main-menu-md', title: '主選單重新設計提案 B：Master Duel 風格', component: MainMenuMasterDuelMockup },
   { id: 'my-decks', title: '我的牌組（提案 B 配套：獨立牌組管理畫面）', component: MyDecksMockup },
   { id: 'deck-editor', title: '牌組編輯器（wireframe 03）', component: DeckEditorMockup },

@@ -297,3 +297,185 @@
     display: none;
   }
 }
+
+/*
+ * 平板橫向版面 mockup 對照
+ *
+ * 小米平板實測 viewport 約 1164×777，寬度會命中正式桌面層，但高度又
+ * 不足以承受桌面版的固定 HUD、手牌扇形與側欄佔位。正式版共用的
+ * responsive 規則位於 src/styles/tablet-layout.css；這裡保留 mockup
+ * 範例的高優先級對照與標籤樣式。
+ */
+@container game-shell (min-width: 901px) and (max-width: 1280px) and (max-height: 840px) {
+  .mock-bf-root[data-layout="tablet"] {
+    --phase-rail-width: 104px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .table-area {
+    row-gap: 6px;
+    padding: 54px calc(var(--phase-rail-width) + 18px) 112px 82px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .battle-row {
+    grid-template-columns: 68px minmax(0, 1fr) 68px;
+    gap: 8px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .field-stack,
+  .mock-bf-root[data-layout="tablet"] .bottom-field .field-stack {
+    top: 0;
+    height: 100%;
+    gap: 6px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .top-field .field-stack {
+    grid-template-rows: minmax(0, 24fr) minmax(0, 76fr);
+  }
+
+  .mock-bf-root[data-layout="tablet"] .bottom-field .field-stack {
+    grid-template-rows: minmax(0, 76fr) minmax(0, 24fr);
+  }
+
+  .mock-bf-root[data-layout="tablet"] .top-field .combat-zone,
+  .mock-bf-root[data-layout="tablet"] .top-field .support-zone,
+  .mock-bf-root[data-layout="tablet"] .bottom-field .combat-zone,
+  .mock-bf-root[data-layout="tablet"] .bottom-field .support-zone {
+    transform: none;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .top-field .break-zone,
+  .mock-bf-root[data-layout="tablet"] .top-field .utility-zones,
+  .mock-bf-root[data-layout="tablet"] .bottom-field .break-zone,
+  .mock-bf-root[data-layout="tablet"] .bottom-field .utility-zones {
+    top: 0;
+    height: 100%;
+    align-self: stretch;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .utility-zones {
+    width: 68px;
+    gap: 4px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .top-field .utility-zones,
+  .mock-bf-root[data-layout="tablet"] .bottom-field .utility-zones {
+    width: 68px;
+  }
+
+  /* 平板版把雙方名稱牌移除，讓右上／左下角完全讓給場區與操作資訊。 */
+  .mock-bf-root[data-layout="tablet"] .top-field .row-meta,
+  .mock-bf-root[data-layout="tablet"] .bottom-field .row-meta {
+    display: none;
+  }
+
+  /* 對手只保留牌背 peek；把中央空間留給場區，不讓手牌卡住支援區。 */
+  .mock-bf-root[data-layout="tablet"] .field-stack > .hand-fan.top-hand {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    width: min(440px, 52vw);
+    height: 48px;
+    transform: translateX(-50%);
+  }
+
+  .mock-bf-root[data-layout="tablet"] .top-hand .hand-card-wrap.opponent-hand-card {
+    top: -92px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .top-hand .hand-card {
+    width: 78px;
+    height: 112px;
+  }
+
+  /* 手牌是獨立操作 dock：未選取時保留可點擊上緣，選取後由既有 preview
+   * 與 selected 樣式抬升，不壓縮戰鬥區的卡牌尺寸。 */
+  .mock-bf-root[data-layout="tablet"] .hand-fan.bottom-hand {
+    left: 50%;
+    right: auto;
+    bottom: 6px;
+    width: min(660px, calc(100% - 136px));
+    height: 132px;
+    overflow: visible;
+    transform: translateX(-50%);
+  }
+
+  .mock-bf-root[data-layout="tablet"] .hand-fan.bottom-hand .hand-card {
+    width: 94px;
+    height: 134px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -42px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .hand-fan.bottom-hand .hand-card-wrap:hover,
+  .mock-bf-root[data-layout="tablet"] .hand-fan.bottom-hand .hand-card-wrap:focus-within {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 54px))
+      rotate(var(--fan-rotation))
+      scale(1.04);
+  }
+
+  .mock-bf-root[data-layout="tablet"] .hand-fan.bottom-hand .hand-card-wrap.is-selected {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 42px))
+      rotate(var(--fan-rotation))
+      scale(1.07);
+  }
+
+  .mock-bf-root[data-layout="tablet"] .phase-rail {
+    right: 8px;
+    width: var(--phase-rail-width);
+    gap: 6px;
+    padding: 6px;
+    border-radius: 16px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .turn-indicator {
+    gap: 3px;
+    padding: 7px 4px;
+    border-radius: 10px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .turn-indicator span {
+    font-size: 0.55rem;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .turn-indicator strong {
+    font-size: 0.82rem;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .next-phase-button {
+    min-height: 52px;
+    border-radius: 10px;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .next-phase-button span {
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .mock-bf-caption {
+    bottom: 8px;
+    max-width: min(480px, 48vw);
+    padding: 4px 8px;
+    font-size: 0.58rem;
+  }
+
+  .mock-bf-root[data-layout="tablet"] .mock-bf-tablet-badge {
+    position: absolute;
+    z-index: 22;
+    top: 10px;
+    left: 58px;
+    padding: 5px 9px;
+    border: 1px solid rgba(126, 231, 240, 0.44);
+    border-radius: 999px;
+    background: rgba(1, 10, 30, 0.78);
+    color: #c9efff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+}
