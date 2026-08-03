@@ -3,6 +3,7 @@ import { selectEnergyPayment, validateEnergyPayment } from './energy'
 import {
   getBreakCount,
   getBreakToBattleCandidates,
+  getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   getHandToBreakBySumCandidates,
   getEffectTargetCandidates,
@@ -408,6 +409,9 @@ const hasUsableEffect = (
     }
     if (effect.kind === 'break-to-battle') {
       return getBreakToBattleCandidates(state, context, effect).length > 0
+    }
+    if (effect.kind === 'support-to-battle') {
+      return getSupportToBattleCandidates(state, context, effect).length > 0
     }
     if (effect.kind === 'break-to-hand-by-level-sum') {
       return getBreakToHandBySumCandidates(state, context, effect).length > 0

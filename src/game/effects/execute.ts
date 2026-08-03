@@ -26,6 +26,7 @@ import {
 import {
   getBreakCount,
   getBreakToBattleCandidates,
+  getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   getHandToBreakBySumCandidates,
   getEffectTargetCandidates,
@@ -1760,6 +1761,58 @@ export const executeCardEffect = (
       deck: player.deck.slice(cookie.hp),
       breakArea: player.breakArea.filter(
         (card) => card.instanceId !== cookie.instanceId,
+      ),
+      battleArea: [
+        ...player.battleArea,
+        {
+          card: cookie,
+          hpCards: availableHpCards,
+          rested: false,
+          battleEntryId: `${cookie.instanceId}:battle:${state.nextBattleEntrySequence}`,
+        },
+      ],
+    })
+    const exhausted = updated.players[context.sourcePlayerId].deck.length === 0
+    if (
+      exhausted &&
+      getRefreshCandidates(updated, context.sourcePlayerId).length === 0
+    ) {
+      return finishWithDefeat(updated, context.sourcePlayerId, 'refresh-unavailable')
+    }
+    return {
+      ...updated,
+      nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+      pendingOnPlay:
+        cookie.skill?.trigger === 'on-play'
+          ? { playerId: context.sourcePlayerId, sourceInstanceId: cookie.instanceId }
+          : null,
+      pendingRefresh: exhausted
+        ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
+        : updated.pendingRefresh,
+    }
+  }
+
+  if (effect.kind === 'support-to-battle') {
+    const player = state.players[context.sourcePlayerId]
+    const candidates = getSupportToBattleCandidates(state, context, effect)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length > effect.amount) {
+      throw new GameRuleError(`最多只能選擇 ${effect.amount} 張支援區餅乾。`)
+    }
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    if (uniqueIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('選擇的餅乾不符合支援區登場條件。')
+    }
+    const cookie = candidates.find((card) => card.instanceId === uniqueIds[0])!
+    const availableHpCards = player.deck.slice(0, cookie.hp)
+    const updated = updatePlayer(state, {
+      ...player,
+      deck: player.deck.slice(cookie.hp),
+      supportArea: player.supportArea.filter(
+        (support) => support.card.instanceId !== cookie.instanceId,
       ),
       battleArea: [
         ...player.battleArea,

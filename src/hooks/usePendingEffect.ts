@@ -13,6 +13,7 @@ import {
   canActivateCookieSkill,
   getEnergyCostTotal,
   getBreakToBattleCandidates,
+  getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
@@ -243,6 +244,11 @@ export function usePendingEffect(params: {
       ? getBreakToBattleCandidates(game, pendingEffect.context, currentEffect)
       : []
 
+  const supportToBattleCandidates =
+    pendingEffect && currentEffect?.kind === 'support-to-battle'
+      ? getSupportToBattleCandidates(game, pendingEffect.context, currentEffect)
+      : []
+
   const breakToHandBySumCandidates =
     pendingEffect && currentEffect?.kind === 'break-to-hand-by-level-sum'
       ? getBreakToHandBySumCandidates(game, pendingEffect.context, currentEffect)
@@ -284,9 +290,10 @@ export function usePendingEffect(params: {
 
   const supportEffectTargetIds = faintActive
     ? new Set<string>()
-    : new Set(
-        supportEffectCandidates.map((support) => support.card.instanceId),
-      )
+    : new Set([
+        ...supportEffectCandidates.map((support) => support.card.instanceId),
+        ...supportToBattleCandidates.map((card) => card.instanceId),
+      ])
 
   const trashEffectTargetIds = faintActive
     ? new Set<string>()
@@ -1030,7 +1037,8 @@ export function usePendingEffect(params: {
             currentEffect.kind === 'trash-to-battle' ||
             currentEffect.kind === 'trash-to-support' ||
             currentEffect.kind === 'trash-to-break' ||
-            currentEffect.kind === 'break-to-battle'
+            currentEffect.kind === 'break-to-battle' ||
+            currentEffect.kind === 'support-to-battle'
           ? currentEffect.amount
         : currentEffect.kind === 'hand-to-break' ||
             currentEffect.kind === 'break-to-hand' ||
@@ -1627,6 +1635,7 @@ export function usePendingEffect(params: {
     nonBattleEffectCandidateCards,
     breakToTrashCandidates,
     breakToBattleCandidates,
+    supportToBattleCandidates,
     breakToHandBySumCandidates,
     handToBreakBySumCandidates,
     trashToHandCandidates,

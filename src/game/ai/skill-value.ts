@@ -69,6 +69,7 @@ const SUPPORT_EFFECT_KINDS = new Set<CardEffect['kind']>([
   'break-to-hand-by-level-sum',
   'break-source-to-battle',
   'break-to-battle',
+  'support-to-battle',
   'set-active',
   'set-cookie-active',
   'rest-support',

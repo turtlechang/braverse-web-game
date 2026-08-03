@@ -291,6 +291,7 @@ const bs4Cards: OfficialCardRecord[] = [
   {"sourceId":44578,"locale":"en","cardNumber":"BS4-099","baseCardNumber":"BS4-099","variant":null,"name":"Amber Sugar Cookie","type":"cookie","officialType":"COOKIE","rarity":"U","grade":"UNCOMMON","level":1,"hp":2,"energyType":"PURPLE","color":"PURPLE","skill":{"name":"{sk} Honeydipper Staff","text":"{ap} <{P}> Place up to 3 cards from the top of either player's deck into the trash."},"attackText":"<{P}> *Buzz, Buzz* {da} 1","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/iBORbFVuS94ekUpKGB8STA.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
   {"sourceId":44582,"locale":"en","cardNumber":"BS4-102","baseCardNumber":"BS4-102","variant":null,"name":"Wildberry Cookie","type":"flip","officialType":"FLIP","rarity":"C","grade":"COMMON","level":1,"hp":1,"energyType":"PURPLE","color":"PURPLE","skill":{"name":null,"text":null},"attackText":"<{P}> Taste THIS! {da} 1","flipText":"Place up to 3 cards from the top of either player's deck into the trash.","keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/Tsl_v8k4uU2lybzMCQXHgg.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
   {"sourceId":44460,"locale":"en","cardNumber":"BS4-019","baseCardNumber":"BS4-019","variant":null,"name":"Ring of Eternal Flame","type":"item","officialType":"ITEM","rarity":"U","grade":"UNCOMMON","level":null,"hp":null,"energyType":"RED","color":"RED","skill":{"name":null,"text":null},"attackText":"<{R}{R}> Select 1 of your {R} Cookies from your battle area. Place 1 card from the top of this Cookie's HP into the trash. Then, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/jCPgBxaWqRSeisyHNwMEGQ.webp","officialUpdatedAt":"2026-03-13T08:54:15.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
+  {"sourceId":44515,"locale":"en","cardNumber":"BS4-058","baseCardNumber":"BS4-058","variant":null,"name":"Lilybell Cookie","type":"cookie","officialType":"COOKIE","rarity":"R","grade":"RARE","level":2,"hp":3,"energyType":"GREEN","color":"GREEN","skill":{"name":"{sk} Blossoming Lyre","text":"{mob} {t1} <{G}{G}> Select up to 1 of your {G} Cookies from your support area and play them."},"attackText":"<{G}{G}> Victory Serenade {da} 2","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/x1OWHom-NMAGHgSSd2UPHg.webp","officialUpdatedAt":"2026-03-13T08:54:16.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
 ]
 
 const findCard = (cardNumber: string) => {
@@ -3432,6 +3433,18 @@ describe('Starter Deck RED official effect adapter', () => {
             target: { side: 'opponent', min: 0, max: 1 },
           },
         ],
+      })
+    })
+  })
+
+  describe('BS4 green candidate cards revisited (previously deferred, now expressible)', () => {
+    it('BS4-058 Lilybell Cookie plays a green Cookie from its own support area into battle', () => {
+      const card = findBs4Card('BS4-058')
+      expect(convertOfficialCookieSkill(card)).toMatchObject({
+        trigger: 'activate',
+        oncePerTurn: true,
+        cost: { energy: { green: 2 } },
+        effects: [{ kind: 'support-to-battle', amount: 1, energyColor: 'green' }],
       })
     })
   })

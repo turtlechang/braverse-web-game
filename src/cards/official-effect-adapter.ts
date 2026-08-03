@@ -1847,6 +1847,9 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
+    'BS4-058': [
+      { kind: 'support-to-battle', amount: 1, energyColor: 'green' },
+    ],
     'BS4-102': [
       {
         kind: 'choose-one',

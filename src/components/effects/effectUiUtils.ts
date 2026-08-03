@@ -141,6 +141,9 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'break-to-battle') {
     return `從 break 區選最多 ${effect.amount} 張餅乾登場。`
   }
+  if (effect.kind === 'support-to-battle') {
+    return `從支援區選最多 ${effect.amount} 張餅乾登場。`
+  }
   if (effect.kind === 'break-to-hand-by-level-sum') {
     return `從 break 區選擇餅乾，等級總和需為 ${effect.targetSum}，返回手牌。`
   }
@@ -298,6 +301,7 @@ export const describeEffectResult = (
     return '對手棄牌區餅乾已放入對手休息區。'
   }
   if (effect.kind === 'break-to-battle') return 'break 區餅乾已登場。'
+  if (effect.kind === 'support-to-battle') return '支援區餅乾已登場。'
   if (effect.kind === 'break-to-hand-by-level-sum') return 'break 區餅乾已返回手牌。'
   if (effect.kind === 'hand-to-break-by-level-sum') return '手牌餅乾已放入休息區。'
   if (effect.kind === 'battle-to-break') return `${names} 已放入 break 區。`

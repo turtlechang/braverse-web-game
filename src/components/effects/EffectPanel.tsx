@@ -146,7 +146,8 @@ function EffectPanelContent({
       ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'opponent-battle-to-trash'
         ? { min: 1, max: 1 }
-      : currentEffect?.kind === 'break-to-battle'
+      : currentEffect?.kind === 'break-to-battle' ||
+          currentEffect?.kind === 'support-to-battle'
         ? { min: 0, max: currentEffect.amount }
         : currentEffect?.kind === 'hand-to-break-by-level-sum' ||
           currentEffect?.kind === 'break-to-hand-by-level-sum'

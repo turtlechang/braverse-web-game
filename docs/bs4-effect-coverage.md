@@ -9,11 +9,11 @@
 | 項目 | 數量 |
 | --- | ---: |
 | BS4 基礎卡 | 111 |
-| 主要效果文字已轉接 | 47 |
-| 主要效果文字待轉接 | 40 |
+| 主要效果文字已轉接 | 48 |
+| 主要效果文字待轉接 | 39 |
 | 沒有效果文字 | 24 |
-| 額外能力來源已轉接 | 62 |
-| 額外能力來源待轉接 | 25 |
+| 額外能力來源已轉接 | 63 |
+| 額外能力來源待轉接 | 24 |
 | 攻擊 `Then` 已轉接 | 18／23 |
 
 ## 攻擊 `Then` 待轉接
@@ -36,7 +36,6 @@ BS4-023, BS4-029, BS4-069, BS4-090, BS4-091
 | BS4-044 | stage | Millennial Temple | YELLOW |
 | BS4-055 | cookie | Alchemist Cookie | GREEN |
 | BS4-057 | flip | Jelly Froggy | GREEN |
-| BS4-058 | cookie | Lilybell Cookie | GREEN |
 | BS4-062 | item | Wind Gems | GREEN |
 | BS4-063 | item | Swan Feather Dreamcatcher | GREEN |
 | BS4-066 | stage | Dessert Paradise | GREEN |

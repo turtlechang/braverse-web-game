@@ -956,6 +956,15 @@ export interface BreakToBattleEffect {
   energyColor?: EnergyColor
 }
 
+/** 從自己支援區選餅乾登場戰鬥區（BS4-058），跟 break-to-battle 同一種形狀，只是來源區不同。 */
+export interface SupportToBattleEffect {
+  kind: 'support-to-battle'
+  amount: number
+  exactLevel?: number
+  maxLevel?: number
+  energyColor?: EnergyColor
+}
+
 export interface BattleToBreakEffect {
   kind: 'battle-to-break'
   target: EffectTargetSelector
@@ -1024,6 +1033,7 @@ export type CardEffect =
   | TrashToDeckEffect
   | HpToSupportEffect
   | BreakToBattleEffect
+  | SupportToBattleEffect
   | BattleToBreakEffect
   | BreakToHandBySumEffect
   | HandToBreakBySumEffect

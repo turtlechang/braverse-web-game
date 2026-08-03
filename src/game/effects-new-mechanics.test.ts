@@ -256,6 +256,40 @@ describe('new card-effect mechanics', () => {
     ).toBe(true)
   })
 
+  it('support-to-battle plays a cookie from the support area (BS4-058)', () => {
+    const base = asMainPhase(createDemoGame())
+    const supportCookie = makeCookie({
+      instanceId: 'support-cookie',
+      level: 2,
+      hp: 3,
+      energyColor: 'green',
+    })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          supportArea: [{ card: supportCookie, rested: false }],
+        },
+      },
+    }
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+      { kind: 'support-to-battle', amount: 1, energyColor: 'green' },
+      [supportCookie.instanceId],
+    )
+
+    expect(resolved.players['player-one'].supportArea).toHaveLength(0)
+    expect(
+      resolved.players['player-one'].battleArea.some(
+        (cookie) => cookie.card.instanceId === supportCookie.instanceId,
+      ),
+    ).toBe(true)
+  })
+
   it('battle-to-break moves a battling cookie into the break area (not the trash)', () => {
     const base = asMainPhase(createDemoGame())
     const cookie = makeCookie({ instanceId: 'to-break' })

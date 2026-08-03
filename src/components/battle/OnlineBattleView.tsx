@@ -43,7 +43,8 @@ const publicTargetScopeFor = (kind: string | undefined): PublicTargetScope => {
   if (
     kind === 'support-to-trash' ||
     kind === 'support-to-hand' ||
-    kind === 'flip-to-support'
+    kind === 'flip-to-support' ||
+    kind === 'support-to-battle'
   ) {
     return 'support'
   }
