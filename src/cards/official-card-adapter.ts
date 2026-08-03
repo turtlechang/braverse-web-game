@@ -71,10 +71,48 @@ export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
   return [...keywords]
 }
 
+const normalizeOfficialCardRecord = (
+  sourceCard: OfficialCardRecord,
+): OfficialCardRecord => {
+  // 官方 BS4-032@1 異圖 API 記錄與其官方卡圖的 HP、攻擊與 FLIP 欄位不一致；
+  // 以卡圖上的正式文字與數值修正轉換邊界，不改動原始匯入資料。
+  if (
+    sourceCard.cardNumber === 'BS4-032@1' &&
+    sourceCard.type === 'flip' &&
+    sourceCard.name === 'Cream Ferret Cookie'
+  ) {
+    return {
+      ...sourceCard,
+      hp: 2,
+      attackText: '<{Y}{Y}> Creamcraft Magic! {da} 2',
+      flipText: 'Draw up to 1 card from your deck.',
+    }
+  }
+
+  // 官方 BS4-004@1 異圖資料把 On Play 文字寫進 attackText，並把真正的
+  // 攻擊文字寫進 flipText；轉換邊界修正欄位，不改動原始匯入資料。
+  if (
+    sourceCard.cardNumber === 'BS4-004@1' &&
+    sourceCard.type === 'cookie' &&
+    /^【On Play】/i.test(sourceCard.attackText ?? '') &&
+    /\{da\}/i.test(sourceCard.flipText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      skill: { ...sourceCard.skill, text: sourceCard.attackText },
+      attackText: sourceCard.flipText,
+      flipText: null,
+    }
+  }
+
+  return sourceCard
+}
+
 export const convertOfficialCardToGameCard = (
-  card: OfficialCardRecord,
+  sourceCard: OfficialCardRecord,
   instanceSuffix = '1',
 ): OfficialCardConversion => {
+  const card = normalizeOfficialCardRecord(sourceCard)
   const parsedText = parseOfficialCardTexts(card)
   const effectConversion = convertOfficialCardEffects(card)
   const skill = convertOfficialCookieSkill(card)

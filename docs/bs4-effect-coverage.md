@@ -2,7 +2,7 @@
 
 > 以 `npm run cards:analyze:bs4-candidate` 重新生成。
 >
-> 此文件只追蹤 runtime adapter 的轉接狀態；BS4 目前仍是 `inventory` 候選,尚未 promote 至 `data/cards/`,本報表是規劃逐卡轉接工作的依據,不取代 `validate:candidate` 的候選驗證。
+> 此文件只追蹤 runtime adapter 的轉接狀態；BS4 已於 2026-08-03 promote 至 `data/cards/`，本報表依正式卡池資料產生，不取代 `validate:cards` 的正式卡池驗證。
 
 ## 摘要
 
@@ -30,4 +30,4 @@
 
 1. 先依此盤點選擇可由既有 runtime 表達的一小批卡牌。
 2. 涉及附著、未知標記或新狀態區的卡牌保持候選，先確認官方規則後另開引擎切片。
-3. BS4 完成首次 promote 前，候選資料須維持 `inventory`，完成 runtime 轉接與嚴格驗證後才可 promote。
+3. BS4 已完成首次 promote；後續新增或更新的 BS4 資料仍須先以 `inventory` 候選隔離，完成 runtime 轉接與嚴格驗證後才可 promote。

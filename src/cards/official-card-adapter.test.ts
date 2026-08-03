@@ -263,6 +263,78 @@ describe('official card adapter', () => {
     })
   })
 
+  it('normalizes the official BS4-004@1 field swap at the adapter boundary', () => {
+    const result = convertOfficialCardToGameCard(
+      createOfficialCard({
+        cardNumber: 'BS4-004@1',
+        baseCardNumber: 'BS4-004',
+        variant: '1',
+        name: 'Mala Sauce Cookie',
+        type: 'cookie',
+        officialType: 'COOKIE',
+        level: 1,
+        hp: 3,
+        energyType: 'RED',
+        color: 'RED',
+        skill: { name: '{sk} Flaming Mala', text: '{sk} Flaming Mala' },
+        attackText:
+          "【On Play】 Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+        flipText:
+          "<{R}> Too Spicy For Ya?! {da} 1 Then, if this Cookie's remaining HP is 1, select up to 1 of your opponent's LV.2 or lower Cookies. That Cookie receives 1 damage.",
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 1,
+        skill: {
+          trigger: 'on-play',
+          effects: [{ kind: 'damage', amount: 1 }],
+        },
+        attackEffects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 },
+            condition: { kind: 'source-hp-less-than', amount: 2 },
+          },
+        ],
+      },
+    })
+  })
+
+  it('normalizes the BS4-032@1 FLIP field from the official card image', () => {
+    const result = convertOfficialCardToGameCard(
+      createOfficialCard({
+        cardNumber: 'BS4-032@1',
+        baseCardNumber: 'BS4-032',
+        variant: '1',
+        name: 'Cream Ferret Cookie',
+        type: 'flip',
+        officialType: 'FLIP',
+        level: 2,
+        hp: 3,
+        energyType: 'YELLOW',
+        color: 'YELLOW',
+        attackText: '<{Y}{Y}> Creamcraft Magic! {da} 1',
+        flipText: '<{Y}{Y}> Creamcraft Magic!',
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 2,
+        hp: 2,
+        flip: {
+          text: 'Draw up to 1 card from your deck.',
+          effects: [{ kind: 'draw-up-to', max: 1 }],
+        },
+      },
+    })
+  })
+
   it('falls back to the FLIP ability text when the generic converter cannot parse a FLIP-only card (BS2-056 regression)', () => {
     // BS2-056 Raspberry Mousse Cookie 的 FLIP 文字（discard cost + gain-hp）不會被
     // convertOfficialCardEffects 的一般轉換器解析出來，先前只有 card.flip 有正確值，

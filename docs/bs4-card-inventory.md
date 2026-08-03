@@ -1,6 +1,6 @@
-# BS4 卡表盤點（候選資料）
+# BS4 卡表盤點（正式卡池）
 
-> 本文件由 `npm run cards:import:bs4-candidate` 依官方英文卡表產生；其內容是來源資料快照與實作盤點，不代表卡牌已進入正式卡池。
+> 本文件由 `npm run cards:import:bs4-candidate` 依官方英文卡表產生；其內容是來源資料快照與實作盤點。BS4 已於 2026-08-03 完成 promote，正式資料位於 `data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json`。
 
 ## 來源與範圍
 
@@ -8,7 +8,7 @@
 - 官方 JSON：`https://cookierunbraverse.com/data/json/cardList_en.json`
 - 擷取時間：`2026-08-02T16:28:58.695Z`
 - 選取規則：完整卡號以 `BS4-` 開頭；保留異圖／促銷變體。
-- 候選狀態：`inventory`。只通過來源與結構驗證，`promote:candidate` 會拒絕此狀態，直到各卡牌已完成 runtime 轉接與嚴格驗證。
+- 正式狀態：原 `promotion-ready` 候選已通過嚴格驗證，170 筆資料已 promote 至 `data/cards/`。
 
 ## 數量
 
@@ -61,14 +61,14 @@
 | `Equip` 文字標記 | 0 | — |
 | 特殊勝利文字 | 0 | — |
 
-上述錨點沿用 BS3 盤點時採用的同一組跨彈關鍵字掃描規則（詳見 [BS3 卡表盤點](bs3-card-inventory.md)），純粹是這批候選資料裡的文字比對結果，不代表 runtime 已經支援或需要支援對應機制。
+上述錨點沿用 BS3 盤點時採用的同一組跨彈關鍵字掃描規則（詳見 [BS3 卡表盤點](bs3-card-inventory.md)），純粹是這批資料裡的文字比對結果，不代表 runtime 已經支援或需要支援對應機制。
 
 ## Runtime 進度
 
-尚未開始 BS4 的 runtime 轉接；本檔案僅完成官方資料的擷取、結構標準化與盤點。既有引擎能力（PURE 費用、Ancient／Soul Jam 關鍵字、可用作費用的攻擊後補款等）沿用自 BS3 開發成果，若 BS4 卡牌用到相同機制可直接複用，但每張卡的專屬效果仍需逐一轉接與測試。
+BS4 已完成 runtime 轉接與正式卡池驗證：111 張基礎卡的攻擊 `Then` 23／23 已轉接，額外能力來源 87 張已轉接，原先 14 張待補效果已降為 0。既有引擎能力（PURE 費用、Ancient／Soul Jam 關鍵字、可用作費用的攻擊後補款等）沿用自 BS3 開發成果；逐卡覆蓋狀態見 [BS4 效果轉接覆蓋盤點](bs4-effect-coverage.md)。
 
-## 後續轉接門檻
+## 後續維護
 
-1. 逐色（紅／黃／綠／藍／紫）盤點官方文字，將每張卡的技能／攻擊／FLIP 效果轉接為 runtime 結構化效果，並補齊回歸測試。
-2. 將候選檔改為 `promotion-ready` 前，確認每筆資料均可轉換為 runtime 卡片，且沒有未裁決的規則文字。
-3. 執行嚴格 `validate:candidate` 與 `promote:candidate`，再重新生成正式 card pool。
+1. 官方資料有更新時，重新以 `cards:import:bs4-candidate` 建立隔離的 `inventory` 候選快照。
+2. 逐色複核新增或變更的技能／攻擊／FLIP 效果，補齊 runtime 轉接與回歸測試。
+3. 候選資料完成嚴格 `validate:candidate` 後，再執行 `promote:candidate` 並重新生成正式 card pool。

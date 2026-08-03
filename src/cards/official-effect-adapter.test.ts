@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import officialBS3Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
-import officialBS4Candidate from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs4.en.json'
+import officialBS4Dataset from '../../data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
@@ -28,11 +28,9 @@ const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
 const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
 const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRecord[]
 const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
-const bs4CandidateCards = officialBS4Candidate.cards as OfficialCardRecord[]
-// BS4 尚未 promote，候選檔仍在 data/candidates/；那個目錄會被
-// validate-candidate-cards.test.ts 的 beforeEach/afterEach 清空重建（用來測試
-// promote 流程），跟它平行執行時 import 真實候選檔會有讀取競態，所以這裡直接
-// 內嵌官方原始資料的副本，不依賴那個會被清空的目錄。
+const bs4DatasetCards = officialBS4Dataset.cards as OfficialCardRecord[]
+// 保留少量內嵌官方資料作為明確 fixture，避免測試依賴完整卡池內容；找不到
+// fixture 的 BS4 卡牌才回退到已 promote 的正式資料集。
 const bs4Cards: OfficialCardRecord[] = [
   {
     sourceId: 44531,
@@ -391,10 +389,10 @@ const findBs3Card = (cardNumber: string) => {
 const findBs4Card = (cardNumber: string) => {
   const card =
     bs4Cards.find((candidate) => candidate.cardNumber === cardNumber) ??
-    bs4CandidateCards.find((candidate) => candidate.cardNumber === cardNumber)
+    bs4DatasetCards.find((candidate) => candidate.cardNumber === cardNumber)
 
   if (!card) {
-    throw new Error(`Missing BS4 candidate card ${cardNumber}`)
+    throw new Error(`Missing BS4 card ${cardNumber}`)
   }
 
   return card
@@ -2723,7 +2721,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 blue candidate cards (inventory, not yet promoted)', () => {
+  describe('BS4 blue cards', () => {
     it('BS4-070 Lord Oyster draws on faint, with the discard cost parsed automatically', () => {
       const card = findBs4Card('BS4-070')
       expect(convertOfficialCardEffects(card)).toMatchObject({
@@ -2847,7 +2845,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 red candidate cards (inventory, not yet promoted)', () => {
+  describe('BS4 red cards', () => {
     it('BS4-004 Mala Sauce Cookie pings 1 damage on play, with the HP-to-trash cost parsed automatically', () => {
       const card = findBs4Card('BS4-004')
       expect(convertOfficialCardEffects(card)).toMatchObject({
@@ -2973,7 +2971,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 yellow candidate cards (inventory, not yet promoted)', () => {
+  describe('BS4 yellow cards', () => {
     it('BS4-038 Millennial Tree Cookie plays a Cookie from the break area on play, and pings when another yellow Cookie is present', () => {
       const card = findBs4Card('BS4-038')
       expect(convertOfficialCookieSkill(card)).toMatchObject({
@@ -3053,7 +3051,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 green candidate cards (inventory, not yet promoted)', () => {
+  describe('BS4 green cards', () => {
     it('BS4-051 Beet Cookie sets itself active, with the support-to-trash cost parsed automatically', () => {
       const card = findBs4Card('BS4-051')
       expect(convertOfficialCookieSkill(card)).toMatchObject({
@@ -3186,7 +3184,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 purple candidate cards (inventory, not yet promoted)', () => {
+  describe('BS4 purple cards', () => {
     it('BS4-095 Shining Glitter Cookie trashes an opponent stage card on play', () => {
       const card = findBs4Card('BS4-095')
       expect(convertOfficialCookieSkill(card)).toMatchObject({
@@ -3318,7 +3316,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 candidate cards clarified via official Chinese card images', () => {
+  describe('BS4 cards clarified via official Chinese card images', () => {
     it('BS4-075 Black Pearl Cookie pays a mandatory discard-2 cost (no "you may") for a bonus attack Then', () => {
       expect(convertOfficialAttackEffects(findBs4Card('BS4-075'))).toEqual([
         { kind: 'discard-hand', count: 2 },
@@ -3379,7 +3377,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 blue candidate cards revisited (previously deferred, now expressible)', () => {
+  describe('BS4 blue cards revisited (previously deferred, now expressible)', () => {
     it('BS4-073 Sea Fairy Cookie offers a conditional optional-cost bonus attack Then when hand is large', () => {
       expect(convertOfficialAttackEffects(findBs4Card('BS4-073'))).toEqual([
         {
@@ -3421,7 +3419,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 red candidate cards revisited (previously deferred, now expressible)', () => {
+  describe('BS4 red cards revisited (previously deferred, now expressible)', () => {
     it('BS4-019 Ring of Eternal Flame mills its own red Cookie HP then independently damages an opponent Cookie, mirroring the BS3-115 two-independent-target pattern', () => {
       const card = findBs4Card('BS4-019')
       expect(convertOfficialItemAbility(card)).toMatchObject({
@@ -3441,7 +3439,7 @@ describe('Starter Deck RED official effect adapter', () => {
     })
   })
 
-  describe('BS4 green candidate cards revisited (previously deferred, now expressible)', () => {
+  describe('BS4 green cards revisited (previously deferred, now expressible)', () => {
     it('BS4-058 Lilybell Cookie plays a green Cookie from its own support area into battle', () => {
       const card = findBs4Card('BS4-058')
       expect(convertOfficialCookieSkill(card)).toMatchObject({

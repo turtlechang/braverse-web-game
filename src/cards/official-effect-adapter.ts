@@ -3664,6 +3664,16 @@ export const convertOfficialAttackEffects = (
       },
     ],
     // === BS4 紅色餅乾卡攻擊 Then ===
+    'BS4-004': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 },
+        // BS4-004@1 的官方異圖文字是「remaining HP is 1」；攻擊結算時
+        // 以「來源 HP 小於 2」表達同一個可觀察條件。
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
     'BS4-003': [
       {
         kind: 'damage',
@@ -3930,6 +3940,19 @@ export const convertOfficialFlipAbility = (
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
+
+  // 官方 BS4-032@1 異圖的 card_flip 欄位只重複攻擊名稱；依官方卡圖補回
+  // 與同卡基礎版本一致的抽牌效果。
+  if (
+    card.cardNumber === 'BS4-032@1' &&
+    /^<\{Y\}\{Y\}>\s*Creamcraft Magic!\s*$/i.test(card.flipText.trim())
+  ) {
+    return {
+      text: 'Draw up to 1 card from your deck.',
+      cost: parseAbilityCost(card.flipText),
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    }
+  }
 
   const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
     'P-024': {
@@ -4655,6 +4678,7 @@ const exactCookieSkillSourceEnergy: Partial<
  */
 const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS3-025': 'activate',
+  'BS4-004': 'on-play',
 }
 
 /**
