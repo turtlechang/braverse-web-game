@@ -161,7 +161,13 @@ function EffectPanelContent({
             }
           : currentEffect?.kind === 'hand-to-hp' ||
               currentEffect?.kind === 'support-to-hp'
-            ? { min: currentEffect.optional ? 0 : 1, max: 1 }
+            ? currentEffect.selectTarget
+              ? { min: currentEffect.optional ? 0 : 1, max: 2 }
+              : { min: currentEffect.optional ? 0 : 1, max: 1 }
+          : currentEffect?.kind === 'cycle-hp'
+            ? { min: 0, max: 2 }
+          : currentEffect?.kind === 'rest-support-and-damage'
+            ? { min: 0, max: currentEffect.supportAmount + currentEffect.target.max }
             : currentEffect?.kind === 'set-active' && currentEffect.selectable
               ? { min: 0, max: currentEffect.supportCount }
         : currentEffect?.kind === 'support-to-trash' ||

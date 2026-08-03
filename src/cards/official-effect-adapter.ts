@@ -1943,6 +1943,149 @@ export const convertOfficialCardEffects = (
       },
       { kind: 'draw-up-to', max: 4 },
     ],
+    // === BS4 效果稽核：可由既有 CardEffect 精確表達的能力 ===
+    'BS4-020': [
+      {
+        kind: 'modify-attack',
+        amount: 3,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          minLevel: 3,
+          maxLevel: 3,
+          energyColor: 'red',
+        },
+        condition: { kind: 'break-level-at-least', level: 6 },
+      },
+    ],
+    'BS4-024': [
+      {
+        kind: 'redirect-attack',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'yellow',
+          level: 3,
+        },
+      },
+    ],
+    'BS4-025': [
+      { kind: 'hand-to-break', amount: 1, energyColor: 'yellow', minLevel: 2 },
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 2,
+        energyColor: 'yellow',
+      },
+    ],
+    'BS4-030': [
+      {
+        kind: 'cycle-hp',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'yellow',
+        },
+      },
+    ],
+    'BS4-055': [
+      { kind: 'deck-to-support', amount: 1, rested: true },
+    ],
+    'BS4-035': [
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 1,
+        energyColor: 'yellow',
+      },
+    ],
+    'BS4-040': [
+      {
+        kind: 'battle-to-break',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          minLevel: 2,
+          energyColor: 'yellow',
+        },
+      },
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 3,
+        energyColor: 'yellow',
+      },
+    ],
+    'BS4-062': [
+      {
+        kind: 'rest-support-and-damage',
+        supportSide: 'self',
+        supportAmount: 4,
+        supportEnergyColor: 'green',
+        activeOnly: true,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-063': [
+      { kind: 'deck-to-support', amount: 2, rested: true },
+      { kind: 'support-to-trash', amount: 1 },
+    ],
+    'BS4-092': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
+    'BS4-093': [
+      { kind: 'opponent-battle-to-trash', min: 0, maxLevel: 2 },
+    ],
+    'BS4-098': [
+      {
+        kind: 'disable-flip',
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-073': [
+      {
+        kind: 'return-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
+      },
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
+    'BS4-074': [
+      { kind: 'discard-hand-all' },
+      { kind: 'draw-up-to', max: 4 },
+    ],
+    'BS4-075': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: { side: 'either', min: 1, max: 1, maxLevel: 1 },
+        allowStage: true,
+        battleSide: 'opponent',
+      },
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS4-084': [
+      { kind: 'draw-until-hand-equals-opponent' },
+    ],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -2527,6 +2670,10 @@ export const convertOfficialItemAbility = (
       discardHand: 0,
       trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
     },
+    'BS4-040': {
+      energy: { yellow: 2 },
+      discardHand: 0,
+    },
   }
   const parsedCost = parseAbilityCost(card.attackText)
   const hasSpecialCost =
@@ -2790,6 +2937,62 @@ export const convertOfficialStageAbility = (
         condition: { kind: 'trash-count-at-most', count: 15 },
       },
     ],
+    'BS4-022': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          minLevel: 2,
+          energyColor: 'red',
+        },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-088': [
+      {
+        kind: 'return-to-hand',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          minRemainingHp: 4,
+          energyColor: 'blue',
+        },
+      },
+    ],
+    'BS4-044': [
+      {
+        kind: 'hand-to-hp',
+        target: { side: 'self', min: 0, max: 1 },
+        selectTarget: true,
+        optional: true,
+      },
+    ],
+    'BS4-066': [
+      {
+        kind: 'support-to-hp',
+        target: { side: 'self', min: 0, max: 1 },
+        energyColor: 'green',
+        selectTarget: true,
+        optional: true,
+      },
+    ],
+    'BS4-111': [
+      { kind: 'field-to-deck-bottom-all', maxLevel: 2 },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -2808,6 +3011,10 @@ export const convertOfficialStageAbility = (
     'P-028': { energy: { yellow: 1 } },
     'P-032': { energy: { neutral: 2 } },
     'BS4-110': { energy: { purple: 1 }, discardHand: 2 },
+    'BS4-022': { energy: { red: 2 }, discardHand: 0 },
+    'BS4-088': { energy: { blue: 1 }, discardHand: 1 },
+    'BS4-044': { energy: { yellow: 2 }, discardHand: 1 },
+    'BS4-066': { energy: { green: 3 }, discardHand: 0 },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {
@@ -3588,6 +3795,63 @@ export const convertOfficialAttackEffects = (
     ],
     // === BS4 紫色卡攻擊 Then ===
     'BS4-103': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    'BS4-023': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'break-area-has-card',
+          side: 'self',
+          color: 'yellow',
+          minLevel: 3,
+          maxLevel: 3,
+        },
+      },
+    ],
+    'BS4-029': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'battle-to-break',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+          {
+            kind: 'break-to-battle',
+            amount: 1,
+            exactLevel: 3,
+            energyColor: 'yellow',
+          },
+        ],
+        effectText:
+          'Use this Cookie as {Y} to place this Cookie in your break area and play up to 1 {Y} LV.3 Cookie from your break area.',
+      },
+    ],
+    'BS4-069': [
+      {
+        kind: 'opponent-discard-hand',
+        count: 1,
+        destination: 'deck-bottom',
+      },
+    ],
+    'BS4-090': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'trash-flip-count-at-least', count: 3 },
+      },
+    ],
+    'BS4-091': [
+      {
+        kind: 'trash-to-deck',
+        max: 3,
+        excludeFlip: true,
+        destination: 'bottom',
+      },
+    ],
     'BS4-098': [
       {
         kind: 'optional-cost-attack',
@@ -3721,6 +3985,30 @@ export const convertOfficialFlipAbility = (
     'BS4-072': {
       effects: [
         { kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' },
+      ],
+    },
+    'BS4-057': {
+      effects: [
+        {
+          kind: 'flip-to-support',
+          rested: true,
+          condition: { kind: 'break-level-at-least', level: 6 },
+        },
+      ],
+    },
+    'BS4-031': {
+      effects: [
+        {
+          kind: 'break-to-hand',
+          amount: 1,
+          minLevel: 1,
+          maxLevel: 1,
+          optional: true,
+        },
+        {
+          kind: 'flip-to-break',
+          condition: { kind: 'break-level-at-least', level: 5 },
+        },
       ],
     },
     // 中文卡面「從自己或對手的牌庫頂」跟 BS4-099 是同一種「自選磨誰的牌庫」，
@@ -4121,6 +4409,15 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'BS4-043': {
+      effects: [
+        {
+          kind: 'damage-by-break-level-difference',
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'break-level-higher-than-opponent' },
+        },
+      ],
+    },
     'BS3-069': {
       effects: [
         {
@@ -4300,6 +4597,16 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { blue: 1 },
     discardHand: 0,
     selfToDeckBottom: true,
+  },
+  'BS4-092': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashBattleCookie: {
+      count: 1,
+      maxLevel: 2,
+      energyColor: 'purple',
+      excludeSource: true,
+    },
   },
   'BS2-071': {
     energy: { purple: 1 },

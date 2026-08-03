@@ -49,11 +49,17 @@ export const resolveOpponentHandDiscard = (
           hand: remainingHand,
           deck: [...selectedCards, ...player.deck],
         }
-      : {
-          ...player,
-          hand: remainingHand,
-          discardPile: [...player.discardPile, ...selectedCards],
-        }
+      : pending.destination === 'deck-bottom'
+        ? {
+            ...player,
+            hand: remainingHand,
+            deck: [...player.deck, ...selectedCards],
+          }
+        : {
+            ...player,
+            hand: remainingHand,
+            discardPile: [...player.discardPile, ...selectedCards],
+          }
 
   return continuePendingReplacements({
     ...state,

@@ -3,13 +3,15 @@ import {
   canActivateCookieSkill,
   canPlayItem,
   canActivateStage,
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
   getEffectTargetCandidates,
   hasRequiredEffectTargets as hasRequiredTargetsForEffect,
   getEnergyCostTotal,
   getTrashBattleCookieCostCandidates,
-  getTrashToDeckCandidates,
   isEffectConditionMet,
   isEffectUntargeted,
+  requiresEffectCardSelection,
   selectEnergyPayment,
   validateEnergyPayment,
   type CardAbility,
@@ -49,6 +51,27 @@ const getTargetSelector = (
   if (!effect) return null
   if (effect.kind === 'gain-hp') {
     return effect.target?.sourceOnly ? null : (effect.target ?? null)
+  }
+  if (
+    effect.kind === 'break-to-battle' ||
+    effect.kind === 'support-to-battle' ||
+    effect.kind === 'trash-to-battle' ||
+    effect.kind === 'support-to-trash' ||
+    effect.kind === 'hand-to-break' ||
+    effect.kind === 'break-to-hand' ||
+    effect.kind === 'hand-to-hp' ||
+    effect.kind === 'rest-support' ||
+    effect.kind === 'support-to-hp' ||
+    effect.kind === 'cycle-hp' ||
+    effect.kind === 'rest-support-and-damage' ||
+    effect.kind === 'field-to-deck-bottom' ||
+    effect.kind === 'hand-to-battle' ||
+    effect.kind === 'opponent-trash-to-break' ||
+    effect.kind === 'trash-to-break' ||
+    effect.kind === 'trash-to-deck' ||
+    (effect.kind === 'set-active' && effect.selectable)
+  ) {
+    return null
   }
   if (isEffectUntargeted(effect)) return null
   if (effect.kind === 'opponent-battle-to-trash') {
@@ -190,14 +213,19 @@ export function useOnlinePendingEffect(params: {
       : true
 
   const currentTargetSelector = getTargetSelector(displayedEffect)
+  const displayedSelectionLimits = displayedEffect
+    ? getEffectSelectionLimits(displayedEffect)
+    : null
 
   const candidateCards: GameCard[] = displayedContext
     ? currentTargetSelector
       ? getEffectTargetCandidates(game, displayedContext, currentTargetSelector).map(
           (candidate) => candidate.card,
         )
-      : displayedEffect?.kind === 'trash-to-deck'
-        ? getTrashToDeckCandidates(game, displayedContext, displayedEffect)
+      : displayedEffect &&
+          (requiresEffectCardSelection(displayedEffect) ||
+            displayedEffect.kind === 'trash-to-deck')
+        ? getEffectSelectionCandidates(game, displayedContext, displayedEffect)
         : []
     : []
   const isEffectPending = Boolean(currentEffect)
@@ -401,10 +429,7 @@ export function useOnlinePendingEffect(params: {
     selectedTargetState.key === effectKey ? selectedTargetState.ids : []
 
   const toggleTarget = (instanceId: string) => {
-    const max =
-      displayedEffect?.kind === 'trash-to-deck'
-        ? displayedEffect.max
-        : (currentTargetSelector?.max ?? 1)
+    const max = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 1
     setSelectedTargetState((currentState) => {
       const current =
         currentState.key === effectKey ? currentState.ids : []
@@ -423,13 +448,10 @@ export function useOnlinePendingEffect(params: {
   const confirmEffect = () => {
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
-      const targetMin = currentTargetSelector?.min ?? 0
-      const targetMax =
-        displayedEffect?.kind === 'trash-to-deck'
-          ? displayedEffect.max
-          : (currentTargetSelector?.max ?? 0)
+      const targetMin = currentTargetSelector?.min ?? displayedSelectionLimits?.min ?? 0
+      const targetMax = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 0
       const requiresTargetSelection =
-        currentTargetSelector !== null || displayedEffect?.kind === 'trash-to-deck'
+        currentTargetSelector !== null || displayedSelectionLimits !== null
       if (
         !draftPaymentValid ||
         abilityCostDraft.selectedCostSupportToTrashIds.length !==
@@ -569,6 +591,9 @@ export function useOnlinePendingEffect(params: {
             ? { remainingHp: effect.remainingHp }
             : {}),
         }).length > 0
+      }
+      if (effect.kind === 'field-to-deck-bottom') {
+        return hasRequiredTargetsForEffect(game, effectContext, effect)
       }
       if (!isEffectUntargeted(effect) && 'target' in effect && effect.target) {
         if ((effect.target.min ?? 0) === 0) return true

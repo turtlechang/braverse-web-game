@@ -20,6 +20,8 @@
 
 本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。
 
+BS4 沿用 BS3 的候選資料流程：先將官方英文資料匯入 `data/candidates/` 的 `inventory` 快照，再依卡面文字與官方規則逐色稽核 runtime adapter；候選完成驗證與效果覆蓋前不直接併入 `data/cards/`。
+
 測試對局設定以正式卡池為來源，可逐方指定戰鬥區餅乾、精確 HP 卡、起始手牌、牌庫頂端順序、支援區實際卡片與能量顏色、場景卡及棄牌區卡片；未指定的牌庫尾端與支援區張數才以測試填充補足。設定視窗提供 BS3-018 的 Blocker／傷害分支與 BS3-020 的 HP 卡回手快速案例，方便在正式規則流程中重現問題並回報。
 
 目前以《綜合規則》Ver.1.2、《CRB 遊戲指南》240812 更新版、《CRB 說明書 P1》、《裁判指南》及 2026-03-30 官方 Rule Update 作為規則文件基線；專案裁定與仍待新版官方資料覆核的項目記錄於 [docs/rule-clarifications.md](docs/rule-clarifications.md)。
@@ -58,6 +60,8 @@ BS3-045 `damage-by-break-count` 已納入陷阱目標候選與驗證，休息區
 
 BS3 全系列本輪完成 121 張基礎卡的瀏覽器載入掃描，並針對餅乾技能／FLIP、攻擊後效果、物品、陷阱、場景、Soul Jam、特殊勝利與 AI 對局補做代表性實戰驗證；修正 BS3-024、BS3-098、BS3-121 的可重現問題。BS3 共 176 筆資料（121 張基礎卡、55 個異圖／促銷變體）已於 2026-07-26 promote 至正式卡池。
 
+BS4 系列已完成 111 張基礎卡的效果覆蓋稽核：攻擊 `Then` 23／23 已轉接，額外能力來源 87 張已轉接，原先 14 張待補效果已降為 0。候選資料仍保留在 `data/candidates/` 的 `inventory` 狀態，尚未 promote；完整狀態見 [BS4 效果轉接覆蓋盤點](docs/bs4-effect-coverage.md)。
+
 P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃描，並以規則回歸及代表性實戰涵蓋餅乾技能、攻擊後效果、物品、FLIP、陷阱與場景。修正 P-017 支援區事件觸發、P-024 不可攻擊的 HP-only FLIP、P-025～P-027 Marzipan 條件與傷害倍增、P-028／P-032 場景多段效果，以及 P-029 戰鬥昏厥後延遲復活；候選 8 張已 promote 至正式卡池。完整清單與限制見 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。
 
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
@@ -76,6 +80,8 @@ P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃�
 測試基線、bundle 大小等會隨每次 PR 變動的數字，一律以 [CHANGELOG.md](CHANGELOG.md) 最新項目為準（非永久門檻，只要求不低於前次基線）。
 
 ## 下一步計畫
+
+BS4 候選資料已完成效果轉接覆蓋稽核與單元／建置驗證；下一步先逐色複核卡面來源與官方規則，維持候選 `inventory` 狀態，確認後再執行 `promote:candidate` 併入正式卡池，並重跑 card pool registry 檢查。
 
 持續以瀏覽器透過正式卡池測試對局設定驗證 BS3 卡牌在卡牌詳情、效果面板與戰鬥互動中的技能、攻擊後、物品、陷阱、場景與資源區效果，並維持規則引擎與 UI 的責任分離。
 
@@ -143,6 +149,7 @@ npm run cards:analyze:bs3-candidate
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-03 | 完成 BS4 111 張基礎卡效果稽核：攻擊 `Then` 23／23、額外能力待補 14→0；候選維持 `inventory`，通過候選驗證、完整單元測試、lint、build 與 card pool registry 檢查。 |
 | 2026-07-31 | 修正 BS3-029 昏厥目標／黃色能量付款與補位優先順序，補上 BS3-045 陷阱傷害目標及 ST2-020 攻擊目標回歸測試。線上協定新增 resolve-faint-effect paymentIds 驗證。 |
 | 2026-07-31 | 功能完成與測試：BS3-029 昏厥目標選擇、黃色能量付款、補位優先順序、空場強制補位；BS3-045 damage-by-break-count 陷阱目標；ST2-020 modify-attack 不改寫攻擊目標。效果面板 optionalCostAttack 支援最小化。完整單元測試 2394 項、lint、build 通過。 |
 | 2026-07-31 | R10 完整版：新增 Attacker 反擊暴露罰分（捕獲 lv4RiskBonus 不讀對手手牌與攻擊力的缺口），修正 `-= responseRiskPenalty(...)` 方向 bug；新增 r10ExposureRisk 指標與 11 條純函式行為測試。 |

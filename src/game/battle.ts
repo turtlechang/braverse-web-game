@@ -114,6 +114,29 @@ const getEquipAttackEffects = (attacker: CookieInBattle): CardEffect[] =>
     return []
   })
 
+export const getForcedAttackTargetId = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+): string | undefined => {
+  const defenderPlayerId = getOpponentId(attackerPlayerId)
+  const defender = state.players[defenderPlayerId]
+  return defender.battleArea.find((cookie) => {
+    const skill = cookie.card.skill
+    if (!skill || skill.trigger !== 'passive') return false
+    const context: EffectContext = {
+      sourcePlayerId: defenderPlayerId,
+      sourceInstanceId: cookie.card.instanceId,
+    }
+    return skill.effects.some(
+      (effect) =>
+        effect.kind === 'redirect-attack' &&
+        effect.target.side === 'self' &&
+        effect.target.sourceOnly &&
+        isEffectConditionMet(state, context, effect),
+    )
+  })?.card.instanceId
+}
+
 export const beginAttack = (
   state: GameState,
   attackerInstanceId: string,
@@ -144,6 +167,10 @@ export const beginAttack = (
 
   const defenderPlayerId = getOpponentId(state.activePlayerId)
   const defender = state.players[defenderPlayerId]
+  const forcedTargetId = getForcedAttackTargetId(state, state.activePlayerId)
+  if (forcedTargetId && targetInstanceId !== forcedTargetId) {
+    throw new GameRuleError('Invalid battle action.')
+  }
   if (
     !defender.battleArea.some(
       (cookie) => cookie.card.instanceId === targetInstanceId,
@@ -497,6 +524,7 @@ const validateTrapTargets = (
     (effect) =>
       effect.kind === 'damage' ||
       effect.kind === 'damage-by-break-count' ||
+      effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||
@@ -1006,7 +1034,10 @@ export const playTrap = (
       continue
     }
 
-    if (effect.kind === 'damage') {
+    if (
+      effect.kind === 'damage' ||
+      effect.kind === 'damage-by-break-level-difference'
+    ) {
       const damageTargetIds = resolveTrapEffectTargetIds(
         nextState,
         context,
@@ -1034,12 +1065,20 @@ export const playTrap = (
     throw new GameRuleError('Invalid battle action.')
       }
       const activeBattle = requirePendingBattle(nextState)
+      const damageAmount =
+        effect.kind === 'damage'
+          ? effect.amount
+          : Math.max(
+              0,
+              getBreakAreaLevel(nextState, playerId) -
+                getBreakAreaLevel(nextState, getOpponentId(playerId)),
+            )
       nextState = {
         ...nextState,
         pendingBattle: {
           ...activeBattle,
           stage: 'damage',
-          remainingDamage: effect.amount,
+          remainingDamage: damageAmount,
           damagePlayerId: targetPlayerId,
           damageTargetInstanceId: target.card.instanceId,
           suspendedAttackDamage: activeBattle.declaredDamage,
@@ -2033,6 +2072,7 @@ export const resolveFlip = (
 
   let nextState = state
   let flipToSupportChoice: { rested: boolean } | null = null
+  let flipToBreakChoice = false
   if (options.activate) {
     const flipContext = {
       sourcePlayerId: playerId,
@@ -2130,6 +2170,8 @@ export const resolveFlip = (
         }
       } else if (effect.kind === 'flip-to-support') {
         flipToSupportChoice = { rested: effect.rested ?? true }
+      } else if (effect.kind === 'flip-to-break') {
+        flipToBreakChoice = true
       } else {
         nextState = executeCardEffect(
           nextState,
@@ -2172,6 +2214,11 @@ export const resolveFlip = (
               { card: revealed, rested: flipToSupportChoice.rested },
             ],
           }
+        : flipToBreakChoice
+          ? {
+              ...player,
+              breakArea: [...player.breakArea, revealed],
+            }
         : {
             ...player,
             discardPile: [...player.discardPile, revealed],
@@ -2363,6 +2410,7 @@ export const getTrapTargetCandidates = (
     (effect) =>
       effect.kind === 'damage' ||
       effect.kind === 'damage-by-break-count' ||
+      effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||

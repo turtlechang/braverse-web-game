@@ -231,9 +231,17 @@ export const getTrashBattleCookieCostCandidates = (
       (cookie) => cookie.card.instanceId === sourceInstanceId,
     )
   }
-  const { level, energyColor } = cost.trashBattleCookie
+  const { level, minLevel, maxLevel, energyColor } = cost.trashBattleCookie
   return battleArea.filter((cookie) => {
+    if (
+      cost.trashBattleCookie?.excludeSource &&
+      cookie.card.instanceId === sourceInstanceId
+    ) {
+      return false
+    }
     if (level !== undefined && cookie.card.level !== level) return false
+    if (minLevel !== undefined && cookie.card.level < minLevel) return false
+    if (maxLevel !== undefined && cookie.card.level > maxLevel) return false
     if (energyColor !== undefined && cookie.card.energyColor !== energyColor) return false
     return true
   })

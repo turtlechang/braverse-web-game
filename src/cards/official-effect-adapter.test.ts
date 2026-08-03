@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import officialBS3Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
+import officialBS4Candidate from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs4.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
@@ -27,6 +28,7 @@ const purpleCards = officialPurpleSample.cards as OfficialCardRecord[]
 const braveBeginningCards = officialBraveBeginning.cards as OfficialCardRecord[]
 const braveBeginningBS2Cards = officialBraveBeginningBS2.cards as OfficialCardRecord[]
 const bs3Cards = officialBS3Inventory.cards as OfficialCardRecord[]
+const bs4CandidateCards = officialBS4Candidate.cards as OfficialCardRecord[]
 // BS4 尚未 promote，候選檔仍在 data/candidates/；那個目錄會被
 // validate-candidate-cards.test.ts 的 beforeEach/afterEach 清空重建（用來測試
 // promote 流程），跟它平行執行時 import 真實候選檔會有讀取競態，所以這裡直接
@@ -387,7 +389,9 @@ const findBs3Card = (cardNumber: string) => {
 }
 
 const findBs4Card = (cardNumber: string) => {
-  const card = bs4Cards.find((candidate) => candidate.cardNumber === cardNumber)
+  const card =
+    bs4Cards.find((candidate) => candidate.cardNumber === cardNumber) ??
+    bs4CandidateCards.find((candidate) => candidate.cardNumber === cardNumber)
 
   if (!card) {
     throw new Error(`Missing BS4 candidate card ${cardNumber}`)
@@ -3445,6 +3449,328 @@ describe('Starter Deck RED official effect adapter', () => {
         oncePerTurn: true,
         cost: { energy: { green: 2 } },
         effects: [{ kind: 'support-to-battle', amount: 1, energyColor: 'green' }],
+      })
+    })
+  })
+
+  describe('BS4 effect audit follow-up', () => {
+    it('converts the red item and stage HP/attack effects with their color and level gates', () => {
+      expect(convertOfficialItemAbility(findBs4Card('BS4-020'))).toMatchObject({
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 3,
+            target: {
+              side: 'self',
+              min: 0,
+              max: 1,
+              minLevel: 3,
+              maxLevel: 3,
+              energyColor: 'red',
+            },
+            condition: { kind: 'break-level-at-least', level: 6 },
+          },
+        ],
+      })
+      expect(convertOfficialStageAbility(findBs4Card('BS4-022'))).toMatchObject({
+        cost: { energy: { red: 2 } },
+        restSource: true,
+        effects: [
+          {
+            kind: 'hp-to-trash',
+            amount: 1,
+            target: {
+              side: 'self',
+              min: 0,
+              max: 1,
+              minLevel: 2,
+              energyColor: 'red',
+            },
+          },
+          { kind: 'damage', amount: 1 },
+        ],
+      })
+    })
+
+    it('converts BS4 ability effects for support, battle-area, and faint timing', () => {
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-035'))).toMatchObject({
+        trigger: 'passive',
+        faint: true,
+        effects: [
+          {
+            kind: 'break-to-battle',
+            amount: 1,
+            exactLevel: 1,
+            energyColor: 'yellow',
+          },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-055'))).toMatchObject({
+        trigger: 'passive',
+        faint: true,
+        effects: [{ kind: 'deck-to-support', amount: 1, rested: true }],
+      })
+      expect(convertOfficialItemAbility(findBs4Card('BS4-040'))).toMatchObject({
+        cost: {
+          energy: { yellow: 2 },
+        },
+        effects: [
+          { kind: 'battle-to-break', target: { min: 1, minLevel: 2, energyColor: 'yellow' } },
+          { kind: 'break-to-battle', amount: 1, exactLevel: 3, energyColor: 'yellow' },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-093'))).toMatchObject({
+        trigger: 'passive',
+        faint: true,
+        effects: [{ kind: 'opponent-battle-to-trash', min: 0, maxLevel: 2 }],
+      })
+      expect(convertOfficialStageAbility(findBs4Card('BS4-088'))).toMatchObject({
+        cost: { energy: { blue: 1 }, discardHand: 1 },
+        restSource: true,
+        effects: [
+          {
+            kind: 'return-to-hand',
+            target: {
+              side: 'self',
+              min: 0,
+              max: 1,
+              maxLevel: 2,
+              minRemainingHp: 4,
+              energyColor: 'blue',
+            },
+          },
+        ],
+      })
+    })
+
+    it('converts BS4 flip and on-play abilities with their runtime conditions', () => {
+      expect(convertOfficialFlipAbility(findBs4Card('BS4-057'))).toMatchObject({
+        effects: [
+          {
+            kind: 'flip-to-support',
+            rested: true,
+            condition: { kind: 'break-level-at-least', level: 6 },
+          },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-092'))).toMatchObject({
+        trigger: 'on-play',
+        cost: {
+          energy: { purple: 1 },
+          discardHand: 0,
+          trashBattleCookie: {
+            count: 1,
+            maxLevel: 2,
+            energyColor: 'purple',
+            excludeSource: true,
+          },
+        },
+        effects: [
+          { kind: 'damage', amount: 2, target: { maxLevel: 1 } },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-098'))).toMatchObject({
+        trigger: 'activate',
+        oncePerTurn: true,
+        cost: { energy: { purple: 1 }, discardHand: 1 },
+        effects: [
+          { kind: 'disable-flip', duration: 'this-turn' },
+          { kind: 'damage', amount: 1 },
+        ],
+      })
+    })
+
+    it('converts all five previously pending BS4 attack Then clauses', () => {
+      expect(convertOfficialAttackEffects(findBs4Card('BS4-023'))).toEqual([
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: {
+            kind: 'break-area-has-card',
+            side: 'self',
+            color: 'yellow',
+            minLevel: 3,
+            maxLevel: 3,
+          },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs4Card('BS4-029'))).toMatchObject([
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: { yellow: 1 } },
+          effects: [
+            { kind: 'battle-to-break', target: { sourceOnly: true, min: 1, max: 1 } },
+            { kind: 'break-to-battle', amount: 1, exactLevel: 3, energyColor: 'yellow' },
+          ],
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs4Card('BS4-069'))).toEqual([
+        { kind: 'opponent-discard-hand', count: 1, destination: 'deck-bottom' },
+      ])
+      expect(convertOfficialAttackEffects(findBs4Card('BS4-090'))).toEqual([
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          condition: { kind: 'trash-flip-count-at-least', count: 3 },
+        },
+      ])
+      expect(convertOfficialAttackEffects(findBs4Card('BS4-091'))).toEqual([
+        {
+          kind: 'trash-to-deck',
+          max: 3,
+          excludeFlip: true,
+          destination: 'bottom',
+        },
+      ])
+    })
+
+    it('converts the remaining pending BS4 yellow and green effects with their selection boundaries', () => {
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-024'))).toMatchObject({
+        trigger: 'passive',
+        effects: [
+          {
+            kind: 'redirect-attack',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            condition: {
+              kind: 'battle-area-has-color',
+              side: 'self',
+              color: 'yellow',
+              level: 3,
+            },
+          },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-025'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          { kind: 'hand-to-break', amount: 1, energyColor: 'yellow', minLevel: 2 },
+          { kind: 'break-to-battle', amount: 1, exactLevel: 2, energyColor: 'yellow' },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-030'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          {
+            kind: 'cycle-hp',
+            target: {
+              side: 'self',
+              min: 0,
+              max: 1,
+              excludeSource: true,
+              energyColor: 'yellow',
+            },
+          },
+        ],
+      })
+      expect(convertOfficialTrapAbility(findBs4Card('BS4-043'))).toMatchObject({
+        effects: [
+          {
+            kind: 'damage-by-break-level-difference',
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'break-level-higher-than-opponent' },
+          },
+        ],
+        cost: { energy: { yellow: 3 }, discardHand: 1 },
+      })
+      expect(convertOfficialStageAbility(findBs4Card('BS4-044'))).toMatchObject({
+        cost: { energy: { yellow: 2 }, discardHand: 1 },
+        restSource: true,
+        effects: [
+          {
+            kind: 'hand-to-hp',
+            target: { side: 'self', min: 0, max: 1 },
+            selectTarget: true,
+            optional: true,
+          },
+        ],
+      })
+      expect(convertOfficialItemAbility(findBs4Card('BS4-062'))).toMatchObject({
+        cost: { green: 2 },
+        effects: [
+          {
+            kind: 'rest-support-and-damage',
+            supportSide: 'self',
+            supportAmount: 4,
+            supportEnergyColor: 'green',
+            activeOnly: true,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
+      expect(convertOfficialItemAbility(findBs4Card('BS4-063'))).toMatchObject({
+        cost: { green: 3 },
+        effects: [
+          { kind: 'deck-to-support', amount: 2, rested: true },
+          { kind: 'support-to-trash', amount: 1 },
+        ],
+      })
+    })
+
+    it('converts the remaining pending BS4 blue and PURE effects', () => {
+      expect(convertOfficialStageAbility(findBs4Card('BS4-066'))).toMatchObject({
+        cost: { energy: { green: 3 }, discardHand: 0 },
+        restSource: true,
+        effects: [
+          {
+            kind: 'support-to-hp',
+            target: { side: 'self', min: 0, max: 1 },
+            energyColor: 'green',
+            selectTarget: true,
+            optional: true,
+          },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-073'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          {
+            kind: 'return-to-deck-bottom',
+            target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
+          },
+          { kind: 'damage-all', amount: 1, side: 'opponent' },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-074'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          { kind: 'discard-hand-all' },
+          { kind: 'draw-up-to', max: 4 },
+        ],
+      })
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-075'))).toMatchObject({
+        trigger: 'activate',
+        effects: [
+          {
+            kind: 'field-to-deck-bottom',
+            target: { side: 'either', min: 1, max: 1, maxLevel: 1 },
+            allowStage: true,
+            battleSide: 'opponent',
+          },
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      })
+      expect(convertOfficialItemAbility(findBs4Card('BS4-084'))).toMatchObject({
+        cost: { blue: 3 },
+        effects: [{ kind: 'draw-until-hand-equals-opponent' }],
+      })
+      expect(convertOfficialStageAbility(findBs4Card('BS4-111'))).toMatchObject({
+        cost: { neutral: 5 },
+        restSource: true,
+        effects: [
+          { kind: 'field-to-deck-bottom-all', maxLevel: 2 },
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+          },
+        ],
       })
     })
   })

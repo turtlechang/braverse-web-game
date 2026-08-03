@@ -137,6 +137,12 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'flip-to-support' ||
           currentEffect.kind === 'hand-to-battle' ||
           currentEffect.kind === 'opponent-trash-to-break' ||
+          currentEffect.kind === 'rest-support' ||
+          currentEffect.kind === 'hand-to-hp' ||
+          currentEffect.kind === 'support-to-hp' ||
+          currentEffect.kind === 'cycle-hp' ||
+          currentEffect.kind === 'rest-support-and-damage' ||
+          currentEffect.kind === 'field-to-deck-bottom' ||
           currentEffect.kind === 'inspect-deck' ||
           currentEffect.kind === 'optional-cost-attack' ||
           currentEffect.kind === 'disable-block'
@@ -213,6 +219,9 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'hand-to-hp' ||
       currentEffect.kind === 'rest-support' ||
       currentEffect.kind === 'support-to-hp' ||
+      currentEffect.kind === 'cycle-hp' ||
+      currentEffect.kind === 'rest-support-and-damage' ||
+      currentEffect.kind === 'field-to-deck-bottom' ||
       currentEffect.kind === 'hand-to-battle' ||
       currentEffect.kind === 'opponent-trash-to-break' ||
       (currentEffect.kind === 'set-active' && currentEffect.selectable))
@@ -1046,7 +1055,15 @@ export function usePendingEffect(params: {
           ? currentEffect.amount
         : currentEffect.kind === 'hand-to-hp' ||
             currentEffect.kind === 'support-to-hp'
-          ? 1
+          ? currentEffect.selectTarget
+            ? 2
+            : 1
+        : currentEffect.kind === 'cycle-hp'
+          ? 2
+        : currentEffect.kind === 'rest-support-and-damage'
+          ? currentEffect.supportAmount + currentEffect.target.max
+        : currentEffect.kind === 'field-to-deck-bottom'
+          ? currentEffect.target.max
         : currentEffect.kind === 'set-active' && currentEffect.selectable
           ? currentEffect.supportCount
         : isEffectUntargeted(currentEffect)

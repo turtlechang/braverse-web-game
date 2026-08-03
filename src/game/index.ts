@@ -142,6 +142,7 @@ export {
 } from './ai'
 export {
   beginAttack,
+  getForcedAttackTargetId,
   getFaintEffectCardCandidates,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,

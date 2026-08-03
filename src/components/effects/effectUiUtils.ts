@@ -28,6 +28,9 @@ const targetText = (
 export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'draw') return `抽 ${effect.amount} 張牌。`
   if (effect.kind === 'draw-up-to') return `最多抽 ${effect.max} 張牌。`
+  if (effect.kind === 'draw-until-hand-equals-opponent') {
+    return '抽牌直到手牌數與對手相同。'
+  }
   if (effect.kind === 'hand-to-deck-and-draw') return '將手牌洗回牌庫後抽同樣張數。'
   if (effect.kind === 'deck-to-support') {
     return `從牌庫頂放 ${effect.amount} 張到支援區。`
@@ -58,6 +61,7 @@ export const describeEffect = (effect: CardEffect) => {
     return `所有${effect.side === 'self' ? '我方' : '對手'}餅乾受到 ${effect.amount} 傷害。`
   }
   if (effect.kind === 'discard-hand') return `棄掉 ${effect.count} 張手牌。`
+  if (effect.kind === 'discard-hand-all') return '將整手牌放入棄牌區。'
   if (effect.kind === 'opponent-discard-hand') {
     return `對手棄掉 ${effect.count} 張手牌。`
   }
@@ -100,11 +104,16 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'field-to-trash-all') {
     return '雙方符合條件的餅乾放入棄牌區。'
   }
+  if (effect.kind === 'field-to-deck-bottom-all') {
+    return '將雙方符合條件的餅乾放到各自牌庫底。'
+  }
   if (effect.kind === 'trash-to-hand') {
     return `從棄牌區選最多 ${effect.max} 張卡返回手牌。`
   }
   if (effect.kind === 'trash-to-deck') {
-    return `從棄牌區選最多 ${effect.max} 張卡洗回牌庫。`
+    return effect.destination === 'bottom'
+      ? `從棄牌區選最多 ${effect.max} 張卡，依選取順序放到牌庫底。`
+      : `從棄牌區選最多 ${effect.max} 張卡洗回牌庫。`
   }
   if (effect.kind === 'trash-to-deck-all') {
     return '將棄牌區所有卡牌洗回牌庫。'
@@ -153,11 +162,15 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'set-cookie-active') return '將餅乾設為活躍。'
   if (effect.kind === 'deck-to-trash') return `牌庫頂 ${effect.amount} 張放入棄牌區。`
   if (effect.kind === 'rest-support') return `休息 ${effect.amount} 張支援區卡。`
+  if (effect.kind === 'rest-support-and-damage') {
+    return `休息最多 ${effect.supportAmount} 張支援區卡，並依休息張數造成傷害。`
+  }
   if (effect.kind === 'stage-source-to-deck') return '場景卡已放回牌庫。'
   if (effect.kind === 'stage-source-to-trash') return '場景卡已放入棄牌區。'
   if (effect.kind === 'break-source-to-battle') return '從休息區登場。'
   if (effect.kind === 'hand-to-break') return '手牌餅乾已放入休息區。'
   if (effect.kind === 'flip-to-support') return 'FLIP 卡已放入支援區。'
+  if (effect.kind === 'flip-to-break') return '將這張 FLIP 卡放入休息區。'
   if (effect.kind === 'trash-to-break') return '棄牌區卡已放入休息區。'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,6 +183,9 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'split-damage' && t) {
     return `選擇 ${t.count}${t.target}，第一個目標造成 ${effect.primaryAmount} 傷害，第二個目標造成 ${effect.secondaryAmount} 傷害。`
+  }
+  if (effect.kind === 'damage-by-break-level-difference' && t) {
+    return `選擇 ${t.count}${t.target}，依雙方休息區等級差造成傷害。`
   }
   if (effect.kind === 'damage-by-break-count' && t) {
     return `選擇 ${t.count}${t.target}，依 break 區條件造成傷害。`
@@ -188,6 +204,9 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'return-to-hand' && t) {
     return `選擇 ${t.count}${t.target}返回手牌。`
+  }
+  if (effect.kind === 'field-to-deck-bottom' && t) {
+    return `選擇 ${t.count}${t.target} 放到持有者牌庫底。`
   }
   if (effect.kind === 'return-to-deck-bottom' && t) {
     return `選擇 ${t.count}${t.target}返回牌庫底。`
@@ -213,6 +232,9 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'hp-to-support' && t) {
     return `選擇 ${t.count}${t.target}，將其 1 張 HP 卡放入支援區。`
+  }
+  if (effect.kind === 'cycle-hp' && t) {
+    return `選擇 ${t.count}${t.target}，取回最上方 HP 後可放回 1 張手牌。`
   }
   if (effect.kind === 'hand-to-hp' && t) {
     return `選擇 ${t.count}${t.target}，將 1 張手牌當作 HP 卡。`
@@ -289,7 +311,11 @@ export const describeEffectResult = (
   if (effect.kind === 'disable-block') return '對手本回合不能發動 {bl}。'
   if (effect.kind === 'field-to-trash-all') return '雙方符合條件的餅乾已放入棄牌區。'
   if (effect.kind === 'trash-to-hand') return '棄牌區卡牌已返回手牌。'
-  if (effect.kind === 'trash-to-deck') return '棄牌區卡牌已洗回牌庫。'
+  if (effect.kind === 'trash-to-deck') {
+    return effect.destination === 'bottom'
+      ? '棄牌區卡牌已依選取順序放到牌庫底。'
+      : '棄牌區卡牌已洗回牌庫。'
+  }
   if (effect.kind === 'trash-to-deck-all') return '棄牌區已全部洗回牌庫。'
   if (effect.kind === 'draw-up-to-battle-cookie-count') {
     return '已依戰鬥區餅乾數量建立抽牌決策。'
