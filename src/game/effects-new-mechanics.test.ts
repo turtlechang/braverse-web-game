@@ -595,6 +595,57 @@ describe('new card-effect mechanics', () => {
     ).toBe(false)
   })
 
+  it('activateCookieSkill supports a selfToDeckBottom cost (BS4-077)', () => {
+    const base = asMainPhase(createDemoGame())
+    const skillCookie = makeCookie({
+      instanceId: 'deck-bottom-self-cookie',
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0, selfToDeckBottom: true },
+        text: 'go to the bottom of the deck, draw up to 2',
+        effects: [{ kind: 'draw-up-to', max: 2 }],
+      },
+    })
+    const hpCard: GameCard = {
+      id: 'hp-card',
+      instanceId: 'hp-card',
+      name: 'HP Card',
+      type: 'item',
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            ...base.players['player-one'].battleArea,
+            { card: skillCookie, hpCards: [hpCard], rested: false },
+          ],
+        },
+      },
+    }
+
+    const activated = activateCookieSkill(
+      state,
+      'player-one',
+      skillCookie.instanceId,
+      'activate',
+      [],
+    )
+
+    expect(activated.players['player-one'].deck.at(-1)).toEqual(skillCookie)
+    expect(activated.players['player-one'].discardPile).toContainEqual(hpCard)
+    expect(
+      activated.players['player-one'].battleArea.some(
+        (cookie) => cookie.card.instanceId === skillCookie.instanceId,
+      ),
+    ).toBe(false)
+  })
+
   it('resolveFlip places the flip card into support instead of discard when flip-to-support triggers', () => {
     const base = createDemoGame()
     const defenderCookie = base.players['player-two'].battleArea[0]

@@ -170,6 +170,13 @@ export interface SupportCountAtLeastCondition {
   count: number
 }
 
+/** 支援區指定顏色張數達到門檻（BS4-048 的「support area contains 7 {G} cards or more」）。 */
+export interface SupportColorCountAtLeastCondition {
+  kind: 'support-color-count-at-least'
+  color: EnergyColor
+  count: number
+}
+
 /** 支援區張數不超過門檻（BS3-067 的「support area contains 6 cards or less」）。 */
 export interface SupportCountAtMostCondition {
   kind: 'support-count-at-most'
@@ -198,6 +205,12 @@ export interface HandCountAtMostCondition {
   count: number
 }
 
+/** 手牌張數達到門檻（BS4-083 的「if your hand contains 5 cards or more」）。 */
+export interface HandCountAtLeastCondition {
+  kind: 'hand-count-at-least'
+  count: number
+}
+
 export interface SupportAreaDecreasedThisTurnCondition {
   kind: 'support-area-decreased-this-turn'
 }
@@ -213,8 +226,23 @@ export interface BattleAreaHasCookieWithLevelCondition {
   level: number
 }
 
+/** 場上有指定顏色的餅乾（BS4-003 的「if there is another {R} Cookie in your battle area」）。 */
+export interface BattleAreaHasColorCondition {
+  kind: 'battle-area-has-color'
+  side: EffectTargetSide
+  color: EnergyColor
+  /** 「another」：不算來源自己。 */
+  excludeSource?: boolean
+}
+
 export interface TrashCountAtLeastCondition {
   kind: 'trash-count-at-least'
+  count: number
+}
+
+/** 己方棄牌區張數不超過門檻（BS4-110 的「if your trash contains 15 cards or less」）。 */
+export interface TrashCountAtMostCondition {
+  kind: 'trash-count-at-most'
   count: number
 }
 
@@ -260,6 +288,12 @@ export interface AttackTargetRemainingHpAtLeastCondition {
   amount: number
 }
 
+/** 本次攻擊宣告的目標等級達到上限（BS4-009 的「if the attacked Cookie is LV.2 or lower」）。 */
+export interface AttackTargetLevelAtMostCondition {
+  kind: 'attack-target-level-at-most'
+  level: number
+}
+
 export interface SupportKeywordAtLeastCondition {
   kind: 'support-keyword-at-least'
   keyword: CardKeyword
@@ -281,25 +315,40 @@ export interface OpponentBattleAreaHasNoBlockerCondition {
   kind: 'opponent-battle-area-has-no-blocker'
 }
 
+/**
+ * 複合條件：全部子條件都成立才算成立（BS4-077 的「if your hand contains 5
+ * cards or less and there is a {B} Cookie in your battle area」）。
+ */
+export interface AllOfCondition {
+  kind: 'all-of'
+  conditions: EffectCondition[]
+}
+
 export type EffectCondition =
+  | AllOfCondition
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
   | SupportCountAtLeastCondition
+  | SupportColorCountAtLeastCondition
   | SupportCountAtMostCondition
   | OpponentSupportCountAtLeastCondition
   | ActiveSupportCountAtLeastCondition
   | TrashColorCountAtLeastCondition
   | HandCountAtMostCondition
+  | HandCountAtLeastCondition
   | SupportAreaDecreasedThisTurnCondition
   | OpponentHasCookieWithLevelCondition
   | BattleAreaHasCookieWithLevelCondition
+  | BattleAreaHasColorCondition
   | TrashCountAtLeastCondition
+  | TrashCountAtMostCondition
   | OpponentBreakLevelAtMostCondition
   | SourceHpLessThanCondition
   | SourceHpAtLeastCondition
   | SourceInBreakAreaCondition
   | OpponentCookieFaintedInCurrentBattleCondition
   | AttackTargetRemainingHpAtLeastCondition
+  | AttackTargetLevelAtMostCondition
   | SupportKeywordAtLeastCondition
   | DistinctNamedFamilyCountCondition
   | AnyBattleAreaHasBlockerCondition
@@ -533,6 +582,8 @@ export interface ModifyAllAttackEffect {
 export interface BattleToSupportEffect {
   kind: 'battle-to-support'
   target: EffectTargetSelector
+  /** 移入支援區時是否橫置；預設不橫置（BS4-049 的「as rested」）。 */
+  rested?: boolean
 }
 
 export interface TrashToBattleEffect {
@@ -890,6 +941,7 @@ export interface BreakToBattleEffect {
 export interface BattleToBreakEffect {
   kind: 'battle-to-break'
   target: EffectTargetSelector
+  condition?: EffectCondition
 }
 
 export interface BreakToHandBySumEffect {
@@ -1022,6 +1074,8 @@ export type AbilityCost = EnergyCost & {
       sourceOnly?: boolean
     }
   selfToBreakArea?: boolean
+  /** 來源自己離開戰鬥區、放到自己牌庫最下方作為代價（BS4-077）。 */
+  selfToDeckBottom?: boolean
   /**
    * 從棄牌區選指定條件的卡牌洗回牌庫作為代價（BS3-098）。
    * 與 `trashToDeckBottom` 不同，結算後會將選取卡牌與牌庫合併並洗牌。

@@ -747,6 +747,12 @@ export const isEffectConditionMet = (
 ): boolean => {
   const condition = 'condition' in effect ? effect.condition : undefined
 
+  if (condition?.kind === 'all-of') {
+    return condition.conditions.every((sub) =>
+      isEffectConditionMet(state, context, { ...effect, condition: sub } as CardEffect),
+    )
+  }
+
   if (condition?.kind === 'opponent-trash-count-at-least') {
     const opponentId = getOpponentId(context.sourcePlayerId)
     return state.players[opponentId].discardPile.length >= condition.count
@@ -755,6 +761,13 @@ export const isEffectConditionMet = (
   if (condition?.kind === 'trash-count-at-least') {
     return (
       state.players[context.sourcePlayerId].discardPile.length >=
+      condition.count
+    )
+  }
+
+  if (condition?.kind === 'trash-count-at-most') {
+    return (
+      state.players[context.sourcePlayerId].discardPile.length <=
       condition.count
     )
   }
@@ -768,6 +781,14 @@ export const isEffectConditionMet = (
 
   if (condition?.kind === 'support-count-at-least') {
     return state.players[context.sourcePlayerId].supportArea.length >= condition.count
+  }
+
+  if (condition?.kind === 'support-color-count-at-least') {
+    return (
+      state.players[context.sourcePlayerId].supportArea.filter(
+        (support) => support.card.energyColor === condition.color,
+      ).length >= condition.count
+    )
   }
 
   if (condition?.kind === 'support-count-at-most') {
@@ -819,6 +840,23 @@ export const isEffectConditionMet = (
       (cookie) => cookie.card.instanceId === targetInstanceId,
     )
     return Boolean(target && target.hpCards.length >= condition.amount)
+  }
+
+  if (condition?.kind === 'attack-target-level-at-most') {
+    const battle = state.pendingBattle
+    const targetInstanceId =
+      context.attackTargetInstanceId ??
+      (battle &&
+        battle.attackerPlayerId === context.sourcePlayerId &&
+        battle.attackerInstanceId === context.sourceInstanceId
+        ? battle.targetInstanceId
+        : undefined)
+    if (!targetInstanceId) return false
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    const target = state.players[opponentId].battleArea.find(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    )
+    return Boolean(target && target.card.level <= condition.level)
   }
 
   if (condition?.kind === 'opponent-cookie-fainted-in-current-battle') {
@@ -881,6 +919,10 @@ export const isEffectConditionMet = (
     return state.players[context.sourcePlayerId].hand.length <= condition.count
   }
 
+  if (condition?.kind === 'hand-count-at-least') {
+    return state.players[context.sourcePlayerId].hand.length >= condition.count
+  }
+
   if (condition?.kind === 'support-area-decreased-this-turn') {
     return Boolean(
       state.supportAreaDecreasedThisTurn?.[context.sourcePlayerId],
@@ -919,6 +961,19 @@ export const isEffectConditionMet = (
         : getOpponentId(context.sourcePlayerId)
     return state.players[playerId].battleArea.some(
       (cookie) => cookie.card.level === condition.level,
+    )
+  }
+
+  if (condition?.kind === 'battle-area-has-color') {
+    const playerId =
+      condition.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    return state.players[playerId].battleArea.some(
+      (cookie) =>
+        cookie.card.energyColor === condition.color &&
+        (!condition.excludeSource ||
+          cookie.card.instanceId !== context.sourceInstanceId),
     )
   }
 

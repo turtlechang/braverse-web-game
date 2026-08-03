@@ -614,6 +614,27 @@ export const activateCookieSkill = (
     }
   }
 
+  let selfToDeckBottomDepartedCount = 0
+  if (cost.selfToDeckBottom) {
+    const stillInBattle = playerAfterCosts.battleArea.find(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+    if (stillInBattle) {
+      playerAfterCosts = {
+        ...playerAfterCosts,
+        battleArea: playerAfterCosts.battleArea.filter(
+          (cookie) => cookie.card.instanceId !== sourceInstanceId,
+        ),
+        deck: [...playerAfterCosts.deck, stillInBattle.card],
+        discardPile: [
+          ...playerAfterCosts.discardPile,
+          ...stillInBattle.hpCards,
+        ],
+      }
+      selfToDeckBottomDepartedCount = 1
+    }
+  }
+
   const paymentSet = new Set(paymentIds)
   const costSupportSet = new Set(uniqueCostSupportToTrashIds)
   const trashBattleSet = new Set(uniqueTrashBattleCookieIds)
@@ -700,7 +721,9 @@ export const activateCookieSkill = (
   }
 
   const totalDepartedCount =
-    trashBattlePayment.departedCount + selfToBreakDepartedCount
+    trashBattlePayment.departedCount +
+    selfToBreakDepartedCount +
+    selfToDeckBottomDepartedCount
 
   return totalDepartedCount > 0
     ? recordCookieDepartures(

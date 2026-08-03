@@ -2505,7 +2505,7 @@ export const executeCardEffect = (
       ),
       supportArea: [
         ...player.supportArea,
-        ...movedCards.map((card) => ({ card, rested: false })),
+        ...movedCards.map((card) => ({ card, rested: effect.rested ?? false })),
       ],
       discardPile: [...player.discardPile, ...hpCards],
     })
