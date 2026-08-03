@@ -76,7 +76,11 @@ function createBattlefieldMockupGame(): GameState {
 }
 
 /** dev server 開 /?mockup=battlefield。 */
-export function BattlefieldMockup() {
+export function BattlefieldMockup({
+  layout = 'desktop',
+}: {
+  layout?: 'desktop' | 'tablet'
+} = {}) {
   const game = useMemo(() => createBattlefieldMockupGame(), [])
   const [previewCard, setPreviewCard] = useState<GameCard | null>(null)
   const [selectedAttackerId, setSelectedAttackerId] = useState<string | null>(
@@ -118,9 +122,15 @@ export function BattlefieldMockup() {
   return (
     <main
       className="game-shell mock-bf-root"
+      data-layout={layout}
       data-attention-state="player-turn"
     >
       <div className="board-texture" />
+      {layout === 'tablet' && (
+        <div className="mock-bf-tablet-badge" aria-label="平板橫向版面草案">
+          平板橫向版面草案 · 1164×777
+        </div>
+      )}
       <BattleTable
         ariaLabel="Braverse 戰場 mockup（實機版面同步）"
         topBattleRow={rowProps('player-two', 'top')}
@@ -146,9 +156,11 @@ export function BattlefieldMockup() {
         disabled
         onAdvance={() => undefined}
       />
-      <p className="mock-bf-caption">
-        實機版面同步檢視：點選我方可攻擊餅乾可查看攻擊目標配置。
-      </p>
+       <p className="mock-bf-caption">
+         {layout === 'tablet'
+           ? '操作示意：手牌保留可點擊區，選取後可查看卡牌與攻擊目標。'
+           : '實機版面同步檢視：點選我方可攻擊餅乾可查看攻擊目標配置。'}
+       </p>
     </main>
   )
 }

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import './styles/base.css'
 import './App.css'
+import './styles/tablet-layout.css'
 import {
   canActivateStage,
   canPlayItem,
