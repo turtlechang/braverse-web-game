@@ -7,6 +7,11 @@ import {
 import type { CardPoolEntry } from '../game/card-pool'
 import { getAllCardPoolEntries, normalizeCardNumber } from '../game/card-pool'
 
+const CARD_NUMBER_SERIES_PREFIXES: Record<string, string> = {
+  BS3: 'BS3-',
+  BS4: 'BS4-',
+}
+
 export interface DeckEditorState {
   deckEntries: CustomDeckEntry[]
   deckName: string
@@ -147,7 +152,11 @@ export function useDeckEditor(): DeckEditorState &
       }
       if (
         filterSeries &&
-        entry.product?.title?.toLowerCase() !== filterSeries.toLowerCase()
+        (CARD_NUMBER_SERIES_PREFIXES[filterSeries]
+          ? !entry.cardNumber
+              .toUpperCase()
+              .startsWith(CARD_NUMBER_SERIES_PREFIXES[filterSeries])
+          : entry.product?.title?.toLowerCase() !== filterSeries.toLowerCase())
       ) {
         return false
       }

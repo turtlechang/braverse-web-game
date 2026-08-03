@@ -43,7 +43,8 @@ const publicTargetScopeFor = (kind: string | undefined): PublicTargetScope => {
   if (
     kind === 'support-to-trash' ||
     kind === 'support-to-hand' ||
-    kind === 'flip-to-support'
+    kind === 'flip-to-support' ||
+    kind === 'support-to-battle'
   ) {
     return 'support'
   }
@@ -644,6 +645,10 @@ export function OnlineBattleView({
         selectedDiscardHandIds={pending.selectedDraftDiscardHandIds}
         onToggleDiscardHand={pending.toggleDraftDiscardHand}
         discardHandCost={pending.draftDiscardHandCost}
+        hpToTrashCandidates={pending.draftHpToTrashCandidates}
+        selectedHpToTrashTargetIds={pending.selectedDraftHpToTrashTargetIds}
+        onToggleHpToTrash={pending.toggleDraftHpToTrash}
+        hpToTrashCost={pending.draftHpToTrashCost}
         paymentCandidates={pending.draftPaymentCandidates}
         selectedPaymentIds={pending.selectedDraftPaymentIds}
         energyPaymentValid={pending.draftPaymentValid}

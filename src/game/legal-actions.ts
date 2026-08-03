@@ -1,6 +1,7 @@
 import { getPendingDecision } from './commands'
 import type { PlayerActionCommand } from './commands'
 import { canPlayStage } from './card-abilities'
+import { getForcedAttackTargetId } from './battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getOpponentId } from './helpers'
 import { getRefreshCandidates } from './refresh'
@@ -113,6 +114,7 @@ export const getLegalTurnCommands = (
 
     if (canAttack(state)) {
       const opponent = state.players[getOpponentId(playerId)]
+      const forcedTargetId = getForcedAttackTargetId(state, playerId)
       for (const attacker of player.battleArea) {
         if (attacker.rested || attacker.card.nonAttackable) continue
         if (
@@ -127,6 +129,7 @@ export const getLegalTurnCommands = (
         )
         if (!paymentIds) continue
         for (const target of opponent.battleArea) {
+          if (forcedTargetId && target.card.instanceId !== forcedTargetId) continue
           commands.push({
             kind: 'attack',
             playerId,

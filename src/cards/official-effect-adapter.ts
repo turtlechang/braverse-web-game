@@ -48,7 +48,7 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
 
 const parseTarget = (text: string): EffectTargetSelector | null => {
   const match = text.match(
-    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?\s+(?:LV\.(\d+)\s+)?Cookies/i,
+    /Select\s+(up to\s+)?(\d+)\s+of\s+(your opponent's|your)(\s+other)?(?:\s+\{[RYGBPKN]\})?\s+(?:LV\.(\d+)\s+)?Cookies/i,
   )
 
   if (match) {
@@ -69,11 +69,17 @@ const parseTarget = (text: string): EffectTargetSelector | null => {
     }
 
     const textAfterTarget = text.slice(match.index ?? 0)
-    const remainingHpMatch = textAfterTarget.match(/remaining HP is (\d+)/i)
+    const remainingHpMatch = textAfterTarget.match(
+      /remaining HP is (\d+)(\s+or more)?/i,
+    )
     const minimumLevelMatch = textAfterTarget.match(/LV\.(\d+) or higher/i)
 
     if (remainingHpMatch) {
-      target.remainingHp = Number(remainingHpMatch[1])
+      if (remainingHpMatch[2]) {
+        target.minRemainingHp = Number(remainingHpMatch[1])
+      } else {
+        target.remainingHp = Number(remainingHpMatch[1])
+      }
     }
 
     if (minimumLevelMatch) {
@@ -115,9 +121,20 @@ const parseCondition = (text: string): EffectCondition | undefined => {
     }
   }
 
-  const handCountMatch = text.match(/(\d+) cards? or less in your hand/i)
-  return handCountMatch
-    ? { kind: 'hand-count-at-most', count: Number(handCountMatch[1]) }
+  const handCountAtMostMatch = text.match(/(\d+) cards? or less in your hand/i)
+  if (handCountAtMostMatch) {
+    return {
+      kind: 'hand-count-at-most',
+      count: Number(handCountAtMostMatch[1]),
+    }
+  }
+
+  // BS4-083「if your hand contains 5 cards or more」。
+  const handCountAtLeastMatch = text.match(
+    /your hand contains?\s+(\d+)\s+cards?\s+or\s+more/i,
+  )
+  return handCountAtLeastMatch
+    ? { kind: 'hand-count-at-least', count: Number(handCountAtLeastMatch[1]) }
     : undefined
 }
 
@@ -193,6 +210,12 @@ const parseAbilityCost = (text: string): AbilityCost => {
   const handToBreakMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?Cookie\s+from\s+your\s+hand\s+into\s+your\s+break\s+area\.?\s*(?:>|》)/i,
   )
+  // BS4-004／005／007 這類辣椒系卡的代價：從自己這張卡的 HP 頂端棄 N 張。
+  // 官方文字用詞不一致：「this Cookie's HP」與「this Cookie's HP card」都有
+  // （BS4-096），故「card」字尾為選用。
+  const hpToTrashMatch = text.match(
+    /(?:<|《)\s*Place\s+(\d+)\s+cards?\s+from\s+the\s+top\s+of\s+this\s+Cookie's\s+HP(?:\s+cards?)?\s+into\s+the\s+trash\.?\s*(?:>|》)/i,
+  )
   const costColors = {
     R: 'red',
     Y: 'yellow',
@@ -211,6 +234,7 @@ const parseAbilityCost = (text: string): AbilityCost => {
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
+    ...(hpToTrashMatch ? { hpToTrash: { amount: Number(hpToTrashMatch[1]) } } : {}),
     ...(handToBreakMatch ? {
       handToBreakArea: {
         count: Number(handToBreakMatch[1]),
@@ -1633,6 +1657,441 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    // BS4-070「When this Cookie faints」的棄牌代價由 parseAbilityCost 自動解析，
+    // 這裡只需要補上昏厥後的抽牌效果本身。
+    'BS4-070': [{ kind: 'draw-up-to', max: 3 }],
+    'BS4-082': [
+      { kind: 'draw-up-to-then-discard', max: 3, discardCount: 2 },
+    ],
+    // 跟 BS3-083「View 3 cards from the top of your deck; place them on the
+    // top of your deck in any order.」是同一種機制：pickCount 0、
+    // restDestination 'top' 時，檢視到的卡全部照玩家決定的順序放回牌頂。
+    'BS4-072': [
+      { kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' },
+    ],
+    // === BS4 紅色餅乾卡技能 ===
+    // 代價「Place 1 card from the top of this Cookie's HP into the trash」
+    // 由 parseAbilityCost 的 hpToTrash 規則自動解析。
+    'BS4-004': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-005': [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    'BS4-007': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'red',
+        },
+      },
+    ],
+    // BS4-011：被動觸發，官方文字沒有 {ap}/{mob} 標記，兩個子效果都要各自帶上
+    // 同一個「本次戰鬥擊倒對方餅乾」條件，因為 CardEffect 是逐一判定，不是整個
+    // 陣列共用一個條件。
+    'BS4-011': [
+      {
+        kind: 'draw',
+        amount: 1,
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+      {
+        kind: 'discard-hand',
+        count: 1,
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+    ],
+    // === BS4 黃色餅乾卡技能 ===
+    'BS4-038': [
+      { kind: 'break-to-battle', amount: 1, maxLevel: 2, energyColor: 'yellow' },
+    ],
+    'BS4-026': [
+      {
+        kind: 'battle-to-break',
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 },
+        condition: { kind: 'opponent-break-level-at-most', level: 5 },
+      },
+    ],
+    'BS4-028': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'break-level-at-least', level: 5 },
+      },
+      {
+        kind: 'discard-hand',
+        count: 1,
+        condition: { kind: 'break-level-at-least', level: 5 },
+      },
+    ],
+    // === BS4 綠色餅乾卡技能 ===
+    // 代價「Place 1 card from your support area into the trash」由
+    // parseAbilityCost 的 supportToTrash 規則自動解析。
+    'BS4-051': [
+      {
+        kind: 'set-cookie-active',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS4-059': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'support-count-at-most', count: 3 },
+      },
+    ],
+    'BS4-048': [
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        condition: {
+          kind: 'support-color-count-at-least',
+          color: 'green',
+          count: 7,
+        },
+      },
+    ],
+    'BS4-053': [
+      {
+        kind: 'battle-to-support',
+        target: { side: 'self', min: 0, max: 1, maxLevel: 2, energyColor: 'green' },
+      },
+    ],
+    // BS4-077：代價「Place this Cookie on the bottom of your deck」透過
+    // exactCookieSkillCosts 的 selfToDeckBottom 硬編碼（官方文字沒有固定句式
+    // 可泛用解析，跟 selfToBreakArea 一樣走per-card覆寫）。
+    'BS4-077': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'hand-count-at-most', count: 5 },
+            { kind: 'battle-area-has-color', side: 'self', color: 'blue' },
+          ],
+        },
+      },
+    ],
+    // 中文卡面另一段用「或更多」明確標示「至少」，這段沒有那個字尾，
+    // 確認「對手戰鬥區有2個餅乾」是剛好等於 2，不是至少 2。
+    'BS4-089': [
+      {
+        kind: 'deck-to-trash',
+        amount: 5,
+        side: 'opponent',
+      },
+      {
+        kind: 'opponent-battle-to-trash',
+        min: 0,
+        condition: { kind: 'opponent-battle-area-cookie-count', count: 2 },
+      },
+    ],
+    // 中文卡面用「且」明確連接顏色與等級，是同一張卡要同時滿足紫色跟LV.3，
+    // 不是分開各自判定存在（battle-area-has-color 已加上可選的 level 欄位）。
+    'BS4-094': [
+      {
+        kind: 'deck-to-trash',
+        amount: 3,
+        side: 'self',
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'purple',
+          level: 3,
+        },
+      },
+      {
+        kind: 'deck-to-trash',
+        amount: 3,
+        side: 'opponent',
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'purple',
+          level: 3,
+        },
+      },
+    ],
+    // 中文卡面「從自己或對手的牌庫頂」確認是發動者自選要磨誰的牌庫，用既有的
+    // choose-one 表達，不需要新的「可選邊」機制。
+    'BS4-099': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '磨自己牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+          },
+          {
+            label: '磨對方牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+          },
+        ],
+      },
+    ],
+    // 中文卡面確認是兩段各自獨立的目標選擇：先選自己一隻紅色餅乾動它的 HP，
+    // 再另外選對手一隻造成傷害，跟 BS3-115（hp-to-trash + equip-source 各自
+    // 獨立目標）是同一種「陣列裡每個效果各自選目標」模式。
+    'BS4-019': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, energyColor: 'red' },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-058': [
+      { kind: 'support-to-battle', amount: 1, energyColor: 'green' },
+    ],
+    'BS4-102': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '磨自己牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+          },
+          {
+            label: '磨對方牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+          },
+        ],
+      },
+    ],
+    'BS4-049': [
+      {
+        kind: 'battle-to-support',
+        target: { side: 'opponent', min: 0, max: 1 },
+        rested: true,
+      },
+    ],
+    // === BS4 紫色卡技能／道具／場景 ===
+    'BS4-095': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 0, max: 1 },
+        stageOnly: true,
+      },
+    ],
+    // 代價「Place 1 card from the top of this Cookie's HP card into the
+    // trash」由 parseAbilityCost 的 hpToTrash 規則（已放寬「HP card」用詞）自動解析。
+    'BS4-096': [{ kind: 'draw-up-to', max: 1 }],
+    'BS4-106': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 },
+        condition: { kind: 'opponent-trash-count-at-least', count: 10 },
+      },
+    ],
+    'BS4-107': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'opponent-trash-count-at-least', count: 15 },
+      },
+      {
+        kind: 'deck-to-trash',
+        amount: 3,
+        side: 'self',
+        condition: { kind: 'opponent-trash-count-at-least', count: 15 },
+      },
+    ],
+    'BS4-108': [
+      { kind: 'trash-to-hand', max: 1, energyColor: 'purple' },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-081': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '選對方 1 隻 LV.1 餅乾放到對方牌庫底',
+            effects: [
+              {
+                kind: 'return-to-deck-bottom',
+                target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+              },
+            ],
+          },
+          {
+            label: '抽 2 張',
+            effects: [{ kind: 'draw-up-to', max: 2 }],
+          },
+        ],
+      },
+    ],
+    // BS4-085 是複合效果（含 Then），通用解析器不處理 Then，需硬編碼；
+    // 棄 4 張的代價一樣交給 parseAbilityCost 自動解析。
+    'BS4-085': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 2 },
+      },
+      { kind: 'draw-up-to', max: 4 },
+    ],
+    // === BS4 效果稽核：可由既有 CardEffect 精確表達的能力 ===
+    'BS4-020': [
+      {
+        kind: 'modify-attack',
+        amount: 3,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          minLevel: 3,
+          maxLevel: 3,
+          energyColor: 'red',
+        },
+        condition: { kind: 'break-level-at-least', level: 6 },
+      },
+    ],
+    'BS4-024': [
+      {
+        kind: 'redirect-attack',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'yellow',
+          level: 3,
+        },
+      },
+    ],
+    'BS4-025': [
+      { kind: 'hand-to-break', amount: 1, energyColor: 'yellow', minLevel: 2 },
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 2,
+        energyColor: 'yellow',
+      },
+    ],
+    'BS4-030': [
+      {
+        kind: 'cycle-hp',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'yellow',
+        },
+      },
+    ],
+    'BS4-055': [
+      { kind: 'deck-to-support', amount: 1, rested: true },
+    ],
+    'BS4-035': [
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 1,
+        energyColor: 'yellow',
+      },
+    ],
+    'BS4-040': [
+      {
+        kind: 'battle-to-break',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          minLevel: 2,
+          energyColor: 'yellow',
+        },
+      },
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 3,
+        energyColor: 'yellow',
+      },
+    ],
+    'BS4-062': [
+      {
+        kind: 'rest-support-and-damage',
+        supportSide: 'self',
+        supportAmount: 4,
+        supportEnergyColor: 'green',
+        activeOnly: true,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-063': [
+      { kind: 'deck-to-support', amount: 2, rested: true },
+      { kind: 'support-to-trash', amount: 1 },
+    ],
+    'BS4-092': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
+    'BS4-093': [
+      { kind: 'opponent-battle-to-trash', min: 0, maxLevel: 2 },
+    ],
+    'BS4-098': [
+      {
+        kind: 'disable-flip',
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-073': [
+      {
+        kind: 'return-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
+      },
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
+    'BS4-074': [
+      { kind: 'discard-hand-all' },
+      { kind: 'draw-up-to', max: 4 },
+    ],
+    'BS4-075': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: { side: 'either', min: 1, max: 1, maxLevel: 1 },
+        allowStage: true,
+        battleSide: 'opponent',
+      },
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS4-084': [
+      { kind: 'draw-until-hand-equals-opponent' },
+    ],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -2217,6 +2676,10 @@ export const convertOfficialItemAbility = (
       discardHand: 0,
       trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
     },
+    'BS4-040': {
+      energy: { yellow: 2 },
+      discardHand: 0,
+    },
   }
   const parsedCost = parseAbilityCost(card.attackText)
   const hasSpecialCost =
@@ -2473,6 +2936,69 @@ export const convertOfficialStageAbility = (
         duration: 'this-turn',
       },
     ],
+    'BS4-110': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'trash-count-at-most', count: 15 },
+      },
+    ],
+    'BS4-022': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          minLevel: 2,
+          energyColor: 'red',
+        },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-088': [
+      {
+        kind: 'return-to-hand',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          minRemainingHp: 4,
+          energyColor: 'blue',
+        },
+      },
+    ],
+    'BS4-044': [
+      {
+        kind: 'hand-to-hp',
+        target: { side: 'self', min: 0, max: 1 },
+        selectTarget: true,
+        optional: true,
+      },
+    ],
+    'BS4-066': [
+      {
+        kind: 'support-to-hp',
+        target: { side: 'self', min: 0, max: 1 },
+        energyColor: 'green',
+        selectTarget: true,
+        optional: true,
+      },
+    ],
+    'BS4-111': [
+      { kind: 'field-to-deck-bottom-all', maxLevel: 2 },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -2490,6 +3016,11 @@ export const convertOfficialStageAbility = (
     },
     'P-028': { energy: { yellow: 1 } },
     'P-032': { energy: { neutral: 2 } },
+    'BS4-110': { energy: { purple: 1 }, discardHand: 2 },
+    'BS4-022': { energy: { red: 2 }, discardHand: 0 },
+    'BS4-088': { energy: { blue: 1 }, discardHand: 1 },
+    'BS4-044': { energy: { yellow: 2 }, discardHand: 1 },
+    'BS4-066': { energy: { green: 3 }, discardHand: 0 },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {
@@ -3122,6 +3653,276 @@ export const convertOfficialAttackEffects = (
           'You can discard 1 card to deal 1 damage to 1 of your opponent\'s Cookies.',
       },
     ],
+    // === BS4 藍色餅乾卡攻擊 Then ===
+    'BS4-076': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS4-083': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'hand-count-at-least', count: 5 },
+      },
+    ],
+    // === BS4 紅色餅乾卡攻擊 Then ===
+    'BS4-004': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 2 },
+        // BS4-004@1 的官方異圖文字是「remaining HP is 1」；攻擊結算時
+        // 以「來源 HP 小於 2」表達同一個可觀察條件。
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
+    'BS4-003': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'red',
+          excludeSource: true,
+        },
+      },
+    ],
+    'BS4-009': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'attack-target-level-at-most', level: 2 },
+      },
+    ],
+    'BS4-013': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {R} to deal 1 damage to the attacked Cookie.',
+      },
+    ],
+    'BS4-016': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, remainingHp: 1 },
+      },
+    ],
+    // === BS4 黃色餅乾卡攻擊 Then ===
+    'BS4-038': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'yellow',
+          excludeSource: true,
+        },
+      },
+    ],
+    'BS4-026': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'break-level-at-least', level: 3 },
+          },
+        ],
+        effectText:
+          "If your break area is LV.3 or higher, use this Cookie as {Y} to deal 2 damage to 1 of your opponent's Cookies.",
+      },
+    ],
+    'BS4-039': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        condition: { kind: 'source-hp-at-least', amount: 2 },
+      },
+    ],
+    // === BS4 綠色餅乾卡攻擊 Then ===
+    'BS4-053': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { green: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'support-count-at-least', count: 7 },
+          },
+        ],
+        effectText:
+          "If your support area contains 7 cards or more, use this Cookie as {G} to deal 1 damage to 1 of your opponent's Cookies.",
+      },
+    ],
+    'BS4-049': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { green: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'opponent-support-count-at-least', count: 7 },
+          },
+        ],
+        effectText:
+          "If your opponent's support area contains 7 cards or more, use this Cookie as {G} to deal 2 damage to 1 of your opponent's Cookies.",
+      },
+    ],
+    'BS4-054': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'support-count-at-least', count: 5 },
+      },
+    ],
+    'BS4-061': [
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        condition: { kind: 'support-count-at-least', count: 7 },
+      },
+    ],
+    // === BS4 紫色卡攻擊 Then ===
+    'BS4-103': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    'BS4-023': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'break-area-has-card',
+          side: 'self',
+          color: 'yellow',
+          minLevel: 3,
+          maxLevel: 3,
+        },
+      },
+    ],
+    'BS4-029': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'battle-to-break',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+          {
+            kind: 'break-to-battle',
+            amount: 1,
+            exactLevel: 3,
+            energyColor: 'yellow',
+          },
+        ],
+        effectText:
+          'Use this Cookie as {Y} to place this Cookie in your break area and play up to 1 {Y} LV.3 Cookie from your break area.',
+      },
+    ],
+    'BS4-069': [
+      {
+        kind: 'opponent-discard-hand',
+        count: 1,
+        destination: 'deck-bottom',
+      },
+    ],
+    'BS4-090': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'trash-flip-count-at-least', count: 3 },
+      },
+    ],
+    'BS4-091': [
+      {
+        kind: 'trash-to-deck',
+        max: 3,
+        excludeFlip: true,
+        destination: 'bottom',
+      },
+    ],
+    'BS4-098': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: {
+              kind: 'trash-color-count-at-least',
+              color: 'purple',
+              count: 15,
+            },
+          },
+        ],
+        effectText:
+          "If your trash contains 15 {P} cards or more, use this Cookie as {P} to deal 2 damage to 1 of your opponent's Cookies.",
+      },
+    ],
+    'BS4-089': [
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 2,
+        discardCount: 1,
+        condition: { kind: 'opponent-trash-count-at-least', count: 15 },
+      },
+    ],
+    'BS4-073': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+            condition: { kind: 'hand-count-at-least', count: 5 },
+          },
+        ],
+        effectText:
+          'If your hand contains 5 cards or more, use this Cookie as {B} to deal 2 additional damage to the attacked Cookie.',
+      },
+    ],
+    // BS4-075：中文卡面確認「棄2張手牌」沒有「可以／you may」字樣，是強制
+    // 代價，不是像「can be used as」那樣的自選加費，所以不用
+    // optional-cost-attack，直接照順序寫成兩個效果。
+    'BS4-075': [
+      { kind: 'discard-hand', count: 2 },
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
   }
 
   if (exactAttackEffects[cardKey]) {
@@ -3145,6 +3946,19 @@ export const convertOfficialFlipAbility = (
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
     : card.cardNumber
+
+  // 官方 BS4-032@1 異圖的 card_flip 欄位只重複攻擊名稱；依官方卡圖補回
+  // 與同卡基礎版本一致的抽牌效果。
+  if (
+    card.cardNumber === 'BS4-032@1' &&
+    /^<\{Y\}\{Y\}>\s*Creamcraft Magic!\s*$/i.test(card.flipText.trim())
+  ) {
+    return {
+      text: 'Draw up to 1 card from your deck.',
+      cost: parseAbilityCost(card.flipText),
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    }
+  }
 
   const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
     'P-024': {
@@ -3194,6 +4008,55 @@ export const convertOfficialFlipAbility = (
           rested: true,
           condition: { kind: 'support-count-at-least', count: 4 },
         } satisfies CardEffect as CardEffect,
+      ],
+    },
+    // 跟 BS3-083 的技能是同一種機制，見 exactStarterEffects 裡的註解。
+    'BS4-072': {
+      effects: [
+        { kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' },
+      ],
+    },
+    'BS4-057': {
+      effects: [
+        {
+          kind: 'flip-to-support',
+          rested: true,
+          condition: { kind: 'break-level-at-least', level: 6 },
+        },
+      ],
+    },
+    'BS4-031': {
+      effects: [
+        {
+          kind: 'break-to-hand',
+          amount: 1,
+          minLevel: 1,
+          maxLevel: 1,
+          optional: true,
+        },
+        {
+          kind: 'flip-to-break',
+          condition: { kind: 'break-level-at-least', level: 5 },
+        },
+      ],
+    },
+    // 中文卡面「從自己或對手的牌庫頂」跟 BS4-099 是同一種「自選磨誰的牌庫」，
+    // 一樣用 choose-one 表達。
+    'BS4-102': {
+      effects: [
+        {
+          kind: 'choose-one',
+          modes: [
+            {
+              label: '磨自己牌庫',
+              effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+            },
+            {
+              label: '磨對方牌庫',
+              effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+            },
+          ],
+        },
       ],
     },
   }
@@ -3575,6 +4438,44 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'BS4-043': {
+      effects: [
+        {
+          kind: 'damage-by-break-level-difference',
+          target: { side: 'opponent', min: 0, max: 1 },
+          condition: { kind: 'break-level-higher-than-opponent' },
+        },
+      ],
+    },
+    'BS4-065': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        { kind: 'deck-to-support', amount: 1, rested: true },
+      ],
+    },
+    'BS4-109': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'inspect-deck',
+          lookCount: 3,
+          pickCount: 1,
+          filterColor: 'purple',
+          optionalPick: true,
+          restDestination: 'trash',
+        },
+      ],
+    },
     'BS3-069': {
       effects: [
         {
@@ -3750,6 +4651,26 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     discardHand: 0,
     selfToBreakArea: true,
   },
+  'BS4-077': {
+    energy: { blue: 1 },
+    discardHand: 0,
+    selfToDeckBottom: true,
+  },
+  'BS4-001': {
+    energy: { red: 2 },
+    discardHand: 0,
+    selfToBreakArea: true,
+  },
+  'BS4-092': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashBattleCookie: {
+      count: 1,
+      maxLevel: 2,
+      energyColor: 'purple',
+      excludeSource: true,
+    },
+  },
   'BS2-071': {
     energy: { purple: 1 },
     discardHand: 0,
@@ -3797,6 +4718,7 @@ const exactCookieSkillSourceEnergy: Partial<
  */
 const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS3-025': 'activate',
+  'BS4-004': 'on-play',
 }
 
 /**

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import type {
   BuiltInDeckChoice,
+  CardEffect,
   DeckChoice,
   EnergyCost,
   GameEndReason,
@@ -1581,8 +1582,12 @@ export interface FlipResponseModalProps {
   discardCount: number
   selectedDiscardIds: string[]
   onToggleDiscard: (instanceId: string) => void
-  onActivate: () => void
+  onActivate: (chooseOneModeIndex?: number, targetIds?: string[]) => void
   onSkip: () => void
+  chooseOneModes?: Extract<CardEffect, { kind: 'choose-one' }>['modes']
+  targetCandidates?: GameCard[]
+  targetMin?: number
+  targetMax?: number
 }
 
 const FLIP_HAND_PAGE_SIZE = 3
@@ -1595,14 +1600,22 @@ export function FlipResponseModal({
   onToggleDiscard,
   onActivate,
   onSkip,
+  chooseOneModes,
+  targetCandidates = [],
+  targetMin = 0,
+  targetMax = 1,
 }: FlipResponseModalProps) {
   const [pageIndex, setPageIndex] = useState(0)
   const [minimized, setMinimized] = useState(false)
+  const [selectedChooseOneMode, setSelectedChooseOneMode] = useState<number | null>(null)
+  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
   const pageCount = Math.max(1, Math.ceil(hand.length / FLIP_HAND_PAGE_SIZE))
   const visibleHand = hand.slice(
     pageIndex * FLIP_HAND_PAGE_SIZE,
     (pageIndex + 1) * FLIP_HAND_PAGE_SIZE,
   )
+  const targetSelectionReady =
+    selectedTargetIds.length >= targetMin && selectedTargetIds.length <= targetMax
 
   if (minimized) {
     return (
@@ -1640,6 +1653,56 @@ export function FlipResponseModal({
         <h2>{card.name} FLIP</h2>
         <CardFace card={card} className="flip-reveal-card" />
         <p>{card.flip?.text}</p>
+        {chooseOneModes && chooseOneModes.length > 0 && (
+          <div className="flip-choice-section">
+            <strong>選擇一項</strong>
+            <div className="flip-choice-options" role="group" aria-label="FLIP 效果選項">
+              {chooseOneModes.map((mode, index) => (
+                <button
+                  type="button"
+                  className={selectedChooseOneMode === index ? 'is-selected' : ''}
+                  aria-pressed={selectedChooseOneMode === index}
+                  key={`${mode.label}-${index}`}
+                  onClick={() => setSelectedChooseOneMode(index)}
+                >
+                  {mode.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {targetCandidates.length > 0 && (
+          <div className="flip-choice-section">
+            <strong>
+              選擇目標{targetMin === 0 ? '（可不選）' : ''}
+            </strong>
+            <div className="flip-choice-options" role="group" aria-label="FLIP 效果目標">
+              {targetCandidates.map((target) => {
+                const selected = selectedTargetIds.includes(target.instanceId)
+                return (
+                  <button
+                    type="button"
+                    className={selected ? 'is-selected' : ''}
+                    aria-pressed={selected}
+                    key={target.instanceId}
+                    onClick={() => {
+                      setSelectedTargetIds((current) =>
+                        selected
+                          ? current.filter((id) => id !== target.instanceId)
+                          : current.length < targetMax
+                            ? [...current, target.instanceId]
+                            : current,
+                      )
+                    }}
+                  >
+                    <CardFace card={target} />
+                    <span>{target.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         {discardCount > 0 && (
           <>
             <strong>選擇 {discardCount} 張手牌棄置</strong>
@@ -1699,8 +1762,14 @@ export function FlipResponseModal({
           <button type="button" onClick={onSkip}>不發動</button>
           <button
             type="button"
-            disabled={selectedDiscardIds.length !== discardCount}
-            onClick={onActivate}
+            disabled={
+              selectedDiscardIds.length !== discardCount ||
+              (chooseOneModes && selectedChooseOneMode === null) ||
+              !targetSelectionReady
+            }
+            onClick={() =>
+              onActivate(selectedChooseOneMode ?? undefined, selectedTargetIds)
+            }
           >
             發動 FLIP
           </button>

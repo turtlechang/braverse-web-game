@@ -13,6 +13,7 @@ import {
   canActivateCookieSkill,
   getEnergyCostTotal,
   getBreakToBattleCandidates,
+  getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
@@ -23,6 +24,7 @@ import {
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
+  getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
   getTrashCookieCandidates,
@@ -136,6 +138,12 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'flip-to-support' ||
           currentEffect.kind === 'hand-to-battle' ||
           currentEffect.kind === 'opponent-trash-to-break' ||
+          currentEffect.kind === 'rest-support' ||
+          currentEffect.kind === 'hand-to-hp' ||
+          currentEffect.kind === 'support-to-hp' ||
+          currentEffect.kind === 'cycle-hp' ||
+          currentEffect.kind === 'rest-support-and-damage' ||
+          currentEffect.kind === 'field-to-deck-bottom' ||
           currentEffect.kind === 'inspect-deck' ||
           currentEffect.kind === 'optional-cost-attack' ||
           currentEffect.kind === 'disable-block'
@@ -212,6 +220,9 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'hand-to-hp' ||
       currentEffect.kind === 'rest-support' ||
       currentEffect.kind === 'support-to-hp' ||
+      currentEffect.kind === 'cycle-hp' ||
+      currentEffect.kind === 'rest-support-and-damage' ||
+      currentEffect.kind === 'field-to-deck-bottom' ||
       currentEffect.kind === 'hand-to-battle' ||
       currentEffect.kind === 'opponent-trash-to-break' ||
       (currentEffect.kind === 'set-active' && currentEffect.selectable))
@@ -241,6 +252,11 @@ export function usePendingEffect(params: {
   const breakToBattleCandidates =
     pendingEffect && currentEffect?.kind === 'break-to-battle'
       ? getBreakToBattleCandidates(game, pendingEffect.context, currentEffect)
+      : []
+
+  const supportToBattleCandidates =
+    pendingEffect && currentEffect?.kind === 'support-to-battle'
+      ? getSupportToBattleCandidates(game, pendingEffect.context, currentEffect)
       : []
 
   const breakToHandBySumCandidates =
@@ -284,9 +300,10 @@ export function usePendingEffect(params: {
 
   const supportEffectTargetIds = faintActive
     ? new Set<string>()
-    : new Set(
-        supportEffectCandidates.map((support) => support.card.instanceId),
-      )
+    : new Set([
+        ...supportEffectCandidates.map((support) => support.card.instanceId),
+        ...supportToBattleCandidates.map((card) => card.instanceId),
+      ])
 
   const trashEffectTargetIds = faintActive
     ? new Set<string>()
@@ -402,6 +419,23 @@ export function usePendingEffect(params: {
   const selectedSkillDiscardHandIds = new Set(
     pendingEffect?.selectedDiscardHandIds ?? [],
   )
+
+  const selectedSkillHpToTrashTargetIds = new Set(
+    pendingEffect?.selectedHpToTrashTargetIds ?? [],
+  )
+  const skillHpToTrashCandidates =
+    pendingEffect &&
+    !pendingEffect.skillActivated &&
+    pendingEffect.skill.cost.hpToTrash
+      ? getHpToTrashCostCandidates(
+          pendingEffect.skill.cost,
+          game.players[pendingEffect.context.sourcePlayerId].battleArea,
+        ).map((cookie) => cookie.card)
+      : []
+  const skillHpToTrashTargetIds = new Set(
+    skillHpToTrashCandidates.map((card) => card.instanceId),
+  )
+  const hpToTrashCost = pendingEffect?.skill.cost.hpToTrash ? 1 : 0
 
   const selectedSkillTrashBattleCookieIds = new Set(
     pendingEffect?.selectedTrashBattleCookieIds ?? [],
@@ -545,6 +579,7 @@ export function usePendingEffect(params: {
         selectedPaymentIds: [],
         selectedCostSupportToTrashIds: [],
         selectedDiscardHandIds: [],
+        selectedHpToTrashTargetIds: [],
         selectedTrashBattleCookieIds: [],
         // 代價在 playTrap 就付清了，這裡只剩效果結算。
         skillActivated: true,
@@ -721,6 +756,7 @@ export function usePendingEffect(params: {
       selectedPaymentIds: [],
       selectedCostSupportToTrashIds: [],
       selectedDiscardHandIds: [],
+      selectedHpToTrashTargetIds: [],
       selectedTrashBattleCookieIds: [],
       skillActivated: false,
       optional,
@@ -790,6 +826,7 @@ export function usePendingEffect(params: {
       selectedPaymentIds: [],
       selectedCostSupportToTrashIds: [],
       selectedDiscardHandIds: [],
+      selectedHpToTrashTargetIds: [],
       selectedTrashBattleCookieIds: [],
       skillActivated: false,
       optional: false,
@@ -924,6 +961,7 @@ export function usePendingEffect(params: {
         selectedPaymentIds: [],
         selectedCostSupportToTrashIds: [],
         selectedDiscardHandIds: [],
+        selectedHpToTrashTargetIds: [],
         selectedTrashBattleCookieIds: [],
         skillActivated: true,
         optional: false,
@@ -1030,7 +1068,8 @@ export function usePendingEffect(params: {
             currentEffect.kind === 'trash-to-battle' ||
             currentEffect.kind === 'trash-to-support' ||
             currentEffect.kind === 'trash-to-break' ||
-            currentEffect.kind === 'break-to-battle'
+            currentEffect.kind === 'break-to-battle' ||
+            currentEffect.kind === 'support-to-battle'
           ? currentEffect.amount
         : currentEffect.kind === 'hand-to-break' ||
             currentEffect.kind === 'break-to-hand' ||
@@ -1038,7 +1077,15 @@ export function usePendingEffect(params: {
           ? currentEffect.amount
         : currentEffect.kind === 'hand-to-hp' ||
             currentEffect.kind === 'support-to-hp'
-          ? 1
+          ? currentEffect.selectTarget
+            ? 2
+            : 1
+        : currentEffect.kind === 'cycle-hp'
+          ? 2
+        : currentEffect.kind === 'rest-support-and-damage'
+          ? currentEffect.supportAmount + currentEffect.target.max
+        : currentEffect.kind === 'field-to-deck-bottom'
+          ? currentEffect.target.max
         : currentEffect.kind === 'set-active' && currentEffect.selectable
           ? currentEffect.supportCount
         : isEffectUntargeted(currentEffect)
@@ -1217,6 +1264,18 @@ export function usePendingEffect(params: {
     setPendingEffect({ ...pendingEffect, selectedTrashBattleCookieIds })
   }
 
+  const toggleSkillHpToTrash = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+    if (!pendingEffect.skill.cost.hpToTrash || !skillHpToTrashTargetIds.has(instanceId)) {
+      return
+    }
+    const selected = pendingEffect.selectedHpToTrashTargetIds
+    setPendingEffect({
+      ...pendingEffect,
+      selectedHpToTrashTargetIds: selected.includes(instanceId) ? [] : [instanceId],
+    })
+  }
+
   const cancelPendingSkill = () => {
     if (!pendingEffect) return
     if (
@@ -1274,6 +1333,7 @@ export function usePendingEffect(params: {
           selectedTargetIds: [],
           skillActivated: true,
           selectedDiscardHandIds: [],
+          selectedHpToTrashTargetIds: [],
           selectedTrashBattleCookieIds: [],
         })
         setMessage('已略過可選效果。')
@@ -1287,6 +1347,7 @@ export function usePendingEffect(params: {
               effectIndex: effectiveNextIndex,
               selectedTargetIds: [],
               selectedDiscardHandIds: [],
+              selectedHpToTrashTargetIds: [],
               selectedTrashBattleCookieIds: [],
               skillActivated: true,
             }
@@ -1402,6 +1463,9 @@ export function usePendingEffect(params: {
               supportToTrashIds,
               supportToHandIds,
               discardHandIds,
+              ...(pendingEffect.skill.cost.hpToTrash
+                ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
+                : {}),
               trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
               chooseOneModes: pendingEffect.chooseOneModes,
             })
@@ -1413,6 +1477,9 @@ export function usePendingEffect(params: {
                 supportToTrashIds,
                 supportToHandIds,
                 discardHandIds,
+                ...(pendingEffect.skill.cost.hpToTrash
+                  ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
+                  : {}),
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
@@ -1424,6 +1491,9 @@ export function usePendingEffect(params: {
                 paymentIds,
                 costSupportToTrashIds: pendingEffect.selectedCostSupportToTrashIds,
                 discardHandIds,
+                ...(pendingEffect.skill.cost.hpToTrash
+                  ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
+                  : {}),
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
                 trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds,
                 trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
@@ -1491,6 +1561,7 @@ export function usePendingEffect(params: {
           effectIndex: effectiveNextIndex,
           selectedTargetIds: [],
           selectedDiscardHandIds: [],
+          selectedHpToTrashTargetIds: [],
           selectedTrashBattleCookieIds: [],
           skillActivated: true,
         })
@@ -1527,6 +1598,7 @@ export function usePendingEffect(params: {
               effectIndex: effectiveNextIndex,
               selectedTargetIds: [],
               selectedDiscardHandIds: [],
+              selectedHpToTrashTargetIds: [],
               selectedTrashBattleCookieIds: [],
               skillActivated: true,
             }
@@ -1612,6 +1684,7 @@ export function usePendingEffect(params: {
     toggleSkillPayment,
     toggleSkillCostSupport,
     toggleSkillDiscardHand,
+    toggleSkillHpToTrash,
     toggleSkillTrashBattleCookie,
     toggleSkillTrashToDeckBottom,
     toggleSkillTrashToDeck,
@@ -1627,6 +1700,7 @@ export function usePendingEffect(params: {
     nonBattleEffectCandidateCards,
     breakToTrashCandidates,
     breakToBattleCandidates,
+    supportToBattleCandidates,
     breakToHandBySumCandidates,
     handToBreakBySumCandidates,
     trashToHandCandidates,
@@ -1640,6 +1714,10 @@ export function usePendingEffect(params: {
     skillDiscardHandTargetIds,
     selectedSkillDiscardHandIds,
     discardHandCost,
+    selectedSkillHpToTrashTargetIds,
+    skillHpToTrashCandidates,
+    skillHpToTrashTargetIds,
+    hpToTrashCost,
     effectTargetIds,
     breakEffectTargetIds,
     supportEffectTargetIds,

@@ -231,9 +231,17 @@ export const getTrashBattleCookieCostCandidates = (
       (cookie) => cookie.card.instanceId === sourceInstanceId,
     )
   }
-  const { level, energyColor } = cost.trashBattleCookie
+  const { level, minLevel, maxLevel, energyColor } = cost.trashBattleCookie
   return battleArea.filter((cookie) => {
+    if (
+      cost.trashBattleCookie?.excludeSource &&
+      cookie.card.instanceId === sourceInstanceId
+    ) {
+      return false
+    }
     if (level !== undefined && cookie.card.level !== level) return false
+    if (minLevel !== undefined && cookie.card.level < minLevel) return false
+    if (maxLevel !== undefined && cookie.card.level > maxLevel) return false
     if (energyColor !== undefined && cookie.card.energyColor !== energyColor) return false
     return true
   })
@@ -247,6 +255,86 @@ export const canPayTrashBattleCookieCost = (
   !cost.trashBattleCookie ||
   getTrashBattleCookieCostCandidates(cost, battleArea, sourceInstanceId).length >=
     cost.trashBattleCookie.count
+
+export const getHpToTrashCostCandidates = (
+  cost: AbilityCost,
+  battleArea: CookieInBattle[],
+): CookieInBattle[] => {
+  if (!cost.hpToTrash) return []
+  return battleArea.filter((cookie) => {
+    if (cookie.hpCards.length === 0) return false
+    return cost.hpToTrash?.untilRemainingHp === undefined
+      ? true
+      : cookie.hpCards.length > cost.hpToTrash.untilRemainingHp
+  })
+}
+
+export const payHpToTrashCost = (
+  player: PlayerState,
+  cost: AbilityCost,
+  selectedIds: string[],
+): { player: PlayerState; departedCount: number } => {
+  const uniqueIds = [...new Set(selectedIds)]
+  if (uniqueIds.length !== selectedIds.length) {
+    throw new GameRuleError('HP 費用不能重複選同一張餅乾。')
+  }
+  if (!cost.hpToTrash) {
+    if (uniqueIds.length > 0) {
+      throw new GameRuleError('此能力不需要支付 HP 費用。')
+    }
+    return { player, departedCount: 0 }
+  }
+  if (uniqueIds.length !== 1) {
+    throw new GameRuleError('必須選擇 1 張餅乾支付 HP 費用。')
+  }
+
+  const target = getHpToTrashCostCandidates(cost, player.battleArea).find(
+    (cookie) => cookie.card.instanceId === uniqueIds[0],
+  )
+  if (!target) {
+    throw new GameRuleError('選擇的 HP 費用餅乾不合法。')
+  }
+
+  const targetIndex = player.battleArea.findIndex(
+    (cookie) => cookie.card.instanceId === target.card.instanceId,
+  )
+  const removeCount = Math.max(
+    0,
+    cost.hpToTrash.untilRemainingHp !== undefined
+      ? target.hpCards.length - cost.hpToTrash.untilRemainingHp
+      : (cost.hpToTrash.amount ?? 1),
+  )
+  if (removeCount === 0) return { player, departedCount: 0 }
+
+  const removedHpCards = target.hpCards.slice(-removeCount)
+  const remainingHpCards = target.hpCards.slice(
+    0,
+    Math.max(0, target.hpCards.length - removeCount),
+  )
+  if (remainingHpCards.length === 0) {
+    return {
+      player: {
+        ...player,
+        battleArea: player.battleArea.filter((_, index) => index !== targetIndex),
+        breakArea: [...player.breakArea, target.card],
+        discardPile: [...player.discardPile, ...removedHpCards],
+      },
+      departedCount: 1,
+    }
+  }
+  return {
+    player: {
+      ...player,
+      battleArea: player.battleArea.map((cookie, index) =>
+        index === targetIndex
+          ? { ...cookie, hpCards: remainingHpCards }
+          : cookie,
+      ),
+      discardPile: [...player.discardPile, ...removedHpCards],
+    },
+    departedCount: 0,
+  }
+}
 
 export const payTrashBattleCookieCost = (
   player: PlayerState,
@@ -427,6 +515,13 @@ export const canActivateCookieSkill = (
     return false
   }
 
+  if (
+    skill.cost.hpToTrash &&
+    getHpToTrashCostCandidates(skill.cost, player.battleArea).length === 0
+  ) {
+    return false
+  }
+
   const context = { sourcePlayerId: playerId, sourceInstanceId }
   for (const effect of skill.effects) {
     if (!isEffectConditionMet(state, context, effect)) {
@@ -480,6 +575,7 @@ export const activateCookieSkill = (
   trashToDeckBottomIds: string[] = [],
   trashToDeckIds: string[] = [],
   shuffle: Shuffle = defaultShuffle,
+  hpToTrashTargetIds: string[] = [],
 ): GameState => {
   if (
     !canActivateCookieSkill(state, playerId, sourceInstanceId, trigger)
@@ -582,8 +678,13 @@ export const activateCookieSkill = (
     throw new GameRuleError('此技能不需要支付洗回牌庫的棄牌區代價。')
   }
 
-  const trashBattlePayment = payTrashBattleCookieCost(
+  const hpToTrashPayment = payHpToTrashCost(
     player,
+    cost,
+    hpToTrashTargetIds,
+  )
+  const trashBattlePayment = payTrashBattleCookieCost(
+    hpToTrashPayment.player,
     cost,
     trashBattleCookieIds,
     sourceInstanceId,
@@ -611,6 +712,27 @@ export const activateCookieSkill = (
         ],
       }
       selfToBreakDepartedCount = 1
+    }
+  }
+
+  let selfToDeckBottomDepartedCount = 0
+  if (cost.selfToDeckBottom) {
+    const stillInBattle = playerAfterCosts.battleArea.find(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+    if (stillInBattle) {
+      playerAfterCosts = {
+        ...playerAfterCosts,
+        battleArea: playerAfterCosts.battleArea.filter(
+          (cookie) => cookie.card.instanceId !== sourceInstanceId,
+        ),
+        deck: [...playerAfterCosts.deck, stillInBattle.card],
+        discardPile: [
+          ...playerAfterCosts.discardPile,
+          ...stillInBattle.hpCards,
+        ],
+      }
+      selfToDeckBottomDepartedCount = 1
     }
   }
 
@@ -700,7 +822,10 @@ export const activateCookieSkill = (
   }
 
   const totalDepartedCount =
-    trashBattlePayment.departedCount + selfToBreakDepartedCount
+    hpToTrashPayment.departedCount +
+    trashBattlePayment.departedCount +
+    selfToBreakDepartedCount +
+    selfToDeckBottomDepartedCount
 
   return totalDepartedCount > 0
     ? recordCookieDepartures(

@@ -1,4 +1,5 @@
 import { playItem } from './card-abilities'
+import { getForcedAttackTargetId } from './battle'
 import { applyGameCommand } from './commands'
 import { getActingPlayerId } from './controller'
 import { createSeededRandom, createSeededShuffle } from './helpers'
@@ -89,15 +90,44 @@ const chooseEffectTargets = (
   effect: CardEffect,
 ): string[] => {
   if (
+    effect.kind === 'break-to-battle' ||
+    effect.kind === 'support-to-battle' ||
     effect.kind === 'hand-to-break' ||
     effect.kind === 'break-to-hand' ||
     effect.kind === 'hand-to-hp' ||
     effect.kind === 'rest-support' ||
     effect.kind === 'support-to-hp' ||
+    effect.kind === 'cycle-hp' ||
+    effect.kind === 'rest-support-and-damage' ||
+    effect.kind === 'field-to-deck-bottom' ||
     effect.kind === 'hand-to-battle' ||
     effect.kind === 'opponent-trash-to-break' ||
     (effect.kind === 'set-active' && effect.selectable)
   ) {
+    if (effect.kind === 'rest-support-and-damage') {
+      const candidates = getEffectSelectionCandidates(state, context, effect)
+      const targetIds = new Set(
+        getEffectTargetCandidates(state, context, effect.target).map(
+          (cookie) => cookie.card.instanceId,
+        ),
+      )
+      return [
+        ...candidates.filter((card) => !targetIds.has(card.instanceId)).slice(0, effect.supportAmount),
+        ...candidates.filter((card) => targetIds.has(card.instanceId)).slice(0, effect.target.max),
+      ].map((card) => card.instanceId)
+    }
+    if (effect.kind === 'support-to-hp' && effect.selectTarget) {
+      const candidates = getEffectSelectionCandidates(state, context, effect)
+      const targetIds = new Set(
+        getEffectTargetCandidates(state, context, effect.target).map(
+          (cookie) => cookie.card.instanceId,
+        ),
+      )
+      return [
+        candidates.find((card) => !targetIds.has(card.instanceId)),
+        candidates.find((card) => targetIds.has(card.instanceId)),
+      ].flatMap((card) => (card ? [card.instanceId] : []))
+    }
     const max = getEffectSelectionLimits(effect)?.max ?? 0
     return getEffectSelectionCandidates(state, context, effect)
       .slice(0, max)
@@ -673,6 +703,7 @@ const isItemEffectTargetCountSufficient = (
     effect.kind !== 'hand-to-battle' &&
     effect.kind !== 'opponent-trash-to-break' &&
     effect.kind !== 'opponent-battle-to-trash' &&
+    'target' in effect &&
     effect.target &&
     targetIds.length < effect.target.min
   ) {
@@ -730,6 +761,20 @@ const resolveAiSkill = (
     discardHandCost > 0 &&
     discardHandIds.length < discardHandCost
   ) {
+    return null
+  }
+
+  const hpToTrashTargetIds = skill.cost.hpToTrash
+    ? player.battleArea
+        .filter((cookie) =>
+          skill.cost.hpToTrash?.untilRemainingHp === undefined
+            ? cookie.hpCards.length > 0
+            : cookie.hpCards.length > skill.cost.hpToTrash.untilRemainingHp,
+        )
+        .slice(0, 1)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+  if (skill.cost.hpToTrash && hpToTrashTargetIds.length === 0) {
     return null
   }
 
@@ -811,6 +856,8 @@ const resolveAiSkill = (
     trashBattleCookieIds,
     trashToDeckBottomIds,
     trashToDeckIds,
+    undefined,
+    hpToTrashTargetIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -831,6 +878,7 @@ const resolveAiSkill = (
       paymentIds,
       costSupportToTrashIds,
       discardHandIds,
+      hpToTrashTargetIds,
       trashBattleCookieIds,
       trashToDeckBottomIds,
       trashToDeckIds,
@@ -894,6 +942,7 @@ const isSkillEffectTargetCountSufficient = (
     effect.kind !== 'flip-to-support' &&
     effect.kind !== 'hand-to-battle' &&
     effect.kind !== 'opponent-trash-to-break' &&
+    'target' in effect &&
     effect.target &&
     targetIds.length < effect.target.min
   ) {
@@ -953,6 +1002,12 @@ const chooseAttackTarget = (
 ) => {
   const opponentId =
     playerId === 'player-one' ? 'player-two' : 'player-one'
+  const forcedTargetId = getForcedAttackTargetId(state, playerId)
+  if (forcedTargetId) {
+    return state.players[opponentId].battleArea.find(
+      (cookie) => cookie.card.instanceId === forcedTargetId,
+    )
+  }
   const profile = getMatchupProfile(state, playerId)
 
   return [...state.players[opponentId].battleArea].sort((left, right) => {

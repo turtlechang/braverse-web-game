@@ -63,6 +63,7 @@ const createPendingEffect = (
   selectedPaymentIds: [],
   selectedCostSupportToTrashIds: [],
   selectedDiscardHandIds: [],
+  selectedHpToTrashTargetIds: [],
   selectedTrashBattleCookieIds: [],
   skillActivated: false,
   optional: false,

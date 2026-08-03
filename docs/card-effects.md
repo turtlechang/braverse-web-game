@@ -50,11 +50,13 @@
 | 效果 | 對應 CardEffect kind | 說明 |
 |---|---|---|
 | 傷害 | `damage` | 對合法目標造成固定傷害，含勝負與替補判定 |
+| 休息區等級差傷害 | `damage-by-break-level-difference` | 依雙方休息區等級總和差造成動態傷害；可搭配 `break-level-higher-than-opponent` 條件 |
 | 攻擊修正 | `modify-attack` | 增加或減少攻擊傷害，回合結束移除 |
 | 全體攻擊修正 | `modify-all-attack` | 增加或減少己方所有餅乾攻擊傷害，回合結束移除 |
 | 承受傷害修正 | `modify-damage-received` | 增加或減少承受的攻擊傷害；可在指定門檻達成時固定為特定傷害，回合結束移除 |
 | 純抽牌 | `draw` | 從牌庫抽固定 N 張，牌庫耗盡觸發 pending Refresh |
 | 可選抽牌 | `draw-up-to` | 玩家選擇抽 0～N 張；選擇大於 0 時沿用逐張抽牌與 Refresh 流程 |
+| 抽到與對手手牌相同 | `draw-until-hand-equals-opponent` | 僅在己方手牌較少時抽牌，抽到雙方手牌數相同；沿用 Refresh 流程 |
 | 場上卡→棄牌區 | `field-to-trash` | 依陣營、等級與剩餘 HP 上限篩選餅乾，文字允許時也可選場景；餅乾屬非昏厥離場，仍會清理修正並建立補位 |
 | 對手戰鬥區→棄牌區 | `opponent-battle-to-trash` | 移除符合條件的對手戰鬥區餅乾，屬非昏厥離場；可用 `min: 0` 表示「最多選 1 個」 |
 | 對手隨機棄牌 | `opponent-random-discard` | 透過注入式洗牌決定棄置卡，剩餘手牌維持原順序 |
@@ -70,6 +72,7 @@
 | 棄牌區→戰鬥區 | `trash-to-battle` | 從棄牌區將指定餅乾移至戰鬥區 |
 | 支援區→手牌 | `support-to-hand` | 將支援區卡牌移回手牌 |
 | 對手手牌→棄牌區 | `opponent-discard-hand` | 對手必須選擇指定數量的手牌放入棄牌區；對手無手牌時效果直接完成 |
+| 整手牌→棄牌區 | `discard-hand-all` | 將來源玩家全部手牌放入棄牌區 |
 | 支援區→棄牌區 | `support-to-trash` | 指定數量的支援區卡牌移至棄牌區 |
 | 目標選擇 | `target` | 目標陣營、最少／最多數量與篩選條件 |
 | 條件 | `condition` | 依遊戲狀態檢查效果是否可結算；不成立時略過該效果 |
@@ -77,11 +80,17 @@
 | 支援區 keyword 條件 | `support-keyword-at-least` | 檢查來源玩家支援區是否至少有指定數量的 keyword 卡，例如 `[Soul Jam]` |
 | 持續時間 | `duration` | 本回合、對手下回合或永久 |
 | HP 送棄牌區 | `hp-to-trash` | 選擇己方 1 隻餅乾，將指定數量的 HP 卡送入棄牌區；非傷害不觸發 FLIP/afterDamage，HP 歸 0 時餅乾進入休息區並沿用離場/補位/勝負流程 |
+| HP 交換 | `cycle-hp` | 取回目標餅乾最上方 1 張 HP，並可將 1 張手牌放回；取走最後 HP 時餅乾立即進入休息區，後續放回步驟不再執行（BS4-030） |
+| 手牌→HP | `hand-to-hp` | 可同時選擇目標餅乾與 0～1 張手牌，將手牌放到 HP 頂端（BS4-044）；不會先移除既有 HP |
+| 支援區→HP | `support-to-hp` | 可同時選擇支援卡與目標餅乾，將符合顏色的支援卡放到 HP 頂端（BS4-066） |
+| 休息支援並造成傷害 | `rest-support-and-damage` | 最多選指定數量、符合顏色且目前活躍的支援卡改為疲勞，再依本次新增疲勞張數對最多 1 個目標造成傷害（BS4-062） |
 | 可選攻擊後續費用 | `optional-cost-attack` | 玩家可略過；來源餅乾先提供 `sourceEnergy` 中列出的指定能量，只有剩餘費用由支援區支付。目標步驟依子效果的對象與 `min` 呈現，支援己方／對手與「最多選 1 個」 |
 | HP 卡搬移 | `transfer-hp` | 在來源餅乾與選定的己方餅乾之間搬移 HP 頂端卡；`direction: 'to-source'` 由目標供牌（BS3-031），`'from-source'` 由來源供牌（BS3-089）。供牌方 HP 歸 0 時照常昏厥並沿用離場／補位／勝負流程。HP 卡屬卡主牌組，不支援跨玩家搬移 |
 | 餅乾設為活躍 | `set-cookie-active` | 解除選定餅乾的休息狀態；與只處理支援區的 `set-active` 不同。可用 `restedOnly` 目標篩選只列出休息中的餅乾（BS3-053） |
 | 依戰鬥區餅乾數抽牌 | `draw-up-to-battle-cookie-count` | 依雙方戰鬥區指定等級的餅乾數量計算抽牌上限，再沿用 `draw-up-to` 的可選抽牌流程；上限為 0 時直接略過（BS3-092） |
 | 棄牌區全部→牌庫 | `trash-to-deck-all` | 不需選擇，將棄牌區整批洗回牌庫。後續的「Then」必須放在 `thenEffects` 內嵌執行——本效果會清空棄牌區，同層的下一個效果若重掛同一個棄牌區條件，重新判定時必定失敗而被跳過（BS3-113） |
+| 場上卡→牌庫底 | `field-to-deck-bottom` | 將選定餅乾或允許的場景卡放到持有者牌庫底；餅乾的 HP／裝備卡進入持有者棄牌區，可用 `battleSide` 表達「對手餅乾或任一方場景」（BS4-075） |
+| 雙方餅乾→各自牌庫底 | `field-to-deck-bottom-all` | 將雙方符合等級的戰鬥區餅乾放到各自牌庫底，HP／裝備卡進入各自棄牌區（BS4-111） |
 | 揭示牌庫底 | `reveal-bottom-deck` | 揭示牌庫底 1 張，依是否為 Cookie 分別送往牌庫頂或手牌；牌庫為空時直接略過，對應官方文字的「up to 1」（BS3-073） |
 | 揭示牌庫頂 | `reveal-top-deck` | peek 牌庫頂 1 張（不移除），檢查 `match` 條件；匹配時執行 `effects` 內嵌效果，不匹配時直接略過。卡始終留在牌庫頂，等價於官方文字的「抽 1 張展示，執行完放回牌庫頂」（BS3-090、BS3-093） |
 | 手牌→戰鬥區 | `hand-to-battle` | 從手牌選餅乾登場，HP 卡照常自牌庫頂補入；`energyCost` 需先由活躍支援卡支付；`gainHp` 對應「Then, that Cookie gains +N HP」。登場後照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定（BS3-029） |
@@ -90,6 +99,7 @@
 
 | 選擇一項 | `choose-one` | 官方文字的「Select 1 of the following.」（BS3-068）。這個效果本身永遠不會被執行——玩家或 AI 選定模式後由 `expandChooseOne` 就地換成該模式的效果，`effectIndex` 不動，之後每個子效果照常各自走目標選取流程。本機 UI、線上 UI、指令層（`resolve-choose-one`／`begin-*` 的 `chooseOneModes`）與 AI 必須共用同一份展開邏輯，否則四邊對「接下來處理哪個效果」會分歧；執行器遇到未展開的 `choose-one` 會直接丟錯而不是默默略過 |
 | 休息區→戰鬥區（來源自己） | `break-source-to-battle` | 讓技能來源自己從休息區登場，HP 卡數固定為 `hpCount`（不是卡面 HP），照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定；戰鬥區已滿（2 隻）時執行器直接丟錯，`canActivateCookieSkill` 會提前擋下（BS3-025） |
+| FLIP→休息區 | `flip-to-break` | FLIP 卡翻開並滿足條件時放入持有者休息區，而非棄牌區（BS4-031） |
 
 代價方面，`AbilityCost.trashToDeckBottom` 表示「從棄牌區選 N 張卡放到牌庫底」（BS3-112），選取順序即為放入牌庫底的順序。目前只有餅乾技能路徑（`activate-skill`／`begin-activate-skill`）實作，item／stage 的 `payAbilityCost` 會直接丟錯，避免被靜默忽略。`AbilityCost.handToBreakArea` 表示「將手牌餅乾放入自己休息區」，與棄到棄牌區的 `discardHand` 不同，會推進自己的 break 等級並立刻走 `resolveBreakLevelVictory`；目前只有陷阱路徑（`playTrap`）實作（BS3-046）。
 
@@ -97,7 +107,7 @@
 
 `TrapCondition.friendly-color-fainted-this-battle` 新增可選的 `minLevel`：未指定時沿用舊行為（本次戰鬥有沒有該顏色餅乾昏厥，不分擁有者與等級），指定時改用 `PendingBattle.faintedCookies`（含擁有者與等級的完整紀錄，`faintedColors` 只留顏色不夠用）判定「己方指定顏色且等級達標的餅乾昏厥」（BS3-046 的「your {Y} LV.2 or higher」）。延遲觸發成立、且效果需要玩家選卡時，`finishBattle` 不會直接執行，而是把效果轉存進 `pendingAbilityEffect`（`sourceKind: 'trap'`）交給既有的逐步結算流程；本機 UI 原本沒有「規則層主動建佇列、UI 被動接手」這種方向的處理，新增了一個 `useEffect` 專門偵測 `sourceKind === 'trap'` 的 `pendingAbilityEffect` 並補建本機的 `pendingEffect`（透過 `window.setTimeout(...,0)` 延後呼叫，避免在 effect body 內同步 `setState`）。
 
-跨玩家戰鬥區目標由 `EffectTargetSelector.side: 'either'` 表示（官方文字的「either player's battle area」）。這種選擇沒有單一擁有者，`getTargetPlayerId` 會直接丟出錯誤，效果必須改用 `getCookieOwnerId` 逐一判定並依擁有者分組結算離場；目前只有 `battle-to-break`（BS3-040）與 `battle-to-deck-top`（BS3-076）處理過。
+跨玩家戰鬥區目標由 `EffectTargetSelector.side: 'either'` 表示（官方文字的「either player's battle area」）。這種選擇沒有單一擁有者，`getTargetPlayerId` 會直接丟出錯誤，效果必須改用 `getCookieOwnerId` 逐一判定並依擁有者分組結算離場；`battle-to-break`（BS3-040）、`battle-to-deck-top`（BS3-076）與 `field-to-deck-bottom`（BS4-075）均已處理，後者另以 `battleSide` 限制餅乾目標而保留任一方場景選項。
 
 無目標效果的判斷統一由 `isEffectUntargeted` 共用（目前涵蓋 `draw`、`deck-to-support`、`modify-all-attack`、`trash-to-battle`、`support-to-hand`、`opponent-discard-hand`、`draw-up-to-battle-cookie-count`、`trash-to-deck-all` 與 `reveal-bottom-deck`）。
 

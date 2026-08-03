@@ -4,6 +4,7 @@ export {
   getAttackDamageAgainst,
   getBreakCount,
   getBreakToBattleCandidates,
+  getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,
@@ -141,6 +142,7 @@ export {
 } from './ai'
 export {
   beginAttack,
+  getForcedAttackTargetId,
   getFaintEffectCardCandidates,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
@@ -199,6 +201,7 @@ export {
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
   canPayTrashToDeckCost,
+  getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckBottomCostCandidates,

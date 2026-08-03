@@ -586,4 +586,76 @@ describe('card effect engine', () => {
     }
     expect(getEffectiveAttack(withoutAuraSource, 'buffed-ally-1')).toBe(3)
   })
+
+  it('all-of condition only passes when every sub-condition is met (BS4-077)', () => {
+    const base = createDemoGame()
+    const blueCookie: GameCard = {
+      id: 'blue-battle-cookie',
+      instanceId: 'blue-battle-cookie',
+      name: 'Blue Battle Cookie',
+      type: 'cookie',
+      level: 1,
+      hp: 1,
+      attack: 1,
+      attackCost: 1,
+      energyColor: 'blue',
+    }
+    const effect: CardEffect = {
+      kind: 'draw-up-to',
+      max: 2,
+      condition: {
+        kind: 'all-of',
+        conditions: [
+          { kind: 'hand-count-at-most', count: 5 },
+          { kind: 'battle-area-has-color', side: 'self', color: 'blue' },
+        ],
+      },
+    }
+
+    const bothMet: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: base.players['player-one'].hand.slice(0, 5),
+          battleArea: [
+            ...base.players['player-one'].battleArea,
+            { card: blueCookie, hpCards: [], rested: false },
+          ],
+        },
+      },
+    }
+    expect(isEffectConditionMet(bothMet, context, effect)).toBe(true)
+
+    const handTooLarge: GameState = {
+      ...bothMet,
+      players: {
+        ...bothMet.players,
+        'player-one': {
+          ...bothMet.players['player-one'],
+          hand: [
+            ...bothMet.players['player-one'].hand,
+            createSupport('extra-hand-card'),
+          ],
+        },
+      },
+    }
+    expect(handTooLarge.players['player-one'].hand.length).toBeGreaterThan(5)
+    expect(isEffectConditionMet(handTooLarge, context, effect)).toBe(false)
+
+    const noBlueCookie: GameState = {
+      ...bothMet,
+      players: {
+        ...bothMet.players,
+        'player-one': {
+          ...bothMet.players['player-one'],
+          battleArea: bothMet.players['player-one'].battleArea.filter(
+            (cookie) => cookie.card.instanceId !== blueCookie.instanceId,
+          ),
+        },
+      },
+    }
+    expect(isEffectConditionMet(noBlueCookie, context, effect)).toBe(false)
+  })
 })

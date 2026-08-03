@@ -86,7 +86,12 @@ export const simulateAbilityEffects = (
       effectTargets.push([])
       break
     }
-    const targetIds = isEffectUntargeted(effect)
+    const usesCardSelection =
+      effect.kind === 'break-to-battle' ||
+      effect.kind === 'support-to-battle' ||
+      effect.kind === 'hand-to-break' ||
+      effect.kind === 'break-to-hand'
+    const targetIds = isEffectUntargeted(effect) && !usesCardSelection
       ? []
       : chooseEffectTargets(nextState, context, effect)
     if (!isTargetCountSufficient(effect, targetIds)) {

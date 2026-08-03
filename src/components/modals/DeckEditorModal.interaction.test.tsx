@@ -112,6 +112,43 @@ describe('DeckEditorModal pool interactions', () => {
     await cleanup()
   })
 
+  it('separates the BS3 and BS4 series filters by card number', async () => {
+    const { container, cleanup } = await render()
+    const seriesSelect = Array.from(
+      container.querySelectorAll<HTMLSelectElement>('.deck-editor-filters select'),
+    ).find((select) =>
+      Array.from(select.options).some((option) => option.value === 'BS4'),
+    )
+    expect(seriesSelect).toBeTruthy()
+
+    const setSeries = async (value: string) => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLSelectElement.prototype,
+        'value',
+      )!.set!
+      await act(() => {
+        nativeSetter.call(seriesSelect, value)
+        seriesSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+    }
+
+    await setSeries('BS3')
+    const bs3Titles = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-pool-card-btn'),
+    ).map((button) => button.title)
+    expect(bs3Titles.length).toBeGreaterThan(0)
+    expect(bs3Titles.every((title) => title.startsWith('BS3-'))).toBe(true)
+
+    await setSeries('BS4')
+    const bs4Titles = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-pool-card-btn'),
+    ).map((button) => button.title)
+    expect(bs4Titles.length).toBeGreaterThan(0)
+    expect(bs4Titles.every((title) => title.startsWith('BS4-'))).toBe(true)
+
+    await cleanup()
+  })
+
   it('disables both base and @1 variant pool cards once the base reaches four copies', async () => {
     const initialDeck: CustomDeck = {
       id: 'legacy-deck',

@@ -564,6 +564,7 @@ function App() {
           ...pending.nonBattleEffectCandidateCards,
           ...pending.breakToTrashCandidates,
           ...pending.breakToBattleCandidates,
+          ...pending.supportToBattleCandidates,
           ...pending.breakToHandBySumCandidates,
           ...pending.handToBreakBySumCandidates,
           ...pending.trashToHandCandidates,
@@ -585,6 +586,14 @@ function App() {
         selectedDiscardHandIds={pending.selectedSkillDiscardHandIds}
         onToggleDiscardHand={pending.toggleSkillDiscardHand}
         discardHandCost={pending.discardHandCost}
+        hpToTrashCandidates={
+          pending.pendingEffect && !pending.pendingEffect.skillActivated
+            ? pending.skillHpToTrashCandidates
+            : []
+        }
+        selectedHpToTrashTargetIds={pending.selectedSkillHpToTrashTargetIds}
+        onToggleHpToTrash={pending.toggleSkillHpToTrash}
+        hpToTrashCost={pending.hpToTrashCost}
         showCancelSkill={showCancelSkill}
         energyPaymentValid={pending.skillEnergyPaymentValid}
         paymentCandidates={

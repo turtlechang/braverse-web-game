@@ -191,6 +191,131 @@ describe('pending battle and FLIP', () => {
     )
   })
 
+  it('resolves a choose-one FLIP mode before executing its deck effect', () => {
+    const flipCard: GameCard = {
+      ...cookie('choose-deck-flip'),
+      officialType: 'flip',
+      flip: {
+        text: 'Place up to 3 cards from the top of either player deck into the trash.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{
+          kind: 'choose-one',
+          modes: [
+            {
+              label: 'your deck',
+              effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+            },
+            {
+              label: "opponent's deck",
+              effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+            },
+          ],
+        }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state.players['player-one'].deck = [item('self-mill-1'), item('self-mill-2'), item('self-mill-3')]
+    state.players['player-two'].deck = [item('opponent-mill-1'), item('opponent-mill-2'), item('opponent-mill-3')]
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+
+    state = resolveFlip(state, 'player-one', {
+      activate: true,
+      chooseOneModeIndex: 1,
+    })
+
+    expect(state.players['player-one'].deck.map((card) => card.instanceId)).toEqual([
+      'self-mill-1',
+      'self-mill-2',
+      'self-mill-3',
+    ])
+    expect(state.players['player-two'].discardPile.map((card) => card.instanceId)).toEqual([
+      'opponent-mill-1',
+      'opponent-mill-2',
+      'opponent-mill-3',
+    ])
+    expect(state.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ instanceId: 'choose-deck-flip' }),
+    )
+  })
+
+  it('passes a selected target into a targeted FLIP effect', () => {
+    const flipCard: GameCard = {
+      ...cookie('targeted-flip'),
+      officialType: 'flip',
+      flip: {
+        text: 'Select up to 1 opponent Cookie. That Cookie receives 1 damage.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state.players['player-two'].battleArea[0].hpCards = [
+      item('attacker-hp-a'),
+      item('attacker-hp-b'),
+      item('attacker-hp-c'),
+      item('attacker-hp-d'),
+    ]
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+
+    state = resolveFlip(state, 'player-one', {
+      activate: true,
+      targetIds: [state.players['player-two'].battleArea[0].card.instanceId],
+    })
+
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(3)
+    expect(state.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ instanceId: 'targeted-flip' }),
+    )
+  })
+
+  it('finishes safely when a targeted FLIP defeats the attacking Cookie', () => {
+    const flipCard: GameCard = {
+      ...cookie('defeat-attacker-flip'),
+      officialType: 'flip',
+      flip: {
+        text: 'Select up to 1 opponent Cookie. That Cookie receives 1 damage.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state.players['player-two'].breakArea = [
+      { ...cookie('break-level-nine'), level: 9 },
+    ]
+
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+
+    expect(() => {
+      state = resolveFlip(state, 'player-one', {
+        activate: true,
+        targetIds: [state.players['player-two'].battleArea[0].card.instanceId],
+      })
+    }).not.toThrow()
+
+    expect(state.status).toBe('finished')
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-two'].breakArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ instanceId: 'break-level-nine' }),
+        expect.objectContaining({ instanceId: 'attacker' }),
+      ]),
+    )
+    expect(state.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ instanceId: 'defeat-attacker-flip' }),
+    )
+  })
+
   it('skips FLIP entirely when conditional FLIP effect condition is not met', () => {
     const conditionalFlip: GameCard = {
       ...cookie('conditional-flip'),

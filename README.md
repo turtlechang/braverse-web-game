@@ -14,11 +14,15 @@
 
 對戰桌以共用展示元件呈現本機與線上對戰，將攻擊者、攻擊目標、回應流程與傷害結算的可視回饋維持一致，避免玩家必須從對戰紀錄回推目前攻擊關係。
 
+主選單的 AI 對手設定在桌機／平板以牌組 8、等級 4 的欄寬比例呈現並保留欄間距；手機改為單欄。開發者工具依視窗寬度在桌機顯示、手機可收合，合法牌組的錯誤提示則以布林狀態控制，避免將 `errors.length = 0` 誤渲染到畫面。
+
 戰鬥區文字固定於中央；單張餅乾使用左側卡槽，兩張餅乾分居左右卡槽。卡片的「能量不足」與「啟動技能」提示會完整置於所屬卡片的外側，避免遮蔽中央戰鬥區文字、HP 卡或支援區。
 
 我方攻擊翻開對手 HP 卡的 FLIP 效果時，沿用左側卡牌快速預覽固定顯示約 3 秒；玩家可點擊預覽外側提前關閉，避免必須查看對戰紀錄才能確認翻出的卡片。
 
 本專案以官方 Braverse 規則、官方起始牌組卡牌資料、卡背與能量圖示為基礎，將純函式規則引擎、AI 決策與 React UI 分離。規則引擎集中於 `src/game/`，官方卡牌資料轉接集中於 `src/cards/`，React 畫面只呼叫規則層公開 API，不另寫權威規則。
+
+BS4 沿用 BS3 的候選資料流程：先將官方英文資料匯入 `data/candidates/` 的 `inventory` 快照，再依卡面文字與官方規則逐色稽核 runtime adapter；候選完成驗證與效果覆蓋前不直接併入 `data/cards/`。
 
 測試對局設定以正式卡池為來源，可逐方指定戰鬥區餅乾、精確 HP 卡、起始手牌、牌庫頂端順序、支援區實際卡片與能量顏色、場景卡及棄牌區卡片；未指定的牌庫尾端與支援區張數才以測試填充補足。設定視窗提供 BS3-018 的 Blocker／傷害分支與 BS3-020 的 HP 卡回手快速案例，方便在正式規則流程中重現問題並回報。
 
@@ -32,7 +36,7 @@
 
 對戰資訊可視化依 P0–P2 分層：P0 固定顯示行動玩家、階段、來源卡、攻擊箭頭與一致事件句型；P1 顯示宣告 → 費用 → 代價 → 目標 → 結算進度、對手卡牌預覽與陷阱／FLIP／攻擊效果回應狀態；P2 提供活動紀錄篩選、連線同步細節與伺服器提供的決策期限。戰場採扇形手牌與左右資源欄；對手手牌以貼齊頂緣的淺弧牌背呈現，我方手牌以低弧度展開，卡牌僅於 hover 或鍵盤 focus 時顯示左側快速預覽。所有線上公開提示都只使用伺服器過濾後的公開卡牌與 instance ID，不揭露對手手牌或牌庫內容。
 
-專案開發流程已整理為 `.agents/skills/develop-braverse` 與 `.agents/skills/braverse-workflow` 兩個 Skill，統一需求分析、規則查核、架構邊界、測試驗證、文件同步、派工與 Git 收尾步驟；`AGENTS.md` 保留硬性規範入口。子代理協作與停滯交接流程見 [docs/subagent-stall-handoff-protocol.md](docs/subagent-stall-handoff-protocol.md)。
+專案開發流程已整理為 `.agents/skills/develop-braverse`、`.agents/skills/braverse-workflow` 與 `.agents/skills/braverse-card-import-audit` 三個 Skill，統一需求分析、規則查核、架構邊界、卡牌匯入、Chrome 逐色效果稽核、測試驗證、文件同步、派工與 Git 收尾步驟；`AGENTS.md` 保留硬性規範入口。子代理協作與停滯交接流程見 [docs/subagent-stall-handoff-protocol.md](docs/subagent-stall-handoff-protocol.md)。
 
 CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌驗證、測試、lint、build；AI、牌組編輯器與好友房 Playwright 瀏覽器 smoke 在 main push 自動執行，也保留手動觸發，不負責部署；Vercel 監聽 PR 與 push 自動產生 Preview 與正式部署，連線設定在 Vercel Dashboard 完成，不存放於 GitHub Secrets。
 
@@ -52,18 +56,22 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 測試對局設定已支援雙方正式卡池的戰鬥區、精確 HP 卡、起始手牌、牌庫頂端順序、破損區、支援區指定卡／能量顏色、場景與棄牌區；牌庫尾端與支援未指定卡片會依設定補足測試卡／萬用能量，並提供 BS3-018 Blocker／傷害與 BS3-020 HP 卡回手案例。二選一效果選項會保留官方完整條件文字，避免只顯示簡化後的傷害摘要。
 
+主選單已完成桌機／平板 AI 牌組與等級欄位的 8:4 版面調整、測試對局設定入口可見性與合法牌組錯誤區回歸修正，並補上對應的 MainMenu 測試。
+
 攻擊宣告期間已在場上保留攻擊箭頭、以目標黃框標示被攻擊餅乾，並在陷阱與 Blocker 回應視窗直接呈現「攻擊者 → 攻擊目標」摘要；陷阱目標選擇步驟同步顯示攻擊者資訊，攻擊中餅乾以紅色邊框與「⚔ 攻擊中」徽章明顯標示。我方攻擊觸發對手 FLIP 時，翻出的 HP 卡會以左側大卡短暫固定呈現 3 秒，並可點擊外側關閉。本機 AI 與線上對戰共用此回饋邏輯。BS3-019 靈魂果醬在聖梅果餅乾不在戰鬥區時自動跳過裝載步驟；BS3-017 攻擊後效果在戰鬥區無其他餅乾時自動略過。陷阱卡同時含對手與自身目標效果（如 BS3-021 盾之誓言 -3 攻擊 + 自身 1 傷害）時，導引步驟自動補齊自身目標選取，不再因缺少 `selfTargetIds` 而無法發動。
 
 BS3-045 `damage-by-break-count` 已納入陷阱目標候選與驗證，休息區有 LV.3 餅乾時可正確選擇對手並造成對應傷害；ST2-020 的回歸測試確認減攻擊效果不會改寫原攻擊目標。
 
 BS3 全系列本輪完成 121 張基礎卡的瀏覽器載入掃描，並針對餅乾技能／FLIP、攻擊後效果、物品、陷阱、場景、Soul Jam、特殊勝利與 AI 對局補做代表性實戰驗證；修正 BS3-024、BS3-098、BS3-121 的可重現問題。BS3 共 176 筆資料（121 張基礎卡、55 個異圖／促銷變體）已於 2026-07-26 promote 至正式卡池。
 
+BS4 系列已完成 111 張基礎卡的效果覆蓋稽核：攻擊 `Then` 23／23 已轉接，額外能力來源 87 張已轉接，原先 14 張待補效果已降為 0。170 筆資料（111 張基礎卡、59 個異圖／促銷變體）已於 2026-08-03 promote 至 `data/cards/`；HP 代價、BS4-001 自我昏厥、BS4-065／109 陷阱後半效果、BS4-008 FLIP 目標與 BS4-102 FLIP 選擇牌庫分支已補齊，完整狀態見 [BS4 效果轉接覆蓋盤點](docs/bs4-effect-coverage.md)。
+
 P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃描，並以規則回歸及代表性實戰涵蓋餅乾技能、攻擊後效果、物品、FLIP、陷阱與場景。修正 P-017 支援區事件觸發、P-024 不可攻擊的 HP-only FLIP、P-025～P-027 Marzipan 條件與傷害倍增、P-028／P-032 場景多段效果，以及 P-029 戰鬥昏厥後延遲復活；候選 8 張已 promote 至正式卡池。完整清單與限制見 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。
 
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
 
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
-- **牌組編輯器**：搜尋/篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
+- **牌組編輯器**：搜尋／篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存；系列選單已分開 BS3 與 BS4，避免兩彈共用官方 product title 時混在一起。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果，見 [docs/ai-levels.md](docs/ai-levels.md)。Lv.5 為設計稿。
 - **卡牌池**：BS1/BS2 官方卡池、五色起始牌組、BS3 官方卡池與 P-0XX 特典卡均已匯入；BS3 的 176 筆資料（含 121 張基礎卡、異圖與促銷變體）及 26 張 P-0XX 已正式納入 `data/cards/`，並以 [BS3 效果轉接覆蓋盤點](docs/bs3-effect-coverage.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md) 持續追蹤 adapter 轉接狀態。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及 8 張高風險卡的語意契約。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；桌面戰場（≥901px）採參考圖的中央戰場、左右資源欄、左側卡牌焦點預覽與右側回合欄排版，底色維持既有深藍／青色基調；1280×720 已修正手牌裁切、提高戰鬥區比例與資源標籤／中央狀態提示對比，並保留 hover 與鍵盤 focus 的卡牌快速預覽；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
@@ -76,6 +84,10 @@ P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃�
 測試基線、bundle 大小等會隨每次 PR 變動的數字，一律以 [CHANGELOG.md](CHANGELOG.md) 最新項目為準（非永久門檻，只要求不低於前次基線）。
 
 ## 下一步計畫
+
+持續以桌機、平板與手機 viewport 實測主選單的欄位比例、開發者工具收合與牌組統計可讀性，並維持合法與不合法牌組錯誤提示的 DOM 狀態一致。
+
+BS4 已完成效果轉接覆蓋稽核、候選嚴格驗證與正式卡池 promote；牌組編輯器已新增 BS4 系列選單並與 BS3 分流，已修正 HP 代價、陷阱後半效果、BS4-008 FLIP 目標與 BS4-102 FLIP 選擇分支，後續以 Chrome 逐色實戰驗證剩餘尚未完整測試的攻擊後續／條件分支、規則回歸與官方更新追蹤為主。
 
 持續以瀏覽器透過正式卡池測試對局設定驗證 BS3 卡牌在卡牌詳情、效果面板與戰鬥互動中的技能、攻擊後、物品、陷阱、場景與資源區效果，並維持規則引擎與 UI 的責任分離。
 
@@ -137,12 +149,15 @@ npm run cards:analyze:bs3-candidate
 
 `cards:import:sample` 目前預設匯入綠色起始牌組；紅色、黃色、綠色、藍色與紫色也可使用明確腳本重新產生。`cards:import:bs3-candidate` 會將官方英文資料中所有 `BS3-*` 記錄輸出為不可 promote 的候選快照，並生成 [BS3 卡表盤點](docs/bs3-card-inventory.md)；接著以 `cards:analyze:bs3-candidate` 產生 [效果轉接覆蓋盤點](docs/bs3-effect-coverage.md)。候選快照是匯入流程的中間產物，正式 BS3 狀態以 `data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json` 為準。新卡牌／新彈的完整匯入流程見 [docs/card-update-process.md](docs/card-update-process.md)。
 
+BS4 已完成首次 promote；正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json` 為準，效果覆蓋報表由 `cards:analyze:bs4-candidate` 依正式檔案產生。
+
 ## 變更記錄
 
 目前發布版本 **`0.9.0`**（2026-07-16，git tag `0.9.0`）。完整變更記錄見 [CHANGELOG.md](CHANGELOG.md#090---2026-07-16)；發布與 PR 流程見 [docs/release-process.md](docs/release-process.md)。
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-03 | 完成 BS4 111 張基礎卡效果稽核：攻擊 `Then` 23／23、額外能力待補 14→0；170 筆候選資料全數通過嚴格驗證並 promote 至正式卡池，重建 card pool registry；牌組編輯器新增 BS4 系列選單，並修正 HP 代價、BS4-001 自我昏厥、BS4-008 FLIP 目標、BS4-065／109 陷阱後半及 BS4-102 FLIP 選擇分支；主選單完成 AI 設定欄位 8:4 版面、測試對局入口顯示與合法牌組錯誤提示修正；新增卡牌匯入與 Chrome 逐色效果稽核 Skill。 |
 | 2026-07-31 | 修正 BS3-029 昏厥目標／黃色能量付款與補位優先順序，補上 BS3-045 陷阱傷害目標及 ST2-020 攻擊目標回歸測試。線上協定新增 resolve-faint-effect paymentIds 驗證。 |
 | 2026-07-31 | 功能完成與測試：BS3-029 昏厥目標選擇、黃色能量付款、補位優先順序、空場強制補位；BS3-045 damage-by-break-count 陷阱目標；ST2-020 modify-attack 不改寫攻擊目標。效果面板 optionalCostAttack 支援最小化。完整單元測試 2394 項、lint、build 通過。 |
 | 2026-07-31 | R10 完整版：新增 Attacker 反擊暴露罰分（捕獲 lv4RiskBonus 不讀對手手牌與攻擊力的缺口），修正 `-= responseRiskPenalty(...)` 方向 bug；新增 r10ExposureRisk 指標與 11 條純函式行為測試。 |

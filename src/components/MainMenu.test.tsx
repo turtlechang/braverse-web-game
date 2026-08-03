@@ -5,7 +5,11 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import { MainMenu, type AiDeckChoice } from './MainMenu'
 import type { AiLevel } from '../game'
-import type { CustomDeck } from '../game/custom-deck'
+import {
+  validateCustomDeck,
+  type CustomDeck,
+  type DeckValidationResult,
+} from '../game/custom-deck'
 import { OFFICIAL_RED_STARTER_DECK } from '../game/starter-deck'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -34,7 +38,11 @@ const renderMenu = async (
     onSelectAiDeck: (choice: AiDeckChoice) => void
     onSelectAiLevel: (level: AiLevel) => void
   }> = {},
-  aiOptions: { aiDeckChoice?: AiDeckChoice; aiLevel?: AiLevel } = {},
+  aiOptions: {
+    aiDeckChoice?: AiDeckChoice
+    aiLevel?: AiLevel
+    selectedValidation?: DeckValidationResult | null
+  } = {},
 ) => {
   const container = document.createElement('div')
   const root = createRoot(container)
@@ -43,7 +51,7 @@ const renderMenu = async (
       <MainMenu
         decks={decks}
         selectedDeckId={decks[0]?.id ?? null}
-        selectedValidation={null}
+        selectedValidation={aiOptions.selectedValidation ?? null}
         battleError={null}
         aiDeckChoice={aiOptions.aiDeckChoice ?? 'random'}
         aiLevel={aiOptions.aiLevel ?? 2}
@@ -146,6 +154,23 @@ describe('MainMenu deck management', () => {
 })
 
 describe('MainMenu AI opponent options', () => {
+  it('does not render a stray zero when a valid deck has no errors', async () => {
+    const { container, root } = await renderMenu([validDeck], {}, {
+      selectedValidation: validateCustomDeck(validDeck.entries),
+    })
+
+    const playerStatus = container.querySelector<HTMLElement>(
+      '.main-menu-status',
+    )
+    const directZeroTextNodes = [...(playerStatus?.childNodes ?? [])].filter(
+      (node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim() === '0',
+    )
+
+    expect(directZeroTextNodes).toHaveLength(0)
+
+    await act(() => root.unmount())
+  })
+
   it('renders deck and level selectors with current values', async () => {
     const { container, root } = await renderMenu([validDeck], {}, {
       aiDeckChoice: 'bs3-blue-sorbet',
@@ -324,12 +349,17 @@ describe('MainMenu empty deck state', () => {
   it('wraps developer tools in a collapsible <details>/<summary> for mobile', async () => {
     const { container, root } = await renderMenu([validDeck])
 
-    const details = container.querySelector('.main-menu-dev-tools-details')
+    const details = container.querySelector<HTMLDetailsElement>(
+      '.main-menu-dev-tools-details',
+    )
     expect(details?.tagName).toBe('DETAILS')
 
     const summary = details?.querySelector('summary.main-menu-dev-tools-label')
     expect(summary?.textContent).toBe('開發者工具')
     expect(summary?.closest('details')).toBe(details)
+
+    // 桌機版會隱藏 summary；details 必須預設展開，工具列才不會跟著消失。
+    expect(details?.open).toBe(true)
 
     // 開發者工具的 <nav> 要在 <details> 底下，這樣手機版才能靠原生收合行為隱藏它。
     const devTools = details?.querySelector('.main-menu-dev-tools')

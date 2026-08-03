@@ -1,6 +1,7 @@
 export {
   getBreakCount,
   getBreakToBattleCandidates,
+  getSupportToBattleCandidates,
   getBreakToHandBySumCandidates,
   getHandToBreakBySumCandidates,
   getBreakToTrashCandidates,

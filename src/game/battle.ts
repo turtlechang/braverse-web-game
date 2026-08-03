@@ -16,6 +16,7 @@ import {
   requiresEffectCardSelection,
   resolveDrawUpTo,
   selectEffectTargets,
+  expandChooseOne,
 } from './effects'
 import {
   getAttackEnergyCostForState,
@@ -114,6 +115,29 @@ const getEquipAttackEffects = (attacker: CookieInBattle): CardEffect[] =>
     return []
   })
 
+export const getForcedAttackTargetId = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+): string | undefined => {
+  const defenderPlayerId = getOpponentId(attackerPlayerId)
+  const defender = state.players[defenderPlayerId]
+  return defender.battleArea.find((cookie) => {
+    const skill = cookie.card.skill
+    if (!skill || skill.trigger !== 'passive') return false
+    const context: EffectContext = {
+      sourcePlayerId: defenderPlayerId,
+      sourceInstanceId: cookie.card.instanceId,
+    }
+    return skill.effects.some(
+      (effect) =>
+        effect.kind === 'redirect-attack' &&
+        effect.target.side === 'self' &&
+        effect.target.sourceOnly &&
+        isEffectConditionMet(state, context, effect),
+    )
+  })?.card.instanceId
+}
+
 export const beginAttack = (
   state: GameState,
   attackerInstanceId: string,
@@ -144,6 +168,10 @@ export const beginAttack = (
 
   const defenderPlayerId = getOpponentId(state.activePlayerId)
   const defender = state.players[defenderPlayerId]
+  const forcedTargetId = getForcedAttackTargetId(state, state.activePlayerId)
+  if (forcedTargetId && targetInstanceId !== forcedTargetId) {
+    throw new GameRuleError('Invalid battle action.')
+  }
   if (
     !defender.battleArea.some(
       (cookie) => cookie.card.instanceId === targetInstanceId,
@@ -497,6 +525,7 @@ const validateTrapTargets = (
     (effect) =>
       effect.kind === 'damage' ||
       effect.kind === 'damage-by-break-count' ||
+      effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||
@@ -1006,7 +1035,10 @@ export const playTrap = (
       continue
     }
 
-    if (effect.kind === 'damage') {
+    if (
+      effect.kind === 'damage' ||
+      effect.kind === 'damage-by-break-level-difference'
+    ) {
       const damageTargetIds = resolveTrapEffectTargetIds(
         nextState,
         context,
@@ -1034,12 +1066,20 @@ export const playTrap = (
     throw new GameRuleError('Invalid battle action.')
       }
       const activeBattle = requirePendingBattle(nextState)
+      const damageAmount =
+        effect.kind === 'damage'
+          ? effect.amount
+          : Math.max(
+              0,
+              getBreakAreaLevel(nextState, playerId) -
+                getBreakAreaLevel(nextState, getOpponentId(playerId)),
+            )
       nextState = {
         ...nextState,
         pendingBattle: {
           ...activeBattle,
           stage: 'damage',
-          remainingDamage: effect.amount,
+          remainingDamage: damageAmount,
           damagePlayerId: targetPlayerId,
           damageTargetInstanceId: target.card.instanceId,
           suspendedAttackDamage: activeBattle.declaredDamage,
@@ -2014,6 +2054,8 @@ export const resolveNextDamage = (state: GameState): GameState => {
 export interface ResolveFlipOptions {
   activate: boolean
   discardHandIds?: string[]
+  chooseOneModeIndex?: number
+  targetIds?: string[]
 }
 
 export const resolveFlip = (
@@ -2033,6 +2075,7 @@ export const resolveFlip = (
 
   let nextState = state
   let flipToSupportChoice: { rested: boolean } | null = null
+  let flipToBreakChoice = false
   if (options.activate) {
     const flipContext = {
       sourcePlayerId: playerId,
@@ -2087,8 +2130,23 @@ export const resolveFlip = (
       },
     }
 
-    for (let i = 0; i < revealed.flip.effects.length; i += 1) {
-      const effect = revealed.flip.effects[i]
+    const chooseOneIndex = revealed.flip.effects.findIndex(
+      (effect) => effect.kind === 'choose-one',
+    )
+    let flipEffects = revealed.flip.effects
+    if (chooseOneIndex >= 0) {
+      if (options.chooseOneModeIndex === undefined) {
+        throw new GameRuleError('Must choose a FLIP effect mode.')
+      }
+      flipEffects = expandChooseOne(
+        flipEffects,
+        chooseOneIndex,
+        options.chooseOneModeIndex,
+      )
+    }
+
+    for (let i = 0; i < flipEffects.length; i += 1) {
+      const effect = flipEffects[i]
       const context = {
         sourcePlayerId: playerId,
         sourceInstanceId: revealed.instanceId,
@@ -2130,15 +2188,17 @@ export const resolveFlip = (
         }
       } else if (effect.kind === 'flip-to-support') {
         flipToSupportChoice = { rested: effect.rested ?? true }
+      } else if (effect.kind === 'flip-to-break') {
+        flipToBreakChoice = true
       } else {
         nextState = executeCardEffect(
           nextState,
           context,
           effect,
-          [],
+          options.targetIds ?? [],
         )
         if (nextState.pendingDrawUpTo) {
-          const remainingEffects = revealed.flip.effects.slice(i + 1)
+          const remainingEffects = flipEffects.slice(i + 1)
           if (remainingEffects.length > 0) {
             nextState = {
               ...nextState,
@@ -2159,24 +2219,43 @@ export const resolveFlip = (
     }
   }
 
-  const player = nextState.players[playerId]
+  const addRevealedFlipCard = (currentState: GameState): GameState => {
+    const player = currentState.players[playerId]
+    return {
+      ...currentState,
+      players: {
+        ...currentState.players,
+        [playerId]: flipToSupportChoice
+          ? {
+              ...player,
+              supportArea: [
+                ...player.supportArea,
+                { card: revealed, rested: flipToSupportChoice.rested },
+              ],
+            }
+          : flipToBreakChoice
+            ? {
+                ...player,
+                breakArea: [...player.breakArea, revealed],
+              }
+            : {
+                ...player,
+                discardPile: [...player.discardPile, revealed],
+              },
+      },
+    }
+  }
+
+  // FLIP 的效果可能讓攻擊中的餅乾昏厥，甚至直接達成勝負條件；
+  // 這時傷害效果會先清除 pendingBattle，仍須把翻開的牌送入對應區域，
+  // 但不可再以原戰鬥要求 pendingBattle。
+  if (!nextState.pendingBattle) {
+    return addRevealedFlipCard(nextState)
+  }
+
+  nextState = addRevealedFlipCard(nextState)
   nextState = {
     ...nextState,
-    players: {
-      ...nextState.players,
-      [playerId]: flipToSupportChoice
-        ? {
-            ...player,
-            supportArea: [
-              ...player.supportArea,
-              { card: revealed, rested: flipToSupportChoice.rested },
-            ],
-          }
-        : {
-            ...player,
-            discardPile: [...player.discardPile, revealed],
-          },
-    },
     pendingBattle: {
       ...requirePendingBattle(nextState),
       stage: 'damage',
@@ -2363,6 +2442,7 @@ export const getTrapTargetCandidates = (
     (effect) =>
       effect.kind === 'damage' ||
       effect.kind === 'damage-by-break-count' ||
+      effect.kind === 'damage-by-break-level-difference' ||
       effect.kind === 'modify-attack' ||
       effect.kind === 'modify-attack-by-break-count' ||
       effect.kind === 'prevent-knockout' ||

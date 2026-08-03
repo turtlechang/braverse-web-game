@@ -287,16 +287,15 @@ button {
 }
 
 .main-menu-ai-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 12px;
 }
 
 .main-menu-ai-options label {
   display: grid;
   gap: 4px;
-  flex: 1;
-  min-width: 140px;
+  min-width: 0;
   color: #9fc3e8;
   font-size: 0.76rem;
   font-weight: 800;
@@ -804,9 +803,9 @@ button {
     padding: 3px 14px 4px;
   }
 
-  /* AI 對手：牌組／等級改上下堆疊，不要擠在同一行。 */
+  /* AI 對手：手機改上下堆疊；桌機／平板維持牌組 8:等級 4。 */
   .main-menu-ai-options {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   /* 目前玩家牌組：手機只留最關鍵的張數／FLIP／餅乾卡，其餘（物品/陷阱/場景）收起。 */
