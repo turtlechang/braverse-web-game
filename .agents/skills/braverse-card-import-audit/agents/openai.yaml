@@ -1,0 +1,4 @@
+interface:
+  display_name: "Braverse 卡牌匯入稽核"
+  short_description: "BS系列卡牌匯入轉接與Chrome逐色效果稽核流程"
+  default_prompt: "使用 $braverse-card-import-audit 完成指定系列的卡牌匯入、promote 與 Chrome 紅綠藍紫逐卡效果驗證。"
