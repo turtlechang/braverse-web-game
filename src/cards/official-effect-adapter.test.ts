@@ -286,6 +286,11 @@ const bs4Cards: OfficialCardRecord[] = [
   {"sourceId":44559,"locale":"en","cardNumber":"BS4-089","baseCardNumber":"BS4-089","variant":null,"name":"Moonlight Cookie","type":"cookie","officialType":"COOKIE","rarity":"UR","grade":"ULTRA RARE","level":3,"hp":6,"energyType":"PURPLE","color":"PURPLE","skill":{"name":"{sk} Dreaming Moonlight","text":"{ap} Place 5 cards from the top of your opponent's deck in the trash. Then, if your opponent has 2 Cookies in their battle area, select up to 1 of your opponent's Cookies. Place that Cookie in the trash."},"attackText":"<{P}{P}{P}> Dreams of Victory {da} 3\r\nThen, if your opponent's trash contains 15 cards or more, draw up to 2 cards from your deck and discard 1 card.","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/JPIA7ZV3FClRqX25jtt85A.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
   {"sourceId":44534,"locale":"en","cardNumber":"BS4-073","baseCardNumber":"BS4-073","variant":null,"name":"Sea Fairy Cookie","type":"cookie","officialType":"COOKIE","rarity":"UR","grade":"ULTRA RARE","level":3,"hp":5,"energyType":"BLUE","color":"BLUE","skill":{"name":"{sk} Soaring Compassion","text":"{ap} <{B}> <Place 1 LV.2 or lower Cookie from your battle area on the bottom of your deck.> Deals 1 damage to all of your opponent's Cookies."},"attackText":"<{B}{B}{B}> Tidal Wave {da} 2\r\nThen, <can be used as {B}.> If your hand contains 5 cards or more, deals 2 damage.","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/swbKxU4iHoIKNoZCMLWGgA.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
   {"sourceId":44542,"locale":"en","cardNumber":"BS4-077","baseCardNumber":"BS4-077","variant":null,"name":"Sorbet Shark Cookie","type":"cookie","officialType":"COOKIE","rarity":"SR","grade":"SUPER RARE","level":1,"hp":1,"energyType":"BLUE","color":"BLUE","skill":{"name":"{sk} Shark Splash","text":"{mob} <{B}> <Place this Cookie on the bottom of your deck.> If your hand contains 5 cards or less and there is a {B} Cookie in your battle area, draw up to 2 cards from your deck."},"attackText":"<{B}{B}> 0ooOoo! OooOoO! {da} 1","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/yAPC4xcajfGooV6IAkhClA.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
+  {"sourceId":44538,"locale":"en","cardNumber":"BS4-075","baseCardNumber":"BS4-075","variant":null,"name":"Black Pearl Cookie","type":"cookie","officialType":"COOKIE","rarity":"UR","grade":"ULTRA RARE","level":3,"hp":5,"energyType":"BLUE","color":"BLUE","skill":{"name":"{sk} Maelstrom of the Duskgloom Sea","text":"{mob} {t1} <{B}> <Select 1 LV.1 Cookie from your opponent's battle area or 1 stage from either player's stage area and place it on the bottom of the owner's deck.> During this turn, this Cookie gains +1 attack damage."},"attackText":"<{B}{B}{B}> Terror of the Abyss {da} 2\r\nThen, <discard 2 cards.> Select up to 1 of your opponent's Cookies.  That Cookie receives 2 damage.","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/9FEhD_AKXzbFR9mSEcM6Pg.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
+  {"sourceId":44569,"locale":"en","cardNumber":"BS4-094","baseCardNumber":"BS4-094","variant":null,"name":"Blueberry Pie Cookie","type":"cookie","officialType":"COOKIE","rarity":"R","grade":"RARE","level":2,"hp":4,"energyType":"PURPLE","color":"PURPLE","skill":{"name":"{sk} Cursed Tome","text":"{mob} {t1} If there is a {P} LV.3 Cookie in your battle area, both players place the top 3 cards from their decks into the trash."},"attackText":"<{P}{P}{P}> Power Unleashed {da} 3","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/n8iNdgDBDgsmFvl7-6uDBQ.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
+  {"sourceId":44578,"locale":"en","cardNumber":"BS4-099","baseCardNumber":"BS4-099","variant":null,"name":"Amber Sugar Cookie","type":"cookie","officialType":"COOKIE","rarity":"U","grade":"UNCOMMON","level":1,"hp":2,"energyType":"PURPLE","color":"PURPLE","skill":{"name":"{sk} Honeydipper Staff","text":"{ap} <{P}> Place up to 3 cards from the top of either player's deck into the trash."},"attackText":"<{P}> *Buzz, Buzz* {da} 1","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/iBORbFVuS94ekUpKGB8STA.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
+  {"sourceId":44582,"locale":"en","cardNumber":"BS4-102","baseCardNumber":"BS4-102","variant":null,"name":"Wildberry Cookie","type":"flip","officialType":"FLIP","rarity":"C","grade":"COMMON","level":1,"hp":1,"energyType":"PURPLE","color":"PURPLE","skill":{"name":null,"text":null},"attackText":"<{P}> Taste THIS! {da} 1","flipText":"Place up to 3 cards from the top of either player's deck into the trash.","keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/Tsl_v8k4uU2lybzMCQXHgg.webp","officialUpdatedAt":"2026-03-13T08:54:17.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
+  {"sourceId":44460,"locale":"en","cardNumber":"BS4-019","baseCardNumber":"BS4-019","variant":null,"name":"Ring of Eternal Flame","type":"item","officialType":"ITEM","rarity":"U","grade":"UNCOMMON","level":null,"hp":null,"energyType":"RED","color":"RED","skill":{"name":null,"text":null},"attackText":"<{R}{R}> Select 1 of your {R} Cookies from your battle area. Place 1 card from the top of this Cookie's HP into the trash. Then, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.","flipText":null,"keywords":[],"product":{"id":209,"title":"BOOSTER PACK [Age of Heroes and Kingdoms]","category":null},"restrictions":{"banned":false,"limited":false},"flags":{"enabled":true,"hidden":false,"extra":false},"imageUrl":"https://cookierunbraverse.com/data/en_storage/jCPgBxaWqRSeisyHNwMEGQ.webp","officialUpdatedAt":"2026-03-13T08:54:15.000Z","sourceUrl":"https://cookierunbraverse.com/data/json/cardList_en.json"} as OfficialCardRecord,
 ]
 
 const findCard = (cardNumber: string) => {
@@ -3291,6 +3296,82 @@ describe('Starter Deck RED official effect adapter', () => {
         },
       ])
     })
+
+    it("BS4-089 Moonlight Cookie mills opponent's deck then trashes an opponent Cookie only when they have EXACTLY 2 (per the Chinese card's own 或更多 contrast)", () => {
+      const card = findBs4Card('BS4-089')
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+        effects: [
+          { kind: 'deck-to-trash', amount: 5, side: 'opponent' },
+          {
+            kind: 'opponent-battle-to-trash',
+            min: 0,
+            condition: { kind: 'opponent-battle-area-cookie-count', count: 2 },
+          },
+        ],
+      })
+    })
+  })
+
+  describe('BS4 candidate cards clarified via official Chinese card images', () => {
+    it('BS4-075 Black Pearl Cookie pays a mandatory discard-2 cost (no "you may") for a bonus attack Then', () => {
+      expect(convertOfficialAttackEffects(findBs4Card('BS4-075'))).toEqual([
+        { kind: 'discard-hand', count: 2 },
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ])
+    })
+
+    it('BS4-094 Blueberry Pie Cookie mills both decks only when a single Cookie is both purple AND LV.3', () => {
+      const card = findBs4Card('BS4-094')
+      const gate = {
+        kind: 'battle-area-has-color',
+        side: 'self',
+        color: 'purple',
+        level: 3,
+      }
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+        effects: [
+          { kind: 'deck-to-trash', amount: 3, side: 'self', condition: gate },
+          { kind: 'deck-to-trash', amount: 3, side: 'opponent', condition: gate },
+        ],
+      })
+    })
+
+    it('BS4-099 Amber Sugar Cookie lets the controller choose which deck to mill', () => {
+      const card = findBs4Card('BS4-099')
+      expect(convertOfficialCardEffects(card)).toMatchObject({
+        status: 'supported',
+        effects: [
+          {
+            kind: 'choose-one',
+            modes: [
+              { effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }] },
+              { effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }] },
+            ],
+          },
+        ],
+      })
+    })
+
+    it('BS4-102 Wildberry Cookie lets the controller choose which deck to mill on flip, same as BS4-099', () => {
+      const card = findBs4Card('BS4-102')
+      expect(convertOfficialFlipAbility(card)).toMatchObject({
+        effects: [
+          {
+            kind: 'choose-one',
+            modes: [
+              { effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }] },
+              { effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }] },
+            ],
+          },
+        ],
+      })
+    })
   })
 
   describe('BS4 blue candidate cards revisited (previously deferred, now expressible)', () => {
@@ -3331,6 +3412,26 @@ describe('Starter Deck RED official effect adapter', () => {
         oncePerTurn: false,
         cost: { energy: { blue: 1 }, selfToDeckBottom: true },
         effects: [{ kind: 'draw-up-to', max: 2, condition: compoundCondition }],
+      })
+    })
+  })
+
+  describe('BS4 red candidate cards revisited (previously deferred, now expressible)', () => {
+    it('BS4-019 Ring of Eternal Flame mills its own red Cookie HP then independently damages an opponent Cookie, mirroring the BS3-115 two-independent-target pattern', () => {
+      const card = findBs4Card('BS4-019')
+      expect(convertOfficialItemAbility(card)).toMatchObject({
+        effects: [
+          {
+            kind: 'hp-to-trash',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, energyColor: 'red' },
+          },
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       })
     })
   })

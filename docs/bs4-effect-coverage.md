@@ -9,22 +9,21 @@
 | 項目 | 數量 |
 | --- | ---: |
 | BS4 基礎卡 | 111 |
-| 主要效果文字已轉接 | 42 |
-| 主要效果文字待轉接 | 45 |
+| 主要效果文字已轉接 | 47 |
+| 主要效果文字待轉接 | 40 |
 | 沒有效果文字 | 24 |
-| 額外能力來源已轉接 | 57 |
-| 額外能力來源待轉接 | 30 |
-| 攻擊 `Then` 已轉接 | 17／23 |
+| 額外能力來源已轉接 | 62 |
+| 額外能力來源待轉接 | 25 |
+| 攻擊 `Then` 已轉接 | 18／23 |
 
 ## 攻擊 `Then` 待轉接
 
-BS4-023, BS4-029, BS4-069, BS4-075, BS4-090, BS4-091
+BS4-023, BS4-029, BS4-069, BS4-090, BS4-091
 
 ## 額外能力來源待轉接
 
 | 卡號 | 類型 | 卡名 | 顏色 |
 | --- | --- | --- | --- |
-| BS4-019 | item | Ring of Eternal Flame | RED |
 | BS4-020 | item | Essence of Conflagration | RED |
 | BS4-022 | stage | Scovillia Training Grounds | RED |
 | BS4-024 | cookie | Kumiho Cookie | YELLOW |
@@ -46,13 +45,9 @@ BS4-023, BS4-029, BS4-069, BS4-075, BS4-090, BS4-091
 | BS4-075 | cookie | Black Pearl Cookie | BLUE |
 | BS4-084 | item | Heart of the Deep Sea | BLUE |
 | BS4-088 | stage | Tower of Frozen Waves | BLUE |
-| BS4-089 | cookie | Moonlight Cookie | PURPLE |
 | BS4-092 | cookie | Milky Way Cookie | PURPLE |
 | BS4-093 | cookie | Black Lemonade Cookie | PURPLE |
-| BS4-094 | cookie | Blueberry Pie Cookie | PURPLE |
 | BS4-098 | cookie | Stardust Cookie | PURPLE |
-| BS4-099 | cookie | Amber Sugar Cookie | PURPLE |
-| BS4-102 | flip | Wildberry Cookie | PURPLE |
 | BS4-111 | stage | Cookies of Legend | PURE |
 
 ## 使用方式

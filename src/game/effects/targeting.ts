@@ -954,6 +954,13 @@ export const isEffectConditionMet = (
     )
   }
 
+  if (condition?.kind === 'opponent-battle-area-cookie-count') {
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    return (
+      state.players[opponentId].battleArea.length === condition.count
+    )
+  }
+
   if (condition?.kind === 'battle-area-has-cookie-with-level') {
     const playerId =
       condition.side === 'self'
@@ -972,6 +979,7 @@ export const isEffectConditionMet = (
     return state.players[playerId].battleArea.some(
       (cookie) =>
         cookie.card.energyColor === condition.color &&
+        (condition.level === undefined || cookie.card.level === condition.level) &&
         (!condition.excludeSource ||
           cookie.card.instanceId !== context.sourceInstanceId),
     )

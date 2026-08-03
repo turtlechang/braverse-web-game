@@ -1775,6 +1775,93 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    // 中文卡面另一段用「或更多」明確標示「至少」，這段沒有那個字尾，
+    // 確認「對手戰鬥區有2個餅乾」是剛好等於 2，不是至少 2。
+    'BS4-089': [
+      {
+        kind: 'deck-to-trash',
+        amount: 5,
+        side: 'opponent',
+      },
+      {
+        kind: 'opponent-battle-to-trash',
+        min: 0,
+        condition: { kind: 'opponent-battle-area-cookie-count', count: 2 },
+      },
+    ],
+    // 中文卡面用「且」明確連接顏色與等級，是同一張卡要同時滿足紫色跟LV.3，
+    // 不是分開各自判定存在（battle-area-has-color 已加上可選的 level 欄位）。
+    'BS4-094': [
+      {
+        kind: 'deck-to-trash',
+        amount: 3,
+        side: 'self',
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'purple',
+          level: 3,
+        },
+      },
+      {
+        kind: 'deck-to-trash',
+        amount: 3,
+        side: 'opponent',
+        condition: {
+          kind: 'battle-area-has-color',
+          side: 'self',
+          color: 'purple',
+          level: 3,
+        },
+      },
+    ],
+    // 中文卡面「從自己或對手的牌庫頂」確認是發動者自選要磨誰的牌庫，用既有的
+    // choose-one 表達，不需要新的「可選邊」機制。
+    'BS4-099': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '磨自己牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+          },
+          {
+            label: '磨對方牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+          },
+        ],
+      },
+    ],
+    // 中文卡面確認是兩段各自獨立的目標選擇：先選自己一隻紅色餅乾動它的 HP，
+    // 再另外選對手一隻造成傷害，跟 BS3-115（hp-to-trash + equip-source 各自
+    // 獨立目標）是同一種「陣列裡每個效果各自選目標」模式。
+    'BS4-019': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, energyColor: 'red' },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS4-102': [
+      {
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '磨自己牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+          },
+          {
+            label: '磨對方牌庫',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+          },
+        ],
+      },
+    ],
     'BS4-049': [
       {
         kind: 'battle-to-support',
@@ -3542,6 +3629,17 @@ export const convertOfficialAttackEffects = (
           'If your hand contains 5 cards or more, use this Cookie as {B} to deal 2 additional damage to the attacked Cookie.',
       },
     ],
+    // BS4-075：中文卡面確認「棄2張手牌」沒有「可以／you may」字樣，是強制
+    // 代價，不是像「can be used as」那樣的自選加費，所以不用
+    // optional-cost-attack，直接照順序寫成兩個效果。
+    'BS4-075': [
+      { kind: 'discard-hand', count: 2 },
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
   }
 
   if (exactAttackEffects[cardKey]) {
@@ -3620,6 +3718,25 @@ export const convertOfficialFlipAbility = (
     'BS4-072': {
       effects: [
         { kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' },
+      ],
+    },
+    // 中文卡面「從自己或對手的牌庫頂」跟 BS4-099 是同一種「自選磨誰的牌庫」，
+    // 一樣用 choose-one 表達。
+    'BS4-102': {
+      effects: [
+        {
+          kind: 'choose-one',
+          modes: [
+            {
+              label: '磨自己牌庫',
+              effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+            },
+            {
+              label: '磨對方牌庫',
+              effects: [{ kind: 'deck-to-trash', amount: 3, side: 'opponent' }],
+            },
+          ],
+        },
       ],
     },
   }

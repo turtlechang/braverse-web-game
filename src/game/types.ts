@@ -220,6 +220,16 @@ export interface OpponentHasCookieWithLevelCondition {
   level: number
 }
 
+/**
+ * 對手戰鬥區餅乾數量剛好等於門檻（BS4-089 的「如果對手的戰鬥區有2個餅乾」，
+ * 中文卡面同一張卡另一段用「或更多」明確標示「至少」，這裡沒有那個字尾，
+ * 確認是剛好等於，不是至少）。
+ */
+export interface OpponentBattleAreaCookieCountCondition {
+  kind: 'opponent-battle-area-cookie-count'
+  count: number
+}
+
 export interface BattleAreaHasCookieWithLevelCondition {
   kind: 'battle-area-has-cookie-with-level'
   side: EffectTargetSide
@@ -233,6 +243,12 @@ export interface BattleAreaHasColorCondition {
   color: EnergyColor
   /** 「another」：不算來源自己。 */
   excludeSource?: boolean
+  /**
+   * 同一張卡要「既是這個顏色又是這個等級」才算數（BS4-094 的「{P} LV.3
+   * Cookie」，中文卡面用「且」明確連接顏色與等級，是同一張卡的兩個條件，
+   * 不是分開各自判定存在）。不給則只看顏色。
+   */
+  level?: number
 }
 
 export interface TrashCountAtLeastCondition {
@@ -338,6 +354,7 @@ export type EffectCondition =
   | HandCountAtLeastCondition
   | SupportAreaDecreasedThisTurnCondition
   | OpponentHasCookieWithLevelCondition
+  | OpponentBattleAreaCookieCountCondition
   | BattleAreaHasCookieWithLevelCondition
   | BattleAreaHasColorCondition
   | TrashCountAtLeastCondition
@@ -680,6 +697,7 @@ export interface OpponentBattleToTrashEffect {
   minLevel?: number
   remainingHp?: number
   destination?: 'trash' | 'break'
+  condition?: EffectCondition
 }
 
 export interface FieldToTrashEffect {
