@@ -234,7 +234,15 @@ const parseAbilityCost = (text: string): AbilityCost => {
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
-    ...(hpToTrashMatch ? { hpToTrash: { amount: Number(hpToTrashMatch[1]) } } : {}),
+    ...(hpToTrashMatch
+      ? {
+          hpToTrash: {
+            amount: Number(hpToTrashMatch[1]),
+            // 卡面明定 this Cookie，不能讓玩家改由另一張己方餅乾支付。
+            sourceOnly: true,
+          },
+        }
+      : {}),
     ...(handToBreakMatch ? {
       handToBreakArea: {
         count: Number(handToBreakMatch[1]),
@@ -1679,7 +1687,15 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
-    'BS4-005': [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    'BS4-005': [
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+      },
+    ],
     'BS4-007': [
       {
         kind: 'modify-attack',

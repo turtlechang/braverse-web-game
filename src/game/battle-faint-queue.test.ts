@@ -8,6 +8,7 @@ import {
   getFaintEffectCandidates,
   getFaintEffectMinMax,
   replaceDefeatedCookie,
+  resolveFlip,
   resolveFaintEffect,
   resolveNextDamage,
   skipDefeatedCookieReplacement,
@@ -139,6 +140,257 @@ describe('faint effect queue', () => {
     expect(afterDamage.pendingFaintEffects!.length).toBe(1)
     expect(afterDamage.pendingFaintEffects![0].sourceInstanceId).toBe('faint-cookie')
     expect(afterDamage.pendingFaintEffects![0].sourcePlayerId).toBe('player-one')
+  })
+
+  it('queues BS4-011 after its attack faints an opponent, then draws and discards through the UI effect flow', () => {
+    const base = createFaintState()
+    const attacker = base.players['player-two'].battleArea[0]
+    const bs4011 = {
+      ...attacker.card,
+      id: 'BS4-011',
+      name: 'Chili Pepper Cookie',
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: "If your opponent's Cookie faints from this Cookie's attack, draw 1 card from your deck and discard 1 card.",
+        effects: [
+          {
+            kind: 'draw' as const,
+            amount: 1,
+            condition: { kind: 'opponent-cookie-fainted-in-current-battle' as const },
+          },
+          {
+            kind: 'discard-hand' as const,
+            count: 1,
+            condition: { kind: 'opponent-cookie-fainted-in-current-battle' as const },
+          },
+        ],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            {
+              ...base.players['player-one'].battleArea[0],
+              card: {
+                ...base.players['player-one'].battleArea[0].card,
+                skill: undefined,
+              },
+            },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          deck: [item('p2-d'), item('p2-d-2')],
+          battleArea: [{ ...attacker, card: bs4011 }],
+        },
+      },
+    }
+
+    let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
+    battleState = skipTrap(battleState, 'player-one')
+    const afterDamage = resolveNextDamage(battleState)
+
+    expect(afterDamage.pendingAbilityEffect).toMatchObject({
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Chili Pepper Cookie',
+      sourceKind: 'skill',
+      effectIndex: 0,
+      effects: [{ kind: 'draw' }, { kind: 'discard-hand' }],
+    })
+
+    // 戰鬥尚未收尾時，UI 會直接由 pendingAbilityEffect 顯示抽牌／棄牌流程。
+    // 補位會等這個攻擊觸發技能與本次戰鬥完成後才進行。
+    const afterDraw = applyGameCommand(afterDamage, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [],
+    })
+    expect(afterDraw.players['player-two'].hand).toHaveLength(2)
+    expect(afterDraw.pendingAbilityEffect?.effectIndex).toBe(1)
+
+    const discardId = afterDraw.players['player-two'].hand[0].instanceId
+    const afterDiscardDecision = applyGameCommand(afterDraw, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [discardId],
+    })
+    expect(afterDiscardDecision.pendingAbilityEffect).toBeUndefined()
+    expect(afterDiscardDecision.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-two',
+      count: 1,
+      sourceCardName: 'Chili Pepper Cookie',
+    })
+
+    const afterDiscard = applyGameCommand(afterDiscardDecision, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-two',
+      cardIds: [discardId],
+    })
+    expect(afterDiscard.players['player-two'].discardPile.map((card) => card.instanceId)).toContain(discardId)
+  })
+
+  it('resolves BS4-005 targets in the selected order, including FLIP before the next Cookie', () => {
+    const base = createFaintState()
+    const first = base.players['player-one'].battleArea[0]
+    const second = {
+      ...first,
+      card: {
+        ...first.card,
+        id: 'second-target',
+        instanceId: 'second-target',
+        name: 'Second target',
+        skill: undefined,
+      },
+      hpCards: [item('second-target-hp')],
+      battleEntryId: 'second-target:battle:2',
+    }
+    const healingFlip = {
+      ...item('first-target-flip'),
+      name: 'Healing FLIP',
+      flip: {
+        text: 'Gain 1 HP.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'gain-hp' as const, amount: 1 }],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [item('healed-hp')],
+          battleArea: [
+            { ...first, hpCards: [healingFlip] },
+            second,
+          ],
+        },
+      },
+    }
+    const context = {
+      sourcePlayerId: 'player-two' as const,
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Fire Spirit Cookie',
+    }
+    const effect = {
+      kind: 'damage-all' as const,
+      amount: 1,
+      side: 'opponent' as const,
+      sequential: true,
+      target: { side: 'opponent' as const, min: 1, max: 2 },
+    }
+
+    expect(() => executeCardEffect(state, context, effect, ['faint-cookie'])).toThrow(
+      'Select every legal damage target exactly once, in resolution order.',
+    )
+
+    let afterFirstSelection = executeCardEffect(
+      state,
+      context,
+      effect,
+      ['faint-cookie', 'second-target'],
+    )
+    expect(afterFirstSelection.pendingBattle).toMatchObject({
+      stage: 'damage',
+      targetInstanceId: 'faint-cookie',
+      effectDamageSequence: {
+        remainingTargetInstanceIds: ['second-target'],
+      },
+    })
+
+    afterFirstSelection = resolveNextDamage(afterFirstSelection)
+    expect(afterFirstSelection.pendingBattle?.stage).toBe('flip')
+    expect(afterFirstSelection.pendingBattle?.targetInstanceId).toBe('faint-cookie')
+
+    const afterFlip = resolveFlip(afterFirstSelection, 'player-one', {
+      activate: true,
+    })
+    expect(afterFlip.players['player-one'].battleArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          card: expect.objectContaining({ instanceId: 'faint-cookie' }),
+          hpCards: [expect.objectContaining({ instanceId: 'healed-hp' })],
+        }),
+      ]),
+    )
+    expect(afterFlip.pendingBattle).toMatchObject({
+      stage: 'damage',
+      targetInstanceId: 'second-target',
+    })
+
+    const completed = resolveNextDamage(afterFlip)
+    expect(completed.players['player-one'].battleArea.map((cookie) => cookie.card.instanceId))
+      .toContain('faint-cookie')
+    expect(completed.players['player-one'].battleArea.map((cookie) => cookie.card.instanceId))
+      .not.toContain('second-target')
+    expect(completed.pendingBattle).toBeNull()
+  })
+
+  it('does not queue BS4-011 when the attacked opponent survives', () => {
+    const base = createFaintState()
+    const attacker = base.players['player-two'].battleArea[0]
+    const target = base.players['player-one'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            {
+              ...target,
+              hpCards: Array.from({ length: 6 }, (_, index) => item(`survivor-hp-${index}`)),
+            },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            {
+              ...attacker,
+              card: {
+                ...attacker.card,
+                id: 'BS4-011',
+                skill: {
+                  trigger: 'passive',
+                  oncePerTurn: false,
+                  yourTurn: false,
+                  restSource: false,
+                  cost: { energy: {}, discardHand: 0 },
+                  text: 'BS4-011 test skill',
+                  effects: [
+                    {
+                      kind: 'draw',
+                      amount: 1,
+                      condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+    }
+
+    let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
+    battleState = skipTrap(battleState, 'player-one')
+    let afterDamage = resolveNextDamage(battleState)
+    while (afterDamage.pendingBattle?.stage === 'damage') {
+      afterDamage = resolveNextDamage(afterDamage)
+    }
+
+    expect(afterDamage.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+    expect(afterDamage.pendingAbilityEffect).toBeUndefined()
   })
 
   it('getFaintEffectCandidates returns opponent cookies', () => {

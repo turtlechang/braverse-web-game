@@ -106,7 +106,9 @@ export function usePendingEffect(params: {
       ? isEffectConditionMet(game, pendingEffect.context, currentEffect)
       : true
   const currentTargetSelector: EffectTargetSelector | null =
-    currentEffect?.kind === 'gain-hp'
+    currentEffect?.kind === 'damage-all' && currentEffect.sequential
+      ? currentEffect.target ?? null
+      : currentEffect?.kind === 'gain-hp'
       ? currentEffect.target?.sourceOnly
         ? null
         : currentEffect.target ?? null
@@ -436,6 +438,7 @@ export function usePendingEffect(params: {
       ? getHpToTrashCostCandidates(
           pendingEffect.skill.cost,
           game.players[pendingEffect.context.sourcePlayerId].battleArea,
+          pendingEffect.context.sourceInstanceId,
         ).map((cookie) => cookie.card)
       : []
   const skillHpToTrashTargetIds = new Set(

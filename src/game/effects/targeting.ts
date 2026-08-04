@@ -314,7 +314,7 @@ export const isEffectUntargeted = (
   effect.kind === 'deck-to-support' ||
   effect.kind === 'deck-to-trash' ||
   effect.kind === 'gain-hp' ||
-  effect.kind === 'damage-all' ||
+  (effect.kind === 'damage-all' && !effect.sequential) ||
   effect.kind === 'modify-all-attack' ||
   effect.kind === 'multiply-attack-damage' ||
   effect.kind === 'place-source-to-support' ||
@@ -354,7 +354,9 @@ export const requiresTargetSelection = (
 ): effect is
   | TargetedCardEffect
   | OpponentBattleToTrashEffect
-  | TargetSelectableGainHpEffect =>
+  | TargetSelectableGainHpEffect
+  | Extract<CardEffect, { kind: 'damage-all' }> =>
+  (effect.kind === 'damage-all' && effect.sequential) ||
   isEffectTargeted(effect) ||
   effect.kind === 'opponent-battle-to-trash' ||
   (effect.kind === 'gain-hp' &&
@@ -385,6 +387,9 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
 export const getEffectSelectionLimits = (
   effect: CardEffect,
 ): { min: number; max: number } | null => {
+  if (effect.kind === 'damage-all' && effect.sequential) {
+    return effect.target ?? null
+  }
   if (effect.kind === 'break-to-battle' || effect.kind === 'support-to-battle') {
     return { min: 0, max: effect.amount }
   }
@@ -642,10 +647,19 @@ export const hasRequiredEffectTargets = (
       effect.target.min
     )
   }
+  if (effect.kind === 'damage-all' && effect.sequential) {
+    return Boolean(
+      effect.target &&
+        getEffectTargetCandidates(state, context, effect.target).length >=
+          effect.target.min,
+    )
+  }
   if (!requiresTargetSelection(effect)) return true
   const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
   const min =
-    effect.kind === 'opponent-battle-to-trash' ? effect.min ?? 1 : effect.target.min
+    effect.kind === 'opponent-battle-to-trash'
+      ? effect.min ?? 1
+      : effect.target?.min ?? Number.POSITIVE_INFINITY
   return candidates.length >= min
 }
 
@@ -1144,6 +1158,14 @@ export const isEffectConditionMet = (
         (condition.color === undefined || card.energyColor === condition.color) &&
         (condition.minLevel === undefined || card.level >= condition.minLevel) &&
         (condition.maxLevel === undefined || card.level <= condition.maxLevel),
+    )
+  }
+
+  if (effect.kind === 'damage-all' && effect.sequential) {
+    return Boolean(
+      effect.target &&
+        getEffectTargetCandidates(state, context, effect.target).length >=
+          effect.target.min,
     )
   }
 

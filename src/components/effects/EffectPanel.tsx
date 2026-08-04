@@ -71,11 +71,13 @@ export interface EffectPanelProps {
 function CandidateButtons({
   cards,
   selectedIds,
+  selectedOrderIds,
   onToggle,
   className,
 }: {
   cards: GameCard[]
   selectedIds: Set<string>
+  selectedOrderIds?: string[]
   onToggle?: (instanceId: string) => void
   className: string
 }) {
@@ -85,6 +87,7 @@ function CandidateButtons({
     <div className={`effect-candidates ${className}`}>
       {cards.map((card) => {
         const selected = selectedIds.has(card.instanceId)
+        const selectionOrder = selectedOrderIds?.indexOf(card.instanceId) ?? -1
         return (
           <button
             type="button"
@@ -94,6 +97,7 @@ function CandidateButtons({
           >
             <CardFace card={card} selected={selected} />
             <span>{card.name}</span>
+            {selectionOrder >= 0 && <small>第 {selectionOrder + 1} 順位</small>}
           </button>
         )
       })}
@@ -148,7 +152,9 @@ function EffectPanelContent({
   const supportAreaCost =
     (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
   const selectionLimits =
-    currentEffect?.kind === 'break-to-trash' ||
+    currentEffect?.kind === 'damage-all' && currentEffect.sequential
+      ? { min: candidateCards.length, max: candidateCards.length }
+      : currentEffect?.kind === 'break-to-trash' ||
       currentEffect?.kind === 'trash-to-hand' ||
       currentEffect?.kind === 'trash-to-deck'
       ? { min: 0, max: currentEffect.max }
@@ -655,6 +661,11 @@ function EffectPanelContent({
                 <CandidateButtons
                   cards={candidateCards}
                   selectedIds={new Set(pendingEffect.selectedTargetIds)}
+                  selectedOrderIds={
+                    currentEffect.kind === 'damage-all' && currentEffect.sequential
+                      ? pendingEffect.selectedTargetIds
+                      : undefined
+                  }
                   onToggle={onToggleCandidate}
                   className="effect-candidates-target"
                 />

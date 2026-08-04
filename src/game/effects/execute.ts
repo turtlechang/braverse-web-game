@@ -14,6 +14,7 @@ import type {
   EffectContext,
   EffectDuration,
   GameState,
+  PendingBattle,
   PlayerId,
   PlayerState,
   Shuffle,
@@ -508,6 +509,55 @@ export const executeCardEffect = (
         !isEffectDamagePrevented(state, cookie, targetPlayerId) &&
         (!effect.excludeSource || cookie.card.instanceId !== context.sourceInstanceId),
     )
+
+    if (effect.sequential) {
+      if (!effect.target) {
+        throw new GameRuleError('Sequential damage requires a target selector.')
+      }
+      if (state.pendingBattle) {
+        throw new GameRuleError('Cannot begin sequential damage during a battle.')
+      }
+
+      const candidateIds = targets.map((target) => target.card.instanceId)
+      const selectedIds = [...new Set(selectedTargetIds)]
+      const selectedAllCandidates =
+        selectedIds.length === selectedTargetIds.length &&
+        selectedIds.length === candidateIds.length &&
+        selectedIds.every((instanceId) => candidateIds.includes(instanceId))
+      if (!selectedAllCandidates) {
+        throw new GameRuleError(
+          'Select every legal damage target exactly once, in resolution order.',
+        )
+      }
+
+      const [targetInstanceId, ...remainingTargetInstanceIds] = selectedIds
+      if (!targetInstanceId) return state
+
+      const pendingBattle: PendingBattle = {
+        attackerPlayerId: context.sourcePlayerId,
+        defenderPlayerId: targetPlayerId,
+        // 代價可能正好讓來源昏厥離場；已成功啟動的技能仍要完整結算。
+        attackerInstanceId: context.sourceInstanceId,
+        targetInstanceId,
+        declaredDamage: effect.amount,
+        remainingDamage: effect.amount,
+        stage: 'damage',
+        trapUsed: true,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        damagePlayerId: targetPlayerId,
+        damageTargetInstanceId: targetInstanceId,
+        effectDamageSequence: {
+          remainingTargetInstanceIds,
+          damage: effect.amount,
+        },
+      }
+      return { ...state, pendingBattle }
+    }
+
     const damagedPlayer = targets.reduce(
       (player, target) =>
         damagePlayerCookie(player, target.card.instanceId, effect.amount),

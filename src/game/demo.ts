@@ -20,6 +20,7 @@ import type {
 } from './custom-deck'
 import { createDeckFromCustomDeck } from './custom-deck'
 import type {
+  CardEffect,
   CookieCard,
   EnergyColor,
   GameCard,
@@ -2647,6 +2648,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     // trigger): put the card on the battlefield with enough hand/support/
     // trash to pay whatever cost it has, plus a spread of legal targets on
     // both sides.
+    const sourceHpCards =
+      card.id === 'BS4-005'
+        ? [testSupportCard('BS4-005-source-hp')]
+        : []
     return {
       ...state,
       players: {
@@ -2655,7 +2660,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-one'],
           hand: handFillers,
           battleArea: [
-            cardCheckBattleEntry(card as CookieCard, [], 4),
+            cardCheckBattleEntry(card as CookieCard, sourceHpCards, 4),
             cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
           ],
           supportArea: energySupports.map((c) => ({ card: c, rested: false })),
@@ -2888,6 +2893,13 @@ export const createBs4ConditionDemoState = (
         ),
       }
       if (conditionMet) {
+        const triggeredEffects = (source.skill?.effects ?? []).flatMap(
+          (effect) =>
+            'condition' in effect &&
+            effect.condition?.kind === 'opponent-cookie-fainted-in-current-battle'
+              ? [{ ...effect, condition: undefined } as CardEffect]
+              : [],
+        )
         state = {
           ...state,
           pendingBattle: {
@@ -2899,6 +2911,15 @@ export const createBs4ConditionDemoState = (
                 level: target.card.level,
               },
             ],
+          },
+          pendingAbilityEffect: {
+            playerId: 'player-one',
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: source.instanceId,
+            sourceCardName: source.name,
+            sourceKind: 'skill',
+            effects: triggeredEffects,
+            effectIndex: 0,
           },
         }
       }

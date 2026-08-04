@@ -18,6 +18,7 @@ import {
   recordCookieDepartures,
 } from './replacement'
 import {
+  getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
@@ -99,6 +100,7 @@ const canPayAbilityCost = (
   state: GameState,
   playerId: PlayerId,
   cost: AbilityCost,
+  sourceInstanceId?: string,
 ): boolean => {
   const player = state.players[playerId]
   const energyPayment = selectEnergyPayment(
@@ -114,16 +116,21 @@ const canPayAbilityCost = (
   const supportCost =
     (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
 
-  const availableDiscardCount = cost.discardHandColor
-    ? player.hand.filter((card) => card.energyColor === cost.discardHandColor)
-        .length
-    : player.hand.length
+  const availableDiscardCount = getDiscardHandCostCandidates(
+    cost,
+    player.hand,
+    sourceInstanceId,
+  ).length
 
   return (
     remainingSupportCount >= supportCost &&
     availableDiscardCount >= (cost.discardHand ?? 0) &&
     (!cost.hpToTrash ||
-      getHpToTrashCostCandidates(cost, player.battleArea).length > 0)
+      getHpToTrashCostCandidates(
+        cost,
+        player.battleArea,
+        sourceInstanceId,
+      ).length > 0)
   )
 }
 
@@ -214,6 +221,16 @@ const payAbilityCost = (
       )
     }
   }
+  if (cost.discardHandType) {
+    const invalidDiscard = discardedHandCards.find(
+      (card) => card.type !== cost.discardHandType,
+    )
+    if (invalidDiscard) {
+      throw new GameRuleError(
+        `棄手牌費用必須選擇 ${cost.discardHandType} 類型的手牌。`,
+      )
+    }
+  }
   if (cost.hpToTrash && hpToTrashTargetIds.length !== 1) {
     throw new GameRuleError('必須選擇 1 張餅乾支付 HP 費用。')
   }
@@ -252,6 +269,7 @@ const payAbilityCost = (
     const target = getHpToTrashCostCandidates(
       cost,
       updatedPlayer.battleArea,
+      options.sourceInstanceId,
     ).find((cookie) => cookie.card.instanceId === hpToTrashTargetIds[0])
     if (!target) {
       throw new GameRuleError('選擇的 HP 費用餅乾不合法。')
@@ -432,7 +450,7 @@ export const canPlayItem = (
     return Boolean(
       card &&
         ability &&
-        canPayAbilityCost(state, playerId, ability.cost) &&
+        canPayAbilityCost(state, playerId, ability.cost, instanceId) &&
         hasUsableEffect(state, playerId, instanceId, ability),
     )
   } catch {
@@ -539,7 +557,7 @@ export const canActivateStage = (
     const ability = stage?.card.stageAbility
     if (!stage || stage.rested || !ability || ability.triggered) return false
     return (
-      canPayAbilityCost(state, playerId, ability.cost) &&
+      canPayAbilityCost(state, playerId, ability.cost, stage.card.instanceId) &&
       (
         hasUsableEffect(state, playerId, stage.card.instanceId, ability) ||
         (ability.specialVictory !== undefined &&

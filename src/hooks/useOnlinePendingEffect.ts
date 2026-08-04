@@ -51,6 +51,9 @@ const getTargetSelector = (
   effect: CardEffect | null,
 ): EffectTargetSelector | null => {
   if (!effect) return null
+  if (effect.kind === 'damage-all' && effect.sequential) {
+    return effect.target ?? null
+  }
   if (effect.kind === 'gain-hp') {
     return effect.target?.sourceOnly ? null : (effect.target ?? null)
   }
@@ -284,6 +287,7 @@ export function useOnlinePendingEffect(params: {
     ? getHpToTrashCostCandidates(
         abilityCostDraft.ability.cost,
         game.players[viewerPlayerId].battleArea,
+        abilityCostDraft.card.instanceId,
       ).map((cookie) => cookie.card)
     : []
   const draftTrashBattleCookieCost =
@@ -361,6 +365,7 @@ export function useOnlinePendingEffect(params: {
         getHpToTrashCostCandidates(
           draft.ability.cost,
           game.players[viewerPlayerId].battleArea,
+          draft.card.instanceId,
         ).map((cookie) => cookie.card.instanceId),
       )
       if (!candidateIds.has(instanceId)) return draft
@@ -476,8 +481,14 @@ export function useOnlinePendingEffect(params: {
   const confirmEffect = () => {
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
-      const targetMin = currentTargetSelector?.min ?? displayedSelectionLimits?.min ?? 0
-      const targetMax = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 0
+      const sequentialAllTargets =
+        displayedEffect?.kind === 'damage-all' && displayedEffect.sequential
+      const targetMin = sequentialAllTargets
+        ? candidateCards.length
+        : (currentTargetSelector?.min ?? displayedSelectionLimits?.min ?? 0)
+      const targetMax = sequentialAllTargets
+        ? candidateCards.length
+        : (currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 0)
       const requiresTargetSelection =
         currentTargetSelector !== null || displayedSelectionLimits !== null
       if (

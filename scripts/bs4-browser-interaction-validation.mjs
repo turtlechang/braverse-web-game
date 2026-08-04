@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { createRequire } from 'node:module'
 import { existsSync } from 'node:fs'
-import { writeFile } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -21,10 +21,9 @@ if (!chromium) {
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4178)
 const baseUrl = `http://127.0.0.1:${port}`
-const reportPath = resolve(
-  root,
-  'data/decks/bs4-browser-interaction-report-2026-08-04.json',
-)
+const reportPath = process.env.BS4_INTERACTION_REPORT_PATH
+  ? resolve(process.env.BS4_INTERACTION_REPORT_PATH)
+  : resolve(root, 'data/decks/bs4-browser-interaction-report-2026-08-04.json')
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
 const browserExecutable =
   process.env.PLAYWRIGHT_BROWSER_EXECUTABLE ??
@@ -62,6 +61,7 @@ const CONDITION_CARDS = [
 const GENERIC_FIXTURE_CARDS = [
   'BS4-003',
   'BS4-004',
+  'BS4-005',
   'BS4-009',
   'BS4-013',
   'BS4-016',
@@ -182,7 +182,16 @@ const driveEffectPanel = async (page, maxRounds = 32, options = {}) => {
 
     const selected = await clickFirstAvailable(page, candidateSelectors)
     if (selected) {
-      operations.push(`effect-panel:${selected}`)
+      const selectedOrder = selected === '.effect-candidates-target'
+        ? await panel
+          .locator(`${selected} button.is-selected small`)
+          .allTextContents()
+        : []
+      operations.push(
+        `effect-panel:${selected}${
+          selectedOrder.length > 0 ? `:${selectedOrder.join(',')}` : ''
+        }`,
+      )
       continue
     }
 
@@ -277,7 +286,7 @@ const driveOtherPendingModal = async (page) => {
     return ['draw-up-to:resolve']
   }
 
-  const handDiscard = page.locator('.hand-discard-modal[role="dialog"]')
+  const handDiscard = page.locator('.hand-discard-modal[role="alertdialog"]')
   if (await visible(handDiscard)) {
     const card = handDiscard.locator('.hand-discard-options button:not(.is-selected)').first()
     if (await visible(card)) await card.click({ force: true })
@@ -346,7 +355,7 @@ const settlePending = async (page, options = {}) => {
       (await count(page, '.effect-panel[role="alertdialog"]')) +
       (await count(page, '.optional-cost-attack-modal[role="alertdialog"]')) +
       (await count(page, '.draw-up-to-modal[role="dialog"]')) +
-      (await count(page, '.hand-discard-modal[role="dialog"]')) +
+      (await count(page, '.hand-discard-modal[role="alertdialog"]')) +
       (await count(page, '.inspect-deck-modal[role="dialog"]')) +
       (await count(page, '.card-reveal-modal[role="alertdialog"]'))
     if (pendingCount === 0) return operations
@@ -421,6 +430,55 @@ const assertNoErrorSurface = async (page, errors, pageErrors) => {
   assert.deepEqual(errors, [], `console errors: ${JSON.stringify(errors)}`)
   assert.deepEqual(pageErrors, [], `page errors: ${JSON.stringify(pageErrors)}`)
   return snapshot
+}
+
+const waitForBs4005DamageSequence = async (page) => {
+  await page.waitForFunction(
+    () => {
+      const texts = [...document.querySelectorAll('.top-field .combat-card-wrap')]
+        .map((element) => element.textContent?.replace(/\s+/g, ' ').trim() ?? '')
+      return (
+        texts.some((text) => text.includes('opp-lv1') && text.includes('5/6')) &&
+        texts.some((text) => text.includes('opp-lv3') && text.includes('4/8'))
+      )
+    },
+    { timeout: 6000 },
+  )
+}
+
+const openBattleLog = async (page) => {
+  const sidebar = page.locator('[data-testid="battle-log-sidebar"]')
+  if (!(await visible(sidebar))) {
+    await page.locator('[data-testid="battle-log-toggle"]').click({ force: true })
+    await sidebar.waitFor({ state: 'visible' })
+  }
+  return sidebar
+}
+
+const assertBs4005DamageLog = async (page) => {
+  const sidebar = await openBattleLog(page)
+  await wait(120)
+  for (let index = 0; index < 16; index += 1) {
+    const collapsedEntry = sidebar.locator('.battle-log-entry[aria-expanded="false"]').first()
+    if ((await collapsedEntry.count()) === 0) break
+    await collapsedEntry.evaluate((button) => button.click())
+    await wait(60)
+  }
+  const logText = (await sidebar.innerText()).replace(/\s+/g, ' ')
+  const logEntries = await sidebar.locator('.battle-log-entry').evaluateAll((entries) =>
+    entries.map((entry) => ({
+      expanded: entry.getAttribute('aria-expanded'),
+      disabled: entry.hasAttribute('disabled'),
+      text: entry.textContent?.replace(/\s+/g, ' ').trim(),
+    })),
+  )
+  for (const targetName of ['opp-lv1', 'opp-lv3']) {
+    assert.match(
+      logText,
+      new RegExp(`「${targetName}」受到 1 點傷害`),
+      `BS4-005 battle log did not report the actual damage to ${targetName}: ${logText}; entries=${JSON.stringify(logEntries)}`,
+    )
+  }
 }
 
 const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
@@ -514,6 +572,22 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
     }
 
     assert.ok(interactions.length > 0, 'no real UI interaction was executed')
+    if (routeType === 'generic' && expectedCard === 'BS4-005') {
+      assert.ok(
+        interactions.some((operation) => operation.includes('第 1 順位') && operation.includes('第 2 順位')),
+        `BS4-005 did not expose the selected first and second damage order in the UI: ${JSON.stringify(interactions)}`,
+      )
+      await openBattleLog(page)
+      await waitForBs4005DamageSequence(page)
+      await assertBs4005DamageLog(page)
+      interactions.push('battle-log:damage-outcome')
+    }
+    if (routeType === 'condition' && expectedCard === 'BS4-011' && expectedResult === 'met') {
+      assert.ok(
+        interactions.includes('hand-discard:resolve'),
+        `BS4-011 fainted-opponent flow did not open its discard-hand prompt: ${JSON.stringify(interactions)}`,
+      )
+    }
     const after = await assertNoErrorSurface(page, consoleErrors, pageErrors)
     if (routeType === 'condition' && (expectedCard === 'BS4-048' || expectedCard === 'BS4-052')) {
       if (expectedResult === 'met') {
@@ -665,6 +739,7 @@ try {
       results: genericResults,
     },
   }
+  await mkdir(dirname(reportPath), { recursive: true })
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   console.log(`Report: ${reportPath}`)
   console.log(

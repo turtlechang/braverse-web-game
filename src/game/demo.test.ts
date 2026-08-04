@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
   getAttackDamageAgainst,
+  applyGameCommand,
   getBreakToBattleCandidates,
   getEffectTargetCandidates,
   getEffectiveAttack,
   getForcedAttackTargetId,
+  resolveNextDamage,
   type CardEffect,
   type GameCard,
+  type GameState,
 } from '.'
 import {
   BS4_CONDITION_CARD_NUMBERS,
@@ -26,6 +29,7 @@ import {
   parseTestStateConfig,
 } from './demo'
 import { getTrapCandidates, resolveFlip } from './battle'
+import { cookie } from './test-helpers/battle-helpers'
 import { canActivateStage } from './card-abilities'
 import { isEffectConditionMet } from './effects'
 import { canActivateCookieSkill } from './skills'
@@ -399,6 +403,202 @@ describe('BS4 condition fixtures', () => {
       }
     },
   )
+
+  it('BS4-011 met fixture exposes its draw and discard UI sequence after the faint', () => {
+    const state = createBs4ConditionDemoState('BS4-011', true)
+
+    expect(state.pendingAbilityEffect).toMatchObject({
+      sourceCardName: 'Chili Pepper Cookie',
+      effects: [{ kind: 'draw' }, { kind: 'discard-hand' }],
+    })
+  })
+
+  it('BS4-005 card-check fixture keeps one HP card for its activation cost', () => {
+    const state = createCardCheckDemoState('BS4-005')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS4-005',
+    )
+
+    expect(source?.hpCards).toHaveLength(1)
+  })
+
+  it('BS4-005 card-check fixture starts its sequential damage after selecting both opponents', () => {
+    const state = createCardCheckDemoState('BS4-005')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS4-005',
+    )
+    expect(source).toBeDefined()
+
+    const activated = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.card.instanceId],
+    })
+    expect(
+      activated.players['player-one'].battleArea.map(
+        (entry) => entry.card.instanceId,
+      ),
+    ).not.toContain(source!.card.instanceId)
+    const resolved = applyGameCommand(activated, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: state.players['player-two'].battleArea.map(
+        (entry) => entry.card.instanceId,
+      ),
+    })
+
+    expect(resolved.pendingBattle).toMatchObject({
+      stage: 'damage',
+      effectDamageSequence: {
+        remainingTargetInstanceIds: [
+          state.players['player-two'].battleArea[1].card.instanceId,
+        ],
+      },
+    })
+
+    // 支付最後一張來源 HP 會令火精靈昏厥，但已啟動的效果仍須依序
+    // 結算兩個對手目標；來源離場不能讓第一個目標的傷害被略過。
+    const afterFirstDamage = resolveNextDamage(resolved)
+    expect(afterFirstDamage.players['player-two'].battleArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          card: expect.objectContaining({ instanceId: 'opp-lv1' }),
+          hpCards: expect.arrayContaining([
+            expect.objectContaining({ instanceId: 'opp-lv1-hp-0' }),
+          ]),
+        }),
+      ]),
+    )
+    expect(
+      afterFirstDamage.players['player-two'].battleArea.find(
+        (entry) => entry.card.instanceId === 'opp-lv1',
+      )?.hpCards,
+    ).toHaveLength(5)
+    expect(afterFirstDamage.pendingBattle).toMatchObject({
+      stage: 'damage',
+      targetInstanceId: 'opp-lv3',
+    })
+
+    const afterSecondDamage = resolveNextDamage(afterFirstDamage)
+    expect(
+      afterSecondDamage.players['player-two'].battleArea.find(
+        (entry) => entry.card.instanceId === 'opp-lv3',
+      )?.hpCards,
+    ).toHaveLength(4)
+    expect(afterSecondDamage.pendingBattle).toBeNull()
+  })
+
+  it('BS4-005 cost faint with an empty battle area queues replacement before the effect', () => {
+    const base = createCardCheckDemoState('BS4-005')
+    const source = base.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS4-005',
+    )
+    expect(source).toBeDefined()
+    const replacementCookie = cookie('bs4-005-replacement', 2, 4)
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: base.players['player-one'].battleArea.filter(
+            (entry) => entry.card.instanceId !== 'self-extra-1',
+          ),
+          hand: [replacementCookie, ...base.players['player-one'].hand],
+        },
+      },
+    }
+
+    const activated = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.card.instanceId],
+    })
+
+    // 戰場清空：補位任務與效果佇列同時建立，但效果被強制補位擋下。
+    expect(activated.players['player-one'].battleArea).toHaveLength(0)
+    expect(activated.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+    expect(activated.pendingAbilityEffect).toBeDefined()
+    expect(() =>
+      applyGameCommand(activated, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: state.players['player-two'].battleArea.map(
+          (entry) => entry.card.instanceId,
+        ),
+      }),
+    ).toThrowError()
+
+    // 補位完成後效果照常依序結算。
+    const replaced = applyGameCommand(activated, {
+      kind: 'replace-cookie',
+      playerId: 'player-one',
+      instanceId: replacementCookie.instanceId,
+    })
+    expect(replaced.pendingReplacement).toBeNull()
+    expect(replaced.pendingOnPlay).toBeNull()
+    const resolved = applyGameCommand(replaced, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: state.players['player-two'].battleArea.map(
+        (entry) => entry.card.instanceId,
+      ),
+    })
+    expect(resolved.pendingBattle).toMatchObject({
+      stage: 'damage',
+      effectDamageSequence: {
+        remainingTargetInstanceIds: [
+          state.players['player-two'].battleArea[1].card.instanceId,
+        ],
+      },
+    })
+  })
+
+  it('BS4-005 cost faint with no cookies to replace loses before any damage', () => {
+    const base = createCardCheckDemoState('BS4-005')
+    const source = base.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS4-005',
+    )
+    expect(source).toBeDefined()
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: base.players['player-one'].battleArea.filter(
+            (entry) => entry.card.instanceId !== 'self-extra-1',
+          ),
+          hand: [],
+        },
+      },
+    }
+
+    const activated = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.card.instanceId],
+    })
+
+    expect(activated.status).toBe('finished')
+    expect(activated.result).toMatchObject({
+      loserId: 'player-one',
+      reason: 'no-cookie-available',
+    })
+    expect(activated.pendingBattle).toBeNull()
+    expect(activated.pendingAbilityEffect).toBeUndefined()
+  })
 })
 
 describe('createBlueActivateSkillDemoState', () => {

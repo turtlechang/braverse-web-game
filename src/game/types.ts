@@ -418,6 +418,13 @@ export interface DamageAllEffect {
   condition?: EffectCondition
   /** 排除來源自己（P-018「Deals damage to all Cookies other than this Cookie」）。 */
   excludeSource?: boolean
+  /**
+   * 逐一選定並處理所有目標；每一張 HP 卡的 FLIP 都必須在下一個目標前完成。
+   * 僅用於卡面明確要求全體傷害仍需依序結算的效果（BS4-005）。
+   */
+  sequential?: boolean
+  /** `sequential` 時用於 UI 選取所有合法目標，點擊順序即傷害順序。 */
+  target?: EffectTargetSelector
 }
 
 export interface DamageByBreakCountEffect {
@@ -1186,11 +1193,22 @@ export type AbilityCost = EnergyCost & {
   energy?: EnergyCost
   discardHand?: number
   discardHandColor?: EnergyColor
+  /** 限定棄置的手牌類型，例如「Discard 1 {R} Trap card」。 */
+  discardHandType?: GameCard['type']
   supportToTrash?: number
   supportToHand?: number
   hpToTrash?: {
     amount?: number
     untilRemainingHp?: number
+    /** 「this Cookie's HP」類代價只能由技能來源本身支付。 */
+    sourceOnly?: boolean
+    /** 「your other Cookie」類代價不能選擇技能來源。 */
+    excludeSource?: boolean
+    /** 限定可支付 HP 的餅乾顏色，例如「your {R} Cookie's HP」。 */
+    energyColor?: EnergyColor
+    /** 限定可支付 HP 的餅乾等級範圍。 */
+    minLevel?: number
+    maxLevel?: number
   }
   trashBattleCookie?: {
     count: number
@@ -1653,6 +1671,15 @@ export interface PendingBattle {
     /** 對應 TrapCondition 的 minLevel；設定時改以 faintedCookies 判定擁有者與等級。 */
     minLevel?: number
     effects: CardEffect[]
+  }
+  /**
+   * 非攻擊效果的逐一傷害序列。沿用既有傷害／FLIP state machine，
+   * 但不開啟陷阱或攻擊後效果，並在所有已選目標完成後才收尾。
+   */
+  effectDamageSequence?: {
+    remainingTargetInstanceIds: string[]
+    damage: number
+    afterCurrentDamageResolved?: boolean
   }
 }
 

@@ -58,6 +58,9 @@ export const describeEffect = (effect: CardEffect) => {
     return `全體${effect.side === 'self' ? '我方' : '對手'}餅乾攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}。`
   }
   if (effect.kind === 'damage-all') {
+    if (effect.sequential) {
+      return `依點選順序，逐一對所有${effect.side === 'self' ? '我方' : '對手'}餅乾造成 ${effect.amount} 點傷害；每次傷害先處理 FLIP 與昏厥。`
+    }
     return `所有${effect.side === 'self' ? '我方' : '對手'}餅乾受到 ${effect.amount} 傷害。`
   }
   if (effect.kind === 'discard-hand') return `棄掉 ${effect.count} 張手牌。`

@@ -256,12 +256,62 @@ export const canPayTrashBattleCookieCost = (
   getTrashBattleCookieCostCandidates(cost, battleArea, sourceInstanceId).length >=
     cost.trashBattleCookie.count
 
+/** 以卡面指定的顏色／類型篩選可作為棄手牌代價的卡片。 */
+export const isDiscardHandCostCandidate = (
+  cost: AbilityCost,
+  card: GameCard,
+  sourceInstanceId?: string,
+): boolean =>
+  card.instanceId !== sourceInstanceId &&
+  (!cost.discardHandColor || card.energyColor === cost.discardHandColor) &&
+  (!cost.discardHandType || card.type === cost.discardHandType)
+
+export const getDiscardHandCostCandidates = (
+  cost: AbilityCost,
+  hand: readonly GameCard[],
+  sourceInstanceId?: string,
+): GameCard[] =>
+  hand.filter((card) =>
+    isDiscardHandCostCandidate(cost, card, sourceInstanceId),
+  )
+
 export const getHpToTrashCostCandidates = (
   cost: AbilityCost,
   battleArea: CookieInBattle[],
+  sourceInstanceId?: string,
 ): CookieInBattle[] => {
   if (!cost.hpToTrash) return []
   return battleArea.filter((cookie) => {
+    if (
+      cost.hpToTrash?.sourceOnly &&
+      cookie.card.instanceId !== sourceInstanceId
+    ) {
+      return false
+    }
+    if (
+      cost.hpToTrash?.excludeSource &&
+      cookie.card.instanceId === sourceInstanceId
+    ) {
+      return false
+    }
+    if (
+      cost.hpToTrash?.energyColor &&
+      cookie.card.energyColor !== cost.hpToTrash.energyColor
+    ) {
+      return false
+    }
+    if (
+      cost.hpToTrash?.minLevel !== undefined &&
+      (cookie.card.level ?? 0) < cost.hpToTrash.minLevel
+    ) {
+      return false
+    }
+    if (
+      cost.hpToTrash?.maxLevel !== undefined &&
+      (cookie.card.level ?? Number.POSITIVE_INFINITY) > cost.hpToTrash.maxLevel
+    ) {
+      return false
+    }
     if (cookie.hpCards.length === 0) return false
     return cost.hpToTrash?.untilRemainingHp === undefined
       ? true
@@ -273,6 +323,7 @@ export const payHpToTrashCost = (
   player: PlayerState,
   cost: AbilityCost,
   selectedIds: string[],
+  sourceInstanceId?: string,
 ): { player: PlayerState; departedCount: number } => {
   const uniqueIds = [...new Set(selectedIds)]
   if (uniqueIds.length !== selectedIds.length) {
@@ -288,9 +339,11 @@ export const payHpToTrashCost = (
     throw new GameRuleError('必須選擇 1 張餅乾支付 HP 費用。')
   }
 
-  const target = getHpToTrashCostCandidates(cost, player.battleArea).find(
-    (cookie) => cookie.card.instanceId === uniqueIds[0],
-  )
+  const target = getHpToTrashCostCandidates(
+    cost,
+    player.battleArea,
+    sourceInstanceId,
+  ).find((cookie) => cookie.card.instanceId === uniqueIds[0])
   if (!target) {
     throw new GameRuleError('選擇的 HP 費用餅乾不合法。')
   }
@@ -484,7 +537,11 @@ export const canActivateCookieSkill = (
 
   if (
     (skill.cost.discardHand ?? 0) > 0 &&
-    player.hand.length < (skill.cost.discardHand ?? 0)
+    getDiscardHandCostCandidates(
+      skill.cost,
+      player.hand,
+      sourceInstanceId,
+    ).length < (skill.cost.discardHand ?? 0)
   ) {
     return false
   }
@@ -517,7 +574,11 @@ export const canActivateCookieSkill = (
 
   if (
     skill.cost.hpToTrash &&
-    getHpToTrashCostCandidates(skill.cost, player.battleArea).length === 0
+    getHpToTrashCostCandidates(
+      skill.cost,
+      player.battleArea,
+      sourceInstanceId,
+    ).length === 0
   ) {
     return false
   }
@@ -624,10 +685,12 @@ export const activateCookieSkill = (
         `必須棄置 ${cost.discardHand ?? 0} 張手牌作為技能代價。`,
       )
     }
-    const allInHand = uniqueDiscardHandIds.every((id) =>
-      player.hand.some((card) => card.instanceId === id),
+    const discardCandidateIds = new Set(
+      getDiscardHandCostCandidates(cost, player.hand, sourceInstanceId).map(
+        (card) => card.instanceId,
+      ),
     )
-    if (!allInHand) {
+    if (uniqueDiscardHandIds.some((id) => !discardCandidateIds.has(id))) {
       throw new GameRuleError('只能選擇自己的手牌作為代價。')
     }
   } else if (uniqueDiscardHandIds.length > 0) {
@@ -682,6 +745,7 @@ export const activateCookieSkill = (
     player,
     cost,
     hpToTrashTargetIds,
+    sourceInstanceId,
   )
   const trashBattlePayment = payTrashBattleCookieCost(
     hpToTrashPayment.player,

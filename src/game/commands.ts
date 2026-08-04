@@ -57,7 +57,7 @@ import {
   resolveLogCard,
   resolveLogCategory,
 } from './command-log'
-import { getBreakAreaLevel } from './victory'
+import { finishWithDefeat, getBreakAreaLevel } from './victory'
 import {
   drawMulliganCompensation,
   forceMulliganOpeningHand,
@@ -1196,6 +1196,24 @@ const assertNoPendingDecision = (
     return
   }
 
+  // 戰鬥中建立的巢狀技能佇列（例如 BS4-011 擊倒後抽牌再棄牌）必須在
+  // pendingBattle 仍保留時結算，才能讓條件讀到本次戰鬥的昏厥資訊。
+  // resolvePendingAbilityEffect 本身仍會拒絕 Refresh、OnPlay 與補位，
+  // 因此這個例外不會放行其他尚未完成的決策。
+  if (
+    command.kind === 'resolve-ability-effect' &&
+    state.pendingAbilityEffect?.playerId === command.playerId &&
+    state.pendingBattle &&
+    !state.pendingEffectOrder &&
+    !hasBlockingPending({
+      ...state,
+      pendingBattle: null,
+      pendingAbilityEffect: undefined,
+    })
+  ) {
+    return
+  }
+
   throw new GameRuleError('必須先處理待處理的決策。')
 }
 
@@ -1242,6 +1260,59 @@ const hasNoEquipTarget = (
   return !player.battleArea.some((c) => c.card.id === next.requiredCookieId)
 }
 
+const hasOwnReplacementTask = (
+  state: GameState,
+  playerId: PlayerId,
+): boolean =>
+  state.pendingReplacement?.tasks.some(
+    (task) => task.playerId === playerId,
+  ) ?? false
+
+/**
+ * 代價致昏後「戰場清空」或「休息區 LV≥10」兩種情形優先處理補位／勝負；
+ * 其他情況（戰場仍有其他餅乾）效果先結算，補位沿用指令出口的既有排程。
+ */
+const shouldFinalizeCostDeparture = (
+  state: GameState,
+  playerId: PlayerId,
+): boolean => {
+  if (state.players[playerId].battleArea.length === 0) return true
+  return getBreakAreaLevel(state, playerId) >= 10
+}
+
+/**
+ * 技能代價造成餅乾離場時，依規格決定是否先完成補位／勝負判定：
+ * 代價→昏厥→休息區 LV≥10 敗北→戰鬥區清空強制補位（無餅乾可補即敗北）→
+ * 效果結算。
+ * - 休息區 LV ≥ 10：立即由 finalizePendingReplacements 判定敗北。
+ * - 戰鬥區清空：建立強制補位；手牌沒有可補位餅乾時依空場敗北判定。
+ * - 其他情況（戰場仍有其他餅乾）：效果先結算，補位沿用指令出口的既有排程。
+ * 只比較本次代價「新增」的離場數，避免把先前補位流程遺留的
+ * departedCookieCounts 舊值誤判成新離場，覆蓋已存在的替補佇列。
+ */
+const finalizeCostDeparture = (
+  state: GameState,
+  playerId: PlayerId,
+  departedBefore: number,
+): GameState => {
+  if (state.status !== 'playing') return state
+  if (state.departedCookieCounts[playerId] <= departedBefore) return state
+  if (!shouldFinalizeCostDeparture(state, playerId)) return state
+  const finalized = finalizePendingReplacements(state)
+  if (finalized.status !== 'playing') return finalized
+  const player = finalized.players[playerId]
+  const hasReplacementCookie = player.hand.some(
+    (card) => card.type === 'cookie',
+  )
+  if (player.battleArea.length === 0 && !hasReplacementCookie) {
+    // 戰場清空且手牌沒有可補位的餅乾：依空場敗北判定，效果不結算。
+    // buildReplacementTasks 只依離場數建任務，不檢查手牌，無法靠
+    // pendingReplacement 的「無任務」區分此情況，因此直接結束遊戲。
+    return finishWithDefeat(finalized, playerId, 'no-cookie-available')
+  }
+  return finalized
+}
+
 const executeAbilityEffects = (
   state: GameState,
   context: EffectContext,
@@ -1274,6 +1345,9 @@ const executeAbilityEffects = (
       shuffle,
     )
     if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    // 代價致昏後補位優先於後續效果結算（BS4-005 等 hpToTrash 代價場景）；
+    // 只對「自己的」補位任務暫停，先前遺留的對側任務不該中斷本次效果。
+    if (hasOwnReplacementTask(nextState, context.sourcePlayerId)) break
     if (hasNoEquipTarget(nextState, context, queue, index)) {
       index += 1
     }
@@ -1411,6 +1485,7 @@ const applyPlayerActionCommand = (
         command.sourceInstanceId,
       )
       const skill = source?.card.skill
+      const departedBefore = state.departedCookieCounts[command.playerId]
       const activated = activateCookieSkill(
         state,
         command.playerId,
@@ -1425,13 +1500,53 @@ const applyPlayerActionCommand = (
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
       )
+      // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再執行效果。
+      // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
+      const costFinalized = finalizeCostDeparture(
+        activated,
+        command.playerId,
+        departedBefore,
+      )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
         sourceInstanceId: command.sourceInstanceId,
         sourceCardName: source?.card.name,
       }
+      if (costFinalized.status !== 'playing') {
+        return costFinalized
+      }
+      const ownCostDeparture =
+        activated.departedCookieCounts[command.playerId] > departedBefore &&
+        shouldFinalizeCostDeparture(activated, command.playerId)
+      if (
+        ownCostDeparture &&
+        hasOwnReplacementTask(costFinalized, command.playerId)
+      ) {
+        // 代價致昏且戰鬥區清空：補位優先。效果改走 pendingAbilityEffect 佇列，
+        // 補位完成後由 resolve-ability-effect 依序結算（與 begin-activate-skill 一致）。
+        const effects = expandChooseOneSequence(
+          filterActiveEffects(costFinalized, context, skill?.effects ?? []),
+          command.chooseOneModes,
+        )
+        if (effects.length === 0) {
+          return costFinalized
+        }
+        return {
+          ...costFinalized,
+          pendingAbilityEffect: {
+            playerId: command.playerId,
+            sourcePlayerId: command.playerId,
+            sourceInstanceId: command.sourceInstanceId,
+            sourceCardName: source?.card.name,
+            sourceKind: 'skill',
+            trigger: command.trigger,
+            effects,
+            effectIndex: 0,
+          },
+        }
+      }
       return executeAbilityEffects(
-        activated,
+        costFinalized,
         context,
         skill?.effects ?? [],
         command.effectTargets,
@@ -1445,6 +1560,7 @@ const applyPlayerActionCommand = (
         command.sourceInstanceId,
       )
       const skill = source?.card.skill
+      const departedBefore = state.departedCookieCounts[command.playerId]
       const activated = activateCookieSkill(
         state,
         command.playerId,
@@ -1459,20 +1575,27 @@ const applyPlayerActionCommand = (
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
       )
+      // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再設定效果。
+      // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
+      const costFinalized = finalizeCostDeparture(
+        activated,
+        command.playerId,
+        departedBefore,
+      )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
         sourceInstanceId: command.sourceInstanceId,
         sourceCardName: source?.card.name,
       }
       const effects = expandChooseOneSequence(
-        filterActiveEffects(activated, context, skill?.effects ?? []),
+        filterActiveEffects(costFinalized, context, skill?.effects ?? []),
         command.chooseOneModes,
       )
-      if (activated.status !== 'playing' || effects.length === 0) {
-        return activated
+      if (costFinalized.status !== 'playing' || effects.length === 0) {
+        return costFinalized
       }
       const pendingState: GameState = {
-        ...activated,
+        ...costFinalized,
         pendingAbilityEffect: {
           playerId: command.playerId,
           sourcePlayerId: command.playerId,
