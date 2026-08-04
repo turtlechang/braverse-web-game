@@ -32,6 +32,8 @@
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test": "vitest run",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",
+    "test:bs4:cards:browser": "node scripts/bs4-browser-card-audit.mjs",
+    "test:bs4:interaction:browser": "node scripts/bs4-browser-interaction-validation.mjs",
     "test:bs3-yellow:browser": "node scripts/bs3-yellow-battle-validation.mjs",
     "test:bs3-red:browser": "set BS3_DECK=bs3-red-pitaya && node scripts/bs3-yellow-battle-validation.mjs",
     "test:bs3-blue:browser": "set BS3_DECK=bs3-blue-sorbet && node scripts/bs3-yellow-battle-validation.mjs",

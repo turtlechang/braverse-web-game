@@ -2441,25 +2441,111 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   const cookieCard = card as CookieCard
   if (cookieCard.attackEffects && cookieCard.attackEffects.length > 0) {
     const state = baseState()
+    // The generic fixture should enter the card's real post-attack UI rather
+    // than silently auto-skipping an effect whose condition happens to be
+    // false in the neutral spread above. Keep these adjustments local to the
+    // browser fixture; they do not alter the official card pool or rules.
+    const attackSourceHpCount =
+      cookieCard.id === 'BS4-039' ? 2 : 0
+    const attackSourceHpCards = Array.from(
+      { length: attackSourceHpCount },
+      (_, index) => testSupportCard(`${cookieCard.id}-source-hp-${index + 1}`),
+    )
+    const attackOpponentBattleArea = opponentBattleArea.map((entry, index) =>
+      cookieCard.id === 'BS4-016' && index === 0
+        ? {
+            ...entry,
+            hpCards: [testSupportCard(`${cookieCard.id}-target-hp-1`)],
+          }
+        : entry,
+    )
+    const attackOwnBreakArea =
+      cookieCard.id === 'BS4-023' || cookieCard.id === 'BS4-029'
+        ? [
+            cardCheckFillerCookie(
+              `${cookieCard.id}-yellow-break-lv3`,
+              3,
+              5,
+              0,
+              'yellow',
+            ).cookie,
+            ...ownBreakArea,
+          ]
+        : ownBreakArea
+    const attackPlayerSupportArea =
+      cookieCard.id === 'BS4-053' || cookieCard.id === 'BS4-061'
+        ? [
+            ...energySupports.map((card) => ({ card, rested: false })),
+            ...scenarioSupports(
+              `${cookieCard.id}-condition-support`,
+              1,
+              'green',
+            ),
+          ]
+        : energySupports.map((card) => ({ card, rested: false }))
+    const attackOpponentSupportArea =
+      cookieCard.id === 'BS4-049'
+        ? scenarioSupports('BS4-049-condition-support', 7, 'green')
+        : []
+    const attackPlayerHand =
+      cookieCard.id === 'BS4-073' || cookieCard.id === 'BS4-083'
+        ? [
+            ...handFillers,
+            testSupportCard(`${cookieCard.id}-condition-hand`, 'blue'),
+          ]
+        : handFillers
+    const attackOpponentDiscard =
+      cookieCard.id === 'BS4-089'
+        ? [
+            ...trashFillers,
+            ...Array.from({ length: 8 }, (_, index) =>
+              testSupportCard(`BS4-089-condition-trash-${index + 1}`),
+            ),
+          ]
+        : trashFillers
+    const attackBattleArea =
+      cookieCard.id === 'BS4-029'
+        ? [cardCheckBattleEntry(card as CookieCard, attackSourceHpCards, 4, true)]
+        : [
+            cardCheckBattleEntry(
+              card as CookieCard,
+              attackSourceHpCards,
+              4,
+              true,
+            ),
+            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+          ]
+    const attackPlayerDiscard =
+      cookieCard.id === 'BS4-090'
+        ? [
+            ...trashFillers,
+            ...Array.from({ length: 3 }, (_, index) =>
+              createCard(
+                getCardPoolEntry('BS4-102')!,
+                'player-one',
+                300 + index,
+              ),
+            ),
+          ]
+        : trashFillers
     return {
       ...state,
       players: {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          hand: handFillers,
-          battleArea: [
-            cardCheckBattleEntry(card as CookieCard, [], 4, true),
-            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
-          ],
-          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
-          breakArea: ownBreakArea,
-          discardPile: trashFillers,
+          hand: attackPlayerHand,
+          battleArea: attackBattleArea,
+          supportArea: attackPlayerSupportArea,
+          breakArea: attackOwnBreakArea,
+          discardPile: attackPlayerDiscard,
         },
         'player-two': {
           ...state.players['player-two'],
-          battleArea: opponentBattleArea,
+          battleArea: attackOpponentBattleArea,
+          supportArea: attackOpponentSupportArea,
           stage: { card: opponentStage, rested: false },
+          discardPile: attackOpponentDiscard,
         },
       },
       pendingBattle: {
@@ -2878,6 +2964,17 @@ export const createBs4ConditionDemoState = (
             scenarioCookie('BS4-023-break-lv3', 3, 5, 'yellow').cookie,
             ...state.players['player-one'].breakArea,
           ],
+        })
+      } else {
+        setPlayer('player-one', {
+          breakArea: state.players['player-one'].breakArea.filter(
+            (card) =>
+              !(
+                card.type === 'cookie' &&
+                card.level === 3 &&
+                card.energyColor === 'yellow'
+              ),
+          ),
         })
       }
       return state

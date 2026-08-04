@@ -1,0 +1,934 @@
+{
+  "generatedAt": "2026-08-04T12:57:49.699Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json",
+  "coverage": "Formal card-check load/flow-entry smoke for every BS4 base card. Interactive branches are covered separately by the condition and generic fixture audit.",
+  "summary": {
+    "total": 111,
+    "passed": 111,
+    "failed": 0,
+    "byColor": {
+      "RED": {
+        "total": 22,
+        "passed": 22,
+        "failed": 0
+      },
+      "YELLOW": {
+        "total": 22,
+        "passed": 22,
+        "failed": 0
+      },
+      "GREEN": {
+        "total": 22,
+        "passed": 22,
+        "failed": 0
+      },
+      "BLUE": {
+        "total": 22,
+        "passed": 22,
+        "failed": 0
+      },
+      "PURPLE": {
+        "total": 22,
+        "passed": 22,
+        "failed": 0
+      },
+      "PURE": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS4-001",
+      "name": "Lilac Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-002",
+      "name": "Lil Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-003",
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-004",
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-005",
+      "name": "Fire Spirit Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-006",
+      "name": "Flaming Hot Wing",
+      "type": "flip",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-007",
+      "name": "Black Raisin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-008",
+      "name": "Scovillia Headmaster",
+      "type": "flip",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-009",
+      "name": "Espresso Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-010",
+      "name": "Scovillia Student Fan",
+      "type": "flip",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-011",
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-012",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-013",
+      "name": "Crushed Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-014",
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-015",
+      "name": "Habanero Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-016",
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-017",
+      "name": "Hot Scovillia Student",
+      "type": "cookie",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-018",
+      "name": "Magma Pendulum",
+      "type": "item",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-019",
+      "name": "Ring of Eternal Flame",
+      "type": "item",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-020",
+      "name": "Essence of Conflagration",
+      "type": "item",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-021",
+      "name": "Battle on the Edge",
+      "type": "trap",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-022",
+      "name": "Scovillia Training Grounds",
+      "type": "stage",
+      "color": "RED",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-023",
+      "name": "Cloud Deity Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-024",
+      "name": "Kumiho Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-025",
+      "name": "Gim Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-026",
+      "name": "Stormbringer Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-027",
+      "name": "Moon Rabbit Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-028",
+      "name": "Vagabond Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-029",
+      "name": "Wind Deity Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-030",
+      "name": "Peach Blossom Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-031",
+      "name": "Rain Deity Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-032",
+      "name": "Cream Ferret Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-033",
+      "name": "Caramel Choux Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-034",
+      "name": "Street Urchin Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-035",
+      "name": "Okchun Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-036",
+      "name": "GingerBrave",
+      "type": "flip",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-037",
+      "name": "Rebel Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-038",
+      "name": "Millennial Tree Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-039",
+      "name": "Churro Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-040",
+      "name": "Essence of Rejuvenation",
+      "type": "item",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-041",
+      "name": "Millennial Twig",
+      "type": "item",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-042",
+      "name": "Millennial Jade Deer",
+      "type": "trap",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-043",
+      "name": "Heaven-Splitting Lightning",
+      "type": "trap",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-044",
+      "name": "Millennial Temple",
+      "type": "stage",
+      "color": "YELLOW",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-045",
+      "name": "Tangerine Tanghulu Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-046",
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-047",
+      "name": "Blue Lily Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-048",
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-049",
+      "name": "Wind Archer Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-050",
+      "name": "Biscuit Giraffe",
+      "type": "flip",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-051",
+      "name": "Beet Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-052",
+      "name": "Shine Muscat Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-053",
+      "name": "Sugar Swan Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-054",
+      "name": "Avocado Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-055",
+      "name": "Alchemist Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-056",
+      "name": "Tiger Lily Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-057",
+      "name": "Jelly Froggy",
+      "type": "flip",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-058",
+      "name": "Lilybell Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-059",
+      "name": "Cookiemals",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-060",
+      "name": "Adventurer Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-061",
+      "name": "Herb Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-062",
+      "name": "Wind Gems",
+      "type": "item",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-063",
+      "name": "Swan Feather Dreamcatcher",
+      "type": "item",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-064",
+      "name": "Night Raven's Arrow",
+      "type": "trap",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-065",
+      "name": "Spring Festival",
+      "type": "trap",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-066",
+      "name": "Dessert Paradise",
+      "type": "stage",
+      "color": "GREEN",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-067",
+      "name": "Gold Citrine Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-068",
+      "name": "Aquamarine Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-069",
+      "name": "Lobster Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-070",
+      "name": "Lord Oyster",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-071",
+      "name": "Mocha Ray Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-072",
+      "name": "Mystic Opal Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-073",
+      "name": "Sea Fairy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-074",
+      "name": "Peppermint Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-075",
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-076",
+      "name": "Star Coral Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-077",
+      "name": "Sorbet Shark Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-078",
+      "name": "Squid Ink Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-079",
+      "name": "Abalone Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-080",
+      "name": "Captain Ice Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-081",
+      "name": "Crimson Coral Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-082",
+      "name": "Frilled Jellyfish Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-083",
+      "name": "Pirate Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-084",
+      "name": "Heart of the Deep Sea",
+      "type": "item",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-085",
+      "name": "Tide Shards",
+      "type": "item",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-086",
+      "name": "Weeping Cries of the Deep",
+      "type": "trap",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-087",
+      "name": "Mermaid's Tale",
+      "type": "trap",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-088",
+      "name": "Tower of Frozen Waves",
+      "type": "stage",
+      "color": "BLUE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-089",
+      "name": "Moonlight Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-090",
+      "name": "Rockstar Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-091",
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-092",
+      "name": "Milky Way Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-093",
+      "name": "Black Lemonade Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-094",
+      "name": "Blueberry Pie Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-095",
+      "name": "Shining Glitter Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-096",
+      "name": "Sugar Glass Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-097",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-098",
+      "name": "Stardust Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-099",
+      "name": "Amber Sugar Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-100",
+      "name": "Space Doughnut",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-101",
+      "name": "Eclair Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-102",
+      "name": "Wildberry Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-103",
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-104",
+      "name": "Parfait Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-105",
+      "name": "Financier Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-106",
+      "name": "Butterfly Brooch",
+      "type": "item",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-107",
+      "name": "Moonlight Shards",
+      "type": "item",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-108",
+      "name": "Plasma Crystal Ball",
+      "type": "item",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-109",
+      "name": "Slumbering Moon's Invitation",
+      "type": "trap",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-110",
+      "name": "City of Wizards",
+      "type": "stage",
+      "color": "PURPLE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    },
+    {
+      "cardNumber": "BS4-111",
+      "name": "Cookies of Legend",
+      "type": "stage",
+      "color": "PURE",
+      "status": "PASS",
+      "flow": "card-check-load"
+    }
+  ]
+}

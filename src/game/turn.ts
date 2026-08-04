@@ -1,7 +1,11 @@
 import { GameRuleError } from './errors'
 import { drawCards, getOpponentId, updatePlayer } from './helpers'
 import { getRefreshCandidates } from './refresh'
-import { executeCardEffect, isEffectUntargeted } from './effects'
+import {
+  executeCardEffect,
+  isEffectConditionMet,
+  requiresEffectCardSelection,
+} from './effects'
 import { hasBlockingPending } from './pending'
 import type { CookieCard, GameState, PlayerId, TurnPhase } from './types'
 import { finishWithDefeat } from './victory'
@@ -120,27 +124,54 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
     const skills = getEndPhaseSkills(nextState, playerId)
     for (const { cookie } of skills) {
       const skill = cookie.skill!
-      for (const effect of skill.effects) {
-        const context = {
-          sourcePlayerId: playerId,
-          sourceInstanceId: cookie.instanceId,
+      const context = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: cookie.instanceId,
+      }
+
+      for (const [effectIndex, effect] of skill.effects.entries()) {
+        if (!isEffectConditionMet(nextState, context, effect)) {
+          continue
         }
-        if (isEffectUntargeted(effect)) {
-          nextState = executeCardEffect(nextState, context, effect, [])
-          if (nextState.status !== 'playing') {
-            return nextState
+
+        if (requiresEffectCardSelection(effect)) {
+          // End-phase skills used to silently drop targeted effects because
+          // the old path only executed effects classified as untargeted. Put
+          // the remaining effect chain into the same pending channel used by
+          // activated skills so the UI/AI can choose and resolve targets.
+          return {
+            ...nextState,
+            skillUsesThisTurn: [
+              ...nextState.skillUsesThisTurn,
+              cookie.instanceId,
+            ],
+            pendingAbilityEffect: {
+              playerId,
+              sourcePlayerId: playerId,
+              sourceInstanceId: cookie.instanceId,
+              sourceCardName: cookie.name,
+              sourceKind: 'skill',
+              effects: skill.effects.slice(effectIndex),
+              effectIndex: 0,
+            },
           }
-          if (hasBlockingPending(nextState)) {
-            return {
-              ...nextState,
-              skillUsesThisTurn: [
-                ...nextState.skillUsesThisTurn,
-                cookie.instanceId,
-              ],
-            }
+        }
+
+        nextState = executeCardEffect(nextState, context, effect, [])
+        if (nextState.status !== 'playing') {
+          return nextState
+        }
+        if (hasBlockingPending(nextState)) {
+          return {
+            ...nextState,
+            skillUsesThisTurn: [
+              ...nextState.skillUsesThisTurn,
+              cookie.instanceId,
+            ],
           }
         }
       }
+
       nextState = {
         ...nextState,
         skillUsesThisTurn: [

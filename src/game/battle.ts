@@ -1822,21 +1822,25 @@ export const resolveOptionalCostAttack = (
       throw new GameRuleError('Invalid battle action.')
     }
     const hasValidTarget = selectableEffects.every((effect) => {
-        const limits = getEffectSelectionLimits(effect)
-        if (!limits) return false
-        const { min, max } = limits
-        if (uniqueTargetIds.length < min || uniqueTargetIds.length > max) {
-          return false
-        }
-        const candidates = getEffectSelectionCandidates(
-          state,
-          effectContext,
-          effect,
-        )
-        return uniqueTargetIds.every((targetId) =>
-          candidates.some((card) => card.instanceId === targetId),
-        )
-      })
+      const effectTargetIds =
+        effect.kind === 'battle-to-break' && effect.target.sourceOnly
+          ? [pending.sourceInstanceId]
+          : uniqueTargetIds
+      const limits = getEffectSelectionLimits(effect)
+      if (!limits) return false
+      const { min, max } = limits
+      if (effectTargetIds.length < min || effectTargetIds.length > max) {
+        return false
+      }
+      const candidates = getEffectSelectionCandidates(
+        state,
+        effectContext,
+        effect,
+      )
+      return effectTargetIds.every((targetId) =>
+        candidates.some((card) => card.instanceId === targetId),
+      )
+    })
     if (!hasValidTarget) {
       throw new GameRuleError('Invalid battle action.')
     }
@@ -1863,7 +1867,11 @@ export const resolveOptionalCostAttack = (
   const context = effectContext
   for (const effect of applicableEffects) {
     if (nextState.status !== 'playing') break
-    nextState = executeCardEffect(nextState, context, effect, targetIds)
+    const effectTargetIds =
+      effect.kind === 'battle-to-break' && effect.target.sourceOnly
+        ? [pending.sourceInstanceId]
+        : targetIds
+    nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
   }
   if (nextState.status !== 'playing') {
     return { ...nextState, pendingBattle: null }

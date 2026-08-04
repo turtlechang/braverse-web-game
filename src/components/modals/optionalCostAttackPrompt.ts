@@ -96,8 +96,14 @@ export function getOptionalCostAttackPrompt(
   const pending = game.pendingOptionalCostAttack
   if (!pending || pending.playerId !== viewerPlayerId) return null
 
-  const targetedEffect = pending.effects.find((effect) =>
-    requiresEffectCardSelection(effect),
+  // A source-only battle-to-break effect is an automatic cost step (the
+  // attacking Cookie itself), not the card the player is asked to choose.
+  // Skip it so chained effects such as BS4-029 expose the following
+  // break-to-battle candidate in the payment flow.
+  const targetedEffect = pending.effects.find(
+    (effect) =>
+      requiresEffectCardSelection(effect) &&
+      !(effect.kind === 'battle-to-break' && effect.target.sourceOnly),
   )
   const needsTarget = Boolean(targetedEffect)
   const targetCandidates = (
