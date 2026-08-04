@@ -1,0 +1,735 @@
+<title>對戰紀錄改版 Mockup</title>
+<style>
+  :root {
+    --bg-void: #030a1c;
+    --bg-panel: #0a1938;
+    --bg-panel-2: #0e2246;
+    --bg-entry: rgba(14, 34, 70, 0.55);
+    --bg-entry-hover: rgba(20, 46, 90, 0.75);
+    --line: rgba(113, 233, 255, 0.16);
+    --line-strong: rgba(113, 233, 255, 0.4);
+    --cyan: #71e9ff;
+    --cyan-dim: #4fb8d4;
+    --gold: #ffd76b;
+    --gold-strong: #ffc94a;
+    --violet: #c9a2ff;
+    --violet-strong: #a374f5;
+    --red: #ff7a7a;
+    --red-strong: #ff5757;
+    --green: #7de8b0;
+    --ink: #eaf4ff;
+    --ink-dim: #93a9c9;
+    --ink-faint: #5c7195;
+
+    --c-red: #ff6b6b;
+    --c-yellow: #ffd257;
+    --c-green: #7bd88f;
+    --c-blue: #6bc2ff;
+    --c-purple: #b48bff;
+    --c-neutral: #9fb0c9;
+
+    --radius: 10px;
+    --font-display: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+    --font-body: 'Segoe UI', 'Noto Sans TC', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font-body);
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse 900px 500px at 20% -10%, rgba(113, 233, 255, 0.10), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(196, 148, 255, 0.08), transparent 55%),
+      linear-gradient(180deg, var(--bg-void), #061229 60%, var(--bg-void));
+  }
+
+  .stage {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 22px 14px 60px;
+  }
+
+  .stage-note {
+    margin: 0 0 16px;
+    padding: 10px 14px;
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    background: rgba(113, 233, 255, 0.06);
+    color: var(--cyan-dim);
+    font-size: 0.72rem;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+  }
+
+  .stage-note b { color: var(--cyan); }
+
+  /* ---------- panel shell (mirrors the real 對戰紀錄側欄) ---------- */
+
+  .log-panel {
+    display: flex;
+    flex-direction: column;
+    height: 78vh;
+    min-height: 520px;
+    border: 1px solid var(--line-strong);
+    border-radius: 14px;
+    background: linear-gradient(160deg, var(--bg-panel), var(--bg-panel-2));
+    box-shadow:
+      0 30px 70px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+
+  .log-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(113, 233, 255, 0.07), transparent);
+  }
+
+  .log-header svg { flex: 0 0 auto; color: var(--cyan); }
+
+  .log-header h1 {
+    margin: 0;
+    flex: 1 1 auto;
+    font-family: var(--font-display);
+    font-size: 1.02rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .log-header .count {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(113, 233, 255, 0.14);
+    color: var(--cyan);
+    font-size: 0.7rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .log-filters {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .log-filters::-webkit-scrollbar { display: none; }
+
+  .chip {
+    flex: 0 0 auto;
+    padding: 5px 11px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink-dim);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .chip:hover { border-color: var(--cyan); color: var(--ink); }
+  .chip.is-active {
+    border-color: var(--cyan);
+    background: rgba(113, 233, 255, 0.16);
+    color: var(--cyan);
+  }
+
+  .log-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 8px 12px 22px;
+  }
+  .log-scroll::-webkit-scrollbar { width: 8px; }
+  .log-scroll::-webkit-scrollbar-thumb {
+    background: rgba(113, 233, 255, 0.25);
+    border-radius: 8px;
+  }
+
+  /* ---------- turn divider ---------- */
+
+  .turn-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 4px 12px;
+  }
+  .turn-divider:first-child { margin-top: 6px; }
+
+  .turn-divider .rule {
+    flex: 1 1 auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-strong), transparent);
+  }
+
+  .turn-pill {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 4px;
+    border: 1px solid var(--gold-strong);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 215, 107, 0.16), rgba(255, 215, 107, 0.04));
+    box-shadow: 0 0 14px rgba(255, 215, 107, 0.18);
+  }
+
+  .turn-pill .turn-num {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: #2a1c00;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .turn-pill .turn-label {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    font-size: 0.74rem;
+    color: var(--gold-strong);
+    padding-right: 4px;
+  }
+
+  .lv-track {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 4px 16px;
+  }
+
+  .lv-side {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(4, 12, 30, 0.5);
+  }
+  .lv-side.is-opponent { flex-direction: row-reverse; text-align: right; }
+
+  .lv-side .who {
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  .lv-side.is-player .who { color: var(--cyan-dim); }
+  .lv-side.is-opponent .who { color: #ff9d9d; }
+
+  .lv-bar-wrap { flex: 1 1 auto; }
+  .lv-num {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    font-size: 0.78rem;
+    margin-bottom: 3px;
+  }
+  .lv-bar {
+    height: 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+  .lv-bar > i {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+  }
+  .is-player .lv-bar > i { background: linear-gradient(90deg, var(--cyan-dim), var(--cyan)); }
+  .is-opponent .lv-bar > i { background: linear-gradient(90deg, var(--red-strong), #ff9d9d); }
+
+  /* ---------- entries ---------- */
+
+  .entry {
+    position: relative;
+    margin: 0 2px 6px;
+    padding-left: 14px;
+  }
+
+  .entry::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: -6px;
+    width: 2px;
+    background: var(--line);
+  }
+  .entry:last-child::before { bottom: 50%; }
+
+  .entry-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 8px 10px 8px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--bg-entry);
+    cursor: default;
+  }
+  .entry-row.is-clickable { cursor: pointer; }
+  .entry-row.is-clickable:hover { background: var(--bg-entry-hover); border-color: var(--line-strong); }
+
+  .badge {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.58rem;
+    letter-spacing: 0.01em;
+    line-height: 1.05;
+    text-align: center;
+    color: #071022;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+    padding: 2px;
+  }
+  .badge.energy-red { background: linear-gradient(150deg, #ffb3b3, var(--c-red)); }
+  .badge.energy-yellow { background: linear-gradient(150deg, #fff0b8, var(--c-yellow)); }
+  .badge.energy-green { background: linear-gradient(150deg, #c9f5d3, var(--c-green)); }
+  .badge.energy-blue { background: linear-gradient(150deg, #cfe9ff, var(--c-blue)); }
+  .badge.energy-purple { background: linear-gradient(150deg, #e4d4ff, var(--c-purple)); }
+  .badge.energy-neutral,
+  .badge.system {
+    background: linear-gradient(150deg, #ccd6e6, var(--c-neutral));
+  }
+  .badge.system {
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+
+  .entry-main { flex: 1 1 auto; min-width: 0; }
+
+  .entry-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    flex: 0 0 auto;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+  }
+  .tag.tag-draw { background: rgba(113, 233, 255, 0.14); color: var(--cyan); }
+  .tag.tag-deploy { background: rgba(255, 215, 107, 0.14); color: var(--gold-strong); }
+  .tag.tag-attack { background: rgba(255, 215, 107, 0.2); color: var(--gold-strong); }
+  .tag.tag-activate { background: rgba(201, 162, 255, 0.18); color: var(--violet); }
+  .tag.tag-damage { background: rgba(255, 122, 122, 0.16); color: var(--red); }
+  .tag.tag-flip { background: rgba(125, 232, 176, 0.16); color: var(--green); }
+  .tag.tag-phase { background: rgba(255, 255, 255, 0.06); color: var(--ink-faint); }
+  .tag.tag-result { background: linear-gradient(90deg, rgba(255, 215, 107, 0.28), rgba(255, 215, 107, 0.1)); color: var(--gold-strong); }
+
+  .entry-title {
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .entry-title .card-name { color: var(--cyan); font-weight: 800; }
+  .entry-title .card-name.is-opp { color: #ffb0b0; }
+
+  .entry-sub {
+    margin-top: 3px;
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    line-height: 1.5;
+  }
+
+  .zoneflow {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+    font-size: 0.62rem;
+    color: var(--ink-faint);
+  }
+  .zoneflow .zbox {
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--line-strong);
+    background: rgba(255, 255, 255, 0.03);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .zoneflow svg { width: 11px; height: 11px; color: var(--cyan-dim); }
+
+  .expand-btn {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    margin-top: 2px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ink-faint);
+    transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease;
+  }
+  .entry-row.is-clickable:hover .expand-btn { color: var(--cyan); background: rgba(113, 233, 255, 0.1); }
+  .entry.is-open .expand-btn { transform: rotate(90deg); color: var(--cyan); }
+
+  /* ---------- expanded detail (chain-style steps) ---------- */
+
+  .entry-detail {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.22s ease;
+  }
+  .entry.is-open .entry-detail { grid-template-rows: 1fr; }
+  .entry-detail > div { overflow: hidden; }
+
+  .steps {
+    margin: 6px 0 4px 8px;
+    padding: 4px 0 4px 20px;
+    border-left: 2px solid var(--violet-strong);
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .step {
+    position: relative;
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    line-height: 1.55;
+  }
+  .step::before {
+    content: attr(data-n);
+    position: absolute;
+    left: -28px;
+    top: -1px;
+    width: 18px;
+    height: 18px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--violet-strong);
+    color: #1c0f38;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.62rem;
+  }
+  .step b { color: var(--ink); font-weight: 700; }
+  .step .highlight { color: var(--gold-strong); font-weight: 800; }
+  .step .neg { color: var(--red); font-weight: 800; }
+  .step .pos { color: var(--green); font-weight: 800; }
+
+  .entry-row.type-damage { border-left: 2px solid var(--red-strong); }
+  .entry-row.type-flip { border-left: 2px solid var(--green); }
+  .entry-row.type-activate { border-left: 2px solid var(--violet-strong); }
+
+  .phase-row .entry-row { background: transparent; padding: 4px 10px; }
+  .phase-row .entry-title { color: var(--ink-faint); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em; }
+
+  .result-banner {
+    margin: 16px 4px 4px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--gold-strong);
+    background: linear-gradient(135deg, rgba(255, 215, 107, 0.16), rgba(255, 215, 107, 0.03));
+    text-align: center;
+  }
+  .result-banner .rb-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    font-size: 0.95rem;
+    color: var(--gold-strong);
+  }
+  .result-banner .rb-sub { margin-top: 3px; font-size: 0.7rem; color: var(--ink-dim); }
+</style>
+
+<div class="stage">
+  <p class="stage-note">
+    <b>Mockup／非最終實作</b>：對戰紀錄改版方向，參考 Master Duel 的逐步驟對戰紀錄，
+    改用薑餅人對戰卡牌自己的分區（手牌／戰鬥區／支援區／棄牌區／休息區）與能量色系。
+    點一下有「▶」的紀錄可以展開詳細結算步驟；上方色塊是篩選分類（陷阱／攻擊／效果傷害／FLIP…）。
+  </p>
+
+  <section class="log-panel" aria-label="對戰紀錄">
+    <header class="log-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <h1>對戰紀錄</h1>
+      <span class="count" id="entryCount">14</span>
+    </header>
+
+    <div class="log-filters" id="filterBar">
+      <button class="chip is-active" data-filter="all">全部</button>
+      <button class="chip" data-filter="attack">攻擊</button>
+      <button class="chip" data-filter="activate">陷阱／道具／技能</button>
+      <button class="chip" data-filter="damage">傷害</button>
+      <button class="chip" data-filter="flip">FLIP</button>
+      <button class="chip" data-filter="phase">階段</button>
+    </div>
+
+    <div class="log-scroll" id="logScroll">
+
+      <!-- ===== 對局開始 ===== -->
+      <div class="turn-divider">
+        <span class="rule"></span>
+        <span class="turn-pill" style="border-color: var(--line-strong); background: rgba(255,255,255,0.04); box-shadow:none;">
+          <span class="turn-num" style="background: var(--ink-faint); color:#0a1938;">–</span>
+          <span class="turn-label" style="color: var(--ink-dim);">對局開始</span>
+        </span>
+        <span class="rule"></span>
+      </div>
+
+      <div class="entry" data-cat="phase">
+        <div class="entry-row">
+          <div class="badge system">初</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-phase">開局</span></div>
+            <div class="entry-title">先攻／後攻猜拳：<span class="card-name">玩家</span> 獲勝，選擇先攻</div>
+            <div class="entry-sub">雙方各抽取起始手牌 5 張，玩家保留、AI 對手 Mulligan 1 次。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TURN 12 ===== -->
+      <div class="turn-divider">
+        <span class="rule"></span>
+        <span class="turn-pill">
+          <span class="turn-num">12</span>
+          <span class="turn-label">主要階段</span>
+        </span>
+        <span class="rule"></span>
+      </div>
+      <div class="lv-track">
+        <div class="lv-side is-player">
+          <span class="who">玩家</span>
+          <div class="lv-bar-wrap">
+            <div class="lv-num">LV. 6/10</div>
+            <div class="lv-bar"><i style="width:60%"></i></div>
+          </div>
+        </div>
+        <div class="lv-side is-opponent">
+          <span class="who">AI 對手</span>
+          <div class="lv-bar-wrap">
+            <div class="lv-num">LV. 4/10</div>
+            <div class="lv-bar"><i style="width:40%"></i></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry" data-cat="phase">
+        <div class="entry-row">
+          <div class="badge system">↻</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-draw">抽牌階段</span></div>
+            <div class="entry-title"><span class="card-name">玩家</span> 從牌庫抽 1 張卡</div>
+            <div class="zoneflow"><span class="zbox">牌庫</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="zbox">手牌</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry" data-cat="phase">
+        <div class="entry-row">
+          <div class="badge energy-green">綠</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-deploy">支援階段</span></div>
+            <div class="entry-title"><span class="card-name">玩家</span> 將 <span class="card-name">Twizzly Gummy Cookie</span> 置入支援區</div>
+            <div class="zoneflow"><span class="zbox">手牌</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="zbox">支援區</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry" data-cat="deploy">
+        <div class="entry-row">
+          <div class="badge energy-neutral">忍</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-deploy">主要階段</span></div>
+            <div class="entry-title"><span class="card-name">玩家</span> 部署 <span class="card-name">Ninja Cookie</span> 到戰鬥區</div>
+            <div class="zoneflow"><span class="zbox">手牌</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="zbox">戰鬥區</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- attack, expandable -->
+      <div class="entry" data-cat="attack">
+        <div class="entry-row is-clickable" data-toggle>
+          <div class="badge energy-neutral">忍</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-attack">攻擊宣告</span></div>
+            <div class="entry-title"><span class="card-name">Ninja Cookie</span> ⚔3 攻擊 <span class="card-name is-opp">Wind Archer Cookie</span></div>
+            <div class="entry-sub">宣告傷害 3・對手可發動陷阱回應</div>
+          </div>
+          <button class="expand-btn" aria-label="展開詳情"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+        <div class="entry-detail"><div>
+          <div class="steps">
+            <div class="step" data-n="1">攻擊者 <b>Ninja Cookie</b> 橫置，支付攻擊費用（全中立 3 點）</div>
+            <div class="step" data-n="2">宣告目標 <b>Wind Archer Cookie</b>，宣告傷害 <span class="highlight">3</span></div>
+            <div class="step" data-n="3">等待防守方回應陷阱視窗……</div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- trap chain, expandable, opened by default -->
+      <div class="entry is-open" data-cat="activate">
+        <div class="entry-row is-clickable type-activate" data-toggle>
+          <div class="badge energy-purple">陷</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-activate">陷阱發動</span></div>
+            <div class="entry-title"><span class="card-name is-opp">AI 對手</span> 發動 <span class="card-name is-opp">Chocolate Altar of the Fallen</span></div>
+            <div class="entry-sub">回應 Ninja Cookie 的攻擊宣告</div>
+          </div>
+          <button class="expand-btn" aria-label="展開詳情"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+        <div class="entry-detail"><div>
+          <div class="steps">
+            <div class="step" data-n="1">支付代價：橫置 2 張支援卡</div>
+            <div class="step" data-n="2">選擇目標：<b>Ninja Cookie</b>（本次攻擊的攻擊者）</div>
+            <div class="step" data-n="3">效果處理：本回合攻擊力 <span class="neg">−3</span>（3 → 0）</div>
+            <div class="step" data-n="4">條件判定：棄牌區 9／15 張，未達門檻，處決效果<b>未觸發</b></div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="entry" data-cat="damage">
+        <div class="entry-row">
+          <div class="badge system">⚔</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-damage">戰鬥結算</span></div>
+            <div class="entry-title">攻擊力歸零，<span class="card-name is-opp">Wind Archer Cookie</span> 未受到傷害</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- item effect damage, expandable -->
+      <div class="entry" data-cat="damage">
+        <div class="entry-row is-clickable type-damage" data-toggle>
+          <div class="badge energy-red">具</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-activate">道具發動</span><span class="tag tag-damage">效果傷害</span></div>
+            <div class="entry-title"><span class="card-name is-opp">AI 對手</span> 發動 <span class="card-name is-opp">Prickly Cacti Gloves</span></div>
+            <div class="entry-sub">對 <span class="card-name">Ninja Cookie</span> 造成 2 點效果傷害</div>
+          </div>
+          <button class="expand-btn" aria-label="展開詳情"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+        <div class="entry-detail"><div>
+          <div class="steps">
+            <div class="step" data-n="1">支付代價：紅色能量 ×2</div>
+            <div class="step" data-n="2">選擇目標：<b>Ninja Cookie</b></div>
+            <div class="step" data-n="3">效果傷害 <span class="neg">2</span> 點・<b>非攻擊傷害，不會開啟陷阱回應視窗</b></div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="entry" data-cat="damage">
+        <div class="entry-row">
+          <div class="badge system">♥</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-damage">HP 結算</span></div>
+            <div class="entry-title"><span class="card-name">Ninja Cookie</span> 翻開 1 張 HP 卡（剩餘 2/3）</div>
+            <div class="zoneflow"><span class="zbox">HP區</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="zbox">棄牌區</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry" data-cat="flip">
+        <div class="entry-row type-flip">
+          <div class="badge energy-yellow">翻</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-flip">FLIP 觸發</span></div>
+            <div class="entry-title">翻到 FLIP卡 <span class="card-name">Fig Cookie</span>：抽 1 張牌</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry" data-cat="phase">
+        <div class="entry-row">
+          <div class="badge system">›</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-phase">結束階段</span></div>
+            <div class="entry-title"><span class="card-name">玩家</span> 結束回合</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== TURN 13 ===== -->
+      <div class="turn-divider">
+        <span class="rule"></span>
+        <span class="turn-pill">
+          <span class="turn-num">13</span>
+          <span class="turn-label">AI 對手回合</span>
+        </span>
+        <span class="rule"></span>
+      </div>
+
+      <div class="entry" data-cat="activate">
+        <div class="entry-row is-clickable type-activate" data-toggle>
+          <div class="badge energy-green">技</div>
+          <div class="entry-main">
+            <div class="entry-top"><span class="tag tag-activate">技能發動</span></div>
+            <div class="entry-title"><span class="card-name">玩家</span> 發動 <span class="card-name">Hydrangea Cookie</span> 技能</div>
+            <div class="entry-sub">從棄牌區選最多 1 張卡返回手牌</div>
+          </div>
+          <button class="expand-btn" aria-label="展開詳情"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+        <div class="entry-detail"><div>
+          <div class="steps">
+            <div class="step" data-n="1">支付代價：紫色能量 ×1</div>
+            <div class="step" data-n="2">從棄牌區選擇 <b>Hidden Warpgate</b></div>
+            <div class="step" data-n="3">目標卡片 <span class="pos">返回手牌</span></div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="result-banner">
+        <div class="rb-title">🏆 玩家 勝利</div>
+        <div class="rb-sub">AI 對手休息區等級推滿 10・第 19 回合結束</div>
+      </div>
+
+    </div>
+  </section>
+</div>
+
+<script>
+  document.querySelectorAll('[data-toggle]').forEach((row) => {
+    row.addEventListener('click', () => {
+      row.closest('.entry').classList.toggle('is-open');
+    });
+  });
+
+  const chips = document.querySelectorAll('.chip');
+  const entries = document.querySelectorAll('.entry[data-cat]');
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      chips.forEach((c) => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+      const filter = chip.dataset.filter;
+      entries.forEach((entry) => {
+        const show = filter === 'all' || entry.dataset.cat === filter;
+        entry.style.display = show ? '' : 'none';
+      });
+    });
+  });
+</script>

@@ -526,7 +526,11 @@ export function usePendingEffect(params: {
       game.status !== 'playing' ||
       game.pendingReplacement ||
       game.pendingRefresh ||
-      game.pendingOnPlay
+      game.pendingOnPlay ||
+      // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾與對手補位
+      // 完成後才結算，補位期間（pendingReplacement）上面已擋；這裡連
+      // pendingBattle 期間也不顯示效果面板，避免玩家點下去被規則層拒絕。
+      (pendingAbility.trigger === 'attacker-faint' && game.pendingBattle)
     ) {
       return
     }

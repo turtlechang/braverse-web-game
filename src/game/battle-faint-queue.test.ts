@@ -142,7 +142,7 @@ describe('faint effect queue', () => {
     expect(afterDamage.pendingFaintEffects![0].sourcePlayerId).toBe('player-one')
   })
 
-  it('queues BS4-011 after its attack faints an opponent, then draws and discards through the UI effect flow', () => {
+  it('queues BS4-011 after its attack faints an opponent, resolving the opponent replacement before the draw/discard', () => {
     const base = createFaintState()
     const attacker = base.players['player-two'].battleArea[0]
     const bs4011 = {
@@ -176,6 +176,9 @@ describe('faint effect queue', () => {
         ...base.players,
         'player-one': {
           ...base.players['player-one'],
+          // 補位會把 p1-replacement（hp 2）放到戰鬥區並抽走 2 張牌庫，
+          // deck 要留足餘量避免觸發 Refresh 或判負。
+          deck: [item('p1-d'), item('p1-d-2'), item('p1-d-3')],
           battleArea: [
             {
               ...base.players['player-one'].battleArea[0],
@@ -196,20 +199,56 @@ describe('faint effect queue', () => {
 
     let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
     battleState = skipTrap(battleState, 'player-one')
-    const afterDamage = resolveNextDamage(battleState)
+    let afterDamage = resolveNextDamage(battleState)
 
     expect(afterDamage.pendingAbilityEffect).toMatchObject({
       playerId: 'player-two',
       sourceInstanceId: 'attacker',
       sourceCardName: 'Chili Pepper Cookie',
       sourceKind: 'skill',
+      trigger: 'attacker-faint',
       effectIndex: 0,
       effects: [{ kind: 'draw' }, { kind: 'discard-hand' }],
     })
 
-    // 戰鬥尚未收尾時，UI 會直接由 pendingAbilityEffect 顯示抽牌／棄牌流程。
-    // 補位會等這個攻擊觸發技能與本次戰鬥完成後才進行。
-    const afterDraw = applyGameCommand(afterDamage, {
+    // 擊倒後佇列已建立，但本次戰鬥尚未收尾：技能不得在 pendingBattle 期間
+    // 結算（補位要等戰鬥收尾後才能建立，技能不能先跑）。
+    expect(() =>
+      applyGameCommand(afterDamage, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-two',
+        targetIds: [],
+      }),
+    ).toThrowError('必須先處理其他待處理的決策。')
+
+    // 完成本次戰鬥剩餘的傷害結算後，補位任務優先建立（attacker-faint 佇列
+    // 不阻塞補位），技能佇列在補位完成前仍被規則層拒絕。
+    while (afterDamage.pendingBattle?.stage === 'damage') {
+      afterDamage = resolveNextDamage(afterDamage)
+    }
+    expect(afterDamage.pendingBattle).toBeNull()
+    expect(afterDamage.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+    expect(() =>
+      applyGameCommand(afterDamage, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-two',
+        targetIds: [],
+      }),
+    ).toThrowError('必須先處理其他待處理的決策。')
+
+    const afterReplacement = applyGameCommand(afterDamage, {
+      kind: 'replace-cookie',
+      playerId: 'player-one',
+      instanceId: 'p1-replacement',
+    })
+    expect(afterReplacement.pendingReplacement).toBeNull()
+    expect(afterReplacement.pendingAbilityEffect).toMatchObject({
+      effectIndex: 0,
+    })
+
+    const afterDraw = applyGameCommand(afterReplacement, {
       kind: 'resolve-ability-effect',
       playerId: 'player-two',
       targetIds: [],
@@ -236,6 +275,197 @@ describe('faint effect queue', () => {
       cardIds: [discardId],
     })
     expect(afterDiscard.players['player-two'].discardPile.map((card) => card.instanceId)).toContain(discardId)
+  })
+
+  it('forces BS4-011 to discard the only card drawn when the hand was empty', () => {
+    const base = createFaintState()
+    const attacker = base.players['player-two'].battleArea[0]
+    const bs4011 = {
+      ...attacker.card,
+      id: 'BS4-011',
+      name: 'Chili Pepper Cookie',
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: "If your opponent's Cookie faints from this Cookie's attack, draw 1 card from your deck and discard 1 card.",
+        effects: [
+          {
+            kind: 'draw' as const,
+            amount: 1,
+            condition: { kind: 'opponent-cookie-fainted-in-current-battle' as const },
+          },
+          {
+            kind: 'discard-hand' as const,
+            count: 1,
+            condition: { kind: 'opponent-cookie-fainted-in-current-battle' as const },
+          },
+        ],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [item('p1-d'), item('p1-d-2'), item('p1-d-3')],
+          battleArea: [
+            {
+              ...base.players['player-one'].battleArea[0],
+              card: {
+                ...base.players['player-one'].battleArea[0].card,
+                skill: undefined,
+              },
+            },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          // 抽 1 張後 deck 必須還有剩，否則會觸發 refresh-unavailable 判負
+          deck: [item('p2-only-card'), item('p2-spare')],
+          hand: [],
+          battleArea: [{ ...attacker, card: bs4011 }],
+        },
+      },
+    }
+
+    let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
+    battleState = skipTrap(battleState, 'player-one')
+    let afterDamage = resolveNextDamage(battleState)
+    while (afterDamage.pendingBattle?.stage === 'damage') {
+      afterDamage = resolveNextDamage(afterDamage)
+    }
+
+    const afterReplacement = applyGameCommand(afterDamage, {
+      kind: 'replace-cookie',
+      playerId: 'player-one',
+      instanceId: 'p1-replacement',
+    })
+
+    const afterDraw = applyGameCommand(afterReplacement, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [],
+    })
+    expect(afterDraw.players['player-two'].hand.map((card) => card.instanceId)).toEqual([
+      'p2-only-card',
+    ])
+
+    // 抽牌前手牌為空：棄 1 張的強制代價只能落在剛抽到的唯一一張牌上。
+    // discard-hand 效果建立強制棄牌決策，少選／重複選／選不存在的牌都會被
+    // 規則層拒絕，沒有任何略過路徑。
+    const drawnId = 'p2-only-card'
+    const afterDiscardDecision = applyGameCommand(afterDraw, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [],
+    })
+    expect(afterDiscardDecision.pendingOpponentHandDiscard).toMatchObject({
+      playerId: 'player-two',
+      count: 1,
+    })
+    expect(() =>
+      applyGameCommand(afterDiscardDecision, {
+        kind: 'resolve-opponent-hand-discard',
+        playerId: 'player-two',
+        cardIds: [],
+      }),
+    ).toThrowError('必須選擇 1 張手牌棄置。')
+
+    const afterResolution = applyGameCommand(afterDiscardDecision, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-two',
+      cardIds: [drawnId],
+    })
+    expect(afterResolution.players['player-two'].hand).toHaveLength(0)
+    expect(
+      afterResolution.players['player-two'].discardPile.map((card) => card.instanceId),
+    ).toContain(drawnId)
+    expect(afterResolution.pendingAbilityEffect).toBeUndefined()
+  })
+
+  it('finishes the game with a defeat when the fainted opponent cannot replace, before BS4-011 resolves', () => {
+    const base = createFaintState()
+    const attacker = base.players['player-two'].battleArea[0]
+    const bs4011 = {
+      ...attacker.card,
+      id: 'BS4-011',
+      name: 'Chili Pepper Cookie',
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: "If your opponent's Cookie faints from this Cookie's attack, draw 1 card from your deck and discard 1 card.",
+        effects: [
+          {
+            kind: 'draw' as const,
+            amount: 1,
+            condition: { kind: 'opponent-cookie-fainted-in-current-battle' as const },
+          },
+          {
+            kind: 'discard-hand' as const,
+            count: 1,
+            condition: { kind: 'opponent-cookie-fainted-in-current-battle' as const },
+          },
+        ],
+      },
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [item('p1-only-item')],
+          battleArea: [
+            {
+              ...base.players['player-one'].battleArea[0],
+              card: {
+                ...base.players['player-one'].battleArea[0].card,
+                skill: undefined,
+              },
+            },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          deck: [item('p2-d'), item('p2-d-2')],
+          battleArea: [{ ...attacker, card: bs4011 }],
+        },
+      },
+    }
+
+    let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
+    battleState = skipTrap(battleState, 'player-one')
+    let afterDamage = resolveNextDamage(battleState)
+    while (afterDamage.pendingBattle?.stage === 'damage') {
+      afterDamage = resolveNextDamage(afterDamage)
+    }
+
+    // 擊倒後對手戰場空缺且手牌沒有餅乾：補位任務優先建立（attacker-faint
+    // 佇列不阻塞補位），略過補位立即判負，BS4-011 的技能不會再結算。
+    expect(afterDamage.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+    expect(afterDamage.pendingAbilityEffect).toBeDefined()
+
+    const defeated = applyGameCommand(afterDamage, {
+      kind: 'skip-replacement',
+      playerId: 'player-one',
+    })
+    expect(defeated.status).toBe('finished')
+    expect(defeated.result).toMatchObject({
+      loserId: 'player-one',
+      reason: 'no-cookie-available',
+    })
+    // 敗北判定優先：技能佇列殘留在 state 上但遊戲已結束（UI 不再顯示
+    // 效果結算），BS4-011 的抽牌／棄牌不曾執行。
+    expect(defeated.pendingAbilityEffect).toBeDefined()
   })
 
   it('resolves BS4-005 targets in the selected order, including FLIP before the next Cookie', () => {

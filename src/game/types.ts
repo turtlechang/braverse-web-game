@@ -1611,7 +1611,7 @@ export interface GameState {
     sourceInstanceId: string
     sourceCardName?: string
     sourceKind: 'skill' | 'item' | 'stage' | 'trap'
-    trigger?: 'activate' | 'on-play'
+    trigger?: 'activate' | 'on-play' | 'attacker-faint'
     effects: CardEffect[]
     effectIndex: number
     /**

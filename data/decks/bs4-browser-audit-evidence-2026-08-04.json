@@ -1,0 +1,1694 @@
+{
+  "generatedAt": "2026-08-04",
+  "source": "Chrome formal card-check state",
+  "cards": [
+    {
+      "number": "BS4-069",
+      "name": "Lobster Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-070",
+      "name": "Lord Oyster",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "faint-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-071",
+      "name": "Mocha Ray Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-072",
+      "name": "Mystic Opal Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-073",
+      "name": "Sea Fairy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-074",
+      "name": "Peppermint Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-075",
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-076",
+      "name": "Star Coral Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-077",
+      "name": "Sorbet Shark Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-078",
+      "name": "Squid Ink Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-079",
+      "name": "Abalone Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-080",
+      "name": "Captain Ice Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-081",
+      "name": "Crimson Coral Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-082",
+      "name": "Frilled Jellyfish Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-083",
+      "name": "Pirate Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-089",
+      "name": "Moonlight Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-090",
+      "name": "Rockstar Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-091",
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-092",
+      "name": "Milky Way Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-093",
+      "name": "Black Lemonade Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "faint-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-094",
+      "name": "Blueberry Pie Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-095",
+      "name": "Shining Glitter Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-096",
+      "name": "Sugar Glass Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-097",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-098",
+      "name": "Stardust Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-099",
+      "name": "Amber Sugar Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-100",
+      "name": "Space Doughnut",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-101",
+      "name": "Eclair Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-102",
+      "name": "Wildberry Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-103",
+      "name": "Cream Unicorn Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-104",
+      "name": "Parfait Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-105",
+      "name": "Financier Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-106",
+      "name": "Butterfly Brooch",
+      "type": "item",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-107",
+      "name": "Moonlight Shards",
+      "type": "item",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-108",
+      "name": "Plasma Crystal Ball",
+      "type": "item",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-109",
+      "name": "Slumbering Moon's Invitation",
+      "type": "trap",
+      "color": "PURPLE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-110",
+      "name": "City of Wizards",
+      "type": "stage",
+      "color": "PURPLE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "stage-skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-111",
+      "name": "Cookies of Legend",
+      "type": "stage",
+      "color": "PURE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-001",
+      "name": "Lilac Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-002",
+      "name": "Lil Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-003",
+      "name": "Madeleine Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-004",
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-005",
+      "name": "Fire Spirit Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-006",
+      "name": "Flaming Hot Wing",
+      "type": "flip",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-007",
+      "name": "Black Raisin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-008",
+      "name": "Scovillia Headmaster",
+      "type": "flip",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-009",
+      "name": "Espresso Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-010",
+      "name": "Scovillia Student Fan",
+      "type": "flip",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-011",
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-012",
+      "name": "Capsaicin Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-013",
+      "name": "Crushed Pepper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-014",
+      "name": "Peperoncino Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-015",
+      "name": "Habanero Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-016",
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-017",
+      "name": "Hot Scovillia Student",
+      "type": "cookie",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-018",
+      "name": "Magma Pendulum",
+      "type": "item",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-019",
+      "name": "Ring of Eternal Flame",
+      "type": "item",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-020",
+      "name": "Essence of Conflagration",
+      "type": "item",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-021",
+      "name": "Battle on the Edge",
+      "type": "trap",
+      "color": "RED",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-022",
+      "name": "Scovillia Training Grounds",
+      "type": "stage",
+      "color": "RED",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "stage-skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-023",
+      "name": "Cloud Deity Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-024",
+      "name": "Kumiho Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-025",
+      "name": "Gim Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-026",
+      "name": "Stormbringer Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-027",
+      "name": "Moon Rabbit Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-028",
+      "name": "Vagabond Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-029",
+      "name": "Wind Deity Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-030",
+      "name": "Peach Blossom Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-031",
+      "name": "Rain Deity Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-032",
+      "name": "Cream Ferret Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-033",
+      "name": "Caramel Choux Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-034",
+      "name": "Street Urchin Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-035",
+      "name": "Okchun Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "faint-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-036",
+      "name": "GingerBrave",
+      "type": "flip",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-037",
+      "name": "Rebel Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-038",
+      "name": "Millennial Tree Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-039",
+      "name": "Churro Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-040",
+      "name": "Essence of Rejuvenation",
+      "type": "item",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-041",
+      "name": "Millennial Twig",
+      "type": "item",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-042",
+      "name": "Millennial Jade Deer",
+      "type": "trap",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-043",
+      "name": "Heaven-Splitting Lightning",
+      "type": "trap",
+      "color": "YELLOW",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-044",
+      "name": "Millennial Temple",
+      "type": "stage",
+      "color": "YELLOW",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "stage-skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-045",
+      "name": "Tangerine Tanghulu Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-046",
+      "name": "Princess Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-047",
+      "name": "Blue Lily Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-048",
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-049",
+      "name": "Wind Archer Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-050",
+      "name": "Biscuit Giraffe",
+      "type": "flip",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-051",
+      "name": "Beet Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-052",
+      "name": "Shine Muscat Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-053",
+      "name": "Sugar Swan Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-054",
+      "name": "Avocado Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-055",
+      "name": "Alchemist Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "faint-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-056",
+      "name": "Tiger Lily Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-057",
+      "name": "Jelly Froggy",
+      "type": "flip",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-058",
+      "name": "Lilybell Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-059",
+      "name": "Cookiemals",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-060",
+      "name": "Adventurer Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-action-ui-seen",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-061",
+      "name": "Herb Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-card-selected-no-action",
+      "effectPanelSeen": false,
+      "confirmed": false,
+      "notes": [
+        "手牌可選取但未出現 使用／放置／登場"
+      ]
+    },
+    {
+      "number": "BS4-062",
+      "name": "Wind Gems",
+      "type": "item",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-063",
+      "name": "Swan Feather Dreamcatcher",
+      "type": "item",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-064",
+      "name": "Night Raven's Arrow",
+      "type": "trap",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-065",
+      "name": "Spring Festival",
+      "type": "trap",
+      "color": "GREEN",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-066",
+      "name": "Dessert Paradise",
+      "type": "stage",
+      "color": "GREEN",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "stage-skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-067",
+      "name": "Gold Citrine Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-ui-seen",
+      "effectPanelSeen": true,
+      "confirmed": false,
+      "notes": []
+    },
+    {
+      "number": "BS4-068",
+      "name": "Aquamarine Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": true,
+      "load": "passed",
+      "interaction": "flip-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-084",
+      "name": "Heart of the Deep Sea",
+      "type": "item",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-085",
+      "name": "Tide Shards",
+      "type": "item",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "hand-effect-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-086",
+      "name": "Weeping Cries of the Deep",
+      "type": "trap",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": []
+    },
+    {
+      "number": "BS4-087",
+      "name": "Mermaid's Tale",
+      "type": "trap",
+      "color": "BLUE",
+      "hasSkill": false,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "trap-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    },
+    {
+      "number": "BS4-088",
+      "name": "Tower of Frozen Waves",
+      "type": "stage",
+      "color": "BLUE",
+      "hasSkill": true,
+      "hasAttack": true,
+      "hasFlip": false,
+      "load": "passed",
+      "interaction": "stage-skill-confirmed",
+      "effectPanelSeen": true,
+      "confirmed": true,
+      "notes": [
+        "互動結束仍有未結清面板"
+      ]
+    }
+  ]
+}

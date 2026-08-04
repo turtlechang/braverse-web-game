@@ -154,8 +154,16 @@ export function useOnlinePendingEffect(params: {
     useState<AbilityCostDraft | null>(null)
 
   const pendingAbility = game.pendingAbilityEffect
+  // 與本地端 usePendingEffect 的面板建立條件一致：補位／Refresh／OnPlay
+  // 期間不顯示效果面板；攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，
+  // 例如 BS4-011）還要等本次戰鬥收尾與對手補位完成後才能結算。
   const abilityActiveForViewer = Boolean(
-    pendingAbility && pendingAbility.playerId === viewerPlayerId,
+    pendingAbility &&
+      pendingAbility.playerId === viewerPlayerId &&
+      !game.pendingReplacement &&
+      !game.pendingRefresh &&
+      !game.pendingOnPlay &&
+      !(pendingAbility.trigger === 'attacker-faint' && game.pendingBattle),
   )
 
   const attackBattle = game.pendingBattle
@@ -922,7 +930,7 @@ export function useOnlinePendingEffect(params: {
               } satisfies CardSkill),
           trigger: attackEffectActive
             ? 'activate'
-            : (pendingAbility?.trigger ?? 'activate'),
+            : (pendingAbility?.trigger === 'on-play' ? 'on-play' : 'activate'),
           effects: attackEffectActive
             ? (attackBattle?.attackEffects ?? [])
             : (pendingAbility?.effects ?? []),

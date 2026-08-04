@@ -895,10 +895,20 @@ export const applyGameCommand = (
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.
   // A multi-step effect must finish before replacement or break-level victory
-  // can be finalized.
-  const finalized = next.status === 'playing' && !hasBlockingPending(next)
-    ? finalizePendingReplacements(next)
-    : next
+  // can be finalized. 唯一的例外是攻擊者擊倒觸發的技能佇列（trigger:
+  // 'attacker-faint'，例如 BS4-011）：依規則對手的空場補位必須優先於技能
+  // 結算，因此這類佇列不阻塞補位任務的建立。
+  const finalized =
+    next.status === 'playing' &&
+    !hasBlockingPending({
+      ...next,
+      pendingAbilityEffect:
+        next.pendingAbilityEffect?.trigger === 'attacker-faint'
+          ? undefined
+          : next.pendingAbilityEffect,
+    })
+      ? finalizePendingReplacements(next)
+      : next
   return appendCommandLogEntry(state, finalized, command)
 }
 
@@ -1196,13 +1206,16 @@ const assertNoPendingDecision = (
     return
   }
 
-  // 戰鬥中建立的巢狀技能佇列（例如 BS4-011 擊倒後抽牌再棄牌）必須在
-  // pendingBattle 仍保留時結算，才能讓條件讀到本次戰鬥的昏厥資訊。
+  // 戰鬥中建立的巢狀技能佇列（例如 BS3-076 的 reveal-top-deck 巢狀傷害）必須
+  // 在 pendingBattle 仍保留時結算，才能讓條件讀到本次戰鬥的資訊。
   // resolvePendingAbilityEffect 本身仍會拒絕 Refresh、OnPlay 與補位，
   // 因此這個例外不會放行其他尚未完成的決策。
+  // 例外：攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011）依
+  // 規則必須等對手的空場補位完成後才能結算，不在此列。
   if (
     command.kind === 'resolve-ability-effect' &&
     state.pendingAbilityEffect?.playerId === command.playerId &&
+    state.pendingAbilityEffect.trigger !== 'attacker-faint' &&
     state.pendingBattle &&
     !state.pendingEffectOrder &&
     !hasBlockingPending({
@@ -1383,7 +1396,12 @@ const resolvePendingAbilityEffect = (
   if (
     state.pendingRefresh ||
     state.pendingOnPlay ||
-    state.pendingReplacement
+    state.pendingReplacement ||
+    // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾後才能結算：
+    // 對手可能因空場需要補位或 Refresh，技能不能先於維持戰線的強制流程。
+    // 其他佇列（BS3-076 的 reveal-top-deck 巢狀傷害）仍允許在 pendingBattle
+    // 保留時結算，才能讓 attackTargetOnly 找到攻擊目標。
+    (state.pendingBattle && pending.trigger === 'attacker-faint')
   ) {
     throw new GameRuleError('必須先處理其他待處理的決策。')
   }

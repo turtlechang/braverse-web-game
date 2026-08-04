@@ -1224,8 +1224,11 @@ const addFaintedColor = (
 
 /**
  * 攻擊者的被動技能若明確檢查「本次戰鬥有對手餅乾昏厥」，要在昏厥實際發生
- * 後建立效果佇列。這和「此餅乾昏厥時」不同：來源仍在戰鬥區，且效果要等
- * 補位／其他必要決策完成後，再由既有的 pendingAbilityEffect UI 逐步結算。
+ * 後建立效果佇列。這和「此餅乾昏厥時」不同：來源仍在戰鬥區，且依官方規則
+ * （昏厥後先維持戰線），對手的空場補位／Refresh 必須優先完成，補位完成後
+ * 再由既有的 pendingAbilityEffect UI 逐步結算。佇列以
+ * `trigger: 'attacker-faint'` 標記，讓 `continuePendingReplacements` 不會被它
+ * 阻塞，但 `resolvePendingAbilityEffect` 仍會拒絕在補位完成前結算。
  */
 const queueAttackerFaintTriggeredSkill = (
   state: GameState,
@@ -1267,6 +1270,7 @@ const queueAttackerFaintTriggeredSkill = (
       sourceInstanceId: attacker.card.instanceId,
       sourceCardName: attacker.card.name,
       sourceKind: 'skill',
+      trigger: 'attacker-faint',
       effects,
       effectIndex: 0,
     },

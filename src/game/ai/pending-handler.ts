@@ -22,12 +22,18 @@ import type { AiDecision } from './types'
  * 巢狀 damage(attackTargetOnly)」的效果，規則層會刻意保留 `pendingBattle`
  * 讓 attackTargetOnly 找得到攻擊目標；列進來的話 AI 會判定自己不能結算
  * pendingAbilityEffect，整個 AI 迴圈就卡在攻擊後階段。
+ *
+ * 例外：攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011）依
+ * 規則必須等本次戰鬥收尾與對手的空場補位完成後才能結算，AI 在 pendingBattle
+ * 期間不得嘗試結算（規則層會拒絕）。
  */
 const hasBlockingAbilityPending = (state: GameState): boolean =>
   Boolean(
     state.pendingRefresh ||
       state.pendingOnPlay ||
-      state.pendingReplacement,
+      state.pendingReplacement ||
+      (state.pendingBattle &&
+        state.pendingAbilityEffect?.trigger === 'attacker-faint'),
   )
 
 export const handleAiPendingDecision = (

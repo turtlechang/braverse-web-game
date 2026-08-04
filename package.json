@@ -27,6 +27,8 @@
     "cards:analyze:bs3-candidate": "tsx scripts/analyze-bs3-effect-coverage.ts",
     "cards:import:bs4-candidate": "node scripts/import-bs4-candidates.mjs",
     "cards:analyze:bs4-candidate": "tsx scripts/analyze-bs4-effect-coverage.ts",
+    "cards:import:bs5-candidate": "node scripts/import-bs5-candidates.mjs",
+    "cards:analyze:bs5-candidate": "tsx scripts/analyze-bs5-effect-coverage.ts",
     "benchmark:bs4-decks": "tsx scripts/benchmark-bs4-decks.ts",
     "lint": "eslint .",
     "check:bundle": "node scripts/check-bundle-size.mjs",
