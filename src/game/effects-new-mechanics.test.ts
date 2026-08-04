@@ -8,6 +8,7 @@ import {
   getEffectSelectionCandidates,
   getLegalTurnCommands,
   isEffectConditionMet,
+  placeHandCardOnHp,
   resolveOpponentHandDiscard,
   resolveFlip,
   type CookieCard,
@@ -961,7 +962,7 @@ describe('new card-effect mechanics', () => {
     )
   })
 
-  it('BS4-030 cycle-hp leaves the hand card untouched when the selected Cookie faints', () => {
+  it('BS4-030 cycle-hp phase 1: the target faints when it had 1 HP card, and no phase 2 runs', () => {
     const base = asMainPhase(createDemoGame())
     const source = makeCookie({
       instanceId: 'peach-blossom',
@@ -991,21 +992,22 @@ describe('new card-effect mechanics', () => {
         },
       },
     }
+    const effect = {
+      kind: 'cycle-hp' as const,
+      target: {
+        side: 'self' as const,
+        min: 0,
+        max: 1,
+        excludeSource: true,
+        energyColor: 'yellow' as const,
+      },
+    }
 
     const resolved = executeCardEffect(
       state,
       { sourcePlayerId: 'player-one', sourceInstanceId: source.instanceId },
-      {
-        kind: 'cycle-hp',
-        target: {
-          side: 'self',
-          min: 0,
-          max: 1,
-          excludeSource: true,
-          energyColor: 'yellow',
-        },
-      },
-      [target.instanceId, handCard.instanceId],
+      effect,
+      [target.instanceId],
     )
 
     expect(resolved.players['player-one'].battleArea).toHaveLength(1)
@@ -1016,7 +1018,7 @@ describe('new card-effect mechanics', () => {
     )
   })
 
-  it('BS4-030 cycle-hp places an optional hand card after returning the top HP card', () => {
+  it('BS4-030 cycle-hp two phases: return top HP, then place an optional hand card', () => {
     const base = asMainPhase(createDemoGame())
     const source = makeCookie({ instanceId: 'peach-blossom-2', energyColor: 'yellow' })
     const target = makeCookie({ instanceId: 'yellow-target-2', energyColor: 'yellow' })
@@ -1041,31 +1043,45 @@ describe('new card-effect mechanics', () => {
         },
       },
     }
-
-    const resolved = executeCardEffect(
-      state,
-      { sourcePlayerId: 'player-one', sourceInstanceId: source.instanceId },
-      {
-        kind: 'cycle-hp',
-        target: {
-          side: 'self',
-          min: 0,
-          max: 1,
-          excludeSource: true,
-          energyColor: 'yellow',
-        },
+    const effect = {
+      kind: 'cycle-hp' as const,
+      target: {
+        side: 'self' as const,
+        min: 0,
+        max: 1,
+        excludeSource: true,
+        energyColor: 'yellow' as const,
       },
-      [target.instanceId, handCard.instanceId],
-    )
+    }
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: source.instanceId,
+    }
 
-    const resolvedTarget = resolved.players['player-one'].battleArea.find(
+    const phase1 = executeCardEffect(state, context, effect, [target.instanceId])
+    expect(phase1.players['player-one'].hand).toEqual([handCard, topHp])
+    const targetAfterPhase1 = phase1.players['player-one'].battleArea.find(
+      (cookie) => cookie.card.instanceId === target.instanceId,
+    )
+    expect(targetAfterPhase1?.hpCards).toEqual([lowerHp])
+
+    const phase2 = placeHandCardOnHp(
+      phase1,
+      context,
+      target.instanceId,
+      handCard.instanceId,
+    )
+    const resolvedTarget = phase2.players['player-one'].battleArea.find(
       (cookie) => cookie.card.instanceId === target.instanceId,
     )
     expect(resolvedTarget?.hpCards).toEqual([lowerHp, handCard])
-    expect(resolved.players['player-one'].hand).toEqual([topHp])
+    expect(phase2.players['player-one'].hand).toEqual([topHp])
+
+    const skipped = placeHandCardOnHp(phase1, context, target.instanceId)
+    expect(skipped).toEqual(phase1)
   })
 
-  it('BS4-044 hand-to-hp adds the selected hand card without removing existing HP', () => {
+  it('BS4-044 hand-to-hp two phases: select the Cookie, then place an optional hand card', () => {
     const base = asMainPhase(createDemoGame())
     const target = makeCookie({ instanceId: 'temple-target', energyColor: 'yellow' })
     const existingHp = makeEnergyCard('temple-existing-hp', 'yellow')
@@ -1081,24 +1097,38 @@ describe('new card-effect mechanics', () => {
         },
       },
     }
+    const effect = {
+      kind: 'hand-to-hp' as const,
+      target: { side: 'self' as const, min: 0, max: 1 },
+      selectTarget: true,
+      optional: true,
+    }
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: 'millennial-temple',
+    }
 
-    const resolved = executeCardEffect(
-      state,
-      { sourcePlayerId: 'player-one', sourceInstanceId: 'millennial-temple' },
-      {
-        kind: 'hand-to-hp',
-        target: { side: 'self', min: 0, max: 1 },
-        selectTarget: true,
-        optional: true,
-      },
-      [target.instanceId, handCard.instanceId],
+    // 第一階段只選目標餅乾：規則層不改動狀態，等第二階段放牌。
+    const phase1 = executeCardEffect(state, context, effect, [target.instanceId])
+    expect(phase1.players['player-one'].battleArea[0].hpCards).toEqual([
+      existingHp,
+    ])
+    expect(phase1.players['player-one'].hand).toEqual([handCard])
+
+    // 未選目標：整個效果略過，狀態不變。
+    expect(executeCardEffect(state, context, effect, [])).toEqual(state)
+
+    const phase2 = placeHandCardOnHp(
+      phase1,
+      context,
+      target.instanceId,
+      handCard.instanceId,
     )
-
-    expect(resolved.players['player-one'].battleArea[0].hpCards).toEqual([
+    expect(phase2.players['player-one'].battleArea[0].hpCards).toEqual([
       existingHp,
       handCard,
     ])
-    expect(resolved.players['player-one'].hand).toEqual([])
+    expect(phase2.players['player-one'].hand).toEqual([])
   })
 
   it('BS4-062 rests only newly-rested green supports and deals damage equal to that count', () => {

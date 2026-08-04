@@ -405,12 +405,22 @@ export const getEffectSelectionLimits = (
   if (effect.kind === 'hand-to-break' || effect.kind === 'break-to-hand') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
   }
-  if (effect.kind === 'hand-to-hp' || effect.kind === 'support-to-hp') {
+  if (effect.kind === 'support-to-hp') {
     if (effect.selectTarget) return { min: effect.optional ? 0 : 1, max: 2 }
     return { min: effect.optional ? 0 : 1, max: 1 }
   }
+  if (effect.kind === 'hand-to-hp') {
+    if (effect.selectTarget) {
+      // 兩階段（BS4-044 千年寺）：第一階段只選 1 個目標餅乾；手牌是第二階段
+      // （pendingAbilityEffect.pendingPlace）才選。
+      return { min: effect.optional ? 0 : 1, max: 1 }
+    }
+    return { min: effect.optional ? 0 : 1, max: 1 }
+  }
   if (effect.kind === 'cycle-hp') {
-    return { min: 0, max: 2 }
+    // 兩階段（BS4-030）：第一階段只選 1 個目標餅乾；手牌放回是第二階段
+    // （pendingAbilityEffect.pendingPlace）才選。
+    return { min: 0, max: 1 }
   }
   if (effect.kind === 'rest-support') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
@@ -515,15 +525,10 @@ export const getEffectSelectionCandidates = (
           effect.energyColor === undefined || card.energyColor === effect.energyColor,
       )
     }
-    return [
-      ...getEffectTargetCandidates(state, context, effect.target).map(
-        (cookie) => cookie.card,
-      ),
-      ...state.players[context.sourcePlayerId].hand.filter(
-        (card) =>
-          effect.energyColor === undefined || card.energyColor === effect.energyColor,
-      ),
-    ]
+    // 兩階段（BS4-044）：第一階段候選只有戰鬥區目標餅乾，手牌由第二階段選。
+    return getEffectTargetCandidates(state, context, effect.target).map(
+      (cookie) => cookie.card,
+    )
   }
   if (effect.kind === 'rest-support') {
     return getSupportEffectCandidates(state, context, {
@@ -569,12 +574,10 @@ export const getEffectSelectionCandidates = (
     ]
   }
   if (effect.kind === 'cycle-hp') {
-    return [
-      ...getEffectTargetCandidates(state, context, effect.target).map(
-        (cookie) => cookie.card,
-      ),
-      ...state.players[context.sourcePlayerId].hand,
-    ]
+    // 第一階段只提供目標餅乾（BS4-030 兩階段設計）；手牌在第二階段才可選。
+    return getEffectTargetCandidates(state, context, effect.target).map(
+      (cookie) => cookie.card,
+    )
   }
   if (effect.kind === 'field-to-deck-bottom') {
     const battleOwnerId =

@@ -90,6 +90,9 @@ export function useOnlineMatchController(params: {
     useState<string[]>([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
+  const [selectedPlaceHandHpId, setSelectedPlaceHandHpId] = useState<
+    string | undefined
+  >(undefined)
 
   const animations = useMatchAnimations()
   const previousGameRef = useRef(game)
@@ -716,6 +719,9 @@ export function useOnlineMatchController(params: {
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
+    // Place hand HP (兩階段選擇第二階段)
+    selectedPlaceHandHpId,
+    setSelectedPlaceHandHpId,
     // Animation
     attackShakeId: animations.attackShakeId,
     damageFlashId: animations.damageFlashId,

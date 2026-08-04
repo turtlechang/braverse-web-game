@@ -208,15 +208,50 @@ export const describeCommand = (
     case 'begin-activate-skill':
       return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的技能`
     case 'resolve-ability-effect': {
+      const effects = getResolvedEffects(previous, command)
+      const cycleHp = effects.find((effect) => effect.kind === 'cycle-hp')
+      if (cycleHp) {
+        if (command.targetIds.length === 0) {
+          return `${actor} 未選擇目標，技能結算完畢`
+        }
+        const targetId = command.targetIds[0]
+        const targetName = findCardName(previous, targetId)
+        const targetSurvived = next.players[command.playerId].battleArea.some(
+          (cookie) => cookie.card.instanceId === targetId,
+        )
+        return targetSurvived
+          ? `${actor} 從「${targetName}」取回 1 張 HP 卡`
+          : `${actor} 從「${targetName}」取回 1 張 HP 卡，該餅乾因此昏厥`
+      }
+      const handToHp = effects.find(
+        (effect) => effect.kind === 'hand-to-hp' && effect.selectTarget,
+      )
+      if (handToHp) {
+        if (command.targetIds.length === 0) {
+          return `${actor} 未選擇目標，技能結算完畢`
+        }
+        return `${actor} 選擇了「${findCardName(previous, command.targetIds[0])}」作為放置 HP 的目標`
+      }
       const outcome = describeDamageOutcome(
         previous,
         next,
         command.playerId,
-        getResolvedEffects(previous, command),
+        effects,
       )
       return outcome
         ? `${actor} 結算效果：${outcome}`
         : `${actor} 結算了效果`
+    }
+    case 'resolve-place-hand-hp': {
+      const targetName = previous.pendingAbilityEffect?.pendingPlace
+        ? findCardName(
+            previous,
+            previous.pendingAbilityEffect.pendingPlace.targetInstanceId,
+          )
+        : null
+      return command.handCardInstanceId
+        ? `${actor} 將 1 張手牌放到「${targetName ?? '目標'}」的 HP 最上方`
+        : `${actor} 略過放置 HP`
     }
     case 'skip-on-play':
       return `${actor} 選擇不發動「${findCardName(state, command.sourceInstanceId)}」的登場效果`
@@ -350,6 +385,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'activate-stage': 'activate',
   'begin-activate-stage': 'activate',
   'resolve-ability-effect': 'activate',
+  'resolve-place-hand-hp': 'activate',
   'resolve-choose-one': 'activate',
   'resolve-opponent-hand-discard': 'activate',
   'resolve-inspect-deck': 'activate',

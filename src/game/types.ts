@@ -1615,6 +1615,15 @@ export interface GameState {
     effects: CardEffect[]
     effectIndex: number
     /**
+     * 兩階段選擇的第一階段結算完且目標未昏厥時，停在
+     * 此處等待玩家決定第二階段「選擇手牌放到該餅乾 HP 最上方」
+     * （cycle-hp BS4-030 / hand-to-hp BS4-044）；為空時
+     * `pendingAbilityEffect` 本身仍是活躍決策，`effectIndex` 不推進。
+     */
+    pendingPlace?: {
+      targetInstanceId: string
+    }
+    /**
      * 效果鏈跑完後欠戰鬥流程什麼動作。由
      * `pendingRevealTopDeck.battleContinuation` 傳遞下來，語意與該欄位相同。
      */

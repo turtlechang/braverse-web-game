@@ -72,6 +72,8 @@ BS4 後續規則回歸已完成 AI benchmark 的 RNG 傳遞修正：同一個 st
 
 擊倒觸發的攻擊後技能（如 BS4-011 擊倒對手後抽 1 張並棄 1 張）已確認以「空場補位優先」結算：傷害結算後先完成戰鬥區再登場（空缺且無餅乾可補位時立即判負），補位完成後才執行技能佇列；離線、線上與 AI 決策流程共用同一判定，回歸測試涵蓋手牌為空時必棄唯一抽牌、以及無補位餅乾直接敗北兩條邊界路徑。
 
+兩階段選擇效果已落地：BS4-030 桃花餅乾「世外桃源」與 BS4-044 千年寺場景的目標選擇拆為「先選目標餅乾 → 再選 1 張手牌放回其 HP 最上方」兩個順序決策，沒有合法目標時不詢問發動、第一階段目標昏厥時自動中止並略過第二階段，對戰紀錄只公開動作過程、不揭露被搬移的卡牌內容；本機、線上與 AI 共用同一判定。
+
 P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃描，並以規則回歸及代表性實戰涵蓋餅乾技能、攻擊後效果、物品、FLIP、陷阱與場景。修正 P-017 支援區事件觸發、P-024 不可攻擊的 HP-only FLIP、P-025～P-027 Marzipan 條件與傷害倍增、P-028／P-032 場景多段效果，以及 P-029 戰鬥昏厥後延遲復活；候選 8 張已 promote 至正式卡池。完整清單與限制見 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。
 
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
@@ -97,7 +99,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 BS4 已完成效果轉接覆蓋稽核、候選嚴格驗證與正式卡池 promote；牌組編輯器已新增 BS4 系列選單並與 BS3 分流，22 張條件卡的成立／不成立專用情境、24 張一般 fixture 的實際 UI 互動、固定 seed benchmark、111 張 Chrome 逐卡載入與平板 responsive geometry gate 均已完成。下一步可進入 BS5 資料準備期；BS4 勝率排名仍只作為觀察資料，不作為正式環境強度定案。
 
-BS5 已進入資料準備期：新增 `cards:import:bs5-candidate` 依 `BS5-*` 卡號前綴從官方英文卡表建立 `inventory` 候選快照與卡牌盤點，並新增 `cards:analyze:bs5-candidate` 產生逐色效果覆蓋盤點；此階段只執行候選結構驗證，不建立 runtime 效果、不改動正式卡池，也不執行 promote。
+BS5 已進入資料準備期：新增 `cards:import:bs5-candidate` 依 `BS5-*` 卡號前綴從官方英文卡表建立 `inventory` 候選快照與卡牌盤點，並新增 `cards:analyze:bs5-candidate` 產生逐色效果覆蓋盤點；此階段只執行候選結構驗證，不建立 runtime 效果、不改動正式卡池，也不執行 promote。下一步依盤點逐色逐張補齊 runtime 轉接、效果稽核與 Chrome 驗證後才 promote。
 
 持續以瀏覽器透過正式卡池測試對局設定驗證 BS3 卡牌在卡牌詳情、效果面板與戰鬥互動中的技能、攻擊後、物品、陷阱、場景與資源區效果，並維持規則引擎與 UI 的責任分離。
 
@@ -171,7 +173,7 @@ BS5 僅進入資料準備期；候選資料以 `data/candidates/official-age-of-
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-05 | 修正擊倒觸發技能（BS4-011）延後至空場補位／敗北判定之後結算，離線、線上與 AI 共用判定並補齊手牌為空與無補位餅乾邊界測試；BS5 候選匯入與效果覆蓋分析腳本就緒（`cards:import:bs5-candidate`、`cards:analyze:bs5-candidate`），尚未 promote。 |
+| 2026-08-05 | 修正擊倒觸發技能（BS4-011）延後至空場補位／敗北判定之後結算，離線、線上與 AI 共用判定並補齊手牌為空與無補位餅乾邊界測試；BS5 候選匯入與效果覆蓋分析腳本就緒（`cards:import:bs5-candidate`、`cards:analyze:bs5-candidate`），尚未 promote；BS4-030「世外桃源」與 BS4-044 千年寺改為兩階段選擇（先選目標餅乾、再選 1 張手牌放回 HP 最上方），含無目標不詢問、昏厥中斷與對戰紀錄隱私。 |
 | 2026-08-04 | 修正 AI benchmark 的技能／物品／場景／Refresh RNG 傳遞並完成 100 場固定 seed 重跑；補上 BattleRow 物品支付 aria label 回歸測試、BS4-052／BS4-029 規則回歸、22 張條件卡 44／44、24 張一般 fixture 24／24、Chrome 111／111 card-check 與平板 responsive geometry gate；BS5 進入 inventory 資料準備期。 |
 | 2026-08-03 | 以 BS3 五色牌組為基礎完成 BS4 五色強化牌組 JSON；新增固定種子 Lv.4 每色 30 場 benchmark，五色共 150 場皆完成且無卡死。 |
 | 2026-08-03 | 完成 BS4 111 張基礎卡效果稽核：攻擊 `Then` 23／23、額外能力待補 14→0；170 筆候選資料全數通過嚴格驗證並 promote 至正式卡池，重建 card pool registry；牌組編輯器新增 BS4 系列選單，並修正 HP 代價、BS4-001 自我昏厥、BS4-008 FLIP 目標、BS4-065／109 陷阱後半及 BS4-102 FLIP 選擇分支；主選單完成 AI 設定欄位 8:4 版面、測試對局入口顯示與合法牌組錯誤提示修正；新增卡牌匯入與 Chrome 逐色效果稽核 Skill。 |

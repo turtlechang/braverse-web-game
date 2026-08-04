@@ -53,6 +53,11 @@ export function deriveInteractionLocked(
       game.pendingStageTrigger &&
         game.pendingStageTrigger.playerId === viewerPlayerId,
     ) ||
+    Boolean(
+      game.pendingAbilityEffect &&
+        game.pendingAbilityEffect.pendingPlace &&
+        game.pendingAbilityEffect.playerId === viewerPlayerId,
+    ) ||
     faintActive ||
     Boolean(extras.aiThinking) ||
     Boolean(extras.aiControlsCurrentState) ||

@@ -18,9 +18,11 @@ import {
 } from './battle'
 import {
   executeCardEffect,
+  getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
   hasRequiredEffectTargets,
   isEffectConditionMet,
+  placeHandCardOnHp,
   requiresEffectCardSelection,
   requiresTargetSelection,
   resolveDrawUpTo,
@@ -183,6 +185,19 @@ export type PendingDecision =
   | StageTriggerDecision
   | AfterDamageEffectDecision
   | EffectOrderDecision
+  | PlaceHandHpDecision
+
+/**
+ * cycle-hp（BS4-030）第二階段：第一階段取回 HP 後，把最多 1 張手牌放回
+ * 目標餅乾 HP 最上方；目標昏厥離場時不會建立此決策。
+ */
+export interface PlaceHandHpDecision {
+  kind: 'place-hand-hp'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  targetInstanceId: string
+}
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -243,6 +258,15 @@ export interface ResolveEffectOrderCommand {
   orderedIds: string[]
 }
 
+/**
+ * cycle-hp（BS4-030）第二階段：`handCardInstanceId` 省略時視為略過不放置。
+ */
+export interface ResolvePlaceHandHpCommand {
+  kind: 'resolve-place-hand-hp'
+  playerId: PlayerId
+  handCardInstanceId?: string
+}
+
 export type PendingDecisionCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
@@ -253,6 +277,7 @@ export type PendingDecisionCommand =
   | ResolveStageTriggerCommand
   | ResolveAfterDamageEffectCommand
   | ResolveEffectOrderCommand
+  | ResolvePlaceHandHpCommand
 
 export interface KeepOpeningHandCommand {
   kind: 'keep-opening-hand'
@@ -647,6 +672,18 @@ export const getPendingDecision = (
     return null
   }
 
+  // cycle-hp（BS4-030）第二階段：第一階段結算後停在這裡等玩家放回手牌。
+  if (state.pendingAbilityEffect?.pendingPlace) {
+    const pending = state.pendingAbilityEffect
+    return {
+      kind: 'place-hand-hp',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      targetInstanceId: pending.pendingPlace.targetInstanceId,
+    }
+  }
+
   if (state.pendingEffectOrder && !state.pendingEffectOrder.resolvedOrder) {
     return {
       kind: 'effect-order',
@@ -821,6 +858,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-stage-trigger': 'stage-trigger',
   'resolve-after-damage-effect': 'after-damage-effect',
   'resolve-effect-order': 'effect-order',
+  'resolve-place-hand-hp': 'place-hand-hp',
 }
 
 const isPendingDecisionCommand = (
@@ -1143,6 +1181,35 @@ const applyPendingDecisionCommand = (
     }
     case 'resolve-after-damage-effect':
       return resolveNextAfterDamageEffect(state, command.targetIds)
+    case 'resolve-place-hand-hp': {
+      const pending = state.pendingAbilityEffect
+      if (!pending?.pendingPlace) {
+        throw new GameRuleError('目前沒有等待放置 HP 的決策。')
+      }
+      if (pending.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要執行放置 HP 的玩家。')
+      }
+      const context: EffectContext = {
+        sourcePlayerId: pending.sourcePlayerId,
+        sourceInstanceId: pending.sourceInstanceId,
+        sourceCardName: pending.sourceCardName,
+      }
+      const continueBattle = (candidate: GameState): GameState =>
+        continueBattleAfterPending(candidate, pending.battleContinuation)
+      const resolved = placeHandCardOnHp(
+        state,
+        context,
+        pending.pendingPlace.targetInstanceId,
+        command.handCardInstanceId,
+      )
+      return continueAbilityQueue(
+        resolved,
+        { ...pending, pendingPlace: undefined },
+        context,
+        1,
+        continueBattle,
+      )
+    }
   }
 }
 
@@ -1426,6 +1493,57 @@ const resolvePendingAbilityEffect = (
   if (hasNoLegalSelectableTargets(state, context, pending.effects, pending.effectIndex)) {
     return continueBattle({ ...state, pendingAbilityEffect: undefined })
   }
+
+  // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp selectTarget BS4-044）：
+  // 第一階段只接受戰鬥區目標餅乾，手牌不在候選內。
+  if (
+    effect.kind === 'cycle-hp' ||
+    (effect.kind === 'hand-to-hp' && effect.selectTarget)
+  ) {
+    const isCycleHp = effect.kind === 'cycle-hp'
+    const targetCandidates = getEffectTargetCandidates(state, context, effect.target)
+    const cookieIds = targetCandidates.map((cookie) => cookie.card.instanceId)
+    const invalidIds = targetIds.filter((id) => !cookieIds.includes(id))
+    if (invalidIds.length > 0) {
+      throw new GameRuleError(
+        isCycleHp ? 'Invalid HP cycle target.' : 'Invalid HP target.',
+      )
+    }
+    const selectedTargets = targetIds.filter((id) => cookieIds.includes(id))
+    if (selectedTargets.length > 1) {
+      throw new GameRuleError(
+        isCycleHp ? 'Invalid HP cycle target.' : 'Invalid HP target.',
+      )
+    }
+    const resolved = executeCardEffect(
+      state,
+      context,
+      effect,
+      selectedTargets,
+      options.shuffle,
+    )
+    if (resolved.status !== 'playing') {
+      return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
+    }
+    const targetSurvived =
+      selectedTargets.length > 0 &&
+      resolved.players[pending.sourcePlayerId].battleArea.some(
+        (cookie) => cookie.card.instanceId === selectedTargets[0],
+      )
+    // 第一階段未選目標（或 cycle-hp 目標昏厥離場）：技能直接結束，不進入
+    // 第二階段。
+    if (!targetSurvived) {
+      return continueAbilityQueue(resolved, pending, context, 1, continueBattle)
+    }
+    return {
+      ...resolved,
+      pendingAbilityEffect: {
+        ...pending,
+        pendingPlace: { targetInstanceId: selectedTargets[0] },
+      },
+    }
+  }
+
   const resolved = executeCardEffect(
     state,
     context,
@@ -1433,7 +1551,21 @@ const resolvePendingAbilityEffect = (
     targetIds,
     options.shuffle,
   )
-  const nextIndex = pending.effectIndex + 1
+  return continueAbilityQueue(resolved, pending, context, 1, continueBattle)
+}
+
+/**
+ * 效果結算成功後推進佇列；佇列跑完（或遊戲結束）時清除 pendingAbilityEffect，
+ * 並視 battleContinuation 補上欠戰鬥流程的動作。
+ */
+const continueAbilityQueue = (
+  resolved: GameState,
+  pending: NonNullable<GameState['pendingAbilityEffect']>,
+  context: EffectContext,
+  advance: number,
+  continueBattle: (candidate: GameState) => GameState,
+): GameState => {
+  const nextIndex = pending.effectIndex + advance
   if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
     return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
   }

@@ -227,6 +227,7 @@ interface CommandShape {
   requiredStrings?: readonly string[]
   requiredStringArrays?: readonly string[]
   optionalStringArrays?: readonly string[]
+  optionalStrings?: readonly string[]
   requiredStringMatrices?: readonly string[]
   optionalStringMatrices?: readonly string[]
   requiredNumbers?: readonly string[]
@@ -498,6 +499,7 @@ const commandShapes = {
     ],
   },
   'resolve-ability-effect': { requiredStringArrays: ['targetIds'] },
+  'resolve-place-hand-hp': { optionalStrings: ['handCardInstanceId'] },
   'resolve-choose-one': { requiredNumbers: ['modeIndex'] },
   'replace-cookie': { requiredStrings: ['instanceId'] },
   'skip-replacement': {},
@@ -550,6 +552,10 @@ const hasValidCommandShape = (
     ) &&
     (shape.optionalStringArrays ?? []).every(
       (field) => command[field] === undefined || isStringArray(command[field]),
+    ) &&
+    (shape.optionalStrings ?? []).every(
+      (field) =>
+        command[field] === undefined || typeof command[field] === 'string',
     ) &&
     (shape.requiredStringMatrices ?? []).every((field) =>
       isStringMatrix(command[field]),

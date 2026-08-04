@@ -975,61 +975,25 @@ export const executeCardEffect = (
 
   if (effect.kind === 'hand-to-hp') {
     if (effect.selectTarget) {
+      // 兩階段（BS4-044 千年寺）：第一階段只選目標餅乾，驗證合法後即結束；
+      // 放置手牌由第二階段（pendingAbilityEffect.pendingPlace → placeHandCardOnHp）
+      // 執行，未選目標則整個效果略過。
       const targetCandidates = getEffectTargetCandidates(
         state,
         context,
         effect.target,
       )
-      const sourcePlayer = state.players[context.sourcePlayerId]
-      const hand = sourcePlayer.hand.filter(
-        (card) =>
-          effect.energyColor === undefined ||
-          card.energyColor === effect.energyColor,
-      )
       const selectedTargets = targetCandidates.filter((cookie) =>
         selectedTargetIds.includes(cookie.card.instanceId),
-      )
-      const selectedHand = hand.filter((card) =>
-        selectedTargetIds.includes(card.instanceId),
       )
       if (
         selectedTargets.length > effect.target.max ||
         selectedTargets.length < effect.target.min ||
-        selectedHand.length > 1 ||
-        selectedTargets.length + selectedHand.length !== selectedTargetIds.length
+        selectedTargets.length !== selectedTargetIds.length
       ) {
-        throw new GameRuleError('Invalid hand or HP target.')
+        throw new GameRuleError('Invalid HP target.')
       }
-      if (selectedTargets.length === 0) return state
-      if (selectedHand.length === 0) return state
-
-      const target = selectedTargets[0]
-      const targetPlayerId = getTargetPlayerId(context, effect.target)
-      const selectedHandCard = selectedHand[0]
-      const targetPlayer = state.players[targetPlayerId]
-      const updatedTargetPlayer = {
-        ...targetPlayer,
-        battleArea: targetPlayer.battleArea.map((cookie) =>
-          cookie.card.instanceId === target.card.instanceId
-            ? { ...cookie, hpCards: [...cookie.hpCards, selectedHandCard] }
-            : cookie,
-        ),
-      }
-      if (targetPlayerId === context.sourcePlayerId) {
-        return updatePlayer(state, {
-          ...updatedTargetPlayer,
-          hand: sourcePlayer.hand.filter(
-            (card) => card.instanceId !== selectedHandCard.instanceId,
-          ),
-        })
-      }
-      const withTargetUpdated = updatePlayer(state, updatedTargetPlayer)
-      return updatePlayer(withTargetUpdated, {
-        ...sourcePlayer,
-        hand: sourcePlayer.hand.filter(
-          (card) => card.instanceId !== selectedHandCard.instanceId,
-        ),
-      })
+      return state
     }
     const player = state.players[context.sourcePlayerId]
     const selectedId = selectedTargetIds[0]
@@ -1102,17 +1066,14 @@ export const executeCardEffect = (
     const selectedTargets = targetCandidates.filter((cookie) =>
       selectedTargetIds.includes(cookie.card.instanceId),
     )
-    const selectedHand = player.hand.filter((card) =>
-      selectedTargetIds.includes(card.instanceId),
-    )
     if (
       selectedTargets.length > effect.target.max ||
       selectedTargets.length < effect.target.min ||
-      selectedHand.length > 1 ||
-      selectedTargets.length + selectedHand.length !== selectedTargetIds.length
+      selectedTargets.length !== selectedTargetIds.length
     ) {
       throw new GameRuleError('Invalid HP cycle target.')
     }
+    // 第一階段「最多 1 個」：不選目標時整個技能直接結束（不進入第二階段）。
     if (selectedTargets.length === 0) return state
 
     const target = selectedTargets[0]
@@ -1131,23 +1092,12 @@ export const executeCardEffect = (
       return resolveDamageOutcome(updated, context.sourcePlayerId, 1, [target.card])
     }
 
-    const selectedHandCard = selectedHand[0]
     return updatePlayer(state, {
       ...player,
-      hand: [
-        ...player.hand.filter(
-          (card) => card.instanceId !== selectedHandCard?.instanceId,
-        ),
-        ...moved,
-      ],
+      hand: [...player.hand, ...moved],
       battleArea: player.battleArea.map((cookie) =>
         cookie.card.instanceId === target.card.instanceId
-          ? {
-              ...cookie,
-              hpCards: selectedHandCard
-                ? [...remaining, selectedHandCard]
-                : remaining,
-            }
+          ? { ...cookie, hpCards: remaining }
           : cookie,
       ),
     })
@@ -3069,4 +3019,51 @@ export const executeCardEffect = (
           ...modifiers,
         ],
       }
+}
+
+/**
+ * 兩階段選擇的第二階段（cycle-hp BS4-030 / hand-to-hp BS4-044）：把最多
+ * 1 張手牌放回目標餅乾 HP 最上方。目標在第一階段昏厥離場時不允許呼叫
+ * （引擎不會建立該決策），`handCardInstanceId` 省略時視為略過放置。
+ */
+export const placeHandCardOnHp = (
+  state: GameState,
+  context: EffectContext,
+  targetInstanceId: string,
+  handCardInstanceId?: string,
+): GameState => {
+  if (state.status !== 'playing') {
+    throw new GameRuleError('只有進行中的遊戲可以執行卡牌效果。')
+  }
+  const player = state.players[context.sourcePlayerId]
+  const target = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === targetInstanceId,
+  )
+  if (!target) {
+    throw new GameRuleError('目標餅乾已不在戰鬥區，無法放置 HP。')
+  }
+  const selectedCard = handCardInstanceId
+    ? player.hand.find((card) => card.instanceId === handCardInstanceId)
+    : undefined
+  if (handCardInstanceId && !selectedCard) {
+    throw new GameRuleError('手牌中沒有這張卡。')
+  }
+  return updatePlayer(state, {
+    ...player,
+    hand: selectedCard
+      ? player.hand.filter(
+          (card) => card.instanceId !== selectedCard.instanceId,
+        )
+      : player.hand,
+    battleArea: player.battleArea.map((cookie) =>
+      cookie.card.instanceId === targetInstanceId
+        ? {
+            ...cookie,
+            hpCards: selectedCard
+              ? [...cookie.hpCards, selectedCard]
+              : cookie.hpCards,
+          }
+        : cookie,
+    ),
+  })
 }

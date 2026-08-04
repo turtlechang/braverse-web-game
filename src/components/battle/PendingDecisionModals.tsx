@@ -6,6 +6,7 @@ import {
   RevealTopDeckModal,
   DrawUpToResponseModal,
   HandDiscardResponseModal,
+  PlaceHandHpModal,
   EffectOrderModal,
 } from '../modals/GameModals'
 import type {
@@ -82,6 +83,69 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
 
   return (
     <>
+      {match.game.pendingAbilityEffect?.pendingPlace &&
+        match.game.pendingAbilityEffect.playerId === match.viewerPlayerId &&
+        !pending.pendingEffect && (() => {
+          const pendingPlace = match.game.pendingAbilityEffect!.pendingPlace!
+          const target = match.game.players[match.viewerPlayerId].battleArea.find(
+            (cookie) => cookie.card.instanceId === pendingPlace.targetInstanceId,
+          )
+          const sourceCard = Object.values(match.game.players)
+            .flatMap((player) => [
+              ...player.battleArea.map((entry) => entry.card),
+              ...player.hand,
+              ...player.discardPile,
+              ...player.supportArea.map((entry) => entry.card),
+              ...(player.stage ? [player.stage.card] : []),
+            ])
+            .find(
+              (card) =>
+                card.instanceId ===
+                match.game.pendingAbilityEffect?.sourceInstanceId,
+            )
+          return (
+            <PlaceHandHpModal
+              sourceCardName={
+                match.game.pendingAbilityEffect?.sourceCardName ??
+                sourceCard?.name ??
+                '技能'
+              }
+              sourceCard={sourceCard}
+              effectText={sourceCard?.skill?.text}
+              targetCardName={target?.card.name ?? '目標餅乾'}
+              hand={match.game.players[match.viewerPlayerId].hand}
+              selectedId={match.selectedPlaceHandHpId}
+              onToggleCard={(instanceId) =>
+                match.setSelectedPlaceHandHpId((current) =>
+                  current === instanceId ? undefined : instanceId,
+                )
+              }
+              onSkip={() => {
+                match.setSelectedPlaceHandHpId(undefined)
+                match.dispatch(
+                  {
+                    kind: 'resolve-place-hand-hp',
+                    playerId: match.viewerPlayerId,
+                  },
+                  '已略過放置 HP。',
+                )
+              }}
+              onConfirm={() => {
+                const selectedId = match.selectedPlaceHandHpId
+                match.setSelectedPlaceHandHpId(undefined)
+                match.dispatch(
+                  {
+                    kind: 'resolve-place-hand-hp',
+                    playerId: match.viewerPlayerId,
+                    handCardInstanceId: selectedId,
+                  },
+                  '已放置 1 張手牌到餅乾的 HP 最上方。',
+                )
+              }}
+            />
+          )
+        })()}
+
       {match.game.pendingOpponentHandDiscard &&
         match.game.pendingOpponentHandDiscard.playerId ===
           match.viewerPlayerId &&

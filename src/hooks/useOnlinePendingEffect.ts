@@ -160,6 +160,9 @@ export function useOnlinePendingEffect(params: {
   const abilityActiveForViewer = Boolean(
     pendingAbility &&
       pendingAbility.playerId === viewerPlayerId &&
+      // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp BS4-044）第二階段等待
+      // 放回手牌時，面板交給 PendingDecisionModals 的 place-hand-hp 提示。
+      !pendingAbility.pendingPlace &&
       !game.pendingReplacement &&
       !game.pendingRefresh &&
       !game.pendingOnPlay &&

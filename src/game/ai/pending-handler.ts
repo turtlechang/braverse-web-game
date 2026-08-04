@@ -32,6 +32,8 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
     state.pendingRefresh ||
       state.pendingOnPlay ||
       state.pendingReplacement ||
+      // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
+      state.pendingAbilityEffect?.pendingPlace ||
       (state.pendingBattle &&
         state.pendingAbilityEffect?.trigger === 'attacker-faint'),
   )
@@ -216,6 +218,31 @@ export const handleAiPendingDecision = (
         targetIds.length > 0
           ? `${state.players[playerId].name}發動對${ordered[0].card.name}的受傷後效果。`
           : `${state.players[playerId].name}略過受傷後效果。`,
+    }
+  }
+
+  if (
+    pendingDecision?.kind === 'place-hand-hp' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇放回 HP 的手牌。`,
+      }
+    }
+    const handCard = state.players[playerId].hand[0]
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-place-hand-hp',
+        playerId,
+        handCardInstanceId: handCard?.instanceId,
+      }),
+      action: 'idle',
+      description: handCard
+        ? `${state.players[playerId].name}將 1 張手牌放回目標餅乾的 HP。`
+        : `${state.players[playerId].name}略過放置 HP。`,
     }
   }
 

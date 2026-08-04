@@ -33,6 +33,7 @@ export {
   validateBreakToTrashTargets,
   expandChooseOne,
   expandChooseOneSequence,
+  placeHandCardOnHp,
 } from './effects'
 export {
   createBlueActivateSkillDemoState,

@@ -357,6 +357,9 @@ export function useMatchController(params: {
   >([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
+  const [selectedPlaceHandHpId, setSelectedPlaceHandHpId] = useState<
+    string | undefined
+  >(undefined)
 
   const viewerPlayerId: PlayerId = 'player-one'
   const opponentId = opponentOfId(viewerPlayerId)
@@ -1144,6 +1147,9 @@ export function useMatchController(params: {
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
+    // Place hand HP (兩階段選擇第二階段)
+    selectedPlaceHandHpId,
+    setSelectedPlaceHandHpId,
     // Animation
     attackShakeId: animations.attackShakeId,
     damageFlashId: animations.damageFlashId,

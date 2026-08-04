@@ -173,8 +173,9 @@ function EffectPanelContent({
               min: currentEffect.optional ? 0 : currentEffect.amount,
               max: currentEffect.amount,
             }
-          : currentEffect?.kind === 'hand-to-hp' ||
-              currentEffect?.kind === 'support-to-hp'
+          : currentEffect?.kind === 'hand-to-hp'
+            ? { min: currentEffect.optional ? 0 : 1, max: 1 }
+          : currentEffect?.kind === 'support-to-hp'
             ? currentEffect.selectTarget
               ? { min: currentEffect.optional ? 0 : 1, max: 2 }
               : { min: currentEffect.optional ? 0 : 1, max: 1 }

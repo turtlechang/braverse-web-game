@@ -139,6 +139,11 @@ export interface BattleUiMatchLike {
   setSelectedOpponentDiscardIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
+  // Place hand HP (兩階段選擇第二階段)
+  selectedPlaceHandHpId: string | undefined
+  setSelectedPlaceHandHpId: (
+    value: string | undefined | ((current: string | undefined) => string | undefined),
+  ) => void
   // Replacement/refresh
   pendingPlayer: PlayerState | null
   pendingOptions: GameCard[]

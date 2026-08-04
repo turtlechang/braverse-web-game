@@ -742,6 +742,21 @@ const resolveAiSkill = (
   const paymentIds = selectAiEnergyPayment(skill, player.supportArea)
   if (!paymentIds) return null
 
+  // cycle-hp（BS4-030）：整個效果依賴「我方其他黃色餅乾」，沒有合法目標時
+  // 發動只會白付代價，直接視為不可發動（與 UI 的發動權詢問門檻一致）。
+  if (
+    skill.effects.some(
+      (effect) =>
+        effect.kind === 'cycle-hp' &&
+        getEffectTargetCandidates(state, {
+          sourcePlayerId: playerId,
+          sourceInstanceId: source.card.instanceId,
+        }, effect.target).length === 0,
+    )
+  ) {
+    return null
+  }
+
   const costSupportToTrashIds = skill.cost.supportToTrash
     ? player.supportArea
         .filter(

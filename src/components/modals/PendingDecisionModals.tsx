@@ -326,6 +326,122 @@ export function HandDiscardResponseModal({
   )
 }
 
+export interface PlaceHandHpModalProps {
+  sourceCardName: string
+  sourceCard?: GameCard
+  effectText?: string
+  targetCardName: string
+  hand: GameCard[]
+  selectedId?: string
+  onToggleCard: (instanceId: string) => void
+  onConfirm: () => void
+  onSkip: () => void
+}
+
+/**
+ * 兩階段選擇的第二階段（cycle-hp BS4-030 世外桃源 / hand-to-hp BS4-044
+ * 千年寺）：第一階段選定目標餅乾後，選擇最多 1 張手牌放回該餅乾 HP 最上方。
+ * 牌名不公開，只顯示手牌給持有者自己選。
+ */
+export function PlaceHandHpModal({
+  sourceCardName,
+  sourceCard,
+  effectText,
+  targetCardName,
+  hand,
+  selectedId,
+  onToggleCard,
+  onConfirm,
+  onSkip,
+}: PlaceHandHpModalProps) {
+  const [minimized, setMinimized] = useState(false)
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>{sourceCardName}</strong>
+          <small>等待放置 HP 手牌</small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal hand-discard-modal"
+        role="alertdialog"
+      >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小放置 HP 提示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <GuidedPhaseSteps
+          phases={[
+            { id: 'target', label: '選擇目標', complete: true },
+            { id: 'place', label: '放回 HP', complete: false },
+          ]}
+          activePhase="place"
+        />
+        <span>放置 HP</span>
+        <h2>{sourceCardName}：請選擇最多 1 張手牌放置到「{targetCardName}」的 HP 最上方</h2>
+        <div className="draw-up-to-source-card hand-discard-source-card">
+          {sourceCard && <CardFace card={sourceCard} />}
+          {effectText && (
+            <div className="draw-up-to-source-info">
+              <span className="draw-up-to-source-label">效果說明</span>
+              <p className="faint-effect-text draw-up-to-effect">
+                <CardEffectText text={effectText} />
+              </p>
+            </div>
+          )}
+        </div>
+        <p className="faint-target-hint">放置的手牌不會公開內容。</p>
+        <div className="modal-card-options hand-discard-options">
+          {hand.map((card) => (
+            <button
+              type="button"
+              key={card.instanceId}
+              className={selectedId === card.instanceId ? 'is-selected' : ''}
+              onClick={() => onToggleCard(card.instanceId)}
+            >
+              <CardFace
+                card={card}
+                selected={selectedId === card.instanceId}
+              />
+              <span>{card.name}</span>
+            </button>
+          ))}
+        </div>
+        <div className="modal-actions hand-discard-actions">
+          <button type="button" className="modal-button" onClick={onSkip}>
+            略過放置
+          </button>
+          <button
+            type="button"
+            className="modal-button primary"
+            disabled={!selectedId}
+            onClick={onConfirm}
+          >
+            確認放置 ({selectedId ? 1 : 0})
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export interface OptionalCostAttackModalProps {
   sourceCardName: string
   sourceCard?: GameCard
