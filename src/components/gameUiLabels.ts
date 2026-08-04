@@ -58,6 +58,11 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs3-purple-dark-cacao': '第三彈紫色・黑可可餅乾',
   'bs3-purple-dark-cacao-fighting': '第三彈紫色・黑可可餅乾（打架流）',
   'bs3-yellow-counter': '第三彈黃色・反擊流',
+  'bs4-red-fire-spirit': 'BS4 紅色・火焰壓制',
+  'bs4-yellow-millennial': 'BS4 黃色・千年復生',
+  'bs4-green-wind-archer': 'BS4 綠色・風弓支援',
+  'bs4-blue-abyss': 'BS4 藍色・深海控制',
+  'bs4-purple-moonlight': 'BS4 紫色・月光 Trash',
   custom: '自訂',
 }
 

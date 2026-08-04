@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+  getAttackDamageAgainst,
+  getBreakToBattleCandidates,
+  getEffectTargetCandidates,
+  getEffectiveAttack,
+  getForcedAttackTargetId,
+  type CardEffect,
+  type GameCard,
+} from '.'
+import {
+  BS4_CONDITION_CARD_NUMBERS,
   createBlueActivateSkillDemoState,
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
@@ -7,6 +17,7 @@ import {
   createBs3SpecialVictoryDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
+  createBs4ConditionDemoState,
   createReplacementChoiceDemoState,
   createSt5010OnPlayDemoState,
   createSupportToTrashSkillDemoState,
@@ -279,6 +290,115 @@ describe('createCardCheckDemoState', () => {
       expect.objectContaining({ id: 'BS3-004' }),
     )
   })
+})
+
+const findCardInState = (state: ReturnType<typeof createBs4ConditionDemoState>, cardNumber: string): GameCard => {
+  for (const player of Object.values(state.players)) {
+    const zones: GameCard[] = [
+      ...player.hand,
+      ...player.breakArea,
+      ...player.discardPile,
+      ...player.battleArea.map((entry) => entry.card),
+      ...player.supportArea.map((support) => support.card),
+      ...(player.stage ? [player.stage.card] : []),
+    ]
+    const card = zones.find((candidate) => candidate.id === cardNumber)
+    if (card) return card
+  }
+  throw new Error(`Missing ${cardNumber} in BS4 condition fixture`)
+}
+
+const collectConditionalEffects = (effects: CardEffect[]): CardEffect[] =>
+  effects.flatMap((effect) => {
+    const ownCondition =
+      'condition' in effect && effect.condition ? [effect] : []
+    const nested =
+      effect.kind === 'optional-cost-attack'
+        ? collectConditionalEffects(effect.effects)
+        : []
+    return [...ownCondition, ...nested]
+  })
+
+describe('BS4 condition fixtures', () => {
+  it.each(BS4_CONDITION_CARD_NUMBERS)(
+    '%s has explicit met and unmet test-state routes',
+    (cardNumber) => {
+      for (const conditionMet of [true, false]) {
+        const state = createBs4ConditionDemoState(cardNumber, conditionMet)
+        const parsed = parseTestStateConfig(
+          `?test-state=bs4-condition:${cardNumber}:${conditionMet ? 'met' : 'unmet'}`,
+          'localhost',
+        )
+        expect(parsed).toEqual({
+          kind: 'bs4-condition',
+          cardNumber,
+          conditionMet,
+        })
+
+        const card = findCardInState(state, cardNumber)
+        const effects = collectConditionalEffects([
+          ...(card.skill?.effects ?? []),
+          ...(card.type === 'cookie' ? card.attackEffects ?? [] : []),
+          ...(card.item?.effects ?? []),
+        ])
+        const context = {
+          sourcePlayerId: 'player-one' as const,
+          sourceInstanceId: card.instanceId,
+          attackTargetInstanceId: state.pendingBattle?.targetInstanceId,
+        }
+        expect(
+          effects.map((effect) => isEffectConditionMet(state, context, effect)),
+        ).toEqual(effects.map(() => conditionMet))
+
+        if (cardNumber === 'BS4-012') {
+          expect(getEffectiveAttack(state, card.instanceId)).toBe(
+            conditionMet ? 5 : 3,
+          )
+        }
+        if (cardNumber === 'BS4-014') {
+          expect(
+            getAttackDamageAgainst(
+              state,
+              state.pendingBattle!.attackerInstanceId,
+              card.instanceId,
+            ),
+          ).toBe(conditionMet ? 0 : 1)
+        }
+        if (cardNumber === 'BS4-016') {
+          const attackEffect =
+            card.type === 'cookie' ? card.attackEffects?.[0] : undefined
+          expect(attackEffect?.kind).toBe('damage')
+          if (attackEffect?.kind === 'damage') {
+            const targetCandidates = getEffectTargetCandidates(
+              state,
+              context,
+              attackEffect.target,
+            )
+            expect(targetCandidates.length > 0).toBe(conditionMet)
+          }
+        }
+        if (cardNumber === 'BS4-024') {
+          expect(getForcedAttackTargetId(state, 'player-two')).toBe(
+            conditionMet
+              ? state.players['player-one'].battleArea[0].card.instanceId
+              : undefined,
+          )
+        }
+        if (cardNumber === 'BS4-040') {
+          const reviveEffect = card.item?.effects[1]
+          expect(reviveEffect?.kind).toBe('break-to-battle')
+          if (reviveEffect?.kind === 'break-to-battle') {
+            const reviveCandidates = getBreakToBattleCandidates(
+              state,
+              context,
+              reviveEffect,
+            )
+            expect(reviveCandidates.length > 0).toBe(conditionMet)
+          }
+        }
+      }
+    },
+  )
 })
 
 describe('createBlueActivateSkillDemoState', () => {

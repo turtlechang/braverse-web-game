@@ -1,0 +1,26 @@
+{
+  "name": "BS4 紫色・月光 Trash",
+  "entries": [
+    { "cardNumber": "BS4-089", "count": 4 },
+    { "cardNumber": "BS4-098", "count": 4 },
+    { "cardNumber": "BS4-090", "count": 4 },
+    { "cardNumber": "BS4-094", "count": 4 },
+    { "cardNumber": "BS4-095", "count": 4 },
+    { "cardNumber": "BS4-096", "count": 4 },
+    { "cardNumber": "BS4-097", "count": 3 },
+    { "cardNumber": "BS4-093", "count": 3 },
+    { "cardNumber": "BS4-100", "count": 3 },
+    { "cardNumber": "BS4-103", "count": 2 },
+    { "cardNumber": "BS4-099", "count": 2 },
+    { "cardNumber": "BS4-106", "count": 2 },
+    { "cardNumber": "BS4-107", "count": 2 },
+    { "cardNumber": "BS4-108", "count": 2 },
+    { "cardNumber": "BS4-109", "count": 2 },
+    { "cardNumber": "BS4-110", "count": 2 },
+    { "cardNumber": "BS3-105", "count": 4 },
+    { "cardNumber": "BS3-107", "count": 4 },
+    { "cardNumber": "BS3-100", "count": 1 },
+    { "cardNumber": "BS3-113", "count": 1 },
+    { "cardNumber": "BS3-117", "count": 3 }
+  ]
+}

@@ -341,6 +341,12 @@ export function usePendingEffect(params: {
         pendingEffect.selectedPaymentIds,
       ).valid
     : false
+  const skillPaymentLabel =
+    pendingEffect?.sourceKind === 'item'
+      ? '物品' as const
+      : pendingEffect?.sourceKind === 'stage'
+        ? '場景' as const
+        : '技能' as const
   const isSkillEnergyColorCompatible = (
     cardColor: GameCard['energyColor'],
   ): boolean => isEnergyColorCompatibleWithCost(skillEnergyCost, cardColor)
@@ -1708,6 +1714,7 @@ export function usePendingEffect(params: {
     genericEffectCandidateCards,
     skillCostSupportCandidates,
     skillEnergyPaymentValid,
+    skillPaymentLabel,
     skillPaymentTargetIds,
     skillCostSupportTargetIds,
     skillCostDiscardHandCandidates,

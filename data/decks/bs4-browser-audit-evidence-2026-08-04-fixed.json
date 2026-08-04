@@ -1,0 +1,89 @@
+{
+  "generatedAt": "2026-08-04",
+  "source": "Chrome formal card-check state plus BS4 condition test-state",
+  "cardAudit": {
+    "cards": 111,
+    "byColor": {
+      "RED": 22,
+      "YELLOW": 22,
+      "GREEN": 22,
+      "BLUE": 22,
+      "PURPLE": 22,
+      "PURE": 1
+    },
+    "passed": 111,
+    "exceptions": 0,
+    "route": "?test-state=card:BS4-xxx",
+    "checks": [
+      "每張卡都完成頁面載入",
+      "存在對戰桌與測試狀態或效果流程狀態",
+      "沒有 role=alert",
+      "沒有錯誤邊界或 Application Error 文字"
+    ],
+    "genericFixtureStatuses": {
+      "plainCardCheck": 87,
+      "pendingOrResolvedEffectFlow": 24,
+      "note": "部分一般 fixture 會自然停在待選目標、支付代價或已略過的攻擊後續效果；這是流程狀態，不列為頁面例外。"
+    }
+  },
+  "conditionAudit": {
+    "cards": 22,
+    "routes": 44,
+    "passed": 44,
+    "exceptions": 0,
+    "route": "?test-state=bs4-condition:BS4-xxx:met|unmet",
+    "cardsUnderTest": [
+      "BS4-011",
+      "BS4-012",
+      "BS4-014",
+      "BS4-016",
+      "BS4-020",
+      "BS4-023",
+      "BS4-024",
+      "BS4-039",
+      "BS4-040",
+      "BS4-048",
+      "BS4-049",
+      "BS4-052",
+      "BS4-053",
+      "BS4-059",
+      "BS4-061",
+      "BS4-073",
+      "BS4-083",
+      "BS4-089",
+      "BS4-090",
+      "BS4-094",
+      "BS4-106",
+      "BS4-107"
+    ],
+    "checks": [
+      "main[data-bs4-condition-card] 等於路由卡號",
+      "main[data-bs4-condition-result] 等於 met 或 unmet",
+      "沒有 role=alert",
+      "沒有錯誤邊界或 Application Error 文字"
+    ]
+  },
+  "benchmark": {
+    "seed": 20260803,
+    "gamesPerMatrix": 100,
+    "runsCompared": 2,
+    "reports": [
+      "bs4-benchmark-report-100-fixed.json",
+      "bs4-benchmark-report-100-fixed-rerun.json"
+    ],
+    "sha256": "55D559781B2A29174E50C0782192D68BF2B029C1FED8D9D34D45A8F16A16F2E1",
+    "identical": true,
+    "stuck": 0,
+    "errors": 0
+  },
+  "ariaRegression": {
+    "itemLabel": "支付物品能量",
+    "skillLabel": "支付技能能量",
+    "assertion": "物品支付 aria label 不再使用技能文案",
+    "test": "src/components/battle/BattleRow.test.tsx"
+  },
+  "limitations": [
+    "逐卡稽核是正式 card-check 的 Chrome smoke／流程入口驗證；條件卡的語義分支由專用 test-state、規則測試與 44 條瀏覽器路徑補足。",
+    "100 場結果已具備固定 seed 重現性，但在專用情境與更完整真人操作覆蓋完成前，不將勝率排名定案為 BS4 環境強度。"
+  ]
+}

@@ -505,6 +505,25 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('作為技能代價')
   })
 
+  it('uses item wording for item energy payment aria labels', () => {
+    const game = createItemUsageDemoState(true)
+    const supportId = game.players['player-one'].supportArea[0].card.instanceId
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          interactionLocked: true,
+          skillPaymentLabel: '物品',
+          skillPaymentTargetIds: new Set([supportId]),
+          onSkillPayment: () => undefined,
+        })}
+      />,
+    )
+
+    expect(markup).toContain('支付物品能量')
+    expect(markup).not.toContain('支付技能能量')
+  })
+
   it('renders opponent hand cards in field-stack with opponent-hand-card class, concealed, no is-selected', () => {
     const game = createItemUsageDemoState(true)
     const opponentHand = Array.from({ length: 3 }, (_, i) => ({

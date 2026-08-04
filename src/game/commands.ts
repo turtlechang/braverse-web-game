@@ -564,6 +564,11 @@ export interface ApplyGameCommandOptions {
    * createSeededShuffle，否則調度／Refresh 的牌序不會一致。
    */
   shuffle?: Shuffle
+  /**
+   * AI 單步使用的可重現洗牌種子。每次套用 command 都會由此建立新的
+   * shuffle，避免效果模擬消耗掉正式結算要使用的亂數序列。
+   */
+  shuffleSeed?: number
 }
 
 const isEffectOrderItemActive = (
@@ -877,9 +882,16 @@ export const applyGameCommand = (
   command: GameCommand,
   options: ApplyGameCommandOptions = {},
 ): GameState => {
+  const effectiveOptions =
+    options.shuffleSeed === undefined
+      ? options
+      : {
+          ...options,
+          shuffle: createSeededShuffle(options.shuffleSeed),
+        }
   const next = isPendingDecisionCommand(command)
-    ? applyPendingDecisionCommand(state, command, options)
-    : applyPlayerActionCommand(state, command, options)
+    ? applyPendingDecisionCommand(state, command, effectiveOptions)
+    : applyPlayerActionCommand(state, command, effectiveOptions)
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.
   // A multi-step effect must finish before replacement or break-level victory

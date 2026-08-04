@@ -1,0 +1,705 @@
+{
+  "schemaVersion": 1,
+  "methodology": {
+    "description": "以 BS3 五色 preset 為基準，五色 BS4 preset 互相對戰；每色對五個對手各 4 場，共 20 場。每組 2 場由目標牌組先手、2 場交換先手。",
+    "colors": [
+      "red",
+      "yellow",
+      "green",
+      "blue",
+      "purple"
+    ],
+    "gamesPerDeck": 20,
+    "gamesPerPair": 4,
+    "firstPlayerSplit": 2,
+    "aiLevel": 4,
+    "maxActions": 2500,
+    "seed": 20260803,
+    "baselineChoices": {
+      "red": "bs3-red-pitaya",
+      "yellow": "bs3-yellow-counter",
+      "green": "bs3-green-lily",
+      "blue": "bs3-blue-sorbet",
+      "purple": "bs3-purple-dark-cacao"
+    },
+    "finalChoices": {
+      "red": "bs4-red-fire-spirit",
+      "yellow": "bs4-yellow-millennial",
+      "green": "bs4-green-wind-archer",
+      "blue": "bs4-blue-abyss",
+      "purple": "bs4-purple-moonlight"
+    }
+  },
+  "baseline": {
+    "decks": {
+      "red": {
+        "games": 20,
+        "wins": 15,
+        "losses": 5,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 13.6,
+        "avgBreakLevel": 7.2,
+        "errors": []
+      },
+      "yellow": {
+        "games": 20,
+        "wins": 7,
+        "losses": 13,
+        "stuck": 0,
+        "winRate": 0.35,
+        "completionRate": 1,
+        "avgTurns": 13.65,
+        "avgBreakLevel": 9.3,
+        "errors": []
+      },
+      "green": {
+        "games": 20,
+        "wins": 7,
+        "losses": 13,
+        "stuck": 0,
+        "winRate": 0.35,
+        "completionRate": 1,
+        "avgTurns": 14.75,
+        "avgBreakLevel": 9.65,
+        "errors": []
+      },
+      "blue": {
+        "games": 20,
+        "wins": 12,
+        "losses": 8,
+        "stuck": 0,
+        "winRate": 0.6,
+        "completionRate": 1,
+        "avgTurns": 14.5,
+        "avgBreakLevel": 8.05,
+        "errors": []
+      },
+      "purple": {
+        "games": 20,
+        "wins": 7,
+        "losses": 13,
+        "stuck": 0,
+        "winRate": 0.35,
+        "completionRate": 1,
+        "avgTurns": 13.95,
+        "avgBreakLevel": 9.35,
+        "errors": []
+      }
+    },
+    "matchups": {
+      "red-vs-red": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 13.5,
+        "avgBreakLevel": 9,
+        "errors": []
+      },
+      "red-vs-yellow": {
+        "games": 4,
+        "wins": 4,
+        "losses": 0,
+        "stuck": 0,
+        "winRate": 1,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 6.25,
+        "errors": []
+      },
+      "red-vs-green": {
+        "games": 4,
+        "wins": 4,
+        "losses": 0,
+        "stuck": 0,
+        "winRate": 1,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 6.75,
+        "errors": []
+      },
+      "red-vs-blue": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 12.5,
+        "avgBreakLevel": 7.5,
+        "errors": []
+      },
+      "red-vs-purple": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 6.5,
+        "errors": []
+      },
+      "yellow-vs-red": {
+        "games": 4,
+        "wins": 0,
+        "losses": 4,
+        "stuck": 0,
+        "winRate": 0,
+        "completionRate": 1,
+        "avgTurns": 13,
+        "avgBreakLevel": 10.5,
+        "errors": []
+      },
+      "yellow-vs-yellow": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 14.25,
+        "avgBreakLevel": 7.5,
+        "errors": []
+      },
+      "yellow-vs-green": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 14.25,
+        "avgBreakLevel": 9,
+        "errors": []
+      },
+      "yellow-vs-blue": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 12.75,
+        "avgBreakLevel": 9.25,
+        "errors": []
+      },
+      "yellow-vs-purple": {
+        "games": 4,
+        "wins": 0,
+        "losses": 4,
+        "stuck": 0,
+        "winRate": 0,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 10.25,
+        "errors": []
+      },
+      "green-vs-red": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 14.5,
+        "avgBreakLevel": 9.75,
+        "errors": []
+      },
+      "green-vs-yellow": {
+        "games": 4,
+        "wins": 0,
+        "losses": 4,
+        "stuck": 0,
+        "winRate": 0,
+        "completionRate": 1,
+        "avgTurns": 15,
+        "avgBreakLevel": 11,
+        "errors": []
+      },
+      "green-vs-green": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 15.5,
+        "avgBreakLevel": 7.25,
+        "errors": []
+      },
+      "green-vs-blue": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 14.25,
+        "avgBreakLevel": 10.25,
+        "errors": []
+      },
+      "green-vs-purple": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 14.5,
+        "avgBreakLevel": 10,
+        "errors": []
+      },
+      "blue-vs-red": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 8.25,
+        "errors": []
+      },
+      "blue-vs-yellow": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 16.5,
+        "avgBreakLevel": 9.5,
+        "errors": []
+      },
+      "blue-vs-green": {
+        "games": 4,
+        "wins": 4,
+        "losses": 0,
+        "stuck": 0,
+        "winRate": 1,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 5.75,
+        "errors": []
+      },
+      "blue-vs-blue": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 14.75,
+        "avgBreakLevel": 9.75,
+        "errors": []
+      },
+      "blue-vs-purple": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 13.25,
+        "avgBreakLevel": 7,
+        "errors": []
+      },
+      "purple-vs-red": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 13,
+        "avgBreakLevel": 9,
+        "errors": []
+      },
+      "purple-vs-yellow": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 14.25,
+        "avgBreakLevel": 9.5,
+        "errors": []
+      },
+      "purple-vs-green": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 15,
+        "avgBreakLevel": 8.75,
+        "errors": []
+      },
+      "purple-vs-blue": {
+        "games": 4,
+        "wins": 0,
+        "losses": 4,
+        "stuck": 0,
+        "winRate": 0,
+        "completionRate": 1,
+        "avgTurns": 13,
+        "avgBreakLevel": 10.5,
+        "errors": []
+      },
+      "purple-vs-purple": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 14.5,
+        "avgBreakLevel": 9,
+        "errors": []
+      }
+    }
+  },
+  "final": {
+    "decks": {
+      "red": {
+        "games": 20,
+        "wins": 16,
+        "losses": 4,
+        "stuck": 0,
+        "winRate": 0.8,
+        "completionRate": 1,
+        "avgTurns": 12.4,
+        "avgBreakLevel": 7.55,
+        "errors": []
+      },
+      "yellow": {
+        "games": 20,
+        "wins": 11,
+        "losses": 9,
+        "stuck": 0,
+        "winRate": 0.55,
+        "completionRate": 1,
+        "avgTurns": 13.05,
+        "avgBreakLevel": 8.75,
+        "errors": []
+      },
+      "green": {
+        "games": 20,
+        "wins": 7,
+        "losses": 13,
+        "stuck": 0,
+        "winRate": 0.35,
+        "completionRate": 1,
+        "avgTurns": 13.3,
+        "avgBreakLevel": 8.8,
+        "errors": []
+      },
+      "blue": {
+        "games": 20,
+        "wins": 12,
+        "losses": 8,
+        "stuck": 0,
+        "winRate": 0.6,
+        "completionRate": 1,
+        "avgTurns": 13.05,
+        "avgBreakLevel": 7.3,
+        "errors": []
+      },
+      "purple": {
+        "games": 20,
+        "wins": 9,
+        "losses": 11,
+        "stuck": 0,
+        "winRate": 0.45,
+        "completionRate": 1,
+        "avgTurns": 13,
+        "avgBreakLevel": 9,
+        "errors": []
+      }
+    },
+    "matchups": {
+      "red-vs-red": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 12,
+        "avgBreakLevel": 10,
+        "errors": []
+      },
+      "red-vs-yellow": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 10.75,
+        "avgBreakLevel": 6.75,
+        "errors": []
+      },
+      "red-vs-green": {
+        "games": 4,
+        "wins": 4,
+        "losses": 0,
+        "stuck": 0,
+        "winRate": 1,
+        "completionRate": 1,
+        "avgTurns": 11.5,
+        "avgBreakLevel": 4.5,
+        "errors": []
+      },
+      "red-vs-blue": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 14.75,
+        "avgBreakLevel": 8.75,
+        "errors": []
+      },
+      "red-vs-purple": {
+        "games": 4,
+        "wins": 4,
+        "losses": 0,
+        "stuck": 0,
+        "winRate": 1,
+        "completionRate": 1,
+        "avgTurns": 13,
+        "avgBreakLevel": 7.75,
+        "errors": []
+      },
+      "yellow-vs-red": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 12.25,
+        "avgBreakLevel": 10,
+        "errors": []
+      },
+      "yellow-vs-yellow": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 12.25,
+        "avgBreakLevel": 7.75,
+        "errors": []
+      },
+      "yellow-vs-green": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 13.75,
+        "avgBreakLevel": 7.25,
+        "errors": []
+      },
+      "yellow-vs-blue": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 9.5,
+        "errors": []
+      },
+      "yellow-vs-purple": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 13,
+        "avgBreakLevel": 9.25,
+        "errors": []
+      },
+      "green-vs-red": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 11,
+        "avgBreakLevel": 8.25,
+        "errors": []
+      },
+      "green-vs-yellow": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 13.75,
+        "avgBreakLevel": 10.25,
+        "errors": []
+      },
+      "green-vs-green": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 15,
+        "avgBreakLevel": 8,
+        "errors": []
+      },
+      "green-vs-blue": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 12.5,
+        "avgBreakLevel": 9,
+        "errors": []
+      },
+      "green-vs-purple": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 14.25,
+        "avgBreakLevel": 8.5,
+        "errors": []
+      },
+      "blue-vs-red": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 13.25,
+        "avgBreakLevel": 9.25,
+        "errors": []
+      },
+      "blue-vs-yellow": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 12.75,
+        "avgBreakLevel": 7.75,
+        "errors": []
+      },
+      "blue-vs-green": {
+        "games": 4,
+        "wins": 4,
+        "losses": 0,
+        "stuck": 0,
+        "winRate": 1,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 4.5,
+        "errors": []
+      },
+      "blue-vs-blue": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 11.75,
+        "avgBreakLevel": 8.25,
+        "errors": []
+      },
+      "blue-vs-purple": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 13.5,
+        "avgBreakLevel": 6.75,
+        "errors": []
+      },
+      "purple-vs-red": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 11.75,
+        "avgBreakLevel": 9.5,
+        "errors": []
+      },
+      "purple-vs-yellow": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 12.5,
+        "avgBreakLevel": 8.25,
+        "errors": []
+      },
+      "purple-vs-green": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgBreakLevel": 9,
+        "errors": []
+      },
+      "purple-vs-blue": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 13.25,
+        "avgBreakLevel": 8.25,
+        "errors": []
+      },
+      "purple-vs-purple": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 13.5,
+        "avgBreakLevel": 10,
+        "errors": []
+      }
+    }
+  }
+}

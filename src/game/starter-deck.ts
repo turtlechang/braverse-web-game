@@ -3,6 +3,11 @@ import officialGreenSample from '../../data/cards/official-starter-deck-green.en
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import officialBlueSample from '../../data/cards/official-starter-deck-blue.en.json'
 import officialPurpleSample from '../../data/cards/official-starter-deck-purple.en.json'
+import bs4RedDeck from '../../data/decks/bs4-red-fire-spirit.json'
+import bs4YellowDeck from '../../data/decks/bs4-yellow-millennial.json'
+import bs4GreenDeck from '../../data/decks/bs4-green-wind-archer.json'
+import bs4BlueDeck from '../../data/decks/bs4-blue-abyss.json'
+import bs4PurpleDeck from '../../data/decks/bs4-purple-moonlight.json'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -29,8 +34,19 @@ export const BS3_AI_PRESET_DECK_CHOICES = [
   'bs3-yellow-counter',
 ] as const
 
+export const BS4_AI_PRESET_DECK_CHOICES = [
+  'bs4-red-fire-spirit',
+  'bs4-yellow-millennial',
+  'bs4-green-wind-archer',
+  'bs4-blue-abyss',
+  'bs4-purple-moonlight',
+] as const
+
 export type Bs3AiPresetDeckChoice =
   (typeof BS3_AI_PRESET_DECK_CHOICES)[number]
+
+export type Bs4AiPresetDeckChoice =
+  (typeof BS4_AI_PRESET_DECK_CHOICES)[number]
 
 export type AiPresetDeckChoice =
   | 'bs2-red'
@@ -39,6 +55,7 @@ export type AiPresetDeckChoice =
   | 'bs2-blue'
   | 'bs2-purple'
   | Bs3AiPresetDeckChoice
+  | Bs4AiPresetDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
@@ -455,6 +472,26 @@ export const AI_PRESET_BS3_YELLOW_COUNTER_DECK: StarterDeckEntry[] = [
   { cardNumber: 'BS1-040', count: 4 },
 ]
 
+/** BS3 牌組基礎上，以 BS4 核心效果強化的紅色火焰壓制牌組。 */
+export const AI_PRESET_BS4_RED_FIRE_SPIRIT_DECK: StarterDeckEntry[] =
+  bs4RedDeck.entries
+
+/** BS3 牌組基礎上，以 BS4 Break 區復生與高等級節奏強化的黃色牌組。 */
+export const AI_PRESET_BS4_YELLOW_MILLENNIAL_DECK: StarterDeckEntry[] =
+  bs4YellowDeck.entries
+
+/** BS3 牌組基礎上，以 BS4 支援區堆疊與轉場強化的綠色牌組。 */
+export const AI_PRESET_BS4_GREEN_WIND_ARCHER_DECK: StarterDeckEntry[] =
+  bs4GreenDeck.entries
+
+/** BS3 牌組基礎上，以 BS4 手牌、回牌與深海控制強化的藍色牌組。 */
+export const AI_PRESET_BS4_BLUE_ABYSS_DECK: StarterDeckEntry[] =
+  bs4BlueDeck.entries
+
+/** BS3 牌組基礎上，以 BS4 Trash 資源與場地拆除強化的紫色牌組。 */
+export const AI_PRESET_BS4_PURPLE_MOONLIGHT_DECK: StarterDeckEntry[] =
+  bs4PurpleDeck.entries
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
@@ -474,6 +511,11 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs3-purple-dark-cacao': AI_PRESET_BS3_PURPLE_DARK_CACAO_DECK,
   'bs3-purple-dark-cacao-fighting': AI_PRESET_BS3_PURPLE_DARK_CACAO_FIGHTING_DECK,
   'bs3-yellow-counter': AI_PRESET_BS3_YELLOW_COUNTER_DECK,
+  'bs4-red-fire-spirit': AI_PRESET_BS4_RED_FIRE_SPIRIT_DECK,
+  'bs4-yellow-millennial': AI_PRESET_BS4_YELLOW_MILLENNIAL_DECK,
+  'bs4-green-wind-archer': AI_PRESET_BS4_GREEN_WIND_ARCHER_DECK,
+  'bs4-blue-abyss': AI_PRESET_BS4_BLUE_ABYSS_DECK,
+  'bs4-purple-moonlight': AI_PRESET_BS4_PURPLE_MOONLIGHT_DECK,
 }
 
 const getEnergyColor = (
@@ -703,6 +745,51 @@ export const createAiPresetBs3YellowCounterDeck = (
     [],
   )
 
+export const createAiPresetBs4RedFireSpiritDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS4_RED_FIRE_SPIRIT_DECK,
+    [],
+  )
+
+export const createAiPresetBs4YellowMillennialDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS4_YELLOW_MILLENNIAL_DECK,
+    [],
+  )
+
+export const createAiPresetBs4GreenWindArcherDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS4_GREEN_WIND_ARCHER_DECK,
+    [],
+  )
+
+export const createAiPresetBs4BlueAbyssDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS4_BLUE_ABYSS_DECK,
+    [],
+  )
+
+export const createAiPresetBs4PurpleMoonlightDeck = (
+  playerId: PlayerId,
+): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(
+    playerId,
+    AI_PRESET_BS4_PURPLE_MOONLIGHT_DECK,
+    [],
+  )
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
@@ -725,6 +812,11 @@ export const DECK_CREATORS: Record<
   'bs3-purple-dark-cacao': createAiPresetBs3PurpleDarkCacaoDeck,
   'bs3-purple-dark-cacao-fighting': createAiPresetBs3PurpleDarkCacaoFightingDeck,
   'bs3-yellow-counter': createAiPresetBs3YellowCounterDeck,
+  'bs4-red-fire-spirit': createAiPresetBs4RedFireSpiritDeck,
+  'bs4-yellow-millennial': createAiPresetBs4YellowMillennialDeck,
+  'bs4-green-wind-archer': createAiPresetBs4GreenWindArcherDeck,
+  'bs4-blue-abyss': createAiPresetBs4BlueAbyssDeck,
+  'bs4-purple-moonlight': createAiPresetBs4PurpleMoonlightDeck,
 }
 
 export const createDeckForChoice = (

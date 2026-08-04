@@ -24,6 +24,7 @@ import type {
   EnergyColor,
   GameCard,
   GameState,
+  PendingBattle,
   PendingFaintEffect,
   PlayerId,
   PlayerState,
@@ -32,6 +33,39 @@ import type {
 
 export const isLocalhost = (hostname: string): boolean =>
   hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]'
+
+export const BS4_CONDITION_CARD_NUMBERS = [
+  'BS4-011',
+  'BS4-012',
+  'BS4-014',
+  'BS4-016',
+  'BS4-020',
+  'BS4-023',
+  'BS4-024',
+  'BS4-039',
+  'BS4-040',
+  'BS4-048',
+  'BS4-049',
+  'BS4-052',
+  'BS4-053',
+  'BS4-059',
+  'BS4-061',
+  'BS4-073',
+  'BS4-083',
+  'BS4-089',
+  'BS4-090',
+  'BS4-094',
+  'BS4-106',
+  'BS4-107',
+] as const
+
+export type Bs4ConditionCardNumber =
+  (typeof BS4_CONDITION_CARD_NUMBERS)[number]
+
+const isBs4ConditionCardNumber = (
+  value: string,
+): value is Bs4ConditionCardNumber =>
+  (BS4_CONDITION_CARD_NUMBERS as readonly string[]).includes(value)
 
 export const parseTestStateConfig = (
   searchString: string,
@@ -61,6 +95,11 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | {
+      kind: 'bs4-condition'
+      cardNumber: Bs4ConditionCardNumber
+      conditionMet: boolean
+    }
   | { kind: 'bs3-121-special-victory' }
   | { kind: 'soul-jam-019-equipped' }
   | { kind: 'soul-jam-043-equipped' }
@@ -171,6 +210,20 @@ export const parseTestStateConfig = (
     const cardNumber = testState.slice('card:'.length).trim()
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber }
+    }
+  }
+  if (testState?.startsWith('bs4-condition:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isBs4ConditionCardNumber(cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs4-condition',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
     }
   }
   if (testState === 'bs3-121-special-victory') {
@@ -2551,6 +2604,382 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         battleArea: opponentBattleArea,
       },
     },
+  }
+}
+
+const updateDemoPlayer = (
+  state: GameState,
+  playerId: PlayerId,
+  patch: Partial<PlayerState>,
+): GameState => ({
+  ...state,
+  players: {
+    ...state.players,
+    [playerId]: {
+      ...state.players[playerId],
+      ...patch,
+    },
+  },
+})
+
+const scenarioCookie = (
+  instanceId: string,
+  level: number,
+  hp: number,
+  energyColor: EnergyColor,
+  remainingHp = hp,
+): { cookie: CookieCard; hpCards: GameCard[] } =>
+  cardCheckFillerCookie(
+    instanceId,
+    level,
+    hp,
+    Math.max(0, hp - remainingHp),
+    energyColor,
+  )
+
+const scenarioSupports = (
+  prefix: string,
+  count: number,
+  energyColor: EnergyColor,
+  rested = false,
+) =>
+  Array.from({ length: count }, (_, index) => ({
+    card: testSupportCard(`${prefix}-${index + 1}`, energyColor),
+    rested,
+  }))
+
+const scenarioPendingBattle = (
+  attackerPlayerId: PlayerId,
+  attackerInstanceId: string,
+  defenderPlayerId: PlayerId,
+  targetInstanceId: string,
+  attackEffects: CookieCard['attackEffects'],
+  faintedColors: EnergyColor[] = [],
+  stage: PendingBattle['stage'] = 'attack-effect',
+): PendingBattle => ({
+  attackerPlayerId,
+  defenderPlayerId,
+  attackerInstanceId,
+  targetInstanceId,
+  declaredDamage: 1,
+  remainingDamage: 0,
+  stage,
+  trapUsed: false,
+  revealedHpCard: null,
+  preventKnockoutTargetIds: [],
+  faintedColors,
+  attackEffects: attackEffects ?? [],
+  attackEffectIndex: 0,
+})
+
+/**
+ * Creates focused BS4 condition fixtures for the cards that the generic
+ * card-check state cannot satisfy. The `met` and `unmet` variants are both
+ * intentionally legal states; the latter keeps the card available while
+ * removing only the relevant condition or target.
+ */
+export const createBs4ConditionDemoState = (
+  cardNumber: Bs4ConditionCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  let state = createCardCheckDemoState(cardNumber)
+
+  const setPlayer = (playerId: PlayerId, patch: Partial<PlayerState>) => {
+    state = updateDemoPlayer(state, playerId, patch)
+  }
+
+  const putSourceInBattle = (
+    remainingHp: number,
+    rested = false,
+  ): CookieCard => {
+    const player = state.players['player-one']
+    const source =
+      player.hand.find((card) => card.id === cardNumber) ??
+      player.battleArea.find((entry) => entry.card.id === cardNumber)?.card
+    if (!source || source.type !== 'cookie') {
+      throw new Error(`BS4 condition fixture requires Cookie ${cardNumber}`)
+    }
+    const otherBattleCookies = player.battleArea
+      .filter((entry) => entry.card.id !== cardNumber)
+      .slice(0, 1)
+    const entry = cardCheckBattleEntry(
+      source,
+      Array.from({ length: Math.max(0, remainingHp) }, (_, index) =>
+        testSupportCard(`${cardNumber}-source-hp-${index + 1}`),
+      ),
+      90,
+      rested,
+    )
+    setPlayer('player-one', {
+      hand: player.hand.filter((card) => card.id !== cardNumber),
+      battleArea: [entry, ...otherBattleCookies],
+    })
+    return source
+  }
+
+  const setAttackScenario = (
+    remainingHp = 2,
+  ): CookieCard => {
+    const source = putSourceInBattle(remainingHp, true)
+    const opponent = state.players['player-two']
+    const target = opponent.battleArea[0]
+    if (!target) throw new Error(`BS4 condition fixture requires an opponent target for ${cardNumber}`)
+    state = {
+      ...state,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingBattle: scenarioPendingBattle(
+        'player-one',
+        source.instanceId,
+        'player-two',
+        target.card.instanceId,
+        source.attackEffects,
+      ),
+    }
+    return source
+  }
+
+  const setOpponentTargetRemainingHp = (remainingHp: number) => {
+    const opponent = state.players['player-two']
+    setPlayer('player-two', {
+      battleArea: opponent.battleArea.map((entry, index) =>
+        index === 0
+          ? {
+              ...entry,
+              hpCards: Array.from({ length: remainingHp }, (_, hpIndex) =>
+                testSupportCard(`${cardNumber}-target-hp-${hpIndex + 1}`),
+              ),
+            }
+          : entry,
+      ),
+    })
+  }
+
+  const setDiscardCount = (playerId: PlayerId, count: number, prefix: string) => {
+    setPlayer(playerId, {
+      discardPile: Array.from({ length: count }, (_, index) =>
+        testSupportCard(`${prefix}-${index + 1}`),
+      ),
+    })
+  }
+
+  const addBattleAlly = (
+    level: number,
+    energyColor: EnergyColor,
+    instanceId: string,
+  ) => {
+    const player = state.players['player-one']
+    const ally = scenarioCookie(instanceId, level, 5, energyColor)
+    const sourceEntry = player.battleArea.find(
+      (entry) => entry.card.id === cardNumber,
+    )
+    setPlayer('player-one', {
+      battleArea: sourceEntry
+        ? [sourceEntry, cardCheckBattleEntry(ally.cookie, ally.hpCards, 91)]
+        : player.battleArea,
+    })
+  }
+
+  switch (cardNumber) {
+    case 'BS4-011': {
+      const source = putSourceInBattle(2, true)
+      const target = state.players['player-two'].battleArea[0]
+      state = {
+        ...state,
+        pendingBattle: scenarioPendingBattle(
+          'player-one',
+          source.instanceId,
+          'player-two',
+          target.card.instanceId,
+          source.attackEffects,
+          conditionMet
+            ? [
+                target.card.energyColor && target.card.energyColor !== 'wild'
+                  ? target.card.energyColor
+                  : 'red',
+              ]
+            : [],
+        ),
+      }
+      if (conditionMet) {
+        state = {
+          ...state,
+          pendingBattle: {
+            ...state.pendingBattle!,
+            faintedCookies: [
+              {
+                playerId: 'player-two',
+                energyColor: target.card.energyColor,
+                level: target.card.level,
+              },
+            ],
+          },
+        }
+      }
+      return state
+    }
+    case 'BS4-012':
+      putSourceInBattle(conditionMet ? 1 : 2)
+      return state
+    case 'BS4-014': {
+      const source = putSourceInBattle(2)
+      const opponent = state.players['player-two']
+      const attacker = opponent.battleArea[0]
+      const attackerCard = { ...attacker.card, level: conditionMet ? 1 : 2 }
+      setPlayer('player-two', {
+        battleArea: [
+          { ...attacker, card: attackerCard },
+          ...opponent.battleArea.slice(1),
+        ],
+      })
+      state = {
+        ...state,
+        activePlayerId: 'player-two',
+        pendingBattle: scenarioPendingBattle(
+          'player-two',
+          attackerCard.instanceId,
+          'player-one',
+          source.instanceId,
+          [],
+          [],
+          'damage',
+        ),
+      }
+      return state
+    }
+    case 'BS4-016':
+      setAttackScenario()
+      setOpponentTargetRemainingHp(conditionMet ? 1 : 2)
+      return state
+    case 'BS4-020': {
+      if (conditionMet) {
+        const target = scenarioCookie('BS4-020-red-lv3', 3, 5, 'red')
+        setPlayer('player-one', {
+          battleArea: [cardCheckBattleEntry(target.cookie, target.hpCards, 90)],
+          breakArea: [
+            scenarioCookie('BS4-020-break-1', 3, 5, 'red').cookie,
+            scenarioCookie('BS4-020-break-2', 3, 5, 'red').cookie,
+          ],
+        })
+      } else {
+        setPlayer('player-one', {
+          breakArea: state.players['player-one'].breakArea.filter(
+            (card) => card.level < 3,
+          ),
+        })
+      }
+      return state
+    }
+    case 'BS4-023':
+      setAttackScenario()
+      if (conditionMet) {
+        setPlayer('player-one', {
+          breakArea: [
+            scenarioCookie('BS4-023-break-lv3', 3, 5, 'yellow').cookie,
+            ...state.players['player-one'].breakArea,
+          ],
+        })
+      }
+      return state
+    case 'BS4-024': {
+      putSourceInBattle(1)
+      if (conditionMet) addBattleAlly(3, 'yellow', 'BS4-024-yellow-lv3')
+      setPlayer('player-two', {
+        battleArea: state.players['player-two'].battleArea.slice(0, 1),
+      })
+      return { ...state, activePlayerId: 'player-two', phase: 'main' }
+    }
+    case 'BS4-039':
+      setAttackScenario(conditionMet ? 2 : 1)
+      return state
+    case 'BS4-040': {
+      const sacrifice = scenarioCookie(
+        'BS4-040-sacrifice',
+        conditionMet ? 2 : 1,
+        4,
+        'yellow',
+      )
+      setPlayer('player-one', {
+        battleArea: [cardCheckBattleEntry(sacrifice.cookie, sacrifice.hpCards, 90)],
+        breakArea: conditionMet
+          ? [scenarioCookie('BS4-040-revive', 3, 5, 'yellow').cookie]
+          : state.players['player-one'].breakArea.filter((card) => card.level !== 3),
+      })
+      return state
+    }
+    case 'BS4-048':
+      putSourceInBattle(2)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports('BS4-048-support', conditionMet ? 7 : 6, 'green', true),
+      })
+      return { ...state, phase: 'end', activePlayerId: 'player-one' }
+    case 'BS4-049':
+      setAttackScenario()
+      setPlayer('player-two', {
+        supportArea: scenarioSupports('BS4-049-opponent-support', conditionMet ? 7 : 6, 'green'),
+      })
+      return state
+    case 'BS4-052':
+      putSourceInBattle(2)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports('BS4-052-support', conditionMet ? 5 : 4, 'green', true),
+      })
+      return { ...state, phase: 'end', activePlayerId: 'player-one' }
+    case 'BS4-053':
+      setAttackScenario()
+      setPlayer('player-one', {
+        supportArea: scenarioSupports('BS4-053-support', conditionMet ? 7 : 6, 'green'),
+      })
+      return state
+    case 'BS4-059':
+      putSourceInBattle(1)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports('BS4-059-support', conditionMet ? 3 : 4, 'green'),
+      })
+      return state
+    case 'BS4-061':
+      setAttackScenario()
+      setPlayer('player-one', {
+        supportArea: scenarioSupports('BS4-061-support', conditionMet ? 7 : 6, 'green'),
+      })
+      return state
+    case 'BS4-073':
+    case 'BS4-083':
+      setAttackScenario()
+      setPlayer('player-one', {
+        hand: Array.from({ length: conditionMet ? 5 : 4 }, (_, index) =>
+          testSupportCard(`${cardNumber}-hand-${index + 1}`, 'blue'),
+        ),
+      })
+      return state
+    case 'BS4-089':
+      setAttackScenario()
+      setPlayer('player-two', {
+        battleArea: state.players['player-two'].battleArea.slice(0, conditionMet ? 2 : 1),
+      })
+      setDiscardCount('player-two', conditionMet ? 15 : 14, 'BS4-089-opponent-trash')
+      return state
+    case 'BS4-090': {
+      setAttackScenario()
+      const flipEntry = getCardPoolEntry('BS4-102')
+      if (!flipEntry) throw new Error('BS4 condition fixture requires BS4-102')
+      setPlayer('player-one', {
+        discardPile: Array.from({ length: conditionMet ? 3 : 2 }, (_, index) =>
+          createCard(flipEntry, 'player-one', 300 + index),
+        ),
+      })
+      return state
+    }
+    case 'BS4-094':
+      putSourceInBattle(2)
+      if (conditionMet) addBattleAlly(3, 'purple', 'BS4-094-purple-lv3')
+      return state
+    case 'BS4-106':
+      setDiscardCount('player-two', conditionMet ? 10 : 9, 'BS4-106-opponent-trash')
+      return state
+    case 'BS4-107':
+      setDiscardCount('player-two', conditionMet ? 15 : 14, 'BS4-107-opponent-trash')
+      return state
   }
 }
 

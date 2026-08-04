@@ -220,6 +220,12 @@ export interface OpponentHasCookieWithLevelCondition {
   level: number
 }
 
+/** The Cookie currently attacking the source has at most the given level. */
+export interface AttackerLevelAtMostCondition {
+  kind: 'attacker-level-at-most'
+  level: number
+}
+
 /**
  * 對手戰鬥區餅乾數量剛好等於門檻（BS4-089 的「如果對手的戰鬥區有2個餅乾」，
  * 中文卡面同一張卡另一段用「或更多」明確標示「至少」，這裡沒有那個字尾，
@@ -369,6 +375,7 @@ export type EffectCondition =
   | HandCountAtLeastCondition
   | SupportAreaDecreasedThisTurnCondition
   | OpponentHasCookieWithLevelCondition
+  | AttackerLevelAtMostCondition
   | OpponentBattleAreaCookieCountCondition
   | BattleAreaHasCookieWithLevelCondition
   | BattleAreaHasColorCondition

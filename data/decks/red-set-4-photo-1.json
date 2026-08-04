@@ -1,0 +1,22 @@
+{
+  "name": "紅色第4彈-1",
+  "entries": [
+    { "cardNumber": "BS1-022", "count": 4 },
+    { "cardNumber": "BS2-006", "count": 4 },
+    { "cardNumber": "ST1-022", "count": 2 },
+    { "cardNumber": "BS1-012", "count": 4 },
+    { "cardNumber": "ST1-014", "count": 4 },
+    { "cardNumber": "BS3-022", "count": 3 },
+    { "cardNumber": "BS2-007", "count": 3 },
+    { "cardNumber": "ST1-015", "count": 4 },
+    { "cardNumber": "ST1-001", "count": 4 },
+    { "cardNumber": "BS1-002", "count": 4 },
+    { "cardNumber": "BS3-010", "count": 4 },
+    { "cardNumber": "ST1-009", "count": 4 },
+    { "cardNumber": "BS3-021", "count": 2 },
+    { "cardNumber": "ST1-020", "count": 4 },
+    { "cardNumber": "BS3-019", "count": 2 },
+    { "cardNumber": "BS3-017", "count": 4 },
+    { "cardNumber": "BS4-005", "count": 4 }
+  ]
+}

@@ -19,6 +19,7 @@ import { computePlayerHandFan } from './playerHandFan'
 import './BattleRow.css'
 
 export type BattleResourceKind = 'deck' | 'stage' | 'break'
+export type PaymentLabel = '技能' | '物品' | '場景'
 
 export interface BattleRowProps {
   game: GameState
@@ -30,6 +31,7 @@ export interface BattleRowProps {
   breakEffectTargetIds: Set<string>
   selectedEffectTargetIds: Set<string>
   selectedSkillPaymentIds: Set<string>
+  skillPaymentLabel?: PaymentLabel
   skillPaymentTargetIds?: Set<string>
   skillCostSupportTargetIds?: Set<string>
   selectedSkillCostSupportIds?: Set<string>
@@ -79,6 +81,7 @@ export function BattleRow({
   breakEffectTargetIds,
   selectedEffectTargetIds,
   selectedSkillPaymentIds,
+  skillPaymentLabel = '技能',
   skillPaymentTargetIds = new Set<string>(),
   skillCostSupportTargetIds = new Set<string>(),
   selectedSkillCostSupportIds = new Set<string>(),
@@ -196,7 +199,7 @@ export function BattleRow({
                 canSelectSkillCost
                   ? `選擇${support.card.name}作為技能代價`
                   : canSelectSkillPayment
-                    ? `選擇${support.card.name}支付技能能量`
+                    ? `選擇${support.card.name}支付${skillPaymentLabel}能量`
                   : canSelectTrapPayment
                     ? `選擇${support.card.name}支付陷阱能量`
                   : undefined

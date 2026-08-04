@@ -1709,6 +1709,24 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
       },
     ],
+    'BS4-012': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
+    'BS4-014': [
+      {
+        kind: 'modify-damage-received',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'attacker-level-at-most', level: 1 },
+      },
+    ],
     // === BS4 黃色餅乾卡技能 ===
     'BS4-038': [
       { kind: 'break-to-battle', amount: 1, maxLevel: 2, energyColor: 'yellow' },
@@ -1975,6 +1993,18 @@ export const convertOfficialCardEffects = (
           side: 'self',
           color: 'yellow',
           level: 3,
+        },
+      },
+    ],
+    'BS4-052': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'support-color-count-at-least',
+          color: 'green',
+          count: 5,
         },
       },
     ],

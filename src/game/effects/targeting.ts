@@ -1092,6 +1092,17 @@ export const isEffectConditionMet = (
     )
   }
 
+  if (condition?.kind === 'attacker-level-at-most') {
+    const battle = state.pendingBattle
+    if (!battle || battle.targetInstanceId !== context.sourceInstanceId) {
+      return false
+    }
+    const attacker = state.players[battle.attackerPlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === battle.attackerInstanceId,
+    )
+    return Boolean(attacker && attacker.card.level <= condition.level)
+  }
+
   if (condition?.kind === 'opponent-battle-area-cookie-count') {
     const opponentId = getOpponentId(context.sourcePlayerId)
     return (
