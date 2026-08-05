@@ -139,6 +139,11 @@ export interface BattleUiMatchLike {
   setSelectedOpponentDiscardIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
+  // Opponent rest support (BS5-065 Petrification)
+  selectedOpponentRestSupportIds: string[]
+  setSelectedOpponentRestSupportIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
   // Place hand HP (兩階段選擇第二階段)
   selectedPlaceHandHpId: string | undefined
   setSelectedPlaceHandHpId: (

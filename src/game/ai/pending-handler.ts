@@ -274,6 +274,31 @@ export const handleAiPendingDecision = (
     }
   }
 
+  if (
+    pendingDecision?.kind === 'opponent-rest-support' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇橫置支援卡。`,
+      }
+    }
+    const candidates = state.players[playerId].supportArea
+      .filter((support) => !pendingDecision.activeOnly || !support.rested)
+      .slice(0, pendingDecision.count)
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-opponent-rest-support',
+        playerId,
+        cardIds: candidates.map((card) => card.card.instanceId),
+      }),
+      action: 'idle',
+      description: `${state.players[playerId].name}橫置 ${pendingDecision.count} 張支援卡。`,
+    }
+  }
+
   if (pendingDecision?.kind === 'inspect-deck' && !state.pendingRefresh) {
     if (pendingDecision.playerId !== playerId) {
       return {

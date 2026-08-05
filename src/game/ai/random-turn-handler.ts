@@ -63,6 +63,7 @@ export const commandActionTypes: Record<
   'play-trap': 'play-trap',
   'skip-trap': 'idle',
   'play-blocker': 'play-blocker',
+  'play-attack-response': 'play-attack-response',
   'resolve-flip': 'resolve-flip',
   'resolve-attack-effect': 'resolve-attack-effect',
   'resolve-next-damage': 'resolve-damage',

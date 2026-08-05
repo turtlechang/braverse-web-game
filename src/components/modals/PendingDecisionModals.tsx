@@ -326,6 +326,114 @@ export function HandDiscardResponseModal({
   )
 }
 
+export interface OpponentRestSupportResponseModalProps {
+  sourceCardName: string
+  sourceCard?: GameCard
+  effectText?: string
+  support: GameCard[]
+  requiredCount: number
+  activeOnly: boolean
+  selectedIds: string[]
+  onToggleCard: (instanceId: string) => void
+  onConfirm: () => void
+}
+
+/**
+ * BS5-065 Petrification 的「Then, your opponent selects 1 active card from
+ * their support area. Rest that card.」由對手（效果影響者）選擇要橫置的支援
+ * 卡。與棄手牌提示共用互動模式，但選擇對象是支援區。
+ */
+export function OpponentRestSupportResponseModal({
+  sourceCardName,
+  sourceCard,
+  effectText,
+  support,
+  requiredCount,
+  activeOnly,
+  selectedIds,
+  onToggleCard,
+  onConfirm,
+}: OpponentRestSupportResponseModalProps) {
+  const [minimized, setMinimized] = useState(false)
+  const canConfirm = selectedIds.length === requiredCount
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        className="card-reveal-dock decision-reveal-dock"
+        onClick={() => setMinimized(false)}
+      >
+        <span>
+          <strong>{sourceCardName}</strong>
+          <small>
+            已選擇 {selectedIds.length}/{requiredCount} 張支援卡
+          </small>
+        </span>
+        <Maximize2 aria-hidden="true" />
+      </button>
+    )
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal hand-discard-modal"
+        role="alertdialog"
+      >
+        <button
+          type="button"
+          className="minimize-reveal"
+          onClick={() => setMinimized(true)}
+          title="縮小選擇橫置支援卡提示"
+        >
+          <Minimize2 aria-hidden="true" />
+          縮小
+        </button>
+        <span>橫置支援卡</span>
+        <h2>{sourceCardName} 要求你橫置支援卡</h2>
+        <div className="draw-up-to-source-card hand-discard-source-card">
+          {sourceCard && <CardFace card={sourceCard} />}
+          <div className="draw-up-to-source-info">
+            <span className="draw-up-to-source-label">效果來源</span>
+            {effectText && (
+              <p className="faint-effect-text draw-up-to-effect">
+                <CardEffectText text={effectText} />
+              </p>
+            )}
+          </div>
+        </div>
+        <p className="faint-target-hint">
+          必須選擇 {requiredCount} 張{activeOnly ? '啟動中' : ''}支援卡橫置。
+        </p>
+        <div className="modal-card-options hand-discard-options">
+          {support.map((card) => (
+            <button
+              type="button"
+              key={card.instanceId}
+              className={
+                selectedIds.includes(card.instanceId) ? 'is-selected' : ''
+              }
+              onClick={() => onToggleCard(card.instanceId)}
+            >
+              <CardFace
+                card={card}
+                selected={selectedIds.includes(card.instanceId)}
+              />
+              <span>{card.name}</span>
+            </button>
+          ))}
+        </div>
+        <div className="modal-actions hand-discard-actions">
+          <button type="button" disabled={!canConfirm} onClick={onConfirm}>
+            確認橫置 ({selectedIds.length})
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export interface PlaceHandHpModalProps {
   sourceCardName: string
   sourceCard?: GameCard

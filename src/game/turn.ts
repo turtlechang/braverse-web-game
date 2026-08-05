@@ -7,7 +7,13 @@ import {
   requiresEffectCardSelection,
 } from './effects'
 import { hasBlockingPending } from './pending'
-import type { CookieCard, GameState, PlayerId, TurnPhase } from './types'
+import type {
+  CookieCard,
+  EffectContext,
+  GameState,
+  PlayerId,
+  TurnPhase,
+} from './types'
 import { finishWithDefeat } from './victory'
 
 const assertPlaying = (state: GameState) => {
@@ -179,6 +185,103 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
           cookie.instanceId,
         ],
       }
+    }
+
+    // 場景卡的「When your turn ends, ...」被動觸發（BS5-066 Longan Palace）。
+    // 效果鏈一律交進 pendingAbilityEffect 佇列，讓回合結束流程能在棄牌、抽牌
+    // 等互動決策之間存活，不會因為第一個效果就卡住而丟掉後續效果。
+    const stage = nextState.players[playerId].stage
+    const stageAbility = stage?.card.stageAbility
+    if (
+      stage &&
+      stageAbility?.endPhase &&
+      !nextState.skillUsesThisTurn.includes(stage.card.instanceId)
+    ) {
+      const stageContext: EffectContext = {
+        sourcePlayerId: playerId,
+        sourceInstanceId: stage.card.instanceId,
+        sourceCardName: stage.card.name,
+      }
+      const applicableEffects = stageAbility.effects.filter((effect) =>
+        isEffectConditionMet(nextState, stageContext, effect),
+      )
+      if (applicableEffects.length > 0) {
+        return {
+          ...nextState,
+          skillUsesThisTurn: [
+            ...nextState.skillUsesThisTurn,
+            stage.card.instanceId,
+          ],
+          pendingAbilityEffect: {
+            playerId,
+            sourcePlayerId: playerId,
+            sourceInstanceId: stage.card.instanceId,
+            sourceCardName: stage.card.name,
+            sourceKind: 'stage',
+            effects: applicableEffects,
+            effectIndex: 0,
+          },
+        }
+      }
+      nextState = {
+        ...nextState,
+        skillUsesThisTurn: [
+          ...nextState.skillUsesThisTurn,
+          stage.card.instanceId,
+        ],
+      }
+    }
+  }
+
+  // 排空「Then, when your turn ends, ...」的延遲效果（BS5-056／060）。
+  const deferred = nextState.pendingEndOfTurnEffects ?? []
+  if (deferred.length > 0) {
+    const entry = deferred[0]
+    const context: EffectContext = {
+      sourcePlayerId: entry.sourcePlayerId,
+      sourceInstanceId: entry.sourceInstanceId,
+      sourceCardName: entry.sourceCardName,
+    }
+    for (let index = entry.effectIndex; index < entry.effects.length; index += 1) {
+      const effect = entry.effects[index]
+      if (!isEffectConditionMet(nextState, context, effect)) {
+        continue
+      }
+      if (requiresEffectCardSelection(effect)) {
+        // 剩餘效果鏈交由 pendingAbilityEffect 佇列逐步處理，入口移出佇列。
+        return {
+          ...nextState,
+          pendingEndOfTurnEffects: deferred.slice(1),
+          pendingAbilityEffect: {
+            playerId: entry.playerId,
+            sourcePlayerId: entry.sourcePlayerId,
+            sourceInstanceId: entry.sourceInstanceId,
+            sourceCardName: entry.sourceCardName,
+            sourceKind: 'skill',
+            effects: entry.effects.slice(index),
+            effectIndex: 0,
+          },
+        }
+      }
+      nextState = executeCardEffect(nextState, context, effect, [])
+      if (nextState.status !== 'playing') {
+        return nextState
+      }
+      if (hasBlockingPending(nextState)) {
+        // 目前效果產生互動決策（抽牌、棄牌等）：保留剩餘效果，決策解決後
+        // 重新進入回合結束流程時從下一個效果繼續。
+        return {
+          ...nextState,
+          pendingEndOfTurnEffects: [
+            { ...entry, effectIndex: index + 1 },
+            ...deferred.slice(1),
+          ],
+        }
+      }
+    }
+    nextState = {
+      ...nextState,
+      pendingEndOfTurnEffects: deferred.slice(1),
     }
   }
 

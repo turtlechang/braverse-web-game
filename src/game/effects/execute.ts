@@ -1697,6 +1697,53 @@ export const executeCardEffect = (
     }
   }
 
+  if (effect.kind === 'deferred-end-of-turn') {
+    // 「Then, when your turn ends, ...」：現在只排隊，回合結束階段才結算。
+    return {
+      ...state,
+      pendingEndOfTurnEffects: [
+        ...(state.pendingEndOfTurnEffects ?? []),
+        {
+          playerId: context.sourcePlayerId,
+          sourcePlayerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId,
+          sourceCardName: context.sourceCardName ??
+            state.players[context.sourcePlayerId].battleArea.find(
+              (c) => c.card.instanceId === context.sourceInstanceId,
+            )?.card.name ?? 'Unknown',
+          effects: effect.effects,
+          effectIndex: 0,
+        },
+      ],
+    }
+  }
+
+  if (effect.kind === 'opponent-rests-support') {
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    const targetPlayer = state.players[targetPlayerId]
+    const candidates = targetPlayer.supportArea.filter(
+      (support) => !effect.activeOnly || !support.rested,
+    )
+    if (candidates.length < effect.amount) {
+      return { ...state }
+    }
+    return {
+      ...state,
+      pendingOpponentRestSupport: {
+        playerId: targetPlayerId,
+        count: effect.amount,
+        activeOnly: effect.activeOnly,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName: context.sourceCardName ??
+          state.players[context.sourcePlayerId].battleArea.find(
+            (c) => c.card.instanceId === context.sourceInstanceId,
+          )?.card.name ?? 'Unknown',
+        effectText: effect.kind,
+      },
+    }
+  }
+
   if (effect.kind === 'discard-hand') {
     const player = state.players[context.sourcePlayerId]
     if (player.hand.length < effect.count) {
@@ -2577,6 +2624,12 @@ export const executeCardEffect = (
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
     if (targetPlayer.battleArea.length - selected.length < 1) {
+      // 自我返回（BS5-051 Beet Cookie 的回合結束效果）：若自己是最後一張
+      // 餅乾，官方規則下應觸發補位流程，但引擎維持「戰鬥區至少 1 張」的
+      // 既有約束，這種情況直接略過效果；對手的返回目標維持拋錯。
+      if (effect.target.sourceOnly) {
+        return { ...state }
+      }
       throw new GameRuleError('返回牌庫底後，戰鬥區必須至少保留 1 張餅乾。')
     }
     const selectedIds = new Set(selected.map((cookie) => cookie.card.instanceId))

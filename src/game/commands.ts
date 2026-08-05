@@ -1,10 +1,12 @@
 import { GameRuleError } from './errors'
 import {
   advanceBattleAfterTrap,
+  advanceAttackEffect,
   beginAttack,
   finishBattle,
   getAfterDamageEffectMinMax,
   getFaintEffectMinMax,
+  playAttackResponseSkill,
   playBlocker,
   playTrap,
   resolveAttackEffect,
@@ -28,6 +30,7 @@ import {
   resolveDrawUpTo,
   resolveInspectDeck,
   resolveOpponentHandDiscard,
+  resolveOpponentRestSupport,
 } from './effects'
 import {
   attackCookie,
@@ -100,6 +103,18 @@ export interface OpponentHandDiscardDecision {
   sourceCardName: string
   effectText: string
   count: number
+}
+
+/** 對手的支援區橫置決策（BS5-065 Petrification 的「your opponent selects 1 active card from their support area」）。 */
+export interface OpponentRestSupportDecision {
+  kind: 'opponent-rest-support'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  effectText: string
+  count: number
+  activeOnly?: boolean
 }
 
 export interface InspectDeckDecision {
@@ -178,6 +193,7 @@ export interface EffectOrderDecision {
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
+  | OpponentRestSupportDecision
   | InspectDeckDecision
   | RevealTopDeckDecision
   | OptionalCostAttackDecision
@@ -208,6 +224,12 @@ export interface ResolveFaintEffectCommand {
 
 export interface ResolveOpponentHandDiscardCommand {
   kind: 'resolve-opponent-hand-discard'
+  playerId: PlayerId
+  cardIds: string[]
+}
+
+export interface ResolveOpponentRestSupportCommand {
+  kind: 'resolve-opponent-rest-support'
   playerId: PlayerId
   cardIds: string[]
 }
@@ -270,6 +292,7 @@ export interface ResolvePlaceHandHpCommand {
 export type PendingDecisionCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
+  | ResolveOpponentRestSupportCommand
   | ResolveInspectDeckCommand
   | ResolveRevealTopDeckCommand
   | ResolveOptionalCostAttackCommand
@@ -524,6 +547,14 @@ export interface PlayBlockerCommand {
   paymentIds: string[]
 }
 
+/** 對手指攻回應技能（BS5-081 Squid Ink Cookie）。 */
+export interface PlayAttackResponseCommand {
+  kind: 'play-attack-response'
+  playerId: PlayerId
+  sourceInstanceId: string
+  discardHandIds: string[]
+}
+
 export interface ResolveFlipCommand {
   kind: 'resolve-flip'
   playerId: PlayerId
@@ -576,6 +607,7 @@ export type PlayerActionCommand =
   | PlayTrapCommand
   | SkipTrapCommand
   | PlayBlockerCommand
+  | PlayAttackResponseCommand
   | ResolveFlipCommand
   | ResolveAttackEffectCommand
   | ResolveNextDamageCommand
@@ -608,7 +640,8 @@ const isEffectOrderItemActive = (
         state.pendingInspectDeck?.sourceInstanceId === item.sourceInstanceId ||
         state.pendingDrawUpTo?.sourceInstanceId === item.sourceInstanceId ||
         state.pendingStageTrigger?.sourceInstanceId === item.sourceInstanceId ||
-        state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId,
+        state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId ||
+        state.pendingOpponentRestSupport?.sourceInstanceId === item.sourceInstanceId,
     )
   }
   if (item.kind === 'after-damage-effect') {
@@ -624,7 +657,8 @@ const isEffectOrderItemActive = (
   if (item.kind === 'draw-up-to') {
     return (
       state.pendingDrawUpTo?.sourceInstanceId === item.sourceInstanceId ||
-      state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId
+      state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId ||
+      state.pendingOpponentRestSupport?.sourceInstanceId === item.sourceInstanceId
     )
   }
   if (item.kind === 'inspect-deck') {
@@ -752,6 +786,20 @@ export const getPendingDecision = (
     }
   }
 
+  if (state.pendingOpponentRestSupport) {
+    const pending = state.pendingOpponentRestSupport
+    return {
+      kind: 'opponent-rest-support',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      effectText: pending.effectText,
+      count: pending.count,
+      activeOnly: pending.activeOnly,
+    }
+  }
+
   if (
     state.pendingInspectDeck &&
     !state.pendingRefresh &&
@@ -852,6 +900,7 @@ export const getPendingDecision = (
 const cmdToDecisionKind: Record<string, string> = {
   'resolve-faint-effect': 'faint-effect',
   'resolve-opponent-hand-discard': 'opponent-hand-discard',
+  'resolve-opponent-rest-support': 'opponent-rest-support',
   'resolve-inspect-deck': 'inspect-deck',
   'resolve-reveal-top-deck': 'reveal-top-deck',
   'resolve-optional-cost-attack': 'optional-cost-attack',
@@ -998,8 +1047,25 @@ const applyPendingDecisionCommand = (
     }
     case 'resolve-faint-effect':
       return resolveFaintEffect(state, command.targetIds, command.paymentIds ?? [])
-    case 'resolve-opponent-hand-discard':
-      return resolveOpponentHandDiscard(state, command.playerId, command.cardIds)
+    case 'resolve-opponent-hand-discard': {
+      // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
+      const resolved = resolveOpponentHandDiscard(
+        state,
+        command.playerId,
+        command.cardIds,
+      )
+      const activeBattle = resolved.pendingBattle
+      if (
+        activeBattle &&
+        activeBattle.stage === 'attack-effect' &&
+        activeBattle.attackEffectIndex < activeBattle.attackEffects.length
+      ) {
+        return advanceAttackEffect(resolved, activeBattle)
+      }
+      return resolved
+    }
+    case 'resolve-opponent-rest-support':
+      return resolveOpponentRestSupport(state, command.playerId, command.cardIds)
     case 'resolve-inspect-deck':
       return resolveInspectDeck(state, command.playerId, command.pickedCardIds, command.restOrder)
     case 'resolve-reveal-top-deck': {
@@ -2002,6 +2068,11 @@ const applyPlayerActionCommand = (
       return playBlocker(state, command.playerId, {
         sourceInstanceId: command.sourceInstanceId,
         paymentIds: command.paymentIds,
+      })
+    case 'play-attack-response':
+      return playAttackResponseSkill(state, command.playerId, {
+        sourceInstanceId: command.sourceInstanceId,
+        discardHandIds: command.discardHandIds,
       })
     case 'resolve-flip':
       return resolveFlip(state, command.playerId, {

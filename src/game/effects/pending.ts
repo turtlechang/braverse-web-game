@@ -71,6 +71,62 @@ export const resolveOpponentHandDiscard = (
   })
 }
 
+export const resolveOpponentRestSupport = (
+  state: GameState,
+  playerId: PlayerId,
+  selectedCardIds: string[],
+): GameState => {
+  const pending = state.pendingOpponentRestSupport
+  if (!pending) {
+    throw new GameRuleError('目前沒有等待對手橫置支援卡的決策。')
+  }
+
+  if (pending.playerId !== playerId) {
+    throw new GameRuleError('不是目前需要橫置支援卡的玩家。')
+  }
+
+  const uniqueIds = [...new Set(selectedCardIds)]
+  if (uniqueIds.length !== pending.count) {
+    throw new GameRuleError(`必須選擇 ${pending.count} 張支援卡橫置。`)
+  }
+
+  if (uniqueIds.length !== selectedCardIds.length) {
+    throw new GameRuleError('不能重複選擇同一張支援卡。')
+  }
+
+  const player = state.players[playerId]
+  const selectedSet = new Set(uniqueIds)
+  for (const instanceId of uniqueIds) {
+    const support = player.supportArea.find(
+      (entry) => entry.card.instanceId === instanceId,
+    )
+    if (!support) {
+      throw new GameRuleError('選擇的卡片不在你的支援區中。')
+    }
+    if (pending.activeOnly && support.rested) {
+      throw new GameRuleError('只能選擇活躍狀態的支援卡。')
+    }
+  }
+
+  const updatedPlayer: PlayerState = {
+    ...player,
+    supportArea: player.supportArea.map((entry) =>
+      selectedSet.has(entry.card.instanceId)
+        ? { ...entry, rested: true }
+        : entry,
+    ),
+  }
+
+  return continuePendingReplacements({
+    ...state,
+    players: {
+      ...state.players,
+      [playerId]: updatedPlayer,
+    },
+    pendingOpponentRestSupport: null,
+  })
+}
+
 export const resolveInspectDeck = (
   state: GameState,
   playerId: PlayerId,

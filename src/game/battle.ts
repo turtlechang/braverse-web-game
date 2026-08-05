@@ -650,6 +650,117 @@ export interface PlayBlockerOptions {
   paymentIds: string[]
 }
 
+/**
+ * 對手指攻回應技能候選（BS5-081 Squid Ink Cookie 的「When your opponent's
+ * Cookie attacks」）：防守方在陷阱視窗（stage 'trap'）內可以宣告的
+ * 一次性回應技能。與陷阱／阻擋者不同，此技能不關閉回應窗，使用後仍可
+ * 繼續選陷阱／阻擋者或直接 skipTrap。
+ */
+export const getAttackResponseSkillCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+): CookieInBattle[] => {
+  const battle = state.pendingBattle
+  if (
+    !battle ||
+    battle.stage !== 'trap' ||
+    battle.defenderPlayerId !== playerId
+  ) {
+    return []
+  }
+  return state.players[playerId].battleArea.filter((cookie) => {
+    const skill = cookie.card.skill
+    if (!skill || skill.trigger !== 'opponent-attack') return false
+    if (
+      skill.oncePerTurn &&
+      state.skillUsesThisTurn.includes(
+        cookie.battleEntryId ?? cookie.card.instanceId,
+      )
+    ) {
+      return false
+    }
+    const cost = skill.cost ?? {}
+    return (
+      state.players[playerId].hand.length >= (cost.discardHand ?? 0)
+    )
+  })
+}
+
+export interface PlayAttackResponseSkillOptions {
+  sourceInstanceId: string
+  discardHandIds: string[]
+}
+
+/**
+ * 對手指攻回應技能（BS5-081）：支付手牌代價後，這次戰鬥該餅乾的 HP
+ * 不會歸零（寫入 pendingBattle.preventKnockoutTargetIds，與陷阱的
+ * prevent-knockout 共用同一條傷害防護檢查）。回應窗維持 open。
+ */
+export const playAttackResponseSkill = (
+  state: GameState,
+  playerId: PlayerId,
+  options: PlayAttackResponseSkillOptions,
+): GameState => {
+  const battle = requirePendingBattle(state)
+  if (battle.stage !== 'trap' || battle.defenderPlayerId !== playerId) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  const player = state.players[playerId]
+  const source = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === options.sourceInstanceId,
+  )
+  const skill = source?.card.skill
+  if (!source || !skill || skill.trigger !== 'opponent-attack') {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  const useKey = source.battleEntryId ?? source.card.instanceId
+  if (skill.oncePerTurn && state.skillUsesThisTurn.includes(useKey)) {
+    throw new GameRuleError('This skill can only be used once per turn.')
+  }
+
+  const cost = skill.cost ?? {}
+  const discardCount = cost.discardHand ?? 0
+  const uniqueDiscardIds = [...new Set(options.discardHandIds)]
+  if (uniqueDiscardIds.length !== discardCount) {
+    throw new GameRuleError(
+      `Must discard exactly ${discardCount} cards for this skill.`,
+    )
+  }
+  if (uniqueDiscardIds.length !== options.discardHandIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  const discardedCards = player.hand.filter((card) =>
+    uniqueDiscardIds.includes(card.instanceId),
+  )
+  if (discardedCards.length !== uniqueDiscardIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...player,
+        hand: player.hand.filter(
+          (card) => !uniqueDiscardIds.includes(card.instanceId),
+        ),
+        discardPile: [...player.discardPile, ...discardedCards],
+      },
+    },
+    pendingBattle: {
+      ...battle,
+      preventKnockoutTargetIds: [
+        ...battle.preventKnockoutTargetIds,
+        source.card.instanceId,
+      ],
+    },
+    skillUsesThisTurn: [...state.skillUsesThisTurn, useKey],
+  }
+}
+
 export const playBlocker = (
   state: GameState,
   playerId: PlayerId,
@@ -1529,7 +1640,7 @@ const hasApplicableOptionalAttackEffect = (
       hasRequiredEffectTargets(state, context, effect),
   )
 
-const advanceAttackEffect = (
+export const advanceAttackEffect = (
   state: GameState,
   battle: PendingBattle,
 ): GameState => {
@@ -1828,6 +1939,30 @@ export const resolveAttackEffect = (
         effects: effect.effects,
         effectText: effect.effectText,
         sourceEnergy: effect.sourceEnergy,
+      },
+    }
+  }
+
+  if (effect.kind === 'discard-hand') {
+    // 攻擊後續效果的棄牌代價（BS5-080 的「Then, <discard 2 cards.>」）：
+    // 交由既有的 pendingOpponentHandDiscard 通道讓玩家選牌，但保留
+    // pendingBattle（stage 'attack-effect'），棄牌完成後由
+    // resolve-opponent-hand-discard 命令接續 advanceAttackEffect，
+    // 不能走 executeCardEffect（該路徑會直接把下一個效果也結算掉）。
+    const player = state.players[playerId]
+    if (player.hand.length < effect.count) {
+      return advanceAttackEffect(state, battle)
+    }
+    return {
+      ...state,
+      pendingOpponentHandDiscard: {
+        playerId,
+        count: effect.count,
+        destination: effect.destination,
+        sourcePlayerId: playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+        sourceCardName: effectContext.sourceCardName ?? 'Unknown',
+        effectText: effect.kind,
       },
     }
   }

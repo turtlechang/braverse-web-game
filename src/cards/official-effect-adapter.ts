@@ -2426,6 +2426,139 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    // BS5-045 Potato Cookie：【On Play】<Return 1 card from your support area
+    // to your hand.> Draw up to 1 card from your deck.
+    'BS5-045': [
+      {
+        kind: 'support-to-hand',
+        amount: 1,
+        optional: true,
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS5-048 Bellflower Cookie：【Activate】<{G}><Rest this card.>
+    // <Discard 1 card.> 選至多 1 張對手戰鬥區中沒有技能、LV.1 的餅乾，使其
+    // 昏厥。效果與代價寫法同 BS5-036（YELLOW）。
+    'BS5-048': [
+      {
+        kind: 'make-faint',
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 1,
+          noSkillOnly: true,
+        },
+      },
+    ],
+    // BS5-051 Beet Cookie：When your turn ends, if there are 2 active cards or
+    // more in your support area, <can be used as {G}.> Place this Cookie on the
+    // bottom of your deck.「can be used as {G}」是能量補充說明，不建效果；
+    // 回合結束觸發由技能 endPhase 承載。
+    'BS5-051': [
+      {
+        kind: 'return-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'active-support-count-at-least', count: 2 },
+      },
+    ],
+    // BS5-053 Shine Muscat Cookie：【On Play】<{G}{G}> Place up to 1 card from
+    // the top of your deck into your support area as rested. 代價自動解析。
+    'BS5-053': [{ kind: 'deck-to-support', amount: 1, rested: true }],
+    // BS5-056 Longan Dragon Cookie：When your turn ends, if there are 3 active
+    // cards or more in your support area, <can be used as {G}.> Select up to 1
+    // of your opponent's Cookies. That Cookie receives 2 damage. 被動回合結束
+    // 觸發（技能 endPhase）；攻擊的 Then 回合結束延遲見 exactAttackEffects。
+    'BS5-056': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'active-support-count-at-least', count: 3 },
+      },
+    ],
+    // BS5-058 Ginseng Cookie：When your turn ends, if there are 3 cards or less
+    // in your support area, <can be used as {G}.> Draw up to 1 card from your
+    // deck。
+    'BS5-058': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'support-count-at-most', count: 3 },
+      },
+    ],
+    // BS5-059 Purple Yam Cookie：【On Play】選至多 1 張對手的休息中 LV.2 以下
+    // 餅乾，2 傷害。與 BS5-028 相同但沒有 break 條件。
+    'BS5-059': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          restedOnly: true,
+        },
+      },
+    ],
+    // BS5-063 Hero Cookie：When your turn ends, if there are 2 active cards or
+    // more in your support area, draw up to 2 cards from your deck.
+    'BS5-063': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'active-support-count-at-least', count: 2 },
+      },
+    ],
+    // BS5-064 Dragon Orb（item）：<{G}{G}{G}> Place up to 1 card from the top
+    // of your deck into your support area as rested. Then, if there are 7 cards
+    // or more in your support area, draw up to 1 card from your deck. 效果與
+    // item 能力相同，提供主效果盤點（比照 BS5-042）。
+    'BS5-064': [
+      { kind: 'deck-to-support', amount: 1, rested: true },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'support-count-at-least', count: 7 },
+      },
+    ],
+    // BS5-065 Petrification（trap）：<{G}{G}{G}> 對手餅乾本回合攻擊 -2。
+    // Then, if there are 7 cards or more in your support area, your opponent
+    // selects 1 active card from their support area. Rest that card. 完整陷阱
+    // 能力見 exactTrapEffects；這裡只做主效果盤點。
+    'BS5-065': [
+      {
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'opponent-rests-support',
+        amount: 1,
+        activeOnly: true,
+        condition: { kind: 'support-count-at-least', count: 7 },
+      },
+    ],
+    // BS5-066 Longan Palace（stage）：<{G}> Place in your stage area. When
+    // your turn ends, <discard 1 card.> Set up to 1 card from your support area
+    // as active. Then, if [Longan Dragon Cookie] is in your battle area, draw
+    // up to 1 card from your deck. 效果與 stageAbility 相同（棄牌為鏈中第一
+    // 個效果），提供主效果盤點（比照 BS5-044）。
+    'BS5-066': [
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'set-active', supportCount: 1 },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Longan Dragon Cookie',
+        },
+      },
+    ],
     // 是 flipText。BS5-004 的附著 +1 HP 由 FlipAbility.attachedHpBonus
     // 承載（見 exactFlipEffects），這裡空效果陣列只為讓主效果狀態判定為
     // supported；BS5-009 就是一般的抽 1。代價<Discard 1 card.>由 flip 轉接
@@ -3397,6 +3530,25 @@ export const convertOfficialStageAbility = (
         },
       },
     ],
+    // BS5-066 Longan Palace：<{G}> Place in your stage area. When your turn
+    // ends, <discard 1 card.> Set up to 1 card from your support area as
+    // active. Then, if [Longan Dragon Cookie] is in your battle area, draw up
+    // to 1 card from your deck. 被動回合結束觸發（endPhase），沒有 {mob}
+    // 標記所以 cannot be manually activated；棄牌是效果鏈第一個效果（由
+    // pendingAbilityEffect 通道讓玩家選要棄的手牌），代價列留空。
+    'BS5-066': [
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'set-active', supportCount: 1 },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Longan Dragon Cookie',
+        },
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -3435,6 +3587,12 @@ export const convertOfficialStageAbility = (
       energy: { yellow: 1 },
       discardHand: 0,
     },
+    // BS5-066 Longan Palace：<{G}> Place in your stage area. 被動回合結束
+    // 觸發，代價為 0（棄牌在效果鏈中處理，見 exactStageEffects）。
+    'BS5-066': {
+      energy: {},
+      discardHand: 0,
+    },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {
@@ -3452,6 +3610,7 @@ export const convertOfficialStageAbility = (
         card.baseCardNumber === 'BS3-095' ||
         RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
       ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
+      ...(card.baseCardNumber === 'BS5-066' ? { endPhase: true } : {}),
     }
   }
 
@@ -4480,6 +4639,35 @@ export const convertOfficialAttackEffects = (
         condition: { kind: 'source-hp-less-than', amount: 5 },
       },
     ],
+    // === BS5 GREEN 攻擊 Then ===
+    // BS5-056 Longan Dragon Cookie：Then, when your turn ends, set up to 1
+    // card from your support area as active. 回合結束延遲效果：攻擊結算時只
+    // 排隊（deferred-end-of-turn），由 end 階段的 processEndPhaseEffects
+    // 依序結算。
+    'BS5-056': [
+      {
+        kind: 'deferred-end-of-turn',
+        effects: [{ kind: 'set-active', supportCount: 1 }],
+      },
+    ],
+    // BS5-059 Purple Yam Cookie：Then, <return 1 card from your support area
+    // to your hand.> Draw up to 1 card from your deck.
+    'BS5-059': [
+      {
+        kind: 'support-to-hand',
+        amount: 1,
+        optional: true,
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS5-060 Croissant Cookie：Then, when your turn ends, set up to 3 cards
+    // from your support area as active.
+    'BS5-060': [
+      {
+        kind: 'deferred-end-of-turn',
+        effects: [{ kind: 'set-active', supportCount: 3 }],
+      },
+    ],
   }
 
   if (exactAttackEffects[cardKey]) {
@@ -5214,6 +5402,28 @@ export const convertOfficialTrapAbility = (
           kind: 'hp-to-hand',
           amount: 1,
           target: { side: 'self', min: 0, max: 1 },
+        },
+      ],
+    },
+    // BS5-065 Petrification：<{G}{G}{G}> Select up to 1 of your opponent's
+    // Cookies. This attack deals -2 attack damage this turn. Then, if there
+    // are 7 cards or more in your support area, your opponent selects 1
+    // active card from their support area. Rest that card. 無發動門檻（7 張
+    // 支援區條件屬於 Then 子句，不是陷阱的 play 條件）；對手選擇橫置由
+    // opponent-rests-support 效果通道處理。
+    'BS5-065': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'opponent-rests-support',
+          amount: 1,
+          activeOnly: true,
+          condition: { kind: 'support-count-at-least', count: 7 },
         },
       ],
     },

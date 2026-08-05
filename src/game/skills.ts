@@ -275,6 +275,19 @@ export const getDiscardHandCostCandidates = (
     isDiscardHandCostCandidate(cost, card, sourceInstanceId),
   )
 
+/**
+ * 「Discard your entire hand.」類代價（BS5-083）：整副手牌都是合法選擇
+ * （不含來源卡自身）；與 `discardHand` 不同，不限制張數與顏色。
+ */
+export const getDiscardAllHandCostCandidates = (
+  cost: AbilityCost,
+  hand: readonly GameCard[],
+  sourceInstanceId?: string,
+): GameCard[] =>
+  cost.discardAllHand
+    ? hand.filter((card) => card.instanceId !== sourceInstanceId)
+    : []
+
 export const getHpToTrashCostCandidates = (
   cost: AbilityCost,
   battleArea: CookieInBattle[],

@@ -393,6 +393,7 @@ const commandShapes = {
     optionalStringArrays: ['paymentIds'],
   },
   'resolve-opponent-hand-discard': { requiredStringArrays: ['cardIds'] },
+  'resolve-opponent-rest-support': { requiredStringArrays: ['cardIds'] },
   'resolve-inspect-deck': {
     requiredStringArrays: ['pickedCardIds', 'restOrder'],
   },
@@ -525,6 +526,10 @@ const commandShapes = {
   'play-blocker': {
     requiredStrings: ['sourceInstanceId'],
     requiredStringArrays: ['paymentIds'],
+  },
+  'play-attack-response': {
+    requiredStrings: ['sourceInstanceId'],
+    requiredStringArrays: ['discardHandIds'],
   },
   'resolve-flip': {
     requiredBooleans: ['activate'],

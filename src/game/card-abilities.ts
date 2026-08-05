@@ -125,6 +125,7 @@ const canPayAbilityCost = (
   return (
     remainingSupportCount >= supportCost &&
     availableDiscardCount >= (cost.discardHand ?? 0) &&
+    (!cost.discardAllHand || player.hand.length > 0) &&
     (!cost.hpToTrash ||
       getHpToTrashCostCandidates(
         cost,
@@ -176,8 +177,20 @@ const payAbilityCost = (
   if (supportToHandIds.length !== (cost.supportToHand ?? 0)) {
     throw new GameRuleError(`必須將 ${cost.supportToHand ?? 0} 張支援區卡返回手牌。`)
   }
-  if (discardHandIds.length !== (cost.discardHand ?? 0)) {
-    throw new GameRuleError(`必須棄掉 ${cost.discardHand ?? 0} 張手牌。`)
+  if (cost.discardAllHand) {
+    if (discardHandIds.length > 0) {
+      throw new GameRuleError('此代價直接棄置整副手牌，不需要選牌。')
+    }
+  } else if (
+    cost.discardHandAtLeast
+      ? discardHandIds.length < (cost.discardHand ?? 0)
+      : discardHandIds.length !== (cost.discardHand ?? 0)
+  ) {
+    throw new GameRuleError(
+      cost.discardHandAtLeast
+        ? `必須至少棄掉 ${cost.discardHand ?? 0} 張手牌。`
+        : `必須棄掉 ${cost.discardHand ?? 0} 張手牌。`,
+    )
   }
 
   const paymentSet = new Set(options.paymentIds)
@@ -205,10 +218,10 @@ const payAbilityCost = (
     throw new GameRuleError('選擇的支援區回手費用不合法。')
   }
 
-  const discardedHandCards = player.hand.filter((card) =>
-    discardHandIds.includes(card.instanceId),
-  )
-  if (discardedHandCards.length !== discardHandIds.length) {
+  const discardedHandCards = cost.discardAllHand
+    ? player.hand
+    : player.hand.filter((card) => discardHandIds.includes(card.instanceId))
+  if (discardedHandCards.length !== (cost.discardAllHand ? player.hand.length : discardHandIds.length)) {
     throw new GameRuleError('選擇的棄手牌費用不合法。')
   }
   if (cost.discardHandColor) {
@@ -251,12 +264,14 @@ const payAbilityCost = (
           ? { ...support, rested: true }
           : support,
       ),
-    hand: [
-      ...player.hand.filter(
-        (card) => !discardHandIds.includes(card.instanceId),
-      ),
-      ...selectedSupportToHand.map((support) => support.card),
-    ],
+    hand: cost.discardAllHand
+      ? selectedSupportToHand.map((support) => support.card)
+      : [
+          ...player.hand.filter(
+            (card) => !discardHandIds.includes(card.instanceId),
+          ),
+          ...selectedSupportToHand.map((support) => support.card),
+        ],
     discardPile: [
       ...player.discardPile,
       ...selectedSupportToTrash.map((support) => support.card),
@@ -565,7 +580,7 @@ export const canActivateStage = (
     assertMainAction(state, playerId)
     const stage = state.players[playerId].stage
     const ability = stage?.card.stageAbility
-    if (!stage || stage.rested || !ability || ability.triggered) return false
+    if (!stage || stage.rested || !ability || ability.triggered || ability.endPhase) return false
     return (
       canPayAbilityCost(state, playerId, ability.cost, stage.card.instanceId) &&
       (

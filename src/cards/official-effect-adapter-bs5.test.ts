@@ -718,3 +718,226 @@ describe('BS5 candidate YELLOW effect adapter', () => {
     })
   })
 })
+
+describe('BS5 candidate GREEN effect adapter', () => {
+  describe('主效果（exactStarterEffects）', () => {
+    it('BS5-045 Potato Cookie 登場效果：支援區回手 1（可選）後抽至多 1', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-045'))).toMatchObject({
+        trigger: 'on-play',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          { kind: 'support-to-hand', amount: 1, optional: true },
+          { kind: 'draw-up-to', max: 1 },
+        ],
+      })
+    })
+
+    it('BS5-048 Bellflower Cookie 啟動技能：{G} + 休息 + 棄 1 卡，使對手無技能 LV.1 餅乾昏厥', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-048'))).toMatchObject({
+        trigger: 'activate',
+        restSource: true,
+        cost: { energy: { green: 1 }, discardHand: 1 },
+        effects: [
+          {
+            kind: 'make-faint',
+            target: {
+              side: 'opponent',
+              min: 0,
+              max: 1,
+              maxLevel: 1,
+              noSkillOnly: true,
+            },
+          },
+        ],
+      })
+    })
+
+    it('BS5-051 Beet Cookie 被動回合結束效果：支援區 2 張以上啟動卡時自己回牌庫底', () => {
+      const skill = convertOfficialCookieSkill(findBs5Card('BS5-051'))
+      expect(skill).toBeDefined()
+      expect(skill).toMatchObject({
+        trigger: 'passive',
+        endPhase: true,
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'return-to-deck-bottom',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            condition: { kind: 'active-support-count-at-least', count: 2 },
+          },
+        ],
+      })
+    })
+
+    it('BS5-053 Shine Muscat Cookie 登場效果：{G}{G} 代價，牌庫頂至多 1 張進支援區橫置', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-053'))).toMatchObject({
+        trigger: 'on-play',
+        cost: { energy: { green: 2 }, discardHand: 0 },
+        effects: [{ kind: 'deck-to-support', amount: 1, rested: true }],
+      })
+    })
+
+    it('BS5-056 Longan Dragon Cookie 被動回合結束效果：支援區 3 張以上啟動卡時對手下 2 傷害', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-056'))).toMatchObject({
+        trigger: 'passive',
+        endPhase: true,
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'active-support-count-at-least', count: 3 },
+          },
+        ],
+      })
+    })
+
+    it('BS5-058 Ginseng Cookie 被動回合結束效果：支援區 3 張以下時抽至多 1', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-058'))).toMatchObject({
+        trigger: 'passive',
+        endPhase: true,
+        effects: [
+          {
+            kind: 'draw-up-to',
+            max: 1,
+            condition: { kind: 'support-count-at-most', count: 3 },
+          },
+        ],
+      })
+    })
+
+    it('BS5-059 Purple Yam Cookie 登場效果：對手休息中 LV.2 以下 2 傷害', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-059'))).toMatchObject({
+        trigger: 'on-play',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: {
+              side: 'opponent',
+              min: 0,
+              max: 1,
+              maxLevel: 2,
+              restedOnly: true,
+            },
+          },
+        ],
+      })
+    })
+
+    it('BS5-063 Hero Cookie 被動回合結束效果：支援區 2 張以上啟動卡時抽至多 2', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-063'))).toMatchObject({
+        trigger: 'passive',
+        endPhase: true,
+        effects: [
+          {
+            kind: 'draw-up-to',
+            max: 2,
+            condition: { kind: 'active-support-count-at-least', count: 2 },
+          },
+        ],
+      })
+    })
+  })
+
+  describe('道具／陷阱／場景能力', () => {
+    it('BS5-064 Dragon Orb 道具：{G}{G}{G}，牌庫頂至多 1 張進支援區橫置，支援區 7 張以上再抽至多 1', () => {
+      expect(convertOfficialItemAbility(findBs5Card('BS5-064'))).toMatchObject({
+        cost: { green: 3 },
+        effects: [
+          { kind: 'deck-to-support', amount: 1, rested: true },
+          {
+            kind: 'draw-up-to',
+            max: 1,
+            condition: { kind: 'support-count-at-least', count: 7 },
+          },
+        ],
+      })
+    })
+
+    it('BS5-065 Petrification 陷阱：無發動門檻，本回合攻擊 -2，Then 對手橫置 1 張啟動中支援卡', () => {
+      const trap = convertOfficialTrapAbility(findBs5Card('BS5-065'))
+      expect(trap).toBeDefined()
+      expect(trap?.condition).toBeUndefined()
+      expect(trap?.effects).toMatchObject([
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'opponent-rests-support',
+          amount: 1,
+          activeOnly: true,
+          condition: { kind: 'support-count-at-least', count: 7 },
+        },
+      ])
+    })
+
+    it('BS5-066 Longan Palace 場景：{G} 放置，被動回合結束觸發（非手動啟動）', () => {
+      const stage = convertOfficialStageAbility(findBs5Card('BS5-066'))
+      expect(stage).toBeDefined()
+      expect(stage?.placementCost).toMatchObject({ green: 1 })
+      expect(stage?.cost).toMatchObject({ energy: {}, discardHand: 0 })
+      expect(stage?.endPhase).toBe(true)
+      expect(stage?.effects).toMatchObject([
+        { kind: 'discard-hand', count: 1 },
+        { kind: 'set-active', supportCount: 1 },
+        {
+          kind: 'draw-up-to',
+          max: 1,
+          condition: {
+            kind: 'battle-area-has-named-cookie',
+            side: 'self',
+            name: 'Longan Dragon Cookie',
+          },
+        },
+      ])
+    })
+  })
+
+  describe('攻擊 Then（exactAttackEffects）', () => {
+    it('BS5-056 Longan Dragon Cookie：Then, when your turn ends, 支援區至多 1 張啟動', () => {
+      expect(convertOfficialAttackEffects(findBs5Card('BS5-056'))).toMatchObject([
+        {
+          kind: 'deferred-end-of-turn',
+          effects: [{ kind: 'set-active', supportCount: 1 }],
+        },
+      ])
+    })
+
+    it('BS5-059 Purple Yam Cookie：Then 支援區回手 1（可選）後抽至多 1', () => {
+      expect(convertOfficialAttackEffects(findBs5Card('BS5-059'))).toMatchObject([
+        { kind: 'support-to-hand', amount: 1, optional: true },
+        { kind: 'draw-up-to', max: 1 },
+      ])
+    })
+
+    it('BS5-060 Croissant Cookie：Then, when your turn ends, 支援區至多 3 張啟動', () => {
+      expect(convertOfficialAttackEffects(findBs5Card('BS5-060'))).toMatchObject([
+        {
+          kind: 'deferred-end-of-turn',
+          effects: [{ kind: 'set-active', supportCount: 3 }],
+        },
+      ])
+    })
+  })
+
+  describe('異畫變體共用規則', () => {
+    it('BS5-056@1 與本體共用相同技能效果', () => {
+      expect(convertOfficialCardEffects(findBs5Card('BS5-056@1'))).toMatchObject({
+        status: 'supported',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'active-support-count-at-least', count: 3 },
+          },
+        ],
+      })
+    })
+  })
+})

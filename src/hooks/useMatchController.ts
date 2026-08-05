@@ -357,6 +357,8 @@ export function useMatchController(params: {
   >([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
+  const [selectedOpponentRestSupportIds, setSelectedOpponentRestSupportIds] =
+    useState<string[]>([])
   const [selectedPlaceHandHpId, setSelectedPlaceHandHpId] = useState<
     string | undefined
   >(undefined)
@@ -989,6 +991,7 @@ export function useMatchController(params: {
       setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
     },
     [animations, battleActions, resetSetup],
@@ -1012,6 +1015,7 @@ export function useMatchController(params: {
       setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
     },
     [animations, battleActions, setSetupStep],
@@ -1147,6 +1151,9 @@ export function useMatchController(params: {
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
+    // Opponent rest support (BS5-065 Petrification)
+    selectedOpponentRestSupportIds,
+    setSelectedOpponentRestSupportIds,
     // Place hand HP (兩階段選擇第二階段)
     selectedPlaceHandHpId,
     setSelectedPlaceHandHpId,

@@ -27,6 +27,7 @@ export {
   requiresEffectCardSelection,
   requiresTargetSelection,
   resolveOpponentHandDiscard,
+  resolveOpponentRestSupport,
   resolveInspectDeck,
   resolveDrawUpTo,
   selectEffectTargets,

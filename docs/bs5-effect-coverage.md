@@ -7,19 +7,19 @@
 | 項目 | 數量 |
 | --- | ---: |
 | BS5 基礎卡 | 111 |
-| 主效果已轉接 | 45 |
+| 主效果已轉接 | 55 |
 | 主效果沒有文字 | 31 |
-| 主效果待轉接 | 35 |
-| 額外能力已轉接 | 48 |
-| 額外能力待轉接 | 32 |
-| 攻擊 Then 已轉接 | 13 / 26 |
+| 主效果待轉接 | 25 |
+| 額外能力已轉接 | 57 |
+| 額外能力待轉接 | 23 |
+| 攻擊 Then 已轉接 | 16 / 26 |
 
 ## 逐色稽核矩陣
 
 | 顏色 | 基礎卡 | 主效果待轉接 | 額外能力待轉接 | 攻擊 Then 待轉接 |
 | --- | ---: | ---: | ---: | ---: |
 | BLUE | 22 | 14 | 13 | 4 |
-| GREEN | 22 | 10 | 9 | 3 |
+| GREEN | 22 | 0 | 0 | 0 |
 | PURE | 1 | 1 | 1 | 0 |
 | PURPLE | 22 | 10 | 9 | 6 |
 | RED | 22 | 0 | 0 | 0 |
@@ -29,18 +29,6 @@
 
 | 卡號 | 顏色 | 類型 | 卡名 | 卡面文字 |
 | --- | --- | --- | --- | --- |
-| BS5-045 | GREEN | cookie | Potato Cookie | 【On Play】 <Return 1 card from your support area to your hand.> Draw up to 1 card from your deck. |
-| BS5-048 | GREEN | cookie | Bellflower Cookie | 【Activate】 <{G}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint. |
-| BS5-051 | GREEN | cookie | Beet Cookie | When your turn ends, if there are 2 active cards or more in your support area, <can be used as {G}.> Place this Cookie on the bottom of your deck. |
-| BS5-053 | GREEN | cookie | Shine Muscat Cookie | 【On Play】 <{G}{G}> Place up to 1 card from the top of your deck into your support area as rested. |
-| BS5-058 | GREEN | cookie | Ginseng Cookie | When your turn ends, if there are 3 cards or less in your support area, <can be used as {G}.> Draw up to 1 card from your deck. |
-| BS5-059 | GREEN | cookie | Purple Yam Cookie | 【On Play】 Select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage. |
-| BS5-063 | GREEN | cookie | Hero Cookie | When your turn ends, if there are 2 active cards or more in your support area, draw up to 2 cards from your deck. |
-| BS5-064 | GREEN | item | Dragon Orb | <{G}{G}{G}> Place up to 1 card from the top of your deck into your support area as rested. Then, if there are 7 cards or more in your support area, draw up to 1 card from your deck. |
-| BS5-065 | GREEN | trap | Petrification | <{G}{G}{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 7 cards or more in your support area, your opponent selects 1 active card from their support area. Rest that card. |
-| BS5-066 | GREEN | stage | Longan Palace | <{G}> Place in your stage area.
-
-When your turn ends, <discard 1 card.> Set up to 1 card from your support area as active. Then, if [Longan Dragon Cookie] is in your battle area, draw up to 1 card from your deck. |
 | BS5-068 | BLUE | cookie | GingerBright | If this Cookie remains in the battle area after receiving damage, draw up to 1 card from your deck. |
 | BS5-070 | BLUE | cookie | Peppermint Cookie | 【On Play】 Select up to 1 Cookie in your opponent's battle area. Return that Cookie to your opponent's hand. |
 | BS5-071 | BLUE | cookie | Lotus Dragon Cookie | 【Activate】 【Once Per Turn】 <Discard 3 or more {B} cards.> If your break area is LV.2 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. |
@@ -75,17 +63,6 @@ When your turn ends, <discard 1 card.> Set up to 1 card from your support area a
 
 | 卡號 | 顏色 | 類型 | 卡名 | 卡面文字 |
 | --- | --- | --- | --- | --- |
-| BS5-045 | GREEN | cookie | Potato Cookie | 【On Play】 <Return 1 card from your support area to your hand.> Draw up to 1 card from your deck. |
-| BS5-048 | GREEN | cookie | Bellflower Cookie | 【Activate】 <{G}> <Rest this card.> <Discard 1 card.> Select up to 1 LV.1 Cookie in your opponent's battle area that does not have 【Skill】. Make that Cookie faint. |
-| BS5-051 | GREEN | cookie | Beet Cookie | When your turn ends, if there are 2 active cards or more in your support area, <can be used as {G}.> Place this Cookie on the bottom of your deck. |
-| BS5-053 | GREEN | cookie | Shine Muscat Cookie | 【On Play】 <{G}{G}> Place up to 1 card from the top of your deck into your support area as rested. |
-| BS5-058 | GREEN | cookie | Ginseng Cookie | When your turn ends, if there are 3 cards or less in your support area, <can be used as {G}.> Draw up to 1 card from your deck. |
-| BS5-059 | GREEN | cookie | Purple Yam Cookie | 【On Play】 Select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage. |
-| BS5-063 | GREEN | cookie | Hero Cookie | When your turn ends, if there are 2 active cards or more in your support area, draw up to 2 cards from your deck. |
-| BS5-064 | GREEN | item | Dragon Orb | <{G}{G}{G}> Place up to 1 card from the top of your deck into your support area as rested. Then, if there are 7 cards or more in your support area, draw up to 1 card from your deck. |
-| BS5-066 | GREEN | stage | Longan Palace | <{G}> Place in your stage area.
-
-When your turn ends, <discard 1 card.> Set up to 1 card from your support area as active. Then, if [Longan Dragon Cookie] is in your battle area, draw up to 1 card from your deck. |
 | BS5-068 | BLUE | cookie | GingerBright | If this Cookie remains in the battle area after receiving damage, draw up to 1 card from your deck. |
 | BS5-070 | BLUE | cookie | Peppermint Cookie | 【On Play】 Select up to 1 Cookie in your opponent's battle area. Return that Cookie to your opponent's hand. |
 | BS5-071 | BLUE | cookie | Lotus Dragon Cookie | 【Activate】 【Once Per Turn】 <Discard 3 or more {B} cards.> If your break area is LV.2 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. |
@@ -118,9 +95,6 @@ When your turn ends, <discard 1 card.> Set up to 1 card from your support area a
 
 | 卡號 | 顏色 | 類型 | 卡名 | 卡面文字 |
 | --- | --- | --- | --- | --- |
-| BS5-056 | GREEN | cookie | Longan Dragon Cookie | When your turn ends, if there are 3 active cards or more in your support area, <can be used as {G}.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. |
-| BS5-059 | GREEN | cookie | Purple Yam Cookie | 【On Play】 Select up to 1 of your opponent's rested LV.2 or lower Cookies. That Cookie receives 2 damage. |
-| BS5-060 | GREEN | cookie | Croissant Cookie | 無效果文字 |
 | BS5-067 | BLUE | cookie | Snow Sugar Cookie | 無效果文字 |
 | BS5-071 | BLUE | cookie | Lotus Dragon Cookie | 【Activate】 【Once Per Turn】 <Discard 3 or more {B} cards.> If your break area is LV.2 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. |
 | BS5-080 | BLUE | cookie | Alchemist Cookie | 無效果文字 |

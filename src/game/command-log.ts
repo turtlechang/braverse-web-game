@@ -204,6 +204,8 @@ export const describeCommand = (
       return `${actor} 選擇不發動陷阱`
     case 'play-blocker':
       return `${actor} 使用了阻擋卡「${findCardName(state, command.sourceInstanceId)}」`
+    case 'play-attack-response':
+      return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的對手指攻回應技能`
     case 'activate-skill':
     case 'begin-activate-skill':
       return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的技能`
@@ -321,6 +323,8 @@ export const describeCommand = (
       return `${actor} 決定了擊倒效果的目標`
     case 'resolve-opponent-hand-discard':
       return `${actor} 選擇了要棄掉的手牌`
+    case 'resolve-opponent-rest-support':
+      return `${actor} 選擇了要橫置的支援卡`
     case 'resolve-inspect-deck':
       return `${actor} 決定了檢視牌庫的結果`
     case 'resolve-optional-cost-attack':
@@ -376,6 +380,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'play-trap': 'activate',
   'skip-trap': 'system',
   'play-blocker': 'activate',
+  'play-attack-response': 'activate',
 
   'activate-skill': 'activate',
   'begin-activate-skill': 'activate',
@@ -388,6 +393,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'resolve-place-hand-hp': 'activate',
   'resolve-choose-one': 'activate',
   'resolve-opponent-hand-discard': 'activate',
+  'resolve-opponent-rest-support': 'activate',
   'resolve-inspect-deck': 'activate',
   'resolve-reveal-top-deck': 'activate',
   'resolve-draw-up-to': 'draw',

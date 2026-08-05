@@ -24,7 +24,7 @@ export type CardColor = EnergyColor
 
 export type EnergyCost = Partial<Record<EnergyColor | 'neutral', number>>
 
-export type SkillTrigger = 'activate' | 'on-play' | 'passive' | 'block'
+export type SkillTrigger = 'activate' | 'on-play' | 'passive' | 'block' | 'opponent-attack'
 
 export interface CardSkill {
   trigger: SkillTrigger
@@ -59,6 +59,11 @@ export interface StageAbility extends CardAbility {
   placementCost: EnergyCost
   restSource: boolean
   triggered?: boolean
+  /**
+   * 「When your turn ends, ...」的被動回合結束觸發（BS5-066 Longan Palace）。
+   * 由 `processEndPhaseEffects` 在回合結束階段自動結算，不需要玩家主動發動。
+   */
+  endPhase?: boolean
   specialVictory?: SpecialVictoryCondition
 }
 
@@ -422,6 +427,12 @@ export interface BattleAreaRemainingHpCountAtLeastCondition {
   count: number
 }
 
+/** 己方戰鬥區餅乾張數不超過門檻（BS5-086 的「If there is 1 Cookie in your battle area」）。 */
+export interface BattleAreaCountAtMostCondition {
+  kind: 'battle-area-count-at-most'
+  count: number
+}
+
 export type EffectCondition =
   | AllOfCondition
   | BreakLevelCondition
@@ -462,6 +473,7 @@ export type EffectCondition =
   | BattleAreaHasNamedCookieCondition
   | LastHpTrashCardNonCookieCondition
   | BattleAreaRemainingHpCountAtLeastCondition
+  | BattleAreaCountAtMostCondition
 
 export interface DamageEffect {
   kind: 'damage'
@@ -1026,6 +1038,11 @@ export interface InspectDeckEffect {
   filterType?: GameCard['type']
   /** 官方文字的「up to」：可以一張都不選（BS3-114）。 */
   optionalPick?: boolean
+  /**
+   * 登場時附帶的額外 HP 卡張數（BS5-086 的「Play that Cookie with
+   * +1 HP」）；只在 `pickDestination: 'battle'` 時有意義。
+   */
+  extraHp?: number
 }
 
 export interface OptionalCostAttackEffect {
@@ -1046,6 +1063,7 @@ export interface ReturnToHandEffect {
 export interface ReturnToDeckBottomEffect {
   kind: 'return-to-deck-bottom'
   target: EffectTargetSelector
+  condition?: EffectCondition
 }
 
 export interface OpponentRandomDiscardEffect {
@@ -1151,6 +1169,29 @@ export interface FieldToDeckBottomAllEffect {
   minLevel?: number
 }
 
+/**
+ * 攻擊後續效果／技能的「Then, when your turn ends, ...」（BS5-056／060）。
+ * 執行時不立即結算，而是把內層效果存入 `pendingEndOfTurnEffects`，
+ * 等到本回合結束階段（`processEndPhaseEffects`）才依序結算。
+ */
+export interface DeferredEndOfTurnEffect {
+  kind: 'deferred-end-of-turn'
+  effects: CardEffect[]
+  condition?: EffectCondition
+}
+
+/**
+ * 官方文字的「your opponent selects N active card(s) from their support
+ * area. Rest that card.」（BS5-065）。選擇權在對手：由對手的支援區
+ * （`activeOnly` 限定活躍卡）挑 N 張橫置。沒有合法候選時直接略過。
+ */
+export interface OpponentRestsSupportEffect {
+  kind: 'opponent-rests-support'
+  amount: number
+  activeOnly?: boolean
+  condition?: EffectCondition
+}
+
 export type CardEffect =
   | DamageEffect
   | SplitDamageEffect
@@ -1236,6 +1277,8 @@ export type CardEffect =
   | StageSourceToTrashEffect
   | TrashToBreakEffect
   | MakeFaintEffect
+  | DeferredEndOfTurnEffect
+  | OpponentRestsSupportEffect
 
 export type TargetedCardEffect =
   | DamageEffect
@@ -1274,6 +1317,13 @@ export type AbilityCost = EnergyCost & {
   energy?: EnergyCost
   discardHand?: number
   discardHandColor?: EnergyColor
+  /**
+   * 「Discard 3 or more {B} cards.」（BS5-071）類代價：只要張數達到
+   * `discardHand` 即可，玩家可棄更多；未設定時維持精確張數。
+   */
+  discardHandAtLeast?: boolean
+  /** 「Discard your entire hand.」（BS5-083）：整副手牌全部進棄牌區。 */
+  discardAllHand?: boolean
   /** 限定棄置的手牌類型，例如「Discard 1 {R} Trap card」。 */
   discardHandType?: GameCard['type']
   supportToTrash?: number
@@ -1544,6 +1594,21 @@ export interface PendingOpponentHandDiscard {
   chainedFromDrawUpTo?: boolean
 }
 
+/**
+ * 官方文字的「your opponent selects N active card(s) from their support
+ * area. Rest that card.」（BS5-065）。`playerId` 是必須做選擇的對手玩家，
+ * 選定後由 `resolveOpponentRestSupport` 把對應支援卡橫置。
+ */
+export interface PendingOpponentRestSupport {
+  playerId: PlayerId
+  count: number
+  activeOnly?: boolean
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  effectText: string
+}
+
 /** 對戰紀錄的分類標籤，供 UI 篩選 chip 使用。見 command-log.ts 的 LOG_CATEGORY_BY_COMMAND_KIND。 */
 export type LogCategory =
   | 'draw'
@@ -1666,6 +1731,7 @@ export interface GameState {
     filterColor?: EnergyColor
     filterType?: GameCard['type']
     optionalPick?: boolean
+    extraHp?: number
   } | null
   pendingRevealTopDeck?: {
     playerId: PlayerId
@@ -1706,6 +1772,25 @@ export interface GameState {
     effects?: CardEffect[]
     sourceEnergy?: EnergyCost
   } | null
+  /**
+   * 等待對手從自己支援區選卡橫置的決策（BS5-065 的「your opponent selects
+   * 1 active card from their support area. Rest that card.」）。
+   * 沒有合法候選時不建立，效果直接略過。
+   */
+  pendingOpponentRestSupport?: PendingOpponentRestSupport | null
+  /**
+   * 攻擊後續效果的「Then, when your turn ends, ...」（BS5-056／060）。
+   * 攻擊結算時只排隊，回合結束階段由 `processEndPhaseEffects` 依序結算；
+   * 內層效果需要選目標時照常走 `pendingAbilityEffect` 通道。
+   */
+  pendingEndOfTurnEffects?: {
+    playerId: PlayerId
+    sourcePlayerId: PlayerId
+    sourceInstanceId: string
+    sourceCardName: string
+    effects: CardEffect[]
+    effectIndex: number
+  }[]
   /**
    * 技能/道具/場景卡多效果的逐步待處理效果鏈。中途若出現其他待處理決策
    * （pendingRefresh/pendingOnPlay 等）會保留此欄位，供之後恢復繼續執行剩餘效果。

@@ -1,4 +1,5 @@
 import {
+  getAttackResponseSkillCandidates,
   getTrapCandidates,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
@@ -426,6 +427,41 @@ export const handleAiPendingBattle = (
   }
 
   if (battle.stage === 'trap' && battle.defenderPlayerId === playerId) {
+    // 對手指攻回應技能（BS5-081 Squid Ink Cookie）優先於陷阱／阻擋者：
+    // 陷阱或阻擋者會把回應窗關閉（stage → 'damage'），對手指攻回應不會。
+    // AI 只在本張餅乾正是攻擊目標且會被擊昏時使用，避免無意義消耗手牌。
+    const attackResponseCandidates = getAttackResponseSkillCandidates(
+      state,
+      playerId,
+    )
+    const targetCookie = state.players[playerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === battle.targetInstanceId,
+    )
+    const targetWouldFaint =
+      targetCookie && targetCookie.hpCards.length <= battle.remainingDamage
+    const attackResponse =
+      targetWouldFaint
+        ? attackResponseCandidates.find(
+            (cookie) => cookie.card.instanceId === battle.targetInstanceId,
+          ) ?? attackResponseCandidates[0]
+        : undefined
+    if (attackResponse) {
+      const skill = attackResponse.card.skill!
+      const discardHandIds = state.players[playerId].hand
+        .slice(0, skill.cost?.discardHand ?? 0)
+        .map((card) => card.instanceId)
+      return {
+        state: applyGameCommand(state, {
+          kind: 'play-attack-response',
+          playerId,
+          sourceInstanceId: attackResponse.card.instanceId,
+          discardHandIds,
+        }),
+        action: 'play-attack-response',
+        description: `${state.players[playerId].name}發動${attackResponse.card.name}的對手指攻回應技能。`,
+      }
+    }
+
     const trapCandidates = getTrapCandidates(state, playerId)
 
     let trapCard: GameCard | undefined

@@ -326,12 +326,14 @@ export const isEffectUntargeted = (
   | DeckToSupportEffect
   | Extract<CardEffect, { kind: 'deck-to-trash' }>
   | Extract<CardEffect, {
-      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'discard-hand-all' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'draw-until-hand-equals-opponent' | 'set-active' | 'field-to-trash-all' | 'field-to-deck-bottom-all' | 'break-to-battle' | 'support-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all' | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck' | 'flip-to-break'
+      kind: 'gain-hp' | 'damage-all' | 'modify-all-attack' | 'multiply-attack-damage' | 'place-source-to-support' | 'discard-hand' | 'discard-hand-all' | 'opponent-discard-hand' | 'opponent-random-discard' | 'hand-to-deck-and-draw' | 'draw-up-to' | 'draw-until-hand-equals-opponent' | 'set-active' | 'field-to-trash-all' | 'field-to-deck-bottom-all' | 'break-to-battle' | 'support-to-battle' | 'break-to-hand-by-level-sum' | 'hand-to-break-by-level-sum' | 'reveal-top-deck' | 'hand-to-break' | 'break-to-hand' | 'draw-up-to-battle-cookie-count' | 'trash-to-deck-all'   | 'reveal-bottom-deck' | 'choose-one' | 'break-source-to-battle' | 'stage-source-to-deck' | 'flip-to-break' | 'deferred-end-of-turn' | 'opponent-rests-support'
     }> =>
   effect.kind === 'draw' ||
   effect.kind === 'deck-to-support' ||
   effect.kind === 'deck-to-trash' ||
   effect.kind === 'gain-hp' ||
+  effect.kind === 'deferred-end-of-turn' ||
+  effect.kind === 'opponent-rests-support' ||
   (effect.kind === 'damage-all' && !effect.sequential) ||
   effect.kind === 'modify-all-attack' ||
   effect.kind === 'multiply-attack-damage' ||
@@ -1245,6 +1247,13 @@ export const isEffectConditionMet = (
       state.costRecord &&
         state.costRecord.hpTrashTopCardType !== undefined &&
         state.costRecord.hpTrashTopCardType !== 'cookie',
+    )
+  }
+
+  if (condition?.kind === 'battle-area-count-at-most') {
+    return (
+      state.players[context.sourcePlayerId].battleArea.length <=
+      condition.count
     )
   }
 

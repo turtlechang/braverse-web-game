@@ -14,5 +14,10 @@ export const hasBlockingPending = (state: GameState): boolean =>
       state.pendingRevealTopDeck ||
       state.pendingOptionalCostAttack ||
       state.pendingDrawUpTo ||
-      state.pendingStageTrigger,
+      state.pendingStageTrigger ||
+      state.pendingOpponentRestSupport,
+      // 注意：pendingEndOfTurnEffects（Then, when your turn ends 的延遲佇列）
+      // 不視為阻塞——它是 end 階段的 processEndPhaseEffects 每次重入時都會
+      // 自己排空的佇列；若列為阻塞，processEndPhaseEffects 開頭的
+      // hasBlockingPending 檢查會把自己擋住，延遲效果永遠無法結算。
   )
