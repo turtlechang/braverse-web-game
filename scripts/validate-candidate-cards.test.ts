@@ -7,12 +7,13 @@ import {
   rmSync,
   readdirSync,
 } from 'node:fs'
+import { mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { execFileSync } from 'node:child_process'
 import { generateCardPool } from './generate-card-pool'
 
 const PROJECT_ROOT = process.cwd()
-const CANDIDATES_DIR = join(PROJECT_ROOT, 'data', 'candidates')
 const CARDS_DIR = join(PROJECT_ROOT, 'data', 'cards')
 const VALIDATE_SCRIPT = join(PROJECT_ROOT, 'scripts', 'validate-candidate-cards.ts')
 const PROMOTE_SCRIPT = join(PROJECT_ROOT, 'scripts', 'promote-candidate-cards.ts')
@@ -23,19 +24,21 @@ const GENERATED_POOL_PATH = join(
   'generated-card-pool.ts',
 )
 
+let candidatesDir = ''
+
 const createCandidateFile = (filename: string, data: unknown) => {
-  if (!existsSync(CANDIDATES_DIR)) {
-    mkdirSync(CANDIDATES_DIR, { recursive: true })
+  if (!existsSync(candidatesDir)) {
+    mkdirSync(candidatesDir, { recursive: true })
   }
   writeFileSync(
-    join(CANDIDATES_DIR, filename),
+    join(candidatesDir, filename),
     JSON.stringify(data, null, 2),
     'utf8',
   )
 }
 
 const removeCandidateFile = (filename: string) => {
-  const filePath = join(CANDIDATES_DIR, filename)
+  const filePath = join(candidatesDir, filename)
   if (existsSync(filePath)) {
     rmSync(filePath, { force: true })
   }
@@ -52,11 +55,15 @@ const TSX_BIN = join(PROJECT_ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs')
 
 const runValidate = () => {
   try {
-    const output = execFileSync('node', [TSX_BIN, VALIDATE_SCRIPT], {
-      encoding: 'utf8',
-      cwd: PROJECT_ROOT,
-      timeout: 30000,
-    })
+    const output = execFileSync(
+      'node',
+      [TSX_BIN, VALIDATE_SCRIPT, '--dir', candidatesDir],
+      {
+        encoding: 'utf8',
+        cwd: PROJECT_ROOT,
+        timeout: 30000,
+      },
+    )
     return { exitCode: 0, output, errors: '' }
   } catch (error: unknown) {
     const err = error as {
@@ -74,11 +81,15 @@ const runValidate = () => {
 
 const runPromote = () => {
   try {
-    const output = execFileSync('node', [TSX_BIN, PROMOTE_SCRIPT], {
-      encoding: 'utf8',
-      cwd: PROJECT_ROOT,
-      timeout: 30000,
-    })
+    const output = execFileSync(
+      'node',
+      [TSX_BIN, PROMOTE_SCRIPT, '--dir', candidatesDir],
+      {
+        encoding: 'utf8',
+        cwd: PROJECT_ROOT,
+        timeout: 30000,
+      },
+    )
     return { exitCode: 0, output, errors: '' }
   } catch (error: unknown) {
     const err = error as {
@@ -153,7 +164,6 @@ const VALID_FILE = {
 }
 
 let generatedPoolBackup: string | null = null
-let candidateFilesBackup: Map<string, string> = new Map()
 
 const backupGeneratedPool = () => {
   generatedPoolBackup = existsSync(GENERATED_POOL_PATH)
@@ -170,31 +180,21 @@ const restoreGeneratedPool = () => {
 
 describe.sequential('candidate card pipeline', () => {
   beforeAll(() => {
-    if (!existsSync(CANDIDATES_DIR)) {
-      mkdirSync(CANDIDATES_DIR, { recursive: true })
-    }
-    candidateFilesBackup = new Map(
-      readdirSync(CANDIDATES_DIR)
-        .filter((file) => file.endsWith('.json'))
-        .map((file) => [file, readFileSync(join(CANDIDATES_DIR, file), 'utf8')]),
-    )
+    candidatesDir = mkdtempSync(join(tmpdir(), 'braverse-candidates-'))
   })
 
   beforeEach(() => {
-    if (!existsSync(CANDIDATES_DIR)) {
-      mkdirSync(CANDIDATES_DIR, { recursive: true })
-    }
-    const existingFiles = readdirSync(CANDIDATES_DIR).filter((f) =>
-      f.endsWith('.json'),
-    )
+    const existingFiles = existsSync(candidatesDir)
+      ? readdirSync(candidatesDir).filter((f) => f.endsWith('.json'))
+      : []
     for (const file of existingFiles) {
-      rmSync(join(CANDIDATES_DIR, file), { force: true })
+      rmSync(join(candidatesDir, file), { force: true })
     }
   })
 
   afterEach(() => {
-    const files = existsSync(CANDIDATES_DIR)
-      ? readdirSync(CANDIDATES_DIR).filter((f) => f.endsWith('.json'))
+    const files = existsSync(candidatesDir)
+      ? readdirSync(candidatesDir).filter((f) => f.endsWith('.json'))
       : []
     for (const file of files) {
       removeCandidateFile(file)
@@ -202,14 +202,8 @@ describe.sequential('candidate card pipeline', () => {
   })
 
   afterAll(() => {
-    const files = existsSync(CANDIDATES_DIR)
-      ? readdirSync(CANDIDATES_DIR).filter((file) => file.endsWith('.json'))
-      : []
-    for (const file of files) {
-      removeCandidateFile(file)
-    }
-    for (const [file, content] of candidateFilesBackup) {
-      writeFileSync(join(CANDIDATES_DIR, file), content, 'utf8')
+    if (candidatesDir) {
+      rmSync(candidatesDir, { recursive: true, force: true })
     }
   })
 
@@ -222,7 +216,7 @@ describe.sequential('candidate card pipeline', () => {
 
     it('rejects malformed JSON', () => {
       writeFileSync(
-        join(CANDIDATES_DIR, 'malformed.json'),
+        join(candidatesDir, 'malformed.json'),
         '{ invalid',
         'utf8',
       )
@@ -586,7 +580,7 @@ describe.sequential('candidate card pipeline', () => {
       expect(result.exitCode).toBe(1)
       expect(result.errors).toContain('檔名碰撞')
 
-      expect(existsSync(join(CANDIDATES_DIR, 'official-sample.en.json'))).toBe(
+      expect(existsSync(join(candidatesDir, 'official-sample.en.json'))).toBe(
         true,
       )
     })
@@ -599,7 +593,7 @@ describe.sequential('candidate card pipeline', () => {
 
       expect(
         existsSync(
-          join(CANDIDATES_DIR, 'official-starter-deck-green.en.json'),
+          join(candidatesDir, 'official-starter-deck-green.en.json'),
         ),
       ).toBe(true)
     })
@@ -615,7 +609,7 @@ describe.sequential('candidate card pipeline', () => {
       const result = runPromote()
       expect(result.exitCode).toBe(1)
       expect(result.errors).toContain('不能 promote')
-      expect(existsSync(join(CANDIDATES_DIR, inventoryFilename))).toBe(true)
+      expect(existsSync(join(candidatesDir, inventoryFilename))).toBe(true)
     })
 
     it('promotes valid candidate to official cards', () => {
@@ -632,7 +626,7 @@ describe.sequential('candidate card pipeline', () => {
       expect(result.output).toContain(promoFilename)
 
       expect(existsSync(join(CARDS_DIR, promoFilename))).toBe(true)
-      expect(existsSync(join(CANDIDATES_DIR, promoFilename))).toBe(false)
+      expect(existsSync(join(candidatesDir, promoFilename))).toBe(false)
     })
 
     it('promoted card is visible in card pool via generated registry', async () => {

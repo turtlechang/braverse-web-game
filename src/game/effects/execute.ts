@@ -794,7 +794,7 @@ export const executeCardEffect = (
       throw new GameRuleError('牌庫張數不足，無法增加 HP。')
     }
     const gainedCards = player.deck.slice(0, effect.amount)
-    return updatePlayer(state, {
+    const updatedState = updatePlayer(state, {
       ...player,
       deck: player.deck.slice(effect.amount),
       battleArea: player.battleArea.map((cookie, index) =>
@@ -803,6 +803,13 @@ export const executeCardEffect = (
           : cookie,
       ),
     })
+    return {
+      ...updatedState,
+      cookiesGainedHpThisTurn: {
+        ...(updatedState.cookiesGainedHpThisTurn ?? {}),
+        [context.sourcePlayerId]: true,
+      },
+    }
   }
 
   if (effect.kind === 'hand-to-break') {
@@ -1782,6 +1789,59 @@ export const executeCardEffect = (
     )
   }
 
+  if (effect.kind === 'make-faint') {
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== selectedTargetIds.length) {
+      throw new GameRuleError('選擇的效果目標數量不合法。')
+    }
+    const min = effect.target.min
+    const max = effect.target.max
+    if (uniqueIds.length < min || uniqueIds.length > max) {
+      throw new GameRuleError('選擇的效果目標數量不合法。')
+    }
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const selectedCookies = uniqueIds.map((instanceId) =>
+      candidates.find((cookie) => cookie.card.instanceId === instanceId),
+    )
+    if (selectedCookies.some((cookie) => !cookie)) {
+      throw new GameRuleError('選擇的卡牌不是此效果的合法目標。')
+    }
+    const targets = selectedCookies as CookieInBattle[]
+
+    let nextState = state
+    for (const [ownerId, group] of groupTargetsByOwner(nextState, targets)) {
+      const player = nextState.players[ownerId]
+      const movedIds = new Set(group.map((c) => c.card.instanceId))
+      const departedCards = group.map((c) => c.card)
+      const hpCards = group.flatMap((c) => c.hpCards)
+      const equippedCards = group.flatMap((c) => c.equippedCards ?? [])
+      const updatedPlayer: PlayerState = {
+        ...player,
+        battleArea: player.battleArea.filter(
+          (c) => !movedIds.has(c.card.instanceId),
+        ),
+        breakArea: [...player.breakArea, ...departedCards],
+        discardPile: [
+          ...player.discardPile,
+          ...hpCards,
+          ...equippedCards,
+        ],
+      }
+      const updatedState = updatePlayer(nextState, updatedPlayer)
+      const faintState = resolveDamageOutcome(
+        updatedState,
+        ownerId,
+        group.length,
+        departedCards,
+      )
+      nextState = checkWindsweptValleyTrigger(faintState, ownerId)
+    }
+    return nextState
+  }
+
   if (effect.kind === 'field-to-trash') {
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
@@ -2452,6 +2512,28 @@ export const executeCardEffect = (
 
   if (effect.kind === 'return-to-hand') {
     const candidates = getEffectTargetCandidates(state, context, effect.target)
+    // 昏厥技能（When this Cookie faints）的「Return this Cookie to your
+    // hand」：來源已離場躺在休息區，戰鬥區沒有候選，直接從休息區返回手牌
+    // （BS5-026 DJ Cookie 的第二個昏厥效果）。
+    if (
+      effect.target.sourceOnly &&
+      candidates.length === 0 &&
+      context.sourceInstanceId
+    ) {
+      const player = state.players[context.sourcePlayerId]
+      const breakSource = player.breakArea.find(
+        (card) => card.instanceId === context.sourceInstanceId,
+      )
+      if (breakSource) {
+        return updatePlayer(state, {
+          ...player,
+          breakArea: player.breakArea.filter(
+            (card) => card.instanceId !== context.sourceInstanceId,
+          ),
+          hand: [...player.hand, breakSource],
+        })
+      }
+    }
     if (candidates.length < effect.target.min && selectedTargetIds.length === 0) {
       return { ...state }
     }

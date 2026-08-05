@@ -265,6 +265,7 @@ const payAbilityCost = (
   }
 
   let departedCount = 0
+  let costRecord: GameState['costRecord']
   if (cost.hpToTrash) {
     const target = getHpToTrashCostCandidates(
       cost,
@@ -290,12 +291,20 @@ const payAbilityCost = (
     // 導致同一張卡同時留在 hpCards 又被複製進棄牌區。
     if (removeCount === 0) {
       departedCount = 0
+      costRecord = {
+        hpTrashCookieInstanceId: target.card.instanceId,
+        hpTrashTopCardType: undefined,
+      }
     } else {
       const removedHpCards = target.hpCards.slice(-removeCount)
       const remainingHpCards = target.hpCards.slice(
         0,
         Math.max(0, target.hpCards.length - removeCount),
       )
+      costRecord = {
+        hpTrashCookieInstanceId: target.card.instanceId,
+        hpTrashTopCardType: removedHpCards[removedHpCards.length - 1]?.type,
+      }
 
       if (remainingHpCards.length === 0) {
         departedCount = 1
@@ -332,6 +341,7 @@ const payAbilityCost = (
 
   let nextState: GameState = {
     ...state,
+    ...(costRecord ? { costRecord } : {}),
     players: {
       ...state.players,
       [playerId]: updatedPlayer,

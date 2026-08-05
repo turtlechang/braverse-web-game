@@ -1,5 +1,5 @@
 import { GameRuleError } from '../errors'
-import { getOpponentId } from '../helpers'
+import { getCookieEffectiveHp, getOpponentId } from '../helpers'
 import type {
   BreakToTrashEffect,
   CardEffect,
@@ -154,14 +154,14 @@ const matchesSelector = (
 
   if (
     selector.remainingHp !== undefined &&
-    cookie.hpCards.length > selector.remainingHp
+    getCookieEffectiveHp(cookie) > selector.remainingHp
   ) {
     return false
   }
 
   if (
     selector.minRemainingHp !== undefined &&
-    cookie.hpCards.length < selector.minRemainingHp
+    getCookieEffectiveHp(cookie) < selector.minRemainingHp
   ) {
     return false
   }
@@ -180,7 +180,25 @@ const matchesSelector = (
     return false
   }
 
+  if (
+    selector.cardName !== undefined &&
+    cookie.card.name !== selector.cardName
+  ) {
+    return false
+  }
+
+  if (
+    selector.costSelected &&
+    cookie.card.instanceId !== state.costRecord?.hpTrashCookieInstanceId
+  ) {
+    return false
+  }
+
   if (selector.restedOnly && !cookie.rested) {
+    return false
+  }
+
+  if (selector.noSkillOnly && cookie.card.skill) {
     return false
   }
 
@@ -699,7 +717,8 @@ export const isEffectTargeted = (
   effect.kind === 'split-damage' ||
   effect.kind === 'prevent-effect-damage' ||
   effect.kind === 'transfer-hp' ||
-  effect.kind === 'set-cookie-active'
+  effect.kind === 'set-cookie-active' ||
+  effect.kind === 'make-faint'
 
 export const getSupportEffectCandidates = (
   state: GameState,
@@ -926,7 +945,7 @@ export const isEffectConditionMet = (
     const source = state.players[context.sourcePlayerId].battleArea.find(
       (cookie) => cookie.card.instanceId === context.sourceInstanceId,
     )
-    return source ? source.hpCards.length < condition.amount : false
+    return source ? getCookieEffectiveHp(source) < condition.amount : false
   }
 
   if (condition?.kind === 'support-count-at-least') {
@@ -971,7 +990,7 @@ export const isEffectConditionMet = (
     const source = state.players[context.sourcePlayerId].battleArea.find(
       (cookie) => cookie.card.instanceId === context.sourceInstanceId,
     )
-    return source ? source.hpCards.length >= condition.amount : false
+    return source ? getCookieEffectiveHp(source) >= condition.amount : false
   }
 
   if (condition?.kind === 'source-in-break-area') {
@@ -994,7 +1013,34 @@ export const isEffectConditionMet = (
     const target = state.players[opponentId].battleArea.find(
       (cookie) => cookie.card.instanceId === targetInstanceId,
     )
-    return Boolean(target && target.hpCards.length >= condition.amount)
+    return Boolean(
+      target && getCookieEffectiveHp(target) >= condition.amount,
+    )
+  }
+
+  if (condition?.kind === 'attack-target-remaining-hp-at-most') {
+    const battle = state.pendingBattle
+    const targetInstanceId =
+      context.attackTargetInstanceId ??
+      (battle &&
+        battle.attackerPlayerId === context.sourcePlayerId &&
+        battle.attackerInstanceId === context.sourceInstanceId
+        ? battle.targetInstanceId
+        : undefined)
+    if (!targetInstanceId) return false
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    const target = state.players[opponentId].battleArea.find(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    )
+    return Boolean(
+      target && getCookieEffectiveHp(target) <= condition.amount,
+    )
+  }
+
+  if (condition?.kind === 'cookie-gained-hp-this-turn') {
+    return Boolean(
+      state.cookiesGainedHpThisTurn?.[context.sourcePlayerId],
+    )
   }
 
   if (condition?.kind === 'attack-target-level-at-most') {
@@ -1012,6 +1058,23 @@ export const isEffectConditionMet = (
       (cookie) => cookie.card.instanceId === targetInstanceId,
     )
     return Boolean(target && target.card.level <= condition.level)
+  }
+
+  if (condition?.kind === 'attack-target-level-equals') {
+    const battle = state.pendingBattle
+    const targetInstanceId =
+      context.attackTargetInstanceId ??
+      (battle &&
+        battle.attackerPlayerId === context.sourcePlayerId &&
+        battle.attackerInstanceId === context.sourceInstanceId
+        ? battle.targetInstanceId
+        : undefined)
+    if (!targetInstanceId) return false
+    const opponentId = getOpponentId(context.sourcePlayerId)
+    const target = state.players[opponentId].battleArea.find(
+      (cookie) => cookie.card.instanceId === targetInstanceId,
+    )
+    return Boolean(target && target.card.level === condition.level)
   }
 
   if (condition?.kind === 'opponent-cookie-fainted-in-current-battle') {
@@ -1161,6 +1224,39 @@ export const isEffectConditionMet = (
         (condition.color === undefined || card.energyColor === condition.color) &&
         (condition.minLevel === undefined || card.level >= condition.minLevel) &&
         (condition.maxLevel === undefined || card.level <= condition.maxLevel),
+    )
+  }
+
+  if (condition?.kind === 'battle-area-has-named-cookie') {
+    const playerId =
+      condition.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    return state.players[playerId].battleArea.some(
+      (cookie) =>
+        cookie.card.name === condition.name &&
+        (!condition.excludeSource ||
+          cookie.card.instanceId !== context.sourceInstanceId),
+    )
+  }
+
+  if (condition?.kind === 'last-hp-trash-card-non-cookie') {
+    return Boolean(
+      state.costRecord &&
+        state.costRecord.hpTrashTopCardType !== undefined &&
+        state.costRecord.hpTrashTopCardType !== 'cookie',
+    )
+  }
+
+  if (condition?.kind === 'battle-area-remaining-hp-count-at-least') {
+    const playerId =
+      condition.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    return (
+      state.players[playerId].battleArea.filter(
+        (cookie) => getCookieEffectiveHp(cookie) === condition.remainingHp,
+      ).length >= condition.count
     )
   }
 

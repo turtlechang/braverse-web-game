@@ -371,6 +371,9 @@ const chooseEffectTargets = (
         left.hpCards.length - right.hpCards.length
       )
     })
+  } else if (effect.kind === 'make-faint') {
+    // 昏厥目標（BS5-036 Milk Cookie）：優先挑 HP 最少的，直接送進休息區。
+    ordered.sort((left, right) => left.hpCards.length - right.hpCards.length)
   } else if (effect.kind === 'transfer-hp') {
     if (effect.direction === 'to-source') {
       // 供牌方是被選中的我方餅乾，抽乾它等於送對手 break 進度，只挑撐得住的。

@@ -1,4 +1,5 @@
 import type {
+  CookieInBattle,
   GameCard,
   GameState,
   PlayerId,
@@ -64,6 +65,20 @@ export const drawCards = (
 
 export const getOpponentId = (playerId: PlayerId): PlayerId =>
   playerId === 'player-one' ? 'player-two' : 'player-one'
+
+/**
+ * 餅乾的有效剩餘 HP：實際附著的 HP 卡張數＋附著卡提供的 HP 加成。
+ * 「The Cookie with this card attached for HP gains +1 HP」類 FLIP 卡只要
+ * 還附著在 HP，就額外 +1；卡被磨掉／移走時加成隨之消失（由內容推導，
+ * 不需要額外的附著／移除鉤子）。所有「剩餘 HP」判定（目標篩選、條件、
+ * 傷害結算）都應以這個函式為準。
+ */
+export const getCookieEffectiveHp = (cookie: CookieInBattle): number =>
+  cookie.hpCards.length +
+  cookie.hpCards.reduce(
+    (bonus, card) => bonus + (card.flip?.attachedHpBonus ?? 0),
+    0,
+  )
 
 export const updatePlayer = (
   state: GameState,

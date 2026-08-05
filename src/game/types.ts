@@ -153,6 +153,23 @@ export interface EffectTargetSelector {
   restedOnly?: boolean
   /** Restrict Cookie targets to cards carrying an official runtime keyword. */
   keyword?: CardKeyword
+  /**
+   * 指名卡名目標（BS5-014 的「your opponent's [Pitaya Dragon Cookie]」）。
+   * 比對 runtime `cookie.card.name`，異畫變體共用同一張基礎卡名。
+   */
+  cardName?: string
+  /**
+   * 只允許技能代價（`hpToTrash`）剛選中的餅乾成為目標
+   * （BS5-022 的「Place 1 card from the top of your LV.2 or higher Cookie's
+   * HP into the trash. During this turn, that Cookie gains +1 attack damage.」）。
+   */
+  costSelected?: boolean
+  /**
+   * 只允許「沒有技能」的餅乾成為目標（BS5-036 Milk Cookie 的「LV.1 Cookie
+   * ... that does not have Skill」）。技能存在與否以轉接層產出的
+   * `CookieCard.skill` 為準（沒有技能文字的餅乾為 `null`）。
+   */
+  noSkillOnly?: boolean
 }
 
 export interface BreakLevelCondition {
@@ -325,9 +342,26 @@ export interface AttackTargetRemainingHpAtLeastCondition {
   amount: number
 }
 
+/** 本次攻擊宣告的目標，攻擊當下的剩餘 HP 卡數低於等於門檻（BS5-024 的「if the attacked Cookie's remaining HP is 2 or less」）。 */
+export interface AttackTargetRemainingHpAtMostCondition {
+  kind: 'attack-target-remaining-hp-at-most'
+  amount: number
+}
+
+/** 來源玩家自己的餅乾在本回合內曾因效果增加過 HP（BS5-044 Ananas Dragon Cookie's Nest 的「if any of your Cookies gained HP」）。 */
+export interface CookieGainedHpThisTurnCondition {
+  kind: 'cookie-gained-hp-this-turn'
+}
+
 /** 本次攻擊宣告的目標等級達到上限（BS4-009 的「if the attacked Cookie is LV.2 or lower」）。 */
 export interface AttackTargetLevelAtMostCondition {
   kind: 'attack-target-level-at-most'
+  level: number
+}
+
+/** 本次攻擊宣告的目標等級剛好等於門檻（BS5-012 的「if the attacked Cookie is LV.3」）。 */
+export interface AttackTargetLevelEqualsCondition {
+  kind: 'attack-target-level-equals'
   level: number
 }
 
@@ -361,6 +395,33 @@ export interface AllOfCondition {
   conditions: EffectCondition[]
 }
 
+/** 場上有指定卡名的餅乾（BS5-022 的「if [Pitaya Dragon Cookie] is in your battle area」）。 */
+export interface BattleAreaHasNamedCookieCondition {
+  kind: 'battle-area-has-named-cookie'
+  side: EffectTargetSide
+  name: string
+  /** 「another」：不算來源自己。 */
+  excludeSource?: boolean
+}
+
+/**
+ * 技能代價（`hpToTrash`）剛被磨進棄牌區的最上方卡不是 Cookie
+ * （BS5-016 的「If that card is a non-Cookie card」）。
+ * 只認 `GameState.costRecord` 存在且其 `hpTrashTopCardType` 非 cookie；
+ * 沒有 costRecord（例如由其他路徑發動）一律視為不成立。
+ */
+export interface LastHpTrashCardNonCookieCondition {
+  kind: 'last-hp-trash-card-non-cookie'
+}
+
+/** 己方戰鬥區剩餘 HP 恰好等於門檻的餅乾張數達到數量（BS5-020 的「2 Cookies whose remaining HP is 1」）。 */
+export interface BattleAreaRemainingHpCountAtLeastCondition {
+  kind: 'battle-area-remaining-hp-count-at-least'
+  side: EffectTargetSide
+  remainingHp: number
+  count: number
+}
+
 export type EffectCondition =
   | AllOfCondition
   | BreakLevelCondition
@@ -389,16 +450,33 @@ export type EffectCondition =
   | SourceInBreakAreaCondition
   | OpponentCookieFaintedInCurrentBattleCondition
   | AttackTargetRemainingHpAtLeastCondition
+  | AttackTargetRemainingHpAtMostCondition
+  | CookieGainedHpThisTurnCondition
   | AttackTargetLevelAtMostCondition
+  | AttackTargetLevelEqualsCondition
   | SupportKeywordAtLeastCondition
   | DistinctNamedFamilyCountCondition
   | AnyBattleAreaHasBlockerCondition
   | OpponentBattleAreaHasNoBlockerCondition
   | BreakLevelHigherThanOpponentCondition
+  | BattleAreaHasNamedCookieCondition
+  | LastHpTrashCardNonCookieCondition
+  | BattleAreaRemainingHpCountAtLeastCondition
 
 export interface DamageEffect {
   kind: 'damage'
   amount: number
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+/**
+ * 讓目標餅乾昏厥（BS5-036 Milk Cookie 的「Make that Cookie faint」）。
+ * 走與傷害相同的昏厥流程：餅乾卡移至休息區、HP 卡移至棄牌區、觸發
+ * 目標的 faint 技能（若有的話）、補位與勝負判定。
+ */
+export interface MakeFaintEffect {
+  kind: 'make-faint'
   target: EffectTargetSelector
   condition?: EffectCondition
 }
@@ -962,6 +1040,7 @@ export interface OptionalCostAttackEffect {
 export interface ReturnToHandEffect {
   kind: 'return-to-hand'
   target: EffectTargetSelector
+  condition?: EffectCondition
 }
 
 export interface ReturnToDeckBottomEffect {
@@ -1156,6 +1235,7 @@ export type CardEffect =
   | StageSourceToDeckEffect
   | StageSourceToTrashEffect
   | TrashToBreakEffect
+  | MakeFaintEffect
 
 export type TargetedCardEffect =
   | DamageEffect
@@ -1188,6 +1268,7 @@ export type TargetedCardEffect =
   | CycleHpEffect
   | RestSupportAndDamageEffect
   | FieldToDeckBottomEffect
+  | MakeFaintEffect
 
 export type AbilityCost = EnergyCost & {
   energy?: EnergyCost
@@ -1255,6 +1336,14 @@ export interface FlipAbility {
   text: string
   cost: AbilityCost
   effects: CardEffect[]
+  /**
+   * 附著 HP 期間的連續 +1 HP（BS5-004／BS5-041／BS5-082／BS5-095 的
+   * 「The Cookie with this card attached for HP gains +1 HP」）。
+   * 不是一次性效果：只要這張卡還附著在目標餅乾的 HP，剩餘 HP 就 +1；
+   * 卡離開 HP（被傷害、代價磨掉……）加成就消失。
+   * 剩餘 HP 的計算一律以 `getCookieEffectiveHp`（helpers.ts）為準。
+   */
+  attachedHpBonus?: number
 }
 
 /**
@@ -1298,6 +1387,10 @@ export type TrapCondition =
   | {
       kind: 'opponent-trash-count-at-least'
       count: number
+    }
+  | {
+      kind: 'battle-area-has-cookie-with-level'
+      level: number
     }
 
 export interface TrapAbility {
@@ -1547,6 +1640,18 @@ export interface GameState {
   pendingFaintEffects?: PendingFaintEffect[]
   pendingAfterDamageEffects?: PendingAfterDamageEffect[]
   pendingEffectOrder?: PendingEffectOrder | null
+  /**
+   * 最近一次 `hpToTrash` 技能代價的結算紀錄，供接續的效果／條件讀取：
+   * - `hpTrashCookieInstanceId`：被磨 HP 的餅乾（BS5-022 的「that Cookie」）。
+   * - `hpTrashTopCardType`：被磨進棄牌區的那張 HP 卡的類型（BS5-016 的
+   *   「If that card is a non-Cookie card」）。
+   * 僅在 `payAbilityCost` 支付 `hpToTrash` 時寫入；同一個命令鏈內由後續
+   * 效果或條件消費，不跨回合保留。
+   */
+  costRecord?: {
+    hpTrashCookieInstanceId?: string
+    hpTrashTopCardType?: GameCard['type']
+  }
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null
   pendingInspectDeck?: {
     playerId: PlayerId
@@ -1630,6 +1735,8 @@ export interface GameState {
     battleContinuation?: BattleContinuation
   }
   supportAreaDecreasedThisTurn?: Partial<Record<PlayerId, boolean>>
+  /** 各玩家本回合是否有餅乾因效果增加過 HP（BS5-044 的「if any of your Cookies gained HP」）。每回合開始時重置。 */
+  cookiesGainedHpThisTurn?: Partial<Record<PlayerId, boolean>>
 }
 
 /**

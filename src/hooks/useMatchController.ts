@@ -494,7 +494,7 @@ export function useMatchController(params: {
   const hasFaint =
     Boolean(pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId)
   const faintMinMax = pendingFaint
-    ? getFaintEffectMinMax(pendingFaint.effect)
+    ? getFaintEffectMinMax(game, pendingFaint.effect)
     : { min: 0, max: 0 }
   const faintEnergyCost =
     pendingFaint?.effect.kind === 'hand-to-battle'

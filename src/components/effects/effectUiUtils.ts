@@ -76,6 +76,9 @@ export const describeEffect = (effect: CardEffect) => {
       ? '將符合條件的對手餅乾放入休息區。'
       : '將符合條件的對手餅乾放入棄牌區。'
   }
+  if (effect.kind === 'make-faint') {
+    return '選擇目標餅乾使其昏厥。'
+  }
   if (effect.kind === 'place-source-to-support') {
     return '將這張卡放入支援區。'
   }
@@ -294,6 +297,7 @@ export const describeEffectResult = (
   if (effect.kind === 'opponent-discard-hand') return '已要求對手棄手牌。'
   if (effect.kind === 'opponent-random-discard') return '對手已隨機棄手牌。'
   if (effect.kind === 'opponent-battle-to-trash') return effect.destination === 'break' ? '對手餅乾已放入休息區。' : '對手餅乾已放入棄牌區。'
+  if (effect.kind === 'make-faint') return `${names} 已昏厥。`
   if (effect.kind === 'place-source-to-support') return '已放入支援區。'
   if (effect.kind === 'set-active') return '支援區卡已設為活躍。'
   if (effect.kind === 'inspect-deck') return '已查看牌庫。'

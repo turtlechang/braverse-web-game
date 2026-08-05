@@ -246,6 +246,7 @@ export const advancePhase = (state: GameState): GameState => {
         phase: 'active',
         supportPlacedThisTurn: false,
         supportAreaDecreasedThisTurn: {},
+        cookiesGainedHpThisTurn: {},
         skillUsesThisTurn: [],
       }
     }

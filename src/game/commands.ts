@@ -673,14 +673,15 @@ export const getPendingDecision = (
   }
 
   // cycle-hp（BS4-030）第二階段：第一階段結算後停在這裡等玩家放回手牌。
-  if (state.pendingAbilityEffect?.pendingPlace) {
-    const pending = state.pendingAbilityEffect
+  const pendingAbility = state.pendingAbilityEffect
+  const pendingPlace = pendingAbility?.pendingPlace
+  if (pendingAbility && pendingPlace) {
     return {
       kind: 'place-hand-hp',
-      playerId: pending.playerId,
-      sourcePlayerId: pending.sourcePlayerId,
-      sourceInstanceId: pending.sourceInstanceId,
-      targetInstanceId: pending.pendingPlace.targetInstanceId,
+      playerId: pendingAbility.playerId,
+      sourcePlayerId: pendingAbility.sourcePlayerId,
+      sourceInstanceId: pendingAbility.sourceInstanceId,
+      targetInstanceId: pendingPlace.targetInstanceId,
     }
   }
 
@@ -706,7 +707,7 @@ export const getPendingDecision = (
     )
   ) {
     const faint = state.pendingFaintEffects[0]
-    const { min, max } = getFaintEffectMinMax(faint.effect)
+    const { min, max } = getFaintEffectMinMax(state, faint.effect)
     return {
       kind: 'faint-effect',
       playerId: faint.sourcePlayerId,

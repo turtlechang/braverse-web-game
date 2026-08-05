@@ -32,7 +32,11 @@ import { execFileSync } from 'node:child_process'
 import { generateCardPool, generatedPoolPath } from './generate-card-pool'
 
 const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const candidatesDir = join(projectRoot, 'data', 'candidates')
+const dirArgIndex = process.argv.indexOf('--dir')
+const candidatesDir =
+  dirArgIndex >= 0 && process.argv[dirArgIndex + 1]
+    ? resolve(projectRoot, process.argv[dirArgIndex + 1])
+    : join(projectRoot, 'data', 'candidates')
 const officialDir = join(projectRoot, 'data', 'cards')
 
 let candidateFiles: string[]
@@ -41,12 +45,12 @@ try {
     file.endsWith('.json'),
   )
 } catch {
-  console.log('候選目錄 data/candidates/ 不存在或無法讀取。')
+  console.log(`候選目錄 ${candidatesDir} 不存在或無法讀取。`)
   process.exit(0)
 }
 
 if (candidateFiles.length === 0) {
-  console.log('data/candidates/ 中無 .json 檔案，無需 promote。')
+  console.log(`${candidatesDir} 中無 .json 檔案，無需 promote。`)
   process.exit(0)
 }
 
@@ -81,10 +85,14 @@ const tsxBin = join(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs')
 const validateScript = join(projectRoot, 'scripts', 'validate-candidate-cards.ts')
 
 try {
-  execFileSync('node', [tsxBin, validateScript, '--require-promotion-ready'], {
-    stdio: 'inherit',
-    cwd: projectRoot,
-  })
+  execFileSync(
+    'node',
+    [tsxBin, validateScript, '--require-promotion-ready', '--dir', candidatesDir],
+    {
+      stdio: 'inherit',
+      cwd: projectRoot,
+    },
+  )
 } catch {
   console.error('✗ 驗證失敗，abort promote。候選檔案未變更。')
   process.exit(1)

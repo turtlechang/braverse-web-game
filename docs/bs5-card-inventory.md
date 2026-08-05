@@ -6,7 +6,7 @@
 
 - 官方卡表：[CookieRun: Braverse Card List](https://cookierunbraverse.com/en/cardList)
 - 官方 JSON：`https://cookierunbraverse.com/data/json/cardList_en.json`
-- 抓取時間：`2026-08-04T14:07:26.873Z`
+- 抓取時間：`2026-08-04T17:32:55.114Z`
 - 篩選規則：完整卡號以 `BS5-` 開頭，保留異圖／促銷變體。
 - 候選狀態：`inventory`
 - 圖片下載：否

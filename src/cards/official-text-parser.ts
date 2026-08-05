@@ -88,6 +88,20 @@ const createDisplayText = (raw: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+/**
+ * BS5 起官方 JSON 改用全形【…】時機標記（【Activate】【On Play】…），
+ * 舊系列用 {mob}/{ap} 大括號 token；在解析前正規化成同義 token，
+ * 讓觸發判定與顯示文字共用同一條路徑。
+ */
+const normalizeTimingMarkers = (raw: string): string =>
+  raw
+    .replace(/【Activate】/g, '{mob}')
+    .replace(/【On Play】/g, '{ap}')
+    .replace(/【Once Per Turn】/g, '{t1}')
+    .replace(/【Your Turn】/g, '{mt}')
+    .replace(/【Blocker】/g, '{bl}')
+    .replace(/【Equip】/g, '{eq}')
+
 export const parseOfficialCardText = (
   rawText: string | null,
 ): ParsedCardText | null => {
@@ -95,7 +109,7 @@ export const parseOfficialCardText = (
     return null
   }
 
-  const raw = rawText.trim()
+  const raw = normalizeTimingMarkers(rawText.trim())
   const tokenNames = [...raw.matchAll(/\{([A-Za-z0-9_]+)\}/g)].map(
     (match) => match[1],
   )

@@ -79,7 +79,8 @@ export const getEffectiveAttack = (
     .filter((modifier) => modifier.targetInstanceId === targetInstanceId)
     .reduce((total, modifier) => total + modifier.amount, 0)
   const passiveModifierTotal =
-    target.card.skill?.trigger === 'passive' &&
+    (target.card.skill?.trigger === 'passive' ||
+      target.card.skill?.trigger === 'block') &&
     (!target.card.skill.yourTurn ||
       state.activePlayerId === owner.id)
       ? target.card.skill.effects
@@ -173,7 +174,8 @@ export const getEffectiveAttackBreakdown = (
   }
 
   if (
-    target.card.skill?.trigger === 'passive' &&
+    (target.card.skill?.trigger === 'passive' ||
+      target.card.skill?.trigger === 'block') &&
     (!target.card.skill.yourTurn || state.activePlayerId === owner.id)
   ) {
     const context = {
@@ -191,7 +193,7 @@ export const getEffectiveAttackBreakdown = (
   for (const sourcePlayer of Object.values(state.players)) {
     for (const source of sourcePlayer.battleArea) {
       const skill = source.card.skill
-      if (skill?.trigger !== 'passive') continue
+      if (skill?.trigger !== 'passive' && skill?.trigger !== 'block') continue
       if (skill.yourTurn && state.activePlayerId !== sourcePlayer.id) continue
       const context = {
         sourcePlayerId: sourcePlayer.id,
@@ -251,7 +253,10 @@ export const getAttackDamageAgainst = (
     (cookie) => cookie.card.instanceId === targetInstanceId,
   )
   const damageAfterDefenderModifiers =
-    !defender || !defenderOwner || defender.card.skill?.trigger !== 'passive'
+    !defender ||
+    !defenderOwner ||
+    (defender.card.skill?.trigger !== 'passive' &&
+      defender.card.skill?.trigger !== 'block')
       ? modifiedDamage
       : defender.card.skill.effects
           .filter(

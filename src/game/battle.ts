@@ -274,6 +274,13 @@ const isTrapConditionMet = (
     return true
   }
 
+  if (condition.kind === 'battle-area-has-cookie-with-level') {
+    // 陷阱擁有者自己的戰鬥區（官方文字的「your battle area」）。
+    return state.players[playerId].battleArea.some(
+      (cookie) => cookie.card.level === condition.level,
+    )
+  }
+
   return true
 }
 
@@ -2687,9 +2694,25 @@ export const getFaintEffectCardCandidates = (state: GameState): GameCard[] => {
 }
 
 export const getFaintEffectMinMax = (
+  state: GameState,
   effect: CardEffect,
-): { min: number; max: number } =>
-  getEffectSelectionLimits(effect) ?? { min: 0, max: 0 }
+): { min: number; max: number } => {
+  // 昏厥技能（When this Cookie faints）的「Return this Cookie to your hand」：
+  // 來源在休息區、戰鬥區沒有候選，由 executeCardEffect 自動把休息區的來源
+  // 返回手牌，不需要玩家選目標（BS5-026 DJ Cookie）。
+  if (effect.kind === 'return-to-hand' && effect.target.sourceOnly) {
+    const faint = state.pendingFaintEffects?.[0]
+    if (
+      faint &&
+      state.players[faint.sourcePlayerId].breakArea.some(
+        (card) => card.instanceId === faint.sourceInstanceId,
+      )
+    ) {
+      return { min: 0, max: 0 }
+    }
+  }
+  return getEffectSelectionLimits(effect) ?? { min: 0, max: 0 }
+}
 
 export const resolveFaintEffect = (
   state: GameState,

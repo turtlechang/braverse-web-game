@@ -676,7 +676,7 @@ describe('faint effect queue', () => {
       ],
     }
 
-    expect(getFaintEffectMinMax(effect)).toEqual({ min: 0, max: 1 })
+    expect(getFaintEffectMinMax(state, effect)).toEqual({ min: 0, max: 1 })
     expect(getFaintEffectCardCandidates(state).map((card) => card.instanceId)).toEqual([
       'yellow-hand',
     ])
