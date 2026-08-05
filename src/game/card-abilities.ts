@@ -18,6 +18,7 @@ import {
   recordCookieDepartures,
 } from './replacement'
 import {
+  getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
@@ -99,6 +100,7 @@ const canPayAbilityCost = (
   state: GameState,
   playerId: PlayerId,
   cost: AbilityCost,
+  sourceInstanceId?: string,
 ): boolean => {
   const player = state.players[playerId]
   const energyPayment = selectEnergyPayment(
@@ -114,16 +116,22 @@ const canPayAbilityCost = (
   const supportCost =
     (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
 
-  const availableDiscardCount = cost.discardHandColor
-    ? player.hand.filter((card) => card.energyColor === cost.discardHandColor)
-        .length
-    : player.hand.length
+  const availableDiscardCount = getDiscardHandCostCandidates(
+    cost,
+    player.hand,
+    sourceInstanceId,
+  ).length
 
   return (
     remainingSupportCount >= supportCost &&
     availableDiscardCount >= (cost.discardHand ?? 0) &&
+    (!cost.discardAllHand || player.hand.length > 0) &&
     (!cost.hpToTrash ||
-      getHpToTrashCostCandidates(cost, player.battleArea).length > 0)
+      getHpToTrashCostCandidates(
+        cost,
+        player.battleArea,
+        sourceInstanceId,
+      ).length > 0)
   )
 }
 
@@ -169,8 +177,20 @@ const payAbilityCost = (
   if (supportToHandIds.length !== (cost.supportToHand ?? 0)) {
     throw new GameRuleError(`必須將 ${cost.supportToHand ?? 0} 張支援區卡返回手牌。`)
   }
-  if (discardHandIds.length !== (cost.discardHand ?? 0)) {
-    throw new GameRuleError(`必須棄掉 ${cost.discardHand ?? 0} 張手牌。`)
+  if (cost.discardAllHand) {
+    if (discardHandIds.length > 0) {
+      throw new GameRuleError('此代價直接棄置整副手牌，不需要選牌。')
+    }
+  } else if (
+    cost.discardHandAtLeast
+      ? discardHandIds.length < (cost.discardHand ?? 0)
+      : discardHandIds.length !== (cost.discardHand ?? 0)
+  ) {
+    throw new GameRuleError(
+      cost.discardHandAtLeast
+        ? `必須至少棄掉 ${cost.discardHand ?? 0} 張手牌。`
+        : `必須棄掉 ${cost.discardHand ?? 0} 張手牌。`,
+    )
   }
 
   const paymentSet = new Set(options.paymentIds)
@@ -198,10 +218,10 @@ const payAbilityCost = (
     throw new GameRuleError('選擇的支援區回手費用不合法。')
   }
 
-  const discardedHandCards = player.hand.filter((card) =>
-    discardHandIds.includes(card.instanceId),
-  )
-  if (discardedHandCards.length !== discardHandIds.length) {
+  const discardedHandCards = cost.discardAllHand
+    ? player.hand
+    : player.hand.filter((card) => discardHandIds.includes(card.instanceId))
+  if (discardedHandCards.length !== (cost.discardAllHand ? player.hand.length : discardHandIds.length)) {
     throw new GameRuleError('選擇的棄手牌費用不合法。')
   }
   if (cost.discardHandColor) {
@@ -211,6 +231,16 @@ const payAbilityCost = (
     if (invalidDiscard) {
       throw new GameRuleError(
         `棄手牌費用必須選擇 ${cost.discardHandColor} 能量顏色的手牌。`,
+      )
+    }
+  }
+  if (cost.discardHandType) {
+    const invalidDiscard = discardedHandCards.find(
+      (card) => card.type !== cost.discardHandType,
+    )
+    if (invalidDiscard) {
+      throw new GameRuleError(
+        `棄手牌費用必須選擇 ${cost.discardHandType} 類型的手牌。`,
       )
     }
   }
@@ -234,12 +264,14 @@ const payAbilityCost = (
           ? { ...support, rested: true }
           : support,
       ),
-    hand: [
-      ...player.hand.filter(
-        (card) => !discardHandIds.includes(card.instanceId),
-      ),
-      ...selectedSupportToHand.map((support) => support.card),
-    ],
+    hand: cost.discardAllHand
+      ? selectedSupportToHand.map((support) => support.card)
+      : [
+          ...player.hand.filter(
+            (card) => !discardHandIds.includes(card.instanceId),
+          ),
+          ...selectedSupportToHand.map((support) => support.card),
+        ],
     discardPile: [
       ...player.discardPile,
       ...selectedSupportToTrash.map((support) => support.card),
@@ -248,10 +280,12 @@ const payAbilityCost = (
   }
 
   let departedCount = 0
+  let costRecord: GameState['costRecord']
   if (cost.hpToTrash) {
     const target = getHpToTrashCostCandidates(
       cost,
       updatedPlayer.battleArea,
+      options.sourceInstanceId,
     ).find((cookie) => cookie.card.instanceId === hpToTrashTargetIds[0])
     if (!target) {
       throw new GameRuleError('選擇的 HP 費用餅乾不合法。')
@@ -272,12 +306,20 @@ const payAbilityCost = (
     // 導致同一張卡同時留在 hpCards 又被複製進棄牌區。
     if (removeCount === 0) {
       departedCount = 0
+      costRecord = {
+        hpTrashCookieInstanceId: target.card.instanceId,
+        hpTrashTopCardType: undefined,
+      }
     } else {
       const removedHpCards = target.hpCards.slice(-removeCount)
       const remainingHpCards = target.hpCards.slice(
         0,
         Math.max(0, target.hpCards.length - removeCount),
       )
+      costRecord = {
+        hpTrashCookieInstanceId: target.card.instanceId,
+        hpTrashTopCardType: removedHpCards[removedHpCards.length - 1]?.type,
+      }
 
       if (remainingHpCards.length === 0) {
         departedCount = 1
@@ -314,6 +356,7 @@ const payAbilityCost = (
 
   let nextState: GameState = {
     ...state,
+    ...(costRecord ? { costRecord } : {}),
     players: {
       ...state.players,
       [playerId]: updatedPlayer,
@@ -432,7 +475,7 @@ export const canPlayItem = (
     return Boolean(
       card &&
         ability &&
-        canPayAbilityCost(state, playerId, ability.cost) &&
+        canPayAbilityCost(state, playerId, ability.cost, instanceId) &&
         hasUsableEffect(state, playerId, instanceId, ability),
     )
   } catch {
@@ -537,9 +580,9 @@ export const canActivateStage = (
     assertMainAction(state, playerId)
     const stage = state.players[playerId].stage
     const ability = stage?.card.stageAbility
-    if (!stage || stage.rested || !ability || ability.triggered) return false
+    if (!stage || stage.rested || !ability || ability.triggered || ability.endPhase) return false
     return (
-      canPayAbilityCost(state, playerId, ability.cost) &&
+      canPayAbilityCost(state, playerId, ability.cost, stage.card.instanceId) &&
       (
         hasUsableEffect(state, playerId, stage.card.instanceId, ability) ||
         (ability.specialVictory !== undefined &&

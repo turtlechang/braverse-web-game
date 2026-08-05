@@ -50,6 +50,7 @@
 | 效果 | 對應 CardEffect kind | 說明 |
 |---|---|---|
 | 傷害 | `damage` | 對合法目標造成固定傷害，含勝負與替補判定 |
+| 依序全體傷害 | `damage-all`（`sequential: true`） | 發動方依點擊順序選齊所有合法目標；每一個目標的傷害、FLIP、昏厥與中斷流程處理完畢後才繼續下一個。現用於 BS4-005，並非攻擊，不開啟陷阱步驟。 |
 | 休息區等級差傷害 | `damage-by-break-level-difference` | 依雙方休息區等級總和差造成動態傷害；可搭配 `break-level-higher-than-opponent` 條件 |
 | 攻擊修正 | `modify-attack` | 增加或減少攻擊傷害，回合結束移除 |
 | 全體攻擊修正 | `modify-all-attack` | 增加或減少己方所有餅乾攻擊傷害，回合結束移除 |

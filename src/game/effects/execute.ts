@@ -14,6 +14,7 @@ import type {
   EffectContext,
   EffectDuration,
   GameState,
+  PendingBattle,
   PlayerId,
   PlayerState,
   Shuffle,
@@ -508,6 +509,55 @@ export const executeCardEffect = (
         !isEffectDamagePrevented(state, cookie, targetPlayerId) &&
         (!effect.excludeSource || cookie.card.instanceId !== context.sourceInstanceId),
     )
+
+    if (effect.sequential) {
+      if (!effect.target) {
+        throw new GameRuleError('Sequential damage requires a target selector.')
+      }
+      if (state.pendingBattle) {
+        throw new GameRuleError('Cannot begin sequential damage during a battle.')
+      }
+
+      const candidateIds = targets.map((target) => target.card.instanceId)
+      const selectedIds = [...new Set(selectedTargetIds)]
+      const selectedAllCandidates =
+        selectedIds.length === selectedTargetIds.length &&
+        selectedIds.length === candidateIds.length &&
+        selectedIds.every((instanceId) => candidateIds.includes(instanceId))
+      if (!selectedAllCandidates) {
+        throw new GameRuleError(
+          'Select every legal damage target exactly once, in resolution order.',
+        )
+      }
+
+      const [targetInstanceId, ...remainingTargetInstanceIds] = selectedIds
+      if (!targetInstanceId) return state
+
+      const pendingBattle: PendingBattle = {
+        attackerPlayerId: context.sourcePlayerId,
+        defenderPlayerId: targetPlayerId,
+        // 代價可能正好讓來源昏厥離場；已成功啟動的技能仍要完整結算。
+        attackerInstanceId: context.sourceInstanceId,
+        targetInstanceId,
+        declaredDamage: effect.amount,
+        remainingDamage: effect.amount,
+        stage: 'damage',
+        trapUsed: true,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        damagePlayerId: targetPlayerId,
+        damageTargetInstanceId: targetInstanceId,
+        effectDamageSequence: {
+          remainingTargetInstanceIds,
+          damage: effect.amount,
+        },
+      }
+      return { ...state, pendingBattle }
+    }
+
     const damagedPlayer = targets.reduce(
       (player, target) =>
         damagePlayerCookie(player, target.card.instanceId, effect.amount),
@@ -744,7 +794,7 @@ export const executeCardEffect = (
       throw new GameRuleError('牌庫張數不足，無法增加 HP。')
     }
     const gainedCards = player.deck.slice(0, effect.amount)
-    return updatePlayer(state, {
+    const updatedState = updatePlayer(state, {
       ...player,
       deck: player.deck.slice(effect.amount),
       battleArea: player.battleArea.map((cookie, index) =>
@@ -753,6 +803,13 @@ export const executeCardEffect = (
           : cookie,
       ),
     })
+    return {
+      ...updatedState,
+      cookiesGainedHpThisTurn: {
+        ...(updatedState.cookiesGainedHpThisTurn ?? {}),
+        [context.sourcePlayerId]: true,
+      },
+    }
   }
 
   if (effect.kind === 'hand-to-break') {
@@ -925,61 +982,25 @@ export const executeCardEffect = (
 
   if (effect.kind === 'hand-to-hp') {
     if (effect.selectTarget) {
+      // 兩階段（BS4-044 千年寺）：第一階段只選目標餅乾，驗證合法後即結束；
+      // 放置手牌由第二階段（pendingAbilityEffect.pendingPlace → placeHandCardOnHp）
+      // 執行，未選目標則整個效果略過。
       const targetCandidates = getEffectTargetCandidates(
         state,
         context,
         effect.target,
       )
-      const sourcePlayer = state.players[context.sourcePlayerId]
-      const hand = sourcePlayer.hand.filter(
-        (card) =>
-          effect.energyColor === undefined ||
-          card.energyColor === effect.energyColor,
-      )
       const selectedTargets = targetCandidates.filter((cookie) =>
         selectedTargetIds.includes(cookie.card.instanceId),
-      )
-      const selectedHand = hand.filter((card) =>
-        selectedTargetIds.includes(card.instanceId),
       )
       if (
         selectedTargets.length > effect.target.max ||
         selectedTargets.length < effect.target.min ||
-        selectedHand.length > 1 ||
-        selectedTargets.length + selectedHand.length !== selectedTargetIds.length
+        selectedTargets.length !== selectedTargetIds.length
       ) {
-        throw new GameRuleError('Invalid hand or HP target.')
+        throw new GameRuleError('Invalid HP target.')
       }
-      if (selectedTargets.length === 0) return state
-      if (selectedHand.length === 0) return state
-
-      const target = selectedTargets[0]
-      const targetPlayerId = getTargetPlayerId(context, effect.target)
-      const selectedHandCard = selectedHand[0]
-      const targetPlayer = state.players[targetPlayerId]
-      const updatedTargetPlayer = {
-        ...targetPlayer,
-        battleArea: targetPlayer.battleArea.map((cookie) =>
-          cookie.card.instanceId === target.card.instanceId
-            ? { ...cookie, hpCards: [...cookie.hpCards, selectedHandCard] }
-            : cookie,
-        ),
-      }
-      if (targetPlayerId === context.sourcePlayerId) {
-        return updatePlayer(state, {
-          ...updatedTargetPlayer,
-          hand: sourcePlayer.hand.filter(
-            (card) => card.instanceId !== selectedHandCard.instanceId,
-          ),
-        })
-      }
-      const withTargetUpdated = updatePlayer(state, updatedTargetPlayer)
-      return updatePlayer(withTargetUpdated, {
-        ...sourcePlayer,
-        hand: sourcePlayer.hand.filter(
-          (card) => card.instanceId !== selectedHandCard.instanceId,
-        ),
-      })
+      return state
     }
     const player = state.players[context.sourcePlayerId]
     const selectedId = selectedTargetIds[0]
@@ -1052,17 +1073,14 @@ export const executeCardEffect = (
     const selectedTargets = targetCandidates.filter((cookie) =>
       selectedTargetIds.includes(cookie.card.instanceId),
     )
-    const selectedHand = player.hand.filter((card) =>
-      selectedTargetIds.includes(card.instanceId),
-    )
     if (
       selectedTargets.length > effect.target.max ||
       selectedTargets.length < effect.target.min ||
-      selectedHand.length > 1 ||
-      selectedTargets.length + selectedHand.length !== selectedTargetIds.length
+      selectedTargets.length !== selectedTargetIds.length
     ) {
       throw new GameRuleError('Invalid HP cycle target.')
     }
+    // 第一階段「最多 1 個」：不選目標時整個技能直接結束（不進入第二階段）。
     if (selectedTargets.length === 0) return state
 
     const target = selectedTargets[0]
@@ -1081,23 +1099,12 @@ export const executeCardEffect = (
       return resolveDamageOutcome(updated, context.sourcePlayerId, 1, [target.card])
     }
 
-    const selectedHandCard = selectedHand[0]
     return updatePlayer(state, {
       ...player,
-      hand: [
-        ...player.hand.filter(
-          (card) => card.instanceId !== selectedHandCard?.instanceId,
-        ),
-        ...moved,
-      ],
+      hand: [...player.hand, ...moved],
       battleArea: player.battleArea.map((cookie) =>
         cookie.card.instanceId === target.card.instanceId
-          ? {
-              ...cookie,
-              hpCards: selectedHandCard
-                ? [...remaining, selectedHandCard]
-                : remaining,
-            }
+          ? { ...cookie, hpCards: remaining }
           : cookie,
       ),
     })
@@ -1690,6 +1697,53 @@ export const executeCardEffect = (
     }
   }
 
+  if (effect.kind === 'deferred-end-of-turn') {
+    // 「Then, when your turn ends, ...」：現在只排隊，回合結束階段才結算。
+    return {
+      ...state,
+      pendingEndOfTurnEffects: [
+        ...(state.pendingEndOfTurnEffects ?? []),
+        {
+          playerId: context.sourcePlayerId,
+          sourcePlayerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId,
+          sourceCardName: context.sourceCardName ??
+            state.players[context.sourcePlayerId].battleArea.find(
+              (c) => c.card.instanceId === context.sourceInstanceId,
+            )?.card.name ?? 'Unknown',
+          effects: effect.effects,
+          effectIndex: 0,
+        },
+      ],
+    }
+  }
+
+  if (effect.kind === 'opponent-rests-support') {
+    const targetPlayerId = getOpponentId(context.sourcePlayerId)
+    const targetPlayer = state.players[targetPlayerId]
+    const candidates = targetPlayer.supportArea.filter(
+      (support) => !effect.activeOnly || !support.rested,
+    )
+    if (candidates.length < effect.amount) {
+      return { ...state }
+    }
+    return {
+      ...state,
+      pendingOpponentRestSupport: {
+        playerId: targetPlayerId,
+        count: effect.amount,
+        activeOnly: effect.activeOnly,
+        sourcePlayerId: context.sourcePlayerId,
+        sourceInstanceId: context.sourceInstanceId,
+        sourceCardName: context.sourceCardName ??
+          state.players[context.sourcePlayerId].battleArea.find(
+            (c) => c.card.instanceId === context.sourceInstanceId,
+          )?.card.name ?? 'Unknown',
+        effectText: effect.kind,
+      },
+    }
+  }
+
   if (effect.kind === 'discard-hand') {
     const player = state.players[context.sourcePlayerId]
     if (player.hand.length < effect.count) {
@@ -1780,6 +1834,59 @@ export const executeCardEffect = (
       afterDeparture,
       targetPlayerId,
     )
+  }
+
+  if (effect.kind === 'make-faint') {
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length !== selectedTargetIds.length) {
+      throw new GameRuleError('選擇的效果目標數量不合法。')
+    }
+    const min = effect.target.min
+    const max = effect.target.max
+    if (uniqueIds.length < min || uniqueIds.length > max) {
+      throw new GameRuleError('選擇的效果目標數量不合法。')
+    }
+    if (uniqueIds.length === 0) {
+      return { ...state }
+    }
+    const selectedCookies = uniqueIds.map((instanceId) =>
+      candidates.find((cookie) => cookie.card.instanceId === instanceId),
+    )
+    if (selectedCookies.some((cookie) => !cookie)) {
+      throw new GameRuleError('選擇的卡牌不是此效果的合法目標。')
+    }
+    const targets = selectedCookies as CookieInBattle[]
+
+    let nextState = state
+    for (const [ownerId, group] of groupTargetsByOwner(nextState, targets)) {
+      const player = nextState.players[ownerId]
+      const movedIds = new Set(group.map((c) => c.card.instanceId))
+      const departedCards = group.map((c) => c.card)
+      const hpCards = group.flatMap((c) => c.hpCards)
+      const equippedCards = group.flatMap((c) => c.equippedCards ?? [])
+      const updatedPlayer: PlayerState = {
+        ...player,
+        battleArea: player.battleArea.filter(
+          (c) => !movedIds.has(c.card.instanceId),
+        ),
+        breakArea: [...player.breakArea, ...departedCards],
+        discardPile: [
+          ...player.discardPile,
+          ...hpCards,
+          ...equippedCards,
+        ],
+      }
+      const updatedState = updatePlayer(nextState, updatedPlayer)
+      const faintState = resolveDamageOutcome(
+        updatedState,
+        ownerId,
+        group.length,
+        departedCards,
+      )
+      nextState = checkWindsweptValleyTrigger(faintState, ownerId)
+    }
+    return nextState
   }
 
   if (effect.kind === 'field-to-trash') {
@@ -2452,6 +2559,28 @@ export const executeCardEffect = (
 
   if (effect.kind === 'return-to-hand') {
     const candidates = getEffectTargetCandidates(state, context, effect.target)
+    // 昏厥技能（When this Cookie faints）的「Return this Cookie to your
+    // hand」：來源已離場躺在休息區，戰鬥區沒有候選，直接從休息區返回手牌
+    // （BS5-026 DJ Cookie 的第二個昏厥效果）。
+    if (
+      effect.target.sourceOnly &&
+      candidates.length === 0 &&
+      context.sourceInstanceId
+    ) {
+      const player = state.players[context.sourcePlayerId]
+      const breakSource = player.breakArea.find(
+        (card) => card.instanceId === context.sourceInstanceId,
+      )
+      if (breakSource) {
+        return updatePlayer(state, {
+          ...player,
+          breakArea: player.breakArea.filter(
+            (card) => card.instanceId !== context.sourceInstanceId,
+          ),
+          hand: [...player.hand, breakSource],
+        })
+      }
+    }
     if (candidates.length < effect.target.min && selectedTargetIds.length === 0) {
       return { ...state }
     }
@@ -2495,6 +2624,12 @@ export const executeCardEffect = (
     const targetPlayerId = getTargetPlayerId(context, effect.target)
     const targetPlayer = state.players[targetPlayerId]
     if (targetPlayer.battleArea.length - selected.length < 1) {
+      // 自我返回（BS5-051 Beet Cookie 的回合結束效果）：若自己是最後一張
+      // 餅乾，官方規則下應觸發補位流程，但引擎維持「戰鬥區至少 1 張」的
+      // 既有約束，這種情況直接略過效果；對手的返回目標維持拋錯。
+      if (effect.target.sourceOnly) {
+        return { ...state }
+      }
       throw new GameRuleError('返回牌庫底後，戰鬥區必須至少保留 1 張餅乾。')
     }
     const selectedIds = new Set(selected.map((cookie) => cookie.card.instanceId))
@@ -3019,4 +3154,51 @@ export const executeCardEffect = (
           ...modifiers,
         ],
       }
+}
+
+/**
+ * 兩階段選擇的第二階段（cycle-hp BS4-030 / hand-to-hp BS4-044）：把最多
+ * 1 張手牌放回目標餅乾 HP 最上方。目標在第一階段昏厥離場時不允許呼叫
+ * （引擎不會建立該決策），`handCardInstanceId` 省略時視為略過放置。
+ */
+export const placeHandCardOnHp = (
+  state: GameState,
+  context: EffectContext,
+  targetInstanceId: string,
+  handCardInstanceId?: string,
+): GameState => {
+  if (state.status !== 'playing') {
+    throw new GameRuleError('只有進行中的遊戲可以執行卡牌效果。')
+  }
+  const player = state.players[context.sourcePlayerId]
+  const target = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === targetInstanceId,
+  )
+  if (!target) {
+    throw new GameRuleError('目標餅乾已不在戰鬥區，無法放置 HP。')
+  }
+  const selectedCard = handCardInstanceId
+    ? player.hand.find((card) => card.instanceId === handCardInstanceId)
+    : undefined
+  if (handCardInstanceId && !selectedCard) {
+    throw new GameRuleError('手牌中沒有這張卡。')
+  }
+  return updatePlayer(state, {
+    ...player,
+    hand: selectedCard
+      ? player.hand.filter(
+          (card) => card.instanceId !== selectedCard.instanceId,
+        )
+      : player.hand,
+    battleArea: player.battleArea.map((cookie) =>
+      cookie.card.instanceId === targetInstanceId
+        ? {
+            ...cookie,
+            hpCards: selectedCard
+              ? [...cookie.hpCards, selectedCard]
+              : cookie.hpCards,
+          }
+        : cookie,
+    ),
+  })
 }

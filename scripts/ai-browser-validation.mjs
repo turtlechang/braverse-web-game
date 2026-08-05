@@ -649,6 +649,10 @@ try {
   const runBreakToTrashTest = async (variant) => {
     const testUrl = `${baseUrl}?test-state=break-to-trash-${variant}`
     await page.goto(testUrl, { waitUntil: 'networkidle' })
+    // Fixture routes hydrate the hand and pending OnPlay state after the
+    // initial navigation. Give React one deterministic commit window before
+    // selecting the first card so this validation does not race cold loads.
+    await page.waitForTimeout(600)
 
     const handCardWrap = page.locator('.bottom-hand .hand-card-wrap').first()
     await handCardWrap.locator('.hand-card').click()

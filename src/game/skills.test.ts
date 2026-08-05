@@ -6,6 +6,7 @@ import {
   canPayEnergyCost,
   createDemoGame,
   getEffectiveAttack,
+  getHpToTrashCostCandidates,
   skipCookieOnPlay,
   type CardSkill,
   type GameCard,
@@ -806,5 +807,190 @@ describe('activate skill with discardHand cost', () => {
     expect(
       canActivateCookieSkill(sixCardState, 'player-one', sourceId, 'activate'),
     ).toBe(true)
+  })
+
+  it("only allows this Cookie's HP to pay a source-only HP cost", () => {
+    let state = createDemoGame()
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0, hpToTrash: { amount: 1, sourceOnly: true } },
+      text: "Place 1 card from the top of this Cookie's HP into the trash.",
+      effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    }
+    state = withSkill(state, 'player-one', skill)
+    state = advancePhase(advancePhase(state))
+    const source = state.players['player-one'].battleArea[0]
+    const other = {
+      ...source,
+      card: { ...source.card, id: 'other-cookie', instanceId: 'other-cookie' },
+      hpCards: [
+        { id: 'other-hp', instanceId: 'other-hp', name: 'other-hp', type: 'item' as const },
+      ],
+    }
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            { ...source, hpCards: [{ id: 'source-hp', instanceId: 'source-hp', name: 'source-hp', type: 'item' as const }] },
+            other,
+          ],
+        },
+      },
+    }
+
+    expect(
+      getHpToTrashCostCandidates(
+        skill.cost,
+        state.players['player-one'].battleArea,
+        source.card.instanceId,
+      ).map((cookie) => cookie.card.instanceId),
+    ).toEqual([source.card.instanceId])
+
+    expect(() =>
+      activateCookieSkill(
+        state,
+        'player-one',
+        source.card.instanceId,
+        'activate',
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        undefined,
+        [other.card.instanceId],
+      ),
+    ).toThrow('選擇的 HP 費用餅乾不合法。')
+
+    const paid = activateCookieSkill(
+      state,
+      'player-one',
+      source.card.instanceId,
+      'activate',
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      [source.card.instanceId],
+    )
+    expect(paid.players['player-one'].battleArea).toHaveLength(1)
+    expect(paid.players['player-one'].battleArea[0].card.instanceId).toBe(
+      other.card.instanceId,
+    )
+    expect(paid.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
+  it('filters HP and discard-hand costs by the card restrictions stated on the card', () => {
+    const base = createDemoGame()
+    const source = base.players['player-one'].battleArea[0]
+    const redLevelOne = {
+      ...source,
+      card: {
+        ...source.card,
+        id: 'red-level-one',
+        instanceId: 'red-level-one',
+        energyColor: 'red' as const,
+        level: 1,
+      },
+    }
+    const redLevelTwo = {
+      ...source,
+      card: {
+        ...source.card,
+        id: 'red-level-two',
+        instanceId: 'red-level-two',
+        energyColor: 'red' as const,
+        level: 2,
+      },
+    }
+    const blueLevelThree = {
+      ...source,
+      card: {
+        ...source.card,
+        id: 'blue-level-three',
+        instanceId: 'blue-level-three',
+        energyColor: 'blue' as const,
+        level: 3,
+      },
+    }
+    const hpCost: CardSkill['cost'] = {
+      energy: {},
+      discardHand: 0,
+      hpToTrash: {
+        amount: 1,
+        energyColor: 'red',
+        minLevel: 2,
+        excludeSource: true,
+      },
+    }
+
+    expect(
+      getHpToTrashCostCandidates(hpCost, [
+        source,
+        redLevelOne,
+        redLevelTwo,
+        blueLevelThree,
+      ], source.card.instanceId).map((cookie) => cookie.card.instanceId),
+    ).toEqual(['red-level-two'])
+
+    const discardSkill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: {},
+        discardHand: 1,
+        discardHandColor: 'red',
+        discardHandType: 'trap',
+      },
+      text: 'Discard 1 red Trap card.',
+      effects: [effect],
+    }
+    let state = withSkill(base, 'player-one', discardSkill)
+    state = advancePhase(advancePhase(state))
+    const sourceId = state.players['player-one'].battleArea[0].card.instanceId
+    const redItem: GameCard = {
+      id: 'red-item',
+      instanceId: 'red-item',
+      name: 'red-item',
+      type: 'item',
+      energyColor: 'red',
+    }
+    const redTrap: GameCard = {
+      id: 'red-trap',
+      instanceId: 'red-trap',
+      name: 'red-trap',
+      type: 'trap',
+      energyColor: 'red',
+    }
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': { ...state.players['player-one'], hand: [redItem] },
+      },
+    }
+    expect(canActivateCookieSkill(state, 'player-one', sourceId, 'activate')).toBe(false)
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': { ...state.players['player-one'], hand: [redTrap] },
+      },
+    }
+    expect(canActivateCookieSkill(state, 'player-one', sourceId, 'activate')).toBe(true)
   })
 })

@@ -1,0 +1,416 @@
+<title>黑可可餅乾 對戰報告與雙路線構築</title>
+<style>
+  :root {
+    --bg: #f4f1f7;
+    --bg-raised: #ffffff;
+    --ink: #241a2e;
+    --ink-soft: #5a4d68;
+    --ink-faint: #8b7d99;
+    --accent: #6a3f9e;
+    --accent-strong: #4f2d78;
+    --accent-soft: #ece3f6;
+    --accent2: #b0552b;
+    --accent2-strong: #8a3f1e;
+    --accent2-soft: #f7e6d9;
+    --gold: #9c7526;
+    --gold-soft: #f3ead3;
+    --danger: #a1423a;
+    --danger-soft: #f6e4e1;
+    --rule: #ddd3ea;
+    --rule-strong: #c1aed9;
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Songti TC", "PMingLiU", Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #180f20;
+      --bg-raised: #211530;
+      --ink: #ece4f4;
+      --ink-soft: #b6a5c9;
+      --ink-faint: #85729a;
+      --accent: #b287e0;
+      --accent-strong: #cfa9f0;
+      --accent-soft: #2c1c3f;
+      --accent2: #e0955f;
+      --accent2-strong: #f0b184;
+      --accent2-soft: #3a2419;
+      --gold: #dcb35c;
+      --gold-soft: #322a15;
+      --danger: #e2897d;
+      --danger-soft: #3a231f;
+      --rule: #34243f;
+      --rule-strong: #493357;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #180f20; --bg-raised: #211530; --ink: #ece4f4; --ink-soft: #b6a5c9; --ink-faint: #85729a;
+    --accent: #b287e0; --accent-strong: #cfa9f0; --accent-soft: #2c1c3f;
+    --accent2: #e0955f; --accent2-strong: #f0b184; --accent2-soft: #3a2419;
+    --gold: #dcb35c; --gold-soft: #322a15; --danger: #e2897d; --danger-soft: #3a231f;
+    --rule: #34243f; --rule-strong: #493357;
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f1f7; --bg-raised: #ffffff; --ink: #241a2e; --ink-soft: #5a4d68; --ink-faint: #8b7d99;
+    --accent: #6a3f9e; --accent-strong: #4f2d78; --accent-soft: #ece3f6;
+    --accent2: #b0552b; --accent2-strong: #8a3f1e; --accent2-soft: #f7e6d9;
+    --gold: #9c7526; --gold-soft: #f3ead3; --danger: #a1423a; --danger-soft: #f6e4e1;
+    --rule: #ddd3ea; --rule-strong: #c1aed9;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--ink); font-family: var(--font-body); margin: 0; padding: 0; }
+  body { max-width: 820px; margin: 0 auto; padding: 56px 28px 96px; line-height: 1.7; }
+  ::selection { background: var(--accent-soft); color: var(--ink); }
+
+  .masthead { display: flex; flex-direction: column; gap: 10px; padding-bottom: 28px; border-bottom: 2px solid var(--accent); margin-bottom: 40px; }
+  .eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); font-weight: 600; }
+  h1 { font-family: var(--font-display); font-weight: 400; font-size: 2.1rem; line-height: 1.2; margin: 0; color: var(--ink); text-wrap: balance; }
+  .masthead p { margin: 4px 0 0; color: var(--ink-soft); font-size: 1.02rem; max-width: 62ch; }
+  .matchup-row { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+  .side { display: flex; align-items: baseline; gap: 8px; font-family: var(--font-mono); font-size: 0.86rem; }
+  .side .name { font-family: var(--font-body); font-size: 0.98rem; color: var(--ink); font-weight: 600; }
+  .vs { color: var(--ink-faint); font-family: var(--font-mono); font-size: 0.8rem; }
+  .result-chip { margin-left: auto; font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.06em; padding: 5px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); border: 1px solid var(--rule-strong); font-weight: 700; }
+
+  section { margin-top: 48px; }
+  h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; color: var(--ink); margin: 0 0 6px; text-wrap: balance; }
+  .section-sub { color: var(--ink-faint); font-size: 0.92rem; margin: 0 0 22px; }
+  h3 { font-family: var(--font-body); font-weight: 700; font-size: 1rem; color: var(--accent-strong); margin: 28px 0 10px; }
+  p { margin: 0 0 14px; }
+  strong { color: var(--ink); }
+  .lede { font-size: 1.06rem; color: var(--ink); }
+
+  .callout { background: var(--bg-raised); border: 1px solid var(--rule); border-left: 3px solid var(--accent); border-radius: 4px; padding: 16px 18px; margin: 18px 0; }
+  .callout.warn { border-left-color: var(--danger); }
+  .callout.gold { border-left-color: var(--gold); }
+  .callout.combat { border-left-color: var(--accent2); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-strong); font-weight: 700; display: block; margin-bottom: 6px; }
+  .callout.warn .label { color: var(--danger); }
+  .callout.gold .label { color: var(--gold); }
+  .callout.combat .label { color: var(--accent2-strong); }
+
+  /* ---- twin-path split ---- */
+  .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 22px 0; }
+  .path-card { background: var(--bg-raised); border: 1px solid var(--rule); border-radius: 8px; padding: 20px 20px 18px; position: relative; overflow: hidden; }
+  .path-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+  .path-card.discard::before { background: var(--accent); }
+  .path-card.combat::before { background: var(--accent2); }
+  .path-tag { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 700; padding: 3px 9px; border-radius: 999px; display: inline-block; margin-bottom: 10px; }
+  .path-card.discard .path-tag { background: var(--accent-soft); color: var(--accent-strong); }
+  .path-card.combat .path-tag { background: var(--accent2-soft); color: var(--accent2-strong); }
+  .path-card h4 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 400; margin: 0 0 8px; }
+  .path-card p { font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 10px; }
+  .path-card .path-meta { display: flex; gap: 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .path-meta .stat { display: flex; flex-direction: column; }
+  .path-meta .stat .n { font-family: var(--font-mono); font-weight: 700; font-size: 1rem; }
+  .path-card.discard .path-meta .n { color: var(--accent-strong); }
+  .path-card.combat .path-meta .n { color: var(--accent2-strong); }
+  .path-meta .stat .k { font-size: 0.68rem; color: var(--ink-faint); }
+
+  .phase { display: grid; grid-template-columns: 92px 1fr; gap: 4px 18px; padding: 18px 0; border-top: 1px solid var(--rule); }
+  .phase:last-of-type { border-bottom: 1px solid var(--rule); }
+  .phase-tag { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); font-weight: 700; padding-top: 3px; }
+  .phase-turn { display: block; font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-faint); margin-top: 3px; }
+  .phase-body h4 { font-family: var(--font-body); font-size: 1.02rem; margin: 0 0 8px; color: var(--ink); }
+  .phase-body ul { margin: 0; padding-left: 20px; }
+  .phase-body li { margin-bottom: 6px; }
+
+  .table-wrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--rule); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--bg-raised); }
+  caption { text-align: left; font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); padding: 10px 14px 0; letter-spacing: 0.04em; }
+  thead th { text-align: left; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--rule-strong); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .card-no { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-faint); white-space: nowrap; }
+  .card-name { font-weight: 600; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; font-family: var(--font-mono); }
+  .delta-up { color: var(--accent-strong); font-weight: 700; }
+  .delta-down { color: var(--danger); font-weight: 700; }
+  .tag { display: inline-block; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+  .tag.new { background: var(--accent-soft); color: var(--accent-strong); }
+  .tag.cut { background: var(--danger-soft); color: var(--danger); }
+
+  .group-row td { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); background: var(--gold-soft); padding: 7px 14px; border-bottom: 1px solid var(--rule); font-weight: 700; }
+  .group-row.combat td { color: var(--accent2-strong); background: var(--accent2-soft); }
+
+  .totals { display: flex; gap: 28px; flex-wrap: wrap; margin: 22px 0 0; padding-top: 16px; border-top: 1px solid var(--rule); }
+  .totals .stat { display: flex; flex-direction: column; gap: 2px; }
+  .totals .stat .n { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+  .totals.combat .stat .n { color: var(--accent2-strong); }
+  .totals .stat .k { font-size: 0.74rem; color: var(--ink-faint); letter-spacing: 0.03em; }
+
+  .caution-list { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+  .caution { display: grid; grid-template-columns: 22px 1fr; gap: 10px; background: var(--bg-raised); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; }
+  .caution .mark { color: var(--danger); font-size: 1.1rem; line-height: 1.5; font-family: var(--font-display); }
+  .caution h4 { margin: 0 0 4px; font-size: 0.96rem; color: var(--ink); }
+  .caution p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule); font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); letter-spacing: 0.02em; }
+
+  @media (max-width: 640px) {
+    body { padding: 36px 18px 72px; }
+    h1 { font-size: 1.55rem; }
+    .phase { grid-template-columns: 1fr; }
+    .phase-tag { padding-top: 0; }
+    .paths { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="masthead">
+  <span class="eyebrow">對戰報告 · 雙路線構築建議</span>
+  <h1>黑可可餅乾：丟牌紫 與 打架紫 的兩條路</h1>
+  <p>使用自訂黑可可餅乾牌組（第三彈紫色）在瀏覽器中與 AI 對戰，對手同樣是第三彈紅色・火龍果龍族餅乾牌組。紫色本身在卡池裡分成兩種完全不同的打法邏輯，這次連同勝利紀錄一起把兩派都整理出來。</p>
+  <div class="matchup-row">
+    <div class="side"><span class="name">黑可可餅乾</span><span>紫・丟牌流</span></div>
+    <span class="vs">VS</span>
+    <div class="side"><span class="name">火龍果龍族餅乾</span><span>紅・快攻</span></div>
+    <span class="result-chip">第 3 戰 · 玩家勝利（LV.1 AI · 第 18 回合）</span>
+  </div>
+</div>
+
+<section id="summary">
+  <h2>對戰結果</h2>
+  <p class="section-sub">兩敗才拿下一勝，但這兩敗把紫色的機制邊界摸得很清楚</p>
+
+  <p class="lede">在 <strong>Lv.2</strong>（基礎戰術）AI 手上輸了兩場：第一場是主力餅乾在 1 HP 掛在場上太久，被對手的道具卡直接打死——道具的直接傷害<strong>不會觸發攻擊宣告，陷阱完全沒有反應視窗</strong>，這點跟綠色聖百合那場遇到的問題一樣，但這次更確定是規則本身的邊界，不是特例。調整節奏並把難度降到 <strong>Lv.1</strong> 後，第 18 回合靠黑可可餅乾／忍者餅乾的連續攻擊，把對手休息區等級推滿 10，正式取得勝利。</p>
+
+  <div class="callout">
+    <span class="label">意外發現：陷阱也能「取消」攻擊</span>
+    <p>異界之門 Hidden Warpgate（「移除對手剩餘 HP ≤2 的餅乾」）原本以為只是清場用，但實測發現：如果直接把<strong>正在攻擊你的那隻餅乾本身</strong>選成目標（前提是它剩餘 HP ≤2），攻擊會直接失效，因為攻擊者已經不在場上了。這比單純的「減傷」陷阱更強——減傷陷阱只能降低傷害，這招是讓攻擊整個消失。</p>
+  </div>
+</section>
+
+<section id="paths">
+  <h2>紫色的兩條路</h2>
+  <p class="section-sub">同一個顏色，兩套完全不同的獲勝邏輯</p>
+
+  <p>黑可可餅乾原始配置（AI 預設牌組）走的是<strong>丟牌紫</strong路線：靠自己棄牌區堆到 10 張、15 張解鎖強力效果。但卡池裡同樣有一批走<strong>打架紫</strong路線的餅乾——不看棄牌區張數，單純靠高數值本體和穩定的移除技能推進。這次連同已經實戰驗證的丟牌紫修正版，一起把打架紫的完整構築也設計出來。</p>
+
+  <div class="paths">
+    <div class="path-card discard">
+      <span class="path-tag">丟牌紫 · 已實戰驗證</span>
+      <h4>堆棄牌區，等門檻解鎖</h4>
+      <p>核心是把自己的棄牌區餵到 10～15 張以上，解鎖 Wind Archer Cookie（秒殺對手 LV.3）、Chocolate Altar of the Fallen（陷阱本體 -3 攻擊，門檻到了還能倒貼處決）這類強力效果。前期靠低費 LV.1 大量鋪場、自我磨損，後期效果一次比一次誇張。</p>
+      <div class="path-meta">
+        <div class="stat"><span class="n">33</span><span class="k">餅乾卡</span></div>
+        <div class="stat"><span class="n">6</span><span class="k">陷阱卡</span></div>
+        <div class="stat"><span class="n">14</span><span class="k">FLIP</span></div>
+      </div>
+    </div>
+    <div class="path-card combat">
+      <span class="path-tag">打架紫 · 全新設計</span>
+      <h4>數值堆疊，穩定移除</h4>
+      <p>不管棄牌區張數，只挑數值效益最高的餅乾：Purple Yam Cookie（LV.3／HP5／攻擊 4）、Hero Cookie（全中立費用，任何顏色能量都能付）、Angel Cookie（阻擋者，扛傷害的第一道防線）。移除技能大多是固定條件（棄 1 張、剩餘 HP 判定），不需要賭棄牌區有沒有堆夠。</p>
+      <div class="path-meta">
+        <div class="stat"><span class="n">39</span><span class="k">餅乾卡</span></div>
+        <div class="stat"><span class="n">8</span><span class="k">陷阱卡</span></div>
+        <div class="stat"><span class="n">8</span><span class="k">FLIP</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout combat">
+    <span class="label">怎麼選</span>
+    <p>丟牌紫上限更高（門檻解鎖後的效果非常誇張），但前中期比較被動、依賴抽到陷阱才能防守；打架紫比較線性、每張牌的效益可預期，缺點是沒有丟牌紫後期那種「一次解決全場」的爆發力。兩者都吃陷阱覆蓋率，這點在下面的注意事項會再說明。</p>
+  </div>
+</section>
+
+<section id="decklist-discard">
+  <h2>丟牌紫：修正版牌組</h2>
+  <p class="section-sub">實戰使用並取得勝利的配置 — 60 張合法牌組</p>
+
+  <div class="callout gold">
+    <span class="label">調整邏輯</span>
+    <p>原始 AI 預設牌組<strong>完全沒有陷阱卡</strong>——這在「損失餅乾＝倒數計時」的規則下是硬傷。砍掉貢獻偏低的 Red Velvet／Starfruit（技能觸發條件苛刻、效益低）與 1 張 Pastry Cookie，換來 6 張陷阱：巧克力祭壇 Chocolate Altar of the Fallen（無條件 -3 攻擊，門檻到了還能倒貼處決）、異界之門 Hidden Warpgate（直接處決或取消攻擊）、遺落雲巢 Abandoned Cloud Nest（棄牌區 15 張以上時 -3 攻擊，剛好符合這套牌自己的節奏）。</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption>新舊配置對照（依區塊分組）</caption>
+      <thead>
+        <tr><th>卡號</th><th>卡名</th><th class="num">原</th><th class="num">新</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr class="group-row"><td colspan="5">餅乾卡 · Cookie</td></tr>
+        <tr><td class="card-no">BS2-061</td><td class="card-name">Hydrangea Cookie</td><td class="num">4</td><td class="num">4</td><td>回收棄牌區非 FLIP 卡，避免抽空牌庫</td></tr>
+        <tr><td class="card-no">BS3-105</td><td class="card-name">Affogato Cookie</td><td class="num">4</td><td class="num">4</td><td>攻擊自帶對手牌庫磨損</td></tr>
+        <tr><td class="card-no">BS3-103</td><td class="card-name">Red Velvet Cookie</td><td class="num">3</td><td class="num">1</td><td class="delta-down">▼ 觸發條件苛刻（陣亡時棄牌區需≥10），減量</td></tr>
+        <tr><td class="card-no">BS2-062</td><td class="card-name">Starfruit Cookie</td><td class="num">4</td><td class="num">2</td><td class="delta-down">▼ 需犧牲自己場上餅乾才能換場，情境限定</td></tr>
+        <tr><td class="card-no">BS2-071</td><td class="card-name">Twizzly Gummy Cookie</td><td class="num">4</td><td class="num">4</td><td>可自爆點 1 傷害，靈活</td></tr>
+        <tr><td class="card-no">BS3-099</td><td class="card-name">Dark Choco Cookie</td><td class="num">2</td><td class="num">2</td><td>棄牌區 15 張以上可對 HP 追加磨損</td></tr>
+        <tr><td class="card-no">BS2-053</td><td class="card-name">Ninja Cookie</td><td class="num">4</td><td class="num">4</td><td>全中立費用，HP4 最耐打的 LV.1</td></tr>
+        <tr><td class="card-no">BS2-069</td><td class="card-name">Clotted Cream Cookie</td><td class="num">4</td><td class="num">4</td><td>棄 1 張秒殺對手 LV.1，核心移除手段</td></tr>
+        <tr><td class="card-no">BS2-068</td><td class="card-name">Cream Unicorn Cookie</td><td class="num">4</td><td class="num">4</td><td>HP5 最肉的 LV.2，棄 1 張回收紫卡</td></tr>
+        <tr><td class="card-no">BS2-058</td><td class="card-name">Wind Archer Cookie</td><td class="num">2</td><td class="num">2</td><td>登場即可清掉對手一張 LV.3，全場 MVP</td></tr>
+        <tr><td class="card-no">BS3-113</td><td class="card-name">Caramel Arrow Cookie</td><td class="num">1</td><td class="num">1</td><td>棄牌區 15 張紫卡以上可洗回牌庫＋全體 2 傷害</td></tr>
+        <tr><td class="card-no">BS3-100</td><td class="card-name">Dark Cacao Cookie</td><td class="num">1</td><td class="num">1</td><td>主力終結者，攻擊自帶 HP 磨損</td></tr>
+
+        <tr class="group-row"><td colspan="5">FLIP</td></tr>
+        <tr><td class="card-no">BS3-107</td><td class="card-name">Prophet Cookie</td><td class="num">4</td><td class="num">4</td><td>翻牌抽 1</td></tr>
+        <tr><td class="card-no">BS2-056</td><td class="card-name">Raspberry Mousse Cookie</td><td class="num">4</td><td class="num">4</td><td>棄 1 張回 1 HP，保命關鍵</td></tr>
+        <tr><td class="card-no">ST5-003</td><td class="card-name">Fig Cookie</td><td class="num">4</td><td class="num">4</td><td>翻牌抽 1</td></tr>
+        <tr><td class="card-no">BS2-072</td><td class="card-name">Pastry Cookie</td><td class="num">3</td><td class="num">2</td><td class="delta-down">▼ 純翻牌抽卡，無其他綜效，減量挪給陷阱</td></tr>
+
+        <tr class="group-row"><td colspan="5">物品卡 · Item</td></tr>
+        <tr><td class="card-no">BS2-077</td><td class="card-name">Forbidden Incantation</td><td class="num">4</td><td class="num">4</td><td>犧牲 1 張 LV.1 換 2 傷害</td></tr>
+        <tr><td class="card-no">BS2-078</td><td class="card-name">Dragon's Breath</td><td class="num">1</td><td class="num">1</td><td>清理自己場上 LV.2 以下</td></tr>
+
+        <tr class="group-row"><td colspan="5">場景卡 · Stage</td></tr>
+        <tr><td class="card-no">BS2-081</td><td class="card-name">Blue Dragon's Eye</td><td class="num">2</td><td class="num">2</td><td>可拆自爆換 1 傷害</td></tr>
+
+        <tr class="group-row"><td colspan="5">陷阱卡 · Trap</td></tr>
+        <tr><td class="card-no">BS3-117</td><td class="card-name">Chocolate Altar of the Fallen<span class="tag new">新增</span></td><td class="num">0</td><td class="num">3</td><td class="delta-up">▲ 無條件 -3 攻擊，門檻到了還能倒貼處決</td></tr>
+        <tr><td class="card-no">ST5-021</td><td class="card-name">Hidden Warpgate<span class="tag new">新增</span></td><td class="num">0</td><td class="num">2</td><td class="delta-up">▲ 可直接處決攻擊者本身，等同取消攻擊</td></tr>
+        <tr><td class="card-no">BS2-080</td><td class="card-name">Abandoned Cloud Nest<span class="tag new">新增</span></td><td class="num">0</td><td class="num">1</td><td class="delta-up">▲ 棄牌區 15 張以上 -3 攻擊，配合本套牌節奏</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="totals">
+    <div class="stat"><span class="n">60</span><span class="k">總張數</span></div>
+    <div class="stat"><span class="n">14</span><span class="k">FLIP（上限 16）</span></div>
+    <div class="stat"><span class="n">33</span><span class="k">餅乾卡</span></div>
+    <div class="stat"><span class="n">6</span><span class="k">陷阱卡（原 0）</span></div>
+  </div>
+</section>
+
+<section id="decklist-combat">
+  <h2>打架紫：全新構築</h2>
+  <p class="section-sub">不吃棄牌區張數，純數值與固定條件移除 — 60 張合法牌組（尚未實戰，已驗證合法）</p>
+
+  <div class="table-wrap">
+    <table>
+      <caption>完整名單（依區塊分組）</caption>
+      <thead>
+        <tr><th>卡號</th><th>卡名</th><th class="num">張數</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr class="group-row combat"><td colspan="4">餅乾卡 · Cookie</td></tr>
+        <tr><td class="card-no">BS3-110</td><td class="card-name">Purple Yam Cookie</td><td class="num">4</td><td>LV.3／HP5／攻擊 4，無條件的純數值終結者</td></tr>
+        <tr><td class="card-no">BS2-076</td><td class="card-name">Hero Cookie</td><td class="num">3</td><td>LV.3／HP4／攻擊 4，全中立費用</td></tr>
+        <tr><td class="card-no">ST5-015</td><td class="card-name">Rye Cookie</td><td class="num">4</td><td>LV.3／HP5，技能可直接移除對手一張餅乾</td></tr>
+        <tr><td class="card-no">BS2-055</td><td class="card-name">Poison Mushroom Cookie</td><td class="num">2</td><td>技能可清空雙方場上 LV.2 以下，逆風時的重置鍵</td></tr>
+        <tr><td class="card-no">BS2-069</td><td class="card-name">Clotted Cream Cookie</td><td class="num">4</td><td>棄 1 張秒殺對手 LV.1</td></tr>
+        <tr><td class="card-no">BS2-068</td><td class="card-name">Cream Unicorn Cookie</td><td class="num">3</td><td>HP5 肉盾</td></tr>
+        <tr><td class="card-no">ST5-010</td><td class="card-name">Carol Cookie</td><td class="num">3</td><td>技能可處決剩餘 HP≤2 的對手</td></tr>
+        <tr><td class="card-no">BS3-108</td><td class="card-name">Milk Cookie</td><td class="num">4</td><td>低費（PN）填曲線用</td></tr>
+        <tr><td class="card-no">BS2-067</td><td class="card-name">Angel Cookie</td><td class="num">4</td><td>阻擋者，防守核心，把傷害導給自己</td></tr>
+        <tr><td class="card-no">BS2-053</td><td class="card-name">Ninja Cookie</td><td class="num">4</td><td>全中立費用，HP4</td></tr>
+        <tr><td class="card-no">BS2-061</td><td class="card-name">Hydrangea Cookie</td><td class="num">4</td><td>回收棄牌區，延長打法續航</td></tr>
+
+        <tr class="group-row combat"><td colspan="4">FLIP</td></tr>
+        <tr><td class="card-no">BS3-107</td><td class="card-name">Prophet Cookie</td><td class="num">3</td><td>翻牌抽 1</td></tr>
+        <tr><td class="card-no">BS2-056</td><td class="card-name">Raspberry Mousse Cookie</td><td class="num">3</td><td>棄 1 張回 1 HP</td></tr>
+        <tr><td class="card-no">ST5-003</td><td class="card-name">Fig Cookie</td><td class="num">2</td><td>翻牌抽 1</td></tr>
+
+        <tr class="group-row combat"><td colspan="4">物品卡 · Item</td></tr>
+        <tr><td class="card-no">BS2-077</td><td class="card-name">Forbidden Incantation</td><td class="num">2</td><td>犧牲 1 張 LV.1 換 2 傷害</td></tr>
+        <tr><td class="card-no">ST5-018</td><td class="card-name">Dragonfly Candy Brooch</td><td class="num">2</td><td>處決剩餘 HP≤4 的對手，收尾用</td></tr>
+        <tr><td class="card-no">BS3-116</td><td class="card-name">First Watcher's Bow</td><td class="num">2</td><td>二選一：磨 HP 或棄對手隨機手牌</td></tr>
+
+        <tr class="group-row combat"><td colspan="4">陷阱卡 · Trap</td></tr>
+        <tr><td class="card-no">BS3-117</td><td class="card-name">Chocolate Altar of the Fallen</td><td class="num">4</td><td>無條件 -3 攻擊，本套牌防守主力</td></tr>
+        <tr><td class="card-no">ST5-021</td><td class="card-name">Hidden Warpgate</td><td class="num">3</td><td>剩餘 HP≤2 直接處決，可取消攻擊</td></tr>
+        <tr><td class="card-no">ST5-020</td><td class="card-name">Forbidden Grimoire</td><td class="num">2</td><td>犧牲 1 張 LV.1 換 -3 攻擊，備用防守手段</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="totals combat">
+    <div class="stat"><span class="n">60</span><span class="k">總張數</span></div>
+    <div class="stat"><span class="n">8</span><span class="k">FLIP（上限 16）</span></div>
+    <div class="stat"><span class="n">39</span><span class="k">餅乾卡</span></div>
+    <div class="stat"><span class="n">8</span><span class="k">陷阱卡</span></div>
+  </div>
+</section>
+
+<section id="strategy">
+  <h2>打法教學（丟牌紫）</h2>
+  <p class="section-sub">以實戰取勝的版本為主，早期鋪場、中期抓節奏、後期用門檻效果收尾</p>
+
+  <div class="phase">
+    <div class="phase-tag">早期<span class="phase-turn">第 1–6 回合</span></div>
+    <div class="phase-body">
+      <h4>先求有，數量壓對手</h4>
+      <ul>
+        <li>起手優先選 <strong>Ninja Cookie</strong>（HP4、全中立費用）或 <strong>Twizzly Gummy Cookie</strong>（HP3）當先發，這套牌前期沒有像阻擋者那樣的專職防守卡，得靠 HP 硬扛。</li>
+        <li>支援階段每回合固定丟 1 張低效益的翻牌卡（Fig Cookie、Raspberry Mousse 這類）進支援區，越快到 3～4 點能量，Clotted Cream 的移除技能與 Dark Cacao 的攻擊才付得起。</li>
+        <li>不用刻意省棄牌區張數——這套牌的核心資源就是棄牌區厚度，正常出牌、正常戰鬥消耗，門檻很快就會到。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="phase-tag">中期<span class="phase-turn">第 7–14 回合</span></div>
+    <div class="phase-body">
+      <h4>陷阱只留給打得死的攻擊，Hidden Warpgate 優先打攻擊者</h4>
+      <ul>
+        <li>Chocolate Altar of the Fallen（-3 攻擊）留給攻擊力足以造成致命傷害的對手；Abandoned Cloud Nest 只有棄牌區 15 張以上才能用，記得先確認門檻。</li>
+        <li>抽到 Hidden Warpgate 時，優先檢查<strong>正在攻擊你的那隻餅乾本身</strong>剩餘 HP 是否 ≤2——選它當目標可以讓整次攻擊直接消失，比單純減傷更划算。</li>
+        <li>Wind Archer Cookie 補位登場時，一定要付費發動登場效果：只要對手場上有 LV.3 餅乾，這是唯一不需要靠戰鬥就能白吃一張主力的手段。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="phase-tag">後期<span class="phase-turn">第 15 回合以後</span></div>
+    <div class="phase-body">
+      <h4>能量充裕時雙線出擊，不要留手</h4>
+      <ul>
+        <li>支援區到 7～9 點能量時，同一回合讓兩張餅乾都攻擊：這套牌沒有阻擋者，保留能量不會換來額外防守，不如直接壓對手的休息區等級。</li>
+        <li>雙方牌庫都會在這個階段見底（實測打到第 18 回合，雙方牌庫只剩個位數），誰先把對方休息區等級推滿 10，遊戲就結束——這時候比的是誰的斬殺效率高，不是誰的血厚。</li>
+        <li>Caramel Arrow Cookie 的技能（棄牌區 15 張紫卡以上，洗回牌庫＋全體 2 傷害）是很好的長考底牌，能同時解決「牌庫見底」與「收尾」兩個問題，優先留到真正需要的時候用。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="cautions">
+  <h2>注意事項</h2>
+  <p class="section-sub">兩派共通的坑，加上紫色特有的機制細節</p>
+
+  <div class="caution-list">
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>道具卡的直接傷害繞過陷阱反應視窗</h4>
+        <p>陷阱只能在「攻擊宣告」時發動；對手用道具卡（如 Prickly Cacti Gloves）直接造成傷害時，完全不會出現陷阱選擇畫面。血量已經很低的主力，就算手上有陷阱也可能無預警陣亡，不要讓關鍵餅乾長期停在 1～2 HP 觀望。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>Hidden Warpgate 可以直接取消攻擊，別只當清場卡用</h4>
+        <p>把「剩餘 HP≤2」的判定套在攻擊者本身，而不是隨便挑一張對手餅乾，往往是防守效益最高的用法——攻擊者消失，這次攻擊就整個作廢。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>棄牌區門檻是雙面刃</h4>
+        <p>丟牌紫的強力效果幾乎都卡在「棄牌區 10 張／15 張以上」，先手玩家早期棄牌區必然比較薄，門檻效果會晚熟；抽到 Hydrangea Cookie、Caramel Arrow Cookie 這類回收棄牌區的卡時，要衡量「現在回收保牌庫」還是「留著棄牌區衝門檻」哪個更急迫。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>打架紫沒有丟牌紫的爆發，但也沒有門檻空窗期</h4>
+        <p>如果對手是壓制力極強的快攻（如本次的火龍果龍族），打架紫的 Angel Cookie 阻擋者＋穩定移除，前期防守會比丟牌紫扎實；但打架紫也因此沒有後期「一次解決全場」的手段，拖到雙方都見底時，反而是丟牌紫的門檻效果更容易一次翻盤。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>戰鬥區只有 2 個位置，敗北看休息區等級不是 HP</h4>
+        <p>跟聖百合那份報告的結論一樣：自己休息區等級總和達到 10 就輸，LV.3 餅乾死一次抵三次 LV.1。兩派紫色牌組都要優先考慮「這次交換划不划算」，而不是單純比誰的傷害輸出高。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  黑可可餅乾（丟牌紫測試版）· 對第三彈紅色・火龍果龍族餅乾牌組 · 本機瀏覽器 AI 對戰紀錄
+</footer>

@@ -22,12 +22,20 @@ import type { AiDecision } from './types'
  * 巢狀 damage(attackTargetOnly)」的效果，規則層會刻意保留 `pendingBattle`
  * 讓 attackTargetOnly 找得到攻擊目標；列進來的話 AI 會判定自己不能結算
  * pendingAbilityEffect，整個 AI 迴圈就卡在攻擊後階段。
+ *
+ * 例外：攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011）依
+ * 規則必須等本次戰鬥收尾與對手的空場補位完成後才能結算，AI 在 pendingBattle
+ * 期間不得嘗試結算（規則層會拒絕）。
  */
 const hasBlockingAbilityPending = (state: GameState): boolean =>
   Boolean(
     state.pendingRefresh ||
       state.pendingOnPlay ||
-      state.pendingReplacement,
+      state.pendingReplacement ||
+      // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
+      state.pendingAbilityEffect?.pendingPlace ||
+      (state.pendingBattle &&
+        state.pendingAbilityEffect?.trigger === 'attacker-faint'),
   )
 
 export const handleAiPendingDecision = (
@@ -214,6 +222,31 @@ export const handleAiPendingDecision = (
   }
 
   if (
+    pendingDecision?.kind === 'place-hand-hp' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇放回 HP 的手牌。`,
+      }
+    }
+    const handCard = state.players[playerId].hand[0]
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-place-hand-hp',
+        playerId,
+        handCardInstanceId: handCard?.instanceId,
+      }),
+      action: 'idle',
+      description: handCard
+        ? `${state.players[playerId].name}將 1 張手牌放回目標餅乾的 HP。`
+        : `${state.players[playerId].name}略過放置 HP。`,
+    }
+  }
+
+  if (
     pendingDecision?.kind === 'opponent-hand-discard' &&
     !state.pendingRefresh
   ) {
@@ -238,6 +271,31 @@ export const handleAiPendingDecision = (
       action: 'idle',
       revealedCards: discardedCards,
       description: `${state.players[playerId].name}棄置 ${pendingDecision.count} 張手牌。`,
+    }
+  }
+
+  if (
+    pendingDecision?.kind === 'opponent-rest-support' &&
+    !state.pendingRefresh
+  ) {
+    if (pendingDecision.playerId !== playerId) {
+      return {
+        state,
+        action: 'idle',
+        description: `等待 ${state.players[pendingDecision.playerId].name} 選擇橫置支援卡。`,
+      }
+    }
+    const candidates = state.players[playerId].supportArea
+      .filter((support) => !pendingDecision.activeOnly || !support.rested)
+      .slice(0, pendingDecision.count)
+    return {
+      state: applyGameCommand(state, {
+        kind: 'resolve-opponent-rest-support',
+        playerId,
+        cardIds: candidates.map((card) => card.card.instanceId),
+      }),
+      action: 'idle',
+      description: `${state.players[playerId].name}橫置 ${pendingDecision.count} 張支援卡。`,
     }
   }
 

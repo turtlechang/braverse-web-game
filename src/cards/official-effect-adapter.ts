@@ -234,7 +234,15 @@ const parseAbilityCost = (text: string): AbilityCost => {
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
-    ...(hpToTrashMatch ? { hpToTrash: { amount: Number(hpToTrashMatch[1]) } } : {}),
+    ...(hpToTrashMatch
+      ? {
+          hpToTrash: {
+            amount: Number(hpToTrashMatch[1]),
+            // 卡面明定 this Cookie，不能讓玩家改由另一張己方餅乾支付。
+            sourceOnly: true,
+          },
+        }
+      : {}),
     ...(handToBreakMatch ? {
       handToBreakArea: {
         count: Number(handToBreakMatch[1]),
@@ -1679,7 +1687,15 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
-    'BS4-005': [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+    'BS4-005': [
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+      },
+    ],
     'BS4-007': [
       {
         kind: 'modify-attack',
@@ -1707,6 +1723,24 @@ export const convertOfficialCardEffects = (
         kind: 'discard-hand',
         count: 1,
         condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+    ],
+    'BS4-012': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
+    'BS4-014': [
+      {
+        kind: 'modify-damage-received',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'attacker-level-at-most', level: 1 },
       },
     ],
     // === BS4 黃色餅乾卡技能 ===
@@ -1978,6 +2012,18 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    'BS4-052': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'support-color-count-at-least',
+          color: 'green',
+          count: 5,
+        },
+      },
+    ],
     'BS4-025': [
       { kind: 'hand-to-break', amount: 1, energyColor: 'yellow', minLevel: 2 },
       {
@@ -2092,6 +2138,440 @@ export const convertOfficialCardEffects = (
     'BS4-084': [
       { kind: 'draw-until-hand-equals-opponent' },
     ],
+    // === BS5 RED ===
+    // BS5-005 Mala Sauce Cookie：【Activate】【Once Per Turn】<{R}>
+    // <Place 1 card from the top of your {R} LV.2 or higher Cookie's HP
+    // into the trash.> 對手下 1 傷害。代價的顏色／等級條件見 exactCookieSkillCosts。
+    'BS5-005': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS5-010 Starch Noodle Cookie：【On Play】對手休息中 LV.2 以下餅乾 2 傷害。
+    'BS5-010': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          restedOnly: true,
+        },
+      },
+    ],
+    // BS5-013 Pitaya Dragon Cookie：【On Play】<Discard 1 {R} Cookie from your
+    // hand.> 對手下 1 傷害。代價見 exactCookieSkillCosts。
+    'BS5-013': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS5-014 Knight Cookie：【Activate】【Once Per Turn】指名對手
+    // [Pitaya Dragon Cookie] 2 傷害（異畫變體同名，selector 以卡名篩選）。
+    'BS5-014': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          cardName: 'Pitaya Dragon Cookie',
+        },
+      },
+    ],
+    // BS5-015 Carol Cookie：【On Play】<Place 1 card from the top of your other
+    // Cookie's HP into the trash.> 對手下 1 傷害。代價見 exactCookieSkillCosts。
+    'BS5-015': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS5-016 Tiramisu Cookie：【Activate】【Once Per Turn】<Place 1 card from
+    // the top of this Cookie's HP into the trash.> If that card is a non-Cookie
+    // card, 對手下 1 傷害。磨掉的卡類型由 payAbilityCost 寫入 costRecord。
+    'BS5-016': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'last-hp-trash-card-non-cookie' },
+      },
+    ],
+    // BS5-018 Flat Tofu Cookie：【On Play】<Discard 1 {R} trap card from your
+    // hand.> 對手下 1 傷害。代價見 exactCookieSkillCosts。
+    'BS5-018': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS5-019 Pudding Cookie：【Activate】【Once Per Turn】<{R}> <Discard 1 {R}
+    // Cookie from your hand.> 本回合這張卡攻擊 +1。代價見 exactCookieSkillCosts。
+    'BS5-019': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    // BS5-020 Crimson Dragon Mask（item）：<{R}{R}> If there are 2 Cookies
+    // whose remaining HP is 1 in your battle area, 對所有對手餅乾 2 傷害。
+    'BS5-020': [
+      {
+        kind: 'damage-all',
+        amount: 2,
+        side: 'opponent',
+        condition: {
+          kind: 'battle-area-remaining-hp-count-at-least',
+          side: 'self',
+          remainingHp: 1,
+          count: 2,
+        },
+      },
+    ],
+    // BS5-021 Draconic Aura（trap）：<{R}> If there is a LV.3 Cookie in your
+    // battle area, 選至多 2 張對手餅乾本回合攻擊 -1；Then 自 1 張己方餅乾的
+    // HP 頂端回手至多 1 張卡。這裡只放效果（主效果狀態判定用）；發動門檻
+    // （LV.3 Cookie 存在）與完整陷阱能力由 exactTrapEffects 的
+    // TrapCondition 承載。
+    'BS5-021': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 2 },
+      },
+      {
+        kind: 'hp-to-hand',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    // BS5-022 Pitaya Dragon Cookie's Nest（stage）：<{R}> Place in your stage
+    // area. 【Activate】<{R}><Rest this card.><Place 1 card from the top of
+    // your LV.2 or higher Cookie's HP into the trash.> During this turn, that
+    // Cookie gains +1 attack damage. Then, if [Pitaya Dragon Cookie] is in
+    // your battle area, draw up to 1 card。「that Cookie」用 costSelected
+    // 指到剛付出 hpToTrash 代價的那張餅乾；代價見 exactStageCosts。
+    'BS5-022': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, costSelected: true },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Pitaya Dragon Cookie',
+        },
+      },
+    ],
+    // BS5-004 Lollipop Cookie／BS5-009 Butterbear Cookie（flip）：主效果欄位
+    // === BS5 YELLOW ===
+    // BS5-023 Dino-Sour Cookie：【Activate】【Once Per Turn】<Place 3 cards
+    // from the top of this Cookie's HP into the trash.> 本回合這張卡攻擊 +2。
+    // 代價由 parseAbilityCost 自動解析（this Cookie's HP，sourceOnly）。
+    'BS5-023': [
+      {
+        kind: 'modify-attack',
+        amount: 2,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    // BS5-026 DJ Cookie：faint 技能「<place 1 {Y} LV.2 or lower Cookie from
+    // your hand into your break area.> Return this Cookie to your hand.」。
+    // faint 技能的代價由離場本身支付，方括號內的「放 1 張黃色 LV.2 以下餅乾
+    // 進休息區」以第一個效果呈現（比照 BS3-061 寫法）；第二個效果把這張卡
+    // 返回手牌。
+    'BS5-026': [
+      {
+        kind: 'hand-to-break',
+        amount: 1,
+        energyColor: 'yellow',
+        maxLevel: 2,
+      },
+      {
+        kind: 'return-to-hand',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    // BS5-028 Mango Cookie：【On Play】<{Y}> If your break area is LV.3 or
+    // higher, 選至多 1 張對手的休息中 LV.2 以下餅乾，2 傷害。
+    'BS5-028': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          restedOnly: true,
+        },
+        condition: { kind: 'break-level-at-least', level: 3 },
+      },
+    ],
+    // BS5-029 Mustard Cookie：【On Play】If there is a {Y} LV.3 Cookie in your
+    // break area, 抽至多 1 張牌。
+    'BS5-029': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'break-area-has-card',
+          side: 'self',
+          color: 'yellow',
+          minLevel: 3,
+          maxLevel: 3,
+        },
+      },
+    ],
+    // BS5-031 Peach Cookie：【On Play】If your break area LV. is higher than
+    // your opponent's break area LV., 抽至多 1 張牌。
+    'BS5-031': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'break-level-higher-than-opponent' },
+      },
+    ],
+    // BS5-036 Milk Cookie：【Activate】<{Y}><Rest this card.><Discard 1 card.>
+    // 選至多 1 張對手戰鬥區中沒有技能、LV.1 的餅乾，使其昏厥。昏厥走與傷害
+    // 相同的流程：餅乾進休息區、HP 進棄牌區、觸發目標的 faint 技能。
+    'BS5-036': [
+      {
+        kind: 'make-faint',
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 1,
+          noSkillOnly: true,
+        },
+      },
+    ],
+    // BS5-039 Cheesecake Cookie：【On Play】選至多 1 張對手的 LV.2 以下、
+    // 剩餘 HP 3 以上的餅乾，1 傷害。
+    'BS5-039': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          minRemainingHp: 3,
+        },
+      },
+    ],
+    // BS5-040 Ananas Dragon Cookie：【Activate】【Once Per Turn】<Place 1 card
+    // from the top of this Cookie's HP into the trash.> 選至多 1 張對手餅乾，
+    // 1 傷害。代價自動解析。
+    'BS5-040': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS5-042 Sniffly Cocoa Palm（item）：<{Y}> <Place 1 of your Cookies' HP
+    // cards in the trash.> If your break area is LV.5 or higher, draw up to 2
+    // cards from your deck. 文字沒有「Select」目標句式，主效果要手動給；
+    // HP 代價見 convertOfficialItemAbility 的 exactCosts。
+    'BS5-042': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'break-level-at-least', level: 5 },
+      },
+    ],
+    // BS5-044 Ananas Dragon Cookie's Nest（stage）：<{Y}> Place in your stage
+    // area. 【Activate】<{Y}><Rest this card.> During this turn, if any of
+    // your Cookies gained HP, select up to 1 of your opponent's Cookies. That
+    // Cookie receives 1 damage. Then, <can be used as {Y}.> 1 of your
+    // [Ananas Dragon Cookie] gains +1 HP。效果與 exactStageEffects 相同，
+    // 提供 convertOfficialCardEffects 的主效果盤點（比照 BS5-022）。
+    'BS5-044': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'cookie-gained-hp-this-turn' },
+      },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          cardName: 'Ananas Dragon Cookie',
+        },
+      },
+    ],
+    // BS5-045 Potato Cookie：【On Play】<Return 1 card from your support area
+    // to your hand.> Draw up to 1 card from your deck.
+    'BS5-045': [
+      {
+        kind: 'support-to-hand',
+        amount: 1,
+        optional: true,
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS5-048 Bellflower Cookie：【Activate】<{G}><Rest this card.>
+    // <Discard 1 card.> 選至多 1 張對手戰鬥區中沒有技能、LV.1 的餅乾，使其
+    // 昏厥。效果與代價寫法同 BS5-036（YELLOW）。
+    'BS5-048': [
+      {
+        kind: 'make-faint',
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 1,
+          noSkillOnly: true,
+        },
+      },
+    ],
+    // BS5-051 Beet Cookie：When your turn ends, if there are 2 active cards or
+    // more in your support area, <can be used as {G}.> Place this Cookie on the
+    // bottom of your deck.「can be used as {G}」是能量補充說明，不建效果；
+    // 回合結束觸發由技能 endPhase 承載。
+    'BS5-051': [
+      {
+        kind: 'return-to-deck-bottom',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'active-support-count-at-least', count: 2 },
+      },
+    ],
+    // BS5-053 Shine Muscat Cookie：【On Play】<{G}{G}> Place up to 1 card from
+    // the top of your deck into your support area as rested. 代價自動解析。
+    'BS5-053': [{ kind: 'deck-to-support', amount: 1, rested: true }],
+    // BS5-056 Longan Dragon Cookie：When your turn ends, if there are 3 active
+    // cards or more in your support area, <can be used as {G}.> Select up to 1
+    // of your opponent's Cookies. That Cookie receives 2 damage. 被動回合結束
+    // 觸發（技能 endPhase）；攻擊的 Then 回合結束延遲見 exactAttackEffects。
+    'BS5-056': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'active-support-count-at-least', count: 3 },
+      },
+    ],
+    // BS5-058 Ginseng Cookie：When your turn ends, if there are 3 cards or less
+    // in your support area, <can be used as {G}.> Draw up to 1 card from your
+    // deck。
+    'BS5-058': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'support-count-at-most', count: 3 },
+      },
+    ],
+    // BS5-059 Purple Yam Cookie：【On Play】選至多 1 張對手的休息中 LV.2 以下
+    // 餅乾，2 傷害。與 BS5-028 相同但沒有 break 條件。
+    'BS5-059': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          restedOnly: true,
+        },
+      },
+    ],
+    // BS5-063 Hero Cookie：When your turn ends, if there are 2 active cards or
+    // more in your support area, draw up to 2 cards from your deck.
+    'BS5-063': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'active-support-count-at-least', count: 2 },
+      },
+    ],
+    // BS5-064 Dragon Orb（item）：<{G}{G}{G}> Place up to 1 card from the top
+    // of your deck into your support area as rested. Then, if there are 7 cards
+    // or more in your support area, draw up to 1 card from your deck. 效果與
+    // item 能力相同，提供主效果盤點（比照 BS5-042）。
+    'BS5-064': [
+      { kind: 'deck-to-support', amount: 1, rested: true },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'support-count-at-least', count: 7 },
+      },
+    ],
+    // BS5-065 Petrification（trap）：<{G}{G}{G}> 對手餅乾本回合攻擊 -2。
+    // Then, if there are 7 cards or more in your support area, your opponent
+    // selects 1 active card from their support area. Rest that card. 完整陷阱
+    // 能力見 exactTrapEffects；這裡只做主效果盤點。
+    'BS5-065': [
+      {
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'opponent-rests-support',
+        amount: 1,
+        activeOnly: true,
+        condition: { kind: 'support-count-at-least', count: 7 },
+      },
+    ],
+    // BS5-066 Longan Palace（stage）：<{G}> Place in your stage area. When
+    // your turn ends, <discard 1 card.> Set up to 1 card from your support area
+    // as active. Then, if [Longan Dragon Cookie] is in your battle area, draw
+    // up to 1 card from your deck. 效果與 stageAbility 相同（棄牌為鏈中第一
+    // 個效果），提供主效果盤點（比照 BS5-044）。
+    'BS5-066': [
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'set-active', supportCount: 1 },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Longan Dragon Cookie',
+        },
+      },
+    ],
+    // 是 flipText。BS5-004 的附著 +1 HP 由 FlipAbility.attachedHpBonus
+    // 承載（見 exactFlipEffects），這裡空效果陣列只為讓主效果狀態判定為
+    // supported；BS5-009 就是一般的抽 1。代價<Discard 1 card.>由 flip 轉接
+    // 層的 parseAbilityCost 解析。
+    'BS5-004': [],
+    'BS5-009': [{ kind: 'draw-up-to', max: 1 }],
+    // 其他四色的同款 flip：附著 +1 HP（041/082/095）與一般抽 1（049/090）。
+    // 主效果只做狀態判定，能力實作各自在 exactFlipEffects。
+    'BS5-041': [],
+    'BS5-082': [],
+    'BS5-095': [],
+    'BS5-049': [{ kind: 'draw-up-to', max: 1 }],
+    'BS5-090': [{ kind: 'draw-up-to', max: 1 }],
   }
   const exactEffects = exactStarterEffects[cardKey]
   if (exactEffects) {
@@ -2680,6 +3160,14 @@ export const convertOfficialItemAbility = (
       energy: { yellow: 2 },
       discardHand: 0,
     },
+    // BS5-042 Sniffly Cocoa Palm（item）：<{Y}> <Place 1 of your Cookies' HP
+    // cards in the trash.> 可選任何己方餅乾的 HP 支付（非 this Cookie 措辭，
+    // parseAbilityCost 抓不到，且不能 sourceOnly）。
+    'BS5-042': {
+      energy: { yellow: 1 },
+      discardHand: 0,
+      hpToTrash: { amount: 1 },
+    },
   }
   const parsedCost = parseAbilityCost(card.attackText)
   const hasSpecialCost =
@@ -2803,6 +3291,27 @@ export const convertOfficialStageAbility = (
             ],
           },
         ],
+      },
+    ],
+    // BS5-022 Pitaya Dragon Cookie's Nest：<Place 1 card from the top of your
+    // LV.2 or higher Cookie's HP into the trash.> 是本技能代價（見
+    // exactStageCosts），「that Cookie」以 costSelected 指到代價選中的那張
+    // 餅乾；抽牌段的 [Pitaya Dragon Cookie] 條件是戰鬥區指名卡名條件。
+    'BS5-022': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, costSelected: true },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Pitaya Dragon Cookie',
+        },
       },
     ],
     'BS3-047': [
@@ -2999,6 +3508,47 @@ export const convertOfficialStageAbility = (
         target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
       },
     ],
+    // BS5-044 Ananas Dragon Cookie's Nest：【Activate】<{Y}><Rest this card.>
+    // During this turn, if any of your Cookies gained HP, 選至多 1 張對手餅乾
+    // 1 傷害。Then, 1 of your [Ananas Dragon Cookie] 獲得 +1 HP。gained HP
+    // 條件由 cookiesGainedHpThisTurn 記錄（gain-hp 效果結算時寫入）。
+    'BS5-044': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'cookie-gained-hp-this-turn' },
+      },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          cardName: 'Ananas Dragon Cookie',
+        },
+      },
+    ],
+    // BS5-066 Longan Palace：<{G}> Place in your stage area. When your turn
+    // ends, <discard 1 card.> Set up to 1 card from your support area as
+    // active. Then, if [Longan Dragon Cookie] is in your battle area, draw up
+    // to 1 card from your deck. 被動回合結束觸發（endPhase），沒有 {mob}
+    // 標記所以 cannot be manually activated；棄牌是效果鏈第一個效果（由
+    // pendingAbilityEffect 通道讓玩家選要棄的手牌），代價列留空。
+    'BS5-066': [
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'set-active', supportCount: 1 },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Longan Dragon Cookie',
+        },
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -3021,6 +3571,28 @@ export const convertOfficialStageAbility = (
     'BS4-088': { energy: { blue: 1 }, discardHand: 1 },
     'BS4-044': { energy: { yellow: 2 }, discardHand: 1 },
     'BS4-066': { energy: { green: 3 }, discardHand: 0 },
+    // BS5-022 Pitaya Dragon Cookie's Nest：【Activate】<{R}><Rest this
+    // card.><Place 1 card from the top of your LV.2 or higher Cookie's HP
+    // into the trash.> <Rest this card.> 由 RESTS_THIS_CARD_PATTERN 抓，
+    // 這裡只要補能量與 hpToTrash 的等級條件。效果見 exactStageEffects。
+    'BS5-022': {
+      energy: { red: 1 },
+      discardHand: 0,
+      hpToTrash: { minLevel: 2 },
+    },
+    // BS5-044 Ananas Dragon Cookie's Nest：<{Y}> Place in your stage area.
+    // 【Activate】<{Y}><Rest this card.> 代價（能量 + rest）由通關解析取得，
+    // 效果見 exactStageEffects。
+    'BS5-044': {
+      energy: { yellow: 1 },
+      discardHand: 0,
+    },
+    // BS5-066 Longan Palace：<{G}> Place in your stage area. 被動回合結束
+    // 觸發，代價為 0（棄牌在效果鏈中處理，見 exactStageEffects）。
+    'BS5-066': {
+      energy: {},
+      discardHand: 0,
+    },
   }
   const stageEffects = exactStageEffects[card.baseCardNumber]
   if (stageEffects) {
@@ -3038,6 +3610,7 @@ export const convertOfficialStageAbility = (
         card.baseCardNumber === 'BS3-095' ||
         RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
       ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
+      ...(card.baseCardNumber === 'BS5-066' ? { endPhase: true } : {}),
     }
   }
 
@@ -3923,6 +4496,178 @@ export const convertOfficialAttackEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
+    // === BS5 RED 攻擊 Then ===
+    // BS5-003 Strawberry Cream Cookie：Then, <discard 1 card.> Deals 1 damage.
+    // 強制代價比照 BS4-075 寫成第一個效果；傷害固定打在被攻擊的那張餅乾。
+    'BS5-003': [
+      { kind: 'discard-hand', count: 1 },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+      },
+    ],
+    // BS5-006 Marshmallow Cookie：Then, if your break area is LV.6 or higher,
+    // select up to 1 of your opponent's Cookies. 1 damage。
+    'BS5-006': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'break-level-at-least', level: 6 },
+      },
+    ],
+    // BS5-008 Chestnut Cookie：Then, if the attacked Cookie's remaining HP is
+    // 3 or more, that Cookie receives 1 damage.
+    'BS5-008': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'attack-target-remaining-hp-at-least', amount: 3 },
+      },
+    ],
+    // BS5-010 Starch Noodle Cookie：Then, <place 1 card from the top of this
+    // Cookie's HP into the trash.> Draw up to 1 card from your deck.
+    'BS5-010': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS5-012 Eggnog Cookie：Then, if the attacked Cookie is LV.3, that Cookie
+    // receives 1 damage.
+    'BS5-012': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'attack-target-level-equals', level: 3 },
+      },
+    ],
+    // BS5-013 Pitaya Dragon Cookie：Then, <can be used as {R}.> If this
+    // Cookie's remaining HP is 4 or less, select up to 2 of your opponent's
+    // Cookies. Those Cookies receive 1 damage each。「can be used as {R}」是
+    // 攻擊費用的補充說明（此 Cookie 可當 {R} 支付），不是攻擊後的自選加費，
+    // 不建 optional-cost-attack；「4 or less」比照 BS3-028 慣例用
+    // source-hp-less-than 5。
+    'BS5-013': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 2 },
+        condition: { kind: 'source-hp-less-than', amount: 5 },
+      },
+    ],
+    // === BS5 YELLOW 攻擊 Then ===
+    // BS5-023 Dino-Sour Cookie：Then, if this Cookie's remaining HP is 3 or
+    // less, this Cookie gains +1 HP。「3 or less」比照 BS3-028 慣例用
+    // source-hp-less-than 4。
+    'BS5-023': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 4 },
+      },
+    ],
+    // BS5-024 Dr. Wasabi Cookie：Then, if the attacked Cookie's remaining HP
+    // is 2 or less, that Cookie receives 1 damage。
+    'BS5-024': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        condition: { kind: 'attack-target-remaining-hp-at-most', amount: 2 },
+      },
+    ],
+    // BS5-025 Leek Cookie：Then, if this Cookie's remaining HP is 1, you can
+    // return this Cookie to your hand。「you can」為可選，但攻擊後條件效果在
+    // 本引擎一律自動結算（條件成立即執行），與 BS5-035 等卡一致。
+    'BS5-025': [
+      {
+        kind: 'return-to-hand',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
+    // BS5-030 Buttercream Choco Cookie：Then, <place this Cookie in your break
+    // area.> Select up to 1 {Y} LV.1 Cookie from your break area. Play that
+    // Cookie。
+    'BS5-030': [
+      {
+        kind: 'battle-to-break',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      {
+        kind: 'break-to-battle',
+        amount: 1,
+        exactLevel: 1,
+        energyColor: 'yellow',
+      },
+    ],
+    // BS5-032 Birthday Cake Cookie：Then, if your break area LV. is higher
+    // than your opponent's break area LV., 選至多 1 張對手餅乾 1 傷害。
+    'BS5-032': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'break-level-higher-than-opponent' },
+      },
+    ],
+    // BS5-035 Artichoke Cookie：Then, if this Cookie's remaining HP is 1,
+    // 選至多 1 張對手餅乾 1 傷害。
+    'BS5-035': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
+    // BS5-040 Ananas Dragon Cookie：Then, <can be used as {Y}.> If this
+    // Cookie's remaining HP is 4 or less, this Cookie gains +1 HP（比照
+    // BS5-013 的「can be used as」與 BS3-028 的「less than N+1」慣例）。
+    'BS5-040': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 5 },
+      },
+    ],
+    // === BS5 GREEN 攻擊 Then ===
+    // BS5-056 Longan Dragon Cookie：Then, when your turn ends, set up to 1
+    // card from your support area as active. 回合結束延遲效果：攻擊結算時只
+    // 排隊（deferred-end-of-turn），由 end 階段的 processEndPhaseEffects
+    // 依序結算。
+    'BS5-056': [
+      {
+        kind: 'deferred-end-of-turn',
+        effects: [{ kind: 'set-active', supportCount: 1 }],
+      },
+    ],
+    // BS5-059 Purple Yam Cookie：Then, <return 1 card from your support area
+    // to your hand.> Draw up to 1 card from your deck.
+    'BS5-059': [
+      {
+        kind: 'support-to-hand',
+        amount: 1,
+        optional: true,
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS5-060 Croissant Cookie：Then, when your turn ends, set up to 3 cards
+    // from your support area as active.
+    'BS5-060': [
+      {
+        kind: 'deferred-end-of-turn',
+        effects: [{ kind: 'set-active', supportCount: 3 }],
+      },
+    ],
   }
 
   if (exactAttackEffects[cardKey]) {
@@ -3960,7 +4705,7 @@ export const convertOfficialFlipAbility = (
     }
   }
 
-  const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost }>> = {
+  const exactFlipEffects: Partial<Record<string, { effects: CardEffect[]; cost?: AbilityCost; attachedHpBonus?: number }>> = {
     'P-024': {
       cost: { energy: {}, discardHand: 1 },
       effects: [
@@ -3970,6 +4715,32 @@ export const convertOfficialFlipAbility = (
           target: { side: 'self', min: 1, max: 1, sourceOnly: true },
         },
       ],
+    },
+    // BS5-004 Lollipop Cookie／BS5-041 Firecracker Cookie／BS5-082 Ion Cookie
+    // Robot／BS5-095 Mint Wafer Cookie：「The Cookie with this card attached
+    // for HP gains +1 HP.」是附著期間的連續效果，不是一次性 gain-hp——
+    // 只要這張卡還附在目標餅乾的 HP 上，剩餘 HP 就 +1，卡離開加成就消失。
+    // 因此 effects 為空，附著加成由 FlipAbility.attachedHpBonus 承載，
+    // 剩餘 HP 計算走 helpers.getCookieEffectiveHp。代價 <Discard 1 card.>
+    // 由 parseAbilityCost 解析。
+    'BS5-004': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS5-009': {
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    'BS5-041': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS5-082': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS5-095': {
+      effects: [],
+      attachedHpBonus: 1,
     },
     'BS1-040': {
       effects: [
@@ -4066,6 +4837,9 @@ export const convertOfficialFlipAbility = (
       text: card.flipText,
       cost: exactFlip.cost ?? parseAbilityCost(card.flipText),
       effects: exactFlip.effects,
+      ...(exactFlip.attachedHpBonus !== undefined
+        ? { attachedHpBonus: exactFlip.attachedHpBonus }
+        : {}),
     }
   }
 
@@ -4611,6 +5385,48 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    // BS5-021 Draconic Aura：<{R}> If there is a LV.3 Cookie in your battle
+    // area, 選至多 2 張對手餅乾本回合攻擊 -1；Then 自 1 張己方餅乾的 HP 頂端
+    // 回手至多 1 張卡。LV.3 條件是「發動門檻」（TrapCondition），不是個別
+    // 效果的條件，條件不成立時整張陷阱不能發動。
+    'BS5-021': {
+      condition: { kind: 'battle-area-has-cookie-with-level', level: 3 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 2 },
+        },
+        {
+          kind: 'hp-to-hand',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1 },
+        },
+      ],
+    },
+    // BS5-065 Petrification：<{G}{G}{G}> Select up to 1 of your opponent's
+    // Cookies. This attack deals -2 attack damage this turn. Then, if there
+    // are 7 cards or more in your support area, your opponent selects 1
+    // active card from their support area. Rest that card. 無發動門檻（7 張
+    // 支援區條件屬於 Then 子句，不是陷阱的 play 條件）；對手選擇橫置由
+    // opponent-rests-support 效果通道處理。
+    'BS5-065': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'opponent-rests-support',
+          amount: 1,
+          activeOnly: true,
+          condition: { kind: 'support-count-at-least', count: 7 },
+        },
+      ],
+    },
   }
 
   const exactTrap = exactTrapEffects[card.cardNumber]
@@ -4703,6 +5519,46 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
   'P-016': { energy: { yellow: 1 }, discardHand: 0 },
   'P-018': { energy: {}, discardHand: 1 },
   'P-030': { energy: {}, discardHand: 2 },
+  // BS5 RED 系列代價覆寫（詳細文字在 data/candidates/ 的原始 JSON）。
+  // BS5-005 Mala Sauce Cookie：【Activate】<{R}><Place 1 card from the top of
+  // your {R} LV.2 or higher Cookie's HP into the trash.> 技能效果是選對手餅乾
+  // 1 傷害，見 exactStarterEffects。
+  'BS5-005': {
+    energy: { red: 1 },
+    discardHand: 0,
+    hpToTrash: { energyColor: 'red', minLevel: 2 },
+  },
+  // BS5-013 Pitaya Dragon Cookie：【On Play】<Discard 1 {R} Cookie from your
+  // hand.> 紅龍 Cookie 是 DRAGON 關鍵字，本身是餅乾。
+  'BS5-013': {
+    energy: {},
+    discardHand: 1,
+    discardHandColor: 'red',
+    discardHandType: 'cookie',
+  },
+  // BS5-015 Carol Cookie：【On Play】<Place 1 card from the top of your other
+  // Cookie's HP into the trash.>（不能犧牲自己）
+  'BS5-015': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { excludeSource: true },
+  },
+  // BS5-018 Flat Tofu Cookie：【On Play】<Discard 1 {R} trap card from your
+  // hand.>
+  'BS5-018': {
+    energy: {},
+    discardHand: 1,
+    discardHandColor: 'red',
+    discardHandType: 'trap',
+  },
+  // BS5-019 Pudding Cookie：【Activate】【Once Per Turn】<{R}><Discard 1 {R}
+  // Cookie from your hand.> 效果是本回合自身攻擊 +1（見 exactStarterEffects）。
+  'BS5-019': {
+    energy: { red: 1 },
+    discardHand: 1,
+    discardHandColor: 'red',
+    discardHandType: 'cookie',
+  },
 }
 
 const exactCookieSkillSourceEnergy: Partial<

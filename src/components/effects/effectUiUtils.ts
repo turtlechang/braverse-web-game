@@ -58,6 +58,9 @@ export const describeEffect = (effect: CardEffect) => {
     return `全體${effect.side === 'self' ? '我方' : '對手'}餅乾攻擊傷害 ${effect.amount >= 0 ? '+' : ''}${effect.amount}。`
   }
   if (effect.kind === 'damage-all') {
+    if (effect.sequential) {
+      return `依點選順序，逐一對所有${effect.side === 'self' ? '我方' : '對手'}餅乾造成 ${effect.amount} 點傷害；每次傷害先處理 FLIP 與昏厥。`
+    }
     return `所有${effect.side === 'self' ? '我方' : '對手'}餅乾受到 ${effect.amount} 傷害。`
   }
   if (effect.kind === 'discard-hand') return `棄掉 ${effect.count} 張手牌。`
@@ -72,6 +75,9 @@ export const describeEffect = (effect: CardEffect) => {
     return effect.destination === 'break'
       ? '將符合條件的對手餅乾放入休息區。'
       : '將符合條件的對手餅乾放入棄牌區。'
+  }
+  if (effect.kind === 'make-faint') {
+    return '選擇目標餅乾使其昏厥。'
   }
   if (effect.kind === 'place-source-to-support') {
     return '將這張卡放入支援區。'
@@ -291,6 +297,7 @@ export const describeEffectResult = (
   if (effect.kind === 'opponent-discard-hand') return '已要求對手棄手牌。'
   if (effect.kind === 'opponent-random-discard') return '對手已隨機棄手牌。'
   if (effect.kind === 'opponent-battle-to-trash') return effect.destination === 'break' ? '對手餅乾已放入休息區。' : '對手餅乾已放入棄牌區。'
+  if (effect.kind === 'make-faint') return `${names} 已昏厥。`
   if (effect.kind === 'place-source-to-support') return '已放入支援區。'
   if (effect.kind === 'set-active') return '支援區卡已設為活躍。'
   if (effect.kind === 'inspect-deck') return '已查看牌庫。'

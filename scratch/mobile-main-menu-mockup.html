@@ -1,0 +1,625 @@
+<title>手機版主選單 Mockup</title>
+<style>
+  :root {
+    --bg-void: #020817;
+    --bg-shell-a: rgba(8, 38, 89, 0.96);
+    --bg-shell-b: rgba(22, 62, 126, 0.9);
+    --bg-shell-solid: #07162f;
+    --gold: #ffda62;
+    --gold-dim: #ffe6a2;
+    --gold-border: rgba(255, 214, 111, 0.72);
+    --gold-border-dim: rgba(255, 214, 111, 0.24);
+    --brand-outline: #6d351b;
+    --cyan: #7ee7f0;
+    --cyan-border: rgba(126, 231, 240, 0.28);
+    --cyan-border-dim: rgba(126, 231, 240, 0.18);
+    --ink: #eef9ff;
+    --ink-dim: #9fc3e8;
+    --card-bg: rgba(7, 27, 61, 0.86);
+    --card-bg-selected: rgba(25, 61, 94, 0.92);
+    --btn-bg: rgba(5, 21, 52, 0.72);
+    --primary-a: #29a8cf;
+    --primary-b: #0d68aa;
+    --danger: #ffd4ca;
+    --danger-border: rgba(255, 139, 116, 0.42);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Noto Sans TC", Inter, ui-sans-serif, system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse 800px 500px at 30% -10%, rgba(126, 231, 240, 0.08), transparent 60%),
+      linear-gradient(180deg, #030d24, #010613 60%);
+  }
+
+  .stage {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 22px 16px 60px;
+  }
+
+  .stage-note {
+    margin: 0 0 18px;
+    padding: 11px 14px;
+    border: 1px dashed var(--cyan-border);
+    border-radius: 10px;
+    background: rgba(126, 231, 240, 0.06);
+    color: var(--cyan);
+    font-size: 0.74rem;
+    line-height: 1.65;
+  }
+  .stage-note b { color: var(--gold); }
+
+  .frame-row {
+    display: flex;
+    justify-content: center;
+  }
+
+  .phone-frame {
+    width: 390px;
+    max-width: 100%;
+    height: 780px;
+    border-radius: 40px;
+    padding: 14px;
+    background: linear-gradient(160deg, #1a2333, #0a0f1a);
+    box-shadow:
+      0 40px 90px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  }
+
+  .phone-screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 28px;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, var(--bg-shell-a), var(--bg-shell-b)),
+      var(--bg-shell-solid);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .phone-notch {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90px;
+    height: 20px;
+    border-radius: 999px;
+    background: #0a0f1a;
+    z-index: 5;
+  }
+
+  /* ---------- scrollable content ---------- */
+
+  .menu-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 30px 16px 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .menu-scroll::-webkit-scrollbar { width: 0; }
+
+  .brand {
+    text-align: center;
+    margin: 0 0 14px;
+  }
+
+  .brand-lockup {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 0.86;
+  }
+
+  .brand-line {
+    color: var(--gold);
+    font-weight: 900;
+    letter-spacing: -0.06em;
+    -webkit-text-stroke: 1.5px var(--brand-outline);
+    paint-order: stroke fill;
+    text-shadow: 0 2px 0 var(--brand-outline);
+  }
+  .brand-line.top { font-size: 1.5rem; }
+  .brand-line.main { font-size: 2.15rem; margin-top: 2px; }
+
+  .brand-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 14px 4px;
+    border-radius: 999px;
+    background: #70401f;
+    color: #ffe9c2;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .brand-sub {
+    margin: 10px 0 0;
+    color: var(--ink-dim);
+    font-size: 0.74rem;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  /* ---------- compact status card ---------- */
+
+  .section {
+    margin-top: 16px;
+  }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 7px;
+    color: var(--ink-dim);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  .card {
+    border: 1px solid var(--cyan-border-dim);
+    border-radius: 12px;
+    background: var(--card-bg);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+  }
+
+  .current-deck-card {
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .current-deck-card .swatch {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(150deg, #2a5fa0, #123b73);
+    border: 1px solid var(--cyan-border);
+    color: var(--cyan);
+    font-weight: 900;
+    font-size: 0.9rem;
+  }
+
+  .current-deck-card .info { min-width: 0; flex: 1 1 auto; }
+  .current-deck-card .info strong {
+    display: block;
+    font-size: 0.88rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .current-deck-card .info span {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink-dim);
+    font-size: 0.68rem;
+  }
+
+  .legal-pill {
+    flex: 0 0 auto;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 800;
+  }
+  .legal-pill.ok { color: var(--cyan); border: 1px solid var(--cyan-border); }
+  .legal-pill.warn { color: #ffb36d; border: 1px solid rgba(255, 179, 109, 0.5); }
+
+  /* ---------- AI opponent row ---------- */
+
+  .ai-row {
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .ai-row label {
+    display: grid;
+    gap: 4px;
+    color: var(--ink-dim);
+    font-size: 0.64rem;
+    font-weight: 800;
+  }
+
+  .ai-row select {
+    min-height: 40px;
+    padding: 0 8px;
+    border: 1px solid var(--cyan-border);
+    border-radius: 8px;
+    background: var(--btn-bg);
+    color: var(--ink);
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .ai-hint {
+    grid-column: 1 / -1;
+    margin: 2px 0 0;
+    color: var(--ink-dim);
+    font-size: 0.66rem;
+    line-height: 1.4;
+  }
+
+  /* ---------- deck list ---------- */
+
+  .deck-list {
+    display: grid;
+    gap: 8px;
+  }
+
+  .deck-card {
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .deck-card.is-selected {
+    border-color: var(--gold-border);
+    background: var(--card-bg-selected);
+  }
+
+  .deck-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .deck-radio {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 2px solid var(--cyan-border);
+    display: grid;
+    place-items: center;
+  }
+  .deck-card.is-selected .deck-radio { border-color: var(--gold); }
+  .deck-radio i {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: var(--gold);
+    display: none;
+  }
+  .deck-card.is-selected .deck-radio i { display: block; }
+
+  .deck-card-top strong {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+  }
+
+  .deck-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-left: 26px;
+  }
+
+  .deck-stats span {
+    padding: 2px 7px;
+    border: 1px solid var(--gold-border-dim);
+    border-radius: 5px;
+    color: var(--gold-dim);
+    font-size: 0.64rem;
+    font-weight: 700;
+  }
+
+  .deck-actions {
+    display: flex;
+    gap: 6px;
+    padding-left: 26px;
+  }
+
+  .deck-actions button {
+    flex: 1 1 0;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid var(--cyan-border);
+    border-radius: 7px;
+    background: var(--btn-bg);
+    color: var(--ink);
+    font-size: 0.68rem;
+    font-weight: 700;
+  }
+
+  .deck-actions button.danger {
+    border-color: var(--danger-border);
+    color: var(--danger);
+  }
+
+  .add-deck-btn {
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px dashed var(--cyan-border);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--cyan);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  /* ---------- collapsible dev tools ---------- */
+
+  .dev-disclosure {
+    margin-top: 18px;
+    text-align: center;
+  }
+
+  .dev-disclosure summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: rgba(159, 195, 232, 0.6);
+    font-size: 0.66rem;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+  }
+  .dev-disclosure summary::-webkit-details-marker { display: none; }
+
+  .dev-tools-body {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .dev-tools-body button {
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--cyan-border-dim);
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink-dim);
+    font-size: 0.64rem;
+    font-weight: 700;
+  }
+
+  .disclaimer {
+    margin: 14px 0 0;
+    padding: 0 4px;
+    color: rgba(159, 195, 232, 0.4);
+    font-size: 0.58rem;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  /* ---------- sticky bottom CTA bar ---------- */
+
+  .cta-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--cyan-border-dim);
+    background: linear-gradient(0deg, rgba(3, 12, 30, 0.98), rgba(3, 12, 30, 0.86));
+    backdrop-filter: blur(10px);
+  }
+
+  .cta-icon-btn {
+    flex: 0 0 auto;
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--cyan-border);
+    border-radius: 12px;
+    background: var(--btn-bg);
+    color: var(--ink);
+  }
+
+  .cta-primary {
+    flex: 1 1 auto;
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid var(--gold-border);
+    border-radius: 12px;
+    background: linear-gradient(180deg, var(--primary-a), var(--primary-b));
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 900;
+    box-shadow: 0 10px 24px rgba(13, 104, 170, 0.4);
+  }
+
+  .change-list {
+    margin: 26px 0 0;
+  }
+  .change-list h2 {
+    font-size: 0.92rem;
+    color: var(--gold);
+    margin: 0 0 8px;
+  }
+  .change-list ul {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--ink-dim);
+    font-size: 0.78rem;
+    line-height: 1.75;
+  }
+  .change-list li b { color: var(--ink); }
+</style>
+
+<div class="stage">
+  <p class="stage-note">
+    <b>Mockup／非最終實作</b>：手機直式主選單改版方向。沿用現有配色與元件語彙（金色品牌色、青色邊框、卡片樣式），
+    改成單欄直式流程＋底部固定「對戰入口」CTA，呼應
+    <code>docs/ui-reference/05-mobile-rwd-wireframe.md</code> 裡「直式手機」規劃的四個原則。
+    資料內容取自目前 MainMenu.tsx 的真實文案與流程，不是憑空編的假畫面。
+  </p>
+
+  <div class="frame-row">
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        <div class="menu-scroll">
+          <div class="brand">
+            <div class="brand-lockup">
+              <span class="brand-line top">薑餅人</span>
+              <span class="brand-line main">對戰卡牌</span>
+            </div>
+            <span class="brand-badge">BRAVERSE</span>
+            <p class="brand-sub">選擇一副合法牌組後開始對戰；AI 對手可在下方指定。</p>
+          </div>
+
+          <div class="section">
+            <div class="section-label"><span>目前玩家牌組</span></div>
+            <div class="card current-deck-card">
+              <div class="swatch">紫</div>
+              <div class="info">
+                <strong>第二彈藍色-1</strong>
+                <span>60 張・FLIP 16・餅乾 40</span>
+              </div>
+              <span class="legal-pill ok">合法</span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-label"><span>AI 對手</span></div>
+            <div class="card ai-row">
+              <label>
+                牌組
+                <select>
+                  <option>第三彈綠色・聖百合餅乾</option>
+                  <option>第三彈藍色・PR 雪酪</option>
+                  <option>第三彈紅色・火龍果龍族餅乾</option>
+                  <option selected>第三彈紫色・黑可可餅乾</option>
+                  <option>第三彈紫色・黑可可餅乾（打架流）</option>
+                  <option>第三彈黃色・反擊流</option>
+                </select>
+              </label>
+              <label>
+                等級
+                <select>
+                  <option>Lv.1 隨機出招</option>
+                  <option>Lv.2 基礎戰術</option>
+                  <option>Lv.3 評估戰局</option>
+                  <option selected>Lv.4 兩層前瞻</option>
+                </select>
+              </label>
+              <p class="ai-hint">模擬對手回應後再評分，並考量破壞區風險與高威脅目標。</p>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-label">
+              <span>已儲存牌組（2）</span>
+            </div>
+            <div class="deck-list">
+              <div class="deck-card is-selected" data-deck>
+                <div class="deck-card-top">
+                  <span class="deck-radio"><i></i></span>
+                  <strong>第二彈藍色-1</strong>
+                  <span class="legal-pill ok">合法</span>
+                </div>
+                <div class="deck-stats">
+                  <span>60 張</span>
+                  <span>FLIP 16</span>
+                  <span>餅乾 40</span>
+                  <span>陷阱 9</span>
+                </div>
+                <div class="deck-actions">
+                  <button type="button">✏️ 編輯</button>
+                  <button type="button">⧉ 複製</button>
+                  <button type="button" class="danger">🗑 刪除</button>
+                </div>
+              </div>
+
+              <div class="deck-card" data-deck>
+                <div class="deck-card-top">
+                  <span class="deck-radio"><i></i></span>
+                  <strong>丟牌紫（修正版）</strong>
+                  <span class="legal-pill warn">需調整</span>
+                </div>
+                <div class="deck-stats">
+                  <span>58 張</span>
+                  <span>FLIP 17</span>
+                  <span>餅乾 38</span>
+                  <span>陷阱 6</span>
+                </div>
+                <div class="deck-actions">
+                  <button type="button">✏️ 編輯</button>
+                  <button type="button">⧉ 複製</button>
+                  <button type="button" class="danger">🗑 刪除</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="add-deck-btn">＋ 新增牌組</button>
+
+          <details class="dev-disclosure">
+            <summary>▾ 開發者工具</summary>
+            <div class="dev-tools-body">
+              <button type="button">🧪 測試對局設定</button>
+              <button type="button">⟳ 重新讀取</button>
+            </div>
+          </details>
+
+          <p class="disclaimer">
+            本作品為非官方粉絲研究專案，與 Devsisters Corporation 無任何關聯、合作或授權；
+            CookieRun: Braverse 卡牌與圖像之著作權均屬 Devsisters 所有。
+          </p>
+        </div>
+
+        <div class="cta-bar">
+          <button type="button" class="cta-icon-btn" title="線上對戰">📶</button>
+          <button type="button" class="cta-icon-btn" title="牌組編輯器">✏️</button>
+          <button type="button" class="cta-primary">▶ 對戰入口</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="change-list">
+    <h2>跟現況比起來改了什麼</h2>
+    <ul>
+      <li><b>單欄直式流程</b>：現行版面在窄螢幕上「已儲存牌組」區塊有 <code>minmax(420px, …)</code> 的欄寬下限，手機portrait viewport不夠寬時仍會硬擠成兩欄；改成完全單欄由上到下：品牌 → 目前牌組 → AI對手 → 牌組清單。</li>
+      <li><b>底部固定 CTA</b>：「對戰入口」／「線上對戰」／「牌組編輯器」移到螢幕底部常駐列，捲動瀏覽牌組清單時不用捲回頂端才能開始對戰，符合手機 App 常見的底部導覽習慣。</li>
+      <li><b>牌組資訊精簡</b>：桌機版「目前玩家牌組」一次列 6 個統計數字（張數/FLIP/餅乾/物品/陷阱/場景）；手機版只留最關鍵的 3 個＋合法徽章，減少視覺雜訊。</li>
+      <li><b>牌組卡片改用單選圓點</b>：取代原本純文字按鈕，觸控時更清楚目前選了哪一副，觸控熱區也更大（整張卡片可點）。</li>
+      <li><b>開發者工具收合</b>：「測試對局設定」「重新讀取」是開發用途，手機版預設收合在 <code>&lt;details&gt;</code> 裡，玩家不需要的資訊不佔版面。</li>
+      <li><b>觸控目標 ≥44px</b>：底部 CTA、牌組卡片、AI下拉選單全部至少 44–46px 高，符合 wireframe 05 訂的觸控基準。</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('[data-deck]').forEach((card) => {
+    card.querySelector('.deck-card-top').addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      document.querySelectorAll('[data-deck]').forEach((c) => c.classList.remove('is-selected'));
+      card.classList.add('is-selected');
+    });
+  });
+</script>

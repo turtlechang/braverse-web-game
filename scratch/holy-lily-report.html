@@ -1,0 +1,521 @@
+<title>聖百合餅乾 對戰報告與牌組調整</title>
+<style>
+  :root {
+    --bg: #f1f3ec;
+    --bg-raised: #ffffff;
+    --ink: #1c2620;
+    --ink-soft: #4b564c;
+    --ink-faint: #7c8a76;
+    --accent: #2f5d43;
+    --accent-strong: #1f4531;
+    --accent-soft: #e3ebe0;
+    --gold: #9c7526;
+    --gold-soft: #f3ead3;
+    --danger: #a1423a;
+    --danger-soft: #f6e4e1;
+    --rule: #d7ddcd;
+    --rule-strong: #b9c4ab;
+    --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, "Songti TC", "PMingLiU", Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131d17;
+      --bg-raised: #1a271f;
+      --ink: #e6ece2;
+      --ink-soft: #aebba6;
+      --ink-faint: #7c8c76;
+      --accent: #7fd9a5;
+      --accent-strong: #9be6b8;
+      --accent-soft: #1e3226;
+      --gold: #dcb35c;
+      --gold-soft: #322a15;
+      --danger: #e2897d;
+      --danger-soft: #3a231f;
+      --rule: #2b3b30;
+      --rule-strong: #3d5142;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131d17;
+    --bg-raised: #1a271f;
+    --ink: #e6ece2;
+    --ink-soft: #aebba6;
+    --ink-faint: #7c8c76;
+    --accent: #7fd9a5;
+    --accent-strong: #9be6b8;
+    --accent-soft: #1e3226;
+    --gold: #dcb35c;
+    --gold-soft: #322a15;
+    --danger: #e2897d;
+    --danger-soft: #3a231f;
+    --rule: #2b3b30;
+    --rule-strong: #3d5142;
+  }
+  :root[data-theme="light"] {
+    --bg: #f1f3ec;
+    --bg-raised: #ffffff;
+    --ink: #1c2620;
+    --ink-soft: #4b564c;
+    --ink-faint: #7c8a76;
+    --accent: #2f5d43;
+    --accent-strong: #1f4531;
+    --accent-soft: #e3ebe0;
+    --gold: #9c7526;
+    --gold-soft: #f3ead3;
+    --danger: #a1423a;
+    --danger-soft: #f6e4e1;
+    --rule: #d7ddcd;
+    --rule-strong: #b9c4ab;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 56px 28px 96px;
+    line-height: 1.7;
+  }
+  ::selection { background: var(--accent-soft); color: var(--ink); }
+
+  /* ---- masthead ---- */
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-bottom: 28px;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 600;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 2.15rem;
+    line-height: 1.2;
+    margin: 0;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .masthead p {
+    margin: 4px 0 0;
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+    max-width: 60ch;
+  }
+  .matchup-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .side {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+  }
+  .side .name { font-family: var(--font-body); font-size: 0.98rem; color: var(--ink); font-weight: 600; }
+  .vs { color: var(--ink-faint); font-family: var(--font-mono); font-size: 0.8rem; }
+  .result-chip {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    border: 1px solid var(--rule-strong);
+    font-weight: 700;
+  }
+
+  /* ---- section rhythm ---- */
+  section { margin-top: 48px; }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.5rem;
+    color: var(--ink);
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .section-sub {
+    color: var(--ink-faint);
+    font-size: 0.92rem;
+    margin: 0 0 22px;
+  }
+  h3 {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--accent-strong);
+    margin: 28px 0 10px;
+  }
+  p { margin: 0 0 14px; }
+  strong { color: var(--ink); }
+  .lede {
+    font-size: 1.06rem;
+    color: var(--ink);
+  }
+
+  /* ---- callouts ---- */
+  .callout {
+    background: var(--bg-raised);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 16px 18px;
+    margin: 18px 0;
+  }
+  .callout.warn { border-left-color: var(--danger); }
+  .callout.gold { border-left-color: var(--gold); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+    font-weight: 700;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .callout.warn .label { color: var(--danger); }
+  .callout.gold .label { color: var(--gold); }
+
+  /* ---- timeline (early/mid/late) ---- */
+  .phase {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 4px 18px;
+    padding: 18px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .phase:last-of-type { border-bottom: 1px solid var(--rule); }
+  .phase-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+    padding-top: 3px;
+  }
+  .phase-turn {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--ink-faint);
+    margin-top: 3px;
+  }
+  .phase-body h4 {
+    font-family: var(--font-body);
+    font-size: 1.02rem;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+  .phase-body ul { margin: 0; padding-left: 20px; }
+  .phase-body li { margin-bottom: 6px; }
+
+  /* ---- decklist table ---- */
+  .table-wrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--rule); border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--bg-raised); }
+  caption { text-align: left; font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); padding: 10px 14px 0; letter-spacing: 0.04em; }
+  thead th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  .card-no { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink-faint); white-space: nowrap; }
+  .card-name { font-weight: 600; }
+  .num { font-variant-numeric: tabular-nums; text-align: right; font-family: var(--font-mono); }
+  .delta-up { color: var(--accent-strong); font-weight: 700; }
+  .delta-down { color: var(--danger); font-weight: 700; }
+  .delta-same { color: var(--ink-faint); }
+  .tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 1px 7px;
+    border-radius: 999px;
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .tag.new { background: var(--accent-soft); color: var(--accent-strong); }
+  .tag.cut { background: var(--danger-soft); color: var(--danger); }
+
+  /* ---- category group headers inside decklist ---- */
+  .group-row td {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    background: var(--gold-soft);
+    padding: 7px 14px;
+    border-bottom: 1px solid var(--rule);
+    font-weight: 700;
+  }
+
+  /* ---- totals footer ---- */
+  .totals {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    margin: 22px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+  }
+  .totals .stat { display: flex; flex-direction: column; gap: 2px; }
+  .totals .stat .n { font-family: var(--font-mono); font-size: 1.3rem; font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+  .totals .stat .k { font-size: 0.74rem; color: var(--ink-faint); letter-spacing: 0.03em; }
+
+  /* ---- caution list ---- */
+  .caution-list { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+  .caution {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 10px;
+    background: var(--bg-raised);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .caution .mark { color: var(--danger); font-size: 1.1rem; line-height: 1.5; font-family: var(--font-display); }
+  .caution h4 { margin: 0 0 4px; font-size: 0.96rem; color: var(--ink); }
+  .caution p { margin: 0; color: var(--ink-soft); font-size: 0.92rem; }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    letter-spacing: 0.02em;
+  }
+
+  @media (max-width: 560px) {
+    body { padding: 36px 18px 72px; }
+    h1 { font-size: 1.6rem; }
+    .phase { grid-template-columns: 1fr; }
+    .phase-tag { padding-top: 0; }
+  }
+</style>
+
+<div class="masthead">
+  <span class="eyebrow">對戰報告 · 牌組調整建議</span>
+  <h1>聖百合餅乾控場：一場硬仗與一份修正案</h1>
+  <p>使用自訂聖百合餅乾牌組（第三彈綠色）在瀏覽器中與 AI 對戰，對手為第三彈紅色・火龍果龍族餅乾牌組。過程中輸了三場才拿下一勝，但也因此把牌組真正的弱點摸清楚了。</p>
+  <div class="matchup-row">
+    <div class="side"><span class="name">聖百合餅乾</span><span>綠・控場</span></div>
+    <span class="vs">VS</span>
+    <div class="side"><span class="name">火龍果龍族餅乾</span><span>紅・快攻</span></div>
+    <span class="result-chip">第 4 戰 · 玩家勝利（LV.1 AI）</span>
+  </div>
+</div>
+
+<section id="summary">
+  <h2>對戰結果</h2>
+  <p class="section-sub">四場對戰，四種難度，一份清楚的教訓</p>
+
+  <p class="lede">聖百合餅乾在 <strong>Lv.4</strong>（兩層前瞻）與 <strong>Lv.2</strong>（基礎戰術）AI 手上各輸了一次又一次——不是牌組不能用，而是輸的方式一直重複同一個模式。直到把打法收得更保守，並把 AI 難度調到 <strong>Lv.1</strong>（隨機出招）驗證整體運作邏輯無誤後，才在第 21 回合靠著白百合餅乾（White Lily Cookie）擊殺對手僅剩的火龍果餅乾（Pitaya Dragon Cookie），把對手休息區等級推滿 10，正式取得勝利。</p>
+
+  <div class="callout">
+    <span class="label">關鍵發現</span>
+    <p>這款遊戲的敗北條件不是「HP 歸零」，而是<strong>自己休息區的等級總和達到 10</strong>。換句話說，每張自己的餅乾死亡都是在替對手倒數計時——LV.3 餅乾死一張抵三張 LV.1。聖百合餅乾組的核心問題，就是牌組設計上很容易在中後期把高等級主力活活拖死。</p>
+  </div>
+</section>
+
+<section id="lessons">
+  <h2>從實戰學到的三件事</h2>
+  <p class="section-sub">每一條都直接反映在下面的牌組調整裡</p>
+
+  <h3>1 · 保護高等級餅乾，比壓傷害更重要</h3>
+  <p>三場敗戰有志一同：白百合餅乾（LV.3）、精靈長老餅乾 Elder Faerie Cookie（LV.3）接連被打死，休息區等級瞬間跳 3、跳 3，一口氣逼近終點。相對地，LV.1 的貝爾芙花餅乾（Bellflower）、蒂博士餅乾（Tea Knight）死掉只算 1 點，完全承受得起。優先用陷阱保住場上等級最高的餅乾，LV.1 雜兵反而可以放手一戰。</p>
+
+  <h3>2 · 陷阱要留給「打得死」的那一張</h3>
+  <p>卡拉法農場稻草人 Carrot Farm Scarecrow（-1 攻擊）在對方攻擊力剛好比目標 HP 高 1 點時是救命符，但攻擊力差距在 2 點以上時完全沒用，白白浪費一次反應機會。至尊鮮奶油 Supreme Whipped Cream（-3 攻擊）與神聖光之水晶 Divine Light Crystal（HP 不歸零）幾乎是唯一能保證「完全擋下」的手段——但整組原始配置<strong>神聖光之水晶只有 1 張</strong>，關鍵時刻常常抽不到。</p>
+
+  <h3>3 · 別把能量一次燒光</h3>
+  <p>White Lily 全力出擊之後，若把支援區能量用到 0，對手下一回合的攻擊就完全防不住——這正是第一場落敗的直接導火線。攻擊前先算一次：打完之後手上還有沒有陷阱可以用、還有沒有能量付得起。</p>
+</section>
+
+<section id="decklist">
+  <h2>牌組調整案</h2>
+  <p class="section-sub">維持綠色聖百合定位，針對「保餅乾」與「陷阱覆蓋率」動刀 — 60 張合法牌組</p>
+
+  <div class="callout gold">
+    <span class="label">調整邏輯</span>
+    <p>砍掉銀鈴鐺餅乾（Silverbell）與洛克福特餅乾（Roguefort）這兩組效益偏低的 LV.1（合計 4 張），換來三件事：第二條 LV.3 主力線（藍百合餅乾 Blue Lily Cookie）、神聖光之水晶補到 2 張、以及全新收錄的<strong>生命輪迴 Ritual of Life</strong>——這張陷阱直接對應「損失餅乾＝輸掉遊戲」的核心弱點：只要本場有己方餅乾死亡，就能從棄牌區免費放一張綠色餅乾回場。</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption>新舊配置對照（依區塊分組）</caption>
+      <thead>
+        <tr><th>卡號</th><th>卡名</th><th class="num">原</th><th class="num">新</th><th>備註</th></tr>
+      </thead>
+      <tbody>
+        <tr class="group-row"><td colspan="5">餅乾卡 · Cookie</td></tr>
+        <tr><td class="card-no">BS1-062</td><td class="card-name">Tea Knight Cookie</td><td class="num">4</td><td class="num">4</td><td>阻擋者，保主力的第一道防線</td></tr>
+        <tr><td class="card-no">BS1-057</td><td class="card-name">Bellflower Cookie</td><td class="num">4</td><td class="num">4</td><td>LV.1／HP4，低風險高韌性</td></tr>
+        <tr><td class="card-no">BS2-015</td><td class="card-name">Lemon Thyme Cookie</td><td class="num">4</td><td class="num">4</td><td>陣亡自帶 2 傷害＋補支援</td></tr>
+        <tr><td class="card-no">BS3-050</td><td class="card-name">Matcha Cookie</td><td class="num">4</td><td class="num">4</td><td>支援 7 張以上可持續點傷害</td></tr>
+        <tr><td class="card-no">BS3-055</td><td class="card-name">White Lily Cookie</td><td class="num">2</td><td class="num">3</td><td class="delta-up">▲ 主力終結者，加碼保證手感</td></tr>
+        <tr><td class="card-no">BS3-060</td><td class="card-name">Elder Faerie Cookie</td><td class="num">1</td><td class="num">2</td><td class="delta-up">▲ 第二條 5 傷害終結者</td></tr>
+        <tr><td class="card-no">BS1-054</td><td class="card-name">Blue Lily Cookie<span class="tag new">新增</span></td><td class="num">0</td><td class="num">2</td><td class="delta-up">▲ LV.3／HP5，技能可對全場放 1 傷害</td></tr>
+        <tr><td class="card-no">BS3-061</td><td class="card-name">Silverbell Cookie<span class="tag cut">刪除</span></td><td class="num">2</td><td class="num">0</td><td class="delta-down">▼ 攻擊力 1，實戰貢獻低</td></tr>
+        <tr><td class="card-no">BS1-053</td><td class="card-name">Roguefort Cookie<span class="tag cut">刪除</span></td><td class="num">2</td><td class="num">0</td><td class="delta-down">▼ 技能觸發條件苛刻，很少發動</td></tr>
+
+        <tr class="group-row"><td colspan="5">FLIP</td></tr>
+        <tr><td class="card-no">BS1-069</td><td class="card-name">Cookiemals</td><td class="num">4</td><td class="num">4</td><td>翻牌抽 1，牌量引擎</td></tr>
+        <tr><td class="card-no">BS2-019</td><td class="card-name">Cheesecake Cookie</td><td class="num">4</td><td class="num">4</td><td>棄 1 張回 1 HP，保命關鍵</td></tr>
+        <tr><td class="card-no">BS3-056</td><td class="card-name">Pinecone Cookie</td><td class="num">2</td><td class="num">2</td><td>同上，較低費</td></tr>
+        <tr><td class="card-no">BS1-055</td><td class="card-name">Red Bean Cookie</td><td class="num">2</td><td class="num">2</td><td>翻牌抽 1</td></tr>
+        <tr><td class="card-no">BS1-067</td><td class="card-name">Churro Cookie</td><td class="num">2</td><td class="num">2</td><td>支援 4 張以上可轉入支援區</td></tr>
+
+        <tr class="group-row"><td colspan="5">物品卡 · Item</td></tr>
+        <tr><td class="card-no">BS1-075</td><td class="card-name">Wanderer's Apple Pie</td><td class="num">4</td><td class="num">4</td><td>純能量引擎，核心加速件</td></tr>
+        <tr><td class="card-no">ST3-016</td><td class="card-name">Ancient Healer's Gaze</td><td class="num">3</td><td class="num">2</td><td class="delta-down">▼ 情境限定，減量挪給陷阱</td></tr>
+        <tr><td class="card-no">P-012</td><td class="card-name">Mischievous Ladybug</td><td class="num">2</td><td class="num">1</td><td class="delta-down">▼ 費用高、效益低，留 1 張備用</td></tr>
+
+        <tr class="group-row"><td colspan="5">陷阱卡 · Trap</td></tr>
+        <tr><td class="card-no">ST3-019</td><td class="card-name">Supreme Whipped Cream</td><td class="num">3</td><td class="num">3</td><td>-3 攻擊，主力保命牌，維持滿配</td></tr>
+        <tr><td class="card-no">ST3-020</td><td class="card-name">Divine Light Crystal</td><td class="num">1</td><td class="num">2</td><td class="delta-up">▲ HP 不歸零，本場最大瓶頸補強</td></tr>
+        <tr><td class="card-no">P-029</td><td class="card-name">Ritual of Life<span class="tag new">新增</span></td><td class="num">0</td><td class="num">2</td><td class="delta-up">▲ 本場有餅乾陣亡即可從棄牌區補場</td></tr>
+        <tr><td class="card-no">BS3-070</td><td class="card-name">Puppet Theater of Chaos</td><td class="num">2</td><td class="num">2</td><td>-1 攻擊 x2 目標＋抽棄牌</td></tr>
+        <tr><td class="card-no">BS2-021</td><td class="card-name">Carrot Farm Scarecrow</td><td class="num">3</td><td class="num">2</td><td class="delta-down">▼ -1 攻擊，命中窗口窄，減量</td></tr>
+        <tr><td class="card-no">BS3-069</td><td class="card-name">The New Guardian's Power</td><td class="num">1</td><td class="num">1</td><td>-2 攻擊＋額外 1 傷害</td></tr>
+
+        <tr class="group-row"><td colspan="5">場景卡 · Stage</td></tr>
+        <tr><td class="card-no">ST3-022</td><td class="card-name">Guardian Tree's Blessing</td><td class="num">4</td><td class="num">4</td><td>支援卡回手＋抽牌引擎</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="totals">
+    <div class="stat"><span class="n">60</span><span class="k">總張數</span></div>
+    <div class="stat"><span class="n">14</span><span class="k">FLIP（上限 16）</span></div>
+    <div class="stat"><span class="n">23</span><span class="k">餅乾卡</span></div>
+    <div class="stat"><span class="n">12</span><span class="k">陷阱卡（原 10）</span></div>
+    <div class="stat"><span class="n">7</span><span class="k">物品卡（原 9）</span></div>
+  </div>
+</section>
+
+<section id="strategy">
+  <h2>打法教學</h2>
+  <p class="section-sub">早期建立地基、中期換血保等級、後期用終結者收尾</p>
+
+  <div class="phase">
+    <div class="phase-tag">早期<span class="phase-turn">第 1–5 回合</span></div>
+    <div class="phase-body">
+      <h4>只做兩件事：鋪支援、擋傷害</h4>
+      <ul>
+        <li>起手優先選 <strong>Bellflower Cookie</strong>（HP4）或 <strong>Tea Knight Cookie</strong> 當先發——前者扛得住，後者能把攻擊導向自己保護隊友。</li>
+        <li>支援階段每回合固定丟 1 張場上用不到的卡進支援區（Cookiemals、Pinecone 這類低效益 FLIP 最適合），目標是盡快讓能量到 4，才付得起 White Lily 的攻擊費用。</li>
+        <li>手上的三張核心陷阱（Supreme Whipped Cream、Divine Light Crystal、Ritual of Life）先留著，這階段對手打不痛，不用急著用。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="phase-tag">中期<span class="phase-turn">第 6–14 回合</span></div>
+    <div class="phase-body">
+      <h4>用陷阱做選擇題，不是用直覺</h4>
+      <ul>
+        <li>每次對手宣告攻擊，先心算「目標剩餘 HP 減掉攻擊力」：差 1～2 點時 Carrot Farm Scarecrow 的 -1 就夠用；差距更大就得上 Supreme Whipped Cream 或 Divine Light Crystal 才擋得住。</li>
+        <li>對手的餅乾若補位到 LV.3（Hollyberry、Wildberry、Pitaya Dragon 這類 5～6 HP 主力），不要用單次攻擊硬拼——先用 Matcha 的被動點傷害、White Lily 攻擊附加效果慢慢削血量，等能一擊斃命再出手。</li>
+        <li>Pitaya Dragon Cookie 登場時會嘗試讓我方 LV.1 餅乾直接陣亡，場上若有 Tea Knight 這類 LV.1 主力，要有心理準備隨時可能被點掉。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="phase-tag">後期<span class="phase-turn">第 15 回合以後</span></div>
+    <div class="phase-body">
+      <h4>用終結者收割，別戀戰</h4>
+      <ul>
+        <li>支援區能量穩定在 4 以上時，主動用 White Lily／Blue Lily／Elder Faerie 打對手血量最低的目標——這階段雙方牌庫都在見底，換血速度直接決定勝負，能斬殺就不要留著等。</li>
+        <li>White Lily 的攻擊附加效果（自身 HP ≥5 時可摧毀對手一張作用中支援卡）要記得每次都用——長期下來會嚴重拖慢對手的能量發展。</li>
+        <li>密切注意雙方休息區等級：只要對手已經逼近 10，任何一次斬殺都可能是致勝一擊；反過來若自己逼近 10，寧可放棄一次進攻機會也要把陷阱留下來保命。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="cautions">
+  <h2>注意事項</h2>
+  <p class="section-sub">這些坑，四場對戰裡踩過至少一次</p>
+
+  <div class="caution-list">
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>敗北不是看 HP，是看休息區等級</h4>
+        <p>時時心算自己休息區目前的等級總和，越接近 10 越要保守；LV.3 餅乾死一次抵三次 LV.1，這個數字比任何單張卡的血量都重要。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>全力出擊後的下一回合是最脆弱的時刻</h4>
+        <p>把支援區能量壓到 0 去換一次攻擊，等於把下一輪的防守權讓給對手。出手前預留至少 1～2 點能量給防守用的陷阱。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>-1／-2 攻擊的陷阱只在差距剛好時才有用</h4>
+        <p>Carrot Farm Scarecrow、The New Guardian's Power 這類部分削減攻擊力的陷阱，遇到攻擊力差距 3 點以上的猛攻完全擋不住，別誤判成保命牌。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>戰鬥區只有 2 個位置</h4>
+        <p>手牌裡塞再多餅乾也沒用，位置滿了就只能等；餅乾陣亡後系統會提供一次免費補位機會，這時候要選場上最需要的類型（血量厚的頂住、或直接補終結者），不要浪費。</p>
+      </div>
+    </div>
+    <div class="caution">
+      <span class="mark">✦</span>
+      <div>
+        <h4>牌庫會比想像中更快見底</h4>
+        <p>控場牌組回合數拉長是常態，實測打到第 20 回合左右牌庫只剩 10～15 張。別把 Guardian Tree's Blessing 的抽牌／回手效果留到最後才用，中期就該啟動讓資源循環起來。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  聖百合餅乾（測試對戰用）· 對第三彈紅色・火龍果龍族餅乾牌組 · 本機瀏覽器 AI 對戰紀錄
+</footer>

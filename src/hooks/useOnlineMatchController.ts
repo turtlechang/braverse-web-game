@@ -90,6 +90,11 @@ export function useOnlineMatchController(params: {
     useState<string[]>([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
+  const [selectedOpponentRestSupportIds, setSelectedOpponentRestSupportIds] =
+    useState<string[]>([])
+  const [selectedPlaceHandHpId, setSelectedPlaceHandHpId] = useState<
+    string | undefined
+  >(undefined)
 
   const animations = useMatchAnimations()
   const previousGameRef = useRef(game)
@@ -241,7 +246,7 @@ export function useOnlineMatchController(params: {
   const hasFaint =
     Boolean(pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId)
   const faintMinMax = pendingFaint
-    ? getFaintEffectMinMax(pendingFaint.effect)
+    ? getFaintEffectMinMax(game, pendingFaint.effect)
     : { min: 0, max: 0 }
   const faintEnergyCost =
     pendingFaint?.effect.kind === 'hand-to-battle'
@@ -716,6 +721,12 @@ export function useOnlineMatchController(params: {
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
+    // Opponent rest support (BS5-065 Petrification)
+    selectedOpponentRestSupportIds,
+    setSelectedOpponentRestSupportIds,
+    // Place hand HP (兩階段選擇第二階段)
+    selectedPlaceHandHpId,
+    setSelectedPlaceHandHpId,
     // Animation
     attackShakeId: animations.attackShakeId,
     damageFlashId: animations.damageFlashId,

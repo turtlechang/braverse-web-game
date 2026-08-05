@@ -2877,7 +2877,7 @@ describe('Starter Deck RED official effect adapter', () => {
       })
       expect(convertOfficialCookieSkill(card)).toMatchObject({
         trigger: 'on-play',
-        cost: { hpToTrash: { amount: 1 } },
+        cost: { hpToTrash: { amount: 1, sourceOnly: true } },
         effects: [
           { kind: 'damage', amount: 1, target: { side: 'opponent', min: 0, max: 1 } },
         ],
@@ -2888,13 +2888,29 @@ describe('Starter Deck RED official effect adapter', () => {
       const card = findBs4Card('BS4-005')
       expect(convertOfficialCardEffects(card)).toMatchObject({
         status: 'supported',
-        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        effects: [
+          {
+            kind: 'damage-all',
+            amount: 1,
+            side: 'opponent',
+            sequential: true,
+            target: { side: 'opponent', min: 1, max: 2 },
+          },
+        ],
       })
       expect(convertOfficialCookieSkill(card)).toMatchObject({
         trigger: 'activate',
         oncePerTurn: true,
-        cost: { hpToTrash: { amount: 1 } },
-        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        cost: { hpToTrash: { amount: 1, sourceOnly: true } },
+        effects: [
+          {
+            kind: 'damage-all',
+            amount: 1,
+            side: 'opponent',
+            sequential: true,
+            target: { side: 'opponent', min: 1, max: 2 },
+          },
+        ],
       })
     })
 
@@ -2903,7 +2919,10 @@ describe('Starter Deck RED official effect adapter', () => {
       expect(convertOfficialCookieSkill(card)).toMatchObject({
         trigger: 'activate',
         oncePerTurn: true,
-        cost: { energy: { red: 1 }, hpToTrash: { amount: 1 } },
+        cost: {
+          energy: { red: 1 },
+          hpToTrash: { amount: 1, sourceOnly: true },
+        },
         effects: [
           {
             kind: 'modify-attack',

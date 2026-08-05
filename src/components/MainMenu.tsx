@@ -14,6 +14,11 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'bs3-purple-dark-cacao', label: '第三彈紫色・黑可可餅乾' },
   { value: 'bs3-purple-dark-cacao-fighting', label: '第三彈紫色・黑可可餅乾（打架流）' },
   { value: 'bs3-yellow-counter', label: '第三彈黃色・反擊流' },
+  { value: 'bs4-red-fire-spirit', label: 'BS4 紅色・火焰壓制' },
+  { value: 'bs4-yellow-millennial', label: 'BS4 黃色・千年復生' },
+  { value: 'bs4-green-wind-archer', label: 'BS4 綠色・風弓支援' },
+  { value: 'bs4-blue-abyss', label: 'BS4 藍色・深海控制' },
+  { value: 'bs4-purple-moonlight', label: 'BS4 紫色・月光 Trash' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [

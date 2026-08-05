@@ -80,6 +80,20 @@ npm run validate:candidate
 - `docs/bs3-card-inventory.md`
 - `docs/bs3-effect-coverage.md`（只報告 runtime 轉接覆蓋，不表示可 promote）
 
+BS5 同樣使用卡號前綴篩選，先保留所有 `BS5-*` 異圖與促銷變體，並停留在 `inventory` 資料準備期：
+
+```bash
+npm run cards:import:bs5-candidate
+npm run validate:candidate
+```
+
+指令會更新：
+
+- `data/candidates/official-age-of-heroes-and-kingdoms-bs5.en.json`
+- `docs/bs5-card-inventory.md`
+
+BS5 尚未提供 `cards:analyze:bs5-candidate` 或 runtime promote 流程；完成逐色效果盤點、adapter／規則引擎／UI 支援、測試與 Chrome 實戰驗證前，維持 `candidateStatus: inventory`，不可執行 `promote:candidate`。
+
 完成每張卡的 runtime 轉接、測試與人工覆核後，確認效果覆蓋盤點沒有待裁決或未支援的規則文字，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
 
 ### 流程說明

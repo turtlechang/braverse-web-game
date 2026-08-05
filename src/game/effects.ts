@@ -34,8 +34,8 @@ export {
   getEffectiveAttackBreakdown,
   type AttackModifierBreakdownEntry,
 } from './effects/combat'
-export { executeCardEffect } from './effects/execute'
-export { resolveInspectDeck, resolveOpponentHandDiscard } from './effects/pending'
+export { executeCardEffect, placeHandCardOnHp } from './effects/execute'
+export { resolveInspectDeck, resolveOpponentHandDiscard, resolveOpponentRestSupport } from './effects/pending'
 export { resolveDrawUpTo } from './effects/draw-up-to'
 export {
   asChooseOneEffect,

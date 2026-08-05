@@ -1,6 +1,13 @@
 import { getOpponentId } from './helpers'
 import type { GameCommand } from './commands'
-import type { GameCard, GameState, LogCategory, LogStepDetail, PlayerId } from './types'
+import type {
+  CardEffect,
+  GameCard,
+  GameState,
+  LogCategory,
+  LogStepDetail,
+  PlayerId,
+} from './types'
 
 const playerName = (state: GameState, playerId: PlayerId): string =>
   state.players[playerId]?.name ?? playerId
@@ -61,6 +68,112 @@ const resolveRevealedDamageCard = (
     : undefined
 }
 
+const getCardEffects = (card: GameCard | undefined): CardEffect[] => {
+  if (!card) return []
+  if ('skill' in card) return card.skill?.effects ?? []
+  if ('item' in card) return card.item?.effects ?? []
+  if ('stageAbility' in card) return card.stageAbility?.effects ?? []
+  return []
+}
+
+/** 取出這筆指令真正要結算的效果，讓紀錄以狀態差異描述結果而非只描述點擊。 */
+const getResolvedEffects = (
+  previous: GameState,
+  command: GameCommand,
+): CardEffect[] => {
+  if (command.kind === 'resolve-ability-effect') {
+    const pending = previous.pendingAbilityEffect
+    const effect = pending?.effects[pending.effectIndex]
+    return effect ? [effect] : []
+  }
+  if (command.kind === 'resolve-attack-effect') {
+    const pending = previous.pendingBattle
+    const effect = pending?.attackEffects[pending.attackEffectIndex]
+    return effect ? [effect] : []
+  }
+  if (command.kind === 'activate-skill') {
+    return getCardEffects(findCard(previous, command.sourceInstanceId))
+  }
+  if (command.kind === 'play-item') {
+    return getCardEffects(findCard(previous, command.instanceId))
+  }
+  if (command.kind === 'activate-stage') {
+    return getCardEffects(previous.players[command.playerId].stage?.card)
+  }
+  return []
+}
+
+const addDamageTargetSide = (
+  playerIds: Set<PlayerId>,
+  sourcePlayerId: PlayerId,
+  side: 'self' | 'opponent' | 'either',
+) => {
+  if (side === 'self' || side === 'either') playerIds.add(sourcePlayerId)
+  if (side === 'opponent' || side === 'either') {
+    playerIds.add(getOpponentId(sourcePlayerId))
+  }
+}
+
+/** 只把實際會造成傷害的 CardEffect 納入紀錄，避免 HP 代價被誤寫成對手受傷。 */
+const getDamageTargetPlayerIds = (
+  sourcePlayerId: PlayerId,
+  effects: CardEffect[],
+): Set<PlayerId> => {
+  const playerIds = new Set<PlayerId>()
+  for (const effect of effects) {
+    if (effect.kind === 'damage-all') {
+      addDamageTargetSide(playerIds, sourcePlayerId, effect.side)
+      continue
+    }
+    if (
+      effect.kind === 'damage' ||
+      effect.kind === 'split-damage' ||
+      effect.kind === 'damage-by-break-count' ||
+      effect.kind === 'damage-by-break-level-difference' ||
+      effect.kind === 'rest-support-and-damage'
+    ) {
+      addDamageTargetSide(playerIds, sourcePlayerId, effect.target.side)
+    }
+  }
+  return playerIds
+}
+
+/**
+ * 將結算前後的 HP 卡差異轉成玩家看得懂的結果。這比直接重述卡面可靠：
+ * 被保護、條件未滿足或沒有合法目標時都會如實顯示「未造成傷害」。
+ */
+const describeDamageOutcome = (
+  previous: GameState,
+  next: GameState,
+  sourcePlayerId: PlayerId,
+  effects: CardEffect[],
+): string | null => {
+  const targetPlayerIds = getDamageTargetPlayerIds(sourcePlayerId, effects)
+  if (targetPlayerIds.size === 0) return null
+
+  const outcomes: string[] = []
+  for (const playerId of targetPlayerIds) {
+    const afterBattle = new Map(
+      next.players[playerId].battleArea.map((cookie) => [
+        cookie.card.instanceId,
+        cookie,
+      ]),
+    )
+    for (const before of previous.players[playerId].battleArea) {
+      const after = afterBattle.get(before.card.instanceId)
+      const damage = before.hpCards.length - (after?.hpCards.length ?? 0)
+      if (damage <= 0) continue
+      outcomes.push(
+        after
+          ? `「${before.card.name}」受到 ${damage} 點傷害`
+          : `「${before.card.name}」受到 ${damage} 點傷害並昏厥`,
+      )
+    }
+  }
+
+  return outcomes.length > 0 ? outcomes.join('；') : '未造成傷害'
+}
+
 export const describeCommand = (
   previous: GameState,
   next: GameState,
@@ -91,11 +204,57 @@ export const describeCommand = (
       return `${actor} 選擇不發動陷阱`
     case 'play-blocker':
       return `${actor} 使用了阻擋卡「${findCardName(state, command.sourceInstanceId)}」`
+    case 'play-attack-response':
+      return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的對手指攻回應技能`
     case 'activate-skill':
     case 'begin-activate-skill':
       return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的技能`
-    case 'resolve-ability-effect':
-      return `${actor} 決定了效果的目標`
+    case 'resolve-ability-effect': {
+      const effects = getResolvedEffects(previous, command)
+      const cycleHp = effects.find((effect) => effect.kind === 'cycle-hp')
+      if (cycleHp) {
+        if (command.targetIds.length === 0) {
+          return `${actor} 未選擇目標，技能結算完畢`
+        }
+        const targetId = command.targetIds[0]
+        const targetName = findCardName(previous, targetId)
+        const targetSurvived = next.players[command.playerId].battleArea.some(
+          (cookie) => cookie.card.instanceId === targetId,
+        )
+        return targetSurvived
+          ? `${actor} 從「${targetName}」取回 1 張 HP 卡`
+          : `${actor} 從「${targetName}」取回 1 張 HP 卡，該餅乾因此昏厥`
+      }
+      const handToHp = effects.find(
+        (effect) => effect.kind === 'hand-to-hp' && effect.selectTarget,
+      )
+      if (handToHp) {
+        if (command.targetIds.length === 0) {
+          return `${actor} 未選擇目標，技能結算完畢`
+        }
+        return `${actor} 選擇了「${findCardName(previous, command.targetIds[0])}」作為放置 HP 的目標`
+      }
+      const outcome = describeDamageOutcome(
+        previous,
+        next,
+        command.playerId,
+        effects,
+      )
+      return outcome
+        ? `${actor} 結算效果：${outcome}`
+        : `${actor} 結算了效果`
+    }
+    case 'resolve-place-hand-hp': {
+      const targetName = previous.pendingAbilityEffect?.pendingPlace
+        ? findCardName(
+            previous,
+            previous.pendingAbilityEffect.pendingPlace.targetInstanceId,
+          )
+        : null
+      return command.handCardInstanceId
+        ? `${actor} 將 1 張手牌放到「${targetName ?? '目標'}」的 HP 最上方`
+        : `${actor} 略過放置 HP`
+    }
     case 'skip-on-play':
       return `${actor} 選擇不發動「${findCardName(state, command.sourceInstanceId)}」的登場效果`
     case 'replace-cookie':
@@ -129,10 +288,31 @@ export const describeCommand = (
         ? `${actor} 翻開${cardLabel}，發動了 FLIP 效果`
         : `${actor} 翻開${cardLabel}，選擇不發動 FLIP 效果`
     }
-    case 'resolve-attack-effect':
-      return `${actor} 決定了攻擊效果的目標`
+    case 'resolve-attack-effect': {
+      const outcome = describeDamageOutcome(
+        previous,
+        next,
+        command.playerId,
+        getResolvedEffects(previous, command),
+      )
+      return outcome
+        ? `${actor} 結算攻擊後續效果：${outcome}`
+        : `${actor} 結算了攻擊後續效果`
+    }
     case 'resolve-next-damage': {
       const revealed = resolveRevealedDamageCard(previous, next, command.playerId)
+      const sequence = previous.pendingBattle?.effectDamageSequence
+      const damageTargetId =
+        previous.pendingBattle?.damageTargetInstanceId ??
+        previous.pendingBattle?.targetInstanceId
+      const damageTargetName = damageTargetId
+        ? findCardName(previous, damageTargetId)
+        : null
+      if (sequence && damageTargetName) {
+        return revealed
+          ? `${actor} 的「${damageTargetName}」受到 1 點傷害，翻開了 HP 卡「${revealed.name}」`
+          : `${actor} 的「${damageTargetName}」未受到傷害`
+      }
       return revealed
         ? `${actor} 翻開了 HP 卡「${revealed.name}」`
         : `${actor} 結算了下一段傷害`
@@ -143,6 +323,8 @@ export const describeCommand = (
       return `${actor} 決定了擊倒效果的目標`
     case 'resolve-opponent-hand-discard':
       return `${actor} 選擇了要棄掉的手牌`
+    case 'resolve-opponent-rest-support':
+      return `${actor} 選擇了要橫置的支援卡`
     case 'resolve-inspect-deck':
       return `${actor} 決定了檢視牌庫的結果`
     case 'resolve-optional-cost-attack':
@@ -198,6 +380,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'play-trap': 'activate',
   'skip-trap': 'system',
   'play-blocker': 'activate',
+  'play-attack-response': 'activate',
 
   'activate-skill': 'activate',
   'begin-activate-skill': 'activate',
@@ -207,8 +390,10 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'activate-stage': 'activate',
   'begin-activate-stage': 'activate',
   'resolve-ability-effect': 'activate',
+  'resolve-place-hand-hp': 'activate',
   'resolve-choose-one': 'activate',
   'resolve-opponent-hand-discard': 'activate',
+  'resolve-opponent-rest-support': 'activate',
   'resolve-inspect-deck': 'activate',
   'resolve-reveal-top-deck': 'activate',
   'resolve-draw-up-to': 'draw',
@@ -358,6 +543,13 @@ export const describeCommandSteps = (
       if (trashToDeckStep) steps.push(trashToDeckStep)
       steps.push(...describeEffectTargetsSteps(state, command.effectTargets))
       steps.push(...describeChooseOneSteps(command.chooseOneModes))
+      const outcome = describeDamageOutcome(
+        previous,
+        next,
+        command.playerId,
+        getResolvedEffects(previous, command),
+      )
+      if (outcome) steps.push({ text: `效果結算：${outcome}` })
       return steps
     }
     case 'play-item':
@@ -393,6 +585,13 @@ export const describeCommandSteps = (
       if (trashBattleStep) steps.push(trashBattleStep)
       steps.push(...describeEffectTargetsSteps(state, command.effectTargets))
       steps.push(...describeChooseOneSteps(command.chooseOneModes))
+      const outcome = describeDamageOutcome(
+        previous,
+        next,
+        command.playerId,
+        getResolvedEffects(previous, command),
+      )
+      if (outcome) steps.push({ text: `效果結算：${outcome}` })
       return steps
     }
     case 'attack': {

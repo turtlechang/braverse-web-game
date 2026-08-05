@@ -1,0 +1,27 @@
+{
+  "name": "BS4 紅色・火焰壓制",
+  "entries": [
+    { "cardNumber": "BS4-005", "count": 2 },
+    { "cardNumber": "BS4-013", "count": 2 },
+    { "cardNumber": "BS4-003", "count": 2 },
+    { "cardNumber": "BS4-015", "count": 2 },
+    { "cardNumber": "BS4-012", "count": 2 },
+    { "cardNumber": "BS4-007", "count": 2 },
+    { "cardNumber": "BS4-014", "count": 2 },
+    { "cardNumber": "BS4-009", "count": 2 },
+    { "cardNumber": "BS4-018", "count": 2 },
+    { "cardNumber": "BS4-019", "count": 2 },
+    { "cardNumber": "BS3-010", "count": 3 },
+    { "cardNumber": "BS3-017", "count": 4 },
+    { "cardNumber": "BS3-006", "count": 4 },
+    { "cardNumber": "BS3-013", "count": 4 },
+    { "cardNumber": "BS3-019", "count": 3 },
+    { "cardNumber": "BS3-022", "count": 1 },
+    { "cardNumber": "ST1-013", "count": 4 },
+    { "cardNumber": "BS1-003", "count": 3 },
+    { "cardNumber": "BS2-003", "count": 4 },
+    { "cardNumber": "BS4-011", "count": 3 },
+    { "cardNumber": "BS1-022", "count": 4 },
+    { "cardNumber": "ST1-020", "count": 3 }
+  ]
+}

@@ -35,6 +35,7 @@ export type AiActionType =
   | 'attack'
   | 'play-trap'
   | 'play-blocker'
+  | 'play-attack-response'
   | 'resolve-damage'
   | 'resolve-attack-effect'
   | 'resolve-flip'

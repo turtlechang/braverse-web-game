@@ -29,11 +29,11 @@
   }
 
   .game-shell .top-field .field-stack {
-    grid-template-rows: minmax(0, 24fr) minmax(0, 76fr);
+    grid-template-rows: minmax(0, 36fr) minmax(0, 64fr);
   }
 
   .game-shell .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 76fr) minmax(0, 24fr);
+    grid-template-rows: minmax(0, 64fr) minmax(0, 36fr);
   }
 
   .game-shell .top-field .combat-zone,
@@ -144,7 +144,9 @@
   }
 
   .game-shell .hand-fan.bottom-hand .hand-card-wrap {
-    bottom: -42px;
+    /* Keep the card face below the combat track at short tablet heights;
+     * the upper edge remains available as the hand interaction dock. */
+    bottom: -50px;
   }
 
   .game-shell .hand-fan.bottom-hand .hand-card-wrap:hover,

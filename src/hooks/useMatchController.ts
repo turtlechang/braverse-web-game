@@ -53,6 +53,7 @@ import {
   createTrapResponseDemoState,
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
+  createBs4ConditionDemoState,
   createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
@@ -165,6 +166,12 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
     }
+    if (testStateConfig?.kind === 'bs4-condition') {
+      return createBs4ConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
     if (testStateConfig?.kind === 'bs3-121-special-victory') {
       return createBs3SpecialVictoryDemoState()
     }
@@ -273,6 +280,11 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-check') {
       return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
     }
+    if (testStateConfig?.kind === 'bs4-condition') {
+      return `BS4 ${testStateConfig.cardNumber} 專用條件情境：${
+        testStateConfig.conditionMet ? '條件成立' : '條件不成立'
+      }`
+    }
     if (testStateConfig?.kind === 'soul-jam-019-equipped') {
       return '靈魂果醬測試：BS3-019 已裝備於 Hollyberry，攻擊力 +1。'
     }
@@ -345,6 +357,11 @@ export function useMatchController(params: {
   >([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
     useState<string[]>([])
+  const [selectedOpponentRestSupportIds, setSelectedOpponentRestSupportIds] =
+    useState<string[]>([])
+  const [selectedPlaceHandHpId, setSelectedPlaceHandHpId] = useState<
+    string | undefined
+  >(undefined)
 
   const viewerPlayerId: PlayerId = 'player-one'
   const opponentId = opponentOfId(viewerPlayerId)
@@ -479,7 +496,7 @@ export function useMatchController(params: {
   const hasFaint =
     Boolean(pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId)
   const faintMinMax = pendingFaint
-    ? getFaintEffectMinMax(pendingFaint.effect)
+    ? getFaintEffectMinMax(game, pendingFaint.effect)
     : { min: 0, max: 0 }
   const faintEnergyCost =
     pendingFaint?.effect.kind === 'hand-to-battle'
@@ -974,6 +991,7 @@ export function useMatchController(params: {
       setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
     },
     [animations, battleActions, resetSetup],
@@ -997,6 +1015,7 @@ export function useMatchController(params: {
       setPendingResponseMode(null)
       setSelectedFlipDiscardIds([])
       setSelectedOpponentDiscardIds([])
+      setSelectedOpponentRestSupportIds([])
       setSelectedBlockerId(null)
     },
     [animations, battleActions, setSetupStep],
@@ -1132,6 +1151,12 @@ export function useMatchController(params: {
     // Opponent discard
     selectedOpponentDiscardIds,
     setSelectedOpponentDiscardIds,
+    // Opponent rest support (BS5-065 Petrification)
+    selectedOpponentRestSupportIds,
+    setSelectedOpponentRestSupportIds,
+    // Place hand HP (兩階段選擇第二階段)
+    selectedPlaceHandHpId,
+    setSelectedPlaceHandHpId,
     // Animation
     attackShakeId: animations.attackShakeId,
     damageFlashId: animations.damageFlashId,

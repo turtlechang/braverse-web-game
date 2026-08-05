@@ -8,6 +8,7 @@ import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
 import { advancePhase, canAttack } from '../turn'
 import { getActivatableSkillSources } from '../skills'
+import { createSeededShuffle } from '../helpers'
 import { simulateAbilityEffects } from './ability-effects'
 import type {
   CardEffect,
@@ -244,6 +245,10 @@ export const handleAiTurnState = (
           sourceInstanceId: stage.card.instanceId,
         }
         const activated = activateStage(state, playerId, paymentIds)
+        const stageShuffle =
+          strategy.shuffleSeed === undefined
+            ? undefined
+            : createSeededShuffle(strategy.shuffleSeed)
         const sim = simulateAbilityEffects(
           activated,
           context,
@@ -255,18 +260,23 @@ export const handleAiTurnState = (
                 effect.kind === 'support-to-trash' ||
                 effect.kind === 'trash-to-support') &&
               targetIds.length < effect.amount
-            ),
+          ),
           { sourceInstanceId: stage.card.instanceId, paymentIds },
+          stageShuffle,
         )
         if (!sim.aborted) {
           return {
-            state: applyGameCommand(state, {
-              kind: 'activate-stage',
-              playerId,
-              paymentIds,
-              effectTargets: sim.effectTargets,
-              chooseOneModes: sim.chooseOneModes,
-            }),
+            state: applyGameCommand(
+              state,
+              {
+                kind: 'activate-stage',
+                playerId,
+                paymentIds,
+                effectTargets: sim.effectTargets,
+                chooseOneModes: sim.chooseOneModes,
+              },
+              { shuffleSeed: strategy.shuffleSeed },
+            ),
             action: 'activate-stage',
             description: `${player.name}啟動${stage.card.name}。`,
             effectSelections: sim.effectSelections,

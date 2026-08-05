@@ -371,6 +371,9 @@ const chooseEffectTargets = (
         left.hpCards.length - right.hpCards.length
       )
     })
+  } else if (effect.kind === 'make-faint') {
+    // 昏厥目標（BS5-036 Milk Cookie）：優先挑 HP 最少的，直接送進休息區。
+    ordered.sort((left, right) => left.hpCards.length - right.hpCards.length)
   } else if (effect.kind === 'transfer-hp') {
     if (effect.direction === 'to-source') {
       // 供牌方是被選中的我方餅乾，抽乾它等於送對手 break 進度，只挑撐得住的。
@@ -566,6 +569,7 @@ const resolveAiCardAbility = (
   state: GameState,
   playerId: PlayerId,
   card: GameState['players'][PlayerId]['hand'][number],
+  shuffleSeed?: number,
 ): AiDecision | null => {
   const ability = card.item
   if (!ability) return null
@@ -623,11 +627,11 @@ const resolveAiCardAbility = (
     costIds.hpToTrashTargetIds,
     costIds.trashBattleCookieIds,
   )
-  const shuffleSeed = [...card.instanceId].reduce(
+  const effectShuffleSeed = shuffleSeed ?? [...card.instanceId].reduce(
     (seed, character) => Math.imul(seed ^ character.charCodeAt(0), 16777619),
     state.turnNumber,
   )
-  const shuffle = createSeededShuffle(shuffleSeed)
+  const shuffle = createSeededShuffle(effectShuffleSeed)
   const sim = simulateAbilityEffects(
     played,
     context,
@@ -640,19 +644,23 @@ const resolveAiCardAbility = (
   if (sim.aborted) return null
 
   return {
-    state: applyGameCommand(state, {
-      kind: 'play-item',
-      playerId,
-      instanceId: card.instanceId,
-      paymentIds: costIds.paymentIds,
-      supportToTrashIds: costIds.supportToTrashIds,
-      supportToHandIds: costIds.supportToHandIds,
-      discardHandIds: costIds.discardHandIds,
-      hpToTrashTargetIds: costIds.hpToTrashTargetIds,
-      trashBattleCookieIds: costIds.trashBattleCookieIds,
-      effectTargets: sim.effectTargets,
-      chooseOneModes: sim.chooseOneModes,
-    }),
+    state: applyGameCommand(
+      state,
+      {
+        kind: 'play-item',
+        playerId,
+        instanceId: card.instanceId,
+        paymentIds: costIds.paymentIds,
+        supportToTrashIds: costIds.supportToTrashIds,
+        supportToHandIds: costIds.supportToHandIds,
+        discardHandIds: costIds.discardHandIds,
+        hpToTrashTargetIds: costIds.hpToTrashTargetIds,
+        trashBattleCookieIds: costIds.trashBattleCookieIds,
+        effectTargets: sim.effectTargets,
+        chooseOneModes: sim.chooseOneModes,
+      },
+      { shuffleSeed: effectShuffleSeed },
+    ),
     action: 'play-item',
     description: `${state.players[playerId].name}使用${card.name}。`,
     revealedCard: card,
@@ -717,6 +725,7 @@ const resolveAiSkill = (
   playerId: PlayerId,
   source: CookieInBattle,
   trigger: 'activate' | 'on-play',
+  shuffleSeed?: number,
 ): AiDecision | null => {
   const skill = source.card.skill
   if (
@@ -735,6 +744,21 @@ const resolveAiSkill = (
   const player = state.players[playerId]
   const paymentIds = selectAiEnergyPayment(skill, player.supportArea)
   if (!paymentIds) return null
+
+  // cycle-hp（BS4-030）：整個效果依賴「我方其他黃色餅乾」，沒有合法目標時
+  // 發動只會白付代價，直接視為不可發動（與 UI 的發動權詢問門檻一致）。
+  if (
+    skill.effects.some(
+      (effect) =>
+        effect.kind === 'cycle-hp' &&
+        getEffectTargetCandidates(state, {
+          sourcePlayerId: playerId,
+          sourceInstanceId: source.card.instanceId,
+        }, effect.target).length === 0,
+    )
+  ) {
+    return null
+  }
 
   const costSupportToTrashIds = skill.cost.supportToTrash
     ? player.supportArea
@@ -845,6 +869,8 @@ const resolveAiSkill = (
   )
   if (effects.length === 0) return null
 
+  const effectShuffleSeed = shuffleSeed ?? state.turnNumber
+  const effectShuffle = createSeededShuffle(effectShuffleSeed)
   const activated = activateCookieSkill(
     state,
     playerId,
@@ -856,7 +882,7 @@ const resolveAiSkill = (
     trashBattleCookieIds,
     trashToDeckBottomIds,
     trashToDeckIds,
-    undefined,
+    effectShuffle,
     hpToTrashTargetIds,
   )
   const sim = simulateAbilityEffects(
@@ -866,25 +892,30 @@ const resolveAiSkill = (
     chooseEffectTargets,
     isSkillEffectTargetCountSufficient,
     { sourceInstanceId: source.card.instanceId, paymentIds },
+    effectShuffle,
   )
   if (sim.aborted) return null
 
   return {
-    state: applyGameCommand(state, {
-      kind: 'activate-skill',
-      playerId,
-      sourceInstanceId: source.card.instanceId,
-      trigger,
-      paymentIds,
-      costSupportToTrashIds,
-      discardHandIds,
-      hpToTrashTargetIds,
-      trashBattleCookieIds,
-      trashToDeckBottomIds,
-      trashToDeckIds,
-      effectTargets: sim.effectTargets,
-      chooseOneModes: sim.chooseOneModes,
-    }),
+    state: applyGameCommand(
+      state,
+      {
+        kind: 'activate-skill',
+        playerId,
+        sourceInstanceId: source.card.instanceId,
+        trigger,
+        paymentIds,
+        costSupportToTrashIds,
+        discardHandIds,
+        hpToTrashTargetIds,
+        trashBattleCookieIds,
+        trashToDeckBottomIds,
+        trashToDeckIds,
+        effectTargets: sim.effectTargets,
+        chooseOneModes: sim.chooseOneModes,
+      },
+      { shuffleSeed: effectShuffleSeed },
+    ),
     action: 'activate-skill',
     description: `${state.players[playerId].name}發動${source.card.name}的技能。`,
     effectSelections: sim.effectSelections,
@@ -1019,8 +1050,10 @@ const chooseAttackTarget = (
 
 const aiTurnStrategy: AiTurnStrategy = {
   chooseEffectTargets,
-  resolveCardAbility: resolveAiCardAbility,
-  resolveSkill: resolveAiSkill,
+  resolveCardAbility: (state, playerId, card) =>
+    resolveAiCardAbility(state, playerId, card, aiTurnStrategy.shuffleSeed),
+  resolveSkill: (state, playerId, source, trigger) =>
+    resolveAiSkill(state, playerId, source, trigger, aiTurnStrategy.shuffleSeed),
   chooseReplacement,
   chooseAttackTarget,
 }

@@ -9,7 +9,7 @@ import {
 } from './battle'
 import { applyGameCommand } from './commands'
 import { deployCookie } from './actions'
-import type { GameState } from './types'
+import type { CookieCard, GameState } from './types'
 import { createBattleState, declareAttack } from './test-helpers/battle-helpers'
 import type { GameCard } from './types'
 import { createOfficialBlueStarterDeck } from './starter-deck'
@@ -87,6 +87,76 @@ describe('optional-cost-attack', () => {
         (cookie) => cookie.card.instanceId,
       ),
     ).toContain(deployableCookie.instanceId)
+  })
+
+  it('resolves source-only battle-to-break before a chained break-to-battle target', () => {
+    let state = createBattleState()
+    const revivedCookie: CookieCard = {
+      id: 'revived-yellow-lv3',
+      instanceId: 'revived-yellow-lv3-instance',
+      name: 'revived-yellow-lv3',
+      type: 'cookie',
+      level: 3,
+      hp: 3,
+      attack: 0,
+      attackCost: 0,
+      energyColor: 'yellow' as const,
+    }
+    const attacker = state.players['player-two'].battleArea[0].card
+    state.players['player-two'].breakArea = [revivedCookie]
+    state.pendingBattle = {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: 'defender',
+      declaredDamage: 0,
+      remainingDamage: 0,
+      stage: 'attack-effect',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
+    }
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: attacker.instanceId,
+      sourceCardName: attacker.name,
+      cost: { energy: { red: 1 } },
+      effects: [
+        {
+          kind: 'battle-to-break',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+        {
+          kind: 'break-to-battle',
+          amount: 1,
+          exactLevel: 3,
+          energyColor: 'yellow',
+        },
+      ],
+      effectText: 'Test chained source-only effect.',
+    }
+
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      [revivedCookie.instanceId],
+      ['p2-support'],
+    )
+
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-two'].battleArea.map((entry) => entry.card.id)).toEqual([
+      revivedCookie.id,
+    ])
+    expect(state.players['player-two'].breakArea.map((card) => card.id)).toContain(
+      attacker.id,
+    )
+    expect(state.players['player-two'].supportArea[0].rested).toBe(true)
   })
 
   it('skips optional attack effects with no applicable child effect', () => {

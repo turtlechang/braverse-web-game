@@ -9,6 +9,7 @@ export type GuidedPhaseId =
   | 'selfTarget'
   | 'draw'
   | 'discard'
+  | 'place'
 
 export interface GuidedPhase {
   id: GuidedPhaseId

@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-08-04T15:12:04.173Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "routeTypes": {
+    "condition": "?test-state=bs4-condition:BS4-xxx:met|unmet",
+    "generic": "?test-state=card:BS4-xxx"
+  },
+  "conditionAudit": {
+    "cards": 0,
+    "routes": 0,
+    "passed": 0,
+    "failures": 0,
+    "results": []
+  },
+  "genericFixtureAudit": {
+    "cards": 1,
+    "passed": 1,
+    "failures": 0,
+    "results": [
+      {
+        "cardNumber": "BS4-005",
+        "result": "fixture",
+        "interactions": [
+          "skill:activate",
+          "effect-panel:.effect-candidates-hp-cost",
+          "effect-panel:primary",
+          "effect-panel:.effect-candidates-target:LV 1 · HP 6,第 1 順位",
+          "effect-panel:.effect-candidates-target:LV 1 · HP 6,第 1 順位,LV 3 · HP 8,第 2 順位",
+          "effect-panel:primary"
+        ],
+        "before": {
+          "activeEffectPanel": 0,
+          "skillActions": 1,
+          "handActions": 0
+        },
+        "after": {
+          "activeEffectPanel": 0,
+          "skillActions": 0,
+          "handActions": 0,
+          "topCombatText": "COOKIEopp-lv1LV 1 · HP 6 6/6 1|COOKIEopp-lv3LV 3 · HP 8 5/8 1",
+          "restedBottomSupports": 0
+        },
+        "status": "PASS"
+      }
+    ]
+  }
+}

@@ -1418,6 +1418,133 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
 })
 
 /**
+ * 攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011 甜辣醬餅乾）
+ * 依規則必須等本次戰鬥收尾與對手的空場補位完成後才能結算。規則層讓補位任務
+ * 優先建立（佇列不阻塞補位），本機 UI 的面板建立條件也必須一致：補位／戰鬥
+ * 未完成前不顯示效果面板，避免玩家點確認卻被規則層拒絕。
+ */
+describe('usePendingEffect attacker-faint queue waits for battle wrap-up and replacement', () => {
+  const buildFaintQueueState = (): GameState => {
+    const state = createBattleState()
+    state.players['player-one'].battleArea[0] = {
+      card: battleCookie('defender', 1, 1),
+      hpCards: [battleItem('def-hp-1')],
+      rested: false,
+      battleEntryId: 'defender:battle:1',
+    }
+    state.players['player-two'].battleArea[0] = {
+      card: {
+        ...battleCookie('attacker', 5, 2),
+        skill: {
+          trigger: 'passive',
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: { energy: {}, discardHand: 0 },
+          text: "If your opponent's Cookie faints from this Cookie's attack, draw 1 card.",
+          effects: [
+            {
+              kind: 'draw',
+              amount: 1,
+              condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+            },
+          ],
+        },
+      },
+      hpCards: [battleItem('att-hp-1')],
+      rested: false,
+      battleEntryId: 'attacker:battle:2',
+    }
+    // 擊倒後對手（player-one）戰場空缺：手牌有餅乾可補位，牌庫要留足餘量
+    state.players['player-one'].hand = [battleCookie('p1-replacement', 1, 2)]
+    state.players['player-one'].deck = [
+      battleItem('p1-d-1'),
+      battleItem('p1-d-2'),
+      battleItem('p1-d-3'),
+    ]
+    // 抽 1 張後 deck 必須還有剩，避免 refresh-unavailable 判負
+    state.players['player-two'].deck = [battleItem('p2-draw'), battleItem('p2-spare')]
+    return state
+  }
+
+  async function renderPendingEffectHarness(
+    gameState: GameState,
+    viewerPlayerId: 'player-one' | 'player-two',
+  ): Promise<ReturnType<typeof usePendingEffect>> {
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: () => {},
+        dispatch: createDispatch(gameState, () => {}),
+        viewerPlayerId,
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.runAllTimers())
+    const result = captured!
+    await act(() => root.unmount())
+    return result
+  }
+
+  it('hides the effect panel until the battle wraps up and replacement completes', async () => {
+    vi.useFakeTimers()
+    let state = buildFaintQueueState()
+    state = beginAttack(state, 'attacker', 'defender', ['p2-support'])
+    state = skipTrap(state, 'player-one')
+    let afterDamage = resolveNextDamage(state)
+    while (afterDamage.pendingBattle?.stage === 'damage') {
+      afterDamage = resolveNextDamage(afterDamage)
+    }
+
+    // 前置：擊倒觸發佇列與補位任務並存，且補位優先
+    expect(afterDamage.pendingAbilityEffect).toMatchObject({
+      trigger: 'attacker-faint',
+    })
+    expect(afterDamage.pendingReplacement).not.toBeNull()
+
+    const duringReplacement = await renderPendingEffectHarness(
+      afterDamage,
+      'player-two',
+    )
+    expect(duringReplacement.pendingEffect).toBeNull()
+
+    // 補位完成後：佇列面板才會出現，玩家接著結算抽牌效果
+    const afterReplacement = applyGameCommand(afterDamage, {
+      kind: 'replace-cookie',
+      playerId: 'player-one',
+      instanceId: 'p1-replacement',
+    })
+    expect(afterReplacement.pendingReplacement).toBeNull()
+
+    const afterReplacementView = await renderPendingEffectHarness(
+      afterReplacement,
+      'player-two',
+    )
+    expect(afterReplacementView.pendingEffect).not.toBeNull()
+    expect(afterReplacementView.currentEffect).toMatchObject({ kind: 'draw' })
+
+    vi.useRealTimers()
+  })
+})
+
+/**
  * 攻擊打死一隻帶昏厥觸發的對手餅乾（如 Cherry Cookie）時，戰鬥會停在
  * attack-effect 階段，同時規則層留下一個屬於**對手**的 pendingFaintEffects。
  *

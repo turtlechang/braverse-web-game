@@ -106,7 +106,9 @@ export function usePendingEffect(params: {
       ? isEffectConditionMet(game, pendingEffect.context, currentEffect)
       : true
   const currentTargetSelector: EffectTargetSelector | null =
-    currentEffect?.kind === 'gain-hp'
+    currentEffect?.kind === 'damage-all' && currentEffect.sequential
+      ? currentEffect.target ?? null
+      : currentEffect?.kind === 'gain-hp'
       ? currentEffect.target?.sourceOnly
         ? null
         : currentEffect.target ?? null
@@ -341,6 +343,12 @@ export function usePendingEffect(params: {
         pendingEffect.selectedPaymentIds,
       ).valid
     : false
+  const skillPaymentLabel =
+    pendingEffect?.sourceKind === 'item'
+      ? '物品' as const
+      : pendingEffect?.sourceKind === 'stage'
+        ? '場景' as const
+        : '技能' as const
   const isSkillEnergyColorCompatible = (
     cardColor: GameCard['energyColor'],
   ): boolean => isEnergyColorCompatibleWithCost(skillEnergyCost, cardColor)
@@ -430,6 +438,7 @@ export function usePendingEffect(params: {
       ? getHpToTrashCostCandidates(
           pendingEffect.skill.cost,
           game.players[pendingEffect.context.sourcePlayerId].battleArea,
+          pendingEffect.context.sourceInstanceId,
         ).map((cookie) => cookie.card)
       : []
   const skillHpToTrashTargetIds = new Set(
@@ -517,7 +526,14 @@ export function usePendingEffect(params: {
       game.status !== 'playing' ||
       game.pendingReplacement ||
       game.pendingRefresh ||
-      game.pendingOnPlay
+      game.pendingOnPlay ||
+      // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾與對手補位
+      // 完成後才結算，補位期間（pendingReplacement）上面已擋；這裡連
+      // pendingBattle 期間也不顯示效果面板，避免玩家點下去被規則層拒絕。
+      (pendingAbility.trigger === 'attacker-faint' && game.pendingBattle) ||
+      // 兩階段選擇第二階段等待放回手牌，面板交給
+      // PendingDecisionModals 的 place-hand-hp 提示，不重開第一階段選目標。
+      Boolean(pendingAbility.pendingPlace)
     ) {
       return
     }
@@ -695,6 +711,13 @@ export function usePendingEffect(params: {
       }
       if (isEffectUntargeted(effect) || !('target' in effect) || !effect.target) {
         return true
+      }
+      // cycle-hp（BS4-030）：整個效果都依賴目標餅乾，沒有其他黃色餅乾時
+      // 直接視為無合法目標，不彈發動權詢問。
+      if (effect.kind === 'cycle-hp') {
+        return (
+          getEffectTargetCandidates(nextGame, context, effect.target).length > 0
+        )
       }
       if ((effect.target.min ?? 0) === 0) return true
       const candidates = getEffectTargetCandidates(nextGame, context, effect.target)
@@ -1075,13 +1098,14 @@ export function usePendingEffect(params: {
             currentEffect.kind === 'break-to-hand' ||
             currentEffect.kind === 'rest-support'
           ? currentEffect.amount
-        : currentEffect.kind === 'hand-to-hp' ||
-            currentEffect.kind === 'support-to-hp'
+        : currentEffect.kind === 'support-to-hp'
           ? currentEffect.selectTarget
             ? 2
             : 1
+        : currentEffect.kind === 'hand-to-hp'
+          ? 1
         : currentEffect.kind === 'cycle-hp'
-          ? 2
+          ? 1
         : currentEffect.kind === 'rest-support-and-damage'
           ? currentEffect.supportAmount + currentEffect.target.max
         : currentEffect.kind === 'field-to-deck-bottom'
@@ -1507,6 +1531,23 @@ export function usePendingEffect(params: {
       const result = currentConditionMet
         ? describeEffectResult(currentEffect, targetNames)
         : `${pendingEffect.sourceCard.name} 的效果條件未滿足，已略過。`
+
+      // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp BS4-044）第一階段完成：
+      // 目標存活時規則層停在第二階段（pendingPlace），把提示交給
+      // PendingDecisionModals；未選目標或目標昏厥時規則層直接結束，
+      // 這裡照常走 hasNextEffect 收尾。
+      if (
+        (currentEffect.kind === 'cycle-hp' ||
+          (currentEffect.kind === 'hand-to-hp' &&
+            currentEffect.selectTarget)) &&
+        nextGame.pendingAbilityEffect?.pendingPlace
+      ) {
+        setGame(nextGame)
+        setMessage(result)
+        setEffectHistory((history) => [result, ...history].slice(0, 4))
+        setPendingEffect(null)
+        return
+      }
       if (
         currentEffect.kind === 'view-hp' &&
         pendingEffect.selectedTargetIds.length === 1
@@ -1708,6 +1749,7 @@ export function usePendingEffect(params: {
     genericEffectCandidateCards,
     skillCostSupportCandidates,
     skillEnergyPaymentValid,
+    skillPaymentLabel,
     skillPaymentTargetIds,
     skillCostSupportTargetIds,
     skillCostDiscardHandCandidates,

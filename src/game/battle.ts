@@ -31,6 +31,7 @@ import {
   finalizePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
+import { hasBlockingPending } from './pending'
 import {
   canPayTrashBattleCookieCost,
   markSupportAreaDecreased,
@@ -271,6 +272,13 @@ const isTrapConditionMet = (
 
   if (condition.kind === 'friendly-cookie-fainted-this-battle') {
     return true
+  }
+
+  if (condition.kind === 'battle-area-has-cookie-with-level') {
+    // 陷阱擁有者自己的戰鬥區（官方文字的「your battle area」）。
+    return state.players[playerId].battleArea.some(
+      (cookie) => cookie.card.level === condition.level,
+    )
   }
 
   return true
@@ -640,6 +648,117 @@ export interface PlayTrapOptions {
 export interface PlayBlockerOptions {
   sourceInstanceId: string
   paymentIds: string[]
+}
+
+/**
+ * 對手指攻回應技能候選（BS5-081 Squid Ink Cookie 的「When your opponent's
+ * Cookie attacks」）：防守方在陷阱視窗（stage 'trap'）內可以宣告的
+ * 一次性回應技能。與陷阱／阻擋者不同，此技能不關閉回應窗，使用後仍可
+ * 繼續選陷阱／阻擋者或直接 skipTrap。
+ */
+export const getAttackResponseSkillCandidates = (
+  state: GameState,
+  playerId: PlayerId,
+): CookieInBattle[] => {
+  const battle = state.pendingBattle
+  if (
+    !battle ||
+    battle.stage !== 'trap' ||
+    battle.defenderPlayerId !== playerId
+  ) {
+    return []
+  }
+  return state.players[playerId].battleArea.filter((cookie) => {
+    const skill = cookie.card.skill
+    if (!skill || skill.trigger !== 'opponent-attack') return false
+    if (
+      skill.oncePerTurn &&
+      state.skillUsesThisTurn.includes(
+        cookie.battleEntryId ?? cookie.card.instanceId,
+      )
+    ) {
+      return false
+    }
+    const cost = skill.cost ?? {}
+    return (
+      state.players[playerId].hand.length >= (cost.discardHand ?? 0)
+    )
+  })
+}
+
+export interface PlayAttackResponseSkillOptions {
+  sourceInstanceId: string
+  discardHandIds: string[]
+}
+
+/**
+ * 對手指攻回應技能（BS5-081）：支付手牌代價後，這次戰鬥該餅乾的 HP
+ * 不會歸零（寫入 pendingBattle.preventKnockoutTargetIds，與陷阱的
+ * prevent-knockout 共用同一條傷害防護檢查）。回應窗維持 open。
+ */
+export const playAttackResponseSkill = (
+  state: GameState,
+  playerId: PlayerId,
+  options: PlayAttackResponseSkillOptions,
+): GameState => {
+  const battle = requirePendingBattle(state)
+  if (battle.stage !== 'trap' || battle.defenderPlayerId !== playerId) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  const player = state.players[playerId]
+  const source = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === options.sourceInstanceId,
+  )
+  const skill = source?.card.skill
+  if (!source || !skill || skill.trigger !== 'opponent-attack') {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  const useKey = source.battleEntryId ?? source.card.instanceId
+  if (skill.oncePerTurn && state.skillUsesThisTurn.includes(useKey)) {
+    throw new GameRuleError('This skill can only be used once per turn.')
+  }
+
+  const cost = skill.cost ?? {}
+  const discardCount = cost.discardHand ?? 0
+  const uniqueDiscardIds = [...new Set(options.discardHandIds)]
+  if (uniqueDiscardIds.length !== discardCount) {
+    throw new GameRuleError(
+      `Must discard exactly ${discardCount} cards for this skill.`,
+    )
+  }
+  if (uniqueDiscardIds.length !== options.discardHandIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  const discardedCards = player.hand.filter((card) =>
+    uniqueDiscardIds.includes(card.instanceId),
+  )
+  if (discardedCards.length !== uniqueDiscardIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      [playerId]: {
+        ...player,
+        hand: player.hand.filter(
+          (card) => !uniqueDiscardIds.includes(card.instanceId),
+        ),
+        discardPile: [...player.discardPile, ...discardedCards],
+      },
+    },
+    pendingBattle: {
+      ...battle,
+      preventKnockoutTargetIds: [
+        ...battle.preventKnockoutTargetIds,
+        source.card.instanceId,
+      ],
+    },
+    skillUsesThisTurn: [...state.skillUsesThisTurn, useKey],
+  }
 }
 
 export const playBlocker = (
@@ -1221,6 +1340,61 @@ const addFaintedColor = (
     : colors
 }
 
+/**
+ * 攻擊者的被動技能若明確檢查「本次戰鬥有對手餅乾昏厥」，要在昏厥實際發生
+ * 後建立效果佇列。這和「此餅乾昏厥時」不同：來源仍在戰鬥區，且依官方規則
+ * （昏厥後先維持戰線），對手的空場補位／Refresh 必須優先完成，補位完成後
+ * 再由既有的 pendingAbilityEffect UI 逐步結算。佇列以
+ * `trigger: 'attacker-faint'` 標記，讓 `continuePendingReplacements` 不會被它
+ * 阻塞，但 `resolvePendingAbilityEffect` 仍會拒絕在補位完成前結算。
+ */
+const queueAttackerFaintTriggeredSkill = (
+  state: GameState,
+  faintedPlayerId: PlayerId,
+): GameState => {
+  const battle = requirePendingBattle(state)
+  if (battle.effectDamageSequence) return state
+  if (faintedPlayerId !== getOpponentId(battle.attackerPlayerId)) return state
+  if (state.pendingAbilityEffect) return state
+
+  const attacker = state.players[battle.attackerPlayerId].battleArea.find(
+    (cookie) => cookie.card.instanceId === battle.attackerInstanceId,
+  )
+  const skill = attacker?.card.skill
+  if (!attacker || !skill || skill.trigger !== 'passive') return state
+
+  const context: EffectContext = {
+    sourcePlayerId: battle.attackerPlayerId,
+    sourceInstanceId: attacker.card.instanceId,
+    sourceCardName: attacker.card.name,
+  }
+  const effects = skill.effects.flatMap((effect) => {
+    if (
+      !('condition' in effect) ||
+      effect.condition?.kind !== 'opponent-cookie-fainted-in-current-battle' ||
+      !isEffectConditionMet(state, context, effect)
+    ) {
+      return []
+    }
+    return [{ ...effect, condition: undefined } as CardEffect]
+  })
+  if (effects.length === 0) return state
+
+  return {
+    ...state,
+    pendingAbilityEffect: {
+      playerId: battle.attackerPlayerId,
+      sourcePlayerId: battle.attackerPlayerId,
+      sourceInstanceId: attacker.card.instanceId,
+      sourceCardName: attacker.card.name,
+      sourceKind: 'skill',
+      trigger: 'attacker-faint',
+      effects,
+      effectIndex: 0,
+    },
+  }
+}
+
 const removeFaintedCookie = (
   state: GameState,
   playerId: PlayerId,
@@ -1319,7 +1493,9 @@ const removeFaintedCookie = (
     }
   }
 
-  return continuePendingReplacements(nextState)
+  return continuePendingReplacements(
+    queueAttackerFaintTriggeredSkill(nextState, playerId),
+  )
 }
 /**
  * 延遲陷阱是否成立。未指定 `minLevel` 時沿用舊行為（只看本次戰鬥有沒有該顏色
@@ -1464,7 +1640,7 @@ const hasApplicableOptionalAttackEffect = (
       hasRequiredEffectTargets(state, context, effect),
   )
 
-const advanceAttackEffect = (
+export const advanceAttackEffect = (
   state: GameState,
   battle: PendingBattle,
 ): GameState => {
@@ -1600,6 +1776,62 @@ const buildPendingEffectOrder = (
 
 const finishDamageSequence = (state: GameState): GameState => {
   const battle = requirePendingBattle(state)
+  if (battle.effectDamageSequence) {
+    const sequence = battle.effectDamageSequence
+    const afterCurrentDamageState = sequence.afterCurrentDamageResolved
+      ? state
+      : collectAfterDamageEffects(state, battle)
+    const activeBattle = requirePendingBattle(afterCurrentDamageState)
+
+    // 逐一傷害要等目前目標衍生的所有決策完整處理後才可前往下一個。
+    // `hasBlockingPending` 本身會把目前的 pendingBattle 視為阻塞，因此
+    // 暫時移除它來檢查真正插入此序列的決策（FLIP、昏厥、Refresh、補位等）。
+    const hasSequenceInterrupt =
+      hasBlockingPending({ ...afterCurrentDamageState, pendingBattle: null }) ||
+      Boolean(afterCurrentDamageState.pendingEffectOrder)
+    if (hasSequenceInterrupt) {
+      return {
+        ...afterCurrentDamageState,
+        pendingBattle: {
+          ...activeBattle,
+          effectDamageSequence: {
+            ...sequence,
+            afterCurrentDamageResolved: true,
+          },
+        },
+      }
+    }
+
+    const [nextTargetInstanceId, ...remainingTargetInstanceIds] =
+      sequence.remainingTargetInstanceIds
+    if (!nextTargetInstanceId) {
+      const completedBattle = {
+        ...activeBattle,
+        effectDamageSequence: undefined,
+      }
+      return finishBattle({ ...afterCurrentDamageState, pendingBattle: completedBattle })
+    }
+
+    return {
+      ...afterCurrentDamageState,
+      pendingBattle: {
+        ...activeBattle,
+        targetInstanceId: nextTargetInstanceId,
+        declaredDamage: sequence.damage,
+        remainingDamage: sequence.damage,
+        stage: 'damage',
+        revealedHpCard: null,
+        damagePlayerId: activeBattle.defenderPlayerId,
+        damageTargetInstanceId: nextTargetInstanceId,
+        damagedInstanceIds: [],
+        effectDamageSequence: {
+          remainingTargetInstanceIds,
+          damage: sequence.damage,
+        },
+      },
+    }
+  }
+
   if (battle.suspendedAttackDamage !== undefined) {
     const attackerExists = battleParticipantExists(
       state,
@@ -1707,6 +1939,30 @@ export const resolveAttackEffect = (
         effects: effect.effects,
         effectText: effect.effectText,
         sourceEnergy: effect.sourceEnergy,
+      },
+    }
+  }
+
+  if (effect.kind === 'discard-hand') {
+    // 攻擊後續效果的棄牌代價（BS5-080 的「Then, <discard 2 cards.>」）：
+    // 交由既有的 pendingOpponentHandDiscard 通道讓玩家選牌，但保留
+    // pendingBattle（stage 'attack-effect'），棄牌完成後由
+    // resolve-opponent-hand-discard 命令接續 advanceAttackEffect，
+    // 不能走 executeCardEffect（該路徑會直接把下一個效果也結算掉）。
+    const player = state.players[playerId]
+    if (player.hand.length < effect.count) {
+      return advanceAttackEffect(state, battle)
+    }
+    return {
+      ...state,
+      pendingOpponentHandDiscard: {
+        playerId,
+        count: effect.count,
+        destination: effect.destination,
+        sourcePlayerId: playerId,
+        sourceInstanceId: battle.attackerInstanceId,
+        sourceCardName: effectContext.sourceCardName ?? 'Unknown',
+        effectText: effect.kind,
       },
     }
   }
@@ -1822,21 +2078,25 @@ export const resolveOptionalCostAttack = (
       throw new GameRuleError('Invalid battle action.')
     }
     const hasValidTarget = selectableEffects.every((effect) => {
-        const limits = getEffectSelectionLimits(effect)
-        if (!limits) return false
-        const { min, max } = limits
-        if (uniqueTargetIds.length < min || uniqueTargetIds.length > max) {
-          return false
-        }
-        const candidates = getEffectSelectionCandidates(
-          state,
-          effectContext,
-          effect,
-        )
-        return uniqueTargetIds.every((targetId) =>
-          candidates.some((card) => card.instanceId === targetId),
-        )
-      })
+      const effectTargetIds =
+        effect.kind === 'battle-to-break' && effect.target.sourceOnly
+          ? [pending.sourceInstanceId]
+          : uniqueTargetIds
+      const limits = getEffectSelectionLimits(effect)
+      if (!limits) return false
+      const { min, max } = limits
+      if (effectTargetIds.length < min || effectTargetIds.length > max) {
+        return false
+      }
+      const candidates = getEffectSelectionCandidates(
+        state,
+        effectContext,
+        effect,
+      )
+      return effectTargetIds.every((targetId) =>
+        candidates.some((card) => card.instanceId === targetId),
+      )
+    })
     if (!hasValidTarget) {
       throw new GameRuleError('Invalid battle action.')
     }
@@ -1863,7 +2123,11 @@ export const resolveOptionalCostAttack = (
   const context = effectContext
   for (const effect of applicableEffects) {
     if (nextState.status !== 'playing') break
-    nextState = executeCardEffect(nextState, context, effect, targetIds)
+    const effectTargetIds =
+      effect.kind === 'battle-to-break' && effect.target.sourceOnly
+        ? [pending.sourceInstanceId]
+        : targetIds
+    nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
   }
   if (nextState.status !== 'playing') {
     return { ...nextState, pendingBattle: null }
@@ -1894,8 +2158,16 @@ export const resolveNextDamage = (state: GameState): GameState => {
     state,
     battle.targetInstanceId,
   )
-  if (!attackerExists || !targetExists) {
-    return finishBattle(state)
+  // 效果傷害在支付後已經獨立成立。像 BS4-005 以最後一張來源 HP 作為
+  // 代價時，來源雖會昏厥，仍必須結算所有已選定目標；一般攻擊則維持
+  // 攻擊者或目標離場即收尾的既有規則。
+  if (
+    (!battle.effectDamageSequence && !attackerExists) ||
+    !targetExists
+  ) {
+    return battle.effectDamageSequence
+      ? finishDamageSequence(state)
+      : finishBattle(state)
   }
 
   if (battle.remainingDamage <= 0) {
@@ -1922,6 +2194,9 @@ export const resolveNextDamage = (state: GameState): GameState => {
       damageTargetInstanceId,
     )
     if (afterFaint.pendingFaintEffects && afterFaint.pendingFaintEffects.length > 0) {
+      if (battle.effectDamageSequence) {
+        return finishDamageSequence(afterFaint)
+      }
       const activeBattle = requirePendingBattle(afterFaint)
       if (
         !battleParticipantExists(afterFaint, activeBattle.attackerInstanceId) ||
@@ -2332,15 +2607,26 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
           context,
           targetedEffect,
         )
+        const selectAllSequentialTargets =
+          targetedEffect.kind === 'damage-all' && targetedEffect.sequential
         autoTargetIds = candidates
-          .slice(0, targetedEffect.kind === 'opponent-battle-to-trash' ? 1 : targetedEffect.target.max)
+          .slice(
+            0,
+            targetedEffect.kind === 'opponent-battle-to-trash'
+              ? 1
+              : selectAllSequentialTargets
+                ? candidates.length
+                : (targetedEffect.target?.max ?? 0),
+          )
           .map((c) => c.card.instanceId)
       }
       const hasTarget = targetedEffect
         ? autoTargetIds.length >=
           (targetedEffect.kind === 'opponent-battle-to-trash'
             ? targetedEffect.min ?? 1
-            : targetedEffect.target.min)
+            : targetedEffect.kind === 'damage-all' && targetedEffect.sequential
+              ? targetedEffect.target?.min ?? Number.POSITIVE_INFINITY
+              : (targetedEffect.target?.min ?? 0))
         : applicableEffects.length > 0
       if (canPayHand && canPayEnergy && hasTarget) {
         const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
@@ -2543,9 +2829,25 @@ export const getFaintEffectCardCandidates = (state: GameState): GameCard[] => {
 }
 
 export const getFaintEffectMinMax = (
+  state: GameState,
   effect: CardEffect,
-): { min: number; max: number } =>
-  getEffectSelectionLimits(effect) ?? { min: 0, max: 0 }
+): { min: number; max: number } => {
+  // 昏厥技能（When this Cookie faints）的「Return this Cookie to your hand」：
+  // 來源在休息區、戰鬥區沒有候選，由 executeCardEffect 自動把休息區的來源
+  // 返回手牌，不需要玩家選目標（BS5-026 DJ Cookie）。
+  if (effect.kind === 'return-to-hand' && effect.target.sourceOnly) {
+    const faint = state.pendingFaintEffects?.[0]
+    if (
+      faint &&
+      state.players[faint.sourcePlayerId].breakArea.some(
+        (card) => card.instanceId === faint.sourceInstanceId,
+      )
+    ) {
+      return { min: 0, max: 0 }
+    }
+  }
+  return getEffectSelectionLimits(effect) ?? { min: 0, max: 0 }
+}
 
 export const resolveFaintEffect = (
   state: GameState,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyGameCommand,
   advancePhase,
   processEndPhaseEffects,
   refreshDeck,
@@ -70,6 +71,115 @@ const createTurnState = (): GameState => {
 }
 
 describe('end phase effects', () => {
+  it('queues targeted end-of-turn effects for player resolution', () => {
+    let state = createTurnState()
+    const endPhaseCookie: CookieCard = {
+      ...cookie('targeted-end-phase-cookie'),
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'At the end of your turn, deal 1 damage to up to 1 opposing Cookie.',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        endPhase: true,
+      },
+    }
+    const target = cookie('target-cookie')
+    state.players['player-one'].battleArea = [
+      {
+        card: endPhaseCookie,
+        hpCards: [item('source-hp')],
+        rested: false,
+      },
+    ]
+    state.players['player-two'].battleArea = [
+      {
+        card: target,
+        hpCards: [item('target-hp-1'), item('target-hp-2')],
+        rested: false,
+      },
+    ]
+
+    state = processEndPhaseEffects(state)
+
+    expect(state.pendingAbilityEffect).toMatchObject({
+      playerId: 'player-one',
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: endPhaseCookie.instanceId,
+      sourceKind: 'skill',
+      effectIndex: 0,
+    })
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
+    expect(state.skillUsesThisTurn).toContain(endPhaseCookie.instanceId)
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target.instanceId],
+    })
+
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
+  it('skips a false end-of-turn condition without executing or throwing', () => {
+    let state = createTurnState()
+    const endPhaseCookie: CookieCard = {
+      ...cookie('conditional-end-phase-cookie'),
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'If you have at least 1 green support, deal 1 damage.',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: {
+              kind: 'support-color-count-at-least',
+              color: 'green',
+              count: 1,
+            },
+          },
+        ],
+        endPhase: true,
+      },
+    }
+    state.players['player-one'].battleArea = [
+      {
+        card: endPhaseCookie,
+        hpCards: [item('source-hp')],
+        rested: false,
+      },
+    ]
+    state.players['player-two'].battleArea = [
+      {
+        card: cookie('target-cookie'),
+        hpCards: [item('target-hp')],
+        rested: false,
+      },
+    ]
+
+    expect(() => {
+      state = processEndPhaseEffects(state)
+    }).not.toThrow()
+
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
+    expect(state.skillUsesThisTurn).toContain(endPhaseCookie.instanceId)
+  })
+
   it('triggers end-of-turn draw for active player cookie', () => {
     let state = createTurnState()
     const endPhaseCookie: CookieCard = {

@@ -276,13 +276,19 @@ export const validateCandidates = (
   return { files, totalCards, convertedCount, inventoryFiles, errors }
 }
 
+const dirArgIndex = process.argv.indexOf('--dir')
+const targetCandidatesDir =
+  dirArgIndex >= 0 && process.argv[dirArgIndex + 1]
+    ? process.argv[dirArgIndex + 1]
+    : candidatesDir
+
 const result = validateCandidates(
-  candidatesDir,
+  targetCandidatesDir,
   new Set(getAllCardPoolEntries().map((entry) => entry.cardNumber)),
   process.argv.includes('--require-promotion-ready'),
 )
 if (result.files.length === 0) {
-  console.log('data/candidates/ 中無 .json 檔案，無候選資料需驗證。')
+  console.log(`${targetCandidatesDir} 中無 .json 檔案，無候選資料需驗證。`)
   process.exit(0)
 }
 if (result.errors.length > 0) {

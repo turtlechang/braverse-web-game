@@ -68,7 +68,15 @@ BS3 全系列本輪完成 121 張基礎卡的瀏覽器載入掃描，並針對�
 
 BS4 系列已完成 111 張基礎卡的效果覆蓋稽核：攻擊 `Then` 23／23 已轉接，額外能力來源 87 張已轉接，原先 14 張待補效果已降為 0。170 筆資料（111 張基礎卡、59 個異圖／促銷變體）已於 2026-08-03 promote 至 `data/cards/`；HP 代價、BS4-001 自我昏厥、BS4-065／109 陷阱後半效果、BS4-008 FLIP 目標與 BS4-102 FLIP 選擇牌庫分支已補齊，完整狀態見 [BS4 效果轉接覆蓋盤點](docs/bs4-effect-coverage.md)。
 
+BS4 後續規則回歸已完成 AI benchmark 的 RNG 傳遞修正：同一個 step seed 會流經技能、物品、場景與 Refresh；固定 seed 的 100 場矩陣重跑結果完全一致。另為 22 張條件卡建立 `met`／`unmet` 專用 test-state，共 44 條路徑通過；24 張一般 fixture 卡的效果面板、支付、代價、目標與可略過流程也以 Chrome 實際互動 24／24 通過。111 張 BS4 基礎卡以 Chrome card-check 逐卡載入 111／111 通過，並在 AI browser 的 1280×720、1024×576 等 viewport 通過 responsive geometry gate；BS4-052 end-phase 目標結算與 BS4-029 chained optional attack 的回歸問題已修正。完整結果見 [BS4 卡牌、RNG、responsive 與互動稽核報告](docs/bs4-browser-audit-report-2026-08-04-final.md)。
+
+擊倒觸發的攻擊後技能（如 BS4-011 擊倒對手後抽 1 張並棄 1 張）已確認以「空場補位優先」結算：傷害結算後先完成戰鬥區再登場（空缺且無餅乾可補位時立即判負），補位完成後才執行技能佇列；離線、線上與 AI 決策流程共用同一判定，回歸測試涵蓋手牌為空時必棄唯一抽牌、以及無補位餅乾直接敗北兩條邊界路徑。
+
+兩階段選擇效果已落地：BS4-030 桃花餅乾「世外桃源」與 BS4-044 千年寺場景的目標選擇拆為「先選目標餅乾 → 再選 1 張手牌放回其 HP 最上方」兩個順序決策，沒有合法目標時不詢問發動、第一階段目標昏厥時自動中止並略過第二階段，對戰紀錄只公開動作過程、不揭露被搬移的卡牌內容；本機、線上與 AI 共用同一判定。
+
 P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃描，並以規則回歸及代表性實戰涵蓋餅乾技能、攻擊後效果、物品、FLIP、陷阱與場景。修正 P-017 支援區事件觸發、P-024 不可攻擊的 HP-only FLIP、P-025～P-027 Marzipan 條件與傷害倍增、P-028／P-032 場景多段效果，以及 P-029 戰鬥昏厥後延遲復活；候選 8 張已 promote 至正式卡池。完整清單與限制見 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。
+
+BS5 YELLOW 與 GREEN 已完成 runtime 轉接，逐色稽核歸零：GREEN 批次新增 `deferred-end-of-turn`（BS5-051／056／058／063「When your turn ends」延遲佇列，於 end 階段重入排空、互動效果建立對應 pending）、`opponent-rests-support`（BS5-065 由對手選定橫置支援卡，`activeOnly` 與候選不足自動略過）、`StageAbility.endPhase`（BS5-066 場景被動觸發，不可手動啟動）；UI 新增 `OpponentRestSupportResponseModal` 並共用本機／線上控制器，`cards:analyze:bs5-candidate` 覆蓋盤點 GREEN 0／0／0（見 [BS5 效果轉接覆蓋盤點](docs/bs5-effect-coverage.md)）。
 
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
 
@@ -85,11 +93,17 @@ P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃�
 
 測試基線、bundle 大小等會隨每次 PR 變動的數字，一律以 [CHANGELOG.md](CHANGELOG.md) 最新項目為準（非永久門檻，只要求不低於前次基線）。
 
+BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
+
 ## 下一步計畫
 
 持續以桌機、平板與手機 viewport 實測主選單的欄位比例、開發者工具收合與牌組統計可讀性；平板橫向戰場已正式套用 mockup 版面，後續維持 1164×777 與其他短高度桌面尺寸的可讀性回歸，並維持合法與不合法牌組錯誤提示的 DOM 狀態一致。
 
-BS4 已完成效果轉接覆蓋稽核、候選嚴格驗證與正式卡池 promote；牌組編輯器已新增 BS4 系列選單並與 BS3 分流，已修正 HP 代價、陷阱後半效果、BS4-008 FLIP 目標與 BS4-102 FLIP 選擇分支，後續以 Chrome 逐色實戰驗證剩餘尚未完整測試的攻擊後續／條件分支、規則回歸與官方更新追蹤為主。
+BS4 已完成效果轉接覆蓋稽核、候選嚴格驗證與正式卡池 promote；牌組編輯器已新增 BS4 系列選單並與 BS3 分流，22 張條件卡的成立／不成立專用情境、24 張一般 fixture 的實際 UI 互動、固定 seed benchmark、111 張 Chrome 逐卡載入與平板 responsive geometry gate 均已完成。下一步可進入 BS5 資料準備期；BS4 勝率排名仍只作為觀察資料，不作為正式環境強度定案。
+
+BS5 已進入資料準備期：新增 `cards:import:bs5-candidate` 依 `BS5-*` 卡號前綴從官方英文卡表建立 `inventory` 候選快照與卡牌盤點，並新增 `cards:analyze:bs5-candidate` 產生逐色效果覆蓋盤點；此階段只執行候選結構驗證，不建立 runtime 效果、不改動正式卡池，也不執行 promote。下一步依盤點逐色逐張補齊 runtime 轉接、效果稽核與 Chrome 驗證後才 promote。
+
+BS5 YELLOW 與 GREEN 已完成 runtime 轉接並逐色待轉接歸零；下一步接續 BLUE／PURPLE 逐色轉接、效果稽核與 Chrome 驗證後才 promote。
 
 持續以瀏覽器透過正式卡池測試對局設定驗證 BS3 卡牌在卡牌詳情、效果面板與戰鬥互動中的技能、攻擊後、物品、陷阱、場景與資源區效果，並維持規則引擎與 UI 的責任分離。
 
@@ -128,6 +142,8 @@ npm run build
 
 ```bash
 npm run test:ai:browser      # AI 對局多解析度 smoke test
+npm run test:bs4:cards:browser # BS4 111 張 Chrome card-check 載入 gate
+npm run test:bs4:interaction:browser # BS4 條件卡與一般 fixture 實際互動
 npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
@@ -153,12 +169,19 @@ npm run cards:analyze:bs3-candidate
 
 BS4 已完成首次 promote；正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json` 為準，效果覆蓋報表由 `cards:analyze:bs4-candidate` 依正式檔案產生。
 
+BS5 已進入資料準備期，YELLOW 與 GREEN 已完成 runtime 轉接並逐色稽核歸零；候選資料以 `data/candidates/official-age-of-heroes-and-kingdoms-bs5.en.json` 與 `docs/bs5-card-inventory.md` 為準，完成逐色效果稽核、runtime 轉接、測試與 Chrome 驗證前，不得 promote。
+
 ## 變更記錄
 
 目前發布版本 **`0.9.0`**（2026-07-16，git tag `0.9.0`）。完整變更記錄見 [CHANGELOG.md](CHANGELOG.md#090---2026-07-16)；發布與 PR 流程見 [docs/release-process.md](docs/release-process.md)。
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-05 | BS5 GREEN 全數轉接完成：10 張主效果、9 項額外能力、3 組攻擊 Then（056／059／060）；新增 `deferred-end-of-turn`（「When your turn ends」延遲佇列，end 階段重入排空＋`effectIndex` 書籤）、`opponent-rests-support`（BS5-065 對手選定橫置支援卡）與 `StageAbility.endPhase`（BS5-066 場景被動觸發、不可手動啟動）；BS5-051 回牌庫底在自身為唯一戰鬥區餅乾時略過；UI 新增 `OpponentRestSupportResponseModal` 並接線本機／線上控制器；新增 16 項引擎測試與 14 項 adapter 測試，GREEN 逐色待轉接歸零。 |
+| 2026-08-05 | BS5 YELLOW 全數轉接完成：新增 `make-faint` 效果（BS5-036）、`noSkillOnly` 目標過濾、`cookie-gained-hp-this-turn`／`attack-target-remaining-hp-at-most` 條件，並以昏厥流程結算；BS5-026 DJ 昏厥技能（手牌黃色 LV.2 以下進休息區＋自身回手）、BS5-044 場景、BS5-042 道具與 7 張攻擊 Then 完成轉接，YELLOW 逐色待轉接歸零；新增 13 項引擎測試與 22 項 adapter 測試。 |
+| 2026-08-05 | 修正擊倒觸發技能（BS4-011）延後至空場補位／敗北判定之後結算，離線、線上與 AI 共用判定並補齊手牌為空與無補位餅乾邊界測試；BS5 候選匯入與效果覆蓋分析腳本就緒（`cards:import:bs5-candidate`、`cards:analyze:bs5-candidate`），尚未 promote；BS4-030「世外桃源」與 BS4-044 千年寺改為兩階段選擇（先選目標餅乾、再選 1 張手牌放回 HP 最上方），含無目標不詢問、昏厥中斷與對戰紀錄隱私。 |
+| 2026-08-04 | 修正 AI benchmark 的技能／物品／場景／Refresh RNG 傳遞並完成 100 場固定 seed 重跑；補上 BattleRow 物品支付 aria label 回歸測試、BS4-052／BS4-029 規則回歸、22 張條件卡 44／44、24 張一般 fixture 24／24、Chrome 111／111 card-check 與平板 responsive geometry gate；BS5 進入 inventory 資料準備期。 |
+| 2026-08-03 | 以 BS3 五色牌組為基礎完成 BS4 五色強化牌組 JSON；新增固定種子 Lv.4 每色 30 場 benchmark，五色共 150 場皆完成且無卡死。 |
 | 2026-08-03 | 完成 BS4 111 張基礎卡效果稽核：攻擊 `Then` 23／23、額外能力待補 14→0；170 筆候選資料全數通過嚴格驗證並 promote 至正式卡池，重建 card pool registry；牌組編輯器新增 BS4 系列選單，並修正 HP 代價、BS4-001 自我昏厥、BS4-008 FLIP 目標、BS4-065／109 陷阱後半及 BS4-102 FLIP 選擇分支；主選單完成 AI 設定欄位 8:4 版面、測試對局入口顯示與合法牌組錯誤提示修正；新增卡牌匯入與 Chrome 逐色效果稽核 Skill。 |
 | 2026-07-31 | 修正 BS3-029 昏厥目標／黃色能量付款與補位優先順序，補上 BS3-045 陷阱傷害目標及 ST2-020 攻擊目標回歸測試。線上協定新增 resolve-faint-effect paymentIds 驗證。 |
 | 2026-07-31 | 功能完成與測試：BS3-029 昏厥目標選擇、黃色能量付款、補位優先順序、空場強制補位；BS3-045 damage-by-break-count 陷阱目標；ST2-020 modify-attack 不改寫攻擊目標。效果面板 optionalCostAttack 支援最小化。完整單元測試 2394 項、lint、build 通過。 |

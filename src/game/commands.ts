@@ -1,10 +1,12 @@
 import { GameRuleError } from './errors'
 import {
   advanceBattleAfterTrap,
+  advanceAttackEffect,
   beginAttack,
   finishBattle,
   getAfterDamageEffectMinMax,
   getFaintEffectMinMax,
+  playAttackResponseSkill,
   playBlocker,
   playTrap,
   resolveAttackEffect,
@@ -18,14 +20,17 @@ import {
 } from './battle'
 import {
   executeCardEffect,
+  getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
   hasRequiredEffectTargets,
   isEffectConditionMet,
+  placeHandCardOnHp,
   requiresEffectCardSelection,
   requiresTargetSelection,
   resolveDrawUpTo,
   resolveInspectDeck,
   resolveOpponentHandDiscard,
+  resolveOpponentRestSupport,
 } from './effects'
 import {
   attackCookie,
@@ -57,7 +62,7 @@ import {
   resolveLogCard,
   resolveLogCategory,
 } from './command-log'
-import { getBreakAreaLevel } from './victory'
+import { finishWithDefeat, getBreakAreaLevel } from './victory'
 import {
   drawMulliganCompensation,
   forceMulliganOpeningHand,
@@ -98,6 +103,18 @@ export interface OpponentHandDiscardDecision {
   sourceCardName: string
   effectText: string
   count: number
+}
+
+/** 對手的支援區橫置決策（BS5-065 Petrification 的「your opponent selects 1 active card from their support area」）。 */
+export interface OpponentRestSupportDecision {
+  kind: 'opponent-rest-support'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  sourceCardName: string
+  effectText: string
+  count: number
+  activeOnly?: boolean
 }
 
 export interface InspectDeckDecision {
@@ -176,6 +193,7 @@ export interface EffectOrderDecision {
 export type PendingDecision =
   | FaintEffectDecision
   | OpponentHandDiscardDecision
+  | OpponentRestSupportDecision
   | InspectDeckDecision
   | RevealTopDeckDecision
   | OptionalCostAttackDecision
@@ -183,6 +201,19 @@ export type PendingDecision =
   | StageTriggerDecision
   | AfterDamageEffectDecision
   | EffectOrderDecision
+  | PlaceHandHpDecision
+
+/**
+ * cycle-hp（BS4-030）第二階段：第一階段取回 HP 後，把最多 1 張手牌放回
+ * 目標餅乾 HP 最上方；目標昏厥離場時不會建立此決策。
+ */
+export interface PlaceHandHpDecision {
+  kind: 'place-hand-hp'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  targetInstanceId: string
+}
 
 export interface ResolveFaintEffectCommand {
   kind: 'resolve-faint-effect'
@@ -193,6 +224,12 @@ export interface ResolveFaintEffectCommand {
 
 export interface ResolveOpponentHandDiscardCommand {
   kind: 'resolve-opponent-hand-discard'
+  playerId: PlayerId
+  cardIds: string[]
+}
+
+export interface ResolveOpponentRestSupportCommand {
+  kind: 'resolve-opponent-rest-support'
   playerId: PlayerId
   cardIds: string[]
 }
@@ -243,9 +280,19 @@ export interface ResolveEffectOrderCommand {
   orderedIds: string[]
 }
 
+/**
+ * cycle-hp（BS4-030）第二階段：`handCardInstanceId` 省略時視為略過不放置。
+ */
+export interface ResolvePlaceHandHpCommand {
+  kind: 'resolve-place-hand-hp'
+  playerId: PlayerId
+  handCardInstanceId?: string
+}
+
 export type PendingDecisionCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
+  | ResolveOpponentRestSupportCommand
   | ResolveInspectDeckCommand
   | ResolveRevealTopDeckCommand
   | ResolveOptionalCostAttackCommand
@@ -253,6 +300,7 @@ export type PendingDecisionCommand =
   | ResolveStageTriggerCommand
   | ResolveAfterDamageEffectCommand
   | ResolveEffectOrderCommand
+  | ResolvePlaceHandHpCommand
 
 export interface KeepOpeningHandCommand {
   kind: 'keep-opening-hand'
@@ -499,6 +547,14 @@ export interface PlayBlockerCommand {
   paymentIds: string[]
 }
 
+/** 對手指攻回應技能（BS5-081 Squid Ink Cookie）。 */
+export interface PlayAttackResponseCommand {
+  kind: 'play-attack-response'
+  playerId: PlayerId
+  sourceInstanceId: string
+  discardHandIds: string[]
+}
+
 export interface ResolveFlipCommand {
   kind: 'resolve-flip'
   playerId: PlayerId
@@ -551,6 +607,7 @@ export type PlayerActionCommand =
   | PlayTrapCommand
   | SkipTrapCommand
   | PlayBlockerCommand
+  | PlayAttackResponseCommand
   | ResolveFlipCommand
   | ResolveAttackEffectCommand
   | ResolveNextDamageCommand
@@ -564,6 +621,11 @@ export interface ApplyGameCommandOptions {
    * createSeededShuffle，否則調度／Refresh 的牌序不會一致。
    */
   shuffle?: Shuffle
+  /**
+   * AI 單步使用的可重現洗牌種子。每次套用 command 都會由此建立新的
+   * shuffle，避免效果模擬消耗掉正式結算要使用的亂數序列。
+   */
+  shuffleSeed?: number
 }
 
 const isEffectOrderItemActive = (
@@ -578,7 +640,8 @@ const isEffectOrderItemActive = (
         state.pendingInspectDeck?.sourceInstanceId === item.sourceInstanceId ||
         state.pendingDrawUpTo?.sourceInstanceId === item.sourceInstanceId ||
         state.pendingStageTrigger?.sourceInstanceId === item.sourceInstanceId ||
-        state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId,
+        state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId ||
+        state.pendingOpponentRestSupport?.sourceInstanceId === item.sourceInstanceId,
     )
   }
   if (item.kind === 'after-damage-effect') {
@@ -594,7 +657,8 @@ const isEffectOrderItemActive = (
   if (item.kind === 'draw-up-to') {
     return (
       state.pendingDrawUpTo?.sourceInstanceId === item.sourceInstanceId ||
-      state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId
+      state.pendingOpponentHandDiscard?.sourceInstanceId === item.sourceInstanceId ||
+      state.pendingOpponentRestSupport?.sourceInstanceId === item.sourceInstanceId
     )
   }
   if (item.kind === 'inspect-deck') {
@@ -642,6 +706,19 @@ export const getPendingDecision = (
     return null
   }
 
+  // cycle-hp（BS4-030）第二階段：第一階段結算後停在這裡等玩家放回手牌。
+  const pendingAbility = state.pendingAbilityEffect
+  const pendingPlace = pendingAbility?.pendingPlace
+  if (pendingAbility && pendingPlace) {
+    return {
+      kind: 'place-hand-hp',
+      playerId: pendingAbility.playerId,
+      sourcePlayerId: pendingAbility.sourcePlayerId,
+      sourceInstanceId: pendingAbility.sourceInstanceId,
+      targetInstanceId: pendingPlace.targetInstanceId,
+    }
+  }
+
   if (state.pendingEffectOrder && !state.pendingEffectOrder.resolvedOrder) {
     return {
       kind: 'effect-order',
@@ -664,7 +741,7 @@ export const getPendingDecision = (
     )
   ) {
     const faint = state.pendingFaintEffects[0]
-    const { min, max } = getFaintEffectMinMax(faint.effect)
+    const { min, max } = getFaintEffectMinMax(state, faint.effect)
     return {
       kind: 'faint-effect',
       playerId: faint.sourcePlayerId,
@@ -706,6 +783,20 @@ export const getPendingDecision = (
       sourceCardName: pending.sourceCardName,
       effectText: pending.effectText,
       count: pending.count,
+    }
+  }
+
+  if (state.pendingOpponentRestSupport) {
+    const pending = state.pendingOpponentRestSupport
+    return {
+      kind: 'opponent-rest-support',
+      playerId: pending.playerId,
+      sourcePlayerId: pending.sourcePlayerId,
+      sourceInstanceId: pending.sourceInstanceId,
+      sourceCardName: pending.sourceCardName,
+      effectText: pending.effectText,
+      count: pending.count,
+      activeOnly: pending.activeOnly,
     }
   }
 
@@ -809,6 +900,7 @@ export const getPendingDecision = (
 const cmdToDecisionKind: Record<string, string> = {
   'resolve-faint-effect': 'faint-effect',
   'resolve-opponent-hand-discard': 'opponent-hand-discard',
+  'resolve-opponent-rest-support': 'opponent-rest-support',
   'resolve-inspect-deck': 'inspect-deck',
   'resolve-reveal-top-deck': 'reveal-top-deck',
   'resolve-optional-cost-attack': 'optional-cost-attack',
@@ -816,6 +908,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-stage-trigger': 'stage-trigger',
   'resolve-after-damage-effect': 'after-damage-effect',
   'resolve-effect-order': 'effect-order',
+  'resolve-place-hand-hp': 'place-hand-hp',
 }
 
 const isPendingDecisionCommand = (
@@ -877,16 +970,33 @@ export const applyGameCommand = (
   command: GameCommand,
   options: ApplyGameCommandOptions = {},
 ): GameState => {
+  const effectiveOptions =
+    options.shuffleSeed === undefined
+      ? options
+      : {
+          ...options,
+          shuffle: createSeededShuffle(options.shuffleSeed),
+        }
   const next = isPendingDecisionCommand(command)
-    ? applyPendingDecisionCommand(state, command, options)
-    : applyPlayerActionCommand(state, command, options)
+    ? applyPendingDecisionCommand(state, command, effectiveOptions)
+    : applyPlayerActionCommand(state, command, effectiveOptions)
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.
   // A multi-step effect must finish before replacement or break-level victory
-  // can be finalized.
-  const finalized = next.status === 'playing' && !hasBlockingPending(next)
-    ? finalizePendingReplacements(next)
-    : next
+  // can be finalized. 唯一的例外是攻擊者擊倒觸發的技能佇列（trigger:
+  // 'attacker-faint'，例如 BS4-011）：依規則對手的空場補位必須優先於技能
+  // 結算，因此這類佇列不阻塞補位任務的建立。
+  const finalized =
+    next.status === 'playing' &&
+    !hasBlockingPending({
+      ...next,
+      pendingAbilityEffect:
+        next.pendingAbilityEffect?.trigger === 'attacker-faint'
+          ? undefined
+          : next.pendingAbilityEffect,
+    })
+      ? finalizePendingReplacements(next)
+      : next
   return appendCommandLogEntry(state, finalized, command)
 }
 
@@ -937,8 +1047,25 @@ const applyPendingDecisionCommand = (
     }
     case 'resolve-faint-effect':
       return resolveFaintEffect(state, command.targetIds, command.paymentIds ?? [])
-    case 'resolve-opponent-hand-discard':
-      return resolveOpponentHandDiscard(state, command.playerId, command.cardIds)
+    case 'resolve-opponent-hand-discard': {
+      // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
+      const resolved = resolveOpponentHandDiscard(
+        state,
+        command.playerId,
+        command.cardIds,
+      )
+      const activeBattle = resolved.pendingBattle
+      if (
+        activeBattle &&
+        activeBattle.stage === 'attack-effect' &&
+        activeBattle.attackEffectIndex < activeBattle.attackEffects.length
+      ) {
+        return advanceAttackEffect(resolved, activeBattle)
+      }
+      return resolved
+    }
+    case 'resolve-opponent-rest-support':
+      return resolveOpponentRestSupport(state, command.playerId, command.cardIds)
     case 'resolve-inspect-deck':
       return resolveInspectDeck(state, command.playerId, command.pickedCardIds, command.restOrder)
     case 'resolve-reveal-top-deck': {
@@ -1121,6 +1248,35 @@ const applyPendingDecisionCommand = (
     }
     case 'resolve-after-damage-effect':
       return resolveNextAfterDamageEffect(state, command.targetIds)
+    case 'resolve-place-hand-hp': {
+      const pending = state.pendingAbilityEffect
+      if (!pending?.pendingPlace) {
+        throw new GameRuleError('目前沒有等待放置 HP 的決策。')
+      }
+      if (pending.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要執行放置 HP 的玩家。')
+      }
+      const context: EffectContext = {
+        sourcePlayerId: pending.sourcePlayerId,
+        sourceInstanceId: pending.sourceInstanceId,
+        sourceCardName: pending.sourceCardName,
+      }
+      const continueBattle = (candidate: GameState): GameState =>
+        continueBattleAfterPending(candidate, pending.battleContinuation)
+      const resolved = placeHandCardOnHp(
+        state,
+        context,
+        pending.pendingPlace.targetInstanceId,
+        command.handCardInstanceId,
+      )
+      return continueAbilityQueue(
+        resolved,
+        { ...pending, pendingPlace: undefined },
+        context,
+        1,
+        continueBattle,
+      )
+    }
   }
 }
 
@@ -1184,6 +1340,27 @@ const assertNoPendingDecision = (
     return
   }
 
+  // 戰鬥中建立的巢狀技能佇列（例如 BS3-076 的 reveal-top-deck 巢狀傷害）必須
+  // 在 pendingBattle 仍保留時結算，才能讓條件讀到本次戰鬥的資訊。
+  // resolvePendingAbilityEffect 本身仍會拒絕 Refresh、OnPlay 與補位，
+  // 因此這個例外不會放行其他尚未完成的決策。
+  // 例外：攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011）依
+  // 規則必須等對手的空場補位完成後才能結算，不在此列。
+  if (
+    command.kind === 'resolve-ability-effect' &&
+    state.pendingAbilityEffect?.playerId === command.playerId &&
+    state.pendingAbilityEffect.trigger !== 'attacker-faint' &&
+    state.pendingBattle &&
+    !state.pendingEffectOrder &&
+    !hasBlockingPending({
+      ...state,
+      pendingBattle: null,
+      pendingAbilityEffect: undefined,
+    })
+  ) {
+    return
+  }
+
   throw new GameRuleError('必須先處理待處理的決策。')
 }
 
@@ -1230,6 +1407,59 @@ const hasNoEquipTarget = (
   return !player.battleArea.some((c) => c.card.id === next.requiredCookieId)
 }
 
+const hasOwnReplacementTask = (
+  state: GameState,
+  playerId: PlayerId,
+): boolean =>
+  state.pendingReplacement?.tasks.some(
+    (task) => task.playerId === playerId,
+  ) ?? false
+
+/**
+ * 代價致昏後「戰場清空」或「休息區 LV≥10」兩種情形優先處理補位／勝負；
+ * 其他情況（戰場仍有其他餅乾）效果先結算，補位沿用指令出口的既有排程。
+ */
+const shouldFinalizeCostDeparture = (
+  state: GameState,
+  playerId: PlayerId,
+): boolean => {
+  if (state.players[playerId].battleArea.length === 0) return true
+  return getBreakAreaLevel(state, playerId) >= 10
+}
+
+/**
+ * 技能代價造成餅乾離場時，依規格決定是否先完成補位／勝負判定：
+ * 代價→昏厥→休息區 LV≥10 敗北→戰鬥區清空強制補位（無餅乾可補即敗北）→
+ * 效果結算。
+ * - 休息區 LV ≥ 10：立即由 finalizePendingReplacements 判定敗北。
+ * - 戰鬥區清空：建立強制補位；手牌沒有可補位餅乾時依空場敗北判定。
+ * - 其他情況（戰場仍有其他餅乾）：效果先結算，補位沿用指令出口的既有排程。
+ * 只比較本次代價「新增」的離場數，避免把先前補位流程遺留的
+ * departedCookieCounts 舊值誤判成新離場，覆蓋已存在的替補佇列。
+ */
+const finalizeCostDeparture = (
+  state: GameState,
+  playerId: PlayerId,
+  departedBefore: number,
+): GameState => {
+  if (state.status !== 'playing') return state
+  if (state.departedCookieCounts[playerId] <= departedBefore) return state
+  if (!shouldFinalizeCostDeparture(state, playerId)) return state
+  const finalized = finalizePendingReplacements(state)
+  if (finalized.status !== 'playing') return finalized
+  const player = finalized.players[playerId]
+  const hasReplacementCookie = player.hand.some(
+    (card) => card.type === 'cookie',
+  )
+  if (player.battleArea.length === 0 && !hasReplacementCookie) {
+    // 戰場清空且手牌沒有可補位的餅乾：依空場敗北判定，效果不結算。
+    // buildReplacementTasks 只依離場數建任務，不檢查手牌，無法靠
+    // pendingReplacement 的「無任務」區分此情況，因此直接結束遊戲。
+    return finishWithDefeat(finalized, playerId, 'no-cookie-available')
+  }
+  return finalized
+}
+
 const executeAbilityEffects = (
   state: GameState,
   context: EffectContext,
@@ -1262,6 +1492,9 @@ const executeAbilityEffects = (
       shuffle,
     )
     if (nextState.pendingRefresh || nextState.pendingOnPlay) break
+    // 代價致昏後補位優先於後續效果結算（BS4-005 等 hpToTrash 代價場景）；
+    // 只對「自己的」補位任務暫停，先前遺留的對側任務不該中斷本次效果。
+    if (hasOwnReplacementTask(nextState, context.sourcePlayerId)) break
     if (hasNoEquipTarget(nextState, context, queue, index)) {
       index += 1
     }
@@ -1297,7 +1530,12 @@ const resolvePendingAbilityEffect = (
   if (
     state.pendingRefresh ||
     state.pendingOnPlay ||
-    state.pendingReplacement
+    state.pendingReplacement ||
+    // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾後才能結算：
+    // 對手可能因空場需要補位或 Refresh，技能不能先於維持戰線的強制流程。
+    // 其他佇列（BS3-076 的 reveal-top-deck 巢狀傷害）仍允許在 pendingBattle
+    // 保留時結算，才能讓 attackTargetOnly 找到攻擊目標。
+    (state.pendingBattle && pending.trigger === 'attacker-faint')
   ) {
     throw new GameRuleError('必須先處理其他待處理的決策。')
   }
@@ -1322,6 +1560,57 @@ const resolvePendingAbilityEffect = (
   if (hasNoLegalSelectableTargets(state, context, pending.effects, pending.effectIndex)) {
     return continueBattle({ ...state, pendingAbilityEffect: undefined })
   }
+
+  // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp selectTarget BS4-044）：
+  // 第一階段只接受戰鬥區目標餅乾，手牌不在候選內。
+  if (
+    effect.kind === 'cycle-hp' ||
+    (effect.kind === 'hand-to-hp' && effect.selectTarget)
+  ) {
+    const isCycleHp = effect.kind === 'cycle-hp'
+    const targetCandidates = getEffectTargetCandidates(state, context, effect.target)
+    const cookieIds = targetCandidates.map((cookie) => cookie.card.instanceId)
+    const invalidIds = targetIds.filter((id) => !cookieIds.includes(id))
+    if (invalidIds.length > 0) {
+      throw new GameRuleError(
+        isCycleHp ? 'Invalid HP cycle target.' : 'Invalid HP target.',
+      )
+    }
+    const selectedTargets = targetIds.filter((id) => cookieIds.includes(id))
+    if (selectedTargets.length > 1) {
+      throw new GameRuleError(
+        isCycleHp ? 'Invalid HP cycle target.' : 'Invalid HP target.',
+      )
+    }
+    const resolved = executeCardEffect(
+      state,
+      context,
+      effect,
+      selectedTargets,
+      options.shuffle,
+    )
+    if (resolved.status !== 'playing') {
+      return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
+    }
+    const targetSurvived =
+      selectedTargets.length > 0 &&
+      resolved.players[pending.sourcePlayerId].battleArea.some(
+        (cookie) => cookie.card.instanceId === selectedTargets[0],
+      )
+    // 第一階段未選目標（或 cycle-hp 目標昏厥離場）：技能直接結束，不進入
+    // 第二階段。
+    if (!targetSurvived) {
+      return continueAbilityQueue(resolved, pending, context, 1, continueBattle)
+    }
+    return {
+      ...resolved,
+      pendingAbilityEffect: {
+        ...pending,
+        pendingPlace: { targetInstanceId: selectedTargets[0] },
+      },
+    }
+  }
+
   const resolved = executeCardEffect(
     state,
     context,
@@ -1329,7 +1618,21 @@ const resolvePendingAbilityEffect = (
     targetIds,
     options.shuffle,
   )
-  const nextIndex = pending.effectIndex + 1
+  return continueAbilityQueue(resolved, pending, context, 1, continueBattle)
+}
+
+/**
+ * 效果結算成功後推進佇列；佇列跑完（或遊戲結束）時清除 pendingAbilityEffect，
+ * 並視 battleContinuation 補上欠戰鬥流程的動作。
+ */
+const continueAbilityQueue = (
+  resolved: GameState,
+  pending: NonNullable<GameState['pendingAbilityEffect']>,
+  context: EffectContext,
+  advance: number,
+  continueBattle: (candidate: GameState) => GameState,
+): GameState => {
+  const nextIndex = pending.effectIndex + advance
   if (resolved.status !== 'playing' || nextIndex >= pending.effects.length) {
     return continueBattle({ ...resolved, pendingAbilityEffect: undefined })
   }
@@ -1399,6 +1702,7 @@ const applyPlayerActionCommand = (
         command.sourceInstanceId,
       )
       const skill = source?.card.skill
+      const departedBefore = state.departedCookieCounts[command.playerId]
       const activated = activateCookieSkill(
         state,
         command.playerId,
@@ -1413,13 +1717,53 @@ const applyPlayerActionCommand = (
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
       )
+      // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再執行效果。
+      // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
+      const costFinalized = finalizeCostDeparture(
+        activated,
+        command.playerId,
+        departedBefore,
+      )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
         sourceInstanceId: command.sourceInstanceId,
         sourceCardName: source?.card.name,
       }
+      if (costFinalized.status !== 'playing') {
+        return costFinalized
+      }
+      const ownCostDeparture =
+        activated.departedCookieCounts[command.playerId] > departedBefore &&
+        shouldFinalizeCostDeparture(activated, command.playerId)
+      if (
+        ownCostDeparture &&
+        hasOwnReplacementTask(costFinalized, command.playerId)
+      ) {
+        // 代價致昏且戰鬥區清空：補位優先。效果改走 pendingAbilityEffect 佇列，
+        // 補位完成後由 resolve-ability-effect 依序結算（與 begin-activate-skill 一致）。
+        const effects = expandChooseOneSequence(
+          filterActiveEffects(costFinalized, context, skill?.effects ?? []),
+          command.chooseOneModes,
+        )
+        if (effects.length === 0) {
+          return costFinalized
+        }
+        return {
+          ...costFinalized,
+          pendingAbilityEffect: {
+            playerId: command.playerId,
+            sourcePlayerId: command.playerId,
+            sourceInstanceId: command.sourceInstanceId,
+            sourceCardName: source?.card.name,
+            sourceKind: 'skill',
+            trigger: command.trigger,
+            effects,
+            effectIndex: 0,
+          },
+        }
+      }
       return executeAbilityEffects(
-        activated,
+        costFinalized,
         context,
         skill?.effects ?? [],
         command.effectTargets,
@@ -1433,6 +1777,7 @@ const applyPlayerActionCommand = (
         command.sourceInstanceId,
       )
       const skill = source?.card.skill
+      const departedBefore = state.departedCookieCounts[command.playerId]
       const activated = activateCookieSkill(
         state,
         command.playerId,
@@ -1447,20 +1792,27 @@ const applyPlayerActionCommand = (
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
       )
+      // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再設定效果。
+      // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
+      const costFinalized = finalizeCostDeparture(
+        activated,
+        command.playerId,
+        departedBefore,
+      )
       const context: EffectContext = {
         sourcePlayerId: command.playerId,
         sourceInstanceId: command.sourceInstanceId,
         sourceCardName: source?.card.name,
       }
       const effects = expandChooseOneSequence(
-        filterActiveEffects(activated, context, skill?.effects ?? []),
+        filterActiveEffects(costFinalized, context, skill?.effects ?? []),
         command.chooseOneModes,
       )
-      if (activated.status !== 'playing' || effects.length === 0) {
-        return activated
+      if (costFinalized.status !== 'playing' || effects.length === 0) {
+        return costFinalized
       }
       const pendingState: GameState = {
-        ...activated,
+        ...costFinalized,
         pendingAbilityEffect: {
           playerId: command.playerId,
           sourcePlayerId: command.playerId,
@@ -1716,6 +2068,11 @@ const applyPlayerActionCommand = (
       return playBlocker(state, command.playerId, {
         sourceInstanceId: command.sourceInstanceId,
         paymentIds: command.paymentIds,
+      })
+    case 'play-attack-response':
+      return playAttackResponseSkill(state, command.playerId, {
+        sourceInstanceId: command.sourceInstanceId,
+        discardHandIds: command.discardHandIds,
       })
     case 'resolve-flip':
       return resolveFlip(state, command.playerId, {

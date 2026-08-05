@@ -316,6 +316,69 @@ describe('describeCommandSteps', () => {
   })
 })
 
+describe('effect resolution log outcome', () => {
+  it('reports the actual damage dealt by a resolved ability instead of only the target choice', () => {
+    const base = createBattleState()
+    const previous: GameState = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'defender',
+        sourceKind: 'skill',
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        effectIndex: 0,
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      pendingAbilityEffect: undefined,
+      players: {
+        ...previous.players,
+        'player-two': {
+          ...previous.players['player-two'],
+          battleArea: previous.players['player-two'].battleArea.map((cookie) =>
+            cookie.card.instanceId === 'attacker'
+              ? { ...cookie, hpCards: cookie.hpCards.slice(0, -1) }
+              : cookie,
+          ),
+        },
+      },
+    }
+
+    expect(
+      describeCommand(previous, next, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: [],
+      }),
+    ).toContain('「attacker」受到 1 點傷害')
+  })
+
+  it('reports when a damage effect resolves without dealing damage', () => {
+    const base = createBattleState()
+    const previous: GameState = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'defender',
+        sourceKind: 'skill',
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        effectIndex: 0,
+      },
+    }
+
+    expect(
+      describeCommand(previous, { ...previous, pendingAbilityEffect: undefined }, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: [],
+      }),
+    ).toContain('未造成傷害')
+  })
+})
+
 describe('resolveRevealedDamageCard (resolve-next-damage / resolve-flip)', () => {
   it('names the flipped HP card even when the battle finishes in the same command (card goes straight to discard)', () => {
     // 沒有 FLIP 能力的卡翻開後立刻進棄牌區；如果這次結算剛好讓 remainingDamage
@@ -362,6 +425,61 @@ describe('resolveRevealedDamageCard (resolve-next-damage / resolve-flip)', () =>
       `防守玩家 翻開了 HP 卡「${flippedHpCard.name}」`,
     )
     expect(resolveLogCard(previous, next, command)).toEqual(flippedHpCard)
+  })
+
+  it('states the actual target and damage for each step of a sequential effect-damage resolution', () => {
+    const base = createBattleState()
+    const flippedHpCard = base.players['player-one'].battleArea[0].hpCards[2]
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'fire-spirit',
+        targetInstanceId: 'defender',
+        damagePlayerId: 'player-one',
+        damageTargetInstanceId: 'defender',
+        stage: 'damage',
+        declaredDamage: 1,
+        remainingDamage: 1,
+        trapUsed: true,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        effectDamageSequence: {
+          remainingTargetInstanceIds: ['another-target'],
+          damage: 1,
+        },
+      } as GameState['pendingBattle'],
+    }
+    const next: GameState = {
+      ...previous,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: previous.players['player-one'].battleArea.map((cookie) =>
+            cookie.card.instanceId === 'defender'
+              ? { ...cookie, hpCards: cookie.hpCards.slice(0, -1) }
+              : cookie,
+          ),
+        },
+      },
+      pendingBattle: {
+        ...previous.pendingBattle!,
+        remainingDamage: 0,
+        revealedHpCard: flippedHpCard,
+      },
+    }
+
+    expect(
+      describeCommand(previous, next, {
+        kind: 'resolve-next-damage',
+        playerId: 'player-one',
+      }),
+    ).toContain('「defender」受到 1 點傷害')
   })
 
   it('falls back to the generic summary when this call did not reveal a new card', () => {

@@ -51,6 +51,9 @@ const getTargetSelector = (
   effect: CardEffect | null,
 ): EffectTargetSelector | null => {
   if (!effect) return null
+  if (effect.kind === 'damage-all' && effect.sequential) {
+    return effect.target ?? null
+  }
   if (effect.kind === 'gain-hp') {
     return effect.target?.sourceOnly ? null : (effect.target ?? null)
   }
@@ -151,8 +154,19 @@ export function useOnlinePendingEffect(params: {
     useState<AbilityCostDraft | null>(null)
 
   const pendingAbility = game.pendingAbilityEffect
+  // 與本地端 usePendingEffect 的面板建立條件一致：補位／Refresh／OnPlay
+  // 期間不顯示效果面板；攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，
+  // 例如 BS4-011）還要等本次戰鬥收尾與對手補位完成後才能結算。
   const abilityActiveForViewer = Boolean(
-    pendingAbility && pendingAbility.playerId === viewerPlayerId,
+    pendingAbility &&
+      pendingAbility.playerId === viewerPlayerId &&
+      // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp BS4-044）第二階段等待
+      // 放回手牌時，面板交給 PendingDecisionModals 的 place-hand-hp 提示。
+      !pendingAbility.pendingPlace &&
+      !game.pendingReplacement &&
+      !game.pendingRefresh &&
+      !game.pendingOnPlay &&
+      !(pendingAbility.trigger === 'attacker-faint' && game.pendingBattle),
   )
 
   const attackBattle = game.pendingBattle
@@ -284,6 +298,7 @@ export function useOnlinePendingEffect(params: {
     ? getHpToTrashCostCandidates(
         abilityCostDraft.ability.cost,
         game.players[viewerPlayerId].battleArea,
+        abilityCostDraft.card.instanceId,
       ).map((cookie) => cookie.card)
     : []
   const draftTrashBattleCookieCost =
@@ -361,6 +376,7 @@ export function useOnlinePendingEffect(params: {
         getHpToTrashCostCandidates(
           draft.ability.cost,
           game.players[viewerPlayerId].battleArea,
+          draft.card.instanceId,
         ).map((cookie) => cookie.card.instanceId),
       )
       if (!candidateIds.has(instanceId)) return draft
@@ -476,8 +492,14 @@ export function useOnlinePendingEffect(params: {
   const confirmEffect = () => {
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
-      const targetMin = currentTargetSelector?.min ?? displayedSelectionLimits?.min ?? 0
-      const targetMax = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 0
+      const sequentialAllTargets =
+        displayedEffect?.kind === 'damage-all' && displayedEffect.sequential
+      const targetMin = sequentialAllTargets
+        ? candidateCards.length
+        : (currentTargetSelector?.min ?? displayedSelectionLimits?.min ?? 0)
+      const targetMax = sequentialAllTargets
+        ? candidateCards.length
+        : (currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 0)
       const requiresTargetSelection =
         currentTargetSelector !== null || displayedSelectionLimits !== null
       if (
@@ -911,7 +933,7 @@ export function useOnlinePendingEffect(params: {
               } satisfies CardSkill),
           trigger: attackEffectActive
             ? 'activate'
-            : (pendingAbility?.trigger ?? 'activate'),
+            : (pendingAbility?.trigger === 'on-play' ? 'on-play' : 'activate'),
           effects: attackEffectActive
             ? (attackBattle?.attackEffects ?? [])
             : (pendingAbility?.effects ?? []),

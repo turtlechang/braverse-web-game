@@ -278,6 +278,7 @@ function App() {
     breakEffectTargetIds: pending.breakEffectTargetIds,
     selectedEffectTargetIds: pending.selectedEffectTargetIds,
     selectedSkillPaymentIds: pending.selectedSkillPaymentIds,
+    skillPaymentLabel: pending.skillPaymentLabel,
     skillPaymentTargetIds: pending.skillPaymentTargetIds,
     skillCostSupportTargetIds: pending.skillCostSupportTargetIds,
     selectedSkillCostSupportIds: pending.selectedSkillCostSupportToTrashIds,
@@ -438,7 +439,22 @@ function App() {
   }
 
   return (
-    <main className="game-shell" data-attention-state={attentionState}>
+    <main
+      className="game-shell"
+      data-attention-state={attentionState}
+      data-bs4-condition-card={
+        testStateConfig?.kind === 'bs4-condition'
+          ? testStateConfig.cardNumber
+          : undefined
+      }
+      data-bs4-condition-result={
+        testStateConfig?.kind === 'bs4-condition'
+          ? testStateConfig.conditionMet
+            ? 'met'
+            : 'unmet'
+          : undefined
+      }
+    >
       <div className="board-texture" />
 
       <MatchToolbar
