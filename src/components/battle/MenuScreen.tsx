@@ -85,7 +85,9 @@ export function MenuScreen({
   const selectedDeckValidation = useMemo(
     () =>
       selectedCustomDeck
-        ? validateCustomDeck(selectedCustomDeck.entries)
+        ? validateCustomDeck(selectedCustomDeck.entries, {
+            format: selectedCustomDeck.format,
+          })
         : null,
     [selectedCustomDeck],
   )

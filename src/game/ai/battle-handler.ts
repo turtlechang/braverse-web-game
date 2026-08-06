@@ -55,6 +55,13 @@ const chooseAttackEffectTargets = (
       .map((cookie) => cookie.card.instanceId)
   }
 
+  if (effect.kind === 'trash-to-deck') {
+    const candidates = getTrashToDeckCandidates(state, context, effect)
+    const count = Math.min(effect.max, candidates.length)
+    if (count < (effect.min ?? 0)) return []
+    return candidates.slice(0, count).map((card) => card.instanceId)
+  }
+
   if (!('target' in effect) || !effect.target) return []
 
   const candidates = getEffectTargetCandidates(state, context, effect.target)

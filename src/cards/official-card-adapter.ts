@@ -64,6 +64,10 @@ export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
     keywords.add('ancient')
   }
 
+  if (card.keywords.some((keyword) => keyword.replace(/[{}]/g, '').trim().toLowerCase() === 'dragon')) {
+    keywords.add('dragon')
+  }
+
   if (/^Soul Jam\s*:/i.test(card.name.trim())) {
     keywords.add('soul-jam')
   }
@@ -101,6 +105,23 @@ const normalizeOfficialCardRecord = (
       ...sourceCard,
       skill: { ...sourceCard.skill, text: sourceCard.attackText },
       attackText: sourceCard.flipText,
+      flipText: null,
+    }
+  }
+
+  // 官方 BS5-089@2 異圖把完整攻擊文字遺漏在 attackText，僅留下攻擊名稱
+  // 在 flipText；沿用同卡基礎版本的攻擊數值與 Then，避免異圖在正式牌池
+  // 被判定為 missing-attack-definition。
+  if (
+    sourceCard.cardNumber === 'BS5-089@2' &&
+    sourceCard.type === 'cookie' &&
+    !sourceCard.attackText &&
+    /Kettlebell Throw/i.test(sourceCard.flipText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      attackText:
+        '<{P}{P}> Kettlebell Throw {da} 2 Then, place up to 3 cards from the top of your deck into the trash.',
       flipText: null,
     }
   }

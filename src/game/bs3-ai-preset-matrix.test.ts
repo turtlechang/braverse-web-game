@@ -21,7 +21,9 @@ describe('第三彈 AI 預設牌組', () => {
   it.each(BS3_AI_PRESET_DECK_CHOICES)(
     '%s 可由正式卡池建立為合法 60 張牌組',
     (deckChoice) => {
-      const validation = validateCustomDeck(OFFICIAL_DECK_RECIPES[deckChoice])
+      const validation = validateCustomDeck(OFFICIAL_DECK_RECIPES[deckChoice], {
+        format: 'open',
+      })
 
       expect(validation.errors).toEqual([])
       expect(validation.stats.totalCards).toBe(60)

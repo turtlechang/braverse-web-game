@@ -1,20 +1,26 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { CustomDeck, CustomDeckEntry } from '../game/custom-deck'
 import {
-  MAX_COPIES_PER_CARD,
   validateCustomDeck,
 } from '../game/custom-deck'
 import type { CardPoolEntry } from '../game/card-pool'
 import { getAllCardPoolEntries, normalizeCardNumber } from '../game/card-pool'
+import {
+  DEFAULT_DECK_FORMAT,
+  getDeckCopyLimit,
+  type DeckFormat,
+} from '../game/deck-rules'
 
 const CARD_NUMBER_SERIES_PREFIXES: Record<string, string> = {
   BS3: 'BS3-',
   BS4: 'BS4-',
+  BS5: 'BS5-',
 }
 
 export interface DeckEditorState {
   deckEntries: CustomDeckEntry[]
   deckName: string
+  deckFormat: DeckFormat
   searchText: string
   filterColor: string | null
   filterType: string | null
@@ -30,6 +36,7 @@ export interface DeckEditorActions {
   removeCard: (cardNumber: string) => void
   setCardCount: (cardNumber: string, count: number) => void
   setDeckName: (name: string) => void
+  setDeckFormat: (format: DeckFormat) => void
   setSearchText: (text: string) => void
   setFilterColor: (color: string | null) => void
   setFilterType: (type: string | null) => void
@@ -53,6 +60,7 @@ export function useDeckEditor(): DeckEditorState &
   DeckEditorActions &
   DeckEditorDerived {
   const [deckEntries, setDeckEntries] = useState<CustomDeckEntry[]>([])
+  const [deckFormat, setDeckFormat] = useState<DeckFormat>(DEFAULT_DECK_FORMAT)
   const [deckName, setDeckName] = useState('我的牌組')
   const [searchText, setSearchText] = useState('')
   const [filterColor, setFilterColor] = useState<string | null>(null)
@@ -67,10 +75,12 @@ export function useDeckEditor(): DeckEditorState &
     const raw = cardNumber
     setDeckEntries((prev) => {
       const base = normalizeCardNumber(raw)
+      const copyLimit = getDeckCopyLimit(base, deckFormat)
+      if (copyLimit === 0) return prev
       const totalForBase = prev
         .filter((e) => normalizeCardNumber(e.cardNumber) === base)
         .reduce((sum, e) => sum + e.count, 0)
-      if (totalForBase >= MAX_COPIES_PER_CARD) return prev
+      if (totalForBase >= copyLimit) return prev
       const existing = prev.find((e) => e.cardNumber === raw)
       if (existing) {
         return prev.map((e) =>
@@ -79,7 +89,7 @@ export function useDeckEditor(): DeckEditorState &
       }
       return [...prev, { cardNumber: raw, count: 1 }]
     })
-  }, [])
+  }, [deckFormat])
 
   const removeCard = useCallback((cardNumber: string) => {
     const raw = cardNumber
@@ -100,15 +110,23 @@ export function useDeckEditor(): DeckEditorState &
     if (count < 0) return
     setDeckEntries((prev) => {
       const base = normalizeCardNumber(raw)
+      const copyLimit = getDeckCopyLimit(base, deckFormat)
+      if (copyLimit === 0) {
+        return prev.filter((e) => normalizeCardNumber(e.cardNumber) !== base)
+      }
       const totalForBase = prev
         .filter((e) => normalizeCardNumber(e.cardNumber) === base)
         .reduce((sum, e) => sum + e.count, 0)
-      const remainingForBase = Math.max(0, MAX_COPIES_PER_CARD - totalForBase)
       if (count === 0) {
         return prev.filter((e) => e.cardNumber !== raw)
       }
-      const clamped = Math.min(count, remainingForBase)
       const existing = prev.find((e) => e.cardNumber === raw)
+      const currentCount = existing?.count ?? 0
+      const otherTotal = totalForBase - currentCount
+      const clamped = Math.min(count, Math.max(0, copyLimit - otherTotal))
+      if (clamped === 0) {
+        return prev.filter((e) => e.cardNumber !== raw)
+      }
       if (existing) {
         return prev.map((e) =>
           e.cardNumber === raw ? { ...e, count: clamped } : e,
@@ -116,7 +134,7 @@ export function useDeckEditor(): DeckEditorState &
       }
       return [...prev, { cardNumber: raw, count: clamped }]
     })
-  }, [])
+  }, [deckFormat])
 
   const clearDeck = useCallback(() => {
     setDeckEntries([])
@@ -125,6 +143,7 @@ export function useDeckEditor(): DeckEditorState &
   const loadDeck = useCallback((deck: CustomDeck) => {
     setDeckEntries(deck.entries.map((entry) => ({ ...entry })))
     setDeckName(deck.name)
+    setDeckFormat(deck.format ?? DEFAULT_DECK_FORMAT)
   }, [])
 
   const getFilteredPool = useCallback((): CardPoolEntry[] => {
@@ -199,13 +218,14 @@ export function useDeckEditor(): DeckEditorState &
   }, [deckEntries])
 
   const deckValidation = useMemo(
-    () => validateCustomDeck(deckEntries),
-    [deckEntries],
+    () => validateCustomDeck(deckEntries, { format: deckFormat }),
+    [deckEntries, deckFormat],
   )
 
   return {
     deckEntries,
     deckName,
+    deckFormat,
     searchText,
     filterColor,
     filterType,
@@ -218,6 +238,7 @@ export function useDeckEditor(): DeckEditorState &
     removeCard,
     setCardCount,
     setDeckName,
+    setDeckFormat,
     setSearchText,
     setFilterColor,
     setFilterType,

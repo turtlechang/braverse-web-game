@@ -1,6 +1,11 @@
 import type { OfficialCardRecord } from '../cards/types'
 import { getCardPoolEntry, normalizeCardNumber } from './card-pool'
 import { createCard } from './starter-deck'
+import {
+  DEFAULT_DECK_FORMAT,
+  validateFormatRestrictions,
+  type DeckFormat,
+} from './deck-rules'
 import type { GameCard, PlayerId } from './types'
 
 const canonicalizeEntry = (entry: CustomDeckEntry): CustomDeckEntry => {
@@ -18,6 +23,7 @@ export interface CustomDeck {
   id: string
   name: string
   entries: CustomDeckEntry[]
+  format?: DeckFormat
   createdAt: string
   updatedAt: string
 }
@@ -121,6 +127,7 @@ export const duplicateCustomDeck = (
     id: createCustomDeckId(),
     name: `${source.name}（複製）`,
     entries: source.entries.map((entry) => ({ ...entry })),
+    format: source.format ?? DEFAULT_DECK_FORMAT,
     createdAt: now,
     updatedAt: now,
   }
@@ -131,7 +138,9 @@ export const duplicateCustomDeck = (
 
 export const validateCustomDeck = (
   entries: CustomDeckEntry[],
+  options: { format?: DeckFormat } = {},
 ): DeckValidationResult => {
+  const format = options.format ?? DEFAULT_DECK_FORMAT
   const errors: string[] = []
   const countsByCardNumber = new Map<string, number>()
   let totalCount = 0
@@ -194,6 +203,8 @@ export const validateCustomDeck = (
     errors.push(`FLIP 卡不得超過 ${MAX_FLIP_CARDS} 張，目前為 ${flipCards} 張`)
   }
 
+  errors.push(...validateFormatRestrictions(entries, format))
+
   const isValid = errors.length === 0
 
   return {
@@ -235,6 +246,7 @@ export const createDeckFromCustomDeck = (
 export interface ExportableDeck {
   name: string
   entries: { cardNumber: string; count: number }[]
+  format?: DeckFormat
 }
 
 export const exportDeck = (deck: CustomDeck): string => {
@@ -244,6 +256,7 @@ export const exportDeck = (deck: CustomDeck): string => {
       cardNumber: e.cardNumber,
       count: e.count,
     })),
+    format: deck.format ?? DEFAULT_DECK_FORMAT,
   }
   return JSON.stringify(data, null, 2)
 }
@@ -277,7 +290,12 @@ export const importDeck = (
       entries.push({ cardNumber, count: Math.floor(entry.count) })
     }
 
-    const validation = validateCustomDeck(entries)
+    const rawFormat = data.format
+    if (rawFormat !== undefined && rawFormat !== 'open' && rawFormat !== 'standard') {
+      return { deck: null, error: '牌組賽制只能是 open 或 standard。' }
+    }
+    const format = rawFormat ?? DEFAULT_DECK_FORMAT
+    const validation = validateCustomDeck(entries, { format })
     if (!validation.valid) {
       return { deck: null, error: validation.errors.join('；') }
     }
@@ -287,6 +305,7 @@ export const importDeck = (
       id: `imported-${Date.now()}`,
       name: data.name,
       entries,
+      format,
       createdAt: now,
       updatedAt: now,
     }

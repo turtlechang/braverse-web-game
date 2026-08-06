@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  beginAttack,
+  executeCardEffect,
+  getAttackDamageAgainst,
   refreshDeck,
   resolveFlip,
   resolveNextDamage,
   skipTrap,
+  type CardEffect,
   type GameCard,
 } from '.'
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
@@ -382,5 +386,131 @@ describe('pending battle and FLIP', () => {
       .toEqual(expect.arrayContaining(['p1-hand-a', 'conditional-flip-met']))
     expect(state.players['player-one'].battleArea[0].hpCards.length).toBe(2)
     expect(state.pendingBattle?.stage).toBe('damage')
+  })
+
+  it('re-evaluates BS5-111 attack damage when a FLIP lowers the attacker to 3 HP', () => {
+    const kumihoFlip: GameCard = {
+      ...cookie('BS1-002'),
+      name: 'Kumiho Cookie',
+      officialType: 'flip',
+      flip: {
+        text: 'Discard 1 card. Select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+      },
+    }
+    const equipEffect: CardEffect = {
+      kind: 'equip-source',
+      target: { side: 'self', min: 1, max: 1 },
+      requiredKeyword: 'dragon',
+      bonusMaxRemainingHp: 3,
+      attackBonus: 1,
+      damageReceivedReduction: 1,
+    }
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: {
+        ...state.players['player-two'].battleArea[0].card,
+        hp: 5,
+        keywords: ['dragon'],
+      },
+      hpCards: [
+        item('attacker-hp-1'),
+        item('attacker-hp-2'),
+        item('attacker-hp-3'),
+        item('attacker-hp-4'),
+      ],
+    }
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('defender-hp-bottom'),
+      kumihoFlip,
+    ]
+    state.players['player-two'].discardPile = [item('wrath-of-the-dragons')]
+    state = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-two', sourceInstanceId: 'wrath-of-the-dragons' },
+      equipEffect,
+      ['attacker'],
+    )
+
+    state = beginAttack(state, 'attacker', 'defender', ['p2-support'])
+    expect(state.pendingBattle).toMatchObject({
+      declaredDamage: 3,
+      remainingDamage: 3,
+    })
+    state = resolveNextDamage(skipTrap(state, 'player-one'))
+    expect(state.pendingBattle?.stage).toBe('flip')
+
+    state = resolveFlip(state, 'player-one', {
+      activate: true,
+      discardHandIds: ['p1-hand-a'],
+      targetIds: ['attacker'],
+    })
+
+    expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(3)
+    expect(state.pendingBattle).toMatchObject({
+      declaredDamage: 4,
+      remainingDamage: 3,
+      stage: 'damage',
+    })
+  })
+
+  it('does not apply BS5-111 received-damage reduction retroactively mid-attack', () => {
+    const equipEffect: CardEffect = {
+      kind: 'equip-source',
+      target: { side: 'self', min: 1, max: 1 },
+      requiredKeyword: 'dragon',
+      bonusMaxRemainingHp: 3,
+      attackBonus: 1,
+      damageReceivedReduction: 1,
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0] = {
+      ...state.players['player-one'].battleArea[0],
+      card: {
+        ...state.players['player-one'].battleArea[0].card,
+        hp: 5,
+        keywords: ['dragon'],
+      },
+      hpCards: [
+        item('target-hp-1'),
+        item('target-hp-2'),
+        item('target-hp-3'),
+        item('target-hp-4'),
+        item('target-hp-5'),
+      ],
+    }
+    state.players['player-two'].battleArea[0].card = {
+      ...state.players['player-two'].battleArea[0].card,
+      attack: 4,
+    }
+    state.players['player-one'].discardPile = [item('wrath-of-the-dragons')]
+    state = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'wrath-of-the-dragons' },
+      equipEffect,
+      ['defender'],
+    )
+
+    state = skipTrap(
+      beginAttack(state, 'attacker', 'defender', ['p2-support']),
+      'player-one',
+    )
+    expect(state.pendingBattle).toMatchObject({
+      declaredDamage: 4,
+      remainingDamage: 4,
+    })
+    for (let i = 0; i < 4; i += 1) {
+      state = resolveNextDamage(state)
+    }
+
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+    expect(getAttackDamageAgainst(state, 'attacker', 'defender')).toBe(3)
   })
 })

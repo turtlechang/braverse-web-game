@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import inventory from '../data/candidates/official-age-of-heroes-and-kingdoms-bs5.en.json'
+import officialBs5Dataset from '../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
 import {
   convertOfficialAttackEffects,
   convertOfficialCardEffects,
@@ -231,7 +231,7 @@ export const createBs5EffectCoverageMarkdown = (
   report: Bs5EffectCoverageReport,
 ) => `# BS5 效果轉接覆蓋盤點
 
-> 由 ${markdownCode('npm run cards:analyze:bs5-candidate')} 產生。資料來源仍是 ${markdownCode('data/candidates/')} 的 ${markdownCode('inventory')} 候選快照；此報告是 runtime 與 Chrome 稽核待辦，不代表可 promote。
+> 由 ${markdownCode('npm run cards:analyze:bs5-candidate')} 產生。資料來源是 ${markdownCode('data/cards/')} 的 BS5 正式卡池；此報告追蹤 runtime 轉接與 Chrome 稽核狀態。
 
 ## 摘要
 
@@ -269,18 +269,27 @@ ${pendingTable(report.pendingAbilityCards)}
 | --- | --- | --- | --- | --- |
 ${pendingTable(report.pendingAttackThenCards)}
 
+## Chrome 實戰驗證（2026-08-06）
+
+| 類別 | 卡號 | 驗證內容 |
+| --- | --- | --- |
+| 陷阱主效果 | BS5-087、BS5-109 | 實際 Chrome 驗證陷阱支付、攻擊目標、條件成立／不成立與 Then；BS5-087 另驗證抽牌選擇與攻擊結算銜接 |
+| 攻擊後 Then | BS5-067、BS5-071、BS5-080、BS5-085、BS5-089、BS5-094、BS5-097、BS5-098、BS5-099、BS5-106 | 實際 Chrome 驗證提示框、支付／代價、目標、可選數量、牌庫／棄牌區變化與 Then 連續結算 |
+
+BS5-098 已補上來源餅乾因支付最後一張 HP 而離場後，仍能建立並完成下一段攻擊後效果的回歸測試。BS5-109 的兩段「最多選擇 1 張對手餅乾」目前沿用陷阱流程的單一對手目標選擇；選擇同一張目標的實戰路徑已驗證，若要支援兩段各自選擇不同目標，仍需後續擴充 per-effect target UI／command payload。
+
 ## Promotion 門檻
 
 1. 本表的三個待轉接區塊皆為 0，且每張卡都有對應單元測試或專用 test-state。
 2. 每色均完成 Chrome 的合法與不合法互動路徑，包含支付、代價、目標、選擇、可略過與 Then。
-3. 候選仍保持 ${markdownCode('candidateStatus: inventory')}；未完成上述門檻前不得執行 ${markdownCode('promote:candidate')}。
+3. BS5 已完成本批次 promote；後續官方更新仍須重新走候選資料、runtime、測試與 Chrome 稽核流程。
 `
 
 export const writeBs5EffectCoverage = async (
   output = DEFAULT_BS5_EFFECT_COVERAGE_OUTPUT,
 ) => {
   const report = analyzeBs5EffectCoverage(
-    inventory.cards as OfficialCardRecord[],
+    officialBs5Dataset.cards as OfficialCardRecord[],
   )
   const markdown = createBs5EffectCoverageMarkdown(report)
   const outputPath = resolve(output)

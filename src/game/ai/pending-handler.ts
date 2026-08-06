@@ -32,6 +32,17 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
     state.pendingRefresh ||
       state.pendingOnPlay ||
       state.pendingReplacement ||
+      state.pendingEffectOrder ||
+      (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
+      (state.pendingAfterDamageEffects &&
+        state.pendingAfterDamageEffects.length > 0) ||
+      state.pendingOpponentHandDiscard ||
+      state.pendingOpponentRestSupport ||
+      state.pendingInspectDeck ||
+      state.pendingRevealTopDeck ||
+      state.pendingOptionalCostAttack ||
+      state.pendingDrawUpTo ||
+      state.pendingStageTrigger ||
       // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
       state.pendingAbilityEffect?.pendingPlace ||
       (state.pendingBattle &&

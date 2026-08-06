@@ -1,0 +1,21 @@
+{
+  "name": "BS5 黃｜標準賽制",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS5-023", "count": 4 },
+    { "cardNumber": "BS5-024", "count": 4 },
+    { "cardNumber": "BS5-026", "count": 4 },
+    { "cardNumber": "BS5-028", "count": 4 },
+    { "cardNumber": "BS5-029", "count": 4 },
+    { "cardNumber": "BS5-032", "count": 4 },
+    { "cardNumber": "BS5-034", "count": 4 },
+    { "cardNumber": "BS5-025", "count": 4 },
+    { "cardNumber": "BS5-036", "count": 4 },
+    { "cardNumber": "BS5-038", "count": 4 },
+    { "cardNumber": "BS5-039", "count": 4 },
+    { "cardNumber": "BS5-040", "count": 4 },
+    { "cardNumber": "BS5-042", "count": 4 },
+    { "cardNumber": "BS5-043", "count": 4 },
+    { "cardNumber": "BS5-044", "count": 4 }
+  ]
+}

@@ -1,6 +1,12 @@
 import { collectAfterDamageEffectsFromIds } from '../afterDamage'
 import { GameRuleError } from '../errors'
-import { defaultShuffle, drawCards, getOpponentId, updatePlayer } from '../helpers'
+import {
+  defaultShuffle,
+  drawCards,
+  getCookieEffectiveHp,
+  getOpponentId,
+  updatePlayer,
+} from '../helpers'
 import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
@@ -1414,7 +1420,14 @@ export const executeCardEffect = (
     const targets = selectEffectTargets(state, context, effect.target, selectedTargetIds)
     if (targets.length === 0) return { ...state }
     const target = targets[0]
-    if (target.card.id !== effect.requiredCookieId) {
+    if (
+      (effect.requiredCookieId !== undefined &&
+        target.card.id !== effect.requiredCookieId) ||
+      (effect.requiredKeyword !== undefined &&
+        !target.card.keywords?.includes(effect.requiredKeyword)) ||
+      (effect.maxRemainingHp !== undefined &&
+        getCookieEffectiveHp(target) > effect.maxRemainingHp)
+    ) {
       throw new GameRuleError('Invalid Equip target.')
     }
     const player = state.players[context.sourcePlayerId]
@@ -1447,20 +1460,37 @@ export const executeCardEffect = (
           : cookie,
       ),
     })
-    return effect.attackBonus
+    const attackModifier = effect.attackBonus !== undefined
       ? {
-          ...updatedState,
-          attackModifiers: [
-            ...updatedState.attackModifiers,
-            {
-              sourceInstanceId: source.instanceId,
-              targetInstanceId: targetId,
-              amount: effect.attackBonus,
-              expiresAfterTurn: null,
-            },
-          ],
+          sourceInstanceId: source.instanceId,
+          targetInstanceId: targetId,
+          amount: effect.attackBonus,
+          expiresAfterTurn: null,
+          ...(effect.bonusMaxRemainingHp === undefined
+            ? {}
+            : { maxTargetRemainingHp: effect.bonusMaxRemainingHp }),
         }
-      : updatedState
+      : undefined
+    const damageReceivedModifier = effect.damageReceivedReduction !== undefined
+      ? {
+          sourceInstanceId: source.instanceId,
+          targetInstanceId: targetId,
+          amount: -effect.damageReceivedReduction,
+          expiresAfterTurn: null,
+          ...(effect.bonusMaxRemainingHp === undefined
+            ? {}
+            : { maxTargetRemainingHp: effect.bonusMaxRemainingHp }),
+        }
+      : undefined
+    return {
+      ...updatedState,
+      attackModifiers: attackModifier
+        ? [...updatedState.attackModifiers, attackModifier]
+        : updatedState.attackModifiers,
+      damageReceivedModifiers: damageReceivedModifier
+        ? [...updatedState.damageReceivedModifiers, damageReceivedModifier]
+        : updatedState.damageReceivedModifiers,
+    }
   }
 
   if (effect.kind === 'support-to-trash') {
@@ -1900,7 +1930,23 @@ export const executeCardEffect = (
           cookie,
           targetPlayerId,
           context.sourcePlayerId,
+          {
+            attackTargetOnly: effect.target.attackTargetOnly,
+            attackTargetInstanceId: state.pendingBattle?.targetInstanceId,
+          },
         )
+      ) {
+        return false
+      }
+      if (
+        effect.target.attackTargetOnly &&
+        cookie.card.instanceId !== state.pendingBattle?.targetInstanceId
+      ) {
+        return false
+      }
+      if (
+        effect.target.excludeAttackTarget &&
+        cookie.card.instanceId === state.pendingBattle?.targetInstanceId
       ) {
         return false
       }
@@ -2098,6 +2144,9 @@ export const executeCardEffect = (
     const uniqueIds = [...new Set(selectedTargetIds)]
     if (uniqueIds.length > effect.max) {
       throw new GameRuleError(`最多只能選擇 ${effect.max} 張棄牌區卡牌。`)
+    }
+    if (uniqueIds.length < (effect.min ?? 0)) {
+      throw new GameRuleError(`至少必須選擇 ${effect.min ?? 0} 張棄牌區卡牌。`)
     }
     if (uniqueIds.length === 0) {
       return { ...state }
@@ -2845,6 +2894,7 @@ export const executeCardEffect = (
           filterColor: effect.filterColor,
           filterType: effect.filterType,
           optionalPick: effect.optionalPick,
+          extraHp: effect.extraHp,
         },
       }
     }
@@ -2863,6 +2913,7 @@ export const executeCardEffect = (
         filterColor: effect.filterColor,
         filterType: effect.filterType,
         optionalPick: effect.optionalPick,
+        extraHp: effect.extraHp,
       },
     }
   }

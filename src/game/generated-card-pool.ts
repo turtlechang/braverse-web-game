@@ -4,26 +4,28 @@
  */
 import official_age_of_heroes_and_kingdoms_bs3_en_json_0 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import official_age_of_heroes_and_kingdoms_bs4_en_json_1 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json'
-import official_brave_beginning_bs1_en_json_2 from '../../data/cards/official-brave-beginning-bs1.en.json'
-import official_brave_beginning_bs2_en_json_3 from '../../data/cards/official-brave-beginning-bs2.en.json'
-import official_promotion_p001_p032_remaining_en_json_4 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
-import official_promotion_p001_p032_en_json_5 from '../../data/cards/official-promotion-p001-p032.en.json'
-import official_sample_en_json_6 from '../../data/cards/official-sample.en.json'
-import official_starter_deck_blue_en_json_7 from '../../data/cards/official-starter-deck-blue.en.json'
-import official_starter_deck_green_en_json_8 from '../../data/cards/official-starter-deck-green.en.json'
-import official_starter_deck_purple_en_json_9 from '../../data/cards/official-starter-deck-purple.en.json'
-import official_starter_deck_yellow_en_json_10 from '../../data/cards/official-starter-deck-yellow.en.json'
+import official_age_of_heroes_and_kingdoms_bs5_en_json_2 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
+import official_brave_beginning_bs1_en_json_3 from '../../data/cards/official-brave-beginning-bs1.en.json'
+import official_brave_beginning_bs2_en_json_4 from '../../data/cards/official-brave-beginning-bs2.en.json'
+import official_promotion_p001_p032_remaining_en_json_5 from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
+import official_promotion_p001_p032_en_json_6 from '../../data/cards/official-promotion-p001-p032.en.json'
+import official_sample_en_json_7 from '../../data/cards/official-sample.en.json'
+import official_starter_deck_blue_en_json_8 from '../../data/cards/official-starter-deck-blue.en.json'
+import official_starter_deck_green_en_json_9 from '../../data/cards/official-starter-deck-green.en.json'
+import official_starter_deck_purple_en_json_10 from '../../data/cards/official-starter-deck-purple.en.json'
+import official_starter_deck_yellow_en_json_11 from '../../data/cards/official-starter-deck-yellow.en.json'
 
 export const officialCardDatasets = [
   official_age_of_heroes_and_kingdoms_bs3_en_json_0,
   official_age_of_heroes_and_kingdoms_bs4_en_json_1,
-  official_brave_beginning_bs1_en_json_2,
-  official_brave_beginning_bs2_en_json_3,
-  official_promotion_p001_p032_remaining_en_json_4,
-  official_promotion_p001_p032_en_json_5,
-  official_sample_en_json_6,
-  official_starter_deck_blue_en_json_7,
-  official_starter_deck_green_en_json_8,
-  official_starter_deck_purple_en_json_9,
-  official_starter_deck_yellow_en_json_10,
+  official_age_of_heroes_and_kingdoms_bs5_en_json_2,
+  official_brave_beginning_bs1_en_json_3,
+  official_brave_beginning_bs2_en_json_4,
+  official_promotion_p001_p032_remaining_en_json_5,
+  official_promotion_p001_p032_en_json_6,
+  official_sample_en_json_7,
+  official_starter_deck_blue_en_json_8,
+  official_starter_deck_green_en_json_9,
+  official_starter_deck_purple_en_json_10,
+  official_starter_deck_yellow_en_json_11,
 ] as const

@@ -139,7 +139,13 @@ export const validateCardEffectSemantics = (
     }
   }
 
-  if (entry.type === 'flip' && entry.flipText && (!card.flip || card.flip.effects.length === 0)) {
+  if (
+    entry.type === 'flip' &&
+    entry.flipText &&
+    (!card.flip ||
+      (card.flip.effects.length === 0 &&
+        card.flip.attachedHpBonus === undefined))
+  ) {
     errors.push(`${label}: FLIP 文字必須轉出含至少 1 個效果的 flip`)
   }
   if (entry.type === 'item' && entry.attackText && (!card.item || card.item.effects.length === 0)) {

@@ -30,6 +30,7 @@
     "cards:import:bs5-candidate": "node scripts/import-bs5-candidates.mjs",
     "cards:analyze:bs5-candidate": "tsx scripts/analyze-bs5-effect-coverage.ts",
     "benchmark:bs4-decks": "tsx scripts/benchmark-bs4-decks.ts",
+    "benchmark:bs5-decks": "tsx scripts/benchmark-bs5-decks.ts",
     "lint": "eslint .",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test": "vitest run",

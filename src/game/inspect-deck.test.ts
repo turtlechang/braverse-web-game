@@ -644,4 +644,47 @@ describe('inspect-deck with filterColor', () => {
     expect(result.players['player-one'].deck).toHaveLength(3)
     expect(result.players['player-one'].deck.map((c) => c.instanceId)).toEqual(allIds)
   })
+
+  it('plays a picked Cookie with the converted extra HP amount', () => {
+    const pickedCookie = { ...coloredCookie('blue-cookie', 'blue'), hp: 2 }
+    const restCards = [
+      { id: 'rest-1', instanceId: 'rest-1', name: 'rest-1', type: 'item' as const },
+      { id: 'rest-2', instanceId: 'rest-2', name: 'rest-2', type: 'item' as const },
+    ]
+    const hpCards = [
+      { id: 'hp-1', instanceId: 'hp-1', name: 'hp-1', type: 'item' as const },
+      { id: 'hp-2', instanceId: 'hp-2', name: 'hp-2', type: 'item' as const },
+      { id: 'hp-3', instanceId: 'hp-3', name: 'hp-3', type: 'item' as const },
+    ]
+    const state = createDeckState([pickedCookie, ...restCards, ...hpCards])
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: 'tales-of-the-lotus',
+    }
+    const withPending = executeCardEffect(state, context, {
+      kind: 'inspect-deck',
+      lookCount: 3,
+      pickCount: 1,
+      restDestination: 'bottom',
+      pickDestination: 'battle',
+      filterColor: 'blue',
+      filterType: 'cookie',
+      optionalPick: true,
+      extraHp: 1,
+    }, [])
+    const pending = withPending.pendingInspectDeck!
+    expect(pending.extraHp).toBe(1)
+
+    const pickedId = pending.revealedCards[0].instanceId
+    const restOrder = pending.revealedCards
+      .filter((card) => card.instanceId !== pickedId)
+      .map((card) => card.instanceId)
+    const result = resolveInspectDeck(withPending, 'player-one', [pickedId], restOrder)
+
+    const playedCookie = result.players['player-one'].battleArea.find(
+      (cookie) => cookie.card.instanceId === pickedId,
+    )
+    expect(playedCookie).toBeDefined()
+    expect(playedCookie?.hpCards).toHaveLength(3)
+  })
 })

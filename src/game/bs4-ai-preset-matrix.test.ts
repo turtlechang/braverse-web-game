@@ -8,7 +8,9 @@ import {
 
 describe('BS4 AI preset decks', () => {
   it.each(BS4_AI_PRESET_DECK_CHOICES)('%s is a valid 60-card deck', (deckChoice) => {
-    const validation = validateCustomDeck(OFFICIAL_DECK_RECIPES[deckChoice])
+    const validation = validateCustomDeck(OFFICIAL_DECK_RECIPES[deckChoice], {
+      format: 'open',
+    })
 
     expect(validation.errors).toEqual([])
     expect(validation.stats.totalCards).toBe(60)

@@ -294,6 +294,45 @@ describe('createCardCheckDemoState', () => {
       expect.objectContaining({ id: 'BS3-004' }),
     )
   })
+
+  it('prepares BS5 condition card-check fixtures for both target and Then paths', () => {
+    const trap087 = createCardCheckDemoState('BS5-087')
+    expect(
+      trap087.players['player-one'].breakArea.reduce(
+        (total, card) => total + card.level,
+        0,
+      ),
+    ).toBeGreaterThanOrEqual(6)
+
+    const trap109 = createCardCheckDemoState('BS5-109')
+    expect(
+      trap109.players['player-two'].battleArea.some(
+        (entry) => entry.card.level === 1,
+      ),
+    ).toBe(true)
+
+    const attack071 = createCardCheckDemoState('BS5-071')
+    expect(attack071.players['player-one'].hand).toHaveLength(2)
+
+    const attack098 = createCardCheckDemoState('BS5-098')
+    expect(attack098.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+
+    const attack094 = createCardCheckDemoState('BS5-094')
+    expect(
+      attack094.players['player-one'].discardPile.filter(
+        (card) =>
+          card.id.startsWith('BS5-094-purple-cookie-') &&
+          card.type === 'cookie' &&
+          card.energyColor === 'purple' &&
+          !card.flip,
+      ),
+    ).toHaveLength(5)
+
+    for (const cardNumber of ['BS5-085', 'BS5-097'] as const) {
+      const state = createCardCheckDemoState(cardNumber)
+      expect(state.pendingBattle?.faintedColors).toEqual(['yellow'])
+    }
+  })
 })
 
 const findCardInState = (state: ReturnType<typeof createBs4ConditionDemoState>, cardNumber: string): GameCard => {

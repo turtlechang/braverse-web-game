@@ -206,7 +206,10 @@ export const resolveInspectDeck = (
       if (pickedCard.type !== 'cookie') {
         throw new GameRuleError('只有 Cookie 可以直接登場。')
       }
-      const hpCards = player.deck.slice(0, pickedCard.hp)
+      const hpCards = player.deck.slice(
+        0,
+        pickedCard.hp + (pending.extraHp ?? 0),
+      )
       playedCookies.push(pickedCard)
       player = {
         ...player,

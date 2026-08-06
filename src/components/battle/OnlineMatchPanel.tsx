@@ -23,7 +23,9 @@ export function OnlineMatchPanel({ decks, onClose }: OnlineMatchPanelProps) {
 
   const selectedDeck = decks.find((deck) => deck.id === selectedDeckId) ?? null
   const selectedDeckValidation = selectedDeck
-    ? validateCustomDeck(selectedDeck.entries)
+    ? validateCustomDeck(selectedDeck.entries, {
+        format: selectedDeck.format,
+      })
     : null
 
   const handleClose = () => {

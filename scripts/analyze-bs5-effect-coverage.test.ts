@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import inventory from '../data/candidates/official-age-of-heroes-and-kingdoms-bs5.en.json'
+import officialBs5Dataset from '../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
 import type { OfficialCardRecord } from '../src/cards/types'
 import {
   analyzeBs5EffectCoverage,
@@ -9,7 +9,7 @@ import {
 describe('BS5 effect coverage analysis', () => {
   it('audits only base card numbers and accounts for every primary conversion', () => {
     const report = analyzeBs5EffectCoverage(
-      inventory.cards as OfficialCardRecord[],
+      officialBs5Dataset.cards as OfficialCardRecord[],
     )
 
     expect(report.baseCardCount).toBe(111)
@@ -26,7 +26,7 @@ describe('BS5 effect coverage analysis', () => {
 
   it('keeps every colour visible in the audit matrix', () => {
     const report = analyzeBs5EffectCoverage(
-      inventory.cards as OfficialCardRecord[],
+      officialBs5Dataset.cards as OfficialCardRecord[],
     )
 
     expect(Object.keys(report.byColor)).toEqual(
@@ -41,12 +41,14 @@ describe('BS5 effect coverage analysis', () => {
 
   it('renders runtime and promotion gates with the pending card tables', () => {
     const markdown = createBs5EffectCoverageMarkdown(
-      analyzeBs5EffectCoverage(inventory.cards as OfficialCardRecord[]),
+      analyzeBs5EffectCoverage(officialBs5Dataset.cards as OfficialCardRecord[]),
     )
 
     expect(markdown).toContain('# BS5 效果轉接覆蓋盤點')
     expect(markdown).toContain('## 逐色稽核矩陣')
+    expect(markdown).toContain('## Chrome 實戰驗證（2026-08-06）')
+    expect(markdown).toContain('BS5-098 已補上來源餅乾')
     expect(markdown).toContain('## Promotion 門檻')
-    expect(markdown).toContain('不得執行 `promote:candidate`')
+    expect(markdown).toContain('後續官方更新仍須重新走候選資料')
   })
 })
