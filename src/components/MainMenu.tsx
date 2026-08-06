@@ -4,6 +4,7 @@ import type { AiLevel, DeckChoice } from '../game'
 import type { DeckValidationResult } from '../game/custom-deck'
 import type { CustomDeck } from '../game/custom-deck'
 import { validateCustomDeck } from '../game/custom-deck'
+import { getDeckFormatLabel } from '../game/deck-rules'
 
 export type AiDeckChoice = 'random' | Exclude<DeckChoice, 'custom'>
 
@@ -19,6 +20,16 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'bs4-green-wind-archer', label: 'BS4 綠色・風弓支援' },
   { value: 'bs4-blue-abyss', label: 'BS4 藍色・深海控制' },
   { value: 'bs4-purple-moonlight', label: 'BS4 紫色・月光 Trash' },
+  { value: 'bs5-red-standard', label: 'BS5 紅｜標準' },
+  { value: 'bs5-yellow-standard', label: 'BS5 黃｜標準' },
+  { value: 'bs5-green-standard', label: 'BS5 綠｜標準' },
+  { value: 'bs5-blue-standard', label: 'BS5 藍｜標準' },
+  { value: 'bs5-purple-standard', label: 'BS5 紫｜標準' },
+  { value: 'bs5-red-open', label: 'BS5 紅｜開放' },
+  { value: 'bs5-yellow-open', label: 'BS5 黃｜開放' },
+  { value: 'bs5-green-open', label: 'BS5 綠｜開放' },
+  { value: 'bs5-blue-open', label: 'BS5 藍｜開放' },
+  { value: 'bs5-purple-open', label: 'BS5 紫｜開放' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
@@ -269,7 +280,9 @@ export function MainMenu({
           ) : (
             <div className="main-menu-deck-list">
               {decks.map((deck) => {
-                const validation = validateCustomDeck(deck.entries)
+                const validation = validateCustomDeck(deck.entries, {
+                  format: deck.format,
+                })
                 return (
                   <article
                     key={deck.id}
@@ -296,6 +309,7 @@ export function MainMenu({
                       </span>
                     </button>
                     <div className="main-menu-deck-meta">
+                      <span>{getDeckFormatLabel(deck.format ?? 'standard')}</span>
                       <span>{validation.stats.totalCards} 張</span>
                       <span>FLIP {validation.stats.flipCards}</span>
                       <span>餅乾 {validation.stats.cookieCards}</span>

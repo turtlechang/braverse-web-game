@@ -24,7 +24,7 @@ import {
   selectEnergyPayment,
   validateEnergyPayment,
 } from './energy'
-import { getOpponentId } from './helpers'
+import { getCookieEffectiveHp, getOpponentId } from './helpers'
 import {
   clearDepartedCookieModifiers,
   continuePendingReplacements,
@@ -1613,6 +1613,14 @@ const battleParticipantExists = (
     ),
   )
 
+const getBattleCookie = (
+  state: GameState,
+  instanceId: string,
+): CookieInBattle | undefined =>
+  Object.values(state.players)
+    .flatMap((player) => player.battleArea)
+    .find((cookie) => cookie.card.instanceId === instanceId)
+
 const collectAfterDamageEffects = (
   state: GameState,
   battle: PendingBattle,
@@ -2545,6 +2553,49 @@ export const resolveFlip = (
 
   if (nextState.pendingFaintEffects && nextState.pendingFaintEffects.length > 0) {
     return nextState
+  }
+
+  // Attack damage may depend on the attacker's current HP (for example,
+  // BS5-111).  A FLIP can damage the attacker before the remaining attack
+  // damage resolves, so re-evaluate the total and preserve damage already
+  // dealt.  The existing `remainingDamage` counter still prevents a
+  // defender-side damage reduction from being applied retroactively during
+  // the same multi-point damage sequence.
+  if (nextState.pendingBattle && !battle.effectDamageSequence) {
+    const attackerBefore = getBattleCookie(state, battle.attackerInstanceId)
+    const attackerAfter = getBattleCookie(
+      nextState,
+      battle.attackerInstanceId,
+    )
+    if (
+      attackerBefore &&
+      attackerAfter &&
+      getCookieEffectiveHp(attackerBefore) !==
+        getCookieEffectiveHp(attackerAfter) &&
+      battleParticipantExists(nextState, battle.targetInstanceId)
+    ) {
+      const activeBattle = requirePendingBattle(nextState)
+      const damageAlreadyDealt = Math.max(
+        0,
+        activeBattle.declaredDamage - activeBattle.remainingDamage,
+      )
+      const recalculatedDamage = getAttackDamageAgainst(
+        nextState,
+        activeBattle.attackerInstanceId,
+        activeBattle.targetInstanceId,
+      )
+      nextState = {
+        ...nextState,
+        pendingBattle: {
+          ...activeBattle,
+          declaredDamage: recalculatedDamage,
+          remainingDamage: Math.max(
+            0,
+            recalculatedDamage - damageAlreadyDealt,
+          ),
+        },
+      }
+    }
   }
 
   return requirePendingBattle(nextState).remainingDamage <= 0

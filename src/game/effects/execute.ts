@@ -1460,37 +1460,37 @@ export const executeCardEffect = (
           : cookie,
       ),
     })
-    const bonusApplies =
-      effect.bonusMaxRemainingHp === undefined ||
-      getCookieEffectiveHp(target) <= effect.bonusMaxRemainingHp
-    const nextState = effect.attackBonus !== undefined && bonusApplies
+    const attackModifier = effect.attackBonus !== undefined
       ? {
-          ...updatedState,
-          attackModifiers: [
-            ...updatedState.attackModifiers,
-            {
-              sourceInstanceId: source.instanceId,
-              targetInstanceId: targetId,
-              amount: effect.attackBonus,
-              expiresAfterTurn: null,
-            },
-          ],
+          sourceInstanceId: source.instanceId,
+          targetInstanceId: targetId,
+          amount: effect.attackBonus,
+          expiresAfterTurn: null,
+          ...(effect.bonusMaxRemainingHp === undefined
+            ? {}
+            : { maxTargetRemainingHp: effect.bonusMaxRemainingHp }),
         }
-      : updatedState
-    return effect.damageReceivedReduction !== undefined && bonusApplies
+      : undefined
+    const damageReceivedModifier = effect.damageReceivedReduction !== undefined
       ? {
-          ...nextState,
-          damageReceivedModifiers: [
-            ...nextState.damageReceivedModifiers,
-            {
-              sourceInstanceId: source.instanceId,
-              targetInstanceId: targetId,
-              amount: -effect.damageReceivedReduction,
-              expiresAfterTurn: null,
-            },
-          ],
+          sourceInstanceId: source.instanceId,
+          targetInstanceId: targetId,
+          amount: -effect.damageReceivedReduction,
+          expiresAfterTurn: null,
+          ...(effect.bonusMaxRemainingHp === undefined
+            ? {}
+            : { maxTargetRemainingHp: effect.bonusMaxRemainingHp }),
         }
-      : nextState
+      : undefined
+    return {
+      ...updatedState,
+      attackModifiers: attackModifier
+        ? [...updatedState.attackModifiers, attackModifier]
+        : updatedState.attackModifiers,
+      damageReceivedModifiers: damageReceivedModifier
+        ? [...updatedState.damageReceivedModifiers, damageReceivedModifier]
+        : updatedState.damageReceivedModifiers,
+    }
   }
 
   if (effect.kind === 'support-to-trash') {

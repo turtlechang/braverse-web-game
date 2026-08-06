@@ -63,6 +63,16 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs4-green-wind-archer': 'BS4 綠色・風弓支援',
   'bs4-blue-abyss': 'BS4 藍色・深海控制',
   'bs4-purple-moonlight': 'BS4 紫色・月光 Trash',
+  'bs5-red-standard': 'BS5 紅色｜標準',
+  'bs5-yellow-standard': 'BS5 黃色｜標準',
+  'bs5-green-standard': 'BS5 綠色｜標準',
+  'bs5-blue-standard': 'BS5 藍色｜標準',
+  'bs5-purple-standard': 'BS5 紫色｜標準',
+  'bs5-red-open': 'BS5 紅色｜開放',
+  'bs5-yellow-open': 'BS5 黃色｜開放',
+  'bs5-green-open': 'BS5 綠色｜開放',
+  'bs5-blue-open': 'BS5 藍色｜開放',
+  'bs5-purple-open': 'BS5 紫色｜開放',
   custom: '自訂',
 }
 

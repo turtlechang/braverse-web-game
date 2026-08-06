@@ -1,0 +1,21 @@
+{
+  "name": "BS5 紅｜開放賽制",
+  "format": "open",
+  "entries": [
+    { "cardNumber": "BS2-003", "count": 4 },
+    { "cardNumber": "BS5-003", "count": 4 },
+    { "cardNumber": "BS5-004", "count": 4 },
+    { "cardNumber": "BS5-005", "count": 4 },
+    { "cardNumber": "BS5-006", "count": 4 },
+    { "cardNumber": "BS5-007", "count": 4 },
+    { "cardNumber": "BS5-008", "count": 4 },
+    { "cardNumber": "BS5-010", "count": 4 },
+    { "cardNumber": "BS5-013", "count": 4 },
+    { "cardNumber": "BS5-014", "count": 4 },
+    { "cardNumber": "BS5-015", "count": 4 },
+    { "cardNumber": "BS5-019", "count": 4 },
+    { "cardNumber": "BS5-020", "count": 4 },
+    { "cardNumber": "BS5-021", "count": 4 },
+    { "cardNumber": "BS5-022", "count": 4 }
+  ]
+}

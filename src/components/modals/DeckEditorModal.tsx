@@ -4,7 +4,6 @@ import type { CustomDeck } from '../../game/custom-deck'
 import {
   DECK_SIZE_REQUIRED,
   MAX_FLIP_CARDS,
-  MAX_COPIES_PER_CARD,
   loadCustomDecks,
   saveCustomDecks,
   exportDeck,
@@ -15,6 +14,12 @@ import {
   normalizeCardNumber,
   type CardPoolEntry,
 } from '../../game/card-pool'
+import {
+  DEFAULT_DECK_FORMAT,
+  getCardRestriction,
+  getDeckCopyLimit,
+  getDeckFormatLabel,
+} from '../../game/deck-rules'
 import { useDeckEditor } from '../../hooks/useDeckEditor'
 import './GameModals.css'
 
@@ -90,6 +95,7 @@ const SERIES_OPTIONS = [
   { value: 'BOOSTER PACK [BRAVE BEGINNING] BS2', label: 'BS2' },
   { value: 'BS3', label: 'BS3' },
   { value: 'BS4', label: 'BS4' },
+  { value: 'BS5', label: 'BS5' },
   { value: 'PROMOTION CARD', label: '特典卡' },
 ]
 
@@ -104,11 +110,23 @@ export function DeckEditorModal({
   const tooltipRef = useRef<HTMLDivElement>(null)
   const [savedSnapshot, setSavedSnapshot] = useState<string>(() =>
     initialDeck
-      ? JSON.stringify({ name: initialDeck.name, entries: initialDeck.entries })
-      : JSON.stringify({ name: editor.deckName, entries: editor.deckEntries }),
+      ? JSON.stringify({
+          name: initialDeck.name,
+          format: initialDeck.format ?? DEFAULT_DECK_FORMAT,
+          entries: initialDeck.entries,
+        })
+      : JSON.stringify({
+          name: editor.deckName,
+          format: editor.deckFormat,
+          entries: editor.deckEntries,
+        }),
   )
   const hasUnsavedChanges =
-    JSON.stringify({ name: editor.deckName, entries: editor.deckEntries }) !==
+    JSON.stringify({
+      name: editor.deckName,
+      format: editor.deckFormat,
+      entries: editor.deckEntries,
+    }) !==
     savedSnapshot
 
   useEffect(() => {
@@ -138,6 +156,7 @@ export function DeckEditorModal({
       id: initialDeck?.id ?? `custom-${Date.now()}`,
       name: editor.deckName,
       entries: editor.deckEntries,
+      format: editor.deckFormat,
       createdAt: initialDeck?.createdAt ?? now,
       updatedAt: now,
     }
@@ -150,7 +169,11 @@ export function DeckEditorModal({
       existing.push(deck)
     }
     saveCustomDecks(existing)
-    setSavedSnapshot(JSON.stringify({ name: deck.name, entries: deck.entries }))
+    setSavedSnapshot(JSON.stringify({
+      name: deck.name,
+      format: deck.format ?? DEFAULT_DECK_FORMAT,
+      entries: deck.entries,
+    }))
     onSave(deck)
   }, [editor, initialDeck, onSave])
 
@@ -182,6 +205,7 @@ export function DeckEditorModal({
     }
     const now = new Date().toISOString()
     const deck: CustomDeck = {
+      format: editor.deckFormat,
       id: `export-${Date.now()}`,
       name: editor.deckName || '未命名牌組',
       entries: editor.deckEntries,
@@ -210,13 +234,7 @@ export function DeckEditorModal({
       ) {
         return
       }
-      editor.setDeckName(result.deck.name)
-      editor.clearDeck()
-      for (const entry of result.deck.entries) {
-        for (let i = 0; i < entry.count; i++) {
-          editor.addCard(entry.cardNumber)
-        }
-      }
+      editor.loadDeck(result.deck)
       setShowImportDialog(false)
       setImportText('')
       showStatus(`已匯入牌組「${result.deck.name}」`)
@@ -346,19 +364,27 @@ export function DeckEditorModal({
                     (e) => normalizeCardNumber(e.cardNumber) === baseCardNumber,
                   )
                   .reduce((sum, e) => sum + e.count, 0)
-                const atMax = totalForBase >= MAX_COPIES_PER_CARD
+                const restriction = getCardRestriction(
+                  baseCardNumber,
+                  editor.deckFormat,
+                )
+                const copyLimit = getDeckCopyLimit(
+                  baseCardNumber,
+                  editor.deckFormat,
+                )
+                const atMax = totalForBase >= copyLimit
                 const showCount = ownCount
 
                 return (
                   <div
                     key={entry.cardNumber}
-                    className={`deck-editor-pool-card${atMax ? ' at-max' : ''}`}
+                    className={`deck-editor-pool-card${atMax ? ' at-max' : ''}${restriction !== 'none' ? ` restriction-${restriction}` : ''}`}
                   >
                     <button
                       type="button"
                       className="deck-editor-pool-card-btn"
                       title={`${baseCardNumber} ${entry.name}（點擊加入 1 張）`}
-                      disabled={atMax}
+                      disabled={atMax || restriction === 'banned'}
                       onClick={() => editor.addCard(entry.cardNumber)}
                     >
                       <CardPoolImage entry={entry} />
@@ -366,6 +392,11 @@ export function DeckEditorModal({
                     {showCount > 0 && (
                       <span className="deck-editor-pool-count" aria-hidden="true">
                         {showCount}
+                      </span>
+                    )}
+                    {restriction !== 'none' && (
+                      <span className="deck-editor-restriction-badge">
+                        {restriction === 'banned' ? '禁卡' : '限 1'}
                       </span>
                     )}
                     <button
@@ -407,7 +438,7 @@ export function DeckEditorModal({
                           <button
                             type="button"
                             className="deck-editor-tooltip-btn"
-                            disabled={atMax}
+                            disabled={atMax || restriction === 'banned'}
                             onClick={() => {
                               editor.addCard(entry.cardNumber)
                             }}
@@ -436,6 +467,20 @@ export function DeckEditorModal({
               onChange={(e) => editor.setDeckName(e.target.value)}
               placeholder="牌組名稱"
             />
+            <label className="deck-editor-format-field">
+              <span>賽制</span>
+              <select
+                data-testid="deck-format-select"
+                value={editor.deckFormat}
+                onChange={(event) =>
+                  editor.setDeckFormat(event.target.value as 'open' | 'standard')
+                }
+              >
+                <option value="standard">標準賽制（套用禁限卡）</option>
+                <option value="open">開放賽制（所有卡牌都能用）</option>
+              </select>
+              <small>{getDeckFormatLabel(editor.deckFormat)}</small>
+            </label>
             <div className="deck-editor-deck-header">
               <span>
                 {deckStats.totalCards} / {DECK_SIZE_REQUIRED} 張
@@ -468,7 +513,8 @@ export function DeckEditorModal({
                     (e) => normalizeCardNumber(e.cardNumber) === baseCardNumber,
                   )
                   .reduce((sum, e) => sum + e.count, 0)
-                const atBaseMax = totalForBase >= MAX_COPIES_PER_CARD
+                const atBaseMax =
+                  totalForBase >= getDeckCopyLimit(baseCardNumber, editor.deckFormat)
                 return (
                   <div
                     key={entry.cardNumber}

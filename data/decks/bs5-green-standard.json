@@ -1,0 +1,21 @@
+{
+  "name": "BS5 綠｜標準賽制",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS5-045", "count": 4 },
+    { "cardNumber": "BS5-047", "count": 4 },
+    { "cardNumber": "BS5-048", "count": 4 },
+    { "cardNumber": "BS5-050", "count": 4 },
+    { "cardNumber": "BS5-063", "count": 4 },
+    { "cardNumber": "BS5-052", "count": 4 },
+    { "cardNumber": "BS5-053", "count": 4 },
+    { "cardNumber": "BS5-054", "count": 4 },
+    { "cardNumber": "BS5-056", "count": 4 },
+    { "cardNumber": "BS5-057", "count": 4 },
+    { "cardNumber": "BS5-059", "count": 4 },
+    { "cardNumber": "BS5-060", "count": 4 },
+    { "cardNumber": "BS5-064", "count": 4 },
+    { "cardNumber": "BS5-065", "count": 4 },
+    { "cardNumber": "BS5-066", "count": 4 }
+  ]
+}

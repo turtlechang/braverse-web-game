@@ -1465,6 +1465,8 @@ export interface AttackModifier {
   targetInstanceId: string
   amount: number
   expiresAfterTurn: number | null
+  /** Modifier is active only while the target's remaining HP is at most this value. */
+  maxTargetRemainingHp?: number
 }
 
 export interface AttackCostModifier {
@@ -1479,6 +1481,8 @@ export interface DamageReceivedModifier {
   targetInstanceId: string
   amount: number
   expiresAfterTurn: number | null
+  /** Modifier is active only while the target's remaining HP is at most this value. */
+  maxTargetRemainingHp?: number
   minimumDamage?: number
   setDamageTo?: number
 }

@@ -1,5 +1,5 @@
 import { GameRuleError } from '../errors'
-import { getOpponentId } from '../helpers'
+import { getCookieEffectiveHp, getOpponentId } from '../helpers'
 import type {
   CookieInBattle,
   GameCard,
@@ -57,6 +57,23 @@ const getAuraAttackBonus = (
     return total + auraTotal
   }, 0)
 
+const getCookieByInstanceId = (
+  state: GameState,
+  instanceId: string,
+): CookieInBattle | undefined =>
+  Object.values(state.players)
+    .flatMap((player) => player.battleArea)
+    .find((cookie) => cookie.card.instanceId === instanceId)
+
+const isConditionalModifierActive = (
+  state: GameState,
+  modifier: { targetInstanceId: string; maxTargetRemainingHp?: number },
+): boolean => {
+  if (modifier.maxTargetRemainingHp === undefined) return true
+  const target = getCookieByInstanceId(state, modifier.targetInstanceId)
+  return target !== undefined && getCookieEffectiveHp(target) <= modifier.maxTargetRemainingHp
+}
+
 export const getEffectiveAttack = (
   state: GameState,
   targetInstanceId: string,
@@ -76,7 +93,11 @@ export const getEffectiveAttack = (
   }
 
   const modifierTotal = state.attackModifiers
-    .filter((modifier) => modifier.targetInstanceId === targetInstanceId)
+    .filter(
+      (modifier) =>
+        modifier.targetInstanceId === targetInstanceId &&
+        isConditionalModifierActive(state, modifier),
+    )
     .reduce((total, modifier) => total + modifier.amount, 0)
   const passiveModifierTotal =
     (target.card.skill?.trigger === 'passive' ||
@@ -166,6 +187,7 @@ export const getEffectiveAttackBreakdown = (
 
   for (const modifier of state.attackModifiers) {
     if (modifier.targetInstanceId !== targetInstanceId) continue
+    if (!isConditionalModifierActive(state, modifier)) continue
     entries.push({
       sourceCardName:
         findCardNameByInstanceId(state, modifier.sourceInstanceId) ?? '未知效果',
@@ -236,7 +258,11 @@ export const getAttackDamageAgainst = (
   const baseDamage = getEffectiveAttack(state, attackerInstanceId, targetInstanceId)
 
   const modifiedDamage = state.damageReceivedModifiers
-    .filter((modifier) => modifier.targetInstanceId === targetInstanceId)
+    .filter(
+      (modifier) =>
+        modifier.targetInstanceId === targetInstanceId &&
+        isConditionalModifierActive(state, modifier),
+    )
     .reduce((damage, modifier) => {
       const adjustedDamage = Math.max(0, damage + modifier.amount)
 

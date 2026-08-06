@@ -408,7 +408,10 @@ export const handleAiTurnState = (
 
   if (state.phase === 'end') {
     const advanced = advancePhase(state)
-    if (advanced.phase === 'end' && advanced.activePlayerId === state.activePlayerId) {
+    // 結束階段效果可能先建立 pendingAbilityEffect（例如 BS5-066）。
+    // 預覽結果若已產生新狀態，必須真正送出 advance-phase，讓 dispatcher
+    // 下一步接手 AI 的效果決策；只把它視為 idle 會遺失 pending 狀態並卡死。
+    if (advanced === state) {
       return {
         state,
         action: 'idle',

@@ -8,6 +8,16 @@ import bs4YellowDeck from '../../data/decks/bs4-yellow-millennial.json'
 import bs4GreenDeck from '../../data/decks/bs4-green-wind-archer.json'
 import bs4BlueDeck from '../../data/decks/bs4-blue-abyss.json'
 import bs4PurpleDeck from '../../data/decks/bs4-purple-moonlight.json'
+import bs5RedStandardDeck from '../../data/decks/bs5-red-standard.json'
+import bs5YellowStandardDeck from '../../data/decks/bs5-yellow-standard.json'
+import bs5GreenStandardDeck from '../../data/decks/bs5-green-standard.json'
+import bs5BlueStandardDeck from '../../data/decks/bs5-blue-standard.json'
+import bs5PurpleStandardDeck from '../../data/decks/bs5-purple-standard.json'
+import bs5RedOpenDeck from '../../data/decks/bs5-red-open.json'
+import bs5YellowOpenDeck from '../../data/decks/bs5-yellow-open.json'
+import bs5GreenOpenDeck from '../../data/decks/bs5-green-open.json'
+import bs5BlueOpenDeck from '../../data/decks/bs5-blue-open.json'
+import bs5PurpleOpenDeck from '../../data/decks/bs5-purple-open.json'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -42,11 +52,27 @@ export const BS4_AI_PRESET_DECK_CHOICES = [
   'bs4-purple-moonlight',
 ] as const
 
+export const BS5_AI_PRESET_DECK_CHOICES = [
+  'bs5-red-standard',
+  'bs5-yellow-standard',
+  'bs5-green-standard',
+  'bs5-blue-standard',
+  'bs5-purple-standard',
+  'bs5-red-open',
+  'bs5-yellow-open',
+  'bs5-green-open',
+  'bs5-blue-open',
+  'bs5-purple-open',
+] as const
+
 export type Bs3AiPresetDeckChoice =
   (typeof BS3_AI_PRESET_DECK_CHOICES)[number]
 
 export type Bs4AiPresetDeckChoice =
   (typeof BS4_AI_PRESET_DECK_CHOICES)[number]
+
+export type Bs5AiPresetDeckChoice =
+  (typeof BS5_AI_PRESET_DECK_CHOICES)[number]
 
 export type AiPresetDeckChoice =
   | 'bs2-red'
@@ -56,6 +82,7 @@ export type AiPresetDeckChoice =
   | 'bs2-purple'
   | Bs3AiPresetDeckChoice
   | Bs4AiPresetDeckChoice
+  | Bs5AiPresetDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
@@ -492,6 +519,27 @@ export const AI_PRESET_BS4_BLUE_ABYSS_DECK: StarterDeckEntry[] =
 export const AI_PRESET_BS4_PURPLE_MOONLIGHT_DECK: StarterDeckEntry[] =
   bs4PurpleDeck.entries
 
+export const AI_PRESET_BS5_RED_STANDARD_DECK: StarterDeckEntry[] =
+  bs5RedStandardDeck.entries
+export const AI_PRESET_BS5_YELLOW_STANDARD_DECK: StarterDeckEntry[] =
+  bs5YellowStandardDeck.entries
+export const AI_PRESET_BS5_GREEN_STANDARD_DECK: StarterDeckEntry[] =
+  bs5GreenStandardDeck.entries
+export const AI_PRESET_BS5_BLUE_STANDARD_DECK: StarterDeckEntry[] =
+  bs5BlueStandardDeck.entries
+export const AI_PRESET_BS5_PURPLE_STANDARD_DECK: StarterDeckEntry[] =
+  bs5PurpleStandardDeck.entries
+export const AI_PRESET_BS5_RED_OPEN_DECK: StarterDeckEntry[] =
+  bs5RedOpenDeck.entries
+export const AI_PRESET_BS5_YELLOW_OPEN_DECK: StarterDeckEntry[] =
+  bs5YellowOpenDeck.entries
+export const AI_PRESET_BS5_GREEN_OPEN_DECK: StarterDeckEntry[] =
+  bs5GreenOpenDeck.entries
+export const AI_PRESET_BS5_BLUE_OPEN_DECK: StarterDeckEntry[] =
+  bs5BlueOpenDeck.entries
+export const AI_PRESET_BS5_PURPLE_OPEN_DECK: StarterDeckEntry[] =
+  bs5PurpleOpenDeck.entries
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
@@ -516,6 +564,16 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs4-green-wind-archer': AI_PRESET_BS4_GREEN_WIND_ARCHER_DECK,
   'bs4-blue-abyss': AI_PRESET_BS4_BLUE_ABYSS_DECK,
   'bs4-purple-moonlight': AI_PRESET_BS4_PURPLE_MOONLIGHT_DECK,
+  'bs5-red-standard': AI_PRESET_BS5_RED_STANDARD_DECK,
+  'bs5-yellow-standard': AI_PRESET_BS5_YELLOW_STANDARD_DECK,
+  'bs5-green-standard': AI_PRESET_BS5_GREEN_STANDARD_DECK,
+  'bs5-blue-standard': AI_PRESET_BS5_BLUE_STANDARD_DECK,
+  'bs5-purple-standard': AI_PRESET_BS5_PURPLE_STANDARD_DECK,
+  'bs5-red-open': AI_PRESET_BS5_RED_OPEN_DECK,
+  'bs5-yellow-open': AI_PRESET_BS5_YELLOW_OPEN_DECK,
+  'bs5-green-open': AI_PRESET_BS5_GREEN_OPEN_DECK,
+  'bs5-blue-open': AI_PRESET_BS5_BLUE_OPEN_DECK,
+  'bs5-purple-open': AI_PRESET_BS5_PURPLE_OPEN_DECK,
 }
 
 const getEnergyColor = (
@@ -790,6 +848,27 @@ export const createAiPresetBs4PurpleMoonlightDeck = (
     [],
   )
 
+export const createAiPresetBs5RedStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_RED_STANDARD_DECK, [])
+export const createAiPresetBs5YellowStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_YELLOW_STANDARD_DECK, [])
+export const createAiPresetBs5GreenStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_GREEN_STANDARD_DECK, [])
+export const createAiPresetBs5BlueStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_BLUE_STANDARD_DECK, [])
+export const createAiPresetBs5PurpleStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_PURPLE_STANDARD_DECK, [])
+export const createAiPresetBs5RedOpenDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_RED_OPEN_DECK, [])
+export const createAiPresetBs5YellowOpenDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_YELLOW_OPEN_DECK, [])
+export const createAiPresetBs5GreenOpenDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_GREEN_OPEN_DECK, [])
+export const createAiPresetBs5BlueOpenDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_BLUE_OPEN_DECK, [])
+export const createAiPresetBs5PurpleOpenDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_PURPLE_OPEN_DECK, [])
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
@@ -817,6 +896,16 @@ export const DECK_CREATORS: Record<
   'bs4-green-wind-archer': createAiPresetBs4GreenWindArcherDeck,
   'bs4-blue-abyss': createAiPresetBs4BlueAbyssDeck,
   'bs4-purple-moonlight': createAiPresetBs4PurpleMoonlightDeck,
+  'bs5-red-standard': createAiPresetBs5RedStandardDeck,
+  'bs5-yellow-standard': createAiPresetBs5YellowStandardDeck,
+  'bs5-green-standard': createAiPresetBs5GreenStandardDeck,
+  'bs5-blue-standard': createAiPresetBs5BlueStandardDeck,
+  'bs5-purple-standard': createAiPresetBs5PurpleStandardDeck,
+  'bs5-red-open': createAiPresetBs5RedOpenDeck,
+  'bs5-yellow-open': createAiPresetBs5YellowOpenDeck,
+  'bs5-green-open': createAiPresetBs5GreenOpenDeck,
+  'bs5-blue-open': createAiPresetBs5BlueOpenDeck,
+  'bs5-purple-open': createAiPresetBs5PurpleOpenDeck,
 }
 
 export const createDeckForChoice = (

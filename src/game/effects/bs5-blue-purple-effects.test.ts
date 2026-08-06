@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   executeCardEffect,
+  getEffectiveAttack,
   getEffectTargetCandidatesForEffect,
   type CardEffect,
   type EffectContext,
@@ -66,13 +67,16 @@ describe('BS5 blue/purple/pure runtime effects', () => {
       targetInstanceId: 'dragon-cookie',
       amount: 1,
       expiresAfterTurn: null,
+      maxTargetRemainingHp: 3,
     })
     expect(result.damageReceivedModifiers).toContainEqual({
       sourceInstanceId: 'wrath-of-the-dragons',
       targetInstanceId: 'dragon-cookie',
       amount: -1,
       expiresAfterTurn: null,
+      maxTargetRemainingHp: 3,
     })
+    expect(getEffectiveAttack(result, 'dragon-cookie')).toBe(3)
 
     const highHpDragon = {
       ...cookie('high-hp-dragon', 2, 4),
@@ -114,11 +118,20 @@ describe('BS5 blue/purple/pure runtime effects', () => {
     expect(highHpResult.players['player-one'].battleArea[1].equippedCards).toEqual([
       item('wrath-of-the-dragons'),
     ])
-    expect(highHpResult.attackModifiers).not.toContainEqual(
-      expect.objectContaining({ targetInstanceId: 'high-hp-dragon' }),
-    )
-    expect(highHpResult.damageReceivedModifiers).not.toContainEqual(
-      expect.objectContaining({ targetInstanceId: 'high-hp-dragon' }),
-    )
+    expect(highHpResult.attackModifiers).toContainEqual({
+      sourceInstanceId: 'wrath-of-the-dragons',
+      targetInstanceId: 'high-hp-dragon',
+      amount: 1,
+      expiresAfterTurn: null,
+      maxTargetRemainingHp: 3,
+    })
+    expect(highHpResult.damageReceivedModifiers).toContainEqual({
+      sourceInstanceId: 'wrath-of-the-dragons',
+      targetInstanceId: 'high-hp-dragon',
+      amount: -1,
+      expiresAfterTurn: null,
+      maxTargetRemainingHp: 3,
+    })
+    expect(getEffectiveAttack(highHpResult, 'high-hp-dragon')).toBe(2)
   })
 })

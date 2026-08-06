@@ -236,11 +236,12 @@ describe('validateCustomDeck', () => {
       { cardNumber: 'BS2-031', count: 2 },
       ...entriesFromNumbers(fillers),
     ]
-    const validation = validateCustomDeck(entries)
+    const validation = validateCustomDeck(entries, { format: 'open' })
     expect(validation.stats.totalCards).toBe(60)
 
     const json = JSON.stringify({
       name: 'split variant',
+      format: 'open',
       entries: [
         { cardNumber: 'BS2-031@1', count: 2 },
         { cardNumber: 'BS2-031', count: 2 },

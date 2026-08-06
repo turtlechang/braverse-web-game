@@ -98,6 +98,16 @@ export {
   createAiPresetBs4PurpleMoonlightDeck,
   createAiPresetBs4RedFireSpiritDeck,
   createAiPresetBs4YellowMillennialDeck,
+  createAiPresetBs5BlueOpenDeck,
+  createAiPresetBs5BlueStandardDeck,
+  createAiPresetBs5GreenOpenDeck,
+  createAiPresetBs5GreenStandardDeck,
+  createAiPresetBs5PurpleOpenDeck,
+  createAiPresetBs5PurpleStandardDeck,
+  createAiPresetBs5RedOpenDeck,
+  createAiPresetBs5RedStandardDeck,
+  createAiPresetBs5YellowOpenDeck,
+  createAiPresetBs5YellowStandardDeck,
   createOfficialBlueStarterDeck,
   createOfficialGreenStarterDeck,
   createOfficialPurpleStarterDeck,
@@ -106,6 +116,7 @@ export {
   createOfficialYellowStarterDeck,
   createCard,
   createDeckForChoice,
+  BS5_AI_PRESET_DECK_CHOICES,
   DECK_CREATORS,
   OFFICIAL_BLUE_STARTER_DECK,
   OFFICIAL_DECK_RECIPES,
@@ -119,6 +130,7 @@ export type {
   AiPresetDeckChoice,
   Bs3AiPresetDeckChoice,
   Bs4AiPresetDeckChoice,
+  Bs5AiPresetDeckChoice,
   BuiltInDeckChoice,
   DeckChoice,
   StarterDeckChoice,
@@ -148,6 +160,16 @@ export {
   MAX_COPIES_PER_CARD,
 } from './custom-deck'
 export type { CustomDeck, CustomDeckEntry } from './custom-deck'
+export {
+  DEFAULT_DECK_FORMAT,
+  getCardRestriction,
+  getDeckCopyLimit,
+  getDeckFormatLabel,
+  validateFormatRestrictions,
+  TAIWAN_BANNED_CARD_NUMBERS,
+  TAIWAN_LIMITED_CARD_NUMBERS,
+} from './deck-rules'
+export type { CardRestriction, DeckEntryLike, DeckFormat } from './deck-rules'
 export { chooseRandomDeck } from './opening'
 export {
   selectAiEnergyPayment,
