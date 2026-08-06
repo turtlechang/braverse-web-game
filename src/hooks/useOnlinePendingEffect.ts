@@ -8,6 +8,8 @@ import {
   getEffectTargetCandidates,
   hasRequiredEffectTargets as hasRequiredTargetsForEffect,
   getEnergyCostTotal,
+  getDiscardAllHandCostCandidates,
+  getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
   getTrashBattleCookieCostCandidates,
   isEffectConditionMet,
@@ -246,18 +248,27 @@ export function useOnlinePendingEffect(params: {
         : []
     : []
   const isEffectPending = Boolean(currentEffect)
-  const draftDiscardHandCost =
-    abilityCostDraft?.ability.cost.discardHand ?? 0
   const draftDiscardHandCandidates = abilityCostDraft
-    ? game.players[viewerPlayerId].hand.filter(
-        (card) =>
-          (!abilityCostDraft.ability.cost.discardHandColor ||
-            card.energyColor ===
-              abilityCostDraft.ability.cost.discardHandColor) &&
-          (abilityCostDraft.selectedDiscardHandIds.length < draftDiscardHandCost ||
-            abilityCostDraft.selectedDiscardHandIds.includes(card.instanceId)),
-      )
+    ? abilityCostDraft.ability.cost.discardAllHand
+      ? getDiscardAllHandCostCandidates(
+          abilityCostDraft.ability.cost,
+          game.players[viewerPlayerId].hand,
+          abilityCostDraft.card.instanceId,
+        )
+      : getDiscardHandCostCandidates(
+          abilityCostDraft.ability.cost,
+          game.players[viewerPlayerId].hand,
+          abilityCostDraft.card.instanceId,
+        )
     : []
+  const draftDiscardHandCost = abilityCostDraft?.ability.cost.discardAllHand
+    ? draftDiscardHandCandidates.length
+    : abilityCostDraft?.ability.cost.discardHand ?? 0
+  const draftDiscardHandSelectionLimit =
+    abilityCostDraft?.ability.cost.discardAllHand ||
+    abilityCostDraft?.ability.cost.discardHandAtLeast
+      ? draftDiscardHandCandidates.length
+      : draftDiscardHandCost
   const draftEnergyCost = abilityCostDraft
     ? (abilityCostDraft.ability.cost.energy ?? abilityCostDraft.ability.cost)
     : {}
@@ -315,13 +326,16 @@ export function useOnlinePendingEffect(params: {
     setAbilityCostDraft((draft) => {
       if (!draft) return draft
       const selected = draft.selectedDiscardHandIds
+      if (!draftDiscardHandCandidates.some((card) => card.instanceId === instanceId)) {
+        return draft
+      }
       if (selected.includes(instanceId)) {
         return {
           ...draft,
           selectedDiscardHandIds: selected.filter((id) => id !== instanceId),
         }
       }
-      if (selected.length >= (draft.ability.cost.discardHand ?? 0)) {
+      if (selected.length >= draftDiscardHandSelectionLimit) {
         return draft
       }
       return {
@@ -502,11 +516,18 @@ export function useOnlinePendingEffect(params: {
         : (currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 0)
       const requiresTargetSelection =
         currentTargetSelector !== null || displayedSelectionLimits !== null
+      const discardHandRequired = cost.discardHand ?? 0
+      const discardHandPaid = cost.discardAllHand
+        ? abilityCostDraft.selectedDiscardHandIds.length ===
+          draftDiscardHandCost
+        : cost.discardHandAtLeast
+          ? abilityCostDraft.selectedDiscardHandIds.length >= discardHandRequired
+          : abilityCostDraft.selectedDiscardHandIds.length === discardHandRequired
       if (
         !draftPaymentValid ||
         abilityCostDraft.selectedCostSupportToTrashIds.length !==
           ((cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)) ||
-        abilityCostDraft.selectedDiscardHandIds.length !== (cost.discardHand ?? 0) ||
+        !discardHandPaid ||
         abilityCostDraft.selectedHpToTrashTargetIds.length !==
           (cost.hpToTrash ? 1 : 0) ||
         abilityCostDraft.selectedTrashBattleCookieIds.length !==
@@ -676,6 +697,8 @@ export function useOnlinePendingEffect(params: {
       (cost.supportToTrash ?? 0) > 0 ||
       (cost.supportToHand ?? 0) > 0 ||
       (cost.discardHand ?? 0) > 0 ||
+      Boolean(cost.discardAllHand) ||
+      Boolean(cost.discardHandAtLeast) ||
       Boolean(cost.hpToTrash) ||
       (cost.trashBattleCookie?.count ?? 0) > 0
     )

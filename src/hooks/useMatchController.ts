@@ -909,6 +909,34 @@ export function useMatchController(params: {
   // auto-skip trap
   useEffect(() => {
     const battle = game.pendingBattle
+    // Card-check test states normally auto-finish the attack after a trap is
+    // played. A trap Then effect may create a real pending decision first
+    // (for example BS5-087's draw up to 2), so wait until that decision is
+    // resolved before sending resolve-battle. Production matches never use
+    // this shortcut; they continue through the normal player/AI flow.
+    if (
+      testStateConfig &&
+      battle?.stage === 'damage' &&
+      !getPendingDecision(game)
+    ) {
+      const timer = window.setTimeout(() => {
+        setGame((current) => {
+          if (
+            current.pendingBattle?.stage !== 'damage' ||
+            getPendingDecision(current)
+          ) {
+            return current
+          }
+          return applyGameCommand(current, {
+            kind: 'resolve-battle',
+            playerId: viewerPlayerId,
+          })
+        })
+      }, 0)
+
+      return () => window.clearTimeout(timer)
+    }
+
     if (
       battle?.stage !== 'trap' ||
       // 陷阱已經打出去了（例如 BS3-093），戰鬥還停在 'trap' 階段只是為了等玩家
@@ -971,7 +999,7 @@ export function useMatchController(params: {
     }, 0)
 
     return () => window.clearTimeout(timer)
-  }, [game, viewerPlayerId])
+  }, [game, testStateConfig, viewerPlayerId])
 
   // resetMatchState: resets all match-owned state (used by App's resetGame)
   const resetMatchState = useCallback(

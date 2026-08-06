@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import officialBs5Candidates from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs5.en.json'
+import officialBs5Dataset from '../../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
 import {
+  convertOfficialCardToGameCard,
   convertOfficialAttackEffects,
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
@@ -10,8 +11,9 @@ import {
   convertOfficialTrapAbility,
   type OfficialCardRecord,
 } from '.'
+import { getRuntimeKeywords } from './official-card-adapter'
 
-const bs5Cards = officialBs5Candidates.cards as OfficialCardRecord[]
+const bs5Cards = officialBs5Dataset.cards as OfficialCardRecord[]
 
 const findBs5Card = (cardNumber: string): OfficialCardRecord => {
   const card = bs5Cards.find((c) => c.cardNumber === cardNumber)
@@ -939,5 +941,198 @@ describe('BS5 candidate GREEN effect adapter', () => {
         ],
       })
     })
+  })
+})
+
+describe('BS5 final trap and attack Then adapter coverage', () => {
+  it.each([
+    ['BS5-067', [{ kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' }]],
+    ['BS5-071', [{ kind: 'draw-up-to', max: 2, condition: { kind: 'hand-count-at-most', count: 3 } }]],
+    ['BS5-080', [{ kind: 'discard-hand', count: 2 }, { kind: 'damage', amount: 1 }]],
+    ['BS5-085', [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ]],
+    ['BS5-089', [{ kind: 'deck-to-trash', amount: 3, side: 'self' }]],
+    ['BS5-094', [
+      {
+        kind: 'trash-to-deck',
+        min: 5,
+        max: 5,
+        excludeFlip: true,
+        energyColor: 'purple',
+        cookieOnly: true,
+      },
+      { kind: 'damage', amount: 1 },
+    ]],
+    ['BS5-097', [{
+      kind: 'draw-up-to-then-discard',
+      max: 2,
+      discardCount: 2,
+      condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+    }]],
+    ['BS5-098', [
+      { kind: 'hp-to-trash', amount: 1 },
+      {
+        kind: 'field-to-trash',
+        target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
+      },
+    ]],
+    ['BS5-099', [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+    ]],
+    ['BS5-106', [
+      { kind: 'draw', amount: 1 },
+      { kind: 'deck-to-trash', amount: 3, side: 'self' },
+    ]],
+  ] as const)('%s converts its attack Then effects', (cardNumber, expected) => {
+    expect(convertOfficialAttackEffects(findBs5Card(cardNumber))).toMatchObject(expected)
+  })
+
+  it.each(['BS5-087', 'BS5-109'] as const)('%s converts trap main and Then effects without a false activation condition', (cardNumber) => {
+    const main = convertOfficialCardEffects(findBs5Card(cardNumber))
+    const trap = convertOfficialTrapAbility(findBs5Card(cardNumber))
+
+    expect(main).toMatchObject({ status: 'supported', effects: expect.any(Array) })
+    if (main.status !== 'supported') throw new Error(`Expected ${cardNumber} trap effects to be supported`)
+    expect(trap?.condition).toBeUndefined()
+    expect(trap?.effects).toEqual(main.effects)
+  })
+
+  it('keeps BS5-109 second attack decrease restricted to opponent LV.1', () => {
+    expect(convertOfficialTrapAbility(findBs5Card('BS5-109'))?.effects[1]).toMatchObject({
+      kind: 'modify-attack',
+      amount: -1,
+      condition: { kind: 'trash-count-at-least', count: 15 },
+      target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+    })
+  })
+
+  it('normalizes the incomplete BS5-089@2 official variant before conversion', () => {
+    expect(convertOfficialCardToGameCard(findBs5Card('BS5-089@2'))).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 2,
+        attackEffects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+      },
+    })
+  })
+})
+
+const bs5PendingAbilityCardNumbers = [
+  'BS5-068',
+  'BS5-070',
+  'BS5-071',
+  'BS5-072',
+  'BS5-074',
+  'BS5-075',
+  'BS5-076',
+  'BS5-078',
+  'BS5-081',
+  'BS5-083',
+  'BS5-084',
+  'BS5-086',
+  'BS5-088',
+  'BS5-091',
+  'BS5-098',
+  'BS5-100',
+  'BS5-101',
+  'BS5-102',
+  'BS5-104',
+  'BS5-107',
+  'BS5-108',
+  'BS5-110',
+  'BS5-111',
+] as const
+
+describe('BS5 candidate BLUE/PURPLE/PURE ability adapter', () => {
+  it.each(bs5PendingAbilityCardNumbers)('%s has a converted ability', (cardNumber) => {
+    const card = findBs5Card(cardNumber)
+    const conversion =
+      card.type === 'cookie'
+        ? convertOfficialCookieSkill(card)
+        : card.type === 'item'
+          ? convertOfficialItemAbility(card)
+          : convertOfficialStageAbility(card)
+
+    expect(conversion).toBeDefined()
+    expect(conversion?.effects.length ?? 0).toBeGreaterThan(0)
+  })
+
+  it('converts the BS5-071 and BS5-083 hand discard modes', () => {
+    expect(convertOfficialCookieSkill(findBs5Card('BS5-071'))).toMatchObject({
+      cost: {
+        discardHand: 3,
+        discardHandAtLeast: true,
+        discardHandColor: 'blue',
+      },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 2,
+          condition: { kind: 'break-level-at-least', level: 2 },
+        },
+      ],
+    })
+    expect(convertOfficialCookieSkill(findBs5Card('BS5-083'))).toMatchObject({
+      cost: { discardHand: 0, discardAllHand: true },
+      effects: [{ kind: 'gain-hp', amount: 2 }, { kind: 'draw-up-to', max: 1 }],
+    })
+  })
+
+  it('converts BS5-081 as an opponent-attack response skill', () => {
+    expect(convertOfficialCookieSkill(findBs5Card('BS5-081'))).toMatchObject({
+      trigger: 'opponent-attack',
+      oncePerTurn: true,
+      cost: { discardHand: 4 },
+      effects: [
+        {
+          kind: 'prevent-knockout',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    })
+  })
+
+  it('carries BS5-086 extra HP through inspect-deck conversion', () => {
+    expect(convertOfficialItemAbility(findBs5Card('BS5-086'))).toMatchObject({
+      cost: { energy: { blue: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'inspect-deck',
+          lookCount: 3,
+          pickCount: 1,
+          pickDestination: 'battle',
+          filterColor: 'blue',
+          filterType: 'cookie',
+          extraHp: 1,
+        },
+      ],
+    })
+  })
+
+  it('converts BS5-111 Dragon equipment restrictions and modifiers', () => {
+    expect(convertOfficialItemAbility(findBs5Card('BS5-111'))).toMatchObject({
+      cost: { energy: { neutral: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'equip-source',
+          requiredKeyword: 'dragon',
+          bonusMaxRemainingHp: 3,
+          attackBonus: 1,
+          damageReceivedReduction: 1,
+        },
+      ],
+    })
+  })
+
+  it('maps official DRAGON keywords into runtime keywords', () => {
+    expect(getRuntimeKeywords(findBs5Card('BS5-040'))).toContain('dragon')
+    expect(getRuntimeKeywords(findBs5Card('BS5-111'))).not.toContain('dragon')
   })
 })

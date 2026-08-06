@@ -78,6 +78,8 @@ P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃�
 
 BS5 YELLOW 與 GREEN 已完成 runtime 轉接，逐色稽核歸零：GREEN 批次新增 `deferred-end-of-turn`（BS5-051／056／058／063「When your turn ends」延遲佇列，於 end 階段重入排空、互動效果建立對應 pending）、`opponent-rests-support`（BS5-065 由對手選定橫置支援卡，`activeOnly` 與候選不足自動略過）、`StageAbility.endPhase`（BS5-066 場景被動觸發，不可手動啟動）；UI 新增 `OpponentRestSupportResponseModal` 並共用本機／線上控制器，`cards:analyze:bs5-candidate` 覆蓋盤點 GREEN 0／0／0（見 [BS5 效果轉接覆蓋盤點](docs/bs5-effect-coverage.md)）。
 
+BS5 BLUE／PURPLE／PURE 的 23 張能力，以及 BS5-087／BS5-109 兩張陷阱主效果與 BS5-067／071／080／085／089／094／097／098／099／106 十張攻擊後 `Then` 已完成 runtime 轉接與回歸測試；`cards:analyze:bs5-candidate`（目前以正式 `data/cards/` 來源分析）顯示 111 張基礎卡的主效果／能力／攻擊 `Then` 待轉接皆為 0。BS5 已於 2026-08-06 promote 至正式卡池，另補上 BS5-089@2 異圖攻擊欄位 normalize 與 attached HP bonus FLIP 的正式驗證契約。
+
 完整技術細節見 [docs/architecture.md](docs/architecture.md)（分層架構、規則引擎模組、AI 分級）與 [docs/audit-report.md](docs/audit-report.md)（逐 Phase 完成度盤點）。摘要：
 
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
@@ -101,9 +103,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 BS4 已完成效果轉接覆蓋稽核、候選嚴格驗證與正式卡池 promote；牌組編輯器已新增 BS4 系列選單並與 BS3 分流，22 張條件卡的成立／不成立專用情境、24 張一般 fixture 的實際 UI 互動、固定 seed benchmark、111 張 Chrome 逐卡載入與平板 responsive geometry gate 均已完成。下一步可進入 BS5 資料準備期；BS4 勝率排名仍只作為觀察資料，不作為正式環境強度定案。
 
-BS5 已進入資料準備期：新增 `cards:import:bs5-candidate` 依 `BS5-*` 卡號前綴從官方英文卡表建立 `inventory` 候選快照與卡牌盤點，並新增 `cards:analyze:bs5-candidate` 產生逐色效果覆蓋盤點；此階段只執行候選結構驗證，不建立 runtime 效果、不改動正式卡池，也不執行 promote。下一步依盤點逐色逐張補齊 runtime 轉接、效果稽核與 Chrome 驗證後才 promote。
-
-BS5 YELLOW 與 GREEN 已完成 runtime 轉接並逐色待轉接歸零；下一步接續 BLUE／PURPLE 逐色轉接、效果稽核與 Chrome 驗證後才 promote。
+BS5 已完成資料準備期與本批次 promote：`cards:import:bs5-candidate` 仍依 `BS5-*` 卡號前綴保留官方來源與異圖／促銷變體，`cards:analyze:bs5-candidate` 目前讀取正式 `data/cards/` 產生效果覆蓋盤點；111 張基礎卡的主效果、能力與攻擊 `Then` 均已轉接。後續 BS5 官方更新仍須重新走候選匯入、逐色稽核、測試與 Chrome 驗證，再提升為 `promotion-ready` 後 promote。
 
 持續以瀏覽器透過正式卡池測試對局設定驗證 BS3 卡牌在卡牌詳情、效果面板與戰鬥互動中的技能、攻擊後、物品、陷阱、場景與資源區效果，並維持規則引擎與 UI 的責任分離。
 
@@ -169,7 +169,7 @@ npm run cards:analyze:bs3-candidate
 
 BS4 已完成首次 promote；正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json` 為準，效果覆蓋報表由 `cards:analyze:bs4-candidate` 依正式檔案產生。
 
-BS5 已進入資料準備期，YELLOW 與 GREEN 已完成 runtime 轉接並逐色稽核歸零；候選資料以 `data/candidates/official-age-of-heroes-and-kingdoms-bs5.en.json` 與 `docs/bs5-card-inventory.md` 為準，完成逐色效果稽核、runtime 轉接、測試與 Chrome 驗證前，不得 promote。
+BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json` 為準，覆蓋報表由 `cards:analyze:bs5-candidate` 依正式檔案產生。後續官方更新仍先輸出至 `data/candidates/`，完成陷阱／攻擊後 `Then` 的效果稽核、測試與 Chrome 實戰驗證後，才可改為 `promotion-ready` 並 promote。
 
 ## 變更記錄
 
@@ -177,8 +177,10 @@ BS5 已進入資料準備期，YELLOW 與 GREEN 已完成 runtime 轉接並逐�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-06 | 完成 BS5-087／BS5-109 陷阱主效果與 10 張攻擊後 `Then` 的 runtime 轉接、條件成立／不成立回歸測試；補上 BS5-089@2 異圖 normalize、attached HP bonus FLIP 驗證契約，111 張基礎卡覆蓋達 0／0／0，`validate:candidate`、`promote:candidate`、`validate:cards`、`check:card-pool` 全部通過；12 張已用 Chrome 完成支付、代價、目標與 Then 實戰驗證，並修正 BS5-098 來源離場後 Then 中斷與 BS5-087 陷阱 Then 待決策流程。 |
 | 2026-08-05 | BS5 GREEN 全數轉接完成：10 張主效果、9 項額外能力、3 組攻擊 Then（056／059／060）；新增 `deferred-end-of-turn`（「When your turn ends」延遲佇列，end 階段重入排空＋`effectIndex` 書籤）、`opponent-rests-support`（BS5-065 對手選定橫置支援卡）與 `StageAbility.endPhase`（BS5-066 場景被動觸發、不可手動啟動）；BS5-051 回牌庫底在自身為唯一戰鬥區餅乾時略過；UI 新增 `OpponentRestSupportResponseModal` 並接線本機／線上控制器；新增 16 項引擎測試與 14 項 adapter 測試，GREEN 逐色待轉接歸零。 |
 | 2026-08-05 | BS5 YELLOW 全數轉接完成：新增 `make-faint` 效果（BS5-036）、`noSkillOnly` 目標過濾、`cookie-gained-hp-this-turn`／`attack-target-remaining-hp-at-most` 條件，並以昏厥流程結算；BS5-026 DJ 昏厥技能（手牌黃色 LV.2 以下進休息區＋自身回手）、BS5-044 場景、BS5-042 道具與 7 張攻擊 Then 完成轉接，YELLOW 逐色待轉接歸零；新增 13 項引擎測試與 22 項 adapter 測試。 |
+| 2026-08-05 | BS5 BLUE／PURPLE／PURE 能力轉接完成：補齊技能棄牌模式、牌庫檢視登場額外 HP、Dragon 裝備條件與本機／線上 UI 支付流程；能力待轉接歸零，保留陷阱主效果與攻擊 Then 待辦。 |
 | 2026-08-05 | 修正擊倒觸發技能（BS4-011）延後至空場補位／敗北判定之後結算，離線、線上與 AI 共用判定並補齊手牌為空與無補位餅乾邊界測試；BS5 候選匯入與效果覆蓋分析腳本就緒（`cards:import:bs5-candidate`、`cards:analyze:bs5-candidate`），尚未 promote；BS4-030「世外桃源」與 BS4-044 千年寺改為兩階段選擇（先選目標餅乾、再選 1 張手牌放回 HP 最上方），含無目標不詢問、昏厥中斷與對戰紀錄隱私。 |
 | 2026-08-04 | 修正 AI benchmark 的技能／物品／場景／Refresh RNG 傳遞並完成 100 場固定 seed 重跑；補上 BattleRow 物品支付 aria label 回歸測試、BS4-052／BS4-029 規則回歸、22 張條件卡 44／44、24 張一般 fixture 24／24、Chrome 111／111 card-check 與平板 responsive geometry gate；BS5 進入 inventory 資料準備期。 |
 | 2026-08-03 | 以 BS3 五色牌組為基礎完成 BS4 五色強化牌組 JSON；新增固定種子 Lv.4 每色 30 場 benchmark，五色共 150 場皆完成且無卡死。 |

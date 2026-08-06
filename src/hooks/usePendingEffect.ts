@@ -20,6 +20,8 @@ import {
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getDiscardAllHandCostCandidates,
+  getDiscardHandCostCandidates,
   getPendingDecision,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
@@ -44,6 +46,22 @@ import type { DispatchGameCommand } from './useBattleActions'
 interface HpPileInfo {
   title: string
   cards: GameCard[]
+}
+
+const findCardInPlayerZones = (
+  player: GameState['players'][PlayerId],
+  instanceId: string,
+): GameCard | undefined => {
+  const cards: GameCard[] = [
+    ...player.battleArea.map((cookie) => cookie.card),
+    ...player.hand,
+    ...player.breakArea,
+    ...player.discardPile,
+    ...player.supportArea.map((support) => support.card),
+    ...(player.stage ? [player.stage.card] : []),
+    ...player.deck,
+  ]
+  return cards.find((card) => card.instanceId === instanceId)
 }
 
 export function usePendingEffect(params: {
@@ -160,11 +178,11 @@ export function usePendingEffect(params: {
       ? (currentEffect.kind === 'field-to-trash' && currentEffect.stageOnly)
         ? []
         : currentEffect.kind === 'equip-source'
-          ? getEffectTargetCandidates(
+          ? getEffectTargetCandidatesForEffect(
               game,
               pendingEffect.context,
-              currentTargetSelector,
-            ).filter((cookie) => cookie.card.id === currentEffect.requiredCookieId)
+              currentEffect,
+            )
           : getEffectTargetCandidates(
               game,
               pendingEffect.context,
@@ -407,18 +425,39 @@ export function usePendingEffect(params: {
     pendingEffect?.selectedCostSupportToTrashIds ?? [],
   )
 
-  const discardHandCost = pendingEffect?.skill.cost.discardHand ?? 0
+  const discardAllHand = Boolean(pendingEffect?.skill.cost.discardAllHand)
+  const discardHandAtLeast = Boolean(
+    pendingEffect?.skill.cost.discardHandAtLeast,
+  )
+  const discardHandCandidates = pendingEffect
+    ? discardAllHand
+      ? getDiscardAllHandCostCandidates(
+          pendingEffect.skill.cost,
+          game.players[pendingEffect.context.sourcePlayerId].hand,
+          pendingEffect.context.sourceInstanceId,
+        )
+      : getDiscardHandCostCandidates(
+          pendingEffect.skill.cost,
+          game.players[pendingEffect.context.sourcePlayerId].hand,
+          pendingEffect.context.sourceInstanceId,
+        )
+    : []
+  const discardHandCost = discardAllHand
+    ? discardHandCandidates.length
+    : pendingEffect?.skill.cost.discardHand ?? 0
+  const discardHandSelectionLimit =
+    discardAllHand || discardHandAtLeast
+      ? discardHandCandidates.length
+      : discardHandCost
   const skillCostDiscardHandCandidates =
     pendingEffect &&
-    discardHandCost > 0 &&
+    (discardAllHand || discardHandCost > 0) &&
     !pendingEffect.skillActivated
-      ? game.players[pendingEffect.context.sourcePlayerId].hand.filter(
+      ? discardHandCandidates.filter(
           (card) =>
-            card.instanceId !== pendingEffect.sourceCard.instanceId &&
-            (pendingEffect.selectedDiscardHandIds.length < discardHandCost ||
-              pendingEffect.selectedDiscardHandIds.includes(
-                card.instanceId,
-              )),
+            pendingEffect.selectedDiscardHandIds.length <
+              discardHandSelectionLimit ||
+            pendingEffect.selectedDiscardHandIds.includes(card.instanceId),
         )
       : []
   const skillDiscardHandTargetIds = new Set(
@@ -881,9 +920,13 @@ export function usePendingEffect(params: {
       return
     }
 
-    const sourceCard = game.players[viewerPlayerId].battleArea.find(
-      (cookie) => cookie.card.instanceId === battle.attackerInstanceId,
-    )?.card
+    // 攻擊後 Then 仍要依序結算，即使前一段效果讓攻擊者昏厥（例如
+    // BS5-098 將自身最後一張 HP 送入棄牌區）。攻擊者此時會離開戰鬥區，
+    // 但完整卡牌資料仍在休息區／棄牌區，必須沿用該資料建立下一段提示。
+    const sourceCard = findCardInPlayerZones(
+      game.players[viewerPlayerId],
+      battle.attackerInstanceId,
+    )
     const currentAttackEffect =
       battle.attackEffects[battle.attackEffectIndex]
     if (!sourceCard || !currentAttackEffect) return
@@ -974,7 +1017,10 @@ export function usePendingEffect(params: {
           yourTurn: true,
           restSource: false,
           cost: { energy: {}, discardHand: 0 },
-          text: sourceCard.attackText ?? '',
+          text:
+            sourceCard && 'attackText' in sourceCard
+              ? sourceCard.attackText ?? ''
+              : '',
           effects: battle.attackEffects,
         },
         trigger: 'activate',
@@ -1199,19 +1245,20 @@ export function usePendingEffect(params: {
 
   const toggleSkillDiscardHand = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
-    const discardHandCost = pendingEffect.skill.cost.discardHand ?? 0
-    if (discardHandCost <= 0) return
-    const player = game.players[pendingEffect.context.sourcePlayerId]
-    const ownsCard = player.hand.some(
-      (card) => card.instanceId === instanceId,
-    )
-    if (!ownsCard) return
+    const cost = pendingEffect.skill.cost
+    const discardHandCost = cost.discardHand ?? 0
+    if (!cost.discardAllHand && discardHandCost <= 0) return
+    if (!skillDiscardHandTargetIds.has(instanceId)) return
+    const selectionLimit =
+      cost.discardAllHand || cost.discardHandAtLeast
+        ? skillDiscardHandTargetIds.size
+        : discardHandCost
 
     const isSelected =
       pendingEffect.selectedDiscardHandIds.includes(instanceId)
     if (
       !isSelected &&
-      pendingEffect.selectedDiscardHandIds.length >= discardHandCost
+      pendingEffect.selectedDiscardHandIds.length >= selectionLimit
     ) {
       return
     }
@@ -1329,9 +1376,11 @@ export function usePendingEffect(params: {
           : null
       const skipNextEquip =
         nextEffect?.kind === 'equip-source' &&
-        !game.players[pendingEffect.context.sourcePlayerId].battleArea.some(
-          (c) => c.card.id === nextEffect.requiredCookieId,
-        )
+        getEffectTargetCandidatesForEffect(
+          game,
+          pendingEffect.context,
+          nextEffect,
+        ).length === 0
       const effectiveNextIndex = skipNextEquip
         ? nextEffectIndex + 1
         : nextEffectIndex
@@ -1571,9 +1620,11 @@ export function usePendingEffect(params: {
           : null
       const skipNextEquip =
         nextEffect?.kind === 'equip-source' &&
-        !nextGame.players[pendingEffect.context.sourcePlayerId].battleArea.some(
-          (c) => c.card.id === nextEffect.requiredCookieId,
-        )
+        getEffectTargetCandidatesForEffect(
+          nextGame,
+          pendingEffect.context,
+          nextEffect,
+        ).length === 0
       const effectiveNextIndex = skipNextEquip
         ? nextEffectIndex + 1
         : nextEffectIndex

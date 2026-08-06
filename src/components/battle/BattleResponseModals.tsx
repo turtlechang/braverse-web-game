@@ -10,14 +10,8 @@ import {
   BlockerResponseModal,
   FlipResponseModal,
 } from '../modals/GameModals'
-import { parseTestStateConfig } from '../../game/demo'
 import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
 import { getUnmetTrapConditionWarning } from './trapWarnings'
-
-const testStateConfig = parseTestStateConfig(
-  window.location.search,
-  window.location.hostname,
-)
 
 export interface BattleResponseModalsProps {
   match: BattleUiMatchLike
@@ -264,12 +258,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 trashToDeckIds: match.selectedTrapTrashToDeckIds,
               }
               match.dispatch(
-                testStateConfig
-                  ? [
-                      playTrapCommand,
-                      { kind: 'resolve-battle', playerId: match.viewerPlayerId },
-                    ]
-                  : playTrapCommand,
+                playTrapCommand,
                 `已發動${trap.name}。`,
               )
             }}

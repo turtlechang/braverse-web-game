@@ -67,7 +67,7 @@ export interface StageAbility extends CardAbility {
   specialVictory?: SpecialVictoryCondition
 }
 
-export type CardKeyword = 'ancient' | 'soul-jam'
+export type CardKeyword = 'ancient' | 'soul-jam' | 'dragon'
 
 export interface DistinctNamedKeywordRequirement {
   keyword: CardKeyword
@@ -1018,9 +1018,14 @@ export interface SupportToHpEffect {
 export interface EquipSourceEffect {
   kind: 'equip-source'
   target: EffectTargetSelector
-  requiredCookieId: string
+  requiredCookieId?: string
+  requiredKeyword?: CardKeyword
+  maxRemainingHp?: number
+  /** 裝備成功後，只有符合此 HP 門檻才套用攻擊／減傷加成。 */
+  bonusMaxRemainingHp?: number
   attackBonus?: number
   gainHp?: number
+  damageReceivedReduction?: number
 }
 
 /** 未被選走的檢視卡去向；`bottom`／`top` 由玩家決定順序，`trash` 直接棄置。 */
@@ -1031,6 +1036,7 @@ export interface InspectDeckEffect {
   lookCount: number
   pickCount: number
   restDestination: InspectDeckRestDestination
+  condition?: EffectCondition
   /** 被選走的卡去向；預設加入手牌，`battle` 代表直接登場（BS3-114）。 */
   pickDestination?: 'hand' | 'battle'
   filterColor?: EnergyColor
@@ -1095,7 +1101,11 @@ export interface TrashToHandEffect {
 export interface TrashToDeckEffect {
   kind: 'trash-to-deck'
   max: number
+  /** Minimum number of cards when the official text says a fixed amount. */
+  min?: number
   excludeFlip?: boolean
+  energyColor?: EnergyColor
+  cookieOnly?: boolean
   /** 指定牌庫底時保留玩家選取順序；未指定時維持洗回牌庫。 */
   destination?: 'bottom'
 }

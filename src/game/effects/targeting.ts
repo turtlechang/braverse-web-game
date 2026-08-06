@@ -283,7 +283,13 @@ export const getEffectTargetCandidatesForEffect = (
 
   if (effect.kind === 'equip-source') {
     return getEffectTargetCandidates(state, context, effect.target).filter(
-      (cookie) => cookie.card.id === effect.requiredCookieId,
+      (cookie) =>
+        (effect.requiredCookieId === undefined ||
+          cookie.card.id === effect.requiredCookieId) &&
+        (effect.requiredKeyword === undefined ||
+          cookie.card.keywords?.includes(effect.requiredKeyword)) &&
+        (effect.maxRemainingHp === undefined ||
+          getCookieEffectiveHp(cookie) <= effect.maxRemainingHp),
     )
   }
 
@@ -417,7 +423,7 @@ export const getEffectSelectionLimits = (
     return { min: effect.amount, max: effect.amount }
   }
   if (effect.kind === 'trash-to-deck') {
-    return { min: 0, max: effect.max }
+    return { min: effect.min ?? 0, max: effect.max }
   }
   if (effect.kind === 'support-to-trash') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
@@ -677,6 +683,12 @@ export const hasRequiredEffectTargets = (
           effect.target.min,
     )
   }
+  if (effect.kind === 'trash-to-deck') {
+    return (
+      getTrashToDeckCandidates(state, context, effect).length >=
+      (effect.min ?? 0)
+    )
+  }
   if (!requiresTargetSelection(effect)) return true
   const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
   const min =
@@ -805,10 +817,17 @@ export const getTrashToHandCandidates = (
 export const getTrashToDeckCandidates = (
   state: GameState,
   context: EffectContext,
-  effect: { excludeFlip?: boolean },
+  effect: {
+    excludeFlip?: boolean
+    energyColor?: EnergyColor
+    cookieOnly?: boolean
+  },
 ): GameCard[] =>
   state.players[context.sourcePlayerId].discardPile.filter(
-    (card) => !effect.excludeFlip || !card.flip,
+    (card) =>
+      (!effect.excludeFlip || !card.flip) &&
+      (effect.energyColor === undefined || card.energyColor === effect.energyColor) &&
+      (!effect.cookieOnly || card.type === 'cookie'),
   )
 
 export const getBreakToBattleCandidates = (

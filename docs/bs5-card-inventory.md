@@ -1,6 +1,6 @@
 # BS5 卡牌資料盤點（資料準備期）
 
-> 本文件由 `npm run cards:import:bs5-candidate` 產生。BS5 目前只隔離在候選資料區，尚未接入 runtime、尚未完成效果稽核，也不應執行 promote。
+> 本文件由 `npm run cards:import:bs5-candidate` 產生，是 BS5 promote 前的歷史盤點快照。BS5 已於 2026-08-06 完成 runtime 轉接、候選驗證與 promote，正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json` 為準。
 
 ## 來源與候選狀態
 
@@ -8,7 +8,8 @@
 - 官方 JSON：`https://cookierunbraverse.com/data/json/cardList_en.json`
 - 抓取時間：`2026-08-04T17:32:55.114Z`
 - 篩選規則：完整卡號以 `BS5-` 開頭，保留異圖／促銷變體。
-- 候選狀態：`inventory`
+- 匯入時候選狀態：`inventory`
+- 目前正式狀態：已 promote 至 `data/cards/`
 - 圖片下載：否
 
 ## 數量摘要

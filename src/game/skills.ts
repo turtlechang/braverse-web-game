@@ -285,7 +285,9 @@ export const getDiscardAllHandCostCandidates = (
   sourceInstanceId?: string,
 ): GameCard[] =>
   cost.discardAllHand
-    ? hand.filter((card) => card.instanceId !== sourceInstanceId)
+    ? hand.filter((card) =>
+        isDiscardHandCostCandidate(cost, card, sourceInstanceId),
+      )
     : []
 
 export const getHpToTrashCostCandidates = (
@@ -548,13 +550,23 @@ export const canActivateCookieSkill = (
     return false
   }
 
+  const discardHandCandidates = skill.cost.discardAllHand
+    ? getDiscardAllHandCostCandidates(
+        skill.cost,
+        player.hand,
+        sourceInstanceId,
+      )
+    : getDiscardHandCostCandidates(skill.cost, player.hand, sourceInstanceId)
+  if (
+    skill.cost.discardAllHand &&
+    (player.hand.length === 0 ||
+      discardHandCandidates.length !== player.hand.length)
+  ) {
+    return false
+  }
   if (
     (skill.cost.discardHand ?? 0) > 0 &&
-    getDiscardHandCostCandidates(
-      skill.cost,
-      player.hand,
-      sourceInstanceId,
-    ).length < (skill.cost.discardHand ?? 0)
+    discardHandCandidates.length < (skill.cost.discardHand ?? 0)
   ) {
     return false
   }
@@ -692,7 +704,31 @@ export const activateCookieSkill = (
     throw new GameRuleError('此技能不需要支付支援區卡牌代價。')
   }
 
-  if ((cost.discardHand ?? 0) > 0) {
+  if (cost.discardAllHand || cost.discardHandAtLeast) {
+    const discardHandCandidates = cost.discardAllHand
+      ? getDiscardAllHandCostCandidates(cost, player.hand, sourceInstanceId)
+      : getDiscardHandCostCandidates(cost, player.hand, sourceInstanceId)
+    const discardCandidateIds = new Set(
+      discardHandCandidates.map((card) => card.instanceId),
+    )
+    if (cost.discardAllHand) {
+      if (
+        player.hand.length === 0 ||
+        uniqueDiscardHandIds.length !== player.hand.length
+      ) {
+        throw new GameRuleError('必須棄掉整手牌。')
+      }
+    } else if (
+      uniqueDiscardHandIds.length < (cost.discardHand ?? 0)
+    ) {
+      throw new GameRuleError(
+        `至少須棄掉 ${cost.discardHand ?? 0} 張手牌。`,
+      )
+    }
+    if (uniqueDiscardHandIds.some((id) => !discardCandidateIds.has(id))) {
+      throw new GameRuleError('手牌不符合棄牌代價條件。')
+    }
+  } else if ((cost.discardHand ?? 0) > 0) {
     if (uniqueDiscardHandIds.length !== (cost.discardHand ?? 0)) {
       throw new GameRuleError(
         `必須棄置 ${cost.discardHand ?? 0} 張手牌作為技能代價。`,

@@ -165,4 +165,46 @@ describe('post-attack effects', () => {
 
     expect(state.pendingBattle).toBeNull()
   })
+
+  it('continues a later attack effect after the attacker pays its last HP card', () => {
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      {
+        kind: 'field-to-trash',
+        target: {
+          side: 'opponent',
+          min: 1,
+          max: 1,
+          maxLevel: 1,
+          attackTargetOnly: true,
+        },
+      },
+    ]
+
+    state = skipTrap(declareAttack(state), 'player-one')
+    state = resolveNextDamage(state)
+    state = resolveNextDamage(state)
+    state = resolveNextDamage(state)
+
+    state = resolveAttackEffect(state, 'player-two', ['attacker'])
+
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackEffectIndex: 1,
+    })
+    expect(state.players['player-two'].battleArea).toHaveLength(0)
+
+    state = resolveAttackEffect(state, 'player-two', ['defender'])
+
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-one'].battleArea).toHaveLength(0)
+    expect(state.players['player-one'].breakArea.map((card) => card.instanceId)).toContain(
+      'defender',
+    )
+  })
 })

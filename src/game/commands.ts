@@ -131,6 +131,7 @@ export interface InspectDeckDecision {
   filterColor?: EnergyColor
   filterType?: GameCard['type']
   optionalPick?: boolean
+  extraHp?: number
 }
 
 export interface RevealTopDeckDecision {
@@ -824,6 +825,7 @@ export const getPendingDecision = (
       filterColor: pending.filterColor,
       filterType: pending.filterType,
       optionalPick: pending.optionalPick,
+      extraHp: pending.extraHp,
     }
   }
 
@@ -1403,8 +1405,7 @@ const hasNoEquipTarget = (
 ): boolean => {
   const next = effects[effectIndex + 1]
   if (!next || next.kind !== 'equip-source') return false
-  const player = state.players[context.sourcePlayerId]
-  return !player.battleArea.some((c) => c.card.id === next.requiredCookieId)
+  return getEffectTargetCandidatesForEffect(state, context, next).length === 0
 }
 
 const hasOwnReplacementTask = (

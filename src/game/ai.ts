@@ -24,6 +24,8 @@ import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
   canActivateCookieSkill,
+  getDiscardAllHandCostCandidates,
+  getDiscardHandCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
@@ -776,14 +778,25 @@ const resolveAiSkill = (
     return null
   }
 
+  const discardHandCandidates = skill.cost.discardAllHand
+    ? getDiscardAllHandCostCandidates(
+        skill.cost,
+        player.hand,
+        source.card.instanceId,
+      )
+    : getDiscardHandCostCandidates(skill.cost, player.hand, source.card.instanceId)
   const discardHandCost = skill.cost.discardHand ?? 0
-  const discardHandIds = discardHandCost > 0
-    ? player.hand.slice(0, discardHandCost).map((card) => card.instanceId)
-    : []
+  const discardHandIds = skill.cost.discardAllHand
+    ? discardHandCandidates.map((card) => card.instanceId)
+    : discardHandCost > 0
+      ? discardHandCandidates
+          .slice(0, discardHandCost)
+          .map((card) => card.instanceId)
+      : []
 
   if (
-    discardHandCost > 0 &&
-    discardHandIds.length < discardHandCost
+    (skill.cost.discardAllHand && discardHandCandidates.length === 0) ||
+    (discardHandCost > 0 && discardHandIds.length < discardHandCost)
   ) {
     return null
   }

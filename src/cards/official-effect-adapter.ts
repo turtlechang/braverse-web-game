@@ -2541,6 +2541,38 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'support-count-at-least', count: 7 },
       },
     ],
+    // BS5-087 Dino Greetings：陷阱主效果與 Then 條件分開建模；LV.6 條件
+    // 只影響後續抽牌，不是陷阱的發動門檻。
+    'BS5-087': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'break-level-at-least', level: 6 },
+      },
+    ],
+    // BS5-109 Charmed Miners：第二個攻擊下降效果只鎖定對手 LV.1，且
+    // 15 張棄牌條件是 Then 子句，不是陷阱的發動門檻。
+    'BS5-109': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        condition: { kind: 'trash-count-at-least', count: 15 },
+      },
+    ],
     // BS5-066 Longan Palace（stage）：<{G}> Place in your stage area. When
     // your turn ends, <discard 1 card.> Set up to 1 card from your support area
     // as active. Then, if [Longan Dragon Cookie] is in your battle area, draw
@@ -2563,6 +2595,199 @@ export const convertOfficialCardEffects = (
     // 承載（見 exactFlipEffects），這裡空效果陣列只為讓主效果狀態判定為
     // supported；BS5-009 就是一般的抽 1。代價<Discard 1 card.>由 flip 轉接
     // 層的 parseAbilityCost 解析。
+    // === BS5 BLUE ability conversions ===
+    'BS5-068': [{ kind: 'draw-up-to', max: 1 }],
+    'BS5-070': [
+      {
+        kind: 'return-to-hand',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS5-071': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'break-level-at-least', level: 2 },
+      },
+    ],
+    'BS5-072': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'break-level-at-least', level: 6 },
+      },
+    ],
+    'BS5-074': [{ kind: 'draw-up-to', max: 2 }],
+    'BS5-075': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          restedOnly: true,
+        },
+        condition: { kind: 'hand-count-at-least', count: 5 },
+      },
+    ],
+    'BS5-076': [
+      {
+        kind: 'make-faint',
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 1,
+          noSkillOnly: true,
+        },
+      },
+    ],
+    'BS5-078': [{ kind: 'draw-up-to', max: 1 }],
+    'BS5-081': [
+      {
+        kind: 'prevent-knockout',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS5-083': [
+      {
+        kind: 'gain-hp',
+        amount: 2,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS5-084': [
+      {
+        kind: 'set-cookie-active',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          excludeSource: true,
+          energyColor: 'blue',
+        },
+      },
+    ],
+    'BS5-086': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 1,
+        restDestination: 'bottom',
+        pickDestination: 'battle',
+        filterColor: 'blue',
+        filterType: 'cookie',
+        optionalPick: true,
+        extraHp: 1,
+        condition: { kind: 'battle-area-count-at-most', count: 1 },
+      },
+    ],
+    'BS5-088': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Lotus Dragon Cookie',
+        },
+      },
+    ],
+    // === BS5 PURPLE ability conversions ===
+    'BS5-091': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          maxLevel: 2,
+          restedOnly: true,
+        },
+        condition: { kind: 'trash-count-at-least', count: 15 },
+      },
+    ],
+    'BS5-098': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, sourceOnly: true },
+      },
+    ],
+    'BS5-100': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 1,
+        restDestination: 'trash',
+        filterColor: 'purple',
+        optionalPick: true,
+      },
+    ],
+    'BS5-101': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'trash-count-at-least', count: 10 },
+      },
+    ],
+    'BS5-102': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    'BS5-104': [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+    ],
+    'BS5-107': [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+    ],
+    'BS5-108': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 1,
+        restDestination: 'trash',
+        filterColor: 'purple',
+        filterType: 'cookie',
+        optionalPick: true,
+      },
+    ],
+    'BS5-110': [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Lychee Dragon Cookie',
+        },
+      },
+    ],
+    // BS5-111 can equip any Dragon Cookie; the HP clause only gates its bonuses.
+    'BS5-111': [
+      {
+        kind: 'equip-source',
+        target: { side: 'self', min: 1, max: 1, keyword: 'dragon' },
+        requiredKeyword: 'dragon',
+        bonusMaxRemainingHp: 3,
+        attackBonus: 1,
+        damageReceivedReduction: 1,
+      },
+    ],
     'BS5-004': [],
     'BS5-009': [{ kind: 'draw-up-to', max: 1 }],
     // 其他四色的同款 flip：附著 +1 HP（041/082/095）與一般抽 1（049/090）。
@@ -3134,6 +3359,9 @@ export const convertOfficialItemAbility = (
   }
   const parsed = parseOfficialCardText(card.attackText)
   if (!parsed) return undefined
+  const cardKey = card.cardNumber.includes('@')
+    ? card.baseCardNumber || card.cardNumber.split('@')[0]
+    : card.cardNumber
   const exactCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-022': { energy: { red: 3 }, discardHand: 1 },
     'BS1-023': {
@@ -3168,6 +3396,18 @@ export const convertOfficialItemAbility = (
       discardHand: 0,
       hpToTrash: { amount: 1 },
     },
+    'BS5-086': {
+      energy: { blue: 2 },
+      discardHand: 0,
+    },
+    'BS5-108': {
+      energy: { purple: 1 },
+      discardHand: 0,
+    },
+    'BS5-111': {
+      energy: { neutral: 1 },
+      discardHand: 0,
+    },
   }
   const parsedCost = parseAbilityCost(card.attackText)
   const hasSpecialCost =
@@ -3177,7 +3417,7 @@ export const convertOfficialItemAbility = (
     Boolean(parsedCost.hpToTrash) ||
     Boolean(parsedCost.trashBattleCookie)
   return {
-    cost: exactCosts[card.cardNumber] ?? (hasSpecialCost ? parsedCost : parsed.cost),
+    cost: exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
     text: card.attackText,
     effects: conversion.effects,
   }
@@ -3549,6 +3789,37 @@ export const convertOfficialStageAbility = (
         },
       },
     ],
+    'BS5-088': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Lotus Dragon Cookie',
+        },
+      },
+    ],
+    'BS5-110': [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Lychee Dragon Cookie',
+        },
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -3591,6 +3862,14 @@ export const convertOfficialStageAbility = (
     // 觸發，代價為 0（棄牌在效果鏈中處理，見 exactStageEffects）。
     'BS5-066': {
       energy: {},
+      discardHand: 0,
+    },
+    'BS5-088': {
+      energy: { blue: 1 },
+      discardHand: 0,
+    },
+    'BS5-110': {
+      energy: { purple: 1 },
       discardHand: 0,
     },
   }
@@ -4668,6 +4947,88 @@ export const convertOfficialAttackEffects = (
         effects: [{ kind: 'set-active', supportCount: 3 }],
       },
     ],
+    // === BS5 BLUE／PURPLE 攻擊 Then ===
+    'BS5-067': [
+      {
+        kind: 'inspect-deck',
+        lookCount: 3,
+        pickCount: 0,
+        restDestination: 'top',
+      },
+    ],
+    'BS5-071': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    'BS5-080': [
+      { kind: 'discard-hand', count: 2 },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS5-085': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS5-089': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+    'BS5-094': [
+      {
+        kind: 'trash-to-deck',
+        min: 5,
+        max: 5,
+        excludeFlip: true,
+        energyColor: 'purple',
+        cookieOnly: true,
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS5-097': [
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 2,
+        discardCount: 2,
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+    ],
+    'BS5-098': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+      {
+        kind: 'field-to-trash',
+        target: {
+          side: 'opponent',
+          min: 1,
+          max: 1,
+          maxLevel: 1,
+          attackTargetOnly: true,
+        },
+      },
+    ],
+    'BS5-099': [
+      { kind: 'deck-to-trash', amount: 2, side: 'self' },
+      { kind: 'deck-to-trash', amount: 2, side: 'opponent' },
+    ],
+    'BS5-106': [
+      { kind: 'draw', amount: 1 },
+      { kind: 'deck-to-trash', amount: 3, side: 'self' },
+    ],
   }
 
   if (exactAttackEffects[cardKey]) {
@@ -5129,6 +5490,7 @@ export const convertOfficialTrapAbility = (
         effects: CardEffect[]
         cost?: AbilityCost
         condition?: TrapAbility['condition']
+        ignoreParsedCondition?: boolean
       }
     >
   > = {
@@ -5427,6 +5789,40 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'BS5-087': {
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: { kind: 'break-level-at-least', level: 6 },
+        },
+      ],
+    },
+    'BS5-109': {
+      ignoreParsedCondition: true,
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          condition: { kind: 'trash-count-at-least', count: 15 },
+        },
+      ],
+    },
   }
 
   const exactTrap = exactTrapEffects[card.cardNumber]
@@ -5434,7 +5830,9 @@ export const convertOfficialTrapAbility = (
     return {
       text,
       cost: exactTrap.cost ?? parseAbilityCost(text),
-      condition: exactTrap.condition ?? condition,
+      condition: exactTrap.ignoreParsedCondition
+        ? exactTrap.condition
+        : exactTrap.condition ?? condition,
       effects: exactTrap.effects,
     }
   }
@@ -5559,6 +5957,37 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     discardHandColor: 'red',
     discardHandType: 'cookie',
   },
+  'BS5-071': {
+    energy: {},
+    discardHand: 3,
+    discardHandAtLeast: true,
+    discardHandColor: 'blue',
+  },
+  'BS5-074': {
+    energy: { blue: 1 },
+    discardHand: 0,
+  },
+  'BS5-076': {
+    energy: { blue: 1 },
+    discardHand: 1,
+  },
+  'BS5-078': {
+    energy: { blue: 1 },
+    discardHand: 0,
+  },
+  'BS5-081': {
+    energy: {},
+    discardHand: 4,
+  },
+  'BS5-083': {
+    energy: {},
+    discardHand: 0,
+    discardAllHand: true,
+  },
+  'BS5-084': {
+    energy: {},
+    discardHand: 1,
+  },
 }
 
 const exactCookieSkillSourceEnergy: Partial<
@@ -5575,6 +6004,7 @@ const exactCookieSkillSourceEnergy: Partial<
 const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS3-025': 'activate',
   'BS4-004': 'on-play',
+  'BS5-081': 'opponent-attack',
 }
 
 /**

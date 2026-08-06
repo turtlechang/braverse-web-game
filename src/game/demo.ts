@@ -2175,6 +2175,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     ...Array.from({ length: 5 }, (_, i) =>
       testSupportCard(`trash-purple-cost-${i}`, 'purple'),
     ),
+    ...(card.id === 'BS5-094'
+      ? Array.from({ length: 5 }, (_, i) =>
+          cardCheckFillerCookie(
+            `BS5-094-purple-cookie-${i}`,
+            1,
+            3,
+            0,
+            'purple',
+          ).cookie,
+        )
+      : []),
   ]
   // Deploying a cookie draws HP cards from the top of the deck
   // (see deployCookie in actions.ts); an empty deck immediately triggers
@@ -2303,6 +2314,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const bigTrashFillers = Array.from({ length: 16 }, (_, i) =>
       cardCheckFillerCookie(`trash-bulk-${i}`, 1, 3).cookie,
     )
+    const trapBreakArea: CookieCard[] = card.id === 'BS5-087'
+      ? [
+          cardCheckFillerCookie('BS5-087-break-1', 3, 4).cookie,
+          cardCheckFillerCookie('BS5-087-break-2', 3, 4).cookie,
+        ]
+      : []
+    const trapOpponentSecondCookie =
+      card.id === 'BS5-109' ? opp1.cookie : opp2.cookie
     const state = baseState()
     return {
       ...state,
@@ -2315,13 +2334,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           hand: [card, ...handFillers],
           battleArea: [cardCheckBattleEntry(defender.cookie, defender.hpCards, 4)],
           supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          breakArea: trapBreakArea,
           discardPile: [...trashFillers, ...bigTrashFillers],
         },
         'player-two': {
           ...state.players['player-two'],
           battleArea: [
             cardCheckBattleEntry(attacker, [], 5),
-            cardCheckBattleEntry(opp2.cookie, opp2.hpCards, 6),
+            cardCheckBattleEntry(
+              trapOpponentSecondCookie,
+              trapOpponentSecondCookie === opp1.cookie
+                ? opp1.hpCards
+                : opp2.hpCards,
+              6,
+            ),
           ],
           stage: { card: opponentStage, rested: false },
         },
@@ -2447,7 +2473,11 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     // false in the neutral spread above. Keep these adjustments local to the
     // browser fixture; they do not alter the official card pool or rules.
     const attackSourceHpCount =
-      cookieCard.id === 'BS4-039' ? 2 : 0
+      cookieCard.id === 'BS4-039'
+        ? 2
+        : cookieCard.id === 'BS5-098'
+          ? 1
+          : 0
     const attackSourceHpCards = Array.from(
       { length: attackSourceHpCount },
       (_, index) => testSupportCard(`${cookieCard.id}-source-hp-${index + 1}`),
@@ -2494,7 +2524,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...handFillers,
             testSupportCard(`${cookieCard.id}-condition-hand`, 'blue'),
           ]
-        : handFillers
+        : cookieCard.id === 'BS5-071'
+          ? handFillers.slice(0, 2)
+          : handFillers
     const attackOpponentDiscard =
       cookieCard.id === 'BS4-089'
         ? [
@@ -2560,7 +2592,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         trapUsed: false,
         revealedHpCard: null,
         preventKnockoutTargetIds: [],
-        faintedColors: [],
+        faintedColors:
+          cookieCard.id === 'BS5-085' || cookieCard.id === 'BS5-097'
+            ? ['yellow']
+            : [],
         attackEffects: cookieCard.attackEffects,
         attackEffectIndex: 0,
       },

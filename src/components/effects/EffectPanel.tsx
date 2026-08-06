@@ -157,7 +157,13 @@ function EffectPanelContent({
       : currentEffect?.kind === 'break-to-trash' ||
       currentEffect?.kind === 'trash-to-hand' ||
       currentEffect?.kind === 'trash-to-deck'
-      ? { min: 0, max: currentEffect.max }
+      ? {
+          min:
+            currentEffect.kind === 'trash-to-deck'
+              ? currentEffect.min ?? 0
+              : 0,
+          max: currentEffect.max,
+        }
       : currentEffect?.kind === 'opponent-battle-to-trash'
         ? { min: 1, max: 1 }
       : currentEffect?.kind === 'break-to-battle' ||
@@ -212,9 +218,15 @@ function EffectPanelContent({
   const supportPaid =
     supportAreaCost === 0 ||
     pendingEffect?.selectedCostSupportToTrashIds.length === supportAreaCost
+  const discardAllHand = Boolean(skill?.cost.discardAllHand)
+  const discardHandAtLeast = Boolean(skill?.cost.discardHandAtLeast)
   const discardPaid =
     discardHandCost === 0 ||
-    pendingEffect?.selectedDiscardHandIds.length === discardHandCost
+    (discardAllHand
+      ? pendingEffect?.selectedDiscardHandIds.length === discardHandCost
+      : discardHandAtLeast
+        ? (pendingEffect?.selectedDiscardHandIds.length ?? 0) >= discardHandCost
+        : pendingEffect?.selectedDiscardHandIds.length === discardHandCost)
   const hpToTrashPaid =
     hpToTrashCost === 0 ||
     (pendingEffect?.selectedHpToTrashTargetIds.length ?? 0) === hpToTrashCost

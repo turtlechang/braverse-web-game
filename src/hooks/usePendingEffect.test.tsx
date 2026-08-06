@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 import {
   createBlueOptionalCostAttackDemoState,
+  createCardCheckDemoState,
   createItemUsageDemoState,
 } from '../game/demo'
 import { usePendingEffect } from './usePendingEffect'
@@ -1045,6 +1046,66 @@ describe('usePendingEffect attack-effect trigger', () => {
     expect(captured!.pendingEffect?.skill.text).not.toBe(
       'OnPlay 技能文字（不應顯示於攻擊後續效果）',
     )
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
+  })
+
+  it('continues an attack Then effect after the attacker leaves the battlefield', async () => {
+    vi.useFakeTimers()
+    let gameState = createCardCheckDemoState('BS5-098')
+    const attackerInstanceId =
+      gameState.players['player-one'].battleArea[0].card.instanceId
+    gameState = resolveAttackEffect(
+      gameState,
+      'player-one',
+      [attackerInstanceId],
+    )
+
+    expect(gameState.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackEffectIndex: 1,
+    })
+    expect(gameState.players['player-one'].battleArea).toHaveLength(1)
+
+    const setGameMock = vi.fn()
+    const captured: { current: ReturnType<typeof usePendingEffect> | null } = {
+      current: null,
+    }
+
+    function TestHarness() {
+      captured.current = usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.runAllTimers())
+
+    expect(captured.current?.pendingEffect).toMatchObject({
+      sourceKind: 'attack',
+      effectIndex: 1,
+      sourceCard: { id: 'BS5-098' },
+    })
 
     await act(() => root.unmount())
     vi.useRealTimers()

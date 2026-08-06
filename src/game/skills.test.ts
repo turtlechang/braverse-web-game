@@ -993,4 +993,92 @@ describe('activate skill with discardHand cost', () => {
     }
     expect(canActivateCookieSkill(state, 'player-one', sourceId, 'activate')).toBe(true)
   })
+
+  it('supports at-least and entire-hand discard costs for cookie skills', () => {
+    const makeHand = (prefix: string, count: number): GameCard[] =>
+      Array.from({ length: count }, (_, index) => ({
+        id: `${prefix}-${index}`,
+        instanceId: `${prefix}-${index}`,
+        name: `${prefix}-${index}`,
+        type: 'item' as const,
+      }))
+
+    const atLeastSkill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: {},
+        discardHand: 3,
+        discardHandAtLeast: true,
+      },
+      text: 'Discard 3 or more cards.',
+      effects: [{ kind: 'draw', amount: 1 }],
+    }
+    let atLeastState = advancePhase(advancePhase(
+      withSkill(createDemoGame(), 'player-one', atLeastSkill),
+    ))
+    atLeastState = {
+      ...atLeastState,
+      players: {
+        ...atLeastState.players,
+        'player-one': {
+          ...atLeastState.players['player-one'],
+          hand: makeHand('at-least', 4),
+        },
+      },
+    }
+    const atLeastSource = atLeastState.players['player-one'].battleArea[0]
+      .card.instanceId
+    expect(
+      canActivateCookieSkill(atLeastState, 'player-one', atLeastSource, 'activate'),
+    ).toBe(true)
+    const atLeastResult = activateCookieSkill(
+      atLeastState,
+      'player-one',
+      atLeastSource,
+      'activate',
+      [],
+      [],
+      atLeastState.players['player-one'].hand.slice(0, 3).map((card) => card.instanceId),
+    )
+    expect(atLeastResult.players['player-one'].hand).toHaveLength(1)
+    expect(atLeastResult.players['player-one'].discardPile).toHaveLength(3)
+
+    const allHandSkill: CardSkill = {
+      ...atLeastSkill,
+      cost: { energy: {}, discardHand: 0, discardAllHand: true },
+      text: 'Discard your entire hand.',
+    }
+    let allHandState = advancePhase(advancePhase(
+      withSkill(createDemoGame(), 'player-one', allHandSkill),
+    ))
+    allHandState = {
+      ...allHandState,
+      players: {
+        ...allHandState.players,
+        'player-one': {
+          ...allHandState.players['player-one'],
+          hand: makeHand('all', 2),
+        },
+      },
+    }
+    const allHandSource = allHandState.players['player-one'].battleArea[0]
+      .card.instanceId
+    expect(
+      canActivateCookieSkill(allHandState, 'player-one', allHandSource, 'activate'),
+    ).toBe(true)
+    const allHandResult = activateCookieSkill(
+      allHandState,
+      'player-one',
+      allHandSource,
+      'activate',
+      [],
+      [],
+      allHandState.players['player-one'].hand.map((card) => card.instanceId),
+    )
+    expect(allHandResult.players['player-one'].hand).toHaveLength(0)
+    expect(allHandResult.players['player-one'].discardPile).toHaveLength(2)
+  })
 })
