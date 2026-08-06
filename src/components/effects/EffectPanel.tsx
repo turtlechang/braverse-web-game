@@ -166,6 +166,8 @@ function EffectPanelContent({
         }
       : currentEffect?.kind === 'opponent-battle-to-trash'
         ? { min: 1, max: 1 }
+      : currentEffect?.kind === 'opponent-trash-to-break'
+        ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'break-to-battle' ||
           currentEffect?.kind === 'support-to-battle'
         ? { min: 0, max: currentEffect.amount }
@@ -207,7 +209,6 @@ function EffectPanelContent({
             currentEffect.kind !== 'optional-cost-attack' &&
             currentEffect.kind !== 'disable-block' &&
             currentEffect.kind !== 'hand-to-battle' &&
-            currentEffect.kind !== 'opponent-trash-to-break' &&
             currentEffect.kind !== 'flip-to-support'
           ? currentEffect.target
           : null

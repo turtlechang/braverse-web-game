@@ -275,6 +275,65 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('shows the opponent trash target for BS3-028 OnPlay', () => {
+    const target = {
+      ...createCookieCard(14),
+      id: 'trash-lv1-cookie',
+      name: 'LV1 Trash Cookie',
+      level: 1,
+    }
+    const effect: CardEffect = {
+      kind: 'opponent-trash-to-break',
+      max: 1,
+      exactLevel: 1,
+      condition: { kind: 'opponent-break-level-at-most', level: 6 },
+    }
+    const pending = createPendingEffect({
+      sourceCard: {
+        ...createCookieCard(15),
+        id: 'BS3-028',
+        name: 'Mozzarella Cookie',
+      },
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { yellow: 1 }, discardHand: 1 },
+        text: 'Select up to 1 LV.1 Cookie from your opponent\'s trash.',
+        effects: [effect],
+      },
+      trigger: 'on-play',
+      triggerLabel: 'OnPlay 登場觸發',
+      effects: [effect],
+      skillActivated: true,
+    })
+    const onToggleCandidate = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        candidateCards={[target]}
+        onToggleCandidate={onToggleCandidate}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-panel-target-col')).not.toBeNull()
+    expect(container.querySelectorAll('.effect-candidates-target button')).toHaveLength(1)
+
+    act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-candidates-target button')!.click()
+    })
+    expect(onToggleCandidate).toHaveBeenCalledWith(target.instanceId)
+
+    act(() => root.unmount())
+  })
+
   it('guides payment, extra cost, and target one step at a time with back navigation', async () => {
     const paymentCard = createSupportCard(1, 'red')
     const costSupport = createItemCard(2)
