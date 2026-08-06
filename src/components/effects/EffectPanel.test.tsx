@@ -334,6 +334,66 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('makes BS4-089 mandatory deck mill and Then progress explicit', () => {
+    const millEffect: CardEffect = {
+      kind: 'deck-to-trash',
+      amount: 5,
+      side: 'opponent',
+    }
+    const thenEffect: CardEffect = {
+      kind: 'opponent-battle-to-trash',
+      min: 0,
+      condition: { kind: 'opponent-battle-area-cookie-count', count: 2 },
+    }
+    const pending = createPendingEffect({
+      sourceCard: {
+        ...createCookieCard(16),
+        id: 'BS4-089',
+        name: 'Moonlight Cookie',
+      },
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Place 5 cards from the top of your opponent\'s deck in the trash.',
+        effects: [millEffect, thenEffect],
+      },
+      trigger: 'on-play',
+      effects: [millEffect, thenEffect],
+      effectIndex: 0,
+      optional: true,
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={millEffect}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain('強制：將對手牌庫頂 5 張牌放入棄牌區。')
+    expect(container.querySelector('.effect-sequence-status')?.textContent).toContain(
+      '第 1 / 2 段',
+    )
+    expect(container.textContent).toContain(
+      '第一段為強制效果；確認後才會進入 Then 的後續目標選擇。',
+    )
+    expect(container.querySelector('.effect-panel-primary-action')?.textContent).toContain(
+      '確認並執行強制效果',
+    )
+    expect(container.querySelector('.effect-skip-label')?.textContent).toBe(
+      '略過整個登場效果',
+    )
+
+    act(() => root.unmount())
+  })
+
   it('guides payment, extra cost, and target one step at a time with back navigation', async () => {
     const paymentCard = createSupportCard(1, 'red')
     const costSupport = createItemCard(2)

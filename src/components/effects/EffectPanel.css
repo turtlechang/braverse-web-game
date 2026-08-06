@@ -473,6 +473,36 @@
   margin-top: 14px;
 }
 
+.effect-sequence-status {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(113, 236, 255, 0.24);
+  border-radius: 5px;
+  background: rgba(113, 236, 255, 0.08);
+}
+
+.effect-sequence-status > span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.effect-sequence-status > strong {
+  color: #9aedff;
+  font-size: 0.74rem;
+}
+
+.effect-sequence-status > small {
+  grid-column: 1 / -1;
+  color: #d7e9ff;
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
 .effect-panel ol {
   max-height: 112px;
   margin: 12px 0 0;

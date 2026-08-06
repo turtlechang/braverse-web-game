@@ -394,6 +394,19 @@ function EffectPanelContent({
             currentEffect.optional === true))))
   const hasSecondaryAction =
     Boolean(showCancelSkill) || hasOptionalSkip || hasPreviousPhase
+  const isDeckToTrashEffect = currentEffect?.kind === 'deck-to-trash'
+  const hasEffectSequence = (pendingEffect?.effects.length ?? 0) > 1
+  const effectSequenceHint = isDeckToTrashEffect
+    ? '第一段為強制效果；確認後才會進入 Then 的後續目標選擇。'
+    : pendingEffect && pendingEffect.effectIndex > 0
+      ? '前一段效果已完成，現在處理 Then 的後續效果。'
+      : '效果會依卡面文字順序逐段結算。'
+  const skipLabel =
+    pendingEffect?.sourceKind === 'attack'
+      ? '略過'
+      : pendingEffect?.trigger === 'on-play'
+        ? '略過整個登場效果'
+        : '不發動'
   const goToPhase = (phase: GuidedPhaseId) => {
     setPhaseState({ signature: phaseSignature, phase })
   }
@@ -466,6 +479,16 @@ function EffectPanelContent({
           </div>
 
           <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
+
+          {hasEffectSequence && (
+            <div className="effect-sequence-status" role="status">
+              <span>效果進度</span>
+              <strong>
+                第 {pendingEffect.effectIndex + 1} / {pendingEffect.effects.length} 段
+              </strong>
+              <small>{effectSequenceHint}</small>
+            </div>
+          )}
 
           {phaseIds.length === 0 && (
             <div className="effect-instruction effect-resolution-summary">
@@ -721,10 +744,8 @@ function EffectPanelContent({
               type="button"
               onClick={onSkip}
             >
-              <span className="effect-skip-label">
-                {pendingEffect.sourceKind === 'attack' ? '略過' : '不發動'}
-              </span>
-              不發動
+              <span className="effect-skip-label">{skipLabel}</span>
+              {skipLabel}
             </button>
           ) : null}
           {hasPreviousPhase && (
@@ -751,7 +772,7 @@ function EffectPanelContent({
             ) : (
               <>
                 <Check aria-hidden="true" />
-                確認發動
+                {isDeckToTrashEffect ? '確認並執行強制效果' : '確認發動'}
               </>
             )}
           </button>

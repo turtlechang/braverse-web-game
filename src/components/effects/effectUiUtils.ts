@@ -166,7 +166,10 @@ export const describeEffect = (effect: CardEffect) => {
     return `從手牌選擇餅乾，等級總和需恰好為 ${effect.targetSum}，放入休息區。`
   }
   if (effect.kind === 'set-cookie-active') return '將餅乾設為活躍。'
-  if (effect.kind === 'deck-to-trash') return `牌庫頂 ${effect.amount} 張放入棄牌區。`
+  if (effect.kind === 'deck-to-trash') {
+    const owner = effect.side === 'self' ? '我方' : '對手'
+    return `強制：將${owner}牌庫頂 ${effect.amount} 張牌放入棄牌區。`
+  }
   if (effect.kind === 'rest-support') return `休息 ${effect.amount} 張支援區卡。`
   if (effect.kind === 'rest-support-and-damage') {
     return `休息最多 ${effect.supportAmount} 張支援區卡，並依休息張數造成傷害。`
@@ -281,6 +284,10 @@ export const describeEffectResult = (
   if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
   if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
   if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
+  if (effect.kind === 'deck-to-trash') {
+    const owner = effect.side === 'self' ? '我方' : '對手'
+    return `${owner}牌庫頂 ${effect.amount} 張牌已放入棄牌區。`
+  }
   if (effect.kind === 'modify-attack-cost') return `${names} 本回合攻擊費用已改變。`
   if (effect.kind === 'multiply-attack-damage') return `攻擊傷害乘以 ${effect.multiplier}。`
   if (effect.kind === 'break-to-trash') {
