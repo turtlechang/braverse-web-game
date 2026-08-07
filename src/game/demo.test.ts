@@ -255,6 +255,11 @@ describe('createBreakToTrashDemoState', () => {
     expect(p1.hand.some((c) => c.id === 'ST2-008')).toBe(true)
     expect(p1.supportArea).toHaveLength(2)
     expect(p1.supportArea.every((s) => !s.rested)).toBe(true)
+    expect(
+      Object.values(state.players).every((player) =>
+        player.battleArea.every((cookie) => cookie.hpCards.length >= 1),
+      ),
+    ).toBe(true)
   })
 
   it('places a LV.1 cookie in break area for lv1 variant', () => {

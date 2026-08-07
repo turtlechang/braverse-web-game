@@ -22,7 +22,14 @@ jobs:
       - run: npm run validate:cards
       - run: npm run validate:candidate
       - run: npm run check:card-pool
+      - run: npm run typecheck
       - run: npm test
       - run: npm run lint
       - run: npm run build
       - run: npm run check:bundle
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ai-benchmark-issue-bundles
+          path: test-results/ai-benchmark
+          if-no-files-found: ignore

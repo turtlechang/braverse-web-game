@@ -548,6 +548,11 @@ button {
   row-gap: 8px;
   padding: 6px 150px 4px;
   overflow: hidden;
+  /* `hidden` still creates a programmatically scrollable container. Chrome
+   * can therefore move the whole table between pointerdown and click when a
+   * hand action receives focus, making the action miss its own button. `clip`
+   * keeps the intended visual crop without allowing focus-driven scrolling. */
+  overflow: clip;
 }
 
 .table-divider {

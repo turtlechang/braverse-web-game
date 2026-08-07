@@ -1,6 +1,17 @@
-import { describe, expect, it } from 'vitest'
-import { createDemoGame, simulateAiMatchDetailed } from '.'
-import type { AiLevel, BuiltInDeckChoice } from '.'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it, vi } from 'vitest'
+import {
+  buildReplayIssueBundle,
+  createDemoGame,
+  serializeReplayIssueBundle,
+  simulateAiMatchDetailed,
+} from '.'
+import type {
+  AiLevel,
+  BuiltInDeckChoice,
+  ReplayIssueBundleV1,
+} from '.'
 
 /**
  * Phase 3b Final Baseline (locked after R5/R6b/R8/R7, seeds 1–30):
@@ -36,6 +47,12 @@ import type { AiLevel, BuiltInDeckChoice } from '.'
  *   Lower value = more target switching (not necessarily more focused).
  *   Use "Damaged Prior" and "Target Switches" for focus-fire quality.
  */
+
+interface BenchmarkIssueDiagnostic {
+  seed: number
+  reasons: string[]
+  bundle: ReplayIssueBundleV1
+}
 
 interface AggregatedReport {
   label: string
@@ -96,6 +113,8 @@ interface AggregatedReport {
   r6cLowQualityCount: number
   r6cForcedCount: number
   r6cBreakWorsenedCount: number
+  issueDiagnostics: BenchmarkIssueDiagnostic[]
+  representativeLosses: BenchmarkIssueDiagnostic[]
 }
 
 const runBenchmark = (
@@ -164,6 +183,8 @@ const runBenchmark = (
     r6cLowQualityCount: 0,
     r6cForcedCount: 0,
     r6cBreakWorsenedCount: 0,
+    issueDiagnostics: [],
+    representativeLosses: [],
   }
 
   let sumTurns = 0
@@ -199,13 +220,51 @@ const runBenchmark = (
       seed,
     })
 
+    agg.invalidActions += result.behavior.invalidActionCount
+    agg.deadlocks += result.behavior.deadlockCount
+    if (result.endInfo.turnCapReached) agg.turnCapReached++
+
+    const issueReasons: string[] = []
     if (result.stuck) {
-      agg.stuck++
-      agg.deadlocks++
-      continue
+      issueReasons.push(`stuck: ${result.error ?? 'unknown error'}`)
+    }
+    if (result.endInfo.turnCapReached) {
+      issueReasons.push('turn cap reached')
+    }
+    if (result.behavior.invalidActionCount > 0) {
+      issueReasons.push(
+        `invalid actions: ${result.behavior.invalidActionCount}`,
+      )
+    }
+    if (result.behavior.deadlockCount > 0) {
+      issueReasons.push(`deadlocks: ${result.behavior.deadlockCount}`)
     }
 
-    if (result.endInfo.turnCapReached) agg.turnCapReached++
+    const createDiagnostic = (reasons: string[]): BenchmarkIssueDiagnostic => ({
+      seed,
+      reasons,
+      bundle: buildReplayIssueBundle({
+        state: result.state,
+        mode: 'offline',
+        viewerId: 'player-one',
+        decks: {
+          playerOne: deck?.player ?? 'red',
+          playerTwo: deck?.ai ?? 'red',
+        },
+        seed,
+        errorSummary: `${label}: ${reasons.join('; ')}`,
+        initialState: state,
+      }),
+    })
+
+    if (issueReasons.length > 0) {
+      agg.issueDiagnostics.push(createDiagnostic(issueReasons))
+    }
+
+    if (result.stuck) {
+      agg.stuck++
+      continue
+    }
 
     const winner = result.endInfo.winner
     const isWin = winner === 'player-one'
@@ -215,6 +274,11 @@ const runBenchmark = (
     } else {
       agg.losses++
       breakInLosses.push(result.endInfo.playerTwoBreakLevel)
+      if (agg.representativeLosses.length < 3) {
+        agg.representativeLosses.push(
+          createDiagnostic(['representative loss for win-rate failure']),
+        )
+      }
     }
     agg.seedWinLoss.push({ seed, win: isWin })
 
@@ -266,7 +330,6 @@ const runBenchmark = (
     }
 
     agg.skillActivations += result.behavior.skillUsageCount
-    agg.invalidActions += result.behavior.invalidActionCount
 
     // R8 hand size tracking
     const finalHandSize = result.state.players['player-one'].hand.length
@@ -448,6 +511,115 @@ const printFullReport = (r: AggregatedReport) => {
   console.log(`${'='.repeat(60)}`)
 }
 
+type BenchmarkQualityReport = Pick<
+  AggregatedReport,
+  | 'label'
+  | 'games'
+  | 'wins'
+  | 'losses'
+  | 'stuck'
+  | 'turnCapReached'
+  | 'invalidActions'
+  | 'deadlocks'
+  | 'issueDiagnostics'
+  | 'representativeLosses'
+>
+
+type BenchmarkIssueEmitter = (report: BenchmarkQualityReport) => string[]
+
+const emitBenchmarkIssueBundles: BenchmarkIssueEmitter = (report) => {
+  const diagnostics = report.issueDiagnostics.length > 0
+    ? report.issueDiagnostics
+    : report.representativeLosses
+  if (diagnostics.length === 0) return []
+
+  const outputDirectory = join(
+    process.cwd(),
+    'test-results',
+    'ai-benchmark',
+  )
+  mkdirSync(outputDirectory, { recursive: true })
+  const label = report.label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'benchmark'
+
+  return diagnostics.map((diagnostic) => {
+    const filePath = join(
+      outputDirectory,
+      `${label}-seed-${diagnostic.seed}.json`,
+    )
+    writeFileSync(
+      filePath,
+      serializeReplayIssueBundle(diagnostic.bundle),
+      'utf8',
+    )
+    return filePath
+  })
+}
+
+const assertBenchmarkQuality = (
+  report: BenchmarkQualityReport,
+  minimumWinRate?: number,
+  emitIssues: BenchmarkIssueEmitter = emitBenchmarkIssueBundles,
+): void => {
+  const completed = report.wins + report.losses
+  const winRate = completed > 0 ? report.wins / completed : 0
+  const failures: string[] = []
+
+  if (report.stuck !== 0) failures.push(`stuck=${report.stuck}`)
+  if (report.deadlocks !== 0) failures.push(`deadlocks=${report.deadlocks}`)
+  if (report.invalidActions !== 0) {
+    failures.push(`invalidActions=${report.invalidActions}`)
+  }
+  if (report.turnCapReached !== 0) {
+    failures.push(`turnCapReached=${report.turnCapReached}`)
+  }
+  if (completed !== report.games) {
+    failures.push(`completed=${completed}/${report.games}`)
+  }
+  if (minimumWinRate !== undefined && winRate < minimumWinRate) {
+    failures.push(
+      `winRate=${(winRate * 100).toFixed(1)}% < ${(minimumWinRate * 100).toFixed(1)}%`,
+    )
+  }
+
+  if (failures.length === 0) return
+
+  const artifactPaths = emitIssues(report)
+  throw new Error([
+    `${report.label} 未通過 AI benchmark quality gate：${failures.join(', ')}`,
+    artifactPaths.length > 0
+      ? `ReplayIssueBundle：${artifactPaths.join(', ')}`
+      : 'ReplayIssueBundle：沒有可輸出的失敗對局。',
+  ].join('\n'))
+}
+
+describe('AI benchmark quality gate', () => {
+  it('讓健康度或勝率門檻失敗時輸出問題包並使測試失敗', () => {
+    const emitIssues = vi.fn(() => [
+      'test-results/ai-benchmark/lv2-vs-lv1-seed-1.json',
+    ])
+    const report: BenchmarkQualityReport = {
+      label: 'Lv.2 vs Lv.1',
+      games: 2,
+      wins: 0,
+      losses: 1,
+      stuck: 1,
+      turnCapReached: 0,
+      invalidActions: 0,
+      deadlocks: 1,
+      issueDiagnostics: [],
+      representativeLosses: [],
+    }
+
+    expect(() => assertBenchmarkQuality(report, 0.6, emitIssues)).toThrow(
+      /stuck=1.*deadlocks=1.*winRate=0\.0%/,
+    )
+    expect(emitIssues).toHaveBeenCalledOnce()
+  })
+})
+
 describe('R6a AI Level Benchmark (Detailed)', () => {
   const seeds = Array.from({ length: 30 }, (_, i) => i + 1)
 
@@ -456,6 +628,7 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
     printFullReport(r)
     const wr = r.wins / (r.wins + r.losses)
     console.log(`\n  Target >= 60%: ${(wr * 100).toFixed(1)}% ${wr >= 0.6 ? 'PASS' : 'FAIL'}`)
+    assertBenchmarkQuality(r, 0.6)
   })
 
   it('Lv.3 vs Lv.2', () => {
@@ -463,6 +636,7 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
     printFullReport(r)
     const wr = r.wins / (r.wins + r.losses)
     console.log(`\n  Target >= 58%: ${(wr * 100).toFixed(1)}% ${wr >= 0.58 ? 'PASS' : 'FAIL'}`)
+    assertBenchmarkQuality(r, 0.58)
   })
 
   it('Lv.4 vs Lv.3', () => {
@@ -471,6 +645,7 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
     const wr = r.wins / (r.wins + r.losses)
     const wrPct = (wr * 100).toFixed(1)
     console.log(`\n  Target >= 55%: ${wrPct}% ${wr >= 0.55 ? 'PASS' : 'FAIL'}`)
+    assertBenchmarkQuality(r, 0.55)
 
     // Phase 3c-0: Upper limit warnings
     if (wr >= 0.80) {
@@ -490,6 +665,7 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
     printFullReport(r)
     const wr = r.wins / (r.wins + r.losses)
     console.log(`\n  Target >= 65%: ${(wr * 100).toFixed(1)}% ${wr >= 0.65 ? 'PASS' : 'FAIL'}`)
+    assertBenchmarkQuality(r, 0.65)
   })
 
   it('Lv.4 vs Lv.1', () => {
@@ -497,6 +673,7 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
     printFullReport(r)
     const wr = r.wins / (r.wins + r.losses)
     console.log(`\n  Target >= 70%: ${(wr * 100).toFixed(1)}% ${wr >= 0.7 ? 'PASS' : 'FAIL'}`)
+    assertBenchmarkQuality(r, 0.7)
   })
 })
 
@@ -530,9 +707,7 @@ describe('BS3 All Presets — 完整性驗證（60 seeds, Lv.4 mirror）', () =>
       // assertCondition 拋出「尚未滿足卡牌效果的發動條件」而卡死整場模擬。
       // 已在 playTrap 補上跟 filterActiveEffects 一樣的條件檢查，修正後
       // 五個 BS3 預設牌組各自的 60-seed 跑法都是 0 卡死，門檻收回 0。
-      const maxStuck = 0
-      expect(r.stuck).toBeLessThanOrEqual(maxStuck)
-      expect(r.deadlocks).toBeLessThanOrEqual(maxStuck)
+      assertBenchmarkQuality(r)
 
       const completed = r.wins + r.losses
       if (r.stuck > 0) {

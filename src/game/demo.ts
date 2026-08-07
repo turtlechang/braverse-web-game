@@ -525,6 +525,8 @@ export const createBreakToTrashDemoState = (
     support1.instanceId,
     support2.instanceId,
   ])
+  const p1HpCard = p1Deck.find((card) => !usedP1.has(card.instanceId))!
+  usedP1.add(p1HpCard.instanceId)
   const p1: PlayerState = {
     id: 'player-one',
     name: '玩家',
@@ -534,7 +536,7 @@ export const createBreakToTrashDemoState = (
     battleArea: [
       {
         card: battleCookie as CookieCard,
-        hpCards: [],
+        hpCards: [p1HpCard],
         rested: false,
         battleEntryId: `${battleCookie.instanceId}:battle:1`,
       },
@@ -547,6 +549,8 @@ export const createBreakToTrashDemoState = (
   }
 
   const usedP2 = new Set([p2Cookie.instanceId])
+  const p2HpCard = p2Deck.find((card) => !usedP2.has(card.instanceId))!
+  usedP2.add(p2HpCard.instanceId)
   const p2: PlayerState = {
     id: 'player-two',
     name: 'AI 對手',
@@ -556,7 +560,7 @@ export const createBreakToTrashDemoState = (
     battleArea: [
       {
         card: p2Cookie as CookieCard,
-        hpCards: [],
+        hpCards: [p2HpCard],
         rested: false,
         battleEntryId: `${p2Cookie.instanceId}:battle:2`,
       },

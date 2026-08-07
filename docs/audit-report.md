@@ -1,10 +1,10 @@
 # 專案審查報告（V1 Current Audit）
 
-> 最後更新：2026-07-12。本文件只保留可由目前程式碼、測試、部署紀錄與文件證明的現況；歷史實作細節見 [CHANGELOG.md](../CHANGELOG.md)。測試數與 bundle 為目前基線，不是永久寫死門檻。
+> 2026-08-08 對帳：本文件下方保留 2026-07-12 的 V1 稽核內容；目前權威穩定化基線與待辦改見 [2026-08-08 穩定化對帳與執行計畫](stabilization-plan-2026-08-08.md)，避免把舊測試數與 bundle 當成 current truth。
 
-- 審查範圍：目前 `main` 與本輪工作區
+- 審查範圍：2026-07-12 當時的 `main` 與工作區（歷史快照）
 - 審查方式：目錄與資料流盤點、文件交叉比對、lint／typecheck／test／build／bundle 實測、Playwright 真實瀏覽器驗證
-- 目前基線：97 個測試檔、1545 項 vitest 測試；主 bundle 731.11 KiB raw／152.38 KiB gzip
+- 當時基線：97 個測試檔、1545 項 vitest 測試；主 bundle 731.11 KiB raw／152.38 KiB gzip
 - 瀏覽器基線：AI 20/20（`stuck=0`）、牌組編輯器 2/2、線上 modal 2/2、好友房雙瀏覽器核心流程與伺服器無法連線負向路徑通過
 
 ---

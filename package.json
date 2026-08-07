@@ -31,7 +31,7 @@
     "cards:analyze:bs5-candidate": "tsx scripts/analyze-bs5-effect-coverage.ts",
     "benchmark:bs4-decks": "tsx scripts/benchmark-bs4-decks.ts",
     "benchmark:bs5-decks": "tsx scripts/benchmark-bs5-decks.ts",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "check:bundle": "node scripts/check-bundle-size.mjs",
     "test": "vitest run",
     "test:ai:browser": "node scripts/ai-browser-validation.mjs",

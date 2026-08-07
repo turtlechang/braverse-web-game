@@ -1,6 +1,6 @@
 # Roadmap
 
-最後更新：2026-07-17。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
+最後路由更新：2026-08-08。下方保留 2026-07-17 的 V1 路線歷史；目前工作優先序與完成狀態改由 [2026-08-08 穩定化對帳與執行計畫](stabilization-plan-2026-08-08.md) 維護。歷史完成項見 [CHANGELOG.md](../CHANGELOG.md) 與 [audit-report.md](audit-report.md) §4 的 Phase 對照。
 
 > 2026-07-17 驗證補充：線上 modal RWD smoke 通過；最新主 bundle 為 509.25 KiB raw / 133.22 KiB gzip，通過 budget。好友房完整開局驗證（`test:online:match:browser`）當時本地跑到起始餅乾同步檢查失敗，經查為過期／偶發紀錄——CI 上 PR #64、#65 合併後兩輪皆綠燈，已重新確認通過。
 > AI、牌組編輯器與好友房 Playwright smoke workflow 已於 main push 自動觸發，並保留手動觸發供調查使用。
