@@ -96,6 +96,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'bs3-061-condition'; conditionMet: boolean }
   | {
       kind: 'bs4-condition'
       cardNumber: Bs4ConditionCardNumber
@@ -211,6 +212,12 @@ export const parseTestStateConfig = (
     const cardNumber = testState.slice('card:'.length).trim()
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber }
+    }
+  }
+  if (testState?.startsWith('bs3-061-condition:')) {
+    const result = testState.slice('bs3-061-condition:'.length)
+    if (result === 'met' || result === 'unmet') {
+      return { kind: 'bs3-061-condition', conditionMet: result === 'met' }
     }
   }
   if (testState?.startsWith('bs4-condition:')) {
@@ -2449,6 +2456,12 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-one': {
           ...state.players['player-one'],
           breakArea: [faintCard, ...ownBreakArea],
+          // BS3-061 pays its faint cost from the support area before checking
+          // the 5-card condition. Start with six cards so the default
+          // card-check route exercises the condition-met path.
+          ...(card.id === 'BS3-061'
+            ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
+            : {}),
           discardPile: trashFillers,
         },
         'player-two': {
@@ -2797,6 +2810,28 @@ const scenarioPendingBattle = (
   attackEffects: attackEffects ?? [],
   attackEffectIndex: 0,
 })
+
+/**
+ * Creates focused BS3-061 condition fixtures for browser verification.
+ * The cost is payable in both routes; only the support count after paying
+ * the cost differs (6 -> 5 versus 5 -> 4).
+ */
+export const createBs3SilverbellConditionDemoState = (
+  conditionMet: boolean,
+): GameState => {
+  const state = createCardCheckDemoState('BS3-061')
+  const player = state.players['player-one']
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        supportArea: player.supportArea.slice(0, conditionMet ? 6 : 5),
+      },
+    },
+  }
+}
 
 /**
  * Creates focused BS4 condition fixtures for the cards that the generic

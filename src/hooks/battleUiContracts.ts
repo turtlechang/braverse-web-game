@@ -118,6 +118,7 @@ export interface BattleUiMatchLike {
   faintSourceCard: CookieCard | null
   faintCandidates: CookieInBattle[]
   faintCardCandidates: GameCard[]
+  faintCandidateLabel: string
   faintEnergyCost: EnergyCost
   faintEnergyCostTotal: number
   faintPaymentCandidates: GameCard[]

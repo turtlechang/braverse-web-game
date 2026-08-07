@@ -1110,6 +1110,129 @@ describe('usePendingEffect attack-effect trigger', () => {
     await act(() => root.unmount())
     vi.useRealTimers()
   })
+
+  it('keeps BS3-060 active-support Then visible after its attack self-faints', async () => {
+    vi.useFakeTimers()
+    const officialCard = (officialBS3.cards as OfficialCardRecord[]).find(
+      (card) => card.cardNumber === 'BS3-060',
+    )
+    if (!officialCard) throw new Error('Missing BS3-060')
+    const conversion = convertOfficialCardToGameCard(officialCard)
+    if (conversion.status !== 'converted') {
+      throw new Error('BS3-060 should convert to a runtime card')
+    }
+    if (conversion.gameCard.type !== 'cookie') {
+      throw new Error('BS3-060 should convert to a Cookie')
+    }
+
+    let gameState = createBattleState()
+    gameState.players['player-two'].battleArea = [
+      {
+        card: { ...conversion.gameCard, instanceId: 'attacker' },
+        hpCards: [battleItem('attacker-last-hp')],
+        rested: false,
+        battleEntryId: 'attacker:battle:2',
+      },
+      {
+        card: battleCookie('ally', 2, 3),
+        hpCards: [
+          battleItem('ally-hp-1'),
+          battleItem('ally-hp-2'),
+          battleItem('ally-hp-3'),
+        ],
+        rested: false,
+        battleEntryId: 'ally:battle:3',
+      },
+    ]
+    gameState.players['player-two'].supportArea = Array.from(
+      { length: 5 },
+      (_, index) => ({
+        card: battleItem(`green-support-${index}`, 'green'),
+        rested: false,
+      }),
+    )
+    gameState.players['player-one'].battleArea = [
+      {
+        card: battleCookie('defender', 5, 6),
+        hpCards: Array.from({ length: 6 }, (_, index) =>
+          battleItem(`defender-hp-${index}`),
+        ),
+        rested: false,
+        battleEntryId: 'defender:battle:1',
+      },
+    ]
+    gameState = beginAttack(
+      gameState,
+      'attacker',
+      'defender',
+      gameState.players['player-two'].supportArea.map(
+        (support) => support.card.instanceId,
+      ),
+    )
+    gameState = skipTrap(gameState, 'player-one')
+    while (gameState.pendingBattle?.stage === 'damage') {
+      gameState = resolveNextDamage(gameState)
+    }
+    gameState = resolveAttackEffect(gameState, 'player-two', ['attacker'])
+
+    const setGameMock = vi.fn()
+    const captured: { current: ReturnType<typeof usePendingEffect> | null } = {
+      current: null,
+    }
+
+    function TestHarness() {
+      captured.current = usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
+        viewerPlayerId: 'player-two',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => vi.runAllTimers())
+
+    expect(captured.current?.pendingEffect).toMatchObject({
+      sourceKind: 'attack',
+      effectIndex: 1,
+      sourceCard: { id: 'BS3-060' },
+    })
+    expect(captured.current?.currentEffect).toMatchObject({
+      kind: 'set-active',
+      supportCount: 2,
+      selectable: true,
+    })
+    expect(
+      captured.current?.nonBattleEffectCandidateCards.map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual([
+      'green-support-0',
+      'green-support-1',
+      'green-support-2',
+      'green-support-3',
+      'green-support-4',
+    ])
+
+    await act(() => root.unmount())
+    vi.useRealTimers()
+  })
 })
 
 describe('usePendingEffect optional-cost-attack', () => {

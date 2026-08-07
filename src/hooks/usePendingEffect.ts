@@ -237,6 +237,7 @@ export function usePendingEffect(params: {
     currentEffect &&
     (currentEffect.kind === 'hand-to-break' ||
       currentEffect.kind === 'break-to-hand' ||
+      currentEffect.kind === 'hand-to-support' ||
       currentEffect.kind === 'hand-to-hp' ||
       currentEffect.kind === 'rest-support' ||
       currentEffect.kind === 'support-to-hp' ||
@@ -1481,6 +1482,13 @@ export function usePendingEffect(params: {
                   (support) => support.card.instanceId === instanceId,
                 )?.card.name ?? instanceId,
             )
+          : currentEffect.kind === 'hand-to-support'
+            ? pendingEffect.selectedTargetIds.map(
+                (instanceId) =>
+                  genericEffectCandidateCards.find(
+                    (card) => card.instanceId === instanceId,
+                  )?.name ?? instanceId,
+              )
           : currentEffect.kind === 'trash-to-battle' ||
               currentEffect.kind === 'trash-to-support'
             ? pendingEffect.selectedTargetIds.map(

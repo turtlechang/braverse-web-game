@@ -7,6 +7,7 @@ import {
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
   getFaintEffectCardCandidates,
+  getFaintEffectCandidateLabel,
   getBlockerCandidates,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
@@ -54,6 +55,7 @@ import {
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
   createBs4ConditionDemoState,
+  createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
@@ -165,6 +167,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'bs3-061-condition') {
+      return createBs3SilverbellConditionDemoState(testStateConfig.conditionMet)
     }
     if (testStateConfig?.kind === 'bs4-condition') {
       return createBs4ConditionDemoState(
@@ -279,6 +284,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return `測試狀態：卡片檢查 ${testStateConfig.cardNumber}。`
+    }
+    if (testStateConfig?.kind === 'bs3-061-condition') {
+      return `BS3-061 Silverbell Cookie 昏厥測試：支援區 ${testStateConfig.conditionMet ? 6 : 5} 張，支付後條件${testStateConfig.conditionMet ? '成立' : '不成立'}。`
     }
     if (testStateConfig?.kind === 'bs4-condition') {
       return `BS4 ${testStateConfig.cardNumber} 專用條件情境：${
@@ -1162,6 +1170,7 @@ export function useMatchController(params: {
     faintSourceCard,
     faintCandidates,
     faintCardCandidates,
+    faintCandidateLabel: getFaintEffectCandidateLabel(game),
     faintTargetIds,
     hasFaint,
     faintMin: faintMinMax.min,

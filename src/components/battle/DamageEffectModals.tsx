@@ -9,6 +9,17 @@ export interface DamageEffectModalsProps {
   pending: BattleUiPendingEffectLike
 }
 
+const toggleFaintTargetId = (
+  current: string[],
+  instanceId: string,
+  maxTargets: number,
+): string[] => {
+  if (current.includes(instanceId)) {
+    return current.filter((id) => id !== instanceId)
+  }
+  return current.length < maxTargets ? [...current, instanceId] : current
+}
+
 export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) {
   return (
     <>
@@ -30,21 +41,10 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           }
           selectedTargetIds={match.selectedFaintTargetIds}
           candidateCards={match.faintCardCandidates}
-          candidateLabel="合法卡牌"
+          candidateLabel={match.faintCandidateLabel}
           onSelectTarget={(instanceId) => {
-            if (
-              !match.faintCardCandidates.some(
-                (candidate) => candidate.instanceId === instanceId,
-              )
-            ) {
-              return
-            }
             match.setSelectedFaintTargetIds((current) =>
-              current.includes(instanceId)
-                ? current.filter((id) => id !== instanceId)
-                : current.length < match.faintMax
-                  ? [...current, instanceId]
-                  : current,
+              toggleFaintTargetId(current, instanceId, match.faintMax),
             )
           }}
           energyCost={match.faintEnergyCost}

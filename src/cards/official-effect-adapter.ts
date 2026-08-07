@@ -1148,14 +1148,14 @@ export const convertOfficialCardEffects = (
     ],
     'BS3-063': [
       { kind: 'support-to-hand', amount: 1 },
-      { kind: 'hand-to-support', amount: 1, rested: true },
+      { kind: 'hand-to-support', amount: 1, rested: true, optional: true },
     ],
     'BS3-064': [
       { kind: 'support-to-hand', amount: 1 },
       { kind: 'draw-up-to', max: 1 },
     ],
     'BS3-065': [
-      { kind: 'hand-to-support', amount: 1, rested: true },
+      { kind: 'hand-to-support', amount: 1, rested: true, optional: true },
       {
         kind: 'draw-up-to',
         max: 1,

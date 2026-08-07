@@ -2850,6 +2850,42 @@ export const getFaintEffectCandidates = (
 }
 
 /**
+ * Label the non-battle cards shown by a faint-effect prompt.
+ *
+ * Faint effects share the same target-selection modal as Cookie targets, but
+ * effects such as BS3-061's support sacrifice select from another zone. Keep
+ * the wording derived from the pending effect so the UI cannot call a support
+ * card an opponent Cookie.
+ */
+export const getFaintEffectCandidateLabel = (state: GameState): string => {
+  const effect = state.pendingFaintEffects?.[0]?.effect
+  if (!effect) return '目標'
+
+  switch (effect.kind) {
+    case 'support-to-trash':
+    case 'support-to-hand':
+    case 'rest-support':
+    case 'set-active':
+      return '支援區卡'
+    case 'hand-to-support':
+    case 'hand-to-break':
+    case 'hand-to-break-by-level-sum':
+    case 'hand-to-battle':
+      return '手牌卡'
+    case 'break-to-hand':
+    case 'break-to-hand-by-level-sum':
+      return '休息區卡'
+    case 'trash-to-battle':
+    case 'trash-to-break':
+    case 'opponent-trash-to-break':
+    case 'trash-to-deck':
+      return '棄牌區卡'
+    default:
+      return '目標'
+  }
+}
+
+/**
  * 回傳昏厥效果需要從非戰鬥區選取的卡牌候選。
  * 傷害類效果沿用戰鬥區目標選擇，其他需要卡牌選擇的效果則共用一般效果候選。
  */
@@ -2898,6 +2934,27 @@ export const getFaintEffectMinMax = (
     }
   }
   return getEffectSelectionLimits(effect) ?? { min: 0, max: 0 }
+}
+
+const skipUnmetPendingFaintEffects = (state: GameState): GameState => {
+  const pending = state.pendingFaintEffects
+  if (!pending || pending.length === 0) return state
+
+  let firstApplicableIndex = 0
+  while (firstApplicableIndex < pending.length) {
+    const entry = pending[firstApplicableIndex]
+    if (isEffectConditionMet(state, entry.context, entry.effect)) break
+    firstApplicableIndex += 1
+  }
+
+  if (firstApplicableIndex === 0) return state
+  return {
+    ...state,
+    pendingFaintEffects:
+      firstApplicableIndex < pending.length
+        ? pending.slice(firstApplicableIndex)
+        : undefined,
+  }
 }
 
 export const resolveFaintEffect = (
@@ -3003,6 +3060,7 @@ export const resolveFaintEffect = (
     return nextState
   }
 
+  nextState = skipUnmetPendingFaintEffects(nextState)
   return continuePendingReplacements(nextState)
 }
 

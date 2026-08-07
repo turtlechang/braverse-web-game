@@ -11,10 +11,16 @@ import {
 import type { OfficialCardRecord } from '../cards/types'
 import {
   executeCardEffect,
+  getEffectSelectionCandidates,
+  getEffectSelectionLimits,
   getEffectTargetCandidates,
   isEffectConditionMet,
 } from './effects'
-import { resolveFaintEffect } from './battle'
+import {
+  getFaintEffectCandidateLabel,
+  getFaintEffectCardCandidates,
+  resolveFaintEffect,
+} from './battle'
 import type { CardEffect, CookieCard, EffectContext, GameState } from './types'
 import { cookie, createBattleState, item } from './test-helpers/battle-helpers'
 
@@ -346,6 +352,29 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
     expect(oppCookies.every((c) => c.hpCards.length === 2)).toBe(true)
   })
 
+  it('exposes the mandatory support card as the faint-effect selection', () => {
+    const [supportToTrashEffect] = effectsOf('BS3-061')
+    const state = createBattleState()
+    state.pendingFaintEffects = [
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Silverbell Cookie',
+        effect: supportToTrashEffect,
+        context: {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'attacker',
+          sourceCardName: 'Silverbell Cookie',
+        },
+      },
+    ]
+
+    expect(getFaintEffectCardCandidates(state).map((card) => card.instanceId)).toEqual([
+      'p2-support',
+    ])
+    expect(getFaintEffectCandidateLabel(state)).toBe('支援區卡')
+  })
+
   it('faint queue actually requires sacrificing a support card before checking the 5+ threshold', () => {
     const source: CookieCard = {
       ...cookie('silverbell'),
@@ -392,22 +421,64 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
 
     const supportIdToSacrifice =
       state.players['player-two'].supportArea[0].card.instanceId
-    let next = resolveFaintEffect(state, [supportIdToSacrifice])
+    const next = resolveFaintEffect(state, [supportIdToSacrifice])
     expect(
       next.players['player-two'].supportArea.some(
         (support) => support.card.instanceId === supportIdToSacrifice,
       ),
     ).toBe(false)
     expect(next.players['player-two'].supportArea).toHaveLength(4)
-    expect(next.pendingFaintEffects).toHaveLength(1)
+    expect(next.pendingFaintEffects).toBeUndefined()
 
     const defenderHpBefore =
       next.players['player-one'].battleArea[0].hpCards.length
-    next = resolveFaintEffect(next, [])
-    expect(next.pendingFaintEffects).toBeUndefined()
     expect(next.players['player-one'].battleArea[0].hpCards.length).toBe(
       defenderHpBefore,
     )
+  })
+
+  it('does not leave BS3-061 pending when its mandatory support cost is unpayable', () => {
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-061'))
+    if (!skill) throw new Error('BS3-061 should have a faint skill')
+    const source: CookieCard = {
+      ...cookie('silverbell'),
+      id: 'BS3-061',
+      name: 'Silverbell Cookie',
+      skill,
+    }
+    let state = createBattleState()
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            {
+              card: source,
+              hpCards: [item('silverbell-hp')],
+              rested: false,
+              battleEntryId: 'silverbell:battle:1',
+            },
+          ],
+          supportArea: [],
+        },
+      },
+    }
+
+    const next = executeCardEffect(
+      state,
+      sourceContext(),
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      [source.instanceId],
+    )
+
+    expect(next.pendingFaintEffects).toBeUndefined()
+    expect(next.players['player-one'].breakArea).toContainEqual(source)
   })
 })
 
@@ -450,8 +521,57 @@ describe('BS3-063 Carameleon Cookie: on-play support-to-hand + hand-to-support',
   it('converts correctly', () => {
     expect(effectsOf('BS3-063')).toEqual([
       { kind: 'support-to-hand', amount: 1 },
-      { kind: 'hand-to-support', amount: 1, rested: true },
+      { kind: 'hand-to-support', amount: 1, rested: true, optional: true },
     ])
+  })
+
+  it('lets the returned support card be selected in the optional Then step', () => {
+    const [supportToHand, handToSupport] = effectsOf('BS3-063')
+    if (
+      supportToHand.kind !== 'support-to-hand' ||
+      handToSupport.kind !== 'hand-to-support'
+    ) {
+      throw new Error('unexpected BS3-063 effects')
+    }
+
+    const context = sourceContext('Carameleon Cookie')
+    const initial = withSupport(createBattleState(), 'player-two', [
+      { id: 'second-support' },
+    ])
+    const afterReturn = executeCardEffect(
+      initial,
+      context,
+      supportToHand,
+      ['p2-support'],
+    )
+
+    expect(
+      getEffectSelectionCandidates(afterReturn, context, handToSupport).map(
+        (card) => card.instanceId,
+      ),
+    ).toContain('p2-support')
+    expect(getEffectSelectionLimits(handToSupport)).toEqual({ min: 0, max: 1 })
+
+    const afterPlace = executeCardEffect(
+      afterReturn,
+      context,
+      handToSupport,
+      ['p2-support'],
+    )
+    expect(
+      afterPlace.players['player-two'].hand.some(
+        (card) => card.instanceId === 'p2-support',
+      ),
+    ).toBe(false)
+    expect(
+      afterPlace.players['player-two'].supportArea.find(
+        (support) => support.card.instanceId === 'p2-support',
+      ),
+    ).toMatchObject({ rested: true })
+
+    expect(
+      executeCardEffect(afterReturn, context, handToSupport, []),
+    ).toEqual(afterReturn)
   })
 })
 
@@ -470,7 +590,7 @@ describe('BS3-064 Clover Cookie: faint support-to-hand + draw', () => {
 describe('BS3-065 Herb Cookie: on-play hand-to-support + conditional draw', () => {
   it('converts correctly', () => {
     expect(effectsOf('BS3-065')).toEqual([
-      { kind: 'hand-to-support', amount: 1, rested: true },
+      { kind: 'hand-to-support', amount: 1, rested: true, optional: true },
       {
         kind: 'draw-up-to',
         max: 1,

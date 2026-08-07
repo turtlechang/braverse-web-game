@@ -180,6 +180,7 @@ export {
   beginAttack,
   getForcedAttackTargetId,
   getFaintEffectCardCandidates,
+  getFaintEffectCandidateLabel,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,

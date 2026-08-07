@@ -170,6 +170,7 @@ const chooseEffectTargets = (
   if (effect.kind === 'hand-to-support') {
     const player = state.players[context.sourcePlayerId]
     return player.hand
+      .filter((card) => card.instanceId !== context.sourceInstanceId)
       .slice(0, effect.amount)
       .map((card) => card.instanceId)
   }
@@ -677,6 +678,7 @@ const isItemEffectTargetCountSufficient = (
   if (
     effect.kind === 'hand-to-break' ||
     effect.kind === 'break-to-hand' ||
+    effect.kind === 'hand-to-support' ||
     effect.kind === 'hand-to-hp' ||
     effect.kind === 'rest-support' ||
     effect.kind === 'support-to-hp' ||
@@ -687,7 +689,6 @@ const isItemEffectTargetCountSufficient = (
   if (
     (effect.kind === 'support-to-trash' ||
       effect.kind === 'support-to-hand' ||
-      effect.kind === 'hand-to-support' ||
       effect.kind === 'trash-to-battle' ||
       effect.kind === 'trash-to-support' ||
       effect.kind === 'trash-to-break') &&
@@ -700,7 +701,6 @@ const isItemEffectTargetCountSufficient = (
     effect.kind !== 'break-to-trash' &&
     effect.kind !== 'support-to-trash' &&
     effect.kind !== 'support-to-hand' &&
-    effect.kind !== 'hand-to-support' &&
     effect.kind !== 'trash-to-battle' &&
     effect.kind !== 'trash-to-support' &&
     effect.kind !== 'trash-to-break' &&
@@ -942,6 +942,7 @@ const isSkillEffectTargetCountSufficient = (
   if (
     effect.kind === 'hand-to-break' ||
     effect.kind === 'break-to-hand' ||
+    effect.kind === 'hand-to-support' ||
     effect.kind === 'hand-to-hp' ||
     effect.kind === 'rest-support' ||
     effect.kind === 'support-to-hp' ||
@@ -961,7 +962,6 @@ const isSkillEffectTargetCountSufficient = (
   if (
     (effect.kind === 'support-to-trash' ||
       effect.kind === 'support-to-hand' ||
-      effect.kind === 'hand-to-support' ||
       effect.kind === 'trash-to-battle' ||
       effect.kind === 'trash-to-support' ||
       effect.kind === 'trash-to-break') &&
@@ -973,7 +973,6 @@ const isSkillEffectTargetCountSufficient = (
     effect.kind !== 'break-to-trash' &&
     effect.kind !== 'support-to-trash' &&
     effect.kind !== 'support-to-hand' &&
-    effect.kind !== 'hand-to-support' &&
     effect.kind !== 'trash-to-battle' &&
     effect.kind !== 'trash-to-support' &&
     effect.kind !== 'trash-to-break' &&

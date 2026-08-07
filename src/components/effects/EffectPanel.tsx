@@ -195,11 +195,15 @@ function EffectPanelContent({
               ? { min: 0, max: currentEffect.supportCount }
         : currentEffect?.kind === 'support-to-trash' ||
           currentEffect?.kind === 'support-to-hand' ||
-          currentEffect?.kind === 'hand-to-support' ||
           currentEffect?.kind === 'trash-to-battle' ||
           currentEffect?.kind === 'trash-to-support' ||
           currentEffect?.kind === 'trash-to-break'
         ? { min: currentEffect.amount, max: currentEffect.amount }
+        : currentEffect?.kind === 'hand-to-support'
+          ? {
+              min: currentEffect.optional ? 0 : currentEffect.amount,
+              max: currentEffect.amount,
+            }
         : currentEffect?.kind === 'gain-hp' &&
             currentEffect.target &&
             !currentEffect.target.sourceOnly

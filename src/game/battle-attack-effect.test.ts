@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  advancePhase,
+  applyGameCommand,
+  beginAttack,
+  canAttack,
   resolveAttackEffect,
   resolveNextDamage,
   skipTrap,
 } from '.'
+import officialBS3 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
+import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
+import type { OfficialCardRecord } from '../cards/types'
 import {
   cookie,
   createBattleState,
@@ -206,5 +213,108 @@ describe('post-attack effects', () => {
     expect(state.players['player-one'].breakArea.map((card) => card.instanceId)).toContain(
       'defender',
     )
+  })
+
+  it('BS3-060 resolves its active-support Then after self-faint and releases the main phase', () => {
+    const officialCard = (officialBS3.cards as OfficialCardRecord[]).find(
+      (card) => card.cardNumber === 'BS3-060',
+    )
+    if (!officialCard) throw new Error('Missing BS3-060')
+    const conversion = convertOfficialCardToGameCard(officialCard)
+    if (conversion.status !== 'converted') {
+      throw new Error('BS3-060 should convert to a runtime card')
+    }
+
+    let state = createBattleState()
+    if (conversion.gameCard.type !== 'cookie') {
+      throw new Error('BS3-060 should convert to a Cookie')
+    }
+    const attacker = {
+      ...conversion.gameCard,
+      instanceId: 'attacker',
+    }
+    state.players['player-two'].battleArea = [
+      {
+        card: attacker,
+        hpCards: [item('attacker-last-hp')],
+        rested: false,
+        battleEntryId: 'attacker:battle:2',
+      },
+      {
+        card: cookie('ally', 2, 3),
+        hpCards: [item('ally-hp-1'), item('ally-hp-2'), item('ally-hp-3')],
+        rested: false,
+        battleEntryId: 'ally:battle:3',
+      },
+    ]
+    state.players['player-two'].supportArea = Array.from(
+      { length: 5 },
+      (_, index) => ({
+        card: item(`green-support-${index}`, 'green'),
+        rested: false,
+      }),
+    )
+    state.players['player-two'].hand = [cookie('replacement', 2, 2)]
+    state.players['player-two'].deck = Array.from(
+      { length: 6 },
+      (_, index) => item(`replacement-hp-${index}`),
+    )
+    state.players['player-one'].battleArea = [
+      {
+        card: cookie('defender', 5, 6),
+        hpCards: Array.from({ length: 6 }, (_, index) =>
+          item(`defender-hp-${index}`),
+        ),
+        rested: false,
+        battleEntryId: 'defender:battle:1',
+      },
+    ]
+
+    const paymentIds = state.players['player-two'].supportArea.map(
+      (support) => support.card.instanceId,
+    )
+    state = beginAttack(
+      state,
+      'attacker',
+      'defender',
+      paymentIds,
+    )
+    state = skipTrap(state, 'player-one')
+    while (state.pendingBattle?.stage === 'damage') {
+      state = resolveNextDamage(state)
+    }
+
+    state = resolveAttackEffect(state, 'player-two', ['attacker'])
+
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackEffectIndex: 1,
+    })
+    expect(state.players['player-two'].battleArea).not.toContainEqual(
+      expect.objectContaining({ card: expect.objectContaining({ id: 'BS3-060' }) }),
+    )
+    expect(
+      state.players['player-two'].breakArea.map((card) => card.id),
+    ).toContain('BS3-060')
+
+    state = resolveAttackEffect(state, 'player-two', [
+      'green-support-0',
+      'green-support-1',
+    ])
+
+    expect(state.pendingBattle).toBeNull()
+    expect(state.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-two', remaining: 1 }],
+    })
+
+    state = applyGameCommand(state, {
+      kind: 'replace-cookie',
+      playerId: 'player-two',
+      instanceId: 'replacement',
+    })
+
+    expect(state.pendingReplacement).toBeNull()
+    expect(canAttack(state)).toBe(true)
+    expect(advancePhase(state).phase).toBe('end')
   })
 })

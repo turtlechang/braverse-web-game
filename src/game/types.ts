@@ -749,6 +749,7 @@ export interface HandToSupportEffect {
   kind: 'hand-to-support'
   amount: number
   rested?: boolean
+  optional?: boolean
   condition?: EffectCondition
 }
 

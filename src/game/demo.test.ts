@@ -17,6 +17,7 @@ import {
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
   createAiDiscardRevealDemoState,
+  createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
@@ -332,6 +333,32 @@ describe('createCardCheckDemoState', () => {
       const state = createCardCheckDemoState(cardNumber)
       expect(state.pendingBattle?.faintedColors).toEqual(['yellow'])
     }
+  })
+
+  it('prepares BS3-061 with a payable six-card support area', () => {
+    const state = createCardCheckDemoState('BS3-061')
+
+    expect(state.players['player-one'].supportArea).toHaveLength(6)
+    expect(state.pendingFaintEffects?.[0]?.effect).toMatchObject({
+      kind: 'support-to-trash',
+      amount: 1,
+    })
+  })
+
+  it('keeps BS3-061 condition routes payable while changing the post-cost threshold', () => {
+    const met = createBs3SilverbellConditionDemoState(true)
+    const unmet = createBs3SilverbellConditionDemoState(false)
+
+    expect(met.players['player-one'].supportArea).toHaveLength(6)
+    expect(unmet.players['player-one'].supportArea).toHaveLength(5)
+    expect(parseTestStateConfig('?test-state=bs3-061-condition:met', 'localhost')).toEqual({
+      kind: 'bs3-061-condition',
+      conditionMet: true,
+    })
+    expect(parseTestStateConfig('?test-state=bs3-061-condition:unmet', 'localhost')).toEqual({
+      kind: 'bs3-061-condition',
+      conditionMet: false,
+    })
   })
 })
 
