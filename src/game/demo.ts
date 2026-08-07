@@ -72,6 +72,8 @@ const isBs4ConditionCardNumber = (
 export const BS5_FLIP_CARD_NUMBERS = [
   'BS5-004',
   'BS5-009',
+  'BS5-038',
+  'BS5-046',
   'BS5-041',
   'BS5-049',
   'BS5-082',

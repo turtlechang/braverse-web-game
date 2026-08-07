@@ -40,7 +40,8 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
   }
 
   if (card.type === 'flip') {
-    return card.flipText
+    // 部分官方 FLIP 記錄將效果文案放在 skill.text；runtime 仍須視為 FLIP。
+    return card.flipText ?? card.skill.text
   }
 
   return card.attackText
@@ -2822,6 +2823,8 @@ export const convertOfficialCardEffects = (
     ],
     'BS5-004': [],
     'BS5-009': [{ kind: 'draw-up-to', max: 1 }],
+    'BS5-038': [{ kind: 'draw-up-to', max: 1 }],
+    'BS5-046': [],
     // 其他四色的同款 flip：附著 +1 HP（041/082/095）與一般抽 1（049/090）。
     // 主效果只做狀態判定，能力實作各自在 exactFlipEffects。
     'BS5-041': [],
@@ -5077,7 +5080,8 @@ export const convertOfficialAttackEffects = (
 export const convertOfficialFlipAbility = (
   card: OfficialCardRecord,
 ): FlipAbility | undefined => {
-  if (card.type !== 'flip' || !card.flipText) {
+  const flipText = card.flipText ?? card.skill.text
+  if (card.type !== 'flip' || !flipText) {
     return undefined
   }
 
@@ -5089,11 +5093,11 @@ export const convertOfficialFlipAbility = (
   // 與同卡基礎版本一致的抽牌效果。
   if (
     card.cardNumber === 'BS4-032@1' &&
-    /^<\{Y\}\{Y\}>\s*Creamcraft Magic!\s*$/i.test(card.flipText.trim())
+    /^<\{Y\}\{Y\}>\s*Creamcraft Magic!\s*$/i.test(flipText.trim())
   ) {
     return {
       text: 'Draw up to 1 card from your deck.',
-      cost: parseAbilityCost(card.flipText),
+      cost: parseAbilityCost(flipText),
       effects: [{ kind: 'draw-up-to', max: 1 }],
     }
   }
@@ -5117,6 +5121,10 @@ export const convertOfficialFlipAbility = (
     // 剩餘 HP 計算走 helpers.getCookieEffectiveHp。代價 <Discard 1 card.>
     // 由 parseAbilityCost 解析。
     'BS5-004': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS5-046': {
       effects: [],
       attachedHpBonus: 1,
     },
@@ -5227,8 +5235,8 @@ export const convertOfficialFlipAbility = (
   const exactFlip = exactFlipEffects[cardKey]
   if (exactFlip) {
     return {
-      text: card.flipText,
-      cost: exactFlip.cost ?? parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: exactFlip.cost ?? parseAbilityCost(flipText),
       effects: exactFlip.effects,
       ...(exactFlip.attachedHpBonus !== undefined
         ? { attachedHpBonus: exactFlip.attachedHpBonus }
@@ -5236,13 +5244,13 @@ export const convertOfficialFlipAbility = (
     }
   }
 
-  const stripped = stripEffectText(card.flipText)
+  const stripped = stripEffectText(flipText)
   const drawAmount = parseSimpleDraw(stripped)
 
   if (drawAmount !== null) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: isOptionalDraw(stripped)
         ? [{ kind: 'draw-up-to', max: drawAmount }]
         : [{ kind: 'draw', amount: drawAmount }],
@@ -5252,8 +5260,8 @@ export const convertOfficialFlipAbility = (
   const conditionalDrawAmount = parseConditionalDraw(stripped)
   if (conditionalDrawAmount !== null) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: [
         {
           kind: 'draw-up-to',
@@ -5264,12 +5272,12 @@ export const convertOfficialFlipAbility = (
     }
   }
 
-  const target = parseTarget(card.flipText)
-  const damageMatch = card.flipText.match(/receives?\s+(\d+)\s+damage/i)
+  const target = parseTarget(flipText)
+  const damageMatch = flipText.match(/receives?\s+(\d+)\s+damage/i)
   if (target && damageMatch) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: [
         {
           kind: 'damage',
@@ -5286,8 +5294,8 @@ export const convertOfficialFlipAbility = (
 
   if (gainHpMatch) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: [
         {
           kind: 'gain-hp',
