@@ -11,7 +11,7 @@ import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
 } from '../replacement'
-import { markSupportAreaDecreased } from '../skills'
+import { getFaintTriggeredCost, markSupportAreaDecreased } from '../skills'
 import { getRefreshCandidates } from '../refresh'
 import type {
   CardEffect,
@@ -155,6 +155,8 @@ const resolveDamageOutcome = (
   for (const cookie of departedCookies) {
     const faintSkill = cookie.skill
     if (faintSkill && faintSkill.faint) {
+      const faintCost = getFaintTriggeredCost(faintSkill)
+      let faintCostAttached = false
       for (const effect of faintSkill.effects) {
         const context = {
           sourcePlayerId: damagedPlayerId,
@@ -187,9 +189,13 @@ const resolveDamageOutcome = (
                   sourceCardName: cookie.name,
                   effect,
                   context,
+                  ...(faintCost && !faintCostAttached
+                    ? { cost: faintCost }
+                    : {}),
                 },
               ],
             }
+            faintCostAttached = true
           }
         } else {
           const selectionLimits = getEffectSelectionLimits(effect)
@@ -214,9 +220,13 @@ const resolveDamageOutcome = (
                 sourceCardName: cookie.name,
                 effect,
                 context,
+                ...(faintCost && !faintCostAttached
+                  ? { cost: faintCost }
+                  : {}),
               },
             ],
           }
+          faintCostAttached = true
         }
       }
     }
@@ -2807,7 +2817,8 @@ export const executeCardEffect = (
       const selectedIds = new Set(selectedTargetIds)
       if (
         selectedIds.size !== selectedTargetIds.length ||
-        selectedIds.size > effect.supportCount
+        selectedIds.size > effect.supportCount ||
+        (effect.optional === false && selectedIds.size !== effect.supportCount)
       ) {
         throw new GameRuleError('Invalid support target.')
       }

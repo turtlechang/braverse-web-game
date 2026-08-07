@@ -223,6 +223,58 @@ describe('describeCommandSteps', () => {
     ])
   })
 
+  it('shows the actual HP card and its type for a begin-activate-skill cost', () => {
+    const base = createBattleState()
+    const source = base.players['player-one'].battleArea.find(
+      (cookie) => cookie.card.instanceId === 'defender',
+    )!
+    const hpCard = source.hpCards.at(-1)!
+    const previous: GameState = {
+      ...base,
+      costRecord: undefined,
+    }
+    const next: GameState = {
+      ...previous,
+      costRecord: {
+        hpTrashCookieInstanceId: 'defender',
+        hpTrashTopCardInstanceId: hpCard.instanceId,
+        hpTrashTopCardType: 'item',
+      },
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: previous.players['player-one'].battleArea.map((cookie) =>
+            cookie.card.instanceId === 'defender'
+              ? { ...cookie, hpCards: cookie.hpCards.slice(0, -1) }
+              : cookie,
+          ),
+          discardPile: [...previous.players['player-one'].discardPile, hpCard],
+        },
+      },
+    }
+    const command = {
+      kind: 'begin-activate-skill' as const,
+      playerId: 'player-one' as const,
+      sourceInstanceId: 'defender',
+      trigger: 'activate' as const,
+      paymentIds: [],
+      hpToTrashTargetIds: ['defender'],
+    }
+
+    const steps = describeCommandSteps(previous, next, command)
+
+    expect(steps?.map((step) => step.text)).toContain(
+      `HP 費用：從「${source.card.name}」丟棄「${hpCard.name}」（物品）`,
+    )
+    expect(steps?.find((step) => step.text.includes('HP 費用'))?.cards).toEqual([
+      hpCard,
+    ])
+    expect(describeCommand(previous, next, command)).toContain(
+      `（HP 費用：從「${source.card.name}」丟棄「${hpCard.name}」（物品））`,
+    )
+  })
+
   it('summarizes an auto-resolved attack with the damage dealt', () => {
     const base = createBattleState()
     // defender 有 3 張 HP 卡，扣 1 張後剩 2 張——非致命傷害，驗證「造成 N 點傷害」

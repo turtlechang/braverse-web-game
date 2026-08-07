@@ -105,6 +105,18 @@ function CandidateButtons({
   )
 }
 
+function splitAttackText(text: string): { primary: string; followUp: string | null } {
+  const separatorIndex = text.search(/\bThen\b|然後/i)
+  if (separatorIndex < 0) {
+    return { primary: text.trim(), followUp: null }
+  }
+
+  return {
+    primary: text.slice(0, separatorIndex).trim(),
+    followUp: text.slice(separatorIndex).trim(),
+  }
+}
+
 function EffectPanelContent({
   pendingEffect,
   currentEffect,
@@ -148,6 +160,10 @@ function EffectPanelContent({
   onChooseMode,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
+  const attackTextSections =
+    pendingEffect?.sourceKind === 'attack'
+      ? splitAttackText(pendingEffect.skill.text)
+      : null
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
   const supportAreaCost =
     (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
@@ -476,11 +492,49 @@ function EffectPanelContent({
                   <span key={label}>{label}</span>
                 ))}
               </div>
-              <p className="effect-source-description">
-                <CardEffectText text={pendingEffect.skill.text} />
-              </p>
+              {attackTextSections ? (
+                <>
+                  <p className="effect-source-description effect-source-attack-text">
+                    <CardEffectText text={attackTextSections.primary} />
+                  </p>
+                  {attackTextSections.followUp && (
+                    <p className="effect-source-description effect-source-attack-follow-up">
+                      <CardEffectText text={attackTextSections.followUp} />
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="effect-source-description">
+                  <CardEffectText text={pendingEffect.skill.text} />
+                </p>
+              )}
             </div>
           </div>
+
+          {pendingEffect.revealedHpCard && (
+            <div className="effect-cost-resolution" role="status">
+              <div className="effect-cost-resolution-heading">
+                <Check aria-hidden="true" />
+                <strong>HP 費用已支付，丟棄的卡片</strong>
+              </div>
+              <div className="effect-cost-resolution-card">
+                <CardFace card={pendingEffect.revealedHpCard} />
+                <div>
+                  <strong>{pendingEffect.revealedHpCard.name}</strong>
+                  <small>
+                    卡片種類：
+                    {pendingEffect.revealedHpCard.type === 'cookie'
+                      ? '餅乾'
+                      : pendingEffect.revealedHpCard.type === 'item'
+                        ? '物品'
+                        : pendingEffect.revealedHpCard.type === 'trap'
+                          ? '陷阱'
+                          : '場景'}
+                  </small>
+                </div>
+              </div>
+            </div>
+          )}
 
           <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
 

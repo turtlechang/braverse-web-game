@@ -593,6 +593,34 @@ describe('FaintEffectResponseModal', () => {
     await act(() => root.unmount())
   })
 
+  it('shows board target cards inside the faint modal for small viewports', async () => {
+    const onSelectTarget = vi.fn()
+    const targetCard: CookieCard = {
+      ...aloeCard,
+      id: 'BS5-007-target',
+      instanceId: 'bs5-007-target',
+      name: 'Opponent Cookie',
+    }
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={0}
+        maxTargets={1}
+        selectedTargetCount={0}
+        targetCandidateCards={[targetCard]}
+        onSelectTarget={onSelectTarget}
+        onConfirm={() => undefined}
+      />,
+    ))
+
+    await click(findButton(container, 'Opponent Cookie'))
+    expect(onSelectTarget).toHaveBeenCalledWith('bs5-007-target')
+
+    await act(() => root.unmount())
+  })
+
   it('blocks faint resolution until its optional energy cost is paid', async () => {
     const onSelectPayment = vi.fn()
     const paymentCard: GameCard = {

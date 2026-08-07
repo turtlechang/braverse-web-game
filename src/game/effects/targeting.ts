@@ -459,7 +459,10 @@ export const getEffectSelectionLimits = (
     return { min: 0, max: effect.supportAmount + effect.target.max }
   }
   if (effect.kind === 'set-active' && effect.selectable) {
-    return { min: 0, max: effect.supportCount }
+    return {
+      min: effect.optional === false ? effect.supportCount : 0,
+      max: effect.supportCount,
+    }
   }
   if (effect.kind === 'hand-to-battle') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }

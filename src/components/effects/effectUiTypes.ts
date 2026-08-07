@@ -24,6 +24,8 @@ export interface PendingEffect {
   /** 未指定時視為空陣列；BS3-098 使用洗回牌庫的棄牌區代價。 */
   selectedTrashToDeckIds?: string[]
   skillActivated: boolean
+  /** 顯示支付 HP 費用後實際被丟棄的卡片，避免條件效果結果不可見。 */
+  revealedHpCard?: GameCard
   optional: boolean
   triggerLabel: string
   sourceKind: 'cookie' | 'item' | 'stage' | 'attack'

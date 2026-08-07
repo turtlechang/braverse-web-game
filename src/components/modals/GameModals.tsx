@@ -1274,6 +1274,11 @@ export interface FaintEffectResponseModalProps {
   selectedTargetIds?: string[]
   candidateCards?: GameCard[]
   candidateLabel?: string
+  /**
+   * 戰鬥區目標的卡面清單。原本戰鬥區只能靠 modal 穿透後點卡，
+   * 在平板／小視窗容易被提示框遮住，因此同時提供可直接點選的目標入口。
+   */
+  targetCandidateCards?: GameCard[]
   onSelectTarget?: (instanceId: string) => void
   energyCost?: EnergyCost
   paymentCandidates?: GameCard[]
@@ -1281,6 +1286,14 @@ export interface FaintEffectResponseModalProps {
   paymentCostTotal?: number
   paymentValid?: boolean
   onSelectPayment?: (instanceId: string) => void
+  costHandAmount?: number
+  costHandCandidates?: GameCard[]
+  selectedCostHandIds?: string[]
+  onSelectCostHand?: (instanceId: string) => void
+  costSupportAmount?: number
+  costSupportCandidates?: GameCard[]
+  selectedCostSupportIds?: string[]
+  onSelectCostSupport?: (instanceId: string) => void
   allowSkip?: boolean
   onSkip?: () => void
   onConfirm: () => void
@@ -1295,6 +1308,7 @@ export function FaintEffectResponseModal({
   selectedTargetIds = [],
   candidateCards = [],
   candidateLabel = '卡牌',
+  targetCandidateCards = [],
   onSelectTarget,
   energyCost,
   paymentCandidates = [],
@@ -1302,6 +1316,14 @@ export function FaintEffectResponseModal({
   paymentCostTotal = 0,
   paymentValid = false,
   onSelectPayment,
+  costHandAmount = 0,
+  costHandCandidates = [],
+  selectedCostHandIds = [],
+  onSelectCostHand,
+  costSupportAmount = 0,
+  costSupportCandidates = [],
+  selectedCostSupportIds = [],
+  onSelectCostSupport,
   allowSkip = false,
   onSkip,
   onConfirm,
@@ -1310,11 +1332,17 @@ export function FaintEffectResponseModal({
   const hasTargetChoice = maxTargets > 0
   const selectedTargetIdSet = new Set(selectedTargetIds)
   const selectedPaymentIdSet = new Set(selectedPaymentIds)
+  const selectedCostHandIdSet = new Set(selectedCostHandIds)
+  const selectedCostSupportIdSet = new Set(selectedCostSupportIds)
   const paymentReady = paymentCostTotal === 0 || paymentValid
-  const canConfirm = selectedTargetCount >= minTargets && paymentReady
+  const faintCostReady =
+    selectedCostHandIds.length === costHandAmount &&
+    selectedCostSupportIds.length === costSupportAmount
+  const canConfirm =
+    selectedTargetCount >= minTargets && paymentReady && faintCostReady
   const targetHint = !hasTargetChoice
     ? '此效果沒有目標選擇，確認後會繼續結算效果。'
-    : candidateCards.length > 0
+    : candidateCards.length > 0 || targetCandidateCards.length > 0
       ? minTargets === 0
         ? `可選擇最多 ${maxTargets} 張${candidateLabel}，也可以不選擇。`
         : `必須選擇 ${minTargets} 張${candidateLabel}。`
@@ -1326,6 +1354,13 @@ export function FaintEffectResponseModal({
     : selectedTargetCount === 0
       ? '不選擇目標'
       : `確認 (${selectedTargetCount})`
+
+  const displayTargetHint =
+    minTargets > 0 &&
+    candidateCards.length === 0 &&
+    targetCandidateCards.length === 0
+      ? `必須選擇 ${minTargets} 張${candidateLabel}，目前沒有合法候選。`
+      : targetHint
 
   if (minimized) {
     return (
@@ -1412,7 +1447,89 @@ export function FaintEffectResponseModal({
             )}
           </div>
         )}
-        <p className="faint-target-hint">{targetHint}</p>
+        {(costHandAmount > 0 || costSupportAmount > 0) && (
+          <div className="faint-cost-section">
+            <strong>先支付昏厥技能代價</strong>
+            {costHandAmount > 0 && (
+              <div className="faint-cost-group">
+                <span>
+                  從手牌棄置 {costHandAmount} 張（已選{' '}
+                  {selectedCostHandIds.length}/{costHandAmount}）
+                </span>
+                {costHandCandidates.length > 0 ? (
+                  <div className="modal-card-options compact faint-cost-hand-candidates">
+                    {costHandCandidates.map((candidate) => {
+                      const selected = selectedCostHandIdSet.has(candidate.instanceId)
+                      return (
+                        <button
+                          type="button"
+                          key={candidate.instanceId}
+                          className={selected ? 'is-selected' : ''}
+                          aria-pressed={selected}
+                          onClick={() => onSelectCostHand?.(candidate.instanceId)}
+                        >
+                          <CardFace card={candidate} selected={selected} />
+                          <span>{candidate.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <small>沒有符合條件的手牌，無法支付此效果。</small>
+                )}
+              </div>
+            )}
+            {costSupportAmount > 0 && (
+              <div className="faint-cost-group">
+                <span>
+                  從支援區放置 {costSupportAmount} 張到棄牌區（已選{' '}
+                  {selectedCostSupportIds.length}/{costSupportAmount}）
+                </span>
+                {costSupportCandidates.length > 0 ? (
+                  <div className="modal-card-options compact faint-cost-support-candidates">
+                    {costSupportCandidates.map((candidate) => {
+                      const selected = selectedCostSupportIdSet.has(candidate.instanceId)
+                      return (
+                        <button
+                          type="button"
+                          key={candidate.instanceId}
+                          className={selected ? 'is-selected' : ''}
+                          aria-pressed={selected}
+                          onClick={() => onSelectCostSupport?.(candidate.instanceId)}
+                        >
+                          <CardFace card={candidate} selected={selected} />
+                          <span>{candidate.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <small>沒有可支付的支援區卡牌，無法支付此效果。</small>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {targetCandidateCards.length > 0 && (
+          <div className="modal-card-options faint-target-candidates">
+            {targetCandidateCards.map((candidate) => {
+              const selected = selectedTargetIdSet.has(candidate.instanceId)
+              return (
+                <button
+                  type="button"
+                  key={candidate.instanceId}
+                  className={selected ? 'is-selected' : ''}
+                  aria-pressed={selected}
+                  onClick={() => onSelectTarget?.(candidate.instanceId)}
+                >
+                  <CardFace card={candidate} selected={selected} />
+                  <span>{candidate.name}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+        <p className="faint-target-hint">{displayTargetHint}</p>
         {selectedTargetName && (
           <div className="battle-response-summary">
             <strong>效果目標</strong>

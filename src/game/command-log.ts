@@ -39,6 +39,44 @@ const findCard = (state: GameState, instanceId: string): GameCard | undefined =>
 const findCardName = (state: GameState, instanceId: string): string =>
   findCard(state, instanceId)?.name ?? '未知卡牌'
 
+const cardTypeLabels: Record<GameCard['type'], string> = {
+  cookie: '餅乾',
+  item: '物品',
+  trap: '陷阱',
+  stage: '場景',
+}
+
+/**
+ * 將 hpToTrash 技能代價寫成可展開的對戰紀錄步驟。
+ *
+ * `begin-activate-skill` 的 previous state 還保留 HP 卡在餅乾下方，
+ * 因此必須從支付後的 next state 讀取 costRecord 與棄牌區，才能顯示
+ * 實際被丟棄的卡片名稱與類型，而不是只顯示支付來源餅乾。
+ */
+const describeHpTrashStep = (
+  previous: GameState,
+  next: GameState,
+  hpToTrashTargetIds: string[] | undefined,
+): LogStepDetail | undefined => {
+  const topCardId = next.costRecord?.hpTrashTopCardInstanceId
+  const hpCard = topCardId ? findCard(next, topCardId) : undefined
+  const hpCardType = hpCard?.type ?? next.costRecord?.hpTrashTopCardType
+  if (!hpCard && !hpCardType) return undefined
+
+  const sourceName = hpToTrashTargetIds?.[0]
+    ? findCardName(previous, hpToTrashTargetIds[0])
+    : '餅乾'
+  const cardName = hpCard ? `「${hpCard.name}」` : 'HP 卡'
+  const typeLabel = hpCardType
+    ? `（${cardTypeLabels[hpCardType]}）`
+    : '（卡片種類待確認）'
+
+  return {
+    text: `HP 費用：從「${sourceName}」丟棄${cardName}${typeLabel}`,
+    cards: hpCard ? [hpCard] : undefined,
+  }
+}
+
 /**
  * 找出 resolve-next-damage 這筆指令實際翻開的 HP 卡。不能只看
  * `pendingBattle.revealedHpCard`：沒有 FLIP 能力的卡翻開後會在同一個指令裡
@@ -207,8 +245,17 @@ export const describeCommand = (
     case 'play-attack-response':
       return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的對手指攻回應技能`
     case 'activate-skill':
-    case 'begin-activate-skill':
-      return `${actor} 發動了「${findCardName(state, command.sourceInstanceId)}」的技能`
+    case 'begin-activate-skill': {
+      const hpTrashStep = describeHpTrashStep(
+        state,
+        next,
+        command.hpToTrashTargetIds,
+      )
+      const sourceName = findCardName(state, command.sourceInstanceId)
+      return hpTrashStep
+        ? `${actor} 發動了「${sourceName}」的技能（${hpTrashStep.text}）`
+        : `${actor} 發動了「${sourceName}」的技能`
+    }
     case 'resolve-ability-effect': {
       const effects = getResolvedEffects(previous, command)
       const cycleHp = effects.find((effect) => effect.kind === 'cycle-hp')
@@ -511,7 +558,8 @@ export const describeCommandSteps = (
       if (selfTargetStep) steps.push(selfTargetStep)
       return steps
     }
-    case 'activate-skill': {
+    case 'activate-skill':
+    case 'begin-activate-skill': {
       const steps: LogStepDetail[] = []
       const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
       if (paymentStep) steps.push(paymentStep)
@@ -523,6 +571,12 @@ export const describeCommandSteps = (
       if (supportTrashStep) steps.push(supportTrashStep)
       const discardStep = describeCardListStep(state, '額外代價：棄置手牌', command.discardHandIds)
       if (discardStep) steps.push(discardStep)
+      const hpTrashStep = describeHpTrashStep(
+        state,
+        next,
+        command.hpToTrashTargetIds,
+      )
+      if (hpTrashStep) steps.push(hpTrashStep)
       const trashBattleStep = describeCardListStep(
         state,
         '額外代價：戰鬥區送入棄牌區',
@@ -541,7 +595,12 @@ export const describeCommandSteps = (
         command.trashToDeckIds,
       )
       if (trashToDeckStep) steps.push(trashToDeckStep)
-      steps.push(...describeEffectTargetsSteps(state, command.effectTargets))
+      steps.push(
+        ...describeEffectTargetsSteps(
+          state,
+          'effectTargets' in command ? command.effectTargets : undefined,
+        ),
+      )
       steps.push(...describeChooseOneSteps(command.chooseOneModes))
       const outcome = describeDamageOutcome(
         previous,

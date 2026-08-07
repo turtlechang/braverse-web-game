@@ -8,6 +8,7 @@ import {
   getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  getSupportEffectCandidates,
   hasRequiredEffectTargets,
   getTargetPlayerId,
   isEffectConditionMet,
@@ -34,6 +35,8 @@ import {
 import { hasBlockingPending } from './pending'
 import {
   canPayTrashBattleCookieCost,
+  getFaintTriggeredCost,
+  getDiscardHandCostCandidates,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
 } from './skills'
@@ -1451,6 +1454,8 @@ const removeFaintedCookie = (
       sourceInstanceId: target.card.instanceId,
       sourceCardName: target.card.name,
     }
+    const faintCost = getFaintTriggeredCost(faintSkill)
+    let faintCostAttached = false
     for (const effect of faintSkill.effects) {
       if (!isEffectConditionMet(nextState, context, effect)) continue
 
@@ -1471,9 +1476,13 @@ const removeFaintedCookie = (
                 sourceCardName: target.card.name,
                 effect,
                 context,
+                ...(faintCost && !faintCostAttached
+                  ? { cost: faintCost }
+                  : {}),
               },
             ],
           }
+          faintCostAttached = true
         }
       } else {
         nextState = {
@@ -1486,9 +1495,13 @@ const removeFaintedCookie = (
               sourceCardName: target.card.name,
               effect,
               context,
+              ...(faintCost && !faintCostAttached
+                ? { cost: faintCost }
+                : {}),
             },
           ],
         }
+        faintCostAttached = true
       }
     }
   }
@@ -2961,6 +2974,10 @@ export const resolveFaintEffect = (
   state: GameState,
   targetIds: string[],
   paymentIds: string[] = [],
+  costOptions: {
+    discardHandIds?: string[]
+    supportToTrashIds?: string[]
+  } = {},
 ): GameState => {
   if (state.pendingReplacement) {
     throw new GameRuleError('必須先完成補位。')
@@ -2986,6 +3003,101 @@ export const resolveFaintEffect = (
 
   if (!isEffectConditionMet(nextState, faint.context, faint.effect)) {
     return continuePendingReplacements(nextState)
+  }
+
+  const selectionLimits = getFaintEffectMinMax(state, faint.effect)
+  // A faint effect can become unfulfillable after the Cookie leaves the
+  // battle area. Treat an empty selection for a mandatory card effect as the
+  // player's explicit skip instead of sending an invalid target error back to
+  // the same modal forever.
+  if (selectionLimits.min > 0 && targetIds.length === 0) {
+    return continuePendingReplacements(nextState)
+  }
+
+  const discardHandIds = costOptions.discardHandIds ?? []
+  const supportToTrashIds = costOptions.supportToTrashIds ?? []
+  const faintCost = faint.cost
+  if (!faintCost && (discardHandIds.length > 0 || supportToTrashIds.length > 0)) {
+    throw new GameRuleError('此昏厥效果不需要支付手牌或支援區代價。')
+  }
+  if (faintCost) {
+    const uniqueDiscardHandIds = [...new Set(discardHandIds)]
+    const uniqueSupportToTrashIds = [...new Set(supportToTrashIds)]
+    if (
+      uniqueDiscardHandIds.length !== discardHandIds.length ||
+      uniqueSupportToTrashIds.length !== supportToTrashIds.length
+    ) {
+      throw new GameRuleError('昏厥效果代價不能重複選擇同一張卡。')
+    }
+
+    const discardAmount = faintCost.discardHand ?? 0
+    const supportAmount = faintCost.supportToTrash ?? 0
+    const costWasSkipped =
+      discardAmount + supportAmount > 0 &&
+      uniqueDiscardHandIds.length === 0 &&
+      uniqueSupportToTrashIds.length === 0
+    if (costWasSkipped) {
+      return continuePendingReplacements(nextState)
+    }
+
+    const sourcePlayer = nextState.players[faint.context.sourcePlayerId]
+    const discardCandidates = getDiscardHandCostCandidates(
+      faintCost,
+      sourcePlayer.hand,
+      faint.sourceInstanceId,
+    )
+    const discardCandidateIds = new Set(
+      discardCandidates.map((card) => card.instanceId),
+    )
+    if (
+      uniqueDiscardHandIds.length !== discardAmount ||
+      uniqueDiscardHandIds.some((id) => !discardCandidateIds.has(id))
+    ) {
+      throw new GameRuleError('昏厥效果的手牌代價不合法。')
+    }
+
+    const supportCandidates = getSupportEffectCandidates(
+      nextState,
+      faint.context,
+    )
+    const supportCandidateIds = new Set(
+      supportCandidates.map((support) => support.card.instanceId),
+    )
+    if (
+      uniqueSupportToTrashIds.length !== supportAmount ||
+      uniqueSupportToTrashIds.some((id) => !supportCandidateIds.has(id))
+    ) {
+      throw new GameRuleError('昏厥效果的支援區代價不合法。')
+    }
+
+    const discardHandSet = new Set(uniqueDiscardHandIds)
+    const supportToTrashSet = new Set(uniqueSupportToTrashIds)
+    const discardedHand = sourcePlayer.hand.filter((card) =>
+      discardHandSet.has(card.instanceId),
+    )
+    const discardedSupport = sourcePlayer.supportArea
+      .filter((support) => supportToTrashSet.has(support.card.instanceId))
+      .map((support) => support.card)
+    nextState = {
+      ...nextState,
+      players: {
+        ...nextState.players,
+        [faint.context.sourcePlayerId]: {
+          ...sourcePlayer,
+          hand: sourcePlayer.hand.filter(
+            (card) => !discardHandSet.has(card.instanceId),
+          ),
+          supportArea: sourcePlayer.supportArea.filter(
+            (support) => !supportToTrashSet.has(support.card.instanceId),
+          ),
+          discardPile: [
+            ...sourcePlayer.discardPile,
+            ...discardedHand,
+            ...discardedSupport,
+          ],
+        },
+      },
+    }
   }
 
   const faintEnergyCost =
@@ -3031,6 +3143,11 @@ export const resolveFaintEffect = (
     }
   }
 
+  const faintExecutionContext = {
+    ...faint.context,
+    sourceCardName: faint.sourceCardName,
+  }
+
   if (
     faint.effect.kind === 'damage' ||
     faint.effect.kind === 'modify-attack' ||
@@ -3040,7 +3157,7 @@ export const resolveFaintEffect = (
       selectEffectTargets(nextState, faint.context, faint.effect.target, targetIds)
       nextState = executeCardEffect(
         nextState,
-        faint.context,
+        faintExecutionContext,
         faint.effect,
         targetIds,
       )
@@ -3050,7 +3167,7 @@ export const resolveFaintEffect = (
   } else {
     nextState = executeCardEffect(
       nextState,
-      faint.context,
+      faintExecutionContext,
       faint.effect,
       targetIds,
     )

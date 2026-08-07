@@ -814,6 +814,103 @@ describe('faint effect queue', () => {
     expect(afterDamage.players['player-two'].battleArea[0].hpCards.length).toBe(1)
   })
 
+  it('preserves the faint source name for deferred draw effects', () => {
+    const base = createFaintState()
+    const faintCard = base.players['player-one'].battleArea[0].card
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [],
+          breakArea: [faintCard],
+        },
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: faintCard.instanceId,
+          sourceCardName: faintCard.name,
+          effect: { kind: 'draw-up-to', max: 2 },
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: faintCard.instanceId,
+          },
+        },
+      ],
+    }
+
+    const resolved = resolveFaintEffect(state, [])
+    expect(resolved.pendingDrawUpTo).toMatchObject({
+      max: 2,
+      sourceCardName: faintCard.name,
+    })
+  })
+
+  it('requires and resolves a faint-triggered hand discard before the target effect', () => {
+    const base = createFaintState()
+    const costCard = item('red-item-cost', 'red')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [costCard],
+          breakArea: [base.players['player-one'].battleArea[0].card],
+          battleArea: [],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            {
+              ...base.players['player-two'].battleArea[0],
+              hpCards: [item('target-hp-a'), item('target-hp-b')],
+            },
+          ],
+        },
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'faint-cookie',
+          sourceCardName: 'Faint Cookie',
+          effect: {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'faint-cookie',
+          },
+          cost: {
+            discardHand: 1,
+            discardHandColor: 'red',
+            discardHandType: 'item',
+          },
+        },
+      ],
+    }
+
+    const skipped = resolveFaintEffect(state, ['attacker'])
+    expect(skipped.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
+    expect(skipped.players['player-one'].hand).toHaveLength(1)
+
+    const resolved = resolveFaintEffect(
+      state,
+      ['attacker'],
+      [],
+      { discardHandIds: [costCard.instanceId] },
+    )
+    expect(resolved.players['player-one'].hand).toHaveLength(0)
+    expect(
+      resolved.players['player-one'].discardPile.map((card) => card.instanceId),
+    ).toContain(costCard.instanceId)
+    expect(resolved.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
   it('faint triggered by effect damage also queues', () => {
     const state = createFaintState()
     const result = executeCardEffect(

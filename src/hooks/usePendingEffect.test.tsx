@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createBlueOptionalCostAttackDemoState,
   createCardCheckDemoState,
+  createBs5StageConditionDemoState,
   createItemUsageDemoState,
 } from '../game/demo'
 import { usePendingEffect } from './usePendingEffect'
@@ -528,6 +529,65 @@ describe('usePendingEffect cancelPendingSkill', () => {
     })
 
     expect(captured!.pendingEffect).toBeNull()
+
+    await act(() => root.unmount())
+  })
+
+  it('maps a staged HP-cost Cookie to a costSelected follow-up target before payment commits', async () => {
+    const state = createBs5StageConditionDemoState('BS5-022', true)
+    const stageCard = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS5-022',
+    )
+    const targetId = state.players['player-one'].battleArea[0].card.instanceId
+    if (!stageCard || stageCard.type !== 'stage' || !stageCard.stageAbility) {
+      throw new Error('BS5-022 stage fixture is incomplete')
+    }
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: state,
+        setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+    await act(() => {
+      captured!.beginCardAbility(
+        stageCard,
+        stageCard.stageAbility!,
+        'stage',
+        'BS5-022',
+      )
+    })
+    await act(() => {
+      captured!.toggleSkillHpToTrash(targetId)
+    })
+
+    expect(captured!.selectedSkillHpToTrashTargetIds).toEqual(
+      new Set([targetId]),
+    )
+    expect(captured!.effectTargetCandidates.map((cookie) => cookie.card.instanceId))
+      .toEqual([targetId])
 
     await act(() => root.unmount())
   })

@@ -8,9 +8,11 @@ import { getRemainingEnergyCost, selectEnergyPayment } from '../energy'
 import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  getSupportEffectCandidates,
   requiresEffectCardSelection,
 } from '../effects'
 import { getRefreshCandidates } from '../refresh'
+import { getDiscardHandCostCandidates } from '../skills'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
@@ -160,6 +162,23 @@ export const handleAiPendingDecision = (
       faintEffect?.kind === 'hand-to-battle'
         ? faintEffect.energyCost
         : undefined
+    const pendingFaint = state.pendingFaintEffects?.[0]
+    const faintTriggeredCost = pendingFaint?.cost
+    const faintCostHandCandidates = faintTriggeredCost
+      ? getDiscardHandCostCandidates(
+          faintTriggeredCost,
+          state.players[playerId].hand,
+          pendingFaint.sourceInstanceId,
+        )
+      : []
+    const faintCostSupportCandidates = faintTriggeredCost
+      ? getSupportEffectCandidates(state, pendingFaint.context)
+      : []
+    const canPayTriggeredCost =
+      !faintTriggeredCost ||
+      (faintCostHandCandidates.length >= (faintTriggeredCost.discardHand ?? 0) &&
+        faintCostSupportCandidates.length >=
+          (faintTriggeredCost.supportToTrash ?? 0))
     const selectedPaymentIds = faintEnergyCost
       ? selectEnergyPayment(
           faintEnergyCost,
@@ -169,7 +188,9 @@ export const handleAiPendingDecision = (
     const canPayFaintCost = selectedPaymentIds !== null
     const shouldPayFaintCost =
       Boolean(faintEnergyCost) && cardCandidates.length > 0 && canPayFaintCost
+    const shouldPayTriggeredCost = Boolean(faintTriggeredCost) && canPayTriggeredCost
     const targetIds =
+      canPayTriggeredCost &&
       cardCandidates.length > 0 && (!faintEnergyCost || shouldPayFaintCost)
         ? orderedCards
             .slice(0, pendingDecision.max)
@@ -186,6 +207,16 @@ export const handleAiPendingDecision = (
         targetIds,
         ...(shouldPayFaintCost
           ? { paymentIds: selectedPaymentIds ?? [] }
+          : {}),
+        ...(shouldPayTriggeredCost
+          ? {
+              discardHandIds: faintCostHandCandidates
+                .slice(0, faintTriggeredCost?.discardHand ?? 0)
+                .map((card) => card.instanceId),
+              supportToTrashIds: faintCostSupportCandidates
+                .slice(0, faintTriggeredCost?.supportToTrash ?? 0)
+                .map((support) => support.card.instanceId),
+            }
           : {}),
       }),
       action: 'resolve-faint',

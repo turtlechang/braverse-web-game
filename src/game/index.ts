@@ -240,10 +240,12 @@ export {
   canPayTrashToDeckCost,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
+  getFaintTriggeredCost,
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckBottomCostCandidates,
+  isSkillEffectConditionDeferredUntilCost,
   skipCookieOnPlay,
 } from './skills'
 export {

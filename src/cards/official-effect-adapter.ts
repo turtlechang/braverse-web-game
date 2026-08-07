@@ -196,7 +196,7 @@ const stripEffectText = (text: string): string =>
 const parseAbilityCost = (text: string): AbilityCost => {
   const parsed = parseOfficialCardText(text)
   const discardMatch = text.match(
-    /(?:<|《)\s*Discard\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?card(?:s)?\.\s*(?:>|》)/i,
+    /(?:<|《)\s*Discard\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:(item|trap|cookie)\s+)?card(?:s)?\.\s*(?:>|》)/i,
   )
   const supportToTrashMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+(?:in|into)\s+the\s+trash\.?\s*(?:>|》)/i,
@@ -231,6 +231,7 @@ const parseAbilityCost = (text: string): AbilityCost => {
     discardHandColor: discardMatch?.[2]
       ? costColors[discardMatch[2].toUpperCase() as keyof typeof costColors]
       : undefined,
+    discardHandType: discardMatch?.[3]?.toLowerCase() as AbilityCost['discardHandType'],
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
@@ -2149,6 +2150,25 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
+    // BS5-007 Fire Spirit Cookie：只選對手餅乾，不能把「this Cookie faints」
+    // 誤判成來源自己的傷害目標。
+    'BS5-007': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS5-011 Starfruit Cookie：<can be used as {R}.> Select up to 1 LV.1
+    // opponent Cookie. 1 damage. 這個句式不是「of ... Cookies」，因此要
+    // 明確覆寫目標，避免 parseTarget 把來源 faint 句誤讀成 self。
+    'BS5-011': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
     // BS5-010 Starch Noodle Cookie：【On Play】對手休息中 LV.2 以下餅乾 2 傷害。
     'BS5-010': [
       {
@@ -2309,6 +2329,18 @@ export const convertOfficialCardEffects = (
       {
         kind: 'return-to-hand',
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    // BS5-047 Cotton Cookie：【When this Cookie faints】<Place 1 card from
+    // support area into the trash.> Set 1 support card active. 代價動作必須
+    // 先進入效果佇列，才能在 UI 中支付後再選擇要恢復的支援卡。
+    'BS5-047': [
+      { kind: 'support-to-trash', amount: 1 },
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        selectable: true,
+        optional: false,
       },
     ],
     // BS5-028 Mango Cookie：【On Play】<{Y}> If your break area is LV.3 or
@@ -5925,6 +5957,15 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { red: 1 },
     discardHand: 0,
     hpToTrash: { energyColor: 'red', minLevel: 2 },
+  },
+  // BS5-007 Fire Spirit Cookie：【When this Cookie faints】<Discard 1 {R}
+  // item card from your hand.> 這個棄牌是昏厥技能的代價，不能只依賴一般
+  // faint 效果轉接，否則會出現技能提示但沒有支付入口的狀態。
+  'BS5-007': {
+    energy: {},
+    discardHand: 1,
+    discardHandColor: 'red',
+    discardHandType: 'item',
   },
   // BS5-013 Pitaya Dragon Cookie：【On Play】<Discard 1 {R} Cookie from your
   // hand.> 紅龍 Cookie 是 DRAGON 關鍵字，本身是餅乾。

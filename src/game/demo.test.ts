@@ -19,6 +19,12 @@ import {
   createAiDiscardRevealDemoState,
   createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
+  createBs5FaintDemoState,
+  createBs5FlipDemoState,
+  createBs5ItemConditionDemoState,
+  createBs5Item111DemoState,
+  createBs5StageConditionDemoState,
+  createBs5TrapDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
   createBs4ConditionDemoState,
@@ -125,6 +131,39 @@ describe('parseTestStateConfig', () => {
   it('returns null when localhost but no test-state param', () => {
     const result = parseTestStateConfig('', 'localhost')
     expect(result).toBeNull()
+  })
+
+  it('parses BS5 focused A/B test-state routes only on localhost', () => {
+    expect(parseTestStateConfig('?test-state=bs5-flip:BS5-009:activate', 'localhost')).toEqual({
+      kind: 'bs5-flip',
+      cardNumber: 'BS5-009',
+      activate: true,
+    })
+    expect(parseTestStateConfig('?test-state=bs5-faint:BS5-007:unmet', 'localhost')).toEqual({
+      kind: 'bs5-faint',
+      cardNumber: 'BS5-007',
+      conditionMet: false,
+    })
+    expect(parseTestStateConfig('?test-state=bs5-trap:BS5-087:met', 'localhost')).toEqual({
+      kind: 'bs5-trap',
+      cardNumber: 'BS5-087',
+      conditionMet: true,
+    })
+    expect(parseTestStateConfig('?test-state=bs5-item:BS5-111:unmet', 'localhost')).toEqual({
+      kind: 'bs5-item-111',
+      conditionMet: false,
+    })
+    expect(parseTestStateConfig('?test-state=bs5-item:BS5-020:met', 'localhost')).toEqual({
+      kind: 'bs5-item-condition',
+      cardNumber: 'BS5-020',
+      conditionMet: true,
+    })
+    expect(parseTestStateConfig('?test-state=bs5-stage:BS5-022:unmet', 'localhost')).toEqual({
+      kind: 'bs5-stage-condition',
+      cardNumber: 'BS5-022',
+      conditionMet: false,
+    })
+    expect(parseTestStateConfig('?test-state=bs5-faint:BS4-011:met', 'localhost')).toBeNull()
   })
 
   it('returns null when non-localhost even with valid test-state', () => {
@@ -284,7 +323,7 @@ describe('createCardCheckDemoState', () => {
       0,
     )
 
-    expect(breakLevel).toBe(9)
+    expect(breakLevel).toBe(5)
 
     const resolved = resolveFlip(state, 'player-one', { activate: true })
 
@@ -359,6 +398,94 @@ describe('createCardCheckDemoState', () => {
       kind: 'bs3-061-condition',
       conditionMet: false,
     })
+  })
+
+  it('provides BS5 focused A/B fixtures for FLIP, faint, traps, items, stages, and BS5-111', () => {
+    const flip = createBs5FlipDemoState('BS5-009', true)
+    expect(flip.pendingBattle?.stage).toBe('flip')
+
+    const faintMet = createBs5FaintDemoState('BS5-007', true)
+    expect(faintMet.pendingFaintEffects?.[0]?.cost).toMatchObject({
+      discardHand: 1,
+      discardHandColor: 'red',
+      discardHandType: 'item',
+    })
+    const bs5072Met = createBs5FaintDemoState('BS5-072', true)
+    const bs5072Unmet = createBs5FaintDemoState('BS5-072', false)
+    expect(bs5072Met.pendingFaintEffects).toHaveLength(1)
+    expect(bs5072Unmet.pendingFaintEffects).toHaveLength(1)
+    expect(bs5072Met.players['player-one'].breakArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'BS5-072' }),
+        expect.objectContaining({ id: 'BS5-072-break-1' }),
+        expect.objectContaining({ id: 'BS5-072-break-2' }),
+      ]),
+    )
+    expect(bs5072Met.players['player-one'].breakArea.reduce((sum, card) => sum + card.level, 0))
+      .toBe(8)
+    expect(bs5072Unmet.players['player-one'].breakArea).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'BS5-072' })]),
+    )
+    expect(bs5072Unmet.players['player-one'].breakArea.reduce((sum, card) => sum + card.level, 0))
+      .toBe(2)
+    expect(
+      createBs5FaintDemoState('BS5-011', false).players['player-two'].battleArea.every(
+        (entry) => entry.card.level !== 1,
+      ),
+    ).toBe(true)
+    expect(createBs5FaintDemoState('BS5-007', false).players['player-one'].hand)
+      .not.toContainEqual(expect.objectContaining({ energyColor: 'red' }))
+
+    const trapMet = createBs5TrapDemoState('BS5-087', true)
+    const trapUnmet = createBs5TrapDemoState('BS5-087', false)
+    expect(trapMet.players['player-one'].breakArea.reduce((sum, card) => sum + card.level, 0))
+      .toBeGreaterThanOrEqual(6)
+    expect(trapUnmet.players['player-one'].breakArea).toHaveLength(0)
+
+    const itemMet = createBs5Item111DemoState(true)
+    const itemUnmet = createBs5Item111DemoState(false)
+    expect(itemMet.players['player-one'].battleArea[0].card.keywords).toContain('dragon')
+    expect(itemMet.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
+    expect(itemUnmet.players['player-one'].battleArea[0].hpCards).toHaveLength(4)
+
+    const item020Met = createBs5ItemConditionDemoState('BS5-020', true)
+    const item020Unmet = createBs5ItemConditionDemoState('BS5-020', false)
+    expect(item020Met.players['player-one'].battleArea).toHaveLength(2)
+    expect(item020Met.players['player-one'].battleArea.filter((entry) => entry.hpCards.length === 1))
+      .toHaveLength(2)
+    expect(item020Unmet.players['player-one'].battleArea.filter((entry) => entry.hpCards.length === 1))
+      .toHaveLength(1)
+
+    const stage022Met = createBs5StageConditionDemoState('BS5-022', true)
+    const stage022Unmet = createBs5StageConditionDemoState('BS5-022', false)
+    expect(stage022Met.players['player-one'].battleArea[0].card.id).toBe('BS5-013')
+    expect(stage022Unmet.players['player-one'].battleArea[0].card.id).not.toBe('BS5-013')
+    expect(stage022Met.players['player-one'].battleArea[0].hpCards).toHaveLength(4)
+  })
+
+  it('keeps BS5 Browser card-check Cookies at legal positive HP', () => {
+    const bs5005 = createCardCheckDemoState('BS5-005')
+    expect(bs5005.players['player-one'].battleArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          card: expect.objectContaining({ id: 'BS5-005' }),
+          hpCards: expect.any(Array),
+        }),
+        expect.objectContaining({
+          card: expect.objectContaining({ id: 'self-extra-1', level: 2 }),
+          hpCards: expect.any(Array),
+        }),
+      ]),
+    )
+    expect(bs5005.players['player-one'].battleArea.every((entry) => entry.hpCards.length >= 1))
+      .toBe(true)
+
+    const bs5010 = createCardCheckDemoState('BS5-010')
+    expect(bs5010.players['player-one'].battleArea[0].hpCards.length).toBeGreaterThanOrEqual(1)
+
+    const bs5011 = createBs5FaintDemoState('BS5-011', true)
+    expect(bs5011.players['player-two'].battleArea.every((entry) => entry.hpCards.length >= 1))
+      .toBe(true)
   })
 })
 
@@ -486,6 +613,74 @@ describe('BS4 condition fixtures', () => {
     )
 
     expect(source?.hpCards).toHaveLength(1)
+  })
+
+  it.each([
+    ['BS5-016', 3],
+    ['BS5-013', 4],
+  ] as const)('%s card-check fixture keeps the HP cards needed by its effect path', (cardNumber, hpCount) => {
+    const state = createCardCheckDemoState(cardNumber)
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === cardNumber,
+    )
+
+    expect(source?.hpCards).toHaveLength(hpCount)
+  })
+
+  it('BS5-016 can be activated before its post-payment HP-card condition is known', () => {
+    const state = createCardCheckDemoState('BS5-016')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS5-016',
+    )
+    expect(source).toBeDefined()
+    expect(
+      canActivateCookieSkill(state, 'player-one', source!.card.instanceId, 'activate'),
+    ).toBe(true)
+
+    const paid = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.card.instanceId],
+    })
+
+    expect(paid.costRecord).toMatchObject({ hpTrashTopCardType: 'item' })
+    expect(paid.costRecord?.hpTrashTopCardInstanceId).toBe(
+      'BS5-016-source-hp-3',
+    )
+    expect(paid.pendingAbilityEffect?.sourceCardName).toBe('Tiramisu Cookie')
+  })
+
+  it('BS5-016 resolves its damage after the HP cost reveals a non-Cookie card', () => {
+    const state = createCardCheckDemoState('BS5-016')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS5-016',
+    )
+    const target = state.players['player-two'].battleArea[0]
+    expect(source).toBeDefined()
+    expect(target).toBeDefined()
+
+    const paid = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.card.instanceId],
+    })
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target.card.instanceId],
+    })
+
+    expect(
+      resolved.players['player-two'].battleArea.find(
+        (entry) => entry.card.instanceId === target.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(target.hpCards.length - 1)
   })
 
   it('BS4-005 card-check fixture starts its sequential damage after selecting both opponents', () => {

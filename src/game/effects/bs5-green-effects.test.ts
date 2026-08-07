@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from 'vitest'
 import {
   executeCardEffect,
+  getEffectSelectionLimits,
   hasBlockingPending,
   isEffectConditionMet,
   processEndPhaseEffects,
@@ -492,6 +493,38 @@ describe('BS5-065 opponent-rests-support（對手選擇橫置支援卡）', () =
       },
     })
     expect(isEffectConditionMet(manyState, context, condition)).toBe(true)
+  })
+})
+
+describe('BS5-047 Cotton faint Then set-active', () => {
+  const context: EffectContext = {
+    sourcePlayerId: 'player-one',
+    sourceInstanceId: 'bs5-047',
+    sourceCardName: 'Cotton Cookie',
+  }
+
+  it('Set 1 support card active requires one rested support target', () => {
+    const effect: CardEffect = {
+      kind: 'set-active',
+      supportCount: 1,
+      selectable: true,
+      optional: false,
+    }
+    expect(getEffectSelectionLimits(effect)).toEqual({ min: 1, max: 1 })
+
+    const state = createTestGameState({
+      players: {
+        'player-one': {
+          ...createTestPlayer('player-one'),
+          supportArea: [{ card: makeCard('s1'), rested: true }],
+        },
+        'player-two': createTestPlayer('player-two'),
+      },
+    })
+
+    expect(() => executeCardEffect(state, context, effect, [])).toThrow()
+    const resolved = executeCardEffect(state, context, effect, ['s1'])
+    expect(resolved.players['player-one'].supportArea[0].rested).toBe(false)
   })
 })
 

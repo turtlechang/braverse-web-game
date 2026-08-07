@@ -11,6 +11,8 @@ import {
   getBlockerCandidates,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
+  getDiscardHandCostCandidates,
+  getSupportEffectCandidates,
   getPendingDecision,
   hasBlockingPending,
   getReplacementCandidates,
@@ -56,6 +58,12 @@ import {
   createBlueSt4TrapDemoState,
   createBs4ConditionDemoState,
   createBs3SilverbellConditionDemoState,
+  createBs5FlipDemoState,
+  createBs5FaintDemoState,
+  createBs5TrapDemoState,
+  createBs5ItemConditionDemoState,
+  createBs5StageConditionDemoState,
+  createBs5Item111DemoState,
   createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
@@ -177,6 +185,39 @@ export function useMatchController(params: {
         testStateConfig.conditionMet,
       )
     }
+    if (testStateConfig?.kind === 'bs5-flip') {
+      return createBs5FlipDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.activate,
+      )
+    }
+    if (testStateConfig?.kind === 'bs5-faint') {
+      return createBs5FaintDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs5-trap') {
+      return createBs5TrapDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs5-item-condition') {
+      return createBs5ItemConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs5-stage-condition') {
+      return createBs5StageConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs5-item-111') {
+      return createBs5Item111DemoState(testStateConfig.conditionMet)
+    }
     if (testStateConfig?.kind === 'bs3-121-special-victory') {
       return createBs3SpecialVictoryDemoState()
     }
@@ -293,6 +334,24 @@ export function useMatchController(params: {
         testStateConfig.conditionMet ? '條件成立' : '條件不成立'
       }`
     }
+    if (testStateConfig?.kind === 'bs5-flip') {
+      return `BS5 ${testStateConfig.cardNumber} FLIP：${
+        testStateConfig.activate ? '發動效果' : '選擇不發動'
+      }。`
+    }
+    if (testStateConfig?.kind === 'bs5-faint') {
+      return `BS5 ${testStateConfig.cardNumber} 昏厥效果：${
+        testStateConfig.conditionMet ? '條件成立' : '條件不成立／不可用'
+      }。`
+    }
+    if (testStateConfig?.kind === 'bs5-trap') {
+      return `BS5 ${testStateConfig.cardNumber} 陷阱：${
+        testStateConfig.conditionMet ? '條件成立' : '條件不成立'
+      }。`
+    }
+    if (testStateConfig?.kind === 'bs5-item-111') {
+      return `BS5-111 覺醒!龍之怒：剩餘 HP ${testStateConfig.conditionMet ? '3 以下' : '4 以上'}。`
+    }
     if (testStateConfig?.kind === 'soul-jam-019-equipped') {
       return '靈魂果醬測試：BS3-019 已裝備於 Hollyberry，攻擊力 +1。'
     }
@@ -361,6 +420,12 @@ export function useMatchController(params: {
     string[]
   >([])
   const [selectedFaintPaymentIds, setSelectedFaintPaymentIds] = useState<
+    string[]
+  >([])
+  const [selectedFaintCostHandIds, setSelectedFaintCostHandIds] = useState<
+    string[]
+  >([])
+  const [selectedFaintCostSupportIds, setSelectedFaintCostSupportIds] = useState<
     string[]
   >([])
   const [selectedOpponentDiscardIds, setSelectedOpponentDiscardIds] =
@@ -467,6 +532,8 @@ export function useMatchController(params: {
     battleActions.clearAttacker()
     setSelectedFaintTargetIds([])
     setSelectedFaintPaymentIds([])
+    setSelectedFaintCostHandIds([])
+    setSelectedFaintCostSupportIds([])
   }
 
   // Derived state
@@ -511,6 +578,23 @@ export function useMatchController(params: {
       ? pendingFaint.effect.energyCost ?? {}
       : {}
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
+  const faintCostHandAmount = pendingFaint?.cost?.discardHand ?? 0
+  const faintCostSupportAmount = pendingFaint?.cost?.supportToTrash ?? 0
+  const faintCostHandCandidates =
+    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
+      ? getDiscardHandCostCandidates(
+          pendingFaint.cost ?? {},
+          game.players[viewerPlayerId].hand,
+          pendingFaint.sourceInstanceId,
+        )
+      : []
+  const faintCostSupportCandidates =
+    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId &&
+    faintCostSupportAmount > 0
+      ? getSupportEffectCandidates(game, pendingFaint.context).map(
+          (support) => support.card,
+        )
+      : []
   const faintPaymentCandidates =
     pendingFaint &&
     pendingFaint.sourcePlayerId === viewerPlayerId &&
@@ -546,6 +630,32 @@ export function useMatchController(params: {
       }
       if (current.length >= faintEnergyCostTotal) return current
       if (!faintPaymentCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
+  const toggleFaintCostHand = (instanceId: string) => {
+    if (faintCostHandAmount === 0) return
+    setSelectedFaintCostHandIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= faintCostHandAmount) return current
+      if (!faintCostHandCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
+  const toggleFaintCostSupport = (instanceId: string) => {
+    if (faintCostSupportAmount === 0) return
+    setSelectedFaintCostSupportIds((current) => {
+      if (current.includes(instanceId)) {
+        return current.filter((id) => id !== instanceId)
+      }
+      if (current.length >= faintCostSupportAmount) return current
+      if (!faintCostSupportCandidates.some((card) => card.instanceId === instanceId)) {
         return current
       }
       return [...current, instanceId]
@@ -1161,11 +1271,21 @@ export function useMatchController(params: {
     setSelectedFaintTargetIds,
     selectedFaintPaymentIds,
     setSelectedFaintPaymentIds,
+    selectedFaintCostHandIds,
+    setSelectedFaintCostHandIds,
+    selectedFaintCostSupportIds,
+    setSelectedFaintCostSupportIds,
     faintEnergyCost,
     faintEnergyCostTotal,
     faintPaymentCandidates,
     faintPaymentValid,
     toggleFaintPayment,
+    faintCostHandAmount,
+    faintCostHandCandidates,
+    toggleFaintCostHand,
+    faintCostSupportAmount,
+    faintCostSupportCandidates,
+    toggleFaintCostSupport,
     pendingFaint,
     faintSourceCard,
     faintCandidates,

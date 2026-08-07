@@ -33,6 +33,7 @@ import {
   getTrashToDeckCandidates,
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
+  isSkillEffectConditionDeferredUntilCost,
   isEnergyColorCompatibleWithCost,
   isEffectConditionMet,
   isEffectUntargeted,
@@ -171,6 +172,12 @@ export function usePendingEffect(params: {
           : (currentEffect.target ?? null)
         : null
 
+  const stagedCostSelectedTargetId =
+    pendingEffect &&
+    currentTargetSelector?.costSelected &&
+    !pendingEffect.skillActivated
+      ? pendingEffect.selectedHpToTrashTargetIds[0]
+      : undefined
   const effectTargetCandidates =
     pendingEffect &&
     currentEffect &&
@@ -183,11 +190,26 @@ export function usePendingEffect(params: {
               pendingEffect.context,
               currentEffect,
             )
-          : getEffectTargetCandidates(
-              game,
-              pendingEffect.context,
-              currentTargetSelector,
-            )
+          : (() => {
+              // A stage/item/cookie ability keeps all costs in local pending
+              // UI state until the final confirmation. `costSelected` effects
+              // therefore cannot rely on GameState.costRecord yet; bridge the
+              // selected HP-cost Cookie into the regular target candidates.
+              const selector = stagedCostSelectedTargetId
+                ? { ...currentTargetSelector, costSelected: false }
+                : currentTargetSelector
+              const candidates = getEffectTargetCandidates(
+                game,
+                pendingEffect.context,
+                selector,
+              )
+              return stagedCostSelectedTargetId
+                ? candidates.filter(
+                    (cookie) =>
+                      cookie.card.instanceId === stagedCostSelectedTargetId,
+                  )
+                : candidates
+            })()
       : []
 
   const supportEffectCandidates =
@@ -718,7 +740,8 @@ export function usePendingEffect(params: {
       sourceInstanceId: card.instanceId,
     }
     const availableEffects = card.skill.effects.filter((effect) =>
-      isEffectConditionMet(nextGame, context, effect),
+      isEffectConditionMet(nextGame, context, effect) ||
+      isSkillEffectConditionDeferredUntilCost(card.skill!, effect),
     )
 
     if (availableEffects.length === 0) {
@@ -1580,6 +1603,53 @@ export function usePendingEffect(params: {
                 trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
+      const deferredAfterHpCost =
+        !pendingEffect.skillActivated &&
+        pendingEffect.sourceKind === 'cookie' &&
+        isSkillEffectConditionDeferredUntilCost(pendingEffect.skill, currentEffect)
+
+      if (deferredAfterHpCost) {
+        const hpCardId = activatedGame.costRecord?.hpTrashTopCardInstanceId
+        const revealedHpCard = hpCardId
+          ? activatedGame.players[
+              pendingEffect.context.sourcePlayerId
+            ].discardPile.find((card) => card.instanceId === hpCardId)
+          : undefined
+        const revealedType =
+          revealedHpCard?.type ?? activatedGame.costRecord?.hpTrashTopCardType
+        const typeLabel =
+          revealedType === 'cookie'
+            ? '餅乾'
+            : revealedType === 'item'
+              ? '物品'
+              : revealedType === 'trap'
+                ? '陷阱'
+                : revealedType === 'stage'
+                  ? '場景'
+                  : '未知'
+        const costResult = revealedHpCard
+          ? `${pendingEffect.sourceCard.name} 支付 HP 費用，丟棄的 HP 卡是「${revealedHpCard.name}」（${typeLabel}）。`
+          : `${pendingEffect.sourceCard.name} 支付 HP 費用，丟棄的 HP 卡類型是「${typeLabel}」。`
+
+        setGame(activatedGame)
+        setMessage(costResult)
+        setEffectHistory((history) => [costResult, ...history].slice(0, 4))
+
+        if (!activatedGame.pendingAbilityEffect) {
+          setPendingEffect(null)
+          return
+        }
+
+        setPendingEffect({
+          ...pendingEffect,
+          selectedTargetIds: [],
+          selectedHpToTrashTargetIds: [],
+          skillActivated: true,
+          ...(revealedHpCard ? { revealedHpCard } : {}),
+        })
+        return
+      }
+
       const nextGame = applyGameCommand(activatedGame, {
         kind: 'resolve-ability-effect',
         playerId: pendingEffect.context.sourcePlayerId,

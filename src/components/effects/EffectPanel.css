@@ -149,6 +149,12 @@
   line-height: 1.55 !important;
 }
 
+.effect-source-attack-follow-up {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(113, 236, 255, 0.2);
+}
+
 .effect-panel p,
 .effect-panel li {
   color: rgba(255, 255, 255, 0.7);
@@ -252,6 +258,61 @@
 
 .effect-panel .cost-summary small {
   color: rgba(108, 225, 108, 0.8);
+  font-size: 0.7rem;
+}
+
+.effect-cost-resolution {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 10px;
+  border: 1px solid rgba(108, 225, 108, 0.55);
+  border-radius: 6px;
+  background: rgba(108, 225, 108, 0.1);
+}
+
+.effect-cost-resolution-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c8ffc8;
+  font-size: 0.78rem;
+}
+
+.effect-cost-resolution-heading svg {
+  width: 16px;
+}
+
+.effect-cost-resolution-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.effect-cost-resolution-card .card-face {
+  width: 58px;
+}
+
+.effect-cost-resolution-card > div:last-child {
+  min-width: 0;
+}
+
+.effect-cost-resolution-card strong,
+.effect-cost-resolution-card small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.effect-cost-resolution-card strong {
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.effect-cost-resolution-card small {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.68);
   font-size: 0.7rem;
 }
 

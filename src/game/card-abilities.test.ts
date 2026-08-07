@@ -319,6 +319,41 @@ describe('item and stage actions', () => {
     expect(canActivateStage(state, 'player-one')).toBe(false)
   })
 
+  it('offers a stage whose follow-up targets the Cookie selected for its HP cost', () => {
+    const stage: GameCard = {
+      id: 'stage-cost-selected',
+      instanceId: 'stage-cost-selected-1',
+      name: 'Stage Cost Selected',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { red: 1 },
+        cost: { energy: { red: 1 }, hpToTrash: { minLevel: 2 } },
+        text: 'stage',
+        restSource: true,
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1, costSelected: true },
+          },
+        ],
+      },
+    }
+    const state = readyState()
+    const target = state.players['player-one'].battleArea[0]
+    state.players['player-one'].battleArea = [
+      {
+        ...target,
+        card: { ...target.card, level: 2 },
+        hpCards: [support('stage-hp-1')],
+      },
+    ]
+    state.players['player-one'].stage = { card: stage, rested: false }
+
+    expect(canActivateStage(state, 'player-one')).toBe(true)
+  })
+
   it('executes item effect with modify-attack targeting own cookie', () => {
     const item: GameCard = {
       id: 'item',

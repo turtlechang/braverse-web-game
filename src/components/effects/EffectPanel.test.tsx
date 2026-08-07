@@ -137,6 +137,91 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('renders ordinary attack text and its follow-up text as separate descriptions', () => {
+    const pending = createPendingEffect({
+      sourceKind: 'attack',
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'Diamond Formation! Damage 4 Then, Draw 1 card from your deck.',
+        effects: [],
+      },
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 4,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    const descriptions = Array.from(
+      container.querySelectorAll<HTMLParagraphElement>('.effect-source-description'),
+    )
+    expect(descriptions).toHaveLength(2)
+    expect(descriptions[0].classList.contains('effect-source-attack-text')).toBe(true)
+    expect(descriptions[0].textContent).toContain('Diamond Formation!')
+    expect(descriptions[0].textContent).not.toContain('Then')
+    expect(descriptions[1].classList.contains('effect-source-attack-follow-up')).toBe(true)
+    expect(descriptions[1].textContent).toContain('Then')
+    expect(descriptions[1].textContent).toContain('Draw 1 card from your deck.')
+
+    act(() => root.unmount())
+  })
+
+  it('shows the HP card revealed by a deferred skill cost before target selection', () => {
+    const revealedHpCard = createItemCard(17)
+    const pending = createPendingEffect({
+      skillActivated: true,
+      revealedHpCard,
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: true,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: {}, hpToTrash: { sourceOnly: true } },
+        text: 'Place the top HP card into the trash, then deal damage.',
+        effects: [],
+      },
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        candidateCards={[createCookieCard(18)]}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-cost-resolution')).not.toBeNull()
+    expect(container.textContent).toContain('HP 費用已支付，丟棄的卡片')
+    expect(container.textContent).toContain(revealedHpCard.name)
+    expect(container.textContent).toContain('卡片種類：物品')
+
+    act(() => root.unmount())
+  })
+
   it('shows effect history when no pending effect', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
