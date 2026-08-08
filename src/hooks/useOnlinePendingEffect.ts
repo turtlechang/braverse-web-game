@@ -6,6 +6,7 @@ import {
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEffectTargetCandidates,
+  getSupportEffectCandidates,
   hasRequiredEffectTargets as hasRequiredTargetsForEffect,
   getEnergyCostTotal,
   getDiscardAllHandCostCandidates,
@@ -225,6 +226,19 @@ export function useOnlinePendingEffect(params: {
     : null
   const displayedEffect = currentEffect ?? draftEffect
   const displayedContext = context ?? draftContext
+  const effectKey = attackEffectActive
+    ? `attack:${attackBattle?.attackerInstanceId}:${attackBattle?.attackEffectIndex}`
+    : abilityActiveForViewer
+      ? `ability:${pendingAbility?.sourceInstanceId}:${pendingAbility?.effectIndex}`
+      : abilityCostDraft
+        ? `draft:${abilityCostDraft.card.instanceId}:0`
+        : 'none'
+  const [selectedTargetState, setSelectedTargetState] = useState<{
+    key: string
+    ids: string[]
+  }>({ key: effectKey, ids: [] })
+  const selectedTargetIds =
+    selectedTargetState.key === effectKey ? selectedTargetState.ids : []
   const displayedEffectConditionMet =
     displayedEffect && displayedContext
       ? isEffectConditionMet(game, displayedContext, displayedEffect)
@@ -235,8 +249,42 @@ export function useOnlinePendingEffect(params: {
     ? getEffectSelectionLimits(displayedEffect)
     : null
 
+  const restSupportAndDamageSupportCandidates =
+    displayedEffect?.kind === 'rest-support-and-damage' && displayedContext
+      ? getSupportEffectCandidates(game, displayedContext, {
+          side: displayedEffect.supportSide,
+          activeOnly: displayedEffect.activeOnly,
+        })
+          .filter(
+            (support) =>
+              (displayedEffect.supportEnergyColor === undefined ||
+                support.card.energyColor ===
+                  displayedEffect.supportEnergyColor) &&
+              !(
+                abilityCostDraft?.selectedPaymentIds.includes(
+                  support.card.instanceId,
+                ) ?? false
+              ),
+          )
+          .map((support) => support.card)
+      : []
+
+  const restSupportAndDamageTargetCandidates =
+    displayedEffect?.kind === 'rest-support-and-damage' && displayedContext
+      ? getEffectTargetCandidates(
+          game,
+          displayedContext,
+          displayedEffect.target,
+        ).map((candidate) => candidate.card)
+      : []
+
   const candidateCards: GameCard[] = displayedContext
-    ? currentTargetSelector
+    ? displayedEffect?.kind === 'rest-support-and-damage'
+      ? [
+          ...restSupportAndDamageSupportCandidates,
+          ...restSupportAndDamageTargetCandidates,
+        ]
+      : currentTargetSelector
       ? getEffectTargetCandidates(game, displayedContext, currentTargetSelector).map(
           (candidate) => candidate.card,
         )
@@ -275,7 +323,11 @@ export function useOnlinePendingEffect(params: {
   const draftEnergyTotal = getEnergyCostTotal(draftEnergyCost)
   const draftPaymentCandidates = abilityCostDraft
     ? game.players[viewerPlayerId].supportArea
-        .filter((support) => !support.rested)
+        .filter(
+          (support) =>
+            !support.rested &&
+            !selectedTargetIds.includes(support.card.instanceId),
+        )
         .map((support) => support.card)
     : []
   const draftPaymentValid = abilityCostDraft
@@ -349,7 +401,12 @@ export function useOnlinePendingEffect(params: {
     setAbilityCostDraft((draft) => {
       if (!draft) return draft
       const selected = draft.selectedPaymentIds
-      if (draft.selectedCostSupportToTrashIds.includes(instanceId)) return draft
+      if (
+        draft.selectedCostSupportToTrashIds.includes(instanceId) ||
+        selectedTargetIds.includes(instanceId)
+      ) {
+        return draft
+      }
       if (selected.includes(instanceId)) {
         return { ...draft, selectedPaymentIds: selected.filter((id) => id !== instanceId) }
       }
@@ -419,13 +476,6 @@ export function useOnlinePendingEffect(params: {
     })
   }
 
-  const effectKey = attackEffectActive
-    ? `attack:${attackBattle?.attackerInstanceId}:${attackBattle?.attackEffectIndex}`
-    : abilityActiveForViewer
-      ? `ability:${pendingAbility?.sourceInstanceId}:${pendingAbility?.effectIndex}`
-      : abilityCostDraft
-        ? `draft:${abilityCostDraft.card.instanceId}:0`
-        : 'none'
   const submittedEffectKeyRef = useRef<string | null>(null)
   const autoSkippedAttackEffectKeyRef = useRef<string | null>(null)
 
@@ -479,14 +529,49 @@ export function useOnlinePendingEffect(params: {
     viewerPlayerId,
   ])
 
-  const [selectedTargetState, setSelectedTargetState] = useState<{
-    key: string
-    ids: string[]
-  }>({ key: effectKey, ids: [] })
-  const selectedTargetIds =
-    selectedTargetState.key === effectKey ? selectedTargetState.ids : []
-
   const toggleTarget = (instanceId: string) => {
+    if (displayedEffect?.kind === 'rest-support-and-damage') {
+      const supportCandidateIds = new Set(
+        restSupportAndDamageSupportCandidates.map(
+          (card) => card.instanceId,
+        ),
+      )
+      const targetCandidateIds = new Set(
+        restSupportAndDamageTargetCandidates.map(
+          (card) => card.instanceId,
+        ),
+      )
+      const isSupport = supportCandidateIds.has(instanceId)
+      const isTarget = targetCandidateIds.has(instanceId)
+      if (!isSupport && !isTarget) return
+
+      setSelectedTargetState((currentState) => {
+        const current =
+          currentState.key === effectKey ? currentState.ids : []
+        if (current.includes(instanceId)) {
+          return {
+            key: effectKey,
+            ids: current.filter((id) => id !== instanceId),
+          }
+        }
+
+        const groupCandidateIds = isSupport
+          ? supportCandidateIds
+          : targetCandidateIds
+        const selectedInGroup = current.filter((id) =>
+          groupCandidateIds.has(id),
+        )
+        const max = isSupport
+          ? displayedEffect.supportAmount
+          : displayedEffect.target.max
+        if (selectedInGroup.length >= max) {
+          return { key: effectKey, ids: current }
+        }
+        return { key: effectKey, ids: [...current, instanceId] }
+      })
+      return
+    }
+
     const max = currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 1
     setSelectedTargetState((currentState) => {
       const current =
@@ -516,6 +601,23 @@ export function useOnlinePendingEffect(params: {
         : (currentTargetSelector?.max ?? displayedSelectionLimits?.max ?? 0)
       const requiresTargetSelection =
         currentTargetSelector !== null || displayedSelectionLimits !== null
+      const restSupportAndDamageSelectionValid =
+        displayedEffect?.kind !== 'rest-support-and-damage' ||
+        (selectedTargetIds.filter((id) =>
+          restSupportAndDamageSupportCandidates.some(
+            (card) => card.instanceId === id,
+          ),
+        ).length <= displayedEffect.supportAmount &&
+          selectedTargetIds.filter((id) =>
+            restSupportAndDamageTargetCandidates.some(
+              (card) => card.instanceId === id,
+            ),
+          ).length >= displayedEffect.target.min &&
+          selectedTargetIds.filter((id) =>
+            restSupportAndDamageTargetCandidates.some(
+              (card) => card.instanceId === id,
+            ),
+          ).length <= displayedEffect.target.max)
       const discardHandRequired = cost.discardHand ?? 0
       const discardHandPaid = cost.discardAllHand
         ? abilityCostDraft.selectedDiscardHandIds.length ===
@@ -532,6 +634,7 @@ export function useOnlinePendingEffect(params: {
           (cost.hpToTrash ? 1 : 0) ||
         abilityCostDraft.selectedTrashBattleCookieIds.length !==
           (cost.trashBattleCookie?.count ?? 0) ||
+        !restSupportAndDamageSelectionValid ||
         (requiresTargetSelection &&
           (selectedTargetIds.length < targetMin ||
             selectedTargetIds.length > targetMax))
@@ -1014,6 +1117,8 @@ export function useOnlinePendingEffect(params: {
     currentEffect: displayedEffect,
     effectConditionMet: displayedEffectConditionMet,
     candidateCards,
+    restSupportAndDamageSupportCandidates,
+    restSupportAndDamageTargetCandidates,
     selectedTargetIds,
     toggleTarget,
     chooseEffectMode,

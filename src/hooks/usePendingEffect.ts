@@ -264,7 +264,6 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'rest-support' ||
       currentEffect.kind === 'support-to-hp' ||
       currentEffect.kind === 'cycle-hp' ||
-      currentEffect.kind === 'rest-support-and-damage' ||
       currentEffect.kind === 'field-to-deck-bottom' ||
       currentEffect.kind === 'hand-to-battle' ||
       currentEffect.kind === 'opponent-trash-to-break' ||
@@ -322,6 +321,33 @@ export function usePendingEffect(params: {
       ? getTrashToDeckCandidates(game, pendingEffect.context, currentEffect)
       : []
 
+  const restSupportAndDamageSupportCandidates =
+    pendingEffect && currentEffect?.kind === 'rest-support-and-damage'
+      ? getSupportEffectCandidates(game, pendingEffect.context, {
+          side: currentEffect.supportSide,
+          activeOnly: currentEffect.activeOnly,
+        })
+          .filter(
+            (support) =>
+              (currentEffect.supportEnergyColor === undefined ||
+                support.card.energyColor ===
+                  currentEffect.supportEnergyColor) &&
+              !pendingEffect.selectedPaymentIds.includes(
+                support.card.instanceId,
+              ),
+          )
+          .map((support) => support.card)
+      : []
+
+  const restSupportAndDamageTargetCandidates =
+    pendingEffect && currentEffect?.kind === 'rest-support-and-damage'
+      ? getEffectTargetCandidates(
+          game,
+          pendingEffect.context,
+          currentEffect.target,
+        ).map((cookie) => cookie.card)
+      : []
+
   const effectTargetIds = faintActive
     ? faintTargetIds
     : afterDamageActive
@@ -330,6 +356,12 @@ export function usePendingEffect(params: {
           ...effectTargetCandidates.map((cookie) => cookie.card.instanceId),
           ...fieldToTrashStageCandidate.map((c) => c.instanceId),
           ...genericEffectCandidateCards.map((card) => card.instanceId),
+          ...restSupportAndDamageSupportCandidates.map(
+            (card) => card.instanceId,
+          ),
+          ...restSupportAndDamageTargetCandidates.map(
+            (card) => card.instanceId,
+          ),
           ...handToBreakBySumCandidates.map((card) => card.instanceId),
         ])
 
@@ -400,6 +432,9 @@ export function usePendingEffect(params: {
             (support) =>
               !support.rested &&
               !pendingEffect.selectedCostSupportToTrashIds.includes(
+                support.card.instanceId,
+              ) &&
+              !pendingEffect.selectedTargetIds.includes(
                 support.card.instanceId,
               ) &&
               (pendingEffect.selectedPaymentIds.includes(
@@ -483,6 +518,7 @@ export function usePendingEffect(params: {
             pendingEffect.selectedDiscardHandIds.includes(card.instanceId),
         )
       : []
+
   const skillDiscardHandTargetIds = new Set(
     skillCostDiscardHandCandidates.map((card) => card.instanceId),
   )
@@ -1147,6 +1183,38 @@ export function usePendingEffect(params: {
       return
     }
 
+    if (currentEffect.kind === 'rest-support-and-damage') {
+      const supportCandidateIds = new Set(
+        restSupportAndDamageSupportCandidates.map(
+          (card) => card.instanceId,
+        ),
+      )
+      const targetCandidateIds = new Set(
+        restSupportAndDamageTargetCandidates.map(
+          (card) => card.instanceId,
+        ),
+      )
+      const isSupport = supportCandidateIds.has(instanceId)
+      const isTarget = targetCandidateIds.has(instanceId)
+      if (!isSupport && !isTarget) return
+
+      const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
+      const selectedInGroup = pendingEffect.selectedTargetIds.filter((id) =>
+        isSupport ? supportCandidateIds.has(id) : targetCandidateIds.has(id),
+      )
+      const max = isSupport
+        ? currentEffect.supportAmount
+        : currentEffect.target.max
+      const selectedTargetIds = isSelected
+        ? pendingEffect.selectedTargetIds.filter((id) => id !== instanceId)
+        : selectedInGroup.length < max
+          ? [...pendingEffect.selectedTargetIds, instanceId]
+          : pendingEffect.selectedTargetIds
+
+      setPendingEffect({ ...pendingEffect, selectedTargetIds })
+      return
+    }
+
     const max =
       currentEffect.kind === 'break-to-trash' ||
         currentEffect.kind === 'trash-to-hand' ||
@@ -1176,8 +1244,6 @@ export function usePendingEffect(params: {
           ? 1
         : currentEffect.kind === 'cycle-hp'
           ? 1
-        : currentEffect.kind === 'rest-support-and-damage'
-          ? currentEffect.supportAmount + currentEffect.target.max
         : currentEffect.kind === 'field-to-deck-bottom'
           ? currentEffect.target.max
         : currentEffect.kind === 'set-active' && currentEffect.selectable
@@ -1212,7 +1278,8 @@ export function usePendingEffect(params: {
   const toggleSkillPayment = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
     if (
-      pendingEffect.selectedCostSupportToTrashIds.includes(instanceId)
+      pendingEffect.selectedCostSupportToTrashIds.includes(instanceId) ||
+      pendingEffect.selectedTargetIds.includes(instanceId)
     ) {
       return
     }
@@ -1876,6 +1943,8 @@ export function usePendingEffect(params: {
     trashToHandCandidates,
     trashToDeckCandidates,
     genericEffectCandidateCards,
+    restSupportAndDamageSupportCandidates,
+    restSupportAndDamageTargetCandidates,
     skillCostSupportCandidates,
     skillEnergyPaymentValid,
     skillPaymentLabel,

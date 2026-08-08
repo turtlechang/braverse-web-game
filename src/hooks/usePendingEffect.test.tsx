@@ -1022,6 +1022,92 @@ describe('usePendingEffect support-to-trash toggleEffectTarget', () => {
   })
 })
 
+describe('usePendingEffect BS4-062 staged selections', () => {
+  it('excludes paid supports and preserves four extra rests when selecting an opponent', async () => {
+    const game = createCardCheckDemoState('BS4-062')
+    const itemCard = game.players['player-one'].hand.find(
+      (card) => card.id === 'BS4-062',
+    )!
+    expect(itemCard.type).toBe('item')
+    if (itemCard.type !== 'item' || !itemCard.item) {
+      throw new Error('BS4-062 must be an item')
+    }
+    const itemAbility = itemCard.item
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game,
+        setGame: () => {},
+        dispatch: createDispatch(game, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCardAbility(
+        itemCard,
+        itemAbility,
+        'item',
+        '使用物品',
+      ),
+    )
+
+    const paymentIds = game.players['player-one'].supportArea
+      .slice(0, 2)
+      .map((support) => support.card.instanceId)
+    for (const paymentId of paymentIds) {
+      await act(() => captured!.toggleSkillPayment(paymentId))
+    }
+
+    expect(captured!.skillEnergyPaymentValid).toBe(true)
+    expect(
+      captured!.restSupportAndDamageSupportCandidates,
+    ).toHaveLength(6)
+    expect(
+      captured!.restSupportAndDamageSupportCandidates.map(
+        (card) => card.instanceId,
+      ),
+    ).not.toEqual(expect.arrayContaining(paymentIds))
+
+    const supportIds = captured!.restSupportAndDamageSupportCandidates.map(
+      (card) => card.instanceId,
+    )
+    for (const supportId of supportIds.slice(0, 5)) {
+      await act(() => captured!.toggleEffectTarget(supportId))
+    }
+    expect(captured!.pendingEffect?.selectedTargetIds).toEqual(
+      supportIds.slice(0, 4),
+    )
+
+    const targetId =
+      captured!.restSupportAndDamageTargetCandidates[0].instanceId
+    await act(() => captured!.toggleEffectTarget(targetId))
+    expect(captured!.pendingEffect?.selectedTargetIds).toEqual([
+      ...supportIds.slice(0, 4),
+      targetId,
+    ])
+
+    await act(() => root.unmount())
+  })
+})
+
 function createAttackEffectPendingState(): GameState {
   const base = createBlueOptionalCostAttackDemoState(true)
   const attacker = base.players['player-one'].battleArea[0]

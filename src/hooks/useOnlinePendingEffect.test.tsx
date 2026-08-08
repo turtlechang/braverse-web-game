@@ -3,7 +3,11 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createItemUsageDemoState, type GameState } from '../game'
+import {
+  createItemUsageDemoState,
+  type GameState,
+} from '../game'
+import { createCardCheckDemoState } from '../game/demo'
 import type { DispatchGameCommand } from './useBattleActions'
 import { useOnlinePendingEffect } from './useOnlinePendingEffect'
 
@@ -751,6 +755,88 @@ describe('useOnlinePendingEffect', () => {
       },
       expect.any(String),
     )
+    await act(() => root.unmount())
+  })
+
+  it('keeps BS4-062 payment, extra supports, and opponent target in separate groups', async () => {
+    const baseGame = createCardCheckDemoState('BS4-062')
+    const baseSupport = baseGame.players['player-one'].supportArea[0].card
+    const supports = Array.from({ length: 8 }, (_, index) => ({
+      ...baseSupport,
+      instanceId: `wind-gems-online-support-${index + 1}`,
+      energyColor: 'green' as const,
+    }))
+    const game: GameState = {
+      ...baseGame,
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          supportArea: supports.map((card) => ({ card, rested: false })),
+        },
+      },
+    }
+    const itemCard = game.players['player-one'].hand.find(
+      (card) => card.id === 'BS4-062',
+    )!
+    const targetId =
+      game.players['player-two'].battleArea[0].card.instanceId
+    const dispatch = vi.fn<DispatchGameCommand>()
+    let captured: ReturnType<typeof useOnlinePendingEffect> | null = null
+
+    function TestHarness() {
+      captured = useOnlinePendingEffect({
+        game,
+        viewerPlayerId: 'player-one',
+        dispatch,
+        hasFaint: false,
+        hasAfterDamage: false,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => captured!.beginPlayItem(itemCard))
+
+    for (const support of supports.slice(0, 2)) {
+      await act(() => captured!.toggleDraftPayment(support.instanceId))
+    }
+    expect(captured!.draftPaymentValid).toBe(true)
+    expect(
+      captured!.restSupportAndDamageSupportCandidates.map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual(supports.slice(2).map((card) => card.instanceId))
+    expect(
+      captured!.restSupportAndDamageTargetCandidates.map(
+        (card) => card.instanceId,
+      ),
+    ).toContain(targetId)
+
+    for (const support of supports.slice(2, 7)) {
+      await act(() => captured!.toggleTarget(support.instanceId))
+    }
+    await act(() => captured!.toggleTarget(targetId))
+    expect(captured!.selectedTargetIds).toEqual([
+      ...supports.slice(2, 6).map((card) => card.instanceId),
+      targetId,
+    ])
+
+    await act(() => captured!.confirmEffect())
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'begin-play-item',
+        instanceId: itemCard.instanceId,
+        paymentIds: supports.slice(0, 2).map((card) => card.instanceId),
+        targetIds: [
+          ...supports.slice(2, 6).map((card) => card.instanceId),
+          targetId,
+        ],
+      }),
+      expect.any(String),
+    )
+
     await act(() => root.unmount())
   })
 })

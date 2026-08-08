@@ -2309,7 +2309,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // Generous energy support to pay any skill/item/trap/stage energy cost.
   const energySupportColors: EnergyColor[] = card.id === 'P-032'
     ? ['red', 'yellow', 'green', 'blue', 'purple', 'red', 'yellow']
-    : Array.from({ length: 6 }, () => payColor)
+    : Array.from({ length: card.id === 'BS4-062' ? 8 : 6 }, () => payColor)
   const energySupports = energySupportColors.map((color, i) =>
     testSupportCard(`support-pay-${i}`, color),
   )

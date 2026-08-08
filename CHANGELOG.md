@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- 🐛 BS4-062「Wind Gems」複合流程修正（2026-08-08）：效果提示改為「支付 2 點綠色能量 → 從付款後仍活躍的支援中額外橫置最多 4 張 → 選擇最多 1 個對手餅乾」三階段；付款卡不再混入額外橫置候選，支援與餅乾各自套用 4／1 的分組上限，單機與線上共用相同候選與防重複選取邏輯。`test-state=card:BS4-062` 固定提供 8 張活躍綠色支援，Chrome 實測通過支付不足、超選第 5 張支援／第 2 個目標的阻擋，以及 2+4 張疲勞後造成 4 點效果傷害；完整 Vitest **177 檔／2,819 項**、lint、build 通過。
 - ✅ 全面稽核第一批穩定化（2026-08-08）：AI 等級 benchmark 改為真正的品質閘門，強制 `stuck`／deadlock／invalid action／turn cap 為 0、完成場數完整且達既有勝率門檻；失敗時自動輸出 `ReplayIssueBundle` 並由 CI 上傳。新閘門抓出 4 個非法略過補位的卡死 seed，修正合法指令列舉器並補回歸測試。CI 新增 app＋server typecheck，ESLint 改為 `--max-warnings=0` 並修正 Hook dependency warning。
 - 🐛 Google Chrome 手牌動作 click 落空修正（2026-08-08）：`.table-area` 改用不可程式化捲動的 `overflow: clip`，避免動作按鈕聚焦時牌桌在 `pointerdown` 與 `mouseup` 之間位移；`break-to-trash` Browser fixture 同步保證場上餅乾至少 1 HP。AI Browser 20／20、牌組編輯器 2／2、好友房完整 smoke、BS2 五色 Browser 81／81、完整 Vitest 177 檔／2,814 項通過。
 - 🐛 BS3-063「Carameleon Cookie」Then 階段手牌候選與可選性修正（2026-08-07）：第一段支援區卡返回手牌後，第二段 `hand-to-support` 現在會列出包含返回卡的手牌候選；官方「Place up to 1」轉為 `optional`，選擇 0 張可直接確認，不再卡在第 2/2 段。規則層、AI、效果面板與對戰紀錄同步更新，新增 BS3-063 兩階段／略過路徑回歸測試。

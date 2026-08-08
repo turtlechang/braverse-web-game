@@ -588,6 +588,12 @@ function App() {
           ...pending.trashToDeckCandidates,
         ]}
         onToggleCandidate={pending.toggleEffectTarget}
+        restSupportCandidates={
+          pending.restSupportAndDamageSupportCandidates
+        }
+        damageTargetCandidates={
+          pending.restSupportAndDamageTargetCandidates
+        }
         costSupportCandidates={
           pending.pendingEffect && !pending.pendingEffect.skillActivated
             ? pending.skillCostSupportCandidates.map((s) => s.card)

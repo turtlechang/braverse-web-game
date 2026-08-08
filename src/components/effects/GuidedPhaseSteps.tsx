@@ -5,6 +5,7 @@ export type GuidedPhaseId =
   | 'energy'
   | 'cost'
   | 'choice'
+  | 'support'
   | 'target'
   | 'selfTarget'
   | 'draw'

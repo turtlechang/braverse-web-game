@@ -389,6 +389,19 @@ describe('createCardCheckDemoState', () => {
     })
   })
 
+  it('prepares BS4-062 with eight active green supports for payment and effect selection', () => {
+    const state = createCardCheckDemoState('BS4-062')
+    const supports = state.players['player-one'].supportArea
+
+    expect(supports).toHaveLength(8)
+    expect(
+      supports.every(
+        (support) =>
+          !support.rested && support.card.energyColor === 'green',
+      ),
+    ).toBe(true)
+  })
+
   it('keeps BS3-061 condition routes payable while changing the post-cost threshold', () => {
     const met = createBs3SilverbellConditionDemoState(true)
     const unmet = createBs3SilverbellConditionDemoState(false)

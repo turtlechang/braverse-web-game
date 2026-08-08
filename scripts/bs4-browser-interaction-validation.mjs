@@ -74,6 +74,7 @@ const GENERIC_FIXTURE_CARDS = [
   'BS4-053',
   'BS4-054',
   'BS4-061',
+  'BS4-062',
   'BS4-069',
   'BS4-073',
   'BS4-075',
@@ -127,6 +128,7 @@ const driveEffectPanel = async (page, maxRounds = 32, options = {}) => {
     '.effect-candidates-trash-battle',
     '.effect-candidates-trash-deck-bottom',
     '.effect-candidates-trash-deck',
+    '.effect-candidates-rest-support',
     '.effect-candidates-target',
     '.optional-cost-col .modal-card-options',
   ]
@@ -481,6 +483,122 @@ const assertBs4005DamageLog = async (page) => {
   }
 }
 
+const exerciseBs4062 = async (page) => {
+  assert.equal(
+    await page.locator('.bottom-field .support-card:not(.is-rested)').count(),
+    8,
+    'BS4-062 fixture must begin with 8 active support cards',
+  )
+  assert.equal(await clickFirstHandAction(page), true, 'BS4-062 item action was unavailable')
+
+  const panel = activeEffectPanel(page)
+  await panel.waitFor({ state: 'visible' })
+  const phaseLabels = await panel.locator('.phase-step').allTextContents()
+  assert.deepEqual(
+    phaseLabels.map((label) => label.replace(/^\s*\d+\s*/, '').trim()),
+    ['能量', '額外橫置', '目標'],
+    `BS4-062 phase order was incorrect: ${JSON.stringify(phaseLabels)}`,
+  )
+
+  const paymentButtons = panel.locator('.effect-candidates-payment button')
+  const primaryAction = panel.locator('.effect-panel-primary-action')
+  assert.equal(await paymentButtons.count(), 8, 'BS4-062 payment must offer all 8 active supports')
+  assert.equal(
+    await primaryAction.isDisabled(),
+    true,
+    'BS4-062 cannot continue before paying 2 green energy',
+  )
+  for (let index = 0; index < 2; index += 1) {
+    await paymentButtons.nth(index).click({ force: true })
+    await wait(100)
+    if (index === 0) {
+      assert.equal(
+        await primaryAction.isDisabled(),
+        true,
+        'BS4-062 cannot continue after paying only 1 of 2 green energy',
+      )
+    }
+  }
+  assert.equal(
+    await panel.locator('.effect-candidates-payment button.is-selected').count(),
+    2,
+    'BS4-062 must select exactly 2 energy supports before continuing',
+  )
+  await primaryAction.click({ force: true })
+  await wait(120)
+
+  const supportButtons = panel.locator('.effect-candidates-rest-support button')
+  assert.equal(
+    await supportButtons.count(),
+    6,
+    'BS4-062 extra-rest step must exclude the 2 supports selected for payment',
+  )
+  for (let index = 0; index < 4; index += 1) {
+    await supportButtons.nth(index).click({ force: true })
+    await wait(100)
+  }
+  await supportButtons.nth(4).click({ force: true })
+  await wait(100)
+  assert.equal(
+    await panel.locator('.effect-candidates-rest-support button.is-selected').count(),
+    4,
+    'BS4-062 must retain 4 selected extra supports',
+  )
+  await primaryAction.click({ force: true })
+  await wait(120)
+
+  const targetButtons = panel.locator('.effect-candidates-target button')
+  assert.ok(
+    (await targetButtons.count()) > 0,
+    'BS4-062 target step must offer an opposing Cookie',
+  )
+  assert.match(
+    (await panel.innerText()).replace(/\s+/g, ' '),
+    /造成 4 點效果傷害/,
+    'BS4-062 target prompt must report the selected extra-rest damage',
+  )
+  const beforeTargetText = await page.locator('.top-field .combat-card-wrap').allTextContents()
+  await targetButtons.first().click({ force: true })
+  await wait(100)
+  if ((await targetButtons.count()) > 1) {
+    await targetButtons.nth(1).click({ force: true })
+    await wait(100)
+    assert.equal(
+      await panel.locator('.effect-candidates-target button.is-selected').count(),
+      1,
+      'BS4-062 must not allow more than 1 opposing Cookie target',
+    )
+  }
+  await primaryAction.click({ force: true })
+  await panel.waitFor({ state: 'detached' })
+  await wait(250)
+
+  assert.equal(
+    await page.locator('.bottom-field .support-card.is-rested').count(),
+    6,
+    'BS4-062 must rest 2 payment supports plus 4 effect supports',
+  )
+  assert.equal(
+    await page.locator('.bottom-field .support-card:not(.is-rested)').count(),
+    2,
+    'BS4-062 must leave 2 of the original 8 supports active',
+  )
+  const afterTargetText = await page.locator('.top-field .combat-card-wrap').allTextContents()
+  assert.notDeepEqual(
+    afterTargetText,
+    beforeTargetText,
+    'BS4-062 did not change the selected opposing Cookie after dealing 4 damage',
+  )
+
+  return [
+    'hand:action',
+    'BS4-062:pay-2',
+    'BS4-062:rest-4',
+    'BS4-062:target-1',
+    'BS4-062:damage-4',
+  ]
+}
+
 const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
   const consoleErrors = []
   const pageErrors = []
@@ -555,6 +673,8 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
           if (inspection) interactions.push(inspection)
         }
       }
+    } else if (expectedCard === 'BS4-062') {
+      interactions.push(...(await exerciseBs4062(page)))
     } else {
       interactions.push(...(await settlePending(page)))
       if (interactions.length === 0 && (await clickSkillAction(page))) {

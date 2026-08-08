@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyGameCommand,
   activateCookieSkill,
   beginAttack,
   createDemoGame,
@@ -17,6 +18,7 @@ import {
   type GameCard,
   type GameState,
 } from '.'
+import { createCardCheckDemoState } from './demo'
 import { GameRuleError } from './errors'
 
 const asMainPhase = (state: GameState): GameState => ({
@@ -1207,6 +1209,69 @@ describe('new card-effect mechanics', () => {
       )?.rested,
     ).toBe(false)
     expect(resolved.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
+  it('BS4-062 pays 2 energy before offering the remaining supports for its effect', () => {
+    const state = createCardCheckDemoState('BS4-062')
+    const item = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS4-062',
+    )!
+    const paymentIds = state.players['player-one'].supportArea
+      .slice(0, 2)
+      .map((support) => support.card.instanceId)
+
+    const paid = applyGameCommand(state, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: item.instanceId,
+      paymentIds,
+    })
+
+    expect(
+      paid.players['player-one'].supportArea
+        .filter((support) => paymentIds.includes(support.card.instanceId))
+        .every((support) => support.rested),
+    ).toBe(true)
+
+    const pending = paid.pendingAbilityEffect!
+    const effect = pending.effects[pending.effectIndex]
+    expect(effect.kind).toBe('rest-support-and-damage')
+    const candidateIds = getEffectSelectionCandidates(
+      paid,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: item.instanceId,
+      },
+      effect,
+    ).map((card) => card.instanceId)
+    expect(candidateIds).not.toEqual(expect.arrayContaining(paymentIds))
+
+    const effectSupportIds = paid.players['player-one'].supportArea
+      .filter((support) => !support.rested)
+      .slice(0, 4)
+      .map((support) => support.card.instanceId)
+    expect(
+      paid.players['player-one'].supportArea.filter((support) => !support.rested),
+    ).toHaveLength(6)
+
+    const target = paid.players['player-two'].battleArea[0]
+    const targetHpBefore = target.hpCards.length
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [...effectSupportIds, target.card.instanceId],
+    })
+
+    expect(
+      resolved.players['player-one'].supportArea.filter(
+        (support) => support.rested,
+      ),
+    ).toHaveLength(6)
+    expect(
+      resolved.players['player-two'].battleArea.find(
+        (cookie) => cookie.card.instanceId === target.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(targetHpBefore - 4)
   })
 
   it('BS4-043 deals the break-area level difference only when its condition is met', () => {
