@@ -21,9 +21,12 @@ if (!chromium) {
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4178)
 const baseUrl = `http://127.0.0.1:${port}`
+const focusedCard = process.env.BS4_INTERACTION_CARD
 const reportPath = process.env.BS4_INTERACTION_REPORT_PATH
   ? resolve(process.env.BS4_INTERACTION_REPORT_PATH)
-  : resolve(root, 'data/decks/bs4-browser-interaction-report-2026-08-04.json')
+  : focusedCard
+    ? resolve(root, `test-results/bs4-browser-interaction-${focusedCard}.json`)
+    : resolve(root, 'data/decks/bs4-browser-interaction-report-2026-08-04.json')
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
 const browserExecutable =
   process.env.PLAYWRIGHT_BROWSER_EXECUTABLE ??
@@ -85,9 +88,10 @@ const GENERIC_FIXTURE_CARDS = [
   'BS4-091',
   'BS4-098',
   'BS4-103',
+  'BS4-106',
+  'BS4-107',
 ]
 
-const focusedCard = process.env.BS4_INTERACTION_CARD
 const conditionCardsToRun = focusedCard
   ? CONDITION_CARDS.filter((cardNumber) => cardNumber === focusedCard)
   : CONDITION_CARDS
@@ -119,6 +123,7 @@ const activeEffectPanel = (page) =>
 const driveEffectPanel = async (page, maxRounds = 32, options = {}) => {
   const operations = []
   const preferTarget = options.preferTarget === true
+  const preferLastChoice = options.preferLastChoice === true
   const candidateSelectors = [
     '.effect-candidates-choice',
     '.effect-candidates-payment',
@@ -160,6 +165,20 @@ const driveEffectPanel = async (page, maxRounds = 32, options = {}) => {
         const target = await clickFirstAvailable(page, ['.effect-candidates-target'])
         if (target) {
           operations.push(`effect-panel:${target}`)
+          continue
+        }
+      }
+    }
+
+    if (preferLastChoice) {
+      const choiceGroup = panel.locator('.effect-candidates-choice')
+      const selectedChoices = choiceGroup.locator('button.is-selected')
+      if ((await selectedChoices.count()) === 0) {
+        const choices = choiceGroup.locator('button')
+        if ((await choices.count()) > 0) {
+          await choices.last().click({ force: true })
+          operations.push('effect-panel:.effect-candidates-choice:last')
+          await wait(120)
           continue
         }
       }
@@ -418,6 +437,14 @@ const surfaceSnapshot = async (page) =>
     topCombatText: [...document.querySelectorAll('.top-field .combat-card-wrap')]
       .map((element) => element.textContent?.replace(/\s+/g, ' ').trim())
       .join('|'),
+    topHpTotal: document.querySelectorAll('.top-field .hp-card-stack .hp-card').length,
+    bottomDeckCount: Number(
+      document.querySelector('.bottom-field .deck-zone .resource-summary > strong')
+        ?.textContent ?? Number.NaN,
+    ),
+    topDiscardCount: Number(
+      document.querySelector('.top-field .discard-zone > strong')?.textContent ?? 0,
+    ),
     body: document.body.innerText,
   }))
 
@@ -599,7 +626,14 @@ const exerciseBs4062 = async (page) => {
   ]
 }
 
-const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
+const runRoute = async (
+  page,
+  url,
+  routeType,
+  expectedCard,
+  expectedResult,
+  options = {},
+) => {
   const consoleErrors = []
   const pageErrors = []
   const onConsole = (message) => {
@@ -622,7 +656,10 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
   page.on('pageerror', onPageError)
 
   try {
-    await page.goto(url, { waitUntil: 'networkidle' })
+    // Official card faces are loaded from an external CDN, so `networkidle`
+    // can remain busy or time out even though the local game UI is ready.
+    // The visible game shell is the actual readiness signal for this audit.
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
     await page.locator('.game-shell').waitFor({ state: 'visible' })
     await wait(700)
     const routeAttribute = await page.locator('.game-shell').getAttribute(
@@ -666,7 +703,14 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
           (await clickFirstHandAction(page))
         ) {
           interactions.push('hand:action')
-          interactions.push(...(await settlePending(page)))
+          interactions.push(
+            ...(await settlePending(page, {
+              preferTarget:
+                expectedResult === 'met' &&
+                (expectedCard === 'BS4-106' || expectedCard === 'BS4-107'),
+              preferLastChoice: options.preferLastChoice,
+            })),
+          )
         }
         if (interactions.length === 0) {
           const inspection = await inspectCookie(page)
@@ -683,7 +727,13 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
       }
       if (interactions.length === 0 && (await clickFirstHandAction(page))) {
         interactions.push('hand:action')
-        interactions.push(...(await settlePending(page)))
+        interactions.push(
+          ...(await settlePending(page, {
+            preferTarget:
+              expectedCard === 'BS4-106' || expectedCard === 'BS4-107',
+            preferLastChoice: options.preferLastChoice,
+          })),
+        )
       }
       if (interactions.length === 0) {
         const inspection = await inspectCookie(page)
@@ -709,6 +759,37 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
       )
     }
     const after = await assertNoErrorSurface(page, consoleErrors, pageErrors)
+    if (
+      (routeType === 'generic' || expectedResult === 'met') &&
+      (expectedCard === 'BS4-106' || expectedCard === 'BS4-107')
+    ) {
+      const expectedHpLoss = expectedCard === 'BS4-106' ? 1 : 2
+      assert.equal(
+        after.topHpTotal,
+        before.topHpTotal - expectedHpLoss,
+        `${expectedCard} did not remove ${expectedHpLoss} HP from the selected opponent Cookie`,
+      )
+      if (expectedCard === 'BS4-106') {
+        assert.equal(
+          after.topDiscardCount,
+          before.topDiscardCount + 1,
+          'BS4-106 did not place the selected opponent HP card in their trash',
+        )
+      } else {
+        assert.ok(
+          interactions.some((operation) =>
+            operation.startsWith('effect-panel:.effect-candidates-choice'),
+          ),
+          'BS4-107 did not expose the optional 0-3 card choice in the UI',
+        )
+        const expectedDeckLoss = options.preferLastChoice ? 0 : 3
+        assert.equal(
+          after.bottomDeckCount,
+          before.bottomDeckCount - expectedDeckLoss,
+          `BS4-107 did not place the selected ${expectedDeckLoss} cards from the controller deck into the trash`,
+        )
+      }
+    }
     if (routeType === 'condition' && (expectedCard === 'BS4-048' || expectedCard === 'BS4-052')) {
       if (expectedResult === 'met') {
         if (expectedCard === 'BS4-048') {
@@ -755,6 +836,9 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
         skillActions: after.skillActions,
         handActions: after.handActions,
         topCombatText: after.topCombatText,
+        topHpTotal: after.topHpTotal,
+        bottomDeckCount: after.bottomDeckCount,
+        topDiscardCount: after.topDiscardCount,
         restedBottomSupports: after.restedBottomSupports,
       },
       status: 'PASS',
@@ -773,6 +857,7 @@ const server = spawn(
 let browser
 const conditionResults = []
 const genericResults = []
+const optionalChoiceResults = []
 
 try {
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -834,7 +919,31 @@ try {
     }
   }
 
-  const failures = [...conditionResults, ...genericResults].filter(
+  if (genericFixtureCardsToRun.includes('BS4-107')) {
+    const route = '?test-state=card:BS4-107'
+    try {
+      const row = await runRoute(
+        page,
+        `${baseUrl}/${route}`,
+        'generic',
+        'BS4-107',
+        'fixture-zero',
+        { preferLastChoice: true },
+      )
+      optionalChoiceResults.push(row)
+      console.log(`PASS optional BS4-107 zero: ${row.interactions.join(', ')}`)
+    } catch (error) {
+      optionalChoiceResults.push({
+        cardNumber: 'BS4-107',
+        result: 'fixture-zero',
+        status: 'FAIL',
+        error: error instanceof Error ? error.message : String(error),
+      })
+      console.log(`FAIL optional BS4-107 zero: ${error}`)
+    }
+  }
+
+  const failures = [...conditionResults, ...genericResults, ...optionalChoiceResults].filter(
     (result) => result.status === 'FAIL',
   )
   const report = {
@@ -858,13 +967,20 @@ try {
       failures: genericResults.filter((result) => result.status === 'FAIL').length,
       results: genericResults,
     },
+    optionalChoiceAudit: {
+      routes: optionalChoiceResults.length,
+      passed: optionalChoiceResults.filter((result) => result.status === 'PASS').length,
+      failures: optionalChoiceResults.filter((result) => result.status === 'FAIL').length,
+      results: optionalChoiceResults,
+    },
   }
   await mkdir(dirname(reportPath), { recursive: true })
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   console.log(`Report: ${reportPath}`)
   console.log(
     `Summary: conditions ${report.conditionAudit.passed}/${report.conditionAudit.routes}; ` +
-      `generic ${report.genericFixtureAudit.passed}/${report.genericFixtureAudit.cards}`,
+      `generic ${report.genericFixtureAudit.passed}/${report.genericFixtureAudit.cards}; ` +
+      `optional choices ${report.optionalChoiceAudit.passed}/${report.optionalChoiceAudit.routes}`,
   )
   process.exitCode = failures.length === 0 ? 0 : 1
 } finally {

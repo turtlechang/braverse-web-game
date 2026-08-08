@@ -1941,9 +1941,25 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'opponent-trash-count-at-least', count: 15 },
       },
       {
-        kind: 'deck-to-trash',
-        amount: 3,
-        side: 'self',
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '將牌庫頂 3 張牌放入自己的棄牌區',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+          },
+          {
+            label: '將牌庫頂 2 張牌放入自己的棄牌區',
+            effects: [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+          },
+          {
+            label: '將牌庫頂 1 張牌放入自己的棄牌區',
+            effects: [{ kind: 'deck-to-trash', amount: 1, side: 'self' }],
+          },
+          {
+            label: '不將牌庫頂的牌放入棄牌區',
+            effects: [],
+          },
+        ],
         condition: { kind: 'opponent-trash-count-at-least', count: 15 },
       },
     ],

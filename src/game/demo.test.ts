@@ -17,6 +17,7 @@ import {
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
   createAiDiscardRevealDemoState,
+  createBs2015CostDepartureDemoState,
   createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
   createBs5FaintDemoState,
@@ -131,6 +132,21 @@ describe('parseTestStateConfig', () => {
   it('returns null when localhost but no test-state param', () => {
     const result = parseTestStateConfig('', 'localhost')
     expect(result).toBeNull()
+  })
+
+  it('parses both BS2-015 post-cost test-state routes on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs2-015-cost:terminal', 'localhost'),
+    ).toEqual({
+      kind: 'bs2-015-cost',
+      replacementAvailable: false,
+    })
+    expect(
+      parseTestStateConfig('?test-state=bs2-015-cost:replacement', 'localhost'),
+    ).toEqual({
+      kind: 'bs2-015-cost',
+      replacementAvailable: true,
+    })
   })
 
   it('parses BS5 focused A/B test-state routes only on localhost', () => {
@@ -631,6 +647,56 @@ describe('BS4 condition fixtures', () => {
     )
 
     expect(source?.hpCards).toHaveLength(1)
+  })
+
+  it('BS2-015 card-check fixture keeps the source Cookie at positive HP', () => {
+    const state = createCardCheckDemoState('BS2-015')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS2-015',
+    )
+
+    expect(source?.hpCards.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it.each([
+    ['BS4-106', 10],
+    ['BS4-107', 15],
+  ] as const)(
+    '%s generic card-check fixture satisfies its opponent-trash condition',
+    (cardNumber, trashCount) => {
+      const state = createCardCheckDemoState(cardNumber)
+      const item = state.players['player-one'].hand.find(
+        (card) => card.id === cardNumber,
+      )
+
+      expect(item?.type).toBe('item')
+      expect(state.players['player-two'].discardPile).toHaveLength(trashCount)
+      expect(state.players['player-one'].deck.length).toBeGreaterThanOrEqual(3)
+      expect(
+        item?.item?.effects.every((effect) =>
+          isEffectConditionMet(state, {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: item.instanceId,
+          }, effect),
+        ),
+      ).toBe(true)
+    },
+  )
+
+  it('prepares both BS2-015 post-cost replacement outcomes', () => {
+    const terminal = createBs2015CostDepartureDemoState(false)
+    const replacement = createBs2015CostDepartureDemoState(true)
+
+    expect(terminal.players['player-one'].battleArea).toHaveLength(1)
+    expect(terminal.players['player-one'].battleArea[0].card.id).toBe('BS2-015')
+    expect(terminal.players['player-one'].battleArea[0].hpCards.length)
+      .toBeGreaterThanOrEqual(1)
+    expect(terminal.players['player-one'].hand).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'cookie' })]),
+    )
+    expect(replacement.players['player-one'].hand).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'cookie' })]),
+    )
   })
 
   it.each([

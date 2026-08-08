@@ -142,6 +142,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'bs2-015-cost'; replacementAvailable: boolean }
   | { kind: 'bs3-061-condition'; conditionMet: boolean }
   | {
       kind: 'bs4-condition'
@@ -280,6 +281,15 @@ export const parseTestStateConfig = (
     const cardNumber = testState.slice('card:'.length).trim()
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber }
+    }
+  }
+  if (testState?.startsWith('bs2-015-cost:')) {
+    const result = testState.slice('bs2-015-cost:'.length)
+    if (result === 'terminal' || result === 'replacement') {
+      return {
+        kind: 'bs2-015-cost',
+        replacementAvailable: result === 'replacement',
+      }
     }
   }
   if (testState?.startsWith('bs3-061-condition:')) {
@@ -2355,6 +2365,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // generous filler deck so no card-check scenario accidentally exhausts it.
   const deckFiller = (prefix: string): GameCard[] =>
     Array.from({ length: 20 }, (_, i) => testSupportCard(`${prefix}-deck-${i}`, payColor))
+  // Conditional item card-check routes should be immediately testable from
+  // the generic `card:` URL. BS4-106/107 inspect the opponent's trash, so the
+  // neutral empty pile would only exercise the unmet branch and hide their
+  // target/Then UI from manual Browser verification.
+  const opponentTrashCount =
+    card.id === 'BS4-106' ? 10 : card.id === 'BS4-107' ? 15 : 0
+  const opponentTrashFillers = Array.from(
+    { length: opponentTrashCount },
+    (_, index) =>
+      testSupportCard(`${card.id}-opponent-trash-${index + 1}`, 'purple'),
+  )
 
   // Own break area filler for break-area-level conditions (flip cards) and
   // for skills that select own-color cookies from the break area (e.g.
@@ -2423,6 +2444,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-two'],
           battleArea: opponentBattleArea,
           stage: { card: opponentStage, rested: false },
+          discardPile: opponentTrashFillers,
         },
       },
     }
@@ -2883,7 +2905,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
               testSupportCard(`BS5-016-source-hp-${index + 1}`),
             )
-          : []
+          : [testSupportCard(`${card.id}-source-hp`)]
     return {
       ...state,
       players: {
@@ -2925,6 +2947,44 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       'player-two': {
         ...state.players['player-two'],
         battleArea: opponentBattleArea,
+      },
+    },
+  }
+}
+
+/**
+ * BS2-015 支付「將這個餅乾放入棄牌區」後的兩條正式流程：
+ * 手牌沒有餅乾時立即敗北；有餅乾時先強制補位，再繼續結算技能。
+ */
+export const createBs2015CostDepartureDemoState = (
+  replacementAvailable: boolean,
+): GameState => {
+  const state = createCardCheckDemoState('BS2-015')
+  const player = state.players['player-one']
+  const source = player.battleArea.find((entry) => entry.card.id === 'BS2-015')
+  if (!source) {
+    throw new Error('BS2-015 cost-departure fixture requires BS2-015')
+  }
+
+  const replacement = cardCheckFillerCookie(
+    'bs2-015-replacement',
+    1,
+    3,
+    0,
+    'green',
+  ).cookie
+  const nonCookieHand = player.hand.filter((card) => card.type !== 'cookie')
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        hand: replacementAvailable
+          ? [replacement, ...nonCookieHand]
+          : nonCookieHand,
+        battleArea: [source],
       },
     },
   }

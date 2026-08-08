@@ -2016,16 +2016,17 @@ const applyPlayerActionCommand = (
       if (pending.playerId !== command.playerId) {
         throw new GameRuleError('不是目前需要選擇項目的玩家。')
       }
+      const expandedEffects = expandChooseOne(
+        pending.effects,
+        pending.effectIndex,
+        command.modeIndex,
+      )
       return {
         ...state,
-        pendingAbilityEffect: {
-          ...pending,
-          effects: expandChooseOne(
-            pending.effects,
-            pending.effectIndex,
-            command.modeIndex,
-          ),
-        },
+        pendingAbilityEffect:
+          pending.effectIndex < expandedEffects.length
+            ? { ...pending, effects: expandedEffects }
+            : undefined,
       }
     }
     case 'replace-cookie': {

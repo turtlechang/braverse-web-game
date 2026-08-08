@@ -1,0 +1,60 @@
+name: Deployment Browser Validation
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: Vercel Preview or Production URL
+        required: true
+        type: string
+      deployment_label:
+        description: Acceptance environment label
+        required: true
+        default: Preview
+        type: choice
+        options:
+          - Preview
+          - Production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-browser-${{ github.event.deployment.id || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  deployment-browser-validation:
+    name: Preview / Production Browser acceptance
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+      (github.event.deployment.environment == 'Preview' ||
+      github.event.deployment.environment == 'Production'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install chromium --with-deps
+      - name: Run deployed-site smoke
+        env:
+          BRAVERSE_DEPLOYMENT_URL: ${{ inputs.deployment_url || github.event.deployment_status.environment_url }}
+          BRAVERSE_DEPLOYMENT_LABEL: ${{ inputs.deployment_label || github.event.deployment.environment }}
+          BRAVERSE_WS_URL: wss://braverse-web-game.onrender.com
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: npm run test:deployment:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-browser-${{ github.run_id }}
+          path: test-results/deployment-browser/
+          if-no-files-found: error
+          retention-days: 14

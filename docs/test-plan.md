@@ -1,8 +1,8 @@
 # 測試計畫（Test Plan）
 
-最後更新：2026-07-16。現況為 113 個測試檔、1656 項 vitest 測試（非永久門檻） + 5 套 Playwright 瀏覽器驗證；最近一次 AI 瀏覽器 20/20、stuck=0，本輪好友房雙瀏覽器驗證通過。
+最後更新：2026-08-08。Vitest 數量以 README／CHANGELOG 最新批次為準（非永久門檻）；AI 瀏覽器 20/20、stuck=0，牌組編輯器與好友房雙瀏覽器驗證通過。
 
-> 2026-07-16 更新：AI、牌組編輯器與好友房 Playwright smoke 已綁定 main push 自動執行，但不在每次 PR 執行以控制成本；好友房已自動驗證私密猜拳、順位、依序調度、起始餅乾同步揭示至主階段同步，以及斷線與伺服器無法連線提示，尚未自動打到勝負。
+> 2026-08-08 更新：AI、牌組編輯器與好友房 Playwright 已合併為 `test:browser:smoke`，在 Browser 影響範圍的 PR、`main` push 與手動觸發時執行；部署成功後另以 `test:deployment:browser` 驗收外部 Preview／Production 與 Render WebSocket。好友房 smoke 尚未自動打到勝負。
 
 ## 1. 測試層級
 
@@ -10,7 +10,7 @@
 |---|---|---|---|
 | 單元/整合 | vitest 4（jsdom） | 規則引擎、卡牌轉接、hooks、元件、server | `npm test`（CI 每次 PR/push） |
 | AI 回歸模擬 | vitest 內嵌 | 多回合 AI 對局矩陣、勝率門檻、卡死偵測 | 同上 |
-| 瀏覽器 E2E | Playwright（自製腳本） | 12 種解析度 AI 對局、牌組編輯器、藍牌效果、線上 modal RWD、雙瀏覽器好友房 | `npm run test:ai:browser` / `test:deck:browser` / `test:blue:browser` / `test:online:browser` / `test:online:match:browser` |
+| 瀏覽器 E2E | Playwright（自製腳本） | 12 種解析度 AI 對局、牌組編輯器、藍牌效果、線上 modal RWD、雙瀏覽器好友房、外部部署 | `npm run test:browser:smoke` / `test:blue:browser` / `test:online:browser` / `test:deployment:browser` |
 | 靜態 | eslint / `tsc -b` / bundle budget | 全 repo | `npm run lint` / `npm run build` / `npm run check:bundle`（CI） |
 
 ## 2. 覆蓋現況（依主計畫驗收項對照）

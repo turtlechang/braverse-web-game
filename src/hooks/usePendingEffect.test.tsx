@@ -1,7 +1,7 @@
 /// @vitest-environment jsdom
 
 import { createRoot } from 'react-dom/client'
-import { act } from 'react'
+import { act, useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -187,6 +187,50 @@ function createDiscardHandDamageSkillGameState(): GameState {
             battleEntryId: `${targetCookie.instanceId}:battle:2`,
           },
         ],
+      },
+    },
+  }
+}
+
+function createBs2015CostDepartureGameState(
+  withReplacementCookie: boolean,
+): GameState {
+  const baseGame = createCardCheckDemoState('BS2-015')
+  const source = baseGame.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS2-015',
+  )
+  if (!source) {
+    throw new Error('BS2-015 card-check fixture is incomplete')
+  }
+
+  const replacementCookie = battleCookie('bs2-015-replacement', 1, 3)
+  const supportArea = baseGame.players['player-one'].supportArea
+    .slice(0, 4)
+    .map((support) => ({
+      ...support,
+      card: { ...support.card, energyColor: 'green' as const },
+      rested: false,
+    }))
+
+  return {
+    ...baseGame,
+    phase: 'main',
+    activePlayerId: 'player-one',
+    status: 'playing',
+    result: null,
+    players: {
+      ...baseGame.players,
+      'player-one': {
+        ...baseGame.players['player-one'],
+        hand: withReplacementCookie ? [replacementCookie] : [],
+        battleArea: [
+          {
+            ...source,
+            hpCards: [createTestHandCard('bs2-015-hp-1')],
+            rested: false,
+          },
+        ],
+        supportArea,
       },
     },
   }
@@ -1103,6 +1147,188 @@ describe('usePendingEffect BS4-062 staged selections', () => {
       ...supportIds.slice(0, 4),
       targetId,
     ])
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('usePendingEffect BS2-015 cost departure', () => {
+  it('commits the finished state when BS2-015 trashes the last battle Cookie without a replacement', async () => {
+    const gameState = createBs2015CostDepartureGameState(false)
+    const setGameMock = vi.fn()
+    const setMessageMock = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+
+    function TestHarness() {
+      const pending = usePendingEffect({
+        game: gameState,
+        setGame: setGameMock,
+        dispatch: createDispatch(gameState, setGameMock),
+        viewerPlayerId: 'player-one',
+        setMessage: setMessageMock,
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    const source = gameState.players['player-one'].battleArea[0].card
+    await act(() => {
+      captured!.beginCookieSkill(
+        gameState,
+        source,
+        'player-one',
+        'activate',
+        '主動技能',
+        false,
+      )
+    })
+    for (const support of gameState.players['player-one'].supportArea) {
+      await act(() => {
+        captured!.toggleSkillPayment(support.card.instanceId)
+      })
+    }
+    await act(() => {
+      captured!.toggleSkillTrashBattleCookie(source.instanceId)
+    })
+    await act(() => {
+      captured!.confirmEffect()
+    })
+
+    expect(setGameMock).toHaveBeenCalledTimes(1)
+    expect(setGameMock.mock.calls[0][0]).toMatchObject({
+      status: 'finished',
+      result: {
+        loserId: 'player-one',
+        reason: 'no-cookie-available',
+      },
+      pendingReplacement: null,
+    })
+    expect(captured!.pendingEffect).toBeNull()
+    expect(captured!.suspendedEffect).toBeNull()
+    expect(setMessageMock).not.toHaveBeenLastCalledWith(
+      '目前沒有待處理的效果。',
+    )
+
+    await act(() => root.unmount())
+  })
+
+  it('commits BS2-015 cost departure and suspends its effect until forced replacement finishes', async () => {
+    const gameState = createBs2015CostDepartureGameState(true)
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    let currentGame = gameState
+    let setHarnessGame:
+      | ((value: GameState | ((prev: GameState) => GameState)) => void)
+      | null = null
+
+    function TestHarness() {
+      const [game, setGame] = useState(gameState)
+      currentGame = game
+      setHarnessGame = setGame
+      const pending = usePendingEffect({
+        game,
+        setGame,
+        dispatch: createDispatch(game, setGame),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      captured = pending
+      return null
+    }
+
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(<TestHarness />))
+
+    const source = gameState.players['player-one'].battleArea[0].card
+    await act(() => {
+      captured!.beginCookieSkill(
+        gameState,
+        source,
+        'player-one',
+        'activate',
+        '主動技能',
+        false,
+      )
+    })
+    for (const support of gameState.players['player-one'].supportArea) {
+      await act(() => {
+        captured!.toggleSkillPayment(support.card.instanceId)
+      })
+    }
+    await act(() => {
+      captured!.toggleSkillTrashBattleCookie(source.instanceId)
+    })
+    await act(() => {
+      captured!.confirmEffect()
+    })
+
+    expect(currentGame).toMatchObject({
+      status: 'playing',
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-one', remaining: 1 }],
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourceInstanceId: source.instanceId,
+      },
+    })
+    expect(captured!.pendingEffect).toBeNull()
+    expect(captured!.suspendedEffect).toMatchObject({
+      skillActivated: true,
+      sourceCard: { id: 'BS2-015' },
+      selectedTargetIds: [],
+    })
+
+    const replacementId =
+      currentGame.players['player-one'].hand[0].instanceId
+    await act(() => {
+      setHarnessGame!((state) =>
+        applyGameCommand(state, {
+          kind: 'replace-cookie',
+          playerId: 'player-one',
+          instanceId: replacementId,
+        }),
+      )
+    })
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+
+    expect(currentGame.pendingReplacement).toBeNull()
+    expect(captured!.suspendedEffect).toBeNull()
+    expect(captured!.pendingEffect).toMatchObject({
+      skillActivated: true,
+      sourceCard: { id: 'BS2-015' },
+      selectedTargetIds: [],
+    })
 
     await act(() => root.unmount())
   })

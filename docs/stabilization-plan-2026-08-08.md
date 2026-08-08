@@ -7,7 +7,7 @@
 | 項目 | 2026-08-08 實測 |
 | --- | --- |
 | 正式卡池 | 12 個資料檔、836 種卡號，全部可轉換 |
-| Vitest | 177 個測試檔、2,814 項通過 |
+| Vitest | 177 個測試檔、2,827 項通過 |
 | AI Browser smoke | 20／20 完成，`stuck=0` |
 | 牌組編輯器 Browser smoke | 桌機 1366×768、手機 280×720，共 2／2 通過 |
 | 好友房 Browser smoke | 雙瀏覽器開局、同步、攻擊預覽、資源、拒絕、斷線與連線失敗全數通過 |
@@ -31,7 +31,7 @@
 
 - 一般 CI 已加入 `npm run typecheck`，明確覆蓋前端 `tsc -b` 與 `server:typecheck`。
 - ESLint 改用 `--max-warnings=0`；修正 `useBattleActions` 的 Hook dependency warning。
-- 本輪以非 silent 模式重跑 177 檔／2,814 項 Vitest，未再出現稽核提到的 React `act(...)`／stderr warning；若後續新增 warning，仍應修正根因，不能用隱藏輸出取代處理。
+- 本輪以非 silent 模式重跑 177 檔／2,827 項 Vitest，未再出現稽核提到的 React `act(...)`／stderr warning；若後續新增 warning，仍應修正根因，不能用隱藏輸出取代處理。
 
 ### S0-3：Chrome 與歷史卡牌回歸
 
@@ -40,17 +40,25 @@
 - `break-to-trash` 測試狀態的場上餅乾改為至少 1 HP，避免 `0 HP` 餅乾與正式昏厥規則衝突。
 - AI Browser 多解析度與互動 gate 已通過；BS2 五色 81 張歷史 Browser 情境也全部通過。
 
+### S0-4：Browser PR check 與部署後驗收
+
+- `.github/workflows/ai-browser-validation.yml` 已改為 PR、`main` push 與手動觸發；Browser 影響範圍會執行 AI、牌組編輯器、好友房三組 smoke，文件限定變更可略過耗時工作，但固定名稱 `Browser Smoke PR Gate` 仍會回報成功／失敗。
+- `.github/workflows/deployment-browser-validation.yml` 會在 Vercel Preview／Production 的成功 `deployment_status` 或手動指定 URL 時，使用預設分支內的可信驗收腳本檢查首頁、SPA rewrite、牌池卡圖、合法 60 張牌組匯入、正式對戰入口與 Render WebSocket。
+- 2026-08-08 Production `https://braverse-web-game.vercel.app/` 實測全數通過：首頁／rewrite 200、牌池 836 張、首張官方卡圖載入、合法牌組儲存、正式進入對戰、前端錯誤 0；Render WebSocket 冷啟動約 31.6 秒。
+- 最新可得 Preview URL 會被 Vercel Authentication 導向登入頁；需在 GitHub 設定 `VERCEL_AUTOMATION_BYPASS_SECRET` 後重跑。此結果是驗收權限尚未完成，不是應用程式測試失敗。
+- workflow 會產生 PR check，但目前 `main` 尚未啟用 branch protection；若要真正阻止未通過的 PR 合併，仍須將 `Browser Smoke PR Gate` 設為 required check。
+
 ## 尚未完成
 
 ### 公開測試前仍需完成
 
 1. **Current HEAD 真人 Playtest**：至少 5 人（2 位熟悉 Braverse、2 位熟悉其他 TCG、1 位非核心玩家），記錄首次完成一局比例、第一次合法操作時間、誤觸、付款錯誤、回應窗口漏看與 Battle Log 使用情況。自動 Browser 測試不能取代此項。
 2. **發布基線決策**：確認是否以目前穩定化結果準備 `0.10.0`；在決定前不直接修改版號或建立 tag。
-3. **Preview／Production 驗收**：本批合併後，重新確認 Vercel 前端、Render WebSocket、冷啟動與 rollback 步驟。
+3. **本批 Preview 驗收**：推送本批後，以新 Preview URL 搭配 bypass secret 重跑部署驗收；目前 Production 通過的是既有部署，不能代替尚未部署的本機修改。
 
 ### 下一批工程硬化
 
-1. 將 AI、牌組編輯器與好友房 Browser smoke 由 `main` push 後驗證提升為 PR gate，搭配 path filter 控制成本。
+1. 在 GitHub branch protection／ruleset 將 `Browser Smoke PR Gate` 設為 required check，並設定 Preview 的 `VERCEL_AUTOMATION_BYPASS_SECRET`。
 2. 升級開發相依鏈中的 `brace-expansion`、`postcss`、`shell-quote`／`concurrently` 與 `undici`，不得使用 `npm audit fix --force`；升級後重跑完整 CI 與 Browser gate。
 3. 建立 Bundle Gate V2：計算 HTML 初始同步依賴圖、最大 chunk、初始 gzip、CSS gzip 與相對基線增幅。現行主 bundle gzip 已占 180 KiB 門檻 94.3%，不宜繼續只看單一 `index-*.js`。
 4. 依序規劃 effect adapter 拆分、BattleScreen ViewModel、online protocol envelope（`protocolVersion`／`commandId`／`expectedStateVersion`）與英文／繁中 i18n。
@@ -58,4 +66,4 @@
 
 ## 新卡池凍結條件
 
-在真人 Playtest、發布基線與 PR Browser gate 完成前，不再以新增 BS6+ 作為主線工作。卡牌官方勘誤與阻斷性規則 bug 仍可依既有候選／稽核流程處理。
+在真人 Playtest、發布基線、required PR Browser gate 與本批 Preview 驗收完成前，不再以新增 BS6+ 作為主線工作。卡牌官方勘誤與阻斷性規則 bug 仍可依既有候選／稽核流程處理。

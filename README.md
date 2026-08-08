@@ -40,13 +40,15 @@ BS4 沿用 BS3 的候選資料流程：先將官方英文資料匯入 `data/cand
 
 複合效果若同時要求支付能量、額外操作支援區與選擇餅乾目標，UI 會依卡面順序拆成獨立步驟；已作為能量支付的支援卡不會再次出現在後續支援候選中。
 
+技能代價若令戰鬥區清空，UI 會先提交規則層產生的終局或強制補位狀態：沒有可補位餅乾時立即顯示對局結果；可補位時暫停原效果，完成補位與 OnPlay 後才繼續結算，不會略過優先決策或把規則錯誤留在舊提示框。
+
 昏厥效果遵守戰鬥區清空時的補位優先順序：先完成強制再登場及其 OnPlay，再處理昏厥技能；BS3-029 的黃色能量付款、手牌目標與 `+1 HP` 已接入離線、線上及 AI 決策流程。
 
 對戰資訊可視化依 P0–P2 分層：P0 固定顯示行動玩家、階段、來源卡、攻擊箭頭與一致事件句型；P1 顯示宣告 → 費用 → 代價 → 目標 → 結算進度、對手卡牌預覽與陷阱／FLIP／攻擊效果回應狀態；P2 提供活動紀錄篩選、連線同步細節與伺服器提供的決策期限。戰場採扇形手牌與左右資源欄；對手手牌以貼齊頂緣的淺弧牌背呈現，我方手牌以低弧度展開，卡牌僅於 hover 或鍵盤 focus 時顯示左側快速預覽。所有線上公開提示都只使用伺服器過濾後的公開卡牌與 instance ID，不揭露對手手牌或牌庫內容。
 
 專案開發流程已整理為 `.agents/skills/develop-braverse`、`.agents/skills/braverse-workflow` 與 `.agents/skills/braverse-card-import-audit` 三個 Skill，統一需求分析、規則查核、架構邊界、卡牌匯入、Chrome 逐色效果稽核、測試驗證、文件同步、派工與 Git 收尾步驟；`AGENTS.md` 保留硬性規範入口。子代理協作與停滯交接流程見 [docs/subagent-stall-handoff-protocol.md](docs/subagent-stall-handoff-protocol.md)。
 
-CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌驗證、app＋server typecheck、測試、零 warning lint、build 與 bundle gate；AI、牌組編輯器與好友房 Playwright 瀏覽器 smoke 在 main push 自動執行，也保留手動觸發，不負責部署；Vercel 監聽 PR 與 push 自動產生 Preview 與正式部署，連線設定在 Vercel Dashboard 完成，不存放於 GitHub Secrets。
+CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌驗證、app＋server typecheck、測試、零 warning lint、build 與 bundle gate；AI、牌組編輯器與好友房 Playwright 組成 `test:browser:smoke`，在 Browser 影響範圍的 PR、`main` push 與手動觸發時執行，並由固定名稱 `Browser Smoke PR Gate` 彙總結果。Vercel 監聽 PR 與 push 自動產生 Preview 與正式部署；`deployment_status` 成功後另以外部 URL 驗收首頁、SPA rewrite、牌池卡圖、合法牌組匯入、正式對戰入口與 Render WebSocket。Preview 若啟用 Vercel Authentication，需在 GitHub 設定 `VERCEL_AUTOMATION_BYPASS_SECRET`。
 
 好友房 V1 不做自動重連；前端只保留單一有效 WebSocket，容許 Render 最長 90 秒冷啟動，連線後 10 秒內未收到伺服器回應或中途斷線時會明確結束並顯示錯誤，不讓畫面永久停在「連線中」。
 
@@ -57,6 +59,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 ## 目前進度
 
 2026-08-08 穩定化批次已將 AI benchmark 從報表改為 CI 品質閘門，強制要求卡死、deadlock、非法操作與 turn cap 全為 0，且未達等級勝率門檻即失敗並輸出 `ReplayIssueBundle`。新閘門抓出並修正空戰鬥區仍有合法補位餅乾時錯誤列出「略過補位」的根因；另修正 Google Chrome 聚焦手牌動作時牌桌自動捲動、導致「登場」click 落空的 UI 問題。完整基線與未完成項目見 [穩定化對帳與執行計畫](docs/stabilization-plan-2026-08-08.md)。
+
+BS2-015 已修正支付自身離場代價後按下「確認發動」看似無反應的問題；無可補位餅乾時會顯示敗北結果，有可補位餅乾時會先完成強制補位，再從目標選擇續接傷害與 `Then` 支援效果。`card:BS2-015` 及專用終局／補位 test-state 都維持合法正 HP。
 
 已完成 Equip（官方 `{mou}`）、On play、Your Turn、Once Per Turn、Activate、Blocker、Damage（`{da}`）、Skill（`{sk}`）八種卡牌標籤的圖片對應，以及黑色能量（`{K}`）圖示，並支援 `{token}` 與 `【Official Tag】` 兩種資料格式。
 
@@ -87,6 +91,8 @@ BS4 系列已完成 111 張基礎卡的效果覆蓋稽核：攻擊 `Then` 23／2
 BS4-089 月光餅乾的登場效果提示已明確區分「強制將對手牌庫頂 5 張牌放入棄牌區」與 Then 後續目標選擇，並顯示第幾段效果進度；完成後的對戰紀錄也會明確確認牌庫移牌已執行。
 
 BS4-062「Wind Gems」已修正為「支付 2 點綠色能量 → 從支付後仍活躍的支援中額外橫置最多 4 張 → 選擇最多 1 個對手餅乾」三階段提示；額外橫置張數決定效果傷害，單機與線上共用分組上限。專用 Browser 路徑已驗證 8 張活躍支援時會留下 6 張候選，最後形成 6 張疲勞、2 張活躍並造成 4 點傷害。
+
+BS4-106／107 的一般 `card:` test-state 已分別準備 10／15 張對手棄牌，能直接操作條件成立流程；`bs4-condition:*:unmet` 仍保留門檻不足分支。BS4-107 的後半段已依「最多 3 張」改為 0／1／2／3 張選擇，Chrome 已驗證最大 3 張與選 0 張都能完成且不會留下待處理效果。
 
 BS4 後續規則回歸已完成 AI benchmark 的 RNG 傳遞修正：同一個 step seed 會流經技能、物品、場景與 Refresh；固定 seed 的 100 場矩陣重跑結果完全一致。另為 22 張條件卡建立 `met`／`unmet` 專用 test-state，共 44 條路徑通過；24 張一般 fixture 卡的效果面板、支付、代價、目標與可略過流程也以 Chrome 實際互動 24／24 通過。111 張 BS4 基礎卡以 Chrome card-check 逐卡載入 111／111 通過，並在 AI browser 的 1280×720、1024×576 等 viewport 通過 responsive geometry gate；BS4-052 end-phase 目標結算與 BS4-029 chained optional attack 的回歸問題已修正。完整結果見 [BS4 卡牌、RNG、responsive 與互動稽核報告](docs/bs4-browser-audit-report-2026-08-04-final.md)。
 
@@ -125,7 +131,9 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-目前先執行 [2026-08-08 穩定化計畫](docs/stabilization-plan-2026-08-08.md)，暫停新增 BS6+：本輪已完成 AI zero-stuck gate、CI server typecheck／零 lint warning、BS2 五色 81／81 Browser 歷史回歸與 Chrome 手牌動作修正；仍需真人 5 人 Playtest、`0.10.0` 發布基線決策、Browser PR gate、開發相依套件升級與 Bundle Gate V2。
+目前先執行 [2026-08-08 穩定化計畫](docs/stabilization-plan-2026-08-08.md)，暫停新增 BS6+：本輪已完成 AI zero-stuck gate、CI server typecheck／零 lint warning、BS2 五色 81／81 Browser 歷史回歸、Chrome 手牌動作修正，以及 Browser PR check／部署後 Browser 驗收流程；仍需真人 5 人 Playtest、`0.10.0` 發布基線決策、將 `Browser Smoke PR Gate` 設為 branch protection required check、Preview bypass secret、開發相依套件升級與 Bundle Gate V2。
+
+後續持續以專用 A/B test-state 稽核「支付代價後來源離場」的卡牌，確認終局、補位、OnPlay 與原效果續接都遵守同一套 pending decision 優先順序。
 
 持續以桌機、平板與手機 viewport 實測主選單的欄位比例、開發者工具收合與牌組統計可讀性；平板橫向戰場已正式套用 mockup 版面，後續維持 1164×777 與其他短高度桌面尺寸的可讀性回歸，並維持合法與不合法牌組錯誤提示的 DOM 狀態一致。
 
@@ -176,6 +184,8 @@ npm run build
 
 ```bash
 npm run test:ai:browser      # AI 對局多解析度 smoke test
+npm run test:browser:smoke   # PR gate：AI＋牌組編輯器＋好友房核心 smoke
+npm run test:deployment:browser # 外部 Preview／Production URL 與 Render WebSocket 驗收
 npm run test:bs4:cards:browser # BS4 111 張 Chrome card-check 載入 gate
 npm run test:bs4:interaction:browser # BS4 條件卡與一般 fixture 實際互動
 npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
@@ -211,7 +221,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-08 | 落實全面稽核第一批穩定化：AI benchmark 強制零卡死／deadlock／非法操作／turn cap 與最低勝率，失敗自動輸出 ReplayIssueBundle；修正非法略過補位、Chrome 手牌動作焦點捲動，以及 BS4-062 付款後支援候選與對手目標混在同一步的問題，CI 加入 app＋server typecheck 與零 lint warning。完整測試 177 檔／2,819 項、BS4-062 Browser 合法／不合法操作、AI Browser 20／20、牌組編輯器 2／2、好友房完整 smoke、BS2 五色 Browser 81／81、卡池 836／836 與 bundle gate 均通過。 |
+| 2026-08-08 | 落實全面稽核第一批穩定化：AI benchmark 強制零卡死／deadlock／非法操作／turn cap 與最低勝率；修正非法略過補位、Chrome 手牌動作焦點捲動、BS4-062 分段選擇、BS2-015 自身離場代價，以及 BS4-106／107 測試前置與 BS4-107「最多 3 張」選擇。新增 Browser Smoke PR check 與 Preview／Production 部署後驗收；Production 首頁、SPA、836 張牌池、卡圖、合法牌組、對戰入口及 Render WebSocket 通過，Preview 需設定 Vercel bypass secret。完整 Vitest 177 檔／2,827 項、lint、build、AI Browser 20／20、牌組編輯器 2／2與好友房完整 smoke 均通過。 |
 | 2026-08-07 | 修正 BS5-038／BS5-046 FLIP 文案落在 `skill.text` 造成的空白／無法結算問題，補上 adapter 回歸測試與 `test-state` fixture；優化攻擊效果提示框、補上 BS5-010 排版回歸測試並驗證 BS5-011 條件不成立路徑可正常結束；完成 BS5 五色標準正式牌組各 2 場、共 10 場 Browser 端到端實戰，結果記錄於 [Browser 實戰矩陣](docs/bs5-browser-formal-matrix-2026-08-07.md)。 |
 | 2026-08-06 | 完成 BS5 五色標準牌組各 40 場、共 200 場固定 seed Lv.4 矩陣與兩組 seed 構築迭代；補上 BS5-111 HP 門檻的攻擊中動態加傷／受擊不追溯減傷回歸測試，Chrome 代表性流程通過，逐色逐卡完整稽核列入下一階段。 |
 | 2026-08-06 | 修正 BS3-028 登場效果在合法對手棄牌區目標存在時未顯示 UI 選擇；補上 LV6 以下成立與 LV7 以上略過的規則／效果面板回歸測試。 |

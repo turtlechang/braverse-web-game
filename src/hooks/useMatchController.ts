@@ -40,6 +40,7 @@ import {
   createBlueInspectDeckDemoState,
   createBlueOptionalCostAttackDemoState,
   createBreakToTrashDemoState,
+  createBs2015CostDepartureDemoState,
   createCardCheckDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
@@ -175,6 +176,11 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'bs2-015-cost') {
+      return createBs2015CostDepartureDemoState(
+        testStateConfig.replacementAvailable,
+      )
     }
     if (testStateConfig?.kind === 'bs3-061-condition') {
       return createBs3SilverbellConditionDemoState(testStateConfig.conditionMet)

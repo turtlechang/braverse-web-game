@@ -721,18 +721,13 @@ export function usePendingEffect(params: {
       return
     }
 
-    const viewerBlocks =
-      (game.pendingRefresh?.playerId === viewerPlayerId) ||
-      (game.pendingOnPlay?.playerId === viewerPlayerId) ||
-      (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
-      (game.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
-      (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
-      (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
-      (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
-      (game.pendingAfterDamageEffects &&
-        game.pendingAfterDamageEffects.length > 0 &&
-        game.pendingAfterDamageEffects[0].sourcePlayerId === viewerPlayerId)
-    if (viewerBlocks) return
+    const hasBlockingDecision = Boolean(
+      game.pendingReplacement ||
+        game.pendingRefresh ||
+        game.pendingOnPlay ||
+        getPendingDecision(game),
+    )
+    if (hasBlockingDecision) return
 
     const timer = window.setTimeout(() => {
       setPendingEffect(suspendedEffect)
@@ -742,15 +737,7 @@ export function usePendingEffect(params: {
   }, [
     suspendedEffect,
     pendingEffect,
-    game.pendingRefresh,
-    game.pendingOnPlay,
-    game.pendingInspectDeck,
-    game.pendingRevealTopDeck,
-    game.pendingOptionalCostAttack,
-    game.pendingDrawUpTo,
-    game.pendingStageTrigger,
-    game.pendingAfterDamageEffects,
-    game.status,
+    game,
     viewerPlayerId,
   ])
 
@@ -1670,6 +1657,48 @@ export function usePendingEffect(params: {
                 trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
+      const activationInterrupted =
+        !pendingEffect.skillActivated &&
+        (activatedGame.status !== 'playing' ||
+          Boolean(
+            activatedGame.pendingReplacement ||
+              activatedGame.pendingRefresh ||
+              activatedGame.pendingOnPlay ||
+              getPendingDecision(activatedGame),
+          ))
+
+      if (activationInterrupted) {
+        setGame(activatedGame)
+        setPendingEffect(null)
+
+        if (activatedGame.status !== 'playing') {
+          setSuspendedEffect(null)
+          setMessage(
+            activatedGame.result?.reason === 'no-cookie-available'
+              ? `${pendingEffect.sourceCard.name}支付代價後，戰鬥區沒有餅乾且手牌沒有可補位的餅乾，對戰結束。`
+              : `${pendingEffect.sourceCard.name}支付代價後，對戰已結束。`,
+          )
+          return
+        }
+
+        setSuspendedEffect({
+          ...pendingEffect,
+          selectedTargetIds: [],
+          selectedPaymentIds: [],
+          selectedCostSupportToTrashIds: [],
+          selectedDiscardHandIds: [],
+          selectedHpToTrashTargetIds: [],
+          selectedTrashBattleCookieIds: [],
+          selectedTrashToDeckBottomIds: [],
+          selectedTrashToDeckIds: [],
+          skillActivated: true,
+        })
+        setMessage(
+          `${pendingEffect.sourceCard.name}已支付代價；請先完成目前的待處理操作，再繼續處理效果。`,
+        )
+        return
+      }
+
       const deferredAfterHpCost =
         !pendingEffect.skillActivated &&
         pendingEffect.sourceKind === 'cookie' &&
@@ -1897,12 +1926,16 @@ export function usePendingEffect(params: {
         `已選擇「${currentEffect.modes[modeIndex]?.label ?? ''}」。`,
       )
     }
-    setPendingEffect({
-      ...pendingEffect,
-      effects: expanded,
-      chooseOneModes: [...(pendingEffect.chooseOneModes ?? []), modeIndex],
-      selectedTargetIds: [],
-    })
+    setPendingEffect(
+      pendingEffect.skillActivated && pendingEffect.effectIndex >= expanded.length
+        ? null
+        : {
+            ...pendingEffect,
+            effects: expanded,
+            chooseOneModes: [...(pendingEffect.chooseOneModes ?? []), modeIndex],
+            selectedTargetIds: [],
+          },
+    )
   }
 
   return {

@@ -437,4 +437,37 @@ describe('resolve-choose-one command', () => {
       }),
     ).toThrowError()
   })
+
+  it('clears the pending queue when the final mode intentionally has no effects', () => {
+    const state: GameState = {
+      ...createBattleState(),
+      pendingAbilityEffect: {
+        playerId: 'player-two',
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceKind: 'item',
+        effects: [
+          {
+            kind: 'choose-one',
+            modes: [
+              {
+                label: '執行效果',
+                effects: [{ kind: 'deck-to-trash', amount: 1, side: 'self' }],
+              },
+              { label: '不執行', effects: [] },
+            ],
+          },
+        ],
+        effectIndex: 0,
+      },
+    }
+
+    const next = applyGameCommand(state, {
+      kind: 'resolve-choose-one',
+      playerId: 'player-two',
+      modeIndex: 1,
+    })
+
+    expect(next.pendingAbilityEffect).toBeUndefined()
+  })
 })
