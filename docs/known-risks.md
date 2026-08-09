@@ -1,6 +1,6 @@
 # 已知風險清單（Known Risks）
 
-最後更新：2026-07-17。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。
+最後更新：2026-08-08。編號固定（R1…），供其他文件引用；解除後標記「已解除」而非刪除。當前穩定化排序另見 [2026-08-08 穩定化對帳與執行計畫](stabilization-plan-2026-08-08.md)。
 
 | # | 風險 | 等級 | 現況與緩解 |
 |---|---|---|---|
@@ -12,7 +12,7 @@
 | R6 | **Vercel 不承載 ws server**：線上對戰伺服器（`server/`）需長連線，Vercel serverless 不適合 | 中（已部署但含免費層冷啟動風險） | 已於 2026-07-11 部署 Render 免費層（commit a679f03）並完成雙視窗公網對局驗收。免費層閒置 15 分鐘後休眠會切斷連線，首次連線冷啟動約需 50 秒以上；活躍對局期間 ws 訊息可維持喚醒 |
 | R7 | **線上對戰無防作弊完整方案**：MVP 僅靠伺服器權威狀態＋`masked-state` 視角遮罩；斷線重連、逾時判負未完備 | 低（範圍內） | 主計畫明訂不做完整防作弊；規則驗證在伺服器端執行，非法操作擋下即符合驗收。伺服器目前沒有 session token／房間狀態保留機制，`joinRoom` 一旦房間進入 `playing` 就會拒絕重新加入，斷線一律視同對手離線並結束對局；用戶端原本保留的 `reconnecting` 連線狀態型別與文案因此從未被觸發，2026-07-17 已移除該死碼，斷線統一走既有「連線已中斷，請重新加入房間」錯誤流程。`PublicIntent` 的 45 秒決策倒數（`RemoteActionBanner`）同理只讀伺服器 `expiresAt` 做顯示，伺服器端沒有 setTimeout 之類的邏輯在逾時後代為略過或判負；真正的重連恢復與逾時強制執行都留待此風險解除時一併設計 |
 | R8 | **官方資料來源脆弱**：匯入腳本依賴官方 API/網站結構；卡圖熱連結若官方改版即整站缺圖 | 中（部分緩解） | 匯入樣本已入 repo（資料不會消失）；缺圖 fallback **已存在**（`CardVisuals.tsx` 的 `.card-fallback`／`.card-back-fallback`，`onError` 時改顯示卡名/類型/等級/HP 文字卡），本輪確認；圖像快取策略仍待做（與 R1 的 PUBLIC_MODE 一併決策） |
-| R9 | **主 bundle 大小**（~750 KiB raw / ~157 KiB gzip） | 低（已設 budget） | CI `check:bundle` 上限 raw 850 KiB / gzip 180 KiB；code-split 已完成（牌組編輯器、測試情境、線上對戰 modal、戰鬥資訊 modal 群組按需載入），2026-07-16 完整建置仍在 budget 內 |
+| R9 | **主 bundle 大小**（664.15 KiB raw／169.74 KiB gzip） | 中（接近 gzip budget） | CI `check:bundle` 上限 raw 850 KiB／gzip 180 KiB；2026-08-08 實測仍通過，但 gzip 已使用 94.3%。現行 gate 只檢查單一 `index-*.js`，下一步建立初始依賴圖、最大 chunk、CSS 與相對增幅的 Bundle Gate V2。 |
 | R10 | **AI 自動結算繞過人類防守**（歷史回歸點）：AI 攻擊若用 `attack` 指令會自動結算、跳過陷阱/FLIP 回應 | 已緩解 | 2026-07-07 已修：Lv.1/3/4 改走 `applyChosenTurnCommand` → `beginAttack`。新增 AI 等級時必須遵守（architecture.md §5） |
 | R11 | **單人維護 + 無 branch protection**：main 可直接 push；CI 綠燈非合併門檻 | 低（接受） | 使用者明確決策不啟用 branch protection；以 PR 工作流自律 + CI 通知 |
 | R12 | ~~README 過載~~ **已解決**（2026-07-11）：README 由 182 行縮減至約 80 行 | — | 先前 P2「CHANGELOG 抽出」只建立了 CHANGELOG.md，但 README 自己的「📝 更新日誌」表格從未真正移除，且與 CHANGELOG.md 內容分岔（9 筆歷史紀錄只存在 README，從未同步）；本輪重新審視 known-risks 時發現此落差，已將分岔的紀錄併入 CHANGELOG.md、移除 README 重複表格，「目前進度」／「下一步計畫」改為短摘要 + 指向 docs/architecture.md／docs/roadmap.md／docs/known-risks.md 的連結 |
@@ -20,3 +20,5 @@
 | R14 | ~~線上對戰指令拒絕尚未顯示於戰場~~ **已解決**（2026-07-14）：`OnlineMatchPanel` 將 hook 接收的 `command-rejected` 原因傳給 `OnlineBattleView`，由既有中央 StatusToast 顯示 | — | 用戶端在收到下一個 `state-update` 時已清除拒絕原因；新增面板測試確認對戰中的原因會傳入戰場。 |
 | R15 | ~~陷阱效果只有單一共用 `targetIds`，無法支援多段效果各自選目標~~ **已解決**（2026-07-16）：BS2-079 的 `trash-to-deck` 使用獨立 `trashToDeckIds`，本機、AI 與線上對戰皆能分別選擇兩段效果目標 | — | 全卡池盤點確認 BS2-079 是唯一受影響陷阱，因此沿用陷阱系統既有的專屬欄位模式，未進行不成比例的通用 `effectTargets: string[][]` 重構。`battle.ts`／`commands.ts`／AI／本機 UI 已支援獨立目標；線上控制器於 2026-07-16 補齊紫色能量付款、非 FLIP 棄牌區候選、最多 5 張選擇與 `play-trap` 指令傳遞，協定層會拒絕非字串目標陣列。未來若新增其他多段可選目標陷阱，再評估通用逐效果目標模型。 |
 | R16 | ~~FLIP 卡的頂層 `effectText`/`effects` 未填入~~ **已解決**（2026-07-12）：`official-card-adapter.ts`／`starter-deck.ts` 的 fallback 鏈（`trap → item → stageAbility`）漏了 `flip` 分支 | — | 紫色卡牌全面稽核時發現：當通用轉換器 `convertOfficialCardEffects` 無法解析 FLIP 文字時（例如 BS2-056 的「棄 1 張手牌 → 該餅乾 HP +1」複合語法），只有 `card.flip` 有正確值，頂層 `effectText`/`effects` 停在 `undefined`；`CardDetailModal` 的 FLIP 段落靠這兩個欄位才會渲染，導致玩家點開任何走此 fallback 路徑的 FLIP 卡都看不到 FLIP 說明（純顯示層，不影響規則執行，因為規則引擎只讀 `card.flip`）。兩處 adapter 都補上 `flip` 分支；已加 adapter 層與 `CardDetailModal` 元件層回歸測試，並實際在瀏覽器測試模式載入 BS2-056、點擊卡牌確認 FLIP 段落正確顯示 |
+| R17 | **開發相依套件安全公告**：完整 `npm audit` 仍有 5 個 high | 低（Production 不受影響） | 2026-08-08 `npm audit --omit=dev` 為 0；風險位於 `brace-expansion`、`postcss`、`shell-quote`／`concurrently` 與 `undici` 的開發相依鏈。以獨立依賴升級批次處理，不使用 `npm audit fix --force`，完成後重跑完整 CI 與 Browser gate。 |
+| R18 | **Browser smoke PR gate 尚未由 branch protection 強制** | 低（部分緩解） | 2026-08-08 已加入 PR path filter、AI／牌組編輯器／好友房 smoke 與固定 `Browser Smoke PR Gate` 彙總 check；部署成功後另有 Preview／Production 外部 URL 驗收。目前 `main` 尚未啟用 branch protection，因此 check 仍可被人工忽略；workflow 合併並首次產生 check 後，需將它設為 required check。Preview 另需 `VERCEL_AUTOMATION_BYPASS_SECRET` 才能通過 Vercel Authentication。 |

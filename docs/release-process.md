@@ -1,6 +1,6 @@
 # Release 流程（Release Process）
 
-最後更新：2026-07-10。適用於所有進入 `main` 的變更；新卡牌另見 [card-update-process.md](card-update-process.md)。
+最後更新：2026-08-08。適用於所有進入 `main` 的變更；新卡牌另見 [card-update-process.md](card-update-process.md)。
 
 ## 1. 分支與 PR 慣例
 
@@ -21,24 +21,36 @@ npm run build            # tsc -b + vite build（不可只跑 tsc --noEmit）
 ```
 
 - UI 變更另跑瀏覽器驗證（`npm run build` 後 `npm run test:ai:browser`），並依 [manual-playtest-checklist.md](manual-playtest-checklist.md) 抽查受影響流程。
+- PR Browser 核心 gate 可用 `npm run test:browser:smoke` 在本機重現，依序涵蓋 AI、牌組編輯器與好友房。
 - AI 行為變更需確認等級門檻測試與 5×5 對局矩陣未退化。
 - 回歸重點見 [regression-test-checklist.md](regression-test-checklist.md)。
 
 ## 3. PR → 部署管線
 
-1. 開 PR 後 GitHub Actions 自動執行 `validate:cards → test → lint → build`。
-2. Vercel Git Integration 自動產生 **Preview URL**：在 preview 上做可玩性驗收（開局、對戰、牌組編輯器、重新整理不 404）。
+1. 開 PR 後 GitHub Actions 自動執行 `validate:cards → test → lint → build`；Browser 影響範圍另跑 `Browser Smoke PR Gate`。文件限定變更可略過 Playwright，但彙總 check 仍會成功回報。
+2. Vercel Git Integration 自動產生 **Preview URL**；成功 deployment 會觸發 `Deployment Browser Validation`，檢查首頁、SPA rewrite、卡圖、合法牌組匯入、正式對戰入口與 Render WebSocket。啟用 Vercel Authentication 時，GitHub 必須設定 `VERCEL_AUTOMATION_BYPASS_SECRET`。
+   - 該 workflow 只執行預設分支內的 trusted harness；PR 分支產生的 Preview `deployment_status` 會安全略過，Preview 驗收請從預設分支手動觸發並傳入 URL；Production `deployment_status` 仍自動執行。workflow／script 尚未合併到預設分支前，trusted preflight 會明確失敗，不執行 PR 分支程式碼並不會把 bypass secret 暴露給 PR。
 3. 維護者交叉驗證通過後合併；合併進 `main` 觸發 Vercel production 部署。
 4. 線上對戰 server（Render）與 Vercel 前端分離部署；server 變更合併後 Render 自動重建（見 [online-server-hosting.md](online-server-hosting.md)）。
 
 ## 4. 合併後
 
-> 2026-07-12 補充：main push 會自動觸發 `.github/workflows/ai-browser-validation.yml`；保留 `workflow_dispatch` 供窄版或失敗後重跑。
+> 2026-08-08 補充：`.github/workflows/ai-browser-validation.yml` 已同時支援 PR、`main` push 與 `workflow_dispatch`；`.github/workflows/deployment-browser-validation.yml` 支援 deployment status 與手動 URL 驗收。
 
 1. 確認 `main` 的 CI 綠燈與 production 部署成功。
 2. `CHANGELOG.md`：合併時將對應項目從 `[Unreleased]` 移到日期段落（PR 內先寫在 Unreleased）。
 3. 有新規則裁定、工作流程變更時同步 `AGENTS.md` / 相關 docs / 專案 Skills。
 4. 重大功能合併後執行一次手動 playtest 抽查（[manual-playtest-checklist.md](manual-playtest-checklist.md)）。
+
+外部部署可在本機重跑：
+
+```powershell
+$env:BRAVERSE_DEPLOYMENT_URL='https://example.vercel.app/'
+$env:BRAVERSE_DEPLOYMENT_LABEL='Preview'
+npm.cmd run test:deployment:browser
+```
+
+真正的合併阻擋需由 GitHub branch protection／ruleset 將 `Browser Smoke PR Gate` 設為 required check；只有 workflow 存在但未設定 required check 時，仍屬通知而非強制門檻。
 
 ## 5. 版本策略
 

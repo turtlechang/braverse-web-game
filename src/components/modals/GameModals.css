@@ -747,10 +747,18 @@
 
 .modal-card-options {
   display: flex;
-  justify-content: center;
+  /*
+   * Keep the start of an overflowing horizontal list reachable. Centering
+   * flex items makes the first card receive a negative left position when
+   * the list is wider than the modal, so the first selectable card cannot be
+   * clicked on tablet-sized viewports.
+   */
+  justify-content: flex-start;
   gap: 12px;
   margin-top: 20px;
+  padding-inline: 4px;
   overflow-x: auto;
+  scroll-padding-inline: 4px;
 }
 
 .decision-card-options {

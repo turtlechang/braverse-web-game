@@ -749,6 +749,7 @@ export interface HandToSupportEffect {
   kind: 'hand-to-support'
   amount: number
   rested?: boolean
+  optional?: boolean
   condition?: EffectCondition
 }
 
@@ -857,6 +858,8 @@ export interface SetActiveEffect {
   supportCount: number
   /** When true, the controller chooses the support cards instead of using engine order. */
   selectable?: boolean
+  /** When false, the declared number of rested support cards must be chosen. */
+  optional?: boolean
   condition?: EffectCondition
 }
 
@@ -1555,6 +1558,11 @@ export interface PendingFaintEffect {
   sourceCardName?: string
   effect: CardEffect
   context: EffectContext
+  /**
+   * 觸發昏厥技能本身的手牌／支援區代價。這些代價必須在效果目標前
+   * 完成，並與一般技能啟動共用同一套候選卡判定。
+   */
+  cost?: Pick<AbilityCost, 'discardHand' | 'discardHandColor' | 'discardHandType' | 'supportToTrash'>
 }
 
 export interface PendingAfterDamageEffect {
@@ -1722,6 +1730,7 @@ export interface GameState {
   /**
    * 最近一次 `hpToTrash` 技能代價的結算紀錄，供接續的效果／條件讀取：
    * - `hpTrashCookieInstanceId`：被磨 HP 的餅乾（BS5-022 的「that Cookie」）。
+   * - `hpTrashTopCardInstanceId`：實際被磨進棄牌區的 HP 卡，供 UI 與對戰紀錄顯示。
    * - `hpTrashTopCardType`：被磨進棄牌區的那張 HP 卡的類型（BS5-016 的
    *   「If that card is a non-Cookie card」）。
    * 僅在 `payAbilityCost` 支付 `hpToTrash` 時寫入；同一個命令鏈內由後續
@@ -1729,6 +1738,7 @@ export interface GameState {
    */
   costRecord?: {
     hpTrashCookieInstanceId?: string
+    hpTrashTopCardInstanceId?: string
     hpTrashTopCardType?: GameCard['type']
   }
   pendingOpponentHandDiscard?: PendingOpponentHandDiscard | null

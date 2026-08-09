@@ -33,6 +33,8 @@ export interface EffectPanelProps {
   onCancel?: () => void
   candidateCards?: GameCard[]
   onToggleCandidate?: (instanceId: string) => void
+  restSupportCandidates?: GameCard[]
+  damageTargetCandidates?: GameCard[]
   costSupportCandidates?: GameCard[]
   selectedCostSupportIds?: Set<string>
   onToggleCostSupport?: (instanceId: string) => void
@@ -105,6 +107,18 @@ function CandidateButtons({
   )
 }
 
+function splitAttackText(text: string): { primary: string; followUp: string | null } {
+  const separatorIndex = text.search(/\bThen\b|然後/i)
+  if (separatorIndex < 0) {
+    return { primary: text.trim(), followUp: null }
+  }
+
+  return {
+    primary: text.slice(0, separatorIndex).trim(),
+    followUp: text.slice(separatorIndex).trim(),
+  }
+}
+
 function EffectPanelContent({
   pendingEffect,
   currentEffect,
@@ -114,6 +128,8 @@ function EffectPanelContent({
   onCancel,
   candidateCards = [],
   onToggleCandidate,
+  restSupportCandidates = [],
+  damageTargetCandidates = [],
   costSupportCandidates = [],
   selectedCostSupportIds = new Set<string>(),
   onToggleCostSupport,
@@ -148,9 +164,25 @@ function EffectPanelContent({
   onChooseMode,
 }: EffectPanelProps) {
   const skill: CardSkill | undefined = pendingEffect?.skill
+  const attackTextSections =
+    pendingEffect?.sourceKind === 'attack'
+      ? splitAttackText(pendingEffect.skill.text)
+      : null
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
   const supportAreaCost =
     (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
+  const isRestSupportAndDamageEffect =
+    currentEffect?.kind === 'rest-support-and-damage'
+  const selectedRestSupportIds = new Set(
+    pendingEffect?.selectedTargetIds.filter((instanceId) =>
+      restSupportCandidates.some((card) => card.instanceId === instanceId),
+    ) ?? [],
+  )
+  const selectedDamageTargetIds = new Set(
+    pendingEffect?.selectedTargetIds.filter((instanceId) =>
+      damageTargetCandidates.some((card) => card.instanceId === instanceId),
+    ) ?? [],
+  )
   const selectionLimits =
     currentEffect?.kind === 'damage-all' && currentEffect.sequential
       ? { min: candidateCards.length, max: candidateCards.length }
@@ -190,16 +222,20 @@ function EffectPanelContent({
           : currentEffect?.kind === 'cycle-hp'
             ? { min: 0, max: 2 }
           : currentEffect?.kind === 'rest-support-and-damage'
-            ? { min: 0, max: currentEffect.supportAmount + currentEffect.target.max }
+            ? currentEffect.target
             : currentEffect?.kind === 'set-active' && currentEffect.selectable
               ? { min: 0, max: currentEffect.supportCount }
         : currentEffect?.kind === 'support-to-trash' ||
           currentEffect?.kind === 'support-to-hand' ||
-          currentEffect?.kind === 'hand-to-support' ||
           currentEffect?.kind === 'trash-to-battle' ||
           currentEffect?.kind === 'trash-to-support' ||
           currentEffect?.kind === 'trash-to-break'
         ? { min: currentEffect.amount, max: currentEffect.amount }
+        : currentEffect?.kind === 'hand-to-support'
+          ? {
+              min: currentEffect.optional ? 0 : currentEffect.amount,
+              max: currentEffect.amount,
+            }
         : currentEffect?.kind === 'gain-hp' &&
             currentEffect.target &&
             !currentEffect.target.sourceOnly
@@ -266,7 +302,13 @@ function EffectPanelContent({
 
   const targetReady =
     !showTargetSelection ||
-    (isLevelSumEffect
+    (isRestSupportAndDamageEffect
+      ? Boolean(
+          currentEffect &&
+            selectedDamageTargetIds.size >= currentEffect.target.min &&
+            selectedDamageTargetIds.size <= currentEffect.target.max,
+        )
+      : isLevelSumEffect
       ? selectedLevelSum === currentEffect.targetSum
       : !selectionLimits ||
         Boolean(
@@ -274,6 +316,12 @@ function EffectPanelContent({
             pendingEffect.selectedTargetIds.length >= selectionLimits.min &&
             pendingEffect.selectedTargetIds.length <= selectionLimits.max,
         ))
+  const restSupportReady =
+    !isRestSupportAndDamageEffect ||
+    Boolean(
+      currentEffect &&
+        selectedRestSupportIds.size <= currentEffect.supportAmount,
+    )
 
   const isChooseOneEffect =
     currentEffect?.kind === 'choose-one' && Boolean(onChooseMode)
@@ -323,6 +371,10 @@ function EffectPanelContent({
       automaticCostDescriptions.length > 0)
   const hasTargetContent =
     effectConditionMet && showTargetSelection && selectionLimits !== null
+  const hasRestSupportContent =
+    effectConditionMet &&
+    showTargetSelection &&
+    isRestSupportAndDamageEffect
   const hasChooseOneContent =
     chooseOneModes !== null && !hasSelectedChooseOneMode
   const visiblePaymentPhase = hasPaymentContent && !hasSelectedChooseOneMode
@@ -332,6 +384,7 @@ function EffectPanelContent({
     ...(visiblePaymentPhase ? (['energy'] as const) : []),
     ...(visibleExtraCostPhase ? (['cost'] as const) : []),
     ...(hasChooseOneContent ? (['choice'] as const) : []),
+    ...(hasRestSupportContent ? (['support'] as const) : []),
     ...(hasTargetContent ? (['target'] as const) : []),
   ]
   const progressPhaseIds: GuidedPhaseId[] = hasSelectedChooseOneMode
@@ -339,6 +392,7 @@ function EffectPanelContent({
         ...(hasPaymentContent ? (['energy'] as const) : []),
         ...(hasExtraCostContent ? (['cost'] as const) : []),
         ...(['choice'] as const),
+        ...(hasRestSupportContent ? (['support'] as const) : []),
         ...(hasTargetContent ? (['target'] as const) : []),
       ]
     : phaseIds
@@ -368,7 +422,9 @@ function EffectPanelContent({
           ? '代價'
           : id === 'choice'
             ? '效果'
-            : '目標',
+            : id === 'support'
+              ? '額外橫置'
+              : '目標',
     complete: index < progressActivePhaseIndex,
   }))
   const activePhaseReady =
@@ -378,6 +434,8 @@ function EffectPanelContent({
         ? extraCostReady
         : activePhase === 'choice'
           ? selectedChooseOneMode !== null
+          : activePhase === 'support'
+            ? restSupportReady
           : activePhase === 'target'
             ? targetReady
             : true
@@ -394,6 +452,19 @@ function EffectPanelContent({
             currentEffect.optional === true))))
   const hasSecondaryAction =
     Boolean(showCancelSkill) || hasOptionalSkip || hasPreviousPhase
+  const isDeckToTrashEffect = currentEffect?.kind === 'deck-to-trash'
+  const hasEffectSequence = (pendingEffect?.effects.length ?? 0) > 1
+  const effectSequenceHint = isDeckToTrashEffect
+    ? '第一段為強制效果；確認後才會進入 Then 的後續目標選擇。'
+    : pendingEffect && pendingEffect.effectIndex > 0
+      ? '前一段效果已完成，現在處理 Then 的後續效果。'
+      : '效果會依卡面文字順序逐段結算。'
+  const skipLabel =
+    pendingEffect?.sourceKind === 'attack'
+      ? '略過'
+      : pendingEffect?.trigger === 'on-play'
+        ? '略過整個登場效果'
+        : '不發動'
   const goToPhase = (phase: GuidedPhaseId) => {
     setPhaseState({ signature: phaseSignature, phase })
   }
@@ -459,13 +530,61 @@ function EffectPanelContent({
                   <span key={label}>{label}</span>
                 ))}
               </div>
-              <p className="effect-source-description">
-                <CardEffectText text={pendingEffect.skill.text} />
-              </p>
+              {attackTextSections ? (
+                <>
+                  <p className="effect-source-description effect-source-attack-text">
+                    <CardEffectText text={attackTextSections.primary} />
+                  </p>
+                  {attackTextSections.followUp && (
+                    <p className="effect-source-description effect-source-attack-follow-up">
+                      <CardEffectText text={attackTextSections.followUp} />
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="effect-source-description">
+                  <CardEffectText text={pendingEffect.skill.text} />
+                </p>
+              )}
             </div>
           </div>
 
+          {pendingEffect.revealedHpCard && (
+            <div className="effect-cost-resolution" role="status">
+              <div className="effect-cost-resolution-heading">
+                <Check aria-hidden="true" />
+                <strong>HP 費用已支付，丟棄的卡片</strong>
+              </div>
+              <div className="effect-cost-resolution-card">
+                <CardFace card={pendingEffect.revealedHpCard} />
+                <div>
+                  <strong>{pendingEffect.revealedHpCard.name}</strong>
+                  <small>
+                    卡片種類：
+                    {pendingEffect.revealedHpCard.type === 'cookie'
+                      ? '餅乾'
+                      : pendingEffect.revealedHpCard.type === 'item'
+                        ? '物品'
+                        : pendingEffect.revealedHpCard.type === 'trap'
+                          ? '陷阱'
+                          : '場景'}
+                  </small>
+                </div>
+              </div>
+            </div>
+          )}
+
           <GuidedPhaseSteps phases={phases} activePhase={activePhase} />
+
+          {hasEffectSequence && (
+            <div className="effect-sequence-status" role="status">
+              <span>效果進度</span>
+              <strong>
+                第 {pendingEffect.effectIndex + 1} / {pendingEffect.effects.length} 段
+              </strong>
+              <small>{effectSequenceHint}</small>
+            </div>
+          )}
 
           {phaseIds.length === 0 && (
             <div className="effect-instruction effect-resolution-summary">
@@ -665,16 +784,52 @@ function EffectPanelContent({
               </section>
             )}
 
+            {activePhase === 'support' &&
+              currentEffect.kind === 'rest-support-and-damage' && (
+                <section className="effect-panel-col effect-panel-rest-support-col">
+                  <span className="effect-panel-col-label">額外橫置支援</span>
+                  <div className="effect-instruction">
+                    <Sparkles aria-hidden="true" />
+                    <span>
+                      從支付後仍為活躍狀態的支援區卡牌中，選擇最多{' '}
+                      {currentEffect.supportAmount} 張改為疲勞狀態。
+                    </span>
+                  </div>
+                  <CandidateButtons
+                    cards={restSupportCandidates}
+                    selectedIds={selectedRestSupportIds}
+                    onToggle={onToggleCandidate}
+                    className="effect-candidates-rest-support"
+                  />
+                  <small>
+                    已選 {selectedRestSupportIds.size}／
+                    {currentEffect.supportAmount}
+                  </small>
+                </section>
+              )}
+
             {activePhase === 'target' && (
               <section className="effect-panel-col effect-panel-target-col">
                 <span className="effect-panel-col-label">目標</span>
                 <div className="effect-instruction">
                   <Sparkles aria-hidden="true" />
-                  <span>{describeEffect(currentEffect)}</span>
+                  <span>
+                    {currentEffect.kind === 'rest-support-and-damage'
+                      ? `選擇最多 ${currentEffect.target.max} 個對手餅乾；將造成 ${selectedRestSupportIds.size} 點效果傷害。`
+                      : describeEffect(currentEffect)}
+                  </span>
                 </div>
                 <CandidateButtons
-                  cards={candidateCards}
-                  selectedIds={new Set(pendingEffect.selectedTargetIds)}
+                  cards={
+                    currentEffect.kind === 'rest-support-and-damage'
+                      ? damageTargetCandidates
+                      : candidateCards
+                  }
+                  selectedIds={
+                    currentEffect.kind === 'rest-support-and-damage'
+                      ? selectedDamageTargetIds
+                      : new Set(pendingEffect.selectedTargetIds)
+                  }
                   selectedOrderIds={
                     currentEffect.kind === 'damage-all' && currentEffect.sequential
                       ? pendingEffect.selectedTargetIds
@@ -687,6 +842,11 @@ function EffectPanelContent({
                 currentEffect.kind === 'break-to-hand-by-level-sum' ? (
                   <small>
                     已選等級總和 {selectedLevelSum}／{currentEffect.targetSum}
+                  </small>
+                ) : currentEffect.kind === 'rest-support-and-damage' ? (
+                  <small>
+                    已選 {selectedDamageTargetIds.size}／
+                    {currentEffect.target.max}
                   </small>
                 ) : (
                   selectionLimits && (
@@ -721,10 +881,8 @@ function EffectPanelContent({
               type="button"
               onClick={onSkip}
             >
-              <span className="effect-skip-label">
-                {pendingEffect.sourceKind === 'attack' ? '略過' : '不發動'}
-              </span>
-              不發動
+              <span className="effect-skip-label">{skipLabel}</span>
+              {skipLabel}
             </button>
           ) : null}
           {hasPreviousPhase && (
@@ -751,7 +909,7 @@ function EffectPanelContent({
             ) : (
               <>
                 <Check aria-hidden="true" />
-                確認發動
+                {isDeckToTrashEffect ? '確認並執行強制效果' : '確認發動'}
               </>
             )}
           </button>

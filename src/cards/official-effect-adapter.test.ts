@@ -3264,13 +3264,22 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
-    it('BS4-107 Moonlight Shards deals damage then mills 3 of the controller\'s own deck when the opponent trash is large', () => {
+    it('BS4-107 Moonlight Shards deals damage then lets the controller mill up to 3 cards when the opponent trash is large', () => {
       const card = findBs4Card('BS4-107')
       const gate = { kind: 'opponent-trash-count-at-least', count: 15 }
       expect(convertOfficialItemAbility(card)).toMatchObject({
         effects: [
           { kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 }, condition: gate },
-          { kind: 'deck-to-trash', amount: 3, side: 'self', condition: gate },
+          {
+            kind: 'choose-one',
+            modes: [
+              { effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }] },
+              { effects: [{ kind: 'deck-to-trash', amount: 2, side: 'self' }] },
+              { effects: [{ kind: 'deck-to-trash', amount: 1, side: 'self' }] },
+              { effects: [] },
+            ],
+            condition: gate,
+          },
         ],
       })
     })

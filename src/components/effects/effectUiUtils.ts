@@ -51,6 +51,9 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'support-to-hand') {
     return `將 ${effect.amount} 張支援區卡返回手牌。`
   }
+  if (effect.kind === 'hand-to-support') {
+    return `${effect.optional ? '最多' : ''}將 ${effect.amount} 張手牌以${effect.rested ? '休息' : '活躍'}狀態放入支援區。`
+  }
   if (effect.kind === 'trash-to-battle') {
     return `從棄牌區選 ${effect.amount} 張餅乾登場。`
   }
@@ -166,7 +169,10 @@ export const describeEffect = (effect: CardEffect) => {
     return `從手牌選擇餅乾，等級總和需恰好為 ${effect.targetSum}，放入休息區。`
   }
   if (effect.kind === 'set-cookie-active') return '將餅乾設為活躍。'
-  if (effect.kind === 'deck-to-trash') return `牌庫頂 ${effect.amount} 張放入棄牌區。`
+  if (effect.kind === 'deck-to-trash') {
+    const owner = effect.side === 'self' ? '我方' : '對手'
+    return `強制：將${owner}牌庫頂 ${effect.amount} 張牌放入棄牌區。`
+  }
   if (effect.kind === 'rest-support') return `休息 ${effect.amount} 張支援區卡。`
   if (effect.kind === 'rest-support-and-damage') {
     return `休息最多 ${effect.supportAmount} 張支援區卡，並依休息張數造成傷害。`
@@ -230,9 +236,6 @@ export const describeEffect = (effect: CardEffect) => {
   if (effect.kind === 'disable-attack' && t) {
     return `選擇 ${t.count}${t.target}，下回合不能攻擊。`
   }
-  if (effect.kind === 'hand-to-support' && t) {
-    return `選擇 ${t.count}${t.target}，將手牌卡放入支援區。`
-  }
   if (effect.kind === 'break-to-hand' && t) {
     return `選擇 ${t.count}${t.target}從休息區返回手牌。`
   }
@@ -281,6 +284,10 @@ export const describeEffectResult = (
   if (effect.kind === 'draw-up-to') return `最多可抽 ${effect.max} 張牌。`
   if (effect.kind === 'hand-to-deck-and-draw') return '已重抽手牌。'
   if (effect.kind === 'deck-to-support') return `放了 ${effect.amount} 張到支援區。`
+  if (effect.kind === 'deck-to-trash') {
+    const owner = effect.side === 'self' ? '我方' : '對手'
+    return `${owner}牌庫頂 ${effect.amount} 張牌已放入棄牌區。`
+  }
   if (effect.kind === 'modify-attack-cost') return `${names} 本回合攻擊費用已改變。`
   if (effect.kind === 'multiply-attack-damage') return `攻擊傷害乘以 ${effect.multiplier}。`
   if (effect.kind === 'break-to-trash') {
@@ -290,6 +297,11 @@ export const describeEffectResult = (
   if (effect.kind === 'gain-hp') return `${names} 獲得 ${effect.amount} HP。`
   if (effect.kind === 'support-to-trash') return '支援區卡已放入棄牌區。'
   if (effect.kind === 'support-to-hand') return '支援區卡已返回手牌。'
+  if (effect.kind === 'hand-to-support') {
+    return targetNames.length > 0
+      ? `${targetNames.join('、')} 已以${effect.rested ? '休息' : '活躍'}狀態放入支援區。`
+      : '未選擇手牌，已略過放入支援區。'
+  }
   if (effect.kind === 'trash-to-battle') return '棄牌區餅乾已登場。'
   if (effect.kind === 'damage-all') return '全體傷害已結算。'
   if (effect.kind === 'modify-all-attack') return '全體攻擊修正已套用。'

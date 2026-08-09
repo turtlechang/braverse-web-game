@@ -178,6 +178,39 @@ describe('getLegalTurnCommands', () => {
     }
   })
 
+  it('空戰鬥區仍有餅乾可補位時不列出非法的略過指令', () => {
+    const base = createPlayingGame()
+    const replacement = createCookie('forced-replacement')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [],
+          hand: [replacement, ...base.players['player-two'].hand],
+        },
+      },
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
+    }
+
+    const commands = getLegalTurnCommands(state, 'player-two')
+
+    expect(commands).toContainEqual({
+      kind: 'replace-cookie',
+      playerId: 'player-two',
+      instanceId: replacement.instanceId,
+    })
+    expect(
+      commands.some((command) => command.kind === 'skip-replacement'),
+    ).toBe(false)
+    for (const command of commands) {
+      expect(() => applyGameCommand(state, command)).not.toThrow()
+    }
+  })
+
   it('有待處理決策時回傳空清單', () => {
     const base = createPlayingGame()
     const state: GameState = {

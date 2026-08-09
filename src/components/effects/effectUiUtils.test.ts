@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { describeEffectResult } from './effectUiUtils'
+import { describeEffect, describeEffectResult } from './effectUiUtils'
 import type { BreakToTrashEffect } from '../../game'
+import type { DeckToTrashEffect } from '../../game/types'
 
 describe('describeEffectResult for break-to-trash', () => {
   const effect: BreakToTrashEffect = { kind: 'break-to-trash', max: 1, exactLevel: 1 }
@@ -11,5 +12,33 @@ describe('describeEffectResult for break-to-trash', () => {
 
   it('returns the trashed message when targets are selected', () => {
     expect(describeEffectResult(effect, ['ST1-009'])).toBe('break 區卡已放入棄牌區。')
+  })
+})
+
+describe('describeEffect for deck-to-trash', () => {
+  const effect: DeckToTrashEffect = {
+    kind: 'deck-to-trash',
+    amount: 5,
+    side: 'opponent',
+  }
+
+  it('identifies the opponent deck and the mandatory step', () => {
+    expect(describeEffect(effect)).toBe(
+      '強制：將對手牌庫頂 5 張牌放入棄牌區。',
+    )
+  })
+})
+
+describe('describeEffectResult for deck-to-trash', () => {
+  const effect: DeckToTrashEffect = {
+    kind: 'deck-to-trash',
+    amount: 5,
+    side: 'opponent',
+  }
+
+  it('confirms that the opponent mill was executed', () => {
+    expect(describeEffectResult(effect, [])).toBe(
+      '對手牌庫頂 5 張牌已放入棄牌區。',
+    )
   })
 })

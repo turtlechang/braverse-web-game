@@ -9,6 +9,17 @@ export interface DamageEffectModalsProps {
   pending: BattleUiPendingEffectLike
 }
 
+const toggleFaintTargetId = (
+  current: string[],
+  instanceId: string,
+  maxTargets: number,
+): string[] => {
+  if (current.includes(instanceId)) {
+    return current.filter((id) => id !== instanceId)
+  }
+  return current.length < maxTargets ? [...current, instanceId] : current
+}
+
 export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) {
   return (
     <>
@@ -30,21 +41,13 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           }
           selectedTargetIds={match.selectedFaintTargetIds}
           candidateCards={match.faintCardCandidates}
-          candidateLabel="合法卡牌"
+          candidateLabel={match.faintCandidateLabel}
+          targetCandidateCards={match.faintCandidates.map(
+            (candidate) => candidate.card,
+          )}
           onSelectTarget={(instanceId) => {
-            if (
-              !match.faintCardCandidates.some(
-                (candidate) => candidate.instanceId === instanceId,
-              )
-            ) {
-              return
-            }
             match.setSelectedFaintTargetIds((current) =>
-              current.includes(instanceId)
-                ? current.filter((id) => id !== instanceId)
-                : current.length < match.faintMax
-                  ? [...current, instanceId]
-                  : current,
+              toggleFaintTargetId(current, instanceId, match.faintMax),
             )
           }}
           energyCost={match.faintEnergyCost}
@@ -53,10 +56,27 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           paymentCostTotal={match.faintEnergyCostTotal}
           paymentValid={match.faintPaymentValid}
           onSelectPayment={match.toggleFaintPayment}
-          allowSkip={match.faintEnergyCostTotal > 0}
+          costHandAmount={match.faintCostHandAmount}
+          costHandCandidates={match.faintCostHandCandidates}
+          selectedCostHandIds={match.selectedFaintCostHandIds}
+          onSelectCostHand={match.toggleFaintCostHand}
+          costSupportAmount={match.faintCostSupportAmount}
+          costSupportCandidates={match.faintCostSupportCandidates}
+          selectedCostSupportIds={match.selectedFaintCostSupportIds}
+          onSelectCostSupport={match.toggleFaintCostSupport}
+          allowSkip={
+            match.faintEnergyCostTotal > 0 ||
+            match.faintCostHandAmount > 0 ||
+            match.faintCostSupportAmount > 0 ||
+            (match.faintMin > 0 &&
+              match.faintCandidates.length < match.faintMin &&
+              match.faintCardCandidates.length < match.faintMin)
+          }
           onSkip={() => {
             match.setSelectedFaintTargetIds([])
             match.setSelectedFaintPaymentIds([])
+            match.setSelectedFaintCostHandIds([])
+            match.setSelectedFaintCostSupportIds([])
             match.dispatch(
               {
                 kind: 'resolve-faint-effect',
@@ -69,6 +89,8 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           onConfirm={() => {
             const targets = match.selectedFaintTargetIds
             const paymentIds = match.selectedFaintPaymentIds
+            const discardHandIds = match.selectedFaintCostHandIds
+            const supportToTrashIds = match.selectedFaintCostSupportIds
             const targetName =
               match.faintCandidates.find(
                 (candidate) => candidate.card.instanceId === targets[0],
@@ -78,12 +100,16 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
               )?.name
             match.setSelectedFaintTargetIds([])
             match.setSelectedFaintPaymentIds([])
+            match.setSelectedFaintCostHandIds([])
+            match.setSelectedFaintCostSupportIds([])
             match.dispatch(
               {
                 kind: 'resolve-faint-effect',
                 playerId: match.viewerPlayerId,
                 targetIds: targets,
                 paymentIds,
+                discardHandIds,
+                supportToTrashIds,
               },
               targets.length === 0
                 ? `${match.faintSourceCard!.name}已結算昏厥效果。`

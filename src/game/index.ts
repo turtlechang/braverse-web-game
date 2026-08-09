@@ -180,6 +180,7 @@ export {
   beginAttack,
   getForcedAttackTargetId,
   getFaintEffectCardCandidates,
+  getFaintEffectCandidateLabel,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
@@ -239,10 +240,12 @@ export {
   canPayTrashToDeckCost,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
+  getFaintTriggeredCost,
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckBottomCostCandidates,
+  isSkillEffectConditionDeferredUntilCost,
   skipCookieOnPlay,
 } from './skills'
 export {

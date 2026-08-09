@@ -318,6 +318,8 @@ const payAbilityCost = (
       )
       costRecord = {
         hpTrashCookieInstanceId: target.card.instanceId,
+        hpTrashTopCardInstanceId:
+          removedHpCards[removedHpCards.length - 1]?.instanceId,
         hpTrashTopCardType: removedHpCards[removedHpCards.length - 1]?.type,
       }
 
@@ -399,6 +401,19 @@ const hasUsableEffect = (
 
   return ability.effects.some((effect) => {
     if (!isEffectConditionMet(state, context, effect)) return false
+    if (isEffectTargeted(effect) && effect.target?.costSelected) {
+      // The Cookie selected for an HP cost is not written to costRecord until
+      // the ability is finally confirmed. Availability checks must still see
+      // a legal LV-filtered HP-cost Cookie before opening the UI flow.
+      return Boolean(
+        ability.cost.hpToTrash &&
+          getHpToTrashCostCandidates(
+            ability.cost,
+            state.players[playerId].battleArea,
+            sourceInstanceId,
+          ).length >= effect.target.min,
+      )
+    }
     if (effect.kind === 'return-to-hand') {
       const targetPlayer = state.players[
         getTargetPlayerId(context, effect.target)

@@ -21,9 +21,12 @@ if (!chromium) {
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4178)
 const baseUrl = `http://127.0.0.1:${port}`
+const focusedCard = process.env.BS4_INTERACTION_CARD
 const reportPath = process.env.BS4_INTERACTION_REPORT_PATH
   ? resolve(process.env.BS4_INTERACTION_REPORT_PATH)
-  : resolve(root, 'data/decks/bs4-browser-interaction-report-2026-08-04.json')
+  : focusedCard
+    ? resolve(root, `test-results/bs4-browser-interaction-${focusedCard}.json`)
+    : resolve(root, 'data/decks/bs4-browser-interaction-report-2026-08-04.json')
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
 const browserExecutable =
   process.env.PLAYWRIGHT_BROWSER_EXECUTABLE ??
@@ -74,6 +77,7 @@ const GENERIC_FIXTURE_CARDS = [
   'BS4-053',
   'BS4-054',
   'BS4-061',
+  'BS4-062',
   'BS4-069',
   'BS4-073',
   'BS4-075',
@@ -84,9 +88,10 @@ const GENERIC_FIXTURE_CARDS = [
   'BS4-091',
   'BS4-098',
   'BS4-103',
+  'BS4-106',
+  'BS4-107',
 ]
 
-const focusedCard = process.env.BS4_INTERACTION_CARD
 const conditionCardsToRun = focusedCard
   ? CONDITION_CARDS.filter((cardNumber) => cardNumber === focusedCard)
   : CONDITION_CARDS
@@ -118,6 +123,7 @@ const activeEffectPanel = (page) =>
 const driveEffectPanel = async (page, maxRounds = 32, options = {}) => {
   const operations = []
   const preferTarget = options.preferTarget === true
+  const preferLastChoice = options.preferLastChoice === true
   const candidateSelectors = [
     '.effect-candidates-choice',
     '.effect-candidates-payment',
@@ -127,6 +133,7 @@ const driveEffectPanel = async (page, maxRounds = 32, options = {}) => {
     '.effect-candidates-trash-battle',
     '.effect-candidates-trash-deck-bottom',
     '.effect-candidates-trash-deck',
+    '.effect-candidates-rest-support',
     '.effect-candidates-target',
     '.optional-cost-col .modal-card-options',
   ]
@@ -158,6 +165,20 @@ const driveEffectPanel = async (page, maxRounds = 32, options = {}) => {
         const target = await clickFirstAvailable(page, ['.effect-candidates-target'])
         if (target) {
           operations.push(`effect-panel:${target}`)
+          continue
+        }
+      }
+    }
+
+    if (preferLastChoice) {
+      const choiceGroup = panel.locator('.effect-candidates-choice')
+      const selectedChoices = choiceGroup.locator('button.is-selected')
+      if ((await selectedChoices.count()) === 0) {
+        const choices = choiceGroup.locator('button')
+        if ((await choices.count()) > 0) {
+          await choices.last().click({ force: true })
+          operations.push('effect-panel:.effect-candidates-choice:last')
+          await wait(120)
           continue
         }
       }
@@ -416,6 +437,14 @@ const surfaceSnapshot = async (page) =>
     topCombatText: [...document.querySelectorAll('.top-field .combat-card-wrap')]
       .map((element) => element.textContent?.replace(/\s+/g, ' ').trim())
       .join('|'),
+    topHpTotal: document.querySelectorAll('.top-field .hp-card-stack .hp-card').length,
+    bottomDeckCount: Number(
+      document.querySelector('.bottom-field .deck-zone .resource-summary > strong')
+        ?.textContent ?? Number.NaN,
+    ),
+    topDiscardCount: Number(
+      document.querySelector('.top-field .discard-zone > strong')?.textContent ?? 0,
+    ),
     body: document.body.innerText,
   }))
 
@@ -481,7 +510,130 @@ const assertBs4005DamageLog = async (page) => {
   }
 }
 
-const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
+const exerciseBs4062 = async (page) => {
+  assert.equal(
+    await page.locator('.bottom-field .support-card:not(.is-rested)').count(),
+    8,
+    'BS4-062 fixture must begin with 8 active support cards',
+  )
+  assert.equal(await clickFirstHandAction(page), true, 'BS4-062 item action was unavailable')
+
+  const panel = activeEffectPanel(page)
+  await panel.waitFor({ state: 'visible' })
+  const phaseLabels = await panel.locator('.phase-step').allTextContents()
+  assert.deepEqual(
+    phaseLabels.map((label) => label.replace(/^\s*\d+\s*/, '').trim()),
+    ['能量', '額外橫置', '目標'],
+    `BS4-062 phase order was incorrect: ${JSON.stringify(phaseLabels)}`,
+  )
+
+  const paymentButtons = panel.locator('.effect-candidates-payment button')
+  const primaryAction = panel.locator('.effect-panel-primary-action')
+  assert.equal(await paymentButtons.count(), 8, 'BS4-062 payment must offer all 8 active supports')
+  assert.equal(
+    await primaryAction.isDisabled(),
+    true,
+    'BS4-062 cannot continue before paying 2 green energy',
+  )
+  for (let index = 0; index < 2; index += 1) {
+    await paymentButtons.nth(index).click({ force: true })
+    await wait(100)
+    if (index === 0) {
+      assert.equal(
+        await primaryAction.isDisabled(),
+        true,
+        'BS4-062 cannot continue after paying only 1 of 2 green energy',
+      )
+    }
+  }
+  assert.equal(
+    await panel.locator('.effect-candidates-payment button.is-selected').count(),
+    2,
+    'BS4-062 must select exactly 2 energy supports before continuing',
+  )
+  await primaryAction.click({ force: true })
+  await wait(120)
+
+  const supportButtons = panel.locator('.effect-candidates-rest-support button')
+  assert.equal(
+    await supportButtons.count(),
+    6,
+    'BS4-062 extra-rest step must exclude the 2 supports selected for payment',
+  )
+  for (let index = 0; index < 4; index += 1) {
+    await supportButtons.nth(index).click({ force: true })
+    await wait(100)
+  }
+  await supportButtons.nth(4).click({ force: true })
+  await wait(100)
+  assert.equal(
+    await panel.locator('.effect-candidates-rest-support button.is-selected').count(),
+    4,
+    'BS4-062 must retain 4 selected extra supports',
+  )
+  await primaryAction.click({ force: true })
+  await wait(120)
+
+  const targetButtons = panel.locator('.effect-candidates-target button')
+  assert.ok(
+    (await targetButtons.count()) > 0,
+    'BS4-062 target step must offer an opposing Cookie',
+  )
+  assert.match(
+    (await panel.innerText()).replace(/\s+/g, ' '),
+    /造成 4 點效果傷害/,
+    'BS4-062 target prompt must report the selected extra-rest damage',
+  )
+  const beforeTargetText = await page.locator('.top-field .combat-card-wrap').allTextContents()
+  await targetButtons.first().click({ force: true })
+  await wait(100)
+  if ((await targetButtons.count()) > 1) {
+    await targetButtons.nth(1).click({ force: true })
+    await wait(100)
+    assert.equal(
+      await panel.locator('.effect-candidates-target button.is-selected').count(),
+      1,
+      'BS4-062 must not allow more than 1 opposing Cookie target',
+    )
+  }
+  await primaryAction.click({ force: true })
+  await panel.waitFor({ state: 'detached' })
+  await wait(250)
+
+  assert.equal(
+    await page.locator('.bottom-field .support-card.is-rested').count(),
+    6,
+    'BS4-062 must rest 2 payment supports plus 4 effect supports',
+  )
+  assert.equal(
+    await page.locator('.bottom-field .support-card:not(.is-rested)').count(),
+    2,
+    'BS4-062 must leave 2 of the original 8 supports active',
+  )
+  const afterTargetText = await page.locator('.top-field .combat-card-wrap').allTextContents()
+  assert.notDeepEqual(
+    afterTargetText,
+    beforeTargetText,
+    'BS4-062 did not change the selected opposing Cookie after dealing 4 damage',
+  )
+
+  return [
+    'hand:action',
+    'BS4-062:pay-2',
+    'BS4-062:rest-4',
+    'BS4-062:target-1',
+    'BS4-062:damage-4',
+  ]
+}
+
+const runRoute = async (
+  page,
+  url,
+  routeType,
+  expectedCard,
+  expectedResult,
+  options = {},
+) => {
   const consoleErrors = []
   const pageErrors = []
   const onConsole = (message) => {
@@ -504,7 +656,10 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
   page.on('pageerror', onPageError)
 
   try {
-    await page.goto(url, { waitUntil: 'networkidle' })
+    // Official card faces are loaded from an external CDN, so `networkidle`
+    // can remain busy or time out even though the local game UI is ready.
+    // The visible game shell is the actual readiness signal for this audit.
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
     await page.locator('.game-shell').waitFor({ state: 'visible' })
     await wait(700)
     const routeAttribute = await page.locator('.game-shell').getAttribute(
@@ -548,13 +703,22 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
           (await clickFirstHandAction(page))
         ) {
           interactions.push('hand:action')
-          interactions.push(...(await settlePending(page)))
+          interactions.push(
+            ...(await settlePending(page, {
+              preferTarget:
+                expectedResult === 'met' &&
+                (expectedCard === 'BS4-106' || expectedCard === 'BS4-107'),
+              preferLastChoice: options.preferLastChoice,
+            })),
+          )
         }
         if (interactions.length === 0) {
           const inspection = await inspectCookie(page)
           if (inspection) interactions.push(inspection)
         }
       }
+    } else if (expectedCard === 'BS4-062') {
+      interactions.push(...(await exerciseBs4062(page)))
     } else {
       interactions.push(...(await settlePending(page)))
       if (interactions.length === 0 && (await clickSkillAction(page))) {
@@ -563,7 +727,13 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
       }
       if (interactions.length === 0 && (await clickFirstHandAction(page))) {
         interactions.push('hand:action')
-        interactions.push(...(await settlePending(page)))
+        interactions.push(
+          ...(await settlePending(page, {
+            preferTarget:
+              expectedCard === 'BS4-106' || expectedCard === 'BS4-107',
+            preferLastChoice: options.preferLastChoice,
+          })),
+        )
       }
       if (interactions.length === 0) {
         const inspection = await inspectCookie(page)
@@ -589,6 +759,37 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
       )
     }
     const after = await assertNoErrorSurface(page, consoleErrors, pageErrors)
+    if (
+      (routeType === 'generic' || expectedResult === 'met') &&
+      (expectedCard === 'BS4-106' || expectedCard === 'BS4-107')
+    ) {
+      const expectedHpLoss = expectedCard === 'BS4-106' ? 1 : 2
+      assert.equal(
+        after.topHpTotal,
+        before.topHpTotal - expectedHpLoss,
+        `${expectedCard} did not remove ${expectedHpLoss} HP from the selected opponent Cookie`,
+      )
+      if (expectedCard === 'BS4-106') {
+        assert.equal(
+          after.topDiscardCount,
+          before.topDiscardCount + 1,
+          'BS4-106 did not place the selected opponent HP card in their trash',
+        )
+      } else {
+        assert.ok(
+          interactions.some((operation) =>
+            operation.startsWith('effect-panel:.effect-candidates-choice'),
+          ),
+          'BS4-107 did not expose the optional 0-3 card choice in the UI',
+        )
+        const expectedDeckLoss = options.preferLastChoice ? 0 : 3
+        assert.equal(
+          after.bottomDeckCount,
+          before.bottomDeckCount - expectedDeckLoss,
+          `BS4-107 did not place the selected ${expectedDeckLoss} cards from the controller deck into the trash`,
+        )
+      }
+    }
     if (routeType === 'condition' && (expectedCard === 'BS4-048' || expectedCard === 'BS4-052')) {
       if (expectedResult === 'met') {
         if (expectedCard === 'BS4-048') {
@@ -635,6 +836,9 @@ const runRoute = async (page, url, routeType, expectedCard, expectedResult) => {
         skillActions: after.skillActions,
         handActions: after.handActions,
         topCombatText: after.topCombatText,
+        topHpTotal: after.topHpTotal,
+        bottomDeckCount: after.bottomDeckCount,
+        topDiscardCount: after.topDiscardCount,
         restedBottomSupports: after.restedBottomSupports,
       },
       status: 'PASS',
@@ -653,6 +857,7 @@ const server = spawn(
 let browser
 const conditionResults = []
 const genericResults = []
+const optionalChoiceResults = []
 
 try {
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -714,7 +919,31 @@ try {
     }
   }
 
-  const failures = [...conditionResults, ...genericResults].filter(
+  if (genericFixtureCardsToRun.includes('BS4-107')) {
+    const route = '?test-state=card:BS4-107'
+    try {
+      const row = await runRoute(
+        page,
+        `${baseUrl}/${route}`,
+        'generic',
+        'BS4-107',
+        'fixture-zero',
+        { preferLastChoice: true },
+      )
+      optionalChoiceResults.push(row)
+      console.log(`PASS optional BS4-107 zero: ${row.interactions.join(', ')}`)
+    } catch (error) {
+      optionalChoiceResults.push({
+        cardNumber: 'BS4-107',
+        result: 'fixture-zero',
+        status: 'FAIL',
+        error: error instanceof Error ? error.message : String(error),
+      })
+      console.log(`FAIL optional BS4-107 zero: ${error}`)
+    }
+  }
+
+  const failures = [...conditionResults, ...genericResults, ...optionalChoiceResults].filter(
     (result) => result.status === 'FAIL',
   )
   const report = {
@@ -738,13 +967,20 @@ try {
       failures: genericResults.filter((result) => result.status === 'FAIL').length,
       results: genericResults,
     },
+    optionalChoiceAudit: {
+      routes: optionalChoiceResults.length,
+      passed: optionalChoiceResults.filter((result) => result.status === 'PASS').length,
+      failures: optionalChoiceResults.filter((result) => result.status === 'FAIL').length,
+      results: optionalChoiceResults,
+    },
   }
   await mkdir(dirname(reportPath), { recursive: true })
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
   console.log(`Report: ${reportPath}`)
   console.log(
     `Summary: conditions ${report.conditionAudit.passed}/${report.conditionAudit.routes}; ` +
-      `generic ${report.genericFixtureAudit.passed}/${report.genericFixtureAudit.cards}`,
+      `generic ${report.genericFixtureAudit.passed}/${report.genericFixtureAudit.cards}; ` +
+      `optional choices ${report.optionalChoiceAudit.passed}/${report.optionalChoiceAudit.routes}`,
   )
   process.exitCode = failures.length === 0 ? 0 : 1
 } finally {

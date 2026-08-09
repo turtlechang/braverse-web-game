@@ -1,4 +1,5 @@
 import { createSeededShuffle, defaultShuffle } from './helpers'
+import { getFaintTriggeredCost } from './skills'
 import {
   createGame,
   forceMulliganOpeningHand,
@@ -68,6 +69,51 @@ const isBs4ConditionCardNumber = (
 ): value is Bs4ConditionCardNumber =>
   (BS4_CONDITION_CARD_NUMBERS as readonly string[]).includes(value)
 
+export const BS5_FLIP_CARD_NUMBERS = [
+  'BS5-004',
+  'BS5-009',
+  'BS5-038',
+  'BS5-046',
+  'BS5-041',
+  'BS5-049',
+  'BS5-082',
+  'BS5-090',
+  'BS5-095',
+] as const
+export type Bs5FlipCardNumber = (typeof BS5_FLIP_CARD_NUMBERS)[number]
+
+export const BS5_FAINT_CARD_NUMBERS = [
+  'BS5-007',
+  'BS5-011',
+  'BS5-026',
+  'BS5-047',
+  'BS5-072',
+  'BS5-107',
+] as const
+export type Bs5FaintCardNumber = (typeof BS5_FAINT_CARD_NUMBERS)[number]
+
+export const BS5_TRAP_CARD_NUMBERS = [
+  'BS5-021',
+  'BS5-043',
+  'BS5-065',
+  'BS5-087',
+  'BS5-109',
+] as const
+export type Bs5TrapCardNumber = (typeof BS5_TRAP_CARD_NUMBERS)[number]
+
+export const BS5_ITEM_CONDITION_CARD_NUMBERS = ['BS5-020'] as const
+export type Bs5ItemConditionCardNumber =
+  (typeof BS5_ITEM_CONDITION_CARD_NUMBERS)[number]
+
+export const BS5_STAGE_CONDITION_CARD_NUMBERS = ['BS5-022'] as const
+export type Bs5StageConditionCardNumber =
+  (typeof BS5_STAGE_CONDITION_CARD_NUMBERS)[number]
+
+const isListedCardNumber = <T extends readonly string[]>(
+  values: T,
+  value: string,
+): value is T[number] => (values as readonly string[]).includes(value)
+
 export const parseTestStateConfig = (
   searchString: string,
   hostname: string,
@@ -96,11 +142,35 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'bs2-015-cost'; replacementAvailable: boolean }
+  | { kind: 'bs3-061-condition'; conditionMet: boolean }
   | {
       kind: 'bs4-condition'
       cardNumber: Bs4ConditionCardNumber
       conditionMet: boolean
     }
+  | { kind: 'bs5-flip'; cardNumber: Bs5FlipCardNumber; activate: boolean }
+  | {
+      kind: 'bs5-faint'
+      cardNumber: Bs5FaintCardNumber
+      conditionMet: boolean
+    }
+  | {
+      kind: 'bs5-trap'
+      cardNumber: Bs5TrapCardNumber
+      conditionMet: boolean
+    }
+  | {
+      kind: 'bs5-item-condition'
+      cardNumber: Bs5ItemConditionCardNumber
+      conditionMet: boolean
+    }
+  | {
+      kind: 'bs5-stage-condition'
+      cardNumber: Bs5StageConditionCardNumber
+      conditionMet: boolean
+    }
+  | { kind: 'bs5-item-111'; conditionMet: boolean }
   | { kind: 'bs3-121-special-victory' }
   | { kind: 'soul-jam-019-equipped' }
   | { kind: 'soul-jam-043-equipped' }
@@ -213,6 +283,21 @@ export const parseTestStateConfig = (
       return { kind: 'card-check', cardNumber }
     }
   }
+  if (testState?.startsWith('bs2-015-cost:')) {
+    const result = testState.slice('bs2-015-cost:'.length)
+    if (result === 'terminal' || result === 'replacement') {
+      return {
+        kind: 'bs2-015-cost',
+        replacementAvailable: result === 'replacement',
+      }
+    }
+  }
+  if (testState?.startsWith('bs3-061-condition:')) {
+    const result = testState.slice('bs3-061-condition:'.length)
+    if (result === 'met' || result === 'unmet') {
+      return { kind: 'bs3-061-condition', conditionMet: result === 'met' }
+    }
+  }
   if (testState?.startsWith('bs4-condition:')) {
     const [, cardNumber, result] = testState.split(':')
     if (
@@ -225,6 +310,82 @@ export const parseTestStateConfig = (
         cardNumber,
         conditionMet: result === 'met',
       }
+    }
+  }
+  if (testState?.startsWith('bs5-flip:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS5_FLIP_CARD_NUMBERS, cardNumber) &&
+      (result === 'activate' || result === 'skip')
+    ) {
+      return {
+        kind: 'bs5-flip',
+        cardNumber,
+        activate: result === 'activate',
+      }
+    }
+  }
+  if (testState?.startsWith('bs5-faint:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS5_FAINT_CARD_NUMBERS, cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs5-faint',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
+  if (testState?.startsWith('bs5-trap:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS5_TRAP_CARD_NUMBERS, cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs5-trap',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
+  if (testState?.startsWith('bs5-item:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS5_ITEM_CONDITION_CARD_NUMBERS, cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs5-item-condition',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
+  if (testState?.startsWith('bs5-stage:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS5_STAGE_CONDITION_CARD_NUMBERS, cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs5-stage-condition',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
+  if (testState?.startsWith('bs5-item:BS5-111:')) {
+    const result = testState.slice('bs5-item:BS5-111:'.length)
+    if (result === 'met' || result === 'unmet') {
+      return { kind: 'bs5-item-111', conditionMet: result === 'met' }
     }
   }
   if (testState === 'bs3-121-special-victory') {
@@ -374,6 +535,8 @@ export const createBreakToTrashDemoState = (
     support1.instanceId,
     support2.instanceId,
   ])
+  const p1HpCard = p1Deck.find((card) => !usedP1.has(card.instanceId))!
+  usedP1.add(p1HpCard.instanceId)
   const p1: PlayerState = {
     id: 'player-one',
     name: '玩家',
@@ -383,7 +546,7 @@ export const createBreakToTrashDemoState = (
     battleArea: [
       {
         card: battleCookie as CookieCard,
-        hpCards: [],
+        hpCards: [p1HpCard],
         rested: false,
         battleEntryId: `${battleCookie.instanceId}:battle:1`,
       },
@@ -396,6 +559,8 @@ export const createBreakToTrashDemoState = (
   }
 
   const usedP2 = new Set([p2Cookie.instanceId])
+  const p2HpCard = p2Deck.find((card) => !usedP2.has(card.instanceId))!
+  usedP2.add(p2HpCard.instanceId)
   const p2: PlayerState = {
     id: 'player-two',
     name: 'AI 對手',
@@ -405,7 +570,7 @@ export const createBreakToTrashDemoState = (
     battleArea: [
       {
         card: p2Cookie as CookieCard,
-        hpCards: [],
+        hpCards: [p2HpCard],
         rested: false,
         battleEntryId: `${p2Cookie.instanceId}:battle:2`,
       },
@@ -2143,12 +2308,18 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // Extra battle cookies for the player, beyond the card under test, so
   // self-side target selectors and trash-battle-cookie costs have
   // candidates that aren't the tested card itself.
-  const selfExtra1 = cardCheckFillerCookie('self-extra-1', 1, 4, 0, payColor)
+  const selfExtra1 = cardCheckFillerCookie(
+    'self-extra-1',
+    card.id === 'BS5-005' ? 2 : 1,
+    4,
+    0,
+    card.id === 'BS5-005' ? 'red' : payColor,
+  )
 
   // Generous energy support to pay any skill/item/trap/stage energy cost.
   const energySupportColors: EnergyColor[] = card.id === 'P-032'
     ? ['red', 'yellow', 'green', 'blue', 'purple', 'red', 'yellow']
-    : Array.from({ length: 6 }, () => payColor)
+    : Array.from({ length: card.id === 'BS4-062' ? 8 : 6 }, () => payColor)
   const energySupports = energySupportColors.map((color, i) =>
     testSupportCard(`support-pay-${i}`, color),
   )
@@ -2194,6 +2365,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // generous filler deck so no card-check scenario accidentally exhausts it.
   const deckFiller = (prefix: string): GameCard[] =>
     Array.from({ length: 20 }, (_, i) => testSupportCard(`${prefix}-deck-${i}`, payColor))
+  // Conditional item card-check routes should be immediately testable from
+  // the generic `card:` URL. BS4-106/107 inspect the opponent's trash, so the
+  // neutral empty pile would only exercise the unmet branch and hide their
+  // target/Then UI from manual Browser verification.
+  const opponentTrashCount =
+    card.id === 'BS4-106' ? 10 : card.id === 'BS4-107' ? 15 : 0
+  const opponentTrashFillers = Array.from(
+    { length: opponentTrashCount },
+    (_, index) =>
+      testSupportCard(`${card.id}-opponent-trash-${index + 1}`, 'purple'),
+  )
 
   // Own break area filler for break-area-level conditions (flip cards) and
   // for skills that select own-color cookies from the break area (e.g.
@@ -2262,6 +2444,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-two'],
           battleArea: opponentBattleArea,
           stage: { card: opponentStage, rested: false },
+          discardPile: opponentTrashFillers,
         },
       },
     }
@@ -2311,6 +2494,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     // (rather than just redirecting/countering the current attack) have
     // legal candidates.
     const attacker: CookieCard = { ...cardCheckFillerCookie('trap-attacker', 2, 5, 0, 'black').cookie, attack: 6 }
+    const attackerHpCards = Array.from({ length: attacker.hp }, (_, index) =>
+      testSupportCard(`trap-attacker-hp-${index + 1}`, 'black'),
+    )
     const bigTrashFillers = Array.from({ length: 16 }, (_, i) =>
       cardCheckFillerCookie(`trash-bulk-${i}`, 1, 3).cookie,
     )
@@ -2332,7 +2518,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-one': {
           ...state.players['player-one'],
           hand: [card, ...handFillers],
-          battleArea: [cardCheckBattleEntry(defender.cookie, defender.hpCards, 4)],
+          battleArea: [
+            cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
+            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+          ],
           supportArea: energySupports.map((c) => ({ card: c, rested: false })),
           breakArea: trapBreakArea,
           discardPile: [...trashFillers, ...bigTrashFillers],
@@ -2340,7 +2529,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-two': {
           ...state.players['player-two'],
           battleArea: [
-            cardCheckBattleEntry(attacker, [], 5),
+            cardCheckBattleEntry(attacker, attackerHpCards, 5),
             cardCheckBattleEntry(
               trapOpponentSecondCookie,
               trapOpponentSecondCookie === opp1.cookie
@@ -2374,18 +2563,16 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
 
   // Flip-attachment cards trigger when revealed as an HP card during an
   // attack, not from the player's hand — mirror createFlipResponseDemoState.
-  if (card.flip) {
+  if (card.officialType === 'flip' || card.flip) {
     const defender = cardCheckFillerCookie('flip-defender', 2, 5, 4, payColor) // 1 HP card left: the flip card itself
     const attacker = cardCheckFillerCookie('flip-attacker', 2, 5, 0, 'black')
-    // Keep the break area above the thresholds used by conditional FLIP
-    // effects, but below the level-10 defeat limit.  The generic card-check
-    // state must remain playable after FLIP resolves; otherwise
-    // `resolveDrawUpTo` can correctly detect a break-level defeat and clear
-    // `pendingBattle` before `resolveFlip` finishes its transition.
+    // Keep enough break level for the generic FLIP fixture while leaving room
+    // for the defeated target's level-2 Cookie. The generic card-check state
+    // must remain playable after FLIP resolves; otherwise the target faint
+    // would correctly end the game before the FLIP result can be inspected.
     const bigOwnBreakArea: CookieCard[] = [
       cardCheckFillerCookie('self-break-big-1', 3, 5).cookie,
       cardCheckFillerCookie('self-break-big-2', 2, 5).cookie,
-      ...ownBreakArea,
     ]
     const state = baseState()
     return {
@@ -2435,13 +2622,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const target = cardCheckFillerCookie('faint-target', 2, 5, 0, payColor)
     const state = baseState()
     const faintCard: CookieCard = { ...(card as CookieCard) }
-    const pendingFaintEffects: PendingFaintEffect[] = card.skill.effects.map((effect) => ({
-      sourcePlayerId: 'player-one',
-      sourceInstanceId: faintCard.instanceId,
-      sourceCardName: faintCard.name,
-      effect,
-      context: { sourcePlayerId: 'player-one', sourceInstanceId: faintCard.instanceId },
-    }))
+    const faintCost = getFaintTriggeredCost(card.skill)
+    const pendingFaintEffects: PendingFaintEffect[] = card.skill.effects.map(
+      (effect, index) => ({
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: faintCard.instanceId,
+        sourceCardName: faintCard.name,
+        effect,
+        context: {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: faintCard.instanceId,
+        },
+        ...(faintCost && index === 0 ? { cost: faintCost } : {}),
+      }),
+    )
     return {
       ...state,
       players: {
@@ -2449,6 +2643,21 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-one': {
           ...state.players['player-one'],
           breakArea: [faintCard, ...ownBreakArea],
+          // Keep a legal Cookie in the battle area so resolving the faint
+          // effect can continue through draw/Then UI without ending the demo
+          // immediately for "no Cookie available".
+          battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
+          // BS3-061 pays its faint cost from the support area before checking
+          // the 5-card condition. Start with six cards so the default
+          // card-check route exercises the condition-met path.
+          ...(card.id === 'BS3-061' || card.id === 'BS5-047'
+            ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
+            : {}),
+          ...(card.id === 'BS5-007'
+            ? { hand: handFillers }
+            : card.id === 'BS5-026'
+              ? { hand: [handCookieFiller, ...handFillers] }
+              : {}),
           discardPile: trashFillers,
         },
         'player-two': {
@@ -2477,6 +2686,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ? 2
         : cookieCard.id === 'BS5-098'
           ? 1
+          : cookieCard.id === 'BS5-013'
+            ? 4
+            : cookieCard.id === 'BS5-010'
+              ? 2
           : 0
     const attackSourceHpCards = Array.from(
       { length: attackSourceHpCount },
@@ -2686,7 +2899,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const sourceHpCards =
       card.id === 'BS4-005'
         ? [testSupportCard('BS4-005-source-hp')]
-        : []
+        : card.id === 'BS5-005'
+          ? [testSupportCard('BS5-005-source-hp')]
+        : card.id === 'BS5-016'
+          ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+              testSupportCard(`BS5-016-source-hp-${index + 1}`),
+            )
+          : [testSupportCard(`${card.id}-source-hp`)]
     return {
       ...state,
       players: {
@@ -2728,6 +2947,44 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       'player-two': {
         ...state.players['player-two'],
         battleArea: opponentBattleArea,
+      },
+    },
+  }
+}
+
+/**
+ * BS2-015 支付「將這個餅乾放入棄牌區」後的兩條正式流程：
+ * 手牌沒有餅乾時立即敗北；有餅乾時先強制補位，再繼續結算技能。
+ */
+export const createBs2015CostDepartureDemoState = (
+  replacementAvailable: boolean,
+): GameState => {
+  const state = createCardCheckDemoState('BS2-015')
+  const player = state.players['player-one']
+  const source = player.battleArea.find((entry) => entry.card.id === 'BS2-015')
+  if (!source) {
+    throw new Error('BS2-015 cost-departure fixture requires BS2-015')
+  }
+
+  const replacement = cardCheckFillerCookie(
+    'bs2-015-replacement',
+    1,
+    3,
+    0,
+    'green',
+  ).cookie
+  const nonCookieHand = player.hand.filter((card) => card.type !== 'cookie')
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        hand: replacementAvailable
+          ? [replacement, ...nonCookieHand]
+          : nonCookieHand,
+        battleArea: [source],
       },
     },
   }
@@ -2797,6 +3054,28 @@ const scenarioPendingBattle = (
   attackEffects: attackEffects ?? [],
   attackEffectIndex: 0,
 })
+
+/**
+ * Creates focused BS3-061 condition fixtures for browser verification.
+ * The cost is payable in both routes; only the support count after paying
+ * the cost differs (6 -> 5 versus 5 -> 4).
+ */
+export const createBs3SilverbellConditionDemoState = (
+  conditionMet: boolean,
+): GameState => {
+  const state = createCardCheckDemoState('BS3-061')
+  const player = state.players['player-one']
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        supportArea: player.supportArea.slice(0, conditionMet ? 6 : 5),
+      },
+    },
+  }
+}
 
 /**
  * Creates focused BS4 condition fixtures for the cards that the generic
@@ -3134,6 +3413,220 @@ export const createBs4ConditionDemoState = (
       setDiscardCount('player-two', conditionMet ? 15 : 14, 'BS4-107-opponent-trash')
       return state
   }
+}
+
+/** BS5 FLIP 的逐卡 A/B fixture：同一張翻開卡分別走發動與不發動。 */
+export const createBs5FlipDemoState = (
+  cardNumber: Bs5FlipCardNumber,
+  activate: boolean,
+): GameState => {
+  void activate
+  return createCardCheckDemoState(cardNumber)
+}
+
+/**
+ * BS5 六張昏厥技能的專用情境。
+ * `met` 只調整該卡的關鍵條件；不成立路徑仍保留真實 pending UI，讓測試
+ * 可以確認「確認／略過」後不會卡死，也不會誤執行後續效果。
+ */
+export const createBs5FaintDemoState = (
+  cardNumber: Bs5FaintCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  let state = createCardCheckDemoState(cardNumber)
+  const setPlayer = (playerId: PlayerId, patch: Partial<PlayerState>) => {
+    state = updateDemoPlayer(state, playerId, patch)
+  }
+
+  switch (cardNumber) {
+    case 'BS5-007':
+      setPlayer('player-one', {
+        hand: conditionMet
+          ? [testSupportCard('BS5-007-red-item', 'red'), testSupportCard('BS5-007-extra', 'wild')]
+          : [testSupportCard('BS5-007-wrong-color', 'blue')],
+      })
+      return state
+    case 'BS5-011': {
+      const opponent = state.players['player-two']
+      setPlayer('player-two', {
+        battleArea: opponent.battleArea.map((entry, index) => ({
+          ...entry,
+          card: {
+            ...entry.card,
+            // The unmet route must remove every LV.1 candidate, not only the
+            // first Cookie in the spread used by the generic fixture.
+            level: conditionMet && index === 0 ? 1 : 2,
+          },
+        })),
+      })
+      return state
+    }
+    case 'BS5-026': {
+      if (!conditionMet) {
+        setPlayer('player-one', {
+          hand: state.players['player-one'].hand.filter(
+            (card) => card.type !== 'cookie',
+          ),
+        })
+      }
+      return state
+    }
+    case 'BS5-047':
+      setPlayer('player-one', {
+        supportArea: scenarioSupports(
+          'BS5-047-support',
+          conditionMet ? 6 : 0,
+          'green',
+          true,
+        ),
+      })
+      return state
+    case 'BS5-072': {
+      // Keep the fainting source Cookie in the break area. The UI resolves
+      // the pending faint effect by looking up that source instance; replacing
+      // the whole zone here made both A/B routes silently lose the prompt.
+      const source = state.players['player-one'].breakArea.find(
+        (breakCard) => breakCard.id === cardNumber,
+      )
+      setPlayer('player-one', {
+        breakArea: conditionMet
+          ? [
+              ...(source ? [source] : []),
+              scenarioCookie('BS5-072-break-1', 3, 4, 'blue').cookie,
+              scenarioCookie('BS5-072-break-2', 3, 4, 'blue').cookie,
+            ]
+          : source
+            ? [source]
+            : [],
+      })
+      return state
+    }
+    case 'BS5-107':
+      // 這張卡沒有條件句；兩條路徑共用同一個「雙方各磨 2 張」流程，
+      // A/B 只用來確認不會把無條件效果誤標成不可用。
+      return state
+  }
+}
+
+/** BS5 五張陷阱的條件成立／不成立 fixture。 */
+export const createBs5TrapDemoState = (
+  cardNumber: Bs5TrapCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  let state = createCardCheckDemoState(cardNumber)
+  const setPlayer = (playerId: PlayerId, patch: Partial<PlayerState>) => {
+    state = updateDemoPlayer(state, playerId, patch)
+  }
+  const player = state.players['player-one']
+
+  switch (cardNumber) {
+    case 'BS5-021':
+      setPlayer('player-one', {
+        battleArea: player.battleArea.map((entry, index) =>
+          index === 0
+            ? { ...entry, card: { ...entry.card, level: conditionMet ? 3 : 2 } }
+            : entry,
+        ),
+      })
+      return state
+    case 'BS5-043':
+      // 無發動條件；A/B 由玩家的發動／略過與目標選擇路徑驗證。
+      return state
+    case 'BS5-065':
+      setPlayer('player-one', {
+        supportArea: scenarioSupports(
+          'BS5-065-support',
+          conditionMet ? 7 : 6,
+          'green',
+        ),
+      })
+      setPlayer('player-two', {
+        supportArea: scenarioSupports('BS5-065-opponent-support', 2, 'blue'),
+      })
+      return state
+    case 'BS5-087':
+      setPlayer('player-one', {
+        breakArea: conditionMet
+          ? [
+              scenarioCookie('BS5-087-break-1', 3, 4, 'blue').cookie,
+              scenarioCookie('BS5-087-break-2', 3, 4, 'blue').cookie,
+            ]
+          : [],
+      })
+      return state
+    case 'BS5-109':
+      setPlayer('player-one', {
+        discardPile: conditionMet
+          ? Array.from({ length: 16 }, (_, index) =>
+              testSupportCard(`BS5-109-trash-${index + 1}`, 'purple'),
+            )
+          : Array.from({ length: 5 }, (_, index) =>
+              testSupportCard(`BS5-109-trash-${index + 1}`, 'purple'),
+            ),
+      })
+      return state
+  }
+}
+
+/** BS5-111 裝備於龍族餅乾，分別測試 HP 3 以下與 HP 4 以上。 */
+export const createBs5Item111DemoState = (conditionMet: boolean): GameState => {
+  const state = createCardCheckDemoState('BS5-111')
+  const dragonEntry = getCardPoolEntry('BS5-056')
+  if (!dragonEntry) throw new Error('BS5-111 fixture requires BS5-056')
+  const dragon = createCard(dragonEntry, 'player-one', 901) as CookieCard
+  const hpCards = Array.from(
+    { length: conditionMet ? 3 : 4 },
+    (_, index) => testSupportCard(`BS5-111-dragon-hp-${index + 1}`, 'green'),
+  )
+  return updateDemoPlayer(state, 'player-one', {
+    battleArea: [cardCheckBattleEntry(dragon, hpCards, 901)],
+  })
+}
+
+/** BS5-020 條件成立／不成立：己方分別有 2／1 個剩餘 HP 為 1 的餅乾。 */
+export const createBs5ItemConditionDemoState = (
+  cardNumber: Bs5ItemConditionCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  const state = createCardCheckDemoState(cardNumber)
+  const currentEntry = state.players['player-one'].battleArea[0]
+  const second = scenarioCookie(
+    `${cardNumber}-condition-cookie`,
+    1,
+    4,
+    'red',
+    conditionMet ? 1 : 2,
+  )
+  return updateDemoPlayer(state, 'player-one', {
+    battleArea: [
+      {
+        ...currentEntry,
+        hpCards: [testSupportCard(`${cardNumber}-first-hp`)],
+      },
+      cardCheckBattleEntry(second.cookie, second.hpCards, 902),
+    ],
+  })
+}
+
+/** BS5-022 條件成立／不成立：己方是否有真正的 Pitaya Dragon Cookie。 */
+export const createBs5StageConditionDemoState = (
+  cardNumber: Bs5StageConditionCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  const state = createCardCheckDemoState(cardNumber)
+  const target = conditionMet
+    ? (() => {
+        const entry = getCardPoolEntry('BS5-013')
+        if (!entry) throw new Error('BS5-022 fixture requires BS5-013')
+        return createCard(entry, 'player-one', 903) as CookieCard
+      })()
+    : scenarioCookie(`${cardNumber}-non-pitaya`, 3, 5, 'red', 4).cookie
+  const hpCards = Array.from({ length: 4 }, (_, index) =>
+    testSupportCard(`${cardNumber}-source-hp-${index + 1}`, 'red'),
+  )
+  return updateDemoPlayer(state, 'player-one', {
+    battleArea: [cardCheckBattleEntry(target, hpCards, 903)],
+  })
 }
 
 /**

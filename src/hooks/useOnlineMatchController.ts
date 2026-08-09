@@ -15,8 +15,11 @@ import {
   getBlockerCandidates,
   getCurrentReplacementTask,
   getFaintEffectCardCandidates,
+  getFaintEffectCandidateLabel,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
+  getDiscardHandCostCandidates,
+  getSupportEffectCandidates,
   getPendingDecision,
   getReplacementCandidates,
   getRefreshCandidates,
@@ -84,6 +87,12 @@ export function useOnlineMatchController(params: {
     string[]
   >([])
   const [selectedFaintPaymentIds, setSelectedFaintPaymentIds] = useState<
+    string[]
+  >([])
+  const [selectedFaintCostHandIds, setSelectedFaintCostHandIds] = useState<
+    string[]
+  >([])
+  const [selectedFaintCostSupportIds, setSelectedFaintCostSupportIds] = useState<
     string[]
   >([])
   const [selectedAfterDamageTargetIds, setSelectedAfterDamageTargetIds] =
@@ -253,6 +262,23 @@ export function useOnlineMatchController(params: {
       ? pendingFaint.effect.energyCost ?? {}
       : {}
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
+  const faintCostHandAmount = pendingFaint?.cost?.discardHand ?? 0
+  const faintCostSupportAmount = pendingFaint?.cost?.supportToTrash ?? 0
+  const faintCostHandCandidates =
+    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
+      ? getDiscardHandCostCandidates(
+          pendingFaint.cost ?? {},
+          game.players[viewerPlayerId].hand,
+          pendingFaint.sourceInstanceId,
+        )
+      : []
+  const faintCostSupportCandidates =
+    pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId &&
+    faintCostSupportAmount > 0
+      ? getSupportEffectCandidates(game, pendingFaint.context).map(
+          (support) => support.card,
+        )
+      : []
   const faintPaymentCandidates =
     pendingFaint &&
     pendingFaint.sourcePlayerId === viewerPlayerId &&
@@ -288,6 +314,28 @@ export function useOnlineMatchController(params: {
       }
       if (current.length >= faintEnergyCostTotal) return current
       if (!faintPaymentCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
+  const toggleFaintCostHand = (instanceId: string) => {
+    if (faintCostHandAmount === 0) return
+    setSelectedFaintCostHandIds((current) => {
+      if (current.includes(instanceId)) return current.filter((id) => id !== instanceId)
+      if (current.length >= faintCostHandAmount) return current
+      if (!faintCostHandCandidates.some((card) => card.instanceId === instanceId)) {
+        return current
+      }
+      return [...current, instanceId]
+    })
+  }
+  const toggleFaintCostSupport = (instanceId: string) => {
+    if (faintCostSupportAmount === 0) return
+    setSelectedFaintCostSupportIds((current) => {
+      if (current.includes(instanceId)) return current.filter((id) => id !== instanceId)
+      if (current.length >= faintCostSupportAmount) return current
+      if (!faintCostSupportCandidates.some((card) => card.instanceId === instanceId)) {
         return current
       }
       return [...current, instanceId]
@@ -695,15 +743,26 @@ export function useOnlineMatchController(params: {
     setSelectedFaintTargetIds,
     selectedFaintPaymentIds,
     setSelectedFaintPaymentIds,
+    selectedFaintCostHandIds,
+    setSelectedFaintCostHandIds,
+    selectedFaintCostSupportIds,
+    setSelectedFaintCostSupportIds,
     faintEnergyCost,
     faintEnergyCostTotal,
     faintPaymentCandidates,
     faintPaymentValid,
     toggleFaintPayment,
+    faintCostHandAmount,
+    faintCostHandCandidates,
+    toggleFaintCostHand,
+    faintCostSupportAmount,
+    faintCostSupportCandidates,
+    toggleFaintCostSupport,
     pendingFaint,
     faintSourceCard,
     faintCandidates,
     faintCardCandidates,
+    faintCandidateLabel: getFaintEffectCandidateLabel(game),
     faintTargetIds,
     hasFaint,
     faintMin: faintMinMax.min,

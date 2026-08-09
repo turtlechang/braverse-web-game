@@ -51,13 +51,16 @@ export const getLegalTurnCommands = (
   const replacementTask = getCurrentReplacementTask(state)
   if (replacementTask) {
     if (replacementTask.playerId !== playerId) return []
+    const candidates = getReplacementCandidates(state, playerId)
+    const canSkip =
+      state.players[playerId].battleArea.length > 0 || candidates.length === 0
     return [
-      ...getReplacementCandidates(state, playerId).map((card) => ({
+      ...candidates.map((card) => ({
         kind: 'replace-cookie' as const,
         playerId,
         instanceId: card.instanceId,
       })),
-      { kind: 'skip-replacement', playerId },
+      ...(canSkip ? [{ kind: 'skip-replacement' as const, playerId }] : []),
     ]
   }
 

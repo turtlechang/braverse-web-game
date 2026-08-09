@@ -33,6 +33,7 @@ import {
   getTrashToDeckCandidates,
   getTrashToHandCandidates,
   getTrashToSupportCandidates,
+  isSkillEffectConditionDeferredUntilCost,
   isEnergyColorCompatibleWithCost,
   isEffectConditionMet,
   isEffectUntargeted,
@@ -171,6 +172,12 @@ export function usePendingEffect(params: {
           : (currentEffect.target ?? null)
         : null
 
+  const stagedCostSelectedTargetId =
+    pendingEffect &&
+    currentTargetSelector?.costSelected &&
+    !pendingEffect.skillActivated
+      ? pendingEffect.selectedHpToTrashTargetIds[0]
+      : undefined
   const effectTargetCandidates =
     pendingEffect &&
     currentEffect &&
@@ -183,11 +190,26 @@ export function usePendingEffect(params: {
               pendingEffect.context,
               currentEffect,
             )
-          : getEffectTargetCandidates(
-              game,
-              pendingEffect.context,
-              currentTargetSelector,
-            )
+          : (() => {
+              // A stage/item/cookie ability keeps all costs in local pending
+              // UI state until the final confirmation. `costSelected` effects
+              // therefore cannot rely on GameState.costRecord yet; bridge the
+              // selected HP-cost Cookie into the regular target candidates.
+              const selector = stagedCostSelectedTargetId
+                ? { ...currentTargetSelector, costSelected: false }
+                : currentTargetSelector
+              const candidates = getEffectTargetCandidates(
+                game,
+                pendingEffect.context,
+                selector,
+              )
+              return stagedCostSelectedTargetId
+                ? candidates.filter(
+                    (cookie) =>
+                      cookie.card.instanceId === stagedCostSelectedTargetId,
+                  )
+                : candidates
+            })()
       : []
 
   const supportEffectCandidates =
@@ -237,11 +259,11 @@ export function usePendingEffect(params: {
     currentEffect &&
     (currentEffect.kind === 'hand-to-break' ||
       currentEffect.kind === 'break-to-hand' ||
+      currentEffect.kind === 'hand-to-support' ||
       currentEffect.kind === 'hand-to-hp' ||
       currentEffect.kind === 'rest-support' ||
       currentEffect.kind === 'support-to-hp' ||
       currentEffect.kind === 'cycle-hp' ||
-      currentEffect.kind === 'rest-support-and-damage' ||
       currentEffect.kind === 'field-to-deck-bottom' ||
       currentEffect.kind === 'hand-to-battle' ||
       currentEffect.kind === 'opponent-trash-to-break' ||
@@ -299,6 +321,33 @@ export function usePendingEffect(params: {
       ? getTrashToDeckCandidates(game, pendingEffect.context, currentEffect)
       : []
 
+  const restSupportAndDamageSupportCandidates =
+    pendingEffect && currentEffect?.kind === 'rest-support-and-damage'
+      ? getSupportEffectCandidates(game, pendingEffect.context, {
+          side: currentEffect.supportSide,
+          activeOnly: currentEffect.activeOnly,
+        })
+          .filter(
+            (support) =>
+              (currentEffect.supportEnergyColor === undefined ||
+                support.card.energyColor ===
+                  currentEffect.supportEnergyColor) &&
+              !pendingEffect.selectedPaymentIds.includes(
+                support.card.instanceId,
+              ),
+          )
+          .map((support) => support.card)
+      : []
+
+  const restSupportAndDamageTargetCandidates =
+    pendingEffect && currentEffect?.kind === 'rest-support-and-damage'
+      ? getEffectTargetCandidates(
+          game,
+          pendingEffect.context,
+          currentEffect.target,
+        ).map((cookie) => cookie.card)
+      : []
+
   const effectTargetIds = faintActive
     ? faintTargetIds
     : afterDamageActive
@@ -307,6 +356,12 @@ export function usePendingEffect(params: {
           ...effectTargetCandidates.map((cookie) => cookie.card.instanceId),
           ...fieldToTrashStageCandidate.map((c) => c.instanceId),
           ...genericEffectCandidateCards.map((card) => card.instanceId),
+          ...restSupportAndDamageSupportCandidates.map(
+            (card) => card.instanceId,
+          ),
+          ...restSupportAndDamageTargetCandidates.map(
+            (card) => card.instanceId,
+          ),
           ...handToBreakBySumCandidates.map((card) => card.instanceId),
         ])
 
@@ -377,6 +432,9 @@ export function usePendingEffect(params: {
             (support) =>
               !support.rested &&
               !pendingEffect.selectedCostSupportToTrashIds.includes(
+                support.card.instanceId,
+              ) &&
+              !pendingEffect.selectedTargetIds.includes(
                 support.card.instanceId,
               ) &&
               (pendingEffect.selectedPaymentIds.includes(
@@ -460,6 +518,7 @@ export function usePendingEffect(params: {
             pendingEffect.selectedDiscardHandIds.includes(card.instanceId),
         )
       : []
+
   const skillDiscardHandTargetIds = new Set(
     skillCostDiscardHandCandidates.map((card) => card.instanceId),
   )
@@ -662,18 +721,13 @@ export function usePendingEffect(params: {
       return
     }
 
-    const viewerBlocks =
-      (game.pendingRefresh?.playerId === viewerPlayerId) ||
-      (game.pendingOnPlay?.playerId === viewerPlayerId) ||
-      (game.pendingInspectDeck?.playerId === viewerPlayerId) ||
-      (game.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
-      (game.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
-      (game.pendingDrawUpTo?.playerId === viewerPlayerId) ||
-      (game.pendingStageTrigger?.playerId === viewerPlayerId) ||
-      (game.pendingAfterDamageEffects &&
-        game.pendingAfterDamageEffects.length > 0 &&
-        game.pendingAfterDamageEffects[0].sourcePlayerId === viewerPlayerId)
-    if (viewerBlocks) return
+    const hasBlockingDecision = Boolean(
+      game.pendingReplacement ||
+        game.pendingRefresh ||
+        game.pendingOnPlay ||
+        getPendingDecision(game),
+    )
+    if (hasBlockingDecision) return
 
     const timer = window.setTimeout(() => {
       setPendingEffect(suspendedEffect)
@@ -683,15 +737,7 @@ export function usePendingEffect(params: {
   }, [
     suspendedEffect,
     pendingEffect,
-    game.pendingRefresh,
-    game.pendingOnPlay,
-    game.pendingInspectDeck,
-    game.pendingRevealTopDeck,
-    game.pendingOptionalCostAttack,
-    game.pendingDrawUpTo,
-    game.pendingStageTrigger,
-    game.pendingAfterDamageEffects,
-    game.status,
+    game,
     viewerPlayerId,
   ])
 
@@ -717,7 +763,8 @@ export function usePendingEffect(params: {
       sourceInstanceId: card.instanceId,
     }
     const availableEffects = card.skill.effects.filter((effect) =>
-      isEffectConditionMet(nextGame, context, effect),
+      isEffectConditionMet(nextGame, context, effect) ||
+      isSkillEffectConditionDeferredUntilCost(card.skill!, effect),
     )
 
     if (availableEffects.length === 0) {
@@ -1123,6 +1170,38 @@ export function usePendingEffect(params: {
       return
     }
 
+    if (currentEffect.kind === 'rest-support-and-damage') {
+      const supportCandidateIds = new Set(
+        restSupportAndDamageSupportCandidates.map(
+          (card) => card.instanceId,
+        ),
+      )
+      const targetCandidateIds = new Set(
+        restSupportAndDamageTargetCandidates.map(
+          (card) => card.instanceId,
+        ),
+      )
+      const isSupport = supportCandidateIds.has(instanceId)
+      const isTarget = targetCandidateIds.has(instanceId)
+      if (!isSupport && !isTarget) return
+
+      const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
+      const selectedInGroup = pendingEffect.selectedTargetIds.filter((id) =>
+        isSupport ? supportCandidateIds.has(id) : targetCandidateIds.has(id),
+      )
+      const max = isSupport
+        ? currentEffect.supportAmount
+        : currentEffect.target.max
+      const selectedTargetIds = isSelected
+        ? pendingEffect.selectedTargetIds.filter((id) => id !== instanceId)
+        : selectedInGroup.length < max
+          ? [...pendingEffect.selectedTargetIds, instanceId]
+          : pendingEffect.selectedTargetIds
+
+      setPendingEffect({ ...pendingEffect, selectedTargetIds })
+      return
+    }
+
     const max =
       currentEffect.kind === 'break-to-trash' ||
         currentEffect.kind === 'trash-to-hand' ||
@@ -1152,8 +1231,6 @@ export function usePendingEffect(params: {
           ? 1
         : currentEffect.kind === 'cycle-hp'
           ? 1
-        : currentEffect.kind === 'rest-support-and-damage'
-          ? currentEffect.supportAmount + currentEffect.target.max
         : currentEffect.kind === 'field-to-deck-bottom'
           ? currentEffect.target.max
         : currentEffect.kind === 'set-active' && currentEffect.selectable
@@ -1188,7 +1265,8 @@ export function usePendingEffect(params: {
   const toggleSkillPayment = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
     if (
-      pendingEffect.selectedCostSupportToTrashIds.includes(instanceId)
+      pendingEffect.selectedCostSupportToTrashIds.includes(instanceId) ||
+      pendingEffect.selectedTargetIds.includes(instanceId)
     ) {
       return
     }
@@ -1481,6 +1559,13 @@ export function usePendingEffect(params: {
                   (support) => support.card.instanceId === instanceId,
                 )?.card.name ?? instanceId,
             )
+          : currentEffect.kind === 'hand-to-support'
+            ? pendingEffect.selectedTargetIds.map(
+                (instanceId) =>
+                  genericEffectCandidateCards.find(
+                    (card) => card.instanceId === instanceId,
+                  )?.name ?? instanceId,
+              )
           : currentEffect.kind === 'trash-to-battle' ||
               currentEffect.kind === 'trash-to-support'
             ? pendingEffect.selectedTargetIds.map(
@@ -1572,6 +1657,95 @@ export function usePendingEffect(params: {
                 trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
               })
+      const activationInterrupted =
+        !pendingEffect.skillActivated &&
+        (activatedGame.status !== 'playing' ||
+          Boolean(
+            activatedGame.pendingReplacement ||
+              activatedGame.pendingRefresh ||
+              activatedGame.pendingOnPlay ||
+              getPendingDecision(activatedGame),
+          ))
+
+      if (activationInterrupted) {
+        setGame(activatedGame)
+        setPendingEffect(null)
+
+        if (activatedGame.status !== 'playing') {
+          setSuspendedEffect(null)
+          setMessage(
+            activatedGame.result?.reason === 'no-cookie-available'
+              ? `${pendingEffect.sourceCard.name}支付代價後，戰鬥區沒有餅乾且手牌沒有可補位的餅乾，對戰結束。`
+              : `${pendingEffect.sourceCard.name}支付代價後，對戰已結束。`,
+          )
+          return
+        }
+
+        setSuspendedEffect({
+          ...pendingEffect,
+          selectedTargetIds: [],
+          selectedPaymentIds: [],
+          selectedCostSupportToTrashIds: [],
+          selectedDiscardHandIds: [],
+          selectedHpToTrashTargetIds: [],
+          selectedTrashBattleCookieIds: [],
+          selectedTrashToDeckBottomIds: [],
+          selectedTrashToDeckIds: [],
+          skillActivated: true,
+        })
+        setMessage(
+          `${pendingEffect.sourceCard.name}已支付代價；請先完成目前的待處理操作，再繼續處理效果。`,
+        )
+        return
+      }
+
+      const deferredAfterHpCost =
+        !pendingEffect.skillActivated &&
+        pendingEffect.sourceKind === 'cookie' &&
+        isSkillEffectConditionDeferredUntilCost(pendingEffect.skill, currentEffect)
+
+      if (deferredAfterHpCost) {
+        const hpCardId = activatedGame.costRecord?.hpTrashTopCardInstanceId
+        const revealedHpCard = hpCardId
+          ? activatedGame.players[
+              pendingEffect.context.sourcePlayerId
+            ].discardPile.find((card) => card.instanceId === hpCardId)
+          : undefined
+        const revealedType =
+          revealedHpCard?.type ?? activatedGame.costRecord?.hpTrashTopCardType
+        const typeLabel =
+          revealedType === 'cookie'
+            ? '餅乾'
+            : revealedType === 'item'
+              ? '物品'
+              : revealedType === 'trap'
+                ? '陷阱'
+                : revealedType === 'stage'
+                  ? '場景'
+                  : '未知'
+        const costResult = revealedHpCard
+          ? `${pendingEffect.sourceCard.name} 支付 HP 費用，丟棄的 HP 卡是「${revealedHpCard.name}」（${typeLabel}）。`
+          : `${pendingEffect.sourceCard.name} 支付 HP 費用，丟棄的 HP 卡類型是「${typeLabel}」。`
+
+        setGame(activatedGame)
+        setMessage(costResult)
+        setEffectHistory((history) => [costResult, ...history].slice(0, 4))
+
+        if (!activatedGame.pendingAbilityEffect) {
+          setPendingEffect(null)
+          return
+        }
+
+        setPendingEffect({
+          ...pendingEffect,
+          selectedTargetIds: [],
+          selectedHpToTrashTargetIds: [],
+          skillActivated: true,
+          ...(revealedHpCard ? { revealedHpCard } : {}),
+        })
+        return
+      }
+
       const nextGame = applyGameCommand(activatedGame, {
         kind: 'resolve-ability-effect',
         playerId: pendingEffect.context.sourcePlayerId,
@@ -1752,12 +1926,16 @@ export function usePendingEffect(params: {
         `已選擇「${currentEffect.modes[modeIndex]?.label ?? ''}」。`,
       )
     }
-    setPendingEffect({
-      ...pendingEffect,
-      effects: expanded,
-      chooseOneModes: [...(pendingEffect.chooseOneModes ?? []), modeIndex],
-      selectedTargetIds: [],
-    })
+    setPendingEffect(
+      pendingEffect.skillActivated && pendingEffect.effectIndex >= expanded.length
+        ? null
+        : {
+            ...pendingEffect,
+            effects: expanded,
+            chooseOneModes: [...(pendingEffect.chooseOneModes ?? []), modeIndex],
+            selectedTargetIds: [],
+          },
+    )
   }
 
   return {
@@ -1798,6 +1976,8 @@ export function usePendingEffect(params: {
     trashToHandCandidates,
     trashToDeckCandidates,
     genericEffectCandidateCards,
+    restSupportAndDamageSupportCandidates,
+    restSupportAndDamageTargetCandidates,
     skillCostSupportCandidates,
     skillEnergyPaymentValid,
     skillPaymentLabel,

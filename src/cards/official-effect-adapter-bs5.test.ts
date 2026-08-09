@@ -208,6 +208,53 @@ describe('BS5 candidate RED effect adapter', () => {
       })
     })
 
+    it('BS5-007 Fire Spirit Cookie faint：棄 1 張紅色物品作為代價，目標只在對手', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-007'))).toMatchObject({
+        faint: true,
+        cost: {
+          energy: {},
+          discardHand: 1,
+          discardHandColor: 'red',
+          discardHandType: 'item',
+        },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+      })
+    })
+
+    it('BS5-011 Starfruit Cookie faint：只選對手 LV.1 餅乾', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-011'))).toMatchObject({
+        faint: true,
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          },
+        ],
+      })
+    })
+
+    it('BS5-047 Cotton Cookie faint：先放 1 張支援到棄牌區，再選 1 張支援活躍', () => {
+      expect(convertOfficialCookieSkill(findBs5Card('BS5-047'))).toMatchObject({
+        faint: true,
+        effects: [
+          { kind: 'support-to-trash', amount: 1 },
+          {
+            kind: 'set-active',
+            supportCount: 1,
+            selectable: true,
+            optional: false,
+          },
+        ],
+      })
+    })
+
     it('BS5-013 On Play，代價棄 1 張手牌 {R} Cookie', () => {
       expect(convertOfficialCookieSkill(findBs5Card('BS5-013'))).toMatchObject({
         trigger: 'on-play',

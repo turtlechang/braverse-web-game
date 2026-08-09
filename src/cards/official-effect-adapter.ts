@@ -40,7 +40,8 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
   }
 
   if (card.type === 'flip') {
-    return card.flipText
+    // 部分官方 FLIP 記錄將效果文案放在 skill.text；runtime 仍須視為 FLIP。
+    return card.flipText ?? card.skill.text
   }
 
   return card.attackText
@@ -196,7 +197,7 @@ const stripEffectText = (text: string): string =>
 const parseAbilityCost = (text: string): AbilityCost => {
   const parsed = parseOfficialCardText(text)
   const discardMatch = text.match(
-    /(?:<|《)\s*Discard\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?card(?:s)?\.\s*(?:>|》)/i,
+    /(?:<|《)\s*Discard\s+(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:(item|trap|cookie)\s+)?card(?:s)?\.\s*(?:>|》)/i,
   )
   const supportToTrashMatch = text.match(
     /(?:<|《)\s*Place\s+(\d+)\s+card(?:s)?\s+from\s+your\s+support\s+area\s+(?:in|into)\s+the\s+trash\.?\s*(?:>|》)/i,
@@ -231,6 +232,7 @@ const parseAbilityCost = (text: string): AbilityCost => {
     discardHandColor: discardMatch?.[2]
       ? costColors[discardMatch[2].toUpperCase() as keyof typeof costColors]
       : undefined,
+    discardHandType: discardMatch?.[3]?.toLowerCase() as AbilityCost['discardHandType'],
     supportToTrash: supportToTrashMatch
       ? Number(supportToTrashMatch[1])
       : undefined,
@@ -1148,14 +1150,14 @@ export const convertOfficialCardEffects = (
     ],
     'BS3-063': [
       { kind: 'support-to-hand', amount: 1 },
-      { kind: 'hand-to-support', amount: 1, rested: true },
+      { kind: 'hand-to-support', amount: 1, rested: true, optional: true },
     ],
     'BS3-064': [
       { kind: 'support-to-hand', amount: 1 },
       { kind: 'draw-up-to', max: 1 },
     ],
     'BS3-065': [
-      { kind: 'hand-to-support', amount: 1, rested: true },
+      { kind: 'hand-to-support', amount: 1, rested: true, optional: true },
       {
         kind: 'draw-up-to',
         max: 1,
@@ -1939,9 +1941,25 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'opponent-trash-count-at-least', count: 15 },
       },
       {
-        kind: 'deck-to-trash',
-        amount: 3,
-        side: 'self',
+        kind: 'choose-one',
+        modes: [
+          {
+            label: '將牌庫頂 3 張牌放入自己的棄牌區',
+            effects: [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
+          },
+          {
+            label: '將牌庫頂 2 張牌放入自己的棄牌區',
+            effects: [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+          },
+          {
+            label: '將牌庫頂 1 張牌放入自己的棄牌區',
+            effects: [{ kind: 'deck-to-trash', amount: 1, side: 'self' }],
+          },
+          {
+            label: '不將牌庫頂的牌放入棄牌區',
+            effects: [],
+          },
+        ],
         condition: { kind: 'opponent-trash-count-at-least', count: 15 },
       },
     ],
@@ -2149,6 +2167,25 @@ export const convertOfficialCardEffects = (
         target: { side: 'opponent', min: 0, max: 1 },
       },
     ],
+    // BS5-007 Fire Spirit Cookie：只選對手餅乾，不能把「this Cookie faints」
+    // 誤判成來源自己的傷害目標。
+    'BS5-007': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS5-011 Starfruit Cookie：<can be used as {R}.> Select up to 1 LV.1
+    // opponent Cookie. 1 damage. 這個句式不是「of ... Cookies」，因此要
+    // 明確覆寫目標，避免 parseTarget 把來源 faint 句誤讀成 self。
+    'BS5-011': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
     // BS5-010 Starch Noodle Cookie：【On Play】對手休息中 LV.2 以下餅乾 2 傷害。
     'BS5-010': [
       {
@@ -2309,6 +2346,18 @@ export const convertOfficialCardEffects = (
       {
         kind: 'return-to-hand',
         target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
+    ],
+    // BS5-047 Cotton Cookie：【When this Cookie faints】<Place 1 card from
+    // support area into the trash.> Set 1 support card active. 代價動作必須
+    // 先進入效果佇列，才能在 UI 中支付後再選擇要恢復的支援卡。
+    'BS5-047': [
+      { kind: 'support-to-trash', amount: 1 },
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        selectable: true,
+        optional: false,
       },
     ],
     // BS5-028 Mango Cookie：【On Play】<{Y}> If your break area is LV.3 or
@@ -2790,6 +2839,8 @@ export const convertOfficialCardEffects = (
     ],
     'BS5-004': [],
     'BS5-009': [{ kind: 'draw-up-to', max: 1 }],
+    'BS5-038': [{ kind: 'draw-up-to', max: 1 }],
+    'BS5-046': [],
     // 其他四色的同款 flip：附著 +1 HP（041/082/095）與一般抽 1（049/090）。
     // 主效果只做狀態判定，能力實作各自在 exactFlipEffects。
     'BS5-041': [],
@@ -5045,7 +5096,8 @@ export const convertOfficialAttackEffects = (
 export const convertOfficialFlipAbility = (
   card: OfficialCardRecord,
 ): FlipAbility | undefined => {
-  if (card.type !== 'flip' || !card.flipText) {
+  const flipText = card.flipText ?? card.skill.text
+  if (card.type !== 'flip' || !flipText) {
     return undefined
   }
 
@@ -5057,11 +5109,11 @@ export const convertOfficialFlipAbility = (
   // 與同卡基礎版本一致的抽牌效果。
   if (
     card.cardNumber === 'BS4-032@1' &&
-    /^<\{Y\}\{Y\}>\s*Creamcraft Magic!\s*$/i.test(card.flipText.trim())
+    /^<\{Y\}\{Y\}>\s*Creamcraft Magic!\s*$/i.test(flipText.trim())
   ) {
     return {
       text: 'Draw up to 1 card from your deck.',
-      cost: parseAbilityCost(card.flipText),
+      cost: parseAbilityCost(flipText),
       effects: [{ kind: 'draw-up-to', max: 1 }],
     }
   }
@@ -5085,6 +5137,10 @@ export const convertOfficialFlipAbility = (
     // 剩餘 HP 計算走 helpers.getCookieEffectiveHp。代價 <Discard 1 card.>
     // 由 parseAbilityCost 解析。
     'BS5-004': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS5-046': {
       effects: [],
       attachedHpBonus: 1,
     },
@@ -5195,8 +5251,8 @@ export const convertOfficialFlipAbility = (
   const exactFlip = exactFlipEffects[cardKey]
   if (exactFlip) {
     return {
-      text: card.flipText,
-      cost: exactFlip.cost ?? parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: exactFlip.cost ?? parseAbilityCost(flipText),
       effects: exactFlip.effects,
       ...(exactFlip.attachedHpBonus !== undefined
         ? { attachedHpBonus: exactFlip.attachedHpBonus }
@@ -5204,13 +5260,13 @@ export const convertOfficialFlipAbility = (
     }
   }
 
-  const stripped = stripEffectText(card.flipText)
+  const stripped = stripEffectText(flipText)
   const drawAmount = parseSimpleDraw(stripped)
 
   if (drawAmount !== null) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: isOptionalDraw(stripped)
         ? [{ kind: 'draw-up-to', max: drawAmount }]
         : [{ kind: 'draw', amount: drawAmount }],
@@ -5220,8 +5276,8 @@ export const convertOfficialFlipAbility = (
   const conditionalDrawAmount = parseConditionalDraw(stripped)
   if (conditionalDrawAmount !== null) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: [
         {
           kind: 'draw-up-to',
@@ -5232,12 +5288,12 @@ export const convertOfficialFlipAbility = (
     }
   }
 
-  const target = parseTarget(card.flipText)
-  const damageMatch = card.flipText.match(/receives?\s+(\d+)\s+damage/i)
+  const target = parseTarget(flipText)
+  const damageMatch = flipText.match(/receives?\s+(\d+)\s+damage/i)
   if (target && damageMatch) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: [
         {
           kind: 'damage',
@@ -5254,8 +5310,8 @@ export const convertOfficialFlipAbility = (
 
   if (gainHpMatch) {
     return {
-      text: card.flipText,
-      cost: parseAbilityCost(card.flipText),
+      text: flipText,
+      cost: parseAbilityCost(flipText),
       effects: [
         {
           kind: 'gain-hp',
@@ -5925,6 +5981,15 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { red: 1 },
     discardHand: 0,
     hpToTrash: { energyColor: 'red', minLevel: 2 },
+  },
+  // BS5-007 Fire Spirit Cookie：【When this Cookie faints】<Discard 1 {R}
+  // item card from your hand.> 這個棄牌是昏厥技能的代價，不能只依賴一般
+  // faint 效果轉接，否則會出現技能提示但沒有支付入口的狀態。
+  'BS5-007': {
+    energy: {},
+    discardHand: 1,
+    discardHandColor: 'red',
+    discardHandType: 'item',
   },
   // BS5-013 Pitaya Dragon Cookie：【On Play】<Discard 1 {R} Cookie from your
   // hand.> 紅龍 Cookie 是 DRAGON 關鍵字，本身是餅乾。

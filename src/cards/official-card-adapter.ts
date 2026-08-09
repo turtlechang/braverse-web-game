@@ -78,6 +78,20 @@ export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
 const normalizeOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
+  // 部分官方 FLIP 記錄把 FLIP 文案誤放在 skill.text；在轉接邊界移回
+  // flipText，避免 runtime 卡沒有 FlipAbility 而產生空白、無法結算的 FLIP 視窗。
+  if (
+    sourceCard.type === 'flip' &&
+    !sourceCard.flipText &&
+    sourceCard.skill.text
+  ) {
+    return {
+      ...sourceCard,
+      skill: { ...sourceCard.skill, text: null },
+      flipText: sourceCard.skill.text,
+    }
+  }
+
   // 官方 BS4-032@1 異圖 API 記錄與其官方卡圖的 HP、攻擊與 FLIP 欄位不一致；
   // 以卡圖上的正式文字與數值修正轉換邊界，不改動原始匯入資料。
   if (

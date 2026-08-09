@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import officialGreenSample from '../../data/cards/official-starter-deck-green.en.json'
 import officialBS3Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
+import officialBS5Inventory from '../../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
 import officialSample from '../../data/cards/official-sample.en.json'
 import officialYellowSample from '../../data/cards/official-starter-deck-yellow.en.json'
 import {
@@ -331,6 +332,46 @@ describe('official card adapter', () => {
           text: 'Draw up to 1 card from your deck.',
           effects: [{ kind: 'draw-up-to', max: 1 }],
         },
+      },
+    })
+  })
+
+  it('normalizes BS5 FLIP text stored in skill.text and converts both effect forms', () => {
+    const records = officialBS5Inventory.cards as OfficialCardRecord[]
+    const findBs5Card = (cardNumber: string) => {
+      const card = records.find(
+        (candidate) => candidate.cardNumber === cardNumber,
+      )
+
+      if (!card) throw new Error(`Missing BS5 card ${cardNumber}`)
+      return card
+    }
+
+    const cherry = convertOfficialCardToGameCard(findBs5Card('BS5-038'))
+    const goblin = convertOfficialCardToGameCard(findBs5Card('BS5-046'))
+
+    expect(cherry).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        flip: {
+          text: 'Draw up to 1 card from your deck.',
+          effects: [{ kind: 'draw-up-to', max: 1 }],
+        },
+        effectText: 'Draw up to 1 card from your deck.',
+      },
+    })
+    expect(goblin).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        flip: {
+          text: '<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.',
+          cost: { discardHand: 1 },
+          effects: [],
+          attachedHpBonus: 1,
+        },
+        effectText:
+          '<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.',
+        effects: [],
       },
     })
   })

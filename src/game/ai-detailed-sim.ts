@@ -161,7 +161,8 @@ const computeBehaviorMetrics = (
   attackEvents: AttackEvent[],
   metrics: AiMatchMetrics,
   turnProgression: TurnProgression,
-  stuckCount: number,
+  invalidActionCount: number,
+  deadlockCount: number,
   r7TrapSkipCount: number,
   lethalOpportunityCount: number,
   lethalConversionCount: number,
@@ -216,8 +217,8 @@ const computeBehaviorMetrics = (
     overkillRatio,
     avgOverkillAmount: avgOverkill,
     skillUsageCount: metrics.skillActivations,
-    invalidActionCount: 0,
-    deadlockCount: stuckCount,
+    invalidActionCount,
+    deadlockCount,
     noDamageTurns: turnProgression.noDamageTurns,
     noBoardChangeTurns: turnProgression.noBoardChangeTurns,
     consecutiveNoProgressMax: turnProgression.consecutiveNoProgressMax,
@@ -265,6 +266,8 @@ export const simulateAiMatchDetailed = (
   let r6cLowQualityCount = 0
   let r6cForcedCount = 0
   let r6cBreakWorsenedCount = 0
+  let invalidActionCount = 0
+  let deadlockCount = 0
 
   resetR10Counters()
 
@@ -358,10 +361,16 @@ export const simulateAiMatchDetailed = (
       prevPlayerTwoBattleHp = countBattleAreaHp(decision.state, 'player-two')
     }
 
-    if (decision.action === 'error' || decision.state === state) {
+    if (decision.action === 'error') {
+      invalidActionCount += 1
       error =
         decision.error ??
         `AI 未推進狀態：${decision.description}`
+      break
+    }
+    if (decision.state === state) {
+      deadlockCount += 1
+      error = `AI 未推進狀態：${decision.description}`
       break
     }
     state = decision.state
@@ -387,7 +396,8 @@ export const simulateAiMatchDetailed = (
     attackEvents,
     metrics,
     turnProgression,
-    error && !turnCapReached ? 1 : 0,
+    invalidActionCount,
+    deadlockCount,
     r7TrapSkipCount,
     0,
     0,

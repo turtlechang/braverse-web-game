@@ -115,14 +115,29 @@ export interface BattleUiMatchLike {
   setSelectedFaintPaymentIds: (
     value: string[] | ((current: string[]) => string[]),
   ) => void
+  selectedFaintCostHandIds: string[]
+  setSelectedFaintCostHandIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  selectedFaintCostSupportIds: string[]
+  setSelectedFaintCostSupportIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
   faintSourceCard: CookieCard | null
   faintCandidates: CookieInBattle[]
   faintCardCandidates: GameCard[]
+  faintCandidateLabel: string
   faintEnergyCost: EnergyCost
   faintEnergyCostTotal: number
   faintPaymentCandidates: GameCard[]
   faintPaymentValid: boolean
   toggleFaintPayment: (instanceId: string) => void
+  faintCostHandAmount: number
+  faintCostHandCandidates: GameCard[]
+  toggleFaintCostHand: (instanceId: string) => void
+  faintCostSupportAmount: number
+  faintCostSupportCandidates: GameCard[]
+  toggleFaintCostSupport: (instanceId: string) => void
   faintMin: number
   faintMax: number
   // After-damage

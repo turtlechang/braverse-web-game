@@ -1,6 +1,7 @@
-name: AI Browser Validation
+name: Browser Smoke
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
@@ -8,25 +9,105 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: browser-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  ai-browser-validation:
-    name: Playwright AI, Deck Editor, and Online Match Validation
+  detect-browser-impact:
+    name: Detect Browser-impacting changes
     runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.scope.outputs.should-run }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: scope
+        name: Decide whether Browser smoke is required
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ "${GITHUB_EVENT_NAME}" != "pull_request" ]]; then
+            echo "should-run=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if git diff --quiet "${BASE_SHA}" "${HEAD_SHA}" -- \
+            .github/workflows \
+            data/cards \
+            data/candidates \
+            data/decks \
+            public \
+            scripts \
+            server \
+            src \
+            index.html \
+            package.json \
+            package-lock.json \
+            eslint.config.js \
+            tsconfig.json \
+            tsconfig.app.json \
+            tsconfig.node.json \
+            vercel.json \
+            vite.config.ts; then
+            echo "should-run=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "should-run=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+  browser-smoke:
+    name: Playwright smoke
+    needs: detect-browser-impact
+    if: needs.detect-browser-impact.outputs.should-run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build
       - run: npx playwright install chromium --with-deps
-      - run: npm run test:ai:browser
-      - run: npm run test:deck:browser
-      - run: npm run test:online:match:browser
-      - uses: actions/upload-artifact@v4
+      - run: npm run test:browser:smoke
+      - uses: actions/upload-artifact@v5
         if: failure()
         with:
           name: test-results
           path: test-results/
           retention-days: 7
+
+  browser-smoke-pr-gate:
+    name: Browser Smoke PR Gate
+    needs: [detect-browser-impact, browser-smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Browser smoke result
+        shell: bash
+        env:
+          DETECT_RESULT: ${{ needs.detect-browser-impact.result }}
+          SHOULD_RUN: ${{ needs.detect-browser-impact.outputs.should-run }}
+          SMOKE_RESULT: ${{ needs.browser-smoke.result }}
+        run: |
+          if [[ "${DETECT_RESULT}" != "success" ]]; then
+            echo "Browser impact detection failed."
+            exit 1
+          fi
+
+          if [[ "${SHOULD_RUN}" == "false" ]]; then
+            echo "No Browser-impacting files changed; Playwright smoke was skipped."
+            exit 0
+          fi
+
+          if [[ "${SHOULD_RUN}" == "true" && "${SMOKE_RESULT}" == "success" ]]; then
+            echo "Playwright Browser smoke passed."
+            exit 0
+          fi
+
+          echo "Playwright Browser smoke did not pass: ${SMOKE_RESULT}"
+          exit 1

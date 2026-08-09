@@ -11,7 +11,7 @@ import {
   clearDepartedCookieModifiers,
   recordCookieDepartures,
 } from '../replacement'
-import { markSupportAreaDecreased } from '../skills'
+import { getFaintTriggeredCost, markSupportAreaDecreased } from '../skills'
 import { getRefreshCandidates } from '../refresh'
 import type {
   CardEffect,
@@ -39,6 +39,7 @@ import {
   getHandToBreakBySumCandidates,
   getEffectTargetCandidates,
   getEffectSelectionCandidates,
+  getEffectSelectionLimits,
   getSupportEffectCandidates,
   getCookieOwnerId,
   getHandToBattleCandidates,
@@ -51,6 +52,7 @@ import {
   getTrashToSupportCandidates,
   isBlockedByOpponentEffectProtection,
   isEffectConditionMet,
+  requiresEffectCardSelection,
   selectEffectTargets,
   validateBreakToTrashTargets,
 } from './targeting'
@@ -153,12 +155,19 @@ const resolveDamageOutcome = (
   for (const cookie of departedCookies) {
     const faintSkill = cookie.skill
     if (faintSkill && faintSkill.faint) {
+      const faintCost = getFaintTriggeredCost(faintSkill)
+      let faintCostAttached = false
       for (const effect of faintSkill.effects) {
         const context = {
           sourcePlayerId: damagedPlayerId,
           sourceInstanceId: cookie.instanceId,
           sourceCardName: cookie.name,
         }
+        // A faint trigger is queued only while its condition is true.  The
+        // condition is checked again when the queued effect resolves because
+        // an earlier effect in the same trigger may change the game state
+        // (for example, BS3-061 sacrifices support before checking 5+).
+        if (!isEffectConditionMet(faintState, context, effect)) continue
         if (
           effect.kind === 'damage' ||
           effect.kind === 'modify-attack' ||
@@ -180,11 +189,27 @@ const resolveDamageOutcome = (
                   sourceCardName: cookie.name,
                   effect,
                   context,
+                  ...(faintCost && !faintCostAttached
+                    ? { cost: faintCost }
+                    : {}),
                 },
               ],
             }
+            faintCostAttached = true
           }
         } else {
+          const selectionLimits = getEffectSelectionLimits(effect)
+          if (
+            requiresEffectCardSelection(effect) &&
+            selectionLimits &&
+            getEffectSelectionCandidates(faintState, context, effect).length <
+              selectionLimits.min
+          ) {
+            // A mandatory card cost/selection with no legal cards cannot be
+            // paid.  Do not leave an impossible faint decision on screen and
+            // lock the match; the effect simply has no legal resolution.
+            continue
+          }
           faintState = {
             ...faintState,
             pendingFaintEffects: [
@@ -195,9 +220,13 @@ const resolveDamageOutcome = (
                 sourceCardName: cookie.name,
                 effect,
                 context,
+                ...(faintCost && !faintCostAttached
+                  ? { cost: faintCost }
+                  : {}),
               },
             ],
           }
+          faintCostAttached = true
         }
       }
     }
@@ -1561,15 +1590,23 @@ export const executeCardEffect = (
   if (effect.kind === 'hand-to-support') {
     const player = state.players[context.sourcePlayerId]
     const uniqueIds = [...new Set(selectedTargetIds)]
-    if (uniqueIds.length !== effect.amount) {
-      throw new GameRuleError(`必須選擇 ${effect.amount} 張手牌。`)
+    const minimum = effect.optional ? 0 : effect.amount
+    if (uniqueIds.length < minimum || uniqueIds.length > effect.amount) {
+      throw new GameRuleError(
+        effect.optional
+          ? `最多選擇 ${effect.amount} 張手牌。`
+          : `必須選擇 ${effect.amount} 張手牌。`,
+      )
     }
     const selected = player.hand.filter(
-      (card) => uniqueIds.includes(card.instanceId),
+      (card) =>
+        card.instanceId !== context.sourceInstanceId &&
+        uniqueIds.includes(card.instanceId),
     )
-    if (selected.length !== effect.amount) {
+    if (selected.length !== uniqueIds.length) {
       throw new GameRuleError('選擇的卡片不在手牌中。')
     }
+    if (selected.length === 0) return state
     return updatePlayer(state, {
       ...player,
       hand: player.hand.filter(
@@ -2780,7 +2817,8 @@ export const executeCardEffect = (
       const selectedIds = new Set(selectedTargetIds)
       if (
         selectedIds.size !== selectedTargetIds.length ||
-        selectedIds.size > effect.supportCount
+        selectedIds.size > effect.supportCount ||
+        (effect.optional === false && selectedIds.size !== effect.supportCount)
       ) {
         throw new GameRuleError('Invalid support target.')
       }

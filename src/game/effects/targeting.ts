@@ -400,6 +400,7 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'support-to-battle' ||
   effect.kind === 'trash-to-battle' ||
   effect.kind === 'support-to-trash' ||
+  effect.kind === 'hand-to-support' ||
   effect.kind === 'hand-to-break' ||
   effect.kind === 'hand-to-break-by-level-sum' ||
   effect.kind === 'break-to-hand' ||
@@ -426,6 +427,9 @@ export const getEffectSelectionLimits = (
     return { min: effect.min ?? 0, max: effect.max }
   }
   if (effect.kind === 'support-to-trash') {
+    return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
+  }
+  if (effect.kind === 'hand-to-support') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
   }
   if (effect.kind === 'hand-to-break' || effect.kind === 'break-to-hand') {
@@ -455,7 +459,10 @@ export const getEffectSelectionLimits = (
     return { min: 0, max: effect.supportAmount + effect.target.max }
   }
   if (effect.kind === 'set-active' && effect.selectable) {
-    return { min: 0, max: effect.supportCount }
+    return {
+      min: effect.optional === false ? effect.supportCount : 0,
+      max: effect.supportCount,
+    }
   }
   if (effect.kind === 'hand-to-battle') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
@@ -520,6 +527,11 @@ export const getEffectSelectionCandidates = (
       side: effect.side,
       activeOnly: effect.activeOnly,
     }).map((support) => support.card)
+  }
+  if (effect.kind === 'hand-to-support') {
+    return state.players[context.sourcePlayerId].hand.filter(
+      (card) => card.instanceId !== context.sourceInstanceId,
+    )
   }
   if (effect.kind === 'trash-to-deck') {
     return getTrashToDeckCandidates(state, context, effect)
@@ -687,6 +699,12 @@ export const hasRequiredEffectTargets = (
     return (
       getTrashToDeckCandidates(state, context, effect).length >=
       (effect.min ?? 0)
+    )
+  }
+  if (effect.kind === 'hand-to-support') {
+    return (
+      getEffectSelectionCandidates(state, context, effect).length >=
+      (effect.optional ? 0 : effect.amount)
     )
   }
   if (!requiresTargetSelection(effect)) return true

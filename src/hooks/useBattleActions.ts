@@ -64,7 +64,7 @@ export function useBattleActions({ game, dispatch }: UseBattleActionsParams) {
         })
         .map((support) => support.card.instanceId),
     )
-  }, [selectedAttackerId, selectedAttackPaymentIds, activePlayer])
+  }, [selectedAttackerId, selectedAttackPaymentIds, activePlayer, game])
 
   const attackPaymentValidation = selectedAttacker
     ? validateEnergyPayment(

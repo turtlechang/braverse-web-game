@@ -74,6 +74,29 @@ const ALL_CARDS = [
   ...YELLOW_CARDS.map(([num, name]) => ({ num, name, set: 'YELLOW' })),
   ...GREEN_CARDS.map(([num, name]) => ({ num, name, set: 'GREEN' })),
 ]
+const requestedCardNumbers = new Set(
+  (process.env.BRAVERSE_CARD_FILTER ?? process.argv[2] ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean),
+)
+const CARDS_TO_RUN =
+  requestedCardNumbers.size > 0
+    ? ALL_CARDS.filter((entry) => requestedCardNumbers.has(entry.num))
+    : ALL_CARDS
+const RUN_BS2015_COST_SCENARIOS =
+  requestedCardNumbers.size === 0 || requestedCardNumbers.has('BS2-015')
+
+const shouldIgnoreConsoleError = (message) => {
+  if (message.type() !== 'error') return false
+  const text = message.text()
+  const url = message.location().url ?? ''
+  if (url.endsWith('/favicon.ico') && text.includes('404')) return true
+  return (
+    url.startsWith('https://cookierunbraverse.com/') &&
+    text.includes('ERR_NETWORK_ACCESS_DENIED')
+  )
+}
 
 const server = spawn(
   process.execPath,
@@ -334,7 +357,7 @@ const drainTrapOrBlockerModal = async (page, cardName) => {
  * card-check scenario presents, then confirm no console/page errors. */
 const exerciseCardCheck = async (page, cardNumber, cardName) => {
   await page.goto(`${baseUrl}?test-state=card:${cardNumber}`, {
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',
   })
   await page.waitForTimeout(500)
 
@@ -408,15 +431,90 @@ const exerciseCardCheck = async (page, cardNumber, cardName) => {
   return 'light-check-only:no-affordance-found'
 }
 
+const exerciseBs2015CostDeparture = async (page, mode) => {
+  await page.goto(`${baseUrl}?test-state=bs2-015-cost:${mode}`, {
+    waitUntil: 'domcontentloaded',
+  })
+  await page.waitForTimeout(300)
+
+  const skillButton = page.locator('.bottom-field .skill-action', {
+    hasText: '啟動技能',
+  })
+  await skillButton.first().click()
+
+  const panel = page.locator('.effect-panel')
+  await panel.waitFor({ state: 'visible' })
+  const paymentButtons = panel.locator('.effect-candidates-payment button')
+  if ((await paymentButtons.count()) < 4) {
+    throw new Error('BS2-015 測試狀態沒有 4 張可支付的綠色支援卡。')
+  }
+  for (let index = 0; index < 4; index += 1) {
+    await paymentButtons.nth(index).click()
+  }
+  await panel.getByRole('button', { name: /下一步/ }).click()
+
+  const sourceCost = panel.locator('.effect-candidates-trash-battle button')
+  if ((await sourceCost.count()) !== 1) {
+    throw new Error('BS2-015 額外代價必須只能選擇來源餅乾。')
+  }
+  await sourceCost.first().click()
+  await panel.getByRole('button', { name: /下一步/ }).click()
+
+  const confirmButton = panel.getByRole('button', { name: '確認發動' })
+  if (await confirmButton.isDisabled()) {
+    throw new Error('BS2-015 的「最多 1 個」目標選 0 個時不應停用確認。')
+  }
+  await confirmButton.click()
+
+  if (mode === 'terminal') {
+    const resultModal = page.locator('.result-modal')
+    await resultModal.waitFor({ state: 'visible' })
+    const resultText = await resultModal.innerText()
+    if (!resultText.includes('我方沒有可登場的餅乾')) {
+      throw new Error(`BS2-015 終局提示不正確：${resultText}`)
+    }
+    if ((await panel.count()) > 0) {
+      throw new Error('BS2-015 終局後技能面板仍未關閉。')
+    }
+    return 'ability-exercised:cost-terminal'
+  }
+
+  const replacementModal = page.locator('.decision-modal')
+  await replacementModal.waitFor({ state: 'visible' })
+  if ((await panel.count()) > 0) {
+    throw new Error('BS2-015 等待強制補位時不應提前顯示效果面板。')
+  }
+  await replacementModal.locator('.decision-card-options button').first().click()
+  await panel.waitFor({ state: 'visible' })
+  if ((await panel.locator('.effect-candidates-payment').count()) > 0) {
+    throw new Error('BS2-015 補位後重新顯示了已支付的能量步驟。')
+  }
+  const resumedConfirm = panel.getByRole('button', { name: '確認發動' })
+  if (await resumedConfirm.isDisabled()) {
+    throw new Error('BS2-015 補位後無法以 0 個目標繼續結算。')
+  }
+  await resumedConfirm.click()
+  await panel.getByText('第 2 / 2 段').waitFor({ state: 'visible' })
+  const thenConfirm = panel.getByRole('button', { name: '確認發動' })
+  if (await thenConfirm.isDisabled()) {
+    throw new Error('BS2-015 補位後無法完成 Then 的牌庫頂放支援效果。')
+  }
+  await thenConfirm.click()
+  await panel.waitFor({ state: 'detached' })
+  if ((await page.locator('.result-modal').count()) > 0) {
+    throw new Error('BS2-015 有合法補位餅乾時不應立即敗北。')
+  }
+  return 'ability-exercised:cost-replacement'
+}
+
 const results = []
 
 const runCard = async (page, cardNumber, cardName, set) => {
   const consoleErrors = []
   const pageErrors = []
   const onConsole = (msg) => {
-    if (msg.type() === 'error') {
+    if (msg.type() === 'error' && !shouldIgnoreConsoleError(msg)) {
       const loc = msg.location()
-      if (loc.url?.endsWith('/favicon.ico') && msg.text().includes('404')) return
       consoleErrors.push(loc.url ? `${msg.text()} (${loc.url})` : msg.text())
     }
   }
@@ -454,6 +552,54 @@ const runCard = async (page, cardNumber, cardName, set) => {
   )
 }
 
+const runBs2015CostScenario = async (page, mode) => {
+  const consoleErrors = []
+  const pageErrors = []
+  const onConsole = (msg) => {
+    if (msg.type() === 'error' && !shouldIgnoreConsoleError(msg)) {
+      const url = msg.location().url
+      consoleErrors.push(url ? `${msg.text()} (${url})` : msg.text())
+    }
+  }
+  const onPageError = (error) => pageErrors.push(error.message)
+  page.on('console', onConsole)
+  page.on('pageerror', onPageError)
+
+  let status = 'PASS'
+  let error = ''
+  let category = 'unknown'
+  try {
+    category = await exerciseBs2015CostDeparture(page, mode)
+    if (consoleErrors.length > 0) {
+      throw new Error(`console error: ${JSON.stringify(consoleErrors)}`)
+    }
+    if (pageErrors.length > 0) {
+      throw new Error(`page error: ${JSON.stringify(pageErrors)}`)
+    }
+  } catch (caught) {
+    status = 'FAIL'
+    error = caught instanceof Error ? caught.message : String(caught)
+    const shotPath = resolve(screenshotDir, `BS2-015-${mode}-fail.png`)
+    await page.screenshot({ path: shotPath }).catch(() => {})
+    error += ` [screenshot: ${shotPath}]`
+  } finally {
+    page.off('console', onConsole)
+    page.off('pageerror', onPageError)
+  }
+
+  results.push({
+    set: 'GREEN',
+    cardNumber: `BS2-015:${mode}`,
+    cardName: 'Lemon Thyme Cookie',
+    category,
+    status,
+    error,
+  })
+  console.log(
+    `  ${status}: [GREEN] BS2-015 ${mode} (${category})${error ? ` — ${error}` : ''}`,
+  )
+}
+
 try {
   await waitForServer()
   await mkdir(screenshotDir, { recursive: true })
@@ -465,9 +611,13 @@ try {
   const page = await browser.newPage({ viewport: { width: 1366, height: 768 } })
   page.setDefaultTimeout(5000)
 
-  console.log(`\n=== BS2 RED + YELLOW + GREEN card validation (${ALL_CARDS.length} cards) ===`)
-  for (const entry of ALL_CARDS) {
+  console.log(`\n=== BS2 RED + YELLOW + GREEN card validation (${CARDS_TO_RUN.length} cards) ===`)
+  for (const entry of CARDS_TO_RUN) {
     await runCard(page, entry.num, entry.name, entry.set)
+  }
+  if (RUN_BS2015_COST_SCENARIOS) {
+    await runBs2015CostScenario(page, 'terminal')
+    await runBs2015CostScenario(page, 'replacement')
   }
 
   await page.close()

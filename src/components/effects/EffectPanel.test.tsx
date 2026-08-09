@@ -137,6 +137,91 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('renders ordinary attack text and its follow-up text as separate descriptions', () => {
+    const pending = createPendingEffect({
+      sourceKind: 'attack',
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'Diamond Formation! Damage 4 Then, Draw 1 card from your deck.',
+        effects: [],
+      },
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 4,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    const descriptions = Array.from(
+      container.querySelectorAll<HTMLParagraphElement>('.effect-source-description'),
+    )
+    expect(descriptions).toHaveLength(2)
+    expect(descriptions[0].classList.contains('effect-source-attack-text')).toBe(true)
+    expect(descriptions[0].textContent).toContain('Diamond Formation!')
+    expect(descriptions[0].textContent).not.toContain('Then')
+    expect(descriptions[1].classList.contains('effect-source-attack-follow-up')).toBe(true)
+    expect(descriptions[1].textContent).toContain('Then')
+    expect(descriptions[1].textContent).toContain('Draw 1 card from your deck.')
+
+    act(() => root.unmount())
+  })
+
+  it('shows the HP card revealed by a deferred skill cost before target selection', () => {
+    const revealedHpCard = createItemCard(17)
+    const pending = createPendingEffect({
+      skillActivated: true,
+      revealedHpCard,
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: true,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: {}, hpToTrash: { sourceOnly: true } },
+        text: 'Place the top HP card into the trash, then deal damage.',
+        effects: [],
+      },
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        candidateCards={[createCookieCard(18)]}
+      />,
+    ))
+
+    expect(container.querySelector('.effect-cost-resolution')).not.toBeNull()
+    expect(container.textContent).toContain('HP 費用已支付，丟棄的卡片')
+    expect(container.textContent).toContain(revealedHpCard.name)
+    expect(container.textContent).toContain('卡片種類：物品')
+
+    act(() => root.unmount())
+  })
+
   it('shows effect history when no pending effect', () => {
     const container = document.createElement('div')
     const root = createRoot(container)
@@ -334,6 +419,66 @@ describe('EffectPanel', () => {
     act(() => root.unmount())
   })
 
+  it('makes BS4-089 mandatory deck mill and Then progress explicit', () => {
+    const millEffect: CardEffect = {
+      kind: 'deck-to-trash',
+      amount: 5,
+      side: 'opponent',
+    }
+    const thenEffect: CardEffect = {
+      kind: 'opponent-battle-to-trash',
+      min: 0,
+      condition: { kind: 'opponent-battle-area-cookie-count', count: 2 },
+    }
+    const pending = createPendingEffect({
+      sourceCard: {
+        ...createCookieCard(16),
+        id: 'BS4-089',
+        name: 'Moonlight Cookie',
+      },
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Place 5 cards from the top of your opponent\'s deck in the trash.',
+        effects: [millEffect, thenEffect],
+      },
+      trigger: 'on-play',
+      effects: [millEffect, thenEffect],
+      effectIndex: 0,
+      optional: true,
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={millEffect}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain('強制：將對手牌庫頂 5 張牌放入棄牌區。')
+    expect(container.querySelector('.effect-sequence-status')?.textContent).toContain(
+      '第 1 / 2 段',
+    )
+    expect(container.textContent).toContain(
+      '第一段為強制效果；確認後才會進入 Then 的後續目標選擇。',
+    )
+    expect(container.querySelector('.effect-panel-primary-action')?.textContent).toContain(
+      '確認並執行強制效果',
+    )
+    expect(container.querySelector('.effect-skip-label')?.textContent).toBe(
+      '略過整個登場效果',
+    )
+
+    act(() => root.unmount())
+  })
+
   it('guides payment, extra cost, and target one step at a time with back navigation', async () => {
     const paymentCard = createSupportCard(1, 'red')
     const costSupport = createItemCard(2)
@@ -398,6 +543,113 @@ describe('EffectPanel', () => {
       container.querySelector<HTMLButtonElement>('.effect-panel-back-action')!.click()
     })
     expect(container.textContent).toContain('額外代價')
+
+    await act(() => root.unmount())
+  })
+
+  it('guides BS4-062 through energy payment, extra support rests, then opponent target', async () => {
+    const supports = Array.from({ length: 8 }, (_, index) =>
+      createSupportCard(index + 30, 'green'),
+    )
+    const target = createCookieCard(40)
+    const effect: CardEffect = {
+      kind: 'rest-support-and-damage',
+      supportSide: 'self',
+      supportAmount: 4,
+      supportEnergyColor: 'green',
+      activeOnly: true,
+      target: { side: 'opponent', min: 0, max: 1 },
+    }
+    const pending = createPendingEffect({
+      sourceCard: {
+        ...createItemCard(41),
+        id: 'BS4-062',
+        name: 'Wind Gems',
+      },
+      sourceKind: 'item',
+      selectedPaymentIds: [
+        supports[0].instanceId,
+        supports[1].instanceId,
+      ],
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: { energy: { green: 2 }, discardHand: 0 },
+        text:
+          'Set up to 4 green cards in your support area as rested. Then, select up to 1 opposing Cookie.',
+        effects: [effect],
+      },
+      effects: [effect],
+    })
+    const onToggleCandidate = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={effect}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        paymentCandidates={supports}
+        selectedPaymentIds={new Set(pending.selectedPaymentIds)}
+        onTogglePayment={() => undefined}
+        energyPaymentValid={true}
+        candidateCards={[...supports, target]}
+        restSupportCandidates={supports.slice(2)}
+        damageTargetCandidates={[target]}
+        onToggleCandidate={onToggleCandidate}
+      />,
+    ))
+
+    expect(
+      Array.from(container.querySelectorAll('.phase-step')).map((step) =>
+        step.textContent?.replace(/^\d+/, '').trim(),
+      ),
+    ).toEqual(['能量', '額外橫置', '目標'])
+
+    await act(() => {
+      container
+        .querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+        .click()
+    })
+
+    const supportStep = container.querySelector(
+      '.effect-panel-rest-support-col',
+    )
+    expect(supportStep).not.toBeNull()
+    expect(
+      supportStep?.querySelectorAll('.effect-candidates-rest-support button'),
+    ).toHaveLength(6)
+    expect(supportStep?.textContent).not.toContain(supports[0].name)
+    expect(supportStep?.textContent).not.toContain(supports[1].name)
+    expect(supportStep?.textContent).not.toContain(target.name)
+
+    await act(() => {
+      supportStep
+        ?.querySelector<HTMLButtonElement>(
+          '.effect-candidates-rest-support button',
+        )
+        ?.click()
+    })
+    expect(onToggleCandidate).toHaveBeenCalledWith(supports[2].instanceId)
+
+    await act(() => {
+      container
+        .querySelector<HTMLButtonElement>('.effect-panel-primary-action')!
+        .click()
+    })
+
+    const targetStep = container.querySelector('.effect-panel-target-col')
+    expect(targetStep).not.toBeNull()
+    expect(
+      targetStep?.querySelectorAll('.effect-candidates-target button'),
+    ).toHaveLength(1)
+    expect(targetStep?.textContent).toContain(target.name)
+    expect(targetStep?.textContent).not.toContain(supports[2].name)
 
     await act(() => root.unmount())
   })

@@ -221,6 +221,8 @@ export interface ResolveFaintEffectCommand {
   playerId: PlayerId
   targetIds: string[]
   paymentIds?: string[]
+  discardHandIds?: string[]
+  supportToTrashIds?: string[]
 }
 
 export interface ResolveOpponentHandDiscardCommand {
@@ -1048,7 +1050,10 @@ const applyPendingDecisionCommand = (
       }
     }
     case 'resolve-faint-effect':
-      return resolveFaintEffect(state, command.targetIds, command.paymentIds ?? [])
+      return resolveFaintEffect(state, command.targetIds, command.paymentIds ?? [], {
+        discardHandIds: command.discardHandIds ?? [],
+        supportToTrashIds: command.supportToTrashIds ?? [],
+      })
     case 'resolve-opponent-hand-discard': {
       // 攻擊後續效果的棄牌代價（BS5-080）棄完後要接續 attack-effect 佇列。
       const resolved = resolveOpponentHandDiscard(
@@ -2011,16 +2016,17 @@ const applyPlayerActionCommand = (
       if (pending.playerId !== command.playerId) {
         throw new GameRuleError('不是目前需要選擇項目的玩家。')
       }
+      const expandedEffects = expandChooseOne(
+        pending.effects,
+        pending.effectIndex,
+        command.modeIndex,
+      )
       return {
         ...state,
-        pendingAbilityEffect: {
-          ...pending,
-          effects: expandChooseOne(
-            pending.effects,
-            pending.effectIndex,
-            command.modeIndex,
-          ),
-        },
+        pendingAbilityEffect:
+          pending.effectIndex < expandedEffects.length
+            ? { ...pending, effects: expandedEffects }
+            : undefined,
       }
     }
     case 'replace-cookie': {

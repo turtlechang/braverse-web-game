@@ -13,6 +13,7 @@ import {
 } from './effects/targeting'
 import type {
   AbilityCost,
+  CardEffect,
   CardSkill,
   CookieInBattle,
   GameCard,
@@ -166,6 +167,18 @@ export const canPayEnergyCost = (
   supports: SupportCard[],
 ): boolean => selectEnergyPayment(cost.energy ?? cost, supports) !== null
 
+/**
+ * 某些效果條件讀取同一次啟動支付後才產生的紀錄，不能在支付前把技能
+ * 隱藏。BS5-016 的傷害條件就是「剛丟進棄牌區的 HP 卡不是 Cookie」。
+ */
+export const isSkillEffectConditionDeferredUntilCost = (
+  skill: CardSkill,
+  effect: CardEffect,
+): boolean =>
+  Boolean(skill.cost.hpToTrash) &&
+  'condition' in effect &&
+  effect.condition?.kind === 'last-hp-trash-card-non-cookie'
+
 export const canPaySupportToTrashCost = (
   cost: AbilityCost,
   supports: SupportCard[],
@@ -276,6 +289,62 @@ export const getDiscardHandCostCandidates = (
   )
 
 /**
+ * 取得「昏厥技能」尚未由效果本身表示的手牌／支援區代價。
+ *
+ * BS3-061 與 BS5-026 已把支付動作放在 effects 的第一段；若再把同一筆
+ * cost 掛到 pending faint，會被重複支付。因此只把仍停留在 CardSkill.cost、
+ * 且 effects 沒有對應支付動作的部分交給昏厥提示框處理。
+ */
+export const getFaintTriggeredCost = (
+  skill: CardSkill,
+): Pick<
+  AbilityCost,
+  'discardHand' | 'discardHandColor' | 'discardHandType' | 'supportToTrash'
+> | undefined => {
+  const discardHand = skill.cost.discardHand ?? 0
+  const supportToTrash = skill.cost.supportToTrash ?? 0
+  const discardCoveredByHandPlacement =
+    discardHand > 0 &&
+    skill.effects.some(
+      (effect) =>
+        effect.kind === 'hand-to-break' &&
+        effect.amount >= discardHand &&
+        (!skill.cost.discardHandColor ||
+          effect.energyColor === skill.cost.discardHandColor) &&
+        (!skill.cost.discardHandType || skill.cost.discardHandType === 'cookie'),
+    )
+  const discardCovered =
+    discardHand > 0 &&
+    (discardCoveredByHandPlacement ||
+      skill.effects.some(
+        (effect) => effect.kind === 'discard-hand' && effect.count >= discardHand,
+      ))
+  const supportCovered =
+    supportToTrash > 0 &&
+    skill.effects.some(
+      (effect) => effect.kind === 'support-to-trash' && effect.amount >= supportToTrash,
+    )
+
+  if (
+    (discardHand === 0 || discardCovered) &&
+    (supportToTrash === 0 || supportCovered)
+  ) {
+    return undefined
+  }
+
+  return {
+    ...(discardHand > 0 && !discardCovered ? { discardHand } : {}),
+    ...(skill.cost.discardHandColor && !discardCovered
+      ? { discardHandColor: skill.cost.discardHandColor }
+      : {}),
+    ...(skill.cost.discardHandType && !discardCovered
+      ? { discardHandType: skill.cost.discardHandType }
+      : {}),
+    ...(supportToTrash > 0 && !supportCovered ? { supportToTrash } : {}),
+  }
+}
+
+/**
  * 「Discard your entire hand.」類代價（BS5-083）：整副手牌都是合法選擇
  * （不含來源卡自身）；與 `discardHand` 不同，不限制張數與顏色。
  */
@@ -339,7 +408,11 @@ export const payHpToTrashCost = (
   cost: AbilityCost,
   selectedIds: string[],
   sourceInstanceId?: string,
-): { player: PlayerState; departedCount: number } => {
+): {
+  player: PlayerState
+  departedCount: number
+  costRecord?: GameState['costRecord']
+} => {
   const uniqueIds = [...new Set(selectedIds)]
   if (uniqueIds.length !== selectedIds.length) {
     throw new GameRuleError('HP 費用不能重複選同一張餅乾。')
@@ -372,7 +445,16 @@ export const payHpToTrashCost = (
       ? target.hpCards.length - cost.hpToTrash.untilRemainingHp
       : (cost.hpToTrash.amount ?? 1),
   )
-  if (removeCount === 0) return { player, departedCount: 0 }
+  if (removeCount === 0) {
+    return {
+      player,
+      departedCount: 0,
+      costRecord: {
+        hpTrashCookieInstanceId: target.card.instanceId,
+        hpTrashTopCardType: undefined,
+      },
+    }
+  }
 
   const removedHpCards = target.hpCards.slice(-removeCount)
   const remainingHpCards = target.hpCards.slice(
@@ -388,6 +470,12 @@ export const payHpToTrashCost = (
         discardPile: [...player.discardPile, ...removedHpCards],
       },
       departedCount: 1,
+      costRecord: {
+        hpTrashCookieInstanceId: target.card.instanceId,
+        hpTrashTopCardInstanceId:
+          removedHpCards[removedHpCards.length - 1]?.instanceId,
+        hpTrashTopCardType: removedHpCards[removedHpCards.length - 1]?.type,
+      },
     }
   }
   return {
@@ -401,6 +489,12 @@ export const payHpToTrashCost = (
       discardPile: [...player.discardPile, ...removedHpCards],
     },
     departedCount: 0,
+    costRecord: {
+      hpTrashCookieInstanceId: target.card.instanceId,
+      hpTrashTopCardInstanceId:
+        removedHpCards[removedHpCards.length - 1]?.instanceId,
+      hpTrashTopCardType: removedHpCards[removedHpCards.length - 1]?.type,
+    },
   }
 }
 
@@ -611,7 +705,7 @@ export const canActivateCookieSkill = (
   const context = { sourcePlayerId: playerId, sourceInstanceId }
   for (const effect of skill.effects) {
     if (!isEffectConditionMet(state, context, effect)) {
-      return false
+      if (!isSkillEffectConditionDeferredUntilCost(skill, effect)) return false
     }
     if (
       (effect.kind === 'damage-by-break-count' ||
@@ -887,6 +981,9 @@ export const activateCookieSkill = (
 
   const activatedState: GameState = {
     ...state,
+    ...(hpToTrashPayment.costRecord
+      ? { costRecord: hpToTrashPayment.costRecord }
+      : {}),
     pendingOnPlay: trigger === 'on-play' ? null : state.pendingOnPlay,
     players: {
       ...state.players,

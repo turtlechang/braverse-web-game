@@ -641,6 +641,12 @@ export function OnlineBattleView({
         }}
         candidateCards={pending.candidateCards}
         onToggleCandidate={pending.toggleTarget}
+        restSupportCandidates={
+          pending.restSupportAndDamageSupportCandidates
+        }
+        damageTargetCandidates={
+          pending.restSupportAndDamageTargetCandidates
+        }
         discardHandCandidates={pending.draftDiscardHandCandidates}
         selectedDiscardHandIds={pending.selectedDraftDiscardHandIds}
         onToggleDiscardHand={pending.toggleDraftDiscardHand}
