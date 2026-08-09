@@ -44,6 +44,7 @@
 
 - `.github/workflows/ai-browser-validation.yml` 已改為 PR、`main` push 與手動觸發；Browser 影響範圍會執行 AI、牌組編輯器、好友房三組 smoke，文件限定變更可略過耗時工作，但固定名稱 `Browser Smoke PR Gate` 仍會回報成功／失敗。
 - `.github/workflows/deployment-browser-validation.yml` 會在 Vercel Preview／Production 的成功 `deployment_status` 或手動指定 URL 時，使用預設分支內的可信驗收腳本檢查首頁、SPA rewrite、牌池卡圖、合法 60 張牌組匯入、正式對戰入口與 Render WebSocket。
+- 2026-08-09 補上 trusted default branch 的 harness preflight 與 artifact 目錄初始化；若 workflow 尚未合併到預設分支，會回報明確原因，artifact 缺檔不再覆蓋原始 smoke 失敗。CI、Browser smoke 與部署 workflow 已升級至 Node 24 相容的 Actions major。
 - 2026-08-08 Production `https://braverse-web-game.vercel.app/` 實測全數通過：首頁／rewrite 200、牌池 836 張、首張官方卡圖載入、合法牌組儲存、正式進入對戰、前端錯誤 0；Render WebSocket 冷啟動約 31.6 秒。
 - 最新可得 Preview URL 會被 Vercel Authentication 導向登入頁；需在 GitHub 設定 `VERCEL_AUTOMATION_BYPASS_SECRET` 後重跑。此結果是驗收權限尚未完成，不是應用程式測試失敗。
 - workflow 會產生 PR check，但目前 `main` 尚未啟用 branch protection；若要真正阻止未通過的 PR 合併，仍須將 `Browser Smoke PR Gate` 設為 required check。
