@@ -13,6 +13,18 @@ import type {
 } from '../game'
 import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
+import {
+  P_EXACT_ATTACK_EFFECTS,
+  P_EXACT_EFFECTS,
+  P_EXACT_FLIP_EFFECTS,
+  P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES,
+  P_EXACT_SKILL_COSTS,
+  P_EXACT_SPECIAL_PLAY_COSTS,
+  P_EXACT_SKILL_TRIGGERS,
+  P_FROM_SUPPORT,
+  P_FROM_TRASH,
+  P_SOURCE_ENERGY,
+} from './p-card-effects'
 
 export type OfficialEffectConversion =
   | {
@@ -44,7 +56,7 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
     return card.flipText ?? card.skill.text
   }
 
-  return card.attackText
+  return card.skill.text ?? card.attackText
 }
 
 const parseTarget = (text: string): EffectTargetSelector | null => {
@@ -2849,7 +2861,7 @@ export const convertOfficialCardEffects = (
     'BS5-049': [{ kind: 'draw-up-to', max: 1 }],
     'BS5-090': [{ kind: 'draw-up-to', max: 1 }],
   }
-  const exactEffects = exactStarterEffects[cardKey]
+  const exactEffects = exactStarterEffects[cardKey] ?? P_EXACT_EFFECTS[cardKey]
   if (exactEffects) {
     return {
       status: 'supported',
@@ -3403,12 +3415,13 @@ export const convertOfficialCardEffects = (
 export const convertOfficialItemAbility = (
   card: OfficialCardRecord,
 ): CardAbility | undefined => {
-  if (card.type !== 'item' || !card.attackText) return undefined
+  const abilityText = card.skill.text ?? card.attackText
+  if (card.type !== 'item' || !abilityText) return undefined
   const conversion = convertOfficialCardEffects(card)
   if (conversion.status !== 'supported') {
     return undefined
   }
-  const parsed = parseOfficialCardText(card.attackText)
+  const parsed = parseOfficialCardText(abilityText)
   if (!parsed) return undefined
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
@@ -3460,7 +3473,7 @@ export const convertOfficialItemAbility = (
       discardHand: 0,
     },
   }
-  const parsedCost = parseAbilityCost(card.attackText)
+  const parsedCost = parseAbilityCost(abilityText)
   const hasSpecialCost =
     (parsedCost.discardHand ?? 0) > 0 ||
     Boolean(parsedCost.supportToTrash) ||
@@ -3468,9 +3481,12 @@ export const convertOfficialItemAbility = (
     Boolean(parsedCost.hpToTrash) ||
     Boolean(parsedCost.trashBattleCookie)
   return {
-    cost: exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
-    text: card.attackText,
+    cost: P_EXACT_SKILL_COSTS[cardKey] ?? exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
+    text: abilityText,
     effects: conversion.effects,
+    ...(P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES[cardKey]
+      ? { activationCostOverride: P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES[cardKey] }
+      : {}),
   }
 }
 
@@ -3480,6 +3496,7 @@ export const convertOfficialStageAbility = (
   if (card.type !== 'stage') return undefined
   const sourceText = [card.skill.text, card.attackText]
     .filter((text): text is string => Boolean(text?.trim()))
+    .map((text) => text.replaceAll('\\"', '"').replace(/^"|"$/g, '').trim())
     .join('\n')
   if (!sourceText) return undefined
   const [placementText, activationText] = sourceText.split(
@@ -3924,12 +3941,13 @@ export const convertOfficialStageAbility = (
       discardHand: 0,
     },
   }
-  const stageEffects = exactStageEffects[card.baseCardNumber]
+  const stageEffects = exactStageEffects[card.baseCardNumber] ?? P_EXACT_EFFECTS[card.baseCardNumber]
   if (stageEffects) {
     return {
       placementCost: placement.cost,
       cost:
         exactStageCosts[card.baseCardNumber] ??
+        P_EXACT_SKILL_COSTS[card.baseCardNumber] ??
         (activation?.cost ?? {}),
       text: sourceText,
       effects: stageEffects,
@@ -5086,6 +5104,10 @@ export const convertOfficialAttackEffects = (
     return exactAttackEffects[cardKey]
   }
 
+  if (P_EXACT_ATTACK_EFFECTS[cardKey]) {
+    return P_EXACT_ATTACK_EFFECTS[cardKey]
+  }
+
   if (!/\bThen\b/i.test(card.attackText)) {
     return undefined
   }
@@ -5249,6 +5271,7 @@ export const convertOfficialFlipAbility = (
     },
   }
   const exactFlip = exactFlipEffects[cardKey]
+  const pExactFlip = P_EXACT_FLIP_EFFECTS[cardKey]
   if (exactFlip) {
     return {
       text: flipText,
@@ -5256,6 +5279,16 @@ export const convertOfficialFlipAbility = (
       effects: exactFlip.effects,
       ...(exactFlip.attachedHpBonus !== undefined
         ? { attachedHpBonus: exactFlip.attachedHpBonus }
+        : {}),
+    }
+  }
+  if (pExactFlip) {
+    return {
+      text: flipText,
+      cost: pExactFlip.cost ?? parseAbilityCost(flipText),
+      effects: pExactFlip.effects,
+      ...(pExactFlip.attachedHpBonus !== undefined
+        ? { attachedHpBonus: pExactFlip.attachedHpBonus }
         : {}),
     }
   }
@@ -5387,11 +5420,11 @@ const parseTrapCondition = (
 export const convertOfficialTrapAbility = (
   card: OfficialCardRecord,
 ): TrapAbility | undefined => {
-  if (card.type !== 'trap' || !card.attackText) {
+  if (card.type !== 'trap' || !(card.skill.text ?? card.attackText)) {
     return undefined
   }
 
-  const text = card.attackText
+  const text = card.skill.text ?? card.attackText!
   const condition = parseTrapCondition(text)
   const target = parseTarget(text)
   const effects: CardEffect[] = []
@@ -5545,11 +5578,19 @@ export const convertOfficialTrapAbility = (
       {
         effects: CardEffect[]
         cost?: AbilityCost
+        alternativeCosts?: AbilityCost[]
         condition?: TrapAbility['condition']
         ignoreParsedCondition?: boolean
       }
     >
   > = {
+    'P-036': {
+      cost: { energy: { red: 3 } },
+      effects: [
+        { kind: 'damage-all', amount: 1, side: 'self' },
+        { kind: 'damage-all', amount: 1, side: 'opponent' },
+      ],
+    },
     'BS3-046': {
       // 條件在戰鬥中延後判定：本次戰鬥有己方 {Y} LV.2 以上餅乾昏厥才發動。
       condition: {
@@ -5793,6 +5834,31 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'P-082': {
+      cost: { energy: { yellow: 1, neutral: 1 } },
+      alternativeCosts: [
+        {
+          energy: {},
+          trashCookieToBreakArea: {
+            count: 1,
+            hp: 1,
+            excludeFlip: true,
+          },
+        },
+      ],
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 2,
+          target: { side: 'self', min: 1, max: 1 },
+        },
+        {
+          kind: 'gain-hp',
+          amount: 2,
+          target: { side: 'opponent', min: 1, max: 1 },
+        },
+      ],
+    },
     'P-029': {
       condition: { kind: 'friendly-cookie-fainted-this-battle' },
       effects: [
@@ -5881,11 +5947,15 @@ export const convertOfficialTrapAbility = (
     },
   }
 
-  const exactTrap = exactTrapEffects[card.cardNumber]
+  const exactTrap =
+    exactTrapEffects[card.cardNumber] ?? exactTrapEffects[card.baseCardNumber]
   if (exactTrap) {
     return {
       text,
       cost: exactTrap.cost ?? parseAbilityCost(text),
+      ...(exactTrap.alternativeCosts
+        ? { alternativeCosts: exactTrap.alternativeCosts }
+        : {}),
       condition: exactTrap.ignoreParsedCondition
         ? exactTrap.condition
         : exactTrap.condition ?? condition,
@@ -6097,7 +6167,7 @@ export const convertOfficialCookieSkill = (
   const conversion = convertOfficialCardEffects(
     card.type === 'flip' ? { ...card, type: 'cookie' } : card,
   )
-  const cost = exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
+  const cost = P_EXACT_SKILL_COSTS[cardKey] ?? exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
   const parsed = parseOfficialCardText(card.skill.text)
 
   if (
@@ -6109,6 +6179,7 @@ export const convertOfficialCookieSkill = (
 
   return {
     trigger:
+      P_EXACT_SKILL_TRIGGERS[cardKey] ??
       exactCookieSkillTriggers[cardKey] ??
       (parsed.markers.includes('bl') &&
       /redirect\s+the\s+attack\s+to\s+this\s+Cookie/i.test(card.skill.text)
@@ -6122,8 +6193,11 @@ export const convertOfficialCookieSkill = (
     yourTurn: exactCookieSkillYourTurn[cardKey] ?? parsed.markers.includes('mt'),
     restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
     cost,
-    ...(exactCookieSkillSourceEnergy[cardKey]
-      ? { sourceEnergy: exactCookieSkillSourceEnergy[cardKey] }
+    ...(P_EXACT_SPECIAL_PLAY_COSTS[cardKey]
+      ? { specialPlayCost: P_EXACT_SPECIAL_PLAY_COSTS[cardKey] }
+      : {}),
+    ...(P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey]
+      ? { sourceEnergy: P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey] }
       : {}),
     text: conversion.sourceText,
     effects: conversion.effects,
@@ -6141,5 +6215,7 @@ export const convertOfficialCookieSkill = (
     // 不是這個技能本身只能從休息區發動的前提，誤判會讓 findSkillSource 在
     // 這些卡意外流落休息區時把它們當成可發動的技能來源。
     fromBreakArea: /this Cookie is in your break area/i.test(card.skill.text),
+    fromTrashArea: P_FROM_TRASH.has(cardKey),
+    fromSupportArea: P_FROM_SUPPORT.has(cardKey),
   }
 }

@@ -129,6 +129,55 @@ describe('item and stage actions', () => {
     ).toEqual(expect.arrayContaining(['cookie-1', 'hp-1']))
   })
 
+  it('uses P-084 neutral activation cost after a friendly Cookie faints this turn', () => {
+    const item: GameCard = {
+      id: 'P-084',
+      instanceId: 'p-084-test',
+      name: 'Magic Lettering Pens',
+      type: 'item',
+      item: {
+        cost: { green: 1 },
+        activationCostOverride: {
+          condition: 'friendly-cookie-fainted-this-turn',
+          cost: { energy: { neutral: 1 } },
+        },
+        text: 'P-084',
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].hand = [item]
+    state.cookiesFaintedThisTurn = { 'player-one': 1, 'player-two': 0 }
+
+    expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(true)
+
+    const next = playItem(state, 'player-one', item.instanceId, ['pay-1'])
+    expect(next.players['player-one'].supportArea[0].rested).toBe(true)
+    expect(next.players['player-one'].discardPile).toContainEqual(item)
+  })
+
+  it('does not apply P-084 neutral activation cost before a friendly Cookie faints', () => {
+    const item: GameCard = {
+      id: 'P-084',
+      instanceId: 'p-084-test-unmet',
+      name: 'Magic Lettering Pens',
+      type: 'item',
+      item: {
+        cost: { green: 1 },
+        activationCostOverride: {
+          condition: 'friendly-cookie-fainted-this-turn',
+          cost: { energy: { neutral: 1 } },
+        },
+        text: 'P-084',
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].hand = [item]
+
+    expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(false)
+  })
+
   it('replaces an existing stage and activates the new stage once', () => {
     const oldStage: GameCard = {
       id: 'old-stage',

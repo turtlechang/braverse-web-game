@@ -368,6 +368,7 @@ const payAbilityCost = (
   if (supportToTrashIds.length > 0 || supportToHandIds.length > 0) {
     nextState = markSupportAreaDecreased(nextState, playerId, {
       triggerSkill: supportToTrashIds.length > 0,
+      trashedCount: supportToTrashIds.length,
     })
   }
 
@@ -382,6 +383,21 @@ const payAbilityCost = (
 
 export const getItemAbility = (card: GameCard): CardAbility | null =>
   card.type === 'item' ? card.item ?? null : null
+
+export const getEffectiveCardAbilityCost = (
+  state: GameState,
+  playerId: PlayerId,
+  ability: CardAbility,
+): AbilityCost => {
+  const override = ability.activationCostOverride
+  if (
+    override?.condition === 'friendly-cookie-fainted-this-turn' &&
+    (state.cookiesFaintedThisTurn?.[playerId] ?? 0) > 0
+  ) {
+    return override.cost
+  }
+  return ability.cost
+}
 
 export const getStageAbility = (
   card: GameCard,
@@ -487,10 +503,14 @@ export const canPlayItem = (
       (candidate) => candidate.instanceId === instanceId,
     )
     const ability = card && getItemAbility(card)
+    const cost = ability
+      ? getEffectiveCardAbilityCost(state, playerId, ability)
+      : undefined
     return Boolean(
       card &&
         ability &&
-        canPayAbilityCost(state, playerId, ability.cost, instanceId) &&
+        cost &&
+        canPayAbilityCost(state, playerId, cost, instanceId) &&
         hasUsableEffect(state, playerId, instanceId, ability),
     )
   } catch {
@@ -521,7 +541,8 @@ export const playItem = (
     throw new GameRuleError('物品卡本身不能作為自己的棄手牌費用。')
   }
 
-  const paidState = payAbilityCost(state, playerId, ability.cost, {
+  const cost = getEffectiveCardAbilityCost(state, playerId, ability)
+  const paidState = payAbilityCost(state, playerId, cost, {
     paymentIds,
     supportToTrashIds,
     supportToHandIds,
@@ -530,9 +551,16 @@ export const playItem = (
     trashBattleCookieIds,
     sourceInstanceId: instanceId,
   })
-  const paidPlayer = paidState.players[playerId]
+  const paidStateWithActivation: GameState = {
+    ...paidState,
+    itemsActivatedThisTurn: {
+      ...(paidState.itemsActivatedThisTurn ?? {}),
+      [playerId]: (paidState.itemsActivatedThisTurn?.[playerId] ?? 0) + 1,
+    },
+  }
+  const paidPlayer = paidStateWithActivation.players[playerId]
 
-  return updatePlayer(paidState, {
+  return updatePlayer(paidStateWithActivation, {
     ...paidPlayer,
     hand: paidPlayer.hand.filter((cardInHand) => cardInHand.instanceId !== instanceId),
     discardPile: paidPlayer.discardPile.some(

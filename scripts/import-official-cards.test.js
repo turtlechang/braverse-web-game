@@ -53,6 +53,21 @@ describe('official card importer', () => {
     expect(card.imageUrl).toMatch(/^https:\/\/cookierunbraverse\.com\//)
   })
 
+  it('normalizes fullwidth numeric level and HP values from the official feed', () => {
+    const card = normalizeOfficialCard(
+      {
+        ...rawCard,
+        card_no: 'P-131',
+        card_level: '１',
+        card_hp: '２',
+      },
+      getDatasetUrl('en'),
+    )
+
+    expect(card.level).toBe(1)
+    expect(card.hp).toBe(2)
+  })
+
   it('limits output and records that images were not downloaded', () => {
     const document = createImportDocument({
       rawCards: [rawCard, { ...rawCard, card_idx: 2, card_no: 'BS9-001' }],

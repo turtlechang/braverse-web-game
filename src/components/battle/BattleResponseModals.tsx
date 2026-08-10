@@ -80,6 +80,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onSelectTrap={(id) => {
               match.setPendingResponseMode('trap')
               match.setSelectedTrapId(id)
+              match.selectTrapCostOption(0)
+              match.setSelectedTrapTrashCookieToBreakAreaIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
               match.setSelectedTrapTrashBattleCookieIds([])
@@ -109,6 +111,21 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
           <TrapResponseModal
             cards={match.playerTrapCandidates}
             selectedTrapId={match.selectedTrapId}
+            trapCostOptionLabels={match.trapCostOptionLabels}
+            selectedTrapCostOptionIndex={match.selectedTrapCostOptionIndex}
+            onSelectTrapCostOption={match.selectTrapCostOption}
+            alternativeCostCards={match.selectedTrapTrashCookieToBreakAreaCandidates}
+            alternativeCostAmount={match.selectedTrapTrashCookieToBreakAreaAmount}
+            selectedAlternativeCostIds={match.selectedTrapTrashCookieToBreakAreaIds}
+            onToggleAlternativeCost={(id) =>
+              match.setSelectedTrapTrashCookieToBreakAreaIds((current) =>
+                current.includes(id)
+                  ? current.filter((cardId) => cardId !== id)
+                  : current.length < match.selectedTrapTrashCookieToBreakAreaAmount
+                    ? [...current, id]
+                    : current,
+              )
+            }
             paymentCards={match.trapPaymentCandidates.map(
               (support) => support.card,
             )}
@@ -154,6 +171,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             selectedTrapSelfTargetId={match.selectedTrapSelfTargetId}
             onSelectTrap={(id) => {
               match.setSelectedTrapId(id)
+              match.selectTrapCostOption(0)
+              match.setSelectedTrapTrashCookieToBreakAreaIds([])
               match.setSelectedTrapPaymentIds([])
               match.setSelectedTrapDiscardIds([])
               match.setSelectedTrapHandToBreakIds([])
@@ -242,6 +261,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 kind: 'play-trap',
                 playerId: match.viewerPlayerId,
                 trapInstanceId: trap.instanceId,
+                costOptionIndex: match.selectedTrapCostOptionIndex,
                 paymentIds: match.selectedTrapPaymentIds,
                 targetIds: match.selectedTrapTargets.map(
                   (target) => target.card.instanceId,
@@ -255,6 +275,8 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                 discardHandIds: match.selectedTrapDiscardIds,
                 handToBreakIds: match.selectedTrapHandToBreakIds,
                 trashBattleCookieIds: match.selectedTrapTrashBattleCookieIds,
+                trashCookieToBreakAreaIds:
+                  match.selectedTrapTrashCookieToBreakAreaIds,
                 trashToDeckIds: match.selectedTrapTrashToDeckIds,
               }
               match.dispatch(

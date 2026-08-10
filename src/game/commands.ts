@@ -346,6 +346,7 @@ export interface DeployCookieCommand {
   kind: 'deploy-cookie'
   playerId: PlayerId
   instanceId: string
+  specialPlayCookieInstanceId?: string
 }
 
 export interface AttackCommand {
@@ -382,6 +383,8 @@ export interface ActivateSkillCommand {
   trashToDeckBottomIds?: string[]
   /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
   trashToDeckIds?: string[]
+  /** 從支援區返回手牌的技能代價卡（P-141）。 */
+  supportToHandIds?: string[]
   effectTargets?: string[][]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -405,6 +408,8 @@ export interface BeginActivateSkillCommand {
   trashToDeckBottomIds?: string[]
   /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
   trashToDeckIds?: string[]
+  /** 從支援區返回手牌的技能代價卡（P-141）。 */
+  supportToHandIds?: string[]
   /** 提供時會在支付完成後一併解析第一個效果，供導引式 UI 最後確認使用。 */
   targetIds?: string[]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
@@ -525,6 +530,7 @@ export interface PlayTrapCommand {
   kind: 'play-trap'
   playerId: PlayerId
   trapInstanceId: string
+  costOptionIndex?: number
   paymentIds: string[]
   targetIds: string[]
   supportTrashIds?: string[]
@@ -534,6 +540,7 @@ export interface PlayTrapCommand {
   /** 放進自己休息區的手牌餅乾代價（BS3-046）。 */
   handToBreakIds?: string[]
   trashBattleCookieIds?: string[]
+  trashCookieToBreakAreaIds?: string[]
   trashToDeckIds?: string[]
   selfTargetIds?: string[]
 }
@@ -1685,7 +1692,11 @@ const applyPlayerActionCommand = (
       return placeSupportCard(state, command.instanceId)
     case 'deploy-cookie':
       requireActivePlayer(state, command.playerId)
-      return deployCookie(state, command.instanceId)
+      return deployCookie(
+        state,
+        command.instanceId,
+        command.specialPlayCookieInstanceId,
+      )
     case 'attack':
       requireActivePlayer(state, command.playerId)
       return attackCookie(
@@ -1722,6 +1733,7 @@ const applyPlayerActionCommand = (
         command.trashToDeckIds ?? [],
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
+        command.supportToHandIds ?? [],
       )
       // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再執行效果。
       // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
@@ -1797,6 +1809,7 @@ const applyPlayerActionCommand = (
         command.trashToDeckIds ?? [],
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
+        command.supportToHandIds ?? [],
       )
       // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再設定效果。
       // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
@@ -2058,6 +2071,7 @@ const applyPlayerActionCommand = (
     case 'play-trap':
       return playTrap(state, command.playerId, {
         trapInstanceId: command.trapInstanceId,
+        costOptionIndex: command.costOptionIndex,
         paymentIds: command.paymentIds,
         targetIds: command.targetIds,
         supportTrashIds: command.supportTrashIds,
@@ -2066,6 +2080,7 @@ const applyPlayerActionCommand = (
         discardHandIds: command.discardHandIds,
         handToBreakIds: command.handToBreakIds,
         trashBattleCookieIds: command.trashBattleCookieIds,
+        trashCookieToBreakAreaIds: command.trashCookieToBreakAreaIds,
         trashToDeckIds: command.trashToDeckIds,
         selfTargetIds: command.selfTargetIds,
       })

@@ -68,6 +68,13 @@ export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
     keywords.add('dragon')
   }
 
+  if (
+    card.keywords.some((keyword) => keyword.replace(/[{}]/g, '').trim().toLowerCase() === 'arena') ||
+    /arena/i.test(`${card.skill.text ?? ''} ${card.attackText ?? ''} ${card.flipText ?? ''}`)
+  ) {
+    keywords.add('arena')
+  }
+
   if (/^Soul Jam\s*:/i.test(card.name.trim())) {
     keywords.add('soul-jam')
   }
@@ -137,6 +144,19 @@ const normalizeOfficialCardRecord = (
       attackText:
         '<{P}{P}> Kettlebell Throw {da} 2 Then, place up to 3 cards from the top of your deck into the trash.',
       flipText: null,
+    }
+  }
+
+  // P-078 的英文官方資料漏了攻擊傷害標記；韓文官方資料同一張卡明確為
+  // `{da} 1`。在 adapter 邊界補回標記，讓本體與兩張異圖共用同一套攻擊效果。
+  if (
+    sourceCard.baseCardNumber === 'P-078' &&
+    sourceCard.type === 'cookie' &&
+    sourceCard.attackText === '<{B}{B}> Sovereign of the Abyss 1'
+  ) {
+    return {
+      ...sourceCard,
+      attackText: '<{B}{B}> Sovereign of the Abyss {da} 1',
     }
   }
 

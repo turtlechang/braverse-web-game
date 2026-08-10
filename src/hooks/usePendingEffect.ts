@@ -20,6 +20,7 @@ import {
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getEffectiveCardAbilityCost,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
   getPendingDecision,
@@ -909,6 +910,10 @@ export function usePendingEffect(params: {
       sourcePlayerId: viewerPlayerId,
       sourceInstanceId: card.instanceId,
     }
+    const effectiveCost =
+      sourceKind === 'item'
+        ? getEffectiveCardAbilityCost(game, viewerPlayerId, ability)
+        : ability.cost
     const effects = ability.effects.filter((effect) =>
       isEffectConditionMet(game, context, effect),
     )
@@ -924,7 +929,7 @@ export function usePendingEffect(params: {
         oncePerTurn: false,
         yourTurn: true,
         restSource: sourceKind === 'stage',
-        cost: ability.cost,
+        cost: effectiveCost,
         text: ability.text,
         effects,
       },
@@ -1647,7 +1652,10 @@ export function usePendingEffect(params: {
                 sourceInstanceId: pendingEffect.sourceCard.instanceId,
                 trigger: pendingEffect.trigger as 'activate' | 'on-play',
                 paymentIds,
-                costSupportToTrashIds: pendingEffect.selectedCostSupportToTrashIds,
+                costSupportToTrashIds: pendingEffect.skill.cost.supportToTrash
+                  ? pendingEffect.selectedCostSupportToTrashIds
+                  : [],
+                supportToHandIds,
                 discardHandIds,
                 ...(pendingEffect.skill.cost.hpToTrash
                   ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
@@ -1812,6 +1820,7 @@ export function usePendingEffect(params: {
         (nextGame.pendingRevealTopDeck?.playerId === viewerPlayerId) ||
         (nextGame.pendingOptionalCostAttack?.playerId === viewerPlayerId) ||
         (nextGame.pendingDrawUpTo?.playerId === viewerPlayerId) ||
+        (nextGame.pendingOpponentHandDiscard?.playerId === viewerPlayerId) ||
         (nextGame.pendingStageTrigger?.playerId === viewerPlayerId) ||
         (nextGame.pendingAfterDamageEffects &&
           nextGame.pendingAfterDamageEffects.length > 0 &&

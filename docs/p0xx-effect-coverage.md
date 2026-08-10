@@ -1,8 +1,8 @@
 # P-0XX 特典卡效果稽核
 
-更新日期：2026-07-30
+更新日期：2026-08-10
 
-本次稽核以正式卡池中的 26 張 P-0XX 卡為範圍。官方資料目前沒有 P-004～P-006、P-020～P-021、P-023、P-033 以後的卡，因此缺號不是匯入遺漏。候選檔已完成 `promotion-ready` 驗證並 promote 至 `data/cards/`，runtime registry 也已重新生成。
+本次稽核以正式卡池中的 26 張 P-0XX 卡為範圍。官方資料目前沒有 P-004～P-006、P-020～P-021、P-023、P-033 以後的卡，因此缺號不是匯入遺漏。完整官方 P-0XX 記錄（含異圖變體）共 153 筆，最新候選盤點與轉換狀態見 [P-0XX 匯入盤點](p0xx-card-inventory.md)；本文件仍只描述已 promote 的 26 張正式卡，不能視為其餘 127 張已進入正式牌池。
 
 ## 逐卡清單
 
@@ -46,6 +46,16 @@
 5. **P-029 陷阱**：補上「本次戰鬥我方餅乾昏厥」的延遲條件與綠色餅乾棄牌區目標；條件未成立時不建立錯誤的復活決策。
 6. **P-032 場景**：補上 Ancient 關鍵字目標與本回合任意攻擊費用修正，並在回合結束或來源／目標離場時清理修正，避免效果跨回合殘留。
 7. **卡池資料**：候選 8 張 P-017、P-024～P-029、P-032 已通過 `--require-promotion-ready`，正式 promote 並重新生成 `src/game/generated-card-pool.ts`。
+
+## 候選特殊流程驗證
+
+本輪新增的 127 張候選資料已全部通過 adapter conversion；其中三個需要額外 runtime／UI 支援的流程已用專用 `test-state` 完成正反與多段操作驗證：
+
+- **P-082 Sugar Gnome Cake Shop**：`p082-trap:energy` 驗證 `{Y}{N}` 主支付、兩張支援卡橫置、對手與我方各一個目標、雙方各增加 2 HP；`p082-trap:cookie` 驗證棄牌區 1 HP 且無 FLIP 的餅乾移至休息區替代支付。兩條路徑都能繼續戰鬥，沒有卡死。
+- **P-084 Magic Lettering Pens**：`p084-item:met` 驗證昏厥後啟動費用改為 `{N}`，完成「我方餅乾橫置 → 對手目標 → 1 傷害」；`p084-item:unmet` 驗證條件未成立時不提供發動流程。
+- **P-147 Licorice Cookie**：`p147-special-play` 驗證支付黑色 LV.1 餅乾的 Special Play、進入戰鬥區後接續 On Play，以及對手有 4 張手牌時的棄牌提示；完成後可回到主要階段。
+
+上述 `test-state` 僅是局部 demo fixture；127 張候選的逐卡效果、正式牌組與完整 Browser 稽核仍未完成，因此尚未執行 `promote:candidate`。
 
 ## 驗證證據
 

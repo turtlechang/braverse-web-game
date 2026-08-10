@@ -264,6 +264,7 @@ describe('replacement sequence', () => {
     expect(state.pendingOnPlay).toEqual({
       playerId: 'player-one',
       sourceInstanceId: onPlayReplacement.instanceId,
+      origin: 'hand',
     })
     expect(state.pendingReplacement?.tasks[0]?.remaining).toBe(1)
 

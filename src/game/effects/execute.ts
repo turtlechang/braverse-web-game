@@ -89,6 +89,25 @@ const assertCondition = (
   }
 }
 
+const markCookieHpReduced = (
+  state: GameState,
+  playerId: PlayerId,
+  instanceIds: readonly string[],
+): GameState => {
+  if (instanceIds.length === 0) return state
+  const previous = state.cookiesHpReducedThisTurn?.[playerId] ?? {}
+  return {
+    ...state,
+    cookiesHpReducedThisTurn: {
+      ...(state.cookiesHpReducedThisTurn ?? {}),
+      [playerId]: {
+        ...previous,
+        ...Object.fromEntries(instanceIds.map((instanceId) => [instanceId, true])),
+      },
+    },
+  }
+}
+
 const damagePlayerCookie = (
   player: PlayerState,
   targetInstanceId: string,
@@ -609,7 +628,7 @@ export const executeCardEffect = (
       )
       .map((target) => target.card)
 
-    const damageState = resolveDamageOutcome(
+    let damageState = markCookieHpReduced(
       {
         ...state,
         players: {
@@ -617,6 +636,28 @@ export const executeCardEffect = (
           [targetPlayerId]: damagedPlayer,
         },
       },
+      targetPlayerId,
+      targets
+        .filter(() => effect.amount > 0)
+        .map((target) => target.card.instanceId),
+    )
+    const sourceCookie = state.players[context.sourcePlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    )
+    if (
+      sourceCookie?.card.keywords?.includes('arena') &&
+      effect.amount > 0
+    ) {
+      damageState = {
+        ...damageState,
+        arenaCookieDealtEffectDamageThisTurn: {
+          ...(damageState.arenaCookieDealtEffectDamageThisTurn ?? {}),
+          [context.sourcePlayerId]: true,
+        },
+      }
+    }
+    damageState = resolveDamageOutcome(
+      damageState,
       targetPlayerId,
       departedCount,
       departedCookieCards,
@@ -639,24 +680,37 @@ export const executeCardEffect = (
 
   if (effect.kind === 'place-source-to-support') {
     const player = state.players[context.sourcePlayerId]
+    const sourceFromBattle = player.battleArea.find(
+      (cookie) => cookie.card.instanceId === context.sourceInstanceId,
+    )
     const sourceFromDiscard = player.discardPile.find(
       (card) => card.instanceId === context.sourceInstanceId,
     )
     const sourceFromHand = player.hand.find(
       (card) => card.instanceId === context.sourceInstanceId,
     )
-    const source = sourceFromDiscard ?? sourceFromHand
+    const source = sourceFromBattle?.card ?? sourceFromDiscard ?? sourceFromHand
+    const battleHpCards = sourceFromBattle?.hpCards ?? []
+    const battleEquippedCards = sourceFromBattle?.equippedCards ?? []
+    // A Cookie moved out of battle takes its HP/equipment cards to the trash.
     if (!source) {
       throw new GameRuleError('找不到可放入支援區的來源卡。')
     }
     return updatePlayer(state, {
       ...player,
+      battleArea: player.battleArea.filter(
+        (cookie) => cookie.card.instanceId !== context.sourceInstanceId,
+      ),
       hand: player.hand.filter(
         (card) => card.instanceId !== context.sourceInstanceId,
       ),
-      discardPile: player.discardPile.filter(
-        (card) => card.instanceId !== context.sourceInstanceId,
-      ),
+      discardPile: [
+        ...player.discardPile.filter(
+          (card) => card.instanceId !== context.sourceInstanceId,
+        ),
+        ...battleHpCards,
+        ...battleEquippedCards,
+      ],
       supportArea: [
         ...player.supportArea,
         { card: source, rested: effect.rested ?? false },
@@ -807,7 +861,11 @@ export const executeCardEffect = (
   }
 
   if (effect.kind === 'gain-hp') {
-    const player = state.players[context.sourcePlayerId]
+    const targetPlayerId = getTargetPlayerId(
+      context,
+      effect.target ?? { side: 'self', min: 0, max: 1 },
+    )
+    const player = state.players[targetPlayerId]
     const isOptionalTarget =
       !effect.target?.sourceOnly && (effect.target?.min ?? 1) === 0
     const targetInstanceId =
@@ -859,6 +917,7 @@ export const executeCardEffect = (
       if (card.type !== 'cookie') return false
       if (effect.nonCookieOnly) return false
       if (effect.energyColor !== undefined && card.energyColor !== effect.energyColor) return false
+      if (effect.keyword !== undefined && !card.keywords?.includes(effect.keyword)) return false
       if (effect.minLevel !== undefined && card.level < effect.minLevel) return false
       if (effect.maxLevel !== undefined && card.level > effect.maxLevel) return false
       return true
@@ -866,11 +925,26 @@ export const executeCardEffect = (
     if (selected.length !== uniqueIds.length) {
       throw new GameRuleError('Invalid hand target.')
     }
-    return updatePlayer(state, {
+    const updatedState = updatePlayer(state, {
       ...player,
       hand: player.hand.filter((card) => !uniqueIds.includes(card.instanceId)),
       breakArea: [...player.breakArea, ...(selected as CookieCard[])],
     })
+    const arenaCount = selected.filter((card) =>
+      card.keywords?.includes('arena'),
+    ).length
+    return arenaCount > 0
+      ? {
+          ...updatedState,
+          arenaCookiesPlacedInBreakThisTurn: {
+            ...(updatedState.arenaCookiesPlacedInBreakThisTurn ?? {}),
+            [context.sourcePlayerId]:
+              (updatedState.arenaCookiesPlacedInBreakThisTurn?.[
+                context.sourcePlayerId
+              ] ?? 0) + arenaCount,
+          },
+        }
+      : updatedState
   }
 
   if (effect.kind === 'hand-to-battle') {
@@ -928,6 +1002,7 @@ export const executeCardEffect = (
           ? {
               playerId: context.sourcePlayerId,
               sourceInstanceId: cookie.instanceId,
+              origin: 'hand',
             }
           : null,
       pendingRefresh: exhausted
@@ -1559,7 +1634,10 @@ export const executeCardEffect = (
         ...player.discardPile,
         ...selected.map((support) => support.card),
       ],
-    }), targetPlayerId, { triggerSkill: selected.length > 0 })
+    }), targetPlayerId, {
+      triggerSkill: selected.length > 0,
+      trashedCount: effect.side === 'self' ? selected.length : 0,
+    })
   }
 
   if (effect.kind === 'support-to-hand') {
@@ -1695,10 +1773,11 @@ export const executeCardEffect = (
       ...updated,
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay: cookie.skill?.trigger === 'on-play'
-        ? {
-            playerId: context.sourcePlayerId,
-            sourceInstanceId: cookie.instanceId,
-          }
+          ? {
+              playerId: context.sourcePlayerId,
+              sourceInstanceId: cookie.instanceId,
+              origin: 'trash',
+            }
         : null,
       pendingRefresh:
         exhausted
@@ -2251,7 +2330,11 @@ export const executeCardEffect = (
         ],
       }
       return resolveDamageOutcome(
-        updatePlayer(state, updatedPlayer),
+        markCookieHpReduced(
+          updatePlayer(state, updatedPlayer),
+          targetPlayerId,
+          [target.card.instanceId],
+        ),
         targetPlayerId,
         1,
         [target.card],
@@ -2270,7 +2353,11 @@ export const executeCardEffect = (
         ...removedHpCards.map((card) => ({ card, rested: effect.rested ?? false })),
       ],
     }
-    return updatePlayer(state, updatedPlayer)
+    return markCookieHpReduced(
+      updatePlayer(state, updatedPlayer),
+      targetPlayerId,
+      [target.card.instanceId],
+    )
   }
 
   if (effect.kind === 'break-to-battle') {
@@ -2317,7 +2404,11 @@ export const executeCardEffect = (
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
         cookie.skill?.trigger === 'on-play'
-          ? { playerId: context.sourcePlayerId, sourceInstanceId: cookie.instanceId }
+          ? {
+              playerId: context.sourcePlayerId,
+              sourceInstanceId: cookie.instanceId,
+              origin: 'break',
+            }
           : null,
       pendingRefresh: exhausted
         ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
@@ -2369,7 +2460,11 @@ export const executeCardEffect = (
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
         cookie.skill?.trigger === 'on-play'
-          ? { playerId: context.sourcePlayerId, sourceInstanceId: cookie.instanceId }
+          ? {
+              playerId: context.sourcePlayerId,
+              sourceInstanceId: cookie.instanceId,
+              origin: 'support',
+            }
           : null,
       pendingRefresh: exhausted
         ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
@@ -2418,7 +2513,11 @@ export const executeCardEffect = (
       nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
       pendingOnPlay:
         sourceInBreak.skill?.trigger === 'on-play'
-          ? { playerId: context.sourcePlayerId, sourceInstanceId: sourceInBreak.instanceId }
+          ? {
+              playerId: context.sourcePlayerId,
+              sourceInstanceId: sourceInBreak.instanceId,
+              origin: 'break',
+            }
           : null,
       pendingRefresh: exhausted
         ? { playerId: context.sourcePlayerId, remainingDraws: 0 }
@@ -2626,13 +2725,13 @@ export const executeCardEffect = (
       }
     }
 
-    const nextState: GameState = {
+    const nextState: GameState = markCookieHpReduced({
       ...state,
       players: {
         ...state.players,
         [targetPlayerId]: updatedPlayer,
       },
-    }
+    }, targetPlayerId, [target.card.instanceId])
 
     if (departedCount > 0) {
       return resolveDamageOutcome(nextState, targetPlayerId, departedCount, [
@@ -3015,6 +3114,84 @@ export const executeCardEffect = (
     return state
   }
 
+  if (effect.kind === 'hp-to-trash-all') {
+    const targetPlayerId =
+      effect.side === 'self'
+        ? context.sourcePlayerId
+        : getOpponentId(context.sourcePlayerId)
+    const targetIds = state.players[targetPlayerId].battleArea.map(
+      (cookie) => cookie.card.instanceId,
+    )
+    let nextState = state
+    for (const targetId of targetIds) {
+      nextState = executeCardEffect(
+        nextState,
+        context,
+        {
+          kind: 'hp-to-trash',
+          amount: effect.amount,
+          target: { side: effect.side, min: 1, max: 1 },
+        },
+        [targetId],
+        shuffle,
+      )
+      if (nextState.status !== 'playing') break
+    }
+    return nextState
+  }
+
+  if (effect.kind === 'rest-cookie') {
+    const targets = selectEffectTargets(
+      state,
+      context,
+      effect.target,
+      selectedTargetIds,
+    )
+    if (targets.length === 0) return state
+    let nextState = state
+    for (const [ownerId, ownedTargets] of groupTargetsByOwner(state, targets)) {
+      const targetIds = new Set(
+        ownedTargets.map((target) => target.card.instanceId),
+      )
+      nextState = updatePlayer(nextState, {
+        ...nextState.players[ownerId],
+        battleArea: nextState.players[ownerId].battleArea.map((cookie) =>
+          targetIds.has(cookie.card.instanceId)
+            ? { ...cookie, rested: true }
+            : cookie,
+        ),
+      })
+    }
+    return nextState
+  }
+
+  if (effect.kind === 'break-source-to-trash') {
+    const player = state.players[context.sourcePlayerId]
+    const source = player.breakArea.find(
+      (card) => card.instanceId === context.sourceInstanceId,
+    )
+    if (!source) return state
+    return updatePlayer(state, {
+      ...player,
+      battleArea: player.battleArea.filter(
+        (cookie) => cookie.card.instanceId !== context.sourceInstanceId,
+      ),
+      breakArea: player.breakArea.filter(
+        (card) => card.instanceId !== context.sourceInstanceId,
+      ),
+      discardPile: [...player.discardPile, source],
+    })
+  }
+
+  if (effect.kind === 'reveal-hand') {
+    const cards = state.players[context.sourcePlayerId].hand.filter(
+      (card) =>
+        effect.keyword === undefined || card.keywords?.includes(effect.keyword),
+    )
+    if (cards.length < effect.amount) return state
+    return state
+  }
+
   if (!effect.target) {
     throw new GameRuleError('此效果需要目標。')
   }
@@ -3062,13 +3239,17 @@ export const executeCardEffect = (
       .map((target) => target.card)
 
     const damageState = resolveDamageOutcome(
-      {
+      markCookieHpReduced(
+        {
         ...state,
         players: {
           ...state.players,
           [targetPlayerId]: damagedPlayer,
         },
-      },
+        },
+        targetPlayerId,
+        protectedTargets.map((target) => target.card.instanceId),
+      ),
       targetPlayerId,
       departedCount,
       departedCookieCards,
@@ -3114,13 +3295,19 @@ export const executeCardEffect = (
       .map((target) => target.card)
 
     const damageState = resolveDamageOutcome(
-      {
-        ...state,
-        players: {
-          ...state.players,
-          [targetPlayerId]: damagedPlayer,
+      markCookieHpReduced(
+        {
+          ...state,
+          players: {
+            ...state.players,
+            [targetPlayerId]: damagedPlayer,
+          },
         },
-      },
+        targetPlayerId,
+        appliedList
+          .filter(({ amount }) => amount > 0)
+          .map(({ target }) => target.card.instanceId),
+      ),
       targetPlayerId,
       departedCount,
       departedCookieCards,

@@ -1,5 +1,9 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { MainMenu, type AiDeckChoice } from '../MainMenu'
+const DeckEditorPage = lazy(async () => {
+  const module = await import('../DeckEditorPage')
+  return { default: module.DeckEditorPage }
+})
 import {
   deleteCustomDeck,
   duplicateCustomDeck,
@@ -13,11 +17,6 @@ import type { useMatchController } from '../../hooks/useMatchController'
 import type { usePendingEffect } from '../../hooks/usePendingEffect'
 import type { useAiTurn } from '../../hooks/useAiTurn'
 import type { useMatchDialogs } from '../../hooks/useMatchDialogs'
-
-const DeckEditorModal = lazy(async () => {
-  const module = await import('../modals/DeckEditorModal')
-  return { default: module.DeckEditorModal }
-})
 
 const TestScenarioModal = lazy(async () => {
   const module = await import('../modals/TestScenarioModal')
@@ -37,6 +36,10 @@ function ModalLoadingFallback() {
       </div>
     </div>
   )
+}
+
+function PageLoadingFallback() {
+  return <div className="deck-editor-page-loading" role="status">載入牌組編輯器中…</div>
 }
 
 const testStateConfig = parseTestStateConfig(
@@ -146,7 +149,7 @@ export function MenuScreen({
 
   return (
     <>
-      {!showOnlineMatch && (
+      {!showOnlineMatch && !showDeckEditor && (
         <MainMenu
           decks={savedDecks}
           selectedDeckId={selectedDeckId}
@@ -197,8 +200,8 @@ export function MenuScreen({
         />
       )}
       {showDeckEditor && (
-        <Suspense fallback={<ModalLoadingFallback />}>
-          <DeckEditorModal
+        <Suspense fallback={<PageLoadingFallback />}>
+          <DeckEditorPage
             initialDeck={editingDeck ?? undefined}
             onSave={handleDeckEditorSave}
             onClose={() => {

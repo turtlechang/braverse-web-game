@@ -35,13 +35,16 @@ import {
 import { hasBlockingPending } from './pending'
 import {
   canPayTrashBattleCookieCost,
+  canPayTrashCookieToBreakAreaCost,
   getFaintTriggeredCost,
   getDiscardHandCostCandidates,
   markSupportAreaDecreased,
   payTrashBattleCookieCost,
+  payTrashCookieToBreakAreaCost,
 } from './skills'
 import { canAttack } from './turn'
 import type {
+  AbilityCost,
   CardEffect,
   CookieInBattle,
   EffectContext,
@@ -65,6 +68,21 @@ const requirePendingBattle = (state: GameState): PendingBattle => {
 
   return state.pendingBattle
 }
+
+const markCookieHpReducedThisTurn = (
+  state: GameState,
+  playerId: PlayerId,
+  instanceId: string,
+): GameState => ({
+  ...state,
+  cookiesHpReducedThisTurn: {
+    ...(state.cookiesHpReducedThisTurn ?? {}),
+    [playerId]: {
+      ...(state.cookiesHpReducedThisTurn?.[playerId] ?? {}),
+      [instanceId]: true,
+    },
+  },
+})
 
 const assertNoBlockingDecision = (state: GameState) => {
   if (state.pendingBattle) {
@@ -398,14 +416,18 @@ export const explainUnavailableTraps = (
                         handCard.energyColor === trap.cost.discardHandColor),
                   ).length < (trap.cost.discardHand ?? 0)
                 ? 'not-enough-hand-to-discard'
-                : selectEnergyPayment(
-                      trap.cost.energy ?? trap.cost,
-                      player.supportArea,
-                    ) === null
-                  ? 'cannot-pay-energy'
-                  : !canPayTrashBattleCookieCost(trap.cost, player.battleArea)
-                    ? 'cannot-trash-battle-cookie'
-                    : 'unknown'
+                : getTrapCostOptions(trap).some((cost) =>
+                    canPayTrapCost(state, playerId, cost, card.instanceId),
+                  )
+                  ? 'unknown'
+                  : selectEnergyPayment(
+                        trap.cost.energy ?? trap.cost,
+                        player.supportArea,
+                      ) === null
+                    ? 'cannot-pay-energy'
+                    : !canPayTrashBattleCookieCost(trap.cost, player.battleArea)
+                      ? 'cannot-trash-battle-cookie'
+                      : 'unknown'
       return { instanceId: card.instanceId, cardId: card.id, reason }
     })
 }
@@ -443,11 +465,9 @@ export const getTrapCandidates = (
           (!card.trap!.cost.discardHandColor ||
             handCard.energyColor === card.trap!.cost.discardHandColor),
       ).length >= (card.trap!.cost.discardHand ?? 0) &&
-      selectEnergyPayment(
-        card.trap!.cost.energy ?? card.trap!.cost,
-        player.supportArea,
-      ) !== null &&
-      canPayTrashBattleCookieCost(card.trap!.cost, player.battleArea),
+      getTrapCostOptions(card.trap!).some((cost) =>
+        canPayTrapCost(state, playerId, cost, card.instanceId),
+      ),
   )
 }
 
@@ -624,6 +644,8 @@ const moveSupportsToHand = (
 
 export interface PlayTrapOptions {
   trapInstanceId: string
+  /** 選取陷阱的第幾種支付方式；0 為卡面主支付。 */
+  costOptionIndex?: number
   paymentIds: string[]
   targetIds: string[]
   supportTrashIds?: string[]
@@ -633,6 +655,7 @@ export interface PlayTrapOptions {
   /** 放進自己休息區的手牌餅乾代價（BS3-046）。 */
   handToBreakIds?: string[]
   trashBattleCookieIds?: string[]
+  trashCookieToBreakAreaIds?: string[]
   /**
    * trash-to-deck 效果的獨立目標欄位（例如 BS2-079 第二段「洗回牌庫」）。
    * 陷阱效果不像物品/技能有逐效果的 effectTargets 陣列，只有單一共用
@@ -646,6 +669,42 @@ export interface PlayTrapOptions {
    * 1 damage」）。與 targetIds（通常瞄準對手）的目標側不同，不能共用。
    */
   selfTargetIds?: string[]
+}
+
+export const getTrapCostOptions = (trap: TrapAbility): AbilityCost[] => [
+  trap.cost,
+  ...(trap.alternativeCosts ?? []),
+]
+
+const canPayTrapCost = (
+  state: GameState,
+  playerId: PlayerId,
+  cost: AbilityCost,
+  trapInstanceId?: string,
+): boolean => {
+  const player = state.players[playerId]
+  const handCandidates = getDiscardHandCostCandidates(
+    cost,
+    player.hand,
+    trapInstanceId,
+  )
+  const handToBreakCost = cost.handToBreakArea
+  const handToBreakCandidates = handToBreakCost
+    ? player.hand.filter(
+        (card) =>
+          card.instanceId !== trapInstanceId &&
+          card.type === 'cookie' &&
+          (handToBreakCost.energyColor === undefined ||
+            card.energyColor === handToBreakCost.energyColor),
+      )
+    : []
+  return (
+    selectEnergyPayment(cost.energy ?? cost, player.supportArea) !== null &&
+    handCandidates.length >= (cost.discardHand ?? 0) &&
+    handToBreakCandidates.length >= (handToBreakCost?.count ?? 0) &&
+    canPayTrashBattleCookieCost(cost, player.battleArea) &&
+    canPayTrashCookieToBreakAreaCost(cost, player.discardPile)
+  )
 }
 
 export interface PlayBlockerOptions {
@@ -861,8 +920,15 @@ export const playTrap = (
     throw new GameRuleError('Invalid battle action.')
   }
 
+  const costOptions = getTrapCostOptions(trap)
+  const costOptionIndex = options.costOptionIndex ?? 0
+  const paidCost = costOptions[costOptionIndex]
+  if (!paidCost || !canPayTrapCost(state, playerId, paidCost, trapCard.instanceId)) {
+    throw new GameRuleError('Invalid trap payment option.')
+  }
+
   const paymentValidation = validateEnergyPayment(
-    trap.cost.energy ?? trap.cost,
+    paidCost.energy ?? paidCost,
     player.supportArea,
     options.paymentIds,
   )
@@ -876,10 +942,10 @@ export const playTrap = (
   const uniqueDiscardHandIds = [...new Set(discardHandIds)]
   if (
     uniqueDiscardHandIds.length !== discardHandIds.length ||
-    uniqueDiscardHandIds.length !== (trap.cost.discardHand ?? 0)
+    uniqueDiscardHandIds.length !== (paidCost.discardHand ?? 0)
   ) {
     throw new GameRuleError(
-      `Must discard exactly ${trap.cost.discardHand ?? 0} cards from hand.`,
+      `Must discard exactly ${paidCost.discardHand ?? 0} cards from hand.`,
     )
   }
   const discardedHandCards = player.hand.filter(
@@ -887,22 +953,22 @@ export const playTrap = (
       card.instanceId !== trapCard.instanceId &&
       uniqueDiscardHandIds.includes(card.instanceId),
   )
-  if (discardedHandCards.length !== (trap.cost.discardHand ?? 0)) {
+  if (discardedHandCards.length !== (paidCost.discardHand ?? 0)) {
     throw new GameRuleError('Invalid battle action.')
   }
-  if (trap.cost.discardHandColor) {
+  if (paidCost.discardHandColor) {
     const invalidDiscard = discardedHandCards.find(
-      (card) => card.energyColor !== trap.cost.discardHandColor,
+      (card) => card.energyColor !== paidCost.discardHandColor,
     )
     if (invalidDiscard) {
       throw new GameRuleError(
-        `Discarded cards must be ${trap.cost.discardHandColor} energy color.`,
+        `Discarded cards must be ${paidCost.discardHandColor} energy color.`,
       )
     }
   }
 
   // 手牌餅乾放進自己的休息區，與 discardHand（進棄牌區）不同，會推進自己的 break 等級。
-  const handToBreakCost = trap.cost.handToBreakArea
+  const handToBreakCost = paidCost.handToBreakArea
   const uniqueHandToBreakIds = [...new Set(options.handToBreakIds ?? [])]
   if (uniqueHandToBreakIds.length !== (options.handToBreakIds ?? []).length) {
     throw new GameRuleError('休息區代價不能重複選同一張手牌。')
@@ -1002,10 +1068,15 @@ export const playTrap = (
 
   const trashBattlePayment = payTrashBattleCookieCost(
     updatedPlayer,
-    trap.cost,
+    paidCost,
     options.trashBattleCookieIds ?? [],
   )
   updatedPlayer = trashBattlePayment.player
+  updatedPlayer = payTrashCookieToBreakAreaCost(
+    updatedPlayer,
+    paidCost,
+    options.trashCookieToBreakAreaIds ?? [],
+  )
 
   let nextState: GameState = {
     ...state,
@@ -1052,6 +1123,20 @@ export const playTrap = (
   }
 
   if (handToBreakCards.length > 0) {
+    const arenaCount = handToBreakCards.filter((card) =>
+      card.keywords?.includes('arena'),
+    ).length
+    if (arenaCount > 0) {
+      nextState = {
+        ...nextState,
+        arenaCookiesPlacedInBreakThisTurn: {
+          ...(nextState.arenaCookiesPlacedInBreakThisTurn ?? {}),
+          [playerId]:
+            (nextState.arenaCookiesPlacedInBreakThisTurn?.[playerId] ?? 0) +
+            arenaCount,
+        },
+      }
+    }
     // 手牌進休息區會推進自己的 break 等級，必須立刻結算勝負。
     nextState = resolveBreakLevelVictory(nextState)
   }
@@ -1059,6 +1144,7 @@ export const playTrap = (
   if (supportToTrash?.kind === 'support-to-trash') {
     nextState = markSupportAreaDecreased(nextState, playerId, {
       triggerSkill: (options.supportTrashIds ?? []).length > 0,
+      trashedCount: (options.supportTrashIds ?? []).length,
     })
   }
 
@@ -2255,7 +2341,7 @@ export const resolveNextDamage = (state: GameState): GameState => {
         : cookie,
     ),
   }
-  let nextState: GameState = {
+  let nextState: GameState = markCookieHpReducedThisTurn({
     ...state,
     players: {
       ...state.players,
@@ -2283,6 +2369,21 @@ export const resolveNextDamage = (state: GameState): GameState => {
           ? 'flip'
           : 'damage',
     },
+  }, defender.id, target.card.instanceId)
+
+  if (battle.effectDamageSequence) {
+    const effectSource = state.players[battle.attackerPlayerId].battleArea.find(
+      (cookie) => cookie.card.instanceId === battle.attackerInstanceId,
+    )
+    if (effectSource?.card.keywords?.includes('arena')) {
+      nextState = {
+        ...nextState,
+        arenaCookieDealtEffectDamageThisTurn: {
+          ...(nextState.arenaCookieDealtEffectDamageThisTurn ?? {}),
+          [battle.attackerPlayerId]: true,
+        },
+      }
+    }
   }
 
   if (
@@ -2788,7 +2889,7 @@ export const getTrapTargetCandidates = (
   const card = state.players[playerId].hand.find(
     (candidate) => candidate.instanceId === trapInstanceId,
   )
-  const targetEffect = card?.trap?.effects.find(
+  const targetEffects = card?.trap?.effects.filter(
     (effect) =>
       effect.kind === 'damage' ||
       effect.kind === 'damage-by-break-count' ||
@@ -2800,6 +2901,14 @@ export const getTrapTargetCandidates = (
       effect.kind === 'redirect-attack' ||
       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
+  // The guided trap UI has separate channels for opponent/either targets and
+  // explicit self targets. Prefer the former when a trap targets both sides
+  // (for example P-082), while retaining the first-target fallback for traps
+  // that only target one of the defender's own Cookies.
+  const targetEffect =
+    targetEffects?.find(
+      (effect) => 'target' in effect && effect.target?.side !== 'self',
+    ) ?? targetEffects?.[0]
   const target =
     targetEffect && 'target' in targetEffect ? targetEffect.target : undefined
   return target
@@ -2829,7 +2938,16 @@ export const getTrapSelfTargetCandidates = (
       effect.target?.side === 'self' &&
       (effect.target.min ?? 0) > 0,
   )
-  if (!selfEffects || selfEffects.length === 0) return []
+  const hasNonSelfTarget = card?.trap?.effects.some(
+    (effect) =>
+      'target' in effect &&
+      effect.target !== undefined &&
+      effect.target.side !== 'self' &&
+      (effect.target.min ?? 0) > 0,
+  )
+  // A self-only trap is already represented by getTrapTargetCandidates. Do
+  // not expose the same Cookie again in a second guided phase.
+  if (!selfEffects || selfEffects.length === 0 || !hasNonSelfTarget) return []
   const firstSelfEffect = selfEffects[0]
   const target =
     firstSelfEffect && 'target' in firstSelfEffect

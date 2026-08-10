@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GameState, PlayerId } from '../../game'
-import { getEnergyCostTotal, selectEnergyPayment } from '../../game'
+import {
+  canSpecialPlayCookie,
+  getEnergyCostTotal,
+  getTrashBattleCookieCostCandidates,
+  selectEnergyPayment,
+} from '../../game'
 import { useOnlineMatchController } from '../../hooks/useOnlineMatchController'
 import type { OnlineConnectionMode } from '../../hooks/useOnlineMatch'
 import { useOnlinePendingEffect } from '../../hooks/useOnlinePendingEffect'
@@ -24,7 +29,12 @@ import { getOptionalCostAttackPrompt } from '../modals/optionalCostAttackPrompt'
 import { BattleResponseModals } from './BattleResponseModals'
 import { DamageEffectModals } from './DamageEffectModals'
 import { PendingDecisionModals } from './PendingDecisionModals'
-import { CardDetailModal, CardPileModal, ResultModal } from '../modals/GameModals'
+import {
+  CardDetailModal,
+  CardPileModal,
+  ResultModal,
+  SpecialPlayModal,
+} from '../modals/GameModals'
 import type { GameCard } from '../../game'
 import type {
   AttackSelectionPreview,
@@ -103,6 +113,8 @@ export function OnlineBattleView({
 }: OnlineBattleViewProps) {
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
+  const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
+  const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
 
@@ -131,6 +143,41 @@ export function OnlineBattleView({
 
   const opponentId = match.opponentId
   const viewerPlayer = game.players[viewerPlayerId]
+  const specialPlaySourceCard = viewerPlayer.hand.find(
+    (card) => card.instanceId === specialPlaySourceId,
+  ) ?? null
+  const specialPlayCandidates =
+    specialPlaySourceCard?.type === 'cookie' &&
+    specialPlaySourceCard.skill?.specialPlayCost
+      ? getTrashBattleCookieCostCandidates(
+          specialPlaySourceCard.skill.specialPlayCost,
+          viewerPlayer.battleArea,
+        )
+      : []
+  const handleSpecialPlayConfirm = () => {
+    if (
+      !specialPlaySourceCard ||
+      !specialPlayCandidateId ||
+      !specialPlayCandidates.some(
+        (candidate) => candidate.card.instanceId === specialPlayCandidateId,
+      ) ||
+      !canSpecialPlayCookie(game, viewerPlayerId, specialPlaySourceCard.instanceId)
+    ) {
+      return
+    }
+
+    match.dispatch(
+      {
+        kind: 'deploy-cookie',
+        playerId: viewerPlayerId,
+        instanceId: specialPlaySourceCard.instanceId,
+        specialPlayCookieInstanceId: specialPlayCandidateId,
+      },
+      '特殊登場已支付，等待處理 On Play。',
+    )
+    setSpecialPlaySourceId(null)
+    setSpecialPlayCandidateId(null)
+  }
   const { activeSelectedHandCardId, setSelectedHandCardId } =
     useHandSelectionDismissal(viewerPlayer.hand, closeResourcePopover)
   const actionStatus = deriveActionStatus({
@@ -488,6 +535,10 @@ export function OnlineBattleView({
         },
         '新餅乾已登場並配置 HP。',
       ),
+    onSpecialPlayCookie: (instanceId) => {
+      setSpecialPlaySourceId(instanceId)
+      setSpecialPlayCandidateId(null)
+    },
     onPlayItem: (instanceId) => {
       const card = viewerPlayer.hand.find(
         (candidate) => candidate.instanceId === instanceId,
@@ -710,6 +761,20 @@ export function OnlineBattleView({
       <BattleResponseModals match={match} />
       <DamageEffectModals match={match} pending={pending} />
       <PendingDecisionModals match={match} pending={pending} />
+
+      {specialPlaySourceCard && specialPlayCandidates.length > 0 && (
+        <SpecialPlayModal
+          sourceCard={specialPlaySourceCard}
+          candidates={specialPlayCandidates}
+          selectedCandidateId={specialPlayCandidateId}
+          onSelectCandidate={setSpecialPlayCandidateId}
+          onCancel={() => {
+            setSpecialPlaySourceId(null)
+            setSpecialPlayCandidateId(null)
+          }}
+          onConfirm={handleSpecialPlayConfirm}
+        />
+      )}
 
       {game.result && (
         <ResultModal

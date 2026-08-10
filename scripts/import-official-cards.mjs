@@ -33,7 +33,10 @@ const toOptionalNumber = (value) => {
     return null
   }
 
-  const parsed = Number(value)
+  const normalized = String(value)
+    .replace(/[０-９]/g, (digit) => String(digit.charCodeAt(0) - '０'.charCodeAt(0) + 0))
+    .replace(/．/g, '.')
+  const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : null
 }
 

@@ -102,7 +102,7 @@ BS4 後續規則回歸已完成 AI benchmark 的 RNG 傳遞修正：同一個 st
 
 兩階段選擇效果已落地：BS4-030 桃花餅乾「世外桃源」與 BS4-044 千年寺場景的目標選擇拆為「先選目標餅乾 → 再選 1 張手牌放回其 HP 最上方」兩個順序決策，沒有合法目標時不詢問發動、第一階段目標昏厥時自動中止並略過第二階段，對戰紀錄只公開動作過程、不揭露被搬移的卡牌內容；本機、線上與 AI 共用同一判定。
 
-P-0XX 特典卡本輪完成 26 張正式卡的逐卡轉接與瀏覽器路由掃描，並以規則回歸及代表性實戰涵蓋餅乾技能、攻擊後效果、物品、FLIP、陷阱與場景。修正 P-017 支援區事件觸發、P-024 不可攻擊的 HP-only FLIP、P-025～P-027 Marzipan 條件與傷害倍增、P-028／P-032 場景多段效果，以及 P-029 戰鬥昏厥後延遲復活；候選 8 張已 promote 至正式卡池。完整清單與限制見 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。
+P-0XX 特典卡原正式卡池的 26 張已完成逐卡轉接與瀏覽器路由掃描；本批依官方資料重新盤點出完整 153 筆 P-0XX 記錄（含 14 筆異圖變體），新增 127 筆候選資料至 `data/candidates/`，且 153／153 筆均已通過 adapter conversion。候選目前為 `promotion-ready`，但尚未 promote；P-082 替代／主支付、P-084 昏厥後轉為 `{N}` 的動態啟動費用，以及 P-147 Special Play 已接上 runtime／UI，並完成專用 Browser 情境驗證。完整記錄見 [P-0XX 匯入盤點](docs/p0xx-card-inventory.md)，已 promote 範圍與剩餘門檻見 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md)。
 
 BS5 YELLOW 與 GREEN 已完成 runtime 轉接，逐色稽核歸零：GREEN 批次新增 `deferred-end-of-turn`（BS5-051／056／058／063「When your turn ends」延遲佇列，於 end 階段重入排空、互動效果建立對應 pending）、`opponent-rests-support`（BS5-065 由對手選定橫置支援卡，`activeOnly` 與候選不足自動略過）、`StageAbility.endPhase`（BS5-066 場景被動觸發，不可手動啟動）；UI 新增 `OpponentRestSupportResponseModal` 並共用本機／線上控制器，`cards:analyze:bs5-candidate` 覆蓋盤點 GREEN 0／0／0（見 [BS5 效果轉接覆蓋盤點](docs/bs5-effect-coverage.md)）。
 
@@ -119,7 +119,7 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
 - **牌組編輯器**：搜尋／篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存；系列選單已分開 BS3 與 BS4，避免兩彈共用官方 product title 時混在一起。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果。等級 benchmark 已強制驗證零卡死／deadlock／非法操作／turn cap 與最低勝率，失敗會輸出可重播問題包；見 [docs/ai-levels.md](docs/ai-levels.md)。Lv.5 為設計稿。
-- **卡牌池**：BS1/BS2 官方卡池、五色起始牌組、BS3 官方卡池與 P-0XX 特典卡均已匯入；BS3 的 176 筆資料（含 121 張基礎卡、異圖與促銷變體）及 26 張 P-0XX 已正式納入 `data/cards/`，並以 [BS3 效果轉接覆蓋盤點](docs/bs3-effect-coverage.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md) 持續追蹤 adapter 轉接狀態。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及 8 張高風險卡的語意契約。
+- **卡牌池**：BS1/BS2 官方卡池、五色起始牌組、BS3 官方卡池與 P-0XX 特典卡均已匯入；BS3 的 176 筆資料（含 121 張基礎卡、異圖與促銷變體）及目前 26 張 P-0XX 已正式納入 `data/cards/`。另有官方 P-0XX 全量 153 筆資料（含異圖變體）已完成 adapter conversion，其中 127 筆仍在候選區等待 Browser 稽核與 promote；以 [P-0XX 匯入盤點](docs/p0xx-card-inventory.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md) 分開追蹤候選與正式狀態。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及 8 張高風險卡的語意契約。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；桌面戰場（≥901px）採參考圖的中央戰場、左右資源欄、左側卡牌焦點預覽與右側回合欄排版，底色維持既有深藍／青色基調；1280×720 已修正手牌裁切、提高戰鬥區比例與資源標籤／中央狀態提示對比，並保留 hover 與鍵盤 focus 的卡牌快速預覽；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
 - **戰鬥區卡槽**：中央「戰鬥區」文字固定不位移；單張餅乾落在左槽，雙張餅乾以放大的左右間隔排開。HP 卡 dock 置於卡片下緣；能量不足與技能提示以所屬卡片外側的垂直中線排列，左卡向左、右卡向右，本機與線上對戰共用。
 - **戰場視覺同步**：`/?mockup=battlefield` 直接重用正式戰場元件與桌面 `tactical-clean` 樣式；對手紅框、我方青框、深藍戰鬥區與次深藍支援區、支援張數與休息區等級文字均同步套用。平板橫向正式對戰與 mockup 共用 `src/styles/tablet-layout.css`，本機與 mockup 都已移除會穿過手牌的全畫面裝飾框。
@@ -155,7 +155,7 @@ BS5 的 Browser 稽核目前已完成五色標準正式牌組各 2 場、共 10 
 
 BS3 已建立候選卡表盤點與可重複匯入流程，並完成 `PURE` 通用分類／特殊費用／Mix Cost 相容性、`Ancient`／`Soul Jam` runtime 追蹤與 `BS3-121` 的主動特殊勝利判定。攻擊後 `Then`、額外能力來源轉接與靈魂果醬裝載家族已有 runtime；BS3-115 保護已依官方 Q&A 補齊 `attackTargetOnly` 例外、全場／棄置路徑排除，以及無合法目標時能力 Then 整段中止。`reveal-top-deck` 已從靜默執行改為兩階段流程（展示 → 確認 → 執行），巢狀效果含目標選擇時正確暫停於 `pendingAbilityEffect`，UI 與 AI 均可正常選取目標。BS3 已完成 promote；後續以正式卡池驗證、規則回歸與官方更新追蹤為主。
 
-P-0XX 已完成正式卡池 promote、逐卡路由掃描與高風險效果回歸；後續以官方卡牌更新、真實牌組對局與 `docs/p0xx-effect-coverage.md` 的未覆蓋分支追蹤為主。
+P-0XX 已完成原 26 張正式卡的 promote 與高風險效果回歸；官方全量盤點的其餘 127 筆（含異圖變體）已完成資料／adapter 轉換並停在候選區。P-082 主支付／替代支付、P-084 met／unmet 動態費用、P-147 Special Play＋On Play 已完成 runtime、UI 與專用 Browser 路徑；下一步是 127 筆候選的逐卡效果 Browser 稽核，完成後才正式牌池 promote，不把候選資料誤稱為已上線卡池。
 
 待辦事項與優先序統一維護於 [docs/roadmap.md](docs/roadmap.md)（依 P0–P3 分類，含每項的完成狀態與前置條件）；WebSocket 入站驗證、玩家名稱、攻擊選取預覽、開局整合、導引式效果操作、對戰中指令拒絕提示、公開互動意圖與 P0–P2 對戰可視化第一版已完成，並補上 ST3-019、BS2-021、BS2-044、BS1-007 攻擊支付與 BS1-037 攻擊後效果的提示框回歸。下一步是以真人好友房驗證攻擊箭頭、卡牌預覽、活動紀錄與回應狀態在 BS2-069、OnPlay、陷阱／FLIP／物品／場景多段決策中的文案與高光邊界，並覆核 600×338 窄畫面下的手牌可讀性；伺服器期限目前只提供顯示，不自動替玩家作決策。R5 已建立語意驗證與官方更新回歸防線，但仍須在新卡或新版規則進入時擴充契約。近期應以 Vercel Preview 完成 1–2 場真人好友房試玩，特別確認開局節奏、ST5-007／ST5-022 的雙方提示、窄畫面可讀性與 Render 冷啟動後的完整流程，再稽核 GitHub Actions／Vercel／Render 健康。已知風險與緩解狀態見 [docs/known-risks.md](docs/known-risks.md)。
 
@@ -223,6 +223,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-10 | 完成官方 P-0XX 全量盤點與轉換：153 筆記錄（含 14 筆異圖變體）全部完成 adapter conversion，新增 127 筆候選資料與完整匯入清單；完成 P-082／P-084／P-147 特殊支付的 runtime、UI 與專用 Browser 驗證，候選仍待逐卡稽核後 promote。 |
 | 2026-08-09 | 修正部署 Browser 驗收 workflow 的 trusted harness preflight、Preview 信任分支閘門與 artifact 缺檔錯誤遮蔽，升級 GitHub Actions 至 Node 24 相容版本，並完成 `main` required checks 與 Vercel Preview bypass secret 設定。 |
 | 2026-08-08 | 落實全面稽核第一批穩定化：AI benchmark 強制零卡死／deadlock／非法操作／turn cap 與最低勝率；修正非法略過補位、Chrome 手牌動作焦點捲動、BS4-062 分段選擇、BS2-015 自身離場代價，以及 BS4-106／107 測試前置與 BS4-107「最多 3 張」選擇。新增 Browser Smoke PR check 與 Preview／Production 部署後驗收；Production 首頁、SPA、836 張牌池、卡圖、合法牌組、對戰入口及 Render WebSocket 通過，Preview 需設定 Vercel bypass secret。完整 Vitest 177 檔／2,827 項、lint、build、AI Browser 20／20、牌組編輯器 2／2與好友房完整 smoke 均通過。 |
 | 2026-08-07 | 修正 BS5-038／BS5-046 FLIP 文案落在 `skill.text` 造成的空白／無法結算問題，補上 adapter 回歸測試與 `test-state` fixture；優化攻擊效果提示框、補上 BS5-010 排版回歸測試並驗證 BS5-011 條件不成立路徑可正常結束；完成 BS5 五色標準正式牌組各 2 場、共 10 場 Browser 端到端實戰，結果記錄於 [Browser 實戰矩陣](docs/bs5-browser-formal-matrix-2026-08-07.md)。 |
@@ -256,3 +257,11 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 | 2026-07-25 | 戰場 mockup 與正式桌面對局同步採深藍桌墊、紅／青場區框、區域資訊與鏡射功能欄；移除會穿過手牌的全畫面裝飾框。 |
 | 2026-07-21 | 攻擊宣告可視化：場上高亮被攻擊餅乾、於陷阱／Blocker 回應直接顯示攻擊者與目標，並在我方攻擊觸發 FLIP 時短暫顯示可外點關閉的左側大卡預覽。 |
 | 2026-07-20 | 線上對戰桌版面收斂：雙方戰鬥／支援／休息區對齊、紅藍陣營邊框、對手手牌淺弧及移除中央狀態橫幅。 |
+
+## 2026-08-10 工作狀態補充
+
+P-0XX 127 筆候選已完成 `127/127` Browser 路由載入；108 筆 effect-bearing 卡已完成通用流程稽核，26 張條件／時機卡已完成 `met`／`unmet` A/B Browser 稽核，結果為 `108 passed / 0 blocked / 0 failed`。候選資料仍維持 `promotion-ready`，尚未 promote。
+
+牌組編輯器已新增 Master Duel 取向的 Braverse 全頁工作台：左側卡牌詳情、中間牌組格、右側卡池搜尋／篩選；主編輯流程不使用 modal，並完成桌面、平板與窄版響應式驗收，詳見 [牌組編輯器設計驗收](docs/deck-editor-design-qa.md)。
+
+已重跑 `test:deck:browser` 與 `test:online:browser`：桌面 `1366×768`、窄版 `280×720` 均通過；窄版允許垂直滾動，但沒有水平溢出。下一步維持 P-0XX 候選資料的 `promotion-ready` 隔離狀態，待正式 promote 決策後再併入正式卡池。

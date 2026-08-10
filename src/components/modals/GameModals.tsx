@@ -521,6 +521,13 @@ export function DiscardRevealModal({
 export interface TrapResponseModalProps {
   cards: GameCard[]
   selectedTrapId: string | null
+  trapCostOptionLabels?: string[]
+  selectedTrapCostOptionIndex?: number
+  onSelectTrapCostOption?: (index: number) => void
+  alternativeCostCards?: GameCard[]
+  alternativeCostAmount?: number
+  selectedAlternativeCostIds?: string[]
+  onToggleAlternativeCost?: (instanceId: string) => void
   paymentCards: GameCard[]
   trapEnergyCostTotal?: number
   trapPaymentValid?: boolean
@@ -620,6 +627,13 @@ function AttackDeclarationSummary({
 export function TrapResponseModal({
   cards,
   selectedTrapId,
+  trapCostOptionLabels = [],
+  selectedTrapCostOptionIndex = 0,
+  onSelectTrapCostOption,
+  alternativeCostCards = [],
+  alternativeCostAmount = 0,
+  selectedAlternativeCostIds = [],
+  onToggleAlternativeCost,
   paymentCards,
   trapEnergyCostTotal = 0,
   trapPaymentValid = true,
@@ -673,12 +687,17 @@ export function TrapResponseModal({
 }: TrapResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
   const [step, setStep] = useState<TrapStep>(() =>
-    selectedTrapId ? 'energy' : 'select',
+    selectedTrapId
+      ? trapCostOptionLabels.length > 1
+        ? 'choice'
+        : 'energy'
+      : 'select',
   )
   const selectedTrap = cards.find((card) => card.instanceId === selectedTrapId)
   const selectedTrapText = selectedTrap?.trap?.text ?? selectedTrap?.effectText
 
   const hasEnergyPhase = trapEnergyCostTotal > 0
+  const hasCostChoicePhase = trapCostOptionLabels.length > 1
   const hasCostPhase =
     discardHandCost > 0 || battleCookieCost > 0 || handToBreakCost > 0
   const hasTargetPhase =
@@ -692,6 +711,7 @@ export function TrapResponseModal({
     trapSelfTargetCandidates.length > 0 && Boolean(onSelectTrapSelfTarget)
 
   const phaseIds: GuidedPhaseId[] = [
+    ...(hasCostChoicePhase ? (['choice'] as const) : []),
     ...(hasEnergyPhase ? (['energy'] as const) : []),
     ...(hasCostPhase ? (['cost'] as const) : []),
     ...(hasTargetPhase ? (['target'] as const) : []),
@@ -710,6 +730,11 @@ export function TrapResponseModal({
     selectedDiscardHandIds.length === discardHandCost &&
     selectedHandToBreakIds.length === handToBreakCost &&
     selectedBattleCookieIds.length === battleCookieCost
+  const costChoiceReady =
+    !hasCostChoicePhase ||
+    (selectedTrapCostOptionIndex >= 0 &&
+      (alternativeCostAmount === 0 ||
+        selectedAlternativeCostIds.length === alternativeCostAmount))
   const targetReady =
     (supportTrashAmount === 0 ||
       supportTrashCards.length === 0 ||
@@ -724,8 +749,10 @@ export function TrapResponseModal({
     trapSelfTargetCandidates.length === 0 ||
     Boolean(selectedTrapSelfTargetId)
   const activePhaseReady =
-    activePhase === 'energy'
-      ? energyReady
+    activePhase === 'choice'
+      ? costChoiceReady
+      : activePhase === 'energy'
+        ? energyReady
       : activePhase === 'cost'
         ? costReady
         : activePhase === 'target'
@@ -744,7 +771,8 @@ export function TrapResponseModal({
 
   const handleSelectTrap = (instanceId: string) => {
     onSelectTrap(instanceId)
-    if (instanceId) setStep('energy')
+    // 若沒有替代支付，activePhase 會自動回到第一個實際階段（通常是 energy）。
+    if (instanceId) setStep('choice')
   }
 
   const handleBackToSelect = () => {
@@ -771,7 +799,9 @@ export function TrapResponseModal({
     !selectedTrapId ||
     !energyReady ||
     !costReady ||
-    !targetReady
+    !targetReady ||
+    !selfTargetReady ||
+    !costChoiceReady
 
   if (minimized) {
     return (
@@ -876,6 +906,46 @@ export function TrapResponseModal({
               attackerCard={attackerCard}
               attackTargetCard={attackTargetCard}
             />
+
+            {activePhase === 'choice' && (
+              <div className="trap-guided-section">
+                <span className="trap-response-col-label">支付方式</span>
+                <div className="modal-card-options compact trap-discard-options">
+                  {trapCostOptionLabels.map((label, index) => (
+                    <button
+                      type="button"
+                      className={selectedTrapCostOptionIndex === index ? 'is-selected' : ''}
+                      key={label}
+                      onClick={() => onSelectTrapCostOption?.(index)}
+                    >
+                      <strong>{label}</strong>
+                    </button>
+                  ))}
+                </div>
+                {alternativeCostAmount > 0 && (
+                  <>
+                    <strong>選擇 {alternativeCostAmount} 張符合條件的棄牌區餅乾放入休息區</strong>
+                    <div className="modal-card-options compact trap-discard-options">
+                      {alternativeCostCards.map((card) => (
+                        <button
+                          type="button"
+                          className={selectedAlternativeCostIds.includes(card.instanceId) ? 'is-selected' : ''}
+                          key={card.instanceId}
+                          onClick={() => onToggleAlternativeCost?.(card.instanceId)}
+                        >
+                          <CardFace
+                            card={card}
+                            selected={selectedAlternativeCostIds.includes(card.instanceId)}
+                          />
+                          <span>{card.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <span>已選 {selectedAlternativeCostIds.length} / {alternativeCostAmount}</span>
+                  </>
+                )}
+              </div>
+            )}
 
             {activePhase === 'energy' && (
               <div className="trap-guided-section">
@@ -2225,6 +2295,68 @@ export interface ResultModalProps {
   viewerPlayerId: PlayerId
   reason: GameEndReason
   onRestart: () => void
+}
+
+export interface SpecialPlayModalProps {
+  sourceCard: GameCard
+  candidates: CookieInBattle[]
+  selectedCandidateId: string | null
+  onSelectCandidate: (instanceId: string) => void
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export function SpecialPlayModal({
+  sourceCard,
+  candidates,
+  selectedCandidateId,
+  onSelectCandidate,
+  onCancel,
+  onConfirm,
+}: SpecialPlayModalProps) {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="battle-response-modal special-play-modal" role="dialog" aria-modal="true">
+        <span className="modal-eyebrow">Special Play 特殊登場</span>
+        <h2>{sourceCard.name}</h2>
+        <p>選擇 1 張符合條件的戰鬥區餅乾放置到棄牌區，完成特殊登場。</p>
+        <div className="special-play-source">
+          <CardFace card={sourceCard} className="special-play-source-card" />
+          <div>
+            <strong>{sourceCard.id}</strong>
+            <p>{sourceCard.effectText ?? sourceCard.skill?.text}</p>
+          </div>
+        </div>
+        <div className="special-play-candidates" role="list" aria-label="特殊登場代價餅乾">
+          {candidates.map((candidate) => {
+            const id = candidate.card.instanceId
+            const selected = selectedCandidateId === id
+            return (
+              <button
+                key={id}
+                type="button"
+                className={`special-play-candidate${selected ? ' is-selected' : ''}`}
+                aria-pressed={selected}
+                onClick={() => onSelectCandidate(id)}
+              >
+                <CardFace card={candidate.card} className="special-play-candidate-card" />
+                <span>
+                  <strong>{candidate.card.name}</strong>
+                  <small>LV.{candidate.card.level}／HP {candidate.card.hp}</small>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        <div className="modal-actions">
+          <button type="button" onClick={onCancel}>取消</button>
+          <button type="button" disabled={!selectedCandidateId} onClick={onConfirm}>
+            確認特殊登場
+          </button>
+        </div>
+      </section>
+    </div>
+  )
 }
 
 export function ResultModal({

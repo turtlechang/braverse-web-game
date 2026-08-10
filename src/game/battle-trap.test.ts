@@ -6,6 +6,7 @@ import {
   explainUnavailableTraps,
   getPendingDecision,
   getTrapTargetCandidates,
+  getTrapSelfTargetCandidates,
   getTrapCandidates,
   playTrap,
   resolveDrawUpTo,
@@ -1613,6 +1614,75 @@ describe('explainUnavailableTraps', () => {
     state.players['player-one'].hand = [blueTrap('trap-1', 2)]
     return declareAttack(state)
   }
+
+  it('allows P-082 alternative payment by moving a valid trash Cookie to the break area', () => {
+    const trap: GameCard = {
+      id: 'P-082',
+      instanceId: 'p-082-test',
+      name: 'Sugar Gnome Cake Shop',
+      type: 'trap',
+      trap: {
+        text: 'Pay {Y}{N} or place a non-FLIP Cookie with 1 HP from your trash into your break area. Gain +2 HP to one of your Cookies, then gain +2 HP to one opponent Cookie.',
+        cost: { energy: { yellow: 1, neutral: 1 } },
+        alternativeCosts: [
+          {
+            energy: {},
+            trashCookieToBreakArea: {
+              count: 1,
+              hp: 1,
+              excludeFlip: true,
+            },
+          },
+        ],
+        effects: [
+          { kind: 'gain-hp', amount: 2, target: { side: 'self', min: 1, max: 1 } },
+          { kind: 'gain-hp', amount: 2, target: { side: 'opponent', min: 1, max: 1 } },
+        ],
+      },
+    }
+    const alternativeCookie: CookieCard = {
+      ...cookie('p-082-payment-cookie', 1, 1),
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state.players['player-one'].deck = [
+      item('p1-p-082-deck-a'),
+      item('p1-p-082-deck-b'),
+      item('p1-p-082-deck-c'),
+    ]
+    state.players['player-two'].deck = [
+      item('p2-p-082-deck-a'),
+      item('p2-p-082-deck-b'),
+    ]
+    state.players['player-one'].discardPile = [alternativeCookie]
+    state = declareAttack(state)
+
+    expect(getTrapCandidates(state, 'player-one')).toEqual([trap])
+    expect(
+      getTrapTargetCandidates(state, 'player-one', trap.instanceId).map(
+        (cookie) => cookie.card.instanceId,
+      ),
+    ).toEqual(['attacker'])
+    expect(
+      getTrapSelfTargetCandidates(state, 'player-one', trap.instanceId).map(
+        (cookie) => cookie.card.instanceId,
+      ),
+    ).toEqual(['defender'])
+
+    const result = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      costOptionIndex: 1,
+      paymentIds: [],
+      trashCookieToBreakAreaIds: [alternativeCookie.instanceId],
+      targetIds: ['attacker'],
+      selfTargetIds: ['defender'],
+    })
+
+    expect(result.players['player-one'].breakArea).toContainEqual(alternativeCookie)
+    expect(result.players['player-one'].discardPile).not.toContainEqual(alternativeCookie)
+    expect(result.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+    expect(result.pendingBattle?.trapUsed).toBe(true)
+  })
 
   it('blames rested support energy rather than reporting an unknown engine fault', () => {
     const state = trapStageState()

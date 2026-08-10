@@ -102,6 +102,50 @@ describe('BS1 non-cookie effect execution', () => {
     })
   })
 
+  it('moves a Cookie source from battle to support and discards its HP/equipment', () => {
+    const base = asMainPhase(createDemoGame())
+    const battleEntry = base.players['player-one'].battleArea[0]
+    const source: CookieCard = {
+      ...battleEntry.card,
+      instanceId: 'bs5-132-source-cookie',
+      name: 'Matcha Cookie',
+    }
+    const hpCard = { ...base.players['player-one'].deck[0], instanceId: 'source-hp' }
+    const equippedCard = { ...base.players['player-one'].deck[1], instanceId: 'source-equipment' }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [],
+          battleArea: [
+            {
+              ...battleEntry,
+              card: source,
+              hpCards: [hpCard],
+              equippedCards: [equippedCard],
+            },
+          ],
+          supportArea: [],
+          discardPile: [],
+        },
+      },
+    }
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: source.instanceId },
+      { kind: 'place-source-to-support', rested: true },
+      [],
+    )
+    const player = resolved.players['player-one']
+
+    expect(player.battleArea).toHaveLength(0)
+    expect(player.supportArea).toContainEqual({ card: source, rested: true })
+    expect(player.discardPile).toEqual(expect.arrayContaining([hpCard, equippedCard]))
+  })
+
   it('requires support area decrease before BS1-078 stage activation resolves', () => {
     const base = asMainPhase(createDemoGame())
     const supportCard = base.players['player-one'].deck[0]
