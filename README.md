@@ -262,6 +262,6 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 P-0XX 127 筆候選已完成 `127/127` Browser 路由載入；108 筆 effect-bearing 卡已完成通用流程稽核，26 張條件／時機卡已完成 `met`／`unmet` A/B Browser 稽核，結果為 `108 passed / 0 blocked / 0 failed`。候選資料仍維持 `promotion-ready`，尚未 promote。
 
-牌組編輯器已新增 Master Duel 取向的 Braverse 全頁工作台：左側卡牌詳情、中間牌組格、右側卡池搜尋／篩選；主編輯流程不使用 modal，並完成桌面、平板與窄版響應式驗收，詳見 [牌組編輯器設計驗收](docs/deck-editor-design-qa.md)。
+牌組編輯器已新增 Master Duel 取向的 Braverse 全頁工作台：左側卡牌詳情、中間牌組格、右側卡池搜尋／篩選；主編輯流程不使用 modal。本輪再將牌組名稱／賽制收斂至中央欄、卡別統計與 JSON 操作收斂至右欄，並修正窄版卡池改為面板內捲動；桌面、平板與窄版響應式驗收詳見 [牌組編輯器設計驗收](docs/deck-editor-design-qa.md) 與 [設計 QA](design-qa.md)。
 
 已重跑 `test:deck:browser` 與 `test:online:browser`：桌面 `1366×768`、窄版 `280×720` 均通過；窄版允許垂直滾動，但沒有水平溢出。下一步維持 P-0XX 候選資料的 `promotion-ready` 隔離狀態，待正式 promote 決策後再併入正式卡池。

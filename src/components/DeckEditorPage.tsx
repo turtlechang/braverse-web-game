@@ -294,50 +294,6 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
         </div>
       </header>
 
-      <div className="deck-editor-page-toolbar">
-        <label className="deck-editor-page-name">
-          <span>牌組名稱</span>
-          <input
-            value={editor.deckName}
-            onChange={(event) => editor.setDeckName(event.target.value)}
-            aria-label="牌組名稱"
-          />
-        </label>
-        <label className="deck-editor-page-format">
-          <span>賽制</span>
-          <select
-            data-testid="deck-format-select"
-            value={editor.deckFormat}
-            onChange={(event) =>
-              editor.setDeckFormat(event.target.value as 'open' | 'standard')
-            }
-          >
-            <option value="standard">標準賽制・套用禁限卡</option>
-            <option value="open">開放賽制・所有正式卡牌</option>
-          </select>
-          <small>{getDeckFormatLabel(editor.deckFormat)}</small>
-        </label>
-        <div className="deck-editor-page-stat-chips">
-          <span>餅乾 {deckStats.cookieCards}</span>
-          <span>物品 {deckStats.itemCards}</span>
-          <span>陷阱 {deckStats.trapCards}</span>
-          <span>場景 {deckStats.stageCards}</span>
-        </div>
-        <div className="deck-editor-page-io">
-          <button type="button" onClick={handleExport}>
-            <Download aria-hidden="true" />
-            匯出 JSON
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowImportPanel((current) => !current)}
-          >
-            <Upload aria-hidden="true" />
-            {showImportPanel ? '收合匯入' : '匯入 JSON'}
-          </button>
-        </div>
-      </div>
-
       <div className="deck-editor-page-workspace">
         <aside className="deck-editor-page-detail" aria-label="卡牌詳細資料">
           <div className="deck-editor-page-detail-kicker">卡牌資訊</div>
@@ -407,6 +363,30 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
         </aside>
 
         <section className="deck-editor-page-current" aria-labelledby="deck-editor-current-title">
+          <div className="deck-editor-page-deck-meta">
+            <label className="deck-editor-page-name">
+              <span>牌組名稱</span>
+              <input
+                value={editor.deckName}
+                onChange={(event) => editor.setDeckName(event.target.value)}
+                aria-label="牌組名稱"
+              />
+            </label>
+            <label className="deck-editor-page-format">
+              <span>賽制</span>
+              <select
+                data-testid="deck-format-select"
+                value={editor.deckFormat}
+                onChange={(event) =>
+                  editor.setDeckFormat(event.target.value as 'open' | 'standard')
+                }
+              >
+                <option value="standard">標準賽制・套用禁限卡</option>
+                <option value="open">開放賽制・所有正式卡牌</option>
+              </select>
+              <small>{getDeckFormatLabel(editor.deckFormat)}</small>
+            </label>
+          </div>
           <div className="deck-editor-page-section-heading">
             <div>
               <span>編輯中</span>
@@ -420,6 +400,25 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
             </span>
             <small>點選牌組卡片查看詳細內容；使用 ＋／－調整張數。</small>
           </div>
+          {showImportPanel && (
+            <section className="deck-editor-page-import" aria-label="匯入牌組 JSON">
+              <div>
+                <span>匯入牌組 JSON</span>
+                <p>貼上牌組編輯器匯出的 JSON，匯入後仍可在目前賽制下檢查合法性。</p>
+              </div>
+              <textarea
+                rows={4}
+                value={importText}
+                onChange={(event) => setImportText(event.target.value)}
+                placeholder='{"name":"我的牌組","entries":[{"cardNumber":"BS5-001","count":4}]}'
+                aria-label="牌組 JSON"
+              />
+              <div>
+                <button type="button" onClick={() => { setShowImportPanel(false); setImportText('') }}>取消</button>
+                <button type="button" onClick={handleImport} disabled={!importText.trim()}>確認匯入</button>
+              </div>
+            </section>
+          )}
           <div className="deck-editor-page-deck-grid">
             {editor.deckEntries.map((entry) => {
               const poolEntry = getCardPoolEntry(entry.cardNumber)
@@ -485,6 +484,27 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
               <h2 id="deck-editor-pool-title">卡片列表</h2>
             </div>
             <strong>{filteredPool.length}</strong>
+          </div>
+          <div className="deck-editor-page-pool-tools">
+            <div className="deck-editor-page-stat-chips">
+              <span>餅乾 {deckStats.cookieCards}</span>
+              <span>物品 {deckStats.itemCards}</span>
+              <span>陷阱 {deckStats.trapCards}</span>
+              <span>場景 {deckStats.stageCards}</span>
+            </div>
+            <div className="deck-editor-page-io">
+              <button type="button" onClick={handleExport}>
+                <Download aria-hidden="true" />
+                匯出 JSON
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowImportPanel((current) => !current)}
+              >
+                <Upload aria-hidden="true" />
+                {showImportPanel ? '收合匯入' : '匯入 JSON'}
+              </button>
+            </div>
           </div>
           <label className="deck-editor-page-search">
             <Search aria-hidden="true" />
@@ -577,26 +597,6 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
           </div>
         </aside>
       </div>
-
-      {showImportPanel && (
-        <section className="deck-editor-page-import" aria-label="匯入牌組 JSON">
-          <div>
-            <span>匯入牌組 JSON</span>
-            <p>貼上牌組編輯器匯出的 JSON，匯入後仍可在目前賽制下檢查合法性。</p>
-          </div>
-          <textarea
-            rows={4}
-            value={importText}
-            onChange={(event) => setImportText(event.target.value)}
-            placeholder='{"name":"我的牌組","entries":[{"cardNumber":"BS5-001","count":4}]}'
-            aria-label="牌組 JSON"
-          />
-          <div>
-            <button type="button" onClick={() => { setShowImportPanel(false); setImportText('') }}>取消</button>
-            <button type="button" onClick={handleImport} disabled={!importText.trim()}>確認匯入</button>
-          </div>
-        </section>
-      )}
 
       {statusMsg && <div className="deck-editor-page-status" role="status">{statusMsg}</div>}
     </main>
