@@ -249,6 +249,11 @@ export interface ExportableDeck {
   format?: DeckFormat
 }
 
+export interface ImportDeckOptions {
+  /** The editor's selected format takes precedence over the JSON metadata. */
+  format?: DeckFormat
+}
+
 export const exportDeck = (deck: CustomDeck): string => {
   const data: ExportableDeck = {
     name: deck.name,
@@ -263,6 +268,7 @@ export const exportDeck = (deck: CustomDeck): string => {
 
 export const importDeck = (
   json: string,
+  options: ImportDeckOptions = {},
 ): { deck: CustomDeck | null; error: string | null } => {
   try {
     const data = JSON.parse(json) as ExportableDeck
@@ -294,7 +300,7 @@ export const importDeck = (
     if (rawFormat !== undefined && rawFormat !== 'open' && rawFormat !== 'standard') {
       return { deck: null, error: '牌組賽制只能是 open 或 standard。' }
     }
-    const format = rawFormat ?? DEFAULT_DECK_FORMAT
+    const format = options.format ?? rawFormat ?? DEFAULT_DECK_FORMAT
     const validation = validateCustomDeck(entries, { format })
     if (!validation.valid) {
       return { deck: null, error: validation.errors.join('；') }

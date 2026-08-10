@@ -39,9 +39,12 @@ const deckEntries = [
   ['ST1-013', 4], ['ST1-015', 4], ['ST1-016', 2], ['ST1-020', 2],
 ].map(([cardNumber, count]) => ({ cardNumber, count }))
 
-const importPayload = JSON.stringify({
-  name: 'Deck Editor Browser Validation',
-  entries: deckEntries,
+const openImportPayload = JSON.stringify({
+  name: 'Open Format Browser Validation',
+  format: 'standard',
+  entries: deckEntries.map((entry, index) =>
+    index === 0 ? { cardNumber: 'BS3-013', count: 4 } : entry,
+  ),
 })
 
 const waitForServer = async () => {
@@ -92,7 +95,14 @@ try {
     const editor = page.locator('[data-testid="deck-editor-page"]')
     await editor.waitFor({ state: 'visible' })
     assert.equal(await editor.locator('[data-testid="deck-editor-search"]').count(), 1)
+    const filterToggle = editor.locator('[data-testid="deck-editor-filter-toggle"]')
+    assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')
+    assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 0)
+    await filterToggle.click()
+    assert.equal(await filterToggle.getAttribute('aria-expanded'), 'true')
     assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 4)
+    await filterToggle.click()
+    assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')
     assert.ok(await editor.locator('.deck-editor-page-pool-card-button').count() > 0)
 
     await editor.locator('[data-testid="deck-editor-search"]').fill('ST1-001')
@@ -113,6 +123,8 @@ try {
     }
     assert.equal(await searchedCard.isDisabled(), true)
     assert.equal(await editor.locator('.deck-editor-page-pool-count').count(), 1)
+    assert.equal(await editor.locator('[data-testid^="deck-editor-deck-section-"]').count(), 5)
+    assert.equal(await editor.locator('[data-testid="deck-editor-extra-deck"]').count(), 1)
     // An incomplete (4/60) deck is still saveable as a draft (P1-1): the save
     // button stays enabled and switches to the amber "儲存草稿" draft styling.
     const saveButton = editor.locator('[data-testid="deck-editor-page-save"]')
@@ -121,8 +133,10 @@ try {
     assert.match((await saveButton.textContent()) ?? '', /儲存草稿/)
 
     await editor.locator('.deck-editor-page-io button').nth(1).click()
-    const importDialog = editor.locator('.deck-editor-page-import')
+    const importDialog = page.locator('[data-testid="deck-editor-import-modal"]')
     await importDialog.waitFor({ state: 'visible' })
+    assert.equal(await importDialog.getAttribute('role'), 'dialog')
+    assert.equal(await importDialog.getAttribute('aria-modal'), 'true')
     const importTextarea = importDialog.locator('textarea')
     const nameBeforeInvalidImport = await editor.locator('.deck-editor-page-name input').inputValue()
     await importTextarea.fill('{')
@@ -137,13 +151,15 @@ try {
       '4',
     )
 
-    await importTextarea.fill(importPayload)
+    await editor.locator('[data-testid="deck-format-select"]').selectOption('open')
+    await importTextarea.fill(openImportPayload)
     await importDialog.locator('button').last().click()
     await importDialog.waitFor({ state: 'hidden' })
     assert.equal(
       await editor.locator('.deck-editor-page-name input').inputValue(),
-      'Deck Editor Browser Validation',
+      'Open Format Browser Validation',
     )
+    assert.equal(await editor.locator('[data-testid="deck-format-select"]').inputValue(), 'open')
     assert.match(
       (await editor.locator('.deck-editor-page-counter').textContent()) ?? '',
       /60\s*\/\s*60/,
@@ -187,7 +203,8 @@ try {
     assert.equal(savedStorage.version, 1)
     const savedDecks = savedStorage.decks
     assert.equal(savedDecks.length, 1)
-    assert.equal(savedDecks[0].name, 'Deck Editor Browser Validation')
+    assert.equal(savedDecks[0].name, 'Open Format Browser Validation')
+    assert.equal(savedDecks[0].format, 'open')
     assert.equal(
       savedDecks[0].entries.reduce((total, entry) => total + entry.count, 0),
       60,

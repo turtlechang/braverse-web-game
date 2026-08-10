@@ -45,8 +45,37 @@
 
 final result: passed
 
+## 2026-08-11：牌組分類與匯入提示框
+
+- 主要牌組依正式卡牌類型分為「餅乾／FLIP／物品／陷阱／場景」五個區段；各區段顯示獨立張數，但仍共用既有 60 張、同卡上限、至少 1 張餅乾與 FLIP 上限驗證。
+- 額外牌組以「BS8 預備」固定區段呈現；目前沒有可加入卡牌，不改動 `CustomDeck` JSON、60 張主牌組計數或現行賽制規則。
+- JSON 匯入改為 `role="dialog"`、`aria-modal="true"` 的置中提示框，支援取消、點擊遮罩與 Esc 關閉。它是唯一的輔助操作 modal，主編輯器本身仍維持全頁工作台。
+- Browser 實測完整牌組分區為餅乾 26／FLIP 12／物品 8／陷阱 10／場景 4；開啟匯入提示框前後，中央牌組欄均為 `571.51 × 616px`，無版面位移。
+
 ## Browser gate rerun 2026-08-10
 
 - `npm.cmd run test:deck:browser`: passed at `1366x768` and `280x720`; both viewports have no horizontal overflow and no page errors.
 - `npm.cmd run test:online:browser`: passed at `1366x768` and `280x720`; the full-page editor returns through its back control and the online match panel remains within the viewport.
 - Full-page editor vertical scrolling is intentional on narrow viewports; the acceptance gate checks horizontal geometry separately.
+
+## 2026-08-11：緊湊操作列與可收合篩選
+
+- 賽制選單移到頁首的「儲存牌組／儲存草稿」左側；中央欄僅保留單列牌組名稱，讓主要牌組的分類卡片區更早進入可視範圍。
+- 卡池將類型、顏色、系列與稀有度整合到「篩選條件」可展開控制列；預設收合，已套用的篩選條件以數量標記提示，搜尋列下方直接顯示卡片。
+- 此調整只改變排版與控制列的顯示密度，沒有修改卡池篩選邏輯、賽制規則、牌組 JSON 或卡片資料。
+
+## 2026-08-11：卡牌資訊欄 Master Duel 式摘要
+
+- 左欄改為卡圖在左、資訊摘要在右；摘要固定列出等級、HP、普通攻擊力、卡牌類型與稀有度。卡圖在桌面版擴大，窄欄時才安全地改為上下排列。
+- 技能、普通攻擊、攻擊後續效果與 FLIP 說明維持在摘要下方；普通攻擊以 `{da}` 分出攻擊力與後續效果，避免混在同一段文字。
+- 卡牌文字改用共用 `CardEffectText` 呈現，因此 `{R}`、`{G}` 等能量標記會顯示為既有的能量圖示與替代文字，不再顯示原始標記。
+
+## 2026-08-11：頁首牌組狀態
+
+- 原本位於中央牌組欄的合法性提示已移入頁首，與頁面名稱、賽制與儲存操作同屬全局狀態；中央欄不再為這兩行訊息保留高度。
+- 桌面版提示緊鄰頁面標題；平板與窄版在可用寬度不足時換行，仍保留完整的可讀狀態與操作說明。
+
+## 2026-08-11：頁首卡池工具
+
+- 卡池統計與匯出／匯入 JSON 已移到頁首中央操作區；右側卡池改從搜尋與可收合篩選直接開始，增加可同時瀏覽的卡片數。
+- 工具區在桌面版與標題／合法性狀態同列置中；中小寬度自動換為多列，不讓按鈕或統計超出頁面。

@@ -258,5 +258,30 @@ describe('validateCustomDeck', () => {
       ...entriesFromNumbers(fillers),
     ])
   })
+
+  it('uses the selected open format when importing a standard JSON deck', () => {
+    const replacementIndex = OFFICIAL_RED_STARTER_DECK.findIndex(
+      (entry) => entry.count === 4,
+    )
+    expect(replacementIndex).toBeGreaterThanOrEqual(0)
+    const entries = OFFICIAL_RED_STARTER_DECK.map((entry, index) =>
+      index === replacementIndex ? { cardNumber: 'BS3-013', count: 4 } : entry,
+    )
+    const json = JSON.stringify({
+      name: 'open import',
+      format: 'standard',
+      entries,
+    })
+
+    expect(importDeck(json).error).toMatch(/BS3-013 最多只能放入 1 張/)
+
+    const result = importDeck(json, { format: 'open' })
+
+    expect(result.error).toBeNull()
+    expect(result.deck?.format).toBe('open')
+    expect(result.deck?.entries).toEqual(
+      entries.map(({ cardNumber, count }) => ({ cardNumber, count })),
+    )
+  })
 })
 
