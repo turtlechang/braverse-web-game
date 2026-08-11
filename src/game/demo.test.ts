@@ -47,10 +47,10 @@ import { canActivateStage } from './card-abilities'
 import { isEffectConditionMet } from './effects'
 import { canActivateCookieSkill } from './skills'
 import { isSpecialVictoryConditionMet } from './victory'
-import pCandidateDocument from '../../data/candidates/official-p-0xx-remaining.en.json'
+import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import type { OfficialCardRecord } from '../cards/types'
 
-const pCandidateRecords = pCandidateDocument.cards as OfficialCardRecord[]
+const pFormalRecords = pFormalDocument.cards as OfficialCardRecord[]
 
 describe('isLocalhost', () => {
   it('allows localhost', () => {
@@ -472,8 +472,8 @@ describe('createCardCheckDemoState', () => {
     expect(p147.players['player-two'].hand).toHaveLength(4)
   })
 
-  it('builds a generic card-check state for every P-0XX candidate record', () => {
-    for (const record of pCandidateRecords) {
+  it('builds a generic card-check state for every promoted P-0XX record', () => {
+    for (const record of pFormalRecords) {
       const state = createCardCheckDemoState(record.cardNumber)
       const source = [
         ...state.players['player-one'].hand,

@@ -1,27 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import pCandidateDocument from '../../data/candidates/official-p-0xx-remaining.en.json'
 import pFormalDocument from '../../data/cards/official-promotion-p001-p032.en.json'
 import pFormalRemainingDocument from '../../data/cards/official-promotion-p001-p032-remaining.en.json'
+import pPromotedDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import { convertOfficialCardToGameCard } from './official-card-adapter'
 import type { OfficialCardRecord } from './types'
 
-const candidateCards = pCandidateDocument.cards as OfficialCardRecord[]
+const promotedCards = pPromotedDocument.cards as OfficialCardRecord[]
 const formalCards = [
   ...pFormalDocument.cards,
   ...pFormalRemainingDocument.cards,
+  ...promotedCards,
 ] as OfficialCardRecord[]
-const allPRecords = [...formalCards, ...candidateCards]
+const allPRecords = formalCards
 
 describe('P-0XX official conversion coverage', () => {
   it('keeps the complete official record inventory, including art variants', () => {
     expect(allPRecords).toHaveLength(153)
-    expect(candidateCards).toHaveLength(127)
-    expect(candidateCards.filter((card) => card.cardNumber.includes('@'))).toHaveLength(14)
+    expect(promotedCards).toHaveLength(127)
+    expect(promotedCards.filter((card) => card.cardNumber.includes('@'))).toHaveLength(14)
     expect(new Set(allPRecords.map((card) => card.cardNumber)).size).toBe(153)
-    expect(pCandidateDocument.source.candidateStatus).toBe('promotion-ready')
+    expect(pPromotedDocument.source.candidateStatus).toBe('promotion-ready')
   })
 
-  it('converts every formal and candidate P-0XX record', () => {
+  it('converts every formal P-0XX record', () => {
     const unsupported = allPRecords
       .map((card) => convertOfficialCardToGameCard(card))
       .filter((conversion) => conversion.status !== 'converted')

@@ -1026,13 +1026,27 @@
 }
 
 @media (max-width: 820px) {
-  .deck-editor-page { overflow-y: auto; height: auto; min-height: 100dvh; }
+  /* App 的根節點會鎖住 viewport，不能依賴 body 捲動。窄版工作台改由
+     全頁編輯器自己承接垂直捲動，才能一路到達主要牌組、卡池與加減按鈕。 */
+  .deck-editor-page {
+    display: block;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
   .deck-editor-page-header { grid-template-columns: 1fr auto; }
   .deck-editor-page-header-center { grid-column: 1 / -1; grid-row: 1; }
   .deck-editor-page-back { grid-column: 1; grid-row: 2; }
   .deck-editor-page-header-actions { grid-column: 2; grid-row: 2; }
   .deck-editor-page-counter { display: none; }
-  .deck-editor-page-workspace { grid-template-columns: minmax(145px, 0.55fr) minmax(0, 1.45fr); min-height: 700px; }
+  .deck-editor-page-workspace {
+    grid-template-columns: minmax(145px, 0.55fr) minmax(0, 1.45fr);
+    min-height: 700px;
+  }
   .deck-editor-page-pool {
     grid-column: 1 / -1;
     height: 520px;

@@ -16,7 +16,7 @@ import {
   type DeckChoice,
 } from './starter-deck'
 import { getCardPoolEntry } from './card-pool'
-import pCandidateDocument from '../../data/candidates/official-p-0xx-remaining.en.json'
+import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type {
@@ -2353,7 +2353,7 @@ const cardCheckBattleEntry = (
 })
 
 const getPTestCard = (cardNumber: string): GameCard => {
-  const source = (pCandidateDocument.cards as OfficialCardRecord[]).find(
+  const source = (pFormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.cardNumber === cardNumber,
   )
   if (!source) throw new Error(`P test fixture requires ${cardNumber}`)
@@ -2370,14 +2370,12 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
     return createCard(entry, 'player-one', 1)
   }
 
-  // Keep P-0XX candidates isolated from the formal runtime pool while still
-  // allowing the localhost card-check route to exercise every imported
-  // candidate. Prefer an exact art-variant record; falling back to the base
-  // record preserves the existing `?test-state=card:P-XXX` ergonomics.
+  // P-0XX 已在正式卡池；仍保留原始資料 fallback，讓本機 card-check 可精確
+  // 指定異圖，或以基礎卡號查找同卡的第一筆官方記錄。
   const trimmed = cardNumber.trim()
-  const source = (pCandidateDocument.cards as OfficialCardRecord[]).find(
+  const source = (pFormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.cardNumber === trimmed,
-  ) ?? (pCandidateDocument.cards as OfficialCardRecord[]).find(
+  ) ?? (pFormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.baseCardNumber === trimmed,
   )
   if (!source) {

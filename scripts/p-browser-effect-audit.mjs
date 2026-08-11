@@ -18,9 +18,9 @@ if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
 const baseUrl = `http://127.0.0.1:${port}`
-const candidatePath = resolve(
+const formalPath = resolve(
   root,
-  'data/candidates/official-p-0xx-remaining.en.json',
+  'data/cards/official-p-0xx-remaining.en.json',
 )
 const reportPath = resolve(root, 'docs/p0xx-effect-audit-2026-08-10.json')
 const vitePackageJson = require.resolve('vite/package.json', { paths: [root] })
@@ -34,7 +34,7 @@ const browserExecutable =
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   ].find((candidate) => existsSync(candidate))
 
-const source = JSON.parse(await readFile(candidatePath, 'utf8'))
+const source = JSON.parse(await readFile(formalPath, 'utf8'))
 const cards = [...source.cards]
   .filter((card) => {
     const skill = card.skill?.text?.trim()
@@ -51,7 +51,7 @@ const cards = [...source.cards]
   .sort((left, right) =>
     left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
   )
-assert.equal(cards.length, 108, 'P-0XX effect-bearing inventory must contain 108 records')
+assert.equal(cards.length, 108, 'P-0XX formal effect-bearing inventory must contain 108 records')
 
 const conditionCardNumbers = new Set([
   'P-041',
@@ -667,9 +667,9 @@ try {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
-    source: 'data/candidates/official-p-0xx-remaining.en.json',
+    source: 'data/cards/official-p-0xx-remaining.en.json',
     scope:
-      'Generic candidate test-state interaction audit plus dedicated A/B paths for 26 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.',
+      'Formal-pool test-state interaction audit plus dedicated A/B paths for 26 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.',
     summary: {
       total: results.length,
       effectFlowPassed: results.filter((result) => result.status === 'PASS').length,

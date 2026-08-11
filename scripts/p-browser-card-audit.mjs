@@ -19,9 +19,9 @@ if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
 const baseUrl = `http://127.0.0.1:${port}`
-const candidatePath = resolve(
+const formalPath = resolve(
   root,
-  'data/candidates/official-p-0xx-remaining.en.json',
+  'data/cards/official-p-0xx-remaining.en.json',
 )
 const reportPath = resolve(root, 'docs/p0xx-browser-audit-2026-08-10.json')
 const vitePackageJson = require.resolve('vite/package.json', { paths: [root] })
@@ -35,11 +35,11 @@ const browserExecutable =
     'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   ].find((candidate) => existsSync(candidate))
 
-const source = JSON.parse(await readFile(candidatePath, 'utf8'))
+const source = JSON.parse(await readFile(formalPath, 'utf8'))
 const cards = [...source.cards].sort((left, right) =>
   left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
 )
-assert.equal(cards.length, 127, 'P-0XX candidate inventory must contain 127 records')
+assert.equal(cards.length, 127, 'P-0XX formal promotion batch must contain 127 records')
 
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
 
@@ -192,7 +192,7 @@ try {
   page.setDefaultTimeout(7000)
 
   console.log(
-    `=== P-0XX Browser candidate audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
+    `=== P-0XX Browser formal-pool audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
     try {
@@ -232,9 +232,9 @@ try {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
-    source: 'data/candidates/official-p-0xx-remaining.en.json',
+    source: 'data/cards/official-p-0xx-remaining.en.json',
     scope:
-      'Candidate card-check entry audit for every P-0XX record. This report separates route/card rendering from interactive effect proof; it is not a promote approval by itself.',
+      'Formal-pool card-check entry audit for every promoted P-0XX record. This report separates route/card rendering from interactive effect proof.',
     summary: {
       total: results.length,
       passed,

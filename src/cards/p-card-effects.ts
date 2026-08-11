@@ -3,6 +3,13 @@ import type { AbilityCost, CardEffect, CardKeyword, EnergyCost } from '../game'
 const opponent = (max = 1) => ({ side: 'opponent' as const, min: 0, max })
 const self = (max = 1) => ({ side: 'self' as const, min: 0, max })
 
+/**
+ * These official skills have an explicit timing marker but no game-state
+ * instruction. Keep their card text and timing in the runtime card instead of
+ * inventing a rules effect solely to satisfy conversion validation.
+ */
+export const P_FLAVOR_ONLY_SKILL_CARD_NUMBERS = new Set(['P-041'])
+
 export const P_EXACT_EFFECTS: Partial<Record<string, CardEffect[]>> = {
   'P-041': [],
   'P-042': [{

@@ -70,6 +70,8 @@ try {
   const results = []
   for (const viewport of [
     { width: 1366, height: 768 },
+    { width: 622, height: 1040 },
+    { width: 390, height: 844 },
     { width: 280, height: 720 },
   ]) {
     const page = await browser.newPage({ viewport })
@@ -166,6 +168,36 @@ try {
     )
     assert.equal(await saveButton.isEnabled(), true)
     assert.equal(await saveButton.evaluate((el) => el.classList.contains('is-draft')), false)
+
+    if (viewport.width <= 820) {
+      const mobileScroll = await editor.evaluate((element) => {
+        element.scrollTop = element.scrollHeight
+        return {
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+          scrollTop: element.scrollTop,
+        }
+      })
+      assert.ok(
+        mobileScroll.scrollHeight > mobileScroll.clientHeight,
+        `${viewport.width}x${viewport.height} mobile editor has no vertical scroll range`,
+      )
+      assert.ok(
+        mobileScroll.scrollTop > 0,
+        `${viewport.width}x${viewport.height} mobile editor cannot scroll to its lower controls`,
+      )
+
+      // 完成往下捲動後，主要牌組的加減按鈕仍要可實際操作，而不只存在於 DOM。
+      const deckControls = editor.locator('.deck-editor-page-deck-card-controls').first()
+      await deckControls.scrollIntoViewIfNeeded()
+      const controlButtons = deckControls.locator('button')
+      await controlButtons.nth(0).click()
+      await controlButtons.nth(1).click()
+      assert.match(
+        (await editor.locator('.deck-editor-page-counter').textContent()) ?? '',
+        /60\s*\/\s*60/,
+      )
+    }
 
     const metrics = await page.evaluate(() => {
       const element = document.querySelector('[data-testid="deck-editor-page"]')

@@ -1,5 +1,6 @@
 import type { GameCard } from '../../src/game/types'
 import type { OfficialCardRecord } from '../../src/cards/types'
+import { P_FLAVOR_ONLY_SKILL_CARD_NUMBERS } from '../../src/cards/p-card-effects'
 
 interface SemanticExpectation {
   path: string
@@ -119,9 +120,12 @@ export const validateCardEffectSemantics = (
 ): string[] => {
   const errors: string[] = []
   const label = `${entry.cardNumber} ${entry.name}`
+  const hasFlavorOnlySkill = P_FLAVOR_ONLY_SKILL_CARD_NUMBERS.has(
+    entry.baseCardNumber,
+  )
 
   if (entry.type === 'cookie' && entry.skill.text) {
-    if (!card.skill || card.skill.effects.length === 0) {
+    if (!hasFlavorOnlySkill && (!card.skill || card.skill.effects.length === 0)) {
       errors.push(`${label}: 技能文字必須轉出含至少 1 個效果的 skill`)
     }
 

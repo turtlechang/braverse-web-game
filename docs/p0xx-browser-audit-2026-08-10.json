@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-10T10:47:26.702Z",
+  "generatedAt": "2026-08-10T23:18:43.320Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
-  "source": "data/candidates/official-p-0xx-remaining.en.json",
-  "scope": "Candidate card-check entry audit for every P-0XX record. This report separates route/card rendering from interactive effect proof; it is not a promote approval by itself.",
+  "source": "data/cards/official-p-0xx-remaining.en.json",
+  "scope": "Formal-pool card-check entry audit for every promoted P-0XX record. This report separates route/card rendering from interactive effect proof.",
   "summary": {
     "total": 127,
     "passed": 127,

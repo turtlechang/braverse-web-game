@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-08-10T10:45:49.141Z",
+  "generatedAt": "2026-08-10T23:29:00.875Z",
   "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "viewport": "1440x960",
-  "source": "data/candidates/official-p-0xx-remaining.en.json",
-  "scope": "Generic candidate test-state interaction audit plus dedicated A/B paths for 26 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "source": "data/cards/official-p-0xx-remaining.en.json",
+  "scope": "Formal-pool test-state interaction audit plus dedicated A/B paths for 26 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
   "summary": {
     "total": 108,
     "effectFlowPassed": 108,

@@ -39,6 +39,13 @@ describe('validateCardEffectSemantics', () => {
     )
   })
 
+  it('accepts P-041\'s official birthday greeting as a non-rules OnPlay skill', () => {
+    const { entry, card } = getConvertedCard('P-041')
+
+    expect(card.skill).toMatchObject({ trigger: 'on-play', effects: [] })
+    expect(validateCardEffectSemantics(entry, card)).toEqual([])
+  })
+
   it('rejects a high-risk contract when ST5-022 optional draw becomes mandatory', () => {
     const { entry, card } = getConvertedCard('ST5-022')
     const brokenCard: GameCard = {

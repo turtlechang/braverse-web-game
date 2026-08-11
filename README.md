@@ -223,6 +223,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-11 | P-0XX 127 筆（118 個 base card number、含 14 筆 `@` 異圖）已 promote 至 `data/cards/`，正式卡池增至 963 種卡號；修正 test-state、轉接覆蓋與 Browser 稽核腳本仍讀候選檔的路徑。P-041 的生日祝福登場文字明確標示為不改變規則狀態的社交效果，保留時機與攻擊後生日 +1 攻擊的轉接及回歸測試。 |
 | 2026-08-11 | 完成牌組編輯器全頁工作台第二輪收斂：主要牌組依餅乾／FLIP／物品／陷阱／場景分區並預留 BS8 額外牌組；JSON 匯入改為輔助提示框；Open 匯入略過標準禁限卡但保留核心牌組規則。頁首整合合法性、賽制、卡池統計與 JSON 工具，卡池篩選預設收合；左欄採卡圖＋數值摘要與能量圖示，補齊元件與 Browser 回歸驗證。 |
 | 2026-08-10 | 完成官方 P-0XX 全量盤點與轉換：153 筆記錄（含 14 筆異圖變體）全部完成 adapter conversion，新增 127 筆候選資料與完整匯入清單；完成 P-082／P-084／P-147 特殊支付的 runtime、UI 與專用 Browser 驗證，候選仍待逐卡稽核後 promote。 |
 | 2026-08-09 | 修正部署 Browser 驗收 workflow 的 trusted harness preflight、Preview 信任分支閘門與 artifact 缺檔錯誤遮蔽，升級 GitHub Actions 至 Node 24 相容版本，並完成 `main` required checks 與 Vercel Preview bypass secret 設定。 |
@@ -259,10 +260,10 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 | 2026-07-21 | 攻擊宣告可視化：場上高亮被攻擊餅乾、於陷阱／Blocker 回應直接顯示攻擊者與目標，並在我方攻擊觸發 FLIP 時短暫顯示可外點關閉的左側大卡預覽。 |
 | 2026-07-20 | 線上對戰桌版面收斂：雙方戰鬥／支援／休息區對齊、紅藍陣營邊框、對手手牌淺弧及移除中央狀態橫幅。 |
 
-## 2026-08-10 工作狀態補充
+## 2026-08-11 工作狀態補充
 
-P-0XX 127 筆候選已完成 `127/127` Browser 路由載入；108 筆 effect-bearing 卡已完成通用流程稽核，26 張條件／時機卡已完成 `met`／`unmet` A/B Browser 稽核，結果為 `108 passed / 0 blocked / 0 failed`。候選資料仍維持 `promotion-ready`，尚未 promote。
+P-0XX 127 筆已完成 `127/127` Browser 路由載入；108 筆 effect-bearing 卡已完成通用流程稽核，26 張條件／時機卡已完成 `met`／`unmet` A/B Browser 稽核，結果為 `108 passed / 0 blocked / 0 failed`。這批資料已正式 promote 到 `data/cards/official-p-0xx-remaining.en.json`，card-check 與 P-0XX Browser 稽核腳本均改讀正式檔；原始來源 metadata 的 `promotion-ready` 保留作為匯入稽核證據，不代表檔案仍在候選區。
 
 牌組編輯器採 Master Duel 取向的 Braverse 全頁工作台：左側卡圖與數值摘要、中間依餅乾／FLIP／物品／陷阱／場景分區的主要牌組，以及右側卡池。合法性、賽制、卡池統計與 JSON 工具均收斂至頁首；卡池篩選預設收合，卡片能更早顯示。JSON 匯入使用輔助提示框，不影響工作台版面；額外牌組僅預留 BS8 區段，尚未改動主牌組規則或匯入格式。完整桌面、平板與窄版驗收詳見 [牌組編輯器設計驗收](docs/deck-editor-design-qa.md) 與 [設計 QA](design-qa.md)。
 
-已重跑 `test:deck:browser` 與 `test:online:browser`：桌面 `1366×768`、窄版 `280×720` 均通過；窄版允許垂直滾動，但沒有水平溢出。下一步維持 P-0XX 候選資料的 `promotion-ready` 隔離狀態，待正式 promote 決策後再併入正式卡池。
+已重跑 `test:deck:browser` 與 `test:online:browser`：桌面 `1366×768`、窄版 `280×720` 均通過；窄版允許垂直滾動，但沒有水平溢出。牌組編輯器在手機與窄平板由頁面本身承接垂直捲動，可到達主要牌組加減按鈕與卡池；Browser gate 另涵蓋 `622×1040`、`390×844` 與 `280×720`。下一步為 P-0XX 正式牌池持續執行回歸與實戰驗證；官方新增卡牌仍先以候選資料流程隔離處理。
