@@ -506,6 +506,7 @@ const commandShapes = {
   },
   'resolve-ability-effect': { requiredStringArrays: ['targetIds'] },
   'resolve-place-hand-hp': { optionalStrings: ['handCardInstanceId'] },
+  'resolve-reorder-hp': { requiredStringArrays: ['orderedCardIds'] },
   'resolve-choose-one': { requiredNumbers: ['modeIndex'] },
   'replace-cookie': { requiredStrings: ['instanceId'] },
   'skip-replacement': {},

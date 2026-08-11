@@ -68,6 +68,7 @@ import {
   createBs5ItemConditionDemoState,
   createBs5StageConditionDemoState,
   createBs5Item111DemoState,
+  createBs6ConditionDemoState,
   createP082TrapDemoState,
   createP084ItemConditionDemoState,
   createP147SpecialPlayDemoState,
@@ -238,6 +239,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs5-stage-condition') {
       return createBs5StageConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs6-condition') {
+      return createBs6ConditionDemoState(
         testStateConfig.cardNumber,
         testStateConfig.conditionMet,
       )

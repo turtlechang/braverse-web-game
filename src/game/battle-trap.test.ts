@@ -20,6 +20,80 @@ import {
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
 
 describe('TRAP response window', () => {
+  it('BS6-008 prevents the defender from activating Traps only for an attack at 4 HP or less', () => {
+    const trap: GameCard = {
+      id: 'trap-response',
+      instanceId: 'trap-response',
+      name: 'Trap response',
+      type: 'trap',
+      officialType: 'trap',
+      trap: { text: 'Trap response', cost: { energy: {}, discardHand: 0 }, effects: [] },
+    }
+    const sugarSwanSkill = {
+      trigger: 'passive' as const,
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text: 'When this Cookie attacks, if this Cookie\'s remaining HP is 4 or less, during this battle, your opponent cannot activate traps.',
+      effects: [
+        {
+          kind: 'disable-traps' as const,
+          duration: 'current-battle' as const,
+          condition: { kind: 'source-hp-at-most' as const, amount: 4 },
+        },
+      ],
+    }
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: {
+        ...state.players['player-two'].battleArea[0].card,
+        id: 'BS6-008',
+        skill: sugarSwanSkill,
+      },
+      hpCards: [
+        item('attacker-hp-1'),
+        item('attacker-hp-2'),
+        item('attacker-hp-3'),
+        item('attacker-hp-4'),
+      ],
+    }
+    state.players['player-one'].hand = [trap]
+
+    state = declareAttack(state)
+
+    expect(state.pendingBattle?.trapsDisabled).toBe(true)
+    expect(getTrapCandidates(state, 'player-one')).toEqual([])
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([
+      expect.objectContaining({ instanceId: trap.instanceId, reason: 'traps-disabled' }),
+    ])
+    expect(() =>
+      playTrap(state, 'player-one', {
+        trapInstanceId: trap.instanceId,
+        paymentIds: [],
+        targetIds: [],
+      }),
+    ).toThrow('Invalid battle action.')
+
+    state = createBattleState()
+    state.players['player-two'].battleArea[0] = {
+      ...state.players['player-two'].battleArea[0],
+      card: {
+        ...state.players['player-two'].battleArea[0].card,
+        id: 'BS6-008',
+        skill: sugarSwanSkill,
+      },
+      hpCards: Array.from({ length: 5 }, (_, index) => item(`attacker-hp-${index}`)),
+    }
+    state.players['player-one'].hand = [trap]
+
+    state = declareAttack(state)
+
+    expect(state.pendingBattle?.trapsDisabled).toBeUndefined()
+    expect(getTrapCandidates(state, 'player-one')).toContainEqual(trap)
+  })
+
   const discardCostTrap = (): GameCard => ({
     id: 'ST4-020',
     instanceId: 'st4-020-test',
@@ -1682,6 +1756,44 @@ describe('explainUnavailableTraps', () => {
     expect(result.players['player-one'].discardPile).not.toContainEqual(alternativeCookie)
     expect(result.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
     expect(result.pendingBattle?.trapUsed).toBe(true)
+  })
+
+  it('requires the trap owner to have three Cookies in break for BS6-042-style conditions', () => {
+    const conditionalTrap: GameCard = {
+      id: 'BS6-042',
+      instanceId: 'bs6-042-break-count',
+      name: 'Clever Advice',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: 'If there are 3 or more Cookies in your break area.',
+        cost: { energy: { yellow: 1 }, discardHand: 0 },
+        condition: { kind: 'break-area-card-count-at-least', count: 3 },
+        effects: [],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [conditionalTrap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-yellow', 'yellow'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    expect(explainUnavailableTraps(state, 'player-one')).toEqual([
+      expect.objectContaining({
+        instanceId: conditionalTrap.instanceId,
+        reason: 'condition-not-met',
+      }),
+    ])
+
+    state.players['player-one'].breakArea = [
+      cookie('break-1'),
+      cookie('break-2'),
+      cookie('break-3'),
+    ]
+    expect(getTrapCandidates(state, 'player-one')).toContainEqual(
+      expect.objectContaining({ instanceId: conditionalTrap.instanceId }),
+    )
   })
 
   it('blames rested support energy rather than reporting an unknown engine fault', () => {

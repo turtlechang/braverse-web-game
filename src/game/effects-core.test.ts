@@ -7,6 +7,7 @@ import {
   getAttackDamageAgainst,
   getEffectiveAttack,
   getEffectiveAttackBreakdown,
+  getEffectTargetCandidatesForEffect,
   isEffectConditionMet,
   selectEffectTargets,
   type CardEffect,
@@ -243,6 +244,195 @@ describe('card effect engine', () => {
     ).toBe(Math.max(0, attacker.card.attack - 1))
   })
 
+  it('BS6-010 blocks only the opponent from moving Cookies out of either battle area', () => {
+    const base = createDemoGame()
+    const timekeeper = {
+      ...base.players['player-one'].battleArea[0],
+      card: {
+        ...base.players['player-one'].battleArea[0].card,
+        id: 'BS6-010',
+        skill: {
+          trigger: 'passive' as const,
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: {},
+          text: '',
+          effects: [{ kind: 'prevent-opponent-battle-movement' as const }],
+        },
+      },
+    }
+    const ally = {
+      ...base.players['player-one'].battleArea[0],
+      card: {
+        ...base.players['player-one'].battleArea[0].card,
+        instanceId: 'timekeeper-ally',
+      },
+    }
+    const protectedState: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [timekeeper, ally],
+          stage: {
+            card: {
+              ...base.players['player-one'].battleArea[0].card,
+              id: 'test-stage',
+              instanceId: 'timekeeper-stage',
+              type: 'stage',
+            },
+            rested: false,
+          },
+        },
+      },
+    }
+    const opponentContext = {
+      sourcePlayerId: 'player-two' as const,
+      sourceInstanceId: base.players['player-two'].battleArea[0].card.instanceId,
+    }
+    const returnOpponentCookie: CardEffect = {
+      kind: 'return-to-hand',
+      target: { side: 'opponent', min: 1, max: 1 },
+    }
+
+    expect(
+      getEffectTargetCandidatesForEffect(
+        protectedState,
+        opponentContext,
+        returnOpponentCookie,
+      ),
+    ).toEqual([])
+    const blocked = executeCardEffect(
+      protectedState,
+      opponentContext,
+      returnOpponentCookie,
+      [timekeeper.card.instanceId],
+    )
+    expect(blocked.players['player-one'].battleArea).toHaveLength(2)
+    expect(blocked.players['player-one'].hand).toHaveLength(
+      protectedState.players['player-one'].hand.length,
+    )
+
+    const damaged = executeCardEffect(
+      protectedState,
+      opponentContext,
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      [timekeeper.card.instanceId],
+    )
+    expect(damaged.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      timekeeper.hpCards.length - 1,
+    )
+
+    const stageMoved = executeCardEffect(
+      protectedState,
+      opponentContext,
+      {
+        kind: 'field-to-trash',
+        allowStage: true,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      ['timekeeper-stage'],
+    )
+    expect(stageMoved.players['player-one'].stage).toBeNull()
+    expect(stageMoved.players['player-one'].battleArea).toHaveLength(2)
+
+    const controllerCanMove = executeCardEffect(
+      protectedState,
+      { ...context, sourceInstanceId: timekeeper.card.instanceId },
+      { kind: 'opponent-battle-to-trash', min: 1 },
+      [base.players['player-two'].battleArea[0].card.instanceId],
+    )
+    expect(controllerCanMove.players['player-two'].battleArea).toHaveLength(0)
+  })
+
+  it('applies a passive no-damage condition only while its controller has fewer supports', () => {
+    let state = createDemoGame()
+    const attacker = state.players['player-two'].battleArea[0]
+    const target = state.players['player-one'].battleArea[0]
+    const protectedTarget = {
+      ...target,
+      card: {
+        ...target.card,
+        skill: {
+          trigger: 'passive' as const,
+          oncePerTurn: false,
+          yourTurn: true,
+          restSource: false,
+          cost: {},
+          text: '',
+          effects: [
+            {
+              kind: 'modify-damage-received' as const,
+              amount: 0,
+              duration: 'persistent' as const,
+              target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true },
+              minimumDamage: 0,
+              setDamageTo: 0,
+              condition: {
+                kind: 'support-count-less-than-opponent' as const,
+                difference: 1,
+              },
+            },
+          ],
+        },
+      },
+    }
+
+    state = {
+      ...state,
+      activePlayerId: 'player-one',
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [protectedTarget],
+          supportArea: [],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          supportArea: [
+            { card: createSupport('opponent-support'), rested: false },
+          ],
+        },
+      },
+    }
+
+    expect(
+      getAttackDamageAgainst(
+        state,
+        attacker.card.instanceId,
+        protectedTarget.card.instanceId,
+      ),
+    ).toBe(0)
+
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [
+            { card: createSupport('matching-support'), rested: false },
+          ],
+        },
+      },
+    }
+
+    expect(
+      getAttackDamageAgainst(
+        state,
+        attacker.card.instanceId,
+        protectedTarget.card.instanceId,
+      ),
+    ).toBe(attacker.card.attack)
+  })
+
   it('sets attack damage meeting a threshold to the specified amount', () => {
     let state = createDemoGame()
     const attacker = state.players['player-two'].battleArea[0]
@@ -280,6 +470,42 @@ describe('card effect engine', () => {
         target.card.instanceId,
       ),
     ).toBe(1)
+  })
+
+  it('keeps exactly five support cards and returns the remainder to hand', () => {
+    let state = createDemoGame()
+    const supports = Array.from({ length: 6 }, (_, index) => ({
+      card: createSupport(`keep-support-${index + 1}`),
+      rested: false,
+    }))
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: supports,
+        },
+      },
+    }
+
+    state = executeCardEffect(
+      state,
+      context,
+      {
+        kind: 'support-to-hand',
+        amount: 0,
+        keepCount: 5,
+      },
+      supports.slice(0, 5).map((support) => support.card.instanceId),
+    )
+
+    expect(
+      state.players['player-one'].supportArea.map(
+        (support) => support.card.instanceId,
+      ),
+    ).toEqual(supports.slice(0, 5).map((support) => support.card.instanceId))
+    expect(state.players['player-one'].hand).toContainEqual(supports[5].card)
   })
 
   it('enforces break-level activation conditions', () => {
@@ -657,5 +883,104 @@ describe('card effect engine', () => {
       },
     }
     expect(isEffectConditionMet(noBlueCookie, context, effect)).toBe(false)
+  })
+
+  it('draws only when the Cookie selected by a modify-attack follow-up has the required HP', () => {
+    let state = createDemoGame()
+    const base = state.players['player-one'].battleArea[0]
+    const selectedAtTwoHp = {
+      ...base,
+      card: { ...base.card, instanceId: 'selected-at-two-hp', level: 2 },
+      hpCards: [createSupport('two-hp-a'), createSupport('two-hp-b')],
+    }
+    const unselectedAtOneHp = {
+      ...base,
+      card: { ...base.card, instanceId: 'unselected-at-one-hp', level: 2 },
+      hpCards: [createSupport('one-hp')],
+    }
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [selectedAtTwoHp, unselectedAtOneHp],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'modify-attack',
+      amount: 1,
+      duration: 'this-turn',
+      target: { side: 'self', min: 0, max: 1, minLevel: 2, maxRemainingHp: 3 },
+      thenDrawUpToIfTargetRemainingHp: { remainingHp: 1, max: 1 },
+    }
+
+    const withoutDraw = executeCardEffect(state, context, effect, [
+      selectedAtTwoHp.card.instanceId,
+    ])
+    expect(withoutDraw.pendingDrawUpTo).toBeUndefined()
+
+    const withDraw = executeCardEffect(state, context, effect, [
+      unselectedAtOneHp.card.instanceId,
+    ])
+    expect(withDraw.pendingDrawUpTo).toMatchObject({
+      playerId: 'player-one',
+      max: 1,
+    })
+  })
+
+  it('only returns HP to hand while the hand-count condition is met (BS6-012)', () => {
+    const base = createDemoGame()
+    const source = base.players['player-one'].battleArea[0]
+    const effect: CardEffect = {
+      kind: 'hp-to-hand',
+      amount: 1,
+      target: { side: 'self', min: 1, max: 1 },
+      condition: { kind: 'hand-count-at-most', count: 5 },
+    }
+    const withFiveCards: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: Array.from({ length: 5 }, (_, index) =>
+            createSupport(`hand-${index}`),
+          ),
+          battleArea: [
+            {
+              ...source,
+              hpCards: [createSupport('hp-a'), createSupport('hp-b')],
+            },
+          ],
+        },
+      },
+    }
+
+    expect(isEffectConditionMet(withFiveCards, context, effect)).toBe(true)
+    const resolved = executeCardEffect(withFiveCards, context, effect, [
+      source.card.instanceId,
+    ])
+    expect(resolved.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+    expect(resolved.players['player-one'].hand).toHaveLength(6)
+
+    const withSixCards: GameState = {
+      ...withFiveCards,
+      players: {
+        ...withFiveCards.players,
+        'player-one': {
+          ...withFiveCards.players['player-one'],
+          hand: Array.from({ length: 6 }, (_, index) =>
+            createSupport(`too-many-hand-${index}`),
+          ),
+        },
+      },
+    }
+
+    expect(isEffectConditionMet(withSixCards, context, effect)).toBe(false)
+    expect(() =>
+      executeCardEffect(withSixCards, context, effect, [source.card.instanceId]),
+    ).toThrow('尚未滿足卡牌效果的發動條件。')
   })
 })

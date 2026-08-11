@@ -302,6 +302,15 @@ export const describeCommand = (
         ? `${actor} 將 1 張手牌放到「${targetName ?? '目標'}」的 HP 最上方`
         : `${actor} 略過放置 HP`
     }
+    case 'resolve-reorder-hp': {
+      const targetName = previous.pendingAbilityEffect?.pendingReorderHp
+        ? findCardName(
+            previous,
+            previous.pendingAbilityEffect.pendingReorderHp.targetInstanceId,
+          )
+        : null
+      return `${actor} 重新排列了 ${targetName ?? '目標餅乾'} 的 HP 卡`
+    }
     case 'skip-on-play':
       return `${actor} 選擇不發動「${findCardName(state, command.sourceInstanceId)}」的登場效果`
     case 'replace-cookie':
@@ -438,6 +447,7 @@ export const LOG_CATEGORY_BY_COMMAND_KIND: Record<GameCommand['kind'], LogCatego
   'begin-activate-stage': 'activate',
   'resolve-ability-effect': 'activate',
   'resolve-place-hand-hp': 'activate',
+  'resolve-reorder-hp': 'activate',
   'resolve-choose-one': 'activate',
   'resolve-opponent-hand-discard': 'activate',
   'resolve-opponent-rest-support': 'activate',

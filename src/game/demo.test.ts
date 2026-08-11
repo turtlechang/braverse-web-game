@@ -27,6 +27,7 @@ import {
   createBs5Item111DemoState,
   createBs5StageConditionDemoState,
   createBs5TrapDemoState,
+  createBs6ConditionDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
   createP082TrapDemoState,
@@ -203,6 +204,26 @@ describe('parseTestStateConfig', () => {
       conditionMet: false,
     })
     expect(parseTestStateConfig('?test-state=bs5-faint:BS4-011:met', 'localhost')).toBeNull()
+  })
+
+  it('parses BS6 candidate A/B test-state routes only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs6-condition:BS6-039:met', 'localhost'),
+    ).toEqual({
+      kind: 'bs6-condition',
+      cardNumber: 'BS6-039',
+      conditionMet: true,
+    })
+    expect(
+      parseTestStateConfig('?test-state=bs6-condition:BS6-039:unmet', 'localhost'),
+    ).toEqual({
+      kind: 'bs6-condition',
+      cardNumber: 'BS6-039',
+      conditionMet: false,
+    })
+    expect(
+      parseTestStateConfig('?test-state=bs6-condition:BS6-034:met', 'localhost'),
+    ).toBeNull()
   })
 
   it('returns null when non-localhost even with valid test-state', () => {
@@ -439,6 +460,53 @@ describe('createCardCheckDemoState', () => {
           !support.rested && support.card.energyColor === 'green',
       ),
     ).toBe(true)
+  })
+
+  it('loads BS6 candidates for localhost card-check without adding them to the formal pool', () => {
+    const prophet = createCardCheckDemoState('BS6-034')
+    const prophetSource = prophet.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-034',
+    )
+    expect(prophetSource?.skill).toMatchObject({
+      trigger: 'on-play',
+      effects: [{ kind: 'reorder-hp' }],
+    })
+
+    const croissant = createCardCheckDemoState('BS6-039')
+    const croissantSource = croissant.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-039',
+    )
+    expect(croissantSource?.skill).toMatchObject({
+      trigger: 'on-play',
+      cost: { energy: { yellow: 1 } },
+      effects: [{ kind: 'opponent-break-to-trash-then-battle-to-break' }],
+    })
+  })
+
+  it('creates BS6-039 met and unmet break-level fixtures without removing the source card', () => {
+    const met = createBs6ConditionDemoState('BS6-039', true)
+    const unmet = createBs6ConditionDemoState('BS6-039', false)
+    const getSourceAndEffect = (state: GameState) => {
+      const source = state.players['player-one'].hand.find(
+        (card) => card.id === 'BS6-039',
+      )
+      if (!source?.skill) throw new Error('BS6-039 candidate source is required')
+      return { source, effect: source.skill.effects[0]! }
+    }
+    const metSource = getSourceAndEffect(met)
+    const unmetSource = getSourceAndEffect(unmet)
+
+    expect(isEffectConditionMet(met, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: metSource.source.instanceId,
+    }, metSource.effect)).toBe(true)
+    expect(isEffectConditionMet(unmet, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: unmetSource.source.instanceId,
+    }, unmetSource.effect)).toBe(false)
+    expect(unmet.players['player-two'].breakArea).toEqual([
+      expect.objectContaining({ level: 7 }),
+    ])
   })
 
   it('prepares focused P-0XX fixtures for both alternative and conditional paths', () => {

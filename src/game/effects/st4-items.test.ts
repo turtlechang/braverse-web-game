@@ -14,6 +14,7 @@ import {
   type PlayerState,
 } from '..'
 import { GameRuleError } from '../errors'
+import { getEffectTargetCandidatesForEffect } from './targeting'
 
 const createTestPlayer = (id: 'player-one' | 'player-two'): PlayerState => ({
   id,
@@ -144,6 +145,15 @@ describe('ST4-016 Bear Jelly Ice Cream', () => {
     expect(
       p1.deck.some((c) => c.instanceId === 'blue-1'),
     ).toBe(false)
+  })
+
+  it('does not offer a return-to-hand target that would empty the battle area', () => {
+    const onlyCookie = createBattleCookie('only-cookie', 1, 3, 'blue')
+    const state = createTestGameState([onlyCookie])
+
+    expect(
+      getEffectTargetCandidatesForEffect(state, context, returnToHandEffect),
+    ).toEqual([])
   })
 
   it('rejects non-blue cookies from candidates', () => {

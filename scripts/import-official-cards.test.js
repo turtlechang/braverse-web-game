@@ -68,6 +68,16 @@ describe('official card importer', () => {
     expect(card.hp).toBe(2)
   })
 
+  it('normalizes official NPC placeholders with Cookie stats as Cookies', () => {
+    const card = normalizeOfficialCard(
+      { ...rawCard, card_type: 'NPC', card_no: 'BS6-028' },
+      getDatasetUrl('en'),
+    )
+
+    expect(card.type).toBe('cookie')
+    expect(card.officialType).toBe('NPC')
+  })
+
   it('limits output and records that images were not downloaded', () => {
     const document = createImportDocument({
       rawCards: [rawCard, { ...rawCard, card_idx: 2, card_no: 'BS9-001' }],

@@ -126,7 +126,15 @@ export function usePendingEffect(params: {
       ? isEffectConditionMet(game, pendingEffect.context, currentEffect)
       : true
   const currentTargetSelector: EffectTargetSelector | null =
-    currentEffect?.kind === 'damage-all' && currentEffect.sequential
+    currentEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
+      ? {
+          side: 'opponent',
+          min: game.pendingAbilityEffect?.pendingOpponentBreakToTrashThenBattleToBreak
+            ? 0
+            : 1,
+          max: 1,
+        }
+      : currentEffect?.kind === 'damage-all' && currentEffect.sequential
       ? currentEffect.target ?? null
       : currentEffect?.kind === 'gain-hp'
       ? currentEffect.target?.sourceOnly
@@ -170,7 +178,7 @@ export function usePendingEffect(params: {
           currentEffect.kind === 'optional-cost-attack' ||
           currentEffect.kind === 'disable-block'
           ? null
-          : (currentEffect.target ?? null)
+          : ('target' in currentEffect ? currentEffect.target ?? null : null)
         : null
 
   const stagedCostSelectedTargetId =
@@ -183,7 +191,9 @@ export function usePendingEffect(params: {
     pendingEffect &&
     currentEffect &&
     currentTargetSelector
-      ? (currentEffect.kind === 'field-to-trash' && currentEffect.stageOnly)
+      ? currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break'
+        ? []
+        : (currentEffect.kind === 'field-to-trash' && currentEffect.stageOnly)
         ? []
         : currentEffect.kind === 'equip-source'
           ? getEffectTargetCandidatesForEffect(
@@ -199,11 +209,17 @@ export function usePendingEffect(params: {
               const selector = stagedCostSelectedTargetId
                 ? { ...currentTargetSelector, costSelected: false }
                 : currentTargetSelector
-              const candidates = getEffectTargetCandidates(
-                game,
-                pendingEffect.context,
-                selector,
-              )
+              const candidates = stagedCostSelectedTargetId
+                ? getEffectTargetCandidates(
+                    game,
+                    pendingEffect.context,
+                    selector,
+                  )
+                : getEffectTargetCandidatesForEffect(
+                    game,
+                    pendingEffect.context,
+                    currentEffect,
+                  )
               return stagedCostSelectedTargetId
                 ? candidates.filter(
                     (cookie) =>
@@ -221,9 +237,13 @@ export function usePendingEffect(params: {
       ? getSupportEffectCandidates(game, pendingEffect.context).filter(
           (support) =>
             currentEffect.kind !== 'support-to-hand' ||
-            currentEffect.maxLevel === undefined ||
-            (support.card.type === 'cookie' &&
-              support.card.level <= currentEffect.maxLevel),
+            ((currentEffect.cardType === undefined ||
+              support.card.type === currentEffect.cardType) &&
+              (currentEffect.energyColor === undefined ||
+                support.card.energyColor === currentEffect.energyColor) &&
+              (currentEffect.maxLevel === undefined ||
+                (support.card.type === 'cookie' &&
+                  support.card.level <= currentEffect.maxLevel))),
         )
       : []
 
@@ -268,6 +288,7 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'field-to-deck-bottom' ||
       currentEffect.kind === 'hand-to-battle' ||
       currentEffect.kind === 'opponent-trash-to-break' ||
+      currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break' ||
       (currentEffect.kind === 'set-active' && currentEffect.selectable))
       ? getEffectSelectionCandidates(
           game,
@@ -632,7 +653,10 @@ export function usePendingEffect(params: {
       (pendingAbility.trigger === 'attacker-faint' && game.pendingBattle) ||
       // 兩階段選擇第二階段等待放回手牌，面板交給
       // PendingDecisionModals 的 place-hand-hp 提示，不重開第一階段選目標。
-      Boolean(pendingAbility.pendingPlace)
+      Boolean(pendingAbility.pendingPlace) ||
+      // BS6-034：目標確認後由 PendingDecisionModals 顯示完整 HP 重排面板，
+      // 不能再次開啟第一段的 EffectPanel。
+      Boolean(pendingAbility.pendingReorderHp)
     ) {
       return
     }
@@ -795,6 +819,12 @@ export function usePendingEffect(params: {
             : {}),
         }
         return getEffectTargetCandidates(nextGame, context, selector).length > 0
+      }
+      if (effect.kind === 'support-to-hand') {
+        return (
+          getEffectSelectionCandidates(nextGame, context, effect).length >=
+          (effect.optional ? 0 : effect.amount)
+        )
       }
       if (isEffectUntargeted(effect) || !('target' in effect) || !effect.target) {
         return true
@@ -1223,7 +1253,12 @@ export function usePendingEffect(params: {
             currentEffect.kind === 'trash-to-break' ||
             currentEffect.kind === 'break-to-battle' ||
             currentEffect.kind === 'support-to-battle'
-          ? currentEffect.amount
+          ? currentEffect.kind === 'support-to-hand'
+            ? currentEffect.keepCount ??
+              (currentEffect.anyNumber
+                ? supportEffectCandidates.length
+                : currentEffect.amount)
+            : currentEffect.amount
         : currentEffect.kind === 'hand-to-break' ||
             currentEffect.kind === 'break-to-hand' ||
             currentEffect.kind === 'rest-support'
@@ -1246,6 +1281,8 @@ export function usePendingEffect(params: {
             : 0
           : currentEffect.kind === 'opponent-battle-to-trash'
             ? 1
+            : currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break'
+              ? 1
             : currentEffect.kind === 'inspect-deck' ||
               currentEffect.kind === 'optional-cost-attack' ||
               currentEffect.kind === 'disable-block' ||
@@ -1255,7 +1292,7 @@ export function usePendingEffect(params: {
             ? currentEffect.amount
             : currentEffect.kind === 'opponent-trash-to-break'
             ? currentEffect.max
-          : currentEffect.target?.max ?? 0
+          : ('target' in currentEffect ? currentEffect.target?.max ?? 0 : 0)
 
     const isSelected = pendingEffect.selectedTargetIds.includes(instanceId)
     const selectedTargetIds = isSelected
@@ -1564,7 +1601,8 @@ export function usePendingEffect(params: {
                   (support) => support.card.instanceId === instanceId,
                 )?.card.name ?? instanceId,
             )
-          : currentEffect.kind === 'hand-to-support'
+          : currentEffect.kind === 'hand-to-support' ||
+              currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break'
             ? pendingEffect.selectedTargetIds.map(
                 (instanceId) =>
                   genericEffectCandidateCards.find(
@@ -1767,6 +1805,37 @@ export function usePendingEffect(params: {
       // 目標存活時規則層停在第二階段（pendingPlace），把提示交給
       // PendingDecisionModals；未選目標或目標昏厥時規則層直接結束，
       // 這裡照常走 hasNextEffect 收尾。
+      if (
+        currentEffect.kind === 'reorder-hp' &&
+        nextGame.pendingAbilityEffect?.pendingReorderHp
+      ) {
+        setGame(nextGame)
+        setMessage(result)
+        setEffectHistory((history) => [result, ...history].slice(0, 4))
+        setPendingEffect(null)
+        return
+      }
+
+      if (
+        currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break' &&
+        nextGame.pendingAbilityEffect
+          ?.pendingOpponentBreakToTrashThenBattleToBreak
+      ) {
+        setGame(nextGame)
+        setMessage(result)
+        setEffectHistory((history) => [result, ...history].slice(0, 4))
+        setPendingEffect({
+          ...pendingEffect,
+          selectedTargetIds: [],
+          selectedDiscardHandIds: [],
+          selectedHpToTrashTargetIds: [],
+          selectedTrashBattleCookieIds: [],
+          skillActivated: true,
+          compoundEffectStep: 'follow-up',
+        })
+        return
+      }
+
       if (
         (currentEffect.kind === 'cycle-hp' ||
           (currentEffect.kind === 'hand-to-hp' &&

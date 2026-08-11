@@ -6,12 +6,14 @@ import {
   createDemoGame,
   executeCardEffect,
   getForcedAttackTargetId,
+  getEffectSelectionLimits,
   getEffectSelectionCandidates,
   getLegalTurnCommands,
   isEffectConditionMet,
   placeHandCardOnHp,
   resolveOpponentHandDiscard,
   resolveFlip,
+  type CardEffect,
   type CookieCard,
   type EnergyColor,
   type FlipAbility,
@@ -53,6 +55,218 @@ const makeEnergyCard = (
 })
 
 describe('new card-effect mechanics', () => {
+  it('filters support-to-hand candidates by card type before resolving the return', () => {
+    const base = createDemoGame()
+    const supportCookie = makeCookie({
+      instanceId: 'support-cookie',
+      energyColor: 'green',
+    })
+    const supportItem = makeEnergyCard('support-item', 'green')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          supportArea: [
+            { card: supportCookie, rested: false },
+            { card: supportItem, rested: false },
+          ],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'support-to-hand',
+      amount: 1,
+      cardType: 'cookie',
+    }
+
+    expect(
+      getEffectSelectionCandidates(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'source',
+      }, effect).map((card) => card.instanceId),
+    ).toEqual([supportCookie.instanceId])
+    expect(() =>
+      executeCardEffect(
+        state,
+        { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+        effect,
+        [supportItem.instanceId],
+      ),
+    ).toThrow('選擇的卡片不在支援區。')
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+      effect,
+      [supportCookie.instanceId],
+    )
+    expect(resolved.players['player-one'].hand).toContainEqual(supportCookie)
+    expect(resolved.players['player-one'].supportArea).toEqual([
+      { card: supportItem, rested: false },
+    ])
+  })
+
+  it('allows an optional support-to-hand effect to resolve without a selection', () => {
+    const state = createDemoGame()
+    const effect: CardEffect = {
+      kind: 'support-to-hand',
+      amount: 1,
+      optional: true,
+    }
+
+    expect(
+      executeCardEffect(
+        state,
+        { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+        effect,
+        [],
+      ),
+    ).toEqual(state)
+  })
+
+  it('returns any number of matching-color support cards without offering other colors', () => {
+    const base = createDemoGame()
+    const greenFirst = makeEnergyCard('green-first', 'green')
+    const red = makeEnergyCard('red', 'red')
+    const greenSecond = makeEnergyCard('green-second', 'green', 'stage')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          supportArea: [
+            { card: greenFirst, rested: false },
+            { card: red, rested: false },
+            { card: greenSecond, rested: true },
+          ],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'support-to-hand',
+      amount: 0,
+      anyNumber: true,
+      optional: true,
+      energyColor: 'green',
+    }
+
+    expect(
+      getEffectSelectionCandidates(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'source',
+      }, effect).map((card) => card.instanceId),
+    ).toEqual([greenFirst.instanceId, greenSecond.instanceId])
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+      effect,
+      [greenFirst.instanceId, greenSecond.instanceId],
+    )
+    expect(resolved.players['player-one'].hand).toEqual(
+      expect.arrayContaining([greenFirst, greenSecond]),
+    )
+    expect(resolved.players['player-one'].supportArea).toEqual([
+      { card: red, rested: false },
+    ])
+  })
+
+  it('records Cookies played from trash for this-turn stage conditions', () => {
+    const base = createDemoGame()
+    const trashCookie = makeCookie({
+      instanceId: 'trash-cookie',
+      energyColor: 'purple',
+    })
+    const handCookie = makeCookie({
+      instanceId: 'hand-cookie',
+      energyColor: 'purple',
+    })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          discardPile: [...base.players['player-one'].discardPile, trashCookie],
+          hand: [...base.players['player-one'].hand, handCookie],
+        },
+      },
+    }
+    const context = {
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: 'source',
+    }
+    const played = executeCardEffect(
+      state,
+      context,
+      { kind: 'trash-to-battle', amount: 1 },
+      [trashCookie.instanceId],
+    )
+
+    expect(played.cookiesPlayedFromTrashThisTurn).toEqual({
+      'player-one': true,
+    })
+    const playedFromHand = executeCardEffect(
+      state,
+      context,
+      { kind: 'hand-to-battle', amount: 1 },
+      [handCookie.instanceId],
+    )
+    expect(playedFromHand.cookiesPlayedFromTrashThisTurn).toBeUndefined()
+    expect(
+      isEffectConditionMet(played, context, {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        condition: { kind: 'cookie-played-from-trash-this-turn' },
+      }),
+    ).toBe(true)
+    expect(
+      isEffectConditionMet(state, context, {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        condition: { kind: 'cookie-played-from-trash-this-turn' },
+      }),
+    ).toBe(false)
+  })
+
+  it('limits BS6-030 draws to own break Cookies at the requested level', () => {
+    const base = createDemoGame()
+    const lowLevel = makeCookie({ instanceId: 'break-low', level: 1 })
+    const levelTwo = makeCookie({ instanceId: 'break-two', level: 2 })
+    const levelThree = makeCookie({ instanceId: 'break-three', level: 3 })
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          breakArea: [lowLevel, levelTwo, levelThree],
+        },
+      },
+    }
+
+    const resolved = executeCardEffect(
+      state,
+      { sourcePlayerId: 'player-one', sourceInstanceId: 'source' },
+      {
+        kind: 'draw-up-to-break-cookie-count',
+        minLevel: 2,
+        amountPerCookie: 1,
+      },
+      [],
+    )
+
+    expect(resolved.pendingDrawUpTo).toMatchObject({
+      playerId: 'player-one',
+      max: 2,
+    })
+  })
+
   it('field-to-trash-all sends matching cookies from both battle areas to the trash', () => {
     const base = asMainPhase(createDemoGame())
     const lowLevel = makeCookie({ instanceId: 'low', level: 2 })
@@ -1630,5 +1844,45 @@ describe('new card-effect mechanics', () => {
       beginAttack(state, attacker.instanceId, forcedTarget.instanceId, [])
         .pendingBattle?.targetInstanceId,
     ).toBe(forcedTarget.instanceId)
+  })
+
+  it('allows an optional trash-to-battle effect to skip or select only eligible base HP', () => {
+    const base = asMainPhase(createDemoGame())
+    const eligible = makeCookie({
+      instanceId: 'purple-hp-2',
+      hp: 2,
+      energyColor: 'purple',
+    })
+    const ineligible = makeCookie({
+      instanceId: 'purple-hp-3',
+      hp: 3,
+      energyColor: 'purple',
+    })
+    const effect = {
+      kind: 'trash-to-battle' as const,
+      amount: 1,
+      optional: true,
+      energyColor: 'purple' as const,
+      maxHp: 2,
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          discardPile: [eligible, ineligible],
+        },
+      },
+    }
+    const context = { sourcePlayerId: 'player-one' as const, sourceInstanceId: 'source' }
+
+    expect(getEffectSelectionLimits(effect)).toEqual({ min: 0, max: 1 })
+    expect(getEffectSelectionCandidates(state, context, effect)).toEqual([eligible])
+    expect(executeCardEffect(state, context, effect, [])).toEqual(state)
+
+    const resolved = executeCardEffect(state, context, effect, [eligible.instanceId])
+    expect(resolved.players['player-one'].battleArea).toHaveLength(2)
+    expect(resolved.players['player-one'].discardPile).toEqual([ineligible])
   })
 })

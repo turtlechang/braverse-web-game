@@ -74,6 +74,7 @@ const activateCurrentPlayer = (state: GameState): GameState => {
     itemsActivatedThisTurn: {},
     cookiesHpReducedThisTurn: {},
     arenaCookieDealtEffectDamageThisTurn: {},
+    cookiesPlayedFromTrashThisTurn: {},
   }
 }
 
@@ -355,6 +356,7 @@ export const advancePhase = (state: GameState): GameState => {
         supportPlacedThisTurn: false,
         supportAreaDecreasedThisTurn: {},
         cookiesGainedHpThisTurn: {},
+        cookiesPlayedFromTrashThisTurn: {},
         skillUsesThisTurn: [],
       }
     }

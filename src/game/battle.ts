@@ -5,14 +5,12 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
-  getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getSupportEffectCandidates,
   hasRequiredEffectTargets,
   getTargetPlayerId,
   isEffectConditionMet,
-  requiresTargetSelection,
   isEffectTargeted,
   requiresEffectCardSelection,
   resolveDrawUpTo,
@@ -217,6 +215,17 @@ export const beginAttack = (
     attackerInstanceId,
     targetInstanceId,
   )
+  const attackContext: EffectContext = {
+    sourcePlayerId: attackerPlayer.id,
+    sourceInstanceId: attacker.card.instanceId,
+  }
+  const trapsDisabled =
+    attacker.card.skill?.trigger === 'passive' &&
+    attacker.card.skill.effects.some(
+      (effect) =>
+        effect.kind === 'disable-traps' &&
+        isEffectConditionMet(state, attackContext, effect),
+    )
 
   return {
     ...state,
@@ -243,6 +252,7 @@ export const beginAttack = (
       remainingDamage: declaredDamage,
       stage: 'trap',
       trapUsed: false,
+      ...(trapsDisabled ? { trapsDisabled: true } : {}),
       revealedHpCard: null,
       preventKnockoutTargetIds: [],
       faintedColors: [],
@@ -267,6 +277,10 @@ const isTrapConditionMet = (
 
   if (condition.kind === 'break-level-at-least') {
     return getBreakAreaLevel(state, playerId) >= condition.level
+  }
+
+  if (condition.kind === 'break-area-card-count-at-least') {
+    return state.players[playerId].breakArea.length >= condition.count
   }
 
   if (condition.kind === 'attacker-attack-more-than') {
@@ -321,9 +335,12 @@ const hasRequiredTrapTargets = (
         (discarded) =>
           discarded.type === 'cookie' &&
           (effect.energyColor === undefined ||
-            discarded.energyColor === effect.energyColor),
+            discarded.energyColor === effect.energyColor) &&
+          (effect.exactLevel === undefined || discarded.level === effect.exactLevel) &&
+          (effect.maxLevel === undefined || discarded.level <= effect.maxLevel) &&
+          (effect.maxHp === undefined || discarded.hp <= effect.maxHp),
       ).length
-      return available >= effect.amount
+      return effect.optional || available >= effect.amount
     }
 
     const isTargetedGainHp =
@@ -350,6 +367,7 @@ const hasRequiredTrapTargets = (
 
 export type TrapUnavailableReason =
   | 'not-trap-stage'
+  | 'traps-disabled'
   | 'condition-not-met'
   | 'no-legal-targets'
   | 'not-enough-support-to-trash'
@@ -396,6 +414,8 @@ export const explainUnavailableTraps = (
       const trap = card.trap!
       const reason: TrapUnavailableReason = !inTrapStage
         ? 'not-trap-stage'
+        : battle?.trapsDisabled
+          ? 'traps-disabled'
         : !isTrapConditionMet(state, playerId, trap)
           ? 'condition-not-met'
           : !hasRequiredTrapTargets(state, playerId, card)
@@ -441,6 +461,7 @@ export const getTrapCandidates = (
     !battle ||
     battle.stage !== 'trap' ||
     battle.trapUsed ||
+    battle.trapsDisabled ||
     battle.defenderPlayerId !== playerId
   ) {
     return []
@@ -900,6 +921,7 @@ export const playTrap = (
   if (
     battle.stage !== 'trap' ||
     battle.trapUsed ||
+    battle.trapsDisabled ||
     battle.defenderPlayerId !== playerId
   ) {
     throw new GameRuleError('Invalid battle action.')
@@ -1740,11 +1762,13 @@ const hasApplicableOptionalAttackEffect = (
   state: GameState,
   context: EffectContext,
   effects: CardEffect[],
+  cost?: AbilityCost,
 ): boolean =>
   effects.some(
     (effect) =>
       isEffectConditionMet(state, context, effect) &&
-      hasRequiredEffectTargets(state, context, effect),
+      (hasRequiredEffectTargets(state, context, effect) ||
+        (cost?.selfToTrash === true && effect.kind === 'trash-to-battle')),
   )
 
 export const advanceAttackEffect = (
@@ -2029,6 +2053,7 @@ export const resolveAttackEffect = (
         state,
         effectContext,
         effect.effects,
+        effect.cost,
       )
     ) {
       return advanceAttackEffect(state, battle)
@@ -2176,6 +2201,34 @@ export const resolveOptionalCostAttack = (
           pendingBattle: { ...battle, attackEffectIndex: nextIndex },
         })
   }
+  const sourceToTrash = pending.cost.selfToTrash
+    ? player.battleArea.find(
+        (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+      )
+    : undefined
+  if (pending.cost.selfToTrash && !sourceToTrash) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  const stateAfterSourceCost: GameState = sourceToTrash
+    ? {
+        ...state,
+        players: {
+          ...state.players,
+          [playerId]: {
+            ...player,
+            battleArea: player.battleArea.filter(
+              (cookie) => cookie.card.instanceId !== sourceToTrash.card.instanceId,
+            ),
+            discardPile: [
+              ...player.discardPile,
+              sourceToTrash.card,
+              ...sourceToTrash.hpCards,
+              ...(sourceToTrash.equippedCards ?? []),
+            ],
+          },
+        },
+      }
+    : state
   const selectableEffects = applicableEffects.filter((effect) =>
     requiresEffectCardSelection(effect),
   )
@@ -2196,7 +2249,7 @@ export const resolveOptionalCostAttack = (
         return false
       }
       const candidates = getEffectSelectionCandidates(
-        state,
+        stateAfterSourceCost,
         effectContext,
         effect,
       )
@@ -2210,16 +2263,17 @@ export const resolveOptionalCostAttack = (
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
   const paymentSet = new Set(uniquePaymentIds)
+  const playerAfterSourceCost = stateAfterSourceCost.players[playerId]
   let nextState: GameState = {
-    ...state,
+    ...stateAfterSourceCost,
     pendingOptionalCostAttack: null,
     players: {
-      ...state.players,
+      ...stateAfterSourceCost.players,
       [playerId]: {
-        ...player,
-        hand: player.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
-        discardPile: [...player.discardPile, ...discardedCards],
-        supportArea: player.supportArea.map((support) =>
+        ...playerAfterSourceCost,
+        hand: playerAfterSourceCost.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+        discardPile: [...playerAfterSourceCost.discardPile, ...discardedCards],
+        supportArea: playerAfterSourceCost.supportArea.map((support) =>
           paymentSet.has(support.card.instanceId)
             ? { ...support, rested: true }
             : support,
@@ -2762,36 +2816,44 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const applicableEffects = pending.effects.filter((effect) =>
         isEffectConditionMet(nextState, context, effect),
       )
-      const targetedEffect = applicableEffects.find((e) =>
-        requiresTargetSelection(e),
+      const selectableEffect = applicableEffects.find((effect) =>
+        requiresEffectCardSelection(effect),
       )
       let autoTargetIds: string[] = []
-      if (targetedEffect) {
-        const candidates = getEffectTargetCandidatesForEffect(
+      let selectionLimits: { min: number; max: number } | null = null
+      if (selectableEffect) {
+        const candidates = getEffectSelectionCandidates(
           nextState,
           context,
-          targetedEffect,
+          selectableEffect,
         )
-        const selectAllSequentialTargets =
-          targetedEffect.kind === 'damage-all' && targetedEffect.sequential
-        autoTargetIds = candidates
-          .slice(
-            0,
-            targetedEffect.kind === 'opponent-battle-to-trash'
-              ? 1
-              : selectAllSequentialTargets
-                ? candidates.length
-                : (targetedEffect.target?.max ?? 0),
-          )
-          .map((c) => c.card.instanceId)
+        const source = nextState.players[pending.playerId].battleArea.find(
+          (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+        )
+        const sourceCanEnterTrashToBattle =
+          pending.cost.selfToTrash === true &&
+          selectableEffect.kind === 'trash-to-battle' &&
+          source !== undefined &&
+          source.card.type === 'cookie' &&
+          (selectableEffect.energyColor === undefined ||
+            source.card.energyColor === selectableEffect.energyColor) &&
+          (selectableEffect.exactLevel === undefined ||
+            source.card.level === selectableEffect.exactLevel) &&
+          (selectableEffect.maxLevel === undefined ||
+            source.card.level <= selectableEffect.maxLevel) &&
+          (selectableEffect.maxHp === undefined ||
+            source.card.hp <= selectableEffect.maxHp)
+        const selectableCards =
+          candidates.length > 0 || !sourceCanEnterTrashToBattle
+            ? candidates
+            : [source.card]
+        selectionLimits = getEffectSelectionLimits(selectableEffect)
+        autoTargetIds = selectableCards
+          .slice(0, selectionLimits?.max ?? 0)
+          .map((card) => card.instanceId)
       }
-      const hasTarget = targetedEffect
-        ? autoTargetIds.length >=
-          (targetedEffect.kind === 'opponent-battle-to-trash'
-            ? targetedEffect.min ?? 1
-            : targetedEffect.kind === 'damage-all' && targetedEffect.sequential
-              ? targetedEffect.target?.min ?? Number.POSITIVE_INFINITY
-              : (targetedEffect.target?.min ?? 0))
+      const hasTarget = selectableEffect
+        ? autoTargetIds.length >= (selectionLimits?.min ?? Number.POSITIVE_INFINITY)
         : applicableEffects.length > 0
       if (canPayHand && canPayEnergy && hasTarget) {
         const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)

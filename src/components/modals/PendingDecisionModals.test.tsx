@@ -9,6 +9,7 @@ import {
   HandDiscardResponseModal,
   OptionalCostAttackModal,
   InspectDeckModal,
+  ReorderHpModal,
 } from './PendingDecisionModals'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -18,6 +19,48 @@ const createHandCard = (index: number): GameCard => ({
   instanceId: `test-hand-${index}`,
   name: `測試手牌 ${index}`,
   type: 'item',
+})
+
+describe('ReorderHpModal', () => {
+  it('keeps every HP card and submits the player-selected order', async () => {
+    const onConfirm = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const hpCards: GameCard[] = [
+      { id: 'HP-A', instanceId: 'hp-a', name: 'HP A', type: 'item' },
+      { id: 'HP-B', instanceId: 'hp-b', name: 'HP B', type: 'trap' },
+      { id: 'HP-C', instanceId: 'hp-c', name: 'HP C', type: 'stage' },
+    ]
+
+    await act(() =>
+      root.render(
+        <ReorderHpModal
+          sourceCardName="Wind Archer Cookie"
+          targetCardName="Wind Archer Cookie"
+          cards={hpCards}
+          onConfirm={onConfirm}
+        />,
+      ),
+    )
+
+    expect(container.querySelector('[aria-label="HP 卡重排順序"]')).not.toBeNull()
+    await act(() => {
+      ;(
+        container.querySelector(
+          '[aria-label="將 HP A 往下移"]',
+        ) as HTMLButtonElement
+      ).click()
+    })
+    await act(() => {
+      findButtonByText(container, '確認 HP 順序')!.click()
+    })
+
+    expect(onConfirm).toHaveBeenCalledWith(['hp-b', 'hp-a', 'hp-c'])
+
+    await act(() => root.unmount())
+    container.remove()
+  })
 })
 
 const createCookieCard = (index: number): CookieCard => ({

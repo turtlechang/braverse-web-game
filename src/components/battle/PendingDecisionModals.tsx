@@ -8,6 +8,7 @@ import {
   HandDiscardResponseModal,
   OpponentRestSupportResponseModal,
   PlaceHandHpModal,
+  ReorderHpModal,
   EffectOrderModal,
 } from '../modals/GameModals'
 import type {
@@ -84,6 +85,51 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
 
   return (
     <>
+      {match.game.pendingAbilityEffect?.pendingReorderHp &&
+        match.game.pendingAbilityEffect.playerId === match.viewerPlayerId &&
+        !pending.pendingEffect && (() => {
+          const pendingReorderHp = match.game.pendingAbilityEffect!.pendingReorderHp!
+          const target = match.game.players[pendingReorderHp.targetPlayerId].battleArea.find(
+            (cookie) => cookie.card.instanceId === pendingReorderHp.targetInstanceId,
+          )
+          const sourceCard = Object.values(match.game.players)
+            .flatMap((player) => [
+              ...player.battleArea.map((entry) => entry.card),
+              ...player.hand,
+              ...player.discardPile,
+              ...player.supportArea.map((entry) => entry.card),
+              ...(player.stage ? [player.stage.card] : []),
+            ])
+            .find(
+              (card) =>
+                card.instanceId ===
+                match.game.pendingAbilityEffect?.sourceInstanceId,
+            )
+          return target ? (
+            <ReorderHpModal
+              sourceCardName={
+                match.game.pendingAbilityEffect?.sourceCardName ??
+                sourceCard?.name ??
+                '技能'
+              }
+              sourceCard={sourceCard}
+              effectText={sourceCard?.skill?.text}
+              targetCardName={target.card.name}
+              cards={target.hpCards}
+              onConfirm={(orderedCardIds) => {
+                match.dispatch(
+                  {
+                    kind: 'resolve-reorder-hp',
+                    playerId: match.viewerPlayerId,
+                    orderedCardIds,
+                  },
+                  `重新排列 ${target.card.name} 的 HP 卡`,
+                )
+              }}
+            />
+          ) : null
+        })()}
+
       {match.game.pendingAbilityEffect?.pendingPlace &&
         match.game.pendingAbilityEffect.playerId === match.viewerPlayerId &&
         !pending.pendingEffect && (() => {

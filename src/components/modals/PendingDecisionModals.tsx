@@ -550,6 +550,103 @@ export function PlaceHandHpModal({
   )
 }
 
+export interface ReorderHpModalProps {
+  sourceCardName: string
+  sourceCard?: GameCard
+  effectText?: string
+  targetCardName: string
+  cards: GameCard[]
+  onConfirm: (orderedCardIds: string[]) => void
+}
+
+/** BS6-034：玩家必須把完整 HP 堆疊以任意順序放回，不能只停在檢視畫面。 */
+export function ReorderHpModal({
+  sourceCardName,
+  sourceCard,
+  effectText,
+  targetCardName,
+  cards,
+  onConfirm,
+}: ReorderHpModalProps) {
+  const [orderedCards, setOrderedCards] = useState(cards)
+
+  const moveCard = (index: number, offset: -1 | 1) => {
+    const destination = index + offset
+    if (destination < 0 || destination >= orderedCards.length) return
+    setOrderedCards((current) => {
+      const next = [...current]
+      ;[next[index], next[destination]] = [next[destination], next[index]]
+      return next
+    })
+  }
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="battle-response-modal hp-reorder-modal" role="alertdialog">
+        <GuidedPhaseSteps
+          phases={[
+            { id: 'target', label: '選擇目標', complete: true },
+            { id: 'reorder', label: '重排 HP', complete: false },
+          ]}
+          activePhase="reorder"
+        />
+        <span>重新排列 HP</span>
+        <h2>{sourceCardName}</h2>
+        <div className="draw-up-to-source-card hand-discard-source-card">
+          {sourceCard && <CardFace card={sourceCard} />}
+          <div className="draw-up-to-source-info">
+            <strong>{targetCardName} 的 HP 卡</strong>
+            {effectText && (
+              <p className="faint-effect-text draw-up-to-effect">
+                <CardEffectText text={effectText} />
+              </p>
+            )}
+          </div>
+        </div>
+        <p className="faint-target-hint">
+          依照想要的「最上方到最下方」順序調整後確認。所有 HP 卡都必須保留。
+        </p>
+        <ol className="hp-reorder-list" aria-label="HP 卡重排順序">
+          {orderedCards.map((card, index) => (
+            <li key={card.instanceId}>
+              <span className="hp-reorder-position">{index + 1}</span>
+              <CardFace card={card} />
+              <span>{card.name}</span>
+              <div className="hp-reorder-actions">
+                <button
+                  type="button"
+                  aria-label={`將 ${card.name} 往上移`}
+                  disabled={index === 0}
+                  onClick={() => moveCard(index, -1)}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label={`將 ${card.name} 往下移`}
+                  disabled={index === orderedCards.length - 1}
+                  onClick={() => moveCard(index, 1)}
+                >
+                  ↓
+                </button>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="modal-button primary"
+            onClick={() => onConfirm(orderedCards.map((card) => card.instanceId))}
+          >
+            確認 HP 順序
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export interface OptionalCostAttackModalProps {
   sourceCardName: string
   sourceCard?: GameCard

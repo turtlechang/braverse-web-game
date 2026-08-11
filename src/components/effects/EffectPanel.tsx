@@ -198,6 +198,8 @@ function EffectPanelContent({
         }
       : currentEffect?.kind === 'opponent-battle-to-trash'
         ? { min: 1, max: 1 }
+      : currentEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
+        ? { min: pendingEffect?.compoundEffectStep === 'follow-up' ? 0 : 1, max: 1 }
       : currentEffect?.kind === 'opponent-trash-to-break'
         ? { min: 0, max: currentEffect.max }
       : currentEffect?.kind === 'break-to-battle' ||
@@ -230,7 +232,25 @@ function EffectPanelContent({
           currentEffect?.kind === 'trash-to-battle' ||
           currentEffect?.kind === 'trash-to-support' ||
           currentEffect?.kind === 'trash-to-break'
-        ? { min: currentEffect.amount, max: currentEffect.amount }
+        ? {
+            min:
+              currentEffect.kind === 'support-to-hand' &&
+              currentEffect.keepCount !== undefined
+                ? currentEffect.keepCount
+                : (currentEffect.kind === 'support-to-trash' ||
+                    currentEffect.kind === 'support-to-hand' ||
+                    currentEffect.kind === 'trash-to-battle') &&
+                  currentEffect.optional
+                  ? 0
+                  : currentEffect.amount,
+            max:
+              currentEffect.kind === 'support-to-hand'
+                ? currentEffect.keepCount ??
+                  (currentEffect.anyNumber
+                    ? candidateCards.length
+                    : currentEffect.amount)
+                : currentEffect.amount,
+          }
         : currentEffect?.kind === 'hand-to-support'
           ? {
               min: currentEffect.optional ? 0 : currentEffect.amount,
@@ -243,10 +263,12 @@ function EffectPanelContent({
         : currentEffect && !isEffectUntargeted(currentEffect) &&
         currentEffect.kind !== 'inspect-deck' &&
             currentEffect.kind !== 'optional-cost-attack' &&
-            currentEffect.kind !== 'disable-block' &&
-            currentEffect.kind !== 'hand-to-battle' &&
-            currentEffect.kind !== 'flip-to-support'
-          ? currentEffect.target
+        currentEffect.kind !== 'disable-block' &&
+        currentEffect.kind !== 'hand-to-battle' &&
+        currentEffect.kind !== 'flip-to-support'
+          ? 'target' in currentEffect
+            ? currentEffect.target
+            : null
           : null
 
   const energyPaid = totalEnergyCost > 0

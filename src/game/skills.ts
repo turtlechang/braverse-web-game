@@ -7,6 +7,7 @@ import {
   getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getEffectSelectionCandidates,
   getEffectTargetCandidates,
   isEffectConditionMet,
   isEffectTargeted,
@@ -847,6 +848,13 @@ export const canActivateCookieSkill = (
     if (
       effect.kind === 'break-to-hand-by-level-sum' &&
       getBreakToHandBySumCandidates(state, context, effect).length === 0
+    ) {
+      return false
+    }
+    if (
+      effect.kind === 'support-to-hand' &&
+      getEffectSelectionCandidates(state, context, effect).length <
+        (effect.optional ? 0 : effect.amount)
     ) {
       return false
     }

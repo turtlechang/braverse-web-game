@@ -17,6 +17,7 @@ import {
 } from './starter-deck'
 import { getCardPoolEntry } from './card-pool'
 import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
+import bs6CandidateDocument from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type {
@@ -150,6 +151,13 @@ export const BS5_STAGE_CONDITION_CARD_NUMBERS = ['BS5-022'] as const
 export type Bs5StageConditionCardNumber =
   (typeof BS5_STAGE_CONDITION_CARD_NUMBERS)[number]
 
+/**
+ * BS6 尚在候選資料期；這些 localhost-only A/B 情境不會將候選資料加入正式牌池。
+ */
+export const BS6_CONDITION_CARD_NUMBERS = ['BS6-039'] as const
+export type Bs6ConditionCardNumber =
+  (typeof BS6_CONDITION_CARD_NUMBERS)[number]
+
 const isListedCardNumber = <T extends readonly string[]>(
   values: T,
   value: string,
@@ -217,6 +225,11 @@ export const parseTestStateConfig = (
   | {
       kind: 'bs5-stage-condition'
       cardNumber: Bs5StageConditionCardNumber
+      conditionMet: boolean
+    }
+  | {
+      kind: 'bs6-condition'
+      cardNumber: Bs6ConditionCardNumber
       conditionMet: boolean
     }
   | { kind: 'bs5-item-111'; conditionMet: boolean }
@@ -427,6 +440,20 @@ export const parseTestStateConfig = (
     ) {
       return {
         kind: 'bs5-trap',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
+  if (testState?.startsWith('bs6-condition:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS6_CONDITION_CARD_NUMBERS, cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs6-condition',
         cardNumber,
         conditionMet: result === 'met',
       }
@@ -2364,6 +2391,25 @@ const getPTestCard = (cardNumber: string): GameCard => {
   return conversion.gameCard
 }
 
+const getBs6CandidateTestCard = (cardNumber: string): GameCard | null => {
+  const trimmed = cardNumber.trim()
+  const source = (bs6CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === trimmed,
+  ) ?? (bs6CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.baseCardNumber === trimmed,
+  )
+  if (!source) return null
+
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS6 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: `player-one-${source.cardNumber}-1`,
+  }
+}
+
 const getCardCheckCard = (cardNumber: string): GameCard => {
   const entry = getCardPoolEntry(cardNumber)
   if (entry) {
@@ -2379,6 +2425,8 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
     (record) => record.baseCardNumber === trimmed,
   )
   if (!source) {
+    const bs6Candidate = getBs6CandidateTestCard(trimmed)
+    if (bs6Candidate) return bs6Candidate
     throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
   }
 
@@ -3656,6 +3704,24 @@ export const createBs4ConditionDemoState = (
  * `conditionMet=false` removes only the relevant prerequisite while keeping
  * the card in a legal zone, so the Browser audit can verify a safe no-op.
  */
+/**
+ * BS6-039 的第一段必須在對手休息區總等級不超過 LV.6 時才可執行。
+ * 兩條路徑都保留登場卡與支付所需的黃色支援，供 Browser 實際部署後驗證。
+ */
+export const createBs6ConditionDemoState = (
+  cardNumber: Bs6ConditionCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  const state = createCardCheckDemoState(cardNumber)
+  const opponentBreakArea = conditionMet
+    ? [scenarioCookie(`${cardNumber}-opponent-break-lv2`, 2, 4, 'red').cookie]
+    : [scenarioCookie(`${cardNumber}-opponent-break-lv7`, 7, 8, 'red').cookie]
+
+  return updateDemoPlayer(state, 'player-two', {
+    breakArea: opponentBreakArea,
+  })
+}
+
 export const createPConditionDemoState = (
   cardNumber: PConditionCardNumber,
   conditionMet: boolean,
