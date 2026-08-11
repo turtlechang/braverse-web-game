@@ -7,6 +7,13 @@
 - 匯入腳本以 `card_product_title` 篩選產品名稱；這對應專案討論中的 `category_title`。
 - 圖片目前保留官方 HTTPS URL，不下載到 repository。
 
+### 社群參考來源（非權威）
+
+- [BraverseFan 中文圖鑑](https://braversefan.com/cookierun/)：可作為卡名、卡號、類型、顏色、稀有度、卡面翻譯與系列盤點的交叉參考。
+- [BraverseFan 官方判例整理](https://braversefan.com/cookierun/faq/)：可用來尋找官方公告所整理的效果互動與 Q&A，尤其是 Then、FLIP、昏厥、HP 移動、效果傷害與結算順序案例。
+- 該站為粉絲整理，頁面明確聲明翻譯與整理內容非官方；正式匯入仍以官方 JSON／卡面與官方規則、公告為準。社群資料不得直接覆寫 `data/cards/`，也不得單獨作為 promote 依據。
+- 使用社群資料形成裁定或測試案例時，應在相關 inventory／coverage 文件記錄 URL、查閱日期與對應官方依據；若官方來源與社群整理不一致，保留差異並標記待確認。
+
 ## 指令
 
 預設匯入英文版綠色起始牌組 `Starter Deck GREEN`：

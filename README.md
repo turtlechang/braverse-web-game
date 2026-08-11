@@ -8,6 +8,8 @@
 
 BS6 依照既有卡牌匯入工作流進入資料準備期：官方來源先保留在 `data/candidates/`，完成 adapter、效果覆蓋、規則回歸與 Browser 互動驗證後，才會進入 `promotion-ready` 並 promote 至正式卡池。
 
+卡牌匯入稽核可使用 BraverseFan 作為社群交叉參考，但不取代官方 JSON、卡面、規則與公告。
+
 卡牌效果文字的官方標記與遊戲規則顯示共用 `CardEffectText`；圖片標籤資產集中於 `public/card-tags/`，保留文字回退與無障礙替代文字。
 
 牌組賽制分為標準賽制與開放賽制：標準賽制套用台灣公告的禁卡／限卡表；開放賽制則允許正式卡池內所有卡牌使用。兩種賽制都仍遵守 60 張牌、同名卡最多 4 張、FLIP 最多 16 張，以及至少 1 張餅乾等基本牌組規則。
@@ -61,6 +63,8 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 ## 目前進度
 
 BS6 候選資料目前包含 138 張卡牌（106 張基礎卡與 32 張異圖／變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；新增 BS6-034 HP 重排與 BS6-039 休息區連鎖的條件成立／不成立 test-state，並以 Browser 驗證支付、強制第一段、可略過第二段、HP 重排與條件不成立時不會卡死。BS6 仍未 promote，以上 Browser 證據僅代表本機候選測試流程。
+
+BraverseFan 中文圖鑑與判例整理已列入文件參考來源；目前僅作為資料交叉核對與測試案例搜尋，不改變正式卡池權威來源。
 
 2026-08-09 已修正 Deployment Browser Validation 的失敗遮蔽：trusted default branch 缺少驗收 harness 時會先明確報錯，artifact 目錄會預先建立且缺少檔案只警告；Preview 來自 PR 分支時安全略過自動驗收，改由 default branch 手動觸發，Production deployment status 則維持自動驗證；CI、Browser smoke 與部署驗收 workflow 同步升級至 Node 24 相容的 Actions major。
 
@@ -138,6 +142,8 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 ## 下一步計畫
 
 完成 BS6 候選卡牌逐色逐卡 Browser 稽核，補齊每張卡的條件成立／不成立、支付、代價、目標、Then、FLIP、陷阱、物品與場景流程證據；全部通過後再執行 `promotion-ready` 審查與 promote，不提前併入正式卡池。
+
+後續引用社群判例時，需在 inventory／coverage 文件記錄 URL、查閱日期與官方對應依據，並保留差異待確認。
 
 目前先執行 [2026-08-08 穩定化計畫](docs/stabilization-plan-2026-08-08.md)，暫停新增 BS6+：本輪已完成 AI zero-stuck gate、CI server typecheck／零 lint warning、BS2 五色 81／81 Browser 歷史回歸、Chrome 手牌動作修正、Browser PR check／部署後 Browser 驗收流程、`main` 的 required checks 與 Vercel Preview bypass secret 設定；仍需真人 5 人 Playtest、`0.10.0` 發布基線決策、開發相依套件升級與 Bundle Gate V2。
 

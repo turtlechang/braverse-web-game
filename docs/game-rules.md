@@ -283,6 +283,13 @@
 - [Notice of Rule Update（2025-11-05）](https://cookierunbraverse.com/en/notice/notice-of-rule-update.html)
 - [Notice of Rule Update（2026-03-30 更新；2026-04-13 生效）](https://cookierunbraverse.com/en/notice/detail?id=1305)
 - [官方公告列表](https://cookierunbraverse.com/en/notice/general)
+
+### 社群交叉參考（非權威）
+
+- [BraverseFan 官方判例整理](https://braversefan.com/cookierun/faq/)
+- [BraverseFan 中文卡牌圖鑑](https://braversefan.com/cookierun/)
+
+以上網站可協助搜尋卡牌翻譯、系列盤點與官方公告／Q&A 的中文整理，但不取代官方規則、卡面、JSON 或公告。若內容與官方來源不一致，以官方來源為準，並在卡牌稽核文件保留差異與待確認標記。
 - [亞洲區規則與公告列表](https://cookierunbraverse.com/asia/notice/all)
 - [亞洲區禁限卡公告範例（2026-02-13 更新）](https://cookierunbraverse.com/asia/notice/detail?id=1380)
 
