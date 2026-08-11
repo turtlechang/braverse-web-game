@@ -46,8 +46,8 @@
 - `.github/workflows/deployment-browser-validation.yml` 會在 Vercel Preview／Production 的成功 `deployment_status` 或手動指定 URL 時，使用預設分支內的可信驗收腳本檢查首頁、SPA rewrite、牌池卡圖、合法 60 張牌組匯入、正式對戰入口與 Render WebSocket。
 - 2026-08-09 補上 trusted default branch 的 harness preflight、Preview 信任分支閘門與 artifact 目錄初始化；PR 分支的 Preview `deployment_status` 會安全略過，Preview 驗收改由 default branch 手動觸發，Production 維持自動驗證。若 workflow 尚未合併到預設分支，會回報明確原因，artifact 缺檔不再覆蓋原始 smoke 失敗。CI、Browser smoke 與部署 workflow 已升級至 Node 24 相容的 Actions major。
 - 2026-08-08 Production `https://braverse-web-game.vercel.app/` 實測全數通過：首頁／rewrite 200、牌池 836 張、首張官方卡圖載入、合法牌組儲存、正式進入對戰、前端錯誤 0；Render WebSocket 冷啟動約 31.6 秒。
-- 最新可得 Preview URL 會被 Vercel Authentication 導向登入頁；需在 GitHub 設定 `VERCEL_AUTOMATION_BYPASS_SECRET` 後重跑。此結果是驗收權限尚未完成，不是應用程式測試失敗。
-- workflow 會產生 PR check，但目前 `main` 尚未啟用 branch protection；若要真正阻止未通過的 PR 合併，仍須將 `Browser Smoke PR Gate` 設為 required check。
+- 2026-08-09 已在 Vercel 產生 Protection Bypass for Automation secret，並存入 GitHub Repository secret `VERCEL_AUTOMATION_BYPASS_SECRET`；Deployment Browser Validation run `31290260043` 重跑成功，不再因 Vercel Authentication 導向登入頁。
+- 2026-08-09 `main` 已啟用 branch protection，required checks 為 `Test, Lint & Build` 與 `Browser Smoke PR Gate`，並要求分支保持最新；PR #102 已合併，後續 PR 將受此規則約束。
 
 ## 尚未完成
 
@@ -55,15 +55,14 @@
 
 1. **Current HEAD 真人 Playtest**：至少 5 人（2 位熟悉 Braverse、2 位熟悉其他 TCG、1 位非核心玩家），記錄首次完成一局比例、第一次合法操作時間、誤觸、付款錯誤、回應窗口漏看與 Battle Log 使用情況。自動 Browser 測試不能取代此項。
 2. **發布基線決策**：確認是否以目前穩定化結果準備 `0.10.0`；在決定前不直接修改版號或建立 tag。
-3. **本批 Preview 驗收**：推送本批後，以新 Preview URL 搭配 bypass secret 重跑部署驗收；目前 Production 通過的是既有部署，不能代替尚未部署的本機修改。
+3. **本批 Preview 驗收**：使用已設定的 bypass secret，從 `main` 手動驗證最新 Preview URL；Production 通過的是既有部署，不能代替尚未部署的本機修改。
 
 ### 下一批工程硬化
 
-1. 在 GitHub branch protection／ruleset 將 `Browser Smoke PR Gate` 設為 required check，並設定 Preview 的 `VERCEL_AUTOMATION_BYPASS_SECRET`。
-2. 升級開發相依鏈中的 `brace-expansion`、`postcss`、`shell-quote`／`concurrently` 與 `undici`，不得使用 `npm audit fix --force`；升級後重跑完整 CI 與 Browser gate。
-3. 建立 Bundle Gate V2：計算 HTML 初始同步依賴圖、最大 chunk、初始 gzip、CSS gzip 與相對基線增幅。現行主 bundle gzip 已占 180 KiB 門檻 94.3%，不宜繼續只看單一 `index-*.js`。
-4. 依序規劃 effect adapter 拆分、BattleScreen ViewModel、online protocol envelope（`protocolVersion`／`commandId`／`expectedStateVersion`）與英文／繁中 i18n。
-5. 規劃官方素材緊急停用開關；既有「收到異議再移除」是已接受風險，不是風險解除。
+1. 升級開發相依鏈中的 `brace-expansion`、`postcss`、`shell-quote`／`concurrently` 與 `undici`，不得使用 `npm audit fix --force`；升級後重跑完整 CI 與 Browser gate。
+2. 建立 Bundle Gate V2：計算 HTML 初始同步依賴圖、最大 chunk、初始 gzip、CSS gzip 與相對基線增幅。現行主 bundle gzip 已占 180 KiB 門檻 94.3%，不宜繼續只看單一 `index-*.js`。
+3. 依序規劃 effect adapter 拆分、BattleScreen ViewModel、online protocol envelope（`protocolVersion`／`commandId`／`expectedStateVersion`）與英文／繁中 i18n。
+4. 規劃官方素材緊急停用開關；既有「收到異議再移除」是已接受風險，不是風險解除。
 
 ## 新卡池凍結條件
 

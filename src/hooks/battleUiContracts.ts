@@ -26,6 +26,15 @@ export interface BattleUiMatchLike {
   playerTrapCandidates: GameCard[]
   selectedTrapId: string | null
   setSelectedTrapId: (value: string | null) => void
+  selectedTrapCostOptionIndex: number
+  selectTrapCostOption: (index: number) => void
+  trapCostOptionLabels: string[]
+  selectedTrapTrashCookieToBreakAreaIds: string[]
+  setSelectedTrapTrashCookieToBreakAreaIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  selectedTrapTrashCookieToBreakAreaAmount: number
+  selectedTrapTrashCookieToBreakAreaCandidates: GameCard[]
   selectedTrapDiscardIds: string[]
   setSelectedTrapDiscardIds: (
     value: string[] | ((current: string[]) => string[]),

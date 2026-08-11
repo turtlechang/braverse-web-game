@@ -69,6 +69,7 @@
 | 效果傷害免疫 | `prevent-effect-damage` | 被影響餅乾在持續期間內不受任何效果傷害（技能、攻擊附加效果等），基本攻擊傷害仍正常結算。`damage`、`damage-all`、`split-damage` 執行器會檢查 `effectDamagePreventedUntilTurn`，受保護餅乾直接跳過（BS3-082） |
 | 禁止 FLIP | `disable-flip` | 被影響玩家本回合不能發動 FLIP 效果 |
 | 檢視 HP | `view-hp` | 查看目標餅乾的 HP 卡內容（可選） |
+| 重排 HP | `reorder-hp` | 先選擇最多 1 個己方餅乾，再以完整且不重複的順序重新排列其 HP 卡；不可遺漏、複製或混入其他卡（BS6-034） |
 | 戰鬥區→支援區 | `battle-to-support` | 將目標餅乾從戰鬥區移至支援區 |
 | 棄牌區→戰鬥區 | `trash-to-battle` | 從棄牌區將指定餅乾移至戰鬥區 |
 | 支援區→手牌 | `support-to-hand` | 將支援區卡牌移回手牌 |
@@ -96,6 +97,7 @@
 | 揭示牌庫頂 | `reveal-top-deck` | peek 牌庫頂 1 張（不移除），檢查 `match` 條件；匹配時執行 `effects` 內嵌效果，不匹配時直接略過。卡始終留在牌庫頂，等價於官方文字的「抽 1 張展示，執行完放回牌庫頂」（BS3-090、BS3-093） |
 | 手牌→戰鬥區 | `hand-to-battle` | 從手牌選餅乾登場，HP 卡照常自牌庫頂補入；`energyCost` 需先由活躍支援卡支付；`gainHp` 對應「Then, that Cookie gains +N HP」。登場後照常觸發 OnPlay 與牌庫耗盡的 Refresh 判定（BS3-029） |
 | 對手棄牌區→對手休息區 | `opponent-trash-to-break` | 從對手棄牌區選餅乾放進**對手**休息區；會推進對手 break 等級，因此走與其他休息區移動相同的勝負判定（BS3-028） |
+| 對手休息區→棄牌區→休息區 | `opponent-break-to-trash-then-battle-to-break` | 先強制將對手休息區 1 張餅乾放進棄牌區，記錄該卡 LV；再可選擇對手戰鬥區中剛好高 1 LV 的餅乾放進對手休息區。第二段允許略過，且仍受「對手效果不能移動戰鬥區餅乾」保護（BS6-039） |
 | 牌庫檢視 | `inspect-deck` | 查看牌庫頂 N 張。`restDestination` 決定未選走的卡去 `bottom`／`top`／`trash`（前兩者由玩家排序），`pickDestination` 決定選走的卡加入手牌或直接登場，`filterColor`／`filterType`／`optionalPick` 控制可選範圍（BS1/BS2 既有卡、BS3-095、BS3-083、BS3-114） |
 
 | 選擇一項 | `choose-one` | 官方文字的「Select 1 of the following.」（BS3-068）。這個效果本身永遠不會被執行——玩家或 AI 選定模式後由 `expandChooseOne` 就地換成該模式的效果，`effectIndex` 不動，之後每個子效果照常各自走目標選取流程。本機 UI、線上 UI、指令層（`resolve-choose-one`／`begin-*` 的 `chooseOneModes`）與 AI 必須共用同一份展開邏輯，否則四邊對「接下來處理哪個效果」會分歧；執行器遇到未展開的 `choose-one` 會直接丟錯而不是默默略過 |

@@ -661,6 +661,7 @@ describe('玩家動作', () => {
     expect(state.pendingOnPlay).toEqual({
       playerId: 'player-one',
       sourceInstanceId: replacement.instanceId,
+      origin: 'hand',
     })
     expect(
       canActivateCookieSkill(

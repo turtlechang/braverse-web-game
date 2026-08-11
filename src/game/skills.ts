@@ -7,6 +7,7 @@ import {
   getBreakCount,
   getBreakToBattleCandidates,
   getBreakToHandBySumCandidates,
+  getEffectSelectionCandidates,
   getEffectTargetCandidates,
   isEffectConditionMet,
   isEffectTargeted,
@@ -15,6 +16,7 @@ import type {
   AbilityCost,
   CardEffect,
   CardSkill,
+  CookieCard,
   CookieInBattle,
   GameCard,
   GameState,
@@ -76,14 +78,25 @@ export const findSkillSource = (
 export const markSupportAreaDecreased = (
   state: GameState,
   playerId: PlayerId,
-  options: { triggerSkill?: boolean } = {},
+  options: { triggerSkill?: boolean; trashedCount?: number } = {},
 ): GameState => {
+  const trashedCount = Math.max(0, options.trashedCount ?? 0)
   const nextState: GameState = {
     ...state,
     supportAreaDecreasedThisTurn: {
       ...(state.supportAreaDecreasedThisTurn ?? {}),
       [playerId]: true,
     },
+    ...(trashedCount > 0
+      ? {
+          supportCardsTrashedThisTurn: {
+            ...(state.supportCardsTrashedThisTurn ?? {}),
+            [playerId]:
+              (state.supportCardsTrashedThisTurn?.[playerId] ?? 0) +
+              trashedCount,
+          },
+        }
+      : {}),
   }
 
   if (!options.triggerSkill || nextState.pendingStageTrigger) {
@@ -221,6 +234,10 @@ export const getTrashToDeckCostCandidates = (
       return false
     }
     if (trashCost.excludeFlip && card.flip) return false
+    if (trashCost.keyword && !card.keywords?.includes(trashCost.keyword)) {
+      return false
+    }
+    if (trashCost.nonCookieOnly && card.type === 'cookie') return false
     return true
   })
 }
@@ -269,6 +286,30 @@ export const canPayTrashBattleCookieCost = (
   getTrashBattleCookieCostCandidates(cost, battleArea, sourceInstanceId).length >=
     cost.trashBattleCookie.count
 
+export const getTrashCookieToBreakAreaCostCandidates = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): GameCard[] => {
+  if (!cost.trashCookieToBreakArea) return []
+  const requirement = cost.trashCookieToBreakArea
+  return discardPile.filter(
+    (card) =>
+      card.type === 'cookie' &&
+      (requirement.hp === undefined || card.hp === requirement.hp) &&
+      (requirement.energyColor === undefined ||
+        card.energyColor === requirement.energyColor) &&
+      (!requirement.excludeFlip || !card.flip),
+  )
+}
+
+export const canPayTrashCookieToBreakAreaCost = (
+  cost: AbilityCost,
+  discardPile: readonly GameCard[],
+): boolean =>
+  !cost.trashCookieToBreakArea ||
+  getTrashCookieToBreakAreaCostCandidates(cost, discardPile).length >=
+    cost.trashCookieToBreakArea.count
+
 /** 以卡面指定的顏色／類型篩選可作為棄手牌代價的卡片。 */
 export const isDiscardHandCostCandidate = (
   cost: AbilityCost,
@@ -277,7 +318,9 @@ export const isDiscardHandCostCandidate = (
 ): boolean =>
   card.instanceId !== sourceInstanceId &&
   (!cost.discardHandColor || card.energyColor === cost.discardHandColor) &&
-  (!cost.discardHandType || card.type === cost.discardHandType)
+  (!cost.discardHandType || card.type === cost.discardHandType) &&
+  (!cost.discardHandKeyword || Boolean(card.keywords?.includes(cost.discardHandKeyword))) &&
+  (!cost.discardHandHasFlip || (card.type === 'cookie' && Boolean(card.flip)))
 
 export const getDiscardHandCostCandidates = (
   cost: AbilityCost,
@@ -299,7 +342,12 @@ export const getFaintTriggeredCost = (
   skill: CardSkill,
 ): Pick<
   AbilityCost,
-  'discardHand' | 'discardHandColor' | 'discardHandType' | 'supportToTrash'
+  | 'discardHand'
+  | 'discardHandColor'
+  | 'discardHandType'
+  | 'discardHandKeyword'
+  | 'discardHandHasFlip'
+  | 'supportToTrash'
 > | undefined => {
   const discardHand = skill.cost.discardHand ?? 0
   const supportToTrash = skill.cost.supportToTrash ?? 0
@@ -339,6 +387,12 @@ export const getFaintTriggeredCost = (
       : {}),
     ...(skill.cost.discardHandType && !discardCovered
       ? { discardHandType: skill.cost.discardHandType }
+      : {}),
+    ...(skill.cost.discardHandKeyword && !discardCovered
+      ? { discardHandKeyword: skill.cost.discardHandKeyword }
+      : {}),
+    ...(skill.cost.discardHandHasFlip && !discardCovered
+      ? { discardHandHasFlip: skill.cost.discardHandHasFlip }
       : {}),
     ...(supportToTrash > 0 && !supportCovered ? { supportToTrash } : {}),
   }
@@ -555,6 +609,51 @@ export const payTrashBattleCookieCost = (
   }
 }
 
+export const payTrashCookieToBreakAreaCost = (
+  player: PlayerState,
+  cost: AbilityCost,
+  selectedIds: string[],
+): PlayerState => {
+  const requirement = cost.trashCookieToBreakArea
+  const uniqueIds = [...new Set(selectedIds)]
+  if (!requirement) {
+    if (uniqueIds.length > 0) {
+      throw new GameRuleError('Unexpected trash-to-break payment.')
+    }
+    return player
+  }
+  if (
+    uniqueIds.length !== selectedIds.length ||
+    uniqueIds.length !== requirement.count
+  ) {
+    throw new GameRuleError(
+      `Must place exactly ${requirement.count} Cookie from trash into the break area.`,
+    )
+  }
+
+  const candidateIds = new Set(
+    getTrashCookieToBreakAreaCostCandidates(cost, player.discardPile).map(
+      (card) => card.instanceId,
+    ),
+  )
+  if (uniqueIds.some((id) => !candidateIds.has(id))) {
+    throw new GameRuleError('Invalid Cookie selected for the alternative payment.')
+  }
+
+  const selectedSet = new Set(uniqueIds)
+  const selectedCards = player.discardPile.filter(
+    (card): card is CookieCard =>
+      selectedSet.has(card.instanceId) && card.type === 'cookie',
+  )
+  return {
+    ...player,
+    discardPile: player.discardPile.filter(
+      (card) => !selectedSet.has(card.instanceId),
+    ),
+    breakArea: [...player.breakArea, ...selectedCards],
+  }
+}
+
 const validatePayment = (
   skill: CardSkill,
   supports: SupportCard[],
@@ -613,6 +712,14 @@ export const canActivateCookieSkill = (
     return false
   }
 
+  const onPlayOrigin = state.pendingOnPlay?.origin
+  if (skill.fromTrashArea && onPlayOrigin !== 'trash') {
+    return false
+  }
+  if (skill.fromSupportArea && onPlayOrigin !== 'support') {
+    return false
+  }
+
   if (
     trigger === 'activate' &&
     (state.phase !== 'main' || state.activePlayerId !== playerId)
@@ -641,6 +748,15 @@ export const canActivateCookieSkill = (
   }
 
   if (skill.restSource && source.rested) {
+    return false
+  }
+
+  if (
+    skill.cost.selfToTrash &&
+    !player.battleArea.some(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+  ) {
     return false
   }
 
@@ -676,6 +792,15 @@ export const canActivateCookieSkill = (
     player.supportArea,
     new Set(energyPayment),
   )) {
+    return false
+  }
+  const availableSupportForSecondaryCosts = player.supportArea.filter(
+    (support) => !energyPayment.includes(support.card.instanceId),
+  ).length
+  if (
+    availableSupportForSecondaryCosts <
+    (skill.cost.supportToTrash ?? 0) + (skill.cost.supportToHand ?? 0)
+  ) {
     return false
   }
 
@@ -727,6 +852,13 @@ export const canActivateCookieSkill = (
       return false
     }
     if (
+      effect.kind === 'support-to-hand' &&
+      getEffectSelectionCandidates(state, context, effect).length <
+        (effect.optional ? 0 : effect.amount)
+    ) {
+      return false
+    }
+    if (
       effect.kind === 'break-source-to-battle' &&
       player.battleArea.length >= 2
     ) {
@@ -756,6 +888,7 @@ export const activateCookieSkill = (
   trashToDeckIds: string[] = [],
   shuffle: Shuffle = defaultShuffle,
   hpToTrashTargetIds: string[] = [],
+  supportToHandIds: string[] = [],
 ): GameState => {
   if (
     !canActivateCookieSkill(state, playerId, sourceInstanceId, trigger)
@@ -779,6 +912,7 @@ export const activateCookieSkill = (
 
   const cost = source.card.skill.cost
   const uniqueCostSupportToTrashIds = [...new Set(costSupportToTrashIds)]
+  const uniqueCostSupportToHandIds = [...new Set(supportToHandIds)]
 
   if (cost.supportToTrash) {
     if (uniqueCostSupportToTrashIds.length !== cost.supportToTrash) {
@@ -796,6 +930,22 @@ export const activateCookieSkill = (
     }
   } else if (uniqueCostSupportToTrashIds.length > 0) {
     throw new GameRuleError('此技能不需要支付支援區卡牌代價。')
+  }
+
+  if (cost.supportToHand) {
+    if (uniqueCostSupportToHandIds.length !== cost.supportToHand) {
+      throw new GameRuleError(
+        `必須選擇 ${cost.supportToHand} 張支援卡返回手牌。`,
+      )
+    }
+    const returned = player.supportArea.filter((support) =>
+      uniqueCostSupportToHandIds.includes(support.card.instanceId),
+    )
+    if (returned.length !== cost.supportToHand) {
+      throw new GameRuleError('只能選擇自己的支援區卡牌返回手牌。')
+    }
+  } else if (uniqueCostSupportToHandIds.length > 0) {
+    throw new GameRuleError('此技能不需要支付支援區回手代價。')
   }
 
   if (cost.discardAllHand || cost.discardHandAtLeast) {
@@ -943,20 +1093,56 @@ export const activateCookieSkill = (
     }
   }
 
+  if (cost.selfToTrash) {
+    const stillInBattle = playerAfterCosts.battleArea.find(
+      (cookie) => cookie.card.instanceId === sourceInstanceId,
+    )
+    if (stillInBattle) {
+      playerAfterCosts = {
+        ...playerAfterCosts,
+        battleArea: playerAfterCosts.battleArea.filter(
+          (cookie) => cookie.card.instanceId !== sourceInstanceId,
+        ),
+        discardPile: [
+          ...playerAfterCosts.discardPile,
+          stillInBattle.card,
+          ...stillInBattle.hpCards,
+        ],
+      }
+    }
+  }
+
   const paymentSet = new Set(paymentIds)
   const costSupportSet = new Set(uniqueCostSupportToTrashIds)
+  const supportToHandSet = new Set(uniqueCostSupportToHandIds)
   const trashBattleSet = new Set(uniqueTrashBattleCookieIds)
 
   if (
-    paymentIds.some((id) => costSupportSet.has(id) || trashBattleSet.has(id)) ||
+    paymentIds.some(
+      (id) =>
+        costSupportSet.has(id) ||
+        supportToHandSet.has(id) ||
+        trashBattleSet.has(id),
+    ) ||
     uniqueCostSupportToTrashIds.some((id) => paymentSet.has(id)) ||
-    uniqueTrashBattleCookieIds.some((id) => paymentSet.has(id) || costSupportSet.has(id))
+    uniqueCostSupportToHandIds.some(
+      (id) => paymentSet.has(id) || costSupportSet.has(id),
+    ) ||
+    uniqueTrashBattleCookieIds.some(
+      (id) =>
+        paymentSet.has(id) ||
+        costSupportSet.has(id) ||
+        supportToHandSet.has(id),
+    )
   ) {
     throw new GameRuleError('同一張卡不能同時支付兩種費用。')
   }
 
   const trashedCards = player.supportArea.filter((support) =>
     costSupportSet.has(support.card.instanceId),
+  )
+  const returnedSupportCards = player.supportArea.filter((support) =>
+    supportToHandSet.has(support.card.instanceId),
   )
 
   // uniqueTrashToDeckBottomIds 的順序就是玩家決定的牌庫底順序。
@@ -996,16 +1182,23 @@ export const activateCookieSkill = (
               ? { ...cookie, rested: true }
               : cookie,
           ),
-        supportArea: player.supportArea
-          .filter((support) => !costSupportSet.has(support.card.instanceId))
+        supportArea: playerAfterCosts.supportArea
+          .filter(
+            (support) =>
+              !costSupportSet.has(support.card.instanceId) &&
+              !supportToHandSet.has(support.card.instanceId),
+          )
           .map((support) =>
             paymentSet.has(support.card.instanceId)
               ? { ...support, rested: true }
               : support,
-          ),
-        hand: player.hand.filter(
-          (card) => !uniqueDiscardHandIds.includes(card.instanceId),
         ),
+        hand: [
+          ...player.hand.filter(
+            (card) => !uniqueDiscardHandIds.includes(card.instanceId),
+          ),
+          ...returnedSupportCards.map((support) => support.card),
+        ],
         deck: cost.trashToDeck
           ? shuffle([...playerAfterCosts.deck, ...trashToDeckCards])
           : [...playerAfterCosts.deck, ...trashToDeckBottomCards],

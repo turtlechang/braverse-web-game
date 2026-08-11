@@ -7,9 +7,15 @@ import { beginAttack, resolveBattleAutomatically } from './battle'
 import {
   consumeReplacementTask,
   continuePendingReplacements,
+  clearDepartedCookieModifiers,
   getCurrentReplacementTask,
   getReplacementCandidates,
+  recordCookieDepartures,
 } from './replacement'
+import {
+  canPayTrashBattleCookieCost,
+  payTrashBattleCookieCost,
+} from './skills'
 
 const assertActiveGame = (state: GameState) => {
   if (state.status !== 'playing') {
@@ -108,9 +114,39 @@ export const placeSupportCard = (
   }
 }
 
+export const canSpecialPlayCookie = (
+  state: GameState,
+  playerId: GameState['activePlayerId'],
+  instanceId: string,
+): boolean => {
+  try {
+    assertActiveGame(state)
+    if (
+      state.activePlayerId !== playerId ||
+      state.phase !== 'main' ||
+      state.players[playerId].battleArea.length >= 2
+    ) {
+      return false
+    }
+    const card = state.players[playerId].hand.find(
+      (candidate) => candidate.instanceId === instanceId,
+    )
+    const cost = card?.type === 'cookie' ? card.skill?.specialPlayCost : undefined
+    return Boolean(
+      card &&
+        card.type === 'cookie' &&
+        cost &&
+        canPayTrashBattleCookieCost(cost, state.players[playerId].battleArea),
+    )
+  } catch {
+    return false
+  }
+}
+
 export const deployCookie = (
   state: GameState,
   instanceId: string,
+  specialPlayCookieInstanceId?: string,
 ): GameState => {
   assertActiveGame(state)
 
@@ -118,7 +154,8 @@ export const deployCookie = (
     throw new GameRuleError('只能在主要階段登場餅乾。')
   }
 
-  const player = state.players[state.activePlayerId]
+  let deploymentState = state
+  let player = deploymentState.players[deploymentState.activePlayerId]
 
   if (player.battleArea.length >= 2) {
     throw new GameRuleError('戰鬥區最多只能有兩隻餅乾。')
@@ -131,19 +168,52 @@ export const deployCookie = (
     throw new GameRuleError('只能從手牌登場餅乾卡。')
   }
 
-  const availableHpCards = player.deck.slice(0, card.hp)
-  const updatedState = updatePlayer(state, {
+  if (specialPlayCookieInstanceId !== undefined) {
+    const specialPlayCost = card.skill?.specialPlayCost
+    if (!specialPlayCost) {
+      throw new GameRuleError('This Cookie does not have a Special Play cost.')
+    }
+
+    const specialPayment = payTrashBattleCookieCost(
+      player,
+      specialPlayCost,
+      [specialPlayCookieInstanceId],
+    )
+    deploymentState = recordCookieDepartures(
+      clearDepartedCookieModifiers(
+        updatePlayer(deploymentState, specialPayment.player),
+      ),
+      player.id,
+      specialPayment.departedCount,
+    )
+    player = deploymentState.players[deploymentState.activePlayerId]
+  }
+
+  const deploymentCardIndex = findCardIndex(player.hand, instanceId)
+  const deploymentCard = player.hand[deploymentCardIndex]
+  /*
+  if (!deploymentCard || deploymentCard.type !== 'cookie') {
+    throw new GameRuleError('?芾敺???湧?銋曉??)
+  }
+
+  */
+  if (!deploymentCard || deploymentCard.type !== 'cookie') {
+    throw new GameRuleError('Invalid Cookie deployment.')
+  }
+
+  const availableHpCards = player.deck.slice(0, deploymentCard.hp)
+  const updatedState = updatePlayer(deploymentState, {
     ...player,
-    deck: player.deck.slice(card.hp),
-    hand: player.hand.filter((_, index) => index !== cardIndex),
+    deck: player.deck.slice(deploymentCard.hp),
+    hand: player.hand.filter((_, index) => index !== deploymentCardIndex),
     battleArea: [
       ...player.battleArea,
       {
-        card,
+        card: deploymentCard,
         hpCards: availableHpCards,
         rested: false,
         battleEntryId:
-          `${card.instanceId}:battle:${state.nextBattleEntrySequence}`,
+          `${deploymentCard.instanceId}:battle:${deploymentState.nextBattleEntrySequence}`,
       },
     ],
   })
@@ -151,12 +221,13 @@ export const deployCookie = (
   return resolveDeckExhaustion(
     {
       ...updatedState,
-      nextBattleEntrySequence: state.nextBattleEntrySequence + 1,
+      nextBattleEntrySequence: deploymentState.nextBattleEntrySequence + 1,
       pendingOnPlay:
-        card.skill?.trigger === 'on-play'
+        deploymentCard.skill?.trigger === 'on-play'
           ? {
               playerId: player.id,
-              sourceInstanceId: card.instanceId,
+              sourceInstanceId: deploymentCard.instanceId,
+              origin: 'hand',
             }
           : null,
     },
@@ -223,6 +294,7 @@ export const replaceDefeatedCookie = (
         ? {
             playerId,
             sourceInstanceId: card.instanceId,
+            origin: 'hand',
           }
         : null,
     nextBattleEntrySequence: state.nextBattleEntrySequence + 1,

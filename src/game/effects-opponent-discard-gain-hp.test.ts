@@ -222,6 +222,33 @@ describe('gain-hp effect', () => {
     )
   })
 
+  it('adds HP to an explicitly selected opponent Cookie', () => {
+    const state = createDemoGame()
+    const opponentCookie = state.players['player-two'].battleArea[0]
+    const effect: CardEffect = {
+      kind: 'gain-hp',
+      amount: 1,
+      target: { side: 'opponent', min: 1, max: 1 },
+    }
+
+    const newState = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: state.players['player-one'].battleArea[0].card.instanceId,
+      },
+      effect,
+      [opponentCookie.card.instanceId],
+    )
+
+    expect(newState.players['player-two'].battleArea[0].hpCards).toHaveLength(
+      opponentCookie.hpCards.length + 1,
+    )
+    expect(newState.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      state.players['player-one'].battleArea[0].hpCards.length,
+    )
+  })
+
   it('throws when deck is empty', () => {
     const state = createDemoGame()
     const emptyState: GameState = {

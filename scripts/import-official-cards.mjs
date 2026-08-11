@@ -12,6 +12,11 @@ export const OFFICIAL_SITE_URL = 'https://cookierunbraverse.com'
 const SUPPORTED_LOCALES = new Set(['en', 'asia', 'ko'])
 const CARD_TYPES = new Set([
   'COOKIE',
+  // The official feed labels several unrevealed Cookie cards as NPC, while
+  // still providing Cookie-level stats, HP, skills, and attacks (BS6-028~030).
+  // Keep the original label in `officialType`, but normalize their gameplay
+  // type so import validation and the runtime adapter can handle them.
+  'NPC',
   'ITEM',
   'TRAP',
   'STAGE',
@@ -33,7 +38,10 @@ const toOptionalNumber = (value) => {
     return null
   }
 
-  const parsed = Number(value)
+  const normalized = String(value)
+    .replace(/[０-９]/g, (digit) => String(digit.charCodeAt(0) - '０'.charCodeAt(0) + 0))
+    .replace(/．/g, '.')
+  const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : null
 }
 
@@ -93,7 +101,9 @@ export const normalizeOfficialCard = (rawCard, sourceUrl) => {
     name,
     type:
       officialType && CARD_TYPES.has(officialType)
-        ? officialType.toLowerCase()
+        ? officialType === 'NPC'
+          ? 'cookie'
+          : officialType.toLowerCase()
         : 'unknown',
     officialType: officialType ?? 'UNKNOWN',
     rarity: toOptionalString(rawCard.card_rare),

@@ -39,9 +39,12 @@ const deckEntries = [
   ['ST1-013', 4], ['ST1-015', 4], ['ST1-016', 2], ['ST1-020', 2],
 ].map(([cardNumber, count]) => ({ cardNumber, count }))
 
-const importPayload = JSON.stringify({
-  name: 'Deck Editor Browser Validation',
-  entries: deckEntries,
+const openImportPayload = JSON.stringify({
+  name: 'Open Format Browser Validation',
+  format: 'standard',
+  entries: deckEntries.map((entry, index) =>
+    index === 0 ? { cardNumber: 'BS3-013', count: 4 } : entry,
+  ),
 })
 
 const waitForServer = async () => {
@@ -67,6 +70,8 @@ try {
   const results = []
   for (const viewport of [
     { width: 1366, height: 768 },
+    { width: 622, height: 1040 },
+    { width: 390, height: 844 },
     { width: 280, height: 720 },
   ]) {
     const page = await browser.newPage({ viewport })
@@ -89,74 +94,117 @@ try {
     await page.reload({ waitUntil: 'networkidle' })
     await page.locator('[data-testid="open-deck-editor"]').click()
 
-    const modal = page.locator('.deck-editor-modal')
-    await modal.waitFor({ state: 'visible' })
-    assert.equal(await modal.locator('.deck-editor-search').count(), 1)
-    assert.equal(await modal.locator('.deck-editor-filters select').count(), 7)
-    assert.ok(await modal.locator('.deck-editor-pool-card-btn').count() > 0)
+    const editor = page.locator('[data-testid="deck-editor-page"]')
+    await editor.waitFor({ state: 'visible' })
+    assert.equal(await editor.locator('[data-testid="deck-editor-search"]').count(), 1)
+    const filterToggle = editor.locator('[data-testid="deck-editor-filter-toggle"]')
+    assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')
+    assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 0)
+    await filterToggle.click()
+    assert.equal(await filterToggle.getAttribute('aria-expanded'), 'true')
+    assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 4)
+    await filterToggle.click()
+    assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')
+    assert.ok(await editor.locator('.deck-editor-page-pool-card-button').count() > 0)
 
-    await modal.locator('.deck-editor-search').fill('ST1-001')
-    const searchedCard = modal.locator('.deck-editor-pool-card-btn[title^="ST1-001 "]').first()
+    await editor.locator('[data-testid="deck-editor-search"]').fill('ST1-001')
+    const searchedCard = editor.locator('.deck-editor-page-pool-card-button[title^="ST1-001 "]').first()
     await searchedCard.waitFor({ state: 'visible' })
     for (let count = 1; count <= 4; count += 1) {
       await searchedCard.click()
       await page.waitForFunction(
         (expectedCount) =>
-          document.querySelector('.deck-editor-deck-entry-count')?.textContent?.trim() ===
+          document.querySelector('[data-testid="deck-editor-page"] .deck-editor-page-counter strong')?.textContent?.trim() ===
           String(expectedCount),
         count,
       )
       assert.equal(
-        (await modal.locator('.deck-editor-deck-entry-count').textContent())?.trim(),
+        (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
         String(count),
       )
     }
     assert.equal(await searchedCard.isDisabled(), true)
-    assert.equal(await modal.locator('.deck-editor-pool-card.at-max').count(), 1)
+    assert.equal(await editor.locator('.deck-editor-page-pool-count').count(), 1)
+    assert.equal(await editor.locator('[data-testid^="deck-editor-deck-section-"]').count(), 5)
+    assert.equal(await editor.locator('[data-testid="deck-editor-extra-deck"]').count(), 1)
     // An incomplete (4/60) deck is still saveable as a draft (P1-1): the save
     // button stays enabled and switches to the amber "儲存草稿" draft styling.
-    const saveButton = modal.locator('.deck-editor-save-btn')
+    const saveButton = editor.locator('[data-testid="deck-editor-page-save"]')
     assert.equal(await saveButton.isEnabled(), true)
     assert.equal(await saveButton.evaluate((el) => el.classList.contains('is-draft')), true)
     assert.match((await saveButton.textContent()) ?? '', /儲存草稿/)
 
-    await modal.locator('.deck-editor-io-btn').nth(1).click()
-    const importDialog = modal.locator('.deck-editor-import-dialog')
+    await editor.locator('.deck-editor-page-io button').nth(1).click()
+    const importDialog = page.locator('[data-testid="deck-editor-import-modal"]')
     await importDialog.waitFor({ state: 'visible' })
-    const importTextarea = importDialog.locator('.deck-editor-import-textarea')
-    const nameBeforeInvalidImport = await modal.locator('.deck-editor-name-input').inputValue()
+    assert.equal(await importDialog.getAttribute('role'), 'dialog')
+    assert.equal(await importDialog.getAttribute('aria-modal'), 'true')
+    const importTextarea = importDialog.locator('textarea')
+    const nameBeforeInvalidImport = await editor.locator('.deck-editor-page-name input').inputValue()
     await importTextarea.fill('{')
-    await importDialog.locator('.deck-editor-import-confirm').click()
-    const importStatus = modal.locator('.deck-editor-status')
+    await importDialog.locator('button').last().click()
+    const importStatus = editor.locator('.deck-editor-page-status')
     await importStatus.waitFor({ state: 'visible' })
     assert.ok(((await importStatus.textContent()) ?? '').trim().length > 0)
     assert.equal(await importDialog.isVisible(), true)
-    assert.equal(await modal.locator('.deck-editor-name-input').inputValue(), nameBeforeInvalidImport)
+    assert.equal(await editor.locator('.deck-editor-page-name input').inputValue(), nameBeforeInvalidImport)
     assert.equal(
-      (await modal.locator('.deck-editor-deck-entry-count').textContent())?.trim(),
+      (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
       '4',
     )
 
-    await importTextarea.fill(importPayload)
-    await importDialog.locator('.deck-editor-import-confirm').click()
+    await editor.locator('[data-testid="deck-format-select"]').selectOption('open')
+    await importTextarea.fill(openImportPayload)
+    await importDialog.locator('button').last().click()
     await importDialog.waitFor({ state: 'hidden' })
     assert.equal(
-      await modal.locator('.deck-editor-name-input').inputValue(),
-      'Deck Editor Browser Validation',
+      await editor.locator('.deck-editor-page-name input').inputValue(),
+      'Open Format Browser Validation',
     )
+    assert.equal(await editor.locator('[data-testid="deck-format-select"]').inputValue(), 'open')
     assert.match(
-      (await modal.locator('.deck-editor-deck-header').textContent()) ?? '',
+      (await editor.locator('.deck-editor-page-counter').textContent()) ?? '',
       /60\s*\/\s*60/,
     )
     assert.equal(await saveButton.isEnabled(), true)
     assert.equal(await saveButton.evaluate((el) => el.classList.contains('is-draft')), false)
 
+    if (viewport.width <= 820) {
+      const mobileScroll = await editor.evaluate((element) => {
+        element.scrollTop = element.scrollHeight
+        return {
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+          scrollTop: element.scrollTop,
+        }
+      })
+      assert.ok(
+        mobileScroll.scrollHeight > mobileScroll.clientHeight,
+        `${viewport.width}x${viewport.height} mobile editor has no vertical scroll range`,
+      )
+      assert.ok(
+        mobileScroll.scrollTop > 0,
+        `${viewport.width}x${viewport.height} mobile editor cannot scroll to its lower controls`,
+      )
+
+      // 完成往下捲動後，主要牌組的加減按鈕仍要可實際操作，而不只存在於 DOM。
+      const deckControls = editor.locator('.deck-editor-page-deck-card-controls').first()
+      await deckControls.scrollIntoViewIfNeeded()
+      const controlButtons = deckControls.locator('button')
+      await controlButtons.nth(0).click()
+      await controlButtons.nth(1).click()
+      assert.match(
+        (await editor.locator('.deck-editor-page-counter').textContent()) ?? '',
+        /60\s*\/\s*60/,
+      )
+    }
+
     const metrics = await page.evaluate(() => {
-      const element = document.querySelector('.deck-editor-modal')
-      if (!(element instanceof HTMLElement)) throw new Error('deck editor modal missing')
+      const element = document.querySelector('[data-testid="deck-editor-page"]')
+      if (!(element instanceof HTMLElement)) throw new Error('deck editor page missing')
       const rect = element.getBoundingClientRect()
       return {
-        modal: {
+        page: {
           left: rect.left,
           right: rect.right,
           top: rect.top,
@@ -168,24 +216,27 @@ try {
         viewportWidth: window.innerWidth,
       }
     })
-    assert.ok(metrics.modal.left >= -1)
-    assert.ok(metrics.modal.right <= viewport.width + 1)
-    assert.ok(metrics.modal.top >= -1)
-    assert.ok(metrics.modal.bottom <= viewport.height + 1)
+    assert.ok(metrics.page.left >= -1)
+    assert.ok(metrics.page.right <= viewport.width + 1)
+    assert.ok(
+      metrics.page.width <= viewport.width + 1,
+      `${viewport.width}x${viewport.height} page width ${metrics.page.width} exceeds viewport`,
+    )
     assert.ok(
       metrics.documentWidth <= viewport.width + 1,
       `${viewport.width}x${viewport.height} document width ${metrics.documentWidth} exceeds viewport`,
     )
 
     await saveButton.click()
-    await modal.waitFor({ state: 'hidden' })
+    await editor.waitFor({ state: 'hidden' })
     const savedStorage = await page.evaluate(() =>
       JSON.parse(localStorage.getItem('braverse-custom-decks') ?? '[]'),
     )
     assert.equal(savedStorage.version, 1)
     const savedDecks = savedStorage.decks
     assert.equal(savedDecks.length, 1)
-    assert.equal(savedDecks[0].name, 'Deck Editor Browser Validation')
+    assert.equal(savedDecks[0].name, 'Open Format Browser Validation')
+    assert.equal(savedDecks[0].format, 'open')
     assert.equal(
       savedDecks[0].entries.reduce((total, entry) => total + entry.count, 0),
       60,

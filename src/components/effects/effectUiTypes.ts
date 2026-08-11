@@ -35,4 +35,6 @@ export interface PendingEffect {
    * 在規則層重建出同一條效果佇列。
    */
   chooseOneModes?: number[]
+  /** BS6-039 uses the same effect twice: mandatory break target, then optional battle target. */
+  compoundEffectStep?: 'follow-up'
 }

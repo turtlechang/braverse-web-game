@@ -145,16 +145,16 @@ try {
   await page.evaluate(() => localStorage.removeItem('braverse-custom-decks'))
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.locator('[data-testid="open-deck-editor"]').click()
-  const modal = page.locator('.deck-editor-modal')
-  await modal.waitFor({ state: 'visible' })
-  const poolCount = await modal.locator('.deck-editor-pool-card-btn').count()
+  const editor = page.locator('[data-testid="deck-editor-page"]')
+  await editor.waitFor({ state: 'visible' })
+  const poolCount = await editor.locator('.deck-editor-page-pool-card-button').count()
   assert.ok(poolCount > 0, 'Deck editor card pool is empty')
 
-  const firstCardImage = modal.locator('.card-pool-img').first()
+  const firstCardImage = editor.locator('.deck-page-card-image').first()
   await firstCardImage.scrollIntoViewIfNeeded()
   await page.waitForFunction(
     () => {
-      const image = document.querySelector('.deck-editor-modal .card-pool-img')
+      const image = document.querySelector('[data-testid="deck-editor-page"] .deck-page-card-image')
       return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0
     },
     undefined,
@@ -166,18 +166,18 @@ try {
     firstImageUrl: await firstCardImage.getAttribute('src'),
   }
 
-  await modal.locator('.deck-editor-io-btn').nth(1).click()
-  const importDialog = modal.locator('.deck-editor-import-dialog')
+  await editor.locator('.deck-editor-page-io button').nth(1).click()
+  const importDialog = editor.locator('.deck-editor-page-import')
   await importDialog.waitFor({ state: 'visible' })
-  await importDialog.locator('.deck-editor-import-textarea').fill(importPayload)
-  await importDialog.locator('.deck-editor-import-confirm').click()
+  await importDialog.locator('textarea').fill(importPayload)
+  await importDialog.locator('button').last().click()
   await importDialog.waitFor({ state: 'hidden' })
   assert.match(
-    (await modal.locator('.deck-editor-deck-header').textContent()) ?? '',
+    (await editor.locator('.deck-editor-page-counter').textContent()) ?? '',
     /60\s*\/\s*60/,
     'Imported deck is not 60 cards',
   )
-  const saveButton = modal.locator('.deck-editor-save-btn')
+  const saveButton = editor.locator('[data-testid="deck-editor-page-save"]')
   assert.equal(await saveButton.isEnabled(), true, 'Imported deck cannot be saved')
   assert.equal(
     await saveButton.evaluate((element) => element.classList.contains('is-draft')),
@@ -185,7 +185,7 @@ try {
     'Imported deck is still marked as a draft',
   )
   await saveButton.click()
-  await modal.waitFor({ state: 'hidden' })
+  await editor.waitFor({ state: 'hidden' })
   await page.locator('.main-menu-deck-card', { hasText: deckName }).waitFor({ state: 'visible' })
   report.checks.deckImport = { name: deckName, cards: 60, legal: true }
 

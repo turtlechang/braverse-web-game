@@ -20,8 +20,10 @@ import {
 } from './battle'
 import {
   executeCardEffect,
+  getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getCookieOwnerId,
   hasRequiredEffectTargets,
   isEffectConditionMet,
   placeHandCardOnHp,
@@ -55,7 +57,7 @@ import { activateStage, playItem, playStage } from './card-abilities'
 import { refreshDeck } from './refresh'
 import { finalizePendingReplacements, getCurrentReplacementTask } from './replacement'
 import { hasBlockingPending } from './pending'
-import { createSeededShuffle } from './helpers'
+import { createSeededShuffle, getOpponentId, updatePlayer } from './helpers'
 import {
   describeCommand,
   describeCommandSteps,
@@ -203,6 +205,7 @@ export type PendingDecision =
   | AfterDamageEffectDecision
   | EffectOrderDecision
   | PlaceHandHpDecision
+  | ReorderHpDecision
 
 /**
  * cycle-hp（BS4-030）第二階段：第一階段取回 HP 後，把最多 1 張手牌放回
@@ -213,6 +216,15 @@ export interface PlaceHandHpDecision {
   playerId: PlayerId
   sourcePlayerId: PlayerId
   sourceInstanceId: string
+  targetInstanceId: string
+}
+
+export interface ReorderHpDecision {
+  kind: 'reorder-hp'
+  playerId: PlayerId
+  sourcePlayerId: PlayerId
+  sourceInstanceId: string
+  targetPlayerId: PlayerId
   targetInstanceId: string
 }
 
@@ -292,6 +304,12 @@ export interface ResolvePlaceHandHpCommand {
   handCardInstanceId?: string
 }
 
+export interface ResolveReorderHpCommand {
+  kind: 'resolve-reorder-hp'
+  playerId: PlayerId
+  orderedCardIds: string[]
+}
+
 export type PendingDecisionCommand =
   | ResolveFaintEffectCommand
   | ResolveOpponentHandDiscardCommand
@@ -304,6 +322,7 @@ export type PendingDecisionCommand =
   | ResolveAfterDamageEffectCommand
   | ResolveEffectOrderCommand
   | ResolvePlaceHandHpCommand
+  | ResolveReorderHpCommand
 
 export interface KeepOpeningHandCommand {
   kind: 'keep-opening-hand'
@@ -346,6 +365,7 @@ export interface DeployCookieCommand {
   kind: 'deploy-cookie'
   playerId: PlayerId
   instanceId: string
+  specialPlayCookieInstanceId?: string
 }
 
 export interface AttackCommand {
@@ -382,6 +402,8 @@ export interface ActivateSkillCommand {
   trashToDeckBottomIds?: string[]
   /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
   trashToDeckIds?: string[]
+  /** 從支援區返回手牌的技能代價卡（P-141）。 */
+  supportToHandIds?: string[]
   effectTargets?: string[][]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
   chooseOneModes?: number[]
@@ -405,6 +427,8 @@ export interface BeginActivateSkillCommand {
   trashToDeckBottomIds?: string[]
   /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
   trashToDeckIds?: string[]
+  /** 從支援區返回手牌的技能代價卡（P-141）。 */
+  supportToHandIds?: string[]
   /** 提供時會在支付完成後一併解析第一個效果，供導引式 UI 最後確認使用。 */
   targetIds?: string[]
   /** 依序對應每個「選擇一項」所選的模式索引。 */
@@ -525,6 +549,7 @@ export interface PlayTrapCommand {
   kind: 'play-trap'
   playerId: PlayerId
   trapInstanceId: string
+  costOptionIndex?: number
   paymentIds: string[]
   targetIds: string[]
   supportTrashIds?: string[]
@@ -534,6 +559,7 @@ export interface PlayTrapCommand {
   /** 放進自己休息區的手牌餅乾代價（BS3-046）。 */
   handToBreakIds?: string[]
   trashBattleCookieIds?: string[]
+  trashCookieToBreakAreaIds?: string[]
   trashToDeckIds?: string[]
   selfTargetIds?: string[]
 }
@@ -711,6 +737,17 @@ export const getPendingDecision = (
 
   // cycle-hp（BS4-030）第二階段：第一階段結算後停在這裡等玩家放回手牌。
   const pendingAbility = state.pendingAbilityEffect
+  const pendingReorderHp = pendingAbility?.pendingReorderHp
+  if (pendingAbility && pendingReorderHp) {
+    return {
+      kind: 'reorder-hp',
+      playerId: pendingAbility.playerId,
+      sourcePlayerId: pendingAbility.sourcePlayerId,
+      sourceInstanceId: pendingAbility.sourceInstanceId,
+      targetPlayerId: pendingReorderHp.targetPlayerId,
+      targetInstanceId: pendingReorderHp.targetInstanceId,
+    }
+  }
   const pendingPlace = pendingAbility?.pendingPlace
   if (pendingAbility && pendingPlace) {
     return {
@@ -913,6 +950,7 @@ const cmdToDecisionKind: Record<string, string> = {
   'resolve-after-damage-effect': 'after-damage-effect',
   'resolve-effect-order': 'effect-order',
   'resolve-place-hand-hp': 'place-hand-hp',
+  'resolve-reorder-hp': 'reorder-hp',
 }
 
 const isPendingDecisionCommand = (
@@ -1284,6 +1322,59 @@ const applyPendingDecisionCommand = (
         continueBattle,
       )
     }
+    case 'resolve-reorder-hp': {
+      const pending = state.pendingAbilityEffect
+      const pendingReorderHp = pending?.pendingReorderHp
+      if (!pending || !pendingReorderHp) {
+        throw new GameRuleError('目前沒有等待重新排列 HP 的決策。')
+      }
+      if (pending.playerId !== command.playerId) {
+        throw new GameRuleError('不是目前需要重新排列 HP 的玩家。')
+      }
+      const targetPlayer = state.players[pendingReorderHp.targetPlayerId]
+      const target = targetPlayer.battleArea.find(
+        (cookie) => cookie.card.instanceId === pendingReorderHp.targetInstanceId,
+      )
+      if (!target) {
+        throw new GameRuleError('重新排列 HP 的目標已不在戰鬥區。')
+      }
+      const expectedIds = target.hpCards.map((card) => card.instanceId).sort()
+      const orderedIds = [...command.orderedCardIds]
+      const uniqueIds = [...new Set(orderedIds)]
+      if (
+        uniqueIds.length !== orderedIds.length ||
+        orderedIds.length !== expectedIds.length ||
+        uniqueIds.sort().join('|') !== expectedIds.join('|')
+      ) {
+        throw new GameRuleError('HP 卡重排結果不合法。')
+      }
+      const cardsById = new Map(
+        target.hpCards.map((card) => [card.instanceId, card]),
+      )
+      const reorderedState = updatePlayer(state, {
+        ...targetPlayer,
+        battleArea: targetPlayer.battleArea.map((cookie) =>
+          cookie.card.instanceId === pendingReorderHp.targetInstanceId
+            ? {
+                ...cookie,
+                hpCards: orderedIds.map((id) => cardsById.get(id)!),
+              }
+            : cookie,
+        ),
+      })
+      const context: EffectContext = {
+        sourcePlayerId: pending.sourcePlayerId,
+        sourceInstanceId: pending.sourceInstanceId,
+        sourceCardName: pending.sourceCardName,
+      }
+      return continueAbilityQueue(
+        reorderedState,
+        { ...pending, pendingReorderHp: undefined },
+        context,
+        1,
+        (candidate) => continueBattleAfterPending(candidate, pending.battleContinuation),
+      )
+    }
   }
 }
 
@@ -1563,8 +1654,122 @@ const resolvePendingAbilityEffect = (
         }
   }
   // 官方 Q&A（BS3-019）：無合法目標時，緊接在後的裝載一併中止（見上方函式註解）。
+  if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
+    const uniqueIds = [...new Set(targetIds)]
+    const previousStep = pending.pendingOpponentBreakToTrashThenBattleToBreak
+    const candidates = getEffectSelectionCandidates(state, context, effect)
+    const candidateIds = new Set(candidates.map((card) => card.instanceId))
+    const minimum = previousStep ? 0 : 1
+    if (
+      uniqueIds.length !== targetIds.length ||
+      uniqueIds.length < minimum ||
+      uniqueIds.length > 1 ||
+      uniqueIds.some((id) => !candidateIds.has(id))
+    ) {
+      throw new GameRuleError('選擇的時間旅行效果目標不合法。')
+    }
+
+    if (!previousStep) {
+      const opponentId = getOpponentId(context.sourcePlayerId)
+      const opponent = state.players[opponentId]
+      const selected = opponent.breakArea.find(
+        (card) => card.instanceId === uniqueIds[0] && card.type === 'cookie',
+      )
+      if (!selected) {
+        throw new GameRuleError('選擇的時間旅行效果目標不合法。')
+      }
+      const afterTrash = updatePlayer(state, {
+        ...opponent,
+        breakArea: opponent.breakArea.filter(
+          (card) => card.instanceId !== selected.instanceId,
+        ),
+        discardPile: [...opponent.discardPile, selected],
+      })
+      return {
+        ...afterTrash,
+        pendingAbilityEffect: {
+          ...pending,
+          pendingOpponentBreakToTrashThenBattleToBreak: {
+            selectedBreakCardLevel: selected.level,
+          },
+        },
+      }
+    }
+
+    if (uniqueIds.length === 0) {
+      return continueAbilityQueue(
+        state,
+        {
+          ...pending,
+          pendingOpponentBreakToTrashThenBattleToBreak: undefined,
+        },
+        context,
+        1,
+        continueBattle,
+      )
+    }
+
+    const movedState = executeCardEffect(
+      state,
+      context,
+      {
+        kind: 'battle-to-break',
+        target: {
+          side: 'opponent',
+          min: 0,
+          max: 1,
+          minLevel: previousStep.selectedBreakCardLevel + 1,
+          maxLevel: previousStep.selectedBreakCardLevel + 1,
+        },
+      },
+      uniqueIds,
+    )
+    return continueAbilityQueue(
+      movedState,
+      {
+        ...pending,
+        pendingOpponentBreakToTrashThenBattleToBreak: undefined,
+      },
+      context,
+      1,
+      continueBattle,
+    )
+  }
+
   if (hasNoLegalSelectableTargets(state, context, pending.effects, pending.effectIndex)) {
     return continueBattle({ ...state, pendingAbilityEffect: undefined })
+  }
+
+  if (effect.kind === 'reorder-hp') {
+    const candidates = getEffectTargetCandidates(state, context, effect.target)
+    const uniqueIds = [...new Set(targetIds)]
+    if (
+      uniqueIds.length !== targetIds.length ||
+      uniqueIds.length < effect.target.min ||
+      uniqueIds.length > effect.target.max
+    ) {
+      throw new GameRuleError('重新排列 HP 的目標不合法。')
+    }
+    if (uniqueIds.length === 0) {
+      return continueAbilityQueue(state, pending, context, 1, continueBattle)
+    }
+    const target = candidates.find(
+      (cookie) => cookie.card.instanceId === uniqueIds[0],
+    )
+    const targetPlayerId = getCookieOwnerId(state, uniqueIds[0])
+    if (!target || !targetPlayerId) {
+      throw new GameRuleError('重新排列 HP 的目標不合法。')
+    }
+    return {
+      ...state,
+      pendingAbilityEffect: {
+        ...pending,
+        pendingReorderHp: {
+          targetPlayerId,
+          targetInstanceId: target.card.instanceId,
+        },
+      },
+    }
   }
 
   // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp selectTarget BS4-044）：
@@ -1685,7 +1890,11 @@ const applyPlayerActionCommand = (
       return placeSupportCard(state, command.instanceId)
     case 'deploy-cookie':
       requireActivePlayer(state, command.playerId)
-      return deployCookie(state, command.instanceId)
+      return deployCookie(
+        state,
+        command.instanceId,
+        command.specialPlayCookieInstanceId,
+      )
     case 'attack':
       requireActivePlayer(state, command.playerId)
       return attackCookie(
@@ -1722,6 +1931,7 @@ const applyPlayerActionCommand = (
         command.trashToDeckIds ?? [],
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
+        command.supportToHandIds ?? [],
       )
       // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再執行效果。
       // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
@@ -1797,6 +2007,7 @@ const applyPlayerActionCommand = (
         command.trashToDeckIds ?? [],
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
+        command.supportToHandIds ?? [],
       )
       // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再設定效果。
       // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
@@ -2058,6 +2269,7 @@ const applyPlayerActionCommand = (
     case 'play-trap':
       return playTrap(state, command.playerId, {
         trapInstanceId: command.trapInstanceId,
+        costOptionIndex: command.costOptionIndex,
         paymentIds: command.paymentIds,
         targetIds: command.targetIds,
         supportTrashIds: command.supportTrashIds,
@@ -2066,6 +2278,7 @@ const applyPlayerActionCommand = (
         discardHandIds: command.discardHandIds,
         handToBreakIds: command.handToBreakIds,
         trashBattleCookieIds: command.trashBattleCookieIds,
+        trashCookieToBreakAreaIds: command.trashCookieToBreakAreaIds,
         trashToDeckIds: command.trashToDeckIds,
         selfTargetIds: command.selfTargetIds,
       })

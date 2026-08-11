@@ -932,6 +932,63 @@
   line-height: 1.6;
 }
 
+.special-play-modal {
+  width: min(760px, 100%);
+}
+
+.special-play-source {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 18px 0;
+  padding: 14px;
+  border: 1px solid rgba(113, 233, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(2, 15, 42, 0.35);
+}
+
+.special-play-source-card,
+.special-play-candidate-card {
+  width: 82px;
+  flex: 0 0 auto;
+}
+
+.special-play-source p {
+  margin: 6px 0 0;
+}
+
+.special-play-candidates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.special-play-candidate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(187, 218, 243, 0.28);
+  border-radius: 8px;
+  background: rgba(4, 26, 67, 0.72);
+  color: #fff;
+  text-align: left;
+}
+
+.special-play-candidate.is-selected {
+  border-color: #ffe674;
+  box-shadow: 0 0 0 2px rgba(255, 230, 116, 0.24);
+}
+
+.special-play-candidate span {
+  display: grid;
+  gap: 4px;
+}
+
+.special-play-candidate small {
+  color: #bbdaf3;
+}
+
 .card-detail-rules {
   min-height: 230px;
   margin-top: 18px;

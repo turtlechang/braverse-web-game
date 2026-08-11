@@ -1,0 +1,2214 @@
+{
+  "generatedAt": "2026-08-10T23:18:43.320Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-p-0xx-remaining.en.json",
+  "scope": "Formal-pool card-check entry audit for every promoted P-0XX record. This report separates route/card rendering from interactive effect proof.",
+  "summary": {
+    "total": 127,
+    "passed": 127,
+    "failed": 0,
+    "effectBearingRecords": 108,
+    "interactiveEffectProof": 0,
+    "byType": {
+      "item": {
+        "total": 2,
+        "passed": 2,
+        "failed": 0
+      },
+      "trap": {
+        "total": 3,
+        "passed": 3,
+        "failed": 0
+      },
+      "flip": {
+        "total": 25,
+        "passed": 25,
+        "failed": 0
+      },
+      "cookie": {
+        "total": 96,
+        "passed": 96,
+        "failed": 0
+      },
+      "stage": {
+        "total": 1,
+        "passed": 1,
+        "failed": 0
+      }
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "P-012@1",
+      "baseCardNumber": "P-012",
+      "variant": "1",
+      "name": "Mischievous Ladybug",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "P-031@1",
+      "baseCardNumber": "P-031",
+      "variant": "1",
+      "name": "The Heir's Betrayal",
+      "type": "trap",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-036@1",
+      "baseCardNumber": "P-036",
+      "variant": "1",
+      "name": "GingerBrave",
+      "type": "trap",
+      "color": "RED",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-040@1",
+      "baseCardNumber": "P-040",
+      "variant": "1",
+      "name": "Milky Way Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-041",
+      "baseCardNumber": "P-041",
+      "variant": null,
+      "name": "Birthday Cake Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Birthday Cake Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 43
+    },
+    {
+      "cardNumber": "P-042",
+      "baseCardNumber": "P-042",
+      "variant": null,
+      "name": "Twizzly Gummy Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-043",
+      "baseCardNumber": "P-043",
+      "variant": null,
+      "name": "Cotton Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-044",
+      "baseCardNumber": "P-044",
+      "variant": null,
+      "name": "Almond Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-045",
+      "baseCardNumber": "P-045",
+      "variant": null,
+      "name": "Macaron Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-046",
+      "baseCardNumber": "P-046",
+      "variant": null,
+      "name": "Pumpkin Pie Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-047",
+      "baseCardNumber": "P-047",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-048",
+      "baseCardNumber": "P-048",
+      "variant": null,
+      "name": "Sparkling Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-049",
+      "baseCardNumber": "P-049",
+      "variant": null,
+      "name": "Herb Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-050@1",
+      "baseCardNumber": "P-050",
+      "variant": "1",
+      "name": "Cream Ferret Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Cream Ferret Cookie等待決定是否支付攻擊後續效果代價。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "P-051",
+      "baseCardNumber": "P-051",
+      "variant": null,
+      "name": "Strawberry Crepe Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-052",
+      "baseCardNumber": "P-052",
+      "variant": null,
+      "name": "Lemon Zest Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "P-053",
+      "baseCardNumber": "P-053",
+      "variant": null,
+      "name": "Herb Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Herb Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "P-054",
+      "baseCardNumber": "P-054",
+      "variant": null,
+      "name": "Blue Slushy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-055",
+      "baseCardNumber": "P-055",
+      "variant": null,
+      "name": "Witchberry Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-056",
+      "baseCardNumber": "P-056",
+      "variant": null,
+      "name": "Rye Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-057",
+      "baseCardNumber": "P-057",
+      "variant": null,
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-058",
+      "baseCardNumber": "P-058",
+      "variant": null,
+      "name": "Ninja Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-059",
+      "baseCardNumber": "P-059",
+      "variant": null,
+      "name": "Chamomile Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-060",
+      "baseCardNumber": "P-060",
+      "variant": null,
+      "name": "Rockstar Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-061",
+      "baseCardNumber": "P-061",
+      "variant": null,
+      "name": "Angel Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Angel Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 51
+    },
+    {
+      "cardNumber": "P-063",
+      "baseCardNumber": "P-063",
+      "variant": null,
+      "name": "Shadow Milk Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-064",
+      "baseCardNumber": "P-064",
+      "variant": null,
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Croissant Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-065",
+      "baseCardNumber": "P-065",
+      "variant": null,
+      "name": "Pizza Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-066",
+      "baseCardNumber": "P-066",
+      "variant": null,
+      "name": "Butter Squid Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-067",
+      "baseCardNumber": "P-067",
+      "variant": null,
+      "name": "Sour Belt Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-068",
+      "baseCardNumber": "P-068",
+      "variant": null,
+      "name": "Starfruit Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Starfruit Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "P-069",
+      "baseCardNumber": "P-069",
+      "variant": null,
+      "name": "Popping Candy Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-070",
+      "baseCardNumber": "P-070",
+      "variant": null,
+      "name": "Radish Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-071",
+      "baseCardNumber": "P-071",
+      "variant": null,
+      "name": "Sauna Egg Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-072",
+      "baseCardNumber": "P-072",
+      "variant": null,
+      "name": "Rosemary Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-073",
+      "baseCardNumber": "P-073",
+      "variant": null,
+      "name": "Snow Crystal Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Snow Crystal Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "P-074",
+      "baseCardNumber": "P-074",
+      "variant": null,
+      "name": "Sugar Globe Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-075",
+      "baseCardNumber": "P-075",
+      "variant": null,
+      "name": "Red Bean Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Red Bean Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "P-076",
+      "baseCardNumber": "P-076",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-077",
+      "baseCardNumber": "P-077",
+      "variant": null,
+      "name": "Eternal Sugar Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-078",
+      "baseCardNumber": "P-078",
+      "variant": null,
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-078@1",
+      "baseCardNumber": "P-078",
+      "variant": "1",
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-078@2",
+      "baseCardNumber": "P-078",
+      "variant": "2",
+      "name": "Black Pearl Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-079",
+      "baseCardNumber": "P-079",
+      "variant": null,
+      "name": "Strawberry Shortcake Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Strawberry Shortcake Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "P-080",
+      "baseCardNumber": "P-080",
+      "variant": null,
+      "name": "Tiny Cake Hound",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-081",
+      "baseCardNumber": "P-081",
+      "variant": null,
+      "name": "Fettuccine Cake Hound",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-082",
+      "baseCardNumber": "P-082",
+      "variant": null,
+      "name": "Sugar Gnome Cake Shop",
+      "type": "trap",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "攻擊宣告",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-083",
+      "baseCardNumber": "P-083",
+      "variant": null,
+      "name": "Dumpling Cake Hound",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-084",
+      "baseCardNumber": "P-084",
+      "variant": null,
+      "name": "Magic Lettering Pens",
+      "type": "item",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "item"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 39
+    },
+    {
+      "cardNumber": "P-085",
+      "baseCardNumber": "P-085",
+      "variant": null,
+      "name": "Tropical Pop Cake Hound",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-086",
+      "baseCardNumber": "P-086",
+      "variant": null,
+      "name": "Black & White Cake Hound",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-087",
+      "baseCardNumber": "P-087",
+      "variant": null,
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-087@1",
+      "baseCardNumber": "P-087",
+      "variant": "1",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-087@2",
+      "baseCardNumber": "P-087",
+      "variant": "2",
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-089",
+      "baseCardNumber": "P-089",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-092",
+      "baseCardNumber": "P-092",
+      "variant": null,
+      "name": "Pudding à la Mode Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-093",
+      "baseCardNumber": "P-093",
+      "variant": null,
+      "name": "White Peach Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-094",
+      "baseCardNumber": "P-094",
+      "variant": null,
+      "name": "Lemon Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Lemon Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-095",
+      "baseCardNumber": "P-095",
+      "variant": null,
+      "name": "Tiger Lily Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-096",
+      "baseCardNumber": "P-096",
+      "variant": null,
+      "name": "Snapdragon Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-097",
+      "baseCardNumber": "P-097",
+      "variant": null,
+      "name": "Cream Ferret Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-098",
+      "baseCardNumber": "P-098",
+      "variant": null,
+      "name": "Space Doughnut",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-099",
+      "baseCardNumber": "P-099",
+      "variant": null,
+      "name": "Bell Pepper Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-100",
+      "baseCardNumber": "P-100",
+      "variant": null,
+      "name": "Icicle Yeti Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-101",
+      "baseCardNumber": "P-101",
+      "variant": null,
+      "name": "Pond Dino Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Pond Dino Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-102",
+      "baseCardNumber": "P-102",
+      "variant": null,
+      "name": "Pancake Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-103",
+      "baseCardNumber": "P-103",
+      "variant": null,
+      "name": "Blossom Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Blossom Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-103@1",
+      "baseCardNumber": "P-103",
+      "variant": "1",
+      "name": "Choco Drizzle Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Choco Drizzle Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-104",
+      "baseCardNumber": "P-104",
+      "variant": null,
+      "name": "Buttercup Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Buttercup Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 53
+    },
+    {
+      "cardNumber": "P-104@1",
+      "baseCardNumber": "P-104",
+      "variant": "1",
+      "name": "Green Tea Mousse Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Green Tea Mousse Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 53
+    },
+    {
+      "cardNumber": "P-105",
+      "baseCardNumber": "P-105",
+      "variant": null,
+      "name": "Bubbles Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Bubbles Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "P-105@1",
+      "baseCardNumber": "P-105",
+      "variant": "1",
+      "name": "Pudding à la Mode Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Pudding à la Mode Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "P-106",
+      "baseCardNumber": "P-106",
+      "variant": null,
+      "name": "Shining Glitter Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-107",
+      "baseCardNumber": "P-107",
+      "variant": null,
+      "name": "Parfait Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-108",
+      "baseCardNumber": "P-108",
+      "variant": null,
+      "name": "Pastel Meringue Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "效果目標",
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "P-109",
+      "baseCardNumber": "P-109",
+      "variant": null,
+      "name": "Dino-Sour Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-110",
+      "baseCardNumber": "P-110",
+      "variant": null,
+      "name": "Sour Belt Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-111",
+      "baseCardNumber": "P-111",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "GingerBrave等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 47
+    },
+    {
+      "cardNumber": "P-112",
+      "baseCardNumber": "P-112",
+      "variant": null,
+      "name": "Adventurer Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-113",
+      "baseCardNumber": "P-113",
+      "variant": null,
+      "name": "Green Tea Mousse Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-114",
+      "baseCardNumber": "P-114",
+      "variant": null,
+      "name": "Shine Muscat Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-115",
+      "baseCardNumber": "P-115",
+      "variant": null,
+      "name": "Truffle Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-116",
+      "baseCardNumber": "P-116",
+      "variant": null,
+      "name": "Mustard Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-117",
+      "baseCardNumber": "P-117",
+      "variant": null,
+      "name": "Earl Grey Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Earl Grey Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "P-118",
+      "baseCardNumber": "P-118",
+      "variant": null,
+      "name": "Strawberry Stick Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-119",
+      "baseCardNumber": "P-119",
+      "variant": null,
+      "name": "Cotton Candy Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-120",
+      "baseCardNumber": "P-120",
+      "variant": null,
+      "name": "Chocolate Bonbon Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Chocolate Bonbon Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 50
+    },
+    {
+      "cardNumber": "P-121",
+      "baseCardNumber": "P-121",
+      "variant": null,
+      "name": "Currant Cream Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-123",
+      "baseCardNumber": "P-123",
+      "variant": null,
+      "name": "Sorbet Shark Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-124",
+      "baseCardNumber": "P-124",
+      "variant": null,
+      "name": "Milky Way Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-125",
+      "baseCardNumber": "P-125",
+      "variant": null,
+      "name": "0th & Broadway: Avenue of Deceit",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "stage"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 41
+    },
+    {
+      "cardNumber": "P-127",
+      "baseCardNumber": "P-127",
+      "variant": null,
+      "name": "Schwarzwälder",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Schwarzwälder等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 49
+    },
+    {
+      "cardNumber": "P-128",
+      "baseCardNumber": "P-128",
+      "variant": null,
+      "name": "Butter Roll Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-129",
+      "baseCardNumber": "P-129",
+      "variant": null,
+      "name": "Wedding Cake Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Wedding Cake Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "P-130",
+      "baseCardNumber": "P-130",
+      "variant": null,
+      "name": "Financier Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Financier Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-131",
+      "baseCardNumber": "P-131",
+      "variant": null,
+      "name": "Spinach Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-132",
+      "baseCardNumber": "P-132",
+      "variant": null,
+      "name": "Matcha Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-133",
+      "baseCardNumber": "P-133",
+      "variant": null,
+      "name": "Cream Soda Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-134",
+      "baseCardNumber": "P-134",
+      "variant": null,
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Blackberry Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-135",
+      "baseCardNumber": "P-135",
+      "variant": null,
+      "name": "Black Forest Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Black Forest Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 48
+    },
+    {
+      "cardNumber": "P-136",
+      "baseCardNumber": "P-136",
+      "variant": null,
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "昏厥效果",
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-137",
+      "baseCardNumber": "P-137",
+      "variant": null,
+      "name": "Astronaut Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-138",
+      "baseCardNumber": "P-138",
+      "variant": null,
+      "name": "Marshmallow Bunny Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-139",
+      "baseCardNumber": "P-139",
+      "variant": null,
+      "name": "Zombie Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-140",
+      "baseCardNumber": "P-140",
+      "variant": null,
+      "name": "Butter Pretzel Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-141",
+      "baseCardNumber": "P-141",
+      "variant": null,
+      "name": "Taurus Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 45
+    },
+    {
+      "cardNumber": "P-142",
+      "baseCardNumber": "P-142",
+      "variant": null,
+      "name": "Cream Puff Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "已略過 Cream Puff Cookie 的攻擊後續效果。",
+      "modalVisible": false,
+      "actionableControls": 46
+    },
+    {
+      "cardNumber": "P-143",
+      "baseCardNumber": "P-143",
+      "variant": null,
+      "name": "Iris Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "Iris Cookie等待選擇攻擊後續效果目標。",
+      "modalVisible": false,
+      "actionableControls": 49
+    },
+    {
+      "cardNumber": "P-144",
+      "baseCardNumber": "P-144",
+      "variant": null,
+      "name": "Elderberry Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-145",
+      "baseCardNumber": "P-145",
+      "variant": null,
+      "name": "Hydrangea Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-146",
+      "baseCardNumber": "P-146",
+      "variant": null,
+      "name": "Wizard Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-147",
+      "baseCardNumber": "P-147",
+      "variant": null,
+      "name": "Licorice Cookie",
+      "type": "cookie",
+      "color": "BLACK",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 44
+    },
+    {
+      "cardNumber": "P-149",
+      "baseCardNumber": "P-149",
+      "variant": null,
+      "name": "Eternal Sugar Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-149@1",
+      "baseCardNumber": "P-149",
+      "variant": "1",
+      "name": "Eternal Sugar Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-149@2",
+      "baseCardNumber": "P-149",
+      "variant": "2",
+      "name": "Eternal Sugar Cookie",
+      "type": "cookie",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": null,
+      "modalVisible": false,
+      "actionableControls": 38
+    },
+    {
+      "cardNumber": "P-151",
+      "baseCardNumber": "P-151",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-152",
+      "baseCardNumber": "P-152",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-153",
+      "baseCardNumber": "P-153",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-154",
+      "baseCardNumber": "P-154",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-155",
+      "baseCardNumber": "P-155",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-156",
+      "baseCardNumber": "P-156",
+      "variant": null,
+      "name": "Black Sapphire Cookie",
+      "type": "flip",
+      "color": "BLACK",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 34
+    },
+    {
+      "cardNumber": "P-157",
+      "baseCardNumber": "P-157",
+      "variant": null,
+      "name": "Candy Apple Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-158",
+      "baseCardNumber": "P-158",
+      "variant": null,
+      "name": "Candy Apple Cookie",
+      "type": "flip",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-159",
+      "baseCardNumber": "P-159",
+      "variant": null,
+      "name": "Candy Apple Cookie",
+      "type": "flip",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-160",
+      "baseCardNumber": "P-160",
+      "variant": null,
+      "name": "Candy Apple Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-161",
+      "baseCardNumber": "P-161",
+      "variant": null,
+      "name": "Candy Apple Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    },
+    {
+      "cardNumber": "P-162",
+      "baseCardNumber": "P-162",
+      "variant": null,
+      "name": "Candy Apple Cookie",
+      "type": "flip",
+      "color": "BLACK",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "status": "PASS",
+      "auditStatus": "載入通過",
+      "flow": "candidate-card-check-entry",
+      "promptVisible": "flip-attacker",
+      "modalVisible": false,
+      "actionableControls": 37
+    }
+  ]
+}

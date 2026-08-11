@@ -3,6 +3,7 @@ import {
   canActivateCookieSkill,
   canActivateStage,
   canAttack,
+  canSpecialPlayCookie,
   canPlayItem,
   canPlayStage,
   getAttackEnergyCostForState,
@@ -60,6 +61,7 @@ export interface BattleRowProps {
   onActivateSkill?: (instanceId: string) => void
   onPlaceSupport?: (instanceId: string) => void
   onDeployCookie?: (instanceId: string) => void
+  onSpecialPlayCookie?: (instanceId: string) => void
   onPlayItem?: (instanceId: string) => void
   onPlayStage?: (instanceId: string) => void
   onActivateStage?: () => void
@@ -110,6 +112,7 @@ export function BattleRow({
   onActivateSkill,
   onPlaceSupport,
   onDeployCookie,
+  onSpecialPlayCookie,
   onPlayItem,
   onPlayStage,
   onActivateStage,
@@ -752,16 +755,12 @@ export function BattleRow({
               game.phase === 'main' &&
               card.type === 'cookie' &&
               player.battleArea.length < 2
+            const canSpecialPlay =
+              canOperate &&
+              canSpecialPlayCookie(game, playerId, card.instanceId)
             const canUseItem =
               canOperate &&
-              canPlayItem(game, playerId, card.instanceId) &&
-              Boolean(
-                card.item &&
-                  selectEnergyPayment(
-                    card.item.cost.energy ?? card.item.cost,
-                    player.supportArea,
-                  ),
-              )
+              canPlayItem(game, playerId, card.instanceId)
             const canPlaceStage =
               canOperate &&
               canPlayStage(game, playerId, card.instanceId) &&
@@ -825,6 +824,18 @@ export function BattleRow({
                     >
                       {actionLabel}
                     </button>
+                    {canSpecialPlay && (
+                      <button
+                        className="hand-card-action"
+                        type="button"
+                        onClick={() => {
+                          onSelectHandCard?.(null)
+                          onSpecialPlayCookie?.(card.instanceId)
+                        }}
+                      >
+                        特殊登場
+                      </button>
+                    )}
                     <button
                       className="hand-card-detail"
                       type="button"

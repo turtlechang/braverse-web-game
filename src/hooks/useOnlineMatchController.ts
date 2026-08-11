@@ -24,9 +24,11 @@ import {
   getReplacementCandidates,
   getRefreshCandidates,
   getTrapCandidates,
+  getTrapCostOptions,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckCandidates,
   getEnergyCostTotal,
   hasBlockingPending,
@@ -66,6 +68,9 @@ export function useOnlineMatchController(params: {
 
   const [message, setMessage] = useState('對局已開始。')
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
+  const [selectedTrapCostOptionIndex, setSelectedTrapCostOptionIndex] = useState(0)
+  const [selectedTrapTrashCookieToBreakAreaIds, setSelectedTrapTrashCookieToBreakAreaIds] =
+    useState<string[]>([])
   const [selectedTrapHandToBreakIds, setSelectedTrapHandToBreakIds] = useState<
     string[]
   >([])
@@ -393,8 +398,13 @@ export function useOnlineMatchController(params: {
     (card) => card.instanceId === selectedTrapId,
   )
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
+  const trapCostOptions = selectedTrap?.trap
+    ? getTrapCostOptions(selectedTrap.trap)
+    : []
+  const selectedTrapCost =
+    trapCostOptions[selectedTrapCostOptionIndex] ?? selectedTrap?.trap?.cost
   const trapEnergyCost =
-    selectedTrap?.trap?.cost.energy ?? selectedTrap?.trap?.cost ?? {}
+    selectedTrapCost?.energy ?? selectedTrapCost ?? {}
   const trapEnergyCostTotal = getEnergyCostTotal(trapEnergyCost)
   const trapPaymentCandidates =
     trapEnergyCostTotal > 0
@@ -445,35 +455,52 @@ export function useOnlineMatchController(params: {
       return next
     })
   }
-  const selectedTrapDiscardCost = selectedTrap?.trap?.cost.discardHand ?? 0
+  const selectedTrapDiscardCost = selectedTrapCost?.discardHand ?? 0
   const selectedTrapTrashBattleCookieCost =
-    selectedTrap?.trap?.cost.trashBattleCookie?.count ?? 0
-  const selectedTrapTrashBattleCookieCandidates = selectedTrap?.trap
+    selectedTrapCost?.trashBattleCookie?.count ?? 0
+  const selectedTrapTrashBattleCookieCandidates = selectedTrapCost
     ? getTrashBattleCookieCostCandidates(
-        selectedTrap.trap.cost,
+        selectedTrapCost,
         game.players[viewerPlayerId].battleArea,
       )
     : []
   const selectedTrapHandToBreakCost =
-    selectedTrap?.trap?.cost.handToBreakArea?.count ?? 0
+    selectedTrapCost?.handToBreakArea?.count ?? 0
   const selectedTrapHandToBreakCandidates = selectedTrap
     ? game.players[viewerPlayerId].hand.filter(
         (card) =>
           card.instanceId !== selectedTrap.instanceId &&
           card.type === 'cookie' &&
-          (!selectedTrap.trap?.cost.handToBreakArea?.energyColor ||
+          (!selectedTrapCost?.handToBreakArea?.energyColor ||
             card.energyColor ===
-              selectedTrap.trap.cost.handToBreakArea.energyColor),
+              selectedTrapCost.handToBreakArea.energyColor),
       )
     : []
   const selectedTrapDiscardCandidates = selectedTrap
     ? game.players[viewerPlayerId].hand.filter(
         (card) =>
           card.instanceId !== selectedTrap.instanceId &&
-          (!selectedTrap.trap?.cost.discardHandColor ||
-            card.energyColor === selectedTrap.trap.cost.discardHandColor),
+          (!selectedTrapCost?.discardHandColor ||
+            card.energyColor === selectedTrapCost.discardHandColor),
       )
     : []
+  const selectedTrapTrashCookieToBreakAreaAmount =
+    selectedTrapCost?.trashCookieToBreakArea?.count ?? 0
+  const selectedTrapTrashCookieToBreakAreaCandidates = selectedTrapCost
+    ? getTrashCookieToBreakAreaCostCandidates(
+        selectedTrapCost,
+        game.players[viewerPlayerId].discardPile,
+      )
+    : []
+  const trapCostOptionLabels = trapCostOptions.map((_, index) =>
+    index === 0 ? '卡面主支付：能量' : '替代支付：棄牌區 1 HP 餅乾→休息區',
+  )
+  const selectTrapCostOption = (index: number) => {
+    if (index < 0 || index >= trapCostOptions.length) return
+    setSelectedTrapCostOptionIndex(index)
+    setSelectedTrapPaymentIds([])
+    setSelectedTrapTrashCookieToBreakAreaIds([])
+  }
   const trapAllowEmptyTarget =
     selectedTrap?.trap?.effects.some(
       (effect) =>
@@ -675,6 +702,13 @@ export function useOnlineMatchController(params: {
     // Trap
     selectedTrapId,
     setSelectedTrapId,
+    selectedTrapCostOptionIndex,
+    selectTrapCostOption,
+    trapCostOptionLabels,
+    selectedTrapTrashCookieToBreakAreaIds,
+    setSelectedTrapTrashCookieToBreakAreaIds,
+    selectedTrapTrashCookieToBreakAreaAmount,
+    selectedTrapTrashCookieToBreakAreaCandidates,
     selectedTrapDiscardIds,
     setSelectedTrapDiscardIds,
     selectedTrapHandToBreakIds,

@@ -412,7 +412,10 @@ const commandShapes = {
   'select-starting-cookie': { requiredStrings: ['instanceId'] },
   'advance-phase': {},
   'place-support': { requiredStrings: ['instanceId'] },
-  'deploy-cookie': { requiredStrings: ['instanceId'] },
+  'deploy-cookie': {
+    requiredStrings: ['instanceId'],
+    optionalStrings: ['specialPlayCookieInstanceId'],
+  },
   attack: {
     requiredStrings: ['attackerInstanceId', 'targetInstanceId'],
     requiredStringArrays: ['supportPaymentIds'],
@@ -430,6 +433,7 @@ const commandShapes = {
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'trashToDeckBottomIds',
+      'supportToHandIds',
     ],
     optionalStringMatrices: ['effectTargets'],
     enumFields: { trigger: ['activate', 'on-play'] },
@@ -443,6 +447,7 @@ const commandShapes = {
       'hpToTrashTargetIds',
       'trashBattleCookieIds',
       'trashToDeckBottomIds',
+      'supportToHandIds',
       'targetIds',
     ],
     enumFields: { trigger: ['activate', 'on-play'] },
@@ -501,6 +506,7 @@ const commandShapes = {
   },
   'resolve-ability-effect': { requiredStringArrays: ['targetIds'] },
   'resolve-place-hand-hp': { optionalStrings: ['handCardInstanceId'] },
+  'resolve-reorder-hp': { requiredStringArrays: ['orderedCardIds'] },
   'resolve-choose-one': { requiredNumbers: ['modeIndex'] },
   'replace-cookie': { requiredStrings: ['instanceId'] },
   'skip-replacement': {},
@@ -511,6 +517,7 @@ const commandShapes = {
   'play-trap': {
     requiredStrings: ['trapInstanceId'],
     requiredStringArrays: ['paymentIds', 'targetIds'],
+    optionalNumbers: ['costOptionIndex'],
     optionalStringArrays: [
       'supportTrashIds',
       'supportToHandIds',
@@ -518,6 +525,7 @@ const commandShapes = {
       'discardHandIds',
       'handToBreakIds',
       'trashBattleCookieIds',
+      'trashCookieToBreakAreaIds',
       'trashToDeckIds',
       'selfTargetIds',
     ],

@@ -12,6 +12,7 @@ import {
   type GameState,
 } from '.'
 import {
+  P_CONDITION_CARD_NUMBERS,
   BS4_CONDITION_CARD_NUMBERS,
   createBlueActivateSkillDemoState,
   createBlueInspectDeckDemoState,
@@ -26,8 +27,13 @@ import {
   createBs5Item111DemoState,
   createBs5StageConditionDemoState,
   createBs5TrapDemoState,
+  createBs6ConditionDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
+  createP082TrapDemoState,
+  createPConditionDemoState,
+  createP084ItemConditionDemoState,
+  createP147SpecialPlayDemoState,
   createBs4ConditionDemoState,
   createReplacementChoiceDemoState,
   createSt5010OnPlayDemoState,
@@ -42,6 +48,10 @@ import { canActivateStage } from './card-abilities'
 import { isEffectConditionMet } from './effects'
 import { canActivateCookieSkill } from './skills'
 import { isSpecialVictoryConditionMet } from './victory'
+import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
+import type { OfficialCardRecord } from '../cards/types'
+
+const pFormalRecords = pFormalDocument.cards as OfficialCardRecord[]
 
 describe('isLocalhost', () => {
   it('allows localhost', () => {
@@ -149,6 +159,20 @@ describe('parseTestStateConfig', () => {
     })
   })
 
+  it('parses focused P-0XX payment and Special Play routes on localhost', () => {
+    expect(parseTestStateConfig('?test-state=p082-trap:cookie', 'localhost')).toEqual({
+      kind: 'p082-trap',
+      payment: 'cookie',
+    })
+    expect(parseTestStateConfig('?test-state=p084-item:met', 'localhost')).toEqual({
+      kind: 'p084-item-condition',
+      conditionMet: true,
+    })
+    expect(parseTestStateConfig('?test-state=p147-special-play', 'localhost')).toEqual({
+      kind: 'p147-special-play',
+    })
+  })
+
   it('parses BS5 focused A/B test-state routes only on localhost', () => {
     expect(parseTestStateConfig('?test-state=bs5-flip:BS5-009:activate', 'localhost')).toEqual({
       kind: 'bs5-flip',
@@ -180,6 +204,26 @@ describe('parseTestStateConfig', () => {
       conditionMet: false,
     })
     expect(parseTestStateConfig('?test-state=bs5-faint:BS4-011:met', 'localhost')).toBeNull()
+  })
+
+  it('parses BS6 candidate A/B test-state routes only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs6-condition:BS6-039:met', 'localhost'),
+    ).toEqual({
+      kind: 'bs6-condition',
+      cardNumber: 'BS6-039',
+      conditionMet: true,
+    })
+    expect(
+      parseTestStateConfig('?test-state=bs6-condition:BS6-039:unmet', 'localhost'),
+    ).toEqual({
+      kind: 'bs6-condition',
+      cardNumber: 'BS6-039',
+      conditionMet: false,
+    })
+    expect(
+      parseTestStateConfig('?test-state=bs6-condition:BS6-034:met', 'localhost'),
+    ).toBeNull()
   })
 
   it('returns null when non-localhost even with valid test-state', () => {
@@ -417,6 +461,128 @@ describe('createCardCheckDemoState', () => {
       ),
     ).toBe(true)
   })
+
+  it('loads BS6 candidates for localhost card-check without adding them to the formal pool', () => {
+    const prophet = createCardCheckDemoState('BS6-034')
+    const prophetSource = prophet.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-034',
+    )
+    expect(prophetSource?.skill).toMatchObject({
+      trigger: 'on-play',
+      effects: [{ kind: 'reorder-hp' }],
+    })
+
+    const croissant = createCardCheckDemoState('BS6-039')
+    const croissantSource = croissant.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-039',
+    )
+    expect(croissantSource?.skill).toMatchObject({
+      trigger: 'on-play',
+      cost: { energy: { yellow: 1 } },
+      effects: [{ kind: 'opponent-break-to-trash-then-battle-to-break' }],
+    })
+  })
+
+  it('creates BS6-039 met and unmet break-level fixtures without removing the source card', () => {
+    const met = createBs6ConditionDemoState('BS6-039', true)
+    const unmet = createBs6ConditionDemoState('BS6-039', false)
+    const getSourceAndEffect = (state: GameState) => {
+      const source = state.players['player-one'].hand.find(
+        (card) => card.id === 'BS6-039',
+      )
+      if (!source?.skill) throw new Error('BS6-039 candidate source is required')
+      return { source, effect: source.skill.effects[0]! }
+    }
+    const metSource = getSourceAndEffect(met)
+    const unmetSource = getSourceAndEffect(unmet)
+
+    expect(isEffectConditionMet(met, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: metSource.source.instanceId,
+    }, metSource.effect)).toBe(true)
+    expect(isEffectConditionMet(unmet, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: unmetSource.source.instanceId,
+    }, unmetSource.effect)).toBe(false)
+    expect(unmet.players['player-two'].breakArea).toEqual([
+      expect.objectContaining({ level: 7 }),
+    ])
+  })
+
+  it('prepares focused P-0XX fixtures for both alternative and conditional paths', () => {
+    const p082Energy = createP082TrapDemoState('energy')
+    const p082Cookie = createP082TrapDemoState('cookie')
+    expect(p082Energy.players['player-one'].discardPile).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'p082-alternative-cookie' })]),
+    )
+    expect(p082Cookie.players['player-one'].discardPile).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'p082-alternative-cookie' })]),
+    )
+    expect(getTrapCandidates(p082Energy, 'player-one')).toHaveLength(1)
+    expect(getTrapCandidates(p082Cookie, 'player-one')).toHaveLength(1)
+    expect(
+      p082Energy.players['player-one'].supportArea.every(
+        (support) => support.card.energyColor === 'yellow',
+      ),
+    ).toBe(true)
+
+    const p084Met = createP084ItemConditionDemoState(true)
+    const p084Unmet = createP084ItemConditionDemoState(false)
+    expect(p084Met.cookiesFaintedThisTurn?.['player-one']).toBe(1)
+    expect(p084Unmet.cookiesFaintedThisTurn?.['player-one']).toBe(0)
+    expect(p084Met.players['player-one'].supportArea[0].card.energyColor).toBe('red')
+
+    const p147 = createP147SpecialPlayDemoState()
+    expect(p147.players['player-one'].battleArea[0].card).toMatchObject({
+      level: 1,
+      energyColor: 'black',
+    })
+    expect(p147.players['player-two'].hand).toHaveLength(4)
+  })
+
+  it('builds a generic card-check state for every promoted P-0XX record', () => {
+    for (const record of pFormalRecords) {
+      const state = createCardCheckDemoState(record.cardNumber)
+      const source = [
+        ...state.players['player-one'].hand,
+        ...state.players['player-one'].battleArea.map((entry) => entry.card),
+        ...state.players['player-one'].breakArea,
+        ...(state.pendingBattle?.revealedHpCard
+          ? [state.pendingBattle.revealedHpCard]
+          : []),
+      ].find((card) => card.id === record.baseCardNumber)
+
+      expect(source, record.cardNumber).toBeDefined()
+    }
+  })
+
+  it.each(P_CONDITION_CARD_NUMBERS)(
+    '%s exposes legal dedicated met and unmet Browser fixtures',
+    (cardNumber) => {
+      for (const conditionMet of [true, false]) {
+        const state = createPConditionDemoState(cardNumber, conditionMet)
+        const parsed = parseTestStateConfig(
+          `?test-state=p-condition:${cardNumber}:${conditionMet ? 'met' : 'unmet'}`,
+          'localhost',
+        )
+        expect(parsed).toEqual({
+          kind: 'p-condition',
+          cardNumber,
+          conditionMet,
+        })
+        expect(state.status).toBe('playing')
+        expect(
+          [
+            ...state.players['player-one'].hand,
+            ...state.players['player-one'].battleArea.map((entry) => entry.card),
+          ].some(
+            (card) =>
+              card.id === cardNumber || card.instanceId.includes(cardNumber),
+          ),
+        ).toBe(true)
+      }
+    },
+  )
 
   it('keeps BS3-061 condition routes payable while changing the post-cost threshold', () => {
     const met = createBs3SilverbellConditionDemoState(true)

@@ -188,6 +188,7 @@ export {
   getBlockerCandidates,
   explainUnavailableTraps,
   getTrapCandidates,
+  getTrapCostOptions,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
   isBlockDisabled,
@@ -204,6 +205,7 @@ export {
 } from './battle'
 export type { PlayBlockerOptions, PlayTrapOptions, ResolveFlipOptions } from './battle'
 export {
+  canSpecialPlayCookie,
   attackCookie,
   deployCookie,
   placeSupportCard,
@@ -215,6 +217,7 @@ export {
   canActivateStage,
   canPlayItem,
   canPlayStage,
+  getEffectiveCardAbilityCost,
   getItemAbility,
   getStageAbility,
   playItem,
@@ -237,6 +240,7 @@ export {
   canActivateCookieSkill,
   canPayEnergyCost,
   canPayTrashBattleCookieCost,
+  canPayTrashCookieToBreakAreaCost,
   canPayTrashToDeckCost,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
@@ -244,8 +248,10 @@ export {
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckBottomCostCandidates,
   isSkillEffectConditionDeferredUntilCost,
+  payTrashCookieToBreakAreaCost,
   skipCookieOnPlay,
 } from './skills'
 export {

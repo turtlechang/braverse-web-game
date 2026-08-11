@@ -2250,3 +2250,93 @@ describe('usePendingEffect attack-effect auto-advance vs opponent pending decisi
     expect(resumed.pendingOptionalCostAttack).toBeTruthy()
   })
 })
+
+describe('usePendingEffect BS6-034 HP reorder handoff', () => {
+  it('closes EffectPanel after target selection so the required reorder decision can open', async () => {
+    const base = createCardCheckDemoState('BS6-034')
+    const player = base.players['player-one']
+    const source = player.hand.find((card) => card.id === 'BS6-034')
+    if (!source || source.type !== 'cookie') {
+      throw new Error('BS6-034 card-check fixture requires Prophet Cookie in hand')
+    }
+    const target = player.battleArea[0]
+    if (!target) throw new Error('BS6-034 card-check fixture requires an ally')
+
+    const gameState: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...player,
+          hand: player.hand.filter((card) => card.instanceId !== source.instanceId),
+          deck: player.deck.slice(source.hp),
+          battleArea: [
+            ...player.battleArea,
+            {
+              card: source,
+              hpCards: player.deck.slice(0, source.hp),
+              rested: false,
+              battleEntryId: `${source.instanceId}:battle:99`,
+            },
+          ],
+        },
+      },
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: source.instanceId,
+        origin: 'hand',
+      },
+    }
+
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    let currentGame = gameState
+
+    function TestHarness() {
+      const [game, setGame] = useState(gameState)
+      currentGame = game
+      captured = usePendingEffect({
+        game,
+        setGame,
+        dispatch: createDispatch(game, setGame),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCookieSkill(
+        currentGame,
+        source,
+        'player-one',
+        'on-play',
+        'OnPlay 登場觸發',
+        true,
+      ),
+    )
+    await act(() => captured!.toggleEffectTarget(target.card.instanceId))
+    await act(() => captured!.confirmEffect())
+
+    expect(currentGame.pendingAbilityEffect?.pendingReorderHp).toMatchObject({
+      targetPlayerId: 'player-one',
+      targetInstanceId: target.card.instanceId,
+    })
+    expect(captured!.pendingEffect).toBeNull()
+
+    await act(() => root.unmount())
+  })
+})

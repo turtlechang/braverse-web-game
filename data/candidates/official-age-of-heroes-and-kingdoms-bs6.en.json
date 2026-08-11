@@ -1,0 +1,5540 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "provider": "CookieRun: Braverse official website",
+    "pageUrl": "https://cookierunbraverse.com/en/cardList",
+    "datasetUrl": "https://cookierunbraverse.com/data/json/cardList_en.json",
+    "locale": "en",
+    "fetchedAt": "2026-08-11T06:00:39.434Z",
+    "totalAvailable": 2093,
+    "matchedAvailable": 138,
+    "importedCount": 138,
+    "filter": {
+      "categoryTitle": null
+    },
+    "candidateStatus": "inventory",
+    "imagesDownloaded": false
+  },
+  "cards": [
+    {
+      "sourceId": 44741,
+      "locale": "en",
+      "cardNumber": "BS6-001@1",
+      "baseCardNumber": "BS6-001",
+      "variant": "1",
+      "name": "Blue Lily Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Sweet Heartmender",
+        "text": "【Activate】 【Once Per Turn】 <Place 2 cards from the top of 1 of your {R} Cookies' HP into the trash.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}> Feelings of Fondness {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/YPuZtYkXzdUE5YeQ9tiFTQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44740,
+      "locale": "en",
+      "cardNumber": "BS6-001",
+      "baseCardNumber": "BS6-001",
+      "variant": null,
+      "name": "Blue Lily Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Sweet Heartmender",
+        "text": "【Activate】 【Once Per Turn】 <Place 2 cards from the top of 1 of your {R} Cookies' HP into the trash.> Select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}> Feelings of Fondness {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ZVT8KspDtDG7p2K25EP2Uw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44742,
+      "locale": "en",
+      "cardNumber": "BS6-002",
+      "baseCardNumber": "BS6-002",
+      "variant": null,
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Someone's Hero",
+        "text": "【Activate】 【Once Per Turn】 <{R}> If this Cookie's remaining HP is 2 or less, during this turn, this Cookie gains +1 attack damage."
+      },
+      "attackText": "<{R}{R}{R}> It's dark... {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fZL0Qb0gFdb9sR06p9T15w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44743,
+      "locale": "en",
+      "cardNumber": "BS6-003",
+      "baseCardNumber": "BS6-003",
+      "variant": null,
+      "name": "Strawberry Stick Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}> Let's have fun! {da} 2 Then, <place 1 card from the top of your {R} Cookie's HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JMc9wJUCUL92GrZSocV6Cg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44744,
+      "locale": "en",
+      "cardNumber": "BS6-004",
+      "baseCardNumber": "BS6-004",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Enchanting Performance",
+        "text": "【On Play】 <Place 1 card from the top of your {R} Cookie's HP into the trash.> Draw up to 2 cards from your deck."
+      },
+      "attackText": "<{R}{R}> Look forward to it! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/oSVBm6InX0HZ7y0Si1BCwg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44745,
+      "locale": "en",
+      "cardNumber": "BS6-005",
+      "baseCardNumber": "BS6-005",
+      "variant": null,
+      "name": "Buttercream Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED MIX",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}> Just let me know {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/faTvV7b7ZJXU5dLtCcrosg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44746,
+      "locale": "en",
+      "cardNumber": "BS6-006",
+      "baseCardNumber": "BS6-006",
+      "variant": null,
+      "name": "Cherry Blossom Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}> Yay! This is fun! {da} 3",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/MOw-o47nqiuxFIwWkYSd1w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44748,
+      "locale": "en",
+      "cardNumber": "BS6-007@1",
+      "baseCardNumber": "BS6-007",
+      "variant": "1",
+      "name": "Blue Slushy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}> Relentless Chirping {da} 3 Then, if your opponent's Cookie faints from this Cookie's attack, rest up to 2 cards in your opponent's support area.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5zTAr3DuaM1l8xkYOEa5mA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44747,
+      "locale": "en",
+      "cardNumber": "BS6-007",
+      "baseCardNumber": "BS6-007",
+      "variant": null,
+      "name": "Blue Slushy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}{R}> Relentless Chirping {da} 3 Then, if your opponent's Cookie faints from this Cookie's attack, rest up to 2 cards in your opponent's support area.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Kd-kDTgfg_gjsPZdezdpqg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44750,
+      "locale": "en",
+      "cardNumber": "BS6-008@1",
+      "baseCardNumber": "BS6-008",
+      "variant": "1",
+      "name": "Sugar Swan Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} True Love's Vow",
+        "text": "When this Cookie attacks, if this Cookie's remaining HP is 4 or less, during this battle, your opponent cannot activate traps."
+      },
+      "attackText": "<{R}{R}{R}> Sweet First Love {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/L1wzJOdWGCZmANrNABjYPA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44749,
+      "locale": "en",
+      "cardNumber": "BS6-008",
+      "baseCardNumber": "BS6-008",
+      "variant": null,
+      "name": "Sugar Swan Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} True Love's Vow",
+        "text": "When this Cookie attacks, if this Cookie's remaining HP is 4 or less, during this battle, your opponent cannot activate traps."
+      },
+      "attackText": "<{R}{R}{R}> Sweet First Love {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/FA9CW-d3DbsY_WSgwKpE4Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44751,
+      "locale": "en",
+      "cardNumber": "BS6-009",
+      "baseCardNumber": "BS6-009",
+      "variant": null,
+      "name": "Cotton Candy Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}> Words of Love {da} 3",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/DbKxCwXQhkGwBTBeN0SzpA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44753,
+      "locale": "en",
+      "cardNumber": "BS6-010@1",
+      "baseCardNumber": "BS6-010",
+      "variant": "1",
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Shackles of Love",
+        "text": "If this Cookie is in the battle area, your opponent cannot use effects to move either player's Cookies from the battle area."
+      },
+      "attackText": "<{R}{R}{R}> Sweet Despair {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/WxI7hREeWwwuAN_MsApBAQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44752,
+      "locale": "en",
+      "cardNumber": "BS6-010",
+      "baseCardNumber": "BS6-010",
+      "variant": null,
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Shackles of Love",
+        "text": "If this Cookie is in the battle area, your opponent cannot use effects to move either player's Cookies from the battle area."
+      },
+      "attackText": "<{R}{R}{R}> Sweet Despair {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/t51NUCSsdRXwRL98FZL1gA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44754,
+      "locale": "en",
+      "cardNumber": "BS6-011",
+      "baseCardNumber": "BS6-011",
+      "variant": null,
+      "name": "Rose Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Rose Finale",
+        "text": "When this Cookie faints, select up to 1 of your Cookies. Return 1 card from the top of that Cookie's HP to your hand."
+      },
+      "attackText": "<{R}{R}> Shall we dance? {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Qolxs8zFN7ZRQcKKovTIrw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44756,
+      "locale": "en",
+      "cardNumber": "BS6-012@1",
+      "baseCardNumber": "BS6-012",
+      "variant": "1",
+      "name": "Lilybell Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Song of Nature",
+        "text": "When your turn ends, if there are 5 cards or less in your hand, return up to 1 card from the top of your Cookie's HP to your hand."
+      },
+      "attackText": "<{R}{R}> Nature is beautiful {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/gFKt9wm5oDxGW8Ue0rL15Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44755,
+      "locale": "en",
+      "cardNumber": "BS6-012",
+      "baseCardNumber": "BS6-012",
+      "variant": null,
+      "name": "Lilybell Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Song of Nature",
+        "text": "When your turn ends, if there are 5 cards or less in your hand, return up to 1 card from the top of your Cookie's HP to your hand."
+      },
+      "attackText": "<{R}{R}> Nature is beautiful {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0cRlGcmy7O5BuIr8LqLFpQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44757,
+      "locale": "en",
+      "cardNumber": "BS6-013",
+      "baseCardNumber": "BS6-013",
+      "variant": null,
+      "name": "Chess Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}> We only need each other {da} 1 Then, if there is another [Chess Choco Cookie] in your battle area, deals 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/E8-m67HxC-WQCQii57ZjtA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44758,
+      "locale": "en",
+      "cardNumber": "BS6-014",
+      "baseCardNumber": "BS6-014",
+      "variant": null,
+      "name": "Choco Bar Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Stunt Action",
+        "text": "【On Play】 <Place 2 cards from the top of 1 of your Cookies' HP into the trash.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{R}{R}> I can do it all! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6s5nlXSAG1DGFbcMDnfEEA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44759,
+      "locale": "en",
+      "cardNumber": "BS6-015",
+      "baseCardNumber": "BS6-015",
+      "variant": null,
+      "name": "Choco Ball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{N}> I was the best today again! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/ROj_iK6cLJ8SH7LG9oif_g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44760,
+      "locale": "en",
+      "cardNumber": "BS6-016",
+      "baseCardNumber": "BS6-016",
+      "variant": null,
+      "name": "Crunchy Chip Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}> Never met a mountain Cookie before?! {da} 1 Then, if this Cookie's remaining HP is 1, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/q9ch7sA5GMhFSWpHkhMqpQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44761,
+      "locale": "en",
+      "cardNumber": "BS6-017",
+      "baseCardNumber": "BS6-017",
+      "variant": null,
+      "name": "Pink Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": "{sk} Love Virus",
+        "text": "【On Play】 <{R}> Select up to 1 of your opponent's Cookies. During this turn, the FLIP effects of that Cookie's HP cards cannot be activated."
+      },
+      "attackText": "<{R}> Ready for action! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/fxhbujDOh1KK0SxYThoqxw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44762,
+      "locale": "en",
+      "cardNumber": "BS6-018",
+      "baseCardNumber": "BS6-018",
+      "variant": null,
+      "name": "White Choco Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}> Victory is a matter of a moment! Then, if this Cookie's remaining HP is 1, select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4Lq0KqAguuVfsf8V-CW5FQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44763,
+      "locale": "en",
+      "cardNumber": "BS6-019",
+      "baseCardNumber": "BS6-019",
+      "variant": null,
+      "name": "Squishy Jelly Watch",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}> <Return 1 card from the top of your Cookie's HP to your hand.> If there is 1 Cookie or less in your opponent's break area, select up to 2 cards in your opponent's support area. Rest those cards.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uzFASOkKOjVCNaaVQXaPlw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44764,
+      "locale": "en",
+      "cardNumber": "BS6-020",
+      "baseCardNumber": "BS6-020",
+      "variant": null,
+      "name": "Tonic Spray",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{R}{R}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 card from the top of your Cookie's HP to your hand.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Wqra6WSQw-sJxVDu1BFu-Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44766,
+      "locale": "en",
+      "cardNumber": "BS6-021",
+      "baseCardNumber": "BS6-021",
+      "variant": null,
+      "name": "TBD Hallway",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "{da} 1 <{R}> Place in your stage area.\r\n\r\n【Activate】 <{R}> <Rest this card.> Select up to 1 of your Cookies that is LV.2 or higher with 3 or less HP remaining. During this turn, that Cookie gains +1 attack damage. Then, if that Cookie's remaining HP is 1, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/pF-UViD5Ik2lDxaxckqKvg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44767,
+      "locale": "en",
+      "cardNumber": "BS6-022",
+      "baseCardNumber": "BS6-022",
+      "variant": null,
+      "name": "Ninja Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}> Cloning Practice {da} 1 Then, <can be used as {Y}.> If your break area is LV.3 or higher, return this Cookie to your hand.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_ZW9oaGrFr9ywXwWfur_Ng.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44769,
+      "locale": "en",
+      "cardNumber": "BS6-023@1",
+      "baseCardNumber": "BS6-023",
+      "variant": "1",
+      "name": "Dark Fondue Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Pleasure to meet you",
+        "text": "【On Play】 <Place 1 Cookie from your hand into your break area.> All of your opponent's Cookies receive 1 damage."
+      },
+      "attackText": "<{Y}{Y}> I'll look forward to it {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/zQo1hbtYIzavag4E1w7cuw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44768,
+      "locale": "en",
+      "cardNumber": "BS6-023",
+      "baseCardNumber": "BS6-023",
+      "variant": null,
+      "name": "Dark Fondue Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Pleasure to meet you",
+        "text": "【On Play】 <Place 1 Cookie from your hand into your break area.> All of your opponent's Cookies receive 1 damage."
+      },
+      "attackText": "<{Y}{Y}> I'll look forward to it {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/8jnEpi_qf7Aeff75cJFjNA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44770,
+      "locale": "en",
+      "cardNumber": "BS6-024",
+      "baseCardNumber": "BS6-024",
+      "variant": null,
+      "name": "Roll Cake Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}{Y}> Vroom, VROOM! {da} 2 Then, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage for each LV.3 Cookie in your break area.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/b6q_K9zYHb4eYPZazxGNjw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44772,
+      "locale": "en",
+      "cardNumber": "BS6-025@1",
+      "baseCardNumber": "BS6-025",
+      "variant": "1",
+      "name": "Baguette Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Time Registry Head Manager",
+        "text": "【Activate】 【Once Per Turn】 <{Y}> If your break area is LV.2 or lower and there are 6 cards or less in your hand, draw up to 1 card from your deck."
+      },
+      "attackText": "<{Y}{Y}{Y}> Focus on the basics {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/atN1sYhyCG1eG9V3JRD_1Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44771,
+      "locale": "en",
+      "cardNumber": "BS6-025",
+      "baseCardNumber": "BS6-025",
+      "variant": null,
+      "name": "Baguette Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Time Registry Head Manager",
+        "text": "【Activate】 【Once Per Turn】 <{Y}> If your break area is LV.2 or lower and there are 6 cards or less in your hand, draw up to 1 card from your deck."
+      },
+      "attackText": "<{Y}{Y}{Y}> Focus on the basics {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xxN1nDyfofdITz6LYCGk4w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44773,
+      "locale": "en",
+      "cardNumber": "BS6-026",
+      "baseCardNumber": "BS6-026",
+      "variant": null,
+      "name": "Skater Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> Let's skate! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Uo3e_K4Va86OS0e_X7ty9Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44774,
+      "locale": "en",
+      "cardNumber": "BS6-027",
+      "baseCardNumber": "BS6-027",
+      "variant": null,
+      "name": "S'more Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}{Y}> The Joy of Camping {da} 2",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_Q9p-_QTVlGs5ZZ_CKpLww.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44775,
+      "locale": "en",
+      "cardNumber": "BS6-028",
+      "baseCardNumber": "BS6-028",
+      "variant": null,
+      "name": "TBD Delivery Cookie",
+      "type": "cookie",
+      "officialType": "NPC",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Delivery Time!",
+        "text": "【On Play】 If there are 3 Cookies or more in your break area, draw up to 1 card from your deck."
+      },
+      "attackText": "<{Y}{Y}> Not done delivering! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kWDePj4y-_2lnjJS6M9taw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44776,
+      "locale": "en",
+      "cardNumber": "BS6-029",
+      "baseCardNumber": "BS6-029",
+      "variant": null,
+      "name": "TBD Office Clerk Cookie",
+      "type": "cookie",
+      "officialType": "NPC",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Talent Recruiting",
+        "text": "【On Play】 <{Y}{Y}> Select up to 1 of your Cookies. That Cookie gains +1 HP."
+      },
+      "attackText": "<{Y}{Y}> How useful! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/LPH3vfDZJXWnsaOK_EU9qA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44777,
+      "locale": "en",
+      "cardNumber": "BS6-030",
+      "baseCardNumber": "BS6-030",
+      "variant": null,
+      "name": "TBD Mender Cookie",
+      "type": "cookie",
+      "officialType": "NPC",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Gear Mending",
+        "text": "【On Play】 Draw up to 1 card from your deck for each Cookie that is LV.2 or higher in your break area."
+      },
+      "attackText": "<{Y}{Y}{Y}> I'm tired! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6cN-4Es1EEa7MYEce7toHA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44779,
+      "locale": "en",
+      "cardNumber": "BS6-031@1",
+      "baseCardNumber": "BS6-031",
+      "variant": "1",
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} A Moment of Fun",
+        "text": "【On Play】 <{Y}> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{Y}{Y}> Instant Reversal {da} 3 Then, <can be used as {Y}.> If your break area is LV.4 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/QQpFIFtz2H_QQTalhH7e3g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44780,
+      "locale": "en",
+      "cardNumber": "BS6-031@2",
+      "baseCardNumber": "BS6-031",
+      "variant": "2",
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "EXR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} A Moment of Fun",
+        "text": "【On Play】 <{Y}> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{Y}{Y}> Instant Reversal {da} 3 Then, <can be used as {Y}.> If your break area is LV.4 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/04Ahr1eXIerfTtIvinvqqA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44778,
+      "locale": "en",
+      "cardNumber": "BS6-031",
+      "baseCardNumber": "BS6-031",
+      "variant": null,
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} A Moment of Fun",
+        "text": "【On Play】 <{Y}> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{Y}{Y}{Y}> Instant Reversal {da} 3 Then, <can be used as {Y}.> If your break area is LV.4 or higher, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/JS9fa9x8iEochSbVqPZAdA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44781,
+      "locale": "en",
+      "cardNumber": "BS6-032",
+      "baseCardNumber": "BS6-032",
+      "variant": null,
+      "name": "Spinach Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Eat your veggies!",
+        "text": "【Activate】 【Once Per Turn】 <Place 1 Cookie from your hand into your break area.> Draw up to 2 cards from your deck."
+      },
+      "attackText": "<{Y}{Y}{Y}> Veggies are the best! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kSA_rdf1Gc_3DZ8xTJWXtQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44782,
+      "locale": "en",
+      "cardNumber": "BS6-033",
+      "baseCardNumber": "BS6-033",
+      "variant": null,
+      "name": "Cinnamon Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} The Great and Terrible!",
+        "text": "【On Play】 If your break area is LV.4 or higher, draw up to 2 cards from your deck and discard 2 cards."
+      },
+      "attackText": "<{Y}{Y}> Prepare to be amazed! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/2nvtnQrAZTWupe4yPFsPIQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44783,
+      "locale": "en",
+      "cardNumber": "BS6-034",
+      "baseCardNumber": "BS6-034",
+      "variant": null,
+      "name": "Prophet Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} The Future Speaks!",
+        "text": "【On Play】 Select up to 1 of your Cookies. View all of that Cookie's HP cards and rearrange them in any order."
+      },
+      "attackText": "<{Y}{Y}> Place your trust in me {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0F0P7DbZJwjDMxbjbcIv_A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44785,
+      "locale": "en",
+      "cardNumber": "BS6-035@1",
+      "baseCardNumber": "BS6-035",
+      "variant": "1",
+      "name": "GingerBrave",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Our Search for Paradise",
+        "text": "When your turn ends, if there are 2 or more Cookies in your break area, set up to 1 card from your support area as active."
+      },
+      "attackText": "<{Y}{Y}{N}> Let's run together! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/G1ZKRY689YVnYwusdDnjmg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44784,
+      "locale": "en",
+      "cardNumber": "BS6-035",
+      "baseCardNumber": "BS6-035",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Our Search for Paradise",
+        "text": "When your turn ends, if there are 2 or more Cookies in your break area, set up to 1 card from your support area as active."
+      },
+      "attackText": "<{Y}{Y}{N}> Let's run together! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6Q85VFW5x8kzsWOKFCRL1A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44786,
+      "locale": "en",
+      "cardNumber": "BS6-036",
+      "baseCardNumber": "BS6-036",
+      "variant": null,
+      "name": "Zombie Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}{Y}{Y}> Fresh Jellies... Want... {da} 2 Then, <can be used as {Y}.> This Cookie gains +1 HP for each LV.3 Cookie in your break area.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/7QMYRPNUaM8rjj5Sf64Sew.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44787,
+      "locale": "en",
+      "cardNumber": "BS6-037",
+      "baseCardNumber": "BS6-037",
+      "variant": null,
+      "name": "Cannoli Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}> Is this the place? {da} 1",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/FObQf2cklkL3AivpeLSaEA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44789,
+      "locale": "en",
+      "cardNumber": "BS6-038@1",
+      "baseCardNumber": "BS6-038",
+      "variant": "1",
+      "name": "Coffee Candy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}> I wasn't dozing off! {da} 3 Then, if there is a {Y} Cookie that is LV.2 or higher in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/KnXzG-iOdT_X-VysaSxMSQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44788,
+      "locale": "en",
+      "cardNumber": "BS6-038",
+      "baseCardNumber": "BS6-038",
+      "variant": null,
+      "name": "Coffee Candy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}> I wasn't dozing off! {da} 3 Then, if there is a {Y} Cookie that is LV.2 or higher in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/TTMXb2dUl9-jlegrk4a3SQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44791,
+      "locale": "en",
+      "cardNumber": "BS6-039@1",
+      "baseCardNumber": "BS6-039",
+      "variant": "1",
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Greatest Time Engineer",
+        "text": "【On Play】 <{Y}> If your opponent's break area is LV.6 or lower, place 1 Cookie from your opponent's break area into the trash. Then, select up to 1 Cookie in your opponent's battle area that is 1 LV. higher than that Cookie. Place the selected Cookie in your opponent's break area."
+      },
+      "attackText": "<{Y}{Y}{Y}> Time travel! WOOT! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/OPuI_asmEH5n4dIpSpjtJA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44790,
+      "locale": "en",
+      "cardNumber": "BS6-039",
+      "baseCardNumber": "BS6-039",
+      "variant": null,
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 6,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": "{sk} Greatest Time Engineer",
+        "text": "【On Play】 <{Y}> If your opponent's break area is LV.6 or lower, place 1 Cookie from your opponent's break area into the trash. Then, select up to 1 Cookie in your opponent's battle area that is 1 LV. higher than that Cookie. Place the selected Cookie in your opponent's break area."
+      },
+      "attackText": "<{Y}{Y}{Y}> Time travel! WOOT! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/OBpwXNOADKAIpuEnKBJkdA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44792,
+      "locale": "en",
+      "cardNumber": "BS6-040",
+      "baseCardNumber": "BS6-040",
+      "variant": null,
+      "name": "Pilot Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "YELLOW MIX",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> Always follow your heart!",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/m4sWoWbhpBQLkdxr4d6S6Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44793,
+      "locale": "en",
+      "cardNumber": "BS6-041",
+      "baseCardNumber": "BS6-041",
+      "variant": null,
+      "name": "Hourglass of Aeternus Tempora",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}{Y}{Y}> If there are 3 Cookies or more in your break area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage. Then, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uQLI-1Z-kZ64rLWrX7aJaQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44794,
+      "locale": "en",
+      "cardNumber": "BS6-042",
+      "baseCardNumber": "BS6-042",
+      "variant": null,
+      "name": "Clever Advice",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}> If there are 3 or more Cookies in your break area, select up to 1 of your opponent's Cookies that is LV.2 or higher. During this turn, that Cookie deals -2 attack damage. Then, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/XcOYa3PqvKF1sg3eY1lpXQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44795,
+      "locale": "en",
+      "cardNumber": "BS6-043",
+      "baseCardNumber": "BS6-043",
+      "variant": null,
+      "name": "Timecraft Garage",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "YELLOW",
+      "color": "YELLOW",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{Y}> Place in your stage area.\r\n\r\nWhen your turn ends, <place 1 {Y} Cookie from your hand into your break area.> Set up to 2 cards from your support area as active. Then, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/tASBpF_cMz1bE8tJVqgS3Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44797,
+      "locale": "en",
+      "cardNumber": "BS6-044@1",
+      "baseCardNumber": "BS6-044",
+      "variant": "1",
+      "name": "Roguefort Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> Searching For The Past {da} 1 Then, <return 1 Cookie from your support area to your hand.> Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uy0evUoJmqw2TgyxA21LnQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44796,
+      "locale": "en",
+      "cardNumber": "BS6-044",
+      "baseCardNumber": "BS6-044",
+      "variant": null,
+      "name": "Roguefort Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> Searching For The Past {da} 1 Then, <return 1 Cookie from your support area to your hand.> Deals 2 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1PyBBp_jG-6x-13qzT1ixA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:13.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44798,
+      "locale": "en",
+      "cardNumber": "BS6-045",
+      "baseCardNumber": "BS6-045",
+      "variant": null,
+      "name": "Lime Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Somewhat Rough",
+        "text": "【Activate】 <{G}> <Place this Cookie in the trash.> \r\nIf your support area has 4 or more cards less than your opponent's support area, draw 1 card from your deck. Then, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{G}{G}> Hmph! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_S83j4whwKcAYPiKOutKIA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44799,
+      "locale": "en",
+      "cardNumber": "BS6-046",
+      "baseCardNumber": "BS6-046",
+      "variant": null,
+      "name": "Langue de Chat Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> You are in good hands {da} 1",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kyq_Ej9jPpK3zZamHJxBgw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44800,
+      "locale": "en",
+      "cardNumber": "BS6-047",
+      "baseCardNumber": "BS6-047",
+      "variant": null,
+      "name": "Lemon Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Sweet and Stinging",
+        "text": "If there are 5 cards or less in your support area, this Cookie gains +3 attack damage."
+      },
+      "attackText": "<{G}{G}{G}> The power flows through me! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/EnEL5BSW3rCYYnT_Tm1kXg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44802,
+      "locale": "en",
+      "cardNumber": "BS6-048@1",
+      "baseCardNumber": "BS6-048",
+      "variant": "1",
+      "name": "Marble Bread Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Facility Manager",
+        "text": "When this Cookie faints, if there are less cards in your support area than your opponent's support area, draw 1 card from your deck. Then, your opponent discards 1 card."
+      },
+      "attackText": "<{G}{G}{G}> Ugh... *Yawn* {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/bJV3kb4i7lmPR3PQBVSeaw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44801,
+      "locale": "en",
+      "cardNumber": "BS6-048",
+      "baseCardNumber": "BS6-048",
+      "variant": null,
+      "name": "Marble Bread Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Facility Manager",
+        "text": "When this Cookie faints, if there are less cards in your support area than your opponent's support area, draw 1 card from your deck. Then, your opponent discards 1 card."
+      },
+      "attackText": "<{G}{G}{G}> Ugh... *Yawn* {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BiE0r85jRrjqlCwYA-OFqQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44803,
+      "locale": "en",
+      "cardNumber": "BS6-049",
+      "baseCardNumber": "BS6-049",
+      "variant": null,
+      "name": "Banana Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> It's Showtime! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/6v1EUrDXcCF8-OXhvBtmtA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44804,
+      "locale": "en",
+      "cardNumber": "BS6-050",
+      "baseCardNumber": "BS6-050",
+      "variant": null,
+      "name": "Butter Pretzel Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Making a Masterpiece",
+        "text": "【Activate】 【Once Per Turn】 Select any number of {G} cards in your support area. Return those cards to your hand."
+      },
+      "attackText": "<{G}{G}> Shush! I need to focus! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Foivn2i7H9hs3pwb7BzuQw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44806,
+      "locale": "en",
+      "cardNumber": "BS6-051@1",
+      "baseCardNumber": "BS6-051",
+      "variant": "1",
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Ruler of the Ephemeral Flow",
+        "text": "When your turn ends, select 5 cards to keep in your support area and return the rest to your hand."
+      },
+      "attackText": "<{G}{G}{G}> It's impossible! {da} 2 Then, <can be used as {G}.> If there are 3 or more cards in your opponent's support area, select up to 2 {G} cards from your hand. Place those cards in your support area as active.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/kbr0TRQ4vjQsPAmGKqyW2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44805,
+      "locale": "en",
+      "cardNumber": "BS6-051",
+      "baseCardNumber": "BS6-051",
+      "variant": null,
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Ruler of the Ephemeral Flow",
+        "text": "When your turn ends, select 5 cards to keep in your support area and return the rest to your hand."
+      },
+      "attackText": "<{G}{G}{G}> It's impossible! {da} 2 Then, <can be used as {G}.> If there are 3 or more cards in your opponent's support area, select up to 2 {G} cards from your hand. Place those cards in your support area as active.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/yj53QSK8ncFdu5JlRCCxcQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44807,
+      "locale": "en",
+      "cardNumber": "BS6-052",
+      "baseCardNumber": "BS6-052",
+      "variant": null,
+      "name": "Almond Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Sharp Detective",
+        "text": "【Activate】 【Once Per Turn】 <{G}{G}> <Return 2 cards from your support area to your hand.> Select up to 1 of your opponent's LV.1 Cookies. Make that Cookie faint."
+      },
+      "attackText": "<{G}{G}> Coffee Break {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Cjmfw5vn-NVRjntgQwb5Qg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44808,
+      "locale": "en",
+      "cardNumber": "BS6-053",
+      "baseCardNumber": "BS6-053",
+      "variant": null,
+      "name": "Cherry Ball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> We can do better than this! {da} 3 Then, if there are 5 cards in your support area, this Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/EFcnhoeEU6jDQawXYsioQQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44809,
+      "locale": "en",
+      "cardNumber": "BS6-054",
+      "baseCardNumber": "BS6-054",
+      "variant": null,
+      "name": "Orange Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> Let's play outside! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/N-pMOpdJX16EoLbaoYu2wg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44810,
+      "locale": "en",
+      "cardNumber": "BS6-055",
+      "baseCardNumber": "BS6-055",
+      "variant": null,
+      "name": "Grapefruit Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 4,
+      "energyType": "GREEN MIX",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Candy Skates",
+        "text": "【Your Turn】 If there are less cards in your support area than your opponent's support area, this Cookie takes no damage."
+      },
+      "attackText": "<{G}{G}{N}> Put some disco music on! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Yqa9qFIRT_K3je_asPHN2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44811,
+      "locale": "en",
+      "cardNumber": "BS6-056",
+      "baseCardNumber": "BS6-056",
+      "variant": null,
+      "name": "Cappuccino Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}> See you in court {da} 1",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/306iIY_EyxtHbNod-fPZhw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44813,
+      "locale": "en",
+      "cardNumber": "BS6-057@1",
+      "baseCardNumber": "BS6-057",
+      "variant": "1",
+      "name": "Coffee Candy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Time Registry Manager",
+        "text": "【Activate】 <{G}> <Place this Cookie in the trash.> <Return 1 Cookie from your support area to your hand.> Draw up to 1 card from your deck."
+      },
+      "attackText": "<{G}{G}> I won't doze off again! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/B4zYAOpgr0SycdDljZo8pg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44812,
+      "locale": "en",
+      "cardNumber": "BS6-057",
+      "baseCardNumber": "BS6-057",
+      "variant": null,
+      "name": "Coffee Candy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Time Registry Manager",
+        "text": "【Activate】 <{G}> <Place this Cookie in the trash.> <Return 1 Cookie from your support area to your hand.> Draw up to 1 card from your deck."
+      },
+      "attackText": "<{G}{G}> I won't doze off again! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BItTYfwxfuWTncj3VYKGMA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44814,
+      "locale": "en",
+      "cardNumber": "BS6-058",
+      "baseCardNumber": "BS6-058",
+      "variant": null,
+      "name": "Kiwi Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": "{sk} Life of a Biker",
+        "text": "【On Play】 If your support area has 2 or more cards less than your opponent's support area, all of your opponent's Cookies receive 2 damage."
+      },
+      "attackText": "<{G}{G}> I ride, therefore I live! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/IsUfH6xvJHxpgvwwfKZ4og.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44815,
+      "locale": "en",
+      "cardNumber": "BS6-059",
+      "baseCardNumber": "BS6-059",
+      "variant": null,
+      "name": "Apple Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> Let's play together! {da} 3 Then, if there are 5 cards in your support area, you can return this Cookie to your hand.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/hoHC7qe5rY6Ix9bpLyCzAQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44816,
+      "locale": "en",
+      "cardNumber": "BS6-060",
+      "baseCardNumber": "BS6-060",
+      "variant": null,
+      "name": "Pistachio Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> Without hesitation or fear! {da} 2 Then, return 1 card from your support area to your hand.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/4JzUF95rxSN6rrvolEPzJg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44818,
+      "locale": "en",
+      "cardNumber": "BS6-061@1",
+      "baseCardNumber": "BS6-061",
+      "variant": "1",
+      "name": "Walnut Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> A Case? Leave it to me! Then, <return 1 Cookie from your support area to your hand.> Select up to 1 of your Cookies with 5 or less HP remaining. That Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/pXnEMegFYnBgpgGwUBS06w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44817,
+      "locale": "en",
+      "cardNumber": "BS6-061",
+      "baseCardNumber": "BS6-061",
+      "variant": null,
+      "name": "Walnut Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> A Case? Leave it to me! Then, <return 1 Cookie from your support area to your hand.> Select up to 1 of your Cookies with 5 or less HP remaining. That Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0p7wi2fsjSd40dM1CPXhmA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44819,
+      "locale": "en",
+      "cardNumber": "BS6-062",
+      "baseCardNumber": "BS6-062",
+      "variant": null,
+      "name": "Time Rend Scissors",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}> <Return 1 Cookie from your support area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/73t37CPTd0XkemaDBJ2Kyw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44820,
+      "locale": "en",
+      "cardNumber": "BS6-063",
+      "baseCardNumber": "BS6-063",
+      "variant": null,
+      "name": "Into a Time Pocket...",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}{G}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, if there are 5 cards in your support area, place up to 1 card from the top of your deck into your support area as rested.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/DYTrixObkoyxlVcjblmhWA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44821,
+      "locale": "en",
+      "cardNumber": "BS6-064",
+      "baseCardNumber": "BS6-064",
+      "variant": null,
+      "name": "Broken Central Clock",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "GREEN",
+      "color": "GREEN",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{G}> Place in your stage area.\r\n\r\n【Activate】 <{G}> <Rest this card.> If there are less cards in your support area than your opponent's support area, place 1 card from your hand into your support area as active.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1768A24vPI_TkBsITWc6FA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44823,
+      "locale": "en",
+      "cardNumber": "BS6-065@1",
+      "baseCardNumber": "BS6-065",
+      "variant": "1",
+      "name": "Marble Bread Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> More trash...? {da} 2 Then, if there are 6 or more cards in your hand, discard 1 card.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Drv1AqUYVnZAPpbdq2Ak_A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44822,
+      "locale": "en",
+      "cardNumber": "BS6-065",
+      "baseCardNumber": "BS6-065",
+      "variant": null,
+      "name": "Marble Bread Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> More trash...? {da} 2 Then, if there are 6 or more cards in your hand, discard 1 card.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/_m_20BlI6pwDFklcJNdSgw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44825,
+      "locale": "en",
+      "cardNumber": "BS6-066@1",
+      "baseCardNumber": "BS6-066",
+      "variant": "1",
+      "name": "Maple Taffy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Relic Manager",
+        "text": "【On Play】 <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}{B}> What is this place...? {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Rirk1WTMDYgQux8lPPezWg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44824,
+      "locale": "en",
+      "cardNumber": "BS6-066",
+      "baseCardNumber": "BS6-066",
+      "variant": null,
+      "name": "Maple Taffy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Relic Manager",
+        "text": "【On Play】 <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Draw up to 1 card from your deck."
+      },
+      "attackText": "<{B}{B}> What is this place...? {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wnvGWaZvxBAT2hHzCNbV6w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44826,
+      "locale": "en",
+      "cardNumber": "BS6-067",
+      "baseCardNumber": "BS6-067",
+      "variant": null,
+      "name": "Vampire Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> Cheers to love! {da} 2",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Nlaq3rqmRKOQ_Czsx3BBhQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44827,
+      "locale": "en",
+      "cardNumber": "BS6-068",
+      "baseCardNumber": "BS6-068",
+      "variant": null,
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> What was that noise? {da} 3 Then, <can be used as {B}.> If there are 5 or less cards in your hand, select up to 1 LV.1 Cookie in your opponent's battle area. Place that Cookie on the bottom of the deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/X7OL6IIheR_CHg__q1Zmww.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44828,
+      "locale": "en",
+      "cardNumber": "BS6-069",
+      "baseCardNumber": "BS6-069",
+      "variant": null,
+      "name": "Sandwich Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}{B}> This'll keep you up all night! {da} 3",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Ifgmjcaipb2DJyuKE8eHJw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44829,
+      "locale": "en",
+      "cardNumber": "BS6-070",
+      "baseCardNumber": "BS6-070",
+      "variant": null,
+      "name": "Salt Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> The Smell of Salt {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/yGmUEaIL99gL3ot2i4uJGA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44830,
+      "locale": "en",
+      "cardNumber": "BS6-071",
+      "baseCardNumber": "BS6-071",
+      "variant": null,
+      "name": "Soda Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} I want more fun...",
+        "text": "When this Cookie faints, draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}> Always surfing! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/QQEXZnZ-G4RF4H89kY9X0Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44831,
+      "locale": "en",
+      "cardNumber": "BS6-072",
+      "baseCardNumber": "BS6-072",
+      "variant": null,
+      "name": "Chocolate Bonbon Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Timeless Classic",
+        "text": "【On Play】 Draw up to 3 cards from your deck."
+      },
+      "attackText": "<{B}{B}{B}> Perfect Measurements {da} 3 Then, <discard 2 cards.> Draw up to 2 cards from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/lhZoWsdgWd8PuJvaIq2v2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44833,
+      "locale": "en",
+      "cardNumber": "BS6-073@1",
+      "baseCardNumber": "BS6-073",
+      "variant": "1",
+      "name": "Schneeball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Relic Management Ace",
+        "text": "【On Play】 <{B}> <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{B}{B}{B}> Relics?! Let me see them first! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/gjCSvSHmpz2rRBp9WOMwJg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44832,
+      "locale": "en",
+      "cardNumber": "BS6-073",
+      "baseCardNumber": "BS6-073",
+      "variant": null,
+      "name": "Schneeball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 4,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Relic Management Ace",
+        "text": "【On Play】 <{B}> <Return 1 {B} LV.1 Cookie from your battle area to your hand.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage."
+      },
+      "attackText": "<{B}{B}{B}> Relics?! Let me see them first! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mN2B0tQthiAURHgIMo27cQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44835,
+      "locale": "en",
+      "cardNumber": "BS6-074@1",
+      "baseCardNumber": "BS6-074",
+      "variant": "1",
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} String Gummy Blaster",
+        "text": "【On Play】 <{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{B}{B}{B}> Don't get in my way {da} 1 Then, if there are 5 cards or less in your hand, draw up to 2 cards from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/KUS_NuMMNNpVH7fZKLbEow.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44834,
+      "locale": "en",
+      "cardNumber": "BS6-074",
+      "baseCardNumber": "BS6-074",
+      "variant": null,
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} String Gummy Blaster",
+        "text": "【On Play】 <{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{B}{B}{B}> Don't get in my way {da} 1 Then, if there are 5 cards or less in your hand, draw up to 2 cards from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sgY39YZptrF4TPJ1I-eU2Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44836,
+      "locale": "en",
+      "cardNumber": "BS6-075",
+      "baseCardNumber": "BS6-075",
+      "variant": null,
+      "name": "Onion Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE MIX",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}> WAAAH! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/5RCSo-QKrwHdFup_NxqyYg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44837,
+      "locale": "en",
+      "cardNumber": "BS6-076",
+      "baseCardNumber": "BS6-076",
+      "variant": null,
+      "name": "Fairy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> You can keep your teeth... {da} 2 Then, <discard 1 card.> Draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wsnulNsAuQg5DJPMc-04Dw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44838,
+      "locale": "en",
+      "cardNumber": "BS6-077",
+      "baseCardNumber": "BS6-077",
+      "variant": null,
+      "name": "Cheerleader Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}{B}> Pillow Fight! {da} 2 Then, <can be used as {B}.> If there are 5 cards or less in your hand, this Cookie gains +1 HP.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/B-RwHp-3rRay4ZIfEw6xCA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44839,
+      "locale": "en",
+      "cardNumber": "BS6-078",
+      "baseCardNumber": "BS6-078",
+      "variant": null,
+      "name": "Coffee Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Organic Brew",
+        "text": "【On Play】 <{B}> If there are 5 cards or less in your hand, this Cookie gains +1 HP."
+      },
+      "attackText": "<{B}{B}> Coffee Studies {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1qV5cwcp6GcNCfLiprNfpg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44841,
+      "locale": "en",
+      "cardNumber": "BS6-079@1",
+      "baseCardNumber": "BS6-079",
+      "variant": "1",
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Director of the TBD",
+        "text": "【On Play】 <Place 1 {B} Cookie that is LV.2 or lower from your battle area on the bottom of your deck.> Draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}{B}{B}> This is my final order {da} 1 Then, <discard 1 card.> Select up to 3 cards in your opponent's support area. Rest those cards.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/uwF5x-xVtoy8gYl24Km8fw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44840,
+      "locale": "en",
+      "cardNumber": "BS6-079",
+      "baseCardNumber": "BS6-079",
+      "variant": null,
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Director of the TBD",
+        "text": "【On Play】 <Place 1 {B} Cookie that is LV.2 or lower from your battle area on the bottom of your deck.> Draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}{B}{B}> This is my final order {da} 1 Then, <discard 1 card.> Select up to 3 cards in your opponent's support area. Rest those cards.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/xPZQ55I5xI5d6iboUTxNPQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44842,
+      "locale": "en",
+      "cardNumber": "BS6-080",
+      "baseCardNumber": "BS6-080",
+      "variant": null,
+      "name": "Adventurer Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 3,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Rope Throw",
+        "text": "【On Play】 If there are 5 cards or less in your hand, select up to 1 Cookie in your opponent's battle area. Return that Cookie to the hand."
+      },
+      "attackText": "<{B}{B}> Where could it be... {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/wfCgm0EXsdHKJ4FmlYb6sQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44844,
+      "locale": "en",
+      "cardNumber": "BS6-081@1",
+      "baseCardNumber": "BS6-081",
+      "variant": "1",
+      "name": "Truffle Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Friend to All Spiders",
+        "text": "【Activate】 【Once Per Turn】 <{B}> Select up to 1 LV.1 Cookie in your opponent's battle area or 1 stage card from either player's stage area. Place that card on the bottom of its owner's deck. Then, if there are 5 cards or more in your hand, discard 1 card."
+      },
+      "attackText": "<{B}{B}> No one here but me {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Yacnqq4BM6VJnYhb7I2k_g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44843,
+      "locale": "en",
+      "cardNumber": "BS6-081",
+      "baseCardNumber": "BS6-081",
+      "variant": null,
+      "name": "Truffle Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Friend to All Spiders",
+        "text": "【Activate】 【Once Per Turn】 <{B}> Select up to 1 LV.1 Cookie in your opponent's battle area or 1 stage card from either player's stage area. Place that card on the bottom of its owner's deck. Then, if there are 5 cards or more in your hand, discard 1 card."
+      },
+      "attackText": "<{B}{B}> No one here but me {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0-xFW-vdD9s4gIZWGMp-aA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44845,
+      "locale": "en",
+      "cardNumber": "BS6-082",
+      "baseCardNumber": "BS6-082",
+      "variant": null,
+      "name": "Popcorn Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} Movies & Popcorn",
+        "text": "【On Play】 <Discard 1 card or more.> If there are 5 cards or less in your hand, draw up to 2 cards from your deck."
+      },
+      "attackText": "<{B}> Movie Night {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/jhMoSmY-OPxofPv6AUd8-w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44846,
+      "locale": "en",
+      "cardNumber": "BS6-083",
+      "baseCardNumber": "BS6-083",
+      "variant": null,
+      "name": "Skating Queen Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": "{sk} My only rival is myself!",
+        "text": "When this Cookie faints, draw up to 2 cards from your deck and discard 1 card."
+      },
+      "attackText": "<{B}{B}> Continuous Effort",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mZUQAeV78zUtQ8duUhkifg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44847,
+      "locale": "en",
+      "cardNumber": "BS6-084",
+      "baseCardNumber": "BS6-084",
+      "variant": null,
+      "name": "Time Manipulator",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> <Discard 1 card or more.> If there are 5 cards or less in your hand, select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/QLRgoORtgKd8Pgamh3We6Q.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44848,
+      "locale": "en",
+      "cardNumber": "BS6-085",
+      "baseCardNumber": "BS6-085",
+      "variant": null,
+      "name": "Destruction of a Pastless Future",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 4 cards or less in your hand, draw up to 2 cards from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/sAV1Zs7ABl5S4pcd6gd2Gg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44849,
+      "locale": "en",
+      "cardNumber": "BS6-086",
+      "baseCardNumber": "BS6-086",
+      "variant": null,
+      "name": "Messy TBD Director's Office",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{B}> Place in your stage area.\r\n\r\n【Activate】 <Rest this card.> <Discard 2 cards.> Select up to 1 of your {B} Cookies. During this turn, that Cookie gains +1 attack damage. Then, if there are 3 cards or less in your hand, draw up to 1 card from your deck.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Mf_b920ibi2JRh5p67DVRw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44850,
+      "locale": "en",
+      "cardNumber": "BS6-087",
+      "baseCardNumber": "BS6-087",
+      "variant": null,
+      "name": "Peeled Carrot Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} TIME FOR MAYHEM!",
+        "text": "When this Cookie is played from the trash, return up to 1 {P} card from your trash to your hand."
+      },
+      "attackText": "<{P}{P}{P}> Ugh, so annoying! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/UwTeIXDIWDZsbt8HJrWPjA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44851,
+      "locale": "en",
+      "cardNumber": "BS6-088",
+      "baseCardNumber": "BS6-088",
+      "variant": null,
+      "name": "Dr. Wasabi Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}> Heh-heh! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VRCE6a03f--1qtxg8H789g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44852,
+      "locale": "en",
+      "cardNumber": "BS6-089",
+      "baseCardNumber": "BS6-089",
+      "variant": null,
+      "name": "Mustard Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Dawn Rebel",
+        "text": "【On Play】 Return up to 1 card from your trash to your hand."
+      },
+      "attackText": "<{P}{P}{P}{P}> Don't limit my freedom! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/EVcKQjue-e4J1OOITlyeug.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44853,
+      "locale": "en",
+      "cardNumber": "BS6-090",
+      "baseCardNumber": "BS6-090",
+      "variant": null,
+      "name": "Candlelight Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Melting Wax",
+        "text": "When your turn ends, place up to 2 cards from the top of your deck into the trash."
+      },
+      "attackText": "<{P}{P}> My Treasure! Ptooey! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/B8r6356scgCho2Sl7zIRWg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:14.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44854,
+      "locale": "en",
+      "cardNumber": "BS6-091@2",
+      "baseCardNumber": "BS6-091",
+      "variant": "2",
+      "name": "Schneeball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "{sk} Time Researcher\n\nWhen this Cookie is played from the trash,  Select up to 1 {P} LV.1 Cookie other than [Schneeball Cookie] from your break area. Place that Cookie in the trash.\n\n<{P}{P}> Relic Analysis {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/l87Z0YAjBgsBgQlKUcqd1Q.webp",
+      "officialUpdatedAt": "2026-03-16T06:04:34.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44855,
+      "locale": "en",
+      "cardNumber": "BS6-091@3",
+      "baseCardNumber": "BS6-091",
+      "variant": "3",
+      "name": "Schneeball Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "{sk} Time Researcher\n\nWhen this Cookie is played from the trash,  Select up to 1 {P} LV.1 Cookie other than [Schneeball Cookie] from your break area. Place that Cookie in the trash.\n\n<{P}{P}> Relic Analysis {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1bu8G9gG_ab605pUYuemLg.webp",
+      "officialUpdatedAt": "2026-03-16T06:04:34.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44857,
+      "locale": "en",
+      "cardNumber": "BS6-092@1",
+      "baseCardNumber": "BS6-092",
+      "variant": "1",
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SEC",
+      "grade": "SECRET RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Timeline Lawbringer",
+        "text": "【Your Turn】 When this Cookie is played from the trash, if there is a LV.3 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{P}{P}{P}> There's no use in running! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/rTT_nCZhq8il07Ur3UnkbQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44856,
+      "locale": "en",
+      "cardNumber": "BS6-092",
+      "baseCardNumber": "BS6-092",
+      "variant": null,
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "R",
+      "grade": "RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Timeline Lawbringer",
+        "text": "【Your Turn】 When this Cookie is played from the trash, if there is a LV.3 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{P}{P}{P}> There's no use in running! {da} 3",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/G9u-E-vR1YfMJXbGo7CtRw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44860,
+      "locale": "en",
+      "cardNumber": "BS6-093@1",
+      "baseCardNumber": "BS6-093",
+      "variant": "1",
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SUR",
+      "grade": "SECRET ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Time Rift Villain",
+        "text": "【On Play】 Select up to 1 LV.1 Cookie in your battle area. Place that Cookie in the trash."
+      },
+      "attackText": "<{P}{P}{P}> Wanna change the past? {da} 3 Then, <can be used as {P}.> Play up to 1 {P} Cookie with 2 or less HP from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/1GZuxasYChokPNKC_29SwA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44859,
+      "locale": "en",
+      "cardNumber": "BS6-093",
+      "baseCardNumber": "BS6-093",
+      "variant": null,
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "UR",
+      "grade": "ULTRA RARE",
+      "level": 3,
+      "hp": 5,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Time Rift Villain",
+        "text": "【On Play】 Select up to 1 LV.1 Cookie in your battle area. Place that Cookie in the trash."
+      },
+      "attackText": "<{P}{P}{P}> Wanna change the past? {da} 3 Then, <can be used as {P}.> Play up to 1 {P} Cookie with 2 or less HP from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/zZ7oH_3Md_F3mjJyfSuc5g.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44861,
+      "locale": "en",
+      "cardNumber": "BS6-094",
+      "baseCardNumber": "BS6-094",
+      "variant": null,
+      "name": "Half-Avocado Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} I HATE JOKES!",
+        "text": "【On Play】 Select up to 1 LV.1 Cookie in your battle area. Place that Cookie in the trash."
+      },
+      "attackText": "<{P}{P}> You'll play with me, won't you? {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/B6nMbMSjQ7BPI16-YC_pBA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44862,
+      "locale": "en",
+      "cardNumber": "BS6-095",
+      "baseCardNumber": "BS6-095",
+      "variant": null,
+      "name": "Wild Strawberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}{P}> Enough with the drama {da} 2 Then, play up to 1 {P} Cookie with 2 or less HP from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/vuoktyus1w367tlK7f5YpQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44864,
+      "locale": "en",
+      "cardNumber": "BS6-096@1",
+      "baseCardNumber": "BS6-096",
+      "variant": "1",
+      "name": "Cherry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}> You can't catch me! {da} 2 Then, if there is a LV.3 Cookie in your battle area, <can be used as {P}.> <Place this Cookie in the trash.> Play 1 {P} LV.1 Cookie from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/GNjG5EVHFhD3FXM1LefuBA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44863,
+      "locale": "en",
+      "cardNumber": "BS6-096",
+      "baseCardNumber": "BS6-096",
+      "variant": null,
+      "name": "Cherry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}> You can't catch me! {da} 2 Then, if there is a LV.3 Cookie in your battle area, <can be used as {P}.> <Place this Cookie in the trash.> Play 1 {P} LV.1 Cookie from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/BpkMEdTu5g46aAb-3Y6zPA.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44865,
+      "locale": "en",
+      "cardNumber": "BS6-097",
+      "baseCardNumber": "BS6-097",
+      "variant": null,
+      "name": "Toothpaste Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Are you for real?",
+        "text": "When this Cookie is played from the trash, this Cookie gains +2 HP."
+      },
+      "attackText": "<{P}{P}> Ugh... It's so hot {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/s66Q7uDGF5atUUGnAmkecw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44866,
+      "locale": "en",
+      "cardNumber": "BS6-098",
+      "baseCardNumber": "BS6-098",
+      "variant": null,
+      "name": "Currant Cream Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Fashion World Rebel",
+        "text": "When this Cookie is played from the trash, place up to 5 cards from the top of your opponent's deck into the trash."
+      },
+      "attackText": "<{P}> Punk Spirit {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/F7snD-7pT5VCUoD-YOMpUg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44867,
+      "locale": "en",
+      "cardNumber": "BS6-099",
+      "baseCardNumber": "BS6-099",
+      "variant": null,
+      "name": "Crowberry Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Jewel Thief",
+        "text": "When this Cookie is played from the trash, select up to 1 of your opponent's Cookies with 2 or more HP remaining. Place 1 card from the top of that Cookie's HP into the trash."
+      },
+      "attackText": "<{P}> Large Black Wings {da} 4",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/HwSVqfronncPOednyPyQPg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44868,
+      "locale": "en",
+      "cardNumber": "BS6-100",
+      "baseCardNumber": "BS6-100",
+      "variant": null,
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 3,
+      "hp": 4,
+      "energyType": "PURPLE MIX",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{N}{N}{N}> Got you! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/mpo9kprSfwIVOxhbW13YdQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44870,
+      "locale": "en",
+      "cardNumber": "BS6-101@1",
+      "baseCardNumber": "BS6-101",
+      "variant": "1",
+      "name": "Twizzly Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SSR",
+      "grade": "SECRET SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Remember My Name!!!",
+        "text": "When this Cookie faints, <can be used as {P}.> Play up to 1 {P} Cookie from your trash."
+      },
+      "attackText": "<{P}{P}> Gimme everything you got! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/YNvaMET6R2Qczv2NLYfi6w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44869,
+      "locale": "en",
+      "cardNumber": "BS6-101",
+      "baseCardNumber": "BS6-101",
+      "variant": null,
+      "name": "Twizzly Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "SR",
+      "grade": "SUPER RARE",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "{sk} Remember My Name!!!",
+        "text": "When this Cookie faints, <can be used as {P}.> Play up to 1 {P} Cookie from your trash."
+      },
+      "attackText": "<{P}{P}> Gimme everything you got! {da} 1",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/0SRZOo167BS_8cpPKF_a_w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44871,
+      "locale": "en",
+      "cardNumber": "BS6-102",
+      "baseCardNumber": "BS6-102",
+      "variant": null,
+      "name": "Pastel Meringue Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 3,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> This is not cute at all {da} 1 Then, both players place 3 cards from the top of their decks into the trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/iYMfdgTL1tNdVapidhSh7w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44872,
+      "locale": "en",
+      "cardNumber": "BS6-103",
+      "baseCardNumber": "BS6-103",
+      "variant": null,
+      "name": "White Ghost Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 1,
+      "hp": 1,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> ... You can see me? {da} 2",
+      "flipText": "<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/VaHwzD8iHGA-Jsew0-XDcQ.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44873,
+      "locale": "en",
+      "cardNumber": "BS6-104",
+      "baseCardNumber": "BS6-104",
+      "variant": null,
+      "name": "Black Garlic Cookie",
+      "type": "flip",
+      "officialType": "FLIP",
+      "rarity": "C",
+      "grade": "COMMON",
+      "level": 2,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}> A sub would be... Terrific!",
+      "flipText": "Draw up to 1 card from your deck.",
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/y5-nY2-83khsJFhJjkwBwg.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44874,
+      "locale": "en",
+      "cardNumber": "BS6-105",
+      "baseCardNumber": "BS6-105",
+      "variant": null,
+      "name": "Butterfly Key Relic",
+      "type": "item",
+      "officialType": "ITEM",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> <Place 1 {P} LV.1 Cookie from your battle area into the trash.> Draw up to 2 cards from your deck and discard 1 card.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/Imh0w3190TFSb-lxhOyC1A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44875,
+      "locale": "en",
+      "cardNumber": "BS6-106",
+      "baseCardNumber": "BS6-106",
+      "variant": null,
+      "name": "Peak Engineer Performance",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}{P}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -1 attack damage. Then, play up to 1 {P} Cookie with 2 or less HP from your trash.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/84_zAO-M_8RqC8-1sG118A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44876,
+      "locale": "en",
+      "cardNumber": "BS6-107",
+      "baseCardNumber": "BS6-107",
+      "variant": null,
+      "name": "TBD Machine Room",
+      "type": "stage",
+      "officialType": "STAGE",
+      "rarity": "U",
+      "grade": "UNCOMMON",
+      "level": null,
+      "hp": null,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": null,
+        "text": null
+      },
+      "attackText": "<{P}> Place in your stage area.\r\n\r\n【Activate】 <{P}> <Rest this card.> During this turn, if a Cookie was played from your trash, all of your opponent's Cookies receive 1 damage.",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 100,
+        "title": "BOOSTER PACK [Operation Timeguard]",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/paub8Qq6xz2zwadvn2mD9w.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:15.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44765,
+      "locale": "en",
+      "cardNumber": "BS6-020@1",
+      "baseCardNumber": "BS6-020",
+      "variant": "1",
+      "name": "Tonic Spray",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "RED",
+      "color": "RED",
+      "skill": {
+        "name": null,
+        "text": "<{R}{R}> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 card from the top of your Cookie's HP to your hand."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/iPHEluTcR917VToQ5oNWEw.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:03.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 44858,
+      "locale": "en",
+      "cardNumber": "BS6-092@2",
+      "baseCardNumber": "BS6-092",
+      "variant": "2",
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "officialType": "COOKIE",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": 1,
+      "hp": 2,
+      "energyType": "PURPLE",
+      "color": "PURPLE",
+      "skill": {
+        "name": "Timeline Lawbringer",
+        "text": "【Your Turn】 When this Cookie is played from the trash, if there is a LV.3 Cookie in your battle area, select up to 1 of your opponent's Cookies. That Cookie receives 2 damage."
+      },
+      "attackText": "<{P}{P}{P}> There's no use in running! {da} 2",
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "PROMOTION CARD",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/DP_Ex7tufI2Juf0IOVyp1A.webp",
+      "officialUpdatedAt": "2026-03-13T08:54:03.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    },
+    {
+      "sourceId": 54231,
+      "locale": "en",
+      "cardNumber": "BS6-085@1",
+      "baseCardNumber": "BS6-085",
+      "variant": "1",
+      "name": "Destruction of a Pastless Future",
+      "type": "trap",
+      "officialType": "TRAP",
+      "rarity": "P",
+      "grade": "PROMOTION",
+      "level": null,
+      "hp": null,
+      "energyType": "BLUE",
+      "color": "BLUE",
+      "skill": {
+        "name": null,
+        "text": "<{B}> <Discard 2 cards.> Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, if there are 4 cards or less in your hand, draw up to 2 cards from your deck."
+      },
+      "attackText": null,
+      "flipText": null,
+      "keywords": [],
+      "product": {
+        "id": 99,
+        "title": "2-ON-2 Event",
+        "category": null
+      },
+      "restrictions": {
+        "banned": false,
+        "limited": false
+      },
+      "flags": {
+        "enabled": true,
+        "hidden": false,
+        "extra": false
+      },
+      "imageUrl": "https://cookierunbraverse.com/data/en_storage/OmyuA5iegjWLg1SDorGaDg.webp",
+      "officialUpdatedAt": "2026-07-21T01:45:37.000Z",
+      "sourceUrl": "https://cookierunbraverse.com/data/json/cardList_en.json"
+    }
+  ]
+}

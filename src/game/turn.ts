@@ -69,6 +69,12 @@ const activateCurrentPlayer = (state: GameState): GameState => {
       [state.activePlayerId]: 0,
       [getOpponentId(state.activePlayerId)]: 0,
     } as Record<PlayerId, number>,
+    supportCardsTrashedThisTurn: {},
+    arenaCookiesPlacedInBreakThisTurn: {},
+    itemsActivatedThisTurn: {},
+    cookiesHpReducedThisTurn: {},
+    arenaCookieDealtEffectDamageThisTurn: {},
+    cookiesPlayedFromTrashThisTurn: {},
   }
 }
 
@@ -350,6 +356,7 @@ export const advancePhase = (state: GameState): GameState => {
         supportPlacedThisTurn: false,
         supportAreaDecreasedThisTurn: {},
         cookiesGainedHpThisTurn: {},
+        cookiesPlayedFromTrashThisTurn: {},
         skillUsesThisTurn: [],
       }
     }

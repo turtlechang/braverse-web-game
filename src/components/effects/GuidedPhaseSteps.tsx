@@ -11,6 +11,7 @@ export type GuidedPhaseId =
   | 'draw'
   | 'discard'
   | 'place'
+  | 'reorder'
 
 export interface GuidedPhase {
   id: GuidedPhaseId

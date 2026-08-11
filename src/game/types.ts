@@ -36,6 +36,8 @@ export interface CardSkill {
   effects: CardEffect[]
   /** Energy supplied by the Cookie itself when a triggered skill is used. */
   sourceEnergy?: EnergyCost
+  /** Alternate cost used by an official Special Play instruction. */
+  specialPlayCost?: AbilityCost
   faint?: boolean
   endPhase?: boolean
   afterDamage?: boolean
@@ -47,12 +49,19 @@ export interface CardSkill {
   oncePerGame?: boolean
   /** 技能來源在休息區時才能發動（BS3-025）；一般技能只看戰鬥區。 */
   fromBreakArea?: boolean
+  fromTrashArea?: boolean
+  fromSupportArea?: boolean
 }
 
 export interface CardAbility {
   cost: AbilityCost
   text: string
   effects: CardEffect[]
+  /** 某些官方物品會在滿足回合內條件後改用另一組啟動費用。 */
+  activationCostOverride?: {
+    condition: 'friendly-cookie-fainted-this-turn'
+    cost: AbilityCost
+  }
 }
 
 export interface StageAbility extends CardAbility {
@@ -67,7 +76,7 @@ export interface StageAbility extends CardAbility {
   specialVictory?: SpecialVictoryCondition
 }
 
-export type CardKeyword = 'ancient' | 'soul-jam' | 'dragon'
+export type CardKeyword = 'ancient' | 'soul-jam' | 'dragon' | 'arena'
 
 export interface DistinctNamedKeywordRequirement {
   keyword: CardKeyword
@@ -148,6 +157,7 @@ export interface EffectTargetSelector {
   excludeSource?: boolean
   sourceOnly?: boolean
   remainingHp?: number
+  maxRemainingHp?: number
   minRemainingHp?: number
   minLevel?: number
   maxLevel?: number
@@ -284,8 +294,75 @@ export interface BreakAreaHasCardCondition {
   kind: 'break-area-has-card'
   side: EffectTargetSide
   color?: EnergyColor
+  keyword?: CardKeyword
   minLevel?: number
   maxLevel?: number
+}
+
+export interface TrashKeywordCountAtLeastCondition {
+  kind: 'trash-keyword-count-at-least'
+  keyword: CardKeyword
+  count: number
+}
+
+export interface SourceHpReducedThisTurnCondition {
+  kind: 'source-hp-reduced-this-turn'
+}
+
+export interface ArenaCookieDealtEffectDamageThisTurnCondition {
+  kind: 'arena-cookie-dealt-effect-damage-this-turn'
+}
+
+export interface BirthdayCondition {
+  kind: 'birthday'
+}
+
+export interface BreakAreaCardCountAtLeastCondition {
+  kind: 'break-area-card-count-at-least'
+  side: EffectTargetSide
+  count: number
+  keyword?: CardKeyword
+  minLevel?: number
+  maxLevel?: number
+}
+
+export interface SupportCountLessThanOpponentCondition {
+  kind: 'support-count-less-than-opponent'
+  difference: number
+}
+
+export interface OpponentHandCountAtLeastCondition {
+  kind: 'opponent-hand-count-at-least'
+  count: number
+}
+
+export interface CookiesFaintedThisTurnAtLeastCondition {
+  kind: 'cookies-fainted-this-turn-at-least'
+  side: EffectTargetSide
+  count: number
+}
+
+export interface SupportCardsTrashedThisTurnAtLeastCondition {
+  kind: 'support-cards-trashed-this-turn-at-least'
+  count: number
+}
+
+export interface ItemActivatedThisTurnCondition {
+  kind: 'item-activated-this-turn'
+}
+
+export interface ArenaCookiePlacedInBreakThisTurnCondition {
+  kind: 'arena-cookie-placed-in-break-this-turn'
+}
+
+export interface SourceHpAtMostCondition {
+  kind: 'source-hp-at-most'
+  amount: number
+}
+
+export interface BreakLevelAtMostCondition {
+  kind: 'break-level-at-most'
+  level: number
 }
 
 export interface TrashCountAtLeastCondition {
@@ -358,6 +435,11 @@ export interface CookieGainedHpThisTurnCondition {
   kind: 'cookie-gained-hp-this-turn'
 }
 
+/** 來源玩家本回合曾有餅乾從棄牌區登場（BS6-107）。 */
+export interface CookiePlayedFromTrashThisTurnCondition {
+  kind: 'cookie-played-from-trash-this-turn'
+}
+
 /** 本次攻擊宣告的目標等級達到上限（BS4-009 的「if the attacked Cookie is LV.2 or lower」）。 */
 export interface AttackTargetLevelAtMostCondition {
   kind: 'attack-target-level-at-most'
@@ -400,6 +482,11 @@ export interface AllOfCondition {
   conditions: EffectCondition[]
 }
 
+export interface AnyOfCondition {
+  kind: 'any-of'
+  conditions: EffectCondition[]
+}
+
 /** 場上有指定卡名的餅乾（BS5-022 的「if [Pitaya Dragon Cookie] is in your battle area」）。 */
 export interface BattleAreaHasNamedCookieCondition {
   kind: 'battle-area-has-named-cookie'
@@ -435,6 +522,7 @@ export interface BattleAreaCountAtMostCondition {
 
 export type EffectCondition =
   | AllOfCondition
+  | AnyOfCondition
   | BreakLevelCondition
   | OpponentTrashCountAtLeastCondition
   | SupportCountAtLeastCondition
@@ -443,6 +531,7 @@ export type EffectCondition =
   | OpponentSupportCountAtLeastCondition
   | ActiveSupportCountAtLeastCondition
   | TrashColorCountAtLeastCondition
+  | TrashKeywordCountAtLeastCondition
   | HandCountAtMostCondition
   | HandCountAtLeastCondition
   | SupportAreaDecreasedThisTurnCondition
@@ -452,6 +541,15 @@ export type EffectCondition =
   | BattleAreaHasCookieWithLevelCondition
   | BattleAreaHasColorCondition
   | BreakAreaHasCardCondition
+  | BreakAreaCardCountAtLeastCondition
+  | SupportCountLessThanOpponentCondition
+  | OpponentHandCountAtLeastCondition
+  | CookiesFaintedThisTurnAtLeastCondition
+  | SupportCardsTrashedThisTurnAtLeastCondition
+  | ItemActivatedThisTurnCondition
+  | ArenaCookiePlacedInBreakThisTurnCondition
+  | SourceHpAtMostCondition
+  | BreakLevelAtMostCondition
   | TrashCountAtLeastCondition
   | TrashCountAtMostCondition
   | TrashFlipCountAtLeastCondition
@@ -463,6 +561,7 @@ export type EffectCondition =
   | AttackTargetRemainingHpAtLeastCondition
   | AttackTargetRemainingHpAtMostCondition
   | CookieGainedHpThisTurnCondition
+  | CookiePlayedFromTrashThisTurnCondition
   | AttackTargetLevelAtMostCondition
   | AttackTargetLevelEqualsCondition
   | SupportKeywordAtLeastCondition
@@ -474,6 +573,9 @@ export type EffectCondition =
   | LastHpTrashCardNonCookieCondition
   | BattleAreaRemainingHpCountAtLeastCondition
   | BattleAreaCountAtMostCondition
+  | SourceHpReducedThisTurnCondition
+  | ArenaCookieDealtEffectDamageThisTurnCondition
+  | BirthdayCondition
 
 export interface DamageEffect {
   kind: 'damage'
@@ -557,6 +659,11 @@ export interface ModifyAttackEffect {
   duration: EffectDuration
   target: EffectTargetSelector
   condition?: EffectCondition
+  /** Resolve an optional draw only when this effect's selected target meets the HP check. */
+  thenDrawUpToIfTargetRemainingHp?: {
+    remainingHp: number
+    max: number
+  }
 }
 
 export interface ModifyAttackCostEffect {
@@ -653,6 +760,12 @@ export interface TrashToBreakEffect {
 export interface GainHpEffect {
   kind: 'gain-hp'
   amount: number
+  /** Gain `amount` HP for each matching Cookie in the source player's break area. */
+  perBreakCard?: {
+    minLevel?: number
+    exactLevel?: number
+    energyColor?: EnergyColor
+  }
   target?: EffectTargetSelector
   condition?: EffectCondition
 }
@@ -701,6 +814,18 @@ export interface DisableBlockEffect {
   side: 'opponent'
 }
 
+/** Prevent the defending player from activating Trap cards during this battle. */
+export interface DisableTrapEffect {
+  kind: 'disable-traps'
+  duration: 'current-battle'
+  condition?: EffectCondition
+}
+
+/** While the source is in battle, opponents cannot move Cookies out of battle by effects. */
+export interface PreventOpponentBattleMovementEffect {
+  kind: 'prevent-opponent-battle-movement'
+}
+
 export interface PreventEffectDamageEffect {
   kind: 'prevent-effect-damage'
   duration: 'until-source-next-turn'
@@ -712,6 +837,12 @@ export interface ViewHpEffect {
   kind: 'view-hp'
   target: EffectTargetSelector
   optional?: boolean
+}
+
+/** View every HP card of a selected Cookie, then place the same cards back in any order. */
+export interface ReorderHpEffect {
+  kind: 'reorder-hp'
+  target: EffectTargetSelector
 }
 
 export interface ModifyAllAttackEffect {
@@ -734,12 +865,27 @@ export interface BattleToSupportEffect {
 export interface TrashToBattleEffect {
   kind: 'trash-to-battle'
   amount: number
+  /** "Play up to N" permits resolving with no selected card. */
+  optional?: boolean
+  exactLevel?: number
+  maxLevel?: number
+  /** Restricts the printed HP value of the Cookie card in the trash. */
+  maxHp?: number
   energyColor?: EnergyColor
+  keyword?: CardKeyword
+  condition?: EffectCondition
 }
 
 export interface SupportToHandEffect {
   kind: 'support-to-hand'
   amount: number
+  /** "Select any number" permits selecting every matching support card. */
+  anyNumber?: boolean
+  /** Choose these cards to remain in support, then return every other eligible card. */
+  keepCount?: number
+  /** Restricts returned support cards to a printed card type. */
+  cardType?: GameCard['type']
+  energyColor?: EnergyColor
   maxLevel?: number
   condition?: EffectCondition
   optional?: boolean
@@ -749,6 +895,7 @@ export interface HandToSupportEffect {
   kind: 'hand-to-support'
   amount: number
   rested?: boolean
+  energyColor?: EnergyColor
   optional?: boolean
   condition?: EffectCondition
 }
@@ -758,6 +905,7 @@ export interface OpponentDiscardHandEffect {
   count: number
   /** 對手選中的手牌去向；未指定時維持原本的棄牌區語意。 */
   destination?: 'trash' | 'deck-top' | 'deck-bottom'
+  condition?: EffectCondition
 }
 
 export interface DiscardHandEffect {
@@ -880,6 +1028,7 @@ export interface HandToBreakEffect {
   minLevel?: number
   maxLevel?: number
   nonCookieOnly?: boolean
+  keyword?: CardKeyword
   optional?: boolean
 }
 
@@ -911,6 +1060,7 @@ export interface HpToHandEffect {
   kind: 'hp-to-hand'
   amount: number
   target: EffectTargetSelector
+  condition?: EffectCondition
 }
 
 export interface CycleHpEffect {
@@ -969,6 +1119,14 @@ export interface SetCookieActiveEffect {
 export interface DrawUpToBattleCookieCountEffect {
   kind: 'draw-up-to-battle-cookie-count'
   level: number
+  amountPerCookie: number
+  condition?: EffectCondition
+}
+
+/** 依自己休息區中符合等級的餅乾數量決定抽牌上限（BS6-030）。 */
+export interface DrawUpToBreakCookieCountEffect {
+  kind: 'draw-up-to-break-cookie-count'
+  minLevel?: number
   amountPerCookie: number
   condition?: EffectCondition
 }
@@ -1087,6 +1245,31 @@ export interface HpToTrashEffect {
   condition?: EffectCondition
 }
 
+export interface HpToTrashAllEffect {
+  kind: 'hp-to-trash-all'
+  amount: number
+  side: EffectTargetSide
+  condition?: EffectCondition
+}
+
+export interface RestCookieEffect {
+  kind: 'rest-cookie'
+  target: EffectTargetSelector
+  condition?: EffectCondition
+}
+
+export interface BreakSourceToTrashEffect {
+  kind: 'break-source-to-trash'
+  condition?: EffectCondition
+}
+
+export interface RevealHandEffect {
+  kind: 'reveal-hand'
+  amount: number
+  keyword?: CardKeyword
+  condition?: EffectCondition
+}
+
 export interface TrashToSupportEffect {
   kind: 'trash-to-support'
   amount: number
@@ -1099,6 +1282,8 @@ export interface TrashToHandEffect {
   energyColor?: EnergyColor
   /** 只有 Cookie 是合法選擇（BS3-112 的「{P} Cookie」）。 */
   cookieOnly?: boolean
+  keyword?: CardKeyword
+  maxLevel?: number
 }
 
 export interface TrashToDeckEffect {
@@ -1109,6 +1294,8 @@ export interface TrashToDeckEffect {
   excludeFlip?: boolean
   energyColor?: EnergyColor
   cookieOnly?: boolean
+  keyword?: CardKeyword
+  nonCookieOnly?: boolean
   /** 指定牌庫底時保留玩家選取順序；未指定時維持洗回牌庫。 */
   destination?: 'bottom'
 }
@@ -1126,6 +1313,7 @@ export interface BreakToBattleEffect {
   exactLevel?: number
   maxLevel?: number
   energyColor?: EnergyColor
+  keyword?: CardKeyword
 }
 
 /** 從自己支援區選餅乾登場戰鬥區（BS4-058），跟 break-to-battle 同一種形狀，只是來源區不同。 */
@@ -1135,6 +1323,8 @@ export interface SupportToBattleEffect {
   exactLevel?: number
   maxLevel?: number
   energyColor?: EnergyColor
+  keyword?: CardKeyword
+  condition?: EffectCondition
 }
 
 export interface BattleToBreakEffect {
@@ -1174,6 +1364,7 @@ export interface FieldToDeckBottomEffect {
   allowStage?: boolean
   /** When `target.side` is `either`, restrict Cookie targets without restricting stages. */
   battleSide?: EffectTargetSide
+  condition?: EffectCondition
 }
 
 export interface FieldToDeckBottomAllEffect {
@@ -1205,6 +1396,17 @@ export interface OpponentRestsSupportEffect {
   condition?: EffectCondition
 }
 
+/**
+ * BS6-039: first trash one Cookie from the opponent's break area, then
+ * optionally move an opponent battle Cookie exactly one level higher into break.
+ * The second target is determined by the first selected card, so this remains a
+ * single serialized effect instead of exposing an invalid static target selector.
+ */
+export interface OpponentBreakToTrashThenBattleToBreakEffect {
+  kind: 'opponent-break-to-trash-then-battle-to-break'
+  condition?: EffectCondition
+}
+
 export type CardEffect =
   | DamageEffect
   | SplitDamageEffect
@@ -1231,8 +1433,11 @@ export type CardEffect =
   | SupportToTrashEffect
   | DisableFlipEffect
   | DisableBlockEffect
+  | DisableTrapEffect
+  | PreventOpponentBattleMovementEffect
   | PreventEffectDamageEffect
   | ViewHpEffect
+  | ReorderHpEffect
   | ModifyAllAttackEffect
   | BattleToSupportEffect
   | TrashToBattleEffect
@@ -1246,6 +1451,10 @@ export type CardEffect =
   | ReturnToDeckBottomEffect
   | OpponentRandomDiscardEffect
   | HpToTrashEffect
+  | HpToTrashAllEffect
+  | RestCookieEffect
+  | BreakSourceToTrashEffect
+  | RevealHandEffect
   | TrashToSupportEffect
   | SetActiveEffect
   | InspectDeckEffect
@@ -1276,6 +1485,7 @@ export type CardEffect =
   | TransferHpEffect
   | SetCookieActiveEffect
   | DrawUpToBattleCookieCountEffect
+  | DrawUpToBreakCookieCountEffect
   | TrashToDeckAllEffect
   | DiscardHandAllEffect
   | DrawUntilHandEqualsOpponentEffect
@@ -1290,8 +1500,10 @@ export type CardEffect =
   | StageSourceToTrashEffect
   | TrashToBreakEffect
   | MakeFaintEffect
+  | RestCookieEffect
   | DeferredEndOfTurnEffect
   | OpponentRestsSupportEffect
+  | OpponentBreakToTrashThenBattleToBreakEffect
 
 export type TargetedCardEffect =
   | DamageEffect
@@ -1306,6 +1518,7 @@ export type TargetedCardEffect =
   | PreventEffectDamageEffect
   | DisableFlipEffect
   | ViewHpEffect
+  | ReorderHpEffect
   | BattleToSupportEffect
   | ReturnToHandEffect
   | ReturnToDeckBottomEffect
@@ -1325,11 +1538,14 @@ export type TargetedCardEffect =
   | RestSupportAndDamageEffect
   | FieldToDeckBottomEffect
   | MakeFaintEffect
+  | RestCookieEffect
 
 export type AbilityCost = EnergyCost & {
   energy?: EnergyCost
   discardHand?: number
   discardHandColor?: EnergyColor
+  discardHandKeyword?: CardKeyword
+  discardHandHasFlip?: boolean
   /**
    * 「Discard 3 or more {B} cards.」（BS5-071）類代價：只要張數達到
    * `discardHand` 即可，玩家可棄更多；未設定時維持精確張數。
@@ -1363,7 +1579,15 @@ export type AbilityCost = EnergyCost & {
     sourceOnly?: boolean
     excludeSource?: boolean
   }
+  /** 從自己的棄牌區將符合條件的餅乾放入休息區，作為替代代價。 */
+  trashCookieToBreakArea?: {
+    count: number
+    hp?: number
+    energyColor?: EnergyColor
+    excludeFlip?: boolean
+  }
   selfToBreakArea?: boolean
+  selfToTrash?: boolean
   /** 來源自己離開戰鬥區、放到自己牌庫最下方作為代價（BS4-077）。 */
   selfToDeckBottom?: boolean
   /**
@@ -1374,6 +1598,8 @@ export type AbilityCost = EnergyCost & {
     count: number
     energyColor?: EnergyColor
     excludeFlip?: boolean
+    keyword?: CardKeyword
+    nonCookieOnly?: boolean
   }
   /**
    * 從棄牌區選卡放到牌庫底作為代價（BS3-112）。
@@ -1428,6 +1654,14 @@ export type TrapCondition =
       level: number
     }
   | {
+      /**
+       * 陷阱擁有者的休息區至少有指定張數的餅乾（BS6-042）。
+       * 這是「張數」而不是休息區 LV 合計，不能復用 break-level-at-least。
+       */
+      kind: 'break-area-card-count-at-least'
+      count: number
+    }
+  | {
       kind: 'attacker-attack-more-than'
       amount: number
     }
@@ -1459,6 +1693,8 @@ export type TrapCondition =
 export interface TrapAbility {
   text: string
   cost: AbilityCost
+  /** 陷阱可選的替代支付方式；未指定時只使用 `cost`。 */
+  alternativeCosts?: AbilityCost[]
   condition?: TrapCondition
   effects: CardEffect[]
 }
@@ -1705,6 +1941,7 @@ export interface GameState {
   pendingOnPlay?: {
     playerId: PlayerId
     sourceInstanceId: string
+    origin?: 'hand' | 'trash' | 'support' | 'break'
   } | null
   pendingDrawUpTo?: {
     playerId: PlayerId
@@ -1719,6 +1956,12 @@ export interface GameState {
   } | null
   effectDamagePreventedUntilTurn?: Record<string, number>
   cookiesFaintedThisTurn?: Record<PlayerId, number>
+  supportCardsTrashedThisTurn?: Partial<Record<PlayerId, number>>
+  arenaCookiesPlacedInBreakThisTurn?: Partial<Record<PlayerId, number>>
+  itemsActivatedThisTurn?: Partial<Record<PlayerId, number>>
+  cookiesHpReducedThisTurn?: Partial<Record<PlayerId, Record<string, boolean>>>
+  arenaCookieDealtEffectDamageThisTurn?: Partial<Record<PlayerId, boolean>>
+  isBirthday?: boolean
   pendingRefresh: {
     playerId: PlayerId
     remainingDraws: number
@@ -1837,6 +2080,15 @@ export interface GameState {
     pendingPlace?: {
       targetInstanceId: string
     }
+    /** BS6-034: after choosing a Cookie, its complete HP pile must be reordered. */
+    pendingReorderHp?: {
+      targetPlayerId: PlayerId
+      targetInstanceId: string
+    }
+    /** BS6-039: the trashed opponent break Cookie determines the next target level. */
+    pendingOpponentBreakToTrashThenBattleToBreak?: {
+      selectedBreakCardLevel: number
+    }
     /**
      * 效果鏈跑完後欠戰鬥流程什麼動作。由
      * `pendingRevealTopDeck.battleContinuation` 傳遞下來，語意與該欄位相同。
@@ -1846,6 +2098,8 @@ export interface GameState {
   supportAreaDecreasedThisTurn?: Partial<Record<PlayerId, boolean>>
   /** 各玩家本回合是否有餅乾因效果增加過 HP（BS5-044 的「if any of your Cookies gained HP」）。每回合開始時重置。 */
   cookiesGainedHpThisTurn?: Partial<Record<PlayerId, boolean>>
+  /** 各玩家本回合是否曾從棄牌區讓餅乾登場（BS6-107）。每回合開始時重置。 */
+  cookiesPlayedFromTrashThisTurn?: Partial<Record<PlayerId, boolean>>
 }
 
 /**
@@ -1869,6 +2123,8 @@ export interface PendingBattle {
   remainingDamage: number
   stage: PendingBattleStage
   trapUsed: boolean
+  /** A current-battle effect, such as BS6-008, prevents the defender's Traps. */
+  trapsDisabled?: boolean
   revealedHpCard: GameCard | null
   preventKnockoutTargetIds: string[]
   faintedColors: EnergyColor[]

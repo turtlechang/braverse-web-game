@@ -83,6 +83,7 @@ describe('2026-03-30 official rule update', () => {
     expect(state.pendingOnPlay).toEqual({
       playerId: 'player-one',
       sourceInstanceId: 'p1-on-play',
+      origin: 'hand',
     })
     expect(state.pendingReplacement?.tasks[0]?.playerId).toBe('player-two')
     expect(() => replaceDefeatedCookie(state, 'p2-on-play')).toThrow(

@@ -91,6 +91,12 @@ const chooseEffectTargets = (
   context: EffectContext,
   effect: CardEffect,
 ): string[] => {
+  if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
+    return getEffectSelectionCandidates(state, context, effect)
+      .slice(0, 1)
+      .map((card) => card.instanceId)
+  }
+
   if (
     effect.kind === 'break-to-battle' ||
     effect.kind === 'support-to-battle' ||
@@ -285,7 +291,7 @@ const chooseEffectTargets = (
     return []
   }
 
-  if (!effect.target) return []
+  if (!('target' in effect) || !effect.target) return []
 
   const candidates = getEffectTargetCandidates(
     state,
@@ -435,7 +441,7 @@ const chooseEffectTargets = (
     )
   }
 
-  if (!effect.target) return []
+  if (!('target' in effect) || !effect.target) return []
 
   const count = Math.min(effect.target.max, ordered.length)
   if (count < effect.target.min) {
@@ -692,7 +698,10 @@ const isItemEffectTargetCountSufficient = (
       effect.kind === 'trash-to-battle' ||
       effect.kind === 'trash-to-support' ||
       effect.kind === 'trash-to-break') &&
-    targetIds.length < effect.amount
+    targetIds.length <
+      (effect.kind === 'trash-to-battle' && effect.optional
+        ? 0
+        : effect.amount)
   ) {
     return false
   }
@@ -965,7 +974,10 @@ const isSkillEffectTargetCountSufficient = (
       effect.kind === 'trash-to-battle' ||
       effect.kind === 'trash-to-support' ||
       effect.kind === 'trash-to-break') &&
-    targetIds.length < effect.amount
+    targetIds.length <
+      (effect.kind === 'trash-to-battle' && effect.optional
+        ? 0
+        : effect.amount)
   ) {
     return false
   }

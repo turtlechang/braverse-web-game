@@ -137,6 +137,12 @@ const P0XX_FIXTURES: Record<string, OfficialCardRecord> = {
     skill: { name: '{sk} Piercing Blizzard', text: "{mt} {ap} <Discard 2 cards.> Deals 1 damage to all of your opponent's Cookies." },
     attackText: "<{B}{N}> Frost shards, away! {da} 3\nThen <discard 1 card.> Select up to 1 of your opponent's Cookies. That Cookie receives 1 damage.",
   }),
+  'P-041': makeOfficialCard({
+    cardNumber: 'P-041', level: 1, hp: 1, energyType: 'RED', color: 'RED',
+    name: 'Birthday Cake Cookie',
+    skill: { name: '{sk} Let\'s Plan a Party!', text: '{ap} If today is your birthday, receive a happy birthday congratulation from your opponent.' },
+    attackText: '<{R}{R}> Happy birthday! {da} 1\nThen, if today is your birthday, during this turn, this Cookie gains +1 attack damage.',
+  }),
   'P-031': makeOfficialCard({
     cardNumber: 'P-031', type: 'trap', officialType: 'TRAP', energyType: 'PURPLE', color: 'PURPLE',
     attackText: "<{P}{P}> If there are 15 cards or more in your trash, select up to 1 of your opponent's LV.3 Cookies. During this turn, that Cookie deals -1 attack damage. Then, place up to 1 of that Cookie's top HP card in the trash.",
@@ -213,6 +219,27 @@ describe('P-0XX promotion card conversion (all 26 cards)', () => {
       expect(hasAnyEffectPayload).toBe(true)
     },
   )
+
+  it('keeps P-041\'s birthday greeting as flavor text and its attack bonus as the rules effect', () => {
+    const conversion = convertOfficialCardToGameCard(P0XX_FIXTURES['P-041'])
+    if (conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') {
+      throw new Error('P-041 should convert to a Cookie GameCard.')
+    }
+
+    expect(conversion.gameCard.skill).toMatchObject({
+      trigger: 'on-play',
+      effects: [],
+    })
+    expect(conversion.gameCard.attackEffects).toEqual([
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'birthday' },
+      },
+    ])
+  })
 
   /**
    * 回歸測試：BS3-025 的 fromBreakArea 靠「this Cookie is in your break

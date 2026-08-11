@@ -19,9 +19,11 @@ import {
   getRefreshCandidates,
   explainUnavailableTraps,
   getTrapCandidates,
+  getTrapCostOptions,
   getTrapTargetCandidates,
   getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
+  getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckCandidates,
   buildReplayIssueBundle,
   getEnergyCostTotal,
@@ -42,6 +44,7 @@ import {
   createBreakToTrashDemoState,
   createBs2015CostDepartureDemoState,
   createCardCheckDemoState,
+  createPConditionDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
   createFaintDamageDemoState,
@@ -65,6 +68,10 @@ import {
   createBs5ItemConditionDemoState,
   createBs5StageConditionDemoState,
   createBs5Item111DemoState,
+  createBs6ConditionDemoState,
+  createP082TrapDemoState,
+  createP084ItemConditionDemoState,
+  createP147SpecialPlayDemoState,
   createBs3SpecialVictoryDemoState,
   parseTestStateConfig,
 } from '../game/demo'
@@ -177,6 +184,21 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
     }
+    if (testStateConfig?.kind === 'p-condition') {
+      return createPConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'p082-trap') {
+      return createP082TrapDemoState(testStateConfig.payment)
+    }
+    if (testStateConfig?.kind === 'p084-item-condition') {
+      return createP084ItemConditionDemoState(testStateConfig.conditionMet)
+    }
+    if (testStateConfig?.kind === 'p147-special-play') {
+      return createP147SpecialPlayDemoState()
+    }
     if (testStateConfig?.kind === 'bs2-015-cost') {
       return createBs2015CostDepartureDemoState(
         testStateConfig.replacementAvailable,
@@ -217,6 +239,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs5-stage-condition') {
       return createBs5StageConditionDemoState(
+        testStateConfig.cardNumber,
+        testStateConfig.conditionMet,
+      )
+    }
+    if (testStateConfig?.kind === 'bs6-condition') {
+      return createBs6ConditionDemoState(
         testStateConfig.cardNumber,
         testStateConfig.conditionMet,
       )
@@ -402,6 +430,9 @@ export function useMatchController(params: {
   const animations = useMatchAnimations()
   const [selectedTrapId, setSelectedTrapId] = useState<string | null>(null)
   const [selectedTrapPaymentIds, setSelectedTrapPaymentIds] = useState<string[]>([])
+  const [selectedTrapCostOptionIndex, setSelectedTrapCostOptionIndex] = useState(0)
+  const [selectedTrapTrashCookieToBreakAreaIds, setSelectedTrapTrashCookieToBreakAreaIds] =
+    useState<string[]>([])
   const [selectedTrapHandToBreakIds, setSelectedTrapHandToBreakIds] = useState<
     string[]
   >([])
@@ -718,8 +749,13 @@ export function useMatchController(params: {
   const selectedTrap = playerTrapCandidates.find(
     (card) => card.instanceId === selectedTrapId,
   )
+  const trapCostOptions = selectedTrap?.trap
+    ? getTrapCostOptions(selectedTrap.trap)
+    : []
+  const selectedTrapCost =
+    trapCostOptions[selectedTrapCostOptionIndex] ?? selectedTrap?.trap?.cost
   const trapEnergyCost =
-    selectedTrap?.trap?.cost.energy ?? selectedTrap?.trap?.cost ?? {}
+    selectedTrapCost?.energy ?? selectedTrapCost ?? {}
   const trapEnergyCostTotal = getEnergyCostTotal(trapEnergyCost)
   const trapPaymentCandidates =
     trapEnergyCostTotal > 0
@@ -778,35 +814,52 @@ export function useMatchController(params: {
         : [...current, instanceId]
     })
   }
-  const selectedTrapDiscardCost = selectedTrap?.trap?.cost.discardHand ?? 0
+  const selectedTrapDiscardCost = selectedTrapCost?.discardHand ?? 0
   const selectedTrapTrashBattleCookieCost =
-    selectedTrap?.trap?.cost.trashBattleCookie?.count ?? 0
-  const selectedTrapTrashBattleCookieCandidates = selectedTrap?.trap
+    selectedTrapCost?.trashBattleCookie?.count ?? 0
+  const selectedTrapTrashBattleCookieCandidates = selectedTrapCost
     ? getTrashBattleCookieCostCandidates(
-        selectedTrap.trap.cost,
+        selectedTrapCost,
         game.players[viewerPlayerId].battleArea,
       )
     : []
   const selectedTrapHandToBreakCost =
-    selectedTrap?.trap?.cost.handToBreakArea?.count ?? 0
+    selectedTrapCost?.handToBreakArea?.count ?? 0
   const selectedTrapHandToBreakCandidates = selectedTrap
     ? game.players[viewerPlayerId].hand.filter(
         (card) =>
           card.instanceId !== selectedTrap.instanceId &&
           card.type === 'cookie' &&
-          (!selectedTrap.trap?.cost.handToBreakArea?.energyColor ||
+          (!selectedTrapCost?.handToBreakArea?.energyColor ||
             card.energyColor ===
-              selectedTrap.trap.cost.handToBreakArea.energyColor),
+              selectedTrapCost.handToBreakArea.energyColor),
       )
     : []
   const selectedTrapDiscardCandidates = selectedTrap
     ? game.players[viewerPlayerId].hand.filter(
         (card) =>
           card.instanceId !== selectedTrap.instanceId &&
-          (!selectedTrap.trap?.cost.discardHandColor ||
-            card.energyColor === selectedTrap.trap.cost.discardHandColor),
+          (!selectedTrapCost?.discardHandColor ||
+            card.energyColor === selectedTrapCost.discardHandColor),
       )
     : []
+  const selectedTrapTrashCookieToBreakAreaAmount =
+    selectedTrapCost?.trashCookieToBreakArea?.count ?? 0
+  const selectedTrapTrashCookieToBreakAreaCandidates = selectedTrapCost
+    ? getTrashCookieToBreakAreaCostCandidates(
+        selectedTrapCost,
+        game.players[viewerPlayerId].discardPile,
+      )
+    : []
+  const trapCostOptionLabels = trapCostOptions.map((_, index) =>
+    index === 0 ? '卡面主支付：能量' : '替代支付：棄牌區 1 HP 餅乾→休息區',
+  )
+  const selectTrapCostOption = (index: number) => {
+    if (index < 0 || index >= trapCostOptions.length) return
+    setSelectedTrapCostOptionIndex(index)
+    setSelectedTrapPaymentIds([])
+    setSelectedTrapTrashCookieToBreakAreaIds([])
+  }
   const trapAllowEmptyTarget =
     selectedTrap?.trap?.effects.some(
       (effect) =>
@@ -1101,6 +1154,8 @@ export function useMatchController(params: {
 
     const timer = window.setTimeout(() => {
       setSelectedTrapId(null)
+      setSelectedTrapCostOptionIndex(0)
+      setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
       setSelectedTrapTargetId(null)
       setSelectedTrapSelfTargetId(null)
@@ -1138,6 +1193,8 @@ export function useMatchController(params: {
       setSelectedFaintPaymentIds([])
       animations.resetAnimations()
       setSelectedTrapId(null)
+      setSelectedTrapCostOptionIndex(0)
+      setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
       setTrapSelectNoTarget(false)
       setPendingResponseMode(null)
@@ -1162,6 +1219,8 @@ export function useMatchController(params: {
       setSelectedFaintPaymentIds([])
       animations.resetAnimations()
       setSelectedTrapId(null)
+      setSelectedTrapCostOptionIndex(0)
+      setSelectedTrapTrashCookieToBreakAreaIds([])
       setSelectedTrapDiscardIds([])
       setTrapSelectNoTarget(false)
       setPendingResponseMode(null)
@@ -1209,6 +1268,13 @@ export function useMatchController(params: {
     // Trap
     selectedTrapId,
     setSelectedTrapId,
+    selectedTrapCostOptionIndex,
+    selectTrapCostOption,
+    trapCostOptionLabels,
+    selectedTrapTrashCookieToBreakAreaIds,
+    setSelectedTrapTrashCookieToBreakAreaIds,
+    selectedTrapTrashCookieToBreakAreaAmount,
+    selectedTrapTrashCookieToBreakAreaCandidates,
     selectedTrapDiscardIds,
     setSelectedTrapDiscardIds,
     selectedTrapTrashBattleCookieIds,

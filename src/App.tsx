@@ -6,6 +6,8 @@ import {
   canActivateStage,
   canPlayItem,
   canPlayStage,
+  canSpecialPlayCookie,
+  getTrashBattleCookieCostCandidates,
   selectEnergyPayment,
   type BuiltInDeckChoice,
   type DeckChoice,
@@ -62,6 +64,11 @@ const ResultModal = lazy(async () => {
   return { default: module.ResultModal }
 })
 
+const SpecialPlayModal = lazy(async () => {
+  const module = await import('./components/modals/GameModals')
+  return { default: module.SpecialPlayModal }
+})
+
 const OpeningSetupModal = lazy(async () => {
   const module = await import('./components/modals/GameModals')
   return { default: module.OpeningSetupModal }
@@ -91,6 +98,8 @@ function App() {
   const [aiLevel, setAiLevel] = useState<AiLevel>(4)
   const [hoveredCard, setHoveredCard] = useState<GameCard | null>(null)
   const [hoveredOpponentCard, setHoveredOpponentCard] = useState<GameCard | null>(null)
+  const [specialPlaySourceId, setSpecialPlaySourceId] = useState<string | null>(null)
+  const [specialPlayCandidateId, setSpecialPlayCandidateId] = useState<string | null>(null)
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
@@ -144,6 +153,8 @@ function App() {
     nextMessage: string,
   ) => {
     setSelectedHandCardId(null)
+    setSpecialPlaySourceId(null)
+    setSpecialPlayCandidateId(null)
     dialogs.closeResourcePopover()
     match.resetMatchState(nextConfig)
     pending.resetEffectContext()
@@ -182,6 +193,60 @@ function App() {
 
   const currentJsxEffect = pending.currentEffect
   const playerHand = match.game.players[match.viewerPlayerId].hand
+  const specialPlaySourceCard = playerHand.find(
+    (card) => card.instanceId === specialPlaySourceId,
+  ) ?? null
+  const specialPlayCandidates =
+    specialPlaySourceCard?.type === 'cookie' &&
+    specialPlaySourceCard.skill?.specialPlayCost
+      ? getTrashBattleCookieCostCandidates(
+          specialPlaySourceCard.skill.specialPlayCost,
+          match.game.players[match.viewerPlayerId].battleArea,
+        )
+      : []
+  const handleSpecialPlayConfirm = () => {
+    if (
+      !specialPlaySourceCard ||
+      !specialPlayCandidateId ||
+      !specialPlayCandidates.some(
+        (candidate) => candidate.card.instanceId === specialPlayCandidateId,
+      ) ||
+      !canSpecialPlayCookie(
+        match.game,
+        match.viewerPlayerId,
+        specialPlaySourceCard.instanceId,
+      )
+    ) {
+      return
+    }
+
+    const sourceInstanceId = specialPlaySourceCard.instanceId
+    const sacrificeInstanceId = specialPlayCandidateId
+    match.dispatch(
+      {
+        kind: 'deploy-cookie',
+        playerId: match.viewerPlayerId,
+        instanceId: sourceInstanceId,
+        specialPlayCookieInstanceId: sacrificeInstanceId,
+      },
+      '特殊登場已支付，等待處理 On Play。',
+      (nextGame) => {
+        setSpecialPlaySourceId(null)
+        setSpecialPlayCandidateId(null)
+        if (nextGame.pendingRefresh) return
+        pending.beginCookieSkill(
+          nextGame,
+          nextGame.players[match.viewerPlayerId].battleArea.find(
+            (cookie) => cookie.card.instanceId === sourceInstanceId,
+          )?.card,
+          match.viewerPlayerId,
+          'on-play',
+          'On Play 特殊登場',
+          true,
+        )
+      },
+    )
+  }
   const optionalCostAttackPrompt =
     match.game.pendingEffectOrder &&
     !match.game.pendingEffectOrder.resolvedOrder
@@ -361,6 +426,10 @@ function App() {
           )
         },
       ),
+    onSpecialPlayCookie: (instanceId) => {
+      setSpecialPlaySourceId(instanceId)
+      setSpecialPlayCandidateId(null)
+    },
     onPlayItem: (instanceId) => {
       if (!canPlayItem(match.game, match.activePlayer.id, instanceId)) {
         match.setMessage('目前無法使用物品卡。')
@@ -696,6 +765,20 @@ function App() {
         <PendingDecisionModals match={match} pending={pending} />
 
         <InformationModals match={match} ai={ai} dialogs={dialogs} />
+
+        {specialPlaySourceCard && specialPlayCandidates.length > 0 && (
+          <SpecialPlayModal
+            sourceCard={specialPlaySourceCard}
+            candidates={specialPlayCandidates}
+            selectedCandidateId={specialPlayCandidateId}
+            onSelectCandidate={setSpecialPlayCandidateId}
+            onCancel={() => {
+              setSpecialPlaySourceId(null)
+              setSpecialPlayCandidateId(null)
+            }}
+            onConfirm={handleSpecialPlayConfirm}
+          />
+        )}
       </Suspense>
 
       {match.game.result && (

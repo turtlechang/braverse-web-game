@@ -16,6 +16,10 @@ import {
   type DeckChoice,
 } from './starter-deck'
 import { getCardPoolEntry } from './card-pool'
+import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
+import bs6CandidateDocument from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
+import type { OfficialCardRecord } from '../cards/types'
 import type {
   CustomDeck,
 } from './custom-deck'
@@ -69,6 +73,44 @@ const isBs4ConditionCardNumber = (
 ): value is Bs4ConditionCardNumber =>
   (BS4_CONDITION_CARD_NUMBERS as readonly string[]).includes(value)
 
+/** P-0XX cards whose Browser verification needs an explicit condition fixture. */
+export const P_CONDITION_CARD_NUMBERS = [
+  'P-041',
+  'P-058',
+  'P-059',
+  'P-064',
+  'P-065',
+  'P-067',
+  'P-071',
+  'P-074',
+  'P-075',
+  'P-093',
+  'P-094',
+  'P-095',
+  'P-098',
+  'P-103',
+  'P-103@1',
+  'P-106',
+  'P-109',
+  'P-110',
+  'P-119',
+  'P-121',
+  'P-128',
+  'P-131',
+  'P-134',
+  'P-137',
+  'P-142',
+  'P-145',
+] as const
+
+export type PConditionCardNumber =
+  (typeof P_CONDITION_CARD_NUMBERS)[number]
+
+const isPConditionCardNumber = (
+  value: string,
+): value is PConditionCardNumber =>
+  (P_CONDITION_CARD_NUMBERS as readonly string[]).includes(value)
+
 export const BS5_FLIP_CARD_NUMBERS = [
   'BS5-004',
   'BS5-009',
@@ -109,6 +151,13 @@ export const BS5_STAGE_CONDITION_CARD_NUMBERS = ['BS5-022'] as const
 export type Bs5StageConditionCardNumber =
   (typeof BS5_STAGE_CONDITION_CARD_NUMBERS)[number]
 
+/**
+ * BS6 尚在候選資料期；這些 localhost-only A/B 情境不會將候選資料加入正式牌池。
+ */
+export const BS6_CONDITION_CARD_NUMBERS = ['BS6-039'] as const
+export type Bs6ConditionCardNumber =
+  (typeof BS6_CONDITION_CARD_NUMBERS)[number]
+
 const isListedCardNumber = <T extends readonly string[]>(
   values: T,
   value: string,
@@ -142,6 +191,14 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | {
+      kind: 'p-condition'
+      cardNumber: PConditionCardNumber
+      conditionMet: boolean
+    }
+  | { kind: 'p082-trap'; payment: 'energy' | 'cookie' }
+  | { kind: 'p084-item-condition'; conditionMet: boolean }
+  | { kind: 'p147-special-play' }
   | { kind: 'bs2-015-cost'; replacementAvailable: boolean }
   | { kind: 'bs3-061-condition'; conditionMet: boolean }
   | {
@@ -168,6 +225,11 @@ export const parseTestStateConfig = (
   | {
       kind: 'bs5-stage-condition'
       cardNumber: Bs5StageConditionCardNumber
+      conditionMet: boolean
+    }
+  | {
+      kind: 'bs6-condition'
+      cardNumber: Bs6ConditionCardNumber
       conditionMet: boolean
     }
   | { kind: 'bs5-item-111'; conditionMet: boolean }
@@ -277,11 +339,40 @@ export const parseTestStateConfig = (
   if (testState === 'blue-st4-020-unpayable') {
     return { kind: 'blue-st4-020', payable: false }
   }
+  if (testState?.startsWith('p-condition:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isPConditionCardNumber(cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'p-condition',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
   if (testState?.startsWith('card:')) {
     const cardNumber = testState.slice('card:'.length).trim()
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber }
     }
+  }
+  if (testState?.startsWith('p082-trap:')) {
+    const payment = testState.slice('p082-trap:'.length)
+    if (payment === 'energy' || payment === 'cookie') {
+      return { kind: 'p082-trap', payment }
+    }
+  }
+  if (testState?.startsWith('p084-item:')) {
+    const result = testState.slice('p084-item:'.length)
+    if (result === 'met' || result === 'unmet') {
+      return { kind: 'p084-item-condition', conditionMet: result === 'met' }
+    }
+  }
+  if (testState === 'p147-special-play') {
+    return { kind: 'p147-special-play' }
   }
   if (testState?.startsWith('bs2-015-cost:')) {
     const result = testState.slice('bs2-015-cost:'.length)
@@ -349,6 +440,20 @@ export const parseTestStateConfig = (
     ) {
       return {
         kind: 'bs5-trap',
+        cardNumber,
+        conditionMet: result === 'met',
+      }
+    }
+  }
+  if (testState?.startsWith('bs6-condition:')) {
+    const [, cardNumber, result] = testState.split(':')
+    if (
+      cardNumber &&
+      isListedCardNumber(BS6_CONDITION_CARD_NUMBERS, cardNumber) &&
+      (result === 'met' || result === 'unmet')
+    ) {
+      return {
+        kind: 'bs6-condition',
         cardNumber,
         conditionMet: result === 'met',
       }
@@ -2274,17 +2379,74 @@ const cardCheckBattleEntry = (
   battleEntryId: `${cookie.instanceId}:battle:${sequence}`,
 })
 
+const getPTestCard = (cardNumber: string): GameCard => {
+  const source = (pFormalDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === cardNumber,
+  )
+  if (!source) throw new Error(`P test fixture requires ${cardNumber}`)
+  const conversion = convertOfficialCardToGameCard(source)
+  if (conversion.status !== 'converted') {
+    throw new Error(`P test fixture cannot convert ${cardNumber}`)
+  }
+  return conversion.gameCard
+}
+
+const getBs6CandidateTestCard = (cardNumber: string): GameCard | null => {
+  const trimmed = cardNumber.trim()
+  const source = (bs6CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === trimmed,
+  ) ?? (bs6CandidateDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.baseCardNumber === trimmed,
+  )
+  if (!source) return null
+
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') {
+    throw new Error(`BS6 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: `player-one-${source.cardNumber}-1`,
+  }
+}
+
+const getCardCheckCard = (cardNumber: string): GameCard => {
+  const entry = getCardPoolEntry(cardNumber)
+  if (entry) {
+    return createCard(entry, 'player-one', 1)
+  }
+
+  // P-0XX 已在正式卡池；仍保留原始資料 fallback，讓本機 card-check 可精確
+  // 指定異圖，或以基礎卡號查找同卡的第一筆官方記錄。
+  const trimmed = cardNumber.trim()
+  const source = (pFormalDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.cardNumber === trimmed,
+  ) ?? (pFormalDocument.cards as OfficialCardRecord[]).find(
+    (record) => record.baseCardNumber === trimmed,
+  )
+  if (!source) {
+    const bs6Candidate = getBs6CandidateTestCard(trimmed)
+    if (bs6Candidate) return bs6Candidate
+    throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
+  }
+
+  const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
+  if (conversion.status !== 'converted') {
+    throw new Error(`候選卡片 ${cardNumber} 無法轉換：${conversion.reason}`)
+  }
+  return {
+    ...conversion.gameCard,
+    instanceId: `player-one-${source.cardNumber}-1`,
+  }
+}
+
 /**
  * Builds a minimal legal GameState positioned so the given card's ability
  * (if any) can be triggered through the real UI. Throws if the card number
  * isn't in the shared official card pool.
  */
 export const createCardCheckDemoState = (cardNumber: string): GameState => {
-  const entry = getCardPoolEntry(cardNumber)
-  if (!entry) {
-    throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
-  }
-  const card = createCard(entry, 'player-one', 1)
+  const card = getCardCheckCard(cardNumber)
   const payColor: EnergyColor = card.energyColor && card.energyColor !== 'wild'
     ? card.energyColor
     : 'purple'
@@ -2308,13 +2470,24 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // Extra battle cookies for the player, beyond the card under test, so
   // self-side target selectors and trash-battle-cookie costs have
   // candidates that aren't the tested card itself.
-  const selfExtra1 = cardCheckFillerCookie(
+  const selfExtra1Base = cardCheckFillerCookie(
     'self-extra-1',
     card.id === 'BS5-005' ? 2 : 1,
     4,
     0,
     card.id === 'BS5-005' ? 'red' : payColor,
   )
+  const selfExtra1 = card.id === 'P-117'
+    ? {
+        ...selfExtra1Base,
+        cookie: {
+          ...selfExtra1Base.cookie,
+          level: 2,
+          energyColor: 'blue' as EnergyColor,
+          keywords: ['arena'] as ['arena'],
+        },
+      }
+    : selfExtra1Base
 
   // Generous energy support to pay any skill/item/trap/stage energy cost.
   const energySupportColors: EnergyColor[] = card.id === 'P-032'
@@ -2690,6 +2863,8 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ? 4
             : cookieCard.id === 'BS5-010'
               ? 2
+              : cookieCard.id.startsWith('P-')
+                ? Math.max(1, cookieCard.hp)
           : 0
     const attackSourceHpCards = Array.from(
       { length: attackSourceHpCount },
@@ -2737,6 +2912,15 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...handFillers,
             testSupportCard(`${cookieCard.id}-condition-hand`, 'blue'),
           ]
+        : cookieCard.id === 'P-111'
+          ? [
+              {
+                ...handCookieFiller,
+                instanceId: `${cookieCard.id}-hand-arena-cookie`,
+                keywords: ['arena'] as ['arena'],
+              },
+              ...handFillers,
+            ]
         : cookieCard.id === 'BS5-071'
           ? handFillers.slice(0, 2)
           : handFillers
@@ -2956,6 +3140,103 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
  * BS2-015 支付「將這個餅乾放入棄牌區」後的兩條正式流程：
  * 手牌沒有餅乾時立即敗北；有餅乾時先強制補位，再繼續結算技能。
  */
+/**
+ * Focused P-082 fixture for validating both official alternative payments.
+ * The cookie route deliberately provides one non-FLIP LV.1 Cookie with 1 HP
+ * in the trash; the energy route leaves that candidate out.
+ */
+export const createP082TrapDemoState = (
+  payment: 'energy' | 'cookie',
+): GameState => {
+  const state = createCardCheckDemoState('BS5-021')
+  const player = state.players['player-one']
+  const trap = getPTestCard('P-082')
+  const alternativeCookie = cardCheckFillerCookie(
+    'p082-alternative-cookie',
+    1,
+    1,
+    0,
+    'yellow',
+  ).cookie
+
+  return {
+    ...state,
+    // Keep the defender in control while the dedicated trap response window
+    // is being inspected; otherwise the AI can consume the pending attack
+    // before a Browser test can select the payment path.
+    activePlayerId: 'player-one',
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        hand: player.hand.map((card, index) => (index === 0 ? trap : card)),
+        // P-082's main payment is {Y}{N}; the base BS5-021 trap fixture uses
+        // red supports, which made the normal payment path unavailable and
+        // caused the browser auto-skip to hide the response modal.
+        supportArea: scenarioSupports('p082-trap-support', 6, 'yellow'),
+        discardPile:
+          payment === 'cookie'
+            ? [...player.discardPile, alternativeCookie]
+            : player.discardPile,
+      },
+    },
+  }
+}
+
+/** P-084 fixtures make the dynamic neutral-cost branch observable in Browser. */
+export const createP084ItemConditionDemoState = (
+  conditionMet: boolean,
+): GameState => {
+  const state = createCardCheckDemoState('BS5-020')
+  const item = getPTestCard('P-084')
+  return {
+    ...state,
+    cookiesFaintedThisTurn: {
+      'player-one': conditionMet ? 1 : 0,
+      'player-two': 0,
+    },
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        hand: state.players['player-one'].hand.map((card, index) =>
+          index === 0 ? item : card,
+        ),
+        // Red pays the dynamic {N} cost, but not the original {G} cost.
+        supportArea: scenarioSupports('p084-condition-support', 1, 'red'),
+      },
+    },
+  }
+}
+
+/** P-147 fixture for Special Play payment followed by the real On Play window. */
+export const createP147SpecialPlayDemoState = (): GameState => {
+  const state = createCardCheckDemoState('BS3-063')
+  const specialPlayCookie = getPTestCard('P-147')
+  const sacrifice = scenarioCookie('p147-special-sacrifice', 1, 4, 'black')
+
+  return {
+    ...state,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        hand: state.players['player-one'].hand.map((card, index) =>
+          index === 0 ? specialPlayCookie : card,
+        ),
+        battleArea: [cardCheckBattleEntry(sacrifice.cookie, sacrifice.hpCards, 600)],
+        supportArea: scenarioSupports('p147-special-support', 6, 'black'),
+      },
+      'player-two': {
+        ...state.players['player-two'],
+        hand: Array.from({ length: 4 }, (_, index) =>
+          testSupportCard(`p147-opponent-hand-${index + 1}`, 'purple'),
+        ),
+      },
+    },
+  }
+}
+
 export const createBs2015CostDepartureDemoState = (
   replacementAvailable: boolean,
 ): GameState => {
@@ -3416,6 +3697,360 @@ export const createBs4ConditionDemoState = (
 }
 
 /** BS5 FLIP 的逐卡 A/B fixture：同一張翻開卡分別走發動與不發動。 */
+/**
+ * Builds the dedicated A/B fixtures for P-0XX cards whose generic card-check
+ * state cannot expose a condition, passive timing, or end-phase effect.
+ *
+ * `conditionMet=false` removes only the relevant prerequisite while keeping
+ * the card in a legal zone, so the Browser audit can verify a safe no-op.
+ */
+/**
+ * BS6-039 的第一段必須在對手休息區總等級不超過 LV.6 時才可執行。
+ * 兩條路徑都保留登場卡與支付所需的黃色支援，供 Browser 實際部署後驗證。
+ */
+export const createBs6ConditionDemoState = (
+  cardNumber: Bs6ConditionCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  const state = createCardCheckDemoState(cardNumber)
+  const opponentBreakArea = conditionMet
+    ? [scenarioCookie(`${cardNumber}-opponent-break-lv2`, 2, 4, 'red').cookie]
+    : [scenarioCookie(`${cardNumber}-opponent-break-lv7`, 7, 8, 'red').cookie]
+
+  return updateDemoPlayer(state, 'player-two', {
+    breakArea: opponentBreakArea,
+  })
+}
+
+export const createPConditionDemoState = (
+  cardNumber: PConditionCardNumber,
+  conditionMet: boolean,
+): GameState => {
+  let state = createCardCheckDemoState(cardNumber)
+  const setPlayer = (playerId: PlayerId, patch: Partial<PlayerState>) => {
+    state = updateDemoPlayer(state, playerId, patch)
+  }
+
+  const putSourceInBattle = (
+    remainingHp = 2,
+    rested = false,
+  ): CookieCard => {
+    const player = state.players['player-one']
+    const isSourceInstance = (candidate: GameCard) =>
+      candidate.id === cardNumber ||
+      candidate.instanceId.startsWith(`player-one-${cardNumber}-`)
+    const source =
+      player.hand.find(isSourceInstance) ??
+      player.battleArea.find((entry) => isSourceInstance(entry.card))?.card
+    if (!source || source.type !== 'cookie') {
+      throw new Error(`P condition fixture requires Cookie ${cardNumber}`)
+    }
+    const otherBattleCookies = player.battleArea
+      .filter((entry) => entry.card.instanceId !== source.instanceId)
+      .slice(0, 1)
+    setPlayer('player-one', {
+      hand: player.hand.filter((card) => card.instanceId !== source.instanceId),
+      battleArea: [
+        cardCheckBattleEntry(
+          source,
+          Array.from({ length: Math.max(1, remainingHp) }, (_, index) =>
+            testSupportCard(`${cardNumber}-source-hp-${index + 1}`),
+          ),
+          90,
+          rested,
+        ),
+        ...otherBattleCookies,
+      ],
+    })
+    return source
+  }
+
+  const setAttackScenario = (remainingHp = 2): CookieCard => {
+    const source = putSourceInBattle(remainingHp, true)
+    const target = state.players['player-two'].battleArea[0]
+    if (!target) {
+      throw new Error(`P condition fixture requires an opponent target for ${cardNumber}`)
+    }
+    state = {
+      ...state,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      pendingBattle: scenarioPendingBattle(
+        'player-one',
+        source.instanceId,
+        'player-two',
+        target.card.instanceId,
+        source.attackEffects,
+      ),
+    }
+    return source
+  }
+
+  const arenaCookie = (instanceId: string, level = 1): CookieCard => ({
+    ...scenarioCookie(instanceId, level, Math.max(2, level + 1), 'red').cookie,
+    keywords: ['arena'],
+  })
+
+  const arenaBreakArea = (count: number): CookieCard[] =>
+    Array.from({ length: count }, (_, index) =>
+      arenaCookie(`${cardNumber}-arena-break-${index + 1}`),
+    )
+
+  const arenaHand = (count: number): GameCard[] =>
+    Array.from({ length: count }, (_, index) => ({
+      ...testSupportCard(`${cardNumber}-arena-hand-${index + 1}`, 'blue'),
+      keywords: ['arena'] as ['arena'],
+    }))
+
+  const arenaTrash = (count: number): GameCard[] =>
+    Array.from({ length: count }, (_, index) => ({
+      ...testSupportCard(`${cardNumber}-arena-trash-${index + 1}`, 'purple'),
+      keywords: ['arena'] as ['arena'],
+    }))
+
+  const setPendingAttackAlly = () => {
+    const player = state.players['player-one']
+    const sourceEntry = player.battleArea.find(
+      (entry) =>
+        entry.card.id === cardNumber ||
+        entry.card.instanceId.startsWith(`player-one-${cardNumber}-`),
+    )
+    if (!sourceEntry) throw new Error(`P condition fixture lost ${cardNumber}`)
+    const ally = arenaCookie(`${cardNumber}-arena-ally`)
+    setPlayer('player-one', {
+      battleArea: [
+        sourceEntry,
+        cardCheckBattleEntry(
+          ally,
+          scenarioCookie(`${cardNumber}-arena-ally-hp`, 1, 2, 'red', 1).hpCards,
+          91,
+        ),
+      ],
+    })
+  }
+
+  switch (cardNumber) {
+    case 'P-041':
+      setAttackScenario(1)
+      return { ...state, isBirthday: conditionMet }
+    case 'P-058':
+      putSourceInBattle(2)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports('P-058-support', 4, 'green'),
+      })
+      return { ...state, activePlayerId: 'player-one', phase: 'end' }
+    case 'P-059':
+      putSourceInBattle(2)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports(
+          'P-059-support',
+          2,
+          'green',
+          !conditionMet,
+        ),
+      })
+      return { ...state, activePlayerId: 'player-one', phase: 'end' }
+    case 'P-064':
+      setAttackScenario(conditionMet ? 1 : 2)
+      return state
+    case 'P-065': {
+      putSourceInBattle(3)
+      if (conditionMet) {
+        const sourceEntry = state.players['player-one'].battleArea.find(
+          (entry) => entry.card.id === cardNumber,
+        )!
+        const pizza = { ...arenaCookie('P-065-pizza', 3), name: 'Pizza Cookie' }
+        setPlayer('player-one', {
+          battleArea: [
+            sourceEntry,
+            cardCheckBattleEntry(
+              pizza,
+              scenarioCookie('P-065-pizza-hp', 3, 5, 'red').hpCards,
+              91,
+            ),
+          ],
+        })
+      }
+      return state
+    }
+    case 'P-067':
+      putSourceInBattle(3)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports(
+          'P-067-self-support',
+          conditionMet ? 3 : 4,
+          'green',
+        ),
+      })
+      setPlayer('player-two', {
+        supportArea: scenarioSupports('P-067-opponent-support', 5, 'green'),
+      })
+      return state
+    case 'P-071': {
+      putSourceInBattle(2)
+      const handCookie = cardCheckFillerCookie(
+        'P-071-hand-cookie',
+        1,
+        2,
+        0,
+        'yellow',
+      ).cookie
+      setPlayer('player-one', {
+        hand: conditionMet
+          ? [handCookie, ...state.players['player-one'].hand]
+          : state.players['player-one'].hand.filter((card) => card.type !== 'cookie'),
+      })
+      return state
+    }
+    case 'P-074':
+      putSourceInBattle(2)
+      setPlayer('player-one', { hand: conditionMet ? arenaHand(2) : [] })
+      return state
+    case 'P-075':
+      setAttackScenario(3)
+      setPlayer('player-one', {
+        discardPile: Array.from(
+          { length: conditionMet ? 15 : 14 },
+          (_, index) => testSupportCard(`P-075-trash-${index + 1}`, 'purple'),
+        ),
+      })
+      return state
+    case 'P-093': {
+      const source = putSourceInBattle(3)
+      return {
+        ...state,
+        cookiesHpReducedThisTurn: {
+          'player-one': conditionMet ? { [source.instanceId]: true } : {},
+          'player-two': {},
+        },
+      }
+    }
+    case 'P-094':
+      setAttackScenario(2)
+      setPlayer('player-one', {
+        breakArea: conditionMet
+          ? [scenarioCookie('P-094-break-lv2', 2, 4, 'yellow').cookie]
+          : [
+              scenarioCookie('P-094-break-lv2-a', 2, 4, 'yellow').cookie,
+              scenarioCookie('P-094-break-lv2-b', 2, 4, 'yellow').cookie,
+            ],
+      })
+      return state
+    case 'P-095': {
+      const source = putSourceInBattle(3)
+      return {
+        ...state,
+        itemsActivatedThisTurn: {
+          'player-one': conditionMet ? 1 : 0,
+          'player-two': 0,
+        },
+        cookiesHpReducedThisTurn: {
+          'player-one': { [source.instanceId]: true },
+          'player-two': {},
+        },
+      }
+    }
+    case 'P-098':
+      putSourceInBattle(2)
+      return {
+        ...state,
+        supportCardsTrashedThisTurn: {
+          'player-one': conditionMet ? 2 : 0,
+          'player-two': 0,
+        },
+      }
+    case 'P-103':
+    case 'P-103@1':
+      setAttackScenario(3)
+      if (conditionMet) setPendingAttackAlly()
+      return state
+    case 'P-106':
+      putSourceInBattle(2)
+      return {
+        ...state,
+        arenaCookieDealtEffectDamageThisTurn: {
+          'player-one': conditionMet,
+          'player-two': false,
+        },
+      }
+    case 'P-109':
+    case 'P-110':
+      putSourceInBattle(2)
+      setPlayer('player-one', {
+        breakArea: conditionMet ? arenaBreakArea(4) : [],
+      })
+      return state
+    case 'P-119':
+      putSourceInBattle(3)
+      setPlayer('player-one', {
+        discardPile: conditionMet ? arenaTrash(5) : [],
+      })
+      return state
+    case 'P-121':
+      putSourceInBattle(2)
+      setPlayer('player-one', {
+        discardPile: conditionMet ? arenaTrash(7) : [],
+      })
+      return state
+    case 'P-128':
+      putSourceInBattle(1)
+      return {
+        ...state,
+        cookiesFaintedThisTurn: {
+          'player-one': 0,
+          'player-two': conditionMet ? 1 : 0,
+        },
+      }
+    case 'P-131':
+      putSourceInBattle(1)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports(
+          'P-131-support',
+          conditionMet ? 7 : 6,
+          'green',
+        ),
+      })
+      return state
+    case 'P-134':
+      setAttackScenario(3)
+      setPlayer('player-one', {
+        hand: Array.from(
+          { length: conditionMet ? 7 : 6 },
+          (_, index) => testSupportCard(`P-134-hand-${index + 1}`, 'blue'),
+        ),
+      })
+      return state
+    case 'P-137':
+      putSourceInBattle(3)
+      return {
+        ...state,
+        cookiesFaintedThisTurn: {
+          'player-one': 0,
+          'player-two': conditionMet ? 1 : 0,
+        },
+      }
+    case 'P-142':
+      setAttackScenario(2)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports(
+          'P-142-self-support',
+          conditionMet ? 2 : 3,
+          'green',
+        ),
+      })
+      setPlayer('player-two', {
+        supportArea: scenarioSupports('P-142-opponent-support', 3, 'green'),
+      })
+      return state
+    case 'P-145':
+      putSourceInBattle(2)
+      setPlayer('player-one', {
+        supportArea: scenarioSupports('P-145-support', 1, 'purple'),
+      })
+      return { ...state, activePlayerId: 'player-one', phase: 'end' }
+  }
+}
+
 export const createBs5FlipDemoState = (
   cardNumber: Bs5FlipCardNumber,
   activate: boolean,

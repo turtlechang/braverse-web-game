@@ -969,4 +969,257 @@ describe('applyGameCommand replacement finalization', () => {
       }),
     ).toThrow()
   })
+
+  it('resolves a BS6-034 HP reorder only with a complete unique card order', () => {
+    const base = createDemoGame()
+    const target = base.players['player-one'].battleArea[0]
+    const hpCards = [1, 2, 3].map((index) => ({
+      ...target.card,
+      instanceId: `reorder-hp-${index}`,
+      name: `HP ${index}`,
+    }))
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{ ...target, hpCards }],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: target.card.instanceId,
+        sourceCardName: 'Wind Archer Cookie',
+        sourceKind: 'skill',
+        effects: [
+          {
+            kind: 'reorder-hp',
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+        effectIndex: 0,
+      },
+    }
+
+    const awaitingReorder = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target.card.instanceId],
+    })
+    expect(awaitingReorder.pendingAbilityEffect?.pendingReorderHp).toEqual({
+      targetPlayerId: 'player-one',
+      targetInstanceId: target.card.instanceId,
+    })
+
+    expect(() =>
+      applyGameCommand(awaitingReorder, {
+        kind: 'resolve-reorder-hp',
+        playerId: 'player-one',
+        orderedCardIds: ['reorder-hp-3', 'reorder-hp-3', 'reorder-hp-1'],
+      }),
+    ).toThrow()
+
+    const result = applyGameCommand(awaitingReorder, {
+      kind: 'resolve-reorder-hp',
+      playerId: 'player-one',
+      orderedCardIds: ['reorder-hp-3', 'reorder-hp-2', 'reorder-hp-1'],
+    })
+    expect(result.pendingAbilityEffect).toBeUndefined()
+    expect(
+      result.players['player-one'].battleArea[0].hpCards.map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual(['reorder-hp-3', 'reorder-hp-2', 'reorder-hp-1'])
+    expect(result.commandLog?.at(-1)?.commandKind).toBe('resolve-reorder-hp')
+  })
+
+  it('allows BS6-034 to skip an optional HP reorder target', () => {
+    const base = createDemoGame()
+    const target = base.players['player-one'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: target.card.instanceId,
+        sourceCardName: 'Wind Archer Cookie',
+        sourceKind: 'skill',
+        effects: [
+          {
+            kind: 'reorder-hp',
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+        effectIndex: 0,
+      },
+    }
+
+    const result = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+
+    expect(result.pendingAbilityEffect).toBeUndefined()
+    expect(result.players['player-one'].battleArea[0].hpCards).toEqual(
+      target.hpCards,
+    )
+  })
+
+  it('resolves BS6-039 in order: opponent break to trash, then exactly one level higher to break', () => {
+    const base = createDemoGame()
+    const opponentBase = base.players['player-two'].battleArea[0]
+    const oneLevelHigher = {
+      ...opponentBase,
+      card: {
+        ...opponentBase.card,
+        instanceId: 'croissant-level-2',
+        level: 2,
+      },
+    }
+    const wrongLevel = {
+      ...opponentBase,
+      card: {
+        ...opponentBase.card,
+        instanceId: 'croissant-level-3',
+        level: 3,
+      },
+    }
+    const breakCookie = {
+      ...opponentBase.card,
+      instanceId: 'croissant-break-level-1',
+      level: 1,
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [oneLevelHigher, wrongLevel],
+          breakArea: [breakCookie],
+          discardPile: [],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: base.players['player-one'].battleArea[0].card.instanceId,
+        sourceCardName: 'Croissant Cookie',
+        sourceKind: 'skill',
+        effects: [
+          {
+            kind: 'opponent-break-to-trash-then-battle-to-break',
+            condition: { kind: 'opponent-break-level-at-most', level: 6 },
+          },
+        ],
+        effectIndex: 0,
+      },
+    }
+
+    const afterTrash = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: ['croissant-break-level-1'],
+    })
+    expect(afterTrash.players['player-two'].breakArea).toEqual([])
+    expect(afterTrash.players['player-two'].discardPile).toMatchObject([
+      { instanceId: 'croissant-break-level-1' },
+    ])
+    expect(
+      afterTrash.pendingAbilityEffect
+        ?.pendingOpponentBreakToTrashThenBattleToBreak,
+    ).toEqual({ selectedBreakCardLevel: 1 })
+
+    expect(() =>
+      applyGameCommand(afterTrash, {
+        kind: 'resolve-ability-effect',
+        playerId: 'player-one',
+        targetIds: ['croissant-level-3'],
+      }),
+    ).toThrow()
+
+    const result = applyGameCommand(afterTrash, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: ['croissant-level-2'],
+    })
+    expect(result.pendingAbilityEffect).toBeUndefined()
+    expect(result.players['player-two'].battleArea).toMatchObject([
+      { card: { instanceId: 'croissant-level-3' } },
+    ])
+    expect(result.players['player-two'].breakArea).toMatchObject([
+      { instanceId: 'croissant-level-2', level: 2 },
+    ])
+  })
+
+  it('lets BS6-039 skip the optional second target but not run above opponent break LV.6', () => {
+    const base = createDemoGame()
+    const opponentBase = base.players['player-two'].battleArea[0]
+    const breakCookie = {
+      ...opponentBase.card,
+      instanceId: 'croissant-break-level-1',
+      level: 1,
+    }
+    const pendingEffect = {
+      playerId: 'player-one' as const,
+      sourcePlayerId: 'player-one' as const,
+      sourceInstanceId: base.players['player-one'].battleArea[0].card.instanceId,
+      sourceCardName: 'Croissant Cookie',
+      sourceKind: 'skill' as const,
+      effects: [
+        {
+          kind: 'opponent-break-to-trash-then-battle-to-break' as const,
+          condition: { kind: 'opponent-break-level-at-most' as const, level: 6 },
+        },
+      ],
+      effectIndex: 0,
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          breakArea: [breakCookie],
+          discardPile: [],
+        },
+      },
+      pendingAbilityEffect: pendingEffect,
+    }
+
+    const afterTrash = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: ['croissant-break-level-1'],
+    })
+    const skipped = applyGameCommand(afterTrash, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+    expect(skipped.pendingAbilityEffect).toBeUndefined()
+    expect(skipped.players['player-two'].battleArea).toHaveLength(1)
+
+    const levelSevenState: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-two': {
+          ...state.players['player-two'],
+          breakArea: [{ ...breakCookie, level: 7 }],
+        },
+      },
+    }
+    const unmet = applyGameCommand(levelSevenState, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: ['croissant-break-level-1'],
+    })
+    expect(unmet.pendingAbilityEffect).toBeUndefined()
+    expect(unmet.players['player-two'].breakArea).toHaveLength(1)
+    expect(unmet.players['player-two'].discardPile).toHaveLength(0)
+  })
 })

@@ -159,6 +159,88 @@ describe('optional-cost-attack', () => {
     expect(state.players['player-two'].supportArea[0].rested).toBe(true)
   })
 
+  it('trashes the optional attack source before selecting it from trash to battle', () => {
+    let state = createBattleState()
+    const attacker = {
+      ...state.players['player-two'].battleArea[0].card,
+      energyColor: 'purple' as const,
+      level: 1,
+    }
+    const levelThreeAlly: CookieCard = {
+      ...attacker,
+      id: 'purple-level-three-ally',
+      instanceId: 'purple-level-three-ally',
+      level: 3,
+    }
+    state.players['player-two'].battleArea = [
+      {
+        ...state.players['player-two'].battleArea[0],
+        card: attacker,
+      },
+      {
+        card: levelThreeAlly,
+        hpCards: [handCookie('level-three-ally-hp')],
+        rested: false,
+        battleEntryId: 'purple-level-three-ally:battle:3',
+      },
+    ]
+    state.players['player-two'].supportArea[0].card.energyColor = 'purple'
+    state.pendingBattle = {
+      attackerPlayerId: 'player-two',
+      defenderPlayerId: 'player-one',
+      attackerInstanceId: attacker.instanceId,
+      targetInstanceId: 'defender',
+      declaredDamage: 0,
+      remainingDamage: 0,
+      stage: 'attack-effect',
+      trapUsed: false,
+      revealedHpCard: null,
+      preventKnockoutTargetIds: [],
+      faintedColors: [],
+      attackEffects: [],
+      attackEffectIndex: 0,
+    }
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: attacker.instanceId,
+      sourceCardName: attacker.name,
+      cost: { energy: { purple: 1 }, selfToTrash: true },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          exactLevel: 1,
+          energyColor: 'purple',
+          condition: {
+            kind: 'battle-area-has-cookie-with-level',
+            side: 'self',
+            level: 3,
+          },
+        },
+      ],
+      effectText: 'Trash this Cookie, then play it from the trash.',
+    }
+
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      [attacker.instanceId],
+      ['p2-support'],
+    )
+
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeNull()
+    expect(
+      state.players['player-two'].battleArea.map((entry) => entry.card.instanceId),
+    ).toEqual([levelThreeAlly.instanceId, attacker.instanceId])
+    expect(
+      state.players['player-two'].discardPile.map((card) => card.instanceId),
+    ).toContain('attacker-hp')
+    expect(state.players['player-two'].supportArea[0].rested).toBe(true)
+  })
+
   it('skips optional attack effects with no applicable child effect', () => {
     let state = createBattleState()
     state.players['player-two'].hand = []

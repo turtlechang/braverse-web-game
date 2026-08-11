@@ -16,6 +16,58 @@ afterEach(() => {
   scrollIntoViewMock.mockReset()
 })
 
+describe('BS6-039 compound target UI', () => {
+  it('requires the break-area target first, then permits skipping the battle-area target', async () => {
+    const effect: CardEffect = {
+      kind: 'opponent-break-to-trash-then-battle-to-break',
+    }
+    const candidate = createCookieCard(98)
+    const pending = createPendingEffect({ effects: [effect] })
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <EffectPanel
+          pendingEffect={pending}
+          currentEffect={effect}
+          effectHistory={[]}
+          onConfirm={() => undefined}
+          onSkip={() => undefined}
+          candidateCards={[candidate]}
+          onToggleCandidate={() => undefined}
+        />,
+      ),
+    )
+    const initialConfirm = container.querySelector(
+      '.effect-panel-primary-action',
+    ) as HTMLButtonElement
+    expect(initialConfirm.disabled).toBe(true)
+
+    await act(() =>
+      root.render(
+        <EffectPanel
+          pendingEffect={{ ...pending, compoundEffectStep: 'follow-up' }}
+          currentEffect={effect}
+          effectHistory={[]}
+          onConfirm={() => undefined}
+          onSkip={() => undefined}
+          candidateCards={[candidate]}
+          onToggleCandidate={() => undefined}
+        />,
+      ),
+    )
+    const followUpConfirm = container.querySelector(
+      '.effect-panel-primary-action',
+    ) as HTMLButtonElement
+    expect(followUpConfirm.disabled).toBe(false)
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+})
+
 const createCookieCard = (index: number): CookieCard => ({
   id: `COOKIE-${index}`,
   instanceId: `cookie-${index}`,

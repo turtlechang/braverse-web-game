@@ -376,6 +376,35 @@ describe('official card adapter', () => {
     })
   })
 
+  it('normalizes the missing P-078 attack damage marker for every art variant', () => {
+    const source = createOfficialCard({
+      cardNumber: 'P-078@1',
+      baseCardNumber: 'P-078',
+      variant: '1',
+      name: 'Blueberry Cookie',
+      type: 'cookie',
+      officialType: 'COOKIE',
+      level: 3,
+      hp: 4,
+      color: 'BLUE',
+      energyType: 'BLUE',
+      attackText: '<{B}{B}> Sovereign of the Abyss 1',
+      skill: { name: null, text: null },
+      flipText: null,
+    })
+
+    const result = convertOfficialCardToGameCard(source)
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        id: 'P-078',
+        attack: 1,
+        attackCost: 2,
+      },
+    })
+  })
+
   it('falls back to the FLIP ability text when the generic converter cannot parse a FLIP-only card (BS2-056 regression)', () => {
     // BS2-056 Raspberry Mousse Cookie 的 FLIP 文字（discard cost + gain-hp）不會被
     // convertOfficialCardEffects 的一般轉換器解析出來，先前只有 card.flip 有正確值，

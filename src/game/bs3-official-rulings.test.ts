@@ -165,6 +165,7 @@ describe('official ruling: replacement order lets BS3-028 disarm BS3-113', () =>
     expect(attackerPlaced.pendingOnPlay).toEqual({
       playerId: 'player-two',
       sourceInstanceId: 'gcc-028',
+      origin: 'hand',
     })
 
     // 防禦方在攻擊方的 OnPlay 結算完成前不能放置自己的再登場餅乾。
@@ -206,6 +207,7 @@ describe('official ruling: replacement order lets BS3-028 disarm BS3-113', () =>
     expect(defenderPlaced.pendingOnPlay).toEqual({
       playerId: 'player-one',
       sourceInstanceId: 'gcc-113',
+      origin: 'hand',
     })
     expect(
       canActivateCookieSkill(defenderPlaced, 'player-one', 'gcc-113', 'on-play'),

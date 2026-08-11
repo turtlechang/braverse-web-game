@@ -7,6 +7,13 @@
 - 匯入腳本以 `card_product_title` 篩選產品名稱；這對應專案討論中的 `category_title`。
 - 圖片目前保留官方 HTTPS URL，不下載到 repository。
 
+### 社群參考來源（非權威）
+
+- [BraverseFan 中文圖鑑](https://braversefan.com/cookierun/)：可作為卡名、卡號、類型、顏色、稀有度、卡面翻譯與系列盤點的交叉參考。
+- [BraverseFan 官方判例整理](https://braversefan.com/cookierun/faq/)：可用來尋找官方公告所整理的效果互動與 Q&A，尤其是 Then、FLIP、昏厥、HP 移動、效果傷害與結算順序案例。
+- 該站為粉絲整理，頁面明確聲明翻譯與整理內容非官方；正式匯入仍以官方 JSON／卡面與官方規則、公告為準。社群資料不得直接覆寫 `data/cards/`，也不得單獨作為 promote 依據。
+- 使用社群資料形成裁定或測試案例時，應在相關 inventory／coverage 文件記錄 URL、查閱日期與對應官方依據；若官方來源與社群整理不一致，保留差異並標記待確認。
+
 ## 指令
 
 預設匯入英文版綠色起始牌組 `Starter Deck GREEN`：
@@ -93,6 +100,16 @@ npm run validate:candidate
 - `docs/bs5-card-inventory.md`
 
 BS5 已提供 `cards:analyze:bs5-candidate`；本批次 BS5-087／BS5-109 陷阱主效果與 10 張攻擊後 `Then` 已完成 adapter／規則引擎／UI 支援、測試與效果盤點，111 張基礎卡的主效果／能力／攻擊 `Then` 待轉接皆為 0。正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json` 為準；`docs/bs5-card-inventory.md` 是 promote 前的歷史盤點快照，`docs/bs5-effect-coverage.md` 追蹤目前正式卡池覆蓋狀態。
+
+BS6 使用同樣的完整卡號前綴篩選與資料準備期隔離：
+
+```bash
+npm run cards:import:bs6-candidate
+npm run cards:analyze:bs6-candidate
+npm run validate:candidate
+```
+
+指令會建立 `data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json`、`docs/bs6-card-inventory.md` 與 `docs/bs6-effect-coverage.md`。候選資料固定維持 `inventory`；逐色完成 runtime 轉接、回歸測試與 Chrome 效果稽核前，不可 promote。
 
 完成每張卡的 runtime 轉接、測試與人工覆核後，確認效果覆蓋盤點沒有待裁決或未支援的規則文字，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
 
@@ -181,4 +198,4 @@ CI 會執行 `npm run check:card-pool`，只讀檢查 `data/cards/*.json` 與 ge
 - `EXTRA` 與資料不完整的餅乾卡會回傳 `unsupported`。
 - runtime `id` 使用 `baseCardNumber`，保留異圖與圖片 URL 在轉換結果 metadata。
 
-`src/cards/official-effect-adapter.ts` 目前支援直接傷害、攻擊傷害增減、全體攻擊修正、受到攻擊傷害減免、目標篩選、break area 等級條件、disable-flip、view-hp、battle-to-support、trash-to-battle、support-to-hand 等物品/場景效果。無法安全轉換的效果會標記為 `unsupported`，避免把尚未確認的規則誤實作成權威邏輯。
+`src/cards/official-effect-adapter.ts` 目前支援直接傷害、攻擊傷害增減、全體攻擊修正、受到攻擊傷害減免、目標篩選、break area 等級條件、disable-flip、view-hp、reorder-hp、battle-to-support、trash-to-battle、support-to-hand，以及跨區的兩段式休息區移動等物品/場景效果。無法安全轉換的效果會標記為 `unsupported`，避免把尚未確認的規則誤實作成權威邏輯。

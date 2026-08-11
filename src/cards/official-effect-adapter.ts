@@ -13,6 +13,18 @@ import type {
 } from '../game'
 import { parseOfficialCardText } from './official-text-parser'
 import type { OfficialCardRecord } from './types'
+import {
+  P_EXACT_ATTACK_EFFECTS,
+  P_EXACT_EFFECTS,
+  P_EXACT_FLIP_EFFECTS,
+  P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES,
+  P_EXACT_SKILL_COSTS,
+  P_EXACT_SPECIAL_PLAY_COSTS,
+  P_EXACT_SKILL_TRIGGERS,
+  P_FROM_SUPPORT,
+  P_FROM_TRASH,
+  P_SOURCE_ENERGY,
+} from './p-card-effects'
 
 export type OfficialEffectConversion =
   | {
@@ -44,7 +56,7 @@ const getEffectText = (card: OfficialCardRecord): string | null => {
     return card.flipText ?? card.skill.text
   }
 
-  return card.attackText
+  return card.skill.text ?? card.attackText
 }
 
 const parseTarget = (text: string): EffectTargetSelector | null => {
@@ -2848,8 +2860,490 @@ export const convertOfficialCardEffects = (
     'BS5-095': [],
     'BS5-049': [{ kind: 'draw-up-to', max: 1 }],
     'BS5-090': [{ kind: 'draw-up-to', max: 1 }],
+    // BS6 basic FLIP cards: attached +1 HP or draw up to 1 card.
+    // The attachment bonus is represented by convertOfficialFlipAbility below.
+    'BS6-006': [],
+    'BS6-009': [{ kind: 'draw-up-to', max: 1 }],
+    'BS6-027': [{ kind: 'draw-up-to', max: 1 }],
+    'BS6-037': [],
+    'BS6-046': [],
+    'BS6-056': [{ kind: 'draw-up-to', max: 1 }],
+    'BS6-067': [{ kind: 'draw-up-to', max: 1 }],
+    'BS6-069': [],
+    'BS6-103': [],
+    'BS6-104': [{ kind: 'draw-up-to', max: 1 }],
+    // BS6 RED: the first runtime batch uses existing target, HP, end-phase and
+    // FLIP prevention primitives; these cards remain unavailable in the pool
+    // until the full BS6 candidate is promotion-ready.
+    'BS6-002': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'source-hp-less-than', amount: 3 },
+      },
+    ],
+    'BS6-001': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    'BS6-004': [{ kind: 'draw-up-to', max: 2 }],
+    'BS6-008': [
+      {
+        kind: 'disable-traps',
+        duration: 'current-battle',
+        condition: { kind: 'source-hp-at-most', amount: 4 },
+      },
+    ],
+    'BS6-010': [{ kind: 'prevent-opponent-battle-movement' }],
+    'BS6-011': [
+      {
+        kind: 'hp-to-hand',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    'BS6-012': [
+      {
+        kind: 'hp-to-hand',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS6-014': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS6-021': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          minLevel: 2,
+          maxRemainingHp: 3,
+        },
+        thenDrawUpToIfTargetRemainingHp: { remainingHp: 1, max: 1 },
+      },
+    ],
+    'BS6-017': [
+      {
+        kind: 'disable-flip',
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    // BS6-019：先將自己餅乾最上方的 HP 回手，再橫置對手最多 2 張支援卡。
+    // 兩段都各自選擇目標，沿用既有 effect queue 逐段處理。
+    'BS6-019': [
+      {
+        kind: 'hp-to-hand',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1 },
+      },
+      {
+        kind: 'rest-support',
+        side: 'opponent',
+        amount: 2,
+        activeOnly: true,
+        optional: true,
+      },
+    ],
+    'BS6-020': [
+      {
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'hp-to-hand',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1 },
+      },
+    ],
+    // BS6 YELLOW：本批只接入既有 effect primitive 可完整表示的效果。
+    // 「從手牌放入休息區」保留為第一段 effect，確保先選牌並更新休息區後才進入後段。
+    'BS6-023': [
+      { kind: 'hand-to-break', amount: 1 },
+      { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
+    'BS6-025': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'break-level-at-most', level: 2 },
+            { kind: 'hand-count-at-most', count: 6 },
+          ],
+        },
+      },
+    ],
+    // 官方資料將 BS6-028~030 標為 NPC；匯入器已依其 Cookie 的等級、HP 與
+    // 攻擊欄位正規化。這裡保留各自的登場技能結算。
+    'BS6-028': [
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'break-area-card-count-at-least',
+          side: 'self',
+          count: 3,
+        },
+      },
+    ],
+    'BS6-030': [
+      {
+        kind: 'draw-up-to-break-cookie-count',
+        minLevel: 2,
+        amountPerCookie: 1,
+      },
+    ],
+    'BS6-032': [
+      { kind: 'hand-to-break', amount: 1 },
+      { kind: 'draw-up-to', max: 2 },
+    ],
+    'BS6-033': [
+      {
+        kind: 'draw-up-to-then-discard',
+        max: 2,
+        discardCount: 2,
+        condition: { kind: 'break-level-at-least', level: 4 },
+      },
+    ],
+    'BS6-034': [
+      { kind: 'reorder-hp', target: { side: 'self', min: 0, max: 1 } },
+    ],
+    'BS6-039': [
+      {
+        kind: 'opponent-break-to-trash-then-battle-to-break',
+        condition: { kind: 'opponent-break-level-at-most', level: 6 },
+      },
+    ],
+    'BS6-035': [
+      {
+        kind: 'set-active',
+        supportCount: 1,
+        selectable: true,
+        optional: true,
+        condition: {
+          kind: 'break-area-card-count-at-least',
+          side: 'self',
+          count: 2,
+        },
+      },
+    ],
+    'BS6-041': [
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'break-area-card-count-at-least',
+          side: 'self',
+          count: 3,
+        },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: {
+          kind: 'break-area-card-count-at-least',
+          side: 'self',
+          count: 3,
+        },
+      },
+    ],
+    'BS6-043': [
+      { kind: 'hand-to-break', amount: 1, energyColor: 'yellow' },
+      { kind: 'set-active', supportCount: 2, selectable: true, optional: true },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS6 GREEN：僅採用既有支援區張數條件與可表達的卡牌移動效果。
+    'BS6-045': [
+      {
+        kind: 'draw',
+        amount: 1,
+        condition: { kind: 'support-count-less-than-opponent', difference: 4 },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'support-count-less-than-opponent', difference: 4 },
+      },
+    ],
+    'BS6-048': [
+      {
+        kind: 'draw',
+        amount: 1,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+      {
+        kind: 'opponent-discard-hand',
+        count: 1,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ],
+    // BS6-050 Butter Pretzel Cookie："any number" 不是固定張數；僅列出
+    // 綠色支援卡並保留 0 張選擇，確認後才一併返回手牌。
+    'BS6-050': [
+      {
+        kind: 'support-to-hand',
+        amount: 0,
+        anyNumber: true,
+        optional: true,
+        energyColor: 'green',
+      },
+    ],
+    'BS6-051': [
+      {
+        kind: 'support-to-hand',
+        amount: 0,
+        keepCount: 5,
+        condition: { kind: 'support-count-at-least', count: 6 },
+      },
+    ],
+    'BS6-052': [
+      {
+        kind: 'make-faint',
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
+    'BS6-055': [
+      {
+        kind: 'modify-damage-received',
+        amount: 0,
+        duration: 'persistent',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        minimumDamage: 0,
+        setDamageTo: 0,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ],
+    'BS6-058': [
+      {
+        kind: 'damage-all',
+        amount: 2,
+        side: 'opponent',
+        condition: { kind: 'support-count-less-than-opponent', difference: 2 },
+      },
+    ],
+    'BS6-064': [
+      {
+        kind: 'hand-to-support',
+        amount: 1,
+        rested: false,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ],
+    // BS6-063 的「最多 1 張」必須讓玩家可以明確略過，不能在條件成立時
+    // 一律把牌庫頂放進支援區；以既有 choose-one 呈現放置／不放置兩條路徑。
+    'BS6-063': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'choose-one',
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'support-count-at-least', count: 5 },
+            { kind: 'support-count-at-most', count: 5 },
+          ],
+        },
+        modes: [
+          {
+            label: '將牌庫頂 1 張卡以休息狀態放入支援區',
+            effects: [{ kind: 'deck-to-support', amount: 1, rested: true }],
+          },
+          { label: '不放置卡牌', effects: [] },
+        ],
+      },
+    ],
+    // BS6-057 Coffee Candy Cookie：自身進棄牌區與支援區餅乾回手皆為
+    // 括號代價；自身離場由 skill cost 支付，接著強制選 1 張支援區餅乾
+    // 返回手牌，最後抽最多 1 張。
+    'BS6-057': [
+      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS6-071': [{ kind: 'draw-up-to', max: 2 }],
+    'BS6-072': [{ kind: 'draw-up-to', max: 3 }],
+    // BS6-066 Maple Taffy Cookie：登場代價先將己方藍色 LV.1 餅乾回手，
+    // 再抽最多 1 張。
+    'BS6-066': [
+      {
+        kind: 'return-to-hand',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          maxLevel: 1,
+          energyColor: 'blue',
+        },
+      },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS6-079 Croissant Cookie：登場代價先將己方藍色 LV.2 以下餅乾
+    // 放到牌庫底，再抽最多 2 張。
+    'BS6-079': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: {
+          side: 'self',
+          min: 1,
+          max: 1,
+          maxLevel: 2,
+          energyColor: 'blue',
+        },
+      },
+      { kind: 'draw-up-to', max: 2 },
+    ],
+    'BS6-080': [
+      {
+        kind: 'return-to-hand',
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    // BS6-081 Truffle Cookie：對手 LV.1 餅乾或任一方場景回到其擁有者
+    // 牌庫底；後段的棄 1 張牌只在手牌至少 5 張時才執行。
+    'BS6-081': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: { side: 'either', min: 0, max: 1, maxLevel: 1 },
+        allowStage: true,
+        battleSide: 'opponent',
+      },
+      {
+        kind: 'discard-hand',
+        count: 1,
+        condition: { kind: 'hand-count-at-least', count: 5 },
+      },
+    ],
+    'BS6-082': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS6-083': [{ kind: 'draw-up-to-then-discard', max: 2, discardCount: 1 }],
+    'BS6-084': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS6-085': [
+      {
+        kind: 'modify-attack',
+        amount: -2,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 4 },
+      },
+    ],
+    'BS6-086': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, energyColor: 'blue' },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
+    'BS6-089': [{ kind: 'trash-to-hand', max: 1 }],
+    'BS6-090': [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+    'BS6-093': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
+    'BS6-094': [
+      {
+        kind: 'field-to-trash',
+        target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
+      },
+    ],
+    // BS6-101 的「最多 1 張」必須保留 0 張選擇；昏厥來源已離場，
+    // 因此「can be used as {P}」不另外要求支援區付款。
+    'BS6-101': [
+      {
+        kind: 'trash-to-battle',
+        amount: 1,
+        optional: true,
+        energyColor: 'purple',
+      },
+    ],
+    'BS6-105': [{ kind: 'draw-up-to-then-discard', max: 2, discardCount: 1 }],
+    'BS6-106': [
+      {
+        kind: 'modify-attack',
+        amount: -1,
+        duration: 'this-turn',
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+      {
+        kind: 'trash-to-battle',
+        amount: 1,
+        optional: true,
+        energyColor: 'purple',
+        maxHp: 2,
+      },
+    ],
+    // BS6-087／098／099 只在「從棄牌區登場」時才觸發；觸發來源限制由
+    // fromTrashArea 統一處理，以下只保留卡面指定的實際結算順序。
+    'BS6-087': [{ kind: 'trash-to-hand', max: 1, energyColor: 'purple' }],
+    'BS6-098': [{ kind: 'deck-to-trash', amount: 5, side: 'opponent' }],
+    'BS6-099': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1, minRemainingHp: 2 },
+      },
+    ],
+    // BS6-107 TBD Machine Room：只有本回合已從棄牌區登場過餅乾時，才對
+    // 對手全體造成效果傷害；旗標由 trash-to-battle 在實際登場後記錄。
+    'BS6-107': [
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        condition: { kind: 'cookie-played-from-trash-this-turn' },
+      },
+    ],
   }
-  const exactEffects = exactStarterEffects[cardKey]
+  const exactEffects = exactStarterEffects[cardKey] ?? P_EXACT_EFFECTS[cardKey]
   if (exactEffects) {
     return {
       status: 'supported',
@@ -3403,12 +3897,13 @@ export const convertOfficialCardEffects = (
 export const convertOfficialItemAbility = (
   card: OfficialCardRecord,
 ): CardAbility | undefined => {
-  if (card.type !== 'item' || !card.attackText) return undefined
+  const abilityText = card.skill.text ?? card.attackText
+  if (card.type !== 'item' || !abilityText) return undefined
   const conversion = convertOfficialCardEffects(card)
   if (conversion.status !== 'supported') {
     return undefined
   }
-  const parsed = parseOfficialCardText(card.attackText)
+  const parsed = parseOfficialCardText(abilityText)
   if (!parsed) return undefined
   const cardKey = card.cardNumber.includes('@')
     ? card.baseCardNumber || card.cardNumber.split('@')[0]
@@ -3459,8 +3954,18 @@ export const convertOfficialItemAbility = (
       energy: { neutral: 1 },
       discardHand: 0,
     },
+    'BS6-084': {
+      energy: { blue: 1 },
+      discardHand: 1,
+      discardHandAtLeast: true,
+    },
+    'BS6-105': {
+      energy: { purple: 1 },
+      discardHand: 0,
+      trashBattleCookie: { count: 1, level: 1, energyColor: 'purple' },
+    },
   }
-  const parsedCost = parseAbilityCost(card.attackText)
+  const parsedCost = parseAbilityCost(abilityText)
   const hasSpecialCost =
     (parsedCost.discardHand ?? 0) > 0 ||
     Boolean(parsedCost.supportToTrash) ||
@@ -3468,9 +3973,12 @@ export const convertOfficialItemAbility = (
     Boolean(parsedCost.hpToTrash) ||
     Boolean(parsedCost.trashBattleCookie)
   return {
-    cost: exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
-    text: card.attackText,
+    cost: P_EXACT_SKILL_COSTS[cardKey] ?? exactCosts[cardKey] ?? (hasSpecialCost ? parsedCost : parsed.cost),
+    text: abilityText,
     effects: conversion.effects,
+    ...(P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES[cardKey]
+      ? { activationCostOverride: P_EXACT_ITEM_ACTIVATION_COST_OVERRIDES[cardKey] }
+      : {}),
   }
 }
 
@@ -3480,6 +3988,7 @@ export const convertOfficialStageAbility = (
   if (card.type !== 'stage') return undefined
   const sourceText = [card.skill.text, card.attackText]
     .filter((text): text is string => Boolean(text?.trim()))
+    .map((text) => text.replaceAll('\\"', '"').replace(/^"|"$/g, '').trim())
     .join('\n')
   if (!sourceText) return undefined
   const [placementText, activationText] = sourceText.split(
@@ -3871,6 +4380,34 @@ export const convertOfficialStageAbility = (
         },
       },
     ],
+    // BS6-043 Timecraft Garage：回合結束時先將手牌黃餅乾放進休息區，
+    // 然後玩家可選最多 2 張疲勞支援卡轉為活躍，最後抽最多 1 張。
+    'BS6-043': [
+      { kind: 'hand-to-break', amount: 1, energyColor: 'yellow' },
+      { kind: 'set-active', supportCount: 2, selectable: true, optional: true },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    'BS6-064': [
+      {
+        kind: 'hand-to-support',
+        amount: 1,
+        rested: false,
+        condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+      },
+    ],
+    'BS6-086': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1, energyColor: 'blue' },
+      },
+      {
+        kind: 'draw-up-to',
+        max: 1,
+        condition: { kind: 'hand-count-at-most', count: 3 },
+      },
+    ],
   }
   const exactStageCosts: Partial<Record<string, AbilityCost>> = {
     'BS1-026': {
@@ -3923,13 +4460,18 @@ export const convertOfficialStageAbility = (
       energy: { purple: 1 },
       discardHand: 0,
     },
+    // BS6-043 的黃卡手牌進休息區，是回合結束自動效果的第一段，
+    // 不是場景啟動代價；避免走尚未通用化的 AbilityCost.handToBreakArea。
+    'BS6-043': { energy: {}, discardHand: 0 },
+    'BS6-086': { energy: {}, discardHand: 2 },
   }
-  const stageEffects = exactStageEffects[card.baseCardNumber]
+  const stageEffects = exactStageEffects[card.baseCardNumber] ?? P_EXACT_EFFECTS[card.baseCardNumber]
   if (stageEffects) {
     return {
       placementCost: placement.cost,
       cost:
         exactStageCosts[card.baseCardNumber] ??
+        P_EXACT_SKILL_COSTS[card.baseCardNumber] ??
         (activation?.cost ?? {}),
       text: sourceText,
       effects: stageEffects,
@@ -3940,7 +4482,9 @@ export const convertOfficialStageAbility = (
         card.baseCardNumber === 'BS3-095' ||
         RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
       ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
-      ...(card.baseCardNumber === 'BS5-066' ? { endPhase: true } : {}),
+      ...(card.baseCardNumber === 'BS5-066' || card.baseCardNumber === 'BS6-043'
+        ? { endPhase: true }
+        : {}),
     }
   }
 
@@ -5080,10 +5624,296 @@ export const convertOfficialAttackEffects = (
       { kind: 'draw', amount: 1 },
       { kind: 'deck-to-trash', amount: 3, side: 'self' },
     ],
+    // === BS6 RED attack Then ===
+    // BS6-003 Strawberry Stick Cookie：先處理自己的紅色餅乾 HP，
+    // 再分開選擇對手餅乾造成傷害。
+    'BS6-003': [
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, energyColor: 'red' },
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS6-007': [
+      {
+        kind: 'rest-support',
+        side: 'opponent',
+        amount: 2,
+        activeOnly: true,
+        optional: true,
+        condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
+      },
+    ],
+    'BS6-038': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'break-area-has-card',
+          side: 'self',
+          color: 'yellow',
+          minLevel: 2,
+        },
+      },
+    ],
+    'BS6-060': [{ kind: 'support-to-hand', amount: 1 }],
+    'BS6-013': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: {
+          kind: 'battle-area-has-named-cookie',
+          side: 'self',
+          name: 'Chess Choco Cookie',
+          excludeSource: true,
+        },
+      },
+    ],
+    'BS6-016': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
+    'BS6-018': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 0, max: 1 },
+        condition: { kind: 'source-hp-less-than', amount: 2 },
+      },
+    ],
+    // === BS6 YELLOW attack Then ===
+    'BS6-022': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'return-to-hand',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            condition: { kind: 'break-level-at-least', level: 3 },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {Y}. If your break area is LV.3 or higher, return this Cookie to your hand.',
+      },
+    ],
+    'BS6-024': [
+      {
+        kind: 'damage-by-break-count',
+        perCount: 1,
+        exactBreakLevel: 3,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS6-031': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'break-level-at-least', level: 4 },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {Y}. If your break area is LV.4 or higher, deal 2 damage to up to 1 opponent Cookie.',
+      },
+    ],
+    // === BS6 GREEN attack Then ===
+    'BS6-053': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'support-count-at-least', count: 5 },
+            { kind: 'support-count-at-most', count: 5 },
+          ],
+        },
+      },
+    ],
+    'BS6-059': [
+      {
+        kind: 'return-to-hand',
+        target: { side: 'self', min: 0, max: 1, sourceOnly: true },
+        condition: {
+          kind: 'all-of',
+          conditions: [
+            { kind: 'support-count-at-least', count: 5 },
+            { kind: 'support-count-at-most', count: 5 },
+          ],
+        },
+      },
+    ],
+    'BS6-044': [
+      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
+      {
+        kind: 'damage',
+        amount: 2,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
+    'BS6-061': [
+      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+      },
+    ],
+    'BS6-036': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            perBreakCard: { exactLevel: 3 },
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {Y}. This Cookie gains +1 HP for each LV.3 Cookie in your break area.',
+      },
+    ],
+    'BS6-051': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { green: 1 } },
+        effects: [
+          {
+            kind: 'hand-to-support',
+            amount: 2,
+            rested: false,
+            optional: true,
+            energyColor: 'green',
+            condition: {
+              kind: 'opponent-support-count-at-least',
+              count: 3,
+            },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {G}. If your opponent has 3 or more support cards, place up to 2 {G} cards from your hand into your support area as active.',
+      },
+    ],
+    'BS6-096': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 }, selfToTrash: true },
+        effects: [
+          {
+            kind: 'trash-to-battle',
+            amount: 1,
+            exactLevel: 1,
+            energyColor: 'purple',
+            condition: {
+              kind: 'battle-area-has-cookie-with-level',
+              side: 'self',
+              level: 3,
+            },
+          },
+        ],
+        effectText:
+          'Use this Cookie as {P}. Place this Cookie in the trash, then play 1 {P} LV.1 Cookie from your trash.',
+      },
+    ],
+    'BS6-065': [
+      {
+        kind: 'discard-hand',
+        count: 1,
+        condition: { kind: 'hand-count-at-least', count: 6 },
+      },
+    ],
+    'BS6-072': [
+      { kind: 'discard-hand', count: 2 },
+      { kind: 'draw-up-to', max: 2 },
+    ],
+    'BS6-074': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS6-076': [
+      { kind: 'discard-hand', count: 1 },
+      { kind: 'draw-up-to', max: 1 },
+    ],
+    // BS6-068／077 的「can be used as {B}」沿用同版 BS5-013 的既有
+    // 轉接：它是攻擊餘效的來源能量敘述，不額外建立一次付款視窗。
+    'BS6-068': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS6-077': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
+    'BS6-079': [
+      { kind: 'discard-hand', count: 1 },
+      {
+        kind: 'rest-support',
+        side: 'opponent',
+        amount: 3,
+        activeOnly: true,
+        optional: true,
+      },
+    ],
+    'BS6-093': [
+      {
+        kind: 'trash-to-battle',
+        amount: 1,
+        optional: true,
+        energyColor: 'purple',
+        maxHp: 2,
+      },
+    ],
+    'BS6-095': [
+      {
+        kind: 'trash-to-battle',
+        amount: 1,
+        optional: true,
+        energyColor: 'purple',
+        maxHp: 2,
+      },
+    ],
+    'BS6-102': [
+      { kind: 'deck-to-trash', amount: 3, side: 'self' },
+      { kind: 'deck-to-trash', amount: 3, side: 'opponent' },
+    ],
   }
 
   if (exactAttackEffects[cardKey]) {
     return exactAttackEffects[cardKey]
+  }
+
+  if (P_EXACT_ATTACK_EFFECTS[cardKey]) {
+    return P_EXACT_ATTACK_EFFECTS[cardKey]
   }
 
   if (!/\bThen\b/i.test(card.attackText)) {
@@ -5158,6 +5988,41 @@ export const convertOfficialFlipAbility = (
     'BS5-095': {
       effects: [],
       attachedHpBonus: 1,
+    },
+    'BS6-006': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS6-009': {
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    'BS6-027': {
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    'BS6-037': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS6-046': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS6-056': {
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    'BS6-067': {
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    },
+    'BS6-069': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS6-103': {
+      effects: [],
+      attachedHpBonus: 1,
+    },
+    'BS6-104': {
+      effects: [{ kind: 'draw-up-to', max: 1 }],
     },
     'BS1-040': {
       effects: [
@@ -5249,6 +6114,7 @@ export const convertOfficialFlipAbility = (
     },
   }
   const exactFlip = exactFlipEffects[cardKey]
+  const pExactFlip = P_EXACT_FLIP_EFFECTS[cardKey]
   if (exactFlip) {
     return {
       text: flipText,
@@ -5256,6 +6122,16 @@ export const convertOfficialFlipAbility = (
       effects: exactFlip.effects,
       ...(exactFlip.attachedHpBonus !== undefined
         ? { attachedHpBonus: exactFlip.attachedHpBonus }
+        : {}),
+    }
+  }
+  if (pExactFlip) {
+    return {
+      text: flipText,
+      cost: pExactFlip.cost ?? parseAbilityCost(flipText),
+      effects: pExactFlip.effects,
+      ...(pExactFlip.attachedHpBonus !== undefined
+        ? { attachedHpBonus: pExactFlip.attachedHpBonus }
         : {}),
     }
   }
@@ -5387,11 +6263,11 @@ const parseTrapCondition = (
 export const convertOfficialTrapAbility = (
   card: OfficialCardRecord,
 ): TrapAbility | undefined => {
-  if (card.type !== 'trap' || !card.attackText) {
+  if (card.type !== 'trap' || !(card.skill.text ?? card.attackText)) {
     return undefined
   }
 
-  const text = card.attackText
+  const text = card.skill.text ?? card.attackText!
   const condition = parseTrapCondition(text)
   const target = parseTarget(text)
   const effects: CardEffect[] = []
@@ -5545,11 +6421,19 @@ export const convertOfficialTrapAbility = (
       {
         effects: CardEffect[]
         cost?: AbilityCost
+        alternativeCosts?: AbilityCost[]
         condition?: TrapAbility['condition']
         ignoreParsedCondition?: boolean
       }
     >
   > = {
+    'P-036': {
+      cost: { energy: { red: 3 } },
+      effects: [
+        { kind: 'damage-all', amount: 1, side: 'self' },
+        { kind: 'damage-all', amount: 1, side: 'opponent' },
+      ],
+    },
     'BS3-046': {
       // 條件在戰鬥中延後判定：本次戰鬥有己方 {Y} LV.2 以上餅乾昏厥才發動。
       condition: {
@@ -5793,6 +6677,31 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'P-082': {
+      cost: { energy: { yellow: 1, neutral: 1 } },
+      alternativeCosts: [
+        {
+          energy: {},
+          trashCookieToBreakArea: {
+            count: 1,
+            hp: 1,
+            excludeFlip: true,
+          },
+        },
+      ],
+      effects: [
+        {
+          kind: 'gain-hp',
+          amount: 2,
+          target: { side: 'self', min: 1, max: 1 },
+        },
+        {
+          kind: 'gain-hp',
+          amount: 2,
+          target: { side: 'opponent', min: 1, max: 1 },
+        },
+      ],
+    },
     'P-029': {
       condition: { kind: 'friendly-cookie-fainted-this-battle' },
       effects: [
@@ -5879,13 +6788,107 @@ export const convertOfficialTrapAbility = (
         },
       ],
     },
+    'BS6-020': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'hp-to-hand',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1 },
+        },
+      ],
+    },
+    // BS6-042 的「休息區有 3 張以上餅乾」是陷阱發動門檻，不是只略過
+    // 效果的 Then 條件；用 TrapCondition 保證條件不成立時不會出現在可發動清單。
+    'BS6-063': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'choose-one',
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'support-count-at-least', count: 5 },
+              { kind: 'support-count-at-most', count: 5 },
+            ],
+          },
+          modes: [
+            {
+              label: '將牌庫頂 1 張卡以休息狀態放入支援區',
+              effects: [{ kind: 'deck-to-support', amount: 1, rested: true }],
+            },
+            { label: '不放置卡牌', effects: [] },
+          ],
+        },
+      ],
+    },
+    'BS6-042': {
+      condition: { kind: 'break-area-card-count-at-least', count: 3 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1, minLevel: 2 },
+        },
+        { kind: 'draw-up-to', max: 1 },
+      ],
+    },
+    'BS6-085': {
+      cost: { energy: { blue: 1 }, discardHand: 2 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: { kind: 'hand-count-at-most', count: 4 },
+        },
+      ],
+    },
+    'BS6-106': {
+      cost: { energy: { purple: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          optional: true,
+          energyColor: 'purple',
+          maxHp: 2,
+        },
+      ],
+    },
   }
 
-  const exactTrap = exactTrapEffects[card.cardNumber]
+  const exactTrap =
+    exactTrapEffects[card.cardNumber] ?? exactTrapEffects[card.baseCardNumber]
   if (exactTrap) {
     return {
       text,
       cost: exactTrap.cost ?? parseAbilityCost(text),
+      ...(exactTrap.alternativeCosts
+        ? { alternativeCosts: exactTrap.alternativeCosts }
+        : {}),
       condition: exactTrap.ignoreParsedCondition
         ? exactTrap.condition
         : exactTrap.condition ?? condition,
@@ -5906,6 +6909,45 @@ export const convertOfficialTrapAbility = (
 }
 
 const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
+  // 這兩張的手牌餅乾進休息區，需由 effect queue 帶出選卡 UI 並先結算，
+  // 不能當成僅有陷阱路徑支援的 AbilityCost.handToBreakArea。
+  'BS6-023': { energy: {}, discardHand: 0 },
+  'BS6-032': { energy: {}, discardHand: 0 },
+  'BS6-045': {
+    energy: { green: 1 },
+    discardHand: 0,
+    trashBattleCookie: { count: 1, sourceOnly: true },
+  },
+  'BS6-052': {
+    energy: { green: 2 },
+    discardHand: 0,
+    supportToHand: 2,
+  },
+  'BS6-057': {
+    energy: { green: 1 },
+    discardHand: 0,
+    trashBattleCookie: { count: 1, sourceOnly: true },
+  },
+  'BS6-082': {
+    energy: {},
+    discardHand: 1,
+    discardHandAtLeast: true,
+  },
+  'BS6-001': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 2, energyColor: 'red' },
+  },
+  'BS6-004': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 1, energyColor: 'red' },
+  },
+  'BS6-014': {
+    energy: {},
+    discardHand: 0,
+    hpToTrash: { amount: 2 },
+  },
   'BS2-015': {
     energy: { green: 4 },
     discardHand: 0,
@@ -6097,7 +7139,7 @@ export const convertOfficialCookieSkill = (
   const conversion = convertOfficialCardEffects(
     card.type === 'flip' ? { ...card, type: 'cookie' } : card,
   )
-  const cost = exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
+  const cost = P_EXACT_SKILL_COSTS[cardKey] ?? exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
   const parsed = parseOfficialCardText(card.skill.text)
 
   if (
@@ -6109,7 +7151,11 @@ export const convertOfficialCookieSkill = (
 
   return {
     trigger:
+      P_EXACT_SKILL_TRIGGERS[cardKey] ??
       exactCookieSkillTriggers[cardKey] ??
+      (/when this Cookie is played from the trash/i.test(card.skill.text)
+        ? 'on-play'
+        : undefined) ??
       (parsed.markers.includes('bl') &&
       /redirect\s+the\s+attack\s+to\s+this\s+Cookie/i.test(card.skill.text)
         ? 'block'
@@ -6122,8 +7168,11 @@ export const convertOfficialCookieSkill = (
     yourTurn: exactCookieSkillYourTurn[cardKey] ?? parsed.markers.includes('mt'),
     restSource: RESTS_THIS_CARD_PATTERN.test(card.skill.text),
     cost,
-    ...(exactCookieSkillSourceEnergy[cardKey]
-      ? { sourceEnergy: exactCookieSkillSourceEnergy[cardKey] }
+    ...(P_EXACT_SPECIAL_PLAY_COSTS[cardKey]
+      ? { specialPlayCost: P_EXACT_SPECIAL_PLAY_COSTS[cardKey] }
+      : {}),
+    ...(P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey]
+      ? { sourceEnergy: P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey] }
       : {}),
     text: conversion.sourceText,
     effects: conversion.effects,
@@ -6141,5 +7190,9 @@ export const convertOfficialCookieSkill = (
     // 不是這個技能本身只能從休息區發動的前提，誤判會讓 findSkillSource 在
     // 這些卡意外流落休息區時把它們當成可發動的技能來源。
     fromBreakArea: /this Cookie is in your break area/i.test(card.skill.text),
+    fromTrashArea:
+      P_FROM_TRASH.has(cardKey) ||
+      /when this Cookie is played from the trash/i.test(card.skill.text),
+    fromSupportArea: P_FROM_SUPPORT.has(cardKey),
   }
 }
