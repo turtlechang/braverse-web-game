@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import officialBs6Candidate from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import officialBs6Formal from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import {
   convertOfficialAttackEffects,
+  convertOfficialCardToGameCard,
   convertOfficialCardEffects,
   convertOfficialCookieSkill,
   convertOfficialFlipAbility,
@@ -11,11 +12,11 @@ import {
   type OfficialCardRecord,
 } from '.'
 
-const bs6Cards = officialBs6Candidate.cards as OfficialCardRecord[]
+const bs6Cards = officialBs6Formal.cards as OfficialCardRecord[]
 
 const findBs6Card = (cardNumber: string): OfficialCardRecord => {
   const card = bs6Cards.find((candidate) => candidate.cardNumber === cardNumber)
-  if (!card) throw new Error(`missing BS6 candidate fixture: ${cardNumber}`)
+  if (!card) throw new Error(`missing BS6 formal fixture: ${cardNumber}`)
   return card
 }
 
@@ -34,6 +35,28 @@ const drawOneFlips = [
   'BS6-067',
   'BS6-104',
 ]
+
+describe('BS6 attack definition normalization', () => {
+  it('converts the six official records whose API omitted the attack damage marker', () => {
+    const expectedAttacks = {
+      'BS6-018': 1,
+      'BS6-040': 3,
+      'BS6-061': 2,
+      'BS6-061@1': 2,
+      'BS6-083': 2,
+      'BS6-104': 2,
+    }
+
+    for (const [cardNumber, attack] of Object.entries(expectedAttacks)) {
+      const result = convertOfficialCardToGameCard(findBs6Card(cardNumber))
+
+      expect(result, cardNumber).toMatchObject({
+        status: 'converted',
+        gameCard: { attack },
+      })
+    }
+  })
+})
 
 describe('BS6 basic FLIP effect adapter', () => {
   it.each(attachedHpBonusFlips)(

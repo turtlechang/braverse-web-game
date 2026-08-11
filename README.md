@@ -6,7 +6,7 @@
 
 ## 開發背景
 
-BS6 依照既有卡牌匯入工作流進入資料準備期：官方來源先保留在 `data/candidates/`，完成 adapter、效果覆蓋、規則回歸與 Browser 互動驗證後，才會進入 `promotion-ready` 並 promote 至正式卡池。
+BS6 已完成資料準備期、逐色 Browser 稽核與正式 promote：138 筆記錄（106 張基礎卡、32 張異圖／變體）已納入 `data/cards/`；正式卡池重新通過 138／138 Browser 入口矩陣、adapter 回歸、`validate:cards` 與 `check:card-pool`。後續官方更新仍先輸出至 `data/candidates/`，完成同一套稽核後再 promote。
 
 卡牌匯入稽核可使用 BraverseFan 作為社群交叉參考，但不取代官方 JSON、卡面、規則與公告。
 
@@ -62,7 +62,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
-BS6 候選資料目前包含 138 張卡牌（106 張基礎卡與 32 張異圖／變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；新增 BS6-034 HP 重排與 BS6-039 休息區連鎖的條件成立／不成立 test-state，並以 Browser 驗證支付、強制第一段、可略過第二段、HP 重排與條件不成立時不會卡死。BS6 仍未 promote，以上 Browser 證據僅代表本機候選測試流程。
+BS6 正式卡池包含 138 張記錄（106 張基礎卡與 32 張異圖／變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 已通過 Browser 驗證。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
 BraverseFan 中文圖鑑與判例整理已列入文件參考來源；目前僅作為資料交叉核對與測試案例搜尋，不改變正式卡池權威來源。
 
@@ -141,7 +141,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-完成 BS6 候選卡牌逐色逐卡 Browser 稽核，補齊每張卡的條件成立／不成立、支付、代價、目標、Then、FLIP、陷阱、物品與場景流程證據；全部通過後再執行 `promotion-ready` 審查與 promote，不提前併入正式卡池。
+BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；後續以正式卡池回歸、官方更新追蹤與真人對戰驗證為主。
 
 後續引用社群判例時，需在 inventory／coverage 文件記錄 URL、查閱日期與官方對應依據，並保留差異待確認。
 
@@ -235,6 +235,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-12 | BS6 138 筆（106 張基礎卡、32 張異圖／變體）完成五色逐卡 Browser 入口矩陣與代表性 A/B 效果驗證；修正 6 筆官方資料遺漏 `{da}`、補足 BS6-041 條件 fixture，候選通過 promotion-ready gate 後 promote 至正式卡池，正式 `validate:cards`、`check:card-pool`、完整測試、lint、build 與 bundle gate 通過。 |
 | 2026-08-11 | P-0XX 127 筆（118 個 base card number、含 14 筆 `@` 異圖）已 promote 至 `data/cards/`，正式卡池增至 963 種卡號；修正 test-state、轉接覆蓋與 Browser 稽核腳本仍讀候選檔的路徑。P-041 的生日祝福登場文字明確標示為不改變規則狀態的社交效果，保留時機與攻擊後生日 +1 攻擊的轉接及回歸測試。 |
 | 2026-08-11 | 完成牌組編輯器全頁工作台第二輪收斂：主要牌組依餅乾／FLIP／物品／陷阱／場景分區並預留 BS8 額外牌組；JSON 匯入改為輔助提示框；Open 匯入略過標準禁限卡但保留核心牌組規則。頁首整合合法性、賽制、卡池統計與 JSON 工具，卡池篩選預設收合；左欄採卡圖＋數值摘要與能量圖示，補齊元件與 Browser 回歸驗證。 |
 | 2026-08-10 | 完成官方 P-0XX 全量盤點與轉換：153 筆記錄（含 14 筆異圖變體）全部完成 adapter conversion，新增 127 筆候選資料與完整匯入清單；完成 P-082／P-084／P-147 特殊支付的 runtime、UI 與專用 Browser 驗證，候選仍待逐卡稽核後 promote。 |
