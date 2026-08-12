@@ -745,6 +745,8 @@ export interface BreakToTrashEffect {
   energyColor?: EnergyColor
   exactLevel?: number
   maxLevel?: number
+  /** 指定卡牌不得作為休息區目標（例如 BS6-091 的 Schneeball Cookie）。 */
+  excludeCardId?: string
   condition?: EffectCondition
 }
 

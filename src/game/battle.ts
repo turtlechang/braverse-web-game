@@ -1176,7 +1176,8 @@ export const playTrap = (
     sourceCardName: trapCard.name,
   }
 
-  for (const effect of trap.effects) {
+  for (let effectIndex = 0; effectIndex < trap.effects.length; effectIndex += 1) {
+    const effect = trap.effects[effectIndex]
     if (
       trap.condition?.kind === 'friendly-color-fainted-this-battle' ||
       trap.condition?.kind === 'friendly-cookie-fainted-this-battle'
@@ -1326,6 +1327,31 @@ export const playTrap = (
         options.trashToDeckIds ?? [],
       )
       continue
+    }
+
+    // 陷阱的第一段戰鬥區目標與後續「從棄牌區登場」不是同一批卡。
+    // 不能把既有 targetIds 再傳給 trash-to-battle，否則會把對手餅乾當成
+    // 自己棄牌區的候選而被規則層拒絕。改交由既有的 pendingAbilityEffect
+    // 逐段選擇，並以 after-trap 在結算後回到同一場戰鬥重算傷害。
+    if (effect.kind === 'trash-to-battle') {
+      const candidates = getEffectSelectionCandidates(nextState, context, effect)
+      if (candidates.length === 0) {
+        nextState = executeCardEffect(nextState, context, effect, [])
+        continue
+      }
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
     }
 
     nextState = executeCardEffect(

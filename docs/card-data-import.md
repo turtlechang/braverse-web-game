@@ -109,7 +109,7 @@ npm run cards:analyze:bs6-candidate
 npm run validate:candidate
 ```
 
-指令會建立 `data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json`、`docs/bs6-card-inventory.md` 與 `docs/bs6-effect-coverage.md`，供官方更新重新進入候選流程。BS6 本批已完成逐色 runtime 轉接、回歸測試與 Browser 效果稽核；完整證據見 [BS6 Browser 稽核報告](bs6-browser-audit-2026-08-12.md)，後續更新仍須先維持 `inventory`，完成稽核後才可改為 `promotion-ready` 並 promote。
+匯入指令會建立 `data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json` 與 `docs/bs6-card-inventory.md`，供官方更新重新進入候選流程；`cards:analyze:bs6-candidate` 會相容地轉呼叫正式卡池分析。已 promote 的 BS6 覆蓋盤點應以 `npm run cards:analyze:bs6` 從 `data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json` 重新產生。BS6 本批已完成逐色 runtime 轉接、回歸測試與 Browser 效果稽核；完整證據見 [BS6 Browser 稽核報告](bs6-browser-audit-2026-08-12.md)，後續更新仍須先維持 `inventory`，完成稽核後才可改為 `promotion-ready` 並 promote。
 
 完成每張卡的 runtime 轉接、測試與人工覆核後，確認效果覆蓋盤點沒有待裁決或未支援的規則文字，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
 

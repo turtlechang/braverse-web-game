@@ -82,7 +82,7 @@ export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
   return [...keywords]
 }
 
-const normalizeOfficialCardRecord = (
+export const normalizeOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
   // 部分官方 FLIP 記錄把 FLIP 文案誤放在 skill.text；在轉接邊界移回
@@ -144,6 +144,27 @@ const normalizeOfficialCardRecord = (
       attackText:
         '<{P}{P}> Kettlebell Throw {da} 2 Then, place up to 3 cards from the top of your deck into the trash.',
       flipText: null,
+    }
+  }
+
+  // BS6-091 目前只有 @2／@3 異圖記錄；官方英文 API 將「從棄牌區登場時」
+  // 的技能文字與普通攻擊合併在 attackText。拆回各自欄位，讓 runtime 能同時
+  // 保留 fromTrashArea OnPlay 與正確的攻擊費用／傷害。
+  if (
+    sourceCard.baseCardNumber === 'BS6-091' &&
+    sourceCard.type === 'cookie' &&
+    !sourceCard.skill.text &&
+    /\{sk\}\s*Time Researcher/i.test(sourceCard.attackText ?? '') &&
+    /\{da\}\s*2/i.test(sourceCard.attackText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      skill: {
+        ...sourceCard.skill,
+        text:
+          'When this Cookie is played from the trash, Select up to 1 {P} LV.1 Cookie other than [Schneeball Cookie] from your break area. Place that Cookie in the trash.',
+      },
+      attackText: '<{P}{P}> Relic Analysis {da} 2',
     }
   }
 

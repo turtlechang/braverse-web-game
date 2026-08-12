@@ -45,7 +45,11 @@ import {
 import { getTrapCandidates, resolveFlip } from './battle'
 import { cookie } from './test-helpers/battle-helpers'
 import { canActivateStage } from './card-abilities'
-import { isEffectConditionMet } from './effects'
+import {
+  getBreakToTrashCandidates,
+  getTrashCookieCandidates,
+  isEffectConditionMet,
+} from './effects'
 import { canActivateCookieSkill } from './skills'
 import { isSpecialVictoryConditionMet } from './victory'
 import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
@@ -462,7 +466,7 @@ describe('createCardCheckDemoState', () => {
     ).toBe(true)
   })
 
-  it('loads BS6 candidates for localhost card-check without adding them to the formal pool', () => {
+  it('loads BS6 formal cards for localhost card-check through the formal pool', () => {
     const prophet = createCardCheckDemoState('BS6-034')
     const prophetSource = prophet.players['player-one'].hand.find(
       (card) => card.id === 'BS6-034',
@@ -481,6 +485,46 @@ describe('createCardCheckDemoState', () => {
       cost: { energy: { yellow: 1 } },
       effects: [{ kind: 'opponent-break-to-trash-then-battle-to-break' }],
     })
+
+    const schneeball = createCardCheckDemoState('BS6-091')
+    const schneeballSource = schneeball.players['player-one'].battleArea[0]?.card
+    expect(schneeball.pendingOnPlay).toMatchObject({ origin: 'trash' })
+    expect(schneeballSource?.skill).toMatchObject({
+      trigger: 'on-play',
+      fromTrashArea: true,
+      effects: [
+        {
+          kind: 'break-to-trash',
+          energyColor: 'purple',
+          exactLevel: 1,
+          excludeCardId: 'BS6-091',
+        },
+      ],
+    })
+    const effect = schneeballSource?.skill?.effects[0]
+    if (!effect || effect.kind !== 'break-to-trash' || !schneeballSource) {
+      throw new Error('BS6-091 formal fixture is required')
+    }
+    expect(
+      getBreakToTrashCandidates(
+        schneeball,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: schneeballSource.instanceId,
+        },
+        effect,
+      ).map((card) => card.instanceId),
+    ).toContain('BS6-091-break-eligible-purple-lv1')
+    expect(
+      getBreakToTrashCandidates(
+        schneeball,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: schneeballSource.instanceId,
+        },
+        effect,
+      ).map((card) => card.instanceId),
+    ).not.toContain('BS6-091-break-excluded')
   })
 
   it('prepares BS6-041 with three Cookies in the break area for its item condition', () => {
@@ -498,7 +542,7 @@ describe('createCardCheckDemoState', () => {
       const source = state.players['player-one'].hand.find(
         (card) => card.id === 'BS6-039',
       )
-      if (!source?.skill) throw new Error('BS6-039 candidate source is required')
+      if (!source?.skill) throw new Error('BS6-039 formal source is required')
       return { source, effect: source.skill.effects[0]! }
     }
     const metSource = getSourceAndEffect(met)
@@ -514,6 +558,39 @@ describe('createCardCheckDemoState', () => {
     }, unmetSource.effect)).toBe(false)
     expect(unmet.players['player-two'].breakArea).toEqual([
       expect.objectContaining({ level: 7 }),
+    ])
+  })
+
+  it('prepares BS6-106 with a vacant battle slot and a legal purple HP 2 trash Cookie', () => {
+    const state = createCardCheckDemoState('BS6-106')
+    const trap = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-106',
+    )
+    const effect = trap?.trap?.effects.find(
+      (entry) => entry.kind === 'trash-to-battle',
+    )
+
+    expect(state.players['player-one'].battleArea).toHaveLength(1)
+    expect(effect?.kind).toBe('trash-to-battle')
+    if (effect?.kind !== 'trash-to-battle' || !trap) {
+      throw new Error('BS6-106 trash-to-battle fixture is required')
+    }
+    expect(
+      getTrashCookieCandidates(
+        state,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: trap.instanceId,
+          sourceCardName: trap.name,
+        },
+        effect,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        instanceId: 'BS6-106-purple-hp2-trash-cookie',
+        energyColor: 'purple',
+        hp: 2,
+      }),
     ])
   })
 
@@ -883,6 +960,52 @@ describe('BS4 condition fixtures', () => {
     )
 
     expect(source?.hpCards).toHaveLength(hpCount)
+  })
+
+  it('BS6-001 card-check fixture pays two HP cards then resolves its self attack bonus', () => {
+    const state = createCardCheckDemoState('BS6-001')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-001',
+    )
+    const target = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id !== 'BS6-001',
+    )
+
+    expect(source?.hpCards).toHaveLength(3)
+    expect(target).toBeDefined()
+    expect(
+      canActivateCookieSkill(
+        state,
+        'player-one',
+        source!.card.instanceId,
+        'activate',
+      ),
+    ).toBe(true)
+
+    const paid = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: source!.card.instanceId,
+      trigger: 'activate',
+      paymentIds: [],
+      hpToTrashTargetIds: [source!.card.instanceId],
+    })
+    expect(
+      paid.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === source!.card.instanceId,
+      )?.hpCards,
+    ).toHaveLength(1)
+
+    const resolved = applyGameCommand(paid, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [target!.card.instanceId],
+    })
+
+    expect(resolved.pendingAbilityEffect).toBeUndefined()
+    expect(getEffectiveAttack(resolved, target!.card.instanceId)).toBe(
+      target!.card.attack + 1,
+    )
   })
 
   it('BS5-016 can be activated before its post-payment HP-card condition is known', () => {

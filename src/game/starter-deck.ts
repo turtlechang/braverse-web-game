@@ -27,7 +27,10 @@ import {
   convertOfficialStageAbility,
   convertOfficialTrapAbility,
 } from '../cards/official-effect-adapter'
-import { getRuntimeKeywords } from '../cards/official-card-adapter'
+import {
+  getRuntimeKeywords,
+  normalizeOfficialCardRecord,
+} from '../cards/official-card-adapter'
 import { parseOfficialCardText } from '../cards/official-text-parser'
 import type { OfficialCardRecord } from '../cards/types'
 import type { CardEffect, GameCard, PlayerId } from './types'
@@ -599,13 +602,14 @@ export const createCard = (
   playerId: PlayerId,
   copyNumber: number,
 ): GameCard => {
-  const effectConversion = convertOfficialCardEffects(source)
-  const attackEffects = convertOfficialAttackEffects(source)
-  const skill = convertOfficialCookieSkill(source)
-  const flip = convertOfficialFlipAbility(source)
-  const trap = convertOfficialTrapAbility(source)
-  const item = convertOfficialItemAbility(source)
-  const stageAbility = convertOfficialStageAbility(source)
+  const card = normalizeOfficialCardRecord(source)
+  const effectConversion = convertOfficialCardEffects(card)
+  const attackEffects = convertOfficialAttackEffects(card)
+  const skill = convertOfficialCookieSkill(card)
+  const flip = convertOfficialFlipAbility(card)
+  const trap = convertOfficialTrapAbility(card)
+  const item = convertOfficialItemAbility(card)
+  const stageAbility = convertOfficialStageAbility(card)
 
   let effectText: string | undefined
   let effects: import('./types').CardEffect[] | undefined
@@ -627,15 +631,15 @@ export const createCard = (
     effects = flip.effects
   }
 
-  const keywords = getRuntimeKeywords(source)
+  const keywords = getRuntimeKeywords(card)
 
   const base = {
-    id: source.baseCardNumber,
-    instanceId: `${playerId}-${source.cardNumber}-${copyNumber}`,
-    name: source.name,
-    imageUrl: source.imageUrl,
-    energyColor: getEnergyColor(source),
-    officialType: (source.type === 'flip'
+    id: card.baseCardNumber,
+    instanceId: `${playerId}-${card.cardNumber}-${copyNumber}`,
+    name: card.name,
+    imageUrl: card.imageUrl,
+    energyColor: getEnergyColor(card),
+    officialType: (card.type === 'flip'
       ? 'flip'
       : 'cookie') as GameCard['officialType'],
     ...(keywords.length > 0 ? { keywords } : {}),
@@ -643,26 +647,26 @@ export const createCard = (
   }
 
   if (
-    (source.type === 'cookie' || source.type === 'flip') &&
-    source.level !== null &&
-    source.hp !== null
+    (card.type === 'cookie' || card.type === 'flip') &&
+    card.level !== null &&
+    card.hp !== null
   ) {
-    const parsedAttack = parseOfficialCardText(source.attackText)
+    const parsedAttack = parseOfficialCardText(card.attackText)
     const hpOnlyFlip =
-      source.type === 'flip' &&
-      source.baseCardNumber === 'P-024' &&
+      card.type === 'flip' &&
+      card.baseCardNumber === 'P-024' &&
       Boolean(flip)
 
     return {
       ...base,
       type: 'cookie',
-      level: source.level,
-      hp: source.hp,
+      level: card.level,
+      hp: card.hp,
       attack: parsedAttack?.damage ?? (hpOnlyFlip ? 0 : 1),
       attackCost: parsedAttack?.totalCost ?? 0,
       attackEnergyCost: parsedAttack?.cost ?? {},
       ...(hpOnlyFlip ? { nonAttackable: true } : {}),
-      attackText: source.attackText ?? undefined,
+      attackText: card.attackText ?? undefined,
       ...(attackEffects ? { attackEffects: attackEffects satisfies CardEffect[] } : {}),
       ...(skill ? { skill } : {}),
       ...(flip ? { flip } : {}),
@@ -670,8 +674,8 @@ export const createCard = (
   }
 
   const runtimeType =
-    source.type === 'trap' || source.type === 'stage'
-      ? source.type
+    card.type === 'trap' || card.type === 'stage'
+      ? card.type
       : 'item'
 
   return {

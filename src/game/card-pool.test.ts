@@ -8,6 +8,8 @@ import {
 
 const BS2_031_BASE = 'BS2-031'
 const BS2_031_VARIANT = 'BS2-031@1'
+const BS6_091_BASE = 'BS6-091'
+const BS6_091_VARIANT = 'BS6-091@2'
 const ST1_001 = 'ST1-001'
 
 describe('card-pool @ variant merging', () => {
@@ -46,6 +48,18 @@ describe('card-pool @ variant merging', () => {
     expect(normalizeCardNumber(BS2_031_BASE)).toBe(BS2_031_BASE)
     expect(normalizeCardNumber(`  ${BS2_031_VARIANT}  `)).toBe(BS2_031_BASE)
     expect(normalizeCardNumber('UNKNOWN-999')).toBe('UNKNOWN-999')
+  })
+
+  it('resolves a base number that is represented only by variants', () => {
+    const baseEntry = getCardPoolEntry(BS6_091_BASE)
+    const variantEntry = getCardPoolEntry(BS6_091_VARIANT)
+
+    expect(baseEntry?.cardNumber).toBe(BS6_091_BASE)
+    expect(variantEntry?.cardNumber).toBe(BS6_091_VARIANT)
+    expect(getCardPoolVariants(BS6_091_BASE).map((card) => card.cardNumber).sort()).toEqual([
+      'BS6-091@2',
+      'BS6-091@3',
+    ])
   })
 
   it('still resolves plain starter-deck numbers unchanged', () => {

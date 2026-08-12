@@ -973,6 +973,26 @@ describe('BS6 PURPLE effect adapter', () => {
       endPhase: true,
       effects: [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
     })
+    expect(convertOfficialCardToGameCard(findBs6Card('BS6-091@2'))).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 2,
+        attackEnergyCost: { purple: 2 },
+        skill: {
+          trigger: 'on-play',
+          fromTrashArea: true,
+          effects: [
+            {
+              kind: 'break-to-trash',
+              max: 1,
+              energyColor: 'purple',
+              exactLevel: 1,
+              excludeCardId: 'BS6-091',
+            },
+          ],
+        },
+      },
+    })
     expect(convertOfficialCookieSkill(findBs6Card('BS6-093'))).toMatchObject({
       trigger: 'on-play',
       effects: [

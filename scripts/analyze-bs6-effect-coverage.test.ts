@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import officialBs5Dataset from '../data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json'
+import officialBs6Dataset from '../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import type { OfficialCardRecord } from '../src/cards/types'
 import {
   analyzeBs6EffectCoverage,
@@ -7,26 +7,29 @@ import {
 } from './analyze-bs6-effect-coverage'
 
 describe('BS6 effect coverage analysis', () => {
-  it('audits only base card numbers and accounts for every primary conversion', () => {
+  it('audits every base card number and accounts for every primary conversion', () => {
     const report = analyzeBs6EffectCoverage(
-      officialBs5Dataset.cards as OfficialCardRecord[],
+      officialBs6Dataset.cards as OfficialCardRecord[],
     )
 
-    expect(report.baseCardCount).toBe(111)
+    expect(report.baseCardCount).toBe(107)
     expect(
       Object.values(report.primaryConversion).reduce(
         (total, count) => total + count,
         0,
       ),
     ).toBe(report.baseCardCount)
-    expect(report.entries.every((entry) => !entry.cardNumber.includes('@'))).toBe(
-      true,
+    expect(report.entries).toContainEqual(
+      expect.objectContaining({
+        cardNumber: 'BS6-091@2',
+        primaryConversion: 'supported',
+      }),
     )
   })
 
   it('keeps every colour visible in the audit matrix', () => {
     const report = analyzeBs6EffectCoverage(
-      officialBs5Dataset.cards as OfficialCardRecord[],
+      officialBs6Dataset.cards as OfficialCardRecord[],
     )
 
     expect(Object.keys(report.byColor)).toEqual(
@@ -55,12 +58,12 @@ describe('BS6 effect coverage analysis', () => {
 
   it('renders inventory and promotion gates with pending card tables', () => {
     const markdown = createBs6EffectCoverageMarkdown(
-      analyzeBs6EffectCoverage(officialBs5Dataset.cards as OfficialCardRecord[]),
+      analyzeBs6EffectCoverage(officialBs6Dataset.cards as OfficialCardRecord[]),
     )
 
-    expect(markdown).toContain('# BS6 效果轉接覆蓋盤點（資料準備期）')
+    expect(markdown).toContain('# BS6 效果轉接覆蓋盤點（正式卡池）')
     expect(markdown).toContain('## 逐色稽核矩陣')
     expect(markdown).toContain('正式對戰狀態以 Chrome')
-    expect(markdown).toContain('不執行 `promote:candidate`')
+    expect(markdown).toContain('再次 promote')
   })
 })

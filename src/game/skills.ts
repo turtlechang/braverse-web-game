@@ -450,6 +450,15 @@ export const getHpToTrashCostCandidates = (
     ) {
       return false
     }
+    // HP 代價是從同一個餅乾的 HP 堆一次移除指定張數；只剩 1 張 HP
+    // 的餅乾不能支付「移除 2 張」的代價。先在候選階段排除它，避免 UI
+    // 顯示可選但在確認時才被規則層拒絕。
+    if (
+      cost.hpToTrash?.untilRemainingHp === undefined &&
+      cookie.hpCards.length < (cost.hpToTrash?.amount ?? 1)
+    ) {
+      return false
+    }
     if (cookie.hpCards.length === 0) return false
     return cost.hpToTrash?.untilRemainingHp === undefined
       ? true

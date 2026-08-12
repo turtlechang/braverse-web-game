@@ -86,6 +86,26 @@ const tableRows = (entries) =>
 const getDistinctBaseCardNumbers = (cards) =>
   [...new Set(cards.map((card) => card.baseCardNumber))].sort(compareText)
 
+export const getBs6VariantStats = (cards) => {
+  const baseCardNumbers = getDistinctBaseCardNumbers(cards)
+  const baseRecords = cards.filter(
+    (card) => card.cardNumber === card.baseCardNumber,
+  )
+  const variants = cards.filter((card) => card.cardNumber !== card.baseCardNumber)
+  const baseRecordNumbers = new Set(
+    baseRecords.map((card) => card.baseCardNumber),
+  )
+
+  return {
+    baseCardNumbers,
+    baseRecords,
+    variants,
+    variantOnlyBaseCardNumbers: baseCardNumbers.filter(
+      (baseCardNumber) => !baseRecordNumbers.has(baseCardNumber),
+    ),
+  }
+}
+
 const listOrNone = (cards) => getDistinctBaseCardNumbers(cards).join(', ') || '無'
 
 const textOf = (card) =>
@@ -95,7 +115,12 @@ const textOf = (card) =>
 
 export const createBs6InventoryMarkdown = (document) => {
   const { cards, source } = document
-  const baseCardNumbers = getDistinctBaseCardNumbers(cards)
+  const {
+    baseCardNumbers,
+    baseRecords,
+    variants,
+    variantOnlyBaseCardNumbers,
+  } = getBs6VariantStats(cards)
   const ancient = cards.filter((card) =>
     card.keywords.some((keyword) => keyword.toLowerCase() === 'ancient'),
   )
@@ -106,7 +131,7 @@ export const createBs6InventoryMarkdown = (document) => {
 
   return `# BS6 卡牌資料盤點（資料準備期）
 
-> 本文件由 \`npm run cards:import:bs6-candidate\` 產生。BS6 僅隔離在候選資料區，尚未完成 runtime 轉接、效果稽核或 promote。
+> 本文件由 \`npm run cards:import:bs6-candidate\` 產生，記錄當次的候選資料準備快照。完成 promote 後，正式卡池以 \`data/cards/\` 與 BS6 效果覆蓋盤點為準。
 
 ## 來源與候選狀態
 
@@ -124,8 +149,10 @@ export const createBs6InventoryMarkdown = (document) => {
 | 官方資料總數 | ${source.totalAvailable} |
 | BS6 匹配記錄 | ${source.matchedAvailable} |
 | 匯入候選記錄 | ${cards.length} |
-| BS6 基礎卡號 | ${baseCardNumbers.length} |
-| 變體記錄 | ${cards.length - baseCardNumbers.length} |
+| 不同基礎卡號 | ${baseCardNumbers.length} |
+| 基礎記錄（無 \`@\` 變體尾碼） | ${baseRecords.length} |
+| 變體記錄（含 \`@\` 變體尾碼） | ${variants.length} |
+| 僅有變體的基礎卡號 | ${variantOnlyBaseCardNumbers.length}（${variantOnlyBaseCardNumbers.join(', ') || '無'}） |
 
 ## 卡片類型
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { describeEffect, describeEffectResult } from './effectUiUtils'
-import type { BreakToTrashEffect } from '../../game'
+import type { BreakToTrashEffect, TrashToBattleEffect } from '../../game'
 import type { DeckToTrashEffect } from '../../game/types'
 
 describe('describeEffectResult for break-to-trash', () => {
@@ -12,6 +12,26 @@ describe('describeEffectResult for break-to-trash', () => {
 
   it('returns the trashed message when targets are selected', () => {
     expect(describeEffectResult(effect, ['ST1-009'])).toBe('break 區卡已放入棄牌區。')
+  })
+})
+
+describe('describeEffectResult for optional trash-to-battle', () => {
+  const effect: TrashToBattleEffect = {
+    kind: 'trash-to-battle',
+    amount: 1,
+    optional: true,
+  }
+
+  it('does not claim that a Cookie entered battle when the optional selection is skipped', () => {
+    expect(describeEffectResult(effect, [])).toBe(
+      '未選擇棄牌區餅乾，已略過登場。',
+    )
+  })
+
+  it('confirms the battle entry when a trash Cookie was selected', () => {
+    expect(describeEffectResult(effect, ['BS6-106-purple-hp2-trash-cookie'])).toBe(
+      '棄牌區餅乾已登場。',
+    )
   })
 })
 

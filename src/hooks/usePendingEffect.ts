@@ -687,7 +687,7 @@ export function usePendingEffect(params: {
 
     const triggerLabel =
       pendingAbility.sourceKind === 'trap'
-        ? '陷阱延遲效果'
+        ? '陷阱效果'
         : pendingAbility.sourceKind === 'stage'
           ? '場景效果'
           : pendingAbility.sourceKind === 'skill'

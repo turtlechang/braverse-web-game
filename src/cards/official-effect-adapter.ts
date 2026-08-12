@@ -3283,6 +3283,18 @@ export const convertOfficialCardEffects = (
     ],
     'BS6-089': [{ kind: 'trash-to-hand', max: 1 }],
     'BS6-090': [{ kind: 'deck-to-trash', amount: 2, side: 'self' }],
+    // BS6-091 官方資料只有異圖，且 adapter 會先把合併在 attackText 的技能
+    // 拆回 skill.text。從棄牌區登場時可選己方另一張紫色 LV.1 休息區餅乾
+    // 放入棄牌區。
+    'BS6-091': [
+      {
+        kind: 'break-to-trash',
+        max: 1,
+        energyColor: 'purple',
+        exactLevel: 1,
+        excludeCardId: 'BS6-091',
+      },
+    ],
     'BS6-093': [
       {
         kind: 'field-to-trash',

@@ -1368,6 +1368,133 @@ describe('R15: trap multi-effect targeting (BS2-079)', () => {
   })
 })
 
+describe('BS6-106 Peak Engineer Performance: trap Then selection', () => {
+  const bs6106Trap = (): GameCard => ({
+    id: 'BS6-106',
+    instanceId: 'bs6-106-test',
+    name: 'Peak Engineer Performance',
+    type: 'trap',
+    officialType: 'trap',
+    energyColor: 'purple',
+    trap: {
+      text: 'Select up to 1 opponent Cookie. It gets -1 attack damage. Then, play up to 1 purple Cookie with 2 or less HP from your trash.',
+      cost: { energy: { purple: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          optional: true,
+          energyColor: 'purple',
+          maxHp: 2,
+        },
+      ],
+    },
+  })
+
+  const createBs6106State = () => {
+    const trap = bs6106Trap()
+    const eligible = {
+      ...cookie('bs6-106-purple-hp2', 1, 2),
+      energyColor: 'purple' as const,
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-purple-a', 'purple'), rested: false },
+      { card: item('p1-purple-b', 'purple'), rested: false },
+    ]
+    state.players['player-one'].deck = [
+      item('p1-deck-a'),
+      item('p1-deck-b'),
+      item('p1-deck-c'),
+    ]
+    state.players['player-one'].discardPile = [eligible]
+    state = declareAttack(state)
+    return { state, trap, eligible }
+  }
+
+  it('keeps the battle pending while the defender selects the optional trash Cookie', () => {
+    const { state, trap, eligible } = createBs6106State()
+
+    const afterTrap = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple-a', 'p1-purple-b'],
+      targetIds: ['attacker'],
+    })
+
+    expect(afterTrap.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -1 }),
+    )
+    expect(afterTrap.pendingBattle?.stage).toBe('trap')
+    expect(afterTrap.pendingAbilityEffect).toMatchObject({
+      playerId: 'player-one',
+      sourceKind: 'trap',
+      effectIndex: 1,
+      battleContinuation: 'after-trap',
+    })
+
+    const resolved = applyGameCommand(afterTrap, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [eligible.instanceId],
+    })
+
+    expect(resolved.pendingAbilityEffect).toBeUndefined()
+    expect(resolved.players['player-one'].battleArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          card: expect.objectContaining({ instanceId: eligible.instanceId }),
+          hpCards: expect.arrayContaining([
+            expect.objectContaining({ instanceId: 'p1-deck-a' }),
+          ]),
+        }),
+      ]),
+    )
+    expect(
+      resolved.players['player-one'].discardPile.some(
+        (card) => card.instanceId === eligible.instanceId,
+      ),
+    ).toBe(false)
+    expect(resolved.pendingBattle).toMatchObject({
+      stage: 'damage',
+      declaredDamage: 2,
+      remainingDamage: 2,
+    })
+  })
+
+  it('allows skipping the optional trash Cookie while preserving the first effect and battle flow', () => {
+    const { state, trap, eligible } = createBs6106State()
+    const afterTrap = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-purple-a', 'p1-purple-b'],
+      targetIds: ['attacker'],
+    })
+
+    const skipped = applyGameCommand(afterTrap, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+
+    expect(skipped.pendingAbilityEffect).toBeUndefined()
+    expect(skipped.attackModifiers).toContainEqual(
+      expect.objectContaining({ targetInstanceId: 'attacker', amount: -1 }),
+    )
+    expect(skipped.players['player-one'].discardPile).toContainEqual(eligible)
+    expect(skipped.pendingBattle).toMatchObject({
+      stage: 'damage',
+      declaredDamage: 2,
+      remainingDamage: 2,
+    })
+  })
+})
+
 describe('BS3-021 Oath on the Shield: modify-attack + self-damage', () => {
   const bs3021Trap = (): GameCard => ({
     id: 'BS3-021',

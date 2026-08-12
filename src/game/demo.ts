@@ -2391,7 +2391,7 @@ const getPTestCard = (cardNumber: string): GameCard => {
   return conversion.gameCard
 }
 
-const getBs6CandidateTestCard = (cardNumber: string): GameCard | null => {
+const getBs6FormalTestCard = (cardNumber: string): GameCard | null => {
   const trimmed = cardNumber.trim()
   const source = (bs6FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.cardNumber === trimmed,
@@ -2412,7 +2412,10 @@ const getBs6CandidateTestCard = (cardNumber: string): GameCard | null => {
 
 const getCardCheckCard = (cardNumber: string): GameCard => {
   const entry = getCardPoolEntry(cardNumber)
-  if (entry) {
+  // BS6-091 is represented only by variants in the formal API. Resolve it
+  // through the formal adapter so its variant-only skill/attack normalization
+  // is preserved in the generic Browser card-check fixture.
+  if (entry && entry.baseCardNumber !== 'BS6-091') {
     return createCard(entry, 'player-one', 1)
   }
 
@@ -2425,8 +2428,8 @@ const getCardCheckCard = (cardNumber: string): GameCard => {
     (record) => record.baseCardNumber === trimmed,
   )
   if (!source) {
-    const bs6Candidate = getBs6CandidateTestCard(trimmed)
-    if (bs6Candidate) return bs6Candidate
+    const bs6Formal = getBs6FormalTestCard(trimmed)
+    if (bs6Formal) return bs6Formal
     throw new Error(`找不到卡片編號 ${cardNumber} 的官方資料。`)
   }
 
@@ -2689,6 +2692,27 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       : []
     const trapOpponentSecondCookie =
       card.id === 'BS5-109' ? opp1.cookie : opp2.cookie
+    const trapBattleArea =
+      card.id === 'BS6-106'
+        ? [cardCheckBattleEntry(defender.cookie, defender.hpCards, 4)]
+        : [
+            cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
+            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+          ]
+    const trapTrashFillers =
+      card.id === 'BS6-106'
+        ? [
+            ...trashFillers,
+            ...bigTrashFillers,
+            cardCheckFillerCookie(
+              'BS6-106-purple-hp2-trash-cookie',
+              1,
+              2,
+              0,
+              'purple',
+            ).cookie,
+          ]
+        : [...trashFillers, ...bigTrashFillers]
     const state = baseState()
     return {
       ...state,
@@ -2699,13 +2723,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-one': {
           ...state.players['player-one'],
           hand: [card, ...handFillers],
-          battleArea: [
-            cardCheckBattleEntry(defender.cookie, defender.hpCards, 4),
-            cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
-          ],
+          battleArea: trapBattleArea,
           supportArea: energySupports.map((c) => ({ card: c, rested: false })),
           breakArea: trapBreakArea,
-          discardPile: [...trashFillers, ...bigTrashFillers],
+          discardPile: trapTrashFillers,
         },
         'player-two': {
           ...state.players['player-two'],
@@ -3062,17 +3083,60 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       // slot, with the opponent's diverse battle area (and one own-side
       // cookie already on the field) providing legal targets for whatever
       // the on-play effect selects.
+      const bs6091BreakArea =
+        card.id === 'BS6-091'
+          ? [
+              {
+                ...card,
+                instanceId: 'BS6-091-break-excluded',
+              } as CookieCard,
+              cardCheckFillerCookie(
+                'BS6-091-break-eligible-purple-lv1',
+                1,
+                2,
+                0,
+                'purple',
+              ).cookie,
+              ...ownBreakArea,
+            ]
+          : ownBreakArea
+      const bs6091DiscardPile =
+        trashFillers
+      const bs6091Hand =
+        card.id === 'BS6-091'
+          ? [handCookieFiller, ...handFillers]
+          : [card, handCookieFiller, ...handFillers]
+      const bs6091BattleArea =
+        card.id === 'BS6-091'
+          ? [
+              cardCheckBattleEntry(
+                card as CookieCard,
+                Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+                  testSupportCard(`BS6-091-source-hp-${index + 1}`, 'purple'),
+                ),
+                6,
+              ),
+            ]
+          : [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)]
+      const bs6091PendingOnPlay =
+        card.id === 'BS6-091'
+          ? {
+              playerId: 'player-one' as const,
+              sourceInstanceId: card.instanceId,
+              origin: 'trash' as const,
+            }
+          : null
       return {
         ...state,
         players: {
           ...state.players,
           'player-one': {
             ...state.players['player-one'],
-            hand: [card, handCookieFiller, ...handFillers],
-            battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)],
+            hand: bs6091Hand,
+            battleArea: bs6091BattleArea,
             supportArea: energySupports.map((c) => ({ card: c, rested: false })),
-            breakArea: ownBreakArea,
-            discardPile: trashFillers,
+            breakArea: bs6091BreakArea,
+            discardPile: bs6091DiscardPile,
           },
           'player-two': {
             ...state.players['player-two'],
@@ -3081,6 +3145,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             breakArea: opponentBreakArea,
           },
         },
+        pendingOnPlay: bs6091PendingOnPlay,
       }
     }
 
@@ -3091,6 +3156,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const sourceHpCards =
       card.id === 'BS4-005'
         ? [testSupportCard('BS4-005-source-hp')]
+        // BS6-001 需要從同一張紅色餅乾的 HP 堆丟 2 張。卡面 HP 為 3，
+        // 因此 card-check 也必須提供完整堆疊，才能驗證付款後仍可選擇
+        // 自己的餅乾套用 +1 攻擊傷害。
+        : card.id === 'BS6-001'
+          ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+              testSupportCard(`BS6-001-source-hp-${index + 1}`, 'red'),
+            )
         : card.id === 'BS5-005'
           ? [testSupportCard('BS5-005-source-hp')]
         : card.id === 'BS5-016'

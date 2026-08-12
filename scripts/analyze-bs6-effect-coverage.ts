@@ -9,10 +9,11 @@ import {
   convertOfficialStageAbility,
   convertOfficialTrapAbility,
 } from '../src/cards/official-effect-adapter'
+import { normalizeOfficialCardRecord } from '../src/cards/official-card-adapter'
 import type { OfficialCardRecord } from '../src/cards/types'
 
-export const DEFAULT_BS6_CANDIDATE_INPUT =
-  'data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json'
+export const DEFAULT_BS6_FORMAL_INPUT =
+  'data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 export const DEFAULT_BS6_EFFECT_COVERAGE_OUTPUT =
   'docs/bs6-effect-coverage.md'
 
@@ -147,8 +148,22 @@ const toColorCoverage = (entries: Bs6EffectCoverageEntry[]) => {
 export const analyzeBs6EffectCoverage = (
   cards: OfficialCardRecord[],
 ): Bs6EffectCoverageReport => {
-  const baseCards = cards
-    .filter((card) => card.cardNumber === card.baseCardNumber)
+  // 官方偶爾只提供異圖記錄（BS6-091），不能只篩無 @ 的本體卡號。
+  // 每個 baseCardNumber 優先取真正基礎記錄；若不存在，取排序最前的變體作為
+  // 代表卡，讓卡號層級覆蓋盤點不漏卡。
+  const baseCards = [...cards]
+    .sort((left, right) => {
+      const baseCompare = compareCardNumber(left.baseCardNumber, right.baseCardNumber)
+      if (baseCompare !== 0) return baseCompare
+      const leftIsBase = left.cardNumber === left.baseCardNumber ? 0 : 1
+      const rightIsBase = right.cardNumber === right.baseCardNumber ? 0 : 1
+      return leftIsBase - rightIsBase || compareCardNumber(left.cardNumber, right.cardNumber)
+    })
+    .filter(
+      (card, index, sortedCards) =>
+        index === 0 || card.baseCardNumber !== sortedCards[index - 1]!.baseCardNumber,
+    )
+    .map(normalizeOfficialCardRecord)
     .sort((left, right) => compareCardNumber(left.cardNumber, right.cardNumber))
   const primaryConversion: Record<PrimaryConversion, number> = {
     supported: 0,
@@ -251,9 +266,9 @@ const pendingTable = (entries: Bs6EffectCoverageEntry[]) =>
 
 export const createBs6EffectCoverageMarkdown = (
   report: Bs6EffectCoverageReport,
-) => `# BS6 效果轉接覆蓋盤點（資料準備期）
+) => `# BS6 效果轉接覆蓋盤點（正式卡池）
 
-> 由 ${markdownCode('npm run cards:analyze:bs6-candidate')} 產生。資料來源是 ${markdownCode(DEFAULT_BS6_CANDIDATE_INPUT)}；本報告只標示 runtime 轉接現況，不代表卡牌已完成 Chrome 實戰驗證或可 promote。
+> 由 ${markdownCode('npm run cards:analyze:bs6')} 產生。資料來源是 ${markdownCode(DEFAULT_BS6_FORMAL_INPUT)}；本報告只標示 runtime 轉接現況，Browser 證據另見 BS6 Browser 稽核報告。
 
 ## 摘要
 
@@ -291,29 +306,28 @@ ${pendingTable(report.pendingAbilityCards)}
 | --- | --- | --- | --- | --- |
 ${pendingAttackThenTable(report.pendingAttackThenCards)}
 
-## 下一階段門檻
+## 後續維護門檻
 
-1. 逐色處理本表列出的待轉接項目；每項先判定為可沿用的既有效果、需要新 runtime 效果，或官方規則仍待確認。
-2. 對可實作的卡牌補齊 adapter、規則、UI 與合法／不合法路徑回歸測試。
-3. 在正式對戰狀態以 Chrome 完成支付、代價、目標、Then、FLIP／TRAP 與錯誤路徑稽核。
-4. 全數完成前維持候選 \`inventory\` 狀態，不執行 \`promote:candidate\`。
+1. 官方資料更新時，先重新匯入候選資料並逐色檢查新增或變更的效果。
+2. 對每個新增效果補齊 adapter、規則、UI 與合法／不合法路徑回歸測試。
+3. 在正式對戰狀態以 Chrome 完成支付、代價、目標、Then、FLIP／TRAP 與錯誤路徑稽核後，才可再次 promote。
 `
 
-export const readBs6CandidateCards = async (
-  input = DEFAULT_BS6_CANDIDATE_INPUT,
+export const readBs6FormalCards = async (
+  input = DEFAULT_BS6_FORMAL_INPUT,
 ): Promise<OfficialCardRecord[]> => {
   const payload: unknown = JSON.parse(await readFile(resolve(input), 'utf8'))
   if (!payload || typeof payload !== 'object' || !Array.isArray(payload.cards)) {
-    throw new Error(`BS6 候選資料格式錯誤：${input}`)
+    throw new Error(`BS6 正式卡池資料格式錯誤：${input}`)
   }
   return payload.cards as OfficialCardRecord[]
 }
 
 export const writeBs6EffectCoverage = async ({
-  input = DEFAULT_BS6_CANDIDATE_INPUT,
+  input = DEFAULT_BS6_FORMAL_INPUT,
   output = DEFAULT_BS6_EFFECT_COVERAGE_OUTPUT,
 } = {}) => {
-  const report = analyzeBs6EffectCoverage(await readBs6CandidateCards(input))
+  const report = analyzeBs6EffectCoverage(await readBs6FormalCards(input))
   const outputPath = resolve(output)
   await writeFile(outputPath, createBs6EffectCoverageMarkdown(report), 'utf8')
   return { outputPath, report }

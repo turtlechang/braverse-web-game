@@ -361,6 +361,48 @@ describe('break-to-trash effect', () => {
     expect(candidates[0].instanceId).toBe('c-lv1')
   })
 
+  it('excludes the named Cookie when the effect forbids it', () => {
+    const state = createDemoGame()
+    const excluded = {
+      ...state.players['player-one'].battleArea[0].card,
+      id: 'BS6-091',
+      instanceId: 'schneeball-in-break',
+      level: 1,
+      energyColor: 'purple' as const,
+    }
+    const eligible = {
+      ...excluded,
+      id: 'BS6-092',
+      instanceId: 'eligible-purple-lv1',
+    }
+    const stateWithBreakArea = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          breakArea: [excluded, eligible],
+        },
+      },
+    }
+
+    const candidates = getBreakToTrashCandidates(
+      stateWithBreakArea,
+      bttContext,
+      {
+        kind: 'break-to-trash',
+        max: 1,
+        energyColor: 'purple',
+        exactLevel: 1,
+        excludeCardId: 'BS6-091',
+      },
+    )
+
+    expect(candidates.map((card) => card.instanceId)).toEqual([
+      'eligible-purple-lv1',
+    ])
+  })
+
   it('validateBreakToTrashTargets throws on duplicate ids', () => {
     expect(() =>
       validateBreakToTrashTargets(
