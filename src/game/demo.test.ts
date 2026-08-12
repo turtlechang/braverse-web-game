@@ -483,6 +483,14 @@ describe('createCardCheckDemoState', () => {
     })
   })
 
+  it('prepares BS6-041 with three Cookies in the break area for its item condition', () => {
+    const state = createCardCheckDemoState('BS6-041')
+
+    expect(
+      state.players['player-one'].breakArea.filter((card) => card.type === 'cookie'),
+    ).toHaveLength(3)
+  })
+
   it('creates BS6-039 met and unmet break-level fixtures without removing the source card', () => {
     const met = createBs6ConditionDemoState('BS6-039', true)
     const unmet = createBs6ConditionDemoState('BS6-039', false)

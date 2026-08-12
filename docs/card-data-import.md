@@ -101,7 +101,7 @@ npm run validate:candidate
 
 BS5 已提供 `cards:analyze:bs5-candidate`；本批次 BS5-087／BS5-109 陷阱主效果與 10 張攻擊後 `Then` 已完成 adapter／規則引擎／UI 支援、測試與效果盤點，111 張基礎卡的主效果／能力／攻擊 `Then` 待轉接皆為 0。正式資料以 `data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json` 為準；`docs/bs5-card-inventory.md` 是 promote 前的歷史盤點快照，`docs/bs5-effect-coverage.md` 追蹤目前正式卡池覆蓋狀態。
 
-BS6 使用同樣的完整卡號前綴篩選與資料準備期隔離：
+BS6 使用同樣的完整卡號前綴篩選與資料準備期隔離；本批 138 筆資料已完成 Browser 稽核並 promote，正式資料以 `data/cards/` 為準：
 
 ```bash
 npm run cards:import:bs6-candidate
@@ -109,7 +109,7 @@ npm run cards:analyze:bs6-candidate
 npm run validate:candidate
 ```
 
-指令會建立 `data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json`、`docs/bs6-card-inventory.md` 與 `docs/bs6-effect-coverage.md`。候選資料固定維持 `inventory`；逐色完成 runtime 轉接、回歸測試與 Chrome 效果稽核前，不可 promote。
+指令會建立 `data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json`、`docs/bs6-card-inventory.md` 與 `docs/bs6-effect-coverage.md`，供官方更新重新進入候選流程。BS6 本批已完成逐色 runtime 轉接、回歸測試與 Browser 效果稽核；完整證據見 [BS6 Browser 稽核報告](bs6-browser-audit-2026-08-12.md)，後續更新仍須先維持 `inventory`，完成稽核後才可改為 `promotion-ready` 並 promote。
 
 完成每張卡的 runtime 轉接、測試與人工覆核後，確認效果覆蓋盤點沒有待裁決或未支援的規則文字，才可將來源欄位的 `candidateStatus` 改為 `promotion-ready`，再執行嚴格候選驗證與 promote。
 

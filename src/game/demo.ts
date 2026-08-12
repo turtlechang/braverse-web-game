@@ -17,7 +17,7 @@ import {
 } from './starter-deck'
 import { getCardPoolEntry } from './card-pool'
 import pFormalDocument from '../../data/cards/official-p-0xx-remaining.en.json'
-import bs6CandidateDocument from '../../data/candidates/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import bs6FormalDocument from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 import type {
@@ -2393,16 +2393,16 @@ const getPTestCard = (cardNumber: string): GameCard => {
 
 const getBs6CandidateTestCard = (cardNumber: string): GameCard | null => {
   const trimmed = cardNumber.trim()
-  const source = (bs6CandidateDocument.cards as OfficialCardRecord[]).find(
+  const source = (bs6FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.cardNumber === trimmed,
-  ) ?? (bs6CandidateDocument.cards as OfficialCardRecord[]).find(
+  ) ?? (bs6FormalDocument.cards as OfficialCardRecord[]).find(
     (record) => record.baseCardNumber === trimmed,
   )
   if (!source) return null
 
   const conversion = convertOfficialCardToGameCard(source, 'card-check-1')
   if (conversion.status !== 'converted') {
-    throw new Error(`BS6 candidate test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
+    throw new Error(`BS6 formal test fixture cannot convert ${cardNumber}: ${conversion.reason}`)
   }
   return {
     ...conversion.gameCard,
@@ -2602,6 +2602,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // --- Non-cookie cards (item / trap / stage) --------------------------
   if (card.type === 'item') {
     const state = baseState()
+    const itemBreakArea =
+      card.id === 'BS6-041'
+        ? [
+            ...ownBreakArea,
+            cardCheckFillerCookie('bs6-041-break-3', 1, 3, 0, 'yellow').cookie,
+          ]
+        : undefined
     return {
       ...state,
       players: {
@@ -2611,6 +2618,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           hand: [card, ...handFillers],
           battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
           supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          ...(itemBreakArea ? { breakArea: itemBreakArea } : {}),
           discardPile: trashFillers,
         },
         'player-two': {

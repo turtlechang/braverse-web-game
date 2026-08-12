@@ -160,6 +160,38 @@ const normalizeOfficialCardRecord = (
     }
   }
 
+  // BS6 官方英文 API 的 6 筆卡牌資料遺漏普通攻擊的 `{da}` 標記，
+  // 但卡圖仍保留正確傷害值。限制在明確的卡號／基礎卡號補回，
+  // 避免把未知的攻擊文案誤判成可攻擊卡牌。
+  const bs6AttackTextFallbacks: Record<string, string> = {
+    'BS6-018':
+      "<{R}{R}> Victory is a matter of a moment! {da} 1 Then, if this Cookie's remaining HP is 1, select up to 1 of your Cookies. During this turn, that Cookie gains +1 attack damage.",
+    'BS6-040': '<{N}{N}> Always follow your heart! {da} 3',
+    'BS6-061':
+      '<{G}{G}> A Case? Leave it to me! {da} 2 Then, <return 1 Cookie from your support area to your hand.> Select up to 1 of your Cookies with 5 or less HP remaining. That Cookie gains +1 HP.',
+    'BS6-083': '<{B}{B}> Continuous Effort {da} 2',
+    'BS6-104': '<{P}{P}> A sub would be... Terrific! {da} 2',
+  }
+  const bs6FallbackKey =
+    sourceCard.baseCardNumber === 'BS6-061'
+      ? 'BS6-061'
+      : sourceCard.cardNumber
+  const bs6AttackTextFallback = bs6AttackTextFallbacks[bs6FallbackKey]
+  if (
+    sourceCard.type === 'cookie' ||
+    (sourceCard.type === 'flip' && sourceCard.cardNumber === 'BS6-104')
+  ) {
+    if (
+      bs6AttackTextFallback &&
+      !/\{da\}/i.test(sourceCard.attackText ?? '')
+    ) {
+      return {
+        ...sourceCard,
+        attackText: bs6AttackTextFallback,
+      }
+    }
+  }
+
   return sourceCard
 }
 
