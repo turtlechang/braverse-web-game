@@ -1,7 +1,9 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   createBs6CandidateDocument,
   createBs6InventoryMarkdown,
+  getBs6VariantStats,
   selectBs6RawCards,
 } from './import-bs6-candidates.mjs'
 
@@ -71,6 +73,47 @@ describe('BS6 candidate importer', () => {
     expect(markdown).toContain('候選狀態：`inventory`')
     expect(markdown).toContain('Chrome 合法／不合法路徑驗證')
     expect(markdown).toContain('不執行 `npm run promote:candidate`')
+  })
+
+  it('counts base records and variants independently when a base card only has variants', () => {
+    const document = createBs6CandidateDocument({
+      rawCards: [
+        rawCard,
+        { ...rawCard, card_idx: 2, card_no: 'BS6-001@1' },
+        { ...rawCard, card_idx: 3, card_no: 'BS6-091@2' },
+        { ...rawCard, card_idx: 4, card_no: 'BS6-091@3' },
+      ],
+    })
+    const stats = getBs6VariantStats(document.cards)
+    const markdown = createBs6InventoryMarkdown(document)
+
+    expect(stats.baseCardNumbers).toEqual(['BS6-001', 'BS6-091'])
+    expect(stats.baseRecords).toHaveLength(1)
+    expect(stats.variants).toHaveLength(3)
+    expect(stats.variantOnlyBaseCardNumbers).toEqual(['BS6-091'])
+    expect(markdown).toContain('| 不同基礎卡號 | 2 |')
+    expect(markdown).toContain('| 基礎記錄（無 `@` 變體尾碼） | 1 |')
+    expect(markdown).toContain('| 變體記錄（含 `@` 變體尾碼） | 3 |')
+    expect(markdown).toContain('| 僅有變體的基礎卡號 | 1（BS6-091） |')
+  })
+
+  it('matches the promoted BS6 snapshot statistics', () => {
+    const snapshot = JSON.parse(
+      readFileSync(
+        new URL(
+          '../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json',
+          import.meta.url,
+        ),
+        'utf8',
+      ),
+    )
+    const stats = getBs6VariantStats(snapshot.cards)
+
+    expect(snapshot.cards).toHaveLength(138)
+    expect(stats.baseCardNumbers).toHaveLength(107)
+    expect(stats.baseRecords).toHaveLength(106)
+    expect(stats.variants).toHaveLength(32)
+    expect(stats.variantOnlyBaseCardNumbers).toEqual(['BS6-091'])
   })
 
   it('rejects a source payload without BS6 records', () => {

@@ -18,11 +18,77 @@ if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
 const baseUrl = `http://127.0.0.1:${port}`
-const formalPath = resolve(
-  root,
-  'data/cards/official-p-0xx-remaining.en.json',
-)
-const reportPath = resolve(root, 'docs/p0xx-effect-audit-2026-08-10.json')
+const requestedSeries = (() => {
+  const inline = process.argv.find((argument) =>
+    argument.startsWith('--series='),
+  )
+  if (inline) return inline.slice('--series='.length).toUpperCase()
+  const index = process.argv.indexOf('--series')
+  if (index >= 0) return process.argv[index + 1]?.toUpperCase()
+  return process.env.BRAVERSE_AUDIT_SERIES?.toUpperCase() ?? 'P'
+})()
+const isBs6Audit = requestedSeries === 'BS6'
+const requestedCardNumbers = process.argv
+  .filter((argument) => argument.startsWith('--card='))
+  .map((argument) => argument.slice('--card='.length))
+
+const AUDIT_CONFIGS = {
+  P: {
+    label: 'P-0XX',
+    source: 'data/cards/official-p-0xx-remaining.en.json',
+    report: 'docs/p0xx-effect-audit-2026-08-10.json',
+    expectedEffectCardCount: 108,
+    conditionTestStatePrefix: 'p-condition',
+    conditionCardNumbers: [
+      'P-041',
+      'P-058',
+      'P-059',
+      'P-064',
+      'P-065',
+      'P-067',
+      'P-071',
+      'P-074',
+      'P-075',
+      'P-093',
+      'P-094',
+      'P-095',
+      'P-098',
+      'P-103',
+      'P-103@1',
+      'P-106',
+      'P-109',
+      'P-110',
+      'P-119',
+      'P-121',
+      'P-128',
+      'P-131',
+      'P-134',
+      'P-137',
+      'P-142',
+      'P-145',
+    ],
+    alwaysIncludeCardNumbers: [],
+  },
+  BS6: {
+    label: 'BS6',
+    source: 'data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json',
+    report: 'docs/bs6-effect-audit-2026-08-12.json',
+    // 以基礎卡號去重後，97 張卡具有主效果、FLIP、陷阱／物品／場景或攻擊 Then。
+    // BS6-091 只有 @2／@3 異圖，仍以其中一張代表記錄納入稽核。
+    expectedEffectCardCount: 97,
+    conditionTestStatePrefix: 'bs6-condition',
+    conditionCardNumbers: ['BS6-039'],
+    alwaysIncludeCardNumbers: ['BS6-091@2'],
+  },
+}
+const auditConfig = AUDIT_CONFIGS[requestedSeries]
+if (!auditConfig) {
+  throw new Error(
+    `Unsupported formal effect audit series: ${requestedSeries}. Supported series: ${Object.keys(AUDIT_CONFIGS).join(', ')}`,
+  )
+}
+const formalPath = resolve(root, auditConfig.source)
+const reportPath = resolve(root, auditConfig.report)
 const vitePackageJson = require.resolve('vite/package.json', { paths: [root] })
 const viteEntry = resolve(dirname(vitePackageJson), 'bin/vite.js')
 const browserExecutable =
@@ -35,52 +101,58 @@ const browserExecutable =
   ].find((candidate) => existsSync(candidate))
 
 const source = JSON.parse(await readFile(formalPath, 'utf8'))
-const cards = [...source.cards]
-  .filter((card) => {
-    const skill = card.skill?.text?.trim()
-    const attackThen = /\bThen\b/i.test(card.attackText ?? '')
-    return Boolean(
-      card.type === 'item' ||
-        card.type === 'trap' ||
-        card.type === 'stage' ||
-        (card.type === 'flip' && card.flipText?.trim()) ||
-        skill ||
-        attackThen,
-    )
-  })
+const hasText = (value) => typeof value === 'string' && value.trim().length > 0
+const hasEffectSurface = (card) => {
+  const skill = hasText(card.skill?.text)
+  const attackThen = hasText(card.attackText) && /\bThen\b/i.test(card.attackText)
+  return (
+    card.type === 'item' ||
+    card.type === 'trap' ||
+    card.type === 'stage' ||
+    (card.type === 'flip' && hasText(card.flipText)) ||
+    skill ||
+    attackThen ||
+    auditConfig.alwaysIncludeCardNumbers.includes(card.cardNumber)
+  )
+}
+const getBaseCardNumber = (card) => card.baseCardNumber || card.cardNumber
+const selectRepresentativeCards = (records) => {
+  if (!isBs6Audit) {
+    return records.filter((card) => hasEffectSurface(card))
+  }
+
+  const representativesByBase = new Map()
+  for (const card of records) {
+    const base = getBaseCardNumber(card)
+    const previous = representativesByBase.get(base)
+    if (
+      hasEffectSurface(card) &&
+      (!previous || card.cardNumber === base)
+    ) {
+      representativesByBase.set(base, card)
+    }
+  }
+  return [...representativesByBase.values()]
+}
+const cards = selectRepresentativeCards([...source.cards])
+  .filter(
+    (card) =>
+      requestedCardNumbers.length === 0 ||
+      requestedCardNumbers.includes(card.cardNumber) ||
+      requestedCardNumbers.includes(card.baseCardNumber),
+  )
   .sort((left, right) =>
     left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
   )
-assert.equal(cards.length, 108, 'P-0XX formal effect-bearing inventory must contain 108 records')
+if (requestedCardNumbers.length === 0) {
+  assert.equal(
+    cards.length,
+    auditConfig.expectedEffectCardCount,
+    `${auditConfig.label} formal effect-bearing inventory must contain ${auditConfig.expectedEffectCardCount} records`,
+  )
+}
 
-const conditionCardNumbers = new Set([
-  'P-041',
-  'P-058',
-  'P-059',
-  'P-064',
-  'P-065',
-  'P-067',
-  'P-071',
-  'P-074',
-  'P-075',
-  'P-093',
-  'P-094',
-  'P-095',
-  'P-098',
-  'P-103',
-  'P-103@1',
-  'P-106',
-  'P-109',
-  'P-110',
-  'P-119',
-  'P-121',
-  'P-128',
-  'P-131',
-  'P-134',
-  'P-137',
-  'P-142',
-  'P-145',
-])
+const conditionCardNumbers = new Set(auditConfig.conditionCardNumbers)
 
 const effectSurfaces = (card) => {
   const surfaces = []
@@ -137,10 +209,19 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
       ? panelText.match(/(?:已選|選擇)\s*(\d+)\s*[\/／]\s*(\d+)/)
       : null
     if (panelProgress && Number(panelProgress[1]) >= Number(panelProgress[2])) continue
-    const progress = groupText.match(/(\d+)\s*[\/／]\s*(\d+)/)
+    const progress = groupText.match(/(?:已選\s*)?(\d+)\s*[\/／]\s*(\d+)/)
     if (progress && Number(progress[1]) >= Number(progress[2])) continue
 
     const selectedCount = await group.locator('button.is-selected').count()
+    // `hpToTrash.amount` means how many HP cards are discarded after one
+    // Cookie is selected. It is not a count of selectable Cookies, so the
+    // UI always accepts exactly one source Cookie for this cost.
+    const maxSelections = selector.includes('hp-cost')
+      ? 1
+      : progress
+        ? Number(progress[2])
+        : undefined
+    if (maxSelections !== undefined && selectedCount >= maxSelections) continue
     if (!progress && !panelProgress && selector.includes('target') && selectedCount > 0) continue
 
     const candidate = group.locator('button:not(.is-selected):not(:disabled)').first()
@@ -229,8 +310,9 @@ const driveEffectPanel = async (page, operations) => {
 
   const primary = panel.locator('.effect-panel-primary-action').first()
   if (await enabled(primary)) {
+    const primaryLabel = (await primary.innerText()).trim()
     await primary.click({ force: true })
-    operations.push('confirm:effect-panel')
+    operations.push(`confirm:effect-panel:${primaryLabel}`)
     // React state and pending-response modals settle asynchronously. Give
     // the next modal enough time to replace the effect panel before the next
     // driver pass, otherwise a stale confirm can be clicked repeatedly.
@@ -462,6 +544,27 @@ const clickNextPhase = async (page) => {
 
 const bodyText = async (page) => (await page.locator('body').innerText()).replace(/\s+/g, ' ').trim()
 
+const pendingSurfaceCount = async (page) =>
+  (await count(page, '.effect-panel[role="alertdialog"]')) +
+  (await count(page, '.flip-response-modal')) +
+  (await count(page, '.trap-response-modal')) +
+  (await count(page, '.draw-up-to-modal')) +
+  (await count(page, '.hand-discard-modal')) +
+  (await count(page, '.inspect-deck-modal')) +
+  (await count(page, '.card-reveal-modal')) +
+  (await count(page, '.faint-response-modal')) +
+  (await count(page, '.effect-order-modal')) +
+  (await count(page, '.decision-modal'))
+
+const effectPanelDebug = async (page) => {
+  const panel = activePanel(page)
+  return {
+    panelText: (await panel.innerText().catch(() => '')).replace(/\s+/g, ' ').trim(),
+    selectedHpCost: await panel.locator('.effect-candidates-hp-cost button.is-selected').count(),
+    selectedTargets: await panel.locator('.effect-candidates-target button.is-selected').count(),
+  }
+}
+
 const runCard = async (
   page,
   card,
@@ -519,17 +622,7 @@ const runCard = async (
         operation,
       ),
     )
-    const pendingSurface =
-      (await count(page, '.effect-panel[role="alertdialog"]')) +
-      (await count(page, '.flip-response-modal')) +
-      (await count(page, '.trap-response-modal')) +
-      (await count(page, '.draw-up-to-modal')) +
-      (await count(page, '.hand-discard-modal')) +
-      (await count(page, '.inspect-deck-modal')) +
-      (await count(page, '.card-reveal-modal')) +
-      (await count(page, '.faint-response-modal')) +
-      (await count(page, '.effect-order-modal')) +
-      (await count(page, '.decision-modal'))
+    const pendingSurface = await pendingSurfaceCount(page)
 
     if (
       pendingSurface === 0 &&
@@ -569,6 +662,7 @@ const runCard = async (
         : 'No interactive effect path',
       operations,
       pendingSurface,
+      debug: await effectPanelDebug(page),
     }
   } catch (error) {
     return {
@@ -585,6 +679,7 @@ const runCard = async (
       auditStatus: 'Browser or runtime error',
       operations,
       error: error instanceof Error ? error.message : String(error),
+      debug: await effectPanelDebug(page),
     }
   } finally {
     page.off('console', onConsole)
@@ -610,7 +705,7 @@ try {
   page.setDefaultTimeout(7000)
 
   console.log(
-    `=== P-0XX interactive effect audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
+    `=== ${auditConfig.label} interactive effect audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
     const genericResult = await runCard(page, card)
@@ -619,13 +714,13 @@ try {
       const met = await runCard(
         page,
         card,
-        `p-condition:${card.cardNumber}:met`,
+        `${auditConfig.conditionTestStatePrefix}:${card.cardNumber}:met`,
         { path: 'condition-met', requireInteractiveOperation: true },
       )
       const unmet = await runCard(
         page,
         card,
-        `p-condition:${card.cardNumber}:unmet`,
+        `${auditConfig.conditionTestStatePrefix}:${card.cardNumber}:unmet`,
         { path: 'condition-unmet', requireInteractiveOperation: false },
       )
       const conditionPaths = { met, unmet }
@@ -667,9 +762,9 @@ try {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
-    source: 'data/cards/official-p-0xx-remaining.en.json',
+    source: auditConfig.source,
     scope:
-      'Formal-pool test-state interaction audit plus dedicated A/B paths for 26 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.',
+      `Formal-pool test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
     summary: {
       total: results.length,
       effectFlowPassed: results.filter((result) => result.status === 'PASS').length,

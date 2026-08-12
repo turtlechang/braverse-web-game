@@ -259,6 +259,35 @@ describe('validateCustomDeck', () => {
     ])
   })
 
+  it('keeps BS6-091 variant-only runtime normalization when building a custom deck', () => {
+    const deck: CustomDeck = {
+      id: 'bs6-091-variant-only',
+      name: 'BS6-091 variant-only',
+      entries: [{ cardNumber: 'BS6-091', count: 1 }],
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+
+    const [card] = createDeckFromCustomDeck(deck, 'player-one')
+    if (card.type !== 'cookie') throw new Error('BS6-091 should be a Cookie')
+
+    expect(card).toMatchObject({
+      id: 'BS6-091',
+      attack: 2,
+      attackEnergyCost: { purple: 2 },
+      skill: {
+        trigger: 'on-play',
+        fromTrashArea: true,
+        effects: [
+          {
+            kind: 'break-to-trash',
+            excludeCardId: 'BS6-091',
+          },
+        ],
+      },
+    })
+  })
+
   it('uses the selected open format when importing a standard JSON deck', () => {
     const replacementIndex = OFFICIAL_RED_STARTER_DECK.findIndex(
       (entry) => entry.count === 4,

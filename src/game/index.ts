@@ -315,6 +315,7 @@ export type {
   TrashCountAtLeastCondition,
   TrashToDeckEffect,
   TrashToHandEffect,
+  TrashToBattleEffect,
   FieldToTrashEffect,
   GameCard,
   GameEndReason,

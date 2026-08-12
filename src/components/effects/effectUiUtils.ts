@@ -321,7 +321,11 @@ export const describeEffectResult = (
       ? `${targetNames.join('、')} 已以${effect.rested ? '休息' : '活躍'}狀態放入支援區。`
       : '未選擇手牌，已略過放入支援區。'
   }
-  if (effect.kind === 'trash-to-battle') return '棄牌區餅乾已登場。'
+  if (effect.kind === 'trash-to-battle') {
+    return targetNames.length > 0
+      ? '棄牌區餅乾已登場。'
+      : '未選擇棄牌區餅乾，已略過登場。'
+  }
   if (effect.kind === 'damage-all') return '全體傷害已結算。'
   if (effect.kind === 'modify-all-attack') return '全體攻擊修正已套用。'
   if (effect.kind === 'discard-hand') return '已建立棄手牌決策。'

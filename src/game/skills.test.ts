@@ -938,6 +938,47 @@ describe('activate skill with discardHand cost', () => {
     expect(paid.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
   })
 
+  it('does not offer a Cookie with too few HP cards for a multi-card HP cost', () => {
+    const state = createDemoGame()
+    const source = state.players['player-one'].battleArea[0]
+    const oneHpCookie = {
+      ...source,
+      card: {
+        ...source.card,
+        id: 'one-hp-cookie',
+        instanceId: 'one-hp-cookie',
+        energyColor: 'red' as const,
+      },
+      hpCards: [
+        { id: 'one-hp-card', instanceId: 'one-hp-card', name: 'one-hp-card', type: 'item' as const },
+      ],
+    }
+    const twoHpCookie = {
+      ...source,
+      card: {
+        ...source.card,
+        id: 'two-hp-cookie',
+        instanceId: 'two-hp-cookie',
+        energyColor: 'red' as const,
+      },
+      hpCards: [
+        { id: 'two-hp-card-1', instanceId: 'two-hp-card-1', name: 'two-hp-card-1', type: 'item' as const },
+        { id: 'two-hp-card-2', instanceId: 'two-hp-card-2', name: 'two-hp-card-2', type: 'item' as const },
+      ],
+    }
+    const cost: CardSkill['cost'] = {
+      energy: {},
+      discardHand: 0,
+      hpToTrash: { amount: 2, energyColor: 'red' },
+    }
+
+    expect(
+      getHpToTrashCostCandidates(cost, [oneHpCookie, twoHpCookie]).map(
+        (cookie) => cookie.card.instanceId,
+      ),
+    ).toEqual(['two-hp-cookie'])
+  })
+
   it('filters HP and discard-hand costs by the card restrictions stated on the card', () => {
     const base = createDemoGame()
     const source = base.players['player-one'].battleArea[0]

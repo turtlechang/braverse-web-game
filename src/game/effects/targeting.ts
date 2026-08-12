@@ -928,6 +928,9 @@ export const getBreakToTrashCandidates = (
   effect: BreakToTrashEffect,
 ): CookieCard[] =>
   state.players[context.sourcePlayerId].breakArea.filter((card) => {
+    if (effect.excludeCardId !== undefined && card.id === effect.excludeCardId) {
+      return false
+    }
     if (effect.energyColor !== undefined && card.energyColor !== effect.energyColor) {
       return false
     }
