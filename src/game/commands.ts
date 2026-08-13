@@ -715,6 +715,22 @@ const getOrderedEffectItem = (
   return null
 }
 
+/** Whether an effect-order record still gates another pending effect. */
+export const hasActiveEffectOrder = (state: GameState): boolean => {
+  const order = state.pendingEffectOrder
+  if (!order) return false
+  if (!order.resolvedOrder) return true
+  return order.resolvedOrder.some((id) => {
+    const item = order.items.find((candidate) => candidate.id === id)
+    return item ? isEffectOrderItemActive(state, item) : false
+  })
+}
+
+const clearCompletedEffectOrder = (state: GameState): GameState =>
+  state.pendingEffectOrder?.resolvedOrder && !hasActiveEffectOrder(state)
+    ? { ...state, pendingEffectOrder: null }
+    : state
+
 const isAllowedByEffectOrder = (
   orderedItem: PendingEffectOrderItem | null,
   kind: PendingEffectOrderItem['kind'],
@@ -1019,9 +1035,10 @@ export const applyGameCommand = (
           ...options,
           shuffle: createSeededShuffle(options.shuffleSeed),
         }
-  const next = isPendingDecisionCommand(command)
+  const commanded = isPendingDecisionCommand(command)
     ? applyPendingDecisionCommand(state, command, effectiveOptions)
     : applyPlayerActionCommand(state, command, effectiveOptions)
+  const next = clearCompletedEffectOrder(commanded)
   // Keep replacement scheduling inside the command boundary so replaying the
   // same command log produces the same pending decisions as the live match.
   // A multi-step effect must finish before replacement or break-level victory
@@ -1286,6 +1303,20 @@ const applyPendingDecisionCommand = (
         sourcePlayerId: playerId,
         sourceInstanceId: stage.card.instanceId,
       }
+      if (ability.effects.some(requiresEffectCardSelection)) {
+        return {
+          ...nextState,
+          pendingAbilityEffect: {
+            playerId,
+            sourcePlayerId: playerId,
+            sourceInstanceId: stage.card.instanceId,
+            sourceCardName: stage.card.name,
+            sourceKind: 'stage',
+            effects: ability.effects,
+            effectIndex: 0,
+          },
+        }
+      }
       for (const effect of ability.effects) {
         nextState = executeCardEffect(nextState, context, effect, [])
       }
@@ -1449,7 +1480,7 @@ const assertNoPendingDecision = (
     state.pendingAbilityEffect?.playerId === command.playerId &&
     state.pendingAbilityEffect.trigger !== 'attacker-faint' &&
     state.pendingBattle &&
-    !state.pendingEffectOrder &&
+    !hasActiveEffectOrder(state) &&
     !hasBlockingPending({
       ...state,
       pendingBattle: null,
@@ -1734,6 +1765,16 @@ const resolvePendingAbilityEffect = (
       1,
       continueBattle,
     )
+  }
+
+  // A mandatory card-selection effect can become impossible after earlier
+  // effects change the hand/support/battle zones.  Skip only that impossible
+  // queue item; optional selections still resolve normally with no targets.
+  if (
+    requiresEffectCardSelection(effect) &&
+    !hasRequiredEffectTargets(state, context, effect)
+  ) {
+    return continueAbilityQueue(state, pending, context, 1, continueBattle)
   }
 
   if (hasNoLegalSelectableTargets(state, context, pending.effects, pending.effectIndex)) {

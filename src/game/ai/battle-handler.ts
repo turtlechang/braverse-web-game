@@ -10,6 +10,7 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectiveAttack,
   getTrashToDeckCandidates,
@@ -73,7 +74,11 @@ const chooseAttackEffectTargets = (
 
   if (!('target' in effect) || !effect.target) return []
 
-  const candidates = getEffectTargetCandidates(state, context, effect.target)
+  // Movement effects have legality constraints beyond the selector itself;
+  // for example a source-only return-to-hand must not empty its battle area.
+  // Keep AI target selection aligned with executeCardEffect's effect-aware
+  // candidate helper.
+  const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
   const ordered = [...candidates].sort((left, right) => {
     if (effect.kind === 'damage') {
       const leftLethal = left.hpCards.length <= effect.amount ? 0 : 1

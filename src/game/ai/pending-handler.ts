@@ -3,7 +3,11 @@ import {
   getFaintEffectCardCandidates,
   getFaintEffectCandidates,
 } from '../battle'
-import { applyGameCommand, getPendingDecision } from '../commands'
+import {
+  applyGameCommand,
+  getPendingDecision,
+  hasActiveEffectOrder,
+} from '../commands'
 import { getRemainingEnergyCost, selectEnergyPayment } from '../energy'
 import {
   getEffectSelectionCandidates,
@@ -35,7 +39,7 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
     state.pendingRefresh ||
       state.pendingOnPlay ||
       state.pendingReplacement ||
-      state.pendingEffectOrder ||
+      hasActiveEffectOrder(state) ||
       (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
       (state.pendingAfterDamageEffects &&
         state.pendingAfterDamageEffects.length > 0) ||

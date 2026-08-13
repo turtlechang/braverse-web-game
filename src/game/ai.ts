@@ -905,6 +905,35 @@ const resolveAiSkill = (
   )
   if (effects.length === 0) return null
 
+  // BS3-019 / BS6-039 uses a special two-step effect. The command layer must
+  // keep the selected break-cookie level between its mandatory first choice
+  // and optional second choice, so it cannot be simulated as an ordinary
+  // executeCardEffect call.
+  const requiresPendingResolution = effects.some(
+    (effect) => effect.kind === 'opponent-break-to-trash-then-battle-to-break',
+  )
+
+  if (requiresPendingResolution) {
+    return {
+      state: applyGameCommand(state, {
+        kind: 'begin-activate-skill',
+        playerId,
+        sourceInstanceId: source.card.instanceId,
+        trigger,
+        paymentIds,
+        costSupportToTrashIds,
+        supportToHandIds: costSupportToHandIds,
+        discardHandIds,
+        hpToTrashTargetIds,
+        trashBattleCookieIds,
+        trashToDeckBottomIds,
+        trashToDeckIds,
+      }),
+      action: 'activate-skill',
+      description: `${state.players[playerId].name}發動${source.card.name}的技能。`,
+    }
+  }
+
   const effectShuffleSeed = shuffleSeed ?? state.turnNumber
   const effectShuffle = createSeededShuffle(effectShuffleSeed)
   const activated = activateCookieSkill(

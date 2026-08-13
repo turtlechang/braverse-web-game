@@ -5,6 +5,7 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getSupportEffectCandidates,
@@ -349,11 +350,14 @@ const hasRequiredTrapTargets = (
       return true
     }
 
-    const battleCandidateCount = getEffectTargetCandidates(
-      state,
-      context,
-      effect.target,
-    ).length
+    // Movement effects have additional legality constraints (for example a
+    // return-to-deck-bottom effect cannot empty a battle area).  Use the
+    // effect-aware candidate helper here so the trap candidate list cannot
+    // advertise BS2-050 when its remaining-HP target is not movable.
+    const battleCandidateCount =
+      effect.kind === 'return-to-hand' || effect.kind === 'return-to-deck-bottom'
+        ? getEffectTargetCandidatesForEffect(state, context, effect).length
+        : getEffectTargetCandidates(state, context, effect.target).length
     const stageCandidateCount =
       effect.kind === 'field-to-trash' &&
       effect.allowStage &&
@@ -588,6 +592,8 @@ const validateTrapTargets = (
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
       effect.kind === 'redirect-attack' ||
+      effect.kind === 'return-to-hand' ||
+      effect.kind === 'return-to-deck-bottom' ||
       effect.kind === 'hp-to-hand' ||
       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
@@ -3011,6 +3017,8 @@ export const getTrapTargetCandidates = (
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
       effect.kind === 'redirect-attack' ||
+      effect.kind === 'return-to-hand' ||
+      effect.kind === 'return-to-deck-bottom' ||
       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
   // The guided trap UI has separate channels for opponent/either targets and

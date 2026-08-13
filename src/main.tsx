@@ -6,6 +6,7 @@ import { getStoredTheme } from './styles/themeStorage'
 
 const searchParams = new URLSearchParams(window.location.search)
 const mockupId = searchParams.get('mockup')
+const browserSwiss = searchParams.get('browser-swiss') === '1'
 const queryTheme = searchParams.get('theme')
 const initialTheme =
   queryTheme === 'tactical' ||
@@ -20,6 +21,9 @@ document.documentElement.dataset.theme = initialTheme
 // ?mockup=<id> 時才動態載入 UI reference mockup，正式遊戲路徑不包含 mockup 代碼
 const MockupGallery = mockupId
   ? lazy(() => import('./ui-reference/MockupGallery'))
+  : null
+const BrowserSwissTournament = browserSwiss
+  ? lazy(() => import('./components/BrowserSwissTournament').then((module) => ({ default: module.BrowserSwissTournament })))
   : null
 
 createRoot(document.getElementById('root')!).render(
@@ -37,6 +41,18 @@ createRoot(document.getElementById('root')!).render(
           }
         >
           <MockupGallery mockupId={mockupId} />
+        </Suspense>
+      </GameErrorBoundary>
+    ) : browserSwiss && BrowserSwissTournament ? (
+      <GameErrorBoundary>
+        <Suspense
+          fallback={
+            <div className="tactical-surface" style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center' }}>
+              載入 Browser Swiss harness…
+            </div>
+          }
+        >
+          <BrowserSwissTournament />
         </Suspense>
       </GameErrorBoundary>
     ) : (

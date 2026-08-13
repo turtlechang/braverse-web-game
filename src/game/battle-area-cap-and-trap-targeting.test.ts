@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   createDemoGame,
   getBreakToBattleCandidates,
+  getTrapCandidates,
   getTrapTargetCandidates,
   playTrap,
   getCardPoolEntry,
@@ -89,6 +90,69 @@ describe('battle area capacity for break-to-battle', () => {
       { exactLevel: 1, energyColor: 'yellow' },
     )
     expect(candidates).toHaveLength(1)
+  })
+})
+
+describe('BS2-050 Hermit Crab\'s Shell target availability', () => {
+  it('does not offer the trap when every remaining-HP target is immovable', () => {
+    const base = asMainPhase(createDemoGame())
+    const trap = createCard(getCardPoolEntry('BS2-050')!, 'player-two', 1)
+    const discardCost: GameCard = {
+      id: 'discard-cost',
+      instanceId: 'discard-cost',
+      name: 'Discard cost',
+      type: 'item',
+      energyColor: 'blue',
+    }
+    const cookiePool = getCardPoolEntry('BS1-001')!
+    const attacker = createCard(cookiePool, 'player-one', 1) as CookieCard
+    const secondAttacker = createCard(cookiePool, 'player-one', 2) as CookieCard
+    const hpCards = [
+      createCard(cookiePool, 'player-one', 3),
+      createCard(cookiePool, 'player-one', 4),
+      createCard(cookiePool, 'player-one', 5),
+      createCard(cookiePool, 'player-one', 6),
+    ]
+    const state: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId: attacker.instanceId,
+        targetInstanceId: attacker.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            { card: attacker, hpCards, rested: false },
+            { card: secondAttacker, hpCards: [...hpCards], rested: false },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          hand: [trap, discardCost],
+          supportArea: [
+            { card: { ...discardCost, instanceId: 'blue-support-1' }, rested: false },
+            { card: { ...discardCost, instanceId: 'blue-support-2' }, rested: false },
+            { card: { ...discardCost, instanceId: 'blue-support-3' }, rested: false },
+          ],
+        },
+      },
+    }
+
+    expect(getTrapCandidates(state, 'player-two')).toEqual([])
+    expect(getTrapTargetCandidates(state, 'player-two', trap.instanceId)).toEqual([])
   })
 })
 

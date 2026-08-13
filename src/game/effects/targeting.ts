@@ -830,6 +830,17 @@ export const hasRequiredEffectTargets = (
       (effect.optional ? 0 : effect.amount)
     )
   }
+  // Card-selection effects use the same pending ability channel as battle
+  // targets, but they are not all represented by `requiresTargetSelection`.
+  // In particular BS6-043 may have no yellow Cookie in hand for its mandatory
+  // hand-to-break step; treat that step as unfulfillable so the queue can
+  // continue to its later effects instead of executing an invalid target.
+  if (requiresEffectCardSelection(effect)) {
+    const limits = getEffectSelectionLimits(effect)
+    if (limits && limits.min > 0) {
+      return getEffectSelectionCandidates(state, context, effect).length >= limits.min
+    }
+  }
   if (!requiresTargetSelection(effect)) return true
   const candidates = getEffectTargetCandidatesForEffect(state, context, effect)
   const min =

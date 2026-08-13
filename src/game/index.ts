@@ -468,3 +468,17 @@ export type {
 } from './ai/types'
 export { evaluatePlayerView } from './ai/evaluated-turn-handler'
 export { simulateAiMatchDetailed } from './ai-detailed-sim'
+export {
+  createCustomDeckMatch,
+  runSwissTournament,
+} from './tournament'
+export type {
+  SwissColorSummary,
+  SwissMatchRecord,
+  SwissRosterDeck,
+  SwissStanding,
+  SwissTournamentOptions,
+  SwissTournamentProgress,
+  SwissTournamentReport,
+  TournamentColor,
+} from './tournament'
