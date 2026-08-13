@@ -1,0 +1,63 @@
+{
+  "generatedAt": "2026-08-13T13:24:06.764Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json",
+  "scope": "Formal-pool test-state UI audit for every BS5 vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.",
+  "summary": {
+    "total": 2,
+    "effectFlowPassed": 2,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Vanilla deploy and attack flow settled": 2
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS5-050",
+      "baseCardNumber": "BS5-050",
+      "variant": null,
+      "name": "Fig Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS5-050",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    },
+    {
+      "cardNumber": "BS5-062",
+      "baseCardNumber": "BS5-062",
+      "variant": null,
+      "name": "Pumpkin Cookie",
+      "type": "cookie",
+      "color": "GREEN",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "vanilla-attack",
+      "testState": "card:BS5-062",
+      "status": "PASS",
+      "auditStatus": "Vanilla deploy and attack flow settled",
+      "operations": [
+        "action:deploy-vanilla",
+        "select:vanilla-attacker",
+        "select:vanilla-attack-payment",
+        "select:vanilla-attack-payment",
+        "declare:vanilla-attack"
+      ]
+    }
+  ]
+}

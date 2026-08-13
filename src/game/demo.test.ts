@@ -30,6 +30,7 @@ import {
   createBs6ConditionDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
+  createCardNegativeDemoState,
   createP082TrapDemoState,
   createPConditionDemoState,
   createP084ItemConditionDemoState,
@@ -231,6 +232,15 @@ describe('parseTestStateConfig', () => {
     })
     expect(
       parseTestStateConfig('?test-state=bs6-condition:BS6-034:met', 'localhost'),
+    ).toBeNull()
+  })
+
+  it('parses the generic negative card-check route only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=card-negative:BS6-020', 'localhost'),
+    ).toEqual({ kind: 'card-negative', cardNumber: 'BS6-020' })
+    expect(
+      parseTestStateConfig('?test-state=card-negative:BS6-020', 'example.com'),
     ).toBeNull()
   })
 
@@ -554,6 +564,18 @@ describe('createCardCheckDemoState', () => {
         effect,
       ).map((card) => card.instanceId),
     ).not.toContain('BS6-091-break-excluded')
+  })
+
+  it('creates a negative Browser fixture with every support card rested', () => {
+    const state = createCardNegativeDemoState('BS6-020')
+
+    expect(state.players['player-one'].supportArea.length).toBeGreaterThan(0)
+    expect(
+      state.players['player-one'].supportArea.every((support) => support.rested),
+    ).toBe(true)
+    expect(
+      state.players['player-one'].hand.some((card) => card.id === 'BS6-020'),
+    ).toBe(true)
   })
 
   it('prepares BS6-041 with three Cookies in the break area for its item condition', () => {

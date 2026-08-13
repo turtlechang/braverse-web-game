@@ -191,6 +191,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'card-negative'; cardNumber: string }
   | {
       kind: 'p-condition'
       cardNumber: PConditionCardNumber
@@ -357,6 +358,12 @@ export const parseTestStateConfig = (
     const cardNumber = testState.slice('card:'.length).trim()
     if (cardNumber.length > 0) {
       return { kind: 'card-check', cardNumber }
+    }
+  }
+  if (testState?.startsWith('card-negative:')) {
+    const cardNumber = testState.slice('card-negative:'.length).trim()
+    if (cardNumber.length > 0) {
+      return { kind: 'card-negative', cardNumber }
     }
   }
   if (testState?.startsWith('p082-trap:')) {
@@ -3238,6 +3245,25 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
  * The cookie route deliberately provides one non-FLIP LV.1 Cookie with 1 HP
  * in the trash; the energy route leaves that candidate out.
  */
+/**
+ * Builds the generic Browser B fixture for a formal card.
+ *
+ * The card remains in the same placement and timing as the positive
+ * card-check state, but every support card is rested. This makes coloured
+ * energy and support-card costs unavailable while preserving the real UI
+ * entry point for the negative browser path.
+ */
+export const createCardNegativeDemoState = (cardNumber: string): GameState => {
+  const state = createCardCheckDemoState(cardNumber)
+  const player = state.players['player-one']
+  return updateDemoPlayer(state, 'player-one', {
+    supportArea: player.supportArea.map((support) => ({
+      ...support,
+      rested: true,
+    })),
+  })
+}
+
 export const createP082TrapDemoState = (
   payment: 'energy' | 'cookie',
 ): GameState => {

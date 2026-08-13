@@ -1,0 +1,726 @@
+{
+  "generatedAt": "2026-08-13T14:35:03.614Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json",
+  "scope": "Formal-pool negative A/B UI audit for every BS6 record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.",
+  "summary": {
+    "total": 29,
+    "effectFlowPassed": 29,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Negative no-payment effect path settled": 27,
+      "Negative no-payment attack path settled": 2
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS6-065",
+      "baseCardNumber": "BS6-065",
+      "variant": null,
+      "name": "Marble Bread Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-065",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-065@1",
+      "baseCardNumber": "BS6-065",
+      "variant": "1",
+      "name": "Marble Bread Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-065@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-066",
+      "baseCardNumber": "BS6-066",
+      "variant": null,
+      "name": "Maple Taffy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-066",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "confirm:negative-effect:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-066@1",
+      "baseCardNumber": "BS6-066",
+      "variant": "1",
+      "name": "Maple Taffy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-066@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "confirm:negative-effect:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-067",
+      "baseCardNumber": "BS6-067",
+      "variant": null,
+      "name": "Vampire Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-067",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-068",
+      "baseCardNumber": "BS6-068",
+      "variant": null,
+      "name": "Blackberry Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-068",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-069",
+      "baseCardNumber": "BS6-069",
+      "variant": null,
+      "name": "Sandwich Cookie",
+      "type": "flip",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-069",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:negative-flip",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-070",
+      "baseCardNumber": "BS6-070",
+      "variant": null,
+      "name": "Salt Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-070",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ]
+    },
+    {
+      "cardNumber": "BS6-071",
+      "baseCardNumber": "BS6-071",
+      "variant": null,
+      "name": "Soda Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-071",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:faint-response",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-072",
+      "baseCardNumber": "BS6-072",
+      "variant": null,
+      "name": "Chocolate Bonbon Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-072",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:hand-discard",
+        "confirm:effect-panel:確認發動",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-073",
+      "baseCardNumber": "BS6-073",
+      "variant": null,
+      "name": "Schneeball Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-073",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-073@1",
+      "baseCardNumber": "BS6-073",
+      "variant": "1",
+      "name": "Schneeball Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-073@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-074",
+      "baseCardNumber": "BS6-074",
+      "variant": null,
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-074",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-074@1",
+      "baseCardNumber": "BS6-074",
+      "variant": "1",
+      "name": "String Gummy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-074@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-075",
+      "baseCardNumber": "BS6-075",
+      "variant": null,
+      "name": "Onion Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "vanilla-attack"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-075",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment attack path settled",
+      "operations": [
+        "action:deploy-negative",
+        "select:negative-attacker"
+      ]
+    },
+    {
+      "cardNumber": "BS6-076",
+      "baseCardNumber": "BS6-076",
+      "variant": null,
+      "name": "Fairy Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-076",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:hand-discard",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-077",
+      "baseCardNumber": "BS6-077",
+      "variant": null,
+      "name": "Cheerleader Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-077",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-078",
+      "baseCardNumber": "BS6-078",
+      "variant": null,
+      "name": "Coffee Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-078",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-079",
+      "baseCardNumber": "BS6-079",
+      "variant": null,
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-079",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:hand-discard",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-079@1",
+      "baseCardNumber": "BS6-079",
+      "variant": "1",
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-079@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:hand-discard",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-080",
+      "baseCardNumber": "BS6-080",
+      "variant": null,
+      "name": "Adventurer Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-080",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-target",
+        "confirm:negative-effect:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-081",
+      "baseCardNumber": "BS6-081",
+      "variant": null,
+      "name": "Truffle Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-081",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-081@1",
+      "baseCardNumber": "BS6-081",
+      "variant": "1",
+      "name": "Truffle Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-081@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-082",
+      "baseCardNumber": "BS6-082",
+      "variant": null,
+      "name": "Popcorn Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-082",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "select:.effect-candidates-discard-hand",
+        "confirm:negative-effect:確認發動",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-083",
+      "baseCardNumber": "BS6-083",
+      "variant": null,
+      "name": "Skating Queen Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-083",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "confirm:faint-response",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-084",
+      "baseCardNumber": "BS6-084",
+      "variant": null,
+      "name": "Time Manipulator",
+      "type": "item",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-084",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-085",
+      "baseCardNumber": "BS6-085",
+      "variant": null,
+      "name": "Destruction of a Pastless Future",
+      "type": "trap",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-085",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-085@1",
+      "baseCardNumber": "BS6-085",
+      "variant": "1",
+      "name": "Destruction of a Pastless Future",
+      "type": "trap",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-085@1",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-086",
+      "baseCardNumber": "BS6-086",
+      "variant": null,
+      "name": "Messy TBD Director's Office",
+      "type": "stage",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "attack-then",
+        "stage"
+      ],
+      "path": "negative-no-payment",
+      "testState": "card-negative:BS6-086",
+      "status": "PASS",
+      "auditStatus": "Negative no-payment effect path settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    }
+  ]
+}

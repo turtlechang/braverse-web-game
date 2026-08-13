@@ -1,0 +1,664 @@
+{
+  "generatedAt": "2026-08-13T13:09:27.267Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json",
+  "scope": "Formal-pool test-state interaction audit for BS6 effect-bearing records plus dedicated A/B paths for 1 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 25,
+    "effectFlowPassed": 25,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Effect flow settled": 25
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS6-001",
+      "baseCardNumber": "BS6-001",
+      "variant": null,
+      "name": "Blue Lily Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-001",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-hp-cost",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-001@1",
+      "baseCardNumber": "BS6-001",
+      "variant": "1",
+      "name": "Blue Lily Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-001@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-hp-cost",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-002",
+      "baseCardNumber": "BS6-002",
+      "variant": null,
+      "name": "Dark Choco Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-002",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-003",
+      "baseCardNumber": "BS6-003",
+      "variant": null,
+      "name": "Strawberry Stick Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-003",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-004",
+      "baseCardNumber": "BS6-004",
+      "variant": null,
+      "name": "Mint Choco Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-004",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-hp-cost",
+        "confirm:effect-panel:確認發動",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-006",
+      "baseCardNumber": "BS6-006",
+      "variant": null,
+      "name": "Cherry Blossom Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-006",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:flip",
+        "confirm:flip",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-007",
+      "baseCardNumber": "BS6-007",
+      "variant": null,
+      "name": "Blue Slushy Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-007",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-007@1",
+      "baseCardNumber": "BS6-007",
+      "variant": "1",
+      "name": "Blue Slushy Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-007@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-008",
+      "baseCardNumber": "BS6-008",
+      "variant": null,
+      "name": "Sugar Swan Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-008",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-008@1",
+      "baseCardNumber": "BS6-008",
+      "variant": "1",
+      "name": "Sugar Swan Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-008@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-009",
+      "baseCardNumber": "BS6-009",
+      "variant": null,
+      "name": "Cotton Candy Cookie",
+      "type": "flip",
+      "color": "RED",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-009",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-010",
+      "baseCardNumber": "BS6-010",
+      "variant": null,
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-010",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-010@1",
+      "baseCardNumber": "BS6-010",
+      "variant": "1",
+      "name": "Timekeeper Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-010@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-011",
+      "baseCardNumber": "BS6-011",
+      "variant": null,
+      "name": "Rose Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-011",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:faint-target",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-012",
+      "baseCardNumber": "BS6-012",
+      "variant": null,
+      "name": "Lilybell Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-012",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-012@1",
+      "baseCardNumber": "BS6-012",
+      "variant": "1",
+      "name": "Lilybell Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-012@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-013",
+      "baseCardNumber": "BS6-013",
+      "variant": null,
+      "name": "Chess Choco Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-013",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-014",
+      "baseCardNumber": "BS6-014",
+      "variant": null,
+      "name": "Choco Bar Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-014",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-hp-cost",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-016",
+      "baseCardNumber": "BS6-016",
+      "variant": null,
+      "name": "Crunchy Chip Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-016",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-017",
+      "baseCardNumber": "BS6-017",
+      "variant": null,
+      "name": "Pink Choco Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-017",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-018",
+      "baseCardNumber": "BS6-018",
+      "variant": null,
+      "name": "White Choco Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-018",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-019",
+      "baseCardNumber": "BS6-019",
+      "variant": null,
+      "name": "Squishy Jelly Watch",
+      "type": "item",
+      "color": "RED",
+      "effectSurfaces": [
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-019",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS6-020",
+      "baseCardNumber": "BS6-020",
+      "variant": null,
+      "name": "Tonic Spray",
+      "type": "trap",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-020",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-target",
+        "next:trap",
+        "confirm:trap",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-020@1",
+      "baseCardNumber": "BS6-020",
+      "variant": "1",
+      "name": "Tonic Spray",
+      "type": "trap",
+      "color": "RED",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-020@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-target",
+        "next:trap",
+        "confirm:trap",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS6-021",
+      "baseCardNumber": "BS6-021",
+      "variant": null,
+      "name": "TBD Hallway",
+      "type": "stage",
+      "color": "RED",
+      "effectSurfaces": [
+        "attack-then",
+        "stage"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-021",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    }
+  ]
+}

@@ -29,6 +29,7 @@ const requestedSeries = (() => {
 })()
 const isBs6Audit = requestedSeries === 'BS6'
 const auditVanillaAttacks = process.argv.includes('--vanilla-attacks')
+const auditNegative = process.argv.includes('--negative')
 const requestedCardNumbers = process.argv
   .filter((argument) => argument.startsWith('--card='))
   .map((argument) => argument.slice('--card='.length))
@@ -174,6 +175,9 @@ const isVanillaAttackCookie = (card) =>
   card.type === 'cookie' && !hasEffectSurface(card)
 const getBaseCardNumber = (card) => card.baseCardNumber || card.cardNumber
 const selectRepresentativeCards = (records) => {
+  if (auditNegative) {
+    return records
+  }
   if (auditVanillaAttacks) {
     // Illustration variants can be independently normalized in the runtime
     // pool, so exercise every formal vanilla Cookie record rather than
@@ -223,7 +227,7 @@ const cards = [
   .sort((left, right) =>
     left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
   )
-if (!auditVanillaAttacks && requestedCardNumbers.length === 0) {
+if (!auditVanillaAttacks && !auditNegative && requestedCardNumbers.length === 0) {
   assert.equal(
     cards.length,
     auditConfig.expectedEffectCardCount,
@@ -329,9 +333,73 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
   return false
 }
 
-const driveEffectPanel = async (page, operations) => {
+const driveEffectPanel = async (
+  page,
+  operations,
+  { negative = false, settleAttackEffects = false } = {},
+) => {
   const panel = activePanel(page)
   if (!(await visible(panel))) return false
+
+  // `card-negative` keeps an attack-Then card at the real post-attack
+  // pending window. The attack payment has already happened before this
+  // window, so B-path validation must resolve the actual Then UI instead of
+  // trying to reject an already-declared attack as if it were a skill cost.
+  if (negative && settleAttackEffects) {
+    return driveEffectPanel(page, operations)
+  }
+
+  if (negative) {
+    // OnPlay panels can expose both "取消技能" and "略過整個登場效果";
+    // the latter is the B-path skip and is rendered last.
+    // Only energy/support payment candidates are illegal in this fixture.
+    // Other candidate groups are real effect targets or alternative costs
+    // that still need to be resolved after the payment check (for example,
+    // an OnPlay effect returning one rested support card to hand).
+    const paymentCandidate = panel
+      .locator(
+        '.effect-candidates-payment button:not(:disabled)',
+      )
+      .first()
+    if (await enabled(paymentCandidate)) {
+      throw new Error('negative path exposed an enabled effect candidate')
+    }
+
+    const selected = await clickFirstUnselected(
+      panel,
+      [
+        '.effect-candidates-cost-support',
+        '.effect-candidates-discard-hand',
+        '.effect-candidates-hp-cost',
+        '.effect-candidates-trash-battle',
+        '.effect-candidates-trash-deck-bottom',
+        '.effect-candidates-trash-deck',
+        '.effect-candidates-rest-support',
+        '.effect-candidates-choice',
+        '.effect-candidates-target',
+      ],
+      operations,
+    )
+    if (selected) return true
+
+    const primary = panel.locator('.effect-panel-primary-action').first()
+    if (await enabled(primary)) {
+      const label = (await primary.innerText()).trim()
+      await primary.click({ force: true })
+      operations.push(`confirm:negative-effect:${label}`)
+      await wait(500)
+      return true
+    }
+
+    const skip = panel.locator('.skip-effect').last()
+    if (await enabled(skip)) {
+      await skip.click({ force: true })
+      operations.push('skip:negative-effect')
+      await wait(180)
+      return true
+    }
+    return false
+  }
 
   const optionalAttack = panel.locator('.optional-cost-attack-inline').first()
   if (await visible(optionalAttack)) {
@@ -426,9 +494,22 @@ const driveEffectPanel = async (page, operations) => {
   return false
 }
 
-const driveOtherModal = async (page, operations) => {
+const driveOtherModal = async (
+  page,
+  operations,
+  { negative = false, settleAttackEffects = false } = {},
+) => {
+  const strictNegative = negative && !settleAttackEffects
   const flip = page.locator('.flip-response-modal').first()
   if (await visible(flip)) {
+    if (strictNegative) {
+      const skip = flip.locator('.modal-actions button').first()
+      if (!(await enabled(skip))) return false
+      await skip.click({ force: true })
+      operations.push('skip:negative-flip')
+      await wait(520)
+      return true
+    }
     const option = flip.locator(
       '.flip-hand-carousel .flip-card-page button:not(.is-selected):not(:disabled), .flip-choice-options button:not(.is-selected):not(:disabled), .modal-card-options button:not(.is-selected):not(:disabled)',
     ).first()
@@ -455,6 +536,9 @@ const driveOtherModal = async (page, operations) => {
 
   const attackResponse = page.locator('.attack-response-modal').first()
   if (await visible(attackResponse)) {
+    if (strictNegative) {
+      throw new Error('negative path unexpectedly exposed an attack response')
+    }
     const trapSelection = attackResponse
       .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
       .first()
@@ -467,6 +551,9 @@ const driveOtherModal = async (page, operations) => {
 
   const trap = page.locator('.trap-response-modal').first()
   if (await visible(trap)) {
+    if (strictNegative) {
+      throw new Error('negative path unexpectedly exposed a trap response')
+    }
     const trapSelectPrompt = trap
       .locator('h2')
       .filter({ hasText: /是否發動陷阱|Activate a Trap/i })
@@ -728,15 +815,31 @@ const driveOtherModal = async (page, operations) => {
   return false
 }
 
-const settlePending = async (page, operations) => {
+const settlePending = async (
+  page,
+  operations,
+  { negative = false, settleAttackEffects = false } = {},
+) => {
   for (let round = 0; round < 32; round += 1) {
     if (operations.length >= MAX_DRIVER_OPERATIONS_PER_CARD) {
       throw new Error(
         `effect driver operation budget exceeded (${MAX_DRIVER_OPERATIONS_PER_CARD})`,
       )
     }
-    if (await driveOtherModal(page, operations)) continue
-    if (await driveEffectPanel(page, operations)) continue
+    if (
+      await driveOtherModal(page, operations, {
+        negative,
+        settleAttackEffects,
+      })
+    )
+      continue
+    if (
+      await driveEffectPanel(page, operations, {
+        negative,
+        settleAttackEffects,
+      })
+    )
+      continue
     const pendingCount =
       (await count(page, '.effect-panel[role="alertdialog"]')) +
       (await count(page, '.flip-response-modal')) +
@@ -839,6 +942,38 @@ const runVanillaAttack = async (page, operations) => {
   )
 }
 
+const runVanillaNegative = async (page, operations) => {
+  const ownCookies = page.locator('.bottom-field .combat-card-wrap')
+  const beforeDeploy = await ownCookies.count()
+  assert.ok(beforeDeploy < 2, 'negative vanilla fixture must have a free battle slot')
+  assert.ok(
+    await clickFirstHandAction(page),
+    'negative vanilla Cookie must expose a deploy action from the hand',
+  )
+  operations.push('action:deploy-negative')
+
+  const attacker = ownCookies.last().locator('.card-face').first()
+  assert.ok(await enabled(attacker), 'negative vanilla Cookie must be clickable')
+  await attacker.click({ force: true })
+  operations.push('select:negative-attacker')
+  await wait(180)
+
+  const legalPayment = page.locator(
+    '.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)',
+  )
+  assert.equal(
+    await legalPayment.count(),
+    0,
+    'all rested support cards must be unavailable for a negative attack payment',
+  )
+  await wait(260)
+  assert.equal(
+    await ownCookies.last().locator('.card-face.is-rested').count(),
+    0,
+    'an attack with no legal payment must not rest the attacker',
+  )
+}
+
 const clickNextPhase = async (page) => {
   const action = page.locator('.next-phase-button').first()
   if (!(await enabled(action))) return false
@@ -890,6 +1025,8 @@ const runCard = async (
     path = 'generic',
     requireInteractiveOperation = true,
     requireVanillaAttack = false,
+    negative = false,
+    settleAttackEffects = false,
   } = {},
 ) => {
   const consoleErrors = []
@@ -912,12 +1049,19 @@ const runCard = async (
     assert.ok(!/遊戲畫面發生錯誤|Application Error|Unhandled Runtime Error/i.test(before))
 
     if (requireVanillaAttack) {
-      await runVanillaAttack(page, operations)
-      await settlePending(page, operations)
+      if (negative) {
+        await runVanillaNegative(page, operations)
+      } else {
+        await runVanillaAttack(page, operations)
+      }
+      await settlePending(page, operations, { negative, settleAttackEffects })
     } else {
       for (let round = 0; round < 8; round += 1) {
         const settledBefore = operations.length
-        await settlePending(page, operations)
+        await settlePending(page, operations, {
+          negative,
+          settleAttackEffects,
+        })
         if (operations.length !== settledBefore) continue
         if (await clickSkill(page)) {
           operations.push('action:skill')
@@ -963,7 +1107,11 @@ const runCard = async (
         testState,
         status: 'PASS',
         auditStatus: requireVanillaAttack
-          ? 'Vanilla deploy and attack flow settled'
+          ? negative
+            ? 'Negative no-payment attack path settled'
+            : 'Vanilla deploy and attack flow settled'
+          : negative
+            ? 'Negative no-payment effect path settled'
           : requireInteractiveOperation
             ? 'Effect flow settled'
           : 'No-op or timing path settled',
@@ -1036,19 +1184,31 @@ try {
   page.setDefaultTimeout(7000)
 
   console.log(
-    `=== ${auditConfig.label} ${auditVanillaAttacks ? 'vanilla attack' : 'interactive effect'} audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
+    `=== ${auditConfig.label} ${auditNegative ? 'negative A/B' : auditVanillaAttacks ? 'vanilla attack' : 'interactive effect'} audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
+    const testState = auditNegative
+      ? `card-negative:${card.cardNumber}`
+      : `card:${card.cardNumber}`
+    const runOptions = auditNegative
+      ? {
+          path: 'negative-no-payment',
+          requireInteractiveOperation: false,
+          requireVanillaAttack: isVanillaAttackCookie(card),
+          negative: true,
+          settleAttackEffects: effectSurfaces(card).includes('attack-then'),
+        }
+      : auditVanillaAttacks
+        ? { path: 'vanilla-attack', requireVanillaAttack: true }
+        : undefined
     const genericResult = await runCard(
       page,
       card,
-      `card:${card.cardNumber}`,
-      auditVanillaAttacks
-        ? { path: 'vanilla-attack', requireVanillaAttack: true }
-        : undefined,
+      testState,
+      runOptions,
     )
     let result = genericResult
-    if (!auditVanillaAttacks && conditionCardNumbers.has(card.cardNumber)) {
+    if (!auditVanillaAttacks && !auditNegative && conditionCardNumbers.has(card.cardNumber)) {
       const met = await runCard(
         page,
         card,
@@ -1101,7 +1261,9 @@ try {
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
     source: auditConfig.source,
-    scope: auditVanillaAttacks
+    scope: auditNegative
+      ? `Formal-pool negative A/B UI audit for every ${auditConfig.label} record. The localhost-only fixture keeps the formal card and timing but rests every support card; PASS means the real UI did not accept an illegal support payment, did not rest a vanilla attacker without payment, and settled without browser/runtime errors or remaining pending UI. Attack-Then records start at their real post-attack pending window, so their Then effect is resolved through the UI rather than re-testing the payment that already occurred before that window.`
+      : auditVanillaAttacks
       ? `Formal-pool test-state UI audit for every ${auditConfig.label} vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.`
       : `Formal-pool test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
     summary: {

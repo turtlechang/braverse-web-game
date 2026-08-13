@@ -1,0 +1,820 @@
+{
+  "generatedAt": "2026-08-13T13:37:49.766Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json",
+  "scope": "Formal-pool test-state interaction audit for BS5 effect-bearing records plus dedicated A/B paths for 14 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 28,
+    "effectFlowPassed": 28,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 2,
+    "dedicatedConditionCardsPassed": 2,
+    "byStatus": {
+      "Effect flow settled": 26,
+      "Dedicated condition A/B paths settled": 2
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS5-089",
+      "baseCardNumber": "BS5-089",
+      "variant": null,
+      "name": "Muscle Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-089",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-089@1",
+      "baseCardNumber": "BS5-089",
+      "variant": "1",
+      "name": "Muscle Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-089@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-089@2",
+      "baseCardNumber": "BS5-089",
+      "variant": "2",
+      "name": "Muscle Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-089@2",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-090",
+      "baseCardNumber": "BS5-090",
+      "variant": null,
+      "name": "Strawberry Stick Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-090",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:flip",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS5-091",
+      "baseCardNumber": "BS5-091",
+      "variant": null,
+      "name": "Lilac Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-091",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-091@1",
+      "baseCardNumber": "BS5-091",
+      "variant": "1",
+      "name": "Lilac Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-091@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-092",
+      "baseCardNumber": "BS5-092",
+      "variant": null,
+      "name": "Rambutan Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-092",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-092@1",
+      "baseCardNumber": "BS5-092",
+      "variant": "1",
+      "name": "Rambutan Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-092@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-093",
+      "baseCardNumber": "BS5-093",
+      "variant": null,
+      "name": "Lychee Dragon Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-093",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-093@1",
+      "baseCardNumber": "BS5-093",
+      "variant": "1",
+      "name": "Lychee Dragon Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-093@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-094",
+      "baseCardNumber": "BS5-094",
+      "variant": null,
+      "name": "Mangosteen Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-094",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-095",
+      "baseCardNumber": "BS5-095",
+      "variant": null,
+      "name": "Mint Wafer Cookie",
+      "type": "flip",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "flip"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-095",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:flip",
+        "confirm:flip",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS5-097",
+      "baseCardNumber": "BS5-097",
+      "variant": null,
+      "name": "Peppercorn Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-097",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:draw-up-to",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-098",
+      "baseCardNumber": "BS5-098",
+      "variant": null,
+      "name": "Centipede Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-098",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "skip:replacement"
+      ]
+    },
+    {
+      "cardNumber": "BS5-099",
+      "baseCardNumber": "BS5-099",
+      "variant": null,
+      "name": "Avocado Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-099",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認並執行強制效果",
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-100",
+      "baseCardNumber": "BS5-100",
+      "variant": null,
+      "name": "Yogurt Cream Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-100",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-100@1",
+      "baseCardNumber": "BS5-100",
+      "variant": "1",
+      "name": "Yogurt Cream Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-100@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-100@2",
+      "baseCardNumber": "BS5-100",
+      "variant": "2",
+      "name": "Yogurt Cream Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-100@2",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-101",
+      "baseCardNumber": "BS5-101",
+      "variant": null,
+      "name": "GingerBrave",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-101",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-102",
+      "baseCardNumber": "BS5-102",
+      "variant": null,
+      "name": "Purple Yam Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-102",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-103",
+      "baseCardNumber": "BS5-103",
+      "variant": null,
+      "name": "Scorpion Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-103",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-103@1",
+      "baseCardNumber": "BS5-103",
+      "variant": "1",
+      "name": "Scorpion Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-103@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-104",
+      "baseCardNumber": "BS5-104",
+      "variant": null,
+      "name": "Chili Pepper Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-104",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "confirm:effect-panel:確認並執行強制效果",
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-106",
+      "baseCardNumber": "BS5-106",
+      "variant": null,
+      "name": "Plain Yogurt Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-106",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "confirm:effect-panel:確認發動",
+        "confirm:effect-panel:確認並執行強制效果",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-107",
+      "baseCardNumber": "BS5-107",
+      "variant": null,
+      "name": "Red Pepper Cookie",
+      "type": "cookie",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-107",
+      "status": "PASS",
+      "auditStatus": "Dedicated condition A/B paths settled",
+      "operations": [
+        "confirm:faint-response",
+        "confirm:faint-response",
+        "action:next-phase",
+        "action:next-phase"
+      ],
+      "genericStatus": "PASS",
+      "conditionPaths": {
+        "met": {
+          "cardNumber": "BS5-107",
+          "baseCardNumber": "BS5-107",
+          "variant": null,
+          "name": "Red Pepper Cookie",
+          "type": "cookie",
+          "color": "PURPLE",
+          "effectSurfaces": [
+            "skill"
+          ],
+          "path": "condition-met",
+          "testState": "bs5-faint:BS5-107:met",
+          "status": "PASS",
+          "auditStatus": "Effect flow settled",
+          "operations": [
+            "confirm:faint-response",
+            "confirm:faint-response",
+            "action:next-phase",
+            "action:next-phase"
+          ]
+        },
+        "unmet": {
+          "cardNumber": "BS5-107",
+          "baseCardNumber": "BS5-107",
+          "variant": null,
+          "name": "Red Pepper Cookie",
+          "type": "cookie",
+          "color": "PURPLE",
+          "effectSurfaces": [
+            "skill"
+          ],
+          "path": "condition-unmet",
+          "testState": "bs5-faint:BS5-107:unmet",
+          "status": "PASS",
+          "auditStatus": "No-op or timing path settled",
+          "operations": [
+            "confirm:faint-response",
+            "confirm:faint-response",
+            "action:next-phase",
+            "action:next-phase"
+          ]
+        }
+      }
+    },
+    {
+      "cardNumber": "BS5-108",
+      "baseCardNumber": "BS5-108",
+      "variant": null,
+      "name": "Rambirdtan Handler Glove",
+      "type": "item",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "item"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-108",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:確認發動",
+        "confirm:inspect-deck",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-109",
+      "baseCardNumber": "BS5-109",
+      "variant": null,
+      "name": "Charmed Miners",
+      "type": "trap",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-109",
+      "status": "PASS",
+      "auditStatus": "Dedicated condition A/B paths settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-target",
+        "confirm:trap",
+        "skip:replacement"
+      ],
+      "genericStatus": "PASS",
+      "conditionPaths": {
+        "met": {
+          "cardNumber": "BS5-109",
+          "baseCardNumber": "BS5-109",
+          "variant": null,
+          "name": "Charmed Miners",
+          "type": "trap",
+          "color": "PURPLE",
+          "effectSurfaces": [
+            "attack-then",
+            "trap"
+          ],
+          "path": "condition-met",
+          "testState": "bs5-trap:BS5-109:met",
+          "status": "PASS",
+          "auditStatus": "Effect flow settled",
+          "operations": [
+            "select:trap",
+            "select:trap-step",
+            "next:trap",
+            "select:trap-target",
+            "confirm:trap",
+            "skip:replacement"
+          ]
+        },
+        "unmet": {
+          "cardNumber": "BS5-109",
+          "baseCardNumber": "BS5-109",
+          "variant": null,
+          "name": "Charmed Miners",
+          "type": "trap",
+          "color": "PURPLE",
+          "effectSurfaces": [
+            "attack-then",
+            "trap"
+          ],
+          "path": "condition-unmet",
+          "testState": "bs5-trap:BS5-109:unmet",
+          "status": "PASS",
+          "auditStatus": "No-op or timing path settled",
+          "operations": [
+            "select:trap",
+            "select:trap-step",
+            "next:trap",
+            "select:trap-target",
+            "confirm:trap",
+            "skip:replacement"
+          ]
+        }
+      }
+    },
+    {
+      "cardNumber": "BS5-110",
+      "baseCardNumber": "BS5-110",
+      "variant": null,
+      "name": "Lychee Dragon Cookie's Cave",
+      "type": "stage",
+      "color": "PURPLE",
+      "effectSurfaces": [
+        "attack-then",
+        "stage"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-110",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    }
+  ]
+}

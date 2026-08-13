@@ -69,6 +69,7 @@ import {
   createBs5StageConditionDemoState,
   createBs5Item111DemoState,
   createBs6ConditionDemoState,
+  createCardNegativeDemoState,
   createP082TrapDemoState,
   createP084ItemConditionDemoState,
   createP147SpecialPlayDemoState,
@@ -183,6 +184,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'card-negative') {
+      return createCardNegativeDemoState(testStateConfig.cardNumber)
     }
     if (testStateConfig?.kind === 'p-condition') {
       return createPConditionDemoState(
