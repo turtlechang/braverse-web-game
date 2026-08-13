@@ -1,4 +1,8 @@
 import { getOpponentId } from './helpers'
+import {
+  getOpponentBattleMovementPreventer,
+  isProtectedBySoulJamResolution,
+} from './effects/targeting'
 import type { GameCommand } from './commands'
 import type {
   CardEffect,
@@ -112,6 +116,118 @@ const getCardEffects = (card: GameCard | undefined): CardEffect[] => {
   if ('item' in card) return card.item?.effects ?? []
   if ('stageAbility' in card) return card.stageAbility?.effects ?? []
   return []
+}
+
+const getOpponentBattleToTrashEffect = (
+  effects: CardEffect[],
+): Extract<CardEffect, { kind: 'opponent-battle-to-trash' }> | undefined =>
+  effects.find(
+    (effect): effect is Extract<CardEffect, { kind: 'opponent-battle-to-trash' }> =>
+      effect.kind === 'opponent-battle-to-trash',
+  )
+
+const getOpponentBattleToTrashBlocker = (
+  state: GameState,
+  sourcePlayerId: PlayerId,
+  effect: Extract<CardEffect, { kind: 'opponent-battle-to-trash' }>,
+): { blocker: GameCard; protectedTarget?: GameCard } | undefined => {
+  const opponent = state.players[getOpponentId(sourcePlayerId)]
+  const eligibleTargets = opponent.battleArea.filter((cookie) => {
+    if (
+      effect.maxLevel !== undefined &&
+      cookie.card.level > effect.maxLevel
+    ) {
+      return false
+    }
+    if (
+      effect.minLevel !== undefined &&
+      cookie.card.level < effect.minLevel
+    ) {
+      return false
+    }
+    if (
+      effect.remainingHp !== undefined &&
+      cookie.hpCards.length > effect.remainingHp
+    ) {
+      return false
+    }
+    return true
+  })
+  const movementPreventer = getOpponentBattleMovementPreventer(state, sourcePlayerId)
+  if (movementPreventer && eligibleTargets.length > 0) {
+    return { blocker: movementPreventer.card }
+  }
+  const unprotectedTarget = eligibleTargets.find(
+    (cookie) => !isProtectedBySoulJamResolution(cookie),
+  )
+  if (unprotectedTarget) return undefined
+
+  const protectedTarget = eligibleTargets.find((cookie) =>
+    isProtectedBySoulJamResolution(cookie),
+  )
+  const soulJam = protectedTarget?.equippedCards?.find(
+    (card) => card.id === 'BS3-115',
+  )
+  return soulJam && protectedTarget
+    ? { blocker: soulJam, protectedTarget: protectedTarget.card }
+    : undefined
+}
+
+const describeOpponentBattleToTrashStep = (
+  previous: GameState,
+  command: Extract<GameCommand, { kind: 'resolve-ability-effect' }>,
+  effect: Extract<CardEffect, { kind: 'opponent-battle-to-trash' }>,
+): LogStepDetail => {
+  const targetCard = command.targetIds[0]
+    ? findCard(previous, command.targetIds[0])
+    : undefined
+  if (targetCard) {
+    return {
+      text: `效果結算：將「${targetCard.name}」放入棄牌區`,
+      cards: [targetCard],
+    }
+  }
+
+  const block = getOpponentBattleToTrashBlocker(
+    previous,
+    command.playerId,
+    effect,
+  )
+  if (block) {
+    const protectedTargetText = block.protectedTarget
+      ? `（目標「${block.protectedTarget.name}」受到保護）`
+      : ''
+    return {
+      text: `效果未生效：被「${block.blocker.name}」的效果阻止${protectedTargetText}`,
+      cards: [block.blocker],
+    }
+  }
+
+  return {
+    text:
+      (effect.min ?? 1) > 0
+        ? '效果未生效：沒有符合條件的目標'
+        : '效果結算：未選擇目標',
+  }
+}
+
+const describeBlockedOnPlayMovement = (
+  state: GameState,
+  sourceInstanceId: string,
+  sourcePlayerId: PlayerId,
+): LogStepDetail | undefined => {
+  const sourceCard = findCard(state, sourceInstanceId)
+  const effect = getOpponentBattleToTrashEffect(getCardEffects(sourceCard))
+  if (!effect) return undefined
+  const block = getOpponentBattleToTrashBlocker(state, sourcePlayerId, effect)
+  if (!block) return undefined
+  const protectedTargetText = block.protectedTarget
+    ? `（目標「${block.protectedTarget.name}」受到保護）`
+    : ''
+  return {
+    text: `效果未生效：被「${block.blocker.name}」的效果阻止${protectedTargetText}`,
+    cards: [block.blocker],
+  }
 }
 
 /** 取出這筆指令真正要結算的效果，讓紀錄以狀態差異描述結果而非只描述點擊。 */
@@ -258,6 +374,26 @@ export const describeCommand = (
     }
     case 'resolve-ability-effect': {
       const effects = getResolvedEffects(previous, command)
+      const opponentBattleToTrash = getOpponentBattleToTrashEffect(effects)
+      if (opponentBattleToTrash) {
+        const targetCard = command.targetIds[0]
+          ? findCard(previous, command.targetIds[0])
+          : undefined
+        if (targetCard) {
+          return `${actor} 將「${targetCard.name}」放入棄牌區`
+        }
+        const block = getOpponentBattleToTrashBlocker(
+          previous,
+          command.playerId,
+          opponentBattleToTrash,
+        )
+        if (block) {
+          return `${actor} 的效果被「${block.blocker.name}」的效果阻止，無法將對手餅乾移出戰鬥區`
+        }
+        return (opponentBattleToTrash.min ?? 1) > 0
+          ? `${actor} 未找到符合條件的目標，技能未生效`
+          : `${actor} 未選擇目標，技能結算完畢`
+      }
       const cycleHp = effects.find((effect) => effect.kind === 'cycle-hp')
       if (cycleHp) {
         if (command.targetIds.length === 0) {
@@ -311,8 +447,16 @@ export const describeCommand = (
         : null
       return `${actor} 重新排列了 ${targetName ?? '目標餅乾'} 的 HP 卡`
     }
-    case 'skip-on-play':
-      return `${actor} 選擇不發動「${findCardName(state, command.sourceInstanceId)}」的登場效果`
+    case 'skip-on-play': {
+      const blockedStep = describeBlockedOnPlayMovement(
+        state,
+        command.sourceInstanceId,
+        command.playerId,
+      )
+      return blockedStep
+        ? `${actor} 無法發動「${findCardName(state, command.sourceInstanceId)}」的登場效果：${blockedStep.text.replace(/^效果未生效：/, '')}`
+        : `${actor} 選擇不發動「${findCardName(state, command.sourceInstanceId)}」的登場效果`
+    }
     case 'replace-cookie':
       return `${actor} 補位了「${findCardName(state, command.instanceId)}」`
     case 'skip-replacement':
@@ -494,11 +638,19 @@ const describeCardListStep = (
 const describeEffectTargetsSteps = (
   state: GameState,
   effectTargets: string[][] | undefined,
+  effects: CardEffect[] = [],
 ): LogStepDetail[] =>
   (effectTargets ?? [])
-    .map((targetIds, index) =>
-      describeCardListStep(state, `第 ${index + 1} 個效果目標`, targetIds),
-    )
+    .map((targetIds, index) => {
+      const effect = effects[index]
+      return describeCardListStep(
+        state,
+        effect?.kind === 'opponent-battle-to-trash'
+          ? '效果結算：放入棄牌區'
+          : `第 ${index + 1} 個效果目標`,
+        targetIds,
+      )
+    })
     .filter((step): step is LogStepDetail => step !== undefined)
 
 const describeChooseOneSteps = (chooseOneModes: number[] | undefined): LogStepDetail[] =>
@@ -609,6 +761,7 @@ export const describeCommandSteps = (
         ...describeEffectTargetsSteps(
           state,
           'effectTargets' in command ? command.effectTargets : undefined,
+          getResolvedEffects(state, command),
         ),
       )
       steps.push(...describeChooseOneSteps(command.chooseOneModes))
@@ -652,7 +805,13 @@ export const describeCommandSteps = (
         command.trashBattleCookieIds,
       )
       if (trashBattleStep) steps.push(trashBattleStep)
-      steps.push(...describeEffectTargetsSteps(state, command.effectTargets))
+      steps.push(
+        ...describeEffectTargetsSteps(
+          state,
+          command.effectTargets,
+          getResolvedEffects(state, command),
+        ),
+      )
       steps.push(...describeChooseOneSteps(command.chooseOneModes))
       const outcome = describeDamageOutcome(
         previous,
@@ -662,6 +821,22 @@ export const describeCommandSteps = (
       )
       if (outcome) steps.push({ text: `效果結算：${outcome}` })
       return steps
+    }
+    case 'resolve-ability-effect': {
+      const effect = getOpponentBattleToTrashEffect(
+        getResolvedEffects(previous, command),
+      )
+      return effect
+        ? [describeOpponentBattleToTrashStep(previous, command, effect)]
+        : undefined
+    }
+    case 'skip-on-play': {
+      const blockedStep = describeBlockedOnPlayMovement(
+        state,
+        command.sourceInstanceId,
+        command.playerId,
+      )
+      return blockedStep ? [blockedStep] : undefined
     }
     case 'attack': {
       const opponentId = getOpponentId(command.playerId)

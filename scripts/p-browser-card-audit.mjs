@@ -19,11 +19,43 @@ if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
 const baseUrl = `http://127.0.0.1:${port}`
-const formalPath = resolve(
-  root,
-  'data/cards/official-p-0xx-remaining.en.json',
+const requestedSeries = (
+  process.argv
+    .find((argument) => argument.startsWith('--series='))
+    ?.slice('--series='.length)
+    .toUpperCase() ?? 'P'
 )
-const reportPath = resolve(root, 'docs/p0xx-browser-audit-2026-08-10.json')
+const cardAuditConfigs = {
+  P: {
+    label: 'P-0XX',
+    formalPath: 'data/cards/official-p-0xx-remaining.en.json',
+    reportPath: 'docs/p0xx-browser-audit-2026-08-10.json',
+    expectedRecordCount: 127,
+  },
+  BS5: {
+    label: 'BS5',
+    formalPath: 'data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json',
+    reportPath: 'docs/bs5-browser-card-audit-2026-08-13.json',
+    expectedRecordCount: 153,
+  },
+  BS6: {
+    label: 'BS6',
+    formalPath: 'data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json',
+    reportPath: 'docs/bs6-browser-card-audit-2026-08-13.json',
+    expectedRecordCount: 138,
+  },
+}
+const auditConfig = cardAuditConfigs[requestedSeries]
+if (!auditConfig) {
+  throw new Error(
+    `Unsupported card audit series ${requestedSeries}; expected P, BS5, or BS6`,
+  )
+}
+const formalPath = resolve(root, auditConfig.formalPath)
+const reportPath = resolve(
+  root,
+  process.env.BRAVERSE_AUDIT_REPORT ?? auditConfig.reportPath,
+)
 const vitePackageJson = require.resolve('vite/package.json', { paths: [root] })
 const viteEntry = resolve(dirname(vitePackageJson), 'bin/vite.js')
 const browserExecutable =
@@ -39,7 +71,11 @@ const source = JSON.parse(await readFile(formalPath, 'utf8'))
 const cards = [...source.cards].sort((left, right) =>
   left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
 )
-assert.equal(cards.length, 127, 'P-0XX formal promotion batch must contain 127 records')
+assert.equal(
+  cards.length,
+  auditConfig.expectedRecordCount,
+  `${auditConfig.label} formal pool must contain ${auditConfig.expectedRecordCount} records`,
+)
 
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
 
@@ -192,7 +228,7 @@ try {
   page.setDefaultTimeout(7000)
 
   console.log(
-    `=== P-0XX Browser formal-pool audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
+    `=== ${auditConfig.label} Browser formal-pool audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
     try {
@@ -232,9 +268,9 @@ try {
     generatedAt: new Date().toISOString(),
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
-    source: 'data/cards/official-p-0xx-remaining.en.json',
+    source: auditConfig.formalPath,
     scope:
-      'Formal-pool card-check entry audit for every promoted P-0XX record. This report separates route/card rendering from interactive effect proof.',
+      `Formal-pool card-check entry audit for every promoted ${auditConfig.label} record. This report separates route/card rendering from interactive effect proof.`,
     summary: {
       total: results.length,
       passed,

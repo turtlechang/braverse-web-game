@@ -1495,6 +1495,64 @@ describe('BS6-106 Peak Engineer Performance: trap Then selection', () => {
   })
 })
 
+describe('trap choose-one continuation', () => {
+  it('lets AI expand and resolve a choose-one trap before damage', () => {
+    const trap: GameCard = {
+      id: 'BS6-choose-one-trap',
+      instanceId: 'bs6-choose-one-trap',
+      name: 'Choose One Trap',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: 'Choose one.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [
+          {
+            kind: 'choose-one',
+            modes: [
+              {
+                label: 'Reduce attack',
+                effects: [
+                  {
+                    kind: 'modify-attack',
+                    amount: -1,
+                    duration: 'this-turn',
+                    target: { side: 'opponent', min: 0, max: 1 },
+                  },
+                ],
+              },
+              { label: 'Do nothing', effects: [] },
+            ],
+          },
+        ],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state = declareAttack(state)
+
+    const played = takeAiStep(state, 'player-one')
+    expect(played.action).toBe('play-trap')
+    expect(played.state.pendingAbilityEffect).toMatchObject({
+      sourceKind: 'trap',
+      effectIndex: 0,
+      battleContinuation: 'after-trap',
+    })
+
+    const modeResolved = takeAiStep(played.state, 'player-one')
+    expect(modeResolved.action).toBe('idle')
+    // AI 可能選到「不執行」模式；該模式沒有子效果，展開後應直接
+    // 清空佇列；下一個 AI step 會沿用陷阱回應流程收尾並進入傷害階段，
+    // 不得留下卡死的 pending。
+    expect(modeResolved.state.pendingAbilityEffect).toBeUndefined()
+
+    const continued = takeAiStep(modeResolved.state, 'player-one')
+    expect(continued.state.pendingAbilityEffect).toBeUndefined()
+    expect(continued.state.pendingBattle?.stage).toBe('damage')
+    expect(continued.state.pendingBattle?.declaredDamage).toBe(3)
+  })
+})
+
 describe('BS3-021 Oath on the Shield: modify-attack + self-damage', () => {
   const bs3021Trap = (): GameCard => ({
     id: 'BS3-021',

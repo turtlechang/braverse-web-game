@@ -408,6 +408,67 @@ describe('resolveAiSkill discardHand with supportToTrash combined', () => {
   })
 })
 
+describe('resolveAiSkill supportToHand cost', () => {
+  it('passes the selected support card back to the rules layer', () => {
+    const cookie = testCookieCard('return-support-cookie', {
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { red: 1 }, supportToHand: 1 },
+        text: 'Return one support card.',
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      },
+    })
+    const paymentSupport = testSupportCard('return-payment', 'red')
+    const returnedSupport = testSupportCard('return-to-hand', 'yellow')
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [],
+      battleArea: [
+        {
+          card: cookie,
+          hpCards: [],
+          rested: false,
+          battleEntryId: 'return-support-cookie:battle:1',
+        },
+      ],
+      supportArea: [
+        { card: paymentSupport, rested: false },
+        { card: returnedSupport, rested: false },
+      ],
+    })
+
+    state.players['player-one'].battleArea = [
+      {
+        card: testCookieCard('opponent-cookie'),
+        hpCards: [],
+        rested: false,
+        battleEntryId: 'opponent-cookie:battle:1',
+      },
+    ]
+
+    const result = takeAiStep(state, 'player-two')
+    expect(result.action).toBe('activate-skill')
+
+    const updatedPlayer = result.state.players['player-two']
+    expect(updatedPlayer.hand.map((card) => card.instanceId)).toEqual([
+      returnedSupport.instanceId,
+    ])
+    expect(updatedPlayer.supportArea).toEqual([
+      { card: paymentSupport, rested: true },
+    ])
+  })
+})
+
 describe('simulateAiMatch with discardHand skill', () => {
   it('completes a match without getting stuck on discardHand skills', () => {
     const handCards: GameCard[] = Array.from({ length: 5 }, (_, i) => ({

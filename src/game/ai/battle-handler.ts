@@ -10,6 +10,7 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getEffectSelectionCandidates,
   getEffectiveAttack,
   getTrashToDeckCandidates,
   isEffectConditionMet,
@@ -60,6 +61,14 @@ const chooseAttackEffectTargets = (
     const count = Math.min(effect.max, candidates.length)
     if (count < (effect.min ?? 0)) return []
     return candidates.slice(0, count).map((card) => card.instanceId)
+  }
+
+  if (effect.kind === 'support-to-hand') {
+    const candidates = getEffectSelectionCandidates(state, context, effect)
+    const minimum = effect.optional ? 0 : effect.amount
+    const maximum = effect.anyNumber ? candidates.length : effect.amount
+    if (candidates.length < minimum) return []
+    return candidates.slice(0, maximum).map((card) => card.instanceId)
   }
 
   if (!('target' in effect) || !effect.target) return []

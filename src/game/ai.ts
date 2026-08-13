@@ -26,6 +26,7 @@ import {
   canActivateCookieSkill,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
+  getHpToTrashCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
@@ -493,12 +494,7 @@ const chooseAbilityCostIds = (
   if (discardHandIds.length < (cost.discardHand ?? 0)) return null
 
   const hpToTrashTargetIds = cost.hpToTrash
-    ? player.battleArea
-        .filter((cookie) =>
-          cost.hpToTrash?.untilRemainingHp === undefined
-            ? cookie.hpCards.length > 0
-            : cookie.hpCards.length > cost.hpToTrash.untilRemainingHp,
-        )
+    ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
         .slice(0, 1)
         .map((cookie) => cookie.card.instanceId)
     : []
@@ -787,6 +783,25 @@ const resolveAiSkill = (
     return null
   }
 
+  const costSupportToTrashSet = new Set(costSupportToTrashIds)
+  const costSupportToHandIds = skill.cost.supportToHand
+    ? player.supportArea
+        .filter(
+          (support) =>
+            !paymentIds.includes(support.card.instanceId) &&
+            !costSupportToTrashSet.has(support.card.instanceId),
+        )
+        .slice(0, skill.cost.supportToHand)
+        .map((support) => support.card.instanceId)
+    : []
+
+  if (
+    skill.cost.supportToHand &&
+    costSupportToHandIds.length < skill.cost.supportToHand
+  ) {
+    return null
+  }
+
   const discardHandCandidates = skill.cost.discardAllHand
     ? getDiscardAllHandCostCandidates(
         skill.cost,
@@ -811,12 +826,11 @@ const resolveAiSkill = (
   }
 
   const hpToTrashTargetIds = skill.cost.hpToTrash
-    ? player.battleArea
-        .filter((cookie) =>
-          skill.cost.hpToTrash?.untilRemainingHp === undefined
-            ? cookie.hpCards.length > 0
-            : cookie.hpCards.length > skill.cost.hpToTrash.untilRemainingHp,
-        )
+    ? getHpToTrashCostCandidates(
+        skill.cost,
+        player.battleArea,
+        source.card.instanceId,
+      )
         .slice(0, 1)
         .map((cookie) => cookie.card.instanceId)
     : []
@@ -906,6 +920,7 @@ const resolveAiSkill = (
     trashToDeckIds,
     effectShuffle,
     hpToTrashTargetIds,
+    costSupportToHandIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -928,6 +943,7 @@ const resolveAiSkill = (
         trigger,
         paymentIds,
         costSupportToTrashIds,
+        supportToHandIds: costSupportToHandIds,
         discardHandIds,
         hpToTrashTargetIds,
         trashBattleCookieIds,

@@ -66,6 +66,63 @@ const withSkill = (
 }
 
 describe('cookie skill activation', () => {
+  it('only accepts an HP payment source with enough matching HP cards', () => {
+    const redOneHp: GameCard = {
+      id: 'red-one-hp',
+      instanceId: 'red-one-hp',
+      name: 'Red One HP',
+      type: 'cookie',
+      energyColor: 'red',
+      level: 1,
+      hp: 3,
+      attack: 1,
+      attackCost: 0,
+    }
+    const redTwoHp: GameCard = { ...redOneHp, id: 'red-two-hp', instanceId: 'red-two-hp' }
+    const blueThreeHp: GameCard = {
+      ...redOneHp,
+      id: 'blue-three-hp',
+      instanceId: 'blue-three-hp',
+      energyColor: 'blue',
+    }
+    const hpCard = (id: string): GameCard => ({
+      id,
+      instanceId: id,
+      name: id,
+      type: 'item',
+      energyColor: 'red',
+    })
+    const battleArea = [
+      { card: redOneHp, hpCards: [hpCard('red-one-hp-card')], rested: false },
+      { card: redTwoHp, hpCards: [hpCard('red-two-hp-card-1'), hpCard('red-two-hp-card-2')], rested: false },
+      { card: blueThreeHp, hpCards: [hpCard('blue-hp-1'), hpCard('blue-hp-2'), hpCard('blue-hp-3')], rested: false },
+    ]
+    const cost = {
+      energy: {},
+      discardHand: 0,
+      hpToTrash: { amount: 2, energyColor: 'red' as const },
+    }
+
+    expect(
+      getHpToTrashCostCandidates(cost, battleArea).map(
+        (cookie) => cookie.card.instanceId,
+      ),
+    ).toEqual(['red-two-hp'])
+    expect(
+      getHpToTrashCostCandidates(
+        {
+          ...cost,
+          hpToTrash: { ...cost.hpToTrash, sourceOnly: true },
+        },
+        [
+        { ...battleArea[0], card: { ...redOneHp, instanceId: 'source' } },
+        ...battleArea.slice(1),
+        ],
+        'source',
+      ),
+    ).toEqual([])
+  })
+
   it('requires a matching support Cookie for support-to-hand effects', () => {
     const skill: CardSkill = {
       trigger: 'activate',

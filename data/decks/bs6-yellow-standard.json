@@ -1,0 +1,21 @@
+{
+  "name": "BS6 Yellow Time Heroes - Standard",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS6-022", "count": 4 },
+    { "cardNumber": "BS6-023", "count": 4 },
+    { "cardNumber": "BS6-025", "count": 4 },
+    { "cardNumber": "BS6-026", "count": 4 },
+    { "cardNumber": "BS6-029", "count": 4 },
+    { "cardNumber": "BS6-032", "count": 4 },
+    { "cardNumber": "BS6-033", "count": 4 },
+    { "cardNumber": "BS6-024", "count": 4 },
+    { "cardNumber": "BS6-030", "count": 4 },
+    { "cardNumber": "BS6-031", "count": 4 },
+    { "cardNumber": "BS6-027", "count": 4 },
+    { "cardNumber": "BS6-037", "count": 4 },
+    { "cardNumber": "BS6-041", "count": 4 },
+    { "cardNumber": "BS6-042", "count": 4 },
+    { "cardNumber": "BS6-043", "count": 4 }
+  ]
+}

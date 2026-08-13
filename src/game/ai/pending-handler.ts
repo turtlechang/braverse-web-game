@@ -13,6 +13,7 @@ import {
 } from '../effects'
 import { getRefreshCandidates } from '../refresh'
 import { getDiscardHandCostCandidates } from '../skills'
+import { chooseAiEffectMode } from './choose-one-mode'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
@@ -74,6 +75,17 @@ export const handleAiPendingDecision = (
       sourcePlayerId: pendingAbility.sourcePlayerId,
       sourceInstanceId: pendingAbility.sourceInstanceId,
       sourceCardName: pendingAbility.sourceCardName,
+    }
+    if (effect.kind === 'choose-one') {
+      return {
+        state: applyGameCommand(state, {
+          kind: 'resolve-choose-one',
+          playerId,
+          modeIndex: chooseAiEffectMode(state, context, effect),
+        }),
+        action: 'idle',
+        description: `${state.players[playerId].name}選擇${pendingAbility.sourceCardName ?? '卡牌'}的一項效果。`,
+      }
     }
     const targetIds = requiresEffectCardSelection(effect)
       ? getEffectSelectionCandidates(state, context, effect)

@@ -1,0 +1,21 @@
+{
+  "name": "BS6+5 Green Competitive Environment",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS5-045", "count": 4 },
+    { "cardNumber": "BS5-052", "count": 4 },
+    { "cardNumber": "BS5-053", "count": 4 },
+    { "cardNumber": "BS5-056", "count": 4 },
+    { "cardNumber": "BS5-060", "count": 4 },
+    { "cardNumber": "BS5-063", "count": 4 },
+    { "cardNumber": "BS6-044", "count": 4 },
+    { "cardNumber": "BS6-047", "count": 4 },
+    { "cardNumber": "BS6-051", "count": 4 },
+    { "cardNumber": "BS6-058", "count": 4 },
+    { "cardNumber": "BS5-049", "count": 4 },
+    { "cardNumber": "BS6-046", "count": 4 },
+    { "cardNumber": "BS5-064", "count": 4 },
+    { "cardNumber": "BS5-065", "count": 4 },
+    { "cardNumber": "BS5-066", "count": 4 }
+  ]
+}

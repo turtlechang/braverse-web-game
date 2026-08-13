@@ -9,6 +9,7 @@ import {
 import { hasBlockingPending } from './pending'
 import type {
   CookieCard,
+  EndPhaseScope,
   EffectContext,
   GameState,
   PlayerId,
@@ -81,14 +82,21 @@ const activateCurrentPlayer = (state: GameState): GameState => {
 const getEndPhaseSkills = (
   state: GameState,
   playerId: PlayerId,
+  endingPlayerId: PlayerId,
 ): { cookie: CookieCard; index: number }[] =>
   state.players[playerId].battleArea
     .map((cookie, index) => ({ cookie: cookie.card, index }))
-    .filter(
-      (item) =>
-        item.cookie.skill?.endPhase &&
-        !state.skillUsesThisTurn.includes(item.cookie.instanceId),
-    )
+    .filter((item) => {
+      const skill = item.cookie.skill
+      const scope: EndPhaseScope = skill?.endPhaseScope ?? 'your-turn'
+      const expectedScope: EndPhaseScope =
+        playerId === endingPlayerId ? 'your-turn' : 'opponent-turn'
+      return (
+        skill?.endPhase &&
+        scope === expectedScope &&
+        !state.skillUsesThisTurn.includes(item.cookie.instanceId)
+      )
+    })
 
 const enterDrawPhase = (state: GameState): GameState => {
   const activePlayer = state.players[state.activePlayerId]
@@ -133,7 +141,7 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
   let nextState = state
 
   for (const playerId of players) {
-    const skills = getEndPhaseSkills(nextState, playerId)
+    const skills = getEndPhaseSkills(nextState, playerId, state.activePlayerId)
     for (const { cookie } of skills) {
       const skill = cookie.skill!
       const context = {
@@ -163,6 +171,7 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
               sourceInstanceId: cookie.instanceId,
               sourceCardName: cookie.name,
               sourceKind: 'skill',
+              trigger: 'passive',
               effects: skill.effects.slice(effectIndex),
               effectIndex: 0,
             },
@@ -201,6 +210,8 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
     if (
       stage &&
       stageAbility?.endPhase &&
+      (stageAbility.endPhaseScope ?? 'your-turn') ===
+        (playerId === state.activePlayerId ? 'your-turn' : 'opponent-turn') &&
       !nextState.skillUsesThisTurn.includes(stage.card.instanceId)
     ) {
       const stageContext: EffectContext = {
@@ -224,6 +235,7 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
             sourceInstanceId: stage.card.instanceId,
             sourceCardName: stage.card.name,
             sourceKind: 'stage',
+            trigger: 'passive',
             effects: applicableEffects,
             effectIndex: 0,
           },
@@ -241,7 +253,10 @@ export const processEndPhaseEffects = (state: GameState): GameState => {
 
   // 排空「Then, when your turn ends, ...」的延遲效果（BS5-056／060）。
   const deferred = nextState.pendingEndOfTurnEffects ?? []
-  if (deferred.length > 0) {
+  if (
+    deferred.length > 0 &&
+    deferred[0].sourcePlayerId === state.activePlayerId
+  ) {
     const entry = deferred[0]
     const context: EffectContext = {
       sourcePlayerId: entry.sourcePlayerId,

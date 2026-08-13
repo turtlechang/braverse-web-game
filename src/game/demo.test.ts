@@ -197,6 +197,10 @@ describe('parseTestStateConfig', () => {
       kind: 'bs5-item-111',
       conditionMet: false,
     })
+    expect(parseTestStateConfig('?test-state=bs5-item:BS5-111:met', 'localhost')).toEqual({
+      kind: 'bs5-item-111',
+      conditionMet: true,
+    })
     expect(parseTestStateConfig('?test-state=bs5-item:BS5-020:met', 'localhost')).toEqual({
       kind: 'bs5-item-condition',
       cardNumber: 'BS5-020',
@@ -228,6 +232,31 @@ describe('parseTestStateConfig', () => {
     expect(
       parseTestStateConfig('?test-state=bs6-condition:BS6-034:met', 'localhost'),
     ).toBeNull()
+  })
+
+  it('creates BS6-012 hand-count A/B fixtures for end-phase verification', () => {
+    const met = createBs6ConditionDemoState('BS6-012', true)
+    const unmet = createBs6ConditionDemoState('BS6-012', false)
+    const getSourceAndEffect = (state: GameState) => {
+      const source = state.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'BS6-012',
+      )
+      if (!source?.card.skill) throw new Error('BS6-012 formal source is required')
+      return { source, effect: source.card.skill.effects[0]! }
+    }
+    const metSource = getSourceAndEffect(met)
+    const unmetSource = getSourceAndEffect(unmet)
+
+    expect(met.players['player-one'].hand).toHaveLength(4)
+    expect(unmet.players['player-one'].hand).toHaveLength(6)
+    expect(isEffectConditionMet(met, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: metSource.source.card.instanceId,
+    }, metSource.effect)).toBe(true)
+    expect(isEffectConditionMet(unmet, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: unmetSource.source.card.instanceId,
+    }, unmetSource.effect)).toBe(false)
   })
 
   it('returns null when non-localhost even with valid test-state', () => {

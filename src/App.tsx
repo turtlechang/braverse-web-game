@@ -132,6 +132,7 @@ function App() {
     faintActive: pending.faintActive,
     afterDamageActive: pending.afterDamageActive,
     deckConfig: match.deckConfig,
+    playerCustomDeck: match.selectedCustomDeck,
     aiLevel,
   })
 

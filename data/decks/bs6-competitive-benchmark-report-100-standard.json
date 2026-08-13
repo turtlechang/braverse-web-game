@@ -1,0 +1,635 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-13T11:34:03.294Z",
+  "format": "standard",
+  "methodology": {
+    "benchmarkMode": "competitive",
+    "description": "BS6 五色標準 preset 互相對戰；每個有向配對 4 場，含鏡像先後攻，共 100 場。",
+    "colors": [
+      "red",
+      "yellow",
+      "green",
+      "blue",
+      "purple"
+    ],
+    "choices": {
+      "red": "bs6-red-competitive",
+      "yellow": "bs6-yellow-competitive",
+      "green": "bs6-green-competitive",
+      "blue": "bs6-blue-competitive",
+      "purple": "bs6-purple-competitive"
+    },
+    "gamesPerPair": 4,
+    "totalGames": 100,
+    "sameColorMatchupsIncluded": true,
+    "aiLevel": 4,
+    "maxActions": 2500,
+    "seed": 20260812
+  },
+  "result": {
+    "decks": {
+      "red": {
+        "games": 20,
+        "wins": 9,
+        "losses": 11,
+        "stuck": 0,
+        "totalTurns": 239,
+        "totalActions": 2936,
+        "skillActivations": 48,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 20
+        },
+        "errors": [],
+        "winRate": 0.45,
+        "completionRate": 1,
+        "avgTurns": 11.95,
+        "avgActions": 146.8,
+        "avgSkillActivations": 2.4,
+        "avgRefreshes": 0
+      },
+      "yellow": {
+        "games": 20,
+        "wins": 8,
+        "losses": 12,
+        "stuck": 0,
+        "totalTurns": 217,
+        "totalActions": 2798,
+        "skillActivations": 62,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 20
+        },
+        "errors": [],
+        "winRate": 0.4,
+        "completionRate": 1,
+        "avgTurns": 10.85,
+        "avgActions": 139.9,
+        "avgSkillActivations": 3.1,
+        "avgRefreshes": 0
+      },
+      "green": {
+        "games": 20,
+        "wins": 8,
+        "losses": 12,
+        "stuck": 0,
+        "totalTurns": 272,
+        "totalActions": 3635,
+        "skillActivations": 29,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 20
+        },
+        "errors": [],
+        "winRate": 0.4,
+        "completionRate": 1,
+        "avgTurns": 13.6,
+        "avgActions": 181.75,
+        "avgSkillActivations": 1.45,
+        "avgRefreshes": 0
+      },
+      "blue": {
+        "games": 20,
+        "wins": 10,
+        "losses": 10,
+        "stuck": 0,
+        "totalTurns": 234,
+        "totalActions": 2823,
+        "skillActivations": 65,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 20
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 11.7,
+        "avgActions": 141.15,
+        "avgSkillActivations": 3.25,
+        "avgRefreshes": 0
+      },
+      "purple": {
+        "games": 20,
+        "wins": 11,
+        "losses": 9,
+        "stuck": 0,
+        "totalTurns": 236,
+        "totalActions": 2890,
+        "skillActivations": 69,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 20
+        },
+        "errors": [],
+        "winRate": 0.55,
+        "completionRate": 1,
+        "avgTurns": 11.8,
+        "avgActions": 144.5,
+        "avgSkillActivations": 3.45,
+        "avgRefreshes": 0
+      }
+    },
+    "matchups": {
+      "red-vs-red": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 49,
+        "totalActions": 603,
+        "skillActivations": 7,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 12.25,
+        "avgActions": 150.75,
+        "avgSkillActivations": 1.75,
+        "avgRefreshes": 0
+      },
+      "red-vs-yellow": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "totalTurns": 43,
+        "totalActions": 538,
+        "skillActivations": 10,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 10.75,
+        "avgActions": 134.5,
+        "avgSkillActivations": 2.5,
+        "avgRefreshes": 0
+      },
+      "red-vs-green": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "totalTurns": 52,
+        "totalActions": 638,
+        "skillActivations": 7,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 13,
+        "avgActions": 159.5,
+        "avgSkillActivations": 1.75,
+        "avgRefreshes": 0
+      },
+      "red-vs-blue": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 51,
+        "totalActions": 593,
+        "skillActivations": 18,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 12.75,
+        "avgActions": 148.25,
+        "avgSkillActivations": 4.5,
+        "avgRefreshes": 0
+      },
+      "red-vs-purple": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "totalTurns": 44,
+        "totalActions": 564,
+        "skillActivations": 6,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 11,
+        "avgActions": 141,
+        "avgSkillActivations": 1.5,
+        "avgRefreshes": 0
+      },
+      "yellow-vs-red": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 41,
+        "totalActions": 527,
+        "skillActivations": 13,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 10.25,
+        "avgActions": 131.75,
+        "avgSkillActivations": 3.25,
+        "avgRefreshes": 0
+      },
+      "yellow-vs-yellow": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 43,
+        "totalActions": 550,
+        "skillActivations": 13,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 10.75,
+        "avgActions": 137.5,
+        "avgSkillActivations": 3.25,
+        "avgRefreshes": 0
+      },
+      "yellow-vs-green": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "totalTurns": 48,
+        "totalActions": 660,
+        "skillActivations": 8,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 12,
+        "avgActions": 165,
+        "avgSkillActivations": 2,
+        "avgRefreshes": 0
+      },
+      "yellow-vs-blue": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 42,
+        "totalActions": 529,
+        "skillActivations": 9,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 10.5,
+        "avgActions": 132.25,
+        "avgSkillActivations": 2.25,
+        "avgRefreshes": 0
+      },
+      "yellow-vs-purple": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "totalTurns": 43,
+        "totalActions": 532,
+        "skillActivations": 19,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 10.75,
+        "avgActions": 133,
+        "avgSkillActivations": 4.75,
+        "avgRefreshes": 0
+      },
+      "green-vs-red": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 57,
+        "totalActions": 754,
+        "skillActivations": 3,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 14.25,
+        "avgActions": 188.5,
+        "avgSkillActivations": 0.75,
+        "avgRefreshes": 0
+      },
+      "green-vs-yellow": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 49,
+        "totalActions": 654,
+        "skillActivations": 10,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 12.25,
+        "avgActions": 163.5,
+        "avgSkillActivations": 2.5,
+        "avgRefreshes": 0
+      },
+      "green-vs-green": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "totalTurns": 56,
+        "totalActions": 794,
+        "skillActivations": 1,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 14,
+        "avgActions": 198.5,
+        "avgSkillActivations": 0.25,
+        "avgRefreshes": 0
+      },
+      "green-vs-blue": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "totalTurns": 55,
+        "totalActions": 692,
+        "skillActivations": 7,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 13.75,
+        "avgActions": 173,
+        "avgSkillActivations": 1.75,
+        "avgRefreshes": 0
+      },
+      "green-vs-purple": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 55,
+        "totalActions": 741,
+        "skillActivations": 8,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 13.75,
+        "avgActions": 185.25,
+        "avgSkillActivations": 2,
+        "avgRefreshes": 0
+      },
+      "blue-vs-red": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 45,
+        "totalActions": 559,
+        "skillActivations": 10,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 11.25,
+        "avgActions": 139.75,
+        "avgSkillActivations": 2.5,
+        "avgRefreshes": 0
+      },
+      "blue-vs-yellow": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 43,
+        "totalActions": 526,
+        "skillActivations": 15,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 10.75,
+        "avgActions": 131.5,
+        "avgSkillActivations": 3.75,
+        "avgRefreshes": 0
+      },
+      "blue-vs-green": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "totalTurns": 45,
+        "totalActions": 552,
+        "skillActivations": 4,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 11.25,
+        "avgActions": 138,
+        "avgSkillActivations": 1,
+        "avgRefreshes": 0
+      },
+      "blue-vs-blue": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "totalTurns": 48,
+        "totalActions": 562,
+        "skillActivations": 18,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 12,
+        "avgActions": 140.5,
+        "avgSkillActivations": 4.5,
+        "avgRefreshes": 0
+      },
+      "blue-vs-purple": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "totalTurns": 53,
+        "totalActions": 624,
+        "skillActivations": 18,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 13.25,
+        "avgActions": 156,
+        "avgSkillActivations": 4.5,
+        "avgRefreshes": 0
+      },
+      "purple-vs-red": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "totalTurns": 54,
+        "totalActions": 632,
+        "skillActivations": 11,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 13.5,
+        "avgActions": 158,
+        "avgSkillActivations": 2.75,
+        "avgRefreshes": 0
+      },
+      "purple-vs-yellow": {
+        "games": 4,
+        "wins": 2,
+        "losses": 2,
+        "stuck": 0,
+        "totalTurns": 37,
+        "totalActions": 468,
+        "skillActivations": 21,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.5,
+        "completionRate": 1,
+        "avgTurns": 9.25,
+        "avgActions": 117,
+        "avgSkillActivations": 5.25,
+        "avgRefreshes": 0
+      },
+      "purple-vs-green": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "totalTurns": 53,
+        "totalActions": 682,
+        "skillActivations": 5,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 13.25,
+        "avgActions": 170.5,
+        "avgSkillActivations": 1.25,
+        "avgRefreshes": 0
+      },
+      "purple-vs-blue": {
+        "games": 4,
+        "wins": 1,
+        "losses": 3,
+        "stuck": 0,
+        "totalTurns": 45,
+        "totalActions": 529,
+        "skillActivations": 15,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.25,
+        "completionRate": 1,
+        "avgTurns": 11.25,
+        "avgActions": 132.25,
+        "avgSkillActivations": 3.75,
+        "avgRefreshes": 0
+      },
+      "purple-vs-purple": {
+        "games": 4,
+        "wins": 3,
+        "losses": 1,
+        "stuck": 0,
+        "totalTurns": 47,
+        "totalActions": 579,
+        "skillActivations": 17,
+        "refreshes": 0,
+        "reasons": {
+          "break-level-limit": 4
+        },
+        "errors": [],
+        "winRate": 0.75,
+        "completionRate": 1,
+        "avgTurns": 11.75,
+        "avgActions": 144.75,
+        "avgSkillActivations": 4.25,
+        "avgRefreshes": 0
+      }
+    }
+  }
+}

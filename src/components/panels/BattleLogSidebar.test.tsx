@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CommandLogEntry } from '../../game'
+import { item } from '../../game/test-helpers/battle-helpers'
 import { BattleLogSidebar } from './BattleLogSidebar'
 
 const containers: HTMLDivElement[] = []
@@ -93,6 +94,39 @@ const supportEntry: CommandLogEntry = {
   groupId: 5,
 }
 
+const groupedMemberWithSteps: CommandLogEntry[] = [
+  {
+    id: 6,
+    turnNumber: 5,
+    phase: 'main',
+    playerId: 'player-one',
+    commandKind: 'declare-attack',
+    payload: {},
+    summary: 'group header',
+    category: 'attack',
+    groupId: 6,
+  },
+  {
+    id: 7,
+    turnNumber: 5,
+    phase: 'main',
+    playerId: 'player-two',
+    commandKind: 'resolve-battle',
+    payload: {},
+    summary: 'fallback summary',
+    category: 'damage',
+    groupId: 6,
+    card: item('fallback-card'),
+    steps: [{
+      text: 'detailed step',
+      cards: [{
+        ...item('step-card'),
+        imageUrl: 'https://example.test/cards/step-card.webp',
+      }],
+    }],
+  },
+]
+
 describe('BattleLogSidebar', () => {
   it('groups entries sharing a groupId under one collapsed row, hiding steps until expanded', async () => {
     const { container, root } = render()
@@ -115,6 +149,21 @@ describe('BattleLogSidebar', () => {
     expect(steps).toHaveLength(2)
     expect(steps[0].textContent).toContain('選擇不發動陷阱')
     expect(steps[1].textContent).toContain('自動結算了戰鬥')
+  })
+
+  it('uses a grouped member entry.steps card when rendering its step', async () => {
+    const { container, root } = render()
+    await act(() => root.render(<BattleLogSidebar entries={groupedMemberWithSteps} />))
+    await click(container.querySelector('[data-testid="battle-log-toggle"]'))
+    await click(container.querySelector('.battle-log-entry'))
+
+    expect(container.querySelectorAll('.battle-log-step-card-face')).toHaveLength(1)
+    expect(
+      container.querySelector('.battle-log-step-card-face img')?.getAttribute('src'),
+    ).toBe('https://example.test/cards/step-card.webp')
+    expect(container.querySelector('.battle-log-steps li')?.textContent).not.toContain(
+      'fallback summary',
+    )
   })
 
   it('expands a single-entry group using its stored synthesized steps', async () => {

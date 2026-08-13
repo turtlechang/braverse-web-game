@@ -3,6 +3,7 @@ import type {
   CardAbility,
   CardSkill,
   CardEffect,
+  EndPhaseScope,
   EffectCondition,
   EffectTargetSelector,
   FlipAbility,
@@ -45,6 +46,17 @@ const RESTS_THIS_CARD_PATTERN = /Rest this card|Card Rests/i
 const STAGE_ACTIVATE_MARKER_PATTERN = /\{mob\}|【Activate】/i
 // 昏厥觸發措辭不一致：多數卡是「When this Cookie faints」，P-011 用「If this Cookie has fainted」
 const FAINT_TRIGGER_PATTERN = /When this Cookie faints|If this Cookie has fainted/i
+
+const YOUR_TURN_END_PHASE_PATTERN =
+  /(?:when (?:your|this) turn ends|at the end of (?:your|this) turn)/i
+const OPPONENT_TURN_END_PHASE_PATTERN =
+  /(?:when (?:your )?opponent[’']s turn ends|at the end of (?:your |the )?opponent[’']s turn)/i
+
+const getEndPhaseScope = (text: string): EndPhaseScope | undefined => {
+  if (OPPONENT_TURN_END_PHASE_PATTERN.test(text)) return 'opponent-turn'
+  if (YOUR_TURN_END_PHASE_PATTERN.test(text)) return 'your-turn'
+  return undefined
+}
 
 const getEffectText = (card: OfficialCardRecord): string | null => {
   if (card.type === 'cookie') {
@@ -4006,6 +4018,7 @@ export const convertOfficialStageAbility = (
   const [placementText, activationText] = sourceText.split(
     STAGE_ACTIVATE_MARKER_PATTERN,
   )
+  const endPhaseScope = getEndPhaseScope(sourceText)
   const placement = parseOfficialCardText(placementText)
   const activation = parseOfficialCardText(activationText ?? '')
   if (!placement) return undefined
@@ -4494,9 +4507,7 @@ export const convertOfficialStageAbility = (
         card.baseCardNumber === 'BS3-095' ||
         RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
       ...(card.cardNumber === 'ST5-022' ? { triggered: true } : {}),
-      ...(card.baseCardNumber === 'BS5-066' || card.baseCardNumber === 'BS6-043'
-        ? { endPhase: true }
-        : {}),
+      ...(endPhaseScope ? { endPhase: true, endPhaseScope } : {}),
     }
   }
 
@@ -4516,6 +4527,7 @@ export const convertOfficialStageAbility = (
     text: sourceText,
     effects: conversion.effects,
     restSource: RESTS_THIS_CARD_PATTERN.test(activationText ?? ''),
+    ...(endPhaseScope ? { endPhase: true, endPhaseScope } : {}),
   }
 }
 
@@ -7153,6 +7165,7 @@ export const convertOfficialCookieSkill = (
   )
   const cost = P_EXACT_SKILL_COSTS[cardKey] ?? exactCookieSkillCosts[cardKey] ?? parseAbilityCost(card.skill.text)
   const parsed = parseOfficialCardText(card.skill.text)
+  const endPhaseScope = getEndPhaseScope(card.skill.text)
 
   if (
     conversion.status !== 'supported' ||
@@ -7189,9 +7202,8 @@ export const convertOfficialCookieSkill = (
     text: conversion.sourceText,
     effects: conversion.effects,
     faint: FAINT_TRIGGER_PATTERN.test(card.skill.text),
-    endPhase: /(?:at the )?end of (?:your|this) turn|your turn ends/i.test(
-      card.skill.text,
-    ),
+    endPhase: endPhaseScope !== undefined,
+    ...(endPhaseScope ? { endPhaseScope } : {}),
     afterDamage: /(?:after|when)\s+(?:receiving|taking)\s+damage/i.test(
       card.skill.text,
     ),

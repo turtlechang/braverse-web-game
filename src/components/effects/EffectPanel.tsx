@@ -548,7 +548,9 @@ function EffectPanelContent({
               <span>{pendingEffect.sourceCard.id}</span>
               <strong>{pendingEffect.sourceCard.name}</strong>
               <div className="skill-labels">
-                {getSkillLabels(pendingEffect.skill).map((label) => (
+                {getSkillLabels(pendingEffect.skill, {
+                  endPhase: pendingEffect.endPhase,
+                }).map((label) => (
                   <span key={label}>{label}</span>
                 ))}
               </div>

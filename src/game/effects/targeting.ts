@@ -115,16 +115,22 @@ export const isBlockedByOpponentEffectProtection = (
  * Cookie out of either battle area. Damage and fainting are resolved through
  * their own rules and intentionally do not use this predicate.
  */
-export const isOpponentBattleMovementPrevented = (
+/** 回傳實際阻擋移動的餅乾，供規則訊息與對戰紀錄指出阻擋來源。 */
+export const getOpponentBattleMovementPreventer = (
   state: GameState,
   sourcePlayerId: PlayerId,
-): boolean =>
-  state.players[getOpponentId(sourcePlayerId)].battleArea.some((cookie) =>
+): CookieInBattle | undefined =>
+  state.players[getOpponentId(sourcePlayerId)].battleArea.find((cookie) =>
     cookie.card.skill?.trigger === 'passive' &&
     cookie.card.skill.effects.some(
       (effect) => effect.kind === 'prevent-opponent-battle-movement',
     ),
   )
+
+export const isOpponentBattleMovementPrevented = (
+  state: GameState,
+  sourcePlayerId: PlayerId,
+): boolean => Boolean(getOpponentBattleMovementPreventer(state, sourcePlayerId))
 
 export const isBattleMovementEffect = (effect: CardEffect): boolean =>
   effect.kind === 'opponent-battle-to-trash' ||

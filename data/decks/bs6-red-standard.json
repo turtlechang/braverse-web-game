@@ -1,0 +1,21 @@
+{
+  "name": "BS6 Red Time Heroes - Standard",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS6-001", "count": 4 },
+    { "cardNumber": "BS6-005", "count": 4 },
+    { "cardNumber": "BS6-012", "count": 4 },
+    { "cardNumber": "BS6-013", "count": 4 },
+    { "cardNumber": "BS6-002", "count": 4 },
+    { "cardNumber": "BS6-004", "count": 4 },
+    { "cardNumber": "BS6-007", "count": 4 },
+    { "cardNumber": "BS6-010", "count": 4 },
+    { "cardNumber": "BS6-003", "count": 4 },
+    { "cardNumber": "BS6-008", "count": 4 },
+    { "cardNumber": "BS6-006", "count": 4 },
+    { "cardNumber": "BS6-009", "count": 4 },
+    { "cardNumber": "BS6-019", "count": 4 },
+    { "cardNumber": "BS6-020", "count": 4 },
+    { "cardNumber": "BS6-021", "count": 4 }
+  ]
+}

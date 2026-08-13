@@ -6,7 +6,7 @@ import {
   resolveLogCard,
   resolveLogCategory,
 } from './command-log'
-import { createBattleState } from './test-helpers/battle-helpers'
+import { cookie, createBattleState } from './test-helpers/battle-helpers'
 
 const withCommandLog = (
   state: GameState,
@@ -428,6 +428,228 @@ describe('effect resolution log outcome', () => {
         targetIds: [],
       }),
     ).toContain('未造成傷害')
+  })
+
+  it('records the Cookie moved to the trash by BS2-058 with its card image data', () => {
+    const base = createBattleState()
+    const windArcher = {
+      ...cookie('wind-archer', 4, 5),
+      id: 'BS2-058',
+      name: 'Wind Archer Cookie',
+      level: 3,
+      energyColor: 'purple' as const,
+      skill: {
+        trigger: 'on-play' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { purple: 1 },
+        text: 'Place up to 1 of your opponent\'s LV.3 Cookies into the trash.',
+        effects: [
+          { kind: 'opponent-battle-to-trash' as const, minLevel: 3, maxLevel: 3 },
+        ],
+      },
+    }
+    const target = cookie('target-lv3', 2, 4)
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{ ...base.players['player-one'].battleArea[0], card: windArcher }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [{ ...base.players['player-two'].battleArea[0], card: target }],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: windArcher.instanceId,
+        sourceCardName: windArcher.name,
+        sourceKind: 'skill',
+        effects: [
+          { kind: 'opponent-battle-to-trash', minLevel: 3, maxLevel: 3 },
+        ],
+        effectIndex: 0,
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      pendingAbilityEffect: undefined,
+      players: {
+        ...previous.players,
+        'player-two': {
+          ...previous.players['player-two'],
+          battleArea: [],
+          discardPile: [...previous.players['player-two'].discardPile, target],
+        },
+      },
+    }
+    const command = {
+      kind: 'resolve-ability-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: [target.instanceId],
+    }
+
+    expect(describeCommand(previous, next, command)).toContain(
+      `將「${target.name}」放入棄牌區`,
+    )
+    const step = describeCommandSteps(previous, next, command)?.[0]
+    expect(step?.text).toBe(`效果結算：將「${target.name}」放入棄牌區`)
+    expect(step?.cards).toEqual([target])
+  })
+
+  it('records the card effect that blocks BS2-058 from moving an opponent Cookie', () => {
+    const base = createBattleState()
+    const windArcher = {
+      ...cookie('wind-archer', 4, 5),
+      id: 'BS2-058',
+      name: 'Wind Archer Cookie',
+      level: 3,
+      energyColor: 'purple' as const,
+      skill: {
+        trigger: 'on-play' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { purple: 1 },
+        text: 'Place up to 1 of your opponent\'s LV.3 Cookies into the trash.',
+        effects: [
+          { kind: 'opponent-battle-to-trash' as const, minLevel: 3, maxLevel: 3 },
+        ],
+      },
+    }
+    const timekeeper = {
+      ...cookie('timekeeper', 1, 4),
+      id: 'BS6-010',
+      name: 'Timekeeper Cookie',
+      level: 3,
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' as const }],
+      },
+    }
+    const target = cookie('target-lv3', 2, 4)
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{ ...base.players['player-one'].battleArea[0], card: windArcher }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            { ...base.players['player-two'].battleArea[0], card: timekeeper },
+            { ...base.players['player-two'].battleArea[0], card: target, battleEntryId: 'target:battle:3' },
+          ],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: windArcher.instanceId,
+        sourceCardName: windArcher.name,
+        sourceKind: 'skill',
+        effects: [
+          { kind: 'opponent-battle-to-trash', minLevel: 3, maxLevel: 3 },
+        ],
+        effectIndex: 0,
+      },
+    }
+    const next: GameState = { ...previous, pendingAbilityEffect: undefined }
+    const command = {
+      kind: 'resolve-ability-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: [],
+    }
+
+    expect(describeCommand(previous, next, command)).toContain(
+      `被「${timekeeper.name}」的效果阻止`,
+    )
+    const step = describeCommandSteps(previous, next, command)?.[0]
+    expect(step?.text).toContain(`被「${timekeeper.name}」的效果阻止`)
+    expect(step?.cards).toEqual([timekeeper])
+  })
+
+  it('records a movement blocker when the OnPlay UI skips BS2-058 for having no legal target', () => {
+    const base = createBattleState()
+    const windArcher = {
+      ...cookie('wind-archer', 4, 5),
+      id: 'BS2-058',
+      name: 'Wind Archer Cookie',
+      level: 3,
+      energyColor: 'purple' as const,
+      skill: {
+        trigger: 'on-play' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { purple: 1 },
+        text: 'Place up to 1 of your opponent\'s LV.3 Cookies into the trash.',
+        effects: [
+          { kind: 'opponent-battle-to-trash' as const, minLevel: 3, maxLevel: 3 },
+        ],
+      },
+    }
+    const blocker = {
+      ...cookie('timekeeper', 1, 4),
+      id: 'BS6-010',
+      name: 'Timekeeper Cookie',
+      level: 3,
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' as const }],
+      },
+    }
+    const target = cookie('target-lv3', 2, 4)
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{ ...base.players['player-one'].battleArea[0], card: windArcher }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            { ...base.players['player-two'].battleArea[0], card: blocker },
+            { ...base.players['player-two'].battleArea[0], card: target, battleEntryId: 'target:battle:3' },
+          ],
+        },
+      },
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: windArcher.instanceId,
+        origin: 'hand',
+      },
+    }
+    const command = {
+      kind: 'skip-on-play' as const,
+      playerId: 'player-one' as const,
+      sourceInstanceId: windArcher.instanceId,
+    }
+
+    expect(describeCommand(previous, { ...previous, pendingOnPlay: null }, command)).toContain(
+      `被「${blocker.name}」的效果阻止`,
+    )
+    const step = describeCommandSteps(previous, { ...previous, pendingOnPlay: null }, command)?.[0]
+    expect(step?.cards).toEqual([blocker])
   })
 })
 

@@ -7,7 +7,13 @@ import { getAttackEnergyCostForState, selectEnergyPayment } from '../energy'
 import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
 import { advancePhase, canAttack } from '../turn'
-import { getActivatableSkillSources } from '../skills'
+import {
+  getActivatableSkillSources,
+  getDiscardAllHandCostCandidates,
+  getDiscardHandCostCandidates,
+  getHpToTrashCostCandidates,
+  getTrashBattleCookieCostCandidates,
+} from '../skills'
 import { createSeededShuffle } from '../helpers'
 import { simulateAbilityEffects } from './ability-effects'
 import type {
@@ -17,6 +23,7 @@ import type {
   GameCard,
   GameState,
   PlayerId,
+  AbilityCost,
 } from '../types'
 import type { AiDecision } from './types'
 import {
@@ -54,6 +61,84 @@ export interface AiTurnStrategy {
     state: GameState,
     playerId: PlayerId,
   ) => CookieInBattle | undefined
+}
+
+const chooseAiStageCostIds = (
+  state: GameState,
+  playerId: PlayerId,
+  cost: AbilityCost,
+  sourceInstanceId: string,
+) => {
+  const player = state.players[playerId]
+  const paymentIds = selectEnergyPayment(
+    cost.energy ?? cost,
+    player.supportArea,
+  )
+  if (!paymentIds) return null
+
+  const paymentSet = new Set(paymentIds)
+  const remainingSupports = player.supportArea.filter(
+    (support) => !paymentSet.has(support.card.instanceId),
+  )
+  const supportToTrashIds = remainingSupports
+    .slice(0, cost.supportToTrash ?? 0)
+    .map((support) => support.card.instanceId)
+  if (supportToTrashIds.length < (cost.supportToTrash ?? 0)) return null
+
+  const supportToTrashSet = new Set(supportToTrashIds)
+  const supportToHandIds = remainingSupports
+    .filter((support) => !supportToTrashSet.has(support.card.instanceId))
+    .slice(0, cost.supportToHand ?? 0)
+    .map((support) => support.card.instanceId)
+  if (supportToHandIds.length < (cost.supportToHand ?? 0)) return null
+
+  const discardCandidates = cost.discardAllHand
+    ? getDiscardAllHandCostCandidates(cost, player.hand, sourceInstanceId)
+    : getDiscardHandCostCandidates(cost, player.hand, sourceInstanceId)
+  const discardHandIds = cost.discardAllHand
+    ? []
+    : discardCandidates
+        .slice(0, cost.discardHand ?? 0)
+        .map((card) => card.instanceId)
+  if (
+    (!cost.discardAllHand &&
+      discardHandIds.length < (cost.discardHand ?? 0)) ||
+    (cost.discardAllHand && discardCandidates.length === 0)
+  ) {
+    return null
+  }
+
+  const hpToTrashTargetIds = cost.hpToTrash
+    ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
+        .slice(0, 1)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+  if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
+
+  const trashBattleCookieIds = cost.trashBattleCookie
+    ? getTrashBattleCookieCostCandidates(
+        cost,
+        player.battleArea,
+        sourceInstanceId,
+      )
+        .slice(0, cost.trashBattleCookie.count)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+  if (
+    cost.trashBattleCookie &&
+    trashBattleCookieIds.length < cost.trashBattleCookie.count
+  ) {
+    return null
+  }
+
+  return {
+    paymentIds,
+    supportToTrashIds,
+    supportToHandIds,
+    discardHandIds,
+    hpToTrashTargetIds,
+    trashBattleCookieIds,
+  }
 }
 
 export const handleAiTurnState = (
@@ -235,16 +320,27 @@ export const handleAiTurnState = (
     if (!canAttack(state) && canActivateStage(state, playerId)) {
       const stage = player.stage!
       const ability = stage.card.stageAbility!
-      const paymentIds = selectEnergyPayment(
-        ability.cost.energy ?? ability.cost,
-        player.supportArea,
+      const costIds = chooseAiStageCostIds(
+        state,
+        playerId,
+        ability.cost,
+        stage.card.instanceId,
       )
-      if (paymentIds) {
+      if (costIds) {
         const context = {
           sourcePlayerId: playerId,
           sourceInstanceId: stage.card.instanceId,
         }
-        const activated = activateStage(state, playerId, paymentIds)
+        const activated = activateStage(
+          state,
+          playerId,
+          costIds.paymentIds,
+          costIds.supportToTrashIds,
+          costIds.supportToHandIds,
+          costIds.discardHandIds,
+          costIds.hpToTrashTargetIds,
+          costIds.trashBattleCookieIds,
+        )
         const stageShuffle =
           strategy.shuffleSeed === undefined
             ? undefined
@@ -261,7 +357,10 @@ export const handleAiTurnState = (
                 effect.kind === 'trash-to-support') &&
               targetIds.length < effect.amount
           ),
-          { sourceInstanceId: stage.card.instanceId, paymentIds },
+          {
+            sourceInstanceId: stage.card.instanceId,
+            paymentIds: costIds.paymentIds,
+          },
           stageShuffle,
         )
         if (!sim.aborted) {
@@ -271,7 +370,12 @@ export const handleAiTurnState = (
               {
                 kind: 'activate-stage',
                 playerId,
-                paymentIds,
+                paymentIds: costIds.paymentIds,
+                supportToTrashIds: costIds.supportToTrashIds,
+                supportToHandIds: costIds.supportToHandIds,
+                discardHandIds: costIds.discardHandIds,
+                hpToTrashTargetIds: costIds.hpToTrashTargetIds,
+                trashBattleCookieIds: costIds.trashBattleCookieIds,
                 effectTargets: sim.effectTargets,
                 chooseOneModes: sim.chooseOneModes,
               },

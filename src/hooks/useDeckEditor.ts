@@ -15,6 +15,7 @@ const CARD_NUMBER_SERIES_PREFIXES: Record<string, string> = {
   BS3: 'BS3-',
   BS4: 'BS4-',
   BS5: 'BS5-',
+  BS6: 'BS6-',
 }
 
 export interface DeckEditorState {

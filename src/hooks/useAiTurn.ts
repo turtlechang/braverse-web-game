@@ -8,6 +8,7 @@ import {
 import type { AiLevel, AiMatchResult } from '../game'
 import type { AiDecision } from '../game'
 import type { BuiltInDeckChoice, DeckChoice } from '../game'
+import type { CustomDeck } from '../game/custom-deck'
 
 const aiSimulationSeeds = Array.from({ length: 20 }, (_, index) => index + 1)
 
@@ -21,6 +22,7 @@ export function useAiTurn(params: {
   faintActive: boolean
   afterDamageActive: boolean
   deckConfig: { player: DeckChoice; ai: BuiltInDeckChoice }
+  playerCustomDeck?: CustomDeck | null
   aiLevel?: AiLevel
   maxConsecutiveActions?: number
 }) {
@@ -34,6 +36,7 @@ export function useAiTurn(params: {
     faintActive,
     afterDamageActive,
     deckConfig,
+    playerCustomDeck,
     aiLevel = 4,
     maxConsecutiveActions = 200,
   } = params
@@ -138,12 +141,14 @@ export function useAiTurn(params: {
 
   const runSimulation = useCallback(() => {
     const results = aiSimulationSeeds.map((seed) =>
-      simulateAiMatch(createDemoGame(seed, deckConfig)),
+      simulateAiMatch(
+        createDemoGame(seed, deckConfig, playerCustomDeck ?? undefined),
+      ),
     )
     setSimulationResults(results)
     const completed = results.filter((result) => !result.stuck).length
     setMessage(`AI 驗證完成：${completed}/20 場正常結束。`)
-  }, [deckConfig, setMessage])
+  }, [deckConfig, playerCustomDeck, setMessage])
 
   const resetAiCounts = useCallback(() => {
     setAiActionCount(0)

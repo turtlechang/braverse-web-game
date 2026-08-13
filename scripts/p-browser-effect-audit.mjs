@@ -28,11 +28,58 @@ const requestedSeries = (() => {
   return process.env.BRAVERSE_AUDIT_SERIES?.toUpperCase() ?? 'P'
 })()
 const isBs6Audit = requestedSeries === 'BS6'
+const auditVanillaAttacks = process.argv.includes('--vanilla-attacks')
 const requestedCardNumbers = process.argv
   .filter((argument) => argument.startsWith('--card='))
   .map((argument) => argument.slice('--card='.length))
 
 const AUDIT_CONFIGS = {
+  BS5: {
+    label: 'BS5',
+    source: 'data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json',
+    report: 'docs/bs5-effect-audit-2026-08-13.json',
+    // BS5 keeps every effect-bearing formal record in the audit, including
+    // illustration variants, because variant records can carry normalized
+    // attack/skill text that must remain safe in the card-check route.
+    // BS5-089@2 is normalized at the adapter boundary into the same
+    // attack-Then definition as BS5-089, so it is an effect-bearing variant
+    // even though the raw API leaves `attackText` empty.
+    expectedEffectCardCount: 142,
+    conditionTestStatePrefix: 'bs5-condition',
+    conditionTestStates: {
+      'BS5-007': 'bs5-faint',
+      'BS5-011': 'bs5-faint',
+      'BS5-020': 'bs5-item',
+      'BS5-021': 'bs5-trap',
+      'BS5-022': 'bs5-stage',
+      'BS5-026': 'bs5-faint',
+      'BS5-043': 'bs5-trap',
+      'BS5-047': 'bs5-faint',
+      'BS5-065': 'bs5-trap',
+      'BS5-072': 'bs5-faint',
+      'BS5-087': 'bs5-trap',
+      'BS5-107': 'bs5-faint',
+      'BS5-109': 'bs5-trap',
+      'BS5-111': 'bs5-item',
+    },
+    conditionCardNumbers: [
+      'BS5-007',
+      'BS5-011',
+      'BS5-020',
+      'BS5-021',
+      'BS5-022',
+      'BS5-026',
+      'BS5-043',
+      'BS5-047',
+      'BS5-065',
+      'BS5-072',
+      'BS5-087',
+      'BS5-107',
+      'BS5-109',
+      'BS5-111',
+    ],
+    alwaysIncludeCardNumbers: [],
+  },
   P: {
     label: 'P-0XX',
     source: 'data/cards/official-p-0xx-remaining.en.json',
@@ -78,7 +125,7 @@ const AUDIT_CONFIGS = {
     expectedEffectCardCount: 97,
     conditionTestStatePrefix: 'bs6-condition',
     conditionCardNumbers: ['BS6-039'],
-    alwaysIncludeCardNumbers: ['BS6-091@2'],
+    alwaysIncludeCardNumbers: ['BS6-091@2', 'BS6-091@3'],
   },
 }
 const auditConfig = AUDIT_CONFIGS[requestedSeries]
@@ -88,7 +135,10 @@ if (!auditConfig) {
   )
 }
 const formalPath = resolve(root, auditConfig.source)
-const reportPath = resolve(root, auditConfig.report)
+const reportPath = resolve(
+  root,
+  process.env.BRAVERSE_AUDIT_REPORT ?? auditConfig.report,
+)
 const vitePackageJson = require.resolve('vite/package.json', { paths: [root] })
 const viteEntry = resolve(dirname(vitePackageJson), 'bin/vite.js')
 const browserExecutable =
@@ -102,9 +152,13 @@ const browserExecutable =
 
 const source = JSON.parse(await readFile(formalPath, 'utf8'))
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0
+const normalizedAttackThenVariants = new Set(['BS5-089@2'])
+const normalizedSkillVariants = new Set(['BS6-091@2', 'BS6-091@3'])
 const hasEffectSurface = (card) => {
   const skill = hasText(card.skill?.text)
-  const attackThen = hasText(card.attackText) && /\bThen\b/i.test(card.attackText)
+  const attackThen =
+    (hasText(card.attackText) && /\bThen\b/i.test(card.attackText)) ||
+    normalizedAttackThenVariants.has(card.cardNumber)
   return (
     card.type === 'item' ||
     card.type === 'trap' ||
@@ -112,11 +166,21 @@ const hasEffectSurface = (card) => {
     (card.type === 'flip' && hasText(card.flipText)) ||
     skill ||
     attackThen ||
+    normalizedSkillVariants.has(card.cardNumber) ||
     auditConfig.alwaysIncludeCardNumbers.includes(card.cardNumber)
   )
 }
+const isVanillaAttackCookie = (card) =>
+  card.type === 'cookie' && !hasEffectSurface(card)
 const getBaseCardNumber = (card) => card.baseCardNumber || card.cardNumber
 const selectRepresentativeCards = (records) => {
+  if (auditVanillaAttacks) {
+    // Illustration variants can be independently normalized in the runtime
+    // pool, so exercise every formal vanilla Cookie record rather than
+    // reducing this UI operation check to one record per base card number.
+    return records.filter(isVanillaAttackCookie)
+  }
+
   if (!isBs6Audit) {
     return records.filter((card) => hasEffectSurface(card))
   }
@@ -134,7 +198,22 @@ const selectRepresentativeCards = (records) => {
   }
   return [...representativesByBase.values()]
 }
-const cards = selectRepresentativeCards([...source.cards])
+const explicitlyRequestedEffectVariants =
+  !auditVanillaAttacks && isBs6Audit && requestedCardNumbers.length > 0
+    ? source.cards.filter(
+        (card) =>
+          requestedCardNumbers.includes(card.cardNumber) &&
+          hasEffectSurface(card),
+      )
+    : []
+const cards = [
+  ...new Map(
+    [
+      ...selectRepresentativeCards([...source.cards]),
+      ...explicitlyRequestedEffectVariants,
+    ].map((card) => [card.cardNumber, card]),
+  ).values(),
+]
   .filter(
     (card) =>
       requestedCardNumbers.length === 0 ||
@@ -144,7 +223,7 @@ const cards = selectRepresentativeCards([...source.cards])
   .sort((left, right) =>
     left.cardNumber.localeCompare(right.cardNumber, undefined, { numeric: true }),
   )
-if (requestedCardNumbers.length === 0) {
+if (!auditVanillaAttacks && requestedCardNumbers.length === 0) {
   assert.equal(
     cards.length,
     auditConfig.expectedEffectCardCount,
@@ -153,16 +232,32 @@ if (requestedCardNumbers.length === 0) {
 }
 
 const conditionCardNumbers = new Set(auditConfig.conditionCardNumbers)
+const conditionTestState = (cardNumber, result) =>
+  `${auditConfig.conditionTestStates?.[cardNumber] ?? auditConfig.conditionTestStatePrefix}:${cardNumber}:${result}`
 
 const effectSurfaces = (card) => {
   const surfaces = []
-  if (card.type === 'cookie' && card.skill?.text?.trim()) surfaces.push('skill')
-  if (/\bThen\b/i.test(card.attackText ?? '')) surfaces.push('attack-then')
+  if (
+    (card.type === 'cookie' && card.skill?.text?.trim()) ||
+    normalizedSkillVariants.has(card.cardNumber)
+  ) {
+    surfaces.push('skill')
+  }
+  if (
+    /\bThen\b/i.test(card.attackText ?? '') ||
+    normalizedAttackThenVariants.has(card.cardNumber)
+  ) {
+    surfaces.push('attack-then')
+  }
   if (card.type === 'flip') surfaces.push('flip')
   if (card.type === 'item') surfaces.push('item')
   if (card.type === 'trap') surfaces.push('trap')
   if (card.type === 'stage') surfaces.push('stage')
   return surfaces
+}
+const auditedSurfaces = (card) => {
+  const surfaces = effectSurfaces(card)
+  return surfaces.length > 0 ? surfaces : ['vanilla-attack']
 }
 
 const wait = (ms) => new Promise((resolvePromise) => setTimeout(resolvePromise, ms))
@@ -335,10 +430,10 @@ const driveOtherModal = async (page, operations) => {
   const flip = page.locator('.flip-response-modal').first()
   if (await visible(flip)) {
     const option = flip.locator(
-      '.flip-hand-carousel button:not(.is-selected):not(:disabled), .modal-card-options button:not(.is-selected):not(:disabled)',
+      '.flip-hand-carousel .flip-card-page button:not(.is-selected):not(:disabled), .flip-choice-options button:not(.is-selected):not(:disabled), .modal-card-options button:not(.is-selected):not(:disabled)',
     ).first()
     const selectedOptionCount = await flip.locator(
-      '.flip-hand-carousel button.is-selected, .modal-card-options button.is-selected',
+      '.flip-hand-carousel .flip-card-page button.is-selected, .flip-choice-options button.is-selected, .modal-card-options button.is-selected',
     ).count()
     if (selectedOptionCount === 0 && (await enabled(option))) {
       await option.click({ force: true })
@@ -352,27 +447,90 @@ const driveOtherModal = async (page, operations) => {
     if (!(await enabled(activate))) return false
     await activate.click({ force: true })
     operations.push('confirm:flip')
+    // FLIP 的棄牌／HP 更新會先完成規則狀態，再卸載回應 modal；短等待會把
+    // 正常的 React transition 誤判成「待處理 UI 仍存在」。
+    await wait(520)
+    return true
+  }
+
+  const attackResponse = page.locator('.attack-response-modal').first()
+  if (await visible(attackResponse)) {
+    const trapSelection = attackResponse
+      .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
+      .first()
+    if (!(await enabled(trapSelection))) return false
+    await trapSelection.click({ force: true })
+    operations.push('select:trap')
     await wait(180)
     return true
   }
 
   const trap = page.locator('.trap-response-modal').first()
   if (await visible(trap)) {
-    const card = trap.locator('.modal-card-options button:not(.is-selected)').first()
-    const selectedTrapCount = await trap.locator('.modal-card-options button.is-selected').count()
-    if (selectedTrapCount === 0 && (await enabled(card))) {
-      await card.click({ force: true })
+    const trapSelectPrompt = trap
+      .locator('h2')
+      .filter({ hasText: /是否發動陷阱|Activate a Trap/i })
+      .first()
+    const trapSelection = trap
+      .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
+      .first()
+    if ((await visible(trapSelectPrompt)) && (await enabled(trapSelection))) {
+      await trapSelection.click({ force: true })
       operations.push('select:trap')
       await wait(180)
       return true
     }
-    const activate = trap.locator(
-      '.modal-actions-sticky button:not(:disabled), .modal-actions button:not(:disabled)',
-    ).filter({ hasText: /發動|Activate|確認/ }).first()
+
+    const guidedSections = trap.locator('.trap-guided-section')
+    for (let index = 0; index < (await guidedSections.count()); index += 1) {
+      const section = guidedSections.nth(index)
+      const progressText = await section.innerText().catch(() => '')
+      const progress = [...progressText.matchAll(/(\d+)\s*[\/／]\s*(\d+)/g)].at(-1)
+      if (!progress || Number(progress[1]) >= Number(progress[2])) continue
+      const candidate = section
+        .locator('.modal-card-options button:not(.is-selected):not(:disabled)')
+        .first()
+      if (!(await enabled(candidate))) continue
+      await candidate.click({ force: true })
+      operations.push('select:trap-step')
+      await wait(180)
+      return true
+    }
+
+    const optionalTarget = trap
+      .locator('.trap-guided-section .trap-target-options button:not(.is-selected):not(:disabled)')
+      .first()
+    const selectedTargetCount = await trap
+      .locator('.trap-guided-section .trap-target-options button.is-selected')
+      .count()
+    if (selectedTargetCount === 0 && (await enabled(optionalTarget))) {
+      await optionalTarget.click({ force: true })
+      operations.push('select:trap-target')
+      await wait(180)
+      return true
+    }
+
+    const nextStep = trap
+      .locator('.modal-actions-sticky button:not(:disabled), .modal-actions button:not(:disabled)')
+      .filter({ hasText: /下一步|Next/i })
+      .first()
+    if (await enabled(nextStep)) {
+      await nextStep.click({ force: true })
+      operations.push('next:trap')
+      await wait(180)
+      return true
+    }
+
+    const activate = trap
+      .locator('.modal-actions-sticky button:not(:disabled), .modal-actions button:not(:disabled)')
+      .filter({ hasText: /確認發動|Activate|Confirm/i })
+      .last()
     if (await enabled(activate)) {
       await activate.click({ force: true })
       operations.push('confirm:trap')
-      await wait(180)
+      // Trap resolution can finish the attack and surface the optional
+      // replacement prompt on the next React transition.
+      await wait(520)
       return true
     }
     return false
@@ -426,12 +584,37 @@ const driveOtherModal = async (page, operations) => {
 
   const faint = page.locator('.faint-response-modal').first()
   if (await visible(faint)) {
-    const payment = faint.locator(
-      '.faint-payment-candidates button:not(.is-selected):not(:disabled), .faint-cost-hand-candidates button:not(.is-selected):not(:disabled), .faint-cost-support-candidates button:not(.is-selected):not(:disabled)',
-    ).first()
-    if (await enabled(payment)) {
-      await payment.click({ force: true })
-      operations.push('select:faint-cost')
+    const faintCostGroups = [
+      {
+        candidates: '.faint-payment-candidates',
+        progress: '.faint-payment-section',
+        operation: 'select:faint-payment',
+      },
+      {
+        candidates: '.faint-cost-hand-candidates',
+        progress: '.faint-cost-hand-candidates',
+        operation: 'select:faint-cost-hand',
+      },
+      {
+        candidates: '.faint-cost-support-candidates',
+        progress: '.faint-cost-support-candidates',
+        operation: 'select:faint-cost-support',
+      },
+    ]
+    for (const group of faintCostGroups) {
+      const progressLocator =
+        group.progress === group.candidates
+          ? faint.locator(group.progress).locator('xpath=..')
+          : faint.locator(group.progress)
+      const progressText = await progressLocator.innerText().catch(() => '')
+      const progress = [...progressText.matchAll(/(\d+)\s*\/\s*(\d+)/g)].at(-1)
+      if (!progress || Number(progress[1]) >= Number(progress[2])) continue
+      const candidate = faint
+        .locator(`${group.candidates} button:not(.is-selected):not(:disabled)`)
+        .first()
+      if (!(await enabled(candidate))) continue
+      await candidate.click({ force: true })
+      operations.push(group.operation)
       await wait(120)
       return true
     }
@@ -449,10 +632,50 @@ const driveOtherModal = async (page, operations) => {
       return true
     }
 
-    const confirm = faint.locator('.modal-actions button:not(:disabled)').last()
+    const confirm = faint
+      .locator(
+        '.modal-actions button:not(:disabled), .faint-modal-actions button:not(:disabled)',
+      )
+      .last()
     if (!(await enabled(confirm))) return false
     await confirm.click({ force: true })
     operations.push('confirm:faint-response')
+    await wait(180)
+    return true
+  }
+
+  const decisionModal = page.locator('.decision-modal').first()
+  if (await visible(decisionModal)) {
+    const skip = decisionModal.locator('button:not(:disabled)').last()
+    if (!(await enabled(skip))) return false
+    await skip.click({ force: true })
+    operations.push('skip:replacement')
+    await wait(180)
+    return true
+  }
+
+  const anyReplacement = page.locator('.decision-modal').first()
+  if (await visible(anyReplacement)) {
+    const skip = anyReplacement
+      .locator('button:not(:disabled)')
+      .filter({ hasText: /不補餅乾|略過|Skip/i })
+      .first()
+    if (!(await enabled(skip))) return false
+    await skip.click({ force: true })
+    operations.push('skip:replacement')
+    await wait(180)
+    return true
+  }
+
+  const localizedReplacement = page.locator('.decision-modal').first()
+  if (await visible(localizedReplacement)) {
+    const skip = localizedReplacement
+      .locator('button')
+      .filter({ hasText: /不補餅乾|略過|Skip/i })
+      .first()
+    if (!(await enabled(skip))) return false
+    await skip.click({ force: true })
+    operations.push('skip:replacement')
     await wait(180)
     return true
   }
@@ -463,6 +686,23 @@ const driveOtherModal = async (page, operations) => {
     .first()
   if (await visible(replacement)) {
     const skip = replacement
+      .locator('button')
+      .filter({ hasText: /不補餅乾|略過|Skip/i })
+      .first()
+    if (!(await enabled(skip))) return false
+    await skip.click({ force: true })
+    operations.push('skip:replacement')
+    await wait(180)
+    return true
+  }
+
+  // Some replacement prompts use the shared decision modal but have localized
+  // copy that is not covered by the legacy selector above. The only remaining
+  // decision modal in this driver is the optional Cookie replacement prompt;
+  // skip it so the attack/FLIP flow can settle.
+  const genericDecision = page.locator('.decision-modal').first()
+  if (await visible(genericDecision)) {
+    const skip = genericDecision
       .locator('button')
       .filter({ hasText: /不補餅乾|略過|Skip/i })
       .first()
@@ -525,13 +765,78 @@ const clickSkill = async (page) => {
 const clickFirstHandAction = async (page) => {
   const hand = page.locator('.bottom-hand .hand-card-wrap').first()
   if (!(await visible(hand))) return false
+  await hand.scrollIntoViewIfNeeded().catch(() => {})
   await hand.locator('.hand-card').click({ force: true })
   await wait(120)
   const action = hand.locator('.hand-card-action').first()
   if (!(await enabled(action))) return false
+  await action.scrollIntoViewIfNeeded().catch(() => {})
   await action.click({ force: true })
   await wait(180)
   return true
+}
+
+const runVanillaAttack = async (page, operations) => {
+  const ownCookies = page.locator('.bottom-field .combat-card-wrap')
+  const beforeDeploy = await ownCookies.count()
+  assert.ok(beforeDeploy < 2, 'vanilla fixture must have a free battle slot')
+  assert.ok(
+    await clickFirstHandAction(page),
+    'vanilla Cookie must expose an enabled deploy action from the hand',
+  )
+  operations.push('action:deploy-vanilla')
+  assert.equal(
+    await ownCookies.count(),
+    beforeDeploy + 1,
+    'deploying the vanilla Cookie must add it to the battle area',
+  )
+
+  const attacker = ownCookies.last().locator('.card-face').first()
+  assert.ok(await enabled(attacker), 'deployed vanilla Cookie must be clickable')
+  await attacker.click({ force: true })
+  operations.push('select:vanilla-attacker')
+  await wait(120)
+
+  // The test-state fixture provides matching active support cards. Select only
+  // cards currently marked as legal payment targets; already-selected cards
+  // stay targetable so excluding `.is-selected` avoids toggling them back off.
+  for (let index = 0; index < 8; index += 1) {
+    const payment = page
+      .locator(
+        '.bottom-field .support-card-wrap .card-face.is-targetable:not(.is-selected)',
+      )
+      // Support cards overlap into a fan; the final candidate is visually on
+      // top, whereas forcing a click on the first one can hit its neighbour.
+      .last()
+    if (!(await visible(payment))) break
+    const selectedBefore = await page
+      .locator('.bottom-field .support-card-wrap .card-face.is-selected')
+      .count()
+    await payment.scrollIntoViewIfNeeded().catch(() => {})
+    // Keyboard activation targets the focused card itself, rather than the
+    // neighbouring card that visually overlaps it in the support fan.
+    await payment.focus()
+    await payment.press('Enter')
+    operations.push('select:vanilla-attack-payment')
+    await wait(80)
+    assert.equal(
+      await page
+        .locator('.bottom-field .support-card-wrap .card-face.is-selected')
+        .count(),
+      selectedBefore + 1,
+      'a legal support-card activation must select exactly one attack payment',
+    )
+  }
+
+  const target = page.locator('.top-field .combat-card-wrap .card-face').first()
+  assert.ok(await enabled(target), 'vanilla attack must expose an opponent target')
+  await target.click({ force: true })
+  operations.push('declare:vanilla-attack')
+  await wait(360)
+  assert.ok(
+    (await ownCookies.last().locator('.card-face.is-rested').count()) > 0,
+    'declaring the vanilla attack must rest the deployed attacker',
+  )
 }
 
 const clickNextPhase = async (page) => {
@@ -565,6 +870,18 @@ const effectPanelDebug = async (page) => {
   }
 }
 
+const vanillaAttackDebug = async (page) => ({
+  ownCookies: await page
+    .locator('.bottom-field .combat-card-wrap .card-face')
+    .evaluateAll((nodes) => nodes.map((node) => node.className)),
+  supports: await page
+    .locator('.bottom-field .support-card-wrap .card-face')
+    .evaluateAll((nodes) => nodes.map((node) => node.className)),
+  opponentCookies: await page
+    .locator('.top-field .combat-card-wrap .card-face')
+    .evaluateAll((nodes) => nodes.map((node) => node.className)),
+})
+
 const runCard = async (
   page,
   card,
@@ -572,6 +889,7 @@ const runCard = async (
   {
     path = 'generic',
     requireInteractiveOperation = true,
+    requireVanillaAttack = false,
   } = {},
 ) => {
   const consoleErrors = []
@@ -593,23 +911,28 @@ const runCard = async (
     const before = await bodyText(page)
     assert.ok(!/遊戲畫面發生錯誤|Application Error|Unhandled Runtime Error/i.test(before))
 
-    for (let round = 0; round < 8; round += 1) {
-      const settledBefore = operations.length
+    if (requireVanillaAttack) {
+      await runVanillaAttack(page, operations)
       await settlePending(page, operations)
-      if (operations.length !== settledBefore) continue
-      if (await clickSkill(page)) {
-        operations.push('action:skill')
-        continue
+    } else {
+      for (let round = 0; round < 8; round += 1) {
+        const settledBefore = operations.length
+        await settlePending(page, operations)
+        if (operations.length !== settledBefore) continue
+        if (await clickSkill(page)) {
+          operations.push('action:skill')
+          continue
+        }
+        if (await clickFirstHandAction(page)) {
+          operations.push('action:hand')
+          continue
+        }
+        if (await clickNextPhase(page)) {
+          operations.push('action:next-phase')
+          continue
+        }
+        break
       }
-      if (await clickFirstHandAction(page)) {
-        operations.push('action:hand')
-        continue
-      }
-      if (await clickNextPhase(page)) {
-        operations.push('action:next-phase')
-        continue
-      }
-      break
     }
 
     const after = await bodyText(page)
@@ -618,7 +941,7 @@ const runCard = async (
     assert.deepEqual(pageErrors, [], `page errors: ${JSON.stringify(pageErrors)}`)
 
     const hasInteractiveOperation = operations.some((operation) =>
-      /^(action:(skill|hand|next-phase)|start:|select:|confirm:|skip:)/.test(
+      /^(action:|start:|select:|declare:|confirm:|skip:)/.test(
         operation,
       ),
     )
@@ -635,12 +958,14 @@ const runCard = async (
         name: card.name,
         type: card.type,
         color: card.color,
-        effectSurfaces: effectSurfaces(card),
+        effectSurfaces: auditedSurfaces(card),
         path,
         testState,
         status: 'PASS',
-        auditStatus: requireInteractiveOperation
-          ? 'Effect flow settled'
+        auditStatus: requireVanillaAttack
+          ? 'Vanilla deploy and attack flow settled'
+          : requireInteractiveOperation
+            ? 'Effect flow settled'
           : 'No-op or timing path settled',
         operations,
       }
@@ -653,7 +978,7 @@ const runCard = async (
       name: card.name,
       type: card.type,
       color: card.color,
-      effectSurfaces: effectSurfaces(card),
+      effectSurfaces: auditedSurfaces(card),
       path,
       testState,
       status: 'BLOCKED',
@@ -662,7 +987,10 @@ const runCard = async (
         : 'No interactive effect path',
       operations,
       pendingSurface,
-      debug: await effectPanelDebug(page),
+      debug: {
+        ...(await effectPanelDebug(page)),
+        ...(requireVanillaAttack ? { vanilla: await vanillaAttackDebug(page) } : {}),
+      },
     }
   } catch (error) {
     return {
@@ -672,14 +1000,17 @@ const runCard = async (
       name: card.name,
       type: card.type,
       color: card.color,
-      effectSurfaces: effectSurfaces(card),
+      effectSurfaces: auditedSurfaces(card),
       path,
       testState,
       status: 'FAIL',
       auditStatus: 'Browser or runtime error',
       operations,
       error: error instanceof Error ? error.message : String(error),
-      debug: await effectPanelDebug(page),
+      debug: {
+        ...(await effectPanelDebug(page)),
+        ...(requireVanillaAttack ? { vanilla: await vanillaAttackDebug(page) } : {}),
+      },
     }
   } finally {
     page.off('console', onConsole)
@@ -705,22 +1036,29 @@ try {
   page.setDefaultTimeout(7000)
 
   console.log(
-    `=== ${auditConfig.label} interactive effect audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
+    `=== ${auditConfig.label} ${auditVanillaAttacks ? 'vanilla attack' : 'interactive effect'} audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,
   )
   for (const card of cards) {
-    const genericResult = await runCard(page, card)
+    const genericResult = await runCard(
+      page,
+      card,
+      `card:${card.cardNumber}`,
+      auditVanillaAttacks
+        ? { path: 'vanilla-attack', requireVanillaAttack: true }
+        : undefined,
+    )
     let result = genericResult
-    if (conditionCardNumbers.has(card.cardNumber)) {
+    if (!auditVanillaAttacks && conditionCardNumbers.has(card.cardNumber)) {
       const met = await runCard(
         page,
         card,
-        `${auditConfig.conditionTestStatePrefix}:${card.cardNumber}:met`,
+        conditionTestState(card.cardNumber, 'met'),
         { path: 'condition-met', requireInteractiveOperation: true },
       )
       const unmet = await runCard(
         page,
         card,
-        `${auditConfig.conditionTestStatePrefix}:${card.cardNumber}:unmet`,
+        conditionTestState(card.cardNumber, 'unmet'),
         { path: 'condition-unmet', requireInteractiveOperation: false },
       )
       const conditionPaths = { met, unmet }
@@ -763,8 +1101,9 @@ try {
     browser: browserExecutable ?? 'playwright-chromium',
     viewport: '1440x960',
     source: auditConfig.source,
-    scope:
-      `Formal-pool test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
+    scope: auditVanillaAttacks
+      ? `Formal-pool test-state UI audit for every ${auditConfig.label} vanilla Cookie record. PASS means the real UI deployed the Cookie from hand, selected it as attacker, paid only legal support cards, declared against an opponent Cookie, rested the attacker, and settled without browser/runtime errors or remaining pending UI.`
+      : `Formal-pool test-state interaction audit for ${auditConfig.label} effect-bearing records plus dedicated A/B paths for ${conditionCardNumbers.size} condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.`,
     summary: {
       total: results.length,
       effectFlowPassed: results.filter((result) => result.status === 'PASS').length,

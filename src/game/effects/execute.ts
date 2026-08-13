@@ -2959,6 +2959,9 @@ export const executeCardEffect = (
   if (effect.kind === 'field-to-deck-bottom') {
     const candidates = getEffectSelectionCandidates(state, context, effect)
     const uniqueIds = [...new Set(selectedTargetIds)]
+    if (uniqueIds.length === 0 && effect.target.min === 0) {
+      return state
+    }
     if (uniqueIds.length < effect.target.min) {
       if (candidates.length === 0) return state
       throw new GameRuleError('Invalid field target.')

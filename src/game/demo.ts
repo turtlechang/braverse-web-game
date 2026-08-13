@@ -154,7 +154,7 @@ export type Bs5StageConditionCardNumber =
 /**
  * BS6 尚在候選資料期；這些 localhost-only A/B 情境不會將候選資料加入正式牌池。
  */
-export const BS6_CONDITION_CARD_NUMBERS = ['BS6-039'] as const
+export const BS6_CONDITION_CARD_NUMBERS = ['BS6-012', 'BS6-039'] as const
 export type Bs6ConditionCardNumber =
   (typeof BS6_CONDITION_CARD_NUMBERS)[number]
 
@@ -459,6 +459,15 @@ export const parseTestStateConfig = (
       }
     }
   }
+  // BS5-111 has its own condition fixture. Keep this exact route before the
+  // generic BS5 item-condition parser so it is not swallowed by the broader
+  // `bs5-item:` prefix.
+  if (testState?.startsWith('bs5-item:BS5-111:')) {
+    const result = testState.slice('bs5-item:BS5-111:'.length)
+    if (result === 'met' || result === 'unmet') {
+      return { kind: 'bs5-item-111', conditionMet: result === 'met' }
+    }
+  }
   if (testState?.startsWith('bs5-item:')) {
     const [, cardNumber, result] = testState.split(':')
     if (
@@ -485,12 +494,6 @@ export const parseTestStateConfig = (
         cardNumber,
         conditionMet: result === 'met',
       }
-    }
-  }
-  if (testState?.startsWith('bs5-item:BS5-111:')) {
-    const result = testState.slice('bs5-item:BS5-111:'.length)
-    if (result === 'met' || result === 'unmet') {
-      return { kind: 'bs5-item-111', conditionMet: result === 'met' }
     }
   }
   if (testState === 'bs3-121-special-victory') {
@@ -587,10 +590,16 @@ export const createDemoSetupGame = (
 export const createDemoGame = (
   seed?: number,
   deck: DeckConfig = 'red',
+  playerCustomDeck?: CustomDeck,
 ): GameState => {
   const effectiveSeed = seed ?? 7
   const shuffle = createSeededShuffle(effectiveSeed)
-  let state = createDemoSetupGame('player-one', deck, effectiveSeed)
+  let state = createDemoSetupGame(
+    'player-one',
+    deck,
+    effectiveSeed,
+    playerCustomDeck,
+  )
 
   state = ensureOpeningCookie(state, 'player-one', shuffle)
   state = ensureOpeningCookie(state, 'player-two', shuffle)
@@ -3169,6 +3178,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
               testSupportCard(`BS5-016-source-hp-${index + 1}`),
             )
+        : card.id === 'BS6-012'
+          ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+              testSupportCard(`BS6-012-source-hp-${index + 1}`, 'red'),
+            )
           : [testSupportCard(`${card.id}-source-hp`)]
     return {
       ...state,
@@ -3792,7 +3805,14 @@ export const createBs6ConditionDemoState = (
   cardNumber: Bs6ConditionCardNumber,
   conditionMet: boolean,
 ): GameState => {
-  const state = createCardCheckDemoState(cardNumber)
+  let state = createCardCheckDemoState(cardNumber)
+  if (cardNumber === 'BS6-012') {
+    const hand = Array.from(
+      { length: conditionMet ? 4 : 6 },
+      (_, index) => testSupportCard(`BS6-012-condition-hand-${index + 1}`, 'red'),
+    )
+    state = updateDemoPlayer(state, 'player-one', { hand })
+  }
   const opponentBreakArea = conditionMet
     ? [scenarioCookie(`${cardNumber}-opponent-break-lv2`, 2, 4, 'red').cookie]
     : [scenarioCookie(`${cardNumber}-opponent-break-lv7`, 7, 8, 'red').cookie]

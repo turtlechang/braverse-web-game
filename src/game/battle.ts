@@ -1354,6 +1354,24 @@ export const playTrap = (
       }
     }
 
+    // 陷阱也可能包含「選擇一項」；先保留未展開的效果佇列，讓 UI／AI
+    // 透過既有 resolve-choose-one 流程選模式，再接續同一場戰鬥。
+    if (effect.kind === 'choose-one') {
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
     nextState = executeCardEffect(
       nextState,
       context,

@@ -62,7 +62,11 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
-BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
+BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
+
+五色 BS6 標準牌組已建立並接入 AI preset；資料驗證、固定 seed 100 場引擎矩陣與正式根路徑 Browser 實戰均通過。修正後五色各 20/20、合計 100/100 場完成，`simulationStuck=0`、Browser 錯誤與頁面例外均為 0；完整結果見 [BS6 牌組 Browser 報告](docs/bs6-deck-browser-validation-2026-08-12.md)。勝率只作固定樣本觀察，不作為環境強度定案。
+
+BS5+6 競技環境 AI 牌組已新增紅、黃、綠、藍、紫五色，並與既有 BS5 標準及 BS6 標準 choice 分開顯示；牌組方向依 Operation Timeguard 賽事 Top 4／色彩占比與牌組 archetype 整理，競技綠牌避開官方禁卡 BS6-064。固定 seed 100 場的本機比較報告見 [BS6 競技牌組研究](docs/bs6-competitive-deck-research-2026-08-13.md) 與 `data/decks/bs6-competitive-benchmark-report-100-standard.json`；這些數字只代表本專案 AI 規則樣本，不等同官方賽事勝率。
 
 BraverseFan 中文圖鑑與判例整理已列入文件參考來源；目前僅作為資料交叉核對與測試案例搜尋，不改變正式卡池權威來源。
 
@@ -141,7 +145,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；後續以正式卡池回歸、官方更新追蹤與真人對戰驗證為主。
+BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；五色標準牌組已完成資料、固定 seed 矩陣與正式根路徑多場 Browser 驗證，五色各 20/20、合計 100/100 且卡死 0。BS5+6 競技環境五色 AI choice 已接入，後續以競技牌組研究報告的固定 seed 結果作為回歸基線，並持續以真人對戰與官方賽事資料校準。
 
 後續引用社群判例時，需在 inventory／coverage 文件記錄 URL、查閱日期與官方對應依據，並保留差異待確認。
 
@@ -202,6 +206,8 @@ npm run test:browser:smoke   # PR gate：AI＋牌組編輯器＋好友房核心 
 npm run test:deployment:browser # 外部 Preview／Production URL 與 Render WebSocket 驗收
 npm run test:bs4:cards:browser # BS4 111 張 Chrome card-check 載入 gate
 npm run test:bs4:interaction:browser # BS4 條件卡與一般 fixture 實際互動
+npm run test:bs6:decks:browser # BS6 五色牌組主選單開局與每色 20 場 Browser AI 驗證
+npm run test:bs6:competitive:decks:browser # BS5+6 五色競技環境牌組 Browser AI 驗證
 npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
@@ -235,7 +241,11 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-12 | BS6 138 筆（107 個不同基礎卡號；106 筆基礎記錄、32 筆異圖／變體）完成五色逐卡 Browser 入口矩陣與 97／97 效果互動矩陣；修正 6 筆官方資料遺漏 `{da}`、BS6-001 HP 代價候選與 BS6-106 陷阱 Then 目標，候選通過 promotion-ready gate 後 promote 至正式卡池，正式 `validate:cards`、`check:card-pool`、完整測試、lint、build 與 bundle gate 通過。 |
+| 2026-08-13 | 新增 BS5+6 五色競技環境 AI 牌組，保留 BS5／BS6 標準 choice；補上賽事研究紀錄、固定 seed 100 場競技矩陣與競技牌組 Browser 驗證入口。 |
+| 2026-08-13 | 修正 BS6 五色標準牌組 Browser 實戰的 HP／支援區／場景代價與陷阱 `choose-one` 決策串接；補上 46 項 AI／陷阱回歸測試，固定 seed 100 場與正式根路徑 Browser 100／100 場完成、卡死 0，Browser gate PASS。 |
+| 2026-08-12 | 五色 BS6 標準牌組完成資料驗證、固定 seed 100 場矩陣與正式根路徑 Browser 驗證；Browser 多場結果仍有 AI／效果結算卡死，已保留失敗證據並列入修正，不宣稱全綠。 |
+| 2026-08-12 | 建立 BS6 五色純 BS6 標準牌組與 AI preset，補上固定 seed 100 場矩陣及根路徑 Browser 牌組驗證；修正 Browser AI simulation 傳遞自訂牌組，並記錄目前效果／AI 結算卡死，未將未全綠結果誤標為通過。 |
+| 2026-08-12 | BS6 138 筆（107 個不同基礎卡號；106 筆基礎記錄、32 筆異圖／變體）完成五色逐卡 Browser 入口矩陣與 97／97 效果互動矩陣；修正 6 筆官方資料遺漏 `{da}`、BS6-001 HP 代價候選與 BS6-106 陷阱 Then 目標，候選通過 promotion-ready gate 後 promote 至正式卡池，正式 `validate:cards`、`check:card-pool`、完整測試、lint、build 與 bundle gate 通過；牌組編輯器新增 BS6 系列篩選並以 Browser 回歸驗證。 |
 | 2026-08-11 | P-0XX 127 筆（118 個 base card number、含 14 筆 `@` 異圖）已 promote 至 `data/cards/`，正式卡池增至 963 種卡號；修正 test-state、轉接覆蓋與 Browser 稽核腳本仍讀候選檔的路徑。P-041 的生日祝福登場文字明確標示為不改變規則狀態的社交效果，保留時機與攻擊後生日 +1 攻擊的轉接及回歸測試。 |
 | 2026-08-11 | 完成牌組編輯器全頁工作台第二輪收斂：主要牌組依餅乾／FLIP／物品／陷阱／場景分區並預留 BS8 額外牌組；JSON 匯入改為輔助提示框；Open 匯入略過標準禁限卡但保留核心牌組規則。頁首整合合法性、賽制、卡池統計與 JSON 工具，卡池篩選預設收合；左欄採卡圖＋數值摘要與能量圖示，補齊元件與 Browser 回歸驗證。 |
 | 2026-08-10 | 完成官方 P-0XX 全量盤點與轉換：153 筆記錄（含 14 筆異圖變體）全部完成 adapter conversion，新增 127 筆候選資料與完整匯入清單；完成 P-082／P-084／P-147 特殊支付的 runtime、UI 與專用 Browser 驗證，候選仍待逐卡稽核後 promote。 |

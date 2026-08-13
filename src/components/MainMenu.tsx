@@ -30,6 +30,16 @@ const AI_DECK_OPTIONS: { value: AiDeckChoice; label: string }[] = [
   { value: 'bs5-green-open', label: 'BS5 綠｜開放' },
   { value: 'bs5-blue-open', label: 'BS5 藍｜開放' },
   { value: 'bs5-purple-open', label: 'BS5 紫｜開放' },
+  { value: 'bs6-red-standard', label: 'BS6 紅｜標準' },
+  { value: 'bs6-yellow-standard', label: 'BS6 黃｜標準' },
+  { value: 'bs6-green-standard', label: 'BS6 綠｜標準' },
+  { value: 'bs6-blue-standard', label: 'BS6 藍｜標準' },
+  { value: 'bs6-purple-standard', label: 'BS6 紫｜標準' },
+  { value: 'bs6-red-competitive', label: 'BS6 紅｜競技環境' },
+  { value: 'bs6-yellow-competitive', label: 'BS6 黃｜競技環境' },
+  { value: 'bs6-green-competitive', label: 'BS6 綠｜競技環境' },
+  { value: 'bs6-blue-competitive', label: 'BS6 藍｜競技環境' },
+  { value: 'bs6-purple-competitive', label: 'BS6 紫｜競技環境' },
 ]
 
 const AI_LEVEL_OPTIONS: { value: AiLevel; label: string; hint: string }[] = [
