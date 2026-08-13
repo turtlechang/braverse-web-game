@@ -556,6 +556,11 @@ const resolveTrapEffectTargetIds = (
   if (!target) return requestedIds
   if (target.side === 'self') {
     if (selfTargetIds && selfTargetIds.length > 0) return selfTargetIds
+    // An explicitly supplied empty selfTargetIds means the UI deliberately
+    // skipped an optional self effect (for example BS6-020's "up to 1" HP
+    // return). Older callers omit selfTargetIds and still use targetIds for
+    // self-only traps such as BS1-051, so keep that compatibility path.
+    if (selfTargetIds && target.min === 0) return []
   } else if (requestedIds.length === 0) {
     return requestedIds
   }
@@ -583,6 +588,7 @@ const validateTrapTargets = (
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
       effect.kind === 'redirect-attack' ||
+      effect.kind === 'hp-to-hand' ||
       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
   if (targetEffects.length === 0) {
@@ -3039,17 +3045,18 @@ export const getTrapSelfTargetCandidates = (
   )
   const selfEffects = card?.trap?.effects.filter(
     (effect) =>
-      (effect.kind === 'damage' || effect.kind === 'gain-hp') &&
+      (effect.kind === 'damage' ||
+        effect.kind === 'gain-hp' ||
+        effect.kind === 'hp-to-hand') &&
       'target' in effect &&
       effect.target?.side === 'self' &&
-      (effect.target.min ?? 0) > 0,
+      effect.target.max > 0,
   )
   const hasNonSelfTarget = card?.trap?.effects.some(
     (effect) =>
       'target' in effect &&
       effect.target !== undefined &&
-      effect.target.side !== 'self' &&
-      (effect.target.min ?? 0) > 0,
+      effect.target.side !== 'self',
   )
   // A self-only trap is already represented by getTrapTargetCandidates. Do
   // not expose the same Cookie again in a second guided phase.

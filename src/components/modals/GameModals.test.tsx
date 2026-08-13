@@ -402,6 +402,53 @@ describe('TrapResponseModal', () => {
     expect((markup.match(/type="button"/g) ?? []).length).toBeGreaterThanOrEqual(9)
   })
 
+  it('shows an optional self-target phase for BS6-020-style HP return effects', async () => {
+    const trap: GameCard = {
+      id: 'BS6-020',
+      instanceId: 'bs6-020-modal-test',
+      name: 'Tonic Spray',
+      type: 'trap',
+      trap: {
+        text: 'Then, return up to 1 card from the top of your Cookie HP to your hand.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [],
+      },
+    }
+    const target = createBattleCookie(91)
+    const onSelectTrapSelfTarget = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        trapSelfTargetCandidates={[target]}
+        trapSelfTargetRequired={false}
+        selectedTrapSelfTargetId={null}
+        onSelectTrap={() => undefined}
+        onSelectTrapSelfTarget={onSelectTrapSelfTarget}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain(target.card.name)
+    expect(
+      (container.querySelector('.modal-actions-sticky button:last-child') as HTMLButtonElement)
+        .disabled,
+    ).toBe(false)
+    await click(findButton(container, target.card.name))
+    expect(onSelectTrapSelfTarget).toHaveBeenCalledWith(target.card.instanceId)
+
+    await act(() => root.unmount())
+  })
+
   it('returns to response selection without skipping the attack response', async () => {
     const trap: GameCard = {
       id: 'ST4-020',

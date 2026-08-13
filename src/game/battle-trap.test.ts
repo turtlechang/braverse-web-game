@@ -1637,6 +1637,101 @@ describe('BS3-021 Oath on the Shield: modify-attack + self-damage', () => {
   })
 })
 
+describe('BS6-020 Tonic Spray: selectable self HP return', () => {
+  const tonicSprayTrap = (): GameCard => ({
+    id: 'BS6-020',
+    instanceId: 'bs6-020-test',
+    name: 'Tonic Spray',
+    type: 'trap',
+    officialType: 'trap',
+    trap: {
+      text: "Select up to 1 of your opponent's Cookies. During this turn, that Cookie deals -2 attack damage. Then, return up to 1 card from the top of your Cookie's HP to your hand.",
+      cost: { energy: { red: 2 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -2,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'hp-to-hand',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1 },
+        },
+      ],
+    },
+  })
+
+  it('exposes own Cookies as selectable self targets', () => {
+    const trap = tonicSprayTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state = declareAttack(state)
+
+    expect(
+      getTrapSelfTargetCandidates(
+        state,
+        'player-one',
+        trap.instanceId,
+      ).map((candidate) => candidate.card.instanceId),
+    ).toEqual(['defender'])
+  })
+
+  it('returns the selected Cookie top HP card, while allowing the optional effect to be skipped', () => {
+    const trap = tonicSprayTrap()
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap]
+    state.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('self-hp-1'),
+      item('self-hp-2'),
+    ]
+    state = declareAttack(state)
+
+    const selected = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: ['attacker'],
+      selfTargetIds: ['defender'],
+    })
+    expect(selected.players['player-one'].hand.map((card) => card.instanceId)).toContain(
+      'self-hp-2',
+    )
+    expect(
+      selected.players['player-one'].battleArea[0].hpCards.map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual(['self-hp-1'])
+
+    const skippedState = createBattleState()
+    skippedState.players['player-one'].hand = [trap]
+    skippedState.players['player-one'].supportArea = [
+      { card: item('p1-red-1', 'red'), rested: false },
+      { card: item('p1-red-2', 'red'), rested: false },
+    ]
+    skippedState.players['player-one'].battleArea[0].hpCards = [
+      item('self-hp-1'),
+      item('self-hp-2'),
+    ]
+    const declaredSkippedState = declareAttack(skippedState)
+    const skipped = playTrap(declaredSkippedState, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-red-1', 'p1-red-2'],
+      targetIds: ['attacker'],
+      selfTargetIds: [],
+    })
+    expect(
+      skipped.players['player-one'].battleArea[0].hpCards.map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual(['self-hp-1', 'self-hp-2'])
+  })
+})
+
 describe('BS1-050 Broken Signpost: redirect-attack self target', () => {
   it('redirects attack to a self cookie using selfTargetIds', () => {
     const trap: GameCard = {

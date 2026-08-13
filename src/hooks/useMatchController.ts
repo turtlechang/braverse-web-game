@@ -891,7 +891,7 @@ export function useMatchController(params: {
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
   const trapSelfTargetCandidates =
-    selectedTrap && !trapSelectNoTarget
+    selectedTrap
       ? getTrapSelfTargetCandidates(game, viewerPlayerId, selectedTrap.instanceId)
       : []
   const selectedTrapSelfTarget = selectedTrapSelfTargetId
@@ -899,9 +899,21 @@ export function useMatchController(params: {
         (candidate) => candidate.card.instanceId === selectedTrapSelfTargetId,
       )
     : undefined
+  const trapSelfTargetRequired =
+    selectedTrap?.trap?.effects.some(
+      (effect) =>
+        (effect.kind === 'damage' ||
+          effect.kind === 'gain-hp' ||
+          effect.kind === 'hp-to-hand') &&
+        'target' in effect &&
+        effect.target?.side === 'self' &&
+        (effect.target.min ?? 0) > 0,
+    ) ?? false
   const selectedTrapSelfTargets = selectedTrapSelfTarget
     ? [selectedTrapSelfTarget]
-    : trapSelfTargetCandidates.slice(0, 1)
+    : trapSelfTargetRequired
+      ? trapSelfTargetCandidates.slice(0, 1)
+      : []
   const trapSupportTrashEffect = selectedTrap?.trap?.effects.find(
     (effect) => effect.kind === 'support-to-trash',
   )
@@ -1305,6 +1317,7 @@ export function useMatchController(params: {
     setSelectedTrapTargetId,
     selectedTrapTargets,
     trapSelfTargetCandidates,
+    trapSelfTargetRequired,
     selectedTrapSelfTargetId,
     setSelectedTrapSelfTargetId,
     selectedTrapSelfTargets,

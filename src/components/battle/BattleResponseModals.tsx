@@ -168,6 +168,7 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             trapTargetCandidates={match.trapTargetCandidates}
             selectedTrapTargetId={match.selectedTrapTargetId}
             trapSelfTargetCandidates={match.trapSelfTargetCandidates}
+            trapSelfTargetRequired={match.trapSelfTargetRequired}
             selectedTrapSelfTargetId={match.selectedTrapSelfTargetId}
             onSelectTrap={(id) => {
               match.setSelectedTrapId(id)
