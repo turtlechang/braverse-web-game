@@ -1935,6 +1935,32 @@
   }
 }
 
+/* On short desktop viewports the hand sits immediately below the combat
+ * row. Keep the cards inside that lower band even while a card is hovered or
+ * focused; the normal desktop lift would otherwise cover the combat card. */
+@container game-shell (min-width: 901px) and (max-height: 620px) {
+  .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: -72px;
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap:hover,
+  .hand-fan.bottom-hand .hand-card-wrap:focus-within {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(var(--fan-y))
+      rotate(var(--fan-rotation))
+      scale(1.04);
+  }
+
+  .hand-fan.bottom-hand .hand-card-wrap.is-selected {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(var(--fan-y))
+      rotate(var(--fan-rotation))
+      scale(1.07);
+  }
+}
+
 /* This must follow every game-shell breakpoint: combat-zone height is the
  * final authority for card size when the board is vertically constrained. */
 @container combat-zone (max-height: 220px) {

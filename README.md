@@ -68,7 +68,9 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 187 個測試檔、3,004 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 187 個測試檔、3,007 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。
+
+Browser smoke 的 1024×576 短桌面版面已修正手牌 hover／focus 抬升造成的戰鬥卡遮擋，並將案例納入明確 hover 回歸；Vite 也將大型 demo harness 拆至 `game-demo` chunk，使主入口 gzip 從 183.59 KiB 降至 161.73 KiB，低於 180 KiB budget。
 
 五色 BS6 標準牌組已建立並接入 AI preset；資料驗證、固定 seed 100 場引擎矩陣與正式根路徑 Browser 實戰均通過。修正後五色各 20/20、合計 100/100 場完成，`simulationStuck=0`、Browser 錯誤與頁面例外均為 0；完整結果見 [BS6 牌組 Browser 報告](docs/bs6-deck-browser-validation-2026-08-12.md)。勝率只作固定樣本觀察，不作為環境強度定案。
 
@@ -251,6 +253,8 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-14 | 修正 Browser smoke 1024×576 短桌面手牌 hover／focus 遮擋戰鬥卡問題，新增明確 hover 回歸；拆分 `game-demo` chunk，主入口 gzip 由 183.59 KiB 降至 161.73 KiB，bundle gate 與完整 Browser smoke 通過。 |
+| 2026-08-14 | 修正 BS5-073「Cyborg Cookie」官方資料遺漏的 FLIP 抽牌效果；同步修正 FLIP 轉接、牌組編輯器篩選與 16 張上限統計，並以本機 Browser 驗證卡圖、詳情文案與加入牌組流程；完整 Vitest 187 檔／3,007 項、lint、typecheck、build 通過。 |
 | 2026-08-14 | 以本機 in-app Browser Use 完成 BS5-001～111、BS6-001～107 共 436 條正向／負向逐卡路徑；補上 BS6-025、032、045、057、081 的合法候選 fixture，完整 Vitest 187 檔／3,004 項、lint、build 通過。 |
 | 2026-08-14 | 釐清 BS5-060 一般 `card:` 夾具未模擬攻擊支付後的休息支援卡；新增專用 end-phase A/B fixture、146 項 demo 回歸，並以 Browser Use 驗證 4 張休息支援卡於結束回合啟動 3 張、全啟動路徑安全略過。 |
 | 2026-08-14 | 完成 BS1～BS6 五色 512 副牌組的 9 輪 Browser Swiss 與第一輪 BS6 加權迭代：初代／迭代各 2,304／2,304 場、卡住 0、Browser 錯誤 0；補上五色上位卡表與 JSON 報告，並修正 BS6-039、BS6-043、陷阱移動目標、過期效果順序及 AI 攻擊目標的結算卡死；完整 Vitest 187 檔／3,003 項、lint、build 通過。 |

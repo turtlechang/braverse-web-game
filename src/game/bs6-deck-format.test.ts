@@ -41,7 +41,7 @@ describe('BS6 五色標準牌組 preset', () => {
       expect(validation.errors).toEqual([])
       expect(validation.stats).toMatchObject({
         totalCards: 60,
-        flipCards: 8,
+        flipCards: deckChoice === 'bs6-blue-competitive' ? 12 : 8,
         cookieCards: 48,
         itemCards: 4,
         trapCards: 4,

@@ -376,6 +376,29 @@ describe('official card adapter', () => {
     })
   })
 
+  it('converts BS5-073 as a Cookie with a FLIP ability', () => {
+    const source = (officialBS5Inventory.cards as OfficialCardRecord[]).find(
+      (card) => card.cardNumber === 'BS5-073',
+    )
+
+    expect(source).toBeDefined()
+    if (!source) return
+
+    const result = convertOfficialCardToGameCard(source)
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        id: 'BS5-073',
+        type: 'cookie',
+        flip: {
+          text: 'Draw up to 1 card from your deck.',
+          effects: [{ kind: 'draw-up-to', max: 1 }],
+        },
+      },
+    })
+  })
+
   it('normalizes the missing P-078 attack damage marker for every art variant', () => {
     const source = createOfficialCard({
       cardNumber: 'P-078@1',

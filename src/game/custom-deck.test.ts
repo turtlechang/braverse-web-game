@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getAllCardPoolEntries } from './card-pool'
+import { getAllCardPoolEntries, hasFlipAbility } from './card-pool'
 import {
   OFFICIAL_RED_STARTER_DECK,
 } from './starter-deck'
@@ -79,7 +79,7 @@ describe('validateCustomDeck', () => {
       (entry) => entry.type === 'flip',
     )
     const cookieEntries = getAllCardPoolEntries().filter(
-      (entry) => entry.type === 'cookie',
+      (entry) => entry.type === 'cookie' && !hasFlipAbility(entry),
     )
     const result = validateCustomDeck([
       ...entriesFromNumbers(flipEntries.slice(0, 5).map((entry) => entry.cardNumber)),
@@ -90,6 +90,15 @@ describe('validateCustomDeck', () => {
     expect(result.stats.flipCards).toBe(20)
     expect(result.isValid).toBe(false)
     expect(result.errors).toContain('FLIP 卡不得超過 16 張，目前為 20 張')
+  })
+
+  it('counts a normal Cookie with FLIP text toward the 16-card FLIP limit', () => {
+    const result = validateCustomDeck([
+      { cardNumber: 'BS5-073', count: 4 },
+    ])
+
+    expect(result.stats.flipCards).toBe(4)
+    expect(result.stats.cookieCards).toBe(4)
   })
 
   it('treats @ variant and base as the same card and enforces a shared 4-copy limit', () => {

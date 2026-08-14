@@ -158,4 +158,42 @@ describe('DeckEditorPage', () => {
 
     await act(() => root.unmount())
   })
+
+  it('shows Cookie records with FLIP text in the FLIP filter', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />,
+      ),
+    )
+
+    const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => filterToggle!.click())
+
+    const typeSelect = Array.from(
+      container.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
+    ).find((select) =>
+      Array.from(select.options).some((option) => option.value === 'flip'),
+    )
+    expect(typeSelect).toBeTruthy()
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    await act(() => {
+      nativeSetter.call(typeSelect, 'flip')
+      typeSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const cardNumbers = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-select'),
+    ).map((button) => button.textContent ?? '')
+    expect(cardNumbers.some((text) => text.includes('BS5-073'))).toBe(true)
+    expect(cardNumbers.some((text) => text.includes('BS5-074'))).toBe(true)
+
+    await act(() => root.unmount())
+  })
 })

@@ -3652,7 +3652,7 @@
         "text": null
       },
       "attackText": "<{B}{B}> High Voltage {da} 2",
-      "flipText": null,
+      "flipText": "Draw up to 1 card from your deck.",
       "keywords": [],
       "product": {
         "id": 100,
