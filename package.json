@@ -36,6 +36,7 @@
     "benchmark:bs4-decks": "tsx scripts/benchmark-bs4-decks.ts",
     "benchmark:bs5-decks": "tsx scripts/benchmark-bs5-decks.ts",
     "benchmark:bs6-decks": "tsx scripts/benchmark-bs6-decks.ts",
+    "benchmark:bs6-competitive:round-robin": "tsx scripts/benchmark-bs6-competitive-round-robin.ts",
     "benchmark:bs1-bs6:generate": "tsx scripts/generate-bs1-bs6-512-roster.ts",
     "benchmark:bs1-bs6:iterate": "tsx scripts/generate-bs1-bs6-512-roster.ts --iteration",
     "test:bs1-bs6:512:browser": "node scripts/bs1-bs6-512-swiss-browser.mjs",

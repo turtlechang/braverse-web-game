@@ -64,6 +64,9 @@ describe('Beam Search 回合層序列規劃', () => {
     expect(decision.action).not.toBe('error')
     expect(decision.state).toBeDefined()
     expect(decision.reason?.level).toBe(4)
+    expect(decision.reason?.consideredCommands).toBeGreaterThan(
+      getLegalTurnCommands(mainState, 'player-one').length,
+    )
   })
 
   it('beam 找不到合法命令時 fallback 回單指令枚舉', () => {
@@ -184,6 +187,108 @@ describe('Beam Search 回合層序列規劃', () => {
       expect(decision.action).not.toBe('error')
       // 無論選誰，應該是合法命令
     }
+  })
+
+  it('Lv.4 會把道具後的致命攻擊納入同回合規劃', () => {
+    const base = createBattleState()
+    const setupItem = item('setup-item')
+    const attacker = { ...cookie('planner-attacker', 2, 3), level: 2 }
+    const target = { ...cookie('planner-target', 2, 3), level: 2 }
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-one',
+      phase: 'main',
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [setupItem],
+          battleArea: [
+            {
+              card: attacker,
+              hpCards: [item('planner-hp-1'), item('planner-hp-2'), item('planner-hp-3')],
+              rested: false,
+              battleEntryId: 'planner-attacker:battle:test',
+            },
+          ],
+          supportArea: [{ card: item('planner-support'), rested: false }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            {
+              card: target,
+              hpCards: [item('target-hp-1'), item('target-hp-2'), item('target-hp-3')],
+              rested: false,
+              battleEntryId: 'planner-target:battle:test',
+            },
+          ],
+          breakArea: [
+            { ...cookie('opponent-break-1', 0, 1), level: 4 },
+            { ...cookie('opponent-break-2', 0, 1), level: 4 },
+          ],
+        },
+      },
+    }
+    const strategy: AiTurnStrategy = {
+      ...minimalStrategy,
+      resolveCardAbility: (current, playerId, card) => {
+        if (playerId !== 'player-one' || card.instanceId !== setupItem.instanceId) {
+          return null
+        }
+        const boosted = {
+          ...current,
+          players: {
+            ...current.players,
+            'player-one': {
+              ...current.players['player-one'],
+              hand: [],
+              battleArea: current.players['player-one'].battleArea.map((cookieInBattle) =>
+                cookieInBattle.card.instanceId === attacker.instanceId
+                  ? {
+                      ...cookieInBattle,
+                      card: { ...cookieInBattle.card, attack: 3 },
+                    }
+                  : cookieInBattle,
+              ),
+            },
+          },
+        }
+        return {
+          state: boosted,
+          action: 'play-item',
+          description: '使用設置道具。',
+        }
+      },
+    }
+
+    const decision = handleAiTwoPlyTurnState(state, 'player-one', strategy)
+
+    expect(decision.action).toBe('play-item')
+    expect(decision.reason?.level).toBe(4)
+  })
+
+  it('Lv.4 不會在仍有合法攻擊時直接結束主階段', () => {
+    const state = createBattleState()
+    const baseline = handleAiEvaluatedTurnState(
+      state,
+      'player-two',
+      minimalStrategy,
+    )
+    const decision = handleAiTwoPlyTurnState(
+      state,
+      'player-two',
+      minimalStrategy,
+    )
+
+    expect(
+      getLegalTurnCommands(state, 'player-two').some(
+        (command) => command.kind === 'attack',
+      ),
+    ).toBe(true)
+    expect(decision.action).toBe('attack')
+    expect(decision.action).toBe(baseline.action)
+    expect(decision.description).toBe(baseline.description)
   })
 
   /**

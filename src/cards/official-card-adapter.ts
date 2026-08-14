@@ -9,6 +9,7 @@ import {
   convertOfficialTrapAbility,
 } from './official-effect-adapter'
 import { parseOfficialCardTexts } from './official-text-parser'
+import { normalizeKnownOfficialCardRecord } from './official-card-normalization'
 import type {
   OfficialCardConversion,
   OfficialCardRecord,
@@ -85,6 +86,9 @@ export const getRuntimeKeywords = (card: OfficialCardRecord): CardKeyword[] => {
 export const normalizeOfficialCardRecord = (
   sourceCard: OfficialCardRecord,
 ): OfficialCardRecord => {
+  const knownNormalized = normalizeKnownOfficialCardRecord(sourceCard)
+  if (knownNormalized !== sourceCard) return knownNormalized
+
   // 部分官方 FLIP 記錄把 FLIP 文案誤放在 skill.text；在轉接邊界移回
   // flipText，避免 runtime 卡沒有 FlipAbility 而產生空白、無法結算的 FLIP 視窗。
   if (

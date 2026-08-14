@@ -74,7 +74,7 @@ Browser smoke 的 1024×576 短桌面版面已修正手牌 hover／focus 抬升�
 
 五色 BS6 標準牌組已建立並接入 AI preset；資料驗證、固定 seed 100 場引擎矩陣與正式根路徑 Browser 實戰均通過。修正後五色各 20/20、合計 100/100 場完成，`simulationStuck=0`、Browser 錯誤與頁面例外均為 0；完整結果見 [BS6 牌組 Browser 報告](docs/bs6-deck-browser-validation-2026-08-12.md)。勝率只作固定樣本觀察，不作為環境強度定案。
 
-BS5+6 競技環境 AI 牌組已新增紅、黃、綠、藍、紫五色，並與既有 BS5 標準及 BS6 標準 choice 分開顯示；牌組方向依 Operation Timeguard 賽事 Top 4／色彩占比與牌組 archetype 整理，競技綠牌避開官方禁卡 BS6-064。固定 seed 100 場的本機比較報告見 [BS6 競技牌組研究](docs/bs6-competitive-deck-research-2026-08-13.md) 與 `data/decks/bs6-competitive-benchmark-report-100-standard.json`；這些數字只代表本專案 AI 規則樣本，不等同官方賽事勝率。
+BS6 競技環境 AI 牌組保留紅、黃、綠、藍、紫五色，並與既有 BS5／BS6 標準 choice 分開顯示；目前卡表以使用者提供的第六彈環境構築為準，可包含現役標準賽制允許的舊彈與起始牌。`P-059` 官方 API 重複攻擊名稱的 `flipText` 已在正規化層排除，避免誤算為 FLIP。可用 `npm run benchmark:bs6-competitive:round-robin` 重跑五色兩兩配對各 5 場、合計 50 場的固定 seed Lv.4 報告；結果僅代表本專案 AI 規則樣本，不等同官方賽事勝率。
 
 BS1～BS6 五色 512 副牌組 Swiss 基準已完成：初代與第一輪 BS6 加權迭代各在 Chromium Browser 完成 9 輪、2,304／2,304 場，卡住 0、Browser 錯誤 0。第一輪上位卡表與牌組清單已保存於 [512 副牌組 Swiss 報告](docs/bs1-bs6-512-swiss-report.md)，後續牌組調整以此固定 seed 基準持續迭代。
 
@@ -202,6 +202,7 @@ npm run validate:cards
 npm run validate:candidate
 npm run generate:card-pool
 npm run check:card-pool
+npm run benchmark:bs6-competitive:round-robin
 npm test
 npm run lint
 npm run typecheck
@@ -219,7 +220,7 @@ npm run test:deployment:browser # 外部 Preview／Production URL 與 Render Web
 npm run test:bs4:cards:browser # BS4 111 張 Chrome card-check 載入 gate
 npm run test:bs4:interaction:browser # BS4 條件卡與一般 fixture 實際互動
 npm run test:bs6:decks:browser # BS6 五色牌組主選單開局與每色 20 場 Browser AI 驗證
-npm run test:bs6:competitive:decks:browser # BS5+6 五色競技環境牌組 Browser AI 驗證
+npm run test:bs6:competitive:decks:browser # BS6 五色競技環境牌組 Browser AI 驗證
 npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
@@ -253,6 +254,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-14 | 匯入使用者提供的 BS6 五色競技環境牌組，修正 P-059 官方 API 將攻擊名稱誤寫入 FLIP 欄位；Lv.4 新增技能／道具後續行動前瞻，並提供五色兩兩配對各 5 場、共 50 場的可重現 round-robin benchmark。 |
 | 2026-08-14 | 修正 Browser smoke 1024×576 短桌面手牌 hover／focus 遮擋戰鬥卡問題，新增明確 hover 回歸；拆分 `game-demo` chunk，主入口 gzip 由 183.59 KiB 降至 161.73 KiB，bundle gate 與完整 Browser smoke 通過。 |
 | 2026-08-14 | 修正 BS5-073「Cyborg Cookie」官方資料遺漏的 FLIP 抽牌效果；同步修正 FLIP 轉接、牌組編輯器篩選與 16 張上限統計，並以本機 Browser 驗證卡圖、詳情文案與加入牌組流程；完整 Vitest 187 檔／3,007 項、lint、typecheck、build 通過。 |
 | 2026-08-14 | 以本機 in-app Browser Use 完成 BS5-001～111、BS6-001～107 共 436 條正向／負向逐卡路徑；補上 BS6-025、032、045、057、081 的合法候選 fixture，完整 Vitest 187 檔／3,004 項、lint、build 通過。 |

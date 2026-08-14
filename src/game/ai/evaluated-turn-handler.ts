@@ -1,4 +1,4 @@
-import { applyGameCommand } from '../commands'
+import { applyGameCommand, getPendingDecision } from '../commands'
 import type { AttackCommand, PlayerActionCommand } from '../commands'
 import { beginAttack, resolveBattleAutomatically } from '../battle'
 import { getEffectiveAttack } from '../effects'
@@ -306,6 +306,13 @@ interface TwoPlyCandidate {
   score: number
 }
 
+const isDecisiveTwoPlyCandidate = (
+  candidate: TwoPlyCandidate,
+  playerId: PlayerId,
+): boolean =>
+  candidate.decision.state.result?.winnerId === playerId ||
+  candidate.score >= 100000
+
 /**
  * 目標能量數：低於此值時，AI 應優先鋪能量以維持運作。
  */
@@ -333,6 +340,32 @@ const cookieSupportPenalty = (
   if (placed?.type !== 'cookie') return 0
   const currentEnergy = state.players[playerId].supportArea.length
   return currentEnergy >= RAMP_ENERGY_TARGET ? 12 : 0
+}
+
+/**
+ * Lv.4 的 beam 只展開自己的回合，若沒有額外節奏修正，容易把「保留
+ * 支援卡與未休息攻擊者」高估成優勢，直接結束主階段而放棄已可支付的
+ * 攻擊。只在主階段仍存在合法 attack command 時處罰 advance-phase；
+ * 攻擊者都已休息、能量不足或沒有對手目標時不產生懲罰。
+ */
+const unspentAttackOpportunityPenalty = (
+  state: GameState,
+  playerId: PlayerId,
+  command: PlayerActionCommand,
+): number => {
+  if (command.kind !== 'advance-phase' || state.phase !== 'main') return 0
+
+  const attacks = getLegalTurnCommands(state, playerId).filter(
+    (candidate): candidate is AttackCommand => candidate.kind === 'attack',
+  )
+  if (attacks.length === 0) return 0
+
+  const bestDamage = Math.max(
+    ...attacks.map((attack) =>
+      getEffectiveAttack(state, attack.attackerInstanceId),
+    ),
+  )
+  return -(50 + Math.min(bestDamage, 3) * 10)
 }
 
 const commandCandidate = (
@@ -574,6 +607,7 @@ const beamStepBonus = (
   bonus += responseRiskPenalty(preState, postState, playerId, command)
   bonus += handManagementBonus(preState, postState, playerId, command.kind)
   bonus -= cookieSupportPenalty(preState, playerId, command)
+  bonus += unspentAttackOpportunityPenalty(preState, playerId, command)
   return bonus
 }
 
@@ -648,6 +682,44 @@ const beamSearchBestFirstCommand = (
   // best.firstCommand 其實就是 advance-phase；但如果 beams 只有初始
   // entry（no expansion），firstCommand 為 null，退回 fallback。
   return { firstCommand: best.firstCommand, beamScore: bestScore }
+}
+
+/**
+ * 技能與道具不在 getLegalTurnCommands 的列舉中，舊版 Lv.4 因此只會
+ * 比較它們結算當下的場面，低估「先使用能力、再攻擊／部署」的回合價值。
+ * 若能力已完整結算且控制權仍在我方，沿用同一個 beam 估算其後兩步；
+ * 有 pending 決策時則維持單步評分，交由 dispatcher 正常處理。
+ */
+const scoreAbilityWithContinuation = (
+  state: GameState,
+  decision: AiDecision,
+  playerId: PlayerId,
+  beamWidth: number,
+  maxDepth: number,
+): number => {
+  const effectBonus = skillEffectBonus(state, decision.state, playerId)
+  const immediateScore = stateScore(decision.state, playerId) + effectBonus
+  const postState = decision.state
+
+  if (
+    postState.status !== 'playing' ||
+    postState.activePlayerId !== playerId ||
+    postState.phase !== 'main' ||
+    getPendingDecision(postState)
+  ) {
+    return immediateScore
+  }
+
+  const continuation = beamSearchBestFirstCommand(
+    postState,
+    playerId,
+    beamWidth,
+    Math.max(1, maxDepth - 1),
+  )
+  return Math.max(
+    immediateScore,
+    continuation.beamScore + effectBonus,
+  )
 }
 
 /**
@@ -858,6 +930,9 @@ const twoPlyCandidateScore = (
     // 支援放置懲罰（餅乾放支援區浪費；能量不足時不懲罰以利鋪能量）
     score -= cookieSupportPenalty(state, playerId, command)
 
+    // 已可攻擊卻直接結束主階段，會放棄當回合的公開傷害機會。
+    score += unspentAttackOpportunityPenalty(state, playerId, command)
+
     return score
   } catch {
     return -999999
@@ -917,23 +992,36 @@ export const handleAiTwoPlyTurnState = (
     })
   }
 
-  // fallback：beam 若找不到有效動作，退一步用單指令枚舉
-  if (candidates.length === 0) {
-    for (const command of getLegalTurnCommands(state, playerId)) {
-      const score = twoPlyCandidateScore(state, playerId, command)
-      try {
-        candidates.push({
-          decision: {
-            state: applyChosenTurnCommand(state, command),
-            action: commandActionTypes[command.kind],
-            description: describeCommand(state, playerId, command),
-          },
-          score,
-        })
-      } catch {
-        // skip invalid command
-      }
+  // 保留所有單步候選作為 beam 的安全比較。beam 寬度有限，若提早剪枝，
+  // 不能因此漏掉 Lv.3 會選到的即時高價值行動；twoPlyCandidateScore 對
+  // 攻擊會完成整場戰鬥結算，也能和 beam 的終局／風險分數直接比較。
+  for (const command of getLegalTurnCommands(state, playerId)) {
+    const score = twoPlyCandidateScore(state, playerId, command)
+    try {
+      candidates.push({
+        decision: {
+          state: applyChosenTurnCommand(state, command),
+          action: commandActionTypes[command.kind],
+          description: describeCommand(state, playerId, command),
+        },
+        score,
+      })
+    } catch {
+      // skip invalid command
     }
+  }
+
+  // Lv.3 的即時評分已經過較長時間的牌組回歸驗證；beam 的累積分數
+  // 則是用於發現「本回合可直接取勝」的路線，兩者不能直接比較。
+  // 因此將 Lv.3 視為穩定基線，只讓能明確導向勝局的前瞻路線覆蓋它，
+  // 避免 Lv.4 因預測深度有限而無故放棄既有攻擊機會。
+  const previousLevel = strategy.currentLevel
+  strategy.currentLevel = 3
+  let baseline: AiDecision
+  try {
+    baseline = handleAiEvaluatedTurnState(state, playerId, strategy)
+  } finally {
+    strategy.currentLevel = previousLevel
   }
 
   if (state.phase === 'main') {
@@ -941,11 +1029,13 @@ export const handleAiTwoPlyTurnState = (
       try {
         const decision = strategy.resolveSkill(state, playerId, source, 'activate')
         if (decision) {
-          const view = createPlayerView(decision.state, playerId)
-          const score =
-            evaluatePlayerView(view) +
-            lv4RiskBonus(view, playerId) +
-            skillEffectBonus(state, decision.state, playerId)
+          const score = scoreAbilityWithContinuation(
+            state,
+            decision,
+            playerId,
+            beamWidth,
+            maxBeamDepth,
+          )
           candidates.push({ decision, score })
         }
       } catch {
@@ -956,11 +1046,13 @@ export const handleAiTwoPlyTurnState = (
       try {
         const decision = strategy.resolveCardAbility(state, playerId, card)
         if (decision) {
-          const view = createPlayerView(decision.state, playerId)
-          const score =
-            evaluatePlayerView(view) +
-            lv4RiskBonus(view, playerId) +
-            skillEffectBonus(state, decision.state, playerId)
+          const score = scoreAbilityWithContinuation(
+            state,
+            decision,
+            playerId,
+            beamWidth,
+            maxBeamDepth,
+          )
           candidates.push({ decision, score })
         }
       } catch {
@@ -983,8 +1075,22 @@ export const handleAiTwoPlyTurnState = (
   }
 
   // Deterministic tie-break：分數相同時選先出現的（穩定排序）
-  let best = candidates[0]
-  for (const candidate of candidates) {
+  const decisiveCandidates = candidates.filter((candidate) =>
+    isDecisiveTwoPlyCandidate(candidate, playerId),
+  )
+  if (decisiveCandidates.length === 0) {
+    return {
+      ...baseline,
+      reason: {
+        level: 4,
+        consideredCommands: candidates.length,
+        chosenCommandKind: baseline.action,
+      },
+    }
+  }
+
+  let best = decisiveCandidates[0]
+  for (const candidate of decisiveCandidates) {
     if (candidate.score > best.score) best = candidate
   }
 

@@ -1,21 +1,25 @@
 {
-  "name": "BS6+5 Blue Competitive Environment",
-  "format": "standard",
+  "name": "第六彈局長藍軸",
   "entries": [
-    { "cardNumber": "BS5-067", "count": 4 },
-    { "cardNumber": "BS5-070", "count": 4 },
-    { "cardNumber": "BS5-071", "count": 4 },
-    { "cardNumber": "BS5-074", "count": 4 },
-    { "cardNumber": "BS5-075", "count": 4 },
-    { "cardNumber": "BS5-076", "count": 4 },
-    { "cardNumber": "BS5-078", "count": 4 },
-    { "cardNumber": "BS5-081", "count": 4 },
-    { "cardNumber": "BS6-069", "count": 4 },
-    { "cardNumber": "BS5-084", "count": 4 },
-    { "cardNumber": "BS5-085", "count": 4 },
-    { "cardNumber": "BS5-082", "count": 4 },
-    { "cardNumber": "BS5-086", "count": 4 },
-    { "cardNumber": "BS5-087", "count": 4 },
-    { "cardNumber": "BS5-088", "count": 4 }
-  ]
+    { "cardNumber": "BS2-045", "count": 2 },
+    { "cardNumber": "BS4-077", "count": 4 },
+    { "cardNumber": "BS6-065", "count": 4 },
+    { "cardNumber": "BS5-080", "count": 4 },
+    { "cardNumber": "BS6-081", "count": 1 },
+    { "cardNumber": "BS4-081", "count": 2 },
+    { "cardNumber": "BS6-073", "count": 4 },
+    { "cardNumber": "BS6-074", "count": 3 },
+    { "cardNumber": "BS6-079", "count": 4 },
+    { "cardNumber": "BS6-084", "count": 2 },
+    { "cardNumber": "ST4-016", "count": 3 },
+    { "cardNumber": "ST4-020", "count": 1 },
+    { "cardNumber": "BS6-085@1", "count": 4 },
+    { "cardNumber": "BS3-093", "count": 4 },
+    { "cardNumber": "BS6-086", "count": 2 },
+    { "cardNumber": "BS4-068", "count": 4 },
+    { "cardNumber": "BS3-085", "count": 4 },
+    { "cardNumber": "ST4-009", "count": 4 },
+    { "cardNumber": "BS5-073", "count": 4 }
+  ],
+  "format": "standard"
 }
