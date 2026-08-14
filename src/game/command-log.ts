@@ -1,4 +1,5 @@
 import { getOpponentId } from './helpers'
+import { getForcedAttackTargetId } from './battle'
 import {
   getOpponentBattleMovementPreventer,
   isProtectedBySoulJamResolution,
@@ -42,6 +43,24 @@ const findCard = (state: GameState, instanceId: string): GameCard | undefined =>
 
 const findCardName = (state: GameState, instanceId: string): string =>
   findCard(state, instanceId)?.name ?? '未知卡牌'
+
+const describeForcedAttackRestriction = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+): LogStepDetail | undefined => {
+  const forcedTargetId = getForcedAttackTargetId(state, attackerPlayerId)
+  const forcedTarget = forcedTargetId
+    ? findCard(state, forcedTargetId)
+    : undefined
+  if (!forcedTarget) return undefined
+
+  const conditionText =
+    forcedTarget.id === 'BS4-024' ? '（場上有黃色 LV.3 餅乾）' : ''
+  return {
+    text: `目標限制：因「${forcedTarget.name}」的被動效果${conditionText}，只能攻擊「${forcedTarget.name}」`,
+    cards: [forcedTarget],
+  }
+}
 
 const cardTypeLabels: Record<GameCard['type'], string> = {
   cookie: '餅乾',
@@ -338,8 +357,14 @@ export const describeCommand = (
 
   switch (command.kind) {
     case 'attack':
-    case 'declare-attack':
-      return `${actor} 使用「${findCardName(state, command.attackerInstanceId)}」攻擊「${findCardName(state, command.targetInstanceId)}」`
+    case 'declare-attack': {
+      const restriction = describeForcedAttackRestriction(
+        state,
+        command.playerId,
+      )
+      const restrictionText = restriction ? `（${restriction.text}）` : ''
+      return `${actor} 使用「${findCardName(state, command.attackerInstanceId)}」攻擊「${findCardName(state, command.targetInstanceId)}」${restrictionText}`
+    }
     case 'deploy-cookie':
       return `${actor} 部署了「${findCardName(state, command.instanceId)}」`
     case 'place-support':
@@ -838,7 +863,8 @@ export const describeCommandSteps = (
       )
       return blockedStep ? [blockedStep] : undefined
     }
-    case 'attack': {
+    case 'attack':
+    case 'declare-attack': {
       const opponentId = getOpponentId(command.playerId)
       const targetBefore = previous.players[opponentId].battleArea.find(
         (cookie) => cookie.card.instanceId === command.targetInstanceId,
@@ -864,6 +890,13 @@ export const describeCommandSteps = (
             (card): card is GameCard => card !== undefined,
           ),
         },
+        ...(() => {
+          const restriction = describeForcedAttackRestriction(
+            state,
+            command.playerId,
+          )
+          return restriction ? [restriction] : []
+        })(),
         { text: `自動結算戰鬥，${outcome}`, cards: targetCard ? [targetCard] : undefined },
       ]
     }

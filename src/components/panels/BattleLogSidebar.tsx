@@ -53,7 +53,10 @@ const stepLinesForEntry = (entry: CommandLogEntry): LogStepDetail[] =>
 
 const stepLinesForGroup = (group: LogGroup): LogStepDetail[] =>
   group.steps.length > 0
-    ? group.steps.flatMap(stepLinesForEntry)
+    ? [
+        ...(group.header.steps ?? []),
+        ...group.steps.flatMap(stepLinesForEntry),
+      ]
     : (group.header.steps ?? [])
 
 export function BattleLogSidebar({ entries, playerNames }: BattleLogSidebarProps) {

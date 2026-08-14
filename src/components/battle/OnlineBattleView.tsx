@@ -458,6 +458,7 @@ export function OnlineBattleView({
     faintAnimIds: match.faintAnimIds,
     drawAnimIds: match.drawAnimIds,
     onAttackTarget: match.handleAttackTarget,
+    onAttackTargetUnavailable: match.setMessage,
     onEffectTarget: pending.toggleTarget,
     openResourceKind:
       dialogs.resourcePopover?.playerId === opponentId

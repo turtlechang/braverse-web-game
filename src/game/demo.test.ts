@@ -38,6 +38,7 @@ import {
   createP084ItemConditionDemoState,
   createP147SpecialPlayDemoState,
   createBs4ConditionDemoState,
+  createBs4024TargetRestrictionDemoState,
   createReplacementChoiceDemoState,
   createSt5010OnPlayDemoState,
   createSupportToTrashSkillDemoState,
@@ -243,6 +244,15 @@ describe('parseTestStateConfig', () => {
     })
     expect(
       parseTestStateConfig('?test-state=bs6-condition:BS6-034:met', 'localhost'),
+    ).toBeNull()
+  })
+
+  it('parses the BS4-024 target-restriction browser route only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs4-024-target-restriction', 'localhost'),
+    ).toEqual({ kind: 'bs4-024-target-restriction' })
+    expect(
+      parseTestStateConfig('?test-state=bs4-024-target-restriction', 'example.com'),
     ).toBeNull()
   })
 
@@ -932,6 +942,19 @@ const collectConditionalEffects = (effects: CardEffect[]): CardEffect[] =>
   })
 
 describe('BS4 condition fixtures', () => {
+  it('creates a real attack target restriction fixture for BS4-024', () => {
+    const state = createBs4024TargetRestrictionDemoState()
+    const opponentBattleArea = state.players['player-two'].battleArea
+
+    expect(state.activePlayerId).toBe('player-one')
+    expect(opponentBattleArea[0]?.card.id).toBe('BS4-024')
+    expect(opponentBattleArea[1]?.card.level).toBe(3)
+    expect(opponentBattleArea[1]?.card.energyColor).toBe('yellow')
+    expect(getForcedAttackTargetId(state, 'player-one')).toBe(
+      opponentBattleArea[0]!.card.instanceId,
+    )
+  })
+
   it.each(BS4_CONDITION_CARD_NUMBERS)(
     '%s has explicit met and unmet test-state routes',
     (cardNumber) => {

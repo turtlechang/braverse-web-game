@@ -326,6 +326,7 @@ function App() {
     faintAnimIds: match.faintAnimIds,
     drawAnimIds: match.drawAnimIds,
     onAttackTarget: match.handleAttackTarget,
+    onAttackTargetUnavailable: match.setMessage,
     onEffectTarget: pending.toggleEffectTarget,
     onInspectCard: dialogs.openCardDetail,
     onInspectDiscard: dialogs.openDiscardPile,

@@ -61,6 +61,7 @@ import {
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
   createBs4ConditionDemoState,
+  createBs4024TargetRestrictionDemoState,
   createBs3SilverbellConditionDemoState,
   createBs5CroissantEndPhaseDemoState,
   createBs5FlipDemoState,
@@ -220,6 +221,9 @@ export function useMatchController(params: {
         testStateConfig.cardNumber,
         testStateConfig.conditionMet,
       )
+    }
+    if (testStateConfig?.kind === 'bs4-024-target-restriction') {
+      return createBs4024TargetRestrictionDemoState()
     }
     if (testStateConfig?.kind === 'bs5-flip') {
       return createBs5FlipDemoState(

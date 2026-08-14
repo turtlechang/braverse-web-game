@@ -224,6 +224,70 @@ describe('BattleRow desktop interactions', () => {
     expect(markup).toContain('card-face  is-selected')
   })
 
+  it('explains the BS4-024 forced attack target while choosing an attack target', () => {
+    const game = createBattleState()
+    const defenderEntry = game.players['player-one'].battleArea[0]
+    const kumiho = {
+      ...defenderEntry.card,
+      id: 'BS4-024',
+      instanceId: 'kumiho',
+      name: 'Kumiho Cookie',
+      level: 1,
+      energyColor: 'yellow' as const,
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: "If there is a Yellow LV.3 Cookie in your battle area, your opponent's Cookies can only attack this Cookie.",
+        effects: [
+          {
+            kind: 'redirect-attack' as const,
+            target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true },
+            condition: {
+              kind: 'battle-area-has-color' as const,
+              side: 'self' as const,
+              color: 'yellow' as const,
+              level: 3,
+            },
+          },
+        ],
+      },
+    }
+    const yellowLevelThree = {
+      ...defenderEntry.card,
+      id: 'yellow-lv3',
+      instanceId: 'yellow-lv3',
+      name: 'Yellow Level 3 Cookie',
+      level: 3,
+      energyColor: 'yellow' as const,
+    }
+    game.players['player-one'].battleArea = [
+      { ...defenderEntry, card: kumiho },
+      { ...defenderEntry, card: yellowLevelThree, battleEntryId: 'yellow-lv3:battle:2' },
+    ]
+
+    const markup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'top',
+          selectedAttackerId: 'attacker',
+          attackTargetingActive: true,
+          attackPaymentValid: true,
+        })}
+      />,
+    )
+
+    expect(markup).toContain(
+      '目標限制：因「Kumiho Cookie」的被動效果（場上有黃色 LV.3 餅乾），對手只能攻擊「Kumiho Cookie」。',
+    )
+    expect(markup).toContain('is-attack-target-restricted')
+    expect(markup).toContain('Yellow Level 3 Cookie：目標限制')
+  })
+
   it('keeps legal hand actions hidden until the card is selected', () => {
     const markup = renderToStaticMarkup(
       <BattleRow {...createProps()} />,

@@ -1987,9 +1987,10 @@ export function CardDetailModal({
     card.type === 'cookie' && Boolean(card.effectText)
   const ruleSectionCount =
     (card.effectText ? 1 : 0) + (card.type === 'cookie' ? 1 : 0)
+  const isFlipCard = Boolean(card.flip) || card.officialType === 'flip'
   const effectHeading = card.skill
     ? '技能'
-    : card.officialType === 'flip'
+    : isFlipCard
       ? 'FLIP'
       : card.type === 'trap'
         ? '陷阱效果'

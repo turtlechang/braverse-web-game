@@ -127,6 +127,35 @@ const groupedMemberWithSteps: CommandLogEntry[] = [
   },
 ]
 
+const groupedHeaderWithSteps: CommandLogEntry[] = [
+  {
+    id: 8,
+    turnNumber: 6,
+    phase: 'main',
+    playerId: 'player-one',
+    commandKind: 'attack',
+    payload: {},
+    summary: 'header with restriction',
+    category: 'attack',
+    groupId: 8,
+    steps: [{
+      text: 'target restriction',
+      cards: [item('restriction-card')],
+    }],
+  },
+  {
+    id: 9,
+    turnNumber: 6,
+    phase: 'main',
+    playerId: 'player-two',
+    commandKind: 'resolve-battle',
+    payload: {},
+    summary: 'battle resolved',
+    category: 'attack',
+    groupId: 8,
+  },
+]
+
 describe('BattleLogSidebar', () => {
   it('groups entries sharing a groupId under one collapsed row, hiding steps until expanded', async () => {
     const { container, root } = render()
@@ -164,6 +193,18 @@ describe('BattleLogSidebar', () => {
     expect(container.querySelector('.battle-log-steps li')?.textContent).not.toContain(
       'fallback summary',
     )
+  })
+
+  it('keeps header steps when later entries share the same group', async () => {
+    const { container, root } = render()
+    await act(() => root.render(<BattleLogSidebar entries={groupedHeaderWithSteps} />))
+    await click(container.querySelector('[data-testid="battle-log-toggle"]'))
+    await click(container.querySelector('.battle-log-entry'))
+
+    const steps = container.querySelectorAll('.battle-log-steps li')
+    expect(steps).toHaveLength(2)
+    expect(steps[0].textContent).toContain('target restriction')
+    expect(container.querySelectorAll('.battle-log-step-card-face')).toHaveLength(1)
   })
 
   it('expands a single-entry group using its stored synthesized steps', async () => {

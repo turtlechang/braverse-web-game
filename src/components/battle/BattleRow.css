@@ -77,6 +77,31 @@
   border-color: rgba(132, 220, 255, 0.3);
 }
 
+.attack-target-restriction-hint {
+  position: absolute;
+  z-index: 6;
+  top: 9px;
+  left: 50%;
+  max-width: min(420px, calc(100% - 24px));
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 218, 102, 0.72);
+  border-radius: 999px;
+  background: rgba(47, 27, 4, 0.9);
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.28);
+  color: #ffe9a4;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.combat-card-wrap.is-attack-target-restricted {
+  opacity: 0.62;
+  filter: saturate(0.72);
+}
+
 .support-zone {
   z-index: 1;
 }

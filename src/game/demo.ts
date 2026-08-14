@@ -208,6 +208,7 @@ export const parseTestStateConfig = (
       cardNumber: Bs4ConditionCardNumber
       conditionMet: boolean
     }
+  | { kind: 'bs4-024-target-restriction' }
   | { kind: 'bs5-flip'; cardNumber: Bs5FlipCardNumber; activate: boolean }
   | {
       kind: 'bs5-faint'
@@ -416,6 +417,9 @@ export const parseTestStateConfig = (
         conditionMet: result === 'met',
       }
     }
+  }
+  if (testState === 'bs4-024-target-restriction') {
+    return { kind: 'bs4-024-target-restriction' }
   }
   if (testState?.startsWith('bs5-flip:')) {
     const [, cardNumber, result] = testState.split(':')
@@ -3414,6 +3418,50 @@ export const createP147SpecialPlayDemoState = (): GameState => {
         hand: Array.from({ length: 4 }, (_, index) =>
           testSupportCard(`p147-opponent-hand-${index + 1}`, 'purple'),
         ),
+      },
+    },
+  }
+}
+
+/**
+ * Focused browser fixture for BS4-024's redirect-attack rule.
+ * The player can attack while the opponent has Kumiho Cookie plus a Yellow
+ * LV.3 Cookie, so the target restriction is observable through the real UI.
+ */
+export const createBs4024TargetRestrictionDemoState = (): GameState => {
+  const state = createCardCheckDemoState('BS4-024')
+  const player = state.players['player-one']
+  const opponent = state.players['player-two']
+  const kumiho = player.battleArea.find(
+    (entry) => entry.card.id === 'BS4-024',
+  )
+  const attacker = player.battleArea.find(
+    (entry) => entry.card.id !== 'BS4-024',
+  )
+  const yellowLevel3 = opponent.battleArea.find(
+    (entry) => entry.card.energyColor === 'yellow' && entry.card.level === 3,
+  )
+
+  if (!kumiho || !attacker || !yellowLevel3) {
+    throw new Error('BS4-024 target-restriction fixture is incomplete')
+  }
+
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    pendingBattle: null,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        battleArea: [attacker],
+      },
+      'player-two': {
+        ...opponent,
+        battleArea: [kumiho, yellowLevel3],
+        hand: [],
+        supportArea: [],
       },
     },
   }

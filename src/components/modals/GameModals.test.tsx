@@ -941,6 +941,37 @@ describe('CardDetailModal', () => {
     expect(markup).toContain('gains +1 HP')
   })
 
+  it('labels a COOKIE record with a runtime FlipAbility as FLIP (BS5-073 regression)', () => {
+    const markup = renderToStaticMarkup(
+      <CardDetailModal
+        card={{
+          id: 'BS5-073',
+          instanceId: 'test-BS5-073',
+          name: 'Cyborg Cookie',
+          type: 'cookie',
+          officialType: 'cookie',
+          level: 2,
+          hp: 2,
+          attack: 2,
+          attackCost: 2,
+          attackEnergyCost: { blue: 2 },
+          effectText: 'Draw up to 1 card from your deck.',
+          flip: {
+            text: 'Draw up to 1 card from your deck.',
+            cost: { energy: {} },
+            effects: [{ kind: 'draw-up-to', max: 1 }],
+          },
+          attackText: '<{B}{B}> High Voltage {da} 2',
+        }}
+        onClose={() => undefined}
+      />,
+    )
+
+    expect(markup).toContain('<strong>FLIP</strong>')
+    expect(markup).not.toContain('<strong>卡牌效果</strong>')
+    expect(markup).toContain('Draw up to 1 card from your deck.')
+  })
+
   it('shows ST2-021 Pretzel Snare official effect text', () => {
     const markup = renderToStaticMarkup(
       <CardDetailModal
