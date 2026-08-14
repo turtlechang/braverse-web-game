@@ -44,6 +44,7 @@ import {
   createBreakToTrashDemoState,
   createBs2015CostDepartureDemoState,
   createCardCheckDemoState,
+  createBs6079OnPlayDemoState,
   createPConditionDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
@@ -189,6 +190,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-negative') {
       return createCardNegativeDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'bs6-079-on-play') {
+      return createBs6079OnPlayDemoState(testStateConfig.blocked)
     }
     if (testStateConfig?.kind === 'bs5-060-end-phase') {
       return createBs5CroissantEndPhaseDemoState(testStateConfig.supportState)

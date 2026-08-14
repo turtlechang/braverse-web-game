@@ -13,6 +13,7 @@ import {
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
   getTrashBattleCookieCostCandidates,
+  getBattleCookieToHandCostCandidates,
   isEffectConditionMet,
   isEffectUntargeted,
   requiresEffectCardSelection,
@@ -46,6 +47,7 @@ type AbilityCostDraft = {
   selectedDiscardHandIds: string[]
   selectedHpToTrashTargetIds: string[]
   selectedTrashBattleCookieIds: string[]
+  selectedBattleToHandIds: string[]
   /** 玩家為「選擇一項」挑過的模式，依序累積後隨 begin-* 指令送出。 */
   chooseOneModes: number[]
 }
@@ -373,6 +375,15 @@ export function useOnlinePendingEffect(params: {
         abilityCostDraft.card.instanceId,
       ).map((cookie) => cookie.card)
     : []
+  const draftBattleCookieToHandCost =
+    abilityCostDraft?.ability.cost.battleCookieToHand?.count ?? 0
+  const draftBattleCookieToHandCandidates = abilityCostDraft
+    ? getBattleCookieToHandCostCandidates(
+        abilityCostDraft.ability.cost,
+        game.players[viewerPlayerId].battleArea,
+        abilityCostDraft.card.instanceId,
+      ).map((cookie) => cookie.card)
+    : []
 
   const toggleDraftDiscardHand = (instanceId: string) => {
     setAbilityCostDraft((draft) => {
@@ -473,6 +484,34 @@ export function useOnlinePendingEffect(params: {
         return draft
       }
       return { ...draft, selectedTrashBattleCookieIds: [...selected, instanceId] }
+    })
+  }
+
+  const toggleDraftBattleCookieToHand = (instanceId: string) => {
+    setAbilityCostDraft((draft) => {
+      if (!draft || !draft.ability.cost.battleCookieToHand) return draft
+      const candidateIds = new Set(
+        getBattleCookieToHandCostCandidates(
+          draft.ability.cost,
+          game.players[viewerPlayerId].battleArea,
+          draft.card.instanceId,
+        ).map((cookie) => cookie.card.instanceId),
+      )
+      if (!candidateIds.has(instanceId)) return draft
+      const selected = draft.selectedBattleToHandIds
+      if (selected.includes(instanceId)) {
+        return {
+          ...draft,
+          selectedBattleToHandIds: selected.filter((id) => id !== instanceId),
+        }
+      }
+      if (selected.length >= draft.ability.cost.battleCookieToHand.count) {
+        return draft
+      }
+      return {
+        ...draft,
+        selectedBattleToHandIds: [...selected, instanceId],
+      }
     })
   }
 
@@ -634,6 +673,8 @@ export function useOnlinePendingEffect(params: {
           (cost.hpToTrash ? 1 : 0) ||
         abilityCostDraft.selectedTrashBattleCookieIds.length !==
           (cost.trashBattleCookie?.count ?? 0) ||
+        abilityCostDraft.selectedBattleToHandIds.length !==
+          (cost.battleCookieToHand?.count ?? 0) ||
         !restSupportAndDamageSelectionValid ||
         (requiresTargetSelection &&
           (selectedTargetIds.length < targetMin ||
@@ -649,6 +690,9 @@ export function useOnlinePendingEffect(params: {
           ? { hpToTrashTargetIds: abilityCostDraft.selectedHpToTrashTargetIds }
           : {}),
         trashBattleCookieIds: abilityCostDraft.selectedTrashBattleCookieIds,
+        ...(cost.battleCookieToHand
+          ? { battleToHandIds: abilityCostDraft.selectedBattleToHandIds }
+          : {}),
         targetIds: selectedTargetIds,
         // 沒有「選擇一項」時就不要多送一個空陣列上線。
         ...(abilityCostDraft.chooseOneModes.length > 0
@@ -803,7 +847,8 @@ export function useOnlinePendingEffect(params: {
       Boolean(cost.discardAllHand) ||
       Boolean(cost.discardHandAtLeast) ||
       Boolean(cost.hpToTrash) ||
-      (cost.trashBattleCookie?.count ?? 0) > 0
+      (cost.trashBattleCookie?.count ?? 0) > 0 ||
+      (cost.battleCookieToHand?.count ?? 0) > 0
     )
   }
 
@@ -826,6 +871,7 @@ export function useOnlinePendingEffect(params: {
             selectedDiscardHandIds: [],
             selectedHpToTrashTargetIds: [],
             selectedTrashBattleCookieIds: [],
+            selectedBattleToHandIds: [],
             chooseOneModes: [],
           },
     )
@@ -1014,6 +1060,7 @@ export function useOnlinePendingEffect(params: {
             abilityCostDraft.selectedHpToTrashTargetIds,
           selectedTrashBattleCookieIds:
             abilityCostDraft.selectedTrashBattleCookieIds,
+          selectedBattleToHandIds: abilityCostDraft.selectedBattleToHandIds,
           chooseOneModes: abilityCostDraft.chooseOneModes,
           skillActivated: false,
           optional: false,
@@ -1072,6 +1119,7 @@ export function useOnlinePendingEffect(params: {
           selectedDiscardHandIds: [],
           selectedHpToTrashTargetIds: [],
           selectedTrashBattleCookieIds: [],
+          selectedBattleToHandIds: [],
           skillActivated: true,
           optional: false,
           triggerLabel: attackEffectActive
@@ -1160,6 +1208,12 @@ export function useOnlinePendingEffect(params: {
     ),
     draftTrashBattleCookieCost,
     toggleDraftTrashBattleCookie,
+    draftBattleCookieToHandCandidates,
+    selectedDraftBattleToHandIds: new Set(
+      abilityCostDraft?.selectedBattleToHandIds ?? [],
+    ),
+    draftBattleCookieToHandCost,
+    toggleDraftBattleCookieToHand,
     abilityCostDraft,
     cancelAbilityCostDraft: () => setAbilityCostDraft(null),
     // 與本地 usePendingEffect 對齊的欄位名,讓 EffectPanel/BattleResponseModals/

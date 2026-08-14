@@ -851,6 +851,90 @@ describe('activate skill with discardHand cost', () => {
     ).toBe(true)
   })
 
+  it('canActivateCookieSkill rejects BS6-079 when Timekeeper blocks Cookie movement', () => {
+    const skill: CardSkill = {
+      trigger: 'on-play',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: {}, discardHand: 0 },
+      text: 'Place 1 blue LV.2 or lower Cookie from your battle area on the bottom of your deck.',
+      effects: [
+        {
+          kind: 'field-to-deck-bottom',
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            maxLevel: 2,
+            energyColor: 'blue',
+          },
+        },
+      ],
+    }
+    let state = withSkill(createDemoGame(), 'player-one', skill)
+    state = advancePhase(state)
+    state = advancePhase(state)
+    const source = state.players['player-one'].battleArea[0]
+    const target: GameCard = {
+      id: 'blue-lv2-target',
+      instanceId: 'blue-lv2-target',
+      name: 'Blue LV.2 Target',
+      type: 'cookie',
+      level: 2,
+      hp: 3,
+      attack: 1,
+      attackCost: 1,
+      energyColor: 'blue',
+    }
+    const timekeeper: GameCard = {
+      id: 'BS6-010',
+      instanceId: 'BS6-010-instance',
+      name: 'Timekeeper Cookie',
+      type: 'cookie',
+      level: 2,
+      hp: 4,
+      attack: 2,
+      attackCost: 2,
+      energyColor: 'red',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' }],
+      },
+    }
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            source,
+            { card: target, hpCards: [], rested: false },
+          ],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [{ card: timekeeper, hpCards: [], rested: false }],
+        },
+      },
+    }
+
+    expect(
+      canActivateCookieSkill(
+        state,
+        'player-one',
+        source.card.instanceId,
+        'on-play',
+      ),
+    ).toBe(false)
+  })
+
   it('canActivateCookieSkill respects hand-count-at-most conditions', () => {
     const skill: CardSkill = {
       trigger: 'activate',

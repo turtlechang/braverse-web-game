@@ -355,3 +355,67 @@ describe('AI prevent-effect-damage target selection', () => {
     expect(selections[0].targetIds).not.toContain('self-other')
   })
 })
+
+describe('AI hand-count item costs', () => {
+  it('discards enough cards before resolving BS6-084 hand-count damage', () => {
+    const item: GameCard = {
+      id: 'BS6-084',
+      instanceId: 'bs6-084-ai',
+      name: 'Time Manipulator',
+      type: 'item',
+      item: {
+        cost: {
+          energy: { blue: 1 },
+          discardHand: 1,
+          discardHandAtLeast: true,
+        },
+        text: 'Discard 1 card or more. If there are 5 cards or less in your hand, deal 1 damage.',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'hand-count-at-most', count: 5 },
+          },
+        ],
+      },
+    }
+    const source = createBattleCookie('ai-source', 1, 2)
+    const opponent = createBattleCookie('ai-opponent', 1, 2)
+    const fillerCards = Array.from({ length: 7 }, (_, index) => ({
+      id: `bs6-084-ai-filler-${index}`,
+      instanceId: `bs6-084-ai-filler-${index}`,
+      name: `BS6-084 AI filler ${index}`,
+      type: 'item' as const,
+    }))
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [item, ...fillerCards],
+      battleArea: [source],
+      supportArea: [
+        {
+          card: {
+            id: 'blue-support',
+            instanceId: 'blue-support',
+            name: 'blue-support',
+            type: 'item',
+            energyColor: 'blue',
+          },
+          rested: false,
+        },
+      ],
+    })
+    state.players['player-one'].battleArea = [opponent]
+
+    const result = takeAiStep(state, 'player-two')
+
+    expect(result.action).toBe('play-item')
+    expect(result.state.players['player-two'].hand).toHaveLength(5)
+    expect(result.state.players['player-two'].discardPile).toEqual(
+      expect.arrayContaining(
+        fillerCards.slice(0, 2).map((card) => expect.objectContaining({ instanceId: card.instanceId })),
+      ),
+    )
+    expect(result.state.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+  })
+})

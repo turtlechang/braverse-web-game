@@ -192,6 +192,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
   | { kind: 'card-negative'; cardNumber: string }
+  | { kind: 'bs6-079-on-play'; blocked: boolean }
   | { kind: 'bs5-060-end-phase'; supportState: 'rested' | 'active' }
   | {
       kind: 'p-condition'
@@ -367,6 +368,12 @@ export const parseTestStateConfig = (
     if (cardNumber.length > 0) {
       return { kind: 'card-negative', cardNumber }
     }
+  }
+  if (testState === 'bs6-079-on-play-clear') {
+    return { kind: 'bs6-079-on-play', blocked: false }
+  }
+  if (testState === 'bs6-079-on-play-blocked') {
+    return { kind: 'bs6-079-on-play', blocked: true }
   }
   if (testState?.startsWith('bs5-060-end-phase:')) {
     const supportState = testState.slice('bs5-060-end-phase:'.length).trim()
@@ -3309,6 +3316,50 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
       rested: true,
     })),
   })
+}
+
+/**
+ * Local Browser A/B fixture for BS6-079's OnPlay movement target.
+ * `blocked` uses the real BS6-010 card record so the UI can prove both the
+ * valid-target path and the Timekeeper movement-protection path.
+ */
+export const createBs6079OnPlayDemoState = (blocked: boolean): GameState => {
+  const state = createCardCheckDemoState('BS6-079')
+  const source = state.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS6-079',
+  )
+  if (!source) throw new Error('BS6-079 Browser fixture source is missing')
+
+  let blocker: CookieCard | undefined
+  if (blocked) {
+    const blockerCard = getCardCheckCard('BS6-010')
+    if (blockerCard.type !== 'cookie') {
+      throw new Error('BS6-010 Browser fixture blocker is not a Cookie')
+    }
+    blocker = { ...blockerCard, instanceId: 'demo-bs6-010' }
+  }
+
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    pendingBattle: null,
+    pendingAbilityEffect: undefined,
+    pendingOnPlay: {
+      playerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+      origin: 'hand',
+    },
+    players: {
+      ...state.players,
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: blocker
+          ? [cardCheckBattleEntry(blocker, [], 1)]
+          : state.players['player-two'].battleArea,
+      },
+    },
+  }
 }
 
 /**

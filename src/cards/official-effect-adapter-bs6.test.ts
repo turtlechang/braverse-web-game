@@ -803,6 +803,36 @@ describe('BS6 BLUE effect adapter', () => {
         { kind: 'draw-up-to', max: 1 },
       ],
     })
+    expect(convertOfficialCookieSkill(findBs6Card('BS6-073'))).toMatchObject({
+      trigger: 'on-play',
+      cost: {
+        energy: { blue: 1 },
+        battleCookieToHand: {
+          count: 1,
+          maxLevel: 1,
+          energyColor: 'blue',
+        },
+      },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+    const bs6073Card = convertOfficialCardToGameCard(findBs6Card('BS6-073'))
+    expect(bs6073Card).toMatchObject({
+      status: 'converted',
+      gameCard: { attack: 3 },
+    })
+    expect(bs6073Card.status).toBe('converted')
+    if (bs6073Card.status === 'converted') {
+      expect(bs6073Card.gameCard.type).toBe('cookie')
+      if (bs6073Card.gameCard.type === 'cookie') {
+        expect(bs6073Card.gameCard.attackEffects).toBeUndefined()
+      }
+    }
     expect(convertOfficialCookieSkill(findBs6Card('BS6-079'))).toMatchObject({
       trigger: 'on-play',
       effects: [
@@ -959,9 +989,36 @@ describe('BS6 BLUE effect adapter', () => {
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-079'))).toMatchObject([
-      { kind: 'discard-hand', count: 1 },
-      { kind: 'rest-support', side: 'opponent', amount: 3, activeOnly: true, optional: true },
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'rest-support',
+            side: 'opponent',
+            amount: 3,
+            activeOnly: true,
+            optional: true,
+          },
+        ],
+        effectText:
+          "Discard 1 card. Select up to 3 cards in your opponent's support area. Rest those cards.",
+      },
     ])
+  })
+
+  it('corrects BS6-074 to the card-face attack damage of 3 while keeping cost 3', () => {
+    const result = convertOfficialCardToGameCard(findBs6Card('BS6-074'))
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 3,
+        attackCost: 3,
+        attackEnergyCost: { blue: 3 },
+        attackText: expect.stringContaining('{da} 3'),
+      },
+    })
   })
 })
 

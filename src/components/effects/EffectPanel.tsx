@@ -55,6 +55,10 @@ export interface EffectPanelProps {
   selectedTrashBattleCookieIds?: Set<string>
   onToggleTrashBattleCookie?: (instanceId: string) => void
   trashBattleCookieCost?: number
+  battleCookieToHandCandidates?: GameCard[]
+  selectedBattleToHandIds?: Set<string>
+  onToggleBattleToHand?: (instanceId: string) => void
+  battleCookieToHandCost?: number
   trashToDeckBottomCandidates?: GameCard[]
   selectedTrashToDeckBottomIds?: Set<string>
   onToggleTrashToDeckBottom?: (instanceId: string) => void
@@ -150,6 +154,10 @@ function EffectPanelContent({
   selectedTrashBattleCookieIds = new Set<string>(),
   onToggleTrashBattleCookie,
   trashBattleCookieCost = 0,
+  battleCookieToHandCandidates = [],
+  selectedBattleToHandIds = new Set<string>(),
+  onToggleBattleToHand,
+  battleCookieToHandCost = 0,
   trashToDeckBottomCandidates = [],
   selectedTrashToDeckBottomIds = new Set<string>(),
   onToggleTrashToDeckBottom,
@@ -292,6 +300,10 @@ function EffectPanelContent({
   const trashBattleCookiePaid =
     trashBattleCookieCost === 0 ||
     pendingEffect?.selectedTrashBattleCookieIds.length === trashBattleCookieCost
+  const battleCookieToHandPaid =
+    battleCookieToHandCost === 0 ||
+    (pendingEffect?.selectedBattleToHandIds ?? []).length ===
+      battleCookieToHandCost
   const trashToDeckBottomPaid =
     trashToDeckBottomCost === 0 ||
     (pendingEffect?.selectedTrashToDeckBottomIds ?? []).length ===
@@ -304,6 +316,7 @@ function EffectPanelContent({
     discardPaid &&
     hpToTrashPaid &&
     trashBattleCookiePaid &&
+    battleCookieToHandPaid &&
     trashToDeckBottomPaid &&
     trashToDeckPaid
 
@@ -386,6 +399,8 @@ function EffectPanelContent({
       supportAreaCost > 0 ||
       discardHandCost > 0 ||
       trashBattleCookieCost > 0 ||
+      battleCookieToHandCandidates.length > 0 ||
+      battleCookieToHandCost > 0 ||
       trashToDeckBottomCandidates.length > 0 ||
       trashToDeckBottomCost > 0 ||
       trashToDeckCandidates.length > 0 ||
@@ -679,6 +694,25 @@ function EffectPanelContent({
                     已選 {pendingEffect.selectedTrashBattleCookieIds.length}／
                     {trashBattleCookieCost} 張戰鬥區餅乾代價
                   </small>
+                )}
+                {battleCookieToHandCost > 0 && (
+                  <small>
+                    已選擇 {(pendingEffect.selectedBattleToHandIds ?? []).length} 張，
+                    需要返回 {battleCookieToHandCost} 張戰鬥區餅乾（技能代價）
+                  </small>
+                )}
+                {battleCookieToHandCandidates.length > 0 && (
+                  <>
+                    <small>
+                      請選擇要返回手牌的藍色 LV.1 戰鬥區餅乾（登場技能代價）
+                    </small>
+                    <CandidateButtons
+                      cards={battleCookieToHandCandidates}
+                      selectedIds={selectedBattleToHandIds}
+                      onToggle={onToggleBattleToHand}
+                      className="effect-candidates-battle-to-hand"
+                    />
+                  </>
                 )}
                 {costSupportCandidates.length > 0 && (
                   <>

@@ -707,6 +707,14 @@ function App() {
         trashBattleCookieCost={
           pending.pendingEffect?.skill.cost.trashBattleCookie?.count ?? 0
         }
+        battleCookieToHandCandidates={
+          pending.pendingEffect && !pending.pendingEffect.skillActivated
+            ? pending.skillBattleToHandCandidates
+            : []
+        }
+        selectedBattleToHandIds={pending.selectedSkillBattleToHandIds}
+        onToggleBattleToHand={pending.toggleSkillBattleToHand}
+        battleCookieToHandCost={pending.battleToHandCost}
         optionalCostAttack={
           optionalCostAttackPrompt
             ? {

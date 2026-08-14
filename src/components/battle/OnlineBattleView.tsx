@@ -718,6 +718,10 @@ export function OnlineBattleView({
         selectedTrashBattleCookieIds={pending.selectedDraftTrashBattleCookieIds}
         onToggleTrashBattleCookie={pending.toggleDraftTrashBattleCookie}
         trashBattleCookieCost={pending.draftTrashBattleCookieCost}
+        battleCookieToHandCandidates={pending.draftBattleCookieToHandCandidates}
+        selectedBattleToHandIds={pending.selectedDraftBattleToHandIds}
+        onToggleBattleToHand={pending.toggleDraftBattleCookieToHand}
+        battleCookieToHandCost={pending.draftBattleCookieToHandCost}
         showTargetSelection
         showCancelSkill={Boolean(pending.abilityCostDraft)}
         onCancel={() => {

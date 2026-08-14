@@ -409,6 +409,7 @@ const hasUsableEffect = (
   playerId: PlayerId,
   sourceInstanceId: string,
   ability: CardAbility,
+  options: { deferHandCountConditionUntilAfterDiscard?: boolean } = {},
 ): boolean => {
   const context = {
     sourcePlayerId: playerId,
@@ -416,7 +417,17 @@ const hasUsableEffect = (
   }
 
   return ability.effects.some((effect) => {
-    if (!isEffectConditionMet(state, context, effect)) return false
+    const conditionMet = isEffectConditionMet(state, context, effect)
+    const effectCondition =
+      'condition' in effect ? effect.condition : undefined
+    const conditionDeferred =
+      !conditionMet &&
+      options.deferHandCountConditionUntilAfterDiscard === true &&
+      effectCondition?.kind === 'hand-count-at-most'
+    // Some item costs can reduce the hand before the effect condition is
+    // checked.  BS6-084 must therefore be allowed to open its discard-cost
+    // flow even while the pre-payment hand is still above the threshold.
+    if (!conditionMet && !conditionDeferred) return false
     if (isEffectTargeted(effect) && effect.target?.costSelected) {
       // The Cookie selected for an HP cost is not written to costRecord until
       // the ability is finally confirmed. Availability checks must still see
@@ -511,7 +522,10 @@ export const canPlayItem = (
         ability &&
         cost &&
         canPayAbilityCost(state, playerId, cost, instanceId) &&
-        hasUsableEffect(state, playerId, instanceId, ability),
+        hasUsableEffect(state, playerId, instanceId, ability, {
+          deferHandCountConditionUntilAfterDiscard:
+            cost.discardHandAtLeast === true,
+        }),
     )
   } catch {
     return false

@@ -33,6 +33,7 @@ import {
   createBreakToTrashDemoState,
   createCardCheckDemoState,
   createCardNegativeDemoState,
+  createBs6079OnPlayDemoState,
   createP082TrapDemoState,
   createPConditionDemoState,
   createP084ItemConditionDemoState,
@@ -262,6 +263,18 @@ describe('parseTestStateConfig', () => {
     ).toEqual({ kind: 'card-negative', cardNumber: 'BS6-020' })
     expect(
       parseTestStateConfig('?test-state=card-negative:BS6-020', 'example.com'),
+    ).toBeNull()
+  })
+
+  it('parses the BS6-079 OnPlay A/B routes only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs6-079-on-play-clear', 'localhost'),
+    ).toEqual({ kind: 'bs6-079-on-play', blocked: false })
+    expect(
+      parseTestStateConfig('?test-state=bs6-079-on-play-blocked', 'localhost'),
+    ).toEqual({ kind: 'bs6-079-on-play', blocked: true })
+    expect(
+      parseTestStateConfig('?test-state=bs6-079-on-play-blocked', 'example.com'),
     ).toBeNull()
   })
 
@@ -585,6 +598,33 @@ describe('createCardCheckDemoState', () => {
         effect,
       ).map((card) => card.instanceId),
     ).not.toContain('BS6-091-break-excluded')
+  })
+
+  it('builds BS6-079 OnPlay A/B fixtures with and without Timekeeper', () => {
+    const clear = createBs6079OnPlayDemoState(false)
+    const blocked = createBs6079OnPlayDemoState(true)
+    const clearSource = clear.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-079',
+    )
+    const clearTarget = clear.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'self-extra-1',
+    )
+
+    expect(clear.pendingOnPlay).toMatchObject({
+      sourceInstanceId: clearSource?.card.instanceId,
+    })
+    expect(clearTarget?.card).toMatchObject({
+      type: 'cookie',
+      level: 1,
+      energyColor: 'blue',
+    })
+    expect(
+      blocked.players['player-two'].battleArea.map((entry) => entry.card.id),
+    ).toEqual(['BS6-010'])
+    expect(blocked.players['player-two'].battleArea[0]?.card.skill).toMatchObject({
+      trigger: 'passive',
+      effects: [{ kind: 'prevent-opponent-battle-movement' }],
+    })
   })
 
   it('creates a negative Browser fixture with every support card rested', () => {

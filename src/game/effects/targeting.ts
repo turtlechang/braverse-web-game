@@ -274,6 +274,30 @@ export const getEffectTargetCandidates = (
 }
 
 /**
+ * Returns the opposing battle Cookie that blocks a field-to-deck-bottom
+ * effect when the effect otherwise has at least one legal Cookie target.
+ *
+ * The normal target-candidate helper intentionally does not apply global
+ * movement protection. This distinction lets the UI explain why an effect
+ * that appears to have a matching Cookie cannot actually be resolved.
+ */
+export const getFieldToDeckBottomBlocker = (
+  state: GameState,
+  context: EffectContext,
+  effect: Extract<CardEffect, { kind: 'field-to-deck-bottom' }>,
+): CookieInBattle | undefined => {
+  const blocker = getOpponentBattleMovementPreventer(
+    state,
+    context.sourcePlayerId,
+  )
+  if (!blocker) return undefined
+
+  return getEffectTargetCandidates(state, context, effect.target).length > 0
+    ? blocker
+    : undefined
+}
+
+/**
  * 回傳沒有標準 `target` selector 的卡牌效果之合法目標。
  *
  * `opponent-battle-to-trash` 使用效果本身的等級／剩餘 HP 條件，

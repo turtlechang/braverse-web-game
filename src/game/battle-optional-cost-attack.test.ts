@@ -695,6 +695,82 @@ describe('optional-cost-attack', () => {
     expect(result.pendingOptionalCostAttack).toBeNull()
     expect(result.pendingBattle).toBeNull()
   })
+
+  it('BS6-079 can skip its bracketed discard cost or pay it before resting opponent support', () => {
+    const buildState = (): GameState => {
+      const state = createBattleState()
+      const discardCard = handCookie('bs6-079-discard')
+      state.players['player-two'].hand = [discardCard]
+      state.players['player-one'].supportArea = [
+        { card: { ...state.players['player-one'].supportArea[0].card, instanceId: 'bs6-079-support-1' }, rested: false },
+        { card: { ...state.players['player-one'].supportArea[1].card, instanceId: 'bs6-079-support-2' }, rested: false },
+      ]
+      const effect = {
+        kind: 'optional-cost-attack' as const,
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'rest-support' as const,
+            side: 'opponent' as const,
+            amount: 3,
+            activeOnly: true,
+            optional: true,
+          },
+        ],
+        effectText:
+          "Discard 1 card. Select up to 3 cards in your opponent's support area. Rest those cards.",
+      }
+      state.pendingBattle = {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        declaredDamage: 0,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [effect],
+        attackEffectIndex: 0,
+      }
+      state.pendingOptionalCostAttack = {
+        playerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Croissant Cookie',
+        cost: effect.cost,
+        effects: effect.effects,
+        effectText: effect.effectText,
+      }
+      return state
+    }
+
+    const skipped = resolveOptionalCostAttack(buildState(), 'player-two', 'skip')
+    expect(skipped.players['player-two'].hand).toHaveLength(1)
+    expect(skipped.players['player-two'].discardPile).toHaveLength(0)
+    expect(skipped.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+    expect(skipped.pendingOptionalCostAttack).toBeNull()
+    expect(skipped.pendingBattle).toBeNull()
+
+    const paid = resolveOptionalCostAttack(
+      buildState(),
+      'player-two',
+      'pay',
+      ['bs6-079-discard-instance'],
+      ['bs6-079-support-1'],
+    )
+    expect(paid.players['player-two'].hand).toHaveLength(0)
+    expect(paid.players['player-two'].discardPile.map((card) => card.instanceId)).toContain(
+      'bs6-079-discard-instance',
+    )
+    expect(paid.players['player-one'].supportArea).toMatchObject([
+      { card: { instanceId: 'bs6-079-support-1' }, rested: true },
+      { card: { instanceId: 'bs6-079-support-2' }, rested: false },
+    ])
+    expect(paid.pendingOptionalCostAttack).toBeNull()
+    expect(paid.pendingBattle).toBeNull()
+  })
 })
 
 describe('optional-cost-attack integration', () => {
