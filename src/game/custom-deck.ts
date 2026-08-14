@@ -1,5 +1,9 @@
 import type { OfficialCardRecord } from '../cards/types'
-import { getCardPoolEntry, normalizeCardNumber } from './card-pool'
+import {
+  getCardPoolEntry,
+  hasFlipAbility,
+  normalizeCardNumber,
+} from './card-pool'
 import { createCard } from './starter-deck'
 import {
   DEFAULT_DECK_FORMAT,
@@ -170,7 +174,7 @@ export const validateCustomDeck = (
       totalCount += entry.count
       continue
     }
-    if (poolEntry.type === 'flip') {
+    if (hasFlipAbility(poolEntry)) {
       flipCards += entry.count
     }
     if (poolEntry.type === 'cookie' || poolEntry.type === 'flip') {

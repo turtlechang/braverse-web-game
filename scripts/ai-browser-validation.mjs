@@ -179,6 +179,18 @@ try {
     { width: 600, height: 338 },
   ]) {
     await page.setViewportSize(viewport)
+    const shortDesktopHoverProbe =
+      viewport.width === 1024 && viewport.height === 576
+    if (shortDesktopHoverProbe) {
+      const hoverTarget = page.locator('.bottom-hand .hand-card-wrap').nth(1)
+      const hoverTargetBox = await hoverTarget.boundingBox()
+      if (hoverTargetBox) {
+        await page.mouse.move(
+          hoverTargetBox.x + hoverTargetBox.width / 2,
+          hoverTargetBox.y + hoverTargetBox.height / 2,
+        )
+      }
+    }
     const metrics = await page.evaluate(() => {
       const shell = document.querySelector('.game-shell')
       if (!(shell instanceof HTMLElement)) {
@@ -457,6 +469,10 @@ try {
         documentClientHeight: document.documentElement.clientHeight,
       }
     })
+    if (shortDesktopHoverProbe) {
+      await page.mouse.move(0, 0)
+      await page.waitForTimeout(200)
+    }
     assert.ok(
       metrics.bodyScrollHeight <= metrics.bodyClientHeight &&
         metrics.documentScrollHeight <= metrics.documentClientHeight,

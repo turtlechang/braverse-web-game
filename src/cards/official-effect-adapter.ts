@@ -5951,7 +5951,12 @@ export const convertOfficialFlipAbility = (
   card: OfficialCardRecord,
 ): FlipAbility | undefined => {
   const flipText = card.flipText ?? card.skill.text
-  if (card.type !== 'flip' || !flipText) {
+  // 官方資料也會把帶有 FLIP 能力的餅乾記成 COOKIE（例如 BS5-073/074）。
+  // 是否能翻面應以 FLIP 文案判斷，不能只看 card.type。
+  const hasFlipRecord =
+    card.type === 'flip' ||
+    (card.type === 'cookie' && Boolean(card.flipText?.trim()))
+  if (!hasFlipRecord || !flipText) {
     return undefined
   }
 

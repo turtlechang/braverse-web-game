@@ -4,7 +4,11 @@ import {
   validateCustomDeck,
 } from '../game/custom-deck'
 import type { CardPoolEntry } from '../game/card-pool'
-import { getAllCardPoolEntries, normalizeCardNumber } from '../game/card-pool'
+import {
+  getAllCardPoolEntries,
+  hasFlipAbility,
+  normalizeCardNumber,
+} from '../game/card-pool'
 import {
   DEFAULT_DECK_FORMAT,
   getDeckCopyLimit,
@@ -164,7 +168,12 @@ export function useDeckEditor(): DeckEditorState &
           }
         }
       }
-      if (filterType && entry.type !== filterType) {
+      if (
+        filterType &&
+        (filterType === 'flip'
+          ? !hasFlipAbility(entry)
+          : entry.type !== filterType)
+      ) {
         return false
       }
       if (filterRarity && entry.rarity !== filterRarity) {

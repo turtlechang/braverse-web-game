@@ -5,6 +5,12 @@ export interface CardPoolEntry extends OfficialCardRecord {
   poolId: string
 }
 
+export const hasFlipAbility = (
+  entry: Pick<CardPoolEntry, 'type' | 'flipText'>,
+): boolean =>
+  entry.type === 'flip' ||
+  (entry.type === 'cookie' && Boolean(entry.flipText?.trim()))
+
 const allRawCards: OfficialCardRecord[] = [
   ...officialCardDatasets.flatMap(
     (dataset) => dataset.cards as OfficialCardRecord[],
