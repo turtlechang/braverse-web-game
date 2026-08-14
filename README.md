@@ -10,7 +10,7 @@ BS6 已完成資料準備期、逐色 Browser 稽核與正式 promote：138 筆�
 
 BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將所選餅乾最上方至多 1 張 HP 卡移回手牌，並保留可略過選擇與既有必要自身目標陷阱的相容行為。
 
-本輪已完成 BS5／BS6 紅、黃、綠、藍、紫逐卡 A/B Browser 稽核：BS5 151 張、BS6 138 張，共 289 張；正向 A 與負向 B 均 289／289 PASS，報告保存在 `docs/`。B fixture 將支援區卡設為疲勞，驗證非法能量支付、無支付攻擊不成立，以及攻擊後 `Then` 在實際待處理視窗可正常收斂。
+本輪已完成 BS5／BS6 逐卡 Browser 效果語意稽核（2026-08-15）：BS5 效果 143／143（含 14 張條件／時機 A/B）、負向 153／153、無效果攻擊 10／10；BS6 效果 97／97（含 BS6-039 A/B）、負向 138／138、無效果攻擊 10／10。另以 `scripts/verify-bs5-bs6-semantics.ts` 對兩系列全部 291 筆記錄逐張比對官方文字與 runtime 的攻擊／技能／陷阱／物品／場景／FLIP 能量代價、{da} 傷害、Then 傷害、HP 代價與抽牌數量：BS5 400 項、BS6 325 項全部相符。B fixture 將支援區卡設為疲勞，驗證非法能量支付、無支付攻擊不成立，以及攻擊後 `Then` 在實際待處理視窗可正常收斂；報告保存在 `docs/`（`bs5-effect-audit-2026-08-15.json` 等）。
 
 卡牌匯入稽核可使用 BraverseFan 作為社群交叉參考，但不取代官方 JSON、卡面、規則與公告。
 
@@ -258,6 +258,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-15 | 完成 BS5／BS6 全卡 Browser 效果語意稽核與代價交叉驗證：BS5 效果 143／143＋負向 153／153＋無效果攻擊 10／10、BS6 效果 97／97＋負向 138／138＋無效果攻擊 10／10；新增 `verify-bs5-bs6-semantics.ts` 對 291 筆記錄逐張比對官方文字與 runtime 能量代價／傷害／HP 代價／抽牌數量（BS5 400 項、BS6 325 項全相符）；修正稽核驅動對 cookie＋FLIP 文案（BS5-073）與 `battle-cookie-to-hand` 代價群（BS6-073）的分類／驅動缺口；完整 Vitest 187 檔／3,028 項、lint、build 通過。 |
 | 2026-08-14 | 修正 BS5-073 FLIP 顯示，並補上 BS4-024 Kumiho Cookie 強制攻擊目標的 UI 限制提示、不可用目標回饋與對戰紀錄原因／來源卡步驟；完整 Vitest 187 檔／3,018 項、lint、typecheck、build、bundle gate 與 Browser 回歸通過。 |
 | 2026-08-14 | 匯入使用者提供的 BS6 五色競技環境牌組，修正 P-059 官方 API 將攻擊名稱誤寫入 FLIP 欄位；Lv.4 新增技能／道具後續行動前瞻，並提供五色兩兩配對各 5 場、共 50 場的可重現 round-robin benchmark。 |
 | 2026-08-14 | 修正 Browser smoke 1024×576 短桌面手牌 hover／focus 遮擋戰鬥卡問題，新增明確 hover 回歸；拆分 `game-demo` chunk，主入口 gzip 由 183.59 KiB 降至 161.73 KiB，bundle gate 與完整 Browser smoke 通過。 |

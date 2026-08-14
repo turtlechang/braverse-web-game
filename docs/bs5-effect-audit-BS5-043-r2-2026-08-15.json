@@ -1,0 +1,92 @@
+{
+  "generatedAt": "2026-08-14T17:49:56.964Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json",
+  "scope": "Formal-pool test-state interaction audit for BS5 effect-bearing records plus dedicated A/B paths for 14 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 1,
+    "effectFlowPassed": 1,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 1,
+    "dedicatedConditionCardsPassed": 1,
+    "byStatus": {
+      "Dedicated condition A/B paths settled": 1
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS5-043",
+      "baseCardNumber": "BS5-043",
+      "variant": null,
+      "name": "Seasick Canoeing",
+      "type": "trap",
+      "color": "YELLOW",
+      "effectSurfaces": [
+        "trap"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-043",
+      "status": "PASS",
+      "auditStatus": "Dedicated condition A/B paths settled",
+      "operations": [
+        "select:trap",
+        "select:trap-step",
+        "next:trap",
+        "select:trap-target",
+        "confirm:trap",
+        "skip:replacement"
+      ],
+      "genericStatus": "PASS",
+      "conditionPaths": {
+        "met": {
+          "cardNumber": "BS5-043",
+          "baseCardNumber": "BS5-043",
+          "variant": null,
+          "name": "Seasick Canoeing",
+          "type": "trap",
+          "color": "YELLOW",
+          "effectSurfaces": [
+            "trap"
+          ],
+          "path": "condition-met",
+          "testState": "bs5-trap:BS5-043:met",
+          "status": "PASS",
+          "auditStatus": "Effect flow settled",
+          "operations": [
+            "select:trap",
+            "select:trap-step",
+            "next:trap",
+            "select:trap-target",
+            "confirm:trap",
+            "skip:replacement"
+          ]
+        },
+        "unmet": {
+          "cardNumber": "BS5-043",
+          "baseCardNumber": "BS5-043",
+          "variant": null,
+          "name": "Seasick Canoeing",
+          "type": "trap",
+          "color": "YELLOW",
+          "effectSurfaces": [
+            "trap"
+          ],
+          "path": "condition-unmet",
+          "testState": "bs5-trap:BS5-043:unmet",
+          "status": "PASS",
+          "auditStatus": "No-op or timing path settled",
+          "operations": [
+            "select:trap",
+            "select:trap-step",
+            "next:trap",
+            "select:trap-target",
+            "confirm:trap",
+            "skip:replacement"
+          ]
+        }
+      }
+    }
+  ]
+}

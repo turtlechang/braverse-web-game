@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-08-14T18:56:56.748Z",
+  "series": "BS5",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json",
+  "summary": {
+    "records": 153,
+    "checks": 400,
+    "issues": 0,
+    "cardsWithIssues": 0
+  },
+  "issues": []
+}
