@@ -17,6 +17,12 @@ const chromium = playwrightModule.chromium ?? playwrightModule.default?.chromium
 if (!chromium) throw new Error('Playwright Chromium is unavailable')
 
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
+const auditActionTimeout = Number(
+  process.env.BRAVERSE_AUDIT_ACTION_TIMEOUT_MS ?? 7000,
+)
+const auditNavigationTimeout = Number(
+  process.env.BRAVERSE_AUDIT_NAVIGATION_TIMEOUT_MS ?? 15000,
+)
 const baseUrl = `http://127.0.0.1:${port}`
 const requestedSeries = (() => {
   const inline = process.argv.find((argument) =>
@@ -1181,7 +1187,8 @@ try {
     ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   })
   const page = await browser.newPage({ viewport: { width: 1440, height: 960 } })
-  page.setDefaultTimeout(7000)
+  page.setDefaultTimeout(auditActionTimeout)
+  page.setDefaultNavigationTimeout(auditNavigationTimeout)
 
   console.log(
     `=== ${auditConfig.label} ${auditNegative ? 'negative A/B' : auditVanillaAttacks ? 'vanilla attack' : 'interactive effect'} audit (${cards.length} records, ${browserExecutable ?? 'Playwright Chromium'}) ===`,

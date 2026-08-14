@@ -7,6 +7,7 @@ import {
   getEffectiveAttack,
   getForcedAttackTargetId,
   resolveNextDamage,
+  advancePhase,
   type CardEffect,
   type GameCard,
   type GameState,
@@ -21,6 +22,7 @@ import {
   createBs2015CostDepartureDemoState,
   createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
+  createBs5CroissantEndPhaseDemoState,
   createBs5FaintDemoState,
   createBs5FlipDemoState,
   createBs5ItemConditionDemoState,
@@ -213,6 +215,15 @@ describe('parseTestStateConfig', () => {
       conditionMet: false,
     })
     expect(parseTestStateConfig('?test-state=bs5-faint:BS4-011:met', 'localhost')).toBeNull()
+  })
+
+  it('parses the BS5-060 end-phase Browser A/B routes', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs5-060-end-phase:rested', 'localhost'),
+    ).toEqual({ kind: 'bs5-060-end-phase', supportState: 'rested' })
+    expect(
+      parseTestStateConfig('?test-state=bs5-060-end-phase:active', 'localhost'),
+    ).toEqual({ kind: 'bs5-060-end-phase', supportState: 'active' })
   })
 
   it('parses BS6 candidate A/B test-state routes only on localhost', () => {
@@ -586,6 +597,29 @@ describe('createCardCheckDemoState', () => {
     ).toHaveLength(3)
   })
 
+  it('prepares BS6 Browser skill routes with their required legal candidates', () => {
+    const bs6025 = createCardCheckDemoState('BS6-025')
+    expect(bs6025.players['player-one'].breakArea).toEqual([
+      expect.objectContaining({ level: 2 }),
+    ])
+
+    const bs6032 = createCardCheckDemoState('BS6-032')
+    expect(bs6032.players['player-one'].hand).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'cookie' })]),
+    )
+
+    const bs6045 = createCardCheckDemoState('BS6-045')
+    expect(bs6045.players['player-two'].supportArea).toHaveLength(10)
+
+    const bs6057 = createCardCheckDemoState('BS6-057')
+    expect(bs6057.players['player-one'].supportArea).toEqual(
+      expect.arrayContaining([expect.objectContaining({ card: expect.objectContaining({ type: 'cookie' }) })]),
+    )
+
+    const bs6081 = createCardCheckDemoState('BS6-081')
+    expect(bs6081.players['player-one'].hand).toHaveLength(5)
+  })
+
   it('creates BS6-039 met and unmet break-level fixtures without removing the source card', () => {
     const met = createBs6ConditionDemoState('BS6-039', true)
     const unmet = createBs6ConditionDemoState('BS6-039', false)
@@ -797,6 +831,51 @@ describe('createCardCheckDemoState', () => {
     expect(stage022Met.players['player-one'].battleArea[0].card.id).toBe('BS5-013')
     expect(stage022Unmet.players['player-one'].battleArea[0].card.id).not.toBe('BS5-013')
     expect(stage022Met.players['player-one'].battleArea[0].hpCards).toHaveLength(4)
+  })
+
+  it('builds the BS5-060 end-phase A/B fixture around the real attack window', () => {
+    const rested = createBs5CroissantEndPhaseDemoState('rested')
+    const active = createBs5CroissantEndPhaseDemoState('active')
+
+    expect(rested.pendingBattle?.stage).toBe('attack-effect')
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(4)
+    expect(active.players['player-one'].supportArea.some((support) => support.rested))
+      .toBe(false)
+  })
+
+  it('resolves BS5-060 only when the turn reaches end phase and activates at most 3 supports', () => {
+    let rested = applyGameCommand(
+      createBs5CroissantEndPhaseDemoState('rested'),
+      { kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] },
+    )
+    expect(rested.pendingEndOfTurnEffects).toMatchObject([
+      {
+        sourceCardName: 'Croissant Cookie',
+        effects: [{ kind: 'set-active', supportCount: 3 }],
+      },
+    ])
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(4)
+
+    rested = advancePhase(rested)
+    expect(rested.phase).toBe('end')
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(4)
+
+    rested = advancePhase(rested)
+    expect(rested.pendingEndOfTurnEffects ?? []).toHaveLength(0)
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(1)
+
+    let active = applyGameCommand(
+      createBs5CroissantEndPhaseDemoState('active'),
+      { kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] },
+    )
+    active = advancePhase(advancePhase(active))
+    expect(active.pendingEndOfTurnEffects ?? []).toHaveLength(0)
+    expect(active.players['player-one'].supportArea.some((support) => support.rested))
+      .toBe(false)
   })
 
   it('keeps BS5 Browser card-check Cookies at legal positive HP', () => {

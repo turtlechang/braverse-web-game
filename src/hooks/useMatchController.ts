@@ -62,6 +62,7 @@ import {
   createBlueSt4TrapDemoState,
   createBs4ConditionDemoState,
   createBs3SilverbellConditionDemoState,
+  createBs5CroissantEndPhaseDemoState,
   createBs5FlipDemoState,
   createBs5FaintDemoState,
   createBs5TrapDemoState,
@@ -187,6 +188,9 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-negative') {
       return createCardNegativeDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'bs5-060-end-phase') {
+      return createBs5CroissantEndPhaseDemoState(testStateConfig.supportState)
     }
     if (testStateConfig?.kind === 'p-condition') {
       return createPConditionDemoState(
