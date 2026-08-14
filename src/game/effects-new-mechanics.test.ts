@@ -1645,6 +1645,23 @@ describe('new card-effect mechanics', () => {
     ])
   })
 
+  it('allows an optional field-to-deck-bottom effect to resolve with no target', () => {
+    const state = asMainPhase(createDemoGame())
+    const effect = {
+      kind: 'field-to-deck-bottom' as const,
+      target: { side: 'opponent' as const, min: 0, max: 1 },
+    }
+
+    expect(
+      executeCardEffect(
+        state,
+        { sourcePlayerId: 'player-one', sourceInstanceId: 'optional-field-source' },
+        effect,
+        [],
+      ),
+    ).toEqual(state)
+  })
+
   it('BS4-066 moves a selected green support onto the selected Cookie HP', () => {
     const base = asMainPhase(createDemoGame())
     const target = makeCookie({ instanceId: 'bs4-066-target', energyColor: 'green' })

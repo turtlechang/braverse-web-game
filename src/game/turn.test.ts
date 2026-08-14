@@ -115,6 +115,7 @@ describe('end phase effects', () => {
       sourcePlayerId: 'player-one',
       sourceInstanceId: endPhaseCookie.instanceId,
       sourceKind: 'skill',
+      trigger: 'passive',
       effectIndex: 0,
     })
     expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(2)
@@ -128,6 +129,59 @@ describe('end phase effects', () => {
 
     expect(state.pendingAbilityEffect).toBeUndefined()
     expect(state.players['player-two'].battleArea[0].hpCards).toHaveLength(1)
+  })
+
+  it('resolves BS6-012 HP return at end of turn without fainting a full-HP Cookie', () => {
+    let state = createTurnState()
+    const lilybell: CookieCard = {
+      ...cookie('BS6-012'),
+      hp: 3,
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'When your turn ends, if you have 5 cards or less in hand, return up to 1 HP card to your hand.',
+        effects: [
+          {
+            kind: 'hp-to-hand',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1 },
+            condition: { kind: 'hand-count-at-most', count: 5 },
+          },
+        ],
+        endPhase: true,
+      },
+    }
+    state.players['player-one'].battleArea = [
+      {
+        card: lilybell,
+        hpCards: [item('lilybell-hp-1'), item('lilybell-hp-2'), item('lilybell-hp-3')],
+        rested: false,
+      },
+    ]
+
+    state = processEndPhaseEffects(state)
+
+    expect(state.pendingAbilityEffect).toMatchObject({
+      sourceInstanceId: lilybell.instanceId,
+      sourceKind: 'skill',
+      trigger: 'passive',
+    })
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [lilybell.instanceId],
+    })
+
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(state.players['player-one'].battleArea).toHaveLength(1)
+    expect(state.players['player-one'].battleArea[0]?.hpCards).toHaveLength(2)
+    expect(state.players['player-one'].hand).toContainEqual(
+      expect.objectContaining({ instanceId: 'lilybell-hp-3' }),
+    )
   })
 
   it('skips a false end-of-turn condition without executing or throwing', () => {
@@ -214,7 +268,7 @@ describe('end phase effects', () => {
     expect(state.skillUsesThisTurn).toContain(endPhaseCookie.instanceId)
   })
 
-  it('triggers end-of-turn effect for opponent cookie after active player', () => {
+  it('does not trigger a your-turn effect on the opponent Cookie', () => {
     let state = createTurnState()
     const activeCookie: CookieCard = {
       ...cookie('active-end'),
@@ -268,11 +322,84 @@ describe('end phase effects', () => {
     expect(state.players['player-one'].hand).toContainEqual(
       expect.objectContaining({ instanceId: 'draw-1' }),
     )
-    expect(state.players['player-two'].hand).toContainEqual(
+    expect(state.players['player-two'].hand).not.toContainEqual(
       expect.objectContaining({ instanceId: 'draw-2' }),
     )
     expect(state.skillUsesThisTurn).toContain(activeCookie.instanceId)
-    expect(state.skillUsesThisTurn).toContain(opponentCookie.instanceId)
+    expect(state.skillUsesThisTurn).not.toContain(opponentCookie.instanceId)
+  })
+
+  it('does not queue BS6-012 while the opponent reaches their end phase', () => {
+    let state = createTurnState()
+    const lilybell: CookieCard = {
+      ...cookie('BS6-012'),
+      hp: 3,
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: 'When your turn ends, if there are 5 cards or less in your hand, return up to 1 HP card to your hand.',
+        effects: [
+          {
+            kind: 'hp-to-hand',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1 },
+            condition: { kind: 'hand-count-at-most', count: 5 },
+          },
+        ],
+        endPhase: true,
+        endPhaseScope: 'your-turn',
+      },
+    }
+    state.players['player-two'].battleArea = [
+      {
+        card: lilybell,
+        hpCards: [item('bs6-012-hp-1'), item('bs6-012-hp-2'), item('bs6-012-hp-3')],
+        rested: false,
+      },
+    ]
+
+    state = processEndPhaseEffects(state)
+
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(state.players['player-two'].battleArea[0]?.hpCards).toHaveLength(3)
+    expect(state.skillUsesThisTurn).not.toContain(lilybell.instanceId)
+  })
+
+  it('triggers an opponent-turn effect only for the non-active Cookie', () => {
+    let state = createTurnState()
+    const opponentTurnCookie: CookieCard = {
+      ...cookie('opponent-turn-effect'),
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 0 },
+        text: "At the end of your opponent's turn, draw 1 card.",
+        effects: [{ kind: 'draw', amount: 1 }],
+        endPhase: true,
+        endPhaseScope: 'opponent-turn',
+      },
+    }
+    state.players['player-two'].battleArea = [
+      {
+        card: opponentTurnCookie,
+        hpCards: [item('opponent-turn-hp')],
+        rested: false,
+      },
+    ]
+    state.players['player-two'].deck = [item('opponent-turn-draw')]
+    state.players['player-two'].discardPile = [cookie('opponent-turn-refresh')]
+
+    state = processEndPhaseEffects(state)
+
+    expect(state.players['player-two'].hand).toContainEqual(
+      expect.objectContaining({ instanceId: 'opponent-turn-draw' }),
+    )
+    expect(state.skillUsesThisTurn).toContain(opponentTurnCookie.instanceId)
   })
 
   it('does not trigger end-of-turn effect twice in the same turn', () => {

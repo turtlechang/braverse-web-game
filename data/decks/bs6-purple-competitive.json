@@ -1,0 +1,21 @@
+{
+  "name": "BS6+5 Purple Competitive Environment",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS5-091", "count": 4 },
+    { "cardNumber": "BS5-093", "count": 4 },
+    { "cardNumber": "BS5-097", "count": 4 },
+    { "cardNumber": "BS5-099", "count": 4 },
+    { "cardNumber": "BS5-102", "count": 4 },
+    { "cardNumber": "BS6-087", "count": 4 },
+    { "cardNumber": "BS6-089", "count": 4 },
+    { "cardNumber": "BS6-093", "count": 4 },
+    { "cardNumber": "BS6-095", "count": 4 },
+    { "cardNumber": "BS6-098", "count": 4 },
+    { "cardNumber": "BS5-090", "count": 4 },
+    { "cardNumber": "BS6-103", "count": 4 },
+    { "cardNumber": "BS6-105", "count": 4 },
+    { "cardNumber": "BS6-106", "count": 4 },
+    { "cardNumber": "BS6-107", "count": 4 }
+  ]
+}

@@ -1,7 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { describeEffect, describeEffectResult } from './effectUiUtils'
+import { describeEffect, describeEffectResult, getSkillLabels } from './effectUiUtils'
 import type { BreakToTrashEffect, TrashToBattleEffect } from '../../game'
 import type { DeckToTrashEffect } from '../../game/types'
+
+describe('getSkillLabels for end-phase effects', () => {
+  it('does not present a queued end-phase effect as Activate', () => {
+    const skill = {
+      trigger: 'passive' as const,
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {},
+      text: 'At the end of your turn, return an HP card to your hand.',
+      effects: [],
+    }
+
+    expect(getSkillLabels(skill, { endPhase: true })[0]).toBe('回合結束效果')
+  })
+})
 
 describe('describeEffectResult for break-to-trash', () => {
   const effect: BreakToTrashEffect = { kind: 'break-to-trash', max: 1, exactLevel: 1 }

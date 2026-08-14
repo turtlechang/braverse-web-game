@@ -73,6 +73,16 @@ export const deckChoiceLabel: Record<DeckChoice, string> = {
   'bs5-green-open': 'BS5 綠色｜開放',
   'bs5-blue-open': 'BS5 藍色｜開放',
   'bs5-purple-open': 'BS5 紫色｜開放',
+  'bs6-red-standard': 'BS6 紅色｜標準',
+  'bs6-yellow-standard': 'BS6 黃色｜標準',
+  'bs6-green-standard': 'BS6 綠色｜標準',
+  'bs6-blue-standard': 'BS6 藍色｜標準',
+  'bs6-purple-standard': 'BS6 紫色｜標準',
+  'bs6-red-competitive': 'BS6 紅色｜競技環境',
+  'bs6-yellow-competitive': 'BS6 黃色｜競技環境',
+  'bs6-green-competitive': 'BS6 綠色｜競技環境',
+  'bs6-blue-competitive': 'BS6 藍色｜競技環境',
+  'bs6-purple-competitive': 'BS6 紫色｜競技環境',
   custom: '自訂',
 }
 

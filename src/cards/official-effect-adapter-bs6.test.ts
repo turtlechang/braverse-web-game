@@ -193,6 +193,7 @@ describe('BS6 RED effect adapter', () => {
     })
     expect(convertOfficialCookieSkill(findBs6Card('BS6-012'))).toMatchObject({
       endPhase: true,
+      endPhaseScope: 'your-turn',
       effects: [
         {
           kind: 'hp-to-hand',
@@ -561,6 +562,7 @@ describe('BS6 YELLOW effect adapter', () => {
       placementCost: { yellow: 1 },
       cost: { energy: {}, discardHand: 0 },
       endPhase: true,
+      endPhaseScope: 'your-turn',
       effects: [
         { kind: 'hand-to-break', amount: 1, energyColor: 'yellow' },
         { kind: 'set-active', supportCount: 2, selectable: true, optional: true },

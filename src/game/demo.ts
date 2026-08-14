@@ -154,7 +154,7 @@ export type Bs5StageConditionCardNumber =
 /**
  * BS6 尚在候選資料期；這些 localhost-only A/B 情境不會將候選資料加入正式牌池。
  */
-export const BS6_CONDITION_CARD_NUMBERS = ['BS6-039'] as const
+export const BS6_CONDITION_CARD_NUMBERS = ['BS6-012', 'BS6-039'] as const
 export type Bs6ConditionCardNumber =
   (typeof BS6_CONDITION_CARD_NUMBERS)[number]
 
@@ -191,6 +191,8 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-019' }
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
+  | { kind: 'card-negative'; cardNumber: string }
+  | { kind: 'bs5-060-end-phase'; supportState: 'rested' | 'active' }
   | {
       kind: 'p-condition'
       cardNumber: PConditionCardNumber
@@ -359,6 +361,18 @@ export const parseTestStateConfig = (
       return { kind: 'card-check', cardNumber }
     }
   }
+  if (testState?.startsWith('card-negative:')) {
+    const cardNumber = testState.slice('card-negative:'.length).trim()
+    if (cardNumber.length > 0) {
+      return { kind: 'card-negative', cardNumber }
+    }
+  }
+  if (testState?.startsWith('bs5-060-end-phase:')) {
+    const supportState = testState.slice('bs5-060-end-phase:'.length).trim()
+    if (supportState === 'rested' || supportState === 'active') {
+      return { kind: 'bs5-060-end-phase', supportState }
+    }
+  }
   if (testState?.startsWith('p082-trap:')) {
     const payment = testState.slice('p082-trap:'.length)
     if (payment === 'energy' || payment === 'cookie') {
@@ -459,6 +473,15 @@ export const parseTestStateConfig = (
       }
     }
   }
+  // BS5-111 has its own condition fixture. Keep this exact route before the
+  // generic BS5 item-condition parser so it is not swallowed by the broader
+  // `bs5-item:` prefix.
+  if (testState?.startsWith('bs5-item:BS5-111:')) {
+    const result = testState.slice('bs5-item:BS5-111:'.length)
+    if (result === 'met' || result === 'unmet') {
+      return { kind: 'bs5-item-111', conditionMet: result === 'met' }
+    }
+  }
   if (testState?.startsWith('bs5-item:')) {
     const [, cardNumber, result] = testState.split(':')
     if (
@@ -485,12 +508,6 @@ export const parseTestStateConfig = (
         cardNumber,
         conditionMet: result === 'met',
       }
-    }
-  }
-  if (testState?.startsWith('bs5-item:BS5-111:')) {
-    const result = testState.slice('bs5-item:BS5-111:'.length)
-    if (result === 'met' || result === 'unmet') {
-      return { kind: 'bs5-item-111', conditionMet: result === 'met' }
     }
   }
   if (testState === 'bs3-121-special-victory') {
@@ -587,10 +604,16 @@ export const createDemoSetupGame = (
 export const createDemoGame = (
   seed?: number,
   deck: DeckConfig = 'red',
+  playerCustomDeck?: CustomDeck,
 ): GameState => {
   const effectiveSeed = seed ?? 7
   const shuffle = createSeededShuffle(effectiveSeed)
-  let state = createDemoSetupGame('player-one', deck, effectiveSeed)
+  let state = createDemoSetupGame(
+    'player-one',
+    deck,
+    effectiveSeed,
+    playerCustomDeck,
+  )
 
   state = ensureOpeningCookie(state, 'player-one', shuffle)
   state = ensureOpeningCookie(state, 'player-two', shuffle)
@@ -2557,10 +2580,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // for skills that select own-color cookies from the break area (e.g.
   // "Select {Y} Cookies from your break area" — colorless fillers would give
   // such skills zero legal candidates and silently never activate).
-  const ownBreakArea: CookieCard[] = [
-    cardCheckFillerCookie('self-break-1', 2, 4, 0, payColor).cookie,
-    cardCheckFillerCookie('self-break-2', 2, 4, 0, payColor).cookie,
-  ]
+  const ownBreakArea: CookieCard[] =
+    card.id === 'BS5-042'
+      ? [
+          cardCheckFillerCookie('BS5-042-break-lv3', 3, 4, 0, payColor).cookie,
+          cardCheckFillerCookie('BS5-042-break-lv2', 2, 4, 0, payColor).cookie,
+        ]
+      : card.id === 'BS6-025'
+        ? [
+            cardCheckFillerCookie('BS6-025-break-lv2', 2, 4, 0, payColor).cookie,
+          ]
+      : [
+          cardCheckFillerCookie('self-break-1', 2, 4, 0, payColor).cookie,
+          cardCheckFillerCookie('self-break-2', 2, 4, 0, payColor).cookie,
+        ]
 
   const baseState = (): GameState => ({
     players: {
@@ -2611,6 +2644,8 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...ownBreakArea,
             cardCheckFillerCookie('bs6-041-break-3', 1, 3, 0, 'yellow').cookie,
           ]
+        : card.id === 'BS5-042'
+          ? ownBreakArea
         : undefined
     return {
       ...state,
@@ -3169,6 +3204,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
               testSupportCard(`BS5-016-source-hp-${index + 1}`),
             )
+        : card.id === 'BS5-023'
+          ? Array.from({ length: 3 }, (_, index) =>
+              testSupportCard(`BS5-023-source-hp-${index + 1}`),
+            )
+        : card.id === 'BS6-012'
+          ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+              testSupportCard(`BS6-012-source-hp-${index + 1}`, 'red'),
+            )
           : [testSupportCard(`${card.id}-source-hp`)]
     return {
       ...state,
@@ -3176,12 +3219,23 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ...state.players,
         'player-one': {
           ...state.players['player-one'],
-          hand: handFillers,
+          hand:
+            card.id === 'BS5-019' || card.id === 'BS6-032'
+              ? [handCookieFiller, ...handFillers]
+              : card.id === 'BS6-081'
+                ? [...handFillers, testSupportCard('BS6-081-condition-hand', payColor)]
+                : handFillers,
           battleArea: [
             cardCheckBattleEntry(card as CookieCard, sourceHpCards, 4),
             cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
           ],
-          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          supportArea:
+            card.id === 'BS6-057'
+              ? [
+                  { card: handCookieFiller, rested: false },
+                  ...energySupports.map((c) => ({ card: c, rested: false })),
+                ]
+              : energySupports.map((c) => ({ card: c, rested: false })),
           breakArea: ownBreakArea,
           discardPile: trashFillers,
         },
@@ -3189,6 +3243,15 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-two'],
           battleArea: opponentBattleArea,
           stage: { card: opponentStage, rested: false },
+          ...(card.id === 'BS6-045'
+            ? {
+                supportArea: scenarioSupports(
+                  'BS6-045-opponent-support',
+                  10,
+                  'green',
+                ),
+              }
+            : {}),
           breakArea: opponentBreakArea,
         },
       },
@@ -3225,6 +3288,45 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
  * The cookie route deliberately provides one non-FLIP LV.1 Cookie with 1 HP
  * in the trash; the energy route leaves that candidate out.
  */
+/**
+ * Builds the generic Browser B fixture for a formal card.
+ *
+ * The card remains in the same placement and timing as the positive
+ * card-check state, but every support card is rested. This makes coloured
+ * energy and support-card costs unavailable while preserving the real UI
+ * entry point for the negative browser path.
+ */
+export const createCardNegativeDemoState = (cardNumber: string): GameState => {
+  const state = createCardCheckDemoState(cardNumber)
+  const player = state.players['player-one']
+  return updateDemoPlayer(state, 'player-one', {
+    supportArea: player.supportArea.map((support) => ({
+      ...support,
+      rested: true,
+    })),
+  })
+}
+
+/**
+ * BS5-060 的專用結束階段夾具。
+ *
+ * `card:` 夾具直接把遊戲放在攻擊後續效果視窗，但不模擬攻擊支付後
+ * 支援卡變成休息狀態。這裡保留同一個真實攻擊後視窗，只把支援區狀態
+ * 分成可觀察的 A/B 路徑：A 有 4 張休息卡，B 全部已啟動。
+ */
+export const createBs5CroissantEndPhaseDemoState = (
+  supportState: 'rested' | 'active',
+): GameState => {
+  const state = createCardCheckDemoState('BS5-060')
+  const player = state.players['player-one']
+  return updateDemoPlayer(state, 'player-one', {
+    supportArea: player.supportArea.map((support, index) => ({
+      ...support,
+      rested: supportState === 'rested' ? index < 4 : false,
+    })),
+  })
+}
+
 export const createP082TrapDemoState = (
   payment: 'energy' | 'cookie',
 ): GameState => {
@@ -3792,7 +3894,14 @@ export const createBs6ConditionDemoState = (
   cardNumber: Bs6ConditionCardNumber,
   conditionMet: boolean,
 ): GameState => {
-  const state = createCardCheckDemoState(cardNumber)
+  let state = createCardCheckDemoState(cardNumber)
+  if (cardNumber === 'BS6-012') {
+    const hand = Array.from(
+      { length: conditionMet ? 4 : 6 },
+      (_, index) => testSupportCard(`BS6-012-condition-hand-${index + 1}`, 'red'),
+    )
+    state = updateDemoPlayer(state, 'player-one', { hand })
+  }
   const opponentBreakArea = conditionMet
     ? [scenarioCookie(`${cardNumber}-opponent-break-lv2`, 2, 4, 'red').cookie]
     : [scenarioCookie(`${cardNumber}-opponent-break-lv7`, 7, 8, 'red').cookie]

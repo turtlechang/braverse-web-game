@@ -29,6 +29,8 @@ export interface PendingEffect {
   optional: boolean
   triggerLabel: string
   sourceKind: 'cookie' | 'item' | 'stage' | 'attack'
+  /** Marks a passive effect queued by the end-phase resolver. */
+  endPhase?: boolean
   /**
    * 玩家為「選擇一項」挑過的模式，依遇到的先後順序累積。
    * `effects` 已就地展開，這份紀錄是要讓稍後的 `begin-*` 指令

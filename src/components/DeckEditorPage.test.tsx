@@ -120,4 +120,42 @@ describe('DeckEditorPage', () => {
 
     await act(() => root.unmount())
   })
+
+  it('shows BS6 cards when the BS6 series filter is selected', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />,
+      ),
+    )
+
+    const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => filterToggle!.click())
+
+    const seriesSelect = Array.from(
+      container.querySelectorAll<HTMLSelectElement>('#deck-editor-pool-filters select'),
+    ).find((select) =>
+      Array.from(select.options).some((option) => option.value === 'BS6'),
+    )
+    expect(seriesSelect).toBeTruthy()
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    await act(() => {
+      nativeSetter.call(seriesSelect, 'BS6')
+      seriesSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const bs6CardNumbers = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-button'),
+    ).map((button) => button.title)
+    expect(bs6CardNumbers.length).toBeGreaterThan(0)
+    expect(bs6CardNumbers.every((cardNumber) => cardNumber.startsWith('BS6-'))).toBe(true)
+
+    await act(() => root.unmount())
+  })
 })

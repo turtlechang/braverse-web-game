@@ -72,6 +72,7 @@ export interface BattleUiMatchLike {
   setSelectedTrapTargetId: (value: string | null) => void
   selectedTrapTargets: CookieInBattle[]
   trapSelfTargetCandidates: CookieInBattle[]
+  trapSelfTargetRequired: boolean
   selectedTrapSelfTargetId: string | null
   setSelectedTrapSelfTargetId: (value: string | null) => void
   selectedTrapSelfTargets: CookieInBattle[]

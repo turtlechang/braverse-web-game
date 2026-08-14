@@ -49,12 +49,17 @@ const CATEGORY_ICONS: Record<LogCategory, typeof Swords> = {
   system: Settings2,
 }
 
+const stepLinesForEntry = (entry: CommandLogEntry): LogStepDetail[] =>
+  entry.steps && entry.steps.length > 0 ? entry.steps : [
+    {
+      text: entry.summary ?? entry.commandKind,
+      cards: entry.card ? [entry.card] : undefined,
+    },
+  ]
+
 const stepLinesForGroup = (group: LogGroup): LogStepDetail[] =>
   group.steps.length > 0
-    ? group.steps.map((entry) => ({
-        text: entry.summary ?? entry.commandKind,
-        cards: entry.card ? [entry.card] : undefined,
-      }))
+    ? group.steps.flatMap(stepLinesForEntry)
     : (group.header.steps ?? [])
 
 type ActivityEvent = {

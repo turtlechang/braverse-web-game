@@ -9,6 +9,7 @@ import {
   getBreakToHandBySumCandidates,
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
+  hasRequiredEffectTargets,
   isEffectConditionMet,
   isEffectTargeted,
 } from './effects/targeting'
@@ -840,6 +841,16 @@ export const canActivateCookieSkill = (
   for (const effect of skill.effects) {
     if (!isEffectConditionMet(state, context, effect)) {
       if (!isSkillEffectConditionDeferredUntilCost(skill, effect)) return false
+    }
+    // BS3-019 / BS6-039 的第一段效果必須先有對手休息區餅乾；
+    // 第二段「可選擇高一等級的戰鬥區餅乾」則由 pending effect 處理。
+    // 這裡若只檢查 `effect.target`，會把沒有 target 欄位的特殊效果誤判為可發動，
+    // 進而在 OnPlay 階段送出沒有目標的 resolve 指令。
+    if (
+      effect.kind === 'opponent-break-to-trash-then-battle-to-break' &&
+      !hasRequiredEffectTargets(state, context, effect)
+    ) {
+      return false
     }
     if (
       (effect.kind === 'damage-by-break-count' ||

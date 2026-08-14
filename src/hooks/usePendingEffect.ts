@@ -685,8 +685,13 @@ export function usePendingEffect(params: {
         type: 'item' as const,
       }
 
-    const triggerLabel =
-      pendingAbility.sourceKind === 'trap'
+    const isEndPhaseEffect = pendingAbility.trigger === 'passive'
+    const pendingTrigger: SkillTrigger = isEndPhaseEffect
+      ? 'passive'
+      : 'activate'
+    const triggerLabel = isEndPhaseEffect
+      ? '回合結束效果'
+      : pendingAbility.sourceKind === 'trap'
         ? '陷阱效果'
         : pendingAbility.sourceKind === 'stage'
           ? '場景效果'
@@ -703,7 +708,7 @@ export function usePendingEffect(params: {
           sourceCardName: pendingAbility.sourceCardName,
         },
         skill: {
-          trigger: 'activate',
+          trigger: pendingTrigger,
           oncePerTurn: false,
           yourTurn: false,
           restSource: false,
@@ -711,7 +716,7 @@ export function usePendingEffect(params: {
           text: '',
           effects: pendingAbility.effects,
         },
-        trigger: 'activate',
+        trigger: pendingTrigger,
         effects: pendingAbility.effects,
         effectIndex: pendingAbility.effectIndex,
         selectedTargetIds: [],
@@ -727,6 +732,7 @@ export function usePendingEffect(params: {
         sourceKind: pendingAbility.sourceKind === 'trap' ? 'item'
           : pendingAbility.sourceKind === 'skill' ? 'cookie'
           : pendingAbility.sourceKind,
+        endPhase: isEndPhaseEffect,
       })
     }, 0)
     return () => window.clearTimeout(timer)
@@ -808,17 +814,10 @@ export function usePendingEffect(params: {
 
     const hasRequiredTargets = availableEffects.every((effect) => {
       if (effect.kind === 'opponent-battle-to-trash') {
-        const selector: EffectTargetSelector = {
-          side: 'opponent',
-          min: 1,
-          max: 1,
-          ...(effect.maxLevel !== undefined ? { maxLevel: effect.maxLevel } : {}),
-          ...(effect.minLevel !== undefined ? { minLevel: effect.minLevel } : {}),
-          ...(effect.remainingHp !== undefined
-            ? { remainingHp: effect.remainingHp }
-            : {}),
-        }
-        return getEffectTargetCandidates(nextGame, context, selector).length > 0
+        // 這類效果不能只用一般 selector 判定：BS6-010 的移動封鎖與
+        // BS3-115 的 Soul Jam 保護都必須在同一份規則候選中排除，否則
+        // UI 會先讓玩家進入選擇流程，最後才發現沒有合法目標。
+        return getEffectTargetCandidatesForEffect(nextGame, context, effect).length > 0
       }
       if (effect.kind === 'support-to-hand') {
         return (

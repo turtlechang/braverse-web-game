@@ -1,0 +1,21 @@
+{
+  "name": "BS6 Green Time Heroes - Standard",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS6-044", "count": 4 },
+    { "cardNumber": "BS6-045", "count": 4 },
+    { "cardNumber": "BS6-048", "count": 4 },
+    { "cardNumber": "BS6-049", "count": 4 },
+    { "cardNumber": "BS6-047", "count": 4 },
+    { "cardNumber": "BS6-050", "count": 4 },
+    { "cardNumber": "BS6-052", "count": 4 },
+    { "cardNumber": "BS6-051", "count": 4 },
+    { "cardNumber": "BS6-058", "count": 4 },
+    { "cardNumber": "BS6-060", "count": 4 },
+    { "cardNumber": "BS6-046", "count": 4 },
+    { "cardNumber": "BS6-056", "count": 4 },
+    { "cardNumber": "BS6-062", "count": 4 },
+    { "cardNumber": "BS6-063", "count": 4 },
+    { "cardNumber": "BS6-064", "count": 4 }
+  ]
+}

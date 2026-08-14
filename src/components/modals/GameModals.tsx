@@ -551,6 +551,7 @@ export interface TrapResponseModalProps {
   onSelectTrap: (instanceId: string) => void
   onSelectTrapTarget?: (instanceId: string) => void
   trapSelfTargetCandidates?: CookieInBattle[]
+  trapSelfTargetRequired?: boolean
   selectedTrapSelfTargetId?: string | null
   onSelectTrapSelfTarget?: (instanceId: string) => void
   onToggleDiscardHand: (instanceId: string) => void
@@ -657,6 +658,7 @@ export function TrapResponseModal({
   onSelectTrap,
   onSelectTrapTarget,
   trapSelfTargetCandidates = [],
+  trapSelfTargetRequired = true,
   selectedTrapSelfTargetId = null,
   onSelectTrapSelfTarget,
   onToggleDiscardHand,
@@ -746,6 +748,7 @@ export function TrapResponseModal({
       handToSupportCards.length === 0 ||
       selectedHandToSupportIds.length === handToSupportAmount)
   const selfTargetReady =
+    !trapSelfTargetRequired ||
     trapSelfTargetCandidates.length === 0 ||
     Boolean(selectedTrapSelfTargetId)
   const activePhaseReady =

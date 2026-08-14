@@ -103,6 +103,28 @@ try {
     await filterToggle.click()
     assert.equal(await filterToggle.getAttribute('aria-expanded'), 'true')
     assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 4)
+    const seriesSelect = editor.locator('[aria-label="卡牌系列"]')
+    await seriesSelect.selectOption('BS6')
+    const bs6PoolCards = editor.locator('.deck-editor-page-pool-card-button')
+    const bs6Titles = await bs6PoolCards.evaluateAll((cards) =>
+      cards.map((card) => card.getAttribute('title') ?? ''),
+    )
+    assert.ok(bs6Titles.length > 0, 'BS6 filter should show at least one card')
+    assert.ok(
+      bs6Titles.every((title) => title.startsWith('BS6-')),
+      `BS6 filter leaked non-BS6 cards: ${bs6Titles.join(', ')}`,
+    )
+    await bs6PoolCards.first().click()
+    assert.equal(
+      (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
+      '1',
+    )
+    await editor.locator('.deck-editor-page-current-footer button').click()
+    assert.equal(
+      (await editor.locator('.deck-editor-page-counter strong').textContent())?.trim(),
+      '0',
+    )
+    await seriesSelect.selectOption('')
     await filterToggle.click()
     assert.equal(await filterToggle.getAttribute('aria-expanded'), 'false')
     assert.ok(await editor.locator('.deck-editor-page-pool-card-button').count() > 0)

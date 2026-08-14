@@ -797,6 +797,57 @@ describe('applyGameCommand replacement finalization', () => {
     )
   })
 
+  it('clears a resolved effect order before resuming an ability in battle', () => {
+    const base = makeState({
+      phase: 'main',
+      activePlayerId: 'player-one',
+    })
+    const attacker = base.players['player-one'].battleArea[0].card
+    const defender = base.players['player-two'].battleArea[0].card
+    const state = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-one' as const,
+        defenderPlayerId: 'player-two' as const,
+        attackerInstanceId: attacker.instanceId,
+        targetInstanceId: defender.instanceId,
+        declaredDamage: 1,
+        remainingDamage: 1,
+        stage: 'trap' as const,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      pendingAbilityEffect: {
+        ...abilityEffect,
+        sourceInstanceId: attacker.instanceId,
+      },
+      pendingEffectOrder: {
+        playerId: 'player-two' as const,
+        items: [{
+          id: 'already-resolved',
+          kind: 'draw-up-to' as const,
+          sourcePlayerId: 'player-two' as const,
+          sourceInstanceId: 'finished-source',
+          sourceCardName: 'Finished Source',
+        }],
+        resolvedOrder: ['already-resolved'],
+      },
+    } satisfies GameState
+
+    const result = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+
+    expect(result.pendingAbilityEffect).toBeUndefined()
+    expect(result.pendingEffectOrder).toBeNull()
+  })
+
   it('finalizes replacement after the last ability-effect step', () => {
     const state = makeState({
       departedCookieCounts: { 'player-one': 1, 'player-two': 0 },

@@ -18,6 +18,16 @@ import bs5YellowOpenDeck from '../../data/decks/bs5-yellow-open.json'
 import bs5GreenOpenDeck from '../../data/decks/bs5-green-open.json'
 import bs5BlueOpenDeck from '../../data/decks/bs5-blue-open.json'
 import bs5PurpleOpenDeck from '../../data/decks/bs5-purple-open.json'
+import bs6RedStandardDeck from '../../data/decks/bs6-red-standard.json'
+import bs6YellowStandardDeck from '../../data/decks/bs6-yellow-standard.json'
+import bs6GreenStandardDeck from '../../data/decks/bs6-green-standard.json'
+import bs6BlueStandardDeck from '../../data/decks/bs6-blue-standard.json'
+import bs6PurpleStandardDeck from '../../data/decks/bs6-purple-standard.json'
+import bs6RedCompetitiveDeck from '../../data/decks/bs6-red-competitive.json'
+import bs6YellowCompetitiveDeck from '../../data/decks/bs6-yellow-competitive.json'
+import bs6GreenCompetitiveDeck from '../../data/decks/bs6-green-competitive.json'
+import bs6BlueCompetitiveDeck from '../../data/decks/bs6-blue-competitive.json'
+import bs6PurpleCompetitiveDeck from '../../data/decks/bs6-purple-competitive.json'
 import {
   convertOfficialCardEffects,
   convertOfficialAttackEffects,
@@ -68,6 +78,22 @@ export const BS5_AI_PRESET_DECK_CHOICES = [
   'bs5-purple-open',
 ] as const
 
+export const BS6_AI_PRESET_DECK_CHOICES = [
+  'bs6-red-standard',
+  'bs6-yellow-standard',
+  'bs6-green-standard',
+  'bs6-blue-standard',
+  'bs6-purple-standard',
+] as const
+
+export const BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES = [
+  'bs6-red-competitive',
+  'bs6-yellow-competitive',
+  'bs6-green-competitive',
+  'bs6-blue-competitive',
+  'bs6-purple-competitive',
+] as const
+
 export type Bs3AiPresetDeckChoice =
   (typeof BS3_AI_PRESET_DECK_CHOICES)[number]
 
@@ -76,6 +102,12 @@ export type Bs4AiPresetDeckChoice =
 
 export type Bs5AiPresetDeckChoice =
   (typeof BS5_AI_PRESET_DECK_CHOICES)[number]
+
+export type Bs6AiPresetDeckChoice =
+  (typeof BS6_AI_PRESET_DECK_CHOICES)[number]
+
+export type Bs6CompetitiveAiPresetDeckChoice =
+  (typeof BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES)[number]
 
 export type AiPresetDeckChoice =
   | 'bs2-red'
@@ -86,6 +118,8 @@ export type AiPresetDeckChoice =
   | Bs3AiPresetDeckChoice
   | Bs4AiPresetDeckChoice
   | Bs5AiPresetDeckChoice
+  | Bs6AiPresetDeckChoice
+  | Bs6CompetitiveAiPresetDeckChoice
 export type BuiltInDeckChoice = StarterDeckChoice | AiPresetDeckChoice
 export type DeckChoice = BuiltInDeckChoice | 'custom'
 
@@ -543,6 +577,28 @@ export const AI_PRESET_BS5_BLUE_OPEN_DECK: StarterDeckEntry[] =
 export const AI_PRESET_BS5_PURPLE_OPEN_DECK: StarterDeckEntry[] =
   bs5PurpleOpenDeck.entries
 
+export const AI_PRESET_BS6_RED_STANDARD_DECK: StarterDeckEntry[] =
+  bs6RedStandardDeck.entries
+export const AI_PRESET_BS6_YELLOW_STANDARD_DECK: StarterDeckEntry[] =
+  bs6YellowStandardDeck.entries
+export const AI_PRESET_BS6_GREEN_STANDARD_DECK: StarterDeckEntry[] =
+  bs6GreenStandardDeck.entries
+export const AI_PRESET_BS6_BLUE_STANDARD_DECK: StarterDeckEntry[] =
+  bs6BlueStandardDeck.entries
+export const AI_PRESET_BS6_PURPLE_STANDARD_DECK: StarterDeckEntry[] =
+  bs6PurpleStandardDeck.entries
+
+export const AI_PRESET_BS6_RED_COMPETITIVE_DECK: StarterDeckEntry[] =
+  bs6RedCompetitiveDeck.entries
+export const AI_PRESET_BS6_YELLOW_COMPETITIVE_DECK: StarterDeckEntry[] =
+  bs6YellowCompetitiveDeck.entries
+export const AI_PRESET_BS6_GREEN_COMPETITIVE_DECK: StarterDeckEntry[] =
+  bs6GreenCompetitiveDeck.entries
+export const AI_PRESET_BS6_BLUE_COMPETITIVE_DECK: StarterDeckEntry[] =
+  bs6BlueCompetitiveDeck.entries
+export const AI_PRESET_BS6_PURPLE_COMPETITIVE_DECK: StarterDeckEntry[] =
+  bs6PurpleCompetitiveDeck.entries
+
 export const OFFICIAL_STARTER_DECK_RED = OFFICIAL_RED_STARTER_DECK
 
 export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]> = {
@@ -577,6 +633,16 @@ export const OFFICIAL_DECK_RECIPES: Record<BuiltInDeckChoice, StarterDeckEntry[]
   'bs5-green-open': AI_PRESET_BS5_GREEN_OPEN_DECK,
   'bs5-blue-open': AI_PRESET_BS5_BLUE_OPEN_DECK,
   'bs5-purple-open': AI_PRESET_BS5_PURPLE_OPEN_DECK,
+  'bs6-red-standard': AI_PRESET_BS6_RED_STANDARD_DECK,
+  'bs6-yellow-standard': AI_PRESET_BS6_YELLOW_STANDARD_DECK,
+  'bs6-green-standard': AI_PRESET_BS6_GREEN_STANDARD_DECK,
+  'bs6-blue-standard': AI_PRESET_BS6_BLUE_STANDARD_DECK,
+  'bs6-purple-standard': AI_PRESET_BS6_PURPLE_STANDARD_DECK,
+  'bs6-red-competitive': AI_PRESET_BS6_RED_COMPETITIVE_DECK,
+  'bs6-yellow-competitive': AI_PRESET_BS6_YELLOW_COMPETITIVE_DECK,
+  'bs6-green-competitive': AI_PRESET_BS6_GREEN_COMPETITIVE_DECK,
+  'bs6-blue-competitive': AI_PRESET_BS6_BLUE_COMPETITIVE_DECK,
+  'bs6-purple-competitive': AI_PRESET_BS6_PURPLE_COMPETITIVE_DECK,
 }
 
 const getEnergyColor = (
@@ -873,6 +939,28 @@ export const createAiPresetBs5BlueOpenDeck = (playerId: PlayerId): GameCard[] =>
 export const createAiPresetBs5PurpleOpenDeck = (playerId: PlayerId): GameCard[] =>
   createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS5_PURPLE_OPEN_DECK, [])
 
+export const createAiPresetBs6RedStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_RED_STANDARD_DECK, [])
+export const createAiPresetBs6YellowStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_YELLOW_STANDARD_DECK, [])
+export const createAiPresetBs6GreenStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_GREEN_STANDARD_DECK, [])
+export const createAiPresetBs6BlueStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_BLUE_STANDARD_DECK, [])
+export const createAiPresetBs6PurpleStandardDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_PURPLE_STANDARD_DECK, [])
+
+export const createAiPresetBs6RedCompetitiveDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_RED_COMPETITIVE_DECK, [])
+export const createAiPresetBs6YellowCompetitiveDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_YELLOW_COMPETITIVE_DECK, [])
+export const createAiPresetBs6GreenCompetitiveDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_GREEN_COMPETITIVE_DECK, [])
+export const createAiPresetBs6BlueCompetitiveDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_BLUE_COMPETITIVE_DECK, [])
+export const createAiPresetBs6PurpleCompetitiveDeck = (playerId: PlayerId): GameCard[] =>
+  createOfficialStarterDeckFromRecipe(playerId, AI_PRESET_BS6_PURPLE_COMPETITIVE_DECK, [])
+
 export const createOfficialStarterDeck = createOfficialRedStarterDeck
 
 export const DECK_CREATORS: Record<
@@ -910,6 +998,16 @@ export const DECK_CREATORS: Record<
   'bs5-green-open': createAiPresetBs5GreenOpenDeck,
   'bs5-blue-open': createAiPresetBs5BlueOpenDeck,
   'bs5-purple-open': createAiPresetBs5PurpleOpenDeck,
+  'bs6-red-standard': createAiPresetBs6RedStandardDeck,
+  'bs6-yellow-standard': createAiPresetBs6YellowStandardDeck,
+  'bs6-green-standard': createAiPresetBs6GreenStandardDeck,
+  'bs6-blue-standard': createAiPresetBs6BlueStandardDeck,
+  'bs6-purple-standard': createAiPresetBs6PurpleStandardDeck,
+  'bs6-red-competitive': createAiPresetBs6RedCompetitiveDeck,
+  'bs6-yellow-competitive': createAiPresetBs6YellowCompetitiveDeck,
+  'bs6-green-competitive': createAiPresetBs6GreenCompetitiveDeck,
+  'bs6-blue-competitive': createAiPresetBs6BlueCompetitiveDeck,
+  'bs6-purple-competitive': createAiPresetBs6PurpleCompetitiveDeck,
 }
 
 export const createDeckForChoice = (

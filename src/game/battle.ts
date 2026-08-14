@@ -5,6 +5,7 @@ import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
   getEffectTargetCandidates,
+  getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getSupportEffectCandidates,
@@ -349,11 +350,14 @@ const hasRequiredTrapTargets = (
       return true
     }
 
-    const battleCandidateCount = getEffectTargetCandidates(
-      state,
-      context,
-      effect.target,
-    ).length
+    // Movement effects have additional legality constraints (for example a
+    // return-to-deck-bottom effect cannot empty a battle area).  Use the
+    // effect-aware candidate helper here so the trap candidate list cannot
+    // advertise BS2-050 when its remaining-HP target is not movable.
+    const battleCandidateCount =
+      effect.kind === 'return-to-hand' || effect.kind === 'return-to-deck-bottom'
+        ? getEffectTargetCandidatesForEffect(state, context, effect).length
+        : getEffectTargetCandidates(state, context, effect.target).length
     const stageCandidateCount =
       effect.kind === 'field-to-trash' &&
       effect.allowStage &&
@@ -556,6 +560,11 @@ const resolveTrapEffectTargetIds = (
   if (!target) return requestedIds
   if (target.side === 'self') {
     if (selfTargetIds && selfTargetIds.length > 0) return selfTargetIds
+    // An explicitly supplied empty selfTargetIds means the UI deliberately
+    // skipped an optional self effect (for example BS6-020's "up to 1" HP
+    // return). Older callers omit selfTargetIds and still use targetIds for
+    // self-only traps such as BS1-051, so keep that compatibility path.
+    if (selfTargetIds && target.min === 0) return []
   } else if (requestedIds.length === 0) {
     return requestedIds
   }
@@ -583,6 +592,9 @@ const validateTrapTargets = (
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
       effect.kind === 'redirect-attack' ||
+      effect.kind === 'return-to-hand' ||
+      effect.kind === 'return-to-deck-bottom' ||
+      effect.kind === 'hp-to-hand' ||
       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
   if (targetEffects.length === 0) {
@@ -1339,6 +1351,24 @@ export const playTrap = (
         nextState = executeCardEffect(nextState, context, effect, [])
         continue
       }
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
+    // 陷阱也可能包含「選擇一項」；先保留未展開的效果佇列，讓 UI／AI
+    // 透過既有 resolve-choose-one 流程選模式，再接續同一場戰鬥。
+    if (effect.kind === 'choose-one') {
       return {
         ...nextState,
         pendingAbilityEffect: {
@@ -2987,6 +3017,8 @@ export const getTrapTargetCandidates = (
       effect.kind === 'prevent-knockout' ||
       effect.kind === 'field-to-trash' ||
       effect.kind === 'redirect-attack' ||
+      effect.kind === 'return-to-hand' ||
+      effect.kind === 'return-to-deck-bottom' ||
       (effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly),
   )
   // The guided trap UI has separate channels for opponent/either targets and
@@ -3021,17 +3053,18 @@ export const getTrapSelfTargetCandidates = (
   )
   const selfEffects = card?.trap?.effects.filter(
     (effect) =>
-      (effect.kind === 'damage' || effect.kind === 'gain-hp') &&
+      (effect.kind === 'damage' ||
+        effect.kind === 'gain-hp' ||
+        effect.kind === 'hp-to-hand') &&
       'target' in effect &&
       effect.target?.side === 'self' &&
-      (effect.target.min ?? 0) > 0,
+      effect.target.max > 0,
   )
   const hasNonSelfTarget = card?.trap?.effects.some(
     (effect) =>
       'target' in effect &&
       effect.target !== undefined &&
-      effect.target.side !== 'self' &&
-      (effect.target.min ?? 0) > 0,
+      effect.target.side !== 'self',
   )
   // A self-only trap is already represented by getTrapTargetCandidates. Do
   // not expose the same Cookie again in a second guided phase.

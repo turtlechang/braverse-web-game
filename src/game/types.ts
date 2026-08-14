@@ -26,6 +26,9 @@ export type EnergyCost = Partial<Record<EnergyColor | 'neutral', number>>
 
 export type SkillTrigger = 'activate' | 'on-play' | 'passive' | 'block' | 'opponent-attack'
 
+/** 回合結束效果是在來源玩家自己的回合，或對手的回合結束時觸發。 */
+export type EndPhaseScope = 'your-turn' | 'opponent-turn'
+
 export interface CardSkill {
   trigger: SkillTrigger
   oncePerTurn: boolean
@@ -40,6 +43,7 @@ export interface CardSkill {
   specialPlayCost?: AbilityCost
   faint?: boolean
   endPhase?: boolean
+  endPhaseScope?: EndPhaseScope
   afterDamage?: boolean
   /**
    * 整局只能發動一次（BS3-025）。官方釋疑：是每位玩家限定一次，即使同一玩家
@@ -73,6 +77,7 @@ export interface StageAbility extends CardAbility {
    * 由 `processEndPhaseEffects` 在回合結束階段自動結算，不需要玩家主動發動。
    */
   endPhase?: boolean
+  endPhaseScope?: EndPhaseScope
   specialVictory?: SpecialVictoryCondition
 }
 
@@ -2070,7 +2075,7 @@ export interface GameState {
     sourceInstanceId: string
     sourceCardName?: string
     sourceKind: 'skill' | 'item' | 'stage' | 'trap'
-    trigger?: 'activate' | 'on-play' | 'attacker-faint'
+    trigger?: 'activate' | 'on-play' | 'passive' | 'attacker-faint'
     effects: CardEffect[]
     effectIndex: number
     /**

@@ -3,7 +3,11 @@ import {
   getFaintEffectCardCandidates,
   getFaintEffectCandidates,
 } from '../battle'
-import { applyGameCommand, getPendingDecision } from '../commands'
+import {
+  applyGameCommand,
+  getPendingDecision,
+  hasActiveEffectOrder,
+} from '../commands'
 import { getRemainingEnergyCost, selectEnergyPayment } from '../energy'
 import {
   getEffectSelectionCandidates,
@@ -13,6 +17,7 @@ import {
 } from '../effects'
 import { getRefreshCandidates } from '../refresh'
 import { getDiscardHandCostCandidates } from '../skills'
+import { chooseAiEffectMode } from './choose-one-mode'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
@@ -34,7 +39,7 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
     state.pendingRefresh ||
       state.pendingOnPlay ||
       state.pendingReplacement ||
-      state.pendingEffectOrder ||
+      hasActiveEffectOrder(state) ||
       (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
       (state.pendingAfterDamageEffects &&
         state.pendingAfterDamageEffects.length > 0) ||
@@ -74,6 +79,17 @@ export const handleAiPendingDecision = (
       sourcePlayerId: pendingAbility.sourcePlayerId,
       sourceInstanceId: pendingAbility.sourceInstanceId,
       sourceCardName: pendingAbility.sourceCardName,
+    }
+    if (effect.kind === 'choose-one') {
+      return {
+        state: applyGameCommand(state, {
+          kind: 'resolve-choose-one',
+          playerId,
+          modeIndex: chooseAiEffectMode(state, context, effect),
+        }),
+        action: 'idle',
+        description: `${state.players[playerId].name}選擇${pendingAbility.sourceCardName ?? '卡牌'}的一項效果。`,
+      }
     }
     const targetIds = requiresEffectCardSelection(effect)
       ? getEffectSelectionCandidates(state, context, effect)

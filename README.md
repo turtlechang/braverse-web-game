@@ -8,6 +8,10 @@
 
 BS6 已完成資料準備期、逐色 Browser 稽核與正式 promote：138 筆記錄（107 個不同基礎卡號；106 筆基礎記錄，另 BS6-091 僅有異圖／變體；共 32 筆異圖／變體）已納入 `data/cards/`；正式卡池重新通過 138／138 Browser 入口矩陣、97／97 效果互動矩陣、adapter 回歸、`validate:cards` 與 `check:card-pool`。後續官方更新仍先輸出至 `data/candidates/`，完成同一套稽核後再 promote。
 
+BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將所選餅乾最上方至多 1 張 HP 卡移回手牌，並保留可略過選擇與既有必要自身目標陷阱的相容行為。
+
+本輪已完成 BS5／BS6 紅、黃、綠、藍、紫逐卡 A/B Browser 稽核：BS5 151 張、BS6 138 張，共 289 張；正向 A 與負向 B 均 289／289 PASS，報告保存在 `docs/`。B fixture 將支援區卡設為疲勞，驗證非法能量支付、無支付攻擊不成立，以及攻擊後 `Then` 在實際待處理視窗可正常收斂。
+
 卡牌匯入稽核可使用 BraverseFan 作為社群交叉參考，但不取代官方 JSON、卡面、規則與公告。
 
 卡牌效果文字的官方標記與遊戲規則顯示共用 `CardEffectText`；圖片標籤資產集中於 `public/card-tags/`，保留文字回退與無障礙替代文字。
@@ -62,7 +66,15 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 ## 目前進度
 
-BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
+BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
+
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 187 個測試檔、3,004 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。
+
+五色 BS6 標準牌組已建立並接入 AI preset；資料驗證、固定 seed 100 場引擎矩陣與正式根路徑 Browser 實戰均通過。修正後五色各 20/20、合計 100/100 場完成，`simulationStuck=0`、Browser 錯誤與頁面例外均為 0；完整結果見 [BS6 牌組 Browser 報告](docs/bs6-deck-browser-validation-2026-08-12.md)。勝率只作固定樣本觀察，不作為環境強度定案。
+
+BS5+6 競技環境 AI 牌組已新增紅、黃、綠、藍、紫五色，並與既有 BS5 標準及 BS6 標準 choice 分開顯示；牌組方向依 Operation Timeguard 賽事 Top 4／色彩占比與牌組 archetype 整理，競技綠牌避開官方禁卡 BS6-064。固定 seed 100 場的本機比較報告見 [BS6 競技牌組研究](docs/bs6-competitive-deck-research-2026-08-13.md) 與 `data/decks/bs6-competitive-benchmark-report-100-standard.json`；這些數字只代表本專案 AI 規則樣本，不等同官方賽事勝率。
+
+BS1～BS6 五色 512 副牌組 Swiss 基準已完成：初代與第一輪 BS6 加權迭代各在 Chromium Browser 完成 9 輪、2,304／2,304 場，卡住 0、Browser 錯誤 0。第一輪上位卡表與牌組清單已保存於 [512 副牌組 Swiss 報告](docs/bs1-bs6-512-swiss-report.md)，後續牌組調整以此固定 seed 基準持續迭代。
 
 BraverseFan 中文圖鑑與判例整理已列入文件參考來源；目前僅作為資料交叉核對與測試案例搜尋，不改變正式卡池權威來源。
 
@@ -141,7 +153,9 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；後續以正式卡池回歸、官方更新追蹤與真人對戰驗證為主。
+BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；五色標準牌組已完成資料、固定 seed 矩陣與正式根路徑多場 Browser 驗證，五色各 20/20、合計 100/100 且卡死 0。BS5+6 競技環境五色 AI choice 已接入，BS6-020 的陷阱自身目標選擇也已納入回歸基線；512 副牌組 Swiss 已成為新的 AI 回歸基準，後續以其上位卡表進行 matchup-aware 迭代，並持續以真人對戰與官方賽事資料校準。
+
+BS5／BS6 五色逐卡 A/B 報告已納入回歸基線；本次以本機 in-app Browser Use 重跑 BS5 222／222、BS6 214／214 正向／負向路徑並全數通過。BS5-060 另以專用 localhost-only end-phase fixture 補驗「攻擊支付後支援卡休息 → 結束回合最多 3 張啟動」，避免一般 `card:` fixture 因支援卡全為啟動而產生假陰性。後續官方卡文、卡圖或規則更新時，需同步重跑正向／負向 Browser 路徑，並維持正式卡池與報告逐色無缺卡、無重複。
 
 後續引用社群判例時，需在 inventory／coverage 文件記錄 URL、查閱日期與官方對應依據，並保留差異待確認。
 
@@ -159,7 +173,7 @@ BS5 已完成資料準備期與本批次 promote：`cards:import:bs5-candidate` 
 
 BS5 的 Browser 稽核目前已完成五色標準正式牌組各 2 場、共 10 場端到端實戰（完整走過開局、支付／攻擊、陷阱／FLIP、昏厥補位、OnPlay 與勝負結算），並確認 console 無 error／warning；完整結果見 [BS5 五色正式 Browser 實戰矩陣](docs/bs5-browser-formal-matrix-2026-08-07.md)。每色 40 場與逐卡自然抽牌覆蓋仍是後續稽核項目，不能以這 10 場取代。
 
-下一步補做每色 40 場正式 Browser 矩陣，並將每張 BS5 卡牌的自然抽牌技能、攻擊後 `Then`、陷阱、物品、場景與不成立條件納入逐卡證據。
+下一步補做每色 40 場正式 Browser 矩陣，並將每張 BS5 卡牌的自然抽牌技能、攻擊後 `Then`、陷阱、物品、場景與不成立條件納入逐卡證據；攻擊後「When your turn ends」卡牌須額外推進至結束階段確認實際狀態變化。
 
 持續以瀏覽器透過正式卡池測試對局設定驗證 BS3 卡牌在卡牌詳情、效果面板與戰鬥互動中的技能、攻擊後、物品、陷阱、場景與資源區效果，並維持規則引擎與 UI 的責任分離。
 
@@ -202,6 +216,8 @@ npm run test:browser:smoke   # PR gate：AI＋牌組編輯器＋好友房核心 
 npm run test:deployment:browser # 外部 Preview／Production URL 與 Render WebSocket 驗收
 npm run test:bs4:cards:browser # BS4 111 張 Chrome card-check 載入 gate
 npm run test:bs4:interaction:browser # BS4 條件卡與一般 fixture 實際互動
+npm run test:bs6:decks:browser # BS6 五色牌組主選單開局與每色 20 場 Browser AI 驗證
+npm run test:bs6:competitive:decks:browser # BS5+6 五色競技環境牌組 Browser AI 驗證
 npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
@@ -235,7 +251,16 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-12 | BS6 138 筆（107 個不同基礎卡號；106 筆基礎記錄、32 筆異圖／變體）完成五色逐卡 Browser 入口矩陣與 97／97 效果互動矩陣；修正 6 筆官方資料遺漏 `{da}`、BS6-001 HP 代價候選與 BS6-106 陷阱 Then 目標，候選通過 promotion-ready gate 後 promote 至正式卡池，正式 `validate:cards`、`check:card-pool`、完整測試、lint、build 與 bundle gate 通過。 |
+| 2026-08-14 | 以本機 in-app Browser Use 完成 BS5-001～111、BS6-001～107 共 436 條正向／負向逐卡路徑；補上 BS6-025、032、045、057、081 的合法候選 fixture，完整 Vitest 187 檔／3,004 項、lint、build 通過。 |
+| 2026-08-14 | 釐清 BS5-060 一般 `card:` 夾具未模擬攻擊支付後的休息支援卡；新增專用 end-phase A/B fixture、146 項 demo 回歸，並以 Browser Use 驗證 4 張休息支援卡於結束回合啟動 3 張、全啟動路徑安全略過。 |
+| 2026-08-14 | 完成 BS1～BS6 五色 512 副牌組的 9 輪 Browser Swiss 與第一輪 BS6 加權迭代：初代／迭代各 2,304／2,304 場、卡住 0、Browser 錯誤 0；補上五色上位卡表與 JSON 報告，並修正 BS6-039、BS6-043、陷阱移動目標、過期效果順序及 AI 攻擊目標的結算卡死；完整 Vitest 187 檔／3,003 項、lint、build 通過。 |
+| 2026-08-13 | 完成 BS5／BS6 五色逐卡 A/B Browser 稽核：151＋138 張正向／負向路徑全部通過；新增 localhost-only `card-negative` fixture 與支付／額外代價／攻擊後 `Then` 驗證驅動，完整 Vitest 185 檔／2,994 項、lint、build 通過。 |
+| 2026-08-13 | 修正 BS6-020 `Tonic Spray` 陷阱後半段的自身餅乾與最上方 HP 卡回手選擇；新增規則／Modal 回歸測試，完整 Vitest 185 檔／2,994 項、lint、build 與本機 Browser 選取／略過路徑通過。 |
+| 2026-08-13 | 新增 BS5+6 五色競技環境 AI 牌組，保留 BS5／BS6 標準 choice；補上賽事研究紀錄、固定 seed 100 場競技矩陣與競技牌組 Browser 驗證入口。 |
+| 2026-08-13 | 修正 BS6 五色標準牌組 Browser 實戰的 HP／支援區／場景代價與陷阱 `choose-one` 決策串接；補上 46 項 AI／陷阱回歸測試，固定 seed 100 場與正式根路徑 Browser 100／100 場完成、卡死 0，Browser gate PASS。 |
+| 2026-08-12 | 五色 BS6 標準牌組完成資料驗證、固定 seed 100 場矩陣與正式根路徑 Browser 驗證；Browser 多場結果仍有 AI／效果結算卡死，已保留失敗證據並列入修正，不宣稱全綠。 |
+| 2026-08-12 | 建立 BS6 五色純 BS6 標準牌組與 AI preset，補上固定 seed 100 場矩陣及根路徑 Browser 牌組驗證；修正 Browser AI simulation 傳遞自訂牌組，並記錄目前效果／AI 結算卡死，未將未全綠結果誤標為通過。 |
+| 2026-08-12 | BS6 138 筆（107 個不同基礎卡號；106 筆基礎記錄、32 筆異圖／變體）完成五色逐卡 Browser 入口矩陣與 97／97 效果互動矩陣；修正 6 筆官方資料遺漏 `{da}`、BS6-001 HP 代價候選與 BS6-106 陷阱 Then 目標，候選通過 promotion-ready gate 後 promote 至正式卡池，正式 `validate:cards`、`check:card-pool`、完整測試、lint、build 與 bundle gate 通過；牌組編輯器新增 BS6 系列篩選並以 Browser 回歸驗證。 |
 | 2026-08-11 | P-0XX 127 筆（118 個 base card number、含 14 筆 `@` 異圖）已 promote 至 `data/cards/`，正式卡池增至 963 種卡號；修正 test-state、轉接覆蓋與 Browser 稽核腳本仍讀候選檔的路徑。P-041 的生日祝福登場文字明確標示為不改變規則狀態的社交效果，保留時機與攻擊後生日 +1 攻擊的轉接及回歸測試。 |
 | 2026-08-11 | 完成牌組編輯器全頁工作台第二輪收斂：主要牌組依餅乾／FLIP／物品／陷阱／場景分區並預留 BS8 額外牌組；JSON 匯入改為輔助提示框；Open 匯入略過標準禁限卡但保留核心牌組規則。頁首整合合法性、賽制、卡池統計與 JSON 工具，卡池篩選預設收合；左欄採卡圖＋數值摘要與能量圖示，補齊元件與 Browser 回歸驗證。 |
 | 2026-08-10 | 完成官方 P-0XX 全量盤點與轉換：153 筆記錄（含 14 筆異圖變體）全部完成 adapter conversion，新增 127 筆候選資料與完整匯入清單；完成 P-082／P-084／P-147 特殊支付的 runtime、UI 與專用 Browser 驗證，候選仍待逐卡稽核後 promote。 |

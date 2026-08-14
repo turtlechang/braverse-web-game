@@ -7,6 +7,7 @@ import {
   getEffectiveAttack,
   getForcedAttackTargetId,
   resolveNextDamage,
+  advancePhase,
   type CardEffect,
   type GameCard,
   type GameState,
@@ -21,6 +22,7 @@ import {
   createBs2015CostDepartureDemoState,
   createBs3SilverbellConditionDemoState,
   createBs3SpecialVictoryDemoState,
+  createBs5CroissantEndPhaseDemoState,
   createBs5FaintDemoState,
   createBs5FlipDemoState,
   createBs5ItemConditionDemoState,
@@ -30,6 +32,7 @@ import {
   createBs6ConditionDemoState,
   createBreakToTrashDemoState,
   createCardCheckDemoState,
+  createCardNegativeDemoState,
   createP082TrapDemoState,
   createPConditionDemoState,
   createP084ItemConditionDemoState,
@@ -197,6 +200,10 @@ describe('parseTestStateConfig', () => {
       kind: 'bs5-item-111',
       conditionMet: false,
     })
+    expect(parseTestStateConfig('?test-state=bs5-item:BS5-111:met', 'localhost')).toEqual({
+      kind: 'bs5-item-111',
+      conditionMet: true,
+    })
     expect(parseTestStateConfig('?test-state=bs5-item:BS5-020:met', 'localhost')).toEqual({
       kind: 'bs5-item-condition',
       cardNumber: 'BS5-020',
@@ -208,6 +215,15 @@ describe('parseTestStateConfig', () => {
       conditionMet: false,
     })
     expect(parseTestStateConfig('?test-state=bs5-faint:BS4-011:met', 'localhost')).toBeNull()
+  })
+
+  it('parses the BS5-060 end-phase Browser A/B routes', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs5-060-end-phase:rested', 'localhost'),
+    ).toEqual({ kind: 'bs5-060-end-phase', supportState: 'rested' })
+    expect(
+      parseTestStateConfig('?test-state=bs5-060-end-phase:active', 'localhost'),
+    ).toEqual({ kind: 'bs5-060-end-phase', supportState: 'active' })
   })
 
   it('parses BS6 candidate A/B test-state routes only on localhost', () => {
@@ -228,6 +244,40 @@ describe('parseTestStateConfig', () => {
     expect(
       parseTestStateConfig('?test-state=bs6-condition:BS6-034:met', 'localhost'),
     ).toBeNull()
+  })
+
+  it('parses the generic negative card-check route only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=card-negative:BS6-020', 'localhost'),
+    ).toEqual({ kind: 'card-negative', cardNumber: 'BS6-020' })
+    expect(
+      parseTestStateConfig('?test-state=card-negative:BS6-020', 'example.com'),
+    ).toBeNull()
+  })
+
+  it('creates BS6-012 hand-count A/B fixtures for end-phase verification', () => {
+    const met = createBs6ConditionDemoState('BS6-012', true)
+    const unmet = createBs6ConditionDemoState('BS6-012', false)
+    const getSourceAndEffect = (state: GameState) => {
+      const source = state.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === 'BS6-012',
+      )
+      if (!source?.card.skill) throw new Error('BS6-012 formal source is required')
+      return { source, effect: source.card.skill.effects[0]! }
+    }
+    const metSource = getSourceAndEffect(met)
+    const unmetSource = getSourceAndEffect(unmet)
+
+    expect(met.players['player-one'].hand).toHaveLength(4)
+    expect(unmet.players['player-one'].hand).toHaveLength(6)
+    expect(isEffectConditionMet(met, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: metSource.source.card.instanceId,
+    }, metSource.effect)).toBe(true)
+    expect(isEffectConditionMet(unmet, {
+      sourcePlayerId: 'player-one',
+      sourceInstanceId: unmetSource.source.card.instanceId,
+    }, unmetSource.effect)).toBe(false)
   })
 
   it('returns null when non-localhost even with valid test-state', () => {
@@ -527,12 +577,47 @@ describe('createCardCheckDemoState', () => {
     ).not.toContain('BS6-091-break-excluded')
   })
 
+  it('creates a negative Browser fixture with every support card rested', () => {
+    const state = createCardNegativeDemoState('BS6-020')
+
+    expect(state.players['player-one'].supportArea.length).toBeGreaterThan(0)
+    expect(
+      state.players['player-one'].supportArea.every((support) => support.rested),
+    ).toBe(true)
+    expect(
+      state.players['player-one'].hand.some((card) => card.id === 'BS6-020'),
+    ).toBe(true)
+  })
+
   it('prepares BS6-041 with three Cookies in the break area for its item condition', () => {
     const state = createCardCheckDemoState('BS6-041')
 
     expect(
       state.players['player-one'].breakArea.filter((card) => card.type === 'cookie'),
     ).toHaveLength(3)
+  })
+
+  it('prepares BS6 Browser skill routes with their required legal candidates', () => {
+    const bs6025 = createCardCheckDemoState('BS6-025')
+    expect(bs6025.players['player-one'].breakArea).toEqual([
+      expect.objectContaining({ level: 2 }),
+    ])
+
+    const bs6032 = createCardCheckDemoState('BS6-032')
+    expect(bs6032.players['player-one'].hand).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'cookie' })]),
+    )
+
+    const bs6045 = createCardCheckDemoState('BS6-045')
+    expect(bs6045.players['player-two'].supportArea).toHaveLength(10)
+
+    const bs6057 = createCardCheckDemoState('BS6-057')
+    expect(bs6057.players['player-one'].supportArea).toEqual(
+      expect.arrayContaining([expect.objectContaining({ card: expect.objectContaining({ type: 'cookie' }) })]),
+    )
+
+    const bs6081 = createCardCheckDemoState('BS6-081')
+    expect(bs6081.players['player-one'].hand).toHaveLength(5)
   })
 
   it('creates BS6-039 met and unmet break-level fixtures without removing the source card', () => {
@@ -746,6 +831,51 @@ describe('createCardCheckDemoState', () => {
     expect(stage022Met.players['player-one'].battleArea[0].card.id).toBe('BS5-013')
     expect(stage022Unmet.players['player-one'].battleArea[0].card.id).not.toBe('BS5-013')
     expect(stage022Met.players['player-one'].battleArea[0].hpCards).toHaveLength(4)
+  })
+
+  it('builds the BS5-060 end-phase A/B fixture around the real attack window', () => {
+    const rested = createBs5CroissantEndPhaseDemoState('rested')
+    const active = createBs5CroissantEndPhaseDemoState('active')
+
+    expect(rested.pendingBattle?.stage).toBe('attack-effect')
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(4)
+    expect(active.players['player-one'].supportArea.some((support) => support.rested))
+      .toBe(false)
+  })
+
+  it('resolves BS5-060 only when the turn reaches end phase and activates at most 3 supports', () => {
+    let rested = applyGameCommand(
+      createBs5CroissantEndPhaseDemoState('rested'),
+      { kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] },
+    )
+    expect(rested.pendingEndOfTurnEffects).toMatchObject([
+      {
+        sourceCardName: 'Croissant Cookie',
+        effects: [{ kind: 'set-active', supportCount: 3 }],
+      },
+    ])
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(4)
+
+    rested = advancePhase(rested)
+    expect(rested.phase).toBe('end')
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(4)
+
+    rested = advancePhase(rested)
+    expect(rested.pendingEndOfTurnEffects ?? []).toHaveLength(0)
+    expect(rested.players['player-one'].supportArea.filter((support) => support.rested))
+      .toHaveLength(1)
+
+    let active = applyGameCommand(
+      createBs5CroissantEndPhaseDemoState('active'),
+      { kind: 'resolve-attack-effect', playerId: 'player-one', targetIds: [] },
+    )
+    active = advancePhase(advancePhase(active))
+    expect(active.pendingEndOfTurnEffects ?? []).toHaveLength(0)
+    expect(active.players['player-one'].supportArea.some((support) => support.rested))
+      .toBe(false)
   })
 
   it('keeps BS5 Browser card-check Cookies at legal positive HP', () => {

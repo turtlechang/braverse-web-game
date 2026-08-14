@@ -1,0 +1,21 @@
+{
+  "name": "BS6 Blue Time Heroes - Standard",
+  "format": "standard",
+  "entries": [
+    { "cardNumber": "BS6-065", "count": 4 },
+    { "cardNumber": "BS6-076", "count": 4 },
+    { "cardNumber": "BS6-080", "count": 4 },
+    { "cardNumber": "BS6-081", "count": 4 },
+    { "cardNumber": "BS6-066", "count": 4 },
+    { "cardNumber": "BS6-068", "count": 4 },
+    { "cardNumber": "BS6-070", "count": 4 },
+    { "cardNumber": "BS6-072", "count": 4 },
+    { "cardNumber": "BS6-074", "count": 4 },
+    { "cardNumber": "BS6-079", "count": 4 },
+    { "cardNumber": "BS6-067", "count": 4 },
+    { "cardNumber": "BS6-069", "count": 4 },
+    { "cardNumber": "BS6-084", "count": 4 },
+    { "cardNumber": "BS6-085", "count": 4 },
+    { "cardNumber": "BS6-086", "count": 4 }
+  ]
+}

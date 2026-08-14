@@ -115,16 +115,22 @@ export const isBlockedByOpponentEffectProtection = (
  * Cookie out of either battle area. Damage and fainting are resolved through
  * their own rules and intentionally do not use this predicate.
  */
-export const isOpponentBattleMovementPrevented = (
+/** 回傳實際阻擋移動的餅乾，供規則訊息與對戰紀錄指出阻擋來源。 */
+export const getOpponentBattleMovementPreventer = (
   state: GameState,
   sourcePlayerId: PlayerId,
-): boolean =>
-  state.players[getOpponentId(sourcePlayerId)].battleArea.some((cookie) =>
+): CookieInBattle | undefined =>
+  state.players[getOpponentId(sourcePlayerId)].battleArea.find((cookie) =>
     cookie.card.skill?.trigger === 'passive' &&
     cookie.card.skill.effects.some(
       (effect) => effect.kind === 'prevent-opponent-battle-movement',
     ),
   )
+
+export const isOpponentBattleMovementPrevented = (
+  state: GameState,
+  sourcePlayerId: PlayerId,
+): boolean => Boolean(getOpponentBattleMovementPreventer(state, sourcePlayerId))
 
 export const isBattleMovementEffect = (effect: CardEffect): boolean =>
   effect.kind === 'opponent-battle-to-trash' ||
@@ -823,6 +829,17 @@ export const hasRequiredEffectTargets = (
       getEffectSelectionCandidates(state, context, effect).length >=
       (effect.optional ? 0 : effect.amount)
     )
+  }
+  // Card-selection effects use the same pending ability channel as battle
+  // targets, but they are not all represented by `requiresTargetSelection`.
+  // In particular BS6-043 may have no yellow Cookie in hand for its mandatory
+  // hand-to-break step; treat that step as unfulfillable so the queue can
+  // continue to its later effects instead of executing an invalid target.
+  if (requiresEffectCardSelection(effect)) {
+    const limits = getEffectSelectionLimits(effect)
+    if (limits && limits.min > 0) {
+      return getEffectSelectionCandidates(state, context, effect).length >= limits.min
+    }
   }
   if (!requiresTargetSelection(effect)) return true
   const candidates = getEffectTargetCandidatesForEffect(state, context, effect)

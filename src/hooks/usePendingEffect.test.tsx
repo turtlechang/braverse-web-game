@@ -2339,4 +2339,125 @@ describe('usePendingEffect BS6-034 HP reorder handoff', () => {
 
     await act(() => root.unmount())
   })
+
+  it('does not open BS2-058 target UI when BS6-010 blocks Cookie movement', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const originalSource = baseGame.players['player-one'].battleArea[0]
+    const sourceCard: CookieCard = {
+      ...originalSource.card,
+      id: 'BS2-058',
+      name: 'Wind Archer Cookie',
+      type: 'cookie',
+      level: 3,
+      hp: originalSource.card.hp ?? 5,
+      attack: originalSource.card.attack ?? 4,
+      attackCost: originalSource.card.attackCost ?? 4,
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { purple: 1 } },
+        text: 'Place 1 opposing LV.3 Cookie into trash.',
+        effects: [
+          { kind: 'opponent-battle-to-trash', minLevel: 3, maxLevel: 3 },
+        ],
+      },
+    }
+    const blocker: CookieCard = {
+      ...originalSource.card,
+      id: 'BS6-010',
+      name: 'Timekeeper Cookie',
+      level: 3,
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' }],
+      },
+    }
+    const opposingTarget: CookieCard = {
+      ...originalSource.card,
+      id: 'opponent-lv3',
+      instanceId: 'opponent-lv3',
+      name: 'Opposing LV.3 Cookie',
+      level: 3,
+      hp: 4,
+    }
+    const gameState: GameState = {
+      ...baseGame,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: sourceCard.instanceId,
+        origin: 'hand',
+      },
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          battleArea: [{ ...originalSource, card: sourceCard }],
+        },
+        'player-two': {
+          ...baseGame.players['player-two'],
+          battleArea: [
+            { ...baseGame.players['player-two'].battleArea[0], card: blocker },
+            {
+              ...baseGame.players['player-two'].battleArea[0],
+              card: opposingTarget,
+              battleEntryId: 'opponent-lv3:battle:2',
+            },
+          ],
+        },
+      },
+    }
+    const setMessage = vi.fn()
+    const setGame = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame,
+        dispatch: vi.fn(),
+        viewerPlayerId: 'player-one',
+        setMessage,
+        clearAttacker: () => undefined,
+        setInspectedHpPile: () => undefined,
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => undefined,
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => undefined,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCookieSkill(
+        gameState,
+        sourceCard,
+        'player-one',
+        'on-play',
+        '登場技能',
+      ),
+    )
+
+    expect(captured!.pendingEffect).toBeNull()
+    expect(setGame).toHaveBeenCalledWith(
+      expect.objectContaining({ pendingOnPlay: null }),
+    )
+    expect(setMessage).toHaveBeenCalledWith(
+      `${sourceCard.name}目前沒有合法的效果目標。`,
+    )
+    await act(() => root.unmount())
+  })
 })

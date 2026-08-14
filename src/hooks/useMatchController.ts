@@ -62,6 +62,7 @@ import {
   createBlueSt4TrapDemoState,
   createBs4ConditionDemoState,
   createBs3SilverbellConditionDemoState,
+  createBs5CroissantEndPhaseDemoState,
   createBs5FlipDemoState,
   createBs5FaintDemoState,
   createBs5TrapDemoState,
@@ -69,6 +70,7 @@ import {
   createBs5StageConditionDemoState,
   createBs5Item111DemoState,
   createBs6ConditionDemoState,
+  createCardNegativeDemoState,
   createP082TrapDemoState,
   createP084ItemConditionDemoState,
   createP147SpecialPlayDemoState,
@@ -183,6 +185,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'card-check') {
       return createCardCheckDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'card-negative') {
+      return createCardNegativeDemoState(testStateConfig.cardNumber)
+    }
+    if (testStateConfig?.kind === 'bs5-060-end-phase') {
+      return createBs5CroissantEndPhaseDemoState(testStateConfig.supportState)
     }
     if (testStateConfig?.kind === 'p-condition') {
       return createPConditionDemoState(
@@ -891,7 +899,7 @@ export function useMatchController(params: {
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
   const trapSelfTargetCandidates =
-    selectedTrap && !trapSelectNoTarget
+    selectedTrap
       ? getTrapSelfTargetCandidates(game, viewerPlayerId, selectedTrap.instanceId)
       : []
   const selectedTrapSelfTarget = selectedTrapSelfTargetId
@@ -899,9 +907,21 @@ export function useMatchController(params: {
         (candidate) => candidate.card.instanceId === selectedTrapSelfTargetId,
       )
     : undefined
+  const trapSelfTargetRequired =
+    selectedTrap?.trap?.effects.some(
+      (effect) =>
+        (effect.kind === 'damage' ||
+          effect.kind === 'gain-hp' ||
+          effect.kind === 'hp-to-hand') &&
+        'target' in effect &&
+        effect.target?.side === 'self' &&
+        (effect.target.min ?? 0) > 0,
+    ) ?? false
   const selectedTrapSelfTargets = selectedTrapSelfTarget
     ? [selectedTrapSelfTarget]
-    : trapSelfTargetCandidates.slice(0, 1)
+    : trapSelfTargetRequired
+      ? trapSelfTargetCandidates.slice(0, 1)
+      : []
   const trapSupportTrashEffect = selectedTrap?.trap?.effects.find(
     (effect) => effect.kind === 'support-to-trash',
   )
@@ -1305,6 +1325,7 @@ export function useMatchController(params: {
     setSelectedTrapTargetId,
     selectedTrapTargets,
     trapSelfTargetCandidates,
+    trapSelfTargetRequired,
     selectedTrapSelfTargetId,
     setSelectedTrapSelfTargetId,
     selectedTrapSelfTargets,

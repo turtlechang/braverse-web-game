@@ -23,6 +23,7 @@ const logEntry = (
   id: number,
   commandKind: string,
   summary: string,
+  overrides: Partial<CommandLogEntry> = {},
 ): CommandLogEntry => ({
   id,
   turnNumber: 2,
@@ -31,6 +32,7 @@ const logEntry = (
   commandKind,
   payload: {},
   summary,
+  ...overrides,
 })
 
 describe('OnlineActivityFeed', () => {
@@ -130,6 +132,54 @@ describe('OnlineActivityFeed', () => {
       root.render(<OnlineActivityFeed game={fainted} viewerPlayerId="player-one" />),
     )
     expect(container.textContent).toContain('昏厥，移至 Break 區')
+    await act(() => root.unmount())
+  })
+
+  it('uses a grouped member entry.steps card when rendering history', async () => {
+    const base = createBattleState()
+    const game: GameState = {
+      ...base,
+      commandLog: [
+        logEntry(1, 'declare-attack', 'group header', { groupId: 1 }),
+        logEntry(2, 'resolve-battle', 'fallback summary', {
+          groupId: 1,
+          card: item('fallback-card'),
+          steps: [{
+            text: 'detailed step',
+            cards: [{
+              ...item('step-card'),
+              imageUrl: 'https://example.test/cards/step-card.webp',
+            }],
+          }],
+        }),
+      ],
+    }
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(<OnlineActivityFeed game={game} viewerPlayerId="player-one" />),
+    )
+    await act(() =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="online-activity-toggle"]')!
+        .click(),
+    )
+    const historyEntry = container.querySelector<HTMLButtonElement>(
+      '.online-activity-history-entry',
+    )
+    expect(historyEntry).not.toBeNull()
+    await act(() => historyEntry!.click())
+
+    expect(container.querySelectorAll('.online-activity-step-card-face')).toHaveLength(1)
+    expect(
+      container.querySelector('.online-activity-step-card-face img')?.getAttribute('src'),
+    ).toBe('https://example.test/cards/step-card.webp')
+    expect(
+      container.querySelector('.online-activity-history-steps li')?.textContent,
+    ).not.toContain('fallback summary')
     await act(() => root.unmount())
   })
 

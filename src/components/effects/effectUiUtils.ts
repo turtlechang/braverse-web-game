@@ -1,7 +1,12 @@
 import type { CardEffect, CardSkill } from '../../game'
 
-export const getSkillLabels = (skill: CardSkill) => [
-  skill.trigger === 'activate'
+export const getSkillLabels = (
+  skill: CardSkill,
+  options?: { endPhase?: boolean },
+) => [
+  options?.endPhase
+    ? '回合結束效果'
+    : skill.trigger === 'activate'
     ? 'Activate 啟動'
     : skill.trigger === 'on-play'
       ? 'OnPlay 登場'
