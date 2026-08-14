@@ -506,7 +506,7 @@ export const runSwissTournament = async (
       aiLevel,
       maxActions,
       seed,
-      browserRuntime: typeof window !== 'undefined',
+      browserRuntime: 'window' in globalThis,
       pairing: '依積分分組、跨組浮動奇數組，優先避免重賽；同分以 deterministic seed 排序。',
       scoring: '勝 3 分、敗 0 分、卡住／無法完成以技術和各 1 分並標記 FAIL。',
     },
