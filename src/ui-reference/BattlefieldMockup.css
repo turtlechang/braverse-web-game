@@ -329,11 +329,11 @@
   }
 
   .mock-bf-root[data-layout="tablet"] .top-field .field-stack {
-    grid-template-rows: minmax(0, 24fr) minmax(0, 76fr);
+    grid-template-rows: minmax(0, 36fr) minmax(0, 64fr);
   }
 
   .mock-bf-root[data-layout="tablet"] .bottom-field .field-stack {
-    grid-template-rows: minmax(0, 76fr) minmax(0, 24fr);
+    grid-template-rows: minmax(0, 64fr) minmax(0, 36fr);
   }
 
   .mock-bf-root[data-layout="tablet"] .top-field .combat-zone,

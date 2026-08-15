@@ -171,6 +171,7 @@ try {
     { width: 1440, height: 960 },
     { width: 1366, height: 768 },
     { width: 1280, height: 720 },
+    { width: 1164, height: 777 },
     { width: 1024, height: 576 },
     { width: 900, height: 506 },
     { width: 798, height: 698 },
@@ -279,6 +280,9 @@ try {
       const handCards = [
         ...document.querySelectorAll('.hand-fan .hand-card'),
       ].map((element) => element.getBoundingClientRect())
+      const bottomHandCards = [
+        ...document.querySelectorAll('.bottom-hand .hand-card'),
+      ].map((element) => element.getBoundingClientRect())
       const battleCards = [
         ...document.querySelectorAll('.combat-card-wrap'),
       ].map((element) => element.getBoundingClientRect())
@@ -355,6 +359,10 @@ try {
         shellBottom: rect.bottom,
         bottomFieldBottom: bottomFieldRect.bottom,
         bottomHandBottom: bottomHandRect.bottom,
+        bottomHandCardsBottom: bottomHandCards.reduce(
+          (bottom, card) => Math.max(bottom, card.bottom),
+          0,
+        ),
         bottomSupportTop: bottomSupportRect.top,
         bottomSupportBottom: bottomSupportRect.bottom,
         fieldRatio:
@@ -482,6 +490,10 @@ try {
       metrics.bottomFieldBottom <= metrics.shellBottom + 1 &&
         metrics.bottomHandBottom <= metrics.shellBottom + 1,
       `${viewport.width}x${viewport.height} 的玩家場地與手牌必須完整位於遊戲畫布內`,
+    )
+    assert.ok(
+      metrics.bottomHandCardsBottom <= metrics.shellBottom + 1,
+      `${viewport.width}x${viewport.height} 的玩家手牌卡面不得被畫布裁切：實際底部 ${metrics.bottomHandCardsBottom}、畫布底部 ${metrics.shellBottom}`,
     )
     assert.ok(
       metrics.bottomSupportBottom <= metrics.shellBottom + 1,
