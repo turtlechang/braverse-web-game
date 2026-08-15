@@ -239,6 +239,37 @@ const describeOpponentBattleToTrashStep = (
   }
 }
 
+/**
+ * BS4-077 的「將這個餅乾放到牌庫底」印在尖括號中，是發動代價而非技能效果。
+ * BS6-010 只阻止對手「以效果」移動戰鬥區餅乾，因此需要在紀錄中明示兩者的
+ * 差異，避免玩家把成功支付代價誤認為封鎖失效。
+ */
+const describeSelfToDeckBottomCostStep = (
+  state: GameState,
+  command: Extract<
+    GameCommand,
+    { kind: 'activate-skill' | 'begin-activate-skill' }
+  >,
+): LogStepDetail | undefined => {
+  const sourceCard = findCard(state, command.sourceInstanceId)
+  if (sourceCard?.type !== 'cookie' || !sourceCard.skill?.cost.selfToDeckBottom) {
+    return undefined
+  }
+
+  const movementPreventer = getOpponentBattleMovementPreventer(
+    state,
+    command.playerId,
+  )
+  const explanation = movementPreventer
+    ? `；「${movementPreventer.card.name}」只阻止效果造成的移動，這是發動代價，仍可支付`
+    : ''
+
+  return {
+    text: `技能代價：將「${sourceCard.name}」放到牌庫底${explanation}`,
+    cards: [sourceCard, ...(movementPreventer ? [movementPreventer.card] : [])],
+  }
+}
+
 const describeFieldToDeckBottomStep = (
   previous: GameState,
   command: Extract<GameCommand, { kind: 'resolve-ability-effect' }>,
@@ -460,8 +491,12 @@ export const describeCommand = (
         '技能代價：將戰鬥區餅乾返回手牌',
         command.battleToHandIds,
       )
+      const selfToDeckBottomStep = describeSelfToDeckBottomCostStep(
+        state,
+        command,
+      )
       const sourceName = findCardName(state, command.sourceInstanceId)
-      const costStep = hpTrashStep ?? battleToHandStep
+      const costStep = hpTrashStep ?? battleToHandStep ?? selfToDeckBottomStep
       return costStep
         ? `${actor} 發動了「${sourceName}」的技能（${costStep.text}）`
         : `${actor} 發動了「${sourceName}」的技能`
@@ -842,6 +877,11 @@ export const describeCommandSteps = (
         command.hpToTrashTargetIds,
       )
       if (hpTrashStep) steps.push(hpTrashStep)
+      const selfToDeckBottomStep = describeSelfToDeckBottomCostStep(
+        state,
+        command,
+      )
+      if (selfToDeckBottomStep) steps.push(selfToDeckBottomStep)
       const trashBattleStep = describeCardListStep(
         state,
         '額外代價：戰鬥區送入棄牌區',

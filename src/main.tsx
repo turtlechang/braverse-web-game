@@ -1,6 +1,7 @@
 import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import './styles/tablet-layout.css'
 import { GameErrorBoundary } from './components/errors/GameErrorBoundary'
 import { getStoredTheme } from './styles/themeStorage'
 

@@ -1,5 +1,6 @@
 import { createSeededShuffle, defaultShuffle } from './helpers'
 import { getFaintTriggeredCost } from './skills'
+import { beginAttack } from './battle'
 import {
   createGame,
   forceMulliganOpeningHand,
@@ -193,6 +194,8 @@ export const parseTestStateConfig = (
   | { kind: 'card-check'; cardNumber: string }
   | { kind: 'card-negative'; cardNumber: string }
   | { kind: 'bs6-079-on-play'; blocked: boolean }
+  | { kind: 'bs6-008-trap'; remainingHp: 4 | 5 }
+  | { kind: 'bs4-077-timekeeper-cost' }
   | { kind: 'bs5-060-end-phase'; supportState: 'rested' | 'active' }
   | {
       kind: 'p-condition'
@@ -374,6 +377,15 @@ export const parseTestStateConfig = (
   }
   if (testState === 'bs6-079-on-play-blocked') {
     return { kind: 'bs6-079-on-play', blocked: true }
+  }
+  if (testState === 'bs6-008-trap-blocked') {
+    return { kind: 'bs6-008-trap', remainingHp: 4 }
+  }
+  if (testState === 'bs6-008-trap-open') {
+    return { kind: 'bs6-008-trap', remainingHp: 5 }
+  }
+  if (testState === 'bs4-077-timekeeper-cost') {
+    return { kind: 'bs4-077-timekeeper-cost' }
   }
   if (testState?.startsWith('bs5-060-end-phase:')) {
     const supportState = testState.slice('bs5-060-end-phase:'.length).trim()
@@ -3362,6 +3374,117 @@ export const createBs6079OnPlayDemoState = (blocked: boolean): GameState => {
       },
     },
   }
+}
+
+/**
+ * BS4-077 的自我回牌庫底是尖括號內的發動代價，不是效果；即使 BS6-010
+ * 在對手戰鬥區，仍須能從正式 UI 發動，並在紀錄標出兩者的差異。
+ */
+export const createBs4077TimekeeperCostDemoState = (): GameState => {
+  const state = createCardCheckDemoState('BS4-077')
+  const source = state.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS4-077',
+  )
+  const timekeeper = getCardCheckCard('BS6-010')
+  if (!source || timekeeper.type !== 'cookie') {
+    throw new Error('BS4-077 Timekeeper cost fixture requires both official Cookies')
+  }
+
+  const blueAlly = scenarioCookie('bs4-077-blue-ally', 1, 2, 'blue')
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    pendingBattle: null,
+    pendingAbilityEffect: undefined,
+    pendingOnPlay: undefined,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...state.players['player-one'],
+        battleArea: [
+          source,
+          cardCheckBattleEntry(blueAlly.cookie, blueAlly.hpCards, 2),
+        ],
+      },
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: [
+          cardCheckBattleEntry(
+            { ...timekeeper, instanceId: 'demo-bs6-010' },
+            [],
+            1,
+          ),
+        ],
+      },
+    },
+  }
+}
+
+/**
+ * Local Browser A/B fixture for BS6-008's current-battle Trap lock.
+ *
+ * The attacker is the real BS6-008 card and the defender holds the real
+ * BS6-020 Tonic Spray with two active red supports, so the open branch proves
+ * that an otherwise payable Trap reaches the response window. The blocked
+ * branch only changes the attacker's remaining HP from 5 to 4 and then uses
+ * the real `beginAttack` rule path, which must set `trapsDisabled` before the
+ * UI decides whether to render the Trap response modal.
+ */
+export const createBs6008TrapDemoState = (
+  remainingHp: 4 | 5,
+): GameState => {
+  const base = createCardCheckDemoState('BS6-008')
+  const source = base.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS6-008',
+  )
+  const defender = base.players['player-one'].battleArea.find(
+    (entry) => entry.card.id !== 'BS6-008',
+  )
+  const trap = getCardCheckCard('BS6-020')
+  if (!source || !defender || trap.type !== 'trap') {
+    throw new Error('BS6-008 Trap fixture requires both official cards')
+  }
+
+  const attacker = {
+    ...source,
+    hpCards: Array.from({ length: remainingHp }, (_, index) =>
+      testSupportCard(`bs6-008-attacker-hp-${index + 1}`, 'red'),
+    ),
+  }
+  const state: GameState = {
+    ...base,
+    activePlayerId: 'player-two',
+    phase: 'main',
+    pendingBattle: null,
+    pendingAbilityEffect: undefined,
+    pendingOnPlay: undefined,
+    players: {
+      ...base.players,
+      'player-one': {
+        ...base.players['player-one'],
+        hand: [{ ...trap, instanceId: 'bs6-008-trap' }, ...base.players['player-one'].hand],
+        battleArea: [defender],
+        supportArea: scenarioSupports('bs6-008-trap-support', 2, 'red'),
+      },
+      'player-two': {
+        ...base.players['player-two'],
+        battleArea: [attacker],
+        supportArea: scenarioSupports('bs6-008-attack-support', 3, 'red'),
+      },
+    },
+  }
+
+  return beginAttack(
+    state,
+    attacker.card.instanceId,
+    defender.card.instanceId,
+    [
+      'bs6-008-attack-support-1',
+      'bs6-008-attack-support-2',
+      'bs6-008-attack-support-3',
+    ],
+  )
 }
 
 /**

@@ -7,65 +7,73 @@
  * 本機／線上對戰共用這份規則，避免兩套版面逐漸漂移。
  */
 @container game-shell (min-width: 901px) and (max-width: 1280px) and (max-height: 840px) {
-  .game-shell {
-    --phase-rail-width: 104px;
-  }
-
-  .game-shell .table-area {
+  /* This import is deliberately applied after the battle components.  The
+   * extra game-shell scope also wins over the desktop tactical theme rules,
+   * which otherwise re-expanded the resource columns on 1164×777. */
+  :root[data-theme] .game-shell .table-area {
+    box-sizing: border-box;
+    height: calc(100% - 54px - var(--tablet-hand-dock-height) - 26px);
+    margin: 54px 0 0;
     row-gap: 6px;
-    padding: 54px calc(var(--phase-rail-width) + 18px) 112px 82px;
+    /* The hand dock is actual table padding, not a visual overlap.  That
+     * keeps the player support area clear even when a card is selected. */
+    padding: 0 122px 0 82px;
   }
 
-  .game-shell .battle-row {
+  :root[data-theme] .game-shell .battle-row {
+    /* A 100% explicit height resolves against the whole table instead of the
+     * grid track once the hand reserve is present.  Let grid stretch each
+     * row inside its own track. */
+    height: auto;
     grid-template-columns: 68px minmax(0, 1fr) 68px;
     gap: 8px;
   }
 
-  .game-shell .top-field .field-stack,
-  .game-shell .bottom-field .field-stack {
+  :root[data-theme] .game-shell .top-field .field-stack,
+  :root[data-theme] .game-shell .bottom-field .field-stack {
     top: 0;
     height: 100%;
     gap: 6px;
   }
 
-  .game-shell .top-field .field-stack {
+  :root[data-theme] .game-shell .top-field .field-stack {
     grid-template-rows: minmax(0, 36fr) minmax(0, 64fr);
   }
 
-  .game-shell .bottom-field .field-stack {
+  :root[data-theme] .game-shell .bottom-field .field-stack {
     grid-template-rows: minmax(0, 64fr) minmax(0, 36fr);
   }
 
-  .game-shell .top-field .combat-zone,
-  .game-shell .top-field .support-zone,
-  .game-shell .bottom-field .combat-zone,
-  .game-shell .bottom-field .support-zone {
+  :root[data-theme] .game-shell .top-field .combat-zone,
+  :root[data-theme] .game-shell .top-field .support-zone,
+  :root[data-theme] .game-shell .bottom-field .combat-zone,
+  :root[data-theme] .game-shell .bottom-field .support-zone {
     transform: none;
   }
 
-  .game-shell .top-field .break-zone,
-  .game-shell .top-field .utility-zones,
-  .game-shell .bottom-field .break-zone,
-  .game-shell .bottom-field .utility-zones {
+  :root[data-theme] .game-shell .top-field .break-zone,
+  :root[data-theme] .game-shell .top-field .utility-zones,
+  :root[data-theme] .game-shell .bottom-field .break-zone,
+  :root[data-theme] .game-shell .bottom-field .utility-zones {
     top: 0;
     height: 100%;
     align-self: stretch;
   }
 
-  .game-shell .utility-zones {
+  :root[data-theme] .game-shell .utility-zones {
     width: 68px;
     gap: 4px;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: repeat(3, minmax(0, 1fr));
   }
 
-  .game-shell .top-field .utility-zones,
-  .game-shell .bottom-field .utility-zones {
+  :root[data-theme] .game-shell .top-field .utility-zones,
+  :root[data-theme] .game-shell .bottom-field .utility-zones {
     width: 68px;
   }
 
-  .game-shell .utility-zones > .resource-dock,
-  .game-shell .utility-zones > .discard-zone {
+  :root[data-theme] .game-shell .utility-zones > .resource-dock,
+  :root[data-theme] .game-shell .utility-zones > .discard-zone {
     grid-column: 1;
     width: auto;
     height: auto;
@@ -75,39 +83,39 @@
   }
 
   /* 對手：棄牌 → 牌庫 → 場景。 */
-  .game-shell .top-field .discard-zone {
+  :root[data-theme] .game-shell .top-field .discard-zone {
     grid-row: 1;
   }
 
-  .game-shell .top-field .deck-zone {
+  :root[data-theme] .game-shell .top-field .deck-zone {
     grid-row: 2;
   }
 
-  .game-shell .top-field .stage-zone {
+  :root[data-theme] .game-shell .top-field .stage-zone {
     grid-row: 3;
   }
 
   /* 我方：場景 → 牌庫 → 棄牌。 */
-  .game-shell .bottom-field .stage-zone {
+  :root[data-theme] .game-shell .bottom-field .stage-zone {
     grid-row: 1;
   }
 
-  .game-shell .bottom-field .deck-zone {
+  :root[data-theme] .game-shell .bottom-field .deck-zone {
     grid-row: 2;
   }
 
-  .game-shell .bottom-field .discard-zone {
+  :root[data-theme] .game-shell .bottom-field .discard-zone {
     grid-row: 3;
   }
 
   /* 平板版移除右上／左下名稱牌，讓場區邊界與操作空間保持乾淨。 */
-  .game-shell .top-field .row-meta,
-  .game-shell .bottom-field .row-meta {
+  :root[data-theme] .game-shell .top-field .row-meta,
+  :root[data-theme] .game-shell .bottom-field .row-meta {
     display: none;
   }
 
   /* 對手只保留牌背 peek，把中央空間留給場區。 */
-  .game-shell .field-stack > .hand-fan.top-hand {
+  :root[data-theme] .game-shell .field-stack > .hand-fan.top-hand {
     position: fixed;
     top: 0;
     right: auto;
@@ -118,83 +126,148 @@
     transform: translateX(-50%);
   }
 
-  .game-shell .top-hand .hand-card-wrap.opponent-hand-card {
+  :root[data-theme] .game-shell .top-hand .hand-card-wrap.opponent-hand-card {
     top: -92px;
   }
 
-  .game-shell .field-stack > .hand-fan.top-hand .hand-card {
+  :root[data-theme] .game-shell .field-stack > .hand-fan.top-hand .hand-card {
     width: 78px;
     height: 112px;
   }
 
-  /* 手牌是獨立操作 dock，保留可點擊上緣，不壓縮戰鬥區卡牌。 */
-  .game-shell .hand-fan.bottom-hand {
+  /* 手牌是獨立操作 dock；卡面完全落在保留的下緣空間，不能跨入支援區。 */
+  :root[data-theme] .game-shell .hand-fan.bottom-hand {
+    position: fixed;
     right: auto;
-    bottom: 6px;
+    /* A rotated outer card extends a few px below its untransformed box. */
+    bottom: 12px;
     left: 50%;
     width: min(660px, calc(100% - 136px));
-    height: 132px;
+    height: var(--tablet-hand-dock-height);
     overflow: visible;
     transform: translateX(-50%);
   }
 
-  .game-shell .hand-fan.bottom-hand .hand-card {
-    width: 94px;
-    height: 134px;
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card {
+    --tablet-hand-card-height: clamp(108px, 17.25vh, 134px);
+    width: calc(var(--tablet-hand-card-height) * 0.7);
+    height: var(--tablet-hand-card-height);
   }
 
-  .game-shell .hand-fan.bottom-hand .hand-card-wrap {
-    /* Keep the card face below the combat track at short tablet heights;
-     * the upper edge remains available as the hand interaction dock. */
-    bottom: -50px;
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: 0;
   }
 
-  .game-shell .hand-fan.bottom-hand .hand-card-wrap:hover,
-  .game-shell .hand-fan.bottom-hand .hand-card-wrap:focus-within {
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap:hover,
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap:focus-within {
     transform:
       translateX(calc(-50% + var(--fan-x)))
-      translateY(calc(var(--fan-y) - 54px))
+      translateY(calc(var(--fan-y) - 18px))
       rotate(var(--fan-rotation))
       scale(1.04);
   }
 
-  .game-shell .hand-fan.bottom-hand .hand-card-wrap.is-selected {
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap.is-selected {
     transform:
       translateX(calc(-50% + var(--fan-x)))
-      translateY(calc(var(--fan-y) - 42px))
+      translateY(calc(var(--fan-y) - 14px))
       rotate(var(--fan-rotation))
       scale(1.07);
   }
 
-  .game-shell .phase-rail {
+  :root[data-theme] .game-shell .bottom-field .support-count,
+  :root[data-theme] .game-shell .top-field .support-count {
+    top: 6px;
+    right: auto;
+    bottom: auto;
+    left: 8px;
+    font-size: 0.72rem;
+  }
+
+  :root[data-theme] .game-shell .card-face.support-card {
+    --tablet-support-card-height: clamp(58px, 10vh, 78px);
+    width: calc(var(--tablet-support-card-height) * 0.7);
+    height: var(--tablet-support-card-height);
+  }
+
+  :root[data-theme] .game-shell .phase-rail {
     right: 8px;
-    width: var(--phase-rail-width);
+    width: 104px;
     gap: 6px;
     padding: 6px;
     border-radius: 16px;
   }
 
-  .game-shell .turn-indicator {
+  :root[data-theme] .game-shell .turn-indicator {
     gap: 3px;
     padding: 7px 4px;
     border-radius: 10px;
   }
 
-  .game-shell .turn-indicator span {
+  :root[data-theme] .game-shell .turn-indicator span {
     font-size: 0.55rem;
   }
 
-  .game-shell .turn-indicator strong {
+  :root[data-theme] .game-shell .turn-indicator strong {
     font-size: 0.82rem;
   }
 
-  .game-shell .next-phase-button {
+  :root[data-theme] .game-shell .next-phase-button {
     min-height: 52px;
     border-radius: 10px;
   }
 
-  .game-shell .next-phase-button span {
+  :root[data-theme] .game-shell .next-phase-button span {
     font-size: 0.68rem;
     line-height: 1.2;
+  }
+}
+
+/* 小型平板仍使用頂部階段列，但手牌也必須脫離兩側場地；否則 900px
+ * 邊界會退回舊版「手牌壓在支援區」的配置。 */
+@container game-shell (min-width: 681px) and (max-width: 900px) and (min-height: 401px) {
+  :root[data-theme] .game-shell .table-area {
+    box-sizing: border-box;
+    height: calc(
+      100% - var(--compact-phase-height) - var(--compact-toolbar-height) - 124px
+    );
+    margin: calc(var(--compact-phase-height) + var(--compact-toolbar-height)) 0 0;
+    padding: 2px 4px;
+  }
+
+  :root[data-theme] .game-shell .field-stack > .hand-fan.top-hand {
+    display: none;
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand {
+    position: fixed;
+    right: auto;
+    bottom: 12px;
+    left: 50%;
+    width: calc(100% - 32px);
+    height: 108px;
+    overflow: visible;
+    transform: translateX(-50%);
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap {
+    bottom: 0;
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap:hover,
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap:focus-within {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 8px))
+      rotate(var(--fan-rotation))
+      scale(1.02);
+  }
+
+  :root[data-theme] .game-shell .hand-fan.bottom-hand .hand-card-wrap.is-selected {
+    transform:
+      translateX(calc(-50% + var(--fan-x)))
+      translateY(calc(var(--fan-y) - 6px))
+      rotate(var(--fan-rotation))
+      scale(1.04);
   }
 }

@@ -44,7 +44,9 @@ import {
   createBreakToTrashDemoState,
   createBs2015CostDepartureDemoState,
   createCardCheckDemoState,
+  createBs4077TimekeeperCostDemoState,
   createBs6079OnPlayDemoState,
+  createBs6008TrapDemoState,
   createPConditionDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
@@ -193,6 +195,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs6-079-on-play') {
       return createBs6079OnPlayDemoState(testStateConfig.blocked)
+    }
+    if (testStateConfig?.kind === 'bs6-008-trap') {
+      return createBs6008TrapDemoState(testStateConfig.remainingHp)
+    }
+    if (testStateConfig?.kind === 'bs4-077-timekeeper-cost') {
+      return createBs4077TimekeeperCostDemoState()
     }
     if (testStateConfig?.kind === 'bs5-060-end-phase') {
       return createBs5CroissantEndPhaseDemoState(testStateConfig.supportState)

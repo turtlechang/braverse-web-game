@@ -42,7 +42,7 @@ describe('player hand hover styles', () => {
     )
   })
 
-  it('keeps the desktop player hand fully visible above the support zone', () => {
+  it('restores the classic desktop player-hand fan geometry', () => {
     expect(normalizedCss).toContain('height: calc(100% - var(--break-summary-end))')
     expect(normalizedCss).toContain('z-index: 40')
     expect(normalizedCss).toContain('bottom: 2px')
@@ -50,7 +50,10 @@ describe('player hand hover styles', () => {
     expect(normalizedCss).toContain('overflow: visible')
     expect(normalizedCss).toContain('.bottom-hand .hand-card')
     expect(normalizedCss).toContain('width: 100px')
-    expect(normalizedCss).not.toContain('bottom: -50px')
+    expect(normalizedCss).toContain('bottom: -60px')
+    expect(normalizedCss).not.toContain(
+      '@container game-shell (min-width: 1281px) and (min-height: 621px)',
+    )
   })
 
   it('centers and exposes the compact player hand above the support cards', () => {

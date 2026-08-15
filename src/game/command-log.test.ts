@@ -329,6 +329,79 @@ describe('describeCommandSteps', () => {
     )
   })
 
+  it('explains why BS4-077 can pay its deck-bottom cost through Timekeeper', () => {
+    const base = createBattleState()
+    const sorbetShark = {
+      ...cookie('sorbet-shark', 1, 1),
+      id: 'BS4-077',
+      name: 'Sorbet Shark Cookie',
+      energyColor: 'blue' as const,
+      skill: {
+        trigger: 'activate' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: { blue: 1 }, selfToDeckBottom: true },
+        text: 'Place this Cookie on the bottom of your deck.',
+        effects: [],
+      },
+    }
+    const timekeeper = {
+      ...cookie('timekeeper', 2, 4),
+      id: 'BS6-010',
+      name: 'Timekeeper Cookie',
+      energyColor: 'red' as const,
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' as const }],
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{ card: sorbetShark, hpCards: [], rested: false }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [{ card: timekeeper, hpCards: [], rested: false }],
+        },
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: [],
+          deck: [...previous.players['player-one'].deck, sorbetShark],
+        },
+      },
+    }
+    const command = {
+      kind: 'begin-activate-skill' as const,
+      playerId: 'player-one' as const,
+      sourceInstanceId: sorbetShark.instanceId,
+      trigger: 'activate' as const,
+      paymentIds: ['p1-support-a'],
+    }
+
+    const explanation = `技能代價：將「${sorbetShark.name}」放到牌庫底；「${timekeeper.name}」只阻止效果造成的移動，這是發動代價，仍可支付`
+    const steps = describeCommandSteps(previous, next, command)
+    const costStep = steps?.find((step) => step.text === explanation)
+
+    expect(costStep?.cards).toEqual([sorbetShark, timekeeper])
+    expect(describeCommand(previous, next, command)).toContain(explanation)
+  })
+
   it('summarizes an auto-resolved attack with the damage dealt', () => {
     const base = createBattleState()
     // defender 有 3 張 HP 卡，扣 1 張後剩 2 張——非致命傷害，驗證「造成 N 點傷害」

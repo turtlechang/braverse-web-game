@@ -289,6 +289,9 @@ try {
       const sideZones = [
         ...document.querySelectorAll('.break-zone, .utility-zones'),
       ].map((element) => element.getBoundingClientRect())
+      const supportZones = [
+        ...document.querySelectorAll('.support-zone'),
+      ].map((element) => element.getBoundingClientRect())
       const cardsOverlap = handCards.some((handCard) =>
         battleCards.some(
           (battleCard) =>
@@ -316,6 +319,14 @@ try {
             overlapHeight > SIDE_ZONE_OVERLAP_TOLERANCE
           )
         }),
+      )
+      const handOverlapsTabletBoard = handCards.some((handCard) =>
+        [...battleCards, ...supportZones, ...sideZones].some((boardRegion) =>
+          Math.min(handCard.right, boardRegion.right) >
+            Math.max(handCard.left, boardRegion.left) + 1 &&
+          Math.min(handCard.bottom, boardRegion.bottom) >
+            Math.max(handCard.top, boardRegion.top) + 1,
+        ),
       )
       const topUtilityZones = document.querySelector(
         '.top-field .utility-zones',
@@ -450,6 +461,27 @@ try {
           })),
         cardsOverlap,
         cardRects: {
+          table: {
+            top: tableAreaRect.top,
+            bottom: tableAreaRect.bottom,
+            height: tableAreaRect.height,
+            computedHeight: getComputedStyle(tableArea).height,
+            padding: getComputedStyle(tableArea).padding,
+            margin: getComputedStyle(tableArea).margin,
+            handDockHeight: getComputedStyle(shell).getPropertyValue('--tablet-hand-dock-height'),
+          },
+          fields: {
+            top: {
+              top: topFieldRect.top,
+              bottom: topFieldRect.bottom,
+              height: topFieldRect.height,
+            },
+            bottom: {
+              top: bottomFieldRect.top,
+              bottom: bottomFieldRect.bottom,
+              height: bottomFieldRect.height,
+            },
+          },
           hand: handCards.map(({ left, right, top, bottom }) => ({
             left,
             right,
@@ -468,9 +500,21 @@ try {
             top,
             bottom,
           })),
+          support: supportZones.map(({ left, right, top, bottom }) => ({
+            left,
+            right,
+            top,
+            bottom,
+          })),
         },
         compactSideZonesVisible:
           rect.width >= 900 || !handOverlapsSideZone,
+        tabletHandClear:
+          rect.width < 681 ||
+          rect.width > 1280 ||
+          rect.height <= 400 ||
+          rect.height > 840 ||
+          !handOverlapsTabletBoard,
         bodyScrollHeight: document.body.scrollHeight,
         bodyClientHeight: document.body.clientHeight,
         documentScrollHeight: document.documentElement.scrollHeight,
@@ -487,14 +531,21 @@ try {
       `${viewport.width}x${viewport.height} 不應出現垂直捲軸`,
     )
     assert.ok(
-      metrics.bottomFieldBottom <= metrics.shellBottom + 1 &&
-        metrics.bottomHandBottom <= metrics.shellBottom + 1,
-      `${viewport.width}x${viewport.height} 的玩家場地與手牌必須完整位於遊戲畫布內`,
+      metrics.bottomFieldBottom <= metrics.shellBottom + 1,
+      `${viewport.width}x${viewport.height} 的玩家場地必須完整位於遊戲畫布內：場地底部 ${metrics.bottomFieldBottom}、畫布底部 ${metrics.shellBottom}；${JSON.stringify(metrics.cardRects.table)}`,
     )
     assert.ok(
-      metrics.bottomHandCardsBottom <= metrics.shellBottom + 1,
-      `${viewport.width}x${viewport.height} 的玩家手牌卡面不得被畫布裁切：實際底部 ${metrics.bottomHandCardsBottom}、畫布底部 ${metrics.shellBottom}`,
+      metrics.bottomHandBottom <= metrics.shellBottom + 1,
+      `${viewport.width}x${viewport.height} 的玩家手牌 dock 必須完整位於遊戲畫布內：dock 底部 ${metrics.bottomHandBottom}、畫布底部 ${metrics.shellBottom}`,
     )
+    // 桌機依使用者確認保留舊版「從畫布下緣露出」的手牌扇形；平板與
+    // 窄版則必須完整收在獨立 dock 裡，否則會重新遮蔽支援／資源區。
+    if (viewport.width <= 1280) {
+      assert.ok(
+        metrics.bottomHandCardsBottom <= metrics.shellBottom + 1,
+        `${viewport.width}x${viewport.height} 的平板玩家手牌卡面不得被畫布裁切：實際底部 ${metrics.bottomHandCardsBottom}、畫布底部 ${metrics.shellBottom}`,
+      )
+    }
     assert.ok(
       metrics.bottomSupportBottom <= metrics.shellBottom + 1,
       `${viewport.width}x${viewport.height} 的玩家支援區必須完整位於遊戲畫布內（支援區底部 ${metrics.bottomSupportBottom}、畫布底部 ${metrics.shellBottom}）`,
@@ -510,6 +561,10 @@ try {
     assert.ok(
       metrics.compactSideZonesVisible,
       `${viewport.width}x${viewport.height} 的手牌不得遮蔽休息區、牌庫、場景區或棄牌區：${JSON.stringify(metrics.cardRects)}`,
+    )
+    assert.ok(
+      metrics.tabletHandClear,
+      `${viewport.width}x${viewport.height} 的平板手牌不得遮蔽戰鬥區、支援區或資源區：${JSON.stringify(metrics.cardRects)}`,
     )
     assert.ok(
       metrics.compactHudValid,
@@ -573,10 +628,16 @@ try {
         )
       }
     }
-    if (viewport.width === 1907 && viewport.height === 868) {
+    if (viewport.width === 1600 && viewport.height === 900) {
       await mkdir(outputDirectory, { recursive: true })
       await page.screenshot({
-        path: resolve(outputDirectory, 'layout-1907x868.png'),
+        path: resolve(outputDirectory, 'layout-1600x900.png'),
+      })
+    }
+    if (viewport.width === 1164 && viewport.height === 777) {
+      await mkdir(outputDirectory, { recursive: true })
+      await page.screenshot({
+        path: resolve(outputDirectory, 'layout-1164x777.png'),
       })
     }
     if (viewport.width === 600 && viewport.height === 338) {

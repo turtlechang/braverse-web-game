@@ -462,6 +462,10 @@ button {
   --phase-rail-width: clamp(84px, 7%, 110px);
   --compact-phase-height: 54px;
   --compact-toolbar-height: 52px;
+  /* Only consumed by the tablet landscape container query.  It lives on the
+   * container itself because container queries cannot set a queried
+   * container's custom properties without creating a size feedback loop. */
+  --tablet-hand-dock-height: clamp(126px, 19vh, 148px);
   position: relative;
   container-name: game-shell;
   container-type: size;

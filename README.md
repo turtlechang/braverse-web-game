@@ -68,7 +68,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 187 個測試檔、3,018 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 189 個測試檔、3,050 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。
 
 BS5-073「Cyborg Cookie」已依官方 `flipText` 在卡牌詳情與牌組編輯器顯示為 FLIP；BS4-024「Kumiho Cookie」在對手有黃色 LV.3 餅乾時，攻擊目標 UI 只允許 Kumiho，其他目標會顯示限制原因，展開對戰紀錄也會保留限制步驟與來源卡。兩條流程均已用 localhost-only Browser fixture 實際操作驗證。
 
@@ -258,6 +258,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-16 | 完成 BS6-008「Sugar Swan Cookie」剩餘 HP 4 以下時的陷阱封鎖驗證：以正式 BS6-020「Tonic Spray」與足夠紅色能量完成規則層、HP 4／5 A/B 與瀏覽器回應視窗驗證；完整 Vitest 189 檔／3,050 項、lint、build 通過。 |
 | 2026-08-15 | 依官方韓文資料與實體卡逐卡修正 BS6「Operation Timeguard」52 個基礎卡號（64 筆含異圖）的英文 API 攻擊傷害誤記，並補上 BS4-045@1／BS4-097@1 兩張異圖變體；修正 BS6-079 攻擊後可選代價的目標選擇只能選 1 張的問題（OptionalCostAttackModal 改為多選、支援「對手支援區的卡」標籤與上限進度），新增 `bs6-079-multi-target-probe` Browser 驗證「支付代價→選 3 張對手支援卡橫置」；補強 1164×777 與通用桌面 viewport 的手牌實際卡面邊界 gate；完整 Vitest 188 檔／3,039 項、lint、build 通過。 |
 | 2026-08-15 | 完成 BS5／BS6 全卡 Browser 效果語意稽核與代價交叉驗證：BS5 效果 143／143＋負向 153／153＋無效果攻擊 10／10、BS6 效果 97／97＋負向 138／138＋無效果攻擊 10／10；新增 `verify-bs5-bs6-semantics.ts` 對 291 筆記錄逐張比對官方文字與 runtime 能量代價／傷害／HP 代價／抽牌數量（BS5 400 項、BS6 325 項全相符）；修正稽核驅動對 cookie＋FLIP 文案（BS5-073）與 `battle-cookie-to-hand` 代價群（BS6-073）的分類／驅動缺口；盤點修復 3 項潛在 UI／AI 隱患（battle-cookie-to-hand 提示改為依 runtime 代價動態產生顏色與等級、hpToTrash 缺 amount 時自動代價描述與 AI 成本阻尼一致視為 1 張），並為慢速機器加長 AI benchmark 測試 timeout；完整 Vitest 187 檔／3,031 項、lint、build 通過。 |
 | 2026-08-14 | 修正 BS5-073 FLIP 顯示，並補上 BS4-024 Kumiho Cookie 強制攻擊目標的 UI 限制提示、不可用目標回饋與對戰紀錄原因／來源卡步驟；完整 Vitest 187 檔／3,018 項、lint、typecheck、build、bundle gate 與 Browser 回歸通過。 |

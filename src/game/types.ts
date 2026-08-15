@@ -1605,7 +1605,10 @@ export type AbilityCost = EnergyCost & {
   }
   selfToBreakArea?: boolean
   selfToTrash?: boolean
-  /** 來源自己離開戰鬥區、放到自己牌庫最下方作為代價（BS4-077）。 */
+  /**
+   * 來源自己離開戰鬥區、放到自己牌庫最下方作為發動代價（BS4-077）。
+   * 這不是卡牌效果，因此不受 BS6-010 的「效果移動」封鎖。
+   */
   selfToDeckBottom?: boolean
   /**
    * 從棄牌區選指定條件的卡牌洗回牌庫作為代價（BS3-098）。
