@@ -1236,4 +1236,111 @@ describe('EffectPanel', () => {
     ).toBe(false)
     await act(() => exact.root.unmount())
   })
+
+  it('battle-cookie-to-hand 提示依 runtime 代價動態產生顏色與等級，不寫死單一卡牌', async () => {
+    const candidate = createCookieCard(30)
+    const renderWithCost = async (
+      battleCookieToHand: {
+        count: number
+        level?: number
+        minLevel?: number
+        maxLevel?: number
+        energyColor?: EnergyColor
+      },
+    ) => {
+      const pending = createPendingEffect({
+        skill: {
+          trigger: 'activate',
+          oncePerTurn: false,
+          yourTurn: false,
+          restSource: false,
+          cost: { energy: {}, discardHand: 0, battleCookieToHand },
+          text: 'Test skill',
+          effects: [],
+        },
+      })
+      const container = document.createElement('div')
+      const root = createRoot(container)
+      await act(() => root.render(
+        <EffectPanel
+          pendingEffect={pending}
+          currentEffect={{
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+          }}
+          effectHistory={[]}
+          onConfirm={() => undefined}
+          onSkip={() => undefined}
+          battleCookieToHandCandidates={[candidate]}
+          battleCookieToHandCost={1}
+        />,
+      ))
+      return { container, root }
+    }
+
+    const blueLv1 = await renderWithCost({
+      count: 1,
+      maxLevel: 1,
+      energyColor: 'blue',
+    })
+    expect(blueLv1.container.textContent).toContain(
+      '請選擇要返回手牌的藍色 LV.1 以下 戰鬥區餅乾（技能代價）',
+    )
+    await act(() => blueLv1.root.unmount())
+
+    const purpleLv2 = await renderWithCost({
+      count: 1,
+      level: 2,
+      energyColor: 'purple',
+    })
+    expect(purpleLv2.container.textContent).toContain(
+      '請選擇要返回手牌的紫色 LV.2 戰鬥區餅乾（技能代價）',
+    )
+    await act(() => purpleLv2.root.unmount())
+
+    const noConstraint = await renderWithCost({ count: 1 })
+    expect(noConstraint.container.textContent).toContain(
+      '請選擇要返回手牌的戰鬥區餅乾（技能代價）',
+    )
+    await act(() => noConstraint.root.unmount())
+  })
+
+  it('HP 代價未標張數（adapter 省略 amount）時顯示「棄置 1 張 HP 卡」', async () => {
+    const candidate = createCookieCard(31)
+    const pending = createPendingEffect({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {
+          energy: {},
+          discardHand: 0,
+          hpToTrash: { energyColor: 'red' },
+        },
+        text: 'Test skill',
+        effects: [],
+      },
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        hpToTrashCandidates={[candidate]}
+        hpToTrashCost={1}
+      />,
+    ))
+    expect(container.textContent).toContain('棄置 1 張 HP 卡')
+    await act(() => root.unmount())
+  })
 })

@@ -258,7 +258,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-15 | 完成 BS5／BS6 全卡 Browser 效果語意稽核與代價交叉驗證：BS5 效果 143／143＋負向 153／153＋無效果攻擊 10／10、BS6 效果 97／97＋負向 138／138＋無效果攻擊 10／10；新增 `verify-bs5-bs6-semantics.ts` 對 291 筆記錄逐張比對官方文字與 runtime 能量代價／傷害／HP 代價／抽牌數量（BS5 400 項、BS6 325 項全相符）；修正稽核驅動對 cookie＋FLIP 文案（BS5-073）與 `battle-cookie-to-hand` 代價群（BS6-073）的分類／驅動缺口；完整 Vitest 187 檔／3,028 項、lint、build 通過。 |
+| 2026-08-15 | 完成 BS5／BS6 全卡 Browser 效果語意稽核與代價交叉驗證：BS5 效果 143／143＋負向 153／153＋無效果攻擊 10／10、BS6 效果 97／97＋負向 138／138＋無效果攻擊 10／10；新增 `verify-bs5-bs6-semantics.ts` 對 291 筆記錄逐張比對官方文字與 runtime 能量代價／傷害／HP 代價／抽牌數量（BS5 400 項、BS6 325 項全相符）；修正稽核驅動對 cookie＋FLIP 文案（BS5-073）與 `battle-cookie-to-hand` 代價群（BS6-073）的分類／驅動缺口；盤點修復 3 項潛在 UI／AI 隱患（battle-cookie-to-hand 提示改為依 runtime 代價動態產生顏色與等級、hpToTrash 缺 amount 時自動代價描述與 AI 成本阻尼一致視為 1 張），並為慢速機器加長 AI benchmark 測試 timeout；完整 Vitest 187 檔／3,031 項、lint、build 通過。 |
 | 2026-08-14 | 修正 BS5-073 FLIP 顯示，並補上 BS4-024 Kumiho Cookie 強制攻擊目標的 UI 限制提示、不可用目標回饋與對戰紀錄原因／來源卡步驟；完整 Vitest 187 檔／3,018 項、lint、typecheck、build、bundle gate 與 Browser 回歸通過。 |
 | 2026-08-14 | 匯入使用者提供的 BS6 五色競技環境牌組，修正 P-059 官方 API 將攻擊名稱誤寫入 FLIP 欄位；Lv.4 新增技能／道具後續行動前瞻，並提供五色兩兩配對各 5 場、共 50 場的可重現 round-robin benchmark。 |
 | 2026-08-14 | 修正 Browser smoke 1024×576 短桌面手牌 hover／focus 遮擋戰鬥卡問題，新增明確 hover 回歸；拆分 `game-demo` chunk，主入口 gzip 由 183.59 KiB 降至 161.73 KiB，bundle gate 與完整 Browser smoke 通過。 |

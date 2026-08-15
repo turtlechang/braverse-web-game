@@ -12,6 +12,7 @@ import { isEffectUntargeted } from '../../game'
 import { CardEffectText, CardFace, EnergyCostIcons } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
 import { describeEffect, getSkillLabels } from './effectUiUtils'
+import { energyColorLabel } from '../gameUiLabels'
 import {
   GuidedPhaseSteps,
   type GuidedPhase,
@@ -121,6 +122,30 @@ function splitAttackText(text: string): { primary: string; followUp: string | nu
     primary: text.slice(0, separatorIndex).trim(),
     followUp: text.slice(separatorIndex).trim(),
   }
+}
+
+/**
+ * battleCookieToHand 代價的限制描述，例如「藍色 LV.1 以下」。
+ * 顏色／等級依 runtime 代價資料產生，不得寫死特定卡牌的顏色與等級。
+ */
+function describeBattleToHandConstraint(
+  cost: CardSkill['cost']['battleCookieToHand'],
+): string {
+  if (!cost) return ''
+  const color = cost.energyColor
+    ? (energyColorLabel[cost.energyColor] ?? String(cost.energyColor))
+    : ''
+  const level =
+    cost.level !== undefined
+      ? `LV.${cost.level}`
+      : cost.minLevel !== undefined && cost.maxLevel !== undefined
+        ? `LV.${cost.minLevel}～${cost.maxLevel}`
+        : cost.maxLevel !== undefined
+          ? `LV.${cost.maxLevel} 以下`
+          : cost.minLevel !== undefined
+            ? `LV.${cost.minLevel} 以上`
+            : ''
+  return [color, level].filter(Boolean).join(' ')
 }
 
 function EffectPanelContent({
@@ -382,8 +407,9 @@ function EffectPanelContent({
     ? []
     : [
         ...(skill?.restSource ? ['將效果來源卡橫置'] : []),
-        ...(skill?.cost.hpToTrash?.amount
-          ? [`棄置 ${skill.cost.hpToTrash.amount} 張 HP 卡`]
+        ...(skill?.cost.hpToTrash &&
+        skill.cost.hpToTrash.untilRemainingHp === undefined
+          ? [`棄置 ${skill.cost.hpToTrash.amount ?? 1} 張 HP 卡`]
           : []),
         ...(skill?.cost.hpToTrash?.untilRemainingHp !== undefined
           ? [`棄置 HP 卡直到剩餘 ${skill.cost.hpToTrash.untilRemainingHp} HP`]
@@ -704,7 +730,14 @@ function EffectPanelContent({
                 {battleCookieToHandCandidates.length > 0 && (
                   <>
                     <small>
-                      請選擇要返回手牌的藍色 LV.1 戰鬥區餅乾（登場技能代價）
+                      {(() => {
+                        const constraint = describeBattleToHandConstraint(
+                          pendingEffect?.skill?.cost?.battleCookieToHand,
+                        )
+                        return constraint
+                          ? `請選擇要返回手牌的${constraint} 戰鬥區餅乾（技能代價）`
+                          : '請選擇要返回手牌的戰鬥區餅乾（技能代價）'
+                      })()}
                     </small>
                     <CandidateButtons
                       cards={battleCookieToHandCandidates}
