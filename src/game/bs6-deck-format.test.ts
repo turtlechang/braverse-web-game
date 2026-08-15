@@ -9,6 +9,44 @@ import {
 } from '.'
 import type { CustomDeck } from './custom-deck'
 
+const COMPETITIVE_DECK_STATS = {
+  'bs6-red-competitive': {
+    flipCards: 16,
+    cookieCards: 43,
+    itemCards: 9,
+    trapCards: 8,
+    stageCards: 0,
+  },
+  'bs6-yellow-competitive': {
+    flipCards: 11,
+    cookieCards: 41,
+    itemCards: 6,
+    trapCards: 13,
+    stageCards: 0,
+  },
+  'bs6-green-competitive': {
+    flipCards: 16,
+    cookieCards: 40,
+    itemCards: 5,
+    trapCards: 11,
+    stageCards: 4,
+  },
+  'bs6-blue-competitive': {
+    flipCards: 16,
+    cookieCards: 44,
+    itemCards: 5,
+    trapCards: 9,
+    stageCards: 2,
+  },
+  'bs6-purple-competitive': {
+    flipCards: 14,
+    cookieCards: 40,
+    itemCards: 9,
+    trapCards: 8,
+    stageCards: 3,
+  },
+} as const
+
 describe('BS6 五色標準牌組 preset', () => {
   it.each(BS6_AI_PRESET_DECK_CHOICES)(
     '%s 是可匯入且可建立的 60 張純 BS6 牌組',
@@ -33,7 +71,7 @@ describe('BS6 五色標準牌組 preset', () => {
   )
 
   it.each(BS6_COMPETITIVE_AI_PRESET_DECK_CHOICES)(
-    '%s is a valid BS5+6 competitive environment deck without BS6-064',
+    '%s is a valid supplied competitive environment deck without BS6-064',
     (deckChoice) => {
       const entries = OFFICIAL_DECK_RECIPES[deckChoice]
       const validation = validateCustomDeck(entries, { format: 'standard' })
@@ -41,15 +79,8 @@ describe('BS6 五色標準牌組 preset', () => {
       expect(validation.errors).toEqual([])
       expect(validation.stats).toMatchObject({
         totalCards: 60,
-        flipCards: deckChoice === 'bs6-blue-competitive' ? 12 : 8,
-        cookieCards: 48,
-        itemCards: 4,
-        trapCards: 4,
-        stageCards: 4,
+        ...COMPETITIVE_DECK_STATS[deckChoice],
       })
-      expect(
-        entries.every((entry) => /^(BS5|BS6)-/.test(entry.cardNumber)),
-      ).toBe(true)
       expect(entries.some((entry) => entry.cardNumber === 'BS6-064')).toBe(
         false,
       )

@@ -26,6 +26,7 @@ import {
   canActivateCookieSkill,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
+  getBattleCookieToHandCostCandidates,
   getHpToTrashCostCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashToDeckCostCandidates,
@@ -459,6 +460,7 @@ const chooseAbilityCostIds = (
   playerId: PlayerId,
   cost: AbilityCost,
   sourceInstanceId: string,
+  effects: CardEffect[] = [],
 ) => {
   const player = state.players[playerId]
   const paymentIds = selectEnergyPayment(
@@ -483,15 +485,25 @@ const chooseAbilityCostIds = (
     .map((support) => support.card.instanceId)
   if (supportToHandIds.length < (cost.supportToHand ?? 0)) return null
 
-  const discardHandIds = player.hand
-    .filter(
-      (card) =>
-        card.instanceId !== sourceInstanceId &&
-        (!cost.discardHandColor || card.energyColor === cost.discardHandColor),
-    )
-    .slice(0, cost.discardHand ?? 0)
+  const discardCandidates = player.hand.filter(
+    (card) =>
+      card.instanceId !== sourceInstanceId &&
+      (!cost.discardHandColor || card.energyColor === cost.discardHandColor),
+  )
+  const handLimit = effects
+    .map((effect) => ('condition' in effect ? effect.condition : undefined))
+    .find((condition) => condition?.kind === 'hand-count-at-most')
+  const discardCount =
+    cost.discardHandAtLeast && handLimit?.kind === 'hand-count-at-most'
+      ? Math.max(
+          cost.discardHand ?? 0,
+          player.hand.length - 1 - handLimit.count,
+        )
+      : cost.discardHand ?? 0
+  const discardHandIds = discardCandidates
+    .slice(0, discardCount)
     .map((card) => card.instanceId)
-  if (discardHandIds.length < (cost.discardHand ?? 0)) return null
+  if (discardHandIds.length < discardCount) return null
 
   const hpToTrashTargetIds = cost.hpToTrash
     ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
@@ -583,6 +595,7 @@ const resolveAiCardAbility = (
     playerId,
     ability.cost,
     card.instanceId,
+    ability.effects,
   )
   if (!costIds) return null
 
@@ -590,8 +603,21 @@ const resolveAiCardAbility = (
     sourcePlayerId: playerId,
     sourceInstanceId: card.instanceId,
   }
+  const played = playItem(
+    state,
+    playerId,
+    card.instanceId,
+    costIds.paymentIds,
+    costIds.supportToTrashIds,
+    costIds.supportToHandIds,
+    costIds.discardHandIds,
+    costIds.hpToTrashTargetIds,
+    costIds.trashBattleCookieIds,
+  )
+  // Conditions such as BS6-084's hand limit are checked after the item and
+  // its cost cards leave the hand, matching the real command path.
   const effects = ability.effects.filter((effect) =>
-    isEffectConditionMet(state, context, effect),
+    isEffectConditionMet(played, context, effect),
   )
   if (effects.length === 0) return null
   if (
@@ -621,17 +647,6 @@ const resolveAiCardAbility = (
     if (!canAttackAfterItem) return null
   }
 
-  const played = playItem(
-    state,
-    playerId,
-    card.instanceId,
-    costIds.paymentIds,
-    costIds.supportToTrashIds,
-    costIds.supportToHandIds,
-    costIds.discardHandIds,
-    costIds.hpToTrashTargetIds,
-    costIds.trashBattleCookieIds,
-  )
   const effectShuffleSeed = shuffleSeed ?? [...card.instanceId].reduce(
     (seed, character) => Math.imul(seed ^ character.charCodeAt(0), 16777619),
     state.turnNumber,
@@ -857,6 +872,23 @@ const resolveAiSkill = (
     return null
   }
 
+  const battleToHandIds = skill.cost.battleCookieToHand
+    ? getBattleCookieToHandCostCandidates(
+        skill.cost,
+        player.battleArea,
+        source.card.instanceId,
+      )
+        .slice(0, skill.cost.battleCookieToHand.count)
+        .map((cookie) => cookie.card.instanceId)
+    : []
+
+  if (
+    skill.cost.battleCookieToHand &&
+    battleToHandIds.length < skill.cost.battleCookieToHand.count
+  ) {
+    return null
+  }
+
   if (costSupportToTrashIds.length > 0) {
     const remainingSupportAfterSkillCost = player.supportArea.filter(
       (support) =>
@@ -926,6 +958,7 @@ const resolveAiSkill = (
         discardHandIds,
         hpToTrashTargetIds,
         trashBattleCookieIds,
+        battleToHandIds,
         trashToDeckBottomIds,
         trashToDeckIds,
       }),
@@ -950,6 +983,7 @@ const resolveAiSkill = (
     effectShuffle,
     hpToTrashTargetIds,
     costSupportToHandIds,
+    battleToHandIds,
   )
   const sim = simulateAbilityEffects(
     activated,
@@ -976,6 +1010,7 @@ const resolveAiSkill = (
         discardHandIds,
         hpToTrashTargetIds,
         trashBattleCookieIds,
+        battleToHandIds,
         trashToDeckBottomIds,
         trashToDeckIds,
         effectTargets: sim.effectTargets,

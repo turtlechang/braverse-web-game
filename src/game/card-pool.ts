@@ -1,4 +1,5 @@
 import type { OfficialCardRecord } from '../cards/types'
+import { normalizeKnownOfficialCardRecord } from '../cards/official-card-normalization'
 import { officialCardDatasets } from './generated-card-pool'
 
 export interface CardPoolEntry extends OfficialCardRecord {
@@ -15,7 +16,7 @@ const allRawCards: OfficialCardRecord[] = [
   ...officialCardDatasets.flatMap(
     (dataset) => dataset.cards as OfficialCardRecord[],
   ),
-]
+].map(normalizeKnownOfficialCardRecord)
 
 const recordByCardNumber = new Map<string, OfficialCardRecord>()
 for (const card of allRawCards) {

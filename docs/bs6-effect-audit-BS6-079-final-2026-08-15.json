@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-08-15T14:08:44.914Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json",
+  "scope": "Formal-pool test-state interaction audit for BS6 effect-bearing records plus dedicated A/B paths for 1 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 1,
+    "effectFlowPassed": 1,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Effect flow settled": 1
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS6-079",
+      "baseCardNumber": "BS6-079",
+      "variant": null,
+      "name": "Croissant Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill",
+        "attack-then"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-079",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "start:optional-cost-attack",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "select:optional-cost",
+        "confirm:optional-cost",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    }
+  ]
+}

@@ -43,7 +43,23 @@
 | --- | --- | --- | --- | --- |
 | 無 | - | - | - | - |
 
-## Chrome 實戰驗證（2026-08-06）
+## Chrome 實戰驗證（2026-08-15）
+
+| 類別 | 範圍 | 驗證內容 |
+| --- | --- | --- |
+| 效果互動矩陣 | 143 筆效果紀錄（含異圖變體） | 實際 Chrome 逐卡進入正式 card-check test-state，依卡面文字驅動技能、登場、FLIP、陷阱、物品、場景、攻擊後 `Then` 的支付／代價／目標／結算 UI 並確認無 pending modal、無 console／runtime 錯誤：143／143 PASS |
+| 條件／時機 A/B | BS5-007／011／020／021／022／026／043／047／065／072／087／107／109／111 | 專用 localhost-only fixture 各跑條件成立／不成立路徑：14 張全部 A/B PASS |
+| 負向路徑 | 全部 153 筆記錄 | `card-negative` fixture 將支援區卡設為疲勞，驗證非法能量支付不被接受、無支付攻擊不成立：153／153 PASS |
+| 無效果攻擊 | BS5-002／017／027／033／050／062／077／079／096／105 | 部署、選攻擊者、合法支援支付、宣告攻擊、攻擊者橫置：10／10 PASS |
+| 語意代價交叉驗證 | 全部 153 筆記錄 | `scripts/verify-bs5-bs6-semantics.ts` 逐張比對官方文字與 runtime 的攻擊能量代價／{da} 傷害／技能代價（能量、HP 進棄牌區、棄手牌）／Then 傷害／陷阱物品場景代價／FLIP 代價與抽牌數量：400 項檢查、0 問題 |
+
+報告：`docs/bs5-effect-audit-2026-08-15.json`、`docs/bs5-negative-audit-2026-08-15.json`、`docs/bs5-vanilla-audit-2026-08-15.json`、`docs/bs5-semantic-cost-audit-2026-08-15.json`。
+
+本輪修正：
+
+- BS5-073「Cyborg Cookie」官方資料為 COOKIE 型但帶 FLIP 文案；稽核驅動原先只認 `type === 'flip'` 的 flipText，把 BS5-073 誤分為無效果攻擊卡。已改為依 flipText 判定效果面，BS5-073 改走 FLIP 效果／負向路徑並全數通過。
+
+## 歷史 Chrome 實戰驗證（2026-08-06）
 
 | 類別 | 卡號 | 驗證內容 |
 | --- | --- | --- |

@@ -10,6 +10,7 @@ import {
   getBreakAreaLevel,
   getEffectiveAttackBreakdown,
   getEnergyCostTotal,
+  getForcedAttackTargetId,
   selectEnergyPayment,
   type GameState,
   type PlayerId,
@@ -53,6 +54,7 @@ export interface BattleRowProps {
   drawAnimIds?: Set<string>
   onSelectAttacker?: (instanceId: string) => void
   onAttackTarget?: (instanceId: string) => void
+  onAttackTargetUnavailable?: (message: string) => void
   onEffectTarget?: (instanceId: string) => void
   onSkillPayment?: (instanceId: string) => void
   onSkillCostSupport?: (instanceId: string) => void
@@ -104,6 +106,7 @@ export function BattleRow({
   drawAnimIds,
   onSelectAttacker,
   onAttackTarget,
+  onAttackTargetUnavailable,
   onEffectTarget,
   onSkillPayment,
   onSkillCostSupport,
@@ -127,6 +130,22 @@ export function BattleRow({
   const isActivePlayer = game.activePlayerId === playerId
   const isOpponent = position === 'top'
   const canOperate = isActivePlayer && !isOpponent && !interactionLocked
+  const forcedAttackTargetId =
+    isOpponent && attackTargetingActive && attackPaymentValid
+      ? getForcedAttackTargetId(game, game.activePlayerId)
+      : undefined
+  const forcedAttackTarget = forcedAttackTargetId
+    ? player.battleArea.find(
+        (cookie) => cookie.card.instanceId === forcedAttackTargetId,
+      )
+    : undefined
+  const attackTargetRestrictionMessage = forcedAttackTarget
+    ? `目標限制：因「${forcedAttackTarget.card.name}」的被動效果${
+        forcedAttackTarget.card.id === 'BS4-024'
+          ? '（場上有黃色 LV.3 餅乾）'
+          : ''
+      }，對手只能攻擊「${forcedAttackTarget.card.name}」。`
+    : null
   const toggleResource = (kind: BattleResourceKind) =>
     onToggleResource?.(kind)
   const selectedHandCard = !isOpponent
@@ -441,6 +460,11 @@ export function BattleRow({
                 isOpponent &&
                 attackTargetingActive &&
                 attackPaymentValid
+              const attackTargetRestricted =
+                Boolean(forcedAttackTargetId) &&
+                cookie.card.instanceId !== forcedAttackTargetId
+              const canSelectAttackTarget =
+                canTarget && !attackTargetRestricted
               const canActivateSkill =
                 canOperate &&
                 canActivateCookieSkill(
@@ -473,6 +497,7 @@ export function BattleRow({
                 attackShakeId === cookie.card.instanceId && 'animate-attack-shake',
                 damageFlashId === cookie.card.instanceId && 'animate-damage-flash',
                 isPendingAttackTarget && 'is-attack-target',
+                attackTargetRestricted && 'is-attack-target-restricted',
                 revealedHpCard && 'has-hp-reveal',
                 battleSlotClass,
                 cookie.rested && 'is-rested',
@@ -502,7 +527,15 @@ export function BattleRow({
                       canSelectEffectTarget ||
                       skillTrashBattleCookieTargetIds.has(
                         cookie.card.instanceId,
-                      )
+                      ) ||
+                      canSelectAttackTarget
+                    }
+                    ariaLabel={
+                      canSelectAttackTarget
+                        ? `選擇攻擊目標：${cookie.card.name}`
+                        : attackTargetRestricted && attackTargetRestrictionMessage
+                          ? `${cookie.card.name}：${attackTargetRestrictionMessage}`
+                          : undefined
                     }
                     attackable={
                       canSelectAttack &&
@@ -514,9 +547,15 @@ export function BattleRow({
                         ? () => onEffectTarget?.(cookie.card.instanceId)
                         : skillTrashBattleCookieTargetIds.has(cookie.card.instanceId)
                           ? () => onSkillTrashBattleCookie?.(cookie.card.instanceId)
-                        : canTarget
+                        : canSelectAttackTarget
                         ? () => onAttackTarget?.(cookie.card.instanceId)
-                        : canSelectAttack
+                        : attackTargetRestricted && onAttackTargetUnavailable
+                          ? () =>
+                              onAttackTargetUnavailable(
+                                attackTargetRestrictionMessage ??
+                                  '此卡目前不能成為攻擊目標。',
+                              )
+                          : canSelectAttack
                           ? () => onSelectAttacker?.(cookie.card.instanceId)
                           : () => onInspectCard(cookie.card)
                     }
@@ -585,7 +624,7 @@ export function BattleRow({
                       )}
                     </div>
                   )}
-                  {(canTarget || canSelectEffectTarget) && (
+                  {(canSelectAttackTarget || canSelectEffectTarget) && (
                     <span className="target-hint">
                       {canSelectEffectTarget ? '效果目標' : '攻擊目標'}
                     </span>
@@ -618,6 +657,15 @@ export function BattleRow({
               <span className="empty-zone">等待餅乾登場</span>
             )}
           </div>
+          {attackTargetRestrictionMessage && (
+            <div
+              className="attack-target-restriction-hint"
+              role="status"
+              aria-live="polite"
+            >
+              {attackTargetRestrictionMessage}
+            </div>
+          )}
         </div>
         {position === 'bottom' && supportZone}
       </div>

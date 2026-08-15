@@ -2460,4 +2460,135 @@ describe('usePendingEffect BS6-034 HP reorder handoff', () => {
     )
     await act(() => root.unmount())
   })
+
+  it('does not open BS6-079 target UI when BS6-010 blocks the valid blue LV.2 target', async () => {
+    const baseGame = createItemUsageDemoState(true)
+    const originalSource = baseGame.players['player-one'].battleArea[0]
+    const sourceCard: CookieCard = {
+      ...originalSource.card,
+      id: 'BS6-079',
+      name: 'Croissant Cookie',
+      type: 'cookie',
+      level: 3,
+      energyColor: 'blue',
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Place 1 blue LV.2 or lower Cookie from your battle area on the bottom of your deck.',
+        effects: [
+          {
+            kind: 'field-to-deck-bottom',
+            target: {
+              side: 'self',
+              min: 1,
+              max: 1,
+              maxLevel: 2,
+              energyColor: 'blue',
+            },
+          },
+        ],
+      },
+    }
+    const targetCard: CookieCard = {
+      ...originalSource.card,
+      id: 'blue-lv2-target',
+      instanceId: 'blue-lv2-target',
+      name: 'Blue LV.2 Target',
+      type: 'cookie',
+      level: 2,
+      energyColor: 'blue',
+      skill: undefined,
+    }
+    const blocker: CookieCard = {
+      ...originalSource.card,
+      id: 'BS6-010',
+      instanceId: 'BS6-010-instance',
+      name: 'Timekeeper Cookie',
+      level: 2,
+      energyColor: 'red',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' }],
+      },
+    }
+    const gameState: GameState = {
+      ...baseGame,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: sourceCard.instanceId,
+        origin: 'hand',
+      },
+      players: {
+        ...baseGame.players,
+        'player-one': {
+          ...baseGame.players['player-one'],
+          battleArea: [
+            { ...originalSource, card: sourceCard },
+            { card: targetCard, hpCards: [], rested: false },
+          ],
+        },
+        'player-two': {
+          ...baseGame.players['player-two'],
+          battleArea: [{ ...baseGame.players['player-two'].battleArea[0], card: blocker }],
+        },
+      },
+    }
+    const setMessage = vi.fn()
+    const setGame = vi.fn()
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame,
+        dispatch: vi.fn(),
+        viewerPlayerId: 'player-one',
+        setMessage,
+        clearAttacker: () => undefined,
+        setInspectedHpPile: () => undefined,
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => undefined,
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => undefined,
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() =>
+      captured!.beginCookieSkill(
+        gameState,
+        sourceCard,
+        'player-one',
+        'on-play',
+        'OnPlay',
+      ),
+    )
+
+    expect(captured!.pendingEffect).toBeNull()
+    expect(setGame).toHaveBeenCalledWith(
+      expect.objectContaining({ pendingOnPlay: null }),
+    )
+    expect(setMessage).toHaveBeenCalledWith(
+      expect.stringContaining('Timekeeper Cookie'),
+    )
+    expect(setMessage).toHaveBeenCalledWith(
+      expect.stringContaining('無法將餅乾移出戰鬥區'),
+    )
+    await act(() => root.unmount())
+  })
 })

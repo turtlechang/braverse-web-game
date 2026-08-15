@@ -1,21 +1,25 @@
 {
-  "name": "BS6+5 Purple Competitive Environment",
-  "format": "standard",
+  "name": "第六彈紫色",
   "entries": [
-    { "cardNumber": "BS5-091", "count": 4 },
-    { "cardNumber": "BS5-093", "count": 4 },
-    { "cardNumber": "BS5-097", "count": 4 },
-    { "cardNumber": "BS5-099", "count": 4 },
-    { "cardNumber": "BS5-102", "count": 4 },
-    { "cardNumber": "BS6-087", "count": 4 },
-    { "cardNumber": "BS6-089", "count": 4 },
     { "cardNumber": "BS6-093", "count": 4 },
-    { "cardNumber": "BS6-095", "count": 4 },
-    { "cardNumber": "BS6-098", "count": 4 },
-    { "cardNumber": "BS5-090", "count": 4 },
-    { "cardNumber": "BS6-103", "count": 4 },
-    { "cardNumber": "BS6-105", "count": 4 },
-    { "cardNumber": "BS6-106", "count": 4 },
-    { "cardNumber": "BS6-107", "count": 4 }
-  ]
+    { "cardNumber": "BS4-098", "count": 1 },
+    { "cardNumber": "BS3-113", "count": 1 },
+    { "cardNumber": "BS6-096", "count": 2 },
+    { "cardNumber": "BS3-105", "count": 4 },
+    { "cardNumber": "BS6-101", "count": 4 },
+    { "cardNumber": "BS6-092", "count": 2 },
+    { "cardNumber": "BS2-061", "count": 4 },
+    { "cardNumber": "BS6-091@2", "count": 4 },
+    { "cardNumber": "BS5-090", "count": 2 },
+    { "cardNumber": "BS3-107", "count": 4 },
+    { "cardNumber": "ST5-003", "count": 4 },
+    { "cardNumber": "ST5-008", "count": 4 },
+    { "cardNumber": "BS2-077", "count": 4 },
+    { "cardNumber": "BS4-107", "count": 3 },
+    { "cardNumber": "BS6-105", "count": 2 },
+    { "cardNumber": "BS2-080", "count": 4 },
+    { "cardNumber": "ST5-020", "count": 4 },
+    { "cardNumber": "BS6-107", "count": 3 }
+  ],
+  "format": "standard"
 }

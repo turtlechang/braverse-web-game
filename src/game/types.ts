@@ -1586,6 +1586,16 @@ export type AbilityCost = EnergyCost & {
     sourceOnly?: boolean
     excludeSource?: boolean
   }
+  /** Return Cookies from the battle area to hand as an ability cost. */
+  battleCookieToHand?: {
+    count: number
+    level?: number
+    minLevel?: number
+    maxLevel?: number
+    energyColor?: EnergyColor
+    sourceOnly?: boolean
+    excludeSource?: boolean
+  }
   /** 從自己的棄牌區將符合條件的餅乾放入休息區，作為替代代價。 */
   trashCookieToBreakArea?: {
     count: number

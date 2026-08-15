@@ -151,10 +151,15 @@ const applyCostDampening = (rawScore: number, skill: CardSkill): number => {
     return rawScore
   }
   const energyCost = getEnergyCostTotal(skill.cost.energy ?? skill.cost)
+  // adapter 對「棄 1 張 HP」常省略 amount；規則層一律視為 1（見 skills.ts），
+  // 這裡也要一致，否則這類技能的成本阻尼會被低估。
+  const hpToTrashCost = skill.cost.hpToTrash
+    ? (skill.cost.hpToTrash.amount ?? 1)
+    : 0
   const otherCost =
     (skill.cost.discardHand ?? 0) +
     (skill.cost.supportToTrash ?? 0) +
-    (skill.cost.hpToTrash?.amount ?? 0)
+    hpToTrashCost
   const totalCost = energyCost + otherCost
   const costFactor = clamp(1 - totalCost * 0.08, 0.5, 1)
   const repeatFactor = skill.oncePerTurn ? 0.9 : 1

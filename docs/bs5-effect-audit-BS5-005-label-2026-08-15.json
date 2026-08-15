@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-08-15T11:00:44.708Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs5.en.json",
+  "scope": "Formal-pool test-state interaction audit for BS5 effect-bearing records plus dedicated A/B paths for 14 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 2,
+    "effectFlowPassed": 2,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Effect flow settled": 2
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS5-005",
+      "baseCardNumber": "BS5-005",
+      "variant": null,
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-005",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-hp-cost",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    },
+    {
+      "cardNumber": "BS5-005@1",
+      "baseCardNumber": "BS5-005",
+      "variant": "1",
+      "name": "Mala Sauce Cookie",
+      "type": "cookie",
+      "color": "RED",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS5-005@1",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:skill",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-hp-cost",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    }
+  ]
+}

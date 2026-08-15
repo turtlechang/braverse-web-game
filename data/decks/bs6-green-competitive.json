@@ -1,21 +1,26 @@
 {
-  "name": "BS6+5 Green Competitive Environment",
-  "format": "standard",
+  "name": "第六彈綠色",
   "entries": [
-    { "cardNumber": "BS5-045", "count": 4 },
-    { "cardNumber": "BS5-052", "count": 4 },
-    { "cardNumber": "BS5-053", "count": 4 },
-    { "cardNumber": "BS5-056", "count": 4 },
-    { "cardNumber": "BS5-060", "count": 4 },
-    { "cardNumber": "BS5-063", "count": 4 },
-    { "cardNumber": "BS6-044", "count": 4 },
-    { "cardNumber": "BS6-047", "count": 4 },
     { "cardNumber": "BS6-051", "count": 4 },
-    { "cardNumber": "BS6-058", "count": 4 },
-    { "cardNumber": "BS5-049", "count": 4 },
-    { "cardNumber": "BS6-046", "count": 4 },
-    { "cardNumber": "BS5-064", "count": 4 },
-    { "cardNumber": "BS5-065", "count": 4 },
-    { "cardNumber": "BS5-066", "count": 4 }
-  ]
+    { "cardNumber": "P-059", "count": 4 },
+    { "cardNumber": "BS6-058", "count": 2 },
+    { "cardNumber": "BS4-049", "count": 2 },
+    { "cardNumber": "BS3-061", "count": 4 },
+    { "cardNumber": "BS6-044", "count": 4 },
+    { "cardNumber": "BS6-061", "count": 4 },
+    { "cardNumber": "BS6-056", "count": 1 },
+    { "cardNumber": "BS3-056", "count": 2 },
+    { "cardNumber": "BS4-050", "count": 1 },
+    { "cardNumber": "ST3-014", "count": 4 },
+    { "cardNumber": "ST3-008", "count": 4 },
+    { "cardNumber": "BS1-069", "count": 4 },
+    { "cardNumber": "ST3-017", "count": 1 },
+    { "cardNumber": "BS6-062", "count": 4 },
+    { "cardNumber": "BS2-021", "count": 3 },
+    { "cardNumber": "BS3-069", "count": 2 },
+    { "cardNumber": "ST3-019", "count": 2 },
+    { "cardNumber": "BS3-070", "count": 4 },
+    { "cardNumber": "BS1-078", "count": 4 }
+  ],
+  "format": "standard"
 }

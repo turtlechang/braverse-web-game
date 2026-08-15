@@ -21,6 +21,14 @@ const createHandCard = (index: number): GameCard => ({
   type: 'item',
 })
 
+const createItemCard = (index: number): GameCard => ({
+  id: `SUPPORT-${index}`,
+  instanceId: `support-${index}`,
+  name: `測試物品 ${index}`,
+  type: 'item',
+  energyColor: 'blue',
+})
+
 describe('ReorderHpModal', () => {
   it('keeps every HP card and submits the player-selected order', async () => {
     const onConfirm = vi.fn()
@@ -431,6 +439,7 @@ describe('OptionalCostAttackModal', () => {
           targetCandidates={opponents}
           needsTarget={true}
           targetMin={1}
+          targetMax={1}
           targetLabel="對手餅乾"
           onSkip={onSkip}
           onPay={onPay}
@@ -494,7 +503,7 @@ describe('OptionalCostAttackModal', () => {
     expect(onPay).toHaveBeenCalledTimes(1)
     expect(onPay).toHaveBeenCalledWith(
       ['test-hand-1', 'test-hand-2'],
-      'cookie-2',
+      ['cookie-2'],
       [],
     )
     expect(onSkip).not.toHaveBeenCalled()
@@ -523,6 +532,7 @@ describe('OptionalCostAttackModal', () => {
           ]}
           needsTarget={true}
           targetMin={0}
+          targetMax={1}
           targetLabel="friendly Cookie"
           onSkip={() => undefined}
           onPay={onPay}
@@ -537,7 +547,9 @@ describe('OptionalCostAttackModal', () => {
       decisionButtons[1].click()
     })
 
-    expect(container.textContent).toContain('最多選擇 1 個friendly Cookie作為目標')
+    expect(container.textContent).toContain(
+      '最多選擇 1 個friendly Cookie作為目標（已選 0）',
+    )
     const confirmButton = container.querySelector<HTMLButtonElement>(
       '.modal-actions-sticky button:last-child',
     )
@@ -547,7 +559,87 @@ describe('OptionalCostAttackModal', () => {
       confirmButton!.click()
     })
 
-    expect(onPay).toHaveBeenCalledWith([], '', [])
+    expect(onPay).toHaveBeenCalledWith([], [], [])
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('lets the player select multiple targets up to targetMax (BS6-079 rest 3 supports)', async () => {
+    const onPay = vi.fn()
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    const supportTargets = [1, 2, 3].map((index) => ({
+      card: createItemCard(index),
+      instanceId: `opp-support-${index}`,
+    }))
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Croissant Cookie"
+          effectText="Discard 1 card. Select up to 3 cards in your opponent's support area. Rest those cards."
+          discardHandCost={1}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[createHandCard(1)]}
+          targetCandidates={supportTargets}
+          needsTarget={true}
+          targetMin={0}
+          targetMax={3}
+          targetLabel="對手支援區的卡"
+          onSkip={() => undefined}
+          onPay={onPay}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '支付')!.click()
+    })
+
+    // 代價階段：棄 1 張手牌後進目標階段。
+    const handBtn = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.modal-card-options button'),
+    ).find((btn) => btn.textContent?.includes('測試手牌'))
+    await act(() => {
+      handBtn!.click()
+    })
+    await act(() => {
+      findButtonByText(container, '下一步')!.click()
+    })
+
+    expect(container.textContent).toContain(
+      '最多選擇 3 個對手支援區的卡作為目標',
+    )
+
+    const targetBtns = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.modal-card-options button'),
+    ).filter((btn) => btn.textContent?.includes('測試物品'))
+    expect(targetBtns.length).toBe(3)
+
+    await act(() => {
+      targetBtns[0].click()
+    })
+    await act(() => {
+      targetBtns[1].click()
+    })
+    await act(() => {
+      targetBtns[2].click()
+    })
+
+    expect(container.textContent).toContain('（已選 3）')
+
+    await act(() => {
+      findButtonByText(container, '確認')!.click()
+    })
+
+    expect(onPay).toHaveBeenCalledWith(
+      ['test-hand-1'],
+      ['opp-support-1', 'opp-support-2', 'opp-support-3'],
+      [],
+    )
 
     await act(() => root.unmount())
     container.remove()
@@ -572,6 +664,7 @@ describe('OptionalCostAttackModal', () => {
           ]}
           needsTarget={true}
           targetMin={1}
+          targetMax={1}
           targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}
@@ -605,6 +698,7 @@ describe('OptionalCostAttackModal', () => {
           ]}
           needsTarget={true}
           targetMin={1}
+          targetMax={1}
           targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}
@@ -668,6 +762,7 @@ describe('OptionalCostAttackModal', () => {
           ]}
           needsTarget={true}
           targetMin={1}
+          targetMax={1}
           targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}
@@ -729,6 +824,7 @@ describe('OptionalCostAttackModal', () => {
           ]}
           needsTarget={true}
           targetMin={1}
+          targetMax={1}
           targetLabel="對手餅乾"
           onSkip={onSkip}
           onPay={() => undefined}
@@ -766,6 +862,7 @@ describe('OptionalCostAttackModal', () => {
           ]}
           needsTarget={true}
           targetMin={1}
+          targetMax={1}
           targetLabel="對手餅乾"
           onSkip={onSkip}
           onPay={() => undefined}
@@ -814,6 +911,7 @@ describe('OptionalCostAttackModal', () => {
           targetCandidates={[]}
           needsTarget={false}
           targetMin={0}
+          targetMax={0}
           targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}
@@ -849,6 +947,7 @@ describe('OptionalCostAttackModal', () => {
           targetCandidates={[]}
           needsTarget={false}
           targetMin={0}
+          targetMax={0}
           targetLabel="對手餅乾"
           onSkip={() => undefined}
           onPay={() => undefined}

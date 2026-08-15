@@ -196,4 +196,29 @@ describe('DeckEditorPage', () => {
 
     await act(() => root.unmount())
   })
+
+  it('shows BS5-073 as FLIP in the selected-card details', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />,
+      ),
+    )
+
+    const cardButton = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-select'),
+    ).find((button) => button.textContent?.includes('BS5-073'))
+    expect(cardButton).toBeDefined()
+
+    await act(() => cardButton!.click())
+
+    const detailCopy = container.querySelector('.deck-editor-page-detail-copy')
+    expect(detailCopy?.textContent).toContain('FLIP')
+    expect(detailCopy?.textContent).toContain('Draw up to 1 card from your deck.')
+    expect(detailCopy?.textContent).not.toContain('卡牌效果')
+
+    await act(() => root.unmount())
+  })
 })

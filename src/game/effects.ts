@@ -8,6 +8,7 @@ export {
   getCookieOwnerId,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   hasRequiredEffectTargets,

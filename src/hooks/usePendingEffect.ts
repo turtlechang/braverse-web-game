@@ -20,6 +20,7 @@ import {
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getFieldToDeckBottomBlocker,
   getEffectiveCardAbilityCost,
   getDiscardAllHandCostCandidates,
   getDiscardHandCostCandidates,
@@ -27,6 +28,7 @@ import {
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashBattleCookieCostCandidates,
+  getBattleCookieToHandCostCandidates,
   getHpToTrashCostCandidates,
   getTrashToDeckCostCandidates,
   getTrashToDeckBottomCostCandidates,
@@ -583,6 +585,25 @@ export function usePendingEffect(params: {
     skillTrashBattleCookieCandidates.map((card) => card.instanceId),
   )
 
+  const selectedSkillBattleToHandIds = new Set(
+    pendingEffect?.selectedBattleToHandIds ?? [],
+  )
+  const skillBattleToHandCandidates =
+    pendingEffect &&
+    !pendingEffect.skillActivated &&
+    pendingEffect.skill.cost.battleCookieToHand
+      ? getBattleCookieToHandCostCandidates(
+          pendingEffect.skill.cost,
+          game.players[pendingEffect.context.sourcePlayerId].battleArea,
+          pendingEffect.context.sourceInstanceId,
+        ).map((cookie) => cookie.card)
+      : []
+  const skillBattleToHandTargetIds = new Set(
+    skillBattleToHandCandidates.map((card) => card.instanceId),
+  )
+  const battleToHandCost =
+    pendingEffect?.skill.cost.battleCookieToHand?.count ?? 0
+
   const selectedSkillTrashToDeckBottomIds = new Set(
     pendingEffect?.selectedTrashToDeckBottomIds ?? [],
   )
@@ -725,6 +746,7 @@ export function usePendingEffect(params: {
         selectedDiscardHandIds: [],
         selectedHpToTrashTargetIds: [],
         selectedTrashBattleCookieIds: [],
+        selectedBattleToHandIds: [],
         // 代價在 playTrap 就付清了，這裡只剩效果結算。
         skillActivated: true,
         optional: false,
@@ -825,6 +847,9 @@ export function usePendingEffect(params: {
           (effect.optional ? 0 : effect.amount)
         )
       }
+      if (effect.kind === 'field-to-deck-bottom') {
+        return hasRequiredEffectTargets(nextGame, context, effect)
+      }
       if (isEffectUntargeted(effect) || !('target' in effect) || !effect.target) {
         return true
       }
@@ -849,6 +874,13 @@ export function usePendingEffect(params: {
     })
 
     if (!hasRequiredTargets) {
+      const movementBlocker = availableEffects
+        .map((effect) =>
+          effect.kind === 'field-to-deck-bottom'
+            ? getFieldToDeckBottomBlocker(nextGame, context, effect)
+            : undefined,
+        )
+        .find((blocker): blocker is NonNullable<typeof blocker> => Boolean(blocker))
       if (trigger === 'on-play' && nextGame.pendingOnPlay) {
         setGame(
           applyGameCommand(nextGame, {
@@ -858,7 +890,11 @@ export function usePendingEffect(params: {
           }),
         )
       }
-      setMessage(`${card.name}目前沒有合法的效果目標。`)
+      setMessage(
+        movementBlocker
+          ? `${card.name}的登場效果被「${movementBlocker.card.name}」阻止：無法將餅乾移出戰鬥區。`
+          : `${card.name}目前沒有合法的效果目標。`,
+      )
       return
     }
 
@@ -897,6 +933,7 @@ export function usePendingEffect(params: {
       selectedDiscardHandIds: [],
       selectedHpToTrashTargetIds: [],
       selectedTrashBattleCookieIds: [],
+      selectedBattleToHandIds: [],
       skillActivated: false,
       optional,
       triggerLabel,
@@ -971,6 +1008,7 @@ export function usePendingEffect(params: {
       selectedDiscardHandIds: [],
       selectedHpToTrashTargetIds: [],
       selectedTrashBattleCookieIds: [],
+      selectedBattleToHandIds: [],
       skillActivated: false,
       optional: false,
       triggerLabel,
@@ -1113,6 +1151,7 @@ export function usePendingEffect(params: {
         selectedDiscardHandIds: [],
         selectedHpToTrashTargetIds: [],
         selectedTrashBattleCookieIds: [],
+        selectedBattleToHandIds: [],
         skillActivated: true,
         optional: false,
         triggerLabel: '攻擊後續效果',
@@ -1454,6 +1493,26 @@ export function usePendingEffect(params: {
     setPendingEffect({ ...pendingEffect, selectedTrashBattleCookieIds })
   }
 
+  const toggleSkillBattleToHand = (instanceId: string) => {
+    if (!pendingEffect || pendingEffect.skillActivated) return
+    if (!pendingEffect.skill.cost.battleCookieToHand) return
+    if (!skillBattleToHandTargetIds.has(instanceId)) return
+
+    const selectedIds = pendingEffect.selectedBattleToHandIds ?? []
+    const isSelected = selectedIds.includes(instanceId)
+    if (
+      !isSelected &&
+      selectedIds.length >= battleToHandCost
+    ) {
+      return
+    }
+    const selectedBattleToHandIds = isSelected
+      ? selectedIds.filter((id) => id !== instanceId)
+      : [...selectedIds, instanceId]
+
+    setPendingEffect({ ...pendingEffect, selectedBattleToHandIds })
+  }
+
   const toggleSkillHpToTrash = (instanceId: string) => {
     if (!pendingEffect || pendingEffect.skillActivated) return
     if (!pendingEffect.skill.cost.hpToTrash || !skillHpToTrashTargetIds.has(instanceId)) {
@@ -1698,6 +1757,7 @@ export function usePendingEffect(params: {
                   ? { hpToTrashTargetIds: pendingEffect.selectedHpToTrashTargetIds }
                   : {}),
                 trashBattleCookieIds: pendingEffect.selectedTrashBattleCookieIds,
+                battleToHandIds: pendingEffect.selectedBattleToHandIds ?? [],
                 trashToDeckBottomIds: pendingEffect.selectedTrashToDeckBottomIds,
                 trashToDeckIds: pendingEffect.selectedTrashToDeckIds,
                 chooseOneModes: pendingEffect.chooseOneModes,
@@ -2033,6 +2093,7 @@ export function usePendingEffect(params: {
     toggleSkillDiscardHand,
     toggleSkillHpToTrash,
     toggleSkillTrashBattleCookie,
+    toggleSkillBattleToHand,
     toggleSkillTrashToDeckBottom,
     toggleSkillTrashToDeck,
     confirmEffect,
@@ -2077,6 +2138,10 @@ export function usePendingEffect(params: {
     selectedSkillTrashBattleCookieIds,
     skillTrashBattleCookieCandidates,
     skillTrashBattleCookieTargetIds,
+    selectedSkillBattleToHandIds,
+    skillBattleToHandCandidates,
+    skillBattleToHandTargetIds,
+    battleToHandCost,
     selectedSkillTrashToDeckBottomIds,
     skillTrashToDeckBottomCandidates,
     skillTrashToDeckBottomTargetIds,

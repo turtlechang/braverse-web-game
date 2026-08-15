@@ -26,6 +26,7 @@ export interface OptionalCostAttackPromptData {
   targetCandidates: { card: GameCard; instanceId: string }[]
   needsTarget: boolean
   targetMin: number
+  targetMax: number
   targetLabel: string
   /**
    * 代價的完整說明文字。含來源餅乾自付的能量（BS3-076「Use this Cookie as
@@ -118,16 +119,25 @@ export function getOptionalCostAttackPrompt(
         )
       : []
   ).map((card) => ({ card, instanceId: card.instanceId }))
-  const targetMin = targetedEffect
-    ? getEffectSelectionLimits(targetedEffect)?.min ?? 0
-    : 0
+  const selectionLimits = targetedEffect
+    ? getEffectSelectionLimits(targetedEffect)
+    : null
+  const targetMin = selectionLimits?.min ?? 0
+  const targetMax = selectionLimits?.max ?? 1
   const targetSelector =
     targetedEffect && 'target' in targetedEffect ? targetedEffect.target : undefined
-  const targetLabel = targetedEffect?.kind === 'opponent-battle-to-trash'
-    ? '對手餅乾'
-    : targetSelector?.side === 'self'
-      ? '己方餅乾'
-      : '對手餅乾'
+  // rest-support 的目標是支援區的卡，不是餅乾；依照目標面給出正確標籤，
+  // 避免把「對手的支援區卡」顯示成「對手餅乾」。
+  const targetLabel =
+    targetedEffect?.kind === 'rest-support'
+      ? targetedEffect.side === 'self'
+        ? '己方支援區的卡'
+        : '對手支援區的卡'
+      : targetedEffect?.kind === 'opponent-battle-to-trash'
+        ? '對手餅乾'
+        : targetSelector?.side === 'self'
+          ? '己方餅乾'
+          : '對手餅乾'
 
   const costEnergy = pending.cost.energy ?? ({} as EnergyCost)
   const energyCost = getRemainingEnergyCost(costEnergy, pending.sourceEnergy)
@@ -159,6 +169,7 @@ export function getOptionalCostAttackPrompt(
     targetCandidates,
     needsTarget,
     targetMin,
+    targetMax,
     targetLabel,
     unmetConditionWarning: getUnmetConditionWarning(
       game,

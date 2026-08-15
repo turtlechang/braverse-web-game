@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   activateStage,
+  applyGameCommand,
   canActivateStage,
   canPlayItem,
   createDemoGame,
@@ -176,6 +177,91 @@ describe('item and stage actions', () => {
     state.players['player-one'].hand = [item]
 
     expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(false)
+  })
+
+  it('allows BS6-084 to pay one-or-more hand cards before checking its hand limit', () => {
+    const item: GameCard = {
+      id: 'BS6-084',
+      instanceId: 'bs6-084-test',
+      name: 'Time Manipulator',
+      type: 'item',
+      item: {
+        cost: {
+          energy: { blue: 1 },
+          discardHand: 1,
+          discardHandAtLeast: true,
+        },
+        text: '<{B}> <Discard 1 card or more.> If there are 5 cards or less in your hand, select up to 1 of your opponent\'s Cookies. That Cookie receives 1 damage.',
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 1 },
+            condition: { kind: 'hand-count-at-most', count: 5 },
+          },
+        ],
+      },
+    }
+    const fillerCards = Array.from({ length: 7 }, (_, index) => ({
+      id: `bs6-084-filler-${index}`,
+      instanceId: `bs6-084-filler-${index}`,
+      name: `BS6-084 filler ${index}`,
+      type: 'item' as const,
+    }))
+    const state = readyState()
+    const initialTarget = state.players['player-two'].battleArea[0]
+    state.players['player-two'].battleArea = [
+      {
+        ...initialTarget,
+        hpCards: [
+          ...initialTarget.hpCards,
+          support('bs6-084-target-hp'),
+        ],
+      },
+    ]
+    const target = state.players['player-two'].battleArea[0]
+    const blueSupport = { ...support('blue-pay'), energyColor: 'blue' as const }
+    state.players['player-one'].supportArea = [
+      { card: blueSupport, rested: false },
+    ]
+    state.players['player-one'].hand = [item, ...fillerCards]
+
+    // The item itself is still legal to use while the pre-payment hand has 8 cards.
+    expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(true)
+
+    const oneDiscard = applyGameCommand(state, {
+      kind: 'begin-play-item',
+      playerId: 'player-one',
+      instanceId: item.instanceId,
+      paymentIds: ['blue-pay'],
+      discardHandIds: [fillerCards[0].instanceId],
+      targetIds: [],
+    })
+    expect(oneDiscard.players['player-one'].hand).toHaveLength(6)
+    expect(oneDiscard.pendingAbilityEffect).toBeUndefined()
+    expect(
+      oneDiscard.players['player-two'].battleArea[0].hpCards,
+    ).toHaveLength(target.hpCards.length)
+
+    const twoDiscards = playItem(
+      state,
+      'player-one',
+      item.instanceId,
+      ['blue-pay'],
+      [],
+      [],
+      fillerCards.slice(0, 2).map((card) => card.instanceId),
+    )
+    expect(twoDiscards.players['player-one'].hand).toHaveLength(5)
+    const resolved = executeCardEffect(
+      twoDiscards,
+      { sourcePlayerId: 'player-one', sourceInstanceId: item.instanceId },
+      item.item!.effects[0],
+      [target.card.instanceId],
+    )
+    expect(
+      resolved.players['player-two'].battleArea[0].hpCards,
+    ).toHaveLength(target.hpCards.length - 1)
   })
 
   it('replaces an existing stage and activates the new stage once', () => {

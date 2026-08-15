@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-08-14T18:25:17.570Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "source": "data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json",
+  "scope": "Formal-pool test-state interaction audit for BS6 effect-bearing records plus dedicated A/B paths for 1 condition or timing cards. PASS means the real UI opened, the required path settled without browser/runtime errors, and no pending modal remained. Unmet paths may legitimately be a no-op; passive and end-phase cards are accepted when their timing path settles.",
+  "summary": {
+    "total": 1,
+    "effectFlowPassed": 1,
+    "blocked": 0,
+    "failed": 0,
+    "dedicatedConditionCards": 0,
+    "dedicatedConditionCardsPassed": 0,
+    "byStatus": {
+      "Effect flow settled": 1
+    }
+  },
+  "results": [
+    {
+      "cardNumber": "BS6-073",
+      "baseCardNumber": "BS6-073",
+      "variant": null,
+      "name": "Schneeball Cookie",
+      "type": "cookie",
+      "color": "BLUE",
+      "effectSurfaces": [
+        "skill"
+      ],
+      "path": "generic",
+      "testState": "card:BS6-073",
+      "status": "PASS",
+      "auditStatus": "Effect flow settled",
+      "operations": [
+        "action:hand",
+        "select:.effect-candidates-payment",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-battle-to-hand",
+        "confirm:effect-panel:下一步",
+        "select:.effect-candidates-target",
+        "confirm:effect-panel:確認發動",
+        "action:hand",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase",
+        "action:next-phase"
+      ]
+    }
+  ]
+}

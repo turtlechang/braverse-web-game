@@ -44,6 +44,7 @@ import {
   createBreakToTrashDemoState,
   createBs2015CostDepartureDemoState,
   createCardCheckDemoState,
+  createBs6079OnPlayDemoState,
   createPConditionDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
@@ -61,6 +62,7 @@ import {
   createBlueSt4DemoState,
   createBlueSt4TrapDemoState,
   createBs4ConditionDemoState,
+  createBs4024TargetRestrictionDemoState,
   createBs3SilverbellConditionDemoState,
   createBs5CroissantEndPhaseDemoState,
   createBs5FlipDemoState,
@@ -189,6 +191,9 @@ export function useMatchController(params: {
     if (testStateConfig?.kind === 'card-negative') {
       return createCardNegativeDemoState(testStateConfig.cardNumber)
     }
+    if (testStateConfig?.kind === 'bs6-079-on-play') {
+      return createBs6079OnPlayDemoState(testStateConfig.blocked)
+    }
     if (testStateConfig?.kind === 'bs5-060-end-phase') {
       return createBs5CroissantEndPhaseDemoState(testStateConfig.supportState)
     }
@@ -220,6 +225,9 @@ export function useMatchController(params: {
         testStateConfig.cardNumber,
         testStateConfig.conditionMet,
       )
+    }
+    if (testStateConfig?.kind === 'bs4-024-target-restriction') {
+      return createBs4024TargetRestrictionDemoState()
     }
     if (testStateConfig?.kind === 'bs5-flip') {
       return createBs5FlipDemoState(

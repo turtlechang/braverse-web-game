@@ -660,9 +660,10 @@ export interface OptionalCostAttackModalProps {
   targetCandidates: { card: GameCard; instanceId: string }[]
   needsTarget: boolean
   targetMin: number
+  targetMax: number
   targetLabel: string
   onSkip: () => void
-  onPay: (discardIds: string[], targetId: string, paymentIds: string[]) => void
+  onPay: (discardIds: string[], targetIds: string[], paymentIds: string[]) => void
   embedded?: boolean
   /**
    * 這個「Then, 付代價」攻擊附加效果裡，有子效果的 condition 目前不成立時
@@ -685,6 +686,7 @@ export function OptionalCostAttackModal({
   targetCandidates,
   needsTarget,
   targetMin,
+  targetMax,
   targetLabel,
   onSkip,
   onPay,
@@ -696,7 +698,7 @@ export function OptionalCostAttackModal({
   const [phaseIndex, setPhaseIndex] = useState(0)
   const [selectedDiscardIds, setSelectedDiscardIds] = useState<string[]>([])
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
-  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null)
+  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
 
   const canPay =
     playerHand.length >= discardHandCost &&
@@ -724,20 +726,26 @@ export function OptionalCostAttackModal({
   }, [energyCostTotal])
 
   const toggleTarget = useCallback((instanceId: string) => {
-    setSelectedTargetId((current) =>
-      current === instanceId ? null : instanceId,
+    setSelectedTargetIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < targetMax
+          ? [...current, instanceId]
+          : current,
     )
-  }, [])
+  }, [targetMax])
 
   const readyToConfirm =
     selectedDiscardIds.length === discardHandCost &&
     selectedPaymentIds.length === energyCostTotal &&
-    (!needsTarget || targetMin === 0 || Boolean(selectedTargetId))
+    (!needsTarget ||
+      (selectedTargetIds.length >= targetMin &&
+        selectedTargetIds.length <= targetMax))
 
   const handlePay = useCallback(() => {
     if (!readyToConfirm) return
-    onPay(selectedDiscardIds, selectedTargetId ?? '', selectedPaymentIds)
-  }, [readyToConfirm, selectedDiscardIds, selectedTargetId, selectedPaymentIds, onPay])
+    onPay(selectedDiscardIds, selectedTargetIds, selectedPaymentIds)
+  }, [readyToConfirm, selectedDiscardIds, selectedTargetIds, selectedPaymentIds, onPay])
 
   // 比照其他效果提示框的能量／代價／目標分步流程(見 EffectPanel.tsx 的
   // GuidedPhaseSteps),一次只處理一件事,而非把代價與目標塞進同一畫面。
@@ -758,7 +766,8 @@ export function OptionalCostAttackModal({
       : activePhase === 'cost'
         ? selectedDiscardIds.length === discardHandCost
         : activePhase === 'target'
-          ? targetMin === 0 || Boolean(selectedTargetId)
+          ? selectedTargetIds.length >= targetMin &&
+            selectedTargetIds.length <= targetMax
           : true
   const hasPreviousPhase = phaseIndex > 0
   const hasNextPhase = phaseIndex < phaseIds.length - 1
@@ -775,7 +784,7 @@ export function OptionalCostAttackModal({
     }
     setSelectedDiscardIds([])
     setSelectedPaymentIds([])
-    setSelectedTargetId(null)
+    setSelectedTargetIds([])
     setPhaseIndex(0)
     setStep('decision')
   }
@@ -916,8 +925,8 @@ export function OptionalCostAttackModal({
                 <span className="optional-cost-col-label">目標</span>
                 <strong>
                   {targetMin === 0
-                    ? `最多選擇 1 個${targetLabel}作為目標`
-                    : `選擇 1 個${targetLabel}作為目標`}
+                    ? `最多選擇 ${targetMax} 個${targetLabel}作為目標（已選 ${selectedTargetIds.length}）`
+                    : `選擇 ${targetMax} 個${targetLabel}作為目標（已選 ${selectedTargetIds.length}）`}
                 </strong>
                 <div className="modal-card-options">
                   {targetCandidates.map((entry) => (
@@ -925,13 +934,13 @@ export function OptionalCostAttackModal({
                       type="button"
                       key={entry.instanceId}
                       className={
-                        selectedTargetId === entry.instanceId
+                        selectedTargetIds.includes(entry.instanceId)
                           ? 'is-selected'
                           : ''
                       }
                       onClick={() => toggleTarget(entry.instanceId)}
                     >
-                      <CardFace card={entry.card} selected={selectedTargetId === entry.instanceId} />
+                      <CardFace card={entry.card} selected={selectedTargetIds.includes(entry.instanceId)} />
                       <span>{entry.card.name}</span>
                     </button>
                   ))}

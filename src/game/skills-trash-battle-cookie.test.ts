@@ -3,8 +3,10 @@ import {
   activateCookieSkill,
   canActivateCookieSkill,
   createDemoGame,
+  createSeededShuffle,
   advancePhase,
   type CardSkill,
+  type GameCard,
   type GameState,
   type CookieInBattle,
 } from '.'
@@ -227,5 +229,140 @@ describe('trashBattleCookie cost', () => {
     expect(p1.discardPile.some((c) => c.instanceId === 'hp-1')).toBe(true)
     expect(p1.discardPile.some((c) => c.instanceId === 'hp-2')).toBe(true)
     expect(result.departedCookieCounts['player-one']).toBe(1)
+  })
+
+  it('requires and pays BS6-073 battle Cookie return cost before resolving On Play', () => {
+    let state = createDemoGame()
+    const player = state.players['player-one']
+    const source = player.battleArea[0]
+    const returned = player.battleArea[1]
+    if (!source || !returned) return
+
+    const skill: CardSkill = {
+      trigger: 'on-play',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: { blue: 1 },
+        discardHand: 0,
+        battleCookieToHand: {
+          count: 1,
+          maxLevel: 1,
+          energyColor: 'blue',
+        },
+      },
+      text: 'Return 1 blue LV.1 Cookie from your battle area to your hand.',
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    }
+    const hpCard: GameCard = {
+      id: 'returned-hp',
+      instanceId: 'returned-hp',
+      name: 'Returned HP',
+      type: 'item',
+    }
+    const sourceId = 'schneeball-source'
+    const returnedId = 'blue-lv1-to-hand'
+    const blueEnergyId = 'blue-energy'
+    state = {
+      ...state,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: sourceId,
+      },
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          battleArea: [
+            {
+              ...source,
+              card: {
+                ...source.card,
+                id: sourceId,
+                instanceId: sourceId,
+                name: 'Schneeball Cookie',
+                level: 2,
+                energyColor: 'blue',
+                skill,
+              },
+            },
+            {
+              ...returned,
+              card: {
+                ...returned.card,
+                id: returnedId,
+                instanceId: returnedId,
+                name: 'Blue LV.1 Cookie',
+                level: 1,
+                energyColor: 'blue',
+              },
+              hpCards: [hpCard],
+            },
+          ],
+          supportArea: [
+            {
+              card: {
+                id: blueEnergyId,
+                instanceId: blueEnergyId,
+                name: 'Blue Energy',
+                type: 'item',
+                energyColor: 'blue',
+              },
+              rested: false,
+            },
+          ],
+        },
+      },
+    }
+
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'on-play'),
+    ).toBe(true)
+    expect(() =>
+      activateCookieSkill(
+        state,
+        'player-one',
+        sourceId,
+        'on-play',
+        [blueEnergyId],
+      ),
+    ).toThrow(GameRuleError)
+
+    const result = activateCookieSkill(
+      state,
+      'player-one',
+      sourceId,
+      'on-play',
+      [blueEnergyId],
+      [],
+      [],
+      [],
+      [],
+      [],
+      createSeededShuffle(1),
+      [],
+      [],
+      [returnedId],
+    )
+    const resultPlayer = result.players['player-one']
+
+    expect(result.pendingOnPlay).toBeNull()
+    expect(resultPlayer.battleArea.map((cookie) => cookie.card.instanceId)).toEqual([
+      sourceId,
+    ])
+    expect(resultPlayer.hand.some((card) => card.instanceId === returnedId)).toBe(
+      true,
+    )
+    expect(resultPlayer.discardPile.some((card) => card.instanceId === hpCard.instanceId)).toBe(
+      true,
+    )
+    expect(resultPlayer.supportArea[0]?.rested).toBe(true)
   })
 })

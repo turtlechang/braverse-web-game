@@ -275,6 +275,60 @@ describe('describeCommandSteps', () => {
     )
   })
 
+  it('records the actual battle Cookie returned for a skill cost', () => {
+    const base = createBattleState()
+    const returned = cookie('returned-blue-lv1')
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            ...base.players['player-one'].battleArea,
+            {
+              card: returned,
+              hpCards: [],
+              rested: false,
+              battleEntryId: 'returned-blue-lv1:battle:3',
+            },
+          ],
+        },
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: previous.players['player-one'].battleArea.filter(
+            (cookieInBattle) => cookieInBattle.card.instanceId !== returned.instanceId,
+          ),
+          hand: [...previous.players['player-one'].hand, returned],
+        },
+      },
+    }
+    const command = {
+      kind: 'begin-activate-skill' as const,
+      playerId: 'player-one' as const,
+      sourceInstanceId: 'defender',
+      trigger: 'on-play' as const,
+      paymentIds: [],
+      battleToHandIds: [returned.instanceId],
+    }
+
+    const steps = describeCommandSteps(previous, next, command)
+    const returnedStep = steps?.find((step) =>
+      step.text.includes('返回手牌'),
+    )
+
+    expect(returnedStep?.cards).toEqual([returned])
+    expect(describeCommand(previous, next, command)).toContain(
+      `技能代價：將戰鬥區餅乾返回手牌：${returned.name}`,
+    )
+  })
+
   it('summarizes an auto-resolved attack with the damage dealt', () => {
     const base = createBattleState()
     // defender 有 3 張 HP 卡，扣 1 張後剩 2 張——非致命傷害，驗證「造成 N 點傷害」
@@ -310,6 +364,74 @@ describe('describeCommandSteps', () => {
       'attacker',
       'defender',
     ])
+  })
+
+  it('records the BS4-024 forced-target reason and source card in an attack log', () => {
+    const base = createBattleState()
+    const defenderEntry = base.players['player-one'].battleArea[0]
+    const kumiho = {
+      ...defenderEntry.card,
+      id: 'BS4-024',
+      instanceId: 'kumiho',
+      name: 'Kumiho Cookie',
+      level: 1,
+      energyColor: 'yellow' as const,
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: "If there is a Yellow LV.3 Cookie in your battle area, your opponent's Cookies can only attack this Cookie.",
+        effects: [
+          {
+            kind: 'redirect-attack' as const,
+            target: { side: 'self' as const, min: 1, max: 1, sourceOnly: true },
+            condition: {
+              kind: 'battle-area-has-color' as const,
+              side: 'self' as const,
+              color: 'yellow' as const,
+              level: 3,
+            },
+          },
+        ],
+      },
+    }
+    const yellowLevelThree = {
+      ...defenderEntry.card,
+      id: 'yellow-lv3',
+      instanceId: 'yellow-lv3',
+      name: 'Yellow Level 3 Cookie',
+      level: 3,
+      energyColor: 'yellow' as const,
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            { ...defenderEntry, card: kumiho },
+            { ...defenderEntry, card: yellowLevelThree, battleEntryId: 'yellow-lv3:battle:2' },
+          ],
+        },
+      },
+    }
+    const command = {
+      kind: 'declare-attack' as const,
+      playerId: 'player-two' as const,
+      attackerInstanceId: 'attacker',
+      targetInstanceId: 'kumiho',
+      supportPaymentIds: ['p2-support'],
+    }
+
+    expect(describeCommand(previous, previous, command)).toContain(
+      '目標限制：因「Kumiho Cookie」的被動效果（場上有黃色 LV.3 餅乾），只能攻擊「Kumiho Cookie」',
+    )
+    const steps = describeCommandSteps(previous, previous, command)
+    expect(steps?.[1].text).toContain('只能攻擊「Kumiho Cookie」')
+    expect(steps?.[1].cards?.map((card) => card.id)).toEqual(['BS4-024'])
   })
 
   it('reports a knockout when the target is fully depleted', () => {
@@ -650,6 +772,122 @@ describe('effect resolution log outcome', () => {
     )
     const step = describeCommandSteps(previous, { ...previous, pendingOnPlay: null }, command)?.[0]
     expect(step?.cards).toEqual([blocker])
+  })
+  it('records the Timekeeper blocker when BS6-079 cannot move a valid Cookie', () => {
+    const base = createBattleState()
+    const croissant = {
+      ...cookie('croissant', 3, 5),
+      id: 'BS6-079',
+      name: 'Croissant Cookie',
+      energyColor: 'blue' as const,
+      skill: {
+        trigger: 'on-play' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Place 1 blue LV.2 or lower Cookie from your battle area on the bottom of your deck.',
+        effects: [
+          {
+            kind: 'field-to-deck-bottom' as const,
+            target: {
+              side: 'self' as const,
+              min: 1,
+              max: 1,
+              maxLevel: 2,
+              energyColor: 'blue' as const,
+            },
+          },
+        ],
+      },
+    }
+    const target = {
+      ...cookie('blue-lv2-target', 2, 3),
+      name: 'Blue LV.2 Target',
+      energyColor: 'blue' as const,
+    }
+    const timekeeper = {
+      ...cookie('timekeeper', 2, 4),
+      id: 'BS6-010',
+      name: 'Timekeeper Cookie',
+      energyColor: 'red' as const,
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' as const }],
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [
+            { ...base.players['player-one'].battleArea[0], card: croissant },
+            {
+              ...base.players['player-one'].battleArea[0],
+              card: target,
+              battleEntryId: 'blue-lv2-target:battle:2',
+            },
+          ],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            { ...base.players['player-two'].battleArea[0], card: timekeeper },
+          ],
+        },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: croissant.instanceId,
+        sourceCardName: croissant.name,
+        sourceKind: 'skill',
+        effects: [croissant.skill.effects[0]],
+        effectIndex: 0,
+      },
+    }
+    const next: GameState = { ...previous, pendingAbilityEffect: undefined }
+    const resolveCommand = {
+      kind: 'resolve-ability-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: [],
+    }
+
+    expect(describeCommand(previous, next, resolveCommand)).toContain(
+      `被「${timekeeper.name}」的效果阻止`,
+    )
+    const resolveStep = describeCommandSteps(previous, next, resolveCommand)?.[0]
+    expect(resolveStep?.text).toContain(`被「${timekeeper.name}」的效果阻止`)
+    expect(resolveStep?.cards).toEqual([timekeeper])
+
+    const skipState: GameState = {
+      ...previous,
+      pendingAbilityEffect: undefined,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: croissant.instanceId,
+        origin: 'hand',
+      },
+    }
+    const skipCommand = {
+      kind: 'skip-on-play' as const,
+      playerId: 'player-one' as const,
+      sourceInstanceId: croissant.instanceId,
+    }
+    const skipStep = describeCommandSteps(
+      skipState,
+      { ...skipState, pendingOnPlay: null },
+      skipCommand,
+    )?.[0]
+    expect(skipStep?.text).toContain(`被「${timekeeper.name}」的效果阻止`)
+    expect(skipStep?.cards).toEqual([timekeeper])
   })
 })
 

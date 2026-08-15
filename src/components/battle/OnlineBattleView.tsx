@@ -458,6 +458,7 @@ export function OnlineBattleView({
     faintAnimIds: match.faintAnimIds,
     drawAnimIds: match.drawAnimIds,
     onAttackTarget: match.handleAttackTarget,
+    onAttackTargetUnavailable: match.setMessage,
     onEffectTarget: pending.toggleTarget,
     openResourceKind:
       dialogs.resourcePopover?.playerId === opponentId
@@ -717,6 +718,10 @@ export function OnlineBattleView({
         selectedTrashBattleCookieIds={pending.selectedDraftTrashBattleCookieIds}
         onToggleTrashBattleCookie={pending.toggleDraftTrashBattleCookie}
         trashBattleCookieCost={pending.draftTrashBattleCookieCost}
+        battleCookieToHandCandidates={pending.draftBattleCookieToHandCandidates}
+        selectedBattleToHandIds={pending.selectedDraftBattleToHandIds}
+        onToggleBattleToHand={pending.toggleDraftBattleCookieToHand}
+        battleCookieToHandCost={pending.draftBattleCookieToHandCost}
         showTargetSelection
         showCancelSkill={Boolean(pending.abilityCostDraft)}
         onCancel={() => {
@@ -740,14 +745,14 @@ export function OnlineBattleView({
                     '已略過攻擊後續效果。',
                   )
                 },
-                onPay: (discardIds, targetId, paymentIds) => {
+                onPay: (discardIds, targetIds, paymentIds) => {
                   match.dispatch(
                     {
                       kind: 'resolve-optional-cost-attack',
                       playerId: viewerPlayerId,
                       action: 'pay',
                       discardCardIds: discardIds,
-                      targetIds: targetId ? [targetId] : [],
+                      targetIds,
                       paymentIds,
                     },
                     '已支付攻擊後續效果費用。',

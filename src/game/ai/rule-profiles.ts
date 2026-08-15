@@ -17,6 +17,7 @@ export type RuleId =
   | 'R8'
   | 'R9'
   | 'R10'
+  | 'R11'
 
 // ============================================================================
 // 規則描述
@@ -115,6 +116,13 @@ export const RULE_DEFINITIONS: Record<RuleId, RuleDefinition> = {
     priority: 'HIGH',
     module: 'evaluated-turn-handler.ts',
   },
+  R11: {
+    id: 'R11',
+    name: '攻擊節奏維持',
+    description: '主階段仍有合法攻擊時，不會為了保留資源而無故結束回合。',
+    priority: 'HIGH',
+    module: 'evaluated-turn-handler.ts',
+  },
 }
 
 // ============================================================================
@@ -152,8 +160,8 @@ export const LV3_PROFILE: RuleProfile = {
 export const LV4_PROFILE: RuleProfile = {
   level: 4,
   name: '兩層前瞻',
-  description: '兩層前瞻 AI，使用全部 12 條規則，含風險管理',
-  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R6c', 'R7', 'R8', 'R9', 'R10'],
+  description: '兩層前瞻 AI，使用全部 13 條規則，含風險與攻擊節奏管理',
+  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R6c', 'R7', 'R8', 'R9', 'R10', 'R11'],
 }
 
 // ============================================================================

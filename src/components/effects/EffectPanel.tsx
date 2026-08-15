@@ -12,6 +12,7 @@ import { isEffectUntargeted } from '../../game'
 import { CardEffectText, CardFace, EnergyCostIcons } from '../cards/CardVisuals'
 import { getSkillCostTotal } from '../cards/cardVisualUtils'
 import { describeEffect, getSkillLabels } from './effectUiUtils'
+import { energyColorLabel } from '../gameUiLabels'
 import {
   GuidedPhaseSteps,
   type GuidedPhase,
@@ -55,6 +56,10 @@ export interface EffectPanelProps {
   selectedTrashBattleCookieIds?: Set<string>
   onToggleTrashBattleCookie?: (instanceId: string) => void
   trashBattleCookieCost?: number
+  battleCookieToHandCandidates?: GameCard[]
+  selectedBattleToHandIds?: Set<string>
+  onToggleBattleToHand?: (instanceId: string) => void
+  battleCookieToHandCost?: number
   trashToDeckBottomCandidates?: GameCard[]
   selectedTrashToDeckBottomIds?: Set<string>
   onToggleTrashToDeckBottom?: (instanceId: string) => void
@@ -119,6 +124,30 @@ function splitAttackText(text: string): { primary: string; followUp: string | nu
   }
 }
 
+/**
+ * battleCookieToHand 代價的限制描述，例如「藍色 LV.1 以下」。
+ * 顏色／等級依 runtime 代價資料產生，不得寫死特定卡牌的顏色與等級。
+ */
+function describeBattleToHandConstraint(
+  cost: CardSkill['cost']['battleCookieToHand'],
+): string {
+  if (!cost) return ''
+  const color = cost.energyColor
+    ? (energyColorLabel[cost.energyColor] ?? String(cost.energyColor))
+    : ''
+  const level =
+    cost.level !== undefined
+      ? `LV.${cost.level}`
+      : cost.minLevel !== undefined && cost.maxLevel !== undefined
+        ? `LV.${cost.minLevel}～${cost.maxLevel}`
+        : cost.maxLevel !== undefined
+          ? `LV.${cost.maxLevel} 以下`
+          : cost.minLevel !== undefined
+            ? `LV.${cost.minLevel} 以上`
+            : ''
+  return [color, level].filter(Boolean).join(' ')
+}
+
 function EffectPanelContent({
   pendingEffect,
   currentEffect,
@@ -150,6 +179,10 @@ function EffectPanelContent({
   selectedTrashBattleCookieIds = new Set<string>(),
   onToggleTrashBattleCookie,
   trashBattleCookieCost = 0,
+  battleCookieToHandCandidates = [],
+  selectedBattleToHandIds = new Set<string>(),
+  onToggleBattleToHand,
+  battleCookieToHandCost = 0,
   trashToDeckBottomCandidates = [],
   selectedTrashToDeckBottomIds = new Set<string>(),
   onToggleTrashToDeckBottom,
@@ -292,6 +325,10 @@ function EffectPanelContent({
   const trashBattleCookiePaid =
     trashBattleCookieCost === 0 ||
     pendingEffect?.selectedTrashBattleCookieIds.length === trashBattleCookieCost
+  const battleCookieToHandPaid =
+    battleCookieToHandCost === 0 ||
+    (pendingEffect?.selectedBattleToHandIds ?? []).length ===
+      battleCookieToHandCost
   const trashToDeckBottomPaid =
     trashToDeckBottomCost === 0 ||
     (pendingEffect?.selectedTrashToDeckBottomIds ?? []).length ===
@@ -304,6 +341,7 @@ function EffectPanelContent({
     discardPaid &&
     hpToTrashPaid &&
     trashBattleCookiePaid &&
+    battleCookieToHandPaid &&
     trashToDeckBottomPaid &&
     trashToDeckPaid
 
@@ -369,8 +407,9 @@ function EffectPanelContent({
     ? []
     : [
         ...(skill?.restSource ? ['將效果來源卡橫置'] : []),
-        ...(skill?.cost.hpToTrash?.amount
-          ? [`棄置 ${skill.cost.hpToTrash.amount} 張 HP 卡`]
+        ...(skill?.cost.hpToTrash &&
+        skill.cost.hpToTrash.untilRemainingHp === undefined
+          ? [`棄置 ${skill.cost.hpToTrash.amount ?? 1} 張 HP 卡`]
           : []),
         ...(skill?.cost.hpToTrash?.untilRemainingHp !== undefined
           ? [`棄置 HP 卡直到剩餘 ${skill.cost.hpToTrash.untilRemainingHp} HP`]
@@ -386,6 +425,8 @@ function EffectPanelContent({
       supportAreaCost > 0 ||
       discardHandCost > 0 ||
       trashBattleCookieCost > 0 ||
+      battleCookieToHandCandidates.length > 0 ||
+      battleCookieToHandCost > 0 ||
       trashToDeckBottomCandidates.length > 0 ||
       trashToDeckBottomCost > 0 ||
       trashToDeckCandidates.length > 0 ||
@@ -679,6 +720,32 @@ function EffectPanelContent({
                     已選 {pendingEffect.selectedTrashBattleCookieIds.length}／
                     {trashBattleCookieCost} 張戰鬥區餅乾代價
                   </small>
+                )}
+                {battleCookieToHandCost > 0 && (
+                  <small>
+                    已選擇 {(pendingEffect.selectedBattleToHandIds ?? []).length} 張，
+                    需要返回 {battleCookieToHandCost} 張戰鬥區餅乾（技能代價）
+                  </small>
+                )}
+                {battleCookieToHandCandidates.length > 0 && (
+                  <>
+                    <small>
+                      {(() => {
+                        const constraint = describeBattleToHandConstraint(
+                          pendingEffect?.skill?.cost?.battleCookieToHand,
+                        )
+                        return constraint
+                          ? `請選擇要返回手牌的${constraint} 戰鬥區餅乾（技能代價）`
+                          : '請選擇要返回手牌的戰鬥區餅乾（技能代價）'
+                      })()}
+                    </small>
+                    <CandidateButtons
+                      cards={battleCookieToHandCandidates}
+                      selectedIds={selectedBattleToHandIds}
+                      onToggle={onToggleBattleToHand}
+                      className="effect-candidates-battle-to-hand"
+                    />
+                  </>
                 )}
                 {costSupportCandidates.length > 0 && (
                   <>

@@ -376,6 +376,36 @@ describe('official card adapter', () => {
     })
   })
 
+  it('does not treat P-059 duplicated attack text as a FLIP ability', () => {
+    const result = convertOfficialCardToGameCard(
+      createOfficialCard({
+        cardNumber: 'P-059',
+        baseCardNumber: 'P-059',
+        name: 'Chamomile Cookie',
+        type: 'cookie',
+        officialType: 'COOKIE',
+        level: 1,
+        hp: 2,
+        energyType: 'GREEN',
+        color: 'GREEN',
+        skill: {
+          name: '{sk} Tea Time',
+          text:
+            'When your turn ends, if there are 2 active cards or more in your support area, draw up to 1 card from your deck.',
+        },
+        attackText: '<{G}{G}> Floating Flower {da} 2',
+        flipText: '<{G}{G}> Floating Flower',
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: { attack: 2 },
+    })
+    if (result.status !== 'converted') return
+    expect(result.gameCard.flip).toBeUndefined()
+  })
+
   it('converts BS5-073 as a Cookie with a FLIP ability', () => {
     const source = (officialBS5Inventory.cards as OfficialCardRecord[]).find(
       (card) => card.cardNumber === 'BS5-073',

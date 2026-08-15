@@ -10,7 +10,7 @@ BS6 已完成資料準備期、逐色 Browser 稽核與正式 promote：138 筆�
 
 BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將所選餅乾最上方至多 1 張 HP 卡移回手牌，並保留可略過選擇與既有必要自身目標陷阱的相容行為。
 
-本輪已完成 BS5／BS6 紅、黃、綠、藍、紫逐卡 A/B Browser 稽核：BS5 151 張、BS6 138 張，共 289 張；正向 A 與負向 B 均 289／289 PASS，報告保存在 `docs/`。B fixture 將支援區卡設為疲勞，驗證非法能量支付、無支付攻擊不成立，以及攻擊後 `Then` 在實際待處理視窗可正常收斂。
+本輪已完成 BS5／BS6 逐卡 Browser 效果語意稽核（2026-08-15）：BS5 效果 143／143（含 14 張條件／時機 A/B）、負向 153／153、無效果攻擊 10／10；BS6 效果 97／97（含 BS6-039 A/B）、負向 138／138、無效果攻擊 10／10。另以 `scripts/verify-bs5-bs6-semantics.ts` 對兩系列全部 291 筆記錄逐張比對官方文字與 runtime 的攻擊／技能／陷阱／物品／場景／FLIP 能量代價、{da} 傷害、Then 傷害、HP 代價與抽牌數量：BS5 400 項、BS6 325 項全部相符。B fixture 將支援區卡設為疲勞，驗證非法能量支付、無支付攻擊不成立，以及攻擊後 `Then` 在實際待處理視窗可正常收斂；報告保存在 `docs/`（`bs5-effect-audit-2026-08-15.json` 等）。
 
 卡牌匯入稽核可使用 BraverseFan 作為社群交叉參考，但不取代官方 JSON、卡面、規則與公告。
 
@@ -22,7 +22,7 @@ BS6-020「Tonic Spray」已補上陷阱後半段的自身餅乾選擇：可將�
 
 桌面 `tactical-clean` 戰場以深藍桌墊與低對比菱格建立層次；對手場區採紅色、我方採青色完整圓角框，戰鬥區比支援區更深。休息區只保留加大的 `LV. x/10`，兩側功能欄分別依對手「棄牌 → 牌庫 → 場景」與我方「場景 → 牌庫 → 棄牌」排列，並與可見場區等高。全畫面裝飾框不延伸至手牌區，避免切過卡片與影響操作體感。
 
-平板橫向（901–1280px 且高度不超過 840px）正式採用與戰場 mockup 相同的 `src/styles/tablet-layout.css`：1164×777 以支援區／戰鬥區 24／76 與 76／24 鏡射比例配置，手牌改為底部操作 dock，右上／左下雙方資訊牌在此尺寸隱藏，並為右側階段列與左右資源欄保留安全邊界。
+平板橫向（901–1280px 且高度不超過 840px）正式採用與戰場 mockup 相同的 `src/styles/tablet-layout.css`：1164×777 以支援區／戰鬥區 36／64 與 64／36 鏡射比例配置，手牌改為底部操作 dock，右上／左下雙方資訊牌在此尺寸隱藏，並為右側階段列與左右資源欄保留安全邊界。
 
 對戰桌以共用展示元件呈現本機與線上對戰，將攻擊者、攻擊目標、回應流程與傷害結算的可視回饋維持一致，避免玩家必須從對戰紀錄回推目前攻擊關係。
 
@@ -68,13 +68,15 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 187 個測試檔、3,007 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 187 個測試檔、3,018 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。
+
+BS5-073「Cyborg Cookie」已依官方 `flipText` 在卡牌詳情與牌組編輯器顯示為 FLIP；BS4-024「Kumiho Cookie」在對手有黃色 LV.3 餅乾時，攻擊目標 UI 只允許 Kumiho，其他目標會顯示限制原因，展開對戰紀錄也會保留限制步驟與來源卡。兩條流程均已用 localhost-only Browser fixture 實際操作驗證。
 
 Browser smoke 的 1024×576 短桌面版面已修正手牌 hover／focus 抬升造成的戰鬥卡遮擋，並將案例納入明確 hover 回歸；Vite 也將大型 demo harness 拆至 `game-demo` chunk，使主入口 gzip 從 183.59 KiB 降至 161.73 KiB，低於 180 KiB budget。
 
 五色 BS6 標準牌組已建立並接入 AI preset；資料驗證、固定 seed 100 場引擎矩陣與正式根路徑 Browser 實戰均通過。修正後五色各 20/20、合計 100/100 場完成，`simulationStuck=0`、Browser 錯誤與頁面例外均為 0；完整結果見 [BS6 牌組 Browser 報告](docs/bs6-deck-browser-validation-2026-08-12.md)。勝率只作固定樣本觀察，不作為環境強度定案。
 
-BS5+6 競技環境 AI 牌組已新增紅、黃、綠、藍、紫五色，並與既有 BS5 標準及 BS6 標準 choice 分開顯示；牌組方向依 Operation Timeguard 賽事 Top 4／色彩占比與牌組 archetype 整理，競技綠牌避開官方禁卡 BS6-064。固定 seed 100 場的本機比較報告見 [BS6 競技牌組研究](docs/bs6-competitive-deck-research-2026-08-13.md) 與 `data/decks/bs6-competitive-benchmark-report-100-standard.json`；這些數字只代表本專案 AI 規則樣本，不等同官方賽事勝率。
+BS6 競技環境 AI 牌組保留紅、黃、綠、藍、紫五色，並與既有 BS5／BS6 標準 choice 分開顯示；目前卡表以使用者提供的第六彈環境構築為準，可包含現役標準賽制允許的舊彈與起始牌。`P-059` 官方 API 重複攻擊名稱的 `flipText` 已在正規化層排除，避免誤算為 FLIP。可用 `npm run benchmark:bs6-competitive:round-robin` 重跑五色兩兩配對各 5 場、合計 50 場的固定 seed Lv.4 報告；結果僅代表本專案 AI 規則樣本，不等同官方賽事勝率。
 
 BS1～BS6 五色 512 副牌組 Swiss 基準已完成：初代與第一輪 BS6 加權迭代各在 Chromium Browser 完成 9 輪、2,304／2,304 場，卡住 0、Browser 錯誤 0。第一輪上位卡表與牌組清單已保存於 [512 副牌組 Swiss 報告](docs/bs1-bs6-512-swiss-report.md)，後續牌組調整以此固定 seed 基準持續迭代。
 
@@ -142,9 +144,9 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 - **牌組編輯器**：搜尋／篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存；系列選單已分開 BS3 與 BS4，避免兩彈共用官方 product title 時混在一起。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
 - **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果。等級 benchmark 已強制驗證零卡死／deadlock／非法操作／turn cap 與最低勝率，失敗會輸出可重播問題包；見 [docs/ai-levels.md](docs/ai-levels.md)。Lv.5 為設計稿。
 - **卡牌池**：BS1/BS2 官方卡池、五色起始牌組、BS3 官方卡池與 P-0XX 特典卡均已匯入；BS3 的 176 筆資料（含 121 張基礎卡、異圖與促銷變體）及目前 26 張 P-0XX 已正式納入 `data/cards/`。另有官方 P-0XX 全量 153 筆資料（含異圖變體）已完成 adapter conversion，其中 127 筆仍在候選區等待 Browser 稽核與 promote；以 [P-0XX 匯入盤點](docs/p0xx-card-inventory.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md) 分開追蹤候選與正式狀態。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及 8 張高風險卡的語意契約。
-- **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；桌面戰場（≥901px）採參考圖的中央戰場、左右資源欄、左側卡牌焦點預覽與右側回合欄排版，底色維持既有深藍／青色基調；1280×720 已修正手牌裁切、提高戰鬥區比例與資源標籤／中央狀態提示對比，並保留 hover 與鍵盤 focus 的卡牌快速預覽；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
+- **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；桌面戰場（≥901px）採參考圖的中央戰場、左右資源欄、左側卡牌焦點預覽與右側回合欄排版，底色維持既有深藍／青色基調；1164×777 平板與 1366×768、1440×900、1920×1080 通用桌面 viewport 均以實際卡面邊界驗證，短高度桌面的手牌高度依 viewport 縮放並完整留在畫布內；1280×720 已修正手牌裁切、提高戰鬥區比例與資源標籤／中央狀態提示對比，並保留 hover 與鍵盤 focus 的卡牌快速預覽；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
 - **戰鬥區卡槽**：中央「戰鬥區」文字固定不位移；單張餅乾落在左槽，雙張餅乾以放大的左右間隔排開。HP 卡 dock 置於卡片下緣；能量不足與技能提示以所屬卡片外側的垂直中線排列，左卡向左、右卡向右，本機與線上對戰共用。
-- **戰場視覺同步**：`/?mockup=battlefield` 直接重用正式戰場元件與桌面 `tactical-clean` 樣式；對手紅框、我方青框、深藍戰鬥區與次深藍支援區、支援張數與休息區等級文字均同步套用。平板橫向正式對戰與 mockup 共用 `src/styles/tablet-layout.css`，本機與 mockup 都已移除會穿過手牌的全畫面裝飾框。
+- **戰場視覺同步**：`/?mockup=battlefield` 直接重用正式戰場元件與桌面 `tactical-clean` 樣式；對手紅框、我方青框、深藍戰鬥區與次深藍支援區、支援張數與休息區等級文字均同步套用。平板橫向正式對戰與 mockup 共用 `src/styles/tablet-layout.css`，本機與 mockup 都已移除會穿過手牌的全畫面裝飾框；responsive gate 同時檢查手牌實際卡面，不只檢查手牌 dock 容器。
 - **近期對戰桌版面**：桌機版雙方戰鬥、支援與休息區以等高鏡射排列；對手區域統一紅色邊框、我方區域統一藍色邊框，共享戰鬥區中央不再保留分隔線。`table-status-banner` 已移除，避免常駐提示遮蔽戰場；回合欄改為深藍底、金色外框。
 - **線上對戰**：WebSocket server（Render 部署）+ 房間碼 + 玩家名稱 + 遮罩狀態；開局已整合至對戰桌，依序完成私密猜拳、勝者選先後攻、先攻再後攻調度、強制調度補償與起始餅乾同步揭示，並持續顯示雙方順位及目前行動者／階段。對局中提供即時對戰動態、昏厥／陷阱／FLIP／物品事件提示與可展開完整紀錄；手牌點擊外部可取消選取，公開資源可查看，對手攻擊選取會同步餅乾高光與付款支援卡橫置，自己的攻擊支付也會收到候選清單而正常點選支援卡。P0–P2 對戰可視化以 `ActionStatus` 統一提供玩家／階段／來源卡、等待原因、五步驟進度與伺服器期限；戰場不再常駐渲染中央 `RemoteActionBanner`，改以攻擊箭頭、公開來源卡預覽、回應狀態與可展開活動紀錄呈現必要資訊。上述功能共用伺服器權威 `PublicIntent`（序號／狀態版本／公開牌面過濾）與 `ActionStatus`，本機與線上維持相同顯示邏輯；BS1-037 無合法 LV.1 對手目標時不建立等待提示，已有提示可由玩家略過；本機雙瀏覽器自動驗證完整開局、階段同步、卡牌詳情、攻擊預覽、拒絕提示、斷線與連線失敗。
 - **CI/CD**：GitHub Actions（卡牌／候選／registry 驗證 → app＋server typecheck → test → 零 warning lint → build → bundle budget；main push 另跑 AI／牌組編輯器／好友房瀏覽器 smoke）+ Vercel Git Integration 自動部署。
@@ -154,6 +156,8 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `benchmark:bs4-decks` 以固定種子、Lv.4、每色 30 場矩陣比較 BS3 基準與 BS4 版本；本輪另以 `BS4_GAMES_PER_PAIR=4` 完成 100 場固定 seed 重跑，結果寫入 `data/decks/bs4-benchmark-report-100-fixed.json`。此處的「環境強度」指本專案五色 AI 對戰環境；在專用條件情境與更完整對局樣本完成前，不將勝率排名視為正式環境強度結論。
 
 ## 下一步計畫
+
+BS5-073 與 BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇與對戰紀錄的正向／負向 Browser 路徑。
 
 BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；五色標準牌組已完成資料、固定 seed 矩陣與正式根路徑多場 Browser 驗證，五色各 20/20、合計 100/100 且卡死 0。BS5+6 競技環境五色 AI choice 已接入，BS6-020 的陷阱自身目標選擇也已納入回歸基線；512 副牌組 Swiss 已成為新的 AI 回歸基準，後續以其上位卡表進行 matchup-aware 迭代，並持續以真人對戰與官方賽事資料校準。
 
@@ -202,6 +206,7 @@ npm run validate:cards
 npm run validate:candidate
 npm run generate:card-pool
 npm run check:card-pool
+npm run benchmark:bs6-competitive:round-robin
 npm test
 npm run lint
 npm run typecheck
@@ -219,7 +224,7 @@ npm run test:deployment:browser # 外部 Preview／Production URL 與 Render Web
 npm run test:bs4:cards:browser # BS4 111 張 Chrome card-check 載入 gate
 npm run test:bs4:interaction:browser # BS4 條件卡與一般 fixture 實際互動
 npm run test:bs6:decks:browser # BS6 五色牌組主選單開局與每色 20 場 Browser AI 驗證
-npm run test:bs6:competitive:decks:browser # BS5+6 五色競技環境牌組 Browser AI 驗證
+npm run test:bs6:competitive:decks:browser # BS6 五色競技環境牌組 Browser AI 驗證
 npm run test:deck:browser    # 牌組編輯器匯入／儲存與 RWD smoke test
 npm run test:blue:browser    # 藍牌效果使用/付款/目標/決策流程
 npm run test:online:browser  # 線上對戰 modal 桌機／窄視窗驗證
@@ -253,6 +258,10 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-15 | 依官方韓文資料與實體卡逐卡修正 BS6「Operation Timeguard」52 個基礎卡號（64 筆含異圖）的英文 API 攻擊傷害誤記，並補上 BS4-045@1／BS4-097@1 兩張異圖變體；修正 BS6-079 攻擊後可選代價的目標選擇只能選 1 張的問題（OptionalCostAttackModal 改為多選、支援「對手支援區的卡」標籤與上限進度），新增 `bs6-079-multi-target-probe` Browser 驗證「支付代價→選 3 張對手支援卡橫置」；補強 1164×777 與通用桌面 viewport 的手牌實際卡面邊界 gate；完整 Vitest 188 檔／3,039 項、lint、build 通過。 |
+| 2026-08-15 | 完成 BS5／BS6 全卡 Browser 效果語意稽核與代價交叉驗證：BS5 效果 143／143＋負向 153／153＋無效果攻擊 10／10、BS6 效果 97／97＋負向 138／138＋無效果攻擊 10／10；新增 `verify-bs5-bs6-semantics.ts` 對 291 筆記錄逐張比對官方文字與 runtime 能量代價／傷害／HP 代價／抽牌數量（BS5 400 項、BS6 325 項全相符）；修正稽核驅動對 cookie＋FLIP 文案（BS5-073）與 `battle-cookie-to-hand` 代價群（BS6-073）的分類／驅動缺口；盤點修復 3 項潛在 UI／AI 隱患（battle-cookie-to-hand 提示改為依 runtime 代價動態產生顏色與等級、hpToTrash 缺 amount 時自動代價描述與 AI 成本阻尼一致視為 1 張），並為慢速機器加長 AI benchmark 測試 timeout；完整 Vitest 187 檔／3,031 項、lint、build 通過。 |
+| 2026-08-14 | 修正 BS5-073 FLIP 顯示，並補上 BS4-024 Kumiho Cookie 強制攻擊目標的 UI 限制提示、不可用目標回饋與對戰紀錄原因／來源卡步驟；完整 Vitest 187 檔／3,018 項、lint、typecheck、build、bundle gate 與 Browser 回歸通過。 |
+| 2026-08-14 | 匯入使用者提供的 BS6 五色競技環境牌組，修正 P-059 官方 API 將攻擊名稱誤寫入 FLIP 欄位；Lv.4 新增技能／道具後續行動前瞻，並提供五色兩兩配對各 5 場、共 50 場的可重現 round-robin benchmark。 |
 | 2026-08-14 | 修正 Browser smoke 1024×576 短桌面手牌 hover／focus 遮擋戰鬥卡問題，新增明確 hover 回歸；拆分 `game-demo` chunk，主入口 gzip 由 183.59 KiB 降至 161.73 KiB，bundle gate 與完整 Browser smoke 通過。 |
 | 2026-08-14 | 修正 BS5-073「Cyborg Cookie」官方資料遺漏的 FLIP 抽牌效果；同步修正 FLIP 轉接、牌組編輯器篩選與 16 張上限統計，並以本機 Browser 驗證卡圖、詳情文案與加入牌組流程；完整 Vitest 187 檔／3,007 項、lint、typecheck、build 通過。 |
 | 2026-08-14 | 以本機 in-app Browser Use 完成 BS5-001～111、BS6-001～107 共 436 條正向／負向逐卡路徑；補上 BS6-025、032、045、057、081 的合法候選 fixture，完整 Vitest 187 檔／3,004 項、lint、build 通過。 |

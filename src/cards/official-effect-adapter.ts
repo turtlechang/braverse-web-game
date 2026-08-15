@@ -3199,6 +3199,15 @@ export const convertOfficialCardEffects = (
     ],
     'BS6-071': [{ kind: 'draw-up-to', max: 2 }],
     'BS6-072': [{ kind: 'draw-up-to', max: 3 }],
+    // BS6-073 Schneeball Cookie：這是 On Play 技能效果，不是攻擊後效果。
+    // 回手藍色 LV.1 餅乾本身由 exactCookieSkillCosts 支付。
+    'BS6-073': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
     // BS6-066 Maple Taffy Cookie：登場代價先將己方藍色 LV.1 餅乾回手，
     // 再抽最多 1 張。
     'BS6-066': [
@@ -5899,13 +5908,20 @@ export const convertOfficialAttackEffects = (
       },
     ],
     'BS6-079': [
-      { kind: 'discard-hand', count: 1 },
       {
-        kind: 'rest-support',
-        side: 'opponent',
-        amount: 3,
-        activeOnly: true,
-        optional: true,
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [
+          {
+            kind: 'rest-support',
+            side: 'opponent',
+            amount: 3,
+            activeOnly: true,
+            optional: true,
+          },
+        ],
+        effectText:
+          "Discard 1 card. Select up to 3 cards in your opponent's support area. Rest those cards.",
       },
     ],
     'BS6-093': [
@@ -6956,6 +6972,15 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { green: 1 },
     discardHand: 0,
     trashBattleCookie: { count: 1, sourceOnly: true },
+  },
+  'BS6-073': {
+    energy: { blue: 1 },
+    discardHand: 0,
+    battleCookieToHand: {
+      count: 1,
+      maxLevel: 1,
+      energyColor: 'blue',
+    },
   },
   'BS6-082': {
     energy: {},

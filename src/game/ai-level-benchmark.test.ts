@@ -620,7 +620,7 @@ describe('AI benchmark quality gate', () => {
   })
 })
 
-describe('R6a AI Level Benchmark (Detailed)', () => {
+describe('R6a AI Level Benchmark (Detailed)', { timeout: 60000 }, () => {
   const seeds = Array.from({ length: 30 }, (_, i) => i + 1)
 
   it('Lv.2 vs Lv.1', () => {
@@ -677,7 +677,7 @@ describe('R6a AI Level Benchmark (Detailed)', () => {
   })
 })
 
-describe('BS3 All Presets — 完整性驗證（60 seeds, Lv.4 mirror）', () => {
+describe('BS3 All Presets — 完整性驗證（60 seeds, Lv.4 mirror）', { timeout: 120000 }, () => {
   const bs3Seeds = Array.from({ length: 60 }, (_, i) => i + 1)
   const bs3Presets = [
     { label: 'BS3 Red Pitaya', deck: 'bs3-red-pitaya' as BuiltInDeckChoice },

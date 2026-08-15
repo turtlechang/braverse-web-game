@@ -51,7 +51,9 @@ const AUDIT_CONFIGS = {
     // BS5-089@2 is normalized at the adapter boundary into the same
     // attack-Then definition as BS5-089, so it is an effect-bearing variant
     // even though the raw API leaves `attackText` empty.
-    expectedEffectCardCount: 142,
+    // BS5-073 is a COOKIE-typed record with official FLIP text and counts as
+    // effect-bearing through the flipText surface.
+    expectedEffectCardCount: 143,
     conditionTestStatePrefix: 'bs5-condition',
     conditionTestStates: {
       'BS5-007': 'bs5-faint',
@@ -166,11 +168,14 @@ const hasEffectSurface = (card) => {
   const attackThen =
     (hasText(card.attackText) && /\bThen\b/i.test(card.attackText)) ||
     normalizedAttackThenVariants.has(card.cardNumber)
+  // 官方資料把帶有 FLIP 能力的餅乾記成 COOKIE（BS5-073/074）；是否為
+  // FLIP 以 flipText 判斷，不能只看 card.type。
+  const flip = hasText(card.flipText)
   return (
     card.type === 'item' ||
     card.type === 'trap' ||
     card.type === 'stage' ||
-    (card.type === 'flip' && hasText(card.flipText)) ||
+    flip ||
     skill ||
     attackThen ||
     normalizedSkillVariants.has(card.cardNumber) ||
@@ -259,7 +264,7 @@ const effectSurfaces = (card) => {
   ) {
     surfaces.push('attack-then')
   }
-  if (card.type === 'flip') surfaces.push('flip')
+  if (card.type === 'flip' || hasText(card.flipText)) surfaces.push('flip')
   if (card.type === 'item') surfaces.push('item')
   if (card.type === 'trap') surfaces.push('trap')
   if (card.type === 'stage') surfaces.push('stage')
@@ -381,6 +386,7 @@ const driveEffectPanel = async (
         '.effect-candidates-trash-deck-bottom',
         '.effect-candidates-trash-deck',
         '.effect-candidates-rest-support',
+        '.effect-candidates-battle-to-hand',
         '.effect-candidates-choice',
         '.effect-candidates-target',
       ],
@@ -469,6 +475,7 @@ const driveEffectPanel = async (
       '.effect-candidates-trash-deck-bottom',
       '.effect-candidates-trash-deck',
       '.effect-candidates-rest-support',
+      '.effect-candidates-battle-to-hand',
       '.effect-candidates-choice',
       '.effect-candidates-target',
       '.optional-cost-col .modal-card-options',

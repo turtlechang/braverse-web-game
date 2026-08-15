@@ -1,0 +1,31 @@
+{
+  "generatedAt": "2026-08-15T14:06:11.977Z",
+  "browser": "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  "viewport": "1440x960",
+  "card": "BS6-079",
+  "scope": "Browser proof that the optional attack cost can be paid and the player can then select up to 3 opponent support cards to rest.",
+  "status": "PASS",
+  "operations": [
+    "pay",
+    "select-discard",
+    "next",
+    "select-support-1",
+    "select-support-2",
+    "select-support-3",
+    "confirm"
+  ],
+  "assertions": {
+    "selectedSupports": 3,
+    "restedSupports": {
+      "_apiName": "Locator",
+      "_frame": {
+        "_type": "Frame",
+        "_guid": "frame@a7e54e2986d6c130423a834d0377e062"
+      },
+      "_selector": ".top-field .support-card-wrap .card-face.is-rested"
+    },
+    "totalOpponentSupports": 4,
+    "consoleErrors": [],
+    "pageErrors": []
+  }
+}

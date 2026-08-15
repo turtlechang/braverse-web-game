@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { createBattleState, cookie } from '../../game/test-helpers/battle-helpers'
+import {
+  createBattleState,
+  cookie,
+  item,
+} from '../../game/test-helpers/battle-helpers'
 import { getOptionalCostAttackPrompt } from './optionalCostAttackPrompt'
 
 describe('getOptionalCostAttackPrompt', () => {
@@ -96,6 +100,47 @@ describe('getOptionalCostAttackPrompt', () => {
       targetLabel: '己方餅乾',
       targetCandidates: [
         { instanceId: state.players['player-two'].battleArea[0].card.instanceId },
+      ],
+    })
+  })
+
+  it('exposes up-to-3 opponent support targets with the support label (BS6-079)', () => {
+    const state = createBattleState()
+    const opponentSupport = [
+      { card: item('opp-support-1'), rested: false },
+      { card: item('opp-support-2'), rested: false },
+      { card: item('opp-support-3'), rested: false },
+    ]
+    state.players['player-one'].supportArea = opponentSupport
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Croissant Cookie',
+      cost: { energy: {}, discardHand: 1 },
+      effects: [
+        {
+          kind: 'rest-support',
+          side: 'opponent',
+          amount: 3,
+          activeOnly: true,
+          optional: true,
+        },
+      ],
+      effectText:
+        "Discard 1 card. Select up to 3 cards in your opponent's support area. Rest those cards.",
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt).toMatchObject({
+      needsTarget: true,
+      targetMin: 0,
+      targetMax: 3,
+      targetLabel: '對手支援區的卡',
+      targetCandidates: [
+        { instanceId: 'opp-support-1' },
+        { instanceId: 'opp-support-2' },
+        { instanceId: 'opp-support-3' },
       ],
     })
   })

@@ -192,6 +192,7 @@ export const parseTestStateConfig = (
   | { kind: 'blue-st4-020'; payable: boolean }
   | { kind: 'card-check'; cardNumber: string }
   | { kind: 'card-negative'; cardNumber: string }
+  | { kind: 'bs6-079-on-play'; blocked: boolean }
   | { kind: 'bs5-060-end-phase'; supportState: 'rested' | 'active' }
   | {
       kind: 'p-condition'
@@ -208,6 +209,7 @@ export const parseTestStateConfig = (
       cardNumber: Bs4ConditionCardNumber
       conditionMet: boolean
     }
+  | { kind: 'bs4-024-target-restriction' }
   | { kind: 'bs5-flip'; cardNumber: Bs5FlipCardNumber; activate: boolean }
   | {
       kind: 'bs5-faint'
@@ -367,6 +369,12 @@ export const parseTestStateConfig = (
       return { kind: 'card-negative', cardNumber }
     }
   }
+  if (testState === 'bs6-079-on-play-clear') {
+    return { kind: 'bs6-079-on-play', blocked: false }
+  }
+  if (testState === 'bs6-079-on-play-blocked') {
+    return { kind: 'bs6-079-on-play', blocked: true }
+  }
   if (testState?.startsWith('bs5-060-end-phase:')) {
     const supportState = testState.slice('bs5-060-end-phase:'.length).trim()
     if (supportState === 'rested' || supportState === 'active') {
@@ -416,6 +424,9 @@ export const parseTestStateConfig = (
         conditionMet: result === 'met',
       }
     }
+  }
+  if (testState === 'bs4-024-target-restriction') {
+    return { kind: 'bs4-024-target-restriction' }
   }
   if (testState?.startsWith('bs5-flip:')) {
     const [, cardNumber, result] = testState.split(':')
@@ -2969,7 +2980,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const attackOpponentSupportArea =
       cookieCard.id === 'BS4-049'
         ? scenarioSupports('BS4-049-condition-support', 7, 'green')
-        : []
+        : cookieCard.id === 'BS6-079'
+          ? scenarioSupports('BS6-079-condition-support', 4, 'blue')
+          : []
     const attackPlayerHand =
       cookieCard.id === 'BS4-073' || cookieCard.id === 'BS4-083'
         ? [
@@ -3308,6 +3321,50 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
 }
 
 /**
+ * Local Browser A/B fixture for BS6-079's OnPlay movement target.
+ * `blocked` uses the real BS6-010 card record so the UI can prove both the
+ * valid-target path and the Timekeeper movement-protection path.
+ */
+export const createBs6079OnPlayDemoState = (blocked: boolean): GameState => {
+  const state = createCardCheckDemoState('BS6-079')
+  const source = state.players['player-one'].battleArea.find(
+    (entry) => entry.card.id === 'BS6-079',
+  )
+  if (!source) throw new Error('BS6-079 Browser fixture source is missing')
+
+  let blocker: CookieCard | undefined
+  if (blocked) {
+    const blockerCard = getCardCheckCard('BS6-010')
+    if (blockerCard.type !== 'cookie') {
+      throw new Error('BS6-010 Browser fixture blocker is not a Cookie')
+    }
+    blocker = { ...blockerCard, instanceId: 'demo-bs6-010' }
+  }
+
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    pendingBattle: null,
+    pendingAbilityEffect: undefined,
+    pendingOnPlay: {
+      playerId: 'player-one',
+      sourceInstanceId: source.card.instanceId,
+      origin: 'hand',
+    },
+    players: {
+      ...state.players,
+      'player-two': {
+        ...state.players['player-two'],
+        battleArea: blocker
+          ? [cardCheckBattleEntry(blocker, [], 1)]
+          : state.players['player-two'].battleArea,
+      },
+    },
+  }
+}
+
+/**
  * BS5-060 的專用結束階段夾具。
  *
  * `card:` 夾具直接把遊戲放在攻擊後續效果視窗，但不模擬攻擊支付後
@@ -3414,6 +3471,50 @@ export const createP147SpecialPlayDemoState = (): GameState => {
         hand: Array.from({ length: 4 }, (_, index) =>
           testSupportCard(`p147-opponent-hand-${index + 1}`, 'purple'),
         ),
+      },
+    },
+  }
+}
+
+/**
+ * Focused browser fixture for BS4-024's redirect-attack rule.
+ * The player can attack while the opponent has Kumiho Cookie plus a Yellow
+ * LV.3 Cookie, so the target restriction is observable through the real UI.
+ */
+export const createBs4024TargetRestrictionDemoState = (): GameState => {
+  const state = createCardCheckDemoState('BS4-024')
+  const player = state.players['player-one']
+  const opponent = state.players['player-two']
+  const kumiho = player.battleArea.find(
+    (entry) => entry.card.id === 'BS4-024',
+  )
+  const attacker = player.battleArea.find(
+    (entry) => entry.card.id !== 'BS4-024',
+  )
+  const yellowLevel3 = opponent.battleArea.find(
+    (entry) => entry.card.energyColor === 'yellow' && entry.card.level === 3,
+  )
+
+  if (!kumiho || !attacker || !yellowLevel3) {
+    throw new Error('BS4-024 target-restriction fixture is incomplete')
+  }
+
+  return {
+    ...state,
+    activePlayerId: 'player-one',
+    phase: 'main',
+    pendingBattle: null,
+    players: {
+      ...state.players,
+      'player-one': {
+        ...player,
+        battleArea: [attacker],
+      },
+      'player-two': {
+        ...opponent,
+        battleArea: [kumiho, yellowLevel3],
+        hand: [],
+        supportArea: [],
       },
     },
   }

@@ -81,6 +81,43 @@ describe('estimateSkillEffectValue', () => {
     expect(costly).toBeGreaterThan(0)
   })
 
+  it('hpToTrash 未標 amount（規則層視為 1 張）時，成本阻尼與明寫 amount:1 一致', () => {
+    const implicitHpCostSkill: CardSkill = {
+      ...costlyActivateDamageSkill,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        // adapter 對「棄 1 張 HP」會省略 amount（BS5-005 形狀）。
+        hpToTrash: { energyColor: 'red' },
+      },
+    }
+    const explicitHpCostSkill: CardSkill = {
+      ...costlyActivateDamageSkill,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        hpToTrash: { amount: 1, energyColor: 'red' },
+      },
+    }
+    const implicit = estimateSkillEffectValue(
+      makeCard({ skill: implicitHpCostSkill }),
+    )
+    const explicit = estimateSkillEffectValue(
+      makeCard({ skill: explicitHpCostSkill }),
+    )
+    expect(implicit).toBe(explicit)
+
+    const withoutHpCost = estimateSkillEffectValue(
+      makeCard({
+        skill: {
+          ...costlyActivateDamageSkill,
+          cost: { energy: {}, discardHand: 0 },
+        },
+      }),
+    )
+    expect(withoutHpCost).toBeGreaterThan(implicit)
+  })
+
   it('抽牌／支援型技能給中等分數，不是 0', () => {
     const score = estimateSkillEffectValue(makeCard({ skill: drawSkill }))
     expect(score).toBeGreaterThan(0)

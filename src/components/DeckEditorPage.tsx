@@ -238,6 +238,12 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
         : null,
     [selectedCard],
   )
+  const selectedCardSkillText = selectedCard?.skill.text?.trim() ?? ''
+  const selectedCardFlipText =
+    selectedCard?.flipText?.trim() ||
+    (selectedCard?.type === 'flip' ? selectedCardSkillText : '')
+  const selectedCardSkillDisplayText =
+    selectedCard?.type === 'flip' ? '' : selectedCardSkillText
 
   const showStatus = (message: string) => {
     setStatusMsg(message)
@@ -448,10 +454,12 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
                 </div>
               </div>
               <div className="deck-editor-page-detail-copy">
-                <section>
-                  <span>技能</span>
-                  <p><CardEffectText text={selectedCard.skill.text || '此卡沒有技能敘述。'} /></p>
-                </section>
+                {selectedCardSkillDisplayText && (
+                  <section>
+                    <span>技能</span>
+                    <p><CardEffectText text={selectedCardSkillDisplayText} /></p>
+                  </section>
+                )}
                 {normalAttack ? (
                   <>
                     <section>
@@ -474,10 +482,10 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
                     <p><CardEffectText text={selectedCard.attackText} /></p>
                   </section>
                 ) : null}
-                {selectedCard.flipText && (
+                {selectedCardFlipText && (
                   <section>
                     <span>FLIP</span>
-                    <p><CardEffectText text={selectedCard.flipText} /></p>
+                    <p><CardEffectText text={selectedCardFlipText} /></p>
                   </section>
                 )}
               </div>

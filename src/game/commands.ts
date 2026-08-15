@@ -398,6 +398,7 @@ export interface ActivateSkillCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  battleToHandIds?: string[]
   /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
   trashToDeckBottomIds?: string[]
   /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
@@ -423,6 +424,7 @@ export interface BeginActivateSkillCommand {
   discardHandIds?: string[]
   hpToTrashTargetIds?: string[]
   trashBattleCookieIds?: string[]
+  battleToHandIds?: string[]
   /** 從棄牌區放到牌庫底的代價卡，順序即為放入牌庫底的順序（BS3-112）。 */
   trashToDeckBottomIds?: string[]
   /** 從棄牌區選卡洗回牌庫的代價卡（BS3-098）。 */
@@ -1973,6 +1975,7 @@ const applyPlayerActionCommand = (
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
         command.supportToHandIds ?? [],
+        command.battleToHandIds ?? [],
       )
       // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再執行效果。
       // 規格：代價→昏厥→補位（含敗北判定）→效果結算。
@@ -2049,6 +2052,7 @@ const applyPlayerActionCommand = (
         options.shuffle,
         command.hpToTrashTargetIds ?? [],
         command.supportToHandIds ?? [],
+        command.battleToHandIds ?? [],
       )
       // 代價支付造成餅乾離場時，先完成補位檢查與勝負判定，再設定效果。
       // 規格：代價→昏厥→補位（含敗北判定）→效果結算。

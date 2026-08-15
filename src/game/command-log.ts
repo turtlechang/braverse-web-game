@@ -1,5 +1,7 @@
 import { getOpponentId } from './helpers'
+import { getForcedAttackTargetId } from './battle'
 import {
+  getFieldToDeckBottomBlocker,
   getOpponentBattleMovementPreventer,
   isProtectedBySoulJamResolution,
 } from './effects/targeting'
@@ -42,6 +44,24 @@ const findCard = (state: GameState, instanceId: string): GameCard | undefined =>
 
 const findCardName = (state: GameState, instanceId: string): string =>
   findCard(state, instanceId)?.name ?? '未知卡牌'
+
+const describeForcedAttackRestriction = (
+  state: GameState,
+  attackerPlayerId: PlayerId,
+): LogStepDetail | undefined => {
+  const forcedTargetId = getForcedAttackTargetId(state, attackerPlayerId)
+  const forcedTarget = forcedTargetId
+    ? findCard(state, forcedTargetId)
+    : undefined
+  if (!forcedTarget) return undefined
+
+  const conditionText =
+    forcedTarget.id === 'BS4-024' ? '（場上有黃色 LV.3 餅乾）' : ''
+  return {
+    text: `目標限制：因「${forcedTarget.name}」的被動效果${conditionText}，只能攻擊「${forcedTarget.name}」`,
+    cards: [forcedTarget],
+  }
+}
 
 const cardTypeLabels: Record<GameCard['type'], string> = {
   cookie: '餅乾',
@@ -124,6 +144,14 @@ const getOpponentBattleToTrashEffect = (
   effects.find(
     (effect): effect is Extract<CardEffect, { kind: 'opponent-battle-to-trash' }> =>
       effect.kind === 'opponent-battle-to-trash',
+  )
+
+const getFieldToDeckBottomEffect = (
+  effects: CardEffect[],
+): Extract<CardEffect, { kind: 'field-to-deck-bottom' }> | undefined =>
+  effects.find(
+    (effect): effect is Extract<CardEffect, { kind: 'field-to-deck-bottom' }> =>
+      effect.kind === 'field-to-deck-bottom',
   )
 
 const getOpponentBattleToTrashBlocker = (
@@ -211,12 +239,66 @@ const describeOpponentBattleToTrashStep = (
   }
 }
 
+const describeFieldToDeckBottomStep = (
+  previous: GameState,
+  command: Extract<GameCommand, { kind: 'resolve-ability-effect' }>,
+  effect: Extract<CardEffect, { kind: 'field-to-deck-bottom' }>,
+): LogStepDetail => {
+  const targetCard = command.targetIds[0]
+    ? findCard(previous, command.targetIds[0])
+    : undefined
+  if (targetCard) {
+    return {
+      text: `效果結算：將「${targetCard.name}」放到持有者牌庫底`,
+      cards: [targetCard],
+    }
+  }
+
+  const blocker = getFieldToDeckBottomBlocker(
+    previous,
+    {
+      sourcePlayerId: command.playerId,
+      sourceInstanceId:
+        previous.pendingAbilityEffect?.sourceInstanceId ?? '',
+    },
+    effect,
+  )
+  if (blocker) {
+    return {
+      text: `效果未生效：被「${blocker.card.name}」的效果阻止，無法將餅乾移出戰鬥區`,
+      cards: [blocker.card],
+    }
+  }
+
+  return {
+    text:
+      effect.target.min > 0
+        ? '效果未生效：沒有符合條件的目標'
+        : '效果未生效：未選擇目標',
+  }
+}
+
 const describeBlockedOnPlayMovement = (
   state: GameState,
   sourceInstanceId: string,
   sourcePlayerId: PlayerId,
 ): LogStepDetail | undefined => {
   const sourceCard = findCard(state, sourceInstanceId)
+  const sourceEffects = getCardEffects(sourceCard)
+  const fieldToDeckBottom = getFieldToDeckBottomEffect(sourceEffects)
+  if (fieldToDeckBottom && !getOpponentBattleToTrashEffect(sourceEffects)) {
+    const block = getFieldToDeckBottomBlocker(
+      state,
+      { sourcePlayerId, sourceInstanceId },
+      fieldToDeckBottom,
+    )
+    if (block) {
+      return {
+        text: `效果未生效：被「${block.card.name}」的效果阻止，無法將餅乾移出戰鬥區`,
+        cards: [block.card],
+      }
+    }
+  }
   const effect = getOpponentBattleToTrashEffect(getCardEffects(sourceCard))
   if (!effect) return undefined
   const block = getOpponentBattleToTrashBlocker(state, sourcePlayerId, effect)
@@ -338,8 +420,14 @@ export const describeCommand = (
 
   switch (command.kind) {
     case 'attack':
-    case 'declare-attack':
-      return `${actor} 使用「${findCardName(state, command.attackerInstanceId)}」攻擊「${findCardName(state, command.targetInstanceId)}」`
+    case 'declare-attack': {
+      const restriction = describeForcedAttackRestriction(
+        state,
+        command.playerId,
+      )
+      const restrictionText = restriction ? `（${restriction.text}）` : ''
+      return `${actor} 使用「${findCardName(state, command.attackerInstanceId)}」攻擊「${findCardName(state, command.targetInstanceId)}」${restrictionText}`
+    }
     case 'deploy-cookie':
       return `${actor} 部署了「${findCardName(state, command.instanceId)}」`
     case 'place-support':
@@ -367,9 +455,15 @@ export const describeCommand = (
         next,
         command.hpToTrashTargetIds,
       )
+      const battleToHandStep = describeCardListStep(
+        state,
+        '技能代價：將戰鬥區餅乾返回手牌',
+        command.battleToHandIds,
+      )
       const sourceName = findCardName(state, command.sourceInstanceId)
-      return hpTrashStep
-        ? `${actor} 發動了「${sourceName}」的技能（${hpTrashStep.text}）`
+      const costStep = hpTrashStep ?? battleToHandStep
+      return costStep
+        ? `${actor} 發動了「${sourceName}」的技能（${costStep.text}）`
         : `${actor} 發動了「${sourceName}」的技能`
     }
     case 'resolve-ability-effect': {
@@ -393,6 +487,15 @@ export const describeCommand = (
         return (opponentBattleToTrash.min ?? 1) > 0
           ? `${actor} 未找到符合條件的目標，技能未生效`
           : `${actor} 未選擇目標，技能結算完畢`
+      }
+      const fieldToDeckBottom = getFieldToDeckBottomEffect(effects)
+      if (fieldToDeckBottom) {
+        const step = describeFieldToDeckBottomStep(
+          previous,
+          command,
+          fieldToDeckBottom,
+        )
+        return `${actor} ${step.text}`
       }
       const cycleHp = effects.find((effect) => effect.kind === 'cycle-hp')
       if (cycleHp) {
@@ -745,6 +848,12 @@ export const describeCommandSteps = (
         command.trashBattleCookieIds,
       )
       if (trashBattleStep) steps.push(trashBattleStep)
+      const battleToHandStep = describeCardListStep(
+        state,
+        '技能代價：將戰鬥區餅乾返回手牌',
+        command.battleToHandIds,
+      )
+      if (battleToHandStep) steps.push(battleToHandStep)
       const trashToDeckBottomStep = describeCardListStep(
         state,
         '額外代價：棄牌區卡片洗到牌庫底',
@@ -823,11 +932,16 @@ export const describeCommandSteps = (
       return steps
     }
     case 'resolve-ability-effect': {
+      const resolvedEffects = getResolvedEffects(previous, command)
       const effect = getOpponentBattleToTrashEffect(
-        getResolvedEffects(previous, command),
+        resolvedEffects,
       )
-      return effect
-        ? [describeOpponentBattleToTrashStep(previous, command, effect)]
+      if (effect) {
+        return [describeOpponentBattleToTrashStep(previous, command, effect)]
+      }
+      const fieldToDeckBottom = getFieldToDeckBottomEffect(resolvedEffects)
+      return fieldToDeckBottom
+        ? [describeFieldToDeckBottomStep(previous, command, fieldToDeckBottom)]
         : undefined
     }
     case 'skip-on-play': {
@@ -838,7 +952,8 @@ export const describeCommandSteps = (
       )
       return blockedStep ? [blockedStep] : undefined
     }
-    case 'attack': {
+    case 'attack':
+    case 'declare-attack': {
       const opponentId = getOpponentId(command.playerId)
       const targetBefore = previous.players[opponentId].battleArea.find(
         (cookie) => cookie.card.instanceId === command.targetInstanceId,
@@ -864,6 +979,13 @@ export const describeCommandSteps = (
             (card): card is GameCard => card !== undefined,
           ),
         },
+        ...(() => {
+          const restriction = describeForcedAttackRestriction(
+            state,
+            command.playerId,
+          )
+          return restriction ? [restriction] : []
+        })(),
         { text: `自動結算戰鬥，${outcome}`, cards: targetCard ? [targetCard] : undefined },
       ]
     }
