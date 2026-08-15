@@ -1020,6 +1020,20 @@ describe('BS6 BLUE effect adapter', () => {
       },
     })
   })
+
+  it('corrects BS6-079 to the card-face attack damage of 3 while keeping cost 3', () => {
+    const result = convertOfficialCardToGameCard(findBs6Card('BS6-079'))
+
+    expect(result).toMatchObject({
+      status: 'converted',
+      gameCard: {
+        attack: 3,
+        attackCost: 3,
+        attackEnergyCost: { blue: 3 },
+        attackText: expect.stringContaining('{da} 3'),
+      },
+    })
+  })
 })
 
 describe('BS6 PURPLE effect adapter', () => {

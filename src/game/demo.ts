@@ -2980,7 +2980,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const attackOpponentSupportArea =
       cookieCard.id === 'BS4-049'
         ? scenarioSupports('BS4-049-condition-support', 7, 'green')
-        : []
+        : cookieCard.id === 'BS6-079'
+          ? scenarioSupports('BS6-079-condition-support', 4, 'blue')
+          : []
     const attackPlayerHand =
       cookieCard.id === 'BS4-073' || cookieCard.id === 'BS4-083'
         ? [

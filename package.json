@@ -55,6 +55,7 @@
     "test:bs5:effects:browser": "node scripts/p-browser-effect-audit.mjs --series=BS5",
     "test:bs6:effects:browser": "node scripts/p-browser-effect-audit.mjs --series=BS6",
     "test:bs6:decks:browser": "node scripts/bs6-deck-browser-validation.mjs",
+    "test:bs6-079:rest-support:browser": "node scripts/bs6-079-multi-target-probe.mjs",
     "test:bs6:competitive:decks:browser": "set BS6_DECK_BROWSER_MODE=competitive&& node scripts/bs6-deck-browser-validation.mjs",
     "test:bs3-yellow:browser": "node scripts/bs3-yellow-battle-validation.mjs",
     "test:bs3-red:browser": "set BS3_DECK=bs3-red-pitaya && node scripts/bs3-yellow-battle-validation.mjs",
