@@ -1207,6 +1207,9 @@ export const takeAiStep = (
 
     const shuffleSeed = createStepShuffleSeed(options.seed ?? 1, state, playerId)
     aiTurnStrategy.shuffleSeed = shuffleSeed
+    // G3：外部只能提供以 PlayerView／合法事件建立的 KnowledgeState。
+    // 每次決策明確覆寫，避免不同對局或玩家共用上一局的短期記憶。
+    aiTurnStrategy.knowledgeState = options.knowledgeState
 
     const turnHandler =
       level === 1

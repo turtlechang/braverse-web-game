@@ -139,3 +139,7 @@ G1 已在獨立 shadow-mode 模組完成能力／牌組策略 profile／synergy 
 ## G2 完成記錄（2026-08-16）
 
 G2 的 `KnowledgeState` 與完整 `GameState` 分離，只接受 `PlayerView` 同步及顯式的已知移動／公開揭示／牌序失效事件。自方已知頂／底與公開 reveal 可跨回合保存；shuffle、Refresh、mulligan 或未知牌庫變動會使該牌庫所有位置事實失效。測試證明變更未知底牌、對手手牌或未翻 HP，不會改變從 PlayerView 建立的 knowledge snapshot。它仍未連到 AI 評分或 command 流程；G3 才能開始使用此安全輸入做一步行動評分。
+
+## G3 完成記錄（2026-08-16）
+
+Lv.3 已改由 `action-score.ts`、`tactical-plans.ts` 與 `lv3-strategy.ts` 對每一個既有合法候選進行一步評估。規則層仍負責 command 列舉、套用與多階段能力合法性；策略模組不匯入 `GameState`，只讀取前後 `PlayerView` 與 G2 snapshot。候選結果以 `ActionScoreBreakdown` 回傳到 `AiDecisionReason`，其中 `RelativeActionScore` 僅用於同一局面排序，終局／公開擊倒則以獨立 calibrated signal 判斷。未支援 capability 和沒有合法已知牌序的 deck-order payoff 會被保守扣分，並留在 breakdown 供 telemetry 消費者彙整。G3 維持一步，不啟動多步 beam 或跨步資源預留。

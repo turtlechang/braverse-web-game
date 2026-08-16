@@ -13,6 +13,17 @@ import {
   commandActionTypes,
   describeCommand,
 } from './random-turn-handler'
+import {
+  actionIdentityFromCommand,
+  createLv3ContextForView,
+  scoreLv3ActionCandidate,
+  selectBestLv3Action,
+  type ScoredLv3ActionCandidate,
+} from './strategy/lv3-strategy'
+import {
+  createKnowledgeStateFromPlayerView,
+  synchronizeKnowledgeWithPlayerView,
+} from './strategy/knowledge-state'
 import { handleAiTurnState, type AiTurnStrategy } from './turn-handler'
 
 const sumBreakLevel = (cards: CookieCard[]): number =>
@@ -296,11 +307,6 @@ const handManagementBonus = (
   return bonus
 }
 
-interface EvaluatedCandidate {
-  decision: AiDecision
-  score: number
-}
-
 interface TwoPlyCandidate {
   decision: AiDecision
   score: number
@@ -372,28 +378,34 @@ const commandCandidate = (
   state: GameState,
   playerId: PlayerId,
   command: PlayerActionCommand,
-): EvaluatedCandidate | null => {
+  beforeView: PlayerView,
+  context: ReturnType<typeof createLv3ContextForView>,
+  legalAttackCountBefore: number,
+): ScoredLv3ActionCandidate<AiDecision> | null => {
   try {
     const nextState = applyChosenTurnCommand(state, command)
-    let score: number
-    if (command.kind === 'attack') {
-      score =
-        evaluatePlayerView(createPlayerView(state, playerId)) +
-        attackBonus(state, playerId, command) +
-        handManagementBonus(state, nextState, playerId, command.kind)
-    } else {
-      score = evaluatePlayerView(createPlayerView(nextState, playerId))
-      score -= cookieSupportPenalty(state, playerId, command)
-      score += handManagementBonus(state, nextState, playerId, command.kind)
-    }
-    return {
-      decision: {
+    const afterView = createPlayerView(nextState, playerId)
+    const decision: AiDecision = {
         state: nextState,
         action: commandActionTypes[command.kind],
         description: describeCommand(state, playerId, command),
-      },
-      score,
     }
+    return scoreLv3ActionCandidate(context, beforeView, {
+      value: decision,
+      identity: actionIdentityFromCommand(command),
+      afterView,
+      // 攻擊進入 pending battle，尚未翻開 HP；以攻擊前公開盤面為基準，
+      // 傷害與致命價值由純 PlayerView 評分模組加入。
+      postActionBoardScore: command.kind === 'attack'
+        ? evaluatePlayerView(beforeView)
+        : evaluatePlayerView(afterView),
+      legalAttackCountBefore,
+      legalAttackCountAfter: command.kind === 'attack'
+        ? 0
+        : getLegalTurnCommands(nextState, playerId).filter(
+          (candidate) => candidate.kind === 'attack',
+        ).length,
+    })
   } catch {
     return null
   }
@@ -425,10 +437,27 @@ export const handleAiEvaluatedTurnState = (
       : { ...delegated, reason: { level: 3 } }
   }
 
-  const candidates: EvaluatedCandidate[] = []
+  const beforeView = createPlayerView(state, playerId)
+  const knowledgeState = strategy.knowledgeState?.observerId === playerId
+    ? synchronizeKnowledgeWithPlayerView(strategy.knowledgeState, beforeView)
+    : createKnowledgeStateFromPlayerView(beforeView)
+  // KnowledgeState 只從 PlayerView 與已知事件建立；不把 GameState 暴露給策略。
+  strategy.knowledgeState = knowledgeState
+  const context = createLv3ContextForView(beforeView, knowledgeState)
+  const legalAttackCountBefore = getLegalTurnCommands(state, playerId).filter(
+    (candidate) => candidate.kind === 'attack',
+  ).length
+  const candidates: ScoredLv3ActionCandidate<AiDecision>[] = []
 
   for (const command of getLegalTurnCommands(state, playerId)) {
-    const candidate = commandCandidate(state, playerId, command)
+    const candidate = commandCandidate(
+      state,
+      playerId,
+      command,
+      beforeView,
+      context,
+      legalAttackCountBefore,
+    )
     if (candidate) candidates.push(candidate)
   }
 
@@ -437,12 +466,21 @@ export const handleAiEvaluatedTurnState = (
       try {
         const decision = strategy.resolveSkill(state, playerId, source, 'activate')
         if (decision) {
-          candidates.push({
-            decision,
-            score:
-              evaluatePlayerView(createPlayerView(decision.state, playerId)) +
-              skillEffectBonus(state, decision.state, playerId),
-          })
+          const afterView = createPlayerView(decision.state, playerId)
+          candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+            value: decision,
+            identity: {
+              kind: 'activate-skill',
+              sourceInstanceId: source.card.instanceId,
+            },
+            afterView,
+            postActionBoardScore: evaluatePlayerView(afterView),
+            legalAttackCountBefore,
+            legalAttackCountAfter: getLegalTurnCommands(
+              decision.state,
+              playerId,
+            ).filter((candidate) => candidate.kind === 'attack').length,
+          }))
         }
       } catch {
         // skip invalid skill resolution
@@ -452,12 +490,21 @@ export const handleAiEvaluatedTurnState = (
       try {
         const decision = strategy.resolveCardAbility(state, playerId, card)
         if (decision) {
-          candidates.push({
-            decision,
-            score:
-              evaluatePlayerView(createPlayerView(decision.state, playerId)) +
-              skillEffectBonus(state, decision.state, playerId),
-          })
+          const afterView = createPlayerView(decision.state, playerId)
+          candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+            value: decision,
+            identity: {
+              kind: `activate-${card.type}`,
+              sourceInstanceId: card.instanceId,
+            },
+            afterView,
+            postActionBoardScore: evaluatePlayerView(afterView),
+            legalAttackCountBefore,
+            legalAttackCountAfter: getLegalTurnCommands(
+              decision.state,
+              playerId,
+            ).filter((candidate) => candidate.kind === 'attack').length,
+          }))
         }
       } catch {
         // skip invalid card ability resolution
@@ -470,17 +517,19 @@ export const handleAiEvaluatedTurnState = (
     return fallback.reason ? fallback : { ...fallback, reason: { level: 3 } }
   }
 
-  let best = candidates[0]
-  for (const candidate of candidates) {
-    if (candidate.score > best.score) best = candidate
+  const best = selectBestLv3Action(candidates)
+  if (!best) {
+    const fallback = handleAiTurnState(state, playerId, strategy)
+    return fallback.reason ? fallback : { ...fallback, reason: { level: 3 } }
   }
 
   return {
-    ...best.decision,
+    ...best.candidate.value,
     reason: {
       level: 3,
       consideredCommands: candidates.length,
-      chosenCommandKind: best.decision.action,
+      chosenCommandKind: best.candidate.identity.kind,
+      actionScore: best.breakdown,
     },
   }
 }

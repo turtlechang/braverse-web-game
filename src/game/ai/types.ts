@@ -1,4 +1,6 @@
 import type { CardEffect, GameCard, GameState, PlayerId } from '../types'
+import type { ActionScoreBreakdown } from './strategy/action-score'
+import type { KnowledgeState } from './strategy/knowledge-state'
 
 export type AiLevel = 1 | 2 | 3 | 4
 
@@ -7,12 +9,18 @@ export interface AiStepOptions {
   level?: AiLevel
   /** Lv.1 隨機性的種子；相同種子與局面必產生相同決策。 */
   seed?: number
+  /**
+   * 只可由 G2 的合法 observation events 建立；未提供時 Lv.3 只使用
+   * 當前 PlayerView 的公開資訊，不會從完整 GameState 補看牌庫。
+   */
+  knowledgeState?: KnowledgeState
 }
 
 export interface AiDecisionReason {
   level: AiLevel
   consideredCommands?: number
   chosenCommandKind?: string
+  actionScore?: ActionScoreBreakdown
 }
 
 export interface SimulateAiMatchOptions {

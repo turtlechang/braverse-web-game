@@ -1,6 +1,6 @@
 # 通用型 Lv.3／Lv.4 AI 策略契約
 
-> 狀態：Phase G0（契約與測試規格）。本文件不是規則引擎或 AI 行動實作；G0 不改變任何 Lv.1～Lv.4 的決策結果。
+> 狀態：G3 已完成；Lv.3 已接入單步、可解釋的通用策略評分。G4 尚未開始，必須取得核准後才可修改 Lv.4 搜尋。
 
 ## 目標與範圍
 
@@ -79,7 +79,7 @@ Lv.4 在加入 R12～R16 後，仍必須沿用 R9、R10、R11。現況 `docs/ai-
 | G0 | 本契約、能力分類、知識邊界、現況基線與測試規格 | 僅文件；不改 AI 決策。 | 本階段完成後停止並等待核准。 |
 | G1 | capability model／extractor、deck profile、synergy graph | shadow mode，只輸出能力與 profile。已完成；沒有接入 AI 行動。 | G0 核准。 |
 | G2 | `KnowledgeState` 與安全測試 | 不得改變策略選擇。已完成；只接收 PlayerView／合法 knowledge event，未接入 AI 行動。 | G1 核准。 |
-| G3 | Lv.3 action scoring／tactical plans | 一步合法 command 評估。 | G2 核准。 |
+| G3 | Lv.3 action scoring／tactical plans | 已完成：一步合法 command 評估、公開資訊／已知資訊輸入與可解釋 breakdown。 | G2 核准。 |
 | G4 | Lv.4 search／reservation／telemetry | 4～6 beam、4～6 command depth、150～350 nodes、100～250ms；逾時回退 Lv.3。 | G3 核准。 |
 | G5 | pending 與防守選擇整合 | replacement、付款、目標、順序、choose-one、discard、blocker、trap、FLIP、refresh、多階段效果。 | G4 核准。 |
 

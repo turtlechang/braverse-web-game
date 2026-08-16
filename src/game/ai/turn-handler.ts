@@ -25,6 +25,7 @@ import type {
   PlayerId,
   AbilityCost,
 } from '../types'
+import type { KnowledgeState } from './strategy/knowledge-state'
 import type { AiDecision } from './types'
 import {
   evaluateHandQuality,
@@ -36,6 +37,7 @@ export interface AiTurnStrategy {
   currentLevel?: number
   /** 由 takeAiStep 注入，供 AI Refresh commandLog 重播。 */
   shuffleSeed?: number
+  knowledgeState?: KnowledgeState
   chooseEffectTargets: (
     state: GameState,
     context: EffectContext,

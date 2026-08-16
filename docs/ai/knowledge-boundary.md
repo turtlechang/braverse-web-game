@@ -1,6 +1,6 @@
 # AI 已知資訊與隱私邊界（Phase G0 規格）
 
-> 狀態：G2 shadow mode 已完成。`src/game/ai/strategy/knowledge-state.ts` 只接收 `PlayerView` 與合法 knowledge events，不接收完整 `GameState`，也尚未接入 AI 行動。
+> 狀態：G3 已將 `KnowledgeState` 接入 Lv.3 的**評分輸入**。`src/game/ai/strategy/knowledge-state.ts` 仍只接收 `PlayerView` 與合法 knowledge events，不接收完整 `GameState`；G3 不建立 command log 投影器，也不讓知識狀態改寫規則或 `GameState`。
 
 ## 現況邊界
 
@@ -79,7 +79,7 @@ interface KnowledgeState {
 - shuffle、Refresh shuffle、mulligan shuffle 與無法證明安全的牌庫變動，都會遞增該玩家的 `deckSequenceVersion` 並移除所有 deck position facts。
 - query 只回傳目前 sequence 的 confirmed／publicly-revealed deck facts；`inferred` 永遠不是 payoff 的授權來源。
 
-目前尚未建立 command log → knowledge event 的投影器，也沒有把 KnowledgeState 接到 Lv.3／Lv.4 評分；這是 G3 前需要保留的整合邊界，而不是對既有行動的隱性變更。
+目前尚未建立 command log → knowledge event 的投影器。G3 的 `takeAiStep(..., { knowledgeState })` 僅接受外部已合法建立的 snapshot；未提供時，Lv.3 會從目前 `PlayerView` 建立只有公開區的空白 snapshot。每次評分前只同步公開區，讀取牌庫事實時只採用當前 sequence 的 `confirmed`／`publicly-revealed` fact；因此無法從完整 `GameState` 補看未知牌庫、對手手牌或未翻 HP。Lv.4 的跨步記憶與 command log 投影仍屬 G4／G5 範圍。
 
 ## 明確禁止事項
 
