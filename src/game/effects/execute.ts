@@ -179,6 +179,7 @@ const resolveDamageOutcome = (
     if (faintSkill && faintSkill.faint) {
       const faintCost = getFaintTriggeredCost(faintSkill)
       let faintCostAttached = false
+      let faintOptionalAttached = false
       for (const effect of faintSkill.effects) {
         const context = {
           sourcePlayerId: damagedPlayerId,
@@ -209,6 +210,9 @@ const resolveDamageOutcome = (
                   sourcePlayerId: damagedPlayerId,
                   sourceInstanceId: cookie.instanceId,
                   sourceCardName: cookie.name,
+                  ...(faintSkill.faintOptional && !faintOptionalAttached
+                    ? { optional: true }
+                    : {}),
                   effect,
                   context,
                   ...(faintCost && !faintCostAttached
@@ -218,6 +222,7 @@ const resolveDamageOutcome = (
               ],
             }
             faintCostAttached = true
+            faintOptionalAttached = true
           }
         } else {
           const selectionLimits = getEffectSelectionLimits(effect)
@@ -240,6 +245,9 @@ const resolveDamageOutcome = (
                 sourcePlayerId: damagedPlayerId,
                 sourceInstanceId: cookie.instanceId,
                 sourceCardName: cookie.name,
+                ...(faintSkill.faintOptional && !faintOptionalAttached
+                  ? { optional: true }
+                  : {}),
                 effect,
                 context,
                 ...(faintCost && !faintCostAttached
@@ -249,6 +257,7 @@ const resolveDamageOutcome = (
             ],
           }
           faintCostAttached = true
+          faintOptionalAttached = true
         }
       }
     }

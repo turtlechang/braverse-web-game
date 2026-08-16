@@ -148,6 +148,7 @@ export interface BattleUiMatchLike {
   faintCostSupportAmount: number
   faintCostSupportCandidates: GameCard[]
   toggleFaintCostSupport: (instanceId: string) => void
+  faintOptional: boolean
   faintMin: number
   faintMax: number
   // After-damage

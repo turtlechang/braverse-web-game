@@ -39,6 +39,11 @@ export interface CardSkill {
   effects: CardEffect[]
   /** Energy supplied by the Cookie itself when a triggered skill is used. */
   sourceEnergy?: EnergyCost
+  /**
+   * 「When this Cookie faints」整組技能可由持有者選擇是否發動。
+   * 與單一 CardEffect 的 optional 不同，略過時會跳過同一觸發佇列的所有效果。
+   */
+  faintOptional?: boolean
   /** Alternate cost used by an official Special Play instruction. */
   specialPlayCost?: AbilityCost
   faint?: boolean
@@ -1816,6 +1821,8 @@ export interface PendingFaintEffect {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   sourceCardName?: string
+  /** 略過時跳過此來源本次昏厥觸發佇列的所有效果。 */
+  optional?: boolean
   effect: CardEffect
   context: EffectContext
   /**

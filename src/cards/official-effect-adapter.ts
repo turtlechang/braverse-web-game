@@ -1147,8 +1147,9 @@ export const convertOfficialCardEffects = (
       // 「place 1 card from your support area into the trash」是這個昏厥觸發
       // 技能的代價，但 resolveFaintEffect 只讀 hand-to-battle 的 energyCost，
       // 完全不會去看 CardSkill.cost（同一類問題見 BS3-029 修正）；跟 BS3-064
-      // 一樣，把代價改成陣列最前面一個非 optional 的效果，讓犧牲確實發生，
-      // 且讓後面「支援區至少 5 張」的條件是用犧牲後的張數判定。
+      // 一樣，把代價改成陣列最前面一個非 optional 的效果，讓玩家選擇發動後
+      // 確實支付犧牲，且讓後面「支援區至少 5 張」的條件用犧牲後張數判定。
+      // 整組技能是否發動則由 convertOfficialCookieSkill 的 faintOptional 標記處理。
       { kind: 'support-to-trash', amount: 1 },
       {
         kind: 'damage-all',
@@ -5822,9 +5823,13 @@ export const convertOfficialAttackEffects = (
       {
         kind: 'optional-cost-attack',
         cost: { energy: {}, supportToHand: 1, supportToHandType: 'cookie' },
-        effects: [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } }],
+        effects: [{
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        }],
         effectText:
-          'Return 1 Cookie from your support area to your hand to deal 2 damage.',
+          'Return 1 Cookie from your support area to your hand to deal 2 damage to the attacked Cookie.',
       },
     ],
     'BS6-061': [
@@ -7239,6 +7244,15 @@ const exactCookieSkillYourTurn: Partial<Record<string, boolean>> = {
   'P-014': true,
 }
 
+/**
+ * 部分「When this Cookie faints」技能是整組效果的可選觸發；
+ * BS3-061 的支援區卡牌是啟動代價，不能只把第一段代價當成可選效果，
+ * 否則略過代價後仍可能繼續結算後面的全場傷害。
+ */
+const exactCookieSkillFaintOptional: Partial<Record<string, boolean>> = {
+  'BS3-061': true,
+}
+
 export const convertOfficialCookieSkill = (
   card: OfficialCardRecord,
 ): CardSkill | undefined => {
@@ -7287,6 +7301,9 @@ export const convertOfficialCookieSkill = (
       : {}),
     ...(P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey]
       ? { sourceEnergy: P_SOURCE_ENERGY[cardKey] ?? exactCookieSkillSourceEnergy[cardKey] }
+      : {}),
+    ...(exactCookieSkillFaintOptional[cardKey]
+      ? { faintOptional: true }
       : {}),
     text: conversion.sourceText,
     effects: conversion.effects,

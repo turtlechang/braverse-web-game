@@ -8,6 +8,7 @@ import {
 import type { GameCommand } from './commands'
 import type {
   CardEffect,
+  EffectTargetSelector,
   GameCard,
   GameState,
   LogCategory,
@@ -386,6 +387,9 @@ const getResolvedEffects = (
     const effect = pending?.attackEffects[pending.attackEffectIndex]
     return effect ? [effect] : []
   }
+  if (command.kind === 'resolve-optional-cost-attack') {
+    return previous.pendingOptionalCostAttack?.effects ?? []
+  }
   if (command.kind === 'activate-skill') {
     return getCardEffects(findCard(previous, command.sourceInstanceId))
   }
@@ -415,21 +419,35 @@ const getDamageTargetPlayerIds = (
   effects: CardEffect[],
 ): Set<PlayerId> => {
   const playerIds = new Set<PlayerId>()
-  for (const effect of effects) {
-    if (effect.kind === 'damage-all') {
-      addDamageTargetSide(playerIds, sourcePlayerId, effect.side)
-      continue
-    }
-    if (
-      effect.kind === 'damage' ||
-      effect.kind === 'split-damage' ||
-      effect.kind === 'damage-by-break-count' ||
-      effect.kind === 'damage-by-break-level-difference' ||
-      effect.kind === 'rest-support-and-damage'
-    ) {
-      addDamageTargetSide(playerIds, sourcePlayerId, effect.target.side)
+  const visit = (nestedEffects: CardEffect[]) => {
+    for (const effect of nestedEffects) {
+      if (effect.kind === 'damage-all') {
+        addDamageTargetSide(playerIds, sourcePlayerId, effect.side)
+        if (effect.target) addDamageTargetSide(playerIds, sourcePlayerId, effect.target.side)
+        continue
+      }
+      if (
+        effect.kind === 'damage' ||
+        effect.kind === 'split-damage' ||
+        effect.kind === 'damage-by-break-count' ||
+        effect.kind === 'damage-by-break-level-difference' ||
+        effect.kind === 'rest-support-and-damage'
+      ) {
+        addDamageTargetSide(playerIds, sourcePlayerId, effect.target.side)
+      }
+      if (
+        effect.kind === 'optional-cost-attack' ||
+        effect.kind === 'reveal-top-deck' ||
+        effect.kind === 'deferred-end-of-turn'
+      ) {
+        visit(effect.effects)
+      }
+      if (effect.kind === 'choose-one') {
+        for (const mode of effect.modes) visit(mode.effects)
+      }
     }
   }
+  visit(effects)
   return playerIds
 }
 
@@ -467,6 +485,296 @@ const describeDamageOutcome = (
   }
 
   return outcomes.length > 0 ? outcomes.join('；') : '未造成傷害'
+}
+
+/** 將攻擊後效果中的巢狀效果攤平，供紀錄判斷實際行為（例如 reveal-top-deck 後再造成傷害）。 */
+const flattenAttackEffects = (effects: CardEffect[]): CardEffect[] => {
+  const flattened: CardEffect[] = []
+  const visit = (nestedEffects: CardEffect[]) => {
+    for (const effect of nestedEffects) {
+      flattened.push(effect)
+      if (
+        effect.kind === 'optional-cost-attack' ||
+        effect.kind === 'reveal-top-deck' ||
+        effect.kind === 'deferred-end-of-turn'
+      ) {
+        visit(effect.effects)
+      }
+      if (effect.kind === 'choose-one') {
+        for (const mode of effect.modes) visit(mode.effects)
+      }
+    }
+  }
+  visit(effects)
+  return flattened
+}
+
+const getEffectTargetSelectors = (effects: CardEffect[]): EffectTargetSelector[] => {
+  const selectors: EffectTargetSelector[] = []
+  for (const effect of flattenAttackEffects(effects)) {
+    if (!('target' in effect)) continue
+    const candidate = effect.target
+    if (
+      candidate &&
+      typeof candidate === 'object' &&
+      'side' in candidate &&
+      'min' in candidate &&
+      'max' in candidate
+    ) {
+      selectors.push(candidate as EffectTargetSelector)
+    }
+  }
+  return selectors
+}
+
+const effectSideLabel = (side: 'self' | 'opponent' | 'either'): string => {
+  if (side === 'self') return '我方'
+  if (side === 'opponent') return '對手'
+  return '任一方'
+}
+
+/** 將 runtime effect 寫成短句；完整官方文字仍會另外顯示在來源／效果步驟。 */
+const describeAttackEffectAction = (effect: CardEffect): string => {
+  switch (effect.kind) {
+    case 'damage':
+      return `對${effectSideLabel(effect.target.side)}目標造成 ${effect.amount} 點傷害`
+    case 'split-damage':
+      return `分別造成 ${effect.primaryAmount} 與 ${effect.secondaryAmount} 點傷害`
+    case 'damage-all':
+      return `對${effectSideLabel(effect.side)}所有餅乾造成 ${effect.amount} 點傷害`
+    case 'damage-by-break-count':
+      return `依休息區條件造成傷害（每張 ${effect.perCount} 點）`
+    case 'damage-by-break-level-difference':
+      return '依休息區等級差造成傷害'
+    case 'gain-hp':
+      return `使目標增加 ${effect.amount} 點 HP`
+    case 'draw':
+      return `抽 ${effect.amount} 張牌`
+    case 'draw-up-to':
+      return `抽至多 ${effect.max} 張牌`
+    case 'draw-up-to-then-discard':
+      return `抽至多 ${effect.max} 張牌，再棄置 ${effect.discardCount} 張`
+    case 'support-to-hand':
+      return `將 ${effect.amount} 張支援卡返回手牌`
+    case 'support-to-trash':
+      return `將 ${effect.amount} 張支援卡放入棄牌區`
+    case 'set-active':
+      return `將 ${effect.supportCount} 張支援卡設為啟動`
+    case 'rest-support':
+      return `將 ${effect.amount} 張支援卡橫置`
+    case 'rest-support-and-damage':
+      return `橫置 ${effect.supportAmount} 張支援卡並造成傷害`
+    case 'modify-attack':
+      return `使目標攻擊力 ${effect.amount >= 0 ? '+' : ''}${effect.amount}`
+    case 'modify-attack-by-break-count':
+      return '依休息區張數修改目標攻擊力'
+    case 'break-to-battle':
+      return `從休息區登場至多 ${effect.amount} 張餅乾`
+    case 'trash-to-battle':
+      return `從棄牌區登場至多 ${effect.amount} 張餅乾`
+    case 'battle-to-break':
+      return '將目標餅乾放入休息區'
+    case 'opponent-battle-to-trash':
+      return '將對手目標餅乾放入棄牌區'
+    case 'return-to-hand':
+      return '將目標返回手牌'
+    case 'return-to-deck-bottom':
+      return '將目標放到牌庫底'
+    case 'hp-to-trash':
+      return `從目標 HP 丟棄 ${effect.amount} 張 HP 卡`
+    case 'hp-to-hand':
+      return `將目標 HP 卡返回手牌（至多 ${effect.amount} 張）`
+    case 'hp-to-support':
+      return `將 ${effect.amount} 張 HP 卡放入支援區`
+    case 'deck-to-trash':
+      return `將牌庫頂 ${effect.amount} 張牌放入棄牌區`
+    case 'reveal-top-deck':
+      return `揭示牌庫頂牌，符合條件時：${effect.effects
+        .map(describeAttackEffectAction)
+        .join('；')}`
+    case 'choose-one':
+      return `從 ${effect.modes.length} 個效果中選擇一項`
+    case 'optional-cost-attack':
+      return effect.effectText
+    default:
+      return `執行 ${effect.kind}`
+  }
+}
+
+const getAttackEffectSourceCard = (
+  state: GameState,
+  command: Extract<
+    GameCommand,
+    { kind: 'resolve-attack-effect' | 'resolve-optional-cost-attack' }
+  >,
+): GameCard | undefined => {
+  const sourceInstanceId =
+    command.kind === 'resolve-attack-effect'
+      ? state.pendingBattle?.attackerInstanceId
+      : state.pendingOptionalCostAttack?.sourceInstanceId
+  return sourceInstanceId ? findCard(state, sourceInstanceId) : undefined
+}
+
+const getAttackEffectText = (
+  sourceCard: GameCard | undefined,
+  effect: CardEffect | undefined,
+  explicitText?: string,
+): string => {
+  if (explicitText) return explicitText
+  if (!effect) return '未找到攻擊後效果'
+  if (effect.kind === 'optional-cost-attack') return effect.effectText
+
+  const attackText = sourceCard?.type === 'cookie' ? sourceCard.attackText : undefined
+  const thenIndex = attackText?.search(/\bThen\s*,/i) ?? -1
+  if (thenIndex >= 0 && attackText) {
+    const commaIndex = attackText.indexOf(',', thenIndex)
+    return attackText.slice(commaIndex + 1).trim()
+  }
+  return describeAttackEffectAction(effect)
+}
+
+const describeAttackEffectSourceStep = (
+  state: GameState,
+  command: Extract<
+    GameCommand,
+    { kind: 'resolve-attack-effect' | 'resolve-optional-cost-attack' }
+  >,
+  effect: CardEffect | undefined,
+  explicitText?: string,
+): LogStepDetail => {
+  const sourceCard = getAttackEffectSourceCard(state, command)
+  const sourceName =
+    sourceCard?.name ??
+    (command.kind === 'resolve-optional-cost-attack'
+      ? state.pendingOptionalCostAttack?.sourceCardName
+      : undefined) ??
+    '未知餅乾'
+  return {
+    text: `攻擊後效果來源：「${sourceName}」；效果：${getAttackEffectText(sourceCard, effect, explicitText)}`,
+    cards: sourceCard ? [sourceCard] : undefined,
+  }
+}
+
+const describeAttackEffectTargetStep = (
+  state: GameState,
+  effect: CardEffect | undefined,
+  targetIds: string[] | undefined,
+  sourceCard: GameCard | undefined,
+): LogStepDetail | undefined => {
+  const ids = targetIds ?? []
+  if (ids.length > 0) {
+    return describeCardListStep(state, '攻擊後效果目標', ids)
+  }
+  if (!effect) return undefined
+
+  // reveal-top-deck／choose-one 會先進入另一個待決策流程，這一筆攻擊後
+  // 指令尚未真正選目標；不要把巢狀效果的必選目標誤寫成「沒有合法目標」。
+  const selectors =
+    effect.kind === 'reveal-top-deck' || effect.kind === 'choose-one'
+      ? []
+      : getEffectTargetSelectors([effect])
+  if (selectors.length === 0) return undefined
+  if (selectors.some((selector) => selector.sourceOnly) && sourceCard) {
+    return {
+      text: `攻擊後效果目標：「${sourceCard.name}」`,
+      cards: [sourceCard],
+    }
+  }
+  return selectors.some((selector) => selector.min > 0)
+    ? { text: '攻擊後效果未生效：沒有符合條件的目標' }
+    : { text: '攻擊後效果目標：未選擇目標（效果未生效）' }
+}
+
+const describeGainHpOutcome = (
+  previous: GameState,
+  next: GameState,
+  sourcePlayerId: PlayerId,
+  effects: CardEffect[],
+): string | null => {
+  if (!flattenAttackEffects(effects).some((effect) => effect.kind === 'gain-hp')) {
+    return null
+  }
+  const targetPlayers = getEffectTargetSelectors(effects).reduce((players, selector) => {
+    addDamageTargetSide(players, sourcePlayerId, selector.side)
+    return players
+  }, new Set<PlayerId>())
+  if (targetPlayers.size === 0) targetPlayers.add(sourcePlayerId)
+
+  const outcomes: string[] = []
+  for (const playerId of targetPlayers) {
+    const afterBattle = new Map(
+      next.players[playerId].battleArea.map((cookie) => [cookie.card.instanceId, cookie]),
+    )
+    for (const before of previous.players[playerId].battleArea) {
+      const after = afterBattle.get(before.card.instanceId)
+      const gained = (after?.hpCards.length ?? 0) - before.hpCards.length
+      if (gained > 0 && after) outcomes.push(`「${before.card.name}」增加 ${gained} 點 HP`)
+    }
+  }
+  return outcomes.length > 0 ? outcomes.join('；') : '未增加 HP'
+}
+
+const describeAttackEffectResultStep = (
+  previous: GameState,
+  next: GameState,
+  commandPlayerId: PlayerId,
+  effects: CardEffect[],
+): LogStepDetail => {
+  const continuation = next.pendingBattle?.effectDamageSequence?.continuation
+  if (
+    continuation === 'attack-effect' ||
+    next.pendingBattle?.stage === 'damage' ||
+    next.pendingRevealTopDeck?.battleContinuation === 'attack-effect' ||
+    next.pendingAbilityEffect?.battleContinuation === 'attack-effect'
+  ) {
+    return { text: '攻擊後效果結果：等待後續傷害／FLIP 或巢狀效果結算' }
+  }
+  const damageOutcome = describeDamageOutcome(
+    previous,
+    next,
+    commandPlayerId,
+    effects,
+  )
+  if (damageOutcome) return { text: `攻擊後效果結果：${damageOutcome}` }
+  const gainHpOutcome = describeGainHpOutcome(
+    previous,
+    next,
+    commandPlayerId,
+    effects,
+  )
+  if (gainHpOutcome) return { text: `攻擊後效果結果：${gainHpOutcome}` }
+  return {
+    text: `攻擊後效果結果：${flattenAttackEffects(effects)
+      .map(describeAttackEffectAction)
+      .join('；') || '效果已結算'}`,
+  }
+}
+
+const describeAttackEffectEnergyStep = (
+  sourceCard: GameCard | undefined,
+  sourceEnergy: Partial<Record<string, number>> | undefined,
+): LogStepDetail | undefined => {
+  if (!sourceEnergy || Object.values(sourceEnergy).every((amount) => !amount)) {
+    return undefined
+  }
+  const labels: Record<string, string> = {
+    red: '紅',
+    yellow: '黃',
+    green: '綠',
+    blue: '藍',
+    purple: '紫',
+    black: '黑',
+    pure: '純',
+    neutral: '無色',
+  }
+  const costText = Object.entries(sourceEnergy)
+    .filter(([, amount]) => amount !== undefined && amount > 0)
+    .map(([color, amount]) => `${labels[color] ?? color}${amount}`)
+    .join('、')
+  return {
+    text: `攻擊後代價：由「${sourceCard?.name ?? '攻擊餅乾'}」提供 ${costText} 能量`,
+    cards: sourceCard ? [sourceCard] : undefined,
+  }
 }
 
 export const describeCommand = (
@@ -655,15 +963,24 @@ export const describeCommand = (
         : `${actor} 翻開${cardLabel}，選擇不發動 FLIP 效果`
     }
     case 'resolve-attack-effect': {
+      const resolvedEffects = getResolvedEffects(previous, command)
+      const sourceCard = getAttackEffectSourceCard(previous, command)
+      const sourceName = sourceCard?.name ?? '未知餅乾'
+      const effectText = getAttackEffectText(sourceCard, resolvedEffects[0])
+      if (resolvedEffects[0]?.kind === 'optional-cost-attack') {
+        return next.pendingOptionalCostAttack
+          ? `${actor} 等待選擇「${sourceName}」的攻擊後效果：${effectText}`
+          : `${actor} 的「${sourceName}」攻擊後效果未生效：沒有合法目標或條件不成立`
+      }
       const outcome = describeDamageOutcome(
         previous,
         next,
         command.playerId,
-        getResolvedEffects(previous, command),
+        resolvedEffects,
       )
       return outcome
-        ? `${actor} 結算攻擊後續效果：${outcome}`
-        : `${actor} 結算了攻擊後續效果`
+        ? `${actor} 結算「${sourceName}」的攻擊後效果：${effectText}；${outcome}`
+        : `${actor} 結算「${sourceName}」的攻擊後效果：${effectText}`
     }
     case 'resolve-next-damage': {
       const revealed = resolveRevealedDamageCard(previous, next, command.playerId)
@@ -694,9 +1011,27 @@ export const describeCommand = (
     case 'resolve-inspect-deck':
       return `${actor} 決定了檢視牌庫的結果`
     case 'resolve-optional-cost-attack':
-      return command.action === 'pay'
-        ? `${actor} 支付了額外代價`
-        : `${actor} 選擇不支付額外代價`
+      {
+        const pending = previous.pendingOptionalCostAttack
+        const sourceCard = getAttackEffectSourceCard(previous, command)
+        const sourceName =
+          sourceCard?.name ?? pending?.sourceCardName ?? '未知餅乾'
+        const effectText = getAttackEffectText(
+          sourceCard,
+          pending?.effects[0],
+          pending?.effectText,
+        )
+        if (command.action === 'skip') {
+          return `${actor} 選擇略過「${sourceName}」的攻擊後效果（未支付代價，後續動作未執行）`
+        }
+        const outcome = describeAttackEffectResultStep(
+          previous,
+          next,
+          command.playerId,
+          pending?.effects ?? [],
+        ).text
+        return `${actor} 支付「${sourceName}」的攻擊後代價並結算效果：${effectText}；${outcome.replace(/^攻擊後效果結果：/, '')}`
+      }
     case 'resolve-draw-up-to': {
       const pending = state.pendingDrawUpTo
       const reason = pending
@@ -847,6 +1182,13 @@ export const describeCommandSteps = (
   switch (command.kind) {
     case 'play-trap': {
       const steps: LogStepDetail[] = []
+      const trapCard = findCard(state, command.trapInstanceId)
+      if (trapCard?.type === 'trap') {
+        steps.push({
+          text: `發動陷阱卡：「${trapCard.name}」`,
+          cards: [trapCard],
+        })
+      }
       const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
       if (paymentStep) steps.push(paymentStep)
       const discardStep = describeCardListStep(state, '額外代價：棄置手牌', command.discardHandIds)
@@ -1006,6 +1348,121 @@ export const describeCommandSteps = (
       if (outcome) steps.push({ text: `效果結算：${outcome}` })
       return steps
     }
+    case 'resolve-attack-effect': {
+      const effects = getResolvedEffects(previous, command)
+      const effect = effects[0]
+      const sourceCard = getAttackEffectSourceCard(previous, command)
+      const steps: LogStepDetail[] = [
+        describeAttackEffectSourceStep(previous, command, effect),
+      ]
+      if (effect?.kind === 'optional-cost-attack') {
+        steps.push(
+          next.pendingOptionalCostAttack
+            ? { text: '攻擊後效果：等待玩家選擇支付代價或略過' }
+            : { text: '攻擊後效果未生效：沒有合法目標或條件不成立' },
+        )
+        return steps
+      }
+      const targetStep = describeAttackEffectTargetStep(
+        state,
+        effect,
+        command.targetIds,
+        sourceCard,
+      )
+      if (targetStep) steps.push(targetStep)
+      if (effect) {
+        steps.push(
+          describeAttackEffectResultStep(
+            previous,
+            next,
+            command.playerId,
+            effects,
+          ),
+        )
+      }
+      return steps
+    }
+    case 'resolve-optional-cost-attack': {
+      const pending = previous.pendingOptionalCostAttack
+      if (!pending) return undefined
+      const sourceCard = getAttackEffectSourceCard(previous, command)
+      const steps: LogStepDetail[] = [
+        describeAttackEffectSourceStep(
+          previous,
+          command,
+          pending.effects[0],
+          pending.effectText,
+        ),
+      ]
+      if (command.action === 'skip') {
+        steps.push({
+          text: '玩家選擇略過攻擊後效果，未支付代價，後續動作未執行',
+        })
+        return steps
+      }
+
+      const sourceEnergyStep = describeAttackEffectEnergyStep(
+        sourceCard,
+        pending.sourceEnergy,
+      )
+      if (sourceEnergyStep) steps.push(sourceEnergyStep)
+      const paymentStep = describeCardListStep(
+        state,
+        '攻擊後代價：支付能量（橫置）',
+        command.paymentIds,
+      )
+      if (paymentStep) steps.push(paymentStep)
+      const discardStep = describeCardListStep(
+        state,
+        '攻擊後代價：棄置手牌',
+        command.discardCardIds,
+      )
+      if (discardStep) steps.push(discardStep)
+      const supportToHandStep = describeCardListStep(
+        state,
+        '攻擊後代價：支援卡返回手牌',
+        command.supportToHandIds,
+      )
+      if (supportToHandStep) steps.push(supportToHandStep)
+      const hpToTrashStep = describeHpTrashStep(
+        state,
+        next,
+        command.hpToTrashIds,
+      )
+      if (hpToTrashStep) steps.push(hpToTrashStep)
+      const trashToDeckStep = describeCardListStep(
+        state,
+        '攻擊後代價：棄牌區卡片洗回牌庫',
+        command.trashToDeckIds,
+      )
+      if (trashToDeckStep) steps.push(trashToDeckStep)
+      if (
+        !sourceEnergyStep &&
+        !paymentStep &&
+        !discardStep &&
+        !supportToHandStep &&
+        !hpToTrashStep &&
+        !trashToDeckStep
+      ) {
+        steps.push({ text: '攻擊後代價：已支付（無需額外選牌）' })
+      }
+      const targetStep = describeAttackEffectTargetStep(
+        state,
+        pending.effects[0],
+        command.targetIds,
+        sourceCard,
+      )
+      if (targetStep) steps.push(targetStep)
+      steps.push(
+        describeAttackEffectResultStep(
+          previous,
+          next,
+          command.playerId,
+          pending.effects,
+        ),
+      )
+      return steps
+    }
     case 'resolve-ability-effect': {
       const resolvedEffects = getResolvedEffects(previous, command)
       const effect = getOpponentBattleToTrashEffect(
@@ -1122,6 +1579,14 @@ export const resolveLogCard = (
     case 'attack':
     case 'declare-attack':
       return findCard(previous, command.attackerInstanceId)
+    case 'resolve-attack-effect':
+      return previous.pendingBattle?.attackerInstanceId
+        ? findCard(previous, previous.pendingBattle.attackerInstanceId)
+        : undefined
+    case 'resolve-optional-cost-attack':
+      return previous.pendingOptionalCostAttack?.sourceInstanceId
+        ? findCard(previous, previous.pendingOptionalCostAttack.sourceInstanceId)
+        : undefined
     case 'activate-stage':
     case 'begin-activate-stage':
       return previous.players[command.playerId].stage?.card

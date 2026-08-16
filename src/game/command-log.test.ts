@@ -1,5 +1,11 @@
 ﻿import { describe, expect, it } from 'vitest'
-import { appendCommandLogEntry, type CommandLogEntry, type GameState } from '.'
+import {
+  appendCommandLogEntry,
+  type CommandLogEntry,
+  type CardEffect,
+  type GameCard,
+  type GameState,
+} from '.'
 import {
   describeCommand,
   describeCommandSteps,
@@ -182,6 +188,57 @@ describe('appendCommandLogEntry breakLevel', () => {
 })
 
 describe('describeCommandSteps', () => {
+  it('identifies the trap source before listing its payment and discard costs', () => {
+    const state = createBattleState()
+    const trap: GameCard = {
+      id: 'BS2-007',
+      instanceId: 'bs2-007-trap',
+      name: 'Prickly Cactus Bat',
+      type: 'trap',
+      officialType: 'trap',
+      trap: {
+        text: 'Select up to 1 opponent Cookie.',
+        cost: { energy: { red: 1 }, discardHand: 1 },
+        effects: [],
+      },
+    }
+    const discarded: GameCard = {
+      ...state.players['player-one'].hand[0],
+      id: 'BS3-022',
+      instanceId: 'bs3-022-discarded',
+      name: 'Banquet of Victory',
+      type: 'trap',
+    }
+    const previous: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [trap, discarded],
+        },
+      },
+    }
+
+    const steps = describeCommandSteps(previous, previous, {
+      kind: 'play-trap',
+      playerId: 'player-one',
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-support-a'],
+      targetIds: ['attacker'],
+      discardHandIds: [discarded.instanceId],
+    })
+
+    expect(steps?.map((step) => step.text)).toEqual([
+      '發動陷阱卡：「Prickly Cactus Bat」',
+      '支付能量（橫置）：p1-support-a',
+      '額外代價：棄置手牌：Banquet of Victory',
+      '選擇目標：attacker',
+    ])
+    expect(steps?.[0].cards).toEqual([trap])
+    expect(steps?.[2].cards).toEqual([discarded])
+  })
+
   it('breaks a play-trap command into payment + target steps', () => {
     const state = createBattleState()
     const steps = describeCommandSteps(state, state, {
@@ -273,6 +330,170 @@ describe('describeCommandSteps', () => {
     expect(describeCommand(previous, next, command)).toContain(
       `（HP 費用：從「${source.card.name}」丟棄「${hpCard.name}」（物品））`,
     )
+  })
+
+  it('details an attack-after optional cost, selected target, and actual result', () => {
+    const base = createBattleState()
+    const attackerEntry = base.players['player-two'].battleArea[0]
+    const attacker = {
+      ...attackerEntry.card,
+      id: 'BS6-044',
+      name: 'Roguefort Cookie',
+      attackText: '<{G}> Follow-up {da} 2 Then, return 1 Cookie from your support area to your hand. Deal 2 damage to the attacked Cookie.',
+    }
+    const returned = cookie('returned-cookie')
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 2,
+      target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [{ ...attackerEntry, card: attacker }],
+          supportArea: [{ card: returned, rested: false }],
+        },
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: attacker.instanceId,
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: attacker.instanceId,
+        sourceCardName: attacker.name,
+        cost: { supportToHand: 1, supportToHandType: 'cookie' },
+        effects: [effect],
+        effectText: 'Return 1 Cookie from your support area to your hand. Deal 2 damage to the attacked Cookie.',
+      },
+    }
+    const defenderBefore = previous.players['player-one'].battleArea[0]
+    const next: GameState = {
+      ...previous,
+      pendingOptionalCostAttack: null,
+      pendingBattle: null,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          battleArea: previous.players['player-one'].battleArea.map((entry) =>
+            entry.card.instanceId === defenderBefore.card.instanceId
+              ? { ...entry, hpCards: entry.hpCards.slice(0, -2) }
+              : entry,
+          ),
+        },
+        'player-two': {
+          ...previous.players['player-two'],
+          supportArea: [],
+          hand: [...previous.players['player-two'].hand, returned],
+        },
+      },
+    }
+    const command = {
+      kind: 'resolve-optional-cost-attack' as const,
+      playerId: 'player-two' as const,
+      action: 'pay' as const,
+      targetIds: ['defender'],
+      supportToHandIds: [returned.instanceId],
+    }
+
+    const steps = describeCommandSteps(previous, next, command)
+    expect(steps?.map((step) => step.text)).toEqual([
+      '攻擊後效果來源：「Roguefort Cookie」；效果：Return 1 Cookie from your support area to your hand. Deal 2 damage to the attacked Cookie.',
+      '攻擊後代價：支援卡返回手牌：returned-cookie',
+      '攻擊後效果目標：defender',
+      '攻擊後效果結果：「defender」受到 2 點傷害',
+    ])
+    expect(steps?.[1].cards).toEqual([returned])
+    expect(resolveLogCard(previous, next, command)).toEqual(attacker)
+  })
+
+  it('records when a player skips an attack-after optional effect', () => {
+    const base = createBattleState()
+    const pending = {
+      playerId: 'player-two' as const,
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Attacker Cookie',
+      cost: { energy: { red: 1 } },
+      effects: [{ kind: 'damage' as const, amount: 1, target: { side: 'opponent' as const, min: 1, max: 1 } }],
+      effectText: 'Pay 1 energy to deal 1 damage.',
+    }
+    const previous: GameState = { ...base, pendingOptionalCostAttack: pending }
+    const next: GameState = { ...previous, pendingOptionalCostAttack: null }
+    const command = {
+      kind: 'resolve-optional-cost-attack' as const,
+      playerId: 'player-two' as const,
+      action: 'skip' as const,
+    }
+
+    expect(describeCommand(previous, next, command)).toContain(
+      '選擇略過「attacker」的攻擊後效果',
+    )
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
+      '攻擊後效果來源：「attacker」；效果：Pay 1 energy to deal 1 damage.',
+      '玩家選擇略過攻擊後效果，未支付代價，後續動作未執行',
+    ])
+  })
+
+  it('records that an attack-after effect is waiting for the optional-cost decision', () => {
+    const base = createBattleState()
+    const effect: CardEffect = {
+      kind: 'optional-cost-attack',
+      cost: { energy: { red: 1 } },
+      effects: [{ kind: 'damage', amount: 1, target: { side: 'opponent', min: 1, max: 1 } }],
+      effectText: 'Pay 1 energy to deal 1 damage.',
+    }
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        attackEffects: [effect],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = {
+      ...previous,
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Attacker Cookie',
+        cost: effect.cost,
+        effects: effect.effects,
+        effectText: effect.effectText,
+      },
+    }
+    const command = {
+      kind: 'resolve-attack-effect' as const,
+      playerId: 'player-two' as const,
+      targetIds: [],
+    }
+
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
+      '攻擊後效果來源：「attacker」；效果：Pay 1 energy to deal 1 damage.',
+      '攻擊後效果：等待玩家選擇支付代價或略過',
+    ])
   })
 
   it('records the actual battle Cookie returned for a skill cost', () => {

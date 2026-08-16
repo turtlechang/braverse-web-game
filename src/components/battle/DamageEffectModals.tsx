@@ -56,6 +56,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           paymentCostTotal={match.faintEnergyCostTotal}
           paymentValid={match.faintPaymentValid}
           onSelectPayment={match.toggleFaintPayment}
+          optional={match.faintOptional}
           costHandAmount={match.faintCostHandAmount}
           costHandCandidates={match.faintCostHandCandidates}
           selectedCostHandIds={match.selectedFaintCostHandIds}
@@ -65,6 +66,7 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
           selectedCostSupportIds={match.selectedFaintCostSupportIds}
           onSelectCostSupport={match.toggleFaintCostSupport}
           allowSkip={
+            match.faintOptional ||
             match.faintEnergyCostTotal > 0 ||
             match.faintCostHandAmount > 0 ||
             match.faintCostSupportAmount > 0 ||
@@ -83,7 +85,9 @@ export function DamageEffectModals({ match, pending }: DamageEffectModalsProps) 
                 playerId: match.viewerPlayerId,
                 targetIds: [],
               },
-              `${match.faintSourceCard!.name}未支付昏厥效果費用，略過效果。`,
+              match.faintOptional
+                ? `${match.faintSourceCard!.name}未發動昏厥效果。`
+                : `${match.faintSourceCard!.name}未支付昏厥效果費用，略過效果。`,
             )
           }}
           onConfirm={() => {

@@ -2888,6 +2888,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         sourcePlayerId: 'player-one',
         sourceInstanceId: faintCard.instanceId,
         sourceCardName: faintCard.name,
+        ...(card.skill?.faintOptional && index === 0
+          ? { optional: true }
+          : {}),
         effect,
         context: {
           sourcePlayerId: 'player-one',

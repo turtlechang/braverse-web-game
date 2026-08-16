@@ -65,6 +65,12 @@ const attackGroup: CommandLogEntry[] = [
   },
 ]
 
+const sourceTrapCard = {
+  ...item('source-trap'),
+  name: 'Chocolate Altar of the Fallen',
+  type: 'trap' as const,
+}
+
 const trapEntry: CommandLogEntry = {
   id: 4,
   turnNumber: 4,
@@ -77,6 +83,10 @@ const trapEntry: CommandLogEntry = {
   groupId: 4,
   breakLevel: { 'player-one': 2, 'player-two': 1 },
   steps: [
+    {
+      text: '發動陷阱卡：「Chocolate Altar of the Fallen」',
+      cards: [sourceTrapCard],
+    },
     { text: '支付能量（橫置）：Twizzly Gummy Cookie、Fig Cookie' },
     { text: '選擇目標：Ninja Cookie' },
   ],
@@ -92,6 +102,30 @@ const supportEntry: CommandLogEntry = {
   summary: '玩家 放置了支援卡「Twizzly Gummy Cookie」',
   category: 'deploy',
   groupId: 5,
+}
+
+const attackAfterEntry: CommandLogEntry = {
+  id: 10,
+  turnNumber: 7,
+  phase: 'main',
+  playerId: 'player-two',
+  commandKind: 'resolve-optional-cost-attack',
+  payload: {},
+  summary: 'Roguefort Cookie 結算攻擊後效果',
+  category: 'attack',
+  groupId: 10,
+  steps: [
+    {
+      text: '攻擊後效果來源：「Roguefort Cookie」；效果：Return 1 Cookie from your support area to your hand. Deal 2 damage to the attacked Cookie.',
+      cards: [item('roguefort-source')],
+    },
+    {
+      text: '攻擊後代價：支援卡返回手牌：Walnut Cookie',
+      cards: [item('walnut-cost')],
+    },
+    { text: '攻擊後效果目標：Chamomile Cookie' },
+    { text: '攻擊後效果結果：「Chamomile Cookie」受到 2 點傷害' },
+  ],
 }
 
 const groupedMemberWithSteps: CommandLogEntry[] = [
@@ -214,9 +248,26 @@ describe('BattleLogSidebar', () => {
     await click(container.querySelector('.battle-log-entry'))
 
     const steps = container.querySelectorAll('.battle-log-steps li')
-    expect(steps).toHaveLength(2)
-    expect(steps[0].textContent).toContain('支付能量')
-    expect(steps[1].textContent).toContain('選擇目標')
+    expect(steps).toHaveLength(3)
+    expect(steps[0].textContent).toContain('發動陷阱卡')
+    expect(steps[1].textContent).toContain('支付能量')
+    expect(steps[2].textContent).toContain('選擇目標')
+    expect(container.querySelectorAll('.battle-log-step-card-face')).toHaveLength(1)
+  })
+
+  it('shows attack-after source, cost, target, and result steps in the local log', async () => {
+    const { container, root } = render()
+    await act(() => root.render(<BattleLogSidebar entries={[attackAfterEntry]} />))
+    await click(container.querySelector('[data-testid="battle-log-toggle"]'))
+    await click(container.querySelector('.battle-log-entry'))
+
+    const steps = container.querySelectorAll('.battle-log-steps li')
+    expect(steps).toHaveLength(4)
+    expect(steps[0].textContent).toContain('攻擊後效果來源')
+    expect(steps[1].textContent).toContain('支援卡返回手牌')
+    expect(steps[2].textContent).toContain('攻擊後效果目標')
+    expect(steps[3].textContent).toContain('受到 2 點傷害')
+    expect(container.querySelectorAll('.battle-log-step-card-face')).toHaveLength(2)
   })
 
   it('does not offer an expand affordance for a simple entry with no steps', async () => {

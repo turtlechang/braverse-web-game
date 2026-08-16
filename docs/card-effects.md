@@ -160,6 +160,7 @@
 - 具有有效目標（如 `min: 0, max: 1` 的 opponent damage）的 faint 效果會進入 `pendingFaintEffects` 佇列，等待玩家或 AI 選擇目標後結算；無目標效果（如 draw）直接結算。
 - 多個餅乾同時昏厥時，faint 效果依序進入佇列，逐個等待選擇。
 - 玩家可選擇 1 個合法目標或選 0 確認（up to 1）；AI 以 deterministic 策略選擇（優先血量最低的對手餅乾）。
+- 卡面明確允許整組昏厥技能選擇時，`CardSkill.faintOptional` 會讓玩家先決定發動或不發動；選擇不發動會移除同一次觸發佇列的所有效果。BS3-061「Silverbell Cookie」選擇發動後，先支付「支援區 1 張送棄牌區」代價，再以支付後的支援區張數重新判定後續全場傷害條件。
 
 ### 已實作：If opponent Cookie attacks more than N
 

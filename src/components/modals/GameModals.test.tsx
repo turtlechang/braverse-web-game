@@ -704,6 +704,29 @@ describe('FaintEffectResponseModal', () => {
     await act(() => root.unmount())
   })
 
+  it('labels an optional faint trigger as activate-or-skip', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <FaintEffectResponseModal
+        card={aloeCard}
+        minTargets={1}
+        maxTargets={1}
+        selectedTargetCount={0}
+        optional
+        allowSkip
+        onSkip={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain('是否發動昏厥效果？')
+    expect(container.textContent).toContain('可以選擇發動或不發動')
+    expect(findButton(container, '不發動')).toBeDefined()
+
+    await act(() => root.unmount())
+  })
+
   it('does not block board target clicks while choosing faint targets', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)

@@ -317,14 +317,13 @@ describe('BS3-060 Elder Faerie Cookie: OnPlay rest-support + attack Then', () =>
 })
 
 describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
-  it('converts the support-area cost as a mandatory leading effect, not CardSkill.cost', () => {
-    // 「place 1 card from your support area into the trash」是這個昏厥觸發
-    // 技能的代價，但 resolveFaintEffect 只讀 hand-to-battle 的 energyCost，
-    // 完全不會去看 CardSkill.cost（同一類問題見 BS3-029）。改成陣列最前面
-    // 一個非 optional 的 support-to-trash 效果，才能真正被扣掉。
+  it('converts the support-area cost and marks the faint trigger as optional', () => {
+    // 「place 1 card from your support area into the trash」是發動這個昏厥
+    // 技能時支付的代價；玩家可先選擇是否發動，確認發動後才支付代價。
     const skill = convertOfficialCookieSkill(findBs3Card('BS3-061'))
     expect(skill).toBeTruthy()
     expect(skill!.trigger).toBe('passive')
+    expect(skill!.faintOptional).toBe(true)
     expect(skill!.effects).toHaveLength(2)
     expect(skill!.effects[0]).toMatchObject({
       kind: 'support-to-trash',
@@ -352,7 +351,7 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
     expect(oppCookies.every((c) => c.hpCards.length === 2)).toBe(true)
   })
 
-  it('exposes the mandatory support card as the faint-effect selection', () => {
+  it('exposes the support card as the faint-effect selection', () => {
     const [supportToTrashEffect] = effectsOf('BS3-061')
     const state = createBattleState()
     state.pendingFaintEffects = [
@@ -360,6 +359,7 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
         sourcePlayerId: 'player-two',
         sourceInstanceId: 'attacker',
         sourceCardName: 'Silverbell Cookie',
+        optional: true,
         effect: supportToTrashEffect,
         context: {
           sourcePlayerId: 'player-two',
@@ -375,7 +375,7 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
     expect(getFaintEffectCandidateLabel(state)).toBe('支援區卡')
   })
 
-  it('faint queue actually requires sacrificing a support card before checking the 5+ threshold', () => {
+  it('faint queue pays the support cost before checking the 5+ threshold', () => {
     const source: CookieCard = {
       ...cookie('silverbell'),
       id: 'BS3-061',
@@ -407,6 +407,7 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
         sourcePlayerId: 'player-two',
         sourceInstanceId: source.instanceId,
         sourceCardName: source.name,
+        optional: true,
         effect: supportToTrashEffect,
         context,
       },
@@ -437,7 +438,147 @@ describe('BS3-061 Silverbell Cookie: faint damage-all with support 5+', () => {
     )
   })
 
-  it('does not leave BS3-061 pending when its mandatory support cost is unpayable', () => {
+  it('lets the player skip the whole optional faint trigger', () => {
+    const [supportToTrashEffect, damageAllEffect] = effectsOf('BS3-061')
+    let state = createBattleState()
+    state = withSupport(
+      state,
+      'player-two',
+      Array.from({ length: 5 }, (_, i) => ({ id: `skip-sup-${i}` })),
+    )
+    const supportCountBefore = state.players['player-two'].supportArea.length
+    const defenderHpBefore = state.players['player-one'].battleArea[0].hpCards.length
+    state.pendingFaintEffects = [
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Silverbell Cookie',
+        optional: true,
+        effect: supportToTrashEffect,
+        context: {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'attacker',
+          sourceCardName: 'Silverbell Cookie',
+        },
+      },
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Silverbell Cookie',
+        effect: damageAllEffect,
+        context: {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'attacker',
+          sourceCardName: 'Silverbell Cookie',
+        },
+      },
+    ]
+
+    const next = resolveFaintEffect(state, [])
+
+    expect(next.pendingFaintEffects).toBeUndefined()
+    expect(next.players['player-two'].supportArea).toHaveLength(supportCountBefore)
+    expect(next.players['player-one'].battleArea[0].hpCards).toHaveLength(
+      defenderHpBefore,
+    )
+  })
+
+  it('queues the converted BS3-061 faint trigger as optional in a real faint', () => {
+    const skill = convertOfficialCookieSkill(findBs3Card('BS3-061'))
+    if (!skill) throw new Error('BS3-061 should have a faint skill')
+    const source: CookieCard = {
+      ...cookie('silverbell-real'),
+      id: 'BS3-061',
+      name: 'Silverbell Cookie',
+      skill,
+    }
+    let state = createBattleState()
+    state = withSupport(
+      state,
+      'player-one',
+      Array.from({ length: 5 }, (_, i) => ({ id: `real-sup-${i}` })),
+    )
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            {
+              card: source,
+              hpCards: [item('silverbell-real-hp')],
+              rested: false,
+              battleEntryId: 'silverbell-real:battle:1',
+            },
+          ],
+        },
+      },
+    }
+
+    const next = executeCardEffect(
+      state,
+      sourceContext(),
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      [source.instanceId],
+    )
+
+    expect(next.pendingFaintEffects?.[0]).toMatchObject({
+      sourceInstanceId: source.instanceId,
+      optional: true,
+    })
+  })
+
+  it('activates the optional trigger, then resolves the damage after paying', () => {
+    const [supportToTrashEffect, damageAllEffect] = effectsOf('BS3-061')
+    let state = createBattleState()
+    state = withSupport(
+      state,
+      'player-two',
+      Array.from({ length: 5 }, (_, i) => ({ id: `activate-sup-${i}` })),
+    )
+    state.pendingFaintEffects = [
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Silverbell Cookie',
+        optional: true,
+        effect: supportToTrashEffect,
+        context: {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'attacker',
+          sourceCardName: 'Silverbell Cookie',
+        },
+      },
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Silverbell Cookie',
+        effect: damageAllEffect,
+        context: {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'attacker',
+          sourceCardName: 'Silverbell Cookie',
+        },
+      },
+    ]
+
+    const supportId = state.players['player-two'].supportArea[0].card.instanceId
+    state = resolveFaintEffect(state, [supportId])
+    expect(state.pendingFaintEffects).toHaveLength(1)
+    expect(state.players['player-two'].supportArea).toHaveLength(5)
+
+    state = resolveFaintEffect(state, [])
+
+    expect(state.pendingFaintEffects).toBeUndefined()
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(2)
+  })
+
+  it('does not leave BS3-061 pending when its support cost is unpayable', () => {
     const skill = convertOfficialCookieSkill(findBs3Card('BS3-061'))
     if (!skill) throw new Error('BS3-061 should have a faint skill')
     const source: CookieCard = {

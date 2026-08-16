@@ -141,6 +141,98 @@ describe('optional-cost-attack', () => {
     expect(state.pendingBattle).toBeNull()
   })
 
+  it('BS6-044 locks its follow-up damage to the original attack target', () => {
+    let state = createBs6SupportReturnAttackState('BS6-044')
+    state.players['player-one'].battleArea.push({
+      card: cookie('BS6-044-bystander', 1, 5),
+      hpCards: Array.from({ length: 5 }, (_, index) =>
+        item(`BS6-044-bystander-hp-${index + 1}`, 'red'),
+      ),
+      rested: false,
+      battleEntryId: 'BS6-044-bystander:battle:2',
+    })
+    state = advanceToAttackEffect(state)
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(() =>
+      resolveOptionalCostAttack(
+        state,
+        'player-two',
+        'pay',
+        [],
+        ['BS6-044-bystander'],
+        [],
+        ['BS6-044-support-cookie'],
+      ),
+    ).toThrow()
+
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      ['defender'],
+      [],
+      ['BS6-044-support-cookie'],
+    )
+
+    expect(state.players['player-one'].battleArea[0].card.instanceId).toBe('defender')
+    expect(state.players['player-one'].battleArea[0].hpCards.length).toBeLessThan(10)
+    expect(
+      state.players['player-one'].battleArea.find(
+        (cookieInBattle) => cookieInBattle.card.instanceId === 'BS6-044-bystander',
+      )?.hpCards.length,
+    ).toBe(5)
+  })
+
+  it('BS6-044 skips the follow-up when the original attack target faints', () => {
+    let state = createBs6SupportReturnAttackState('BS6-044')
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('BS6-044-defender-last-hp', 'red'),
+    ]
+    state.players['player-one'].battleArea.push({
+      card: cookie('BS6-044-bystander', 1, 5),
+      hpCards: Array.from({ length: 5 }, (_, index) =>
+        item(`BS6-044-bystander-hp-${index + 1}`, 'red'),
+      ),
+      rested: false,
+      battleEntryId: 'BS6-044-bystander:battle:2',
+    })
+    state = advanceToAttackEffect(state)
+
+    expect(
+      state.players['player-one'].battleArea.some(
+        (cookieInBattle) => cookieInBattle.card.instanceId === 'defender',
+      ),
+    ).toBe(false)
+
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeNull()
+    expect(
+      state.players['player-one'].battleArea.some(
+        (cookieInBattle) => cookieInBattle.card.instanceId === 'BS6-044-bystander',
+      ),
+    ).toBe(true)
+  })
+
+  it('BS6-061 support-return cost marks the support area as decreased this turn', () => {
+    let state = advanceToAttackEffect(createBs6SupportReturnAttackState('BS6-061'))
+    state = resolveAttackEffect(state, 'player-two', [])
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      [],
+      [],
+      ['BS6-061-support-cookie'],
+    )
+
+    expect(state.supportAreaDecreasedThisTurn?.['player-two']).toBe(true)
+  })
+
   it('reaches the pending decision through a real ST4-013 attack', () => {
     let state = createBattleState()
     const caviar = createOfficialBlueStarterDeck('player-two').find(

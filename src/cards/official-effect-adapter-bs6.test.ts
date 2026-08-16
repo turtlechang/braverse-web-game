@@ -398,7 +398,7 @@ describe('BS6 RED effect adapter', () => {
           {
             kind: 'damage',
             amount: 2,
-            target: { side: 'opponent', min: 0, max: 1 },
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
           },
         ],
       },

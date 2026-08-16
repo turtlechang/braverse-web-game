@@ -1623,6 +1623,7 @@ const removeFaintedCookie = (
     }
     const faintCost = getFaintTriggeredCost(faintSkill)
     let faintCostAttached = false
+    let faintOptionalAttached = false
     for (const effect of faintSkill.effects) {
       if (!isEffectConditionMet(nextState, context, effect)) continue
 
@@ -1641,6 +1642,9 @@ const removeFaintedCookie = (
                 sourcePlayerId: playerId,
                 sourceInstanceId: target.card.instanceId,
                 sourceCardName: target.card.name,
+                ...(faintSkill.faintOptional && !faintOptionalAttached
+                  ? { optional: true }
+                  : {}),
                 effect,
                 context,
                 ...(faintCost && !faintCostAttached
@@ -1650,6 +1654,7 @@ const removeFaintedCookie = (
             ],
           }
           faintCostAttached = true
+          faintOptionalAttached = true
         }
       } else {
         nextState = {
@@ -1660,6 +1665,9 @@ const removeFaintedCookie = (
               sourcePlayerId: playerId,
               sourceInstanceId: target.card.instanceId,
               sourceCardName: target.card.name,
+              ...(faintSkill.faintOptional && !faintOptionalAttached
+                ? { optional: true }
+                : {}),
               effect,
               context,
               ...(faintCost && !faintCostAttached
@@ -1669,6 +1677,7 @@ const removeFaintedCookie = (
           ],
         }
         faintCostAttached = true
+        faintOptionalAttached = true
       }
     }
   }
@@ -2584,6 +2593,13 @@ export const resolveOptionalCostAttack = (
           ),
       },
     },
+  }
+  // 支援區回手也是「支援區張數減少」：BS6-061 的攻擊後代價可讓
+  // BS1-078 Awakening Ancient Forest 在同一回合依條件發動。這裡是
+  // 攻擊後代價的手動移動路徑，不能只依賴 executeCardEffect 的
+  // support-to-hand 分支來更新回合旗標。
+  if (returnedSupportCards.length > 0) {
+    nextState = markSupportAreaDecreased(nextState, playerId)
   }
   if (trashToDeckCost) {
     nextState = executeCardEffect(
@@ -3550,6 +3566,29 @@ const skipUnmetPendingFaintEffects = (state: GameState): GameState => {
   }
 }
 
+/**
+ * 略過可選的昏厥技能時，必須跳過同一次觸發拆出的所有效果；
+ * 不能只移除支援區代價，否則 BS3-061 仍會繼續結算後面的全場傷害。
+ */
+const skipOptionalFaintTrigger = (
+  state: GameState,
+  sourceInstanceId: string,
+): GameState => {
+  const pending = state.pendingFaintEffects ?? []
+  let consumed = 0
+  while (
+    consumed < pending.length &&
+    pending[consumed].sourceInstanceId === sourceInstanceId
+  ) {
+    consumed += 1
+  }
+  return {
+    ...state,
+    pendingFaintEffects:
+      consumed < pending.length ? pending.slice(consumed) : undefined,
+  }
+}
+
 export const resolveFaintEffect = (
   state: GameState,
   targetIds: string[],
@@ -3575,6 +3614,20 @@ export const resolveFaintEffect = (
   }
 
   const faint = faints[0]
+  const discardHandIds = costOptions.discardHandIds ?? []
+  const supportToTrashIds = costOptions.supportToTrashIds ?? []
+  const isOptionalTriggerSkipped =
+    faint.optional === true &&
+    targetIds.length === 0 &&
+    paymentIds.length === 0 &&
+    discardHandIds.length === 0 &&
+    supportToTrashIds.length === 0
+  if (isOptionalTriggerSkipped) {
+    return continuePendingReplacements(
+      skipOptionalFaintTrigger(state, faint.sourceInstanceId),
+    )
+  }
+
   const remaining = faints.slice(1)
   let nextState: GameState = {
     ...state,
@@ -3594,8 +3647,6 @@ export const resolveFaintEffect = (
     return continuePendingReplacements(nextState)
   }
 
-  const discardHandIds = costOptions.discardHandIds ?? []
-  const supportToTrashIds = costOptions.supportToTrashIds ?? []
   const faintCost = faint.cost
   if (!faintCost && (discardHandIds.length > 0 || supportToTrashIds.length > 0)) {
     throw new GameRuleError('此昏厥效果不需要支付手牌或支援區代價。')
