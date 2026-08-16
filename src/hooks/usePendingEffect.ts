@@ -489,6 +489,8 @@ export function usePendingEffect(params: {
             !pendingEffect.selectedPaymentIds.includes(
               support.card.instanceId,
             ) &&
+            (pendingEffect.skill.cost.supportToHandType === undefined ||
+              support.card.type === pendingEffect.skill.cost.supportToHandType) &&
             (pendingEffect.selectedCostSupportToTrashIds.length <
               supportAreaCost ||
               pendingEffect.selectedCostSupportToTrashIds.includes(

@@ -602,6 +602,47 @@ describe('OptionalCostAttackModal', () => {
     container.remove()
   })
 
+  it('shows the full hand/color target instruction for BS6-051', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Timekeeper Cookie"
+          effectText="Place up to 2 green cards from your hand into your support area as active."
+          discardHandCost={0}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[]}
+          targetCandidates={[
+            { card: createHandCard(1), instanceId: 'green-hand-1' },
+            { card: createHandCard(2), instanceId: 'green-hand-2' },
+          ]}
+          needsTarget={true}
+          targetMin={0}
+          targetMax={2}
+          targetLabel="自己的手牌中的綠色卡牌"
+          targetInstruction="從自己的手牌選擇最多 2 張綠色卡牌作為目標"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '支付')!.click()
+    })
+
+    expect(container.textContent).toContain(
+      '從自己的手牌選擇最多 2 張綠色卡牌作為目標（已選 0）',
+    )
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   it('lets the player select multiple targets up to targetMax (BS6-079 rest 3 supports)', async () => {
     const onPay = vi.fn()
     const container = document.createElement('div')

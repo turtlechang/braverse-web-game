@@ -145,6 +145,45 @@ describe('getOptionalCostAttackPrompt', () => {
     })
   })
 
+  it('limits BS6-051 targets to green cards in the source player hand', () => {
+    const state = createBattleState()
+    state.players['player-two'].hand = [
+      item('green-hand-a', 'green'),
+      item('red-hand', 'red'),
+      item('green-hand-b', 'green'),
+    ]
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Timekeeper Cookie',
+      cost: { energy: { green: 1 } },
+      effects: [
+        {
+          kind: 'hand-to-support',
+          amount: 2,
+          rested: false,
+          optional: true,
+          energyColor: 'green',
+        },
+      ],
+      effectText:
+        'If your opponent has 3 or more support cards, place up to 2 {G} cards from your hand into your support area as active.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt).toMatchObject({
+      targetMin: 0,
+      targetMax: 2,
+      targetLabel: '自己的手牌中的綠色卡牌',
+      targetInstruction: '從自己的手牌選擇最多 2 張綠色卡牌作為目標',
+      targetCandidates: [
+        { instanceId: 'green-hand-a' },
+        { instanceId: 'green-hand-b' },
+      ],
+    })
+  })
+
   // 使用者問「其他類型的卡有嗎」——BS3-086 這類攻擊文字裡「Then, <discard
   // 1 card.> if there is a LV.3 Cookie in your battle area, deal 1 damage」
   // 是同樣的結構：optional-cost-attack 內嵌的子效果自己掛 condition，

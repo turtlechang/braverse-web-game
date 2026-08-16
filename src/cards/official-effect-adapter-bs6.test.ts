@@ -618,6 +618,24 @@ describe('BS6 YELLOW effect adapter', () => {
     })
   })
 
+  it('BS6-062 exposes its green energy and Cookie return cost', () => {
+    expect(convertOfficialItemAbility(findBs6Card('BS6-062'))).toMatchObject({
+      cost: {
+        energy: { green: 1 },
+        discardHand: 0,
+        supportToHand: 1,
+        supportToHandType: 'cookie',
+      },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
   it('BS6-038 damages after its attack only with a LV.2+ yellow Cookie in break', () => {
     expect(convertOfficialAttackEffects(findBs6Card('BS6-038'))).toMatchObject([
       {

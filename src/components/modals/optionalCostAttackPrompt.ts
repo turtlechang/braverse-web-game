@@ -37,6 +37,11 @@ export interface OptionalCostAttackPromptData {
   targetMax: number
   targetLabel: string
   /**
+   * 目標若不是一般「餅乾／支援區卡」格式，提供完整的選取說明。
+   * 例如 BS6-051 必須明確告知玩家從自己的手牌選綠色卡牌。
+   */
+  targetInstruction?: string
+  /**
    * 代價的完整說明文字。含來源餅乾自付的能量（BS3-076「Use this Cookie as
    * {B}」這類寫法）——這部分不會出現在 `energyCostTotal`（那是扣掉來源能量後
    * 「還要從支援區付」的張數），少了它玩家會看到一個空白的「代價：」。
@@ -147,7 +152,11 @@ export function getOptionalCostAttackPrompt(
   // rest-support 的目標是支援區的卡，不是餅乾；依照目標面給出正確標籤，
   // 避免把「對手的支援區卡」顯示成「對手餅乾」。
   const targetLabel =
-    targetedEffect?.kind === 'rest-support'
+    targetedEffect?.kind === 'hand-to-support'
+      ? `自己的手牌中的${
+          energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'
+        }卡牌`
+      : targetedEffect?.kind === 'rest-support'
       ? targetedEffect.side === 'self'
         ? '己方支援區的卡'
         : '對手支援區的卡'
@@ -159,9 +168,16 @@ export function getOptionalCostAttackPrompt(
             ? '己方棄牌區餅乾'
             : targetedEffect?.kind === 'trash-to-deck'
               ? '棄牌區卡牌'
-        : targetSelector?.side === 'self'
+          : targetSelector?.side === 'self'
           ? '己方餅乾'
           : '對手餅乾'
+
+  const targetInstruction =
+    targetedEffect?.kind === 'hand-to-support'
+      ? `從自己的手牌選擇${targetMin === 0 ? '最多 ' : ''}${targetMax} 張${
+          energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'
+        }卡牌作為目標`
+      : undefined
 
   const costEnergy = pending.cost.energy ?? ({} as EnergyCost)
   const energyCost = getRemainingEnergyCost(costEnergy, pending.sourceEnergy)
@@ -233,6 +249,7 @@ export function getOptionalCostAttackPrompt(
     targetMin,
     targetMax,
     targetLabel,
+    targetInstruction,
     unmetConditionWarning: getUnmetConditionWarning(
       game,
       viewerPlayerId,

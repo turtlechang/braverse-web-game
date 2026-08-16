@@ -115,6 +115,13 @@ const canPayAbilityCost = (
   ).length
   const supportCost =
     (cost.supportToTrash ?? 0) + (cost.supportToHand ?? 0)
+  const availableSupportToHandCount = cost.supportToHandType
+    ? player.supportArea.filter(
+        (support) =>
+          !energyPaymentSet.has(support.card.instanceId) &&
+          support.card.type === cost.supportToHandType,
+      ).length
+    : remainingSupportCount
 
   const availableDiscardCount = getDiscardHandCostCandidates(
     cost,
@@ -124,6 +131,7 @@ const canPayAbilityCost = (
 
   return (
     remainingSupportCount >= supportCost &&
+    availableSupportToHandCount >= (cost.supportToHand ?? 0) &&
     availableDiscardCount >= (cost.discardHand ?? 0) &&
     (!cost.discardAllHand || player.hand.length > 0) &&
     (!cost.hpToTrash ||
@@ -216,6 +224,16 @@ const payAbilityCost = (
   }
   if (selectedSupportToHand.length !== supportToHandIds.length) {
     throw new GameRuleError('選擇的支援區回手費用不合法。')
+  }
+  if (cost.supportToHandType) {
+    const invalidSupport = selectedSupportToHand.find(
+      (support) => support.card.type !== cost.supportToHandType,
+    )
+    if (invalidSupport) {
+      throw new GameRuleError(
+        `支援區回手費用必須選擇 ${cost.supportToHandType}。`,
+      )
+    }
   }
 
   const discardedHandCards = cost.discardAllHand

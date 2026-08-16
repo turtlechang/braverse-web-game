@@ -3164,6 +3164,16 @@ export const convertOfficialCardEffects = (
         condition: { kind: 'support-count-less-than-opponent', difference: 1 },
       },
     ],
+    // BS6-062 Time Rend Scissors：第二個尖括號「Return 1 Cookie from your
+    // support area to your hand.」是物品啟動代價，另由 exactCosts 限定為
+    // 支援區餅乾回手；效果本身是最多 1 張對手餅乾受到 1 點傷害。
+    'BS6-062': [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 0, max: 1 },
+      },
+    ],
     // BS6-063 的「最多 1 張」必須讓玩家可以明確略過，不能在條件成立時
     // 一律把牌庫頂放進支援區；以既有 choose-one 呈現放置／不放置兩條路徑。
     'BS6-063': [
@@ -3987,6 +3997,15 @@ export const convertOfficialItemAbility = (
     'BS5-111': {
       energy: { neutral: 1 },
       discardHand: 0,
+    },
+    // BS6-062 Time Rend Scissors：<{G}> 後的尖括號是額外啟動代價，
+    // 回手目標限定為支援區的 Cookie；generic parseAbilityCost 目前不解析
+    // 「Return ... Cookie ...」句型，必須在此保留完整代價。
+    'BS6-062': {
+      energy: { green: 1 },
+      discardHand: 0,
+      supportToHand: 1,
+      supportToHandType: 'cookie',
     },
     'BS6-084': {
       energy: { blue: 1 },

@@ -708,6 +708,15 @@ describe('createCardCheckDemoState', () => {
   })
 
   it('prepares BS6 Browser skill routes with their required legal candidates', () => {
+    const bs6062 = createCardCheckDemoState('BS6-062')
+    expect(bs6062.players['player-one'].supportArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          card: expect.objectContaining({ type: 'cookie' }),
+        }),
+      ]),
+    )
+
     const bs6025 = createCardCheckDemoState('BS6-025')
     expect(bs6025.players['player-one'].breakArea).toEqual([
       expect.objectContaining({ level: 2 }),

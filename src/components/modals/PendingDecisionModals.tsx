@@ -676,6 +676,8 @@ export interface OptionalCostAttackModalProps {
   targetMin: number
   targetMax: number
   targetLabel: string
+  /** 需要完整描述來源區域／顏色時使用，例如 BS6-051 的綠色手牌目標。 */
+  targetInstruction?: string
   onSkip: () => void
   onPay: (
     discardIds: string[],
@@ -715,6 +717,7 @@ export function OptionalCostAttackModal({
   targetMin,
   targetMax,
   targetLabel,
+  targetInstruction,
   onSkip,
   onPay,
   embedded = false,
@@ -1132,7 +1135,9 @@ export function OptionalCostAttackModal({
               <div className="optional-cost-col">
                 <span className="optional-cost-col-label">目標</span>
                 <strong>
-                  {targetMin === 0
+                  {targetInstruction
+                    ? `${targetInstruction}（已選 ${selectedTargetIds.length}）`
+                    : targetMin === 0
                     ? `最多選擇 ${targetMax} 個${targetLabel}作為目標（已選 ${selectedTargetIds.length}）`
                     : `選擇 ${targetMax} 個${targetLabel}作為目標（已選 ${selectedTargetIds.length}）`}
                 </strong>

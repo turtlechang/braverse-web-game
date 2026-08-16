@@ -2545,6 +2545,27 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   const energySupports = energySupportColors.map((color, i) =>
     testSupportCard(`support-pay-${i}`, color),
   )
+  // 物品／技能的支援區回手代價若限定卡牌種類，通用 card-check fixture
+  // 也要提供同類型候選，才能在正式 UI 實際走過支付代價而不是只測到
+  // 「沒有合法候選」的略過路徑（例如 BS6-062 的 Cookie 代價）。
+  const supportToHandType =
+    card.item?.cost.supportToHandType ??
+    card.skill?.cost.supportToHandType ??
+    card.stageAbility?.cost.supportToHandType
+  const supportCostCandidates: GameCard[] =
+    supportToHandType === 'cookie'
+      ? [
+          cardCheckFillerCookie(
+            `${card.id}-support-cost-cookie`,
+            1,
+            2,
+            0,
+            payColor,
+          ).cookie,
+        ]
+      : supportToHandType
+        ? [testSupportCard(`${card.id}-support-cost-${supportToHandType}`, payColor)]
+        : []
   // Hand filler cards for discard-hand style costs, beyond the tested card.
   const handFillers = Array.from({ length: 4 }, (_, i) =>
     testSupportCard(`hand-filler-${i}`, i % 2 === 0 ? payColor : 'wild'),
@@ -2678,7 +2699,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-one'],
           hand: [card, ...handFillers],
           battleArea: [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 4)],
-          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          supportArea: [...energySupports, ...supportCostCandidates].map((c) => ({
+            card: c,
+            rested: false,
+          })),
           ...(itemBreakArea ? { breakArea: itemBreakArea } : {}),
           discardPile: trashFillers,
         },
@@ -2715,7 +2739,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-one'],
           hand: stageHand,
           battleArea: [cardCheckBattleEntry(stageBattleCookie, selfExtra1.hpCards, 4)],
-          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          supportArea: [...energySupports, ...supportCostCandidates].map((c) => ({
+            card: c,
+            rested: false,
+          })),
           stage: { card: oldStage, rested: false },
           breakArea: stageBreakArea,
           discardPile: trashFillers,
