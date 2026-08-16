@@ -30,6 +30,7 @@ export type PendingSelectionKind =
   | 'discard'
   | 'flip'
   | 'trap'
+  | 'attack-response'
   | 'blocker'
   | 'multi-stage'
 
@@ -192,6 +193,19 @@ const cardRetentionValue = (
   return faceValue + capabilityValue(capabilities) + plan.relativeValue
 }
 
+const modeHasConditionalPayoff = (effect: CardEffect): boolean => {
+  if (effect.kind === 'choose-one') {
+    return effect.modes.some((mode) => mode.effects.some(modeHasConditionalPayoff))
+  }
+  if (effect.kind === 'optional-cost-attack' || effect.kind === 'deferred-end-of-turn') {
+    return effect.effects.some(modeHasConditionalPayoff)
+  }
+  if (effect.kind === 'reveal-top-deck') {
+    return effect.effects.some(modeHasConditionalPayoff)
+  }
+  return 'condition' in effect && effect.condition !== undefined
+}
+
 const modePreference = (
   effect: ChooseOneEffect,
   plan: TacticalPlan,
@@ -199,7 +213,13 @@ const modePreference = (
   .map((mode, index) => ({
     index,
     score: mode.effects.reduce((score, child) => score + effectScore(child), 0) +
-      (plan.kind === 'payoff' ? plan.relativeValue : 0),
+      // TacticalPlan 必須影響「模式之間」的相對次序，不能把同一常數加給
+      // 每個模式。只有真正承接目前可確認 payoff 的條件效果才取得加分；
+      // 尚未確認的 setup 仍保持中性，避免為了猜測的連段延後確定收益。
+      (plan.kind === 'payoff' && plan.status === 'confirmed' &&
+      mode.effects.some(modeHasConditionalPayoff)
+        ? plan.relativeValue
+        : 0),
   }))
   .sort((left, right) => right.score - left.score || left.index - right.index)
   .map(({ index }) => index)
@@ -213,10 +233,22 @@ export interface PendingSelectionStrategy {
     candidateIds: readonly string[],
     max: number,
   ) => string[]
+  /**
+   * 只接受本次 pending 已合法揭露給 AI 的卡面（例如自己的 inspect-deck
+   * revealedCards），不得傳入牌庫其餘未知卡。這讓檢視效果也使用同一套
+   * 保留價值，卻不會偷看牌序。
+   */
+  selectRevealedCardIds: (
+    revealedCards: readonly GameCard[],
+    candidateIds: readonly string[],
+    max: number,
+  ) => string[]
   preferredModeIndices: (
     effect: ChooseOneEffect,
     sourceInstanceId?: string,
   ) => number[]
+  /** TacticalPlan 對公開來源的相對加成，供 R7/R11 防守候選並列時使用。 */
+  tacticalPlanValue: (sourceInstanceId?: string) => number
   orderEffectIds: (
     items: readonly PendingEffectOrderItem[],
   ) => string[]
@@ -225,6 +257,7 @@ export interface PendingSelectionStrategy {
   telemetry: (
     kind: PendingSelectionKind,
     sourceInstanceId?: string,
+    effect?: CardEffect,
   ) => PendingStrategyTelemetry
 }
 
@@ -249,6 +282,8 @@ export const createPendingSelectionStrategy = (
   }
   const retention = (instanceId: string): number =>
     cardRetentionValue(cardsByInstanceId.get(instanceId), context, view)
+  const revealedRetention = (card: GameCard): number =>
+    cardRetentionValue(card, context, view)
   const stableByRetention = (
     candidateIds: readonly string[],
     direction: 1 | -1,
@@ -262,7 +297,7 @@ export const createPendingSelectionStrategy = (
     const opponentCookie = isOpponentBattleCookie(view, instanceId)
     const effectTargetSide = 'target' in effect ? effect.target?.side : undefined
 
-    if (effect.kind === 'damage' && cookie && opponentCookie) {
+    if ((effect.kind === 'damage' || effect.kind === 'damage-all') && cookie && opponentCookie) {
       const lethal = cookie.hpCount <= effect.amount
       return (lethal ? 10_000 : 0) - cookie.hpCount * 20 + retention(instanceId)
     }
@@ -322,8 +357,21 @@ export const createPendingSelectionStrategy = (
           left.localeCompare(right),
         )
         .slice(0, max),
+    selectRevealedCardIds: (revealedCards, candidateIds, max) => {
+      const revealedById = new Map(revealedCards.map((card) => [card.instanceId, card]))
+      return [...candidateIds]
+        .filter((instanceId) => revealedById.has(instanceId))
+        .sort((left, right) =>
+          revealedRetention(revealedById.get(right)!) -
+            revealedRetention(revealedById.get(left)!) ||
+          left.localeCompare(right),
+        )
+        .slice(0, max)
+    },
     preferredModeIndices: (effect, sourceInstanceId) =>
       modePreference(effect, planFor(sourceInstanceId)),
+    tacticalPlanValue: (sourceInstanceId) =>
+      planFor(sourceInstanceId).relativeValue,
     orderEffectIds: (items) => [...items]
       .sort((left, right) => {
         const leftPlan = planFor(left.sourceInstanceId)
@@ -343,21 +391,37 @@ export const createPendingSelectionStrategy = (
     chooseRefreshId: (candidateIds) =>
       // Refresh 的選擇會進入 break area，故犧牲保留價值最低的合法餅乾。
       stableByRetention(candidateIds, 1)[0],
-    telemetry: (kind, sourceInstanceId) => {
+    telemetry: (kind, sourceInstanceId, effect) => {
       const source = sourceCardFor(cardsByInstanceId, sourceInstanceId)
       const plan = planFor(sourceInstanceId)
       const capabilities = source
         ? extractCardCapabilities(source).capabilities
         : []
+      // When the pending queue exposes an actual effect, inspect that
+      // structured effect directly as well. A source card can be outside the
+      // observer's PlayerView (for example a just-revealed FLIP), so counting
+      // only source-card capabilities would incorrectly report unknown
+      // effects as supported.
+      const effectProbeUnsupportedCount = effect
+        ? extractCardCapabilities({
+            id: '__pending-effect__',
+            instanceId: '__pending-effect__',
+            name: '__pending-effect__',
+            type: 'item',
+            effects: [effect],
+          }).unsupportedEffectKinds.length
+        : 0
       return {
         kind,
         sourceCardId: source?.id,
         planKind: plan.kind,
         planStatus: plan.status,
         usedUniversalSelection: enabled,
-        unsupportedEffectCount: capabilities.filter(
-          (capability) => capability.kind === 'unsupported',
-        ).length,
+        unsupportedEffectCount: effect
+          ? effectProbeUnsupportedCount
+          : capabilities.filter(
+              (capability) => capability.kind === 'unsupported',
+            ).length,
         publicViewOnly: true,
       }
     },

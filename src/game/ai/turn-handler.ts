@@ -26,6 +26,7 @@ import type {
   AbilityCost,
 } from '../types'
 import type { KnowledgeState } from './strategy/knowledge-state'
+import type { PendingSelectionStrategy } from './strategy/pending-selection'
 import type { AiDecision, AiLevel } from './types'
 import {
   evaluateHandQuality,
@@ -43,6 +44,17 @@ export interface AiTurnStrategy {
     context: EffectContext,
     effect: CardEffect,
   ) => string[]
+  chooseEffectMode?: (
+    state: GameState,
+    context: EffectContext,
+    effect: Extract<CardEffect, { kind: 'choose-one' }>,
+  ) => number
+  chooseStageCostIds?: (
+    state: GameState,
+    playerId: PlayerId,
+    cost: AbilityCost,
+    sourceInstanceId: string,
+  ) => AiStageCostIds | null
   resolveCardAbility: (
     state: GameState,
     playerId: PlayerId,
@@ -74,16 +86,33 @@ export interface AiTurnStrategy {
   ) => CookieInBattle | undefined
 }
 
-const chooseAiStageCostIds = (
+export interface AiStageCostIds {
+  paymentIds: string[]
+  supportToTrashIds: string[]
+  supportToHandIds: string[]
+  discardHandIds: string[]
+  hpToTrashTargetIds: string[]
+  trashBattleCookieIds: string[]
+}
+
+export const chooseAiStageCostIds = (
   state: GameState,
   playerId: PlayerId,
   cost: AbilityCost,
   sourceInstanceId: string,
-) => {
+  universal?: PendingSelectionStrategy,
+): AiStageCostIds | null => {
   const player = state.players[playerId]
+  const orderedSupports = universal?.enabled
+    ? universal.orderPaymentIds(
+        player.supportArea.map((support) => support.card.instanceId),
+      ).map((instanceId) => player.supportArea.find(
+        (support) => support.card.instanceId === instanceId,
+      )!)
+    : player.supportArea
   const paymentIds = selectEnergyPayment(
     cost.energy ?? cost,
-    player.supportArea,
+    orderedSupports,
   )
   if (!paymentIds) return null
 
@@ -91,16 +120,27 @@ const chooseAiStageCostIds = (
   const remainingSupports = player.supportArea.filter(
     (support) => !paymentSet.has(support.card.instanceId),
   )
-  const supportToTrashIds = remainingSupports
-    .slice(0, cost.supportToTrash ?? 0)
-    .map((support) => support.card.instanceId)
+  const supportToTrashCandidateIds = remainingSupports.map(
+    (support) => support.card.instanceId,
+  )
+  const supportToTrashIds = universal?.enabled
+    ? universal.orderCostIds(
+        supportToTrashCandidateIds,
+        cost.supportToTrash ?? 0,
+      )
+    : supportToTrashCandidateIds.slice(0, cost.supportToTrash ?? 0)
   if (supportToTrashIds.length < (cost.supportToTrash ?? 0)) return null
 
   const supportToTrashSet = new Set(supportToTrashIds)
-  const supportToHandIds = remainingSupports
+  const supportToHandCandidateIds = remainingSupports
     .filter((support) => !supportToTrashSet.has(support.card.instanceId))
-    .slice(0, cost.supportToHand ?? 0)
     .map((support) => support.card.instanceId)
+  const supportToHandIds = universal?.enabled
+    ? universal.orderCostIds(
+        supportToHandCandidateIds,
+        cost.supportToHand ?? 0,
+      )
+    : supportToHandCandidateIds.slice(0, cost.supportToHand ?? 0)
   if (supportToHandIds.length < (cost.supportToHand ?? 0)) return null
 
   const discardCandidates = cost.discardAllHand
@@ -108,9 +148,14 @@ const chooseAiStageCostIds = (
     : getDiscardHandCostCandidates(cost, player.hand, sourceInstanceId)
   const discardHandIds = cost.discardAllHand
     ? []
-    : discardCandidates
-        .slice(0, cost.discardHand ?? 0)
-        .map((card) => card.instanceId)
+    : universal?.enabled
+      ? universal.orderCostIds(
+          discardCandidates.map((card) => card.instanceId),
+          cost.discardHand ?? 0,
+        )
+      : discardCandidates
+          .slice(0, cost.discardHand ?? 0)
+          .map((card) => card.instanceId)
   if (
     (!cost.discardAllHand &&
       discardHandIds.length < (cost.discardHand ?? 0)) ||
@@ -119,21 +164,32 @@ const chooseAiStageCostIds = (
     return null
   }
 
-  const hpToTrashTargetIds = cost.hpToTrash
+  const hpToTrashCandidateIds = cost.hpToTrash
     ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
-        .slice(0, 1)
         .map((cookie) => cookie.card.instanceId)
+    : []
+  const hpToTrashTargetIds = cost.hpToTrash
+    ? universal?.enabled
+      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
+      : hpToTrashCandidateIds.slice(0, 1)
     : []
   if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
 
-  const trashBattleCookieIds = cost.trashBattleCookie
+  const trashBattleCookieCandidateIds = cost.trashBattleCookie
     ? getTrashBattleCookieCostCandidates(
         cost,
         player.battleArea,
         sourceInstanceId,
       )
-        .slice(0, cost.trashBattleCookie.count)
         .map((cookie) => cookie.card.instanceId)
+    : []
+  const trashBattleCookieIds = cost.trashBattleCookie
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          trashBattleCookieCandidateIds,
+          cost.trashBattleCookie.count,
+        )
+      : trashBattleCookieCandidateIds.slice(0, cost.trashBattleCookie.count)
     : []
   if (
     cost.trashBattleCookie &&
@@ -335,12 +391,19 @@ export const handleAiTurnState = (
     if (!canAttack(state) && canActivateStage(state, playerId)) {
       const stage = player.stage!
       const ability = stage.card.stageAbility!
-      const costIds = chooseAiStageCostIds(
-        state,
-        playerId,
-        ability.cost,
-        stage.card.instanceId,
-      )
+      const costIds = strategy.chooseStageCostIds
+        ? strategy.chooseStageCostIds(
+            state,
+            playerId,
+            ability.cost,
+            stage.card.instanceId,
+          )
+        : chooseAiStageCostIds(
+            state,
+            playerId,
+            ability.cost,
+            stage.card.instanceId,
+          )
       if (costIds) {
         const context = {
           sourcePlayerId: playerId,
@@ -377,6 +440,7 @@ export const handleAiTurnState = (
             paymentIds: costIds.paymentIds,
           },
           stageShuffle,
+          strategy.chooseEffectMode,
         )
         if (!sim.aborted) {
           return {

@@ -29,6 +29,7 @@ import {
   type KnowledgeState,
 } from './strategy/knowledge-state'
 import { createPendingSelectionStrategy } from './strategy/pending-selection'
+import { chooseSharedEffectTargets } from './shared-selection'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
@@ -95,12 +96,13 @@ export const handleAiPendingDecision = (
     decision: AiDecision,
     kind: Parameters<typeof universal.telemetry>[0],
     sourceInstanceId?: string,
+    effect?: import('../types').CardEffect,
   ): AiDecision => universal.enabled
     ? {
         ...decision,
         reason: {
           ...(decision.reason ?? { level: options.level ?? 2 }),
-          pendingStrategy: universal.telemetry(kind, sourceInstanceId),
+          pendingStrategy: universal.telemetry(kind, sourceInstanceId, effect),
         },
       }
     : decision
@@ -139,7 +141,7 @@ export const handleAiPendingDecision = (
         }),
         action: 'idle',
         description: `${state.players[playerId].name}選擇${pendingAbility.sourceCardName ?? '卡牌'}的一項效果。`,
-      }, 'choose-one', pendingAbility.sourceInstanceId)
+      }, 'choose-one', pendingAbility.sourceInstanceId, effect)
     }
     if (effect.kind === 'reorder-hp') {
       // G2 禁止 AI 讀取未翻開 HP 身分，因此不能組出 orderedCardIds。
@@ -153,7 +155,7 @@ export const handleAiPendingDecision = (
         }),
         action: 'idle',
         description: `${state.players[playerId].name}略過未翻開 HP 的重排效果。`,
-      }, 'multi-stage', pendingAbility.sourceInstanceId)
+      }, 'multi-stage', pendingAbility.sourceInstanceId, effect)
     }
     const candidates = requiresEffectCardSelection(effect)
       ? getEffectSelectionCandidates(state, context, effect)
@@ -174,7 +176,7 @@ export const handleAiPendingDecision = (
       }),
       action: 'idle',
       description: `${state.players[playerId].name}結算${pendingAbility.sourceCardName ?? '卡牌'}的效果。`,
-    }, 'effect-target', pendingAbility.sourceInstanceId)
+    }, 'effect-target', pendingAbility.sourceInstanceId, effect)
   }
 
   if (
@@ -262,36 +264,60 @@ export const handleAiPendingDecision = (
     const faintCostSupportCandidates = faintTriggeredCost
       ? getSupportEffectCandidates(state, pendingFaint.context)
       : []
+    const faintPaymentSupports = universal.enabled
+      ? universal.orderPaymentIds(
+          state.players[playerId].supportArea.map((support) => support.card.instanceId),
+        ).map((instanceId) => state.players[playerId].supportArea.find(
+          (support) => support.card.instanceId === instanceId,
+        )!)
+      : state.players[playerId].supportArea
+    const selectedPaymentIds = faintEnergyCost
+      ? selectEnergyPayment(faintEnergyCost, faintPaymentSupports)
+      : []
+    // 同一張支援卡不能同時支付能量又作為送棄牌區代價；先由規則層付款
+    // 選擇排除已選能量，再交給通用選擇器決定剩餘合法成本。
+    const faintSupportToTrashCandidates = faintCostSupportCandidates.filter(
+      (support) => !selectedPaymentIds?.includes(support.card.instanceId),
+    )
     const canPayTriggeredCost =
       !faintTriggeredCost ||
       (faintCostHandCandidates.length >= (faintTriggeredCost.discardHand ?? 0) &&
-        faintCostSupportCandidates.length >=
+        faintSupportToTrashCandidates.length >=
           (faintTriggeredCost.supportToTrash ?? 0))
-    const selectedPaymentIds = faintEnergyCost
-      ? selectEnergyPayment(
-          faintEnergyCost,
-          state.players[playerId].supportArea,
-        )
-      : []
     const canPayFaintCost = selectedPaymentIds !== null
     const shouldPayFaintCost =
       Boolean(faintEnergyCost) && cardCandidates.length > 0 && canPayFaintCost
     const shouldPayTriggeredCost = Boolean(faintTriggeredCost) && canPayTriggeredCost
-    const fallbackTargetIds =
+    const faintDiscardHandIds = universal.enabled
+      ? universal.orderCostIds(
+          faintCostHandCandidates.map((card) => card.instanceId),
+          faintTriggeredCost?.discardHand ?? 0,
+        )
+      : faintCostHandCandidates
+          .slice(0, faintTriggeredCost?.discardHand ?? 0)
+          .map((card) => card.instanceId)
+    const faintSupportToTrashIds = universal.enabled
+      ? universal.orderCostIds(
+          faintSupportToTrashCandidates.map((support) => support.card.instanceId),
+          faintTriggeredCost?.supportToTrash ?? 0,
+        )
+      : faintSupportToTrashCandidates
+          .slice(0, faintTriggeredCost?.supportToTrash ?? 0)
+          .map((support) => support.card.instanceId)
+    const legalTargetIds =
       canPayTriggeredCost &&
       cardCandidates.length > 0 && (!faintEnergyCost || shouldPayFaintCost)
         ? orderedCards
-            .slice(0, pendingDecision.max)
             .map((card) => card.instanceId)
         : candidates.length >= pendingDecision.min
           ? ordered
-              .slice(0, pendingDecision.max)
               .map((cookie) => cookie.card.instanceId)
           : []
+    const fallbackTargetIds = legalTargetIds.slice(0, pendingDecision.max)
     const targetIds = universal.enabled && faintEffect
       ? universal.selectEffectTargetIds(
           faintEffect,
-          fallbackTargetIds,
+          legalTargetIds,
           pendingDecision.max,
         )
       : fallbackTargetIds
@@ -305,12 +331,8 @@ export const handleAiPendingDecision = (
           : {}),
         ...(shouldPayTriggeredCost
           ? {
-              discardHandIds: faintCostHandCandidates
-                .slice(0, faintTriggeredCost?.discardHand ?? 0)
-                .map((card) => card.instanceId),
-              supportToTrashIds: faintCostSupportCandidates
-                .slice(0, faintTriggeredCost?.supportToTrash ?? 0)
-                .map((support) => support.card.instanceId),
+              discardHandIds: faintDiscardHandIds,
+              supportToTrashIds: faintSupportToTrashIds,
             }
           : {}),
       }),
@@ -319,7 +341,7 @@ export const handleAiPendingDecision = (
         targetIds.length > 0
           ? `${state.players[playerId].name}發動對${ordered[0]?.card.name ?? orderedCards[0]?.name ?? '目標'}的昏厥效果。`
           : `${state.players[playerId].name}略過昏厥效果。`,
-    }, 'effect-target', pendingDecision.sourceInstanceId)
+    }, 'effect-target', pendingDecision.sourceInstanceId, faintEffect)
   }
 
   if (
@@ -338,17 +360,17 @@ export const handleAiPendingDecision = (
     const ordered = [...candidates].sort(
       (left, right) => left.hpCards.length - right.hpCards.length,
     )
-    const fallbackTargetIds =
+    const legalTargetIds =
       candidates.length >= pendingDecision.min
         ? ordered
-            .slice(0, pendingDecision.max)
             .map((cookie) => cookie.card.instanceId)
         : []
+    const fallbackTargetIds = legalTargetIds.slice(0, pendingDecision.max)
     const afterDamageEffect = state.pendingAfterDamageEffects?.[0]?.effect
     const targetIds = universal.enabled && afterDamageEffect
       ? universal.selectEffectTargetIds(
           afterDamageEffect,
-          fallbackTargetIds,
+          legalTargetIds,
           pendingDecision.max,
         )
       : fallbackTargetIds
@@ -363,7 +385,7 @@ export const handleAiPendingDecision = (
         targetIds.length > 0
           ? `${state.players[playerId].name}發動對${ordered[0].card.name}的受傷後效果。`
           : `${state.players[playerId].name}略過受傷後效果。`,
-    }, 'effect-target', pendingDecision.sourceInstanceId)
+    }, 'effect-target', pendingDecision.sourceInstanceId, afterDamageEffect)
   }
 
   if (
@@ -470,21 +492,26 @@ export const handleAiPendingDecision = (
       pendingDecision.filterColor !== undefined ||
       pendingDecision.filterType !== undefined
     // pickCount 為 0 的檢視（例如只重排牌庫頂）不選任何一張。
+    const candidateCards = hasFilter
+      ? revealed.filter(
+          (card) =>
+            (pendingDecision.filterColor === undefined ||
+              card.energyColor === pendingDecision.filterColor) &&
+            (pendingDecision.filterType === undefined ||
+              card.type === pendingDecision.filterType),
+        )
+      : revealed
+    const candidateIds = candidateCards.map((card) => card.instanceId)
     const pickedIds: string[] =
       pendingDecision.pickCount === 0
         ? []
-        : hasFilter
-          ? revealed
-              .filter(
-                (card) =>
-                  (pendingDecision.filterColor === undefined ||
-                    card.energyColor === pendingDecision.filterColor) &&
-                  (pendingDecision.filterType === undefined ||
-                    card.type === pendingDecision.filterType),
-              )
-              .slice(0, pendingDecision.pickCount)
-              .map((c) => c.instanceId)
-          : allIds.slice(0, pendingDecision.pickCount)
+        : universal.enabled
+          ? universal.selectRevealedCardIds(
+              revealed,
+              candidateIds,
+              pendingDecision.pickCount,
+            )
+          : candidateIds.slice(0, pendingDecision.pickCount)
     const pickedSet = new Set(pickedIds)
     const restIds = allIds.filter((id) => !pickedSet.has(id))
     return withPendingReason({
@@ -589,34 +616,21 @@ export const handleAiPendingDecision = (
     const canPayTrashToDeck = pendingDecision.cost.trashToDeck
       ? trashToDeckIds.length === pendingDecision.cost.trashToDeck.count
       : true
-    const targetedEffect = pendingDecision.effects.find((effect) =>
-      requiresEffectCardSelection(effect),
-    )
     const context: EffectContext = {
       sourcePlayerId: playerId,
       sourceInstanceId: pendingDecision.sourceInstanceId,
     }
-    const targetCandidateIds = targetedEffect
-      ? getEffectSelectionCandidates(
-          state,
-          context,
-          targetedEffect,
-        )
-          .map((card) => card.instanceId)
-      : []
-    const targetIds = targetedEffect
-      ? universal.enabled
-        ? universal.selectEffectTargetIds(
-            targetedEffect,
-            targetCandidateIds,
-            getEffectSelectionLimits(targetedEffect)?.max ?? 0,
-          )
-        : targetCandidateIds.slice(0, getEffectSelectionLimits(targetedEffect)?.max ?? 0)
-      : []
-    const hasTarget =
-      targetedEffect
-      ? targetIds.length >= (getEffectSelectionLimits(targetedEffect)?.min ?? 0)
-        : true
+    const sharedSelection = chooseSharedEffectTargets(
+      state,
+      context,
+      pendingDecision.effects,
+      universal,
+    )
+    const targetIds = sharedSelection.targetIds ?? []
+    const hasTarget = sharedSelection.valid
+    const targetedEffect = pendingDecision.effects.find((effect) =>
+      requiresEffectCardSelection(effect),
+    )
     if (canPay && canPayHpToTrash && canPayTrashToDeck && hasTarget) {
       const discardCardIds = universal.enabled
         ? universal.orderCostIds(
@@ -640,7 +654,7 @@ export const handleAiPendingDecision = (
         }),
         action: 'resolve-optional-cost-attack',
         description: `${state.players[playerId].name}支付攻擊後續效果代價。`,
-      }, 'payment', pendingDecision.sourceInstanceId)
+      }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
     }
     return withPendingReason({
       state: applyGameCommand(state, {
@@ -650,7 +664,7 @@ export const handleAiPendingDecision = (
       }),
       action: 'resolve-optional-cost-attack',
       description: `${state.players[playerId].name}略過攻擊後續可選代價效果。`,
-    }, 'payment', pendingDecision.sourceInstanceId)
+    }, 'payment', pendingDecision.sourceInstanceId, targetedEffect)
   }
 
   if (

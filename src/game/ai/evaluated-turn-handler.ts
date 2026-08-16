@@ -503,6 +503,34 @@ export const handleAiEvaluatedTurnState = (
         // skip invalid card ability resolution
       }
     }
+
+    // `getLegalTurnCommands` deliberately excludes stage activation because
+    // it may contain target／choose-one effects.  Evaluate the already legal
+    // turn-handler decision as an additional root candidate so Lv.3 does not
+    // treat `advance-phase` as the only option when a stage ability is ready.
+    const stageDecision = state.players[playerId].stage
+      ? handleAiTurnState(state, playerId, strategy)
+      : null
+    if (
+      stageDecision?.action === 'activate-stage' &&
+      state.players[playerId].stage
+    ) {
+      const afterView = createPlayerView(stageDecision.state, playerId)
+      candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+        value: stageDecision,
+        identity: {
+          kind: 'activate-stage',
+          sourceInstanceId: state.players[playerId].stage.card.instanceId,
+        },
+        afterView,
+        postActionBoardScore: evaluatePlayerView(afterView),
+        legalAttackCountBefore,
+        legalAttackCountAfter: getLegalTurnCommands(
+          stageDecision.state,
+          playerId,
+        ).filter((candidate) => candidate.kind === 'attack').length,
+      }))
+    }
   }
 
   if (candidates.length === 0) {
@@ -951,6 +979,20 @@ export const handleAiTwoPlyTurnState = (
       } catch {
         // skip invalid card ability resolution
       }
+    }
+    const stageDecision = state.players[playerId].stage
+      ? handleAiTurnState(state, playerId, strategy)
+      : null
+    if (
+      stageDecision?.action === 'activate-stage' &&
+      state.players[playerId].stage &&
+      !addAbilityCandidate(
+        stageDecision,
+        'activate-stage',
+        state.players[playerId].stage.card.instanceId,
+      )
+    ) {
+      return fallbackToLv3()
     }
   }
 

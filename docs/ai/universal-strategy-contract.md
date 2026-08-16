@@ -1,6 +1,6 @@
 # 通用型 Lv.3／Lv.4 AI 策略契約
 
-> 狀態：G4 已完成；Lv.4 已接入有限預算的多步合法 command 搜尋、R16 資源預留與搜尋 telemetry。G5 已依核准進行實作與驗證，尚待完整回歸／benchmark 完成後才標記為完成。
+> 狀態：G0～G5 已完成。Lv.4 已接入有限預算的多步合法 command 搜尋、R16 資源預留與搜尋 telemetry；G5 則將通用策略安全接入所有既有 pending 與防守決策。
 
 ## 目標與範圍
 
@@ -81,7 +81,7 @@ Lv.4 在加入 R12～R16 後，仍必須沿用 R9、R10、R11。現況 `docs/ai-
 | G2 | `KnowledgeState` 與安全測試 | 不得改變策略選擇。已完成；只接收 PlayerView／合法 knowledge event，未接入 AI 行動。 | G1 核准。 |
 | G3 | Lv.3 action scoring／tactical plans | 已完成：一步合法 command 評估、公開資訊／已知資訊輸入與可解釋 breakdown。 | G2 核准。 |
 | G4 | Lv.4 search／reservation／telemetry | 已完成：width 5、depth 5、240 nodes、150ms；只展開合法 command、攻擊進入 pending 即停止、逾時回退 Lv.3。 | G3 核准。 |
-| G5 | pending 與防守選擇整合 | replacement、付款、目標、順序、choose-one、discard、blocker、trap、FLIP、refresh、多階段效果。 | G4 核准。 |
+| G5 | pending 與防守選擇整合 | 已完成：replacement、付款、目標、順序、choose-one、discard、blocker、trap、FLIP、refresh、多階段效果。 | G4 核准。 |
 
 每個 phase 使用獨立短期分支與 PR。現工作樹已有其他未提交工作時，不得混入、stage、覆寫或藉由切換分支破壞它；應先建立隔離 worktree／分支後再建立該 phase 的 PR。
 
@@ -99,10 +99,14 @@ Lv.4 在加入 R12～R16 後，仍必須沿用 R9、R10、R11。現況 `docs/ai-
 
 R16 的 `resource-reservation.ts` 只讀取規則層已列出的攻擊付款，避免非攻擊 setup 耗盡已可支付的最小攻擊資源。`search-telemetry.ts` 與 detailed simulation／benchmark 記錄節點、時間、timeout／fallback、setup／payoff／combo 放棄、未知資訊停止、未支援效果與資源預留；timeout 一律回退同局面的 Lv.3 最佳候選。R9、R10、R11 與既有公開風險訊號仍在每個 command 過渡中使用。G5 才會將 TacticalPlan 接到 pending payment、target、blocker、trap、FLIP、refresh 與多段效果選擇。
 
-## G5 實作記錄（進行中，2026-08-16）
+## G5 完成記錄（2026-08-17）
 
 `pending-selection.ts` 建立只吃 `PlayerView` 與 `KnowledgeState` 的選擇器；它只接收規則層已列出的候選 instance id，再輸出穩定排序、目標、模式、Refresh 與補位選擇。因此策略不會直接寫入 `GameState`，也不會自行擴張候選集合。Lv.3／Lv.4 已接入 replacement、Refresh、可選代價、effect target／order、choose-one、discard、rest support、faint／after-damage、FLIP、trap、blocker 與 attack response；Lv.1／Lv.2 保持原有分支。
 
 每一筆實際 pending／防守決策會附 `PendingStrategyTelemetry`；`simulateAiMatchDetailed` 同時輸出逐筆明細與彙總，以稽核使用通用選擇、保守 fallback、未支援能力與 `publicViewOnly`。handler 已有精確 telemetry 時，`takeAiStep` 不會以入口分類覆寫它。
 
 未翻開 HP 不得讀取其卡面或順序。對「最多 1 個目標」的 HP 重排，AI 以既有合法 `resolve-ability-effect` 空目標明確略過，而非讀取 HP instance id 組造重排 command；玩家 UI 仍可使用完整的既有重排流程。這是保守策略選擇，不改變任何正式卡牌規則、資料、UI 或線上協議。
+
+本輪補強了三個實際候選邊界：多目標 faint／after-damage 不會在策略評分前切掉規則層候選；陷阱會以真正具有 target 的子效果評分；`inspect-deck` 僅傳入本次已合法揭露的卡面，因此不會讀取未知牌庫。費用付款與送支援區成本也會先排除同一張卡，避免產生規則層必然拒絕的雙重使用。
+
+驗證：G5 定向回歸 33 項、lint、app／server typecheck、以 G5 原始碼執行的 AI Browser 20／20 均通過。六種官方 preset 各 60-seed Lv.4 mirror 已由 benchmark 回歸覆蓋；Lv.4 對 Lv.3 的 60／300 seed 比較分別為 38／60（63.3%）與 181／300（60.3%），兩組皆為 stuck／deadlock／invalid action／turn cap 0。300-seed 共 8,610 次 Lv.4 決策，平均／p95／最大耗時為 0.43／2／6ms，timeout 與 Lv.3 fallback 均為 0；資源預留 miss 1,211 次，未支援效果與未知資訊停止均為 0。完整 Vitest（排除會改寫 `generated-card-pool.ts` 且受 Windows 檔案鎖阻擋的 `validate-candidate-cards.test.ts`）為 196 個檔案／3,127 項全數通過。正式 Vite build 仍受隔離 worktree 的 Windows `EPERM`（`dist` 鎖定且無法建立替代輸出目錄）阻擋，並非 TypeScript 或 lint 錯誤。

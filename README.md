@@ -273,6 +273,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-17 | 補強通用型 Lv.3／Lv.4 AI G5：faint／after-damage 改以完整合法候選交由通用 selector 排序，陷阱依真正有 target 的子效果評估，inspect-deck 僅依本次合法揭露卡面選取；付款與送支援區成本不再可重複使用同一張卡。新增 33 項定向回歸、測試產物輸出覆寫，G5 原始碼 AI Browser 20／20、六種 preset 各 60-seed，以及 Lv.4 對 Lv.3 的 300-seed（181／300，60.3%，stuck／deadlock／非法指令／turn cap 均為 0）驗證；app／server typecheck 與 lint 通過，Vite build 受隔離 worktree 的 Windows `EPERM` 檔案鎖阻擋。 |
 | 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G5：將只讀 `PlayerView`／`KnowledgeState` 的通用 pending 選擇策略接入補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、Blocker、Refresh 與多階段效果，保留規則層 `GameCommand` 驗證與 Lv.1／Lv.2 原行為；新增 selection telemetry 與 hidden-HP 保守略過。完整 Vitest 197 檔／3,143 項、lint、build 及 AI Browser 20／20 通過，stuck 0。 |
 | 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G4：Lv.4 改為有限預算的合法 `GameCommand` 多步搜尋（width 5、depth 5、240 nodes、150ms），保留 R9～R11、加入 R16 資源預留，攻擊／防守 pending 與未知抽牌均保守停止推演，逾時回退 Lv.3；新增搜尋、combo、未知資訊與資源 telemetry。完整 Vitest 196 檔／3,138 項、lint、build 與 AI Browser 20／20 通過；60-seed Lv.4 vs Lv.3 為 40／60（66.7%）、stuck／deadlock／非法操作／turn cap 均為 0。 |
 | 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G3：Lv.3 以結構化能力、牌組策略、合法已知資訊與前後公開局面評估每個合法候選，輸出可解釋 `ActionScoreBreakdown`；保守處理未知／未支援效果，Lv.1／Lv.2 行為不變；完整 Vitest 192 檔／3,128 項、lint、build 與 AI Browser 驗證通過。 |
