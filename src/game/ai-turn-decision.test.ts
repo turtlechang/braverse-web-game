@@ -433,8 +433,16 @@ describe('simple AI opponent', () => {
       },
     }
 
-    const refreshDecision = takeAiStep(refreshState, 'player-two', { seed: 42 })
+    const refreshDecision = takeAiStep(refreshState, 'player-two', {
+      level: 3,
+      seed: 42,
+    })
     expect(refreshDecision.action).toBe('refresh')
+    expect(refreshDecision.reason?.pendingStrategy).toMatchObject({
+      kind: 'refresh',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
     const refreshEntry = refreshDecision.state.commandLog?.at(-1)
     expect(refreshEntry?.payload).toMatchObject({
       shuffleSeed: expect.any(Number),
@@ -460,7 +468,16 @@ describe('simple AI opponent', () => {
       },
     }
 
-    expect(takeAiStep(replacementState).action).toBe('replace-cookie')
+    const replacementDecision = takeAiStep(replacementState, 'player-two', {
+      level: 4,
+      seed: 42,
+    })
+    expect(replacementDecision.action).toBe('replace-cookie')
+    expect(replacementDecision.reason?.pendingStrategy).toMatchObject({
+      kind: 'replacement',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
   })
 
   it('resolves replacement OnPlay even during the opponent turn', () => {
@@ -819,5 +836,37 @@ describe('simple AI opponent', () => {
     }
 
     expect(takeAiStep(state).action).toBe('advance-phase')
+  })
+
+  it('Lv.3 safely declines an optional HP reorder without reading facedown cards', () => {
+    const base = createDemoGame()
+    const target = base.players['player-one'].battleArea[0]
+    const state: GameState = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: target.card.instanceId,
+        sourceCardName: target.card.name,
+        sourceKind: 'skill',
+        effects: [{
+          kind: 'reorder-hp',
+          target: { side: 'self', min: 0, max: 1 },
+        }],
+        effectIndex: 0,
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-one', { level: 3, seed: 42 })
+
+    expect(decision.state.pendingAbilityEffect).toBeUndefined()
+    expect(decision.state.players['player-one'].battleArea[0].hpCards).toEqual(
+      target.hpCards,
+    )
+    expect(decision.reason?.pendingStrategy).toMatchObject({
+      kind: 'multi-stage',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
   })
 })

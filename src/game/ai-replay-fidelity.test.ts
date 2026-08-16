@@ -11,13 +11,14 @@ import {
  * R3 回歸測試：AI 的 play-item／activate-skill／activate-stage 現在透過
  * `applyGameCommand` 執行（見 src/game/ai.ts、src/game/ai/turn-handler.ts），
  * commandLog 內的 `effectTargets` 必須完整到足以讓 `replayCommandLog` 從初始
- * state 重播出與實際對局完全相同的終局。種子 `red`/3 在合理行動數內會自然
- * 觸發技能／道具發動。`takeAiStep` 會把同一個 step seed 傳給技能、物品、
+ * state 重播出與實際對局完全相同的終局。種子 `red`/6 在合理行動數內會自然
+ * 觸發技能／道具發動。這個固定 fixture 同時驗證 Lv.3 的策略調整不會讓
+ * commandLog 的 activate-skill／effectTargets 重播資訊失真。`takeAiStep` 會把同一個 step seed 傳給技能、物品、
  * 場景與 Refresh，因而相同牌組與 seed 必須產生相同的 commandLog 與終局狀態。
  */
 describe('AI 對局重播忠實度（R3）', () => {
   it('AI 對局的 commandLog 可經 replayCommandLog 重播出相同終局狀態', () => {
-    const seed = 3
+    const seed = 6
     const levels = { 'player-one': 3, 'player-two': 3 } as const
 
     const liveResult = simulateAiMatch(createDemoGame(seed, 'red'), 300, {

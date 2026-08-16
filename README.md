@@ -170,6 +170,8 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
+通用型 Lv.3／Lv.4 AI 已完成 G0～G5：Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`；Lv.4 則以 width 5、depth 5、240 nodes、150ms 的有限 command search 維持 Setup→Payoff 計畫並預留攻擊資源。搜尋只使用 `PlayerView` 與合法 `KnowledgeState`，遇到未知抽牌、攻擊 pending、trap／blocker／FLIP／replacement 等決策即停止推演；timeout 一律回退 Lv.3。G5 已將合法的補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、阻擋、Refresh 與多階段 pending 決策接入 TacticalPlan，並輸出可稽核的 selection telemetry；Lv.1／Lv.2 行為不變。
+
 牌組編輯器的 LV／HP／攻擊力篩選、BS3-061 可選昏厥技能、BS5／BS6 尖括號攻擊後代價稽核、BS6-044 固定攻擊目標追傷、效果傷害 FLIP 結算、陷阱來源／代價與攻擊後效果詳細步驟對戰紀錄，以及 BS5-073、BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇、昏厥效果與對戰紀錄的正向／負向 Browser 路徑。
 
 BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；五色標準牌組已完成資料、固定 seed 矩陣與正式根路徑多場 Browser 驗證，五色各 20/20、合計 100/100 且卡死 0。BS5+6 競技環境五色 AI choice 已接入，BS6-020 的陷阱自身目標選擇也已納入回歸基線；512 副牌組 Swiss 已成為新的 AI 回歸基準，後續以其上位卡表進行 matchup-aware 迭代，並持續以真人對戰與官方賽事資料校準。
@@ -271,6 +273,12 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-17 | 補強通用型 Lv.3／Lv.4 AI G5：faint／after-damage 改以完整合法候選交由通用 selector 排序，陷阱依真正有 target 的子效果評估，inspect-deck 僅依本次合法揭露卡面選取；付款與送支援區成本不再可重複使用同一張卡。新增 33 項定向回歸、測試產物輸出覆寫，G5 原始碼 AI Browser 20／20、六種 preset 各 60-seed，以及 Lv.4 對 Lv.3 的 300-seed（181／300，60.3%，stuck／deadlock／非法指令／turn cap 均為 0）驗證；app／server typecheck 與 lint 通過，Vite build 受隔離 worktree 的 Windows `EPERM` 檔案鎖阻擋。 |
+| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G5：將只讀 `PlayerView`／`KnowledgeState` 的通用 pending 選擇策略接入補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、Blocker、Refresh 與多階段效果，保留規則層 `GameCommand` 驗證與 Lv.1／Lv.2 原行為；新增 selection telemetry 與 hidden-HP 保守略過。完整 Vitest 197 檔／3,143 項、lint、build 及 AI Browser 20／20 通過，stuck 0。 |
+| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G4：Lv.4 改為有限預算的合法 `GameCommand` 多步搜尋（width 5、depth 5、240 nodes、150ms），保留 R9～R11、加入 R16 資源預留，攻擊／防守 pending 與未知抽牌均保守停止推演，逾時回退 Lv.3；新增搜尋、combo、未知資訊與資源 telemetry。完整 Vitest 196 檔／3,138 項、lint、build 與 AI Browser 20／20 通過；60-seed Lv.4 vs Lv.3 為 40／60（66.7%）、stuck／deadlock／非法操作／turn cap 均為 0。 |
+| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G3：Lv.3 以結構化能力、牌組策略、合法已知資訊與前後公開局面評估每個合法候選，輸出可解釋 `ActionScoreBreakdown`；保守處理未知／未支援效果，Lv.1／Lv.2 行為不變；完整 Vitest 192 檔／3,128 項、lint、build 與 AI Browser 驗證通過。 |
+| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G2：新增事件驅動的 `KnowledgeState`，僅保存合法已知頂／底與公開區資訊；洗牌／Refresh／mulligan／未知牌庫變動會清除牌序記憶，未知底牌、對手手牌與未翻 HP 無法影響 snapshot；尚未接入 AI 行動。 |
+| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI 的 G0 契約與 G1 shadow mode：新增結構化能力、牌組策略 profile 與 synergy graph；正式卡池 1,101 張共 2,909 筆能力證據，未知 `reveal-hand` 保守記錄 telemetry，尚未接入 AI 行動。 |
 | 2026-08-16 | 完成牌組編輯器 LV／HP／攻擊力篩選，修正並稽核 BS5／BS6 尖括號攻擊後代價可略過流程，補上 P-059 抽牌來源與條件紀錄；完成 BS6-008「Sugar Swan Cookie」陷阱封鎖、BS6-044 固定原攻擊目標追傷、BS6-061 支援區回手後 BS1-078 場景條件、BS6-051 綠色手牌目標提示、BS6-062 物品支援區餅乾回手代價、效果傷害 FLIP 逐點結算與 BS3-061 可選昏厥技能修正；補上本機／線上對戰紀錄的陷阱來源卡、代價與攻擊後效果來源／目標／結果步驟；完整 Vitest 189 檔／3,104 項、lint、build 通過。 |
 | 2026-08-15 | 依官方韓文資料與實體卡逐卡修正 BS6「Operation Timeguard」52 個基礎卡號（64 筆含異圖）的英文 API 攻擊傷害誤記，並補上 BS4-045@1／BS4-097@1 兩張異圖變體；修正 BS6-079 攻擊後可選代價的目標選擇只能選 1 張的問題（OptionalCostAttackModal 改為多選、支援「對手支援區的卡」標籤與上限進度），新增 `bs6-079-multi-target-probe` Browser 驗證「支付代價→選 3 張對手支援卡橫置」；補強 1164×777 與通用桌面 viewport 的手牌實際卡面邊界 gate；完整 Vitest 188 檔／3,039 項、lint、build 通過。 |
 | 2026-08-15 | 完成 BS5／BS6 全卡 Browser 效果語意稽核與代價交叉驗證：BS5 效果 143／143＋負向 153／153＋無效果攻擊 10／10、BS6 效果 97／97＋負向 138／138＋無效果攻擊 10／10；新增 `verify-bs5-bs6-semantics.ts` 對 291 筆記錄逐張比對官方文字與 runtime 能量代價／傷害／HP 代價／抽牌數量（BS5 400 項、BS6 325 項全相符）；修正稽核驅動對 cookie＋FLIP 文案（BS5-073）與 `battle-cookie-to-hand` 代價群（BS6-073）的分類／驅動缺口；盤點修復 3 項潛在 UI／AI 隱患（battle-cookie-to-hand 提示改為依 runtime 代價動態產生顏色與等級、hpToTrash 缺 amount 時自動代價描述與 AI 成本阻尼一致視為 1 張），並為慢速機器加長 AI benchmark 測試 timeout；完整 Vitest 187 檔／3,031 項、lint、build 通過。 |

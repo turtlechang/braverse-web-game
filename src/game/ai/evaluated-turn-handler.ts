@@ -1,10 +1,9 @@
-import { applyGameCommand, getPendingDecision } from '../commands'
 import type { AttackCommand, PlayerActionCommand } from '../commands'
-import { beginAttack, resolveBattleAutomatically } from '../battle'
 import { getEffectiveAttack } from '../effects'
 import { getLegalTurnCommands } from '../legal-actions'
 import { getActivatableSkillSources } from '../skills'
 import { createPlayerView } from '../player-view'
+import { hasBlockingPending } from '../pending'
 import type { CookieInBattleView, PlayerView } from '../player-view'
 import type { CookieCard, GameState, PlayerId } from '../types'
 import type { AiDecision } from './types'
@@ -13,6 +12,23 @@ import {
   commandActionTypes,
   describeCommand,
 } from './random-turn-handler'
+import {
+  actionIdentityFromCommand,
+  createLv3ContextForView,
+  scoreLv3ActionCandidate,
+  selectBestLv3Action,
+  type ScoredLv3ActionCandidate,
+} from './strategy/lv3-strategy'
+import {
+  createKnowledgeStateFromPlayerView,
+  synchronizeKnowledgeWithPlayerView,
+} from './strategy/knowledge-state'
+import {
+  DEFAULT_LV4_SEARCH_OPTIONS,
+  searchLv4Commands,
+  selectLv4StrategicContribution,
+} from './strategy/lv4-search'
+import { createLv4SearchTelemetry } from './strategy/search-telemetry'
 import { handleAiTurnState, type AiTurnStrategy } from './turn-handler'
 
 const sumBreakLevel = (cards: CookieCard[]): number =>
@@ -296,23 +312,6 @@ const handManagementBonus = (
   return bonus
 }
 
-interface EvaluatedCandidate {
-  decision: AiDecision
-  score: number
-}
-
-interface TwoPlyCandidate {
-  decision: AiDecision
-  score: number
-}
-
-const isDecisiveTwoPlyCandidate = (
-  candidate: TwoPlyCandidate,
-  playerId: PlayerId,
-): boolean =>
-  candidate.decision.state.result?.winnerId === playerId ||
-  candidate.score >= 100000
-
 /**
  * 目標能量數：低於此值時，AI 應優先鋪能量以維持運作。
  */
@@ -372,28 +371,34 @@ const commandCandidate = (
   state: GameState,
   playerId: PlayerId,
   command: PlayerActionCommand,
-): EvaluatedCandidate | null => {
+  beforeView: PlayerView,
+  context: ReturnType<typeof createLv3ContextForView>,
+  legalAttackCountBefore: number,
+): ScoredLv3ActionCandidate<AiDecision> | null => {
   try {
     const nextState = applyChosenTurnCommand(state, command)
-    let score: number
-    if (command.kind === 'attack') {
-      score =
-        evaluatePlayerView(createPlayerView(state, playerId)) +
-        attackBonus(state, playerId, command) +
-        handManagementBonus(state, nextState, playerId, command.kind)
-    } else {
-      score = evaluatePlayerView(createPlayerView(nextState, playerId))
-      score -= cookieSupportPenalty(state, playerId, command)
-      score += handManagementBonus(state, nextState, playerId, command.kind)
-    }
-    return {
-      decision: {
+    const afterView = createPlayerView(nextState, playerId)
+    const decision: AiDecision = {
         state: nextState,
         action: commandActionTypes[command.kind],
         description: describeCommand(state, playerId, command),
-      },
-      score,
     }
+    return scoreLv3ActionCandidate(context, beforeView, {
+      value: decision,
+      identity: actionIdentityFromCommand(command),
+      afterView,
+      // 攻擊進入 pending battle，尚未翻開 HP；以攻擊前公開盤面為基準，
+      // 傷害與致命價值由純 PlayerView 評分模組加入。
+      postActionBoardScore: command.kind === 'attack'
+        ? evaluatePlayerView(beforeView)
+        : evaluatePlayerView(afterView),
+      legalAttackCountBefore,
+      legalAttackCountAfter: command.kind === 'attack'
+        ? 0
+        : getLegalTurnCommands(nextState, playerId).filter(
+          (candidate) => candidate.kind === 'attack',
+        ).length,
+    })
   } catch {
     return null
   }
@@ -425,10 +430,27 @@ export const handleAiEvaluatedTurnState = (
       : { ...delegated, reason: { level: 3 } }
   }
 
-  const candidates: EvaluatedCandidate[] = []
+  const beforeView = createPlayerView(state, playerId)
+  const knowledgeState = strategy.knowledgeState?.observerId === playerId
+    ? synchronizeKnowledgeWithPlayerView(strategy.knowledgeState, beforeView)
+    : createKnowledgeStateFromPlayerView(beforeView)
+  // KnowledgeState 只從 PlayerView 與已知事件建立；不把 GameState 暴露給策略。
+  strategy.knowledgeState = knowledgeState
+  const context = createLv3ContextForView(beforeView, knowledgeState)
+  const legalAttackCountBefore = getLegalTurnCommands(state, playerId).filter(
+    (candidate) => candidate.kind === 'attack',
+  ).length
+  const candidates: ScoredLv3ActionCandidate<AiDecision>[] = []
 
   for (const command of getLegalTurnCommands(state, playerId)) {
-    const candidate = commandCandidate(state, playerId, command)
+    const candidate = commandCandidate(
+      state,
+      playerId,
+      command,
+      beforeView,
+      context,
+      legalAttackCountBefore,
+    )
     if (candidate) candidates.push(candidate)
   }
 
@@ -437,12 +459,21 @@ export const handleAiEvaluatedTurnState = (
       try {
         const decision = strategy.resolveSkill(state, playerId, source, 'activate')
         if (decision) {
-          candidates.push({
-            decision,
-            score:
-              evaluatePlayerView(createPlayerView(decision.state, playerId)) +
-              skillEffectBonus(state, decision.state, playerId),
-          })
+          const afterView = createPlayerView(decision.state, playerId)
+          candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+            value: decision,
+            identity: {
+              kind: 'activate-skill',
+              sourceInstanceId: source.card.instanceId,
+            },
+            afterView,
+            postActionBoardScore: evaluatePlayerView(afterView),
+            legalAttackCountBefore,
+            legalAttackCountAfter: getLegalTurnCommands(
+              decision.state,
+              playerId,
+            ).filter((candidate) => candidate.kind === 'attack').length,
+          }))
         }
       } catch {
         // skip invalid skill resolution
@@ -452,16 +483,53 @@ export const handleAiEvaluatedTurnState = (
       try {
         const decision = strategy.resolveCardAbility(state, playerId, card)
         if (decision) {
-          candidates.push({
-            decision,
-            score:
-              evaluatePlayerView(createPlayerView(decision.state, playerId)) +
-              skillEffectBonus(state, decision.state, playerId),
-          })
+          const afterView = createPlayerView(decision.state, playerId)
+          candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+            value: decision,
+            identity: {
+              kind: `activate-${card.type}`,
+              sourceInstanceId: card.instanceId,
+            },
+            afterView,
+            postActionBoardScore: evaluatePlayerView(afterView),
+            legalAttackCountBefore,
+            legalAttackCountAfter: getLegalTurnCommands(
+              decision.state,
+              playerId,
+            ).filter((candidate) => candidate.kind === 'attack').length,
+          }))
         }
       } catch {
         // skip invalid card ability resolution
       }
+    }
+
+    // `getLegalTurnCommands` deliberately excludes stage activation because
+    // it may contain target／choose-one effects.  Evaluate the already legal
+    // turn-handler decision as an additional root candidate so Lv.3 does not
+    // treat `advance-phase` as the only option when a stage ability is ready.
+    const stageDecision = state.players[playerId].stage
+      ? handleAiTurnState(state, playerId, strategy)
+      : null
+    if (
+      stageDecision?.action === 'activate-stage' &&
+      state.players[playerId].stage
+    ) {
+      const afterView = createPlayerView(stageDecision.state, playerId)
+      candidates.push(scoreLv3ActionCandidate(context, beforeView, {
+        value: stageDecision,
+        identity: {
+          kind: 'activate-stage',
+          sourceInstanceId: state.players[playerId].stage.card.instanceId,
+        },
+        afterView,
+        postActionBoardScore: evaluatePlayerView(afterView),
+        legalAttackCountBefore,
+        legalAttackCountAfter: getLegalTurnCommands(
+          stageDecision.state,
+          playerId,
+        ).filter((candidate) => candidate.kind === 'attack').length,
+      }))
     }
   }
 
@@ -470,17 +538,19 @@ export const handleAiEvaluatedTurnState = (
     return fallback.reason ? fallback : { ...fallback, reason: { level: 3 } }
   }
 
-  let best = candidates[0]
-  for (const candidate of candidates) {
-    if (candidate.score > best.score) best = candidate
+  const best = selectBestLv3Action(candidates)
+  if (!best) {
+    const fallback = handleAiTurnState(state, playerId, strategy)
+    return fallback.reason ? fallback : { ...fallback, reason: { level: 3 } }
   }
 
   return {
-    ...best.decision,
+    ...best.candidate.value,
     reason: {
       level: 3,
       consideredCommands: candidates.length,
-      chosenCommandKind: best.decision.action,
+      chosenCommandKind: best.candidate.identity.kind,
+      actionScore: best.breakdown,
     },
   }
 }
@@ -505,91 +575,10 @@ export const getR10Counters = () => ({
   exposureRisk: r10ExposureRiskCount,
 })
 
-// ---------------------------------------------------------------------------
-// Beam search — 回合層最佳行動序列規劃
-// ---------------------------------------------------------------------------
-
 /**
- * 從指定玩家視角對終局場面打分。反覆使用的基本評分單元。
- */
-const stateScore = (state: GameState, playerId: PlayerId): number => {
-  if (state.status === 'finished') {
-    const view = createPlayerView(state, playerId)
-    return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
-  }
-  const view = createPlayerView(state, playerId)
-  return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
-}
-
-/**
- * 判定一個狀態是否不適合繼續展開 beam（回合結束、換人、有 pending、
- * 對局結束等）。
- */
-const isBeamTerminal = (state: GameState, playerId: PlayerId): boolean =>
-  state.status === 'finished' ||
-  state.activePlayerId !== playerId ||
-  !!state.pendingBattle ||
-  !!state.pendingRefresh ||
-  !!state.pendingReplacement ||
-  !!state.pendingOnPlay
-
-/**
- * 把單一命令應用到當前狀態，若為攻擊則自動結算整場戰鬥。
- * 回傳 (nextState, isTerminal) 供 beam 展開使用。
- */
-const applyBeamAction = (
-  state: GameState,
-  command: PlayerActionCommand,
-  playerId: PlayerId,
-): { nextState: GameState; isTerminal: boolean } => {
-  let next: GameState
-  if (command.kind === 'attack') {
-    next = beginAttack(
-      state,
-      command.attackerInstanceId,
-      command.targetInstanceId,
-      command.supportPaymentIds,
-    )
-  } else {
-    next = applyGameCommand(state, command)
-  }
-  if (next.status === 'finished') return { nextState: next, isTerminal: true }
-
-  if (command.kind === 'attack') {
-    next = resolveBattleAutomatically(next)
-  }
-  if (next.status === 'finished') return { nextState: next, isTerminal: true }
-
-  // advance-phase 之後 phase 會變（e.g. main → end），即終端
-  const phaseChanged = next.phase !== state.phase
-  const terminal = phaseChanged || isBeamTerminal(next, playerId)
-  return { nextState: next, isTerminal: terminal }
-}
-
-interface BeamEntry {
-  state: GameState
-  firstCommand: PlayerActionCommand | null
-  /** 沿路徑累加的單步修正分（R8/R9/R10/attackBonus/cookieSupportPenalty）。 */
-  pathBonus: number
-  score: number
-  isTerminal: boolean
-}
-
-/**
- * 單步過渡（preState → postState，套用 command）的風險／機會修正，
- * 跟 twoPlyCandidateScore 用同一套規則（attackBonus、R9 致命偵測、
- * R10 對手回應風險、R8 手牌管理、支援放置懲罰）。
- *
- * 背景：beam search 原本只用 stateScore（evaluatePlayerView +
- * lv4RiskBonus）幫每個展開節點打分，這些單步修正只留在
- * twoPlyCandidateScore 這條 fallback 路徑裡——但 getLegalTurnCommands
- * 永遠至少含 advance-phase，beam 幾乎不可能回傳 null，fallback 在真實
- * 對局中打不到，等於 R8/R9/R10 對 Lv.4 主路徑完全失效（2026-07-31
- * review：60 局 Lv.4 vs Lv.3 benchmark 裡 R10 相關計數器全部為 0）。
- * 這裡把同一套修正搬進 beam 的每一步展開，讓序列規劃真的吃得到。
- *
- * 對局結束的過渡不疊加任何修正——跟 twoPlyCandidateScore 一致，終局
- * 分數只看 evaluatePlayerView 的 ±100000。
+ * R8～R11 的公開單步風險／機會修正。G4 會在每個合法 command 過渡
+ * 套用此分數，但攻擊一建立 pending battle 就停止搜尋；不會自動略過
+ * 防守方的 blocker、陷阱、FLIP 或 replacement 決策。
  */
 const beamStepBonus = (
   preState: GameState,
@@ -609,117 +598,6 @@ const beamStepBonus = (
   bonus -= cookieSupportPenalty(preState, playerId, command)
   bonus += unspentAttackOpportunityPenalty(preState, playerId, command)
   return bonus
-}
-
-/**
- * 回合層 beam search（Lv.4 核心增強）。
- *
- * 從當前 state 出發，以 beamWidth × maxDepth 枚舉同一回合內可能的
- * 行動序列，取「終局 state 分數 + 沿路單步修正總和」最高者，回傳該
- * 序列的「第一個動作」。
- *
- * 若回傳 null 代表 beam 尚未展開出有效動作（合法命令清單為空或全部
- * 拋例），caller 應 fallback 回傳統單步評估。
- */
-const beamSearchBestFirstCommand = (
-  state: GameState,
-  playerId: PlayerId,
-  beamWidth: number,
-  maxDepth: number,
-): { firstCommand: PlayerActionCommand | null; beamScore: number } => {
-  let beams: BeamEntry[] = [
-    {
-      state,
-      firstCommand: null,
-      pathBonus: 0,
-      score: stateScore(state, playerId),
-      isTerminal: false,
-    },
-  ]
-
-  for (let depth = 0; depth < maxDepth; depth += 1) {
-    if (beams.every((b) => b.isTerminal)) break
-
-    const nextBeams: BeamEntry[] = []
-
-    for (const beam of beams) {
-      if (beam.isTerminal) {
-        nextBeams.push(beam)
-        continue
-      }
-
-      const commands = getLegalTurnCommands(beam.state, playerId)
-      for (const cmd of commands) {
-        try {
-          const { nextState, isTerminal } = applyBeamAction(beam.state, cmd, playerId)
-          const pathBonus =
-            beam.pathBonus + beamStepBonus(beam.state, nextState, playerId, cmd)
-          const score = stateScore(nextState, playerId) + pathBonus
-          nextBeams.push({
-            state: nextState,
-            firstCommand: beam.firstCommand ?? cmd,
-            pathBonus,
-            score,
-            isTerminal,
-          })
-        } catch {
-          // invalid action within beam — skip
-        }
-      }
-    }
-
-    if (nextBeams.length === 0) break
-
-    // 穩定排序（deterministic tie-break）
-    nextBeams.sort((a, b) => b.score - a.score)
-    beams = nextBeams.slice(0, beamWidth)
-  }
-
-  const best = beams[0]
-  const bestScore = best?.score ?? -Infinity
-  if (!best?.firstCommand) return { firstCommand: null, beamScore: bestScore }
-  // 當 beam 的「最佳序列」根本沒做事（advance-phase 是第一個命令），
-  // best.firstCommand 其實就是 advance-phase；但如果 beams 只有初始
-  // entry（no expansion），firstCommand 為 null，退回 fallback。
-  return { firstCommand: best.firstCommand, beamScore: bestScore }
-}
-
-/**
- * 技能與道具不在 getLegalTurnCommands 的列舉中，舊版 Lv.4 因此只會
- * 比較它們結算當下的場面，低估「先使用能力、再攻擊／部署」的回合價值。
- * 若能力已完整結算且控制權仍在我方，沿用同一個 beam 估算其後兩步；
- * 有 pending 決策時則維持單步評分，交由 dispatcher 正常處理。
- */
-const scoreAbilityWithContinuation = (
-  state: GameState,
-  decision: AiDecision,
-  playerId: PlayerId,
-  beamWidth: number,
-  maxDepth: number,
-): number => {
-  const effectBonus = skillEffectBonus(state, decision.state, playerId)
-  const immediateScore = stateScore(decision.state, playerId) + effectBonus
-  const postState = decision.state
-
-  if (
-    postState.status !== 'playing' ||
-    postState.activePlayerId !== playerId ||
-    postState.phase !== 'main' ||
-    getPendingDecision(postState)
-  ) {
-    return immediateScore
-  }
-
-  const continuation = beamSearchBestFirstCommand(
-    postState,
-    playerId,
-    beamWidth,
-    Math.max(1, maxDepth - 1),
-  )
-  return Math.max(
-    immediateScore,
-    continuation.beamScore + effectBonus,
-  )
 }
 
 /**
@@ -870,73 +748,59 @@ export const responseRiskPenalty = (
   return penalty
 }
 
-/**
- * 計算單一候選動作的兩層前瞻分數。
- *
- * 與 Lv.3 的差異：
- * - 攻擊：使用 resolveBattleAutomatically 解析完整戰鬥，再評分
- *   （Lv.3 僅用 attackBonus 啟發式）
- * - 所有動作：疊加 lv4RiskBonus 風險修正
- */
-const twoPlyCandidateScore = (
+const isLv4SearchTerminal = (
   state: GameState,
   playerId: PlayerId,
-  command: PlayerActionCommand,
+): boolean =>
+  state.status !== 'playing' ||
+  state.activePlayerId !== playerId ||
+  hasBlockingPending(state) ||
+  !!state.pendingEffectOrder ||
+  state.phase === 'end' ||
+  state.phase === 'active'
+
+const canContinueFromKnownHand = (
+  beforeView: PlayerView,
+  afterView: PlayerView,
+): boolean => {
+  const beforeHandIds = new Set(beforeView.hand.map((card) => card.instanceId))
+  return afterView.hand.every((card) => beforeHandIds.has(card.instanceId))
+}
+
+const terminalRankForDecision = (
+  decision: AiDecision,
+  playerId: PlayerId,
 ): number => {
-  try {
-    let nextState: GameState
-    if (command.kind === 'attack') {
-      nextState = beginAttack(
-        state,
-        command.attackerInstanceId,
-        command.targetInstanceId,
-        command.supportPaymentIds,
-      )
-    } else {
-      nextState = applyGameCommand(state, command)
+  if (decision.state.status !== 'finished') return 1
+  return decision.state.result?.winnerId === playerId ? 2 : 0
+}
+
+interface Lv4RootCandidate {
+  decision: AiDecision
+  relativeScore: number
+  tieBreakKey: string
+  actionScore: NonNullable<AiDecision['reason']>['actionScore']
+  telemetry: ReturnType<typeof createLv4SearchTelemetry>
+}
+
+const chooseBestLv4Candidate = (
+  candidates: readonly Lv4RootCandidate[],
+  playerId: PlayerId,
+): Lv4RootCandidate | null => {
+  if (candidates.length === 0) return null
+  return candidates.reduce((best, candidate) => {
+    const candidateRank = terminalRankForDecision(candidate.decision, playerId)
+    const bestRank = terminalRankForDecision(best.decision, playerId)
+    if (candidateRank !== bestRank) {
+      return candidateRank > bestRank ? candidate : best
     }
-    if (nextState.status === 'finished') {
-      const view = createPlayerView(nextState, playerId)
-      return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
+    if (candidate.relativeScore !== best.relativeScore) {
+      return candidate.relativeScore > best.relativeScore ? candidate : best
     }
-
-    let resolved = nextState
-    if (command.kind === 'attack') {
-      resolved = resolveBattleAutomatically(nextState)
-    }
-
-    if (resolved.status === 'finished') {
-      const view = createPlayerView(resolved, playerId)
-      return evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
-    }
-
-    const view = createPlayerView(resolved, playerId)
-    let score = evaluatePlayerView(view) + lv4RiskBonus(view, playerId)
-
-    // 攻擊動作：仍保留 attackBonus 作為額外斬殺加成
-    if (command.kind === 'attack') {
-      score += attackBonus(state, playerId, command)
-      // R9: 致命傷害偵測（Lv.4 專用）
-      score += lethalDetectionBonus(state, playerId, command)
-    }
-
-    // R10: 對手回應風險扣分（Lv.4 專用）
-    // responseRiskPenalty 回傳非正值（負＝風險），以 += 疊加做扣分。
-    score += responseRiskPenalty(state, resolved, playerId, command)
-
-    // R8: 手牌數量管理
-    score += handManagementBonus(state, resolved, playerId, command.kind)
-
-    // 支援放置懲罰（餅乾放支援區浪費；能量不足時不懲罰以利鋪能量）
-    score -= cookieSupportPenalty(state, playerId, command)
-
-    // 已可攻擊卻直接結束主階段，會放棄當回合的公開傷害機會。
-    score += unspentAttackOpportunityPenalty(state, playerId, command)
-
-    return score
-  } catch {
-    return -999999
-  }
+    return candidate.tieBreakKey.localeCompare(best.tieBreakKey) < 0
+      ? candidate
+      : best
+  })
 }
 
 export const handleAiTwoPlyTurnState = (
@@ -966,55 +830,8 @@ export const handleAiTwoPlyTurnState = (
     }
   }
 
-  // ── Beam search 回合層序列規劃 ──
-  // beam 探索最多 3 步 deep，同層保留 top 3 序列。
-  // 攻擊自動結算整場戰鬥；終端 state 直接以 stateScore 打分。
-  const beamWidth = 3
-  const maxBeamDepth = 3
-  const beamResult = beamSearchBestFirstCommand(
-    state,
-    playerId,
-    beamWidth,
-    maxBeamDepth,
-  )
-
-  const candidates: TwoPlyCandidate[] = []
-
-  if (beamResult.firstCommand) {
-    const decisionState = applyChosenTurnCommand(state, beamResult.firstCommand)
-    candidates.push({
-      decision: {
-        state: decisionState,
-        action: commandActionTypes[beamResult.firstCommand.kind],
-        description: describeCommand(state, playerId, beamResult.firstCommand),
-      },
-      score: beamResult.beamScore,
-    })
-  }
-
-  // 保留所有單步候選作為 beam 的安全比較。beam 寬度有限，若提早剪枝，
-  // 不能因此漏掉 Lv.3 會選到的即時高價值行動；twoPlyCandidateScore 對
-  // 攻擊會完成整場戰鬥結算，也能和 beam 的終局／風險分數直接比較。
-  for (const command of getLegalTurnCommands(state, playerId)) {
-    const score = twoPlyCandidateScore(state, playerId, command)
-    try {
-      candidates.push({
-        decision: {
-          state: applyChosenTurnCommand(state, command),
-          action: commandActionTypes[command.kind],
-          description: describeCommand(state, playerId, command),
-        },
-        score,
-      })
-    } catch {
-      // skip invalid command
-    }
-  }
-
-  // Lv.3 的即時評分已經過較長時間的牌組回歸驗證；beam 的累積分數
-  // 則是用於發現「本回合可直接取勝」的路線，兩者不能直接比較。
-  // 因此將 Lv.3 視為穩定基線，只讓能明確導向勝局的前瞻路線覆蓋它，
-  // 避免 Lv.4 因預測深度有限而無故放棄既有攻擊機會。
+  // G3 是任何預算中斷時的 deterministic fallback；reason 保持 level 4，
+  // 讓 benchmark 能辨識安全降階，而不是把它誤當成 Lv.3 對局。
   const previousLevel = strategy.currentLevel
   strategy.currentLevel = 3
   let baseline: AiDecision
@@ -1024,19 +841,126 @@ export const handleAiTwoPlyTurnState = (
     strategy.currentLevel = previousLevel
   }
 
+  const beforeView = createPlayerView(state, playerId)
+  const knowledgeState = strategy.knowledgeState?.observerId === playerId
+    ? synchronizeKnowledgeWithPlayerView(strategy.knowledgeState, beforeView)
+    : createKnowledgeStateFromPlayerView(beforeView)
+  strategy.knowledgeState = knowledgeState
+  const rootContext = createLv3ContextForView(beforeView, knowledgeState)
+  const deadlineMs = Date.now() + DEFAULT_LV4_SEARCH_OPTIONS.timeBudgetMs
+  const searchHooks = {
+    getLegalCommands: getLegalTurnCommands,
+    applyCommand: applyChosenTurnCommand,
+    createPlayerView,
+    scorePublicView: (view: PlayerView) =>
+      evaluatePlayerView(view) + lv4RiskBonus(view, playerId),
+    legacyStepBonus: beamStepBonus,
+    isTerminal: isLv4SearchTerminal,
+  }
+  const searchResult = searchLv4Commands(
+    state,
+    playerId,
+    knowledgeState,
+    searchHooks,
+    { deadlineMs },
+  )
+
+  const fallbackToLv3 = (telemetry = searchResult.telemetry): AiDecision => ({
+    ...baseline,
+    reason: {
+      level: 4,
+      consideredCommands: telemetry.nodesGenerated,
+      chosenCommandKind: baseline.reason?.chosenCommandKind ?? baseline.action,
+      actionScore: baseline.reason?.actionScore,
+      lv4Search: { ...telemetry, fallbackUsed: true },
+    },
+  })
+
+  if (searchResult.telemetry.stopReason === 'time-budget') {
+    return fallbackToLv3()
+  }
+
+  const candidates: Lv4RootCandidate[] = []
+  if (searchResult.firstCommand && searchResult.firstStep) {
+    try {
+      const command = searchResult.firstCommand
+      candidates.push({
+        decision: {
+          state: applyChosenTurnCommand(state, command),
+          action: commandActionTypes[command.kind],
+          description: describeCommand(state, playerId, command),
+        },
+        relativeScore: searchResult.relativeScore,
+        tieBreakKey: searchResult.firstStep.actionScore.tieBreakKey,
+        actionScore: searchResult.firstStep.actionScore,
+        telemetry: searchResult.telemetry,
+      })
+    } catch {
+      // 搜尋後再次由規則層驗證；若狀態已不適用就保守回退 G3。
+    }
+  }
+
+  const addAbilityCandidate = (
+    decision: AiDecision,
+    kind: string,
+    sourceInstanceId: string,
+  ): boolean => {
+    const afterView = createPlayerView(decision.state, playerId)
+    const canContinue = canContinueFromKnownHand(beforeView, afterView) &&
+      !isLv4SearchTerminal(decision.state, playerId)
+    const scored = scoreLv3ActionCandidate(rootContext, beforeView, {
+      value: decision,
+      identity: { kind, sourceInstanceId },
+      afterView,
+      postActionBoardScore:
+        evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId),
+      legalAttackCountBefore: getLegalTurnCommands(state, playerId)
+        .filter((command) => command.kind === 'attack').length,
+      legalAttackCountAfter: canContinue
+        ? getLegalTurnCommands(decision.state, playerId)
+          .filter((command) => command.kind === 'attack').length
+        : 0,
+    })
+    let relativeScore =
+      (evaluatePlayerView(afterView) + lv4RiskBonus(afterView, playerId)) -
+      (evaluatePlayerView(beforeView) + lv4RiskBonus(beforeView, playerId)) +
+      selectLv4StrategicContribution(scored.breakdown) +
+      skillEffectBonus(state, decision.state, playerId)
+    let telemetry = createLv4SearchTelemetry()
+
+    if (canContinue) {
+      const continuation = searchLv4Commands(
+        decision.state,
+        playerId,
+        knowledgeState,
+        searchHooks,
+        { deadlineMs },
+      )
+      telemetry = continuation.telemetry
+      if (telemetry.stopReason === 'time-budget') return false
+      relativeScore += continuation.relativeScore
+    }
+
+    candidates.push({
+      decision,
+      relativeScore,
+      tieBreakKey: scored.breakdown.tieBreakKey,
+      actionScore: scored.breakdown,
+      telemetry,
+    })
+    return true
+  }
+
   if (state.phase === 'main') {
     for (const source of getActivatableSkillSources(state.players[playerId])) {
       try {
         const decision = strategy.resolveSkill(state, playerId, source, 'activate')
-        if (decision) {
-          const score = scoreAbilityWithContinuation(
-            state,
-            decision,
-            playerId,
-            beamWidth,
-            maxBeamDepth,
-          )
-          candidates.push({ decision, score })
+        if (decision && !addAbilityCandidate(
+          decision,
+          'activate-skill',
+          source.card.instanceId,
+        )) {
+          return fallbackToLv3()
         }
       } catch {
         // skip invalid skill resolution
@@ -1045,61 +969,52 @@ export const handleAiTwoPlyTurnState = (
     for (const card of state.players[playerId].hand) {
       try {
         const decision = strategy.resolveCardAbility(state, playerId, card)
-        if (decision) {
-          const score = scoreAbilityWithContinuation(
-            state,
-            decision,
-            playerId,
-            beamWidth,
-            maxBeamDepth,
-          )
-          candidates.push({ decision, score })
+        if (decision && !addAbilityCandidate(
+          decision,
+          `activate-${card.type}`,
+          card.instanceId,
+        )) {
+          return fallbackToLv3()
         }
       } catch {
         // skip invalid card ability resolution
       }
     }
+    const stageDecision = state.players[playerId].stage
+      ? handleAiTurnState(state, playerId, strategy)
+      : null
+    if (
+      stageDecision?.action === 'activate-stage' &&
+      state.players[playerId].stage &&
+      !addAbilityCandidate(
+        stageDecision,
+        'activate-stage',
+        state.players[playerId].stage.card.instanceId,
+      )
+    ) {
+      return fallbackToLv3()
+    }
   }
 
   if (candidates.length === 0) {
-    const fallback = handleAiTurnState(state, playerId, strategy)
-    if (fallback.reason) return fallback
-    return {
-      ...fallback,
-      reason: {
-        level: 4 as const,
-        consideredCommands: 0,
-        chosenCommandKind: fallback.action,
-      },
-    }
+    return fallbackToLv3({
+      ...searchResult.telemetry,
+      stopReason: 'no-candidate',
+      fallbackUsed: true,
+    })
   }
 
-  // Deterministic tie-break：分數相同時選先出現的（穩定排序）
-  const decisiveCandidates = candidates.filter((candidate) =>
-    isDecisiveTwoPlyCandidate(candidate, playerId),
-  )
-  if (decisiveCandidates.length === 0) {
-    return {
-      ...baseline,
-      reason: {
-        level: 4,
-        consideredCommands: candidates.length,
-        chosenCommandKind: baseline.action,
-      },
-    }
-  }
-
-  let best = decisiveCandidates[0]
-  for (const candidate of decisiveCandidates) {
-    if (candidate.score > best.score) best = candidate
-  }
+  const best = chooseBestLv4Candidate(candidates, playerId)
+  if (!best) return fallbackToLv3()
 
   return {
     ...best.decision,
     reason: {
       level: 4,
-      consideredCommands: candidates.length,
+      consideredCommands: searchResult.telemetry.nodesGenerated + candidates.length,
       chosenCommandKind: best.decision.action,
+      actionScore: best.actionScore,
+      lv4Search: best.telemetry,
     },
   }
 }

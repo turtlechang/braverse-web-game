@@ -22,7 +22,9 @@ if (!chromium) {
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4173)
 const baseUrl = `http://127.0.0.1:${port}`
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
-const outputDirectory = resolve(root, 'test-results')
+// 允許受檔案鎖定或唯讀工作目錄的驗證，將純測試產物導向外部暫存區；
+// 未設定時仍保留既有專案內 test-results 行為。
+const outputDirectory = process.env.BRAVERSE_TEST_RESULTS_DIR ?? resolve(root, 'test-results')
 const browserExecutable =
   process.env.PLAYWRIGHT_BROWSER_EXECUTABLE ??
   [

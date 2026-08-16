@@ -44,6 +44,11 @@ export const simulateAbilityEffects = (
   isTargetCountSufficient: (effect: CardEffect, targetIds: string[]) => boolean,
   effectSelectionMeta: { sourceInstanceId: string; paymentIds: string[] },
   shuffle?: Shuffle,
+  chooseEffectMode?: (
+    state: GameState,
+    context: EffectContext,
+    effect: Extract<CardEffect, { kind: 'choose-one' }>,
+  ) => number,
 ): SimulatedAbilityEffects => {
   let nextState = state
   const effectTargets: string[][] = []
@@ -58,7 +63,9 @@ export const simulateAbilityEffects = (
 
     const chooseOne = asChooseOneEffect(effect)
     if (chooseOne) {
-      const modeIndex = chooseAiEffectMode(nextState, context, chooseOne)
+      const modeIndex = chooseEffectMode
+        ? chooseEffectMode(nextState, context, chooseOne)
+        : chooseAiEffectMode(nextState, context, chooseOne)
       chooseOneModes.push(modeIndex)
       queue = expandChooseOne(queue, index, modeIndex)
       // index 不前進，改由展開後的第一個效果接手這一輪。

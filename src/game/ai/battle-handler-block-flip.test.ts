@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { takeAiStep } from '../ai'
 import { evaluateBlockWorth, handleAiPendingBattle } from './battle-handler'
 import { cookie, createBattleState, declareAttack, item } from '../test-helpers/battle-helpers'
 import type { CardSkill, CookieInBattle, GameCard, GameState } from '../types'
@@ -175,6 +176,34 @@ describe('evaluateBlockWorth', () => {
     expect(decision?.action).toBe('play-trap')
     expect(decision?.description).toContain('未發動陷阱')
   })
+
+  it('takeAiStep 會保留防守決策的 G5 telemetry，而不是只回報舊 action', () => {
+    let state = declareAttack(createBattleState())
+    const blocker = asBlocker('telemetry-blocker', 1, 5)
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [
+            ...state.players['player-one'].battleArea,
+            blocker,
+          ],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-one', { level: 3, seed: 17 })
+
+    expect(decision.action).toBe('play-blocker')
+    expect(decision.reason?.pendingStrategy).toMatchObject({
+      kind: 'blocker',
+      sourceCardId: 'telemetry-blocker',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
+  })
 })
 
 /**
@@ -294,5 +323,43 @@ describe('handleAiPendingBattle：FLIP 發動判斷', () => {
     const remainingHand = decision!.state.players['player-one'].hand
     expect(remainingHand.some((c) => c.instanceId === 'ace-cookie')).toBe(false)
     expect(remainingHand.some((c) => c.instanceId === 'junk-item')).toBe(true)
+  })
+})
+
+describe('handleAiPendingBattle：FLIP 多目標安全性', () => {
+  it('當不同子效果沒有共同 target id 時保守略過，不送出非法 command', () => {
+    const state = withFlipPending(
+      declareAttack(createBattleState()),
+      {
+        ...cookie('multi-target-flip'),
+        officialType: 'flip',
+        flip: {
+          text: 'Deal damage to an opponent and gain HP on your Cookie.',
+          cost: { energy: {}, discardHand: 0 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 1,
+              target: { side: 'opponent', min: 1, max: 1 },
+            },
+            {
+              kind: 'gain-hp',
+              amount: 1,
+              target: { side: 'self', min: 1, max: 1 },
+            },
+          ],
+        },
+      },
+    )
+
+    const decision = handleAiPendingBattle(state, 'player-one', 3)
+
+    expect(decision?.action).toBe('resolve-flip')
+    expect(decision?.description).toContain('略過')
+    expect(decision?.reason?.pendingStrategy).toMatchObject({
+      kind: 'flip',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
   })
 })

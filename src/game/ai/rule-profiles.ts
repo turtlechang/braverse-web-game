@@ -18,6 +18,11 @@ export type RuleId =
   | 'R9'
   | 'R10'
   | 'R11'
+  | 'R12'
+  | 'R13'
+  | 'R14'
+  | 'R15'
+  | 'R16'
 
 // ============================================================================
 // 規則描述
@@ -123,6 +128,41 @@ export const RULE_DEFINITIONS: Record<RuleId, RuleDefinition> = {
     priority: 'HIGH',
     module: 'evaluated-turn-handler.ts',
   },
+  R12: {
+    id: 'R12',
+    name: '結構化能力辨識',
+    description: '依結構化 CardEffect、cost、timing 與 target 評估來源能力，不解析顯示卡文。',
+    priority: 'HIGH',
+    module: 'strategy/capability-extractor.ts',
+  },
+  R13: {
+    id: 'R13',
+    name: '動態牌組策略推導',
+    description: '依可合法得知的己方能力分布推導連續策略權重，不使用牌組或彈數 profile。',
+    priority: 'MEDIUM',
+    module: 'strategy/deck-profile.ts',
+  },
+  R14: {
+    id: 'R14',
+    name: '已知資訊安全記憶',
+    description: '只使用 PlayerView 與合法 KnowledgeState，未知牌序、對手手牌與未翻 HP 不參與評分。',
+    priority: 'CRITICAL',
+    module: 'strategy/knowledge-state.ts',
+  },
+  R15: {
+    id: 'R15',
+    name: 'Setup／Payoff 計畫評分',
+    description: '以結構化 setup/payoff、可見條件與未知資訊扣分排序單步行動。',
+    priority: 'HIGH',
+    module: 'strategy/tactical-plans.ts',
+  },
+  R16: {
+    id: 'R16',
+    name: '指令順序與資源預留',
+    description: '在有限多步 command 搜尋中保留後續攻擊付款，並比較 setup、payoff 與收尾順序。',
+    priority: 'HIGH',
+    module: 'strategy/lv4-search.ts',
+  },
 }
 
 // ============================================================================
@@ -153,15 +193,15 @@ export const LV2_PROFILE: RuleProfile = {
 export const LV3_PROFILE: RuleProfile = {
   level: 3,
   name: '評估式',
-  description: '評估式 AI，使用 9 條規則，評估一步結果',
-  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R7', 'R8'],
+  description: '評估式 AI，評估一步結果並使用結構化能力、策略 profile、已知資訊與 setup/payoff。',
+  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R7', 'R8', 'R12', 'R13', 'R14', 'R15'],
 }
 
 export const LV4_PROFILE: RuleProfile = {
   level: 4,
   name: '兩層前瞻',
-  description: '兩層前瞻 AI，使用全部 13 條規則，含風險與攻擊節奏管理',
-  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R6c', 'R7', 'R8', 'R9', 'R10', 'R11'],
+  description: '兩層前瞻 AI，含通用策略、風險與攻擊節奏管理',
+  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R6c', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16'],
 }
 
 // ============================================================================

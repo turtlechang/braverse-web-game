@@ -3,6 +3,7 @@ import {
   createDemoGame,
   evaluatePlayerView,
   createPlayerView,
+  applyGameCommand,
   simulateAiMatch,
   takeAiStep,
   type GameState,
@@ -39,10 +40,29 @@ const baseView = (): PlayerView => ({
 
 describe('Lv.3 評估式 AI', () => {
   it('決策附帶 Lv.3 結構化 reason', () => {
-    const state = createDemoGame(1)
+    const state = applyGameCommand(createDemoGame(1), {
+      kind: 'advance-phase',
+      playerId: 'player-one',
+    })
     const decision = takeAiStep(state, state.activePlayerId, { level: 3 })
 
     expect(decision.reason?.level).toBe(3)
+    expect(decision.reason?.actionScore?.scoreType).toBe('relative-action-score')
+    expect(decision.reason?.actionScore?.contributions).toEqual(
+      expect.any(Array),
+    )
+  })
+
+  it('Lv.1、Lv.2 不會附加 Lv.3 action score', () => {
+    const state = applyGameCommand(createDemoGame(1), {
+      kind: 'advance-phase',
+      playerId: 'player-one',
+    })
+
+    expect(takeAiStep(state, state.activePlayerId, { level: 1 }).reason?.actionScore)
+      .toBeUndefined()
+    expect(takeAiStep(state, state.activePlayerId, { level: 2 }).reason?.actionScore)
+      .toBeUndefined()
   })
 
   it('evaluatePlayerView 對己方場面優勢給正分、劣勢給負分', () => {

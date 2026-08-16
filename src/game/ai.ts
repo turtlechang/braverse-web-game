@@ -18,8 +18,10 @@ import {
   getEffectiveAttack,
   isEffectConditionMet,
   isEffectUntargeted,
+  requiresEffectCardSelection,
 } from './effects'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
+import { getRefreshCandidates } from './refresh'
 import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
@@ -33,6 +35,7 @@ import {
   getTrashToDeckBottomCostCandidates,
 } from './skills'
 import { simulateAbilityEffects } from './ai/ability-effects'
+import { chooseAiEffectMode } from './ai/choose-one-mode'
 import type {
   AbilityCost,
   CardEffect,
@@ -54,10 +57,22 @@ import type {
 import { handleAiPendingDecision } from './ai/pending-handler'
 import { handleAiPendingBattle } from './ai/battle-handler'
 import { dispatchAiStep } from './ai/dispatcher'
+import { createPlayerView } from './player-view'
+import {
+  createKnowledgeStateFromPlayerView,
+  synchronizeKnowledgeWithPlayerView,
+} from './ai/strategy/knowledge-state'
+import type { KnowledgeState } from './ai/strategy/knowledge-state'
+import {
+  createPendingSelectionStrategy,
+  type PendingSelectionStrategy,
+  type PendingSelectionKind,
+} from './ai/strategy/pending-selection'
 import { handleAiRandomTurnState } from './ai/random-turn-handler'
 import { handleAiEvaluatedTurnState, handleAiTwoPlyTurnState } from './ai/evaluated-turn-handler'
 import {
   handleAiTurnState,
+  chooseAiStageCostIds,
   type AiTurnStrategy,
 } from './ai/turn-handler'
 import {
@@ -88,7 +103,7 @@ export const selectAiEnergyPayment = (
 ): string[] | null =>
   selectEnergyPayment(skill.cost.energy ?? skill.cost, supportArea)
 
-const chooseEffectTargets = (
+const legacyChooseEffectTargets = (
   state: GameState,
   context: EffectContext,
   effect: CardEffect,
@@ -461,11 +476,21 @@ const chooseAbilityCostIds = (
   cost: AbilityCost,
   sourceInstanceId: string,
   effects: CardEffect[] = [],
+  universal?: PendingSelectionStrategy,
 ) => {
   const player = state.players[playerId]
+  const orderedSupportCards = universal?.enabled
+    ? universal.orderPaymentIds(
+        player.supportArea.map((support) => support.card.instanceId),
+      ).map((instanceId) =>
+        player.supportArea.find(
+          (support) => support.card.instanceId === instanceId,
+        )!,
+      )
+    : player.supportArea
   const paymentIds = selectEnergyPayment(
     cost.energy ?? cost,
-    player.supportArea,
+    orderedSupportCards,
   )
   if (!paymentIds) return null
 
@@ -473,16 +498,27 @@ const chooseAbilityCostIds = (
   const remainingSupports = player.supportArea.filter(
     (support) => !paymentSet.has(support.card.instanceId),
   )
-  const supportToTrashIds = remainingSupports
-    .slice(0, cost.supportToTrash ?? 0)
-    .map((support) => support.card.instanceId)
+  const supportToTrashCandidateIds = remainingSupports.map(
+    (support) => support.card.instanceId,
+  )
+  const supportToTrashIds = universal?.enabled
+    ? universal.orderCostIds(
+        supportToTrashCandidateIds,
+        cost.supportToTrash ?? 0,
+      )
+    : supportToTrashCandidateIds.slice(0, cost.supportToTrash ?? 0)
   if (supportToTrashIds.length < (cost.supportToTrash ?? 0)) return null
 
   const supportToTrashSet = new Set(supportToTrashIds)
-  const supportToHandIds = remainingSupports
+  const supportToHandCandidateIds = remainingSupports
     .filter((support) => !supportToTrashSet.has(support.card.instanceId))
-    .slice(0, cost.supportToHand ?? 0)
     .map((support) => support.card.instanceId)
+  const supportToHandIds = universal?.enabled
+    ? universal.orderCostIds(
+        supportToHandCandidateIds,
+        cost.supportToHand ?? 0,
+      )
+    : supportToHandCandidateIds.slice(0, cost.supportToHand ?? 0)
   if (supportToHandIds.length < (cost.supportToHand ?? 0)) return null
 
   const discardCandidates = player.hand.filter(
@@ -500,22 +536,36 @@ const chooseAbilityCostIds = (
           player.hand.length - 1 - handLimit.count,
         )
       : cost.discardHand ?? 0
-  const discardHandIds = discardCandidates
-    .slice(0, discardCount)
-    .map((card) => card.instanceId)
+  const discardHandIds = universal?.enabled
+    ? universal.orderCostIds(
+        discardCandidates.map((card) => card.instanceId),
+        discardCount,
+      )
+    : discardCandidates.slice(0, discardCount).map((card) => card.instanceId)
   if (discardHandIds.length < discardCount) return null
 
-  const hpToTrashTargetIds = cost.hpToTrash
+  const hpToTrashCandidateIds = cost.hpToTrash
     ? getHpToTrashCostCandidates(cost, player.battleArea, sourceInstanceId)
-        .slice(0, 1)
         .map((cookie) => cookie.card.instanceId)
+    : []
+  const hpToTrashTargetIds = cost.hpToTrash
+    ? universal?.enabled
+      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
+      : hpToTrashCandidateIds.slice(0, 1)
     : []
   if (cost.hpToTrash && hpToTrashTargetIds.length === 0) return null
 
-  const trashBattleCookieIds = cost.trashBattleCookie
+  const trashBattleCookieCandidateIds = cost.trashBattleCookie
     ? getTrashBattleCookieCostCandidates(cost, player.battleArea, sourceInstanceId)
-        .slice(0, cost.trashBattleCookie.count)
         .map((cookie) => cookie.card.instanceId)
+    : []
+  const trashBattleCookieIds = cost.trashBattleCookie
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          trashBattleCookieCandidateIds,
+          cost.trashBattleCookie.count,
+        )
+      : trashBattleCookieCandidateIds.slice(0, cost.trashBattleCookie.count)
     : []
   if (
     cost.trashBattleCookie &&
@@ -524,10 +574,17 @@ const chooseAbilityCostIds = (
     return null
   }
 
-  const trashToDeckBottomIds = cost.trashToDeckBottom
+  const trashToDeckBottomCandidateIds = cost.trashToDeckBottom
     ? getTrashToDeckBottomCostCandidates(cost, player.discardPile)
-        .slice(0, cost.trashToDeckBottom.count)
         .map((card) => card.instanceId)
+    : []
+  const trashToDeckBottomIds = cost.trashToDeckBottom
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          trashToDeckBottomCandidateIds,
+          cost.trashToDeckBottom.count,
+        )
+      : trashToDeckBottomCandidateIds.slice(0, cost.trashToDeckBottom.count)
     : []
   if (
     cost.trashToDeckBottom &&
@@ -536,10 +593,17 @@ const chooseAbilityCostIds = (
     return null
   }
 
-  const trashToDeckIds = cost.trashToDeck
+  const trashToDeckCandidateIds = cost.trashToDeck
     ? getTrashToDeckCostCandidates(cost, player.discardPile)
-        .slice(0, cost.trashToDeck.count)
         .map((card) => card.instanceId)
+    : []
+  const trashToDeckIds = cost.trashToDeck
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          trashToDeckCandidateIds,
+          cost.trashToDeck.count,
+        )
+      : trashToDeckCandidateIds.slice(0, cost.trashToDeck.count)
     : []
   if (
     cost.trashToDeck &&
@@ -590,12 +654,19 @@ const resolveAiCardAbility = (
 ): AiDecision | null => {
   const ability = card.item
   if (!ability) return null
+  const universal = createUniversalPendingStrategy(
+    state,
+    playerId,
+    aiTurnStrategy.currentLevel,
+    aiTurnStrategy.knowledgeState,
+  )
   const costIds = chooseAbilityCostIds(
     state,
     playerId,
     ability.cost,
     card.instanceId,
     ability.effects,
+    universal ?? undefined,
   )
   if (!costIds) return null
 
@@ -656,10 +727,11 @@ const resolveAiCardAbility = (
     played,
     context,
     ability.effects,
-    chooseEffectTargets,
+    universalChooseEffectTargets,
     isItemEffectTargetCountSufficient,
     { sourceInstanceId: card.instanceId, paymentIds: costIds.paymentIds },
     shuffle,
+    universalChooseEffectMode,
   )
   if (sim.aborted) return null
 
@@ -764,7 +836,25 @@ const resolveAiSkill = (
   }
 
   const player = state.players[playerId]
-  const paymentIds = selectAiEnergyPayment(skill, player.supportArea)
+  const universal = createUniversalPendingStrategy(
+    state,
+    playerId,
+    aiTurnStrategy.currentLevel,
+    aiTurnStrategy.knowledgeState,
+  )
+  const orderedSupportCards = universal?.enabled
+    ? universal.orderPaymentIds(
+        player.supportArea.map((support) => support.card.instanceId),
+      ).map((instanceId) =>
+        player.supportArea.find(
+          (support) => support.card.instanceId === instanceId,
+        )!,
+      )
+    : player.supportArea
+  const paymentIds = selectEnergyPayment(
+    skill.cost.energy ?? skill.cost,
+    orderedSupportCards,
+  )
   if (!paymentIds) return null
 
   // cycle-hp（BS4-030）：整個效果依賴「我方其他黃色餅乾」，沒有合法目標時
@@ -782,13 +872,19 @@ const resolveAiSkill = (
     return null
   }
 
+  const remainingSupportsAfterPayment = player.supportArea.filter(
+    (support) => !paymentIds.includes(support.card.instanceId),
+  )
+  const supportToTrashCandidateIds = remainingSupportsAfterPayment.map(
+    (support) => support.card.instanceId,
+  )
   const costSupportToTrashIds = skill.cost.supportToTrash
-    ? player.supportArea
-        .filter(
-          (support) => !paymentIds.includes(support.card.instanceId),
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          supportToTrashCandidateIds,
+          skill.cost.supportToTrash,
         )
-        .slice(0, skill.cost.supportToTrash)
-        .map((support) => support.card.instanceId)
+      : supportToTrashCandidateIds.slice(0, skill.cost.supportToTrash)
     : []
 
   if (
@@ -799,15 +895,16 @@ const resolveAiSkill = (
   }
 
   const costSupportToTrashSet = new Set(costSupportToTrashIds)
+  const supportToHandCandidateIds = remainingSupportsAfterPayment
+    .filter((support) => !costSupportToTrashSet.has(support.card.instanceId))
+    .map((support) => support.card.instanceId)
   const costSupportToHandIds = skill.cost.supportToHand
-    ? player.supportArea
-        .filter(
-          (support) =>
-            !paymentIds.includes(support.card.instanceId) &&
-            !costSupportToTrashSet.has(support.card.instanceId),
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          supportToHandCandidateIds,
+          skill.cost.supportToHand,
         )
-        .slice(0, skill.cost.supportToHand)
-        .map((support) => support.card.instanceId)
+      : supportToHandCandidateIds.slice(0, skill.cost.supportToHand)
     : []
 
   if (
@@ -828,9 +925,14 @@ const resolveAiSkill = (
   const discardHandIds = skill.cost.discardAllHand
     ? discardHandCandidates.map((card) => card.instanceId)
     : discardHandCost > 0
-      ? discardHandCandidates
-          .slice(0, discardHandCost)
-          .map((card) => card.instanceId)
+      ? universal?.enabled
+        ? universal.orderCostIds(
+            discardHandCandidates.map((card) => card.instanceId),
+            discardHandCost,
+          )
+        : discardHandCandidates
+            .slice(0, discardHandCost)
+            .map((card) => card.instanceId)
       : []
 
   if (
@@ -840,20 +942,23 @@ const resolveAiSkill = (
     return null
   }
 
-  const hpToTrashTargetIds = skill.cost.hpToTrash
+  const hpToTrashCandidateIds = skill.cost.hpToTrash
     ? getHpToTrashCostCandidates(
         skill.cost,
         player.battleArea,
         source.card.instanceId,
-      )
-        .slice(0, 1)
-        .map((cookie) => cookie.card.instanceId)
+      ).map((cookie) => cookie.card.instanceId)
+    : []
+  const hpToTrashTargetIds = skill.cost.hpToTrash
+    ? universal?.enabled
+      ? universal.orderCostIds(hpToTrashCandidateIds, 1)
+      : hpToTrashCandidateIds.slice(0, 1)
     : []
   if (skill.cost.hpToTrash && hpToTrashTargetIds.length === 0) {
     return null
   }
 
-  const trashBattleCookieIds = skill.cost.trashBattleCookie
+  const trashBattleCookieCandidateIds = skill.cost.trashBattleCookie
     ? player.battleArea
         .filter((cookie) => {
           if (skill.cost.trashBattleCookie!.level !== undefined && cookie.card.level !== skill.cost.trashBattleCookie!.level) return false
@@ -861,8 +966,15 @@ const resolveAiSkill = (
           return true
         })
         .sort((left, right) => left.hpCards.length - right.hpCards.length)
-        .slice(0, skill.cost.trashBattleCookie!.count)
         .map((cookie) => cookie.card.instanceId)
+    : []
+  const trashBattleCookieIds = skill.cost.trashBattleCookie
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          trashBattleCookieCandidateIds,
+          skill.cost.trashBattleCookie.count,
+        )
+      : trashBattleCookieCandidateIds.slice(0, skill.cost.trashBattleCookie.count)
     : []
 
   if (
@@ -872,14 +984,20 @@ const resolveAiSkill = (
     return null
   }
 
-  const battleToHandIds = skill.cost.battleCookieToHand
+  const battleToHandCandidateIds = skill.cost.battleCookieToHand
     ? getBattleCookieToHandCostCandidates(
         skill.cost,
         player.battleArea,
         source.card.instanceId,
-      )
-        .slice(0, skill.cost.battleCookieToHand.count)
-        .map((cookie) => cookie.card.instanceId)
+      ).map((cookie) => cookie.card.instanceId)
+    : []
+  const battleToHandIds = skill.cost.battleCookieToHand
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          battleToHandCandidateIds,
+          skill.cost.battleCookieToHand.count,
+        )
+      : battleToHandCandidateIds.slice(0, skill.cost.battleCookieToHand.count)
     : []
 
   if (
@@ -904,10 +1022,17 @@ const resolveAiSkill = (
     }
   }
 
-  const trashToDeckBottomIds = skill.cost.trashToDeckBottom
+  const trashToDeckBottomCandidateIds = skill.cost.trashToDeckBottom
     ? getTrashToDeckBottomCostCandidates(skill.cost, player.discardPile)
-        .slice(0, skill.cost.trashToDeckBottom.count)
         .map((card) => card.instanceId)
+    : []
+  const trashToDeckBottomIds = skill.cost.trashToDeckBottom
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          trashToDeckBottomCandidateIds,
+          skill.cost.trashToDeckBottom.count,
+        )
+      : trashToDeckBottomCandidateIds.slice(0, skill.cost.trashToDeckBottom.count)
     : []
   if (
     skill.cost.trashToDeckBottom &&
@@ -916,10 +1041,17 @@ const resolveAiSkill = (
     return null
   }
 
-  const trashToDeckIds = skill.cost.trashToDeck
+  const trashToDeckCandidateIds = skill.cost.trashToDeck
     ? getTrashToDeckCostCandidates(skill.cost, player.discardPile)
-        .slice(0, skill.cost.trashToDeck.count)
         .map((card) => card.instanceId)
+    : []
+  const trashToDeckIds = skill.cost.trashToDeck
+    ? universal?.enabled
+      ? universal.orderCostIds(
+          trashToDeckCandidateIds,
+          skill.cost.trashToDeck.count,
+        )
+      : trashToDeckCandidateIds.slice(0, skill.cost.trashToDeck.count)
     : []
   if (
     skill.cost.trashToDeck &&
@@ -989,10 +1121,11 @@ const resolveAiSkill = (
     activated,
     context,
     skill.effects,
-    chooseEffectTargets,
+    universalChooseEffectTargets,
     isSkillEffectTargetCountSufficient,
     { sourceInstanceId: source.card.instanceId, paymentIds },
     effectShuffle,
+    universalChooseEffectMode,
   )
   if (sim.aborted) return null
 
@@ -1086,9 +1219,109 @@ const isSkillEffectTargetCountSufficient = (
   return true
 }
 
-const chooseReplacement = (state: GameState, playerId: PlayerId, level?: number) => {
+const createUniversalPendingStrategy = (
+  state: GameState,
+  playerId: PlayerId,
+  level: AiLevel | undefined,
+  knowledgeState: KnowledgeState | undefined,
+) => {
+  if (level !== 3 && level !== 4) return null
+
+  const view = createPlayerView(state, playerId)
+  const synchronizedKnowledge = knowledgeState?.observerId === playerId
+    ? synchronizeKnowledgeWithPlayerView(knowledgeState, view)
+    : createKnowledgeStateFromPlayerView(view)
+  return createPendingSelectionStrategy(view, synchronizedKnowledge, level)
+}
+
+/**
+ * Lv.3／Lv.4 的直接技能／物品模擬也必須使用和 pending 相同的候選排序器。
+ * 這裡只把「單一候選集合、單一數量限制」的效果交給通用策略；多區域／多階段
+ * 效果仍交回既有 effect-specific fallback，避免把一組 instance id 套到不同
+ * selector 而製造非法 command。最終合法性仍由 `applyGameCommand` 驗證。
+ */
+const universalChooseEffectTargets = (
+  state: GameState,
+  context: EffectContext,
+  effect: CardEffect,
+): string[] => {
+  const universal = createUniversalPendingStrategy(
+    state,
+    context.sourcePlayerId,
+    aiTurnStrategy.currentLevel,
+    aiTurnStrategy.knowledgeState,
+  )
+  if (!universal?.enabled) {
+    return legacyChooseEffectTargets(state, context, effect)
+  }
+
+  // These effects have multiple independent target groups or a special
+  // command-level continuation. Keep their existing legal fallback until the
+  // command contract can carry one target list per group.
+  if (
+    effect.kind === 'rest-support-and-damage' ||
+    (effect.kind === 'support-to-hp' && effect.selectTarget) ||
+    effect.kind === 'field-to-trash' ||
+    effect.kind === 'field-to-deck-bottom' ||
+    effect.kind === 'split-damage' ||
+    effect.kind === 'opponent-break-to-trash-then-battle-to-break'
+  ) {
+    return legacyChooseEffectTargets(state, context, effect)
+  }
+
+  if (!requiresEffectCardSelection(effect)) {
+    return legacyChooseEffectTargets(state, context, effect)
+  }
+
+  const limits = getEffectSelectionLimits(effect)
+  if (!limits) return legacyChooseEffectTargets(state, context, effect)
+
+  const candidateIds = getEffectSelectionCandidates(state, context, effect)
+    .map((card) => card.instanceId)
+  const max = Math.min(limits.max, candidateIds.length)
+  const selected = universal.selectEffectTargetIds(effect, candidateIds, max)
+  return selected.length >= limits.min
+    ? selected
+    : legacyChooseEffectTargets(state, context, effect)
+}
+
+const universalChooseEffectMode = (
+  state: GameState,
+  context: EffectContext,
+  effect: Extract<CardEffect, { kind: 'choose-one' }>,
+): number => {
+  const universal = createUniversalPendingStrategy(
+    state,
+    context.sourcePlayerId,
+    aiTurnStrategy.currentLevel,
+    aiTurnStrategy.knowledgeState,
+  )
+  return chooseAiEffectMode(
+    state,
+    context,
+    effect,
+    universal?.enabled
+      ? universal.preferredModeIndices(effect, context.sourceInstanceId)
+      : [],
+  )
+}
+
+const chooseReplacement = (state: GameState, playerId: PlayerId, level?: AiLevel) => {
   const candidates = getReplacementCandidates(state, playerId)
   if (candidates.length === 0) return undefined
+
+  const pendingStrategy = createUniversalPendingStrategy(
+    state,
+    playerId,
+    level,
+    aiTurnStrategy.knowledgeState,
+  )
+  if (pendingStrategy?.enabled) {
+    const selectedId = pendingStrategy.chooseReplacementId(
+      candidates.map((candidate) => candidate.instanceId),
+    )
+    return candidates.find((candidate) => candidate.instanceId === selectedId)
+  }
 
   const profile = getMatchupProfile(state, playerId)
   const breakPressure = evaluateBreakPressure(
@@ -1131,6 +1364,30 @@ const chooseReplacement = (state: GameState, playerId: PlayerId, level?: number)
     })[0]
 }
 
+const chooseRefresh = (
+  state: GameState,
+  playerId: PlayerId,
+  level?: AiLevel,
+) => {
+  const candidates = getRefreshCandidates(state, playerId)
+  if (candidates.length === 0) return undefined
+
+  const pendingStrategy = createUniversalPendingStrategy(
+    state,
+    playerId,
+    level,
+    aiTurnStrategy.knowledgeState,
+  )
+  if (pendingStrategy?.enabled) {
+    const selectedId = pendingStrategy.chooseRefreshId(
+      candidates.map((candidate) => candidate.instanceId),
+    )
+    return candidates.find((candidate) => candidate.instanceId === selectedId)
+  }
+
+  return candidates[0]
+}
+
 const chooseAttackTarget = (
   state: GameState,
   playerId: PlayerId,
@@ -1153,12 +1410,27 @@ const chooseAttackTarget = (
 }
 
 const aiTurnStrategy: AiTurnStrategy = {
-  chooseEffectTargets,
+  chooseEffectTargets: universalChooseEffectTargets,
+  chooseEffectMode: universalChooseEffectMode,
+  chooseStageCostIds: (state, playerId, cost, sourceInstanceId) =>
+    chooseAiStageCostIds(
+      state,
+      playerId,
+      cost,
+      sourceInstanceId,
+      createUniversalPendingStrategy(
+        state,
+        playerId,
+        aiTurnStrategy.currentLevel,
+        aiTurnStrategy.knowledgeState,
+      ) ?? undefined,
+    ),
   resolveCardAbility: (state, playerId, card) =>
     resolveAiCardAbility(state, playerId, card, aiTurnStrategy.shuffleSeed),
   resolveSkill: (state, playerId, source, trigger) =>
     resolveAiSkill(state, playerId, source, trigger, aiTurnStrategy.shuffleSeed),
   chooseReplacement,
+  chooseRefresh,
   chooseAttackTarget,
 }
 
@@ -1190,6 +1462,72 @@ const createStepShuffleSeed = (
   return (seed ^ entropy) >>> 0
 }
 
+const pendingSelectionForState = (
+  state: GameState,
+  playerId: PlayerId,
+  decision: AiDecision,
+): { kind: PendingSelectionKind; sourceInstanceId?: string } | null => {
+  if (state.pendingRefresh?.playerId === playerId) return { kind: 'refresh' }
+  if (state.pendingReplacement?.tasks[0]?.playerId === playerId) {
+    return { kind: 'replacement' }
+  }
+  if (state.pendingBattle) {
+    if (state.pendingBattle.stage === 'flip') {
+      return {
+        kind: 'flip',
+        sourceInstanceId: state.pendingBattle.revealedHpCard?.instanceId,
+      }
+    }
+    if (state.pendingBattle.stage === 'trap') {
+      return {
+        kind: decision.action === 'play-blocker'
+          ? 'blocker'
+          : decision.action === 'play-attack-response'
+            ? 'attack-response'
+            : 'trap',
+        // 防守卡已由 battle handler 放在 revealedCard；沒有實際出牌時才退回
+        // 攻擊者，讓 telemetry 的能力／unsupported 統計對應真正決策來源。
+        sourceInstanceId: decision.revealedCard?.instanceId ??
+          state.pendingBattle.attackerInstanceId,
+      }
+    }
+    if (state.pendingBattle.stage === 'attack-effect') {
+      return {
+        kind: 'effect-target',
+        sourceInstanceId: state.pendingBattle.attackerInstanceId,
+      }
+    }
+  }
+  const pendingAbility = state.pendingAbilityEffect
+  if (pendingAbility?.playerId === playerId) {
+    return {
+      kind: pendingAbility.effects[pendingAbility.effectIndex]?.kind === 'choose-one'
+        ? 'choose-one'
+        : 'effect-target',
+      sourceInstanceId: pendingAbility.sourceInstanceId,
+    }
+  }
+  if (state.pendingOptionalCostAttack?.playerId === playerId) {
+    return {
+      kind: 'payment',
+      sourceInstanceId: state.pendingOptionalCostAttack.sourceInstanceId,
+    }
+  }
+  if (state.pendingOpponentHandDiscard?.playerId === playerId) {
+    return {
+      kind: 'discard',
+      sourceInstanceId: state.pendingOpponentHandDiscard.sourceInstanceId,
+    }
+  }
+  if (state.pendingEffectOrder?.playerId === playerId) {
+    return {
+      kind: 'effect-order',
+      sourceInstanceId: state.pendingEffectOrder.items[0]?.sourceInstanceId,
+    }
+  }
+  return null
+}
+
 export const takeAiStep = (
   state: GameState,
   playerId: PlayerId = 'player-two',
@@ -1207,6 +1545,10 @@ export const takeAiStep = (
 
     const shuffleSeed = createStepShuffleSeed(options.seed ?? 1, state, playerId)
     aiTurnStrategy.shuffleSeed = shuffleSeed
+    aiTurnStrategy.currentLevel = level
+    // G3：外部只能提供以 PlayerView／合法事件建立的 KnowledgeState。
+    // 每次決策明確覆寫，避免不同對局或玩家共用上一局的短期記憶。
+    aiTurnStrategy.knowledgeState = options.knowledgeState
 
     const turnHandler =
       level === 1
@@ -1234,8 +1576,17 @@ export const takeAiStep = (
 
     const decision =
       dispatchAiStep(state, playerId, [
-        handleAiPendingDecision,
-        (s, p) => handleAiPendingBattle(s, p, level),
+        (current, currentPlayerId) => handleAiPendingDecision(
+          current,
+          currentPlayerId,
+          { level, knowledgeState: aiTurnStrategy.knowledgeState },
+        ),
+        (s, p) => handleAiPendingBattle(
+          s,
+          p,
+          level,
+          aiTurnStrategy.knowledgeState,
+        ),
         turnHandler,
       ]) ?? {
         state,
@@ -1243,7 +1594,41 @@ export const takeAiStep = (
         description: `${state.players[playerId].name}等待行動。`,
       }
 
-    return decision.reason ? decision : { ...decision, reason: { level } }
+    const levelledDecision: AiDecision = {
+      ...decision,
+      reason: {
+        ...(decision.reason ?? {}),
+        level: decision.reason?.level ?? level,
+      },
+    }
+    // pending／battle handler 已為實際選擇記錄更精確的種類（例如 FLIP、
+    // blocker 或多階段）。只有既有 handler 尚未附帶 telemetry 時，才以
+    // 入口狀態補上通用分類，避免覆寫真實決策原因。
+    const pendingSelection = level >= 3 && !levelledDecision.reason?.pendingStrategy
+      ? pendingSelectionForState(state, playerId, levelledDecision)
+      : null
+    if (!pendingSelection) return levelledDecision
+
+    const view = createPlayerView(state, playerId)
+    const knowledgeState = aiTurnStrategy.knowledgeState?.observerId === playerId
+      ? synchronizeKnowledgeWithPlayerView(aiTurnStrategy.knowledgeState, view)
+      : createKnowledgeStateFromPlayerView(view)
+    const selectionStrategy = createPendingSelectionStrategy(
+      view,
+      knowledgeState,
+      level,
+    )
+    return {
+      ...levelledDecision,
+      reason: {
+        ...levelledDecision.reason,
+        level: levelledDecision.reason?.level ?? level,
+        pendingStrategy: selectionStrategy.telemetry(
+          pendingSelection.kind,
+          pendingSelection.sourceInstanceId,
+        ),
+      },
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'AI 執行失敗。'

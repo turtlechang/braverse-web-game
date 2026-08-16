@@ -153,6 +153,353 @@ describe('AI optional attack source energy', () => {
   })
 })
 
+describe('G5 pending faint cost selection', () => {
+  it('uses distinct legal cards for energy and trash costs, preserving higher-value public cards', () => {
+    const base = createBattleState()
+    const targetCookie: CookieCard = {
+      ...testCookieCard('faint-target', { level: 1, hp: 1, attack: 1 }),
+      energyColor: 'yellow',
+    }
+    const valuableHandCookie: CookieCard = {
+      ...testCookieCard('valuable-hand', { level: 4, hp: 5, attack: 4 }),
+      energyColor: 'yellow',
+    }
+    const valuableSupport: CookieCard = {
+      ...testCookieCard('valuable-support', { level: 4, hp: 5, attack: 4 }),
+      energyColor: 'yellow',
+    }
+    const energyPayment = testSupportCard('payment-a', 'yellow')
+    const trashSupport = testSupportCard('trash-b', 'yellow')
+    const junkHand = testSupportCard('discard-junk', 'yellow')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [testSupportCard('faint-target-hp')],
+          hand: [valuableHandCookie, targetCookie, junkHand],
+          supportArea: [
+            { card: energyPayment, rested: false },
+            { card: trashSupport, rested: false },
+            { card: valuableSupport, rested: false },
+          ],
+        },
+      },
+      pendingFaintEffects: [{
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'defender',
+        sourceCardName: 'Faint source',
+        effect: {
+          kind: 'hand-to-battle',
+          amount: 1,
+          energyColor: 'yellow',
+          energyCost: { yellow: 1 },
+          optional: false,
+        },
+        context: {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'defender',
+        },
+        cost: { discardHand: 1, supportToTrash: 1 },
+      }],
+    }
+
+    const decision = handleAiPendingDecision(state, 'player-one', { level: 3 })
+
+    expect(decision?.action).toBe('resolve-faint')
+    expect(decision?.error).toBeUndefined()
+    expect(decision?.reason?.pendingStrategy).toMatchObject({
+      kind: 'effect-target',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
+    // 登場是收益而非代價，應選擇公開價值較高的餅乾；真正的棄牌／送支援
+    // 成本仍會保留高價值卡。
+    expect(decision?.state.players['player-one'].battleArea.map(
+      (entry) => entry.card.instanceId,
+    )).toContain('valuable-hand')
+    expect(decision?.state.players['player-one'].supportArea).toEqual([
+      { card: energyPayment, rested: true },
+      { card: valuableSupport, rested: false },
+    ])
+    expect(decision?.state.players['player-one'].discardPile.map(
+      (card) => card.instanceId,
+    )).toEqual(expect.arrayContaining(['discard-junk', 'trash-b']))
+    expect(decision?.state.players['player-one'].hand.map(
+      (card) => card.instanceId,
+    )).toEqual(['faint-target'])
+  })
+})
+
+describe('G5 pending inspect-deck selection', () => {
+  it('only selects from its legally revealed cards and resolves through GameCommand', () => {
+    const revealedLow = testSupportCard('revealed-low')
+    const revealedHigh = testCookieCard('revealed-high', {
+      level: 3,
+      hp: 5,
+      attack: 4,
+    })
+    const state: GameState = {
+      ...buildTestState('player-one', {
+        id: 'player-one',
+        deck: [],
+        hand: [],
+      }),
+      pendingInspectDeck: {
+        playerId: 'player-one',
+        sourceInstanceId: 'inspect-source',
+        sourceCardName: 'Inspect source',
+        revealedCards: [revealedLow, revealedHigh],
+        lookCount: 2,
+        pickCount: 1,
+        restDestination: 'bottom',
+      },
+    }
+
+    const decision = handleAiPendingDecision(state, 'player-one', { level: 3 })
+
+    expect(decision?.action).toBe('resolve-inspect-deck')
+    expect(decision?.reason?.pendingStrategy).toMatchObject({
+      kind: 'multi-stage',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
+    expect(decision?.state.pendingInspectDeck).toBeNull()
+    expect(decision?.state.players['player-one'].hand.map(
+      (card) => card.instanceId,
+    )).toEqual(['revealed-high'])
+    expect(decision?.state.players['player-one'].deck.map(
+      (card) => card.instanceId,
+    )).toEqual(['revealed-low'])
+  })
+})
+
+describe('G5 direct Lv.3 strategy selection', () => {
+  it('routes direct skill targets through TacticalPlan-aware universal scoring', () => {
+    const source = testCookieCard('direct-source', {
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {} },
+        text: 'Deal damage to an opposing Cookie.',
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 1, max: 1 },
+        }],
+      },
+    })
+    const survivor = testCookieCard('direct-survivor', { level: 3, hp: 5 })
+    const lethal = testCookieCard('direct-lethal', { level: 1, hp: 1 })
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [],
+      battleArea: [{
+        card: source,
+        hpCards: [testSupportCard('source-hp')],
+        rested: false,
+        battleEntryId: 'direct-source:battle:1',
+      }],
+    })
+    state.pendingOnPlay = {
+      playerId: 'player-two',
+      sourceInstanceId: source.instanceId,
+      origin: 'hand',
+    }
+    state.players['player-one'].battleArea = [
+      {
+        card: survivor,
+        hpCards: [
+          testSupportCard('survivor-hp-1'),
+          testSupportCard('survivor-hp-2'),
+          testSupportCard('survivor-hp-3'),
+        ],
+        rested: false,
+        battleEntryId: 'direct-survivor:battle:1',
+      },
+      {
+        card: lethal,
+        hpCards: [testSupportCard('lethal-hp')],
+        rested: false,
+        battleEntryId: 'direct-lethal:battle:2',
+      },
+    ]
+
+    const decision = takeAiStep(state, 'player-two', { level: 3, seed: 7 })
+
+    expect(decision.action).toBe('activate-skill')
+    expect(decision.effectSelections?.[0]?.targetIds).toEqual(['direct-lethal'])
+  })
+
+  it('uses universal retention ordering for direct skill costs at Lv.3', () => {
+    const source = testCookieCard('direct-cost-source', {
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: { energy: {}, discardHand: 1 },
+        text: 'Discard one card, then modify this Cookie.',
+        effects: [{
+          kind: 'modify-attack',
+          amount: 1,
+          duration: 'this-turn',
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        }],
+      },
+    })
+    const valuable = testCookieCard('direct-cost-valuable', { level: 4, hp: 5, attack: 4 })
+    const junk = testSupportCard('direct-cost-junk')
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [valuable, junk],
+      battleArea: [{
+        card: source,
+        hpCards: [testSupportCard('direct-cost-source-hp')],
+        rested: false,
+        battleEntryId: 'direct-cost-source:battle:1',
+      }],
+    })
+    state.pendingOnPlay = {
+      playerId: 'player-two',
+      sourceInstanceId: source.instanceId,
+      origin: 'hand',
+    }
+    state.players['player-one'].battleArea = [{
+      card: testCookieCard('direct-cost-opponent'),
+      hpCards: [testSupportCard('direct-cost-opponent-hp')],
+      rested: false,
+      battleEntryId: 'direct-cost-opponent:battle:1',
+    }]
+
+    const decision = takeAiStep(state, 'player-two', { level: 3, seed: 11 })
+
+    expect(decision.action).toBe('activate-skill')
+    expect(decision.state.players['player-two'].hand.map((card) => card.instanceId))
+      .toEqual(['direct-cost-valuable'])
+  })
+
+  it('routes direct stage costs through the same universal retention ordering', () => {
+    const stage: GameCard = {
+      id: 'direct-stage',
+      instanceId: 'direct-stage',
+      name: 'direct-stage',
+      type: 'stage',
+      stageAbility: {
+        placementCost: {},
+        restSource: false,
+        cost: { energy: {}, supportToTrash: 1 },
+        text: 'Trash one support, then deal damage.',
+        effects: [{
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 1, max: 1 },
+        }],
+      },
+    }
+    const valuableSupport: GameCard = {
+      ...testSupportCard('stage-valuable'),
+      effects: [{ kind: 'draw', amount: 2 }],
+    }
+    const junkSupport = testSupportCard('stage-junk')
+    const state = buildTestState('player-two', {
+      id: 'player-two',
+      hand: [],
+      deck: [testSupportCard('stage-draw-card')],
+      battleArea: [],
+      supportArea: [
+        { card: valuableSupport, rested: false },
+        { card: junkSupport, rested: false },
+      ],
+      stage: { card: stage, rested: false },
+    })
+    state.players['player-one'].battleArea = [{
+      card: testCookieCard('stage-opponent', { hp: 1 }),
+      hpCards: [testSupportCard('stage-opponent-hp')],
+      rested: false,
+      battleEntryId: 'stage-opponent:battle:1',
+    }]
+
+    const decision = takeAiStep(state, 'player-two', { level: 3, seed: 23 })
+
+    expect(decision.action).toBe('activate-stage')
+    expect(decision.state.players['player-two'].supportArea.map(
+      (support) => support.card.instanceId,
+    )).toEqual(['stage-valuable'])
+    expect(decision.state.players['player-two'].discardPile.map(
+      (card) => card.instanceId,
+    )).toContain('stage-junk')
+  })
+})
+
+describe('G5 optional attack target safety', () => {
+  it('skips a multi-target optional effect when one shared target list cannot satisfy both effects', () => {
+    const state: GameState = {
+      ...buildTestState('player-two', { id: 'player-two' }),
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'optional-source',
+        targetInstanceId: 'optional-target',
+        declaredDamage: 0,
+        remainingDamage: 0,
+        stage: 'attack-effect',
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+      },
+      pendingOptionalCostAttack: {
+        playerId: 'player-two',
+        sourceInstanceId: 'optional-source',
+        sourceCardName: 'Optional source',
+        cost: { energy: {} },
+        sourceEnergy: {},
+        effects: [
+          {
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1 },
+          },
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1 },
+          },
+        ],
+        effectText: 'Use this Cookie as energy.',
+      },
+    }
+    state.players['player-one'].battleArea = [{
+      card: testCookieCard('optional-target'),
+      hpCards: [testSupportCard('optional-target-hp')],
+      rested: false,
+      battleEntryId: 'optional-target:battle:1',
+    }]
+    state.players['player-two'].battleArea = [{
+      card: testCookieCard('optional-source'),
+      hpCards: [testSupportCard('optional-source-hp')],
+      rested: false,
+      battleEntryId: 'optional-source:battle:1',
+    }]
+
+    const decision = handleAiPendingDecision(state, 'player-two', { level: 4 })
+
+    expect(decision?.action).toBe('resolve-optional-cost-attack')
+    expect(decision?.description).toContain('略過')
+    expect(decision?.reason?.pendingStrategy).toMatchObject({
+      kind: 'payment',
+      usedUniversalSelection: true,
+      publicViewOnly: true,
+    })
+  })
+})
+
 describe('resolveAiSkill discardHand', () => {
   it('discards first N hand cards deterministically for discardHand cost', () => {
     const handCard0: GameCard = {
