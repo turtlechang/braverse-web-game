@@ -131,3 +131,7 @@ flowchart TD
 ## G0 結束條件
 
 本文件與其餘三份 G0 文件完成後，即停止，不建立 `src/game/ai/strategy/`、不改 `rule-profiles.ts`、不接入 shadow mode，也不啟動 G1。G1 必須取得明確核准後才開始。
+
+## G1 完成記錄（2026-08-16）
+
+G1 已在獨立 shadow-mode 模組完成能力／牌組策略 profile／synergy graph。它只讀 `GameCard` 的結構化 effect、cost、timing、target 與 condition，不讀顯示文字，不匯入 `GameState`、`takeAiStep` 或 `applyGameCommand`，因此不會改變 Lv.1～Lv.4 行動。正式卡池 scan 的 1 筆 `reveal-hand` 未支援效果以 telemetry 保守記錄；G2 才能開始已知資訊安全模型。

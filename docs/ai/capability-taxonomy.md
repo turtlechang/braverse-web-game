@@ -1,6 +1,6 @@
 # AI 能力分類法（Phase G0 規格）
 
-> 狀態：G0 設計文件。G1 才建立 `src/game/ai/strategy/capability-model.ts` 與 `capability-extractor.ts`；本文件不重新解析卡面顯示文字。
+> 狀態：G1 shadow mode 已完成。`src/game/ai/strategy/capability-model.ts`、`capability-extractor.ts`、`deck-profile.ts` 與 `synergy-graph.ts` 均不重新解析卡面顯示文字，也尚未接入 AI 行動。
 
 ## 唯一資料來源
 
@@ -92,9 +92,11 @@ interface CapabilityEvidence {
 
 範例：將已知卡放到牌庫底的效果只能產生「已知 deck-bottom」setup 邊；若 payoff 只從牌庫底拿牌且洗牌前仍可合法發動，才可形成 confirmed payoff 邊。未知牌庫底只可形成 potential 邊，不能給必定成功分數。
 
-## G1 shadow mode 與測試規格
+## G1 shadow mode 實作與測試
 
-G1 僅輸出 `CapabilityModel`、`DeckStrategyProfile`、synergy evidence 及 unsupported telemetry，不得改變 `takeAiStep` 的選擇。
+G1 以 `extractCardCapabilities`、`extractDeckCapabilities`、`createStrategyShadowReport` 與 `buildSynergyGraph` 輸出 `CapabilityModel`、`DeckStrategyProfile`、synergy evidence 及 unsupported telemetry，不得改變 `takeAiStep` 的選擇。具 timing／cost 的 skill、item、trap、FLIP、stage 來源優先於展示用 `card.effects`，避免同一效果雙重計數。
+
+2026-08-16 的正式卡池唯讀 scan：1,101 張卡、2,909 筆能力證據；未支援 `reveal-hand` 1 筆，已保守寫入 shadow telemetry，未被當作 payoff 或策略加分。
 
 最低測試集：
 

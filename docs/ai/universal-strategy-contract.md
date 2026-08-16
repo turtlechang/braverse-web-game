@@ -77,7 +77,7 @@ Lv.4 在加入 R12～R16 後，仍必須沿用 R9、R10、R11。現況 `docs/ai-
 | Phase | 交付物 | 實作邊界 | 進入條件 |
 | --- | --- | --- | --- |
 | G0 | 本契約、能力分類、知識邊界、現況基線與測試規格 | 僅文件；不改 AI 決策。 | 本階段完成後停止並等待核准。 |
-| G1 | capability model／extractor、deck profile、synergy graph | shadow mode，只輸出能力與 profile。 | G0 核准。 |
+| G1 | capability model／extractor、deck profile、synergy graph | shadow mode，只輸出能力與 profile。已完成；沒有接入 AI 行動。 | G0 核准。 |
 | G2 | `KnowledgeState` 與安全測試 | 不得改變策略選擇。 | G1 核准。 |
 | G3 | Lv.3 action scoring／tactical plans | 一步合法 command 評估。 | G2 核准。 |
 | G4 | Lv.4 search／reservation／telemetry | 4～6 beam、4～6 command depth、150～350 nodes、100～250ms；逾時回退 Lv.3。 | G3 核准。 |
