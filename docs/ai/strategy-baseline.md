@@ -135,3 +135,7 @@ flowchart TD
 ## G1 完成記錄（2026-08-16）
 
 G1 已在獨立 shadow-mode 模組完成能力／牌組策略 profile／synergy graph。它只讀 `GameCard` 的結構化 effect、cost、timing、target 與 condition，不讀顯示文字，不匯入 `GameState`、`takeAiStep` 或 `applyGameCommand`，因此不會改變 Lv.1～Lv.4 行動。正式卡池 scan 的 1 筆 `reveal-hand` 未支援效果以 telemetry 保守記錄；G2 才能開始已知資訊安全模型。
+
+## G2 完成記錄（2026-08-16）
+
+G2 的 `KnowledgeState` 與完整 `GameState` 分離，只接受 `PlayerView` 同步及顯式的已知移動／公開揭示／牌序失效事件。自方已知頂／底與公開 reveal 可跨回合保存；shuffle、Refresh、mulligan 或未知牌庫變動會使該牌庫所有位置事實失效。測試證明變更未知底牌、對手手牌或未翻 HP，不會改變從 PlayerView 建立的 knowledge snapshot。它仍未連到 AI 評分或 command 流程；G3 才能開始使用此安全輸入做一步行動評分。

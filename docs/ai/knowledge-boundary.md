@@ -1,6 +1,6 @@
 # AI 已知資訊與隱私邊界（Phase G0 規格）
 
-> 狀態：G0 設計文件。G2 才建立 `src/game/ai/strategy/knowledge-state.ts` 與測試；本階段不改 AI 讀取路徑。
+> 狀態：G2 shadow mode 已完成。`src/game/ai/strategy/knowledge-state.ts` 只接收 `PlayerView` 與合法 knowledge events，不接收完整 `GameState`，也尚未接入 AI 行動。
 
 ## 現況邊界
 
@@ -69,6 +69,17 @@ interface KnowledgeState {
 4. **不確定操作**：未知抽牌、未知隨機移動、未向 observer 展示的牌庫重排，必須清除無法繼續證明的 fact；不能保留樂觀猜測。
 5. **跨回合**：未被洗牌或移動破壞的已知底／頂資訊可跨回合保留；每次讀取都需匹配 sequence version。
 6. **回放**：knowledge 更新必須由 command／公開效果事件可重播，以維持同 seed deterministic。
+
+## G2 實作邊界
+
+`KnowledgeState` 以 `observe-known-deck-card`、`observe-public-card`、`forget-known-card` 與 `invalidate-deck-sequence` 作為唯一寫入入口：
+
+- `self-private` 觀察只允許 observer 自己的牌庫；若要記錄對手牌庫，必須是 `public` reveal。
+- `synchronizeKnowledgeWithPlayerView` 只投影戰鬥、支援、Break、棄牌與場景等公開區；不讀取手牌身分、牌庫陣列或 HP 卡面。
+- shuffle、Refresh shuffle、mulligan shuffle 與無法證明安全的牌庫變動，都會遞增該玩家的 `deckSequenceVersion` 並移除所有 deck position facts。
+- query 只回傳目前 sequence 的 confirmed／publicly-revealed deck facts；`inferred` 永遠不是 payoff 的授權來源。
+
+目前尚未建立 command log → knowledge event 的投影器，也沒有把 KnowledgeState 接到 Lv.3／Lv.4 評分；這是 G3 前需要保留的整合邊界，而不是對既有行動的隱性變更。
 
 ## 明確禁止事項
 
