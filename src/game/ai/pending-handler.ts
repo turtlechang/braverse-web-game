@@ -54,6 +54,9 @@ const hasBlockingAbilityPending = (state: GameState): boolean =>
       state.pendingOptionalCostAttack ||
       state.pendingDrawUpTo ||
       state.pendingStageTrigger ||
+      // 效果傷害序列由既有的 battle/FLIP handler 逐點結算；
+      // 不能在中途搶先執行同一條 pendingAbilityEffect。
+      state.pendingBattle?.effectDamageSequence ||
       // cycle-hp（BS4-030）第二階段等待放回手牌時，不能重跑第一階段。
       state.pendingAbilityEffect?.pendingPlace ||
       (state.pendingBattle &&

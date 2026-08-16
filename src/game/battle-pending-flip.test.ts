@@ -13,6 +13,96 @@ import {
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
 
 describe('pending battle and FLIP', () => {
+  it('routes skill/item effect damage through the same FLIP flow as attack damage', () => {
+    const flipCard: GameCard = {
+      ...item('effect-damage-flip'),
+      officialType: 'flip',
+      flip: {
+        text: 'Draw 1 card.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw', amount: 1, side: 'self' }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+
+    state = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-two',
+        sourceInstanceId: 'attacker',
+        sourceCardName: 'Effect damage source',
+      },
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+      ['defender'],
+    )
+
+    expect(state.pendingBattle?.stage).toBe('damage')
+    state = resolveNextDamage(state)
+    expect(state.pendingBattle?.stage).toBe('flip')
+    expect(state.pendingBattle?.revealedHpCard).toBe(flipCard)
+
+    state = resolveFlip(state, 'player-one', { activate: false })
+
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-one'].battleArea).toHaveLength(0)
+    expect(state.players['player-one'].breakArea.map((card) => card.instanceId)).toContain(
+      'defender',
+    )
+    expect(state.players['player-one'].discardPile).toContainEqual(flipCard)
+  })
+
+  it('does not trigger FLIP when an effect moves an HP card without dealing damage', () => {
+    const flipCard: GameCard = {
+      ...item('non-damage-flip'),
+      officialType: 'flip',
+      flip: {
+        text: 'Draw 1 card.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    const state = {
+      ...createBattleState(),
+      players: {
+        ...createBattleState().players,
+        'player-one': {
+          ...createBattleState().players['player-one'],
+          battleArea: [
+            {
+              ...createBattleState().players['player-one'].battleArea[0],
+              hpCards: [item('hp-bottom'), flipCard],
+            },
+          ],
+        },
+      },
+    }
+
+    const resolved = executeCardEffect(
+      state,
+      {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'item-source',
+      },
+      {
+        kind: 'hp-to-trash',
+        amount: 1,
+        target: { side: 'self', min: 1, max: 1 },
+      },
+      ['defender'],
+    )
+
+    expect(resolved.pendingBattle).toBeNull()
+    expect(resolved.players['player-one'].battleArea[0].hpCards).toEqual([
+      expect.objectContaining({ instanceId: 'hp-bottom' }),
+    ])
+    expect(resolved.players['player-one'].discardPile).toContainEqual(flipCard)
+  })
+
   it('rests attack payment immediately and waits for a trap response', () => {
     const state = declareAttack(createBattleState())
 

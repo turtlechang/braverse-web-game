@@ -5,8 +5,10 @@ import {
   beginAttack,
   canAttack,
   resolveAttackEffect,
+  resolveFlip,
   resolveNextDamage,
   skipTrap,
+  type GameCard,
 } from '.'
 import officialBS3 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs3.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
@@ -19,6 +21,44 @@ import {
 } from './test-helpers/battle-helpers'
 
 describe('post-attack effects', () => {
+  it('routes attack-after damage through FLIP when the follow-up reveals a FLIP HP card', () => {
+    const flipCard: GameCard = {
+      ...item('attack-after-flip'),
+      officialType: 'flip' as const,
+      flip: {
+        text: 'Draw 1 card.',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw', amount: 1, side: 'self' as const }],
+      },
+    }
+    let state = createBattleState()
+    state.players['player-two'].battleArea[0].card.attack = 1
+    state.players['player-two'].battleArea[0].card.attackEffects = [
+      {
+        kind: 'damage',
+        amount: 1,
+        target: { side: 'opponent', min: 1, max: 1 },
+      },
+    ]
+    // 主攻擊先移除一般 HP，攻擊後追傷再翻開 FLIP。
+    state.players['player-one'].battleArea[0].hpCards = [flipCard, item('normal-hp')]
+
+    state = skipTrap(declareAttack(state), 'player-one')
+    state = resolveNextDamage(state)
+    expect(state.pendingBattle?.stage).toBe('attack-effect')
+
+    state = resolveAttackEffect(state, 'player-two', ['defender'])
+    expect(state.pendingBattle?.stage).toBe('damage')
+    state = resolveNextDamage(state)
+    expect(state.pendingBattle?.stage).toBe('flip')
+    state = resolveFlip(state, 'player-one', { activate: false })
+
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-one'].discardPile.map((card) => card.instanceId)).toEqual(
+      expect.arrayContaining(['normal-hp', 'attack-after-flip']),
+    )
+  })
+
   it('resolves Wizard Cookie break-to-trash after damage and before battle completion', () => {
     let state = createBattleState()
     state.players['player-two'].battleArea[0].card.attackEffects = [

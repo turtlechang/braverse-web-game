@@ -2134,7 +2134,25 @@ export interface GameState {
  * 待處理決策結算完之後，欠戰鬥流程的動作。
  * 見 `GameState.pendingRevealTopDeck.battleContinuation`。
  */
-export type BattleContinuation = 'finish' | 'after-trap'
+export type BattleContinuation = 'finish' | 'after-trap' | 'attack-effect'
+
+/**
+ * 效果傷害逐點結算完成後，原本被暫停的流程要如何接續。
+ *
+ * `ability-effect` 代表技能／物品／場景／陷阱佇列中的目前效果；
+ * `attack-effect` 代表一般攻擊後效果；其餘兩項則是保留原戰鬥流程。
+ */
+export type EffectDamageContinuation =
+  | 'ability-effect'
+  | 'attack-effect'
+  | 'finish-battle'
+  | 'after-trap'
+
+export interface EffectDamageTarget {
+  playerId: PlayerId
+  instanceId: string
+  damage: number
+}
 
 export type PendingBattleStage =
   | 'trap'
@@ -2189,6 +2207,12 @@ export interface PendingBattle {
     remainingTargetInstanceIds: string[]
     damage: number
     afterCurrentDamageResolved?: boolean
+    /** 目標可能跨玩家，或 split-damage 需要不同傷害量時使用。 */
+    remainingTargets?: EffectDamageTarget[]
+    /** 結算完這段效果傷害後，接回原本被暫停的流程。 */
+    continuation?: EffectDamageContinuation
+    /** 是否仍需保留建立序列前的外層 PendingBattle。 */
+    resumeBattleAfterAbility?: boolean
   }
 }
 

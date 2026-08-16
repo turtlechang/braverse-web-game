@@ -20,14 +20,17 @@ describe('BS1 Phase 3 shared effects', () => {
       ...(opponent.battleArea[0].card as CookieCard),
       instanceId: 'opponent-extra-cookie',
     }
-    const hpCards = opponent.deck.slice(0, 4)
+    // 這個案例驗證同步的全場傷害結果；另有專門案例驗證含 FLIP HP
+    // 時會轉入逐點翻牌流程，因此這裡刻意取非 FLIP 卡避免混合兩個行為。
+    const hpCards = opponent.deck.filter((card) => !card.flip).slice(0, 4)
+    const hpCardIds = new Set(hpCards.map((card) => card.instanceId))
     const state = {
       ...base,
       players: {
         ...base.players,
         'player-two': {
           ...opponent,
-          deck: opponent.deck.slice(4),
+          deck: opponent.deck.filter((card) => !hpCardIds.has(card.instanceId)),
           battleArea: [
             {
               ...opponent.battleArea[0],

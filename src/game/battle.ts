@@ -1738,6 +1738,30 @@ export const finishBattle = (state: GameState): GameState => {
         effect,
         [],
       )
+      if (completedState.pendingBattle?.effectDamageSequence) {
+        return {
+          ...completedState,
+          pendingAbilityEffect: {
+            playerId: battle.delayedTrap.playerId,
+            sourcePlayerId: battle.delayedTrap.playerId,
+            sourceInstanceId: battle.delayedTrap.sourceInstanceId,
+            sourceCardName: battle.delayedTrap.sourceCardName,
+            sourceKind: 'trap',
+            effects: battle.delayedTrap.effects,
+            effectIndex: i,
+            battleContinuation: 'finish',
+          },
+          pendingBattle: {
+            ...completedState.pendingBattle,
+            delayedTrap: undefined,
+            effectDamageSequence: {
+              ...completedState.pendingBattle.effectDamageSequence,
+              continuation: 'ability-effect',
+              resumeBattleAfterAbility: true,
+            },
+          },
+        }
+      }
       const remainingEffects = battle.delayedTrap.effects.slice(i + 1)
       if (completedState.pendingDrawUpTo && remainingEffects.length > 0) {
         completedState = {
@@ -1806,7 +1830,11 @@ const collectAfterDamageEffects = (
   battle: PendingBattle,
 ): GameState => {
   const damagedIds = battle.damagedInstanceIds ?? []
-  return collectAfterDamageEffectsFromIds(state, damagedIds)
+  return collectAfterDamageEffectsFromIds(
+    state,
+    damagedIds,
+    battle.effectDamageSequence ? 'effect' : undefined,
+  )
 }
 
 const getAttackEffectContext = (
@@ -1976,8 +2004,18 @@ const finishDamageSequence = (state: GameState): GameState => {
     // 逐一傷害要等目前目標衍生的所有決策完整處理後才可前往下一個。
     // `hasBlockingPending` 本身會把目前的 pendingBattle 視為阻塞，因此
     // 暫時移除它來檢查真正插入此序列的決策（FLIP、昏厥、Refresh、補位等）。
+    const sequenceInterruptState = {
+      ...afterCurrentDamageState,
+      pendingBattle: null,
+      // `pendingAbilityEffect` is the continuation owner for this sequence,
+      // not an external interruption. Other pending decisions still block the
+      // next target as before.
+      ...(sequence.continuation === 'ability-effect'
+        ? { pendingAbilityEffect: undefined }
+        : {}),
+    }
     const hasSequenceInterrupt =
-      hasBlockingPending({ ...afterCurrentDamageState, pendingBattle: null }) ||
+      hasBlockingPending(sequenceInterruptState) ||
       Boolean(afterCurrentDamageState.pendingEffectOrder)
     if (hasSequenceInterrupt) {
       return {
@@ -1992,31 +2030,97 @@ const finishDamageSequence = (state: GameState): GameState => {
       }
     }
 
-    const [nextTargetInstanceId, ...remainingTargetInstanceIds] =
-      sequence.remainingTargetInstanceIds
+    const nextTarget = sequence.remainingTargets?.[0]
+    const nextTargetInstanceId =
+      nextTarget?.instanceId ?? sequence.remainingTargetInstanceIds[0]
+    const remainingTargets = sequence.remainingTargets
+      ? sequence.remainingTargets.slice(1)
+      : undefined
+    const remainingTargetInstanceIds = sequence.remainingTargetInstanceIds.slice(1)
     if (!nextTargetInstanceId) {
       const completedBattle = {
         ...activeBattle,
         effectDamageSequence: undefined,
       }
-      return finishBattle({ ...afterCurrentDamageState, pendingBattle: completedBattle })
+      const completedState = {
+        ...afterCurrentDamageState,
+        pendingBattle: completedBattle,
+      }
+      const continuation = sequence.continuation
+
+      if (continuation === 'attack-effect') {
+        const nextIndex = completedBattle.attackEffectIndex + 1
+        return nextIndex < completedBattle.attackEffects.length
+          ? {
+              ...completedState,
+              pendingBattle: {
+                ...completedBattle,
+                attackEffectIndex: nextIndex,
+                stage: 'attack-effect',
+              },
+            }
+          : finishBattle(completedState)
+      }
+
+      if (continuation === 'after-trap') {
+        return advanceBattleAfterTrap(completedState)
+      }
+
+      if (continuation === 'ability-effect') {
+        const pendingAbility = completedState.pendingAbilityEffect
+        if (!pendingAbility) return finishBattle(completedState)
+
+        const nextIndex = pendingAbility.effectIndex + 1
+        const hasNextEffect = nextIndex < pendingAbility.effects.length
+        const nextPendingAbility = hasNextEffect
+          ? { ...pendingAbility, effectIndex: nextIndex }
+          : undefined
+        const keepBattle = sequence.resumeBattleAfterAbility === true
+        const resumedState: GameState = {
+          ...completedState,
+          pendingBattle: keepBattle ? completedBattle : null,
+          pendingAbilityEffect: nextPendingAbility,
+        }
+
+        if (nextPendingAbility) return resumedState
+        if (pendingAbility.battleContinuation === 'finish') {
+          return keepBattle ? finishBattle(resumedState) : resumedState
+        }
+        if (pendingAbility.battleContinuation === 'after-trap') {
+          return keepBattle ? advanceBattleAfterTrap(resumedState) : resumedState
+        }
+        if (pendingAbility.battleContinuation === 'attack-effect') {
+          return keepBattle
+            ? advanceAttackEffect(resumedState, completedBattle)
+            : resumedState
+        }
+        return resumedState
+      }
+
+      return finishBattle(completedState)
     }
+
+    const nextDamage = nextTarget?.damage ?? sequence.damage
+    const nextDamagePlayerId = nextTarget?.playerId ?? activeBattle.defenderPlayerId
 
     return {
       ...afterCurrentDamageState,
       pendingBattle: {
         ...activeBattle,
         targetInstanceId: nextTargetInstanceId,
-        declaredDamage: sequence.damage,
-        remainingDamage: sequence.damage,
+        declaredDamage: nextDamage,
+        remainingDamage: nextDamage,
         stage: 'damage',
         revealedHpCard: null,
-        damagePlayerId: activeBattle.defenderPlayerId,
+        damagePlayerId: nextDamagePlayerId,
         damageTargetInstanceId: nextTargetInstanceId,
         damagedInstanceIds: [],
         effectDamageSequence: {
           remainingTargetInstanceIds,
           damage: sequence.damage,
+          ...(remainingTargets ? { remainingTargets } : {}),
+          continuation: sequence.continuation,
+          resumeBattleAfterAbility: sequence.resumeBattleAfterAbility,
         },
       },
     }
@@ -2171,6 +2275,20 @@ export const resolveAttackEffect = (
       return { ...nextState, pendingBattle: null }
     }
 
+    if (nextState.pendingBattle?.effectDamageSequence) {
+      return {
+        ...nextState,
+        pendingBattle: {
+          ...nextState.pendingBattle,
+          effectDamageSequence: {
+            ...nextState.pendingBattle.effectDamageSequence,
+            continuation: 'attack-effect',
+            resumeBattleAfterAbility: false,
+          },
+        },
+      }
+    }
+
     const nextBattle = requirePendingBattle(nextState)
     return advanceAttackEffect(nextState, nextBattle)
   }
@@ -2183,6 +2301,20 @@ export const resolveAttackEffect = (
   )
   if (nextState.status !== 'playing') {
     return { ...nextState, pendingBattle: null }
+  }
+
+  if (nextState.pendingBattle?.effectDamageSequence) {
+    return {
+      ...nextState,
+      pendingBattle: {
+        ...nextState.pendingBattle,
+        effectDamageSequence: {
+          ...nextState.pendingBattle.effectDamageSequence,
+          continuation: 'attack-effect',
+          resumeBattleAfterAbility: false,
+        },
+      },
+    }
   }
 
   const nextBattle = requirePendingBattle(nextState)
@@ -2470,7 +2602,8 @@ export const resolveOptionalCostAttack = (
       uniqueTrashToDeckIds,
     )
   }
-  for (const effect of applicableEffects) {
+  for (let effectIndex = 0; effectIndex < applicableEffects.length; effectIndex += 1) {
+    const effect = applicableEffects[effectIndex]
     if (nextState.status !== 'playing') break
     const effectTargetIds =
       ((effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
@@ -2478,6 +2611,29 @@ export const resolveOptionalCostAttack = (
         ? [pending.sourceInstanceId]
         : targetIds
     nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
+    if (nextState.pendingBattle?.effectDamageSequence) {
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: pending.sourceInstanceId,
+          sourceCardName: pending.sourceCardName,
+          sourceKind: 'skill',
+          effects: applicableEffects,
+          effectIndex,
+          battleContinuation: 'attack-effect',
+        },
+        pendingBattle: {
+          ...nextState.pendingBattle,
+          effectDamageSequence: {
+            ...nextState.pendingBattle.effectDamageSequence,
+            continuation: 'ability-effect',
+            resumeBattleAfterAbility: true,
+          },
+        },
+      }
+    }
   }
   if (nextState.status !== 'playing') {
     return { ...nextState, pendingBattle: null }
@@ -3579,12 +3735,44 @@ export const resolveFaintEffect = (
   ) {
     if (targetIds.length > 0) {
       selectEffectTargets(nextState, faint.context, faint.effect.target, targetIds)
+      const isDamageEffect = faint.effect.kind === 'damage'
+      if (isDamageEffect) {
+        nextState = {
+          ...nextState,
+          pendingAbilityEffect: {
+            playerId: faint.context.sourcePlayerId,
+            sourcePlayerId: faint.context.sourcePlayerId,
+            sourceInstanceId: faint.context.sourceInstanceId,
+            sourceCardName: faint.sourceCardName,
+            sourceKind: 'skill',
+            effects: [faint.effect],
+            effectIndex: 0,
+            battleContinuation: 'finish',
+          },
+        }
+      }
       nextState = executeCardEffect(
         nextState,
         faintExecutionContext,
         faint.effect,
         targetIds,
       )
+      if (isDamageEffect && !nextState.pendingBattle?.effectDamageSequence) {
+        nextState = { ...nextState, pendingAbilityEffect: undefined }
+      }
+      if (nextState.pendingBattle?.effectDamageSequence) {
+        return {
+          ...nextState,
+          pendingBattle: {
+            ...nextState.pendingBattle,
+            effectDamageSequence: {
+              ...nextState.pendingBattle.effectDamageSequence,
+              continuation: 'ability-effect',
+              resumeBattleAfterAbility: true,
+            },
+          },
+        }
+      }
     } else if (faint.effect.target.min > 0) {
     throw new GameRuleError('Invalid battle action.')
     }
@@ -3656,12 +3844,44 @@ export const resolveNextAfterDamageEffect = (
   ) {
     if (targetIds.length > 0) {
       selectEffectTargets(nextState, pending.context, pending.effect.target, targetIds)
+      const isDamageEffect = pending.effect.kind === 'damage'
+      if (isDamageEffect) {
+        nextState = {
+          ...nextState,
+          pendingAbilityEffect: {
+            playerId: pending.context.sourcePlayerId,
+            sourcePlayerId: pending.context.sourcePlayerId,
+            sourceInstanceId: pending.context.sourceInstanceId,
+            sourceCardName: pending.sourceCardName,
+            sourceKind: 'skill',
+            effects: [pending.effect],
+            effectIndex: 0,
+            battleContinuation: 'finish',
+          },
+        }
+      }
       nextState = executeCardEffect(
         nextState,
         pending.context,
         pending.effect,
         targetIds,
       )
+      if (isDamageEffect && !nextState.pendingBattle?.effectDamageSequence) {
+        nextState = { ...nextState, pendingAbilityEffect: undefined }
+      }
+      if (nextState.pendingBattle?.effectDamageSequence) {
+        nextState = {
+          ...nextState,
+          pendingBattle: {
+            ...nextState.pendingBattle,
+            effectDamageSequence: {
+              ...nextState.pendingBattle.effectDamageSequence,
+              continuation: 'ability-effect',
+              resumeBattleAfterAbility: true,
+            },
+          },
+        }
+      }
     } else if (pending.effect.target.min > 0) {
     throw new GameRuleError('Invalid battle action.')
     }

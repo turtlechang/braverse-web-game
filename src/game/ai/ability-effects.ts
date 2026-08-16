@@ -100,6 +100,9 @@ export const simulateAbilityEffects = (
     nextState = executeCardEffect(nextState, context, effect, targetIds, shuffle)
     effectTargets.push(targetIds)
     effectSelections.push({ ...effectSelectionMeta, targetIds, effect })
+    // 含 FLIP 的效果傷害會暫停在 battle/FLIP state machine，正式指令鏈
+    // 必須先完成這段序列，不能讓模擬器繼續把後續效果當成同步結算。
+    if (nextState.pendingBattle?.effectDamageSequence) break
     if (nextState.pendingRefresh || nextState.pendingOnPlay) break
     const nextEffect = queue[index + 1]
     if (

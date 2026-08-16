@@ -668,6 +668,9 @@ export function usePendingEffect(params: {
       game.pendingReplacement ||
       game.pendingRefresh ||
       game.pendingOnPlay ||
+      // 效果傷害正在由 battle/FLIP state machine 逐點結算，
+      // 先隱藏效果選擇面板，待序列完成後再依 effectIndex 恢復。
+      game.pendingBattle?.effectDamageSequence ||
       // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾與對手補位
       // 完成後才結算，補位期間（pendingReplacement）上面已擋；這裡連
       // pendingBattle 期間也不顯示效果面板，避免玩家點下去被規則層拒絕。
@@ -1859,6 +1862,14 @@ export function usePendingEffect(params: {
       const result = currentConditionMet
         ? describeEffectResult(currentEffect, targetNames)
         : `${pendingEffect.sourceCard.name} 的效果條件未滿足，已略過。`
+
+      if (nextGame.pendingBattle?.effectDamageSequence) {
+        setGame(nextGame)
+        setMessage(result)
+        setEffectHistory((history) => [result, ...history].slice(0, 4))
+        setPendingEffect(null)
+        return
+      }
 
       // 兩階段選擇（cycle-hp BS4-030 / hand-to-hp BS4-044）第一階段完成：
       // 目標存活時規則層停在第二階段（pendingPlace），把提示交給
