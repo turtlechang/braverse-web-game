@@ -464,7 +464,11 @@ describe('BS6 RED effect adapter', () => {
       },
     ])
     const cherryAttack = convertOfficialAttackEffects(findBs6Card('BS6-096'))
-    expect(cherryAttack[0]?.sourceEnergy).toBeUndefined()
+    const firstCherryAttack = cherryAttack?.[0]
+    if (firstCherryAttack?.kind !== 'optional-cost-attack') {
+      throw new Error('BS6-096 must convert to an optional-cost attack effect')
+    }
+    expect(firstCherryAttack.sourceEnergy).toBeUndefined()
     expect(cherryAttack).toMatchObject([
       {
         kind: 'optional-cost-attack',
