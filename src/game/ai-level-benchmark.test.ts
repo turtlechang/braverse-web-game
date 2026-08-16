@@ -12,6 +12,11 @@ import type {
   BuiltInDeckChoice,
   ReplayIssueBundleV1,
 } from '.'
+import {
+  aggregateLv4SearchTelemetry,
+  type Lv4SearchTelemetry,
+  type Lv4SearchTelemetryAggregate,
+} from './ai/strategy/search-telemetry'
 
 /**
  * Phase 3b Final Baseline (locked after R5/R6b/R8/R7, seeds 1–30):
@@ -106,6 +111,7 @@ interface AggregatedReport {
   lethalOpportunityCount: number
   lethalConversionCount: number
   directWinCount: number
+  legalAttackSkippedCount: number
   r10PenaltyAppliedCount: number
   r10BreakRaceRiskCount: number
   r10ExposureRiskCount: number
@@ -113,6 +119,7 @@ interface AggregatedReport {
   r6cLowQualityCount: number
   r6cForcedCount: number
   r6cBreakWorsenedCount: number
+  lv4Search: Lv4SearchTelemetryAggregate
   issueDiagnostics: BenchmarkIssueDiagnostic[]
   representativeLosses: BenchmarkIssueDiagnostic[]
 }
@@ -176,6 +183,7 @@ const runBenchmark = (
     lethalOpportunityCount: 0,
     lethalConversionCount: 0,
     directWinCount: 0,
+    legalAttackSkippedCount: 0,
     r10PenaltyAppliedCount: 0,
     r10BreakRaceRiskCount: 0,
     r10ExposureRiskCount: 0,
@@ -183,6 +191,7 @@ const runBenchmark = (
     r6cLowQualityCount: 0,
     r6cForcedCount: 0,
     r6cBreakWorsenedCount: 0,
+    lv4Search: aggregateLv4SearchTelemetry([]),
     issueDiagnostics: [],
     representativeLosses: [],
   }
@@ -210,6 +219,7 @@ const runBenchmark = (
   let totalDrawMentions = 0
   let totalTrapPlayed = 0
   let totalTrapSkipped = 0
+  const lv4SearchTelemetry: Lv4SearchTelemetry[] = []
   const breakInWins: number[] = []
   const breakInLosses: number[] = []
 
@@ -219,9 +229,11 @@ const runBenchmark = (
       levels: { 'player-one': playerLevel, 'player-two': aiLevel },
       seed,
     })
+    lv4SearchTelemetry.push(...result.lv4SearchTelemetry)
 
     agg.invalidActions += result.behavior.invalidActionCount
     agg.deadlocks += result.behavior.deadlockCount
+    agg.legalAttackSkippedCount += result.behavior.legalAttackSkippedCount
     if (result.endInfo.turnCapReached) agg.turnCapReached++
 
     const issueReasons: string[] = []
@@ -363,6 +375,7 @@ const runBenchmark = (
     agg.r6cBreakWorsenedCount += result.behavior.r6cBreakWorsenedCount
   }
 
+  agg.lv4Search = aggregateLv4SearchTelemetry(lv4SearchTelemetry)
   const completed = agg.wins + agg.losses
   if (completed === 0) return agg
 
@@ -492,6 +505,7 @@ const printFullReport = (r: AggregatedReport) => {
   console.log(`  Missed Lethal:   ${r.missedLethalCount}`)
   console.log(`  Conv Rate:       ${r.lethalOpportunityCount > 0 ? ((r.lethalConversionCount / r.lethalOpportunityCount) * 100).toFixed(1) + '%' : 'N/A'}`)
   console.log(`  Direct Wins:     ${r.directWinCount}`)
+  console.log(`  Legal Attacks Skipped: ${r.legalAttackSkippedCount}`)
   console.log(``)
   console.log(`  --- R10 Risk Management ---`)
   console.log(`  Penalty Applied: ${r.r10PenaltyAppliedCount}`)
@@ -504,6 +518,15 @@ const printFullReport = (r: AggregatedReport) => {
   console.log(`  Forced (≤2):     ${r.r6cForcedCount}`)
   console.log(`  Non-Forced LQ:   ${r.r6cLowQualityCount - r.r6cForcedCount}`)
   console.log(`  Break Worsened:  ${r.r6cBreakWorsenedCount}`)
+  console.log(``)
+  console.log(`  --- G4 Search Telemetry ---`)
+  console.log(`  Decisions:       ${r.lv4Search.decisions}`)
+  console.log(`  Avg / p95 / Max: ${r.lv4Search.averageDecisionMs.toFixed(1)} / ${r.lv4Search.p95DecisionMs.toFixed(1)} / ${r.lv4Search.maxDecisionMs.toFixed(1)} ms`)
+  console.log(`  Timeouts / Fallbacks / Node Limits: ${r.lv4Search.timeouts} / ${r.lv4Search.fallbacks} / ${r.lv4Search.nodeLimits}`)
+  console.log(`  Nodes (expanded/generated/pruned): ${r.lv4Search.nodesExpanded} / ${r.lv4Search.nodesGenerated} / ${r.lv4Search.nodesPruned}`)
+  console.log(`  Setup / Payoff / Completed / Abandoned: ${r.lv4Search.setupSteps} / ${r.lv4Search.payoffSteps} / ${r.lv4Search.completedPayoffs} / ${r.lv4Search.comboAbandonments}`)
+  console.log(`  Hidden stops / unknown penalty / unsupported: ${r.lv4Search.hiddenInformationStops} / ${r.lv4Search.unknownInformationPenalty} / ${r.lv4Search.unsupportedEffectCount}`)
+  console.log(`  Resource reservation misses: ${r.lv4Search.resourceReservationMisses}`)
   console.log(``)
   console.log(`  --- Break Level ---`)
   console.log(`  Avg Break (Wins):   ${r.avgBreakInWins}`)

@@ -170,7 +170,7 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 ## 下一步計畫
 
-通用型 Lv.3／Lv.4 AI 已完成 G0 契約、G1 結構化能力／牌組策略 shadow mode、G2 已知資訊安全模型，以及 G3 的 Lv.3 一步 action scoring／tactical plans。Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`，分開呈現公開擊倒、setup/payoff、資源消耗、未知資訊與未支援效果；`KnowledgeState` 只接受合法 snapshot，未提供時僅用公開 `PlayerView`。Lv.1／Lv.2 不變；下一步須取得核准後才進入 G4 的 Lv.4 多步搜尋、資源預留與搜尋 telemetry。
+通用型 Lv.3／Lv.4 AI 已完成 G0～G4：Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`；Lv.4 則以 width 5、depth 5、240 nodes、150ms 的有限 command search 維持 Setup→Payoff 計畫並預留攻擊資源。搜尋只使用 `PlayerView` 與合法 `KnowledgeState`，遇到未知抽牌、攻擊 pending、trap／blocker／FLIP／replacement 等決策即停止推演；timeout 一律回退 Lv.3。telemetry 已記錄時間、節點、setup/payoff、combo 放棄、未知／未支援與資源預留。Lv.1／Lv.2 不變；下一步須取得核准後才進入 G5 的 pending 與防守選擇。
 
 牌組編輯器的 LV／HP／攻擊力篩選、BS3-061 可選昏厥技能、BS5／BS6 尖括號攻擊後代價稽核、BS6-044 固定攻擊目標追傷、效果傷害 FLIP 結算、陷阱來源／代價與攻擊後效果詳細步驟對戰紀錄，以及 BS5-073、BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇、昏厥效果與對戰紀錄的正向／負向 Browser 路徑。
 
@@ -273,6 +273,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G4：Lv.4 改為有限預算的合法 `GameCommand` 多步搜尋（width 5、depth 5、240 nodes、150ms），保留 R9～R11、加入 R16 資源預留，攻擊／防守 pending 與未知抽牌均保守停止推演，逾時回退 Lv.3；新增搜尋、combo、未知資訊與資源 telemetry。完整 Vitest 196 檔／3,138 項、lint、build 與 AI Browser 20／20 通過；60-seed Lv.4 vs Lv.3 為 40／60（66.7%）、stuck／deadlock／非法操作／turn cap 均為 0。 |
 | 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G3：Lv.3 以結構化能力、牌組策略、合法已知資訊與前後公開局面評估每個合法候選，輸出可解釋 `ActionScoreBreakdown`；保守處理未知／未支援效果，Lv.1／Lv.2 行為不變；完整 Vitest 192 檔／3,128 項、lint、build 與 AI Browser 驗證通過。 |
 | 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G2：新增事件驅動的 `KnowledgeState`，僅保存合法已知頂／底與公開區資訊；洗牌／Refresh／mulligan／未知牌庫變動會清除牌序記憶，未知底牌、對手手牌與未翻 HP 無法影響 snapshot；尚未接入 AI 行動。 |
 | 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI 的 G0 契約與 G1 shadow mode：新增結構化能力、牌組策略 profile 與 synergy graph；正式卡池 1,101 張共 2,909 筆能力證據，未知 `reveal-hand` 保守記錄 telemetry，尚未接入 AI 行動。 |

@@ -1,7 +1,7 @@
 # AI 等級分級設計
 
-> **狀態：Lv.1–Lv.4 已實作完成；Lv.4 採用 beam search 回合層序列規劃。Lv.5 為設計稿，未實作。**
-> **最後更新：2026-07-31（beam search 上線後修正 R8/R9/R10 死碼 bug）。**
+> **狀態：Lv.1–Lv.4 已實作完成；Lv.4 採有限預算的合法 command beam 搜尋。Lv.5 為設計稿，未實作。**
+> **最後更新：2026-08-16（通用策略 G4）。**
 
 ## Lv.5 投入前觀察（2026-07-11）
 
@@ -13,8 +13,8 @@
 |---|---|---|---|---|
 | Lv.1 | 隨機出招 | 從合法動作中隨機挑選；不主動使用技能 | 無 | ✅ 完成 |
 | Lv.2 | 基礎戰術 | 啟發式：能出牌就出牌、攻擊最低 HP 目標、斬殺優先 | R1–R4, R6a | ✅ 完成 |
-| Lv.3 | 評估式 | 對候選動作套用後以 PlayerView 評分，取最高分 | +R5, R6b, R7, R8 | ✅ 完成 |
-| Lv.4 | 兩層前瞻 | beam search 回合層序列規劃（w=3, d=3），終局 state 評分 + 風險管理 | +R9, R10, lv4RiskBonus | ✅ 完成 |
+| Lv.3 | 評估式 | 對每個合法候選輸出 `ActionScoreBreakdown`，以結構化能力、牌組 profile、已知資訊與公開局面一步評分 | +R5, R6b, R7, R8, R12–R15 | ✅ 完成 |
+| Lv.4 | 多步規劃 | 有限 beam command search（w=5, d=5, 240 nodes, 150ms）、R16 資源預留；timeout 回退 Lv.3 | +R9, R10, R11, R12–R16, lv4RiskBonus | ✅ 完成 |
 | Lv.5 | 對抗性 | 在 Lv.4 之上加入對手回應期望值 | 未實作 | ⬜ 設計稿 |
 
 ## 勝率驗收（seeds 1–30）
@@ -32,7 +32,7 @@
 - Lv.4 vs Lv.3 > 75%：需審核是否過強
 - Lv.4 vs Lv.3 > 80%：暫停，必須降權或回滾
 
-## 規則系統（R1–R10）
+## 規則系統（R1–R16）
 
 | 規則 | 名稱 | 適用等級 | 狀態 |
 |---|---|---|---|
@@ -48,6 +48,12 @@
 | R8 | 手牌數量管理 | Lv.3+ | ✅ Done |
 | R9 | 致命傷害偵測 | Lv.4 | ✅ Done |
 | R10 | 對手回應風險評估 | Lv.4 | ✅ 完整版（F0 + F1） |
+| R11 | 不浪費已合法攻擊機會 | Lv.4 | ✅ Done |
+| R12 | 結構化卡牌能力辨識 | Lv.3+ | ✅ Done |
+| R13 | 動態牌組策略推導 | Lv.3+ | ✅ Done |
+| R14 | 已知資訊安全記憶 | Lv.3+ | ✅ Done |
+| R15 | Setup／Payoff 計畫評分 | Lv.3+ | ✅ Done |
+| R16 | 指令順序與資源預留 | Lv.4 | ✅ Done |
 
 ### R6c Deferred 理由
 
@@ -71,8 +77,10 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 
 | 組件 | 位置 | 說明 |
 |---|---|---|---|
-| `beamSearchBestFirstCommand` | evaluated-turn-handler.ts | 回合層 beam search（w=3, d=3, attacks auto-resolved）+ `stateScore` + `beamStepBonus` |
-| `beamStepBonus` | evaluated-turn-handler.ts | beam 每一步展開的單步修正（attackBonus/R9/R10/R8/cookieSupportPenalty），沿路徑累加進 `pathBonus` |
+| `searchLv4Commands` | `ai/strategy/lv4-search.ts` | width 5、depth 5、240 nodes、150ms 的合法 command 搜尋；timeout 不採半截 frontier，直接回退 Lv.3 |
+| `resource-reservation` | `ai/strategy/resource-reservation.ts` | 從規則層列出的 attack payment 保留最小付款資源（R16） |
+| `search-telemetry` | `ai/strategy/search-telemetry.ts` | 搜尋時間、節點、timeout／fallback、setup/payoff、未知／未支援與資源預留 telemetry |
+| `beamStepBonus` | evaluated-turn-handler.ts | 每一步公開風險修正（attackBonus/R9/R10/R8/R11/cookieSupportPenalty）；攻擊進入 pending 後不自動結算 |
 | `lv4RiskBonus` | evaluated-turn-handler.ts | 核心風險評分（不可刪除） |
 | `lethalDetectionBonus` | evaluated-turn-handler.ts | R9 致命偵測 |
 | `responseRiskPenalty` | evaluated-turn-handler.ts | R10 完整版：F0 break race risk guardrail + F1 attacker 反擊暴露 |
@@ -85,6 +93,8 @@ Revisit 條件：新高強度牌組、Lv.5 實作、非強制 LQ 增加、break 
 4. 勝利條件為 `break >= 10`（非 12），所有規則已修正為正確閾值
 
 ### 2026-07-31：beam search 上線曾讓 R8/R9/R10 變成死碼（已修正）
+
+> 此節保留舊版問題的歷史背景；目前正式路徑已由 G4 `searchLv4Commands` 取代，不再自動結算攻擊來推演未知防守回應。
 
 R10 完整版（F1 attacker 反擊暴露）與回合層 beam search 是同一天先後兩個 commit。
 beam search 把 `handleAiTwoPlyTurnState` 的主要評分路徑換成

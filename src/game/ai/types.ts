@@ -1,6 +1,10 @@
 import type { CardEffect, GameCard, GameState, PlayerId } from '../types'
 import type { ActionScoreBreakdown } from './strategy/action-score'
 import type { KnowledgeState } from './strategy/knowledge-state'
+import type {
+  Lv4SearchTelemetry,
+  Lv4SearchTelemetryAggregate,
+} from './strategy/search-telemetry'
 
 export type AiLevel = 1 | 2 | 3 | 4
 
@@ -21,6 +25,7 @@ export interface AiDecisionReason {
   consideredCommands?: number
   chosenCommandKind?: string
   actionScore?: ActionScoreBreakdown
+  lv4Search?: Lv4SearchTelemetry
 }
 
 export interface SimulateAiMatchOptions {
@@ -175,6 +180,8 @@ export interface BehaviorMetrics {
   r6cLowQualityCount: number
   r6cForcedCount: number
   r6cBreakWorsenedCount: number
+  legalAttackSkippedCount: number
+  lv4Search: Lv4SearchTelemetryAggregate
 }
 
 export interface AiDetailedResult {
@@ -189,4 +196,6 @@ export interface AiDetailedResult {
   turnProgression: TurnProgression
   endInfo: EndInfo
   behavior: BehaviorMetrics
+  /** 原始決策 telemetry，供 benchmark 正確計算跨對局 p95。 */
+  lv4SearchTelemetry: readonly Lv4SearchTelemetry[]
 }

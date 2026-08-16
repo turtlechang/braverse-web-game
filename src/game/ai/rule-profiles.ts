@@ -22,6 +22,7 @@ export type RuleId =
   | 'R13'
   | 'R14'
   | 'R15'
+  | 'R16'
 
 // ============================================================================
 // 規則描述
@@ -155,6 +156,13 @@ export const RULE_DEFINITIONS: Record<RuleId, RuleDefinition> = {
     priority: 'HIGH',
     module: 'strategy/tactical-plans.ts',
   },
+  R16: {
+    id: 'R16',
+    name: '指令順序與資源預留',
+    description: '在有限多步 command 搜尋中保留後續攻擊付款，並比較 setup、payoff 與收尾順序。',
+    priority: 'HIGH',
+    module: 'strategy/lv4-search.ts',
+  },
 }
 
 // ============================================================================
@@ -193,7 +201,7 @@ export const LV4_PROFILE: RuleProfile = {
   level: 4,
   name: '兩層前瞻',
   description: '兩層前瞻 AI，含通用策略、風險與攻擊節奏管理',
-  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R6c', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15'],
+  rules: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6a', 'R6b', 'R6c', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14', 'R15', 'R16'],
 }
 
 // ============================================================================

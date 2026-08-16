@@ -23,7 +23,7 @@ flowchart TD
   D -->|Lv.1| E["random-turn-handler"]
   D -->|Lv.2| F["turn-handler heuristic"]
   D -->|Lv.3| G["evaluated-turn-handler one-command evaluation"]
-  D -->|Lv.4| H["evaluated-turn-handler beam search"]
+  D -->|Lv.4| H["evaluated-turn-handler G4 finite command search"]
   C --> I["typed GameCommand / rule handlers"]
   F --> I
   G --> I
@@ -94,7 +94,7 @@ flowchart TD
 - skill usage、R7 trap skip、R10 與 R6c 稽核計數。
 - 失敗時的 seed、對局記錄、最後狀態與 `test-results/ai-benchmark/*seed*.json` diagnostics。
 
-後續 benchmark 必增：平均／p95／最大決策時間、setup 次數、payoff 完成率、combo 放棄率、致命漏失、合法攻擊略過、未知資訊誤判、unsupported effect、資源預留成功率，以及每個失敗的 `ReplayIssueBundle`（seed、牌組、command log、最後 state）。
+G4 已新增平均／p95／最大決策時間、setup／payoff／combo 放棄、公開致命漏失、合法攻擊略過、未知資訊停止、unsupported effect 與資源預留 telemetry；失敗仍由 benchmark 輸出含 seed、牌組、command log 與最後 state 的 `ReplayIssueBundle`。G5 再把 pending 與防守選擇的 plan 成功率／放棄原因接入同一報表。
 
 驗收樣本：PR 快速測試 60 seeds；正式比較 300 seeds；勝率差距小於約 3pp 時提升至 1,000 seeds。Dedicated deterministic fixtures 必須有 stuck = 0、deadlock = 0、invalid action = 0。通用性應以六種能力分布 fixture（牌庫底、支援區、Active／Rest、棄牌區、快攻、控制）測試；測試與正式程式不得以這些名稱或彈數作判斷。
 

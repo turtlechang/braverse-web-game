@@ -1,7 +1,14 @@
 import { getActingPlayerId } from './controller'
+import { getLegalTurnCommands } from './legal-actions'
+import { getEffectiveAttack } from './effects'
+import type { AttackCommand } from './commands'
 import { calculateReplacementBaseScore } from './ai/bs2MatchupProfiles'
 import { takeAiStep } from './ai'
 import { resetR10Counters, getR10Counters } from './ai/evaluated-turn-handler'
+import {
+  aggregateLv4SearchTelemetry,
+  type Lv4SearchTelemetry,
+} from './ai/strategy/search-telemetry'
 import type {
   AiMatchMetrics,
   AiDetailedResult,
@@ -21,6 +28,22 @@ const countBattleAreaHp = (state: GameState, playerId: PlayerId): number =>
     (sum, cookie) => sum + cookie.hpCards.length,
     0,
   )
+
+/** 只以目前公開攻擊／HP 找出可立即擊倒的合法 attack command。 */
+const publicLethalAttackCommands = (
+  state: GameState,
+  playerId: PlayerId,
+): AttackCommand[] => getLegalTurnCommands(state, playerId).filter((command): command is AttackCommand => {
+  if (command.kind !== 'attack') return false
+  const opponentId: PlayerId = playerId === 'player-one'
+    ? 'player-two'
+    : 'player-one'
+  const target = state.players[opponentId].battleArea.find(
+    (cookie) => cookie.card.instanceId === command.targetInstanceId,
+  )
+  return target !== undefined &&
+    getEffectiveAttack(state, command.attackerInstanceId) >= target.hpCards.length
+})
 
 const detectReplacement = (
   prevState: GameState,
@@ -174,6 +197,8 @@ const computeBehaviorMetrics = (
   r6cLowQualityCount: number,
   r6cForcedCount: number,
   r6cBreakWorsenedCount: number,
+  legalAttackSkippedCount: number,
+  lv4SearchTelemetry: readonly Lv4SearchTelemetry[],
 ): BehaviorMetrics => {
   const lowQualityCount = replacementEvents.filter((e) => e.level <= 1 && e.hp <= 1).length
 
@@ -233,6 +258,8 @@ const computeBehaviorMetrics = (
     r6cLowQualityCount,
     r6cForcedCount,
     r6cBreakWorsenedCount,
+    legalAttackSkippedCount,
+    lv4Search: aggregateLv4SearchTelemetry(lv4SearchTelemetry),
   }
 }
 
@@ -268,6 +295,10 @@ export const simulateAiMatchDetailed = (
   let r6cBreakWorsenedCount = 0
   let invalidActionCount = 0
   let deadlockCount = 0
+  let legalAttackSkippedCount = 0
+  let lethalOpportunityCount = 0
+  let lethalConversionCount = 0
+  const lv4SearchTelemetry: Lv4SearchTelemetry[] = []
 
   resetR10Counters()
 
@@ -281,10 +312,32 @@ export const simulateAiMatchDetailed = (
 
     const prevState = state
     const controller = getActingPlayerId(state)
+    const legalCommands = getLegalTurnCommands(state, controller)
+    const legalAttacks = legalCommands.filter((command) => command.kind === 'attack')
+    const publicLethals = publicLethalAttackCommands(state, controller)
     const decision = takeAiStep(state, controller, {
       level: (options.levels?.[controller] ?? 2) as 1 | 2 | 3 | 4,
       seed: options.seed,
     })
+    if (decision.reason?.lv4Search) {
+      lv4SearchTelemetry.push(decision.reason.lv4Search)
+    }
+    if (legalAttacks.length > 0 && decision.action === 'advance-phase') {
+      legalAttackSkippedCount += 1
+    }
+    if (publicLethals.length > 0) {
+      lethalOpportunityCount += 1
+      if (
+        decision.action === 'attack' &&
+        decision.state.pendingBattle &&
+        publicLethals.some((command) =>
+          command.attackerInstanceId === decision.state.pendingBattle?.attackerInstanceId &&
+          command.targetInstanceId === decision.state.pendingBattle?.targetInstanceId,
+        )
+      ) {
+        lethalConversionCount += 1
+      }
+    }
     logs.push(
       `#${actionCount + 1} T${state.turnNumber} ${decision.description}`,
     )
@@ -399,8 +452,8 @@ export const simulateAiMatchDetailed = (
     invalidActionCount,
     deadlockCount,
     r7TrapSkipCount,
-    0,
-    0,
+    lethalOpportunityCount,
+    lethalConversionCount,
     directWinCount,
     getR10Counters().penaltyApplied,
     getR10Counters().breakRaceRisk,
@@ -409,6 +462,8 @@ export const simulateAiMatchDetailed = (
     r6cLowQualityCount,
     r6cForcedCount,
     r6cBreakWorsenedCount,
+    legalAttackSkippedCount,
+    lv4SearchTelemetry,
   )
 
   return {
@@ -423,5 +478,6 @@ export const simulateAiMatchDetailed = (
     turnProgression,
     endInfo,
     behavior,
+    lv4SearchTelemetry,
   }
 }

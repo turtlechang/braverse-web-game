@@ -101,3 +101,7 @@ interface KnowledgeState {
 | 已公開 inspect/reveal | 只保存實際向 observer 公開的牌及其位置；未展示的鄰近牌不得出現在 facts。 |
 
 任何無法從現有 command log／公開效果事件辨識「牌序是否已被破壞」的效果，是 G2 的 `Blocking Decision`；在裁決前不得寫入可能沿用過期位置的策略。
+
+## G4 搜尋邊界（2026-08-16）
+
+G4 的假想 command 仍以同一份 `KnowledgeState` 及 `PlayerView` 評分。若套用 command 後手牌包含節點前未可見的 instance，搜尋不會列舉該狀態的下一個 command；因此不會根據未知抽牌的身分規劃後續行動。攻擊出現 blocker、trap、FLIP、replacement 或任何 pending 狀態時也立即停止搜尋，交由現有規則流程處理。command log → knowledge event 投影與 pending 選擇的知識更新保留到 G5。

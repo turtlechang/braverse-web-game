@@ -1,6 +1,6 @@
 # 通用型 Lv.3／Lv.4 AI 策略契約
 
-> 狀態：G3 已完成；Lv.3 已接入單步、可解釋的通用策略評分。G4 尚未開始，必須取得核准後才可修改 Lv.4 搜尋。
+> 狀態：G4 已完成；Lv.4 已接入有限預算的多步合法 command 搜尋、R16 資源預留與搜尋 telemetry。G5 尚未開始，必須取得核准後才可改動 pending／防守選擇。
 
 ## 目標與範圍
 
@@ -80,7 +80,7 @@ Lv.4 在加入 R12～R16 後，仍必須沿用 R9、R10、R11。現況 `docs/ai-
 | G1 | capability model／extractor、deck profile、synergy graph | shadow mode，只輸出能力與 profile。已完成；沒有接入 AI 行動。 | G0 核准。 |
 | G2 | `KnowledgeState` 與安全測試 | 不得改變策略選擇。已完成；只接收 PlayerView／合法 knowledge event，未接入 AI 行動。 | G1 核准。 |
 | G3 | Lv.3 action scoring／tactical plans | 已完成：一步合法 command 評估、公開資訊／已知資訊輸入與可解釋 breakdown。 | G2 核准。 |
-| G4 | Lv.4 search／reservation／telemetry | 4～6 beam、4～6 command depth、150～350 nodes、100～250ms；逾時回退 Lv.3。 | G3 核准。 |
+| G4 | Lv.4 search／reservation／telemetry | 已完成：width 5、depth 5、240 nodes、150ms；只展開合法 command、攻擊進入 pending 即停止、逾時回退 Lv.3。 | G3 核准。 |
 | G5 | pending 與防守選擇整合 | replacement、付款、目標、順序、choose-one、discard、blocker、trap、FLIP、refresh、多階段效果。 | G4 核准。 |
 
 每個 phase 使用獨立短期分支與 PR。現工作樹已有其他未提交工作時，不得混入、stage、覆寫或藉由切換分支破壞它；應先建立隔離 worktree／分支後再建立該 phase 的 PR。
@@ -92,3 +92,9 @@ Lv.4 在加入 R12～R16 後，仍必須沿用 R9、R10、R11。現況 `docs/ai-
 - 明確登錄已知的相對分數固定門檻風險與 Blocking Decisions。
 - 記錄後續階段所需的能力、知識安全、Lv.3、Lv.4、pending、benchmark 測試規格。
 - 完成後停止，等待使用者核准 G1；不得先建立 G1 的 source file 或影子輸出。
+
+## G4 完成記錄（2026-08-16）
+
+`lv4-search.ts` 以 width 5、depth 5、240 個節點、150ms 的有限 beam 搜尋同一回合可合法執行的 `PlayerActionCommand`。每個節點只以 `PlayerView`、G2 `KnowledgeState`、結構化能力與公開資源評分；不自動結算攻擊，也不猜測 blocker、trap、FLIP、replacement 或未翻 HP 的結果。攻擊一建立 pending battle、控制權改變或出現其他 pending 決策便停止展開，交回既有規則／G5 流程。假想行動若帶來未知手牌，也只保留公開張數價值並停止後續 command 列舉。
+
+R16 的 `resource-reservation.ts` 只讀取規則層已列出的攻擊付款，避免非攻擊 setup 耗盡已可支付的最小攻擊資源。`search-telemetry.ts` 與 detailed simulation／benchmark 記錄節點、時間、timeout／fallback、setup／payoff／combo 放棄、未知資訊停止、未支援效果與資源預留；timeout 一律回退同局面的 Lv.3 最佳候選。R9、R10、R11 與既有公開風險訊號仍在每個 command 過渡中使用。G5 才會將 TacticalPlan 接到 pending payment、target、blocker、trap、FLIP、refresh 與多段效果選擇。
