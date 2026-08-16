@@ -503,6 +503,45 @@ describe('item and stage actions', () => {
     expect(canActivateStage(state, 'player-one')).toBe(false)
   })
 
+  it('only offers BS6-107 Machine Room after a Cookie was played from trash this turn', () => {
+    const machineRoom: GameCard = {
+      id: 'BS6-107',
+      instanceId: 'BS6-107-stage-1',
+      name: 'TBD Machine Room',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { purple: 1 },
+        cost: { purple: 1 },
+        text: "During this turn, if a Cookie was played from your trash, all of your opponent's Cookies receive 1 damage.",
+        restSource: true,
+        effects: [
+          {
+            kind: 'damage-all',
+            amount: 1,
+            side: 'opponent',
+            condition: { kind: 'cookie-played-from-trash-this-turn' },
+          },
+        ],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].stage = { card: machineRoom, rested: false }
+    state.players['player-one'].supportArea = [
+      {
+        card: { ...support('purple-pay'), energyColor: 'purple' },
+        rested: false,
+      },
+    ]
+
+    expect(canActivateStage(state, 'player-one')).toBe(false)
+
+    const eligibleState: GameState = {
+      ...state,
+      cookiesPlayedFromTrashThisTurn: { 'player-one': true },
+    }
+    expect(canActivateStage(eligibleState, 'player-one')).toBe(true)
+  })
+
   it('does not offer stage activation when a required target is unavailable', () => {
     const stage: GameCard = {
       id: 'stage',

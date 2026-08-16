@@ -4,7 +4,7 @@ import {
   createItemUsageDemoState,
   createStageUsageDemoState,
 } from '../../game/demo'
-import { createBattleState } from '../../game/test-helpers/battle-helpers'
+import { createBattleState, item } from '../../game/test-helpers/battle-helpers'
 import type { CardSkill, GameState, PendingBattle } from '../../game'
 import { BattleRow, type BattleRowProps } from './BattleRow'
 import { computeOpponentFan, CARD_W, CARD_H } from './opponentFan'
@@ -505,6 +505,67 @@ describe('BattleRow desktop interactions', () => {
 
     expect(markup).not.toContain('hand-card-actions')
     expect(markup).not.toContain('>放置<')
+  })
+
+  it('shows BS6-107 Machine Room activation after a trash Cookie was played', () => {
+    const game = createBattleState()
+    game.activePlayerId = 'player-one'
+    game.phase = 'main'
+    game.players['player-one'].stage = {
+      card: {
+        id: 'BS6-107',
+        instanceId: 'BS6-107-stage-1',
+        name: 'TBD Machine Room',
+        type: 'stage',
+        stageAbility: {
+          placementCost: { purple: 1 },
+          cost: { purple: 1 },
+          text: 'During this turn, if a Cookie was played from your trash, all of your opponent Cookies receive 1 damage.',
+          restSource: true,
+          effects: [
+            {
+              kind: 'damage-all',
+              amount: 1,
+              side: 'opponent',
+              condition: { kind: 'cookie-played-from-trash-this-turn' },
+            },
+          ],
+        },
+      },
+      rested: false,
+    }
+    game.players['player-one'].supportArea = [
+      {
+        card: item('purple-pay', 'purple'),
+        rested: false,
+      },
+    ]
+
+    const blockedMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game,
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+    expect(blockedMarkup).not.toContain('stage-quick-action')
+
+    const eligibleMarkup = renderToStaticMarkup(
+      <BattleRow
+        {...createProps({
+          game: {
+            ...game,
+            cookiesPlayedFromTrashThisTurn: { 'player-one': true },
+          },
+          playerId: 'player-one',
+          position: 'bottom',
+        })}
+      />,
+    )
+    expect(eligibleMarkup).toContain('class="stage-quick-action"')
+    expect(eligibleMarkup).toContain('>啟動<')
   })
 
   it('marks support cards as selectable for a support-to-trash skill cost', () => {

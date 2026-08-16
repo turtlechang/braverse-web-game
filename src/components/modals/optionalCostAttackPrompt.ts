@@ -113,6 +113,62 @@ const describeCost = (
   return parts.length > 0 ? parts.join('、') : '無'
 }
 
+/**
+ * 攻擊後代價的目標要依「支付代價後」的區域判定。
+ *
+ * BS6-096 會先把來源餅乾放入棄牌區，再從棄牌區登場 LV.1 紫色餅乾。
+ * 當己方戰鬥區已經有兩張餅乾時，若直接用目前 state 找候選，
+ * `getTrashCookieCandidates` 會因戰鬥區已滿而回傳空陣列，讓支付按鈕被
+ * UI 錯誤地停用。規則引擎在實際結算時本來就先支付來源代價再驗證目標，
+ * 這裡只建立同樣的唯讀投影供提示框使用，不會改動正式 GameState。
+ */
+const getTargetSelectionState = (
+  game: GameState,
+  viewerPlayerId: PlayerId,
+  sourceInstanceId: string,
+  targetedEffect: CardEffect | undefined,
+  cost: EnergyCost & {
+    selfToTrash?: boolean
+    selfToBreakArea?: boolean
+  },
+): GameState => {
+  const projectsTrashToBattle =
+    cost.selfToTrash === true && targetedEffect?.kind === 'trash-to-battle'
+  const projectsBreakToBattle =
+    cost.selfToBreakArea === true && targetedEffect?.kind === 'break-to-battle'
+  if (!projectsTrashToBattle && !projectsBreakToBattle) return game
+
+  const player = game.players[viewerPlayerId]
+  const source = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === sourceInstanceId,
+  )
+  if (!source) return game
+
+  const sourceCards = [
+    source.card,
+    ...source.hpCards,
+    ...(source.equippedCards ?? []),
+  ]
+  return {
+    ...game,
+    players: {
+      ...game.players,
+      [viewerPlayerId]: {
+        ...player,
+        battleArea: player.battleArea.filter(
+          (cookie) => cookie.card.instanceId !== sourceInstanceId,
+        ),
+        ...(projectsBreakToBattle
+          ? { breakArea: [...player.breakArea, source.card] }
+          : {}),
+        discardPile: projectsTrashToBattle
+          ? [...player.discardPile, ...sourceCards]
+          : player.discardPile,
+      },
+    },
+  }
+}
+
 export function getOptionalCostAttackPrompt(
   game: GameState,
   viewerPlayerId: PlayerId,
@@ -130,10 +186,17 @@ export function getOptionalCostAttackPrompt(
       !(effect.kind === 'battle-to-break' && effect.target.sourceOnly),
   )
   const needsTarget = Boolean(targetedEffect)
+  const targetSelectionState = getTargetSelectionState(
+    game,
+    viewerPlayerId,
+    pending.sourceInstanceId,
+    targetedEffect,
+    pending.cost,
+  )
   const targetCandidates = (
     targetedEffect
       ? getEffectSelectionCandidates(
-          game,
+          targetSelectionState,
           {
             sourcePlayerId: viewerPlayerId,
             sourceInstanceId: pending.sourceInstanceId,

@@ -463,7 +463,9 @@ describe('BS6 RED effect adapter', () => {
         ],
       },
     ])
-    expect(convertOfficialAttackEffects(findBs6Card('BS6-096'))).toMatchObject([
+    const cherryAttack = convertOfficialAttackEffects(findBs6Card('BS6-096'))
+    expect(cherryAttack[0]?.sourceEnergy).toBeUndefined()
+    expect(cherryAttack).toMatchObject([
       {
         kind: 'optional-cost-attack',
         cost: { energy: { purple: 1 }, selfToTrash: true },
