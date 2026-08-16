@@ -77,6 +77,7 @@ import type {
   BattleContinuation,
   CardEffect,
   CommandLogEntry,
+  EffectCondition,
   EffectContext,
   EnergyCost,
   EnergyColor,
@@ -164,6 +165,8 @@ export interface DrawUpToDecision {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   sourceCardName: string
+  sourceCardId?: string
+  condition?: EffectCondition
   max: number
 }
 
@@ -269,6 +272,12 @@ export interface ResolveOptionalCostAttackCommand {
   discardCardIds?: string[]
   targetIds?: string[]
   paymentIds?: string[]
+  /** 支援區回手代價（例如 BS6-044／BS6-061）。 */
+  supportToHandIds?: string[]
+  /** 支付 HP 代價時選擇的戰鬥區餅乾（例如 BS6-003）。 */
+  hpToTrashIds?: string[]
+  /** 支付洗回牌庫代價時選擇的棄牌區卡牌（例如 BS5-094）。 */
+  trashToDeckIds?: string[]
 }
 
 export interface ResolveDrawUpToCommand {
@@ -930,6 +939,8 @@ export const getPendingDecision = (
       sourcePlayerId: pending.sourcePlayerId,
       sourceInstanceId: pending.sourceInstanceId,
       sourceCardName: pending.sourceCardName,
+      sourceCardId: pending.sourceCardId,
+      condition: pending.condition,
       max: pending.max,
     }
   }
@@ -1199,7 +1210,8 @@ const applyPendingDecisionCommand = (
       return resolveOptionalCostAttack(
         state, command.playerId, command.action,
         command.discardCardIds ?? [], command.targetIds ?? [],
-        command.paymentIds ?? [],
+        command.paymentIds ?? [], command.supportToHandIds ?? [],
+        command.hpToTrashIds ?? [], command.trashToDeckIds ?? [],
       )
     case 'resolve-draw-up-to':
       return resolveDrawUpTo(state, command.playerId, command.drawCount)

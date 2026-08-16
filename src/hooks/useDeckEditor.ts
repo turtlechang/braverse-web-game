@@ -9,6 +9,7 @@ import {
   hasFlipAbility,
   normalizeCardNumber,
 } from '../game/card-pool'
+import { parseOfficialCardText } from '../cards/official-text-parser'
 import {
   DEFAULT_DECK_FORMAT,
   getDeckCopyLimit,
@@ -22,6 +23,9 @@ const CARD_NUMBER_SERIES_PREFIXES: Record<string, string> = {
   BS6: 'BS6-',
 }
 
+export const getCardAttackPower = (attackText: string | null): number | null =>
+  parseOfficialCardText(attackText)?.damage ?? null
+
 export interface DeckEditorState {
   deckEntries: CustomDeckEntry[]
   deckName: string
@@ -33,6 +37,7 @@ export interface DeckEditorState {
   filterSeries: string | null
   filterLevel: number | null
   filterHp: number | null
+  filterAttackPower: number | null
   filterEffect: string | null
 }
 
@@ -49,6 +54,7 @@ export interface DeckEditorActions {
   setFilterSeries: (series: string | null) => void
   setFilterLevel: (level: number | null) => void
   setFilterHp: (hp: number | null) => void
+  setFilterAttackPower: (attackPower: number | null) => void
   setFilterEffect: (effect: string | null) => void
   clearDeck: () => void
   loadDeck: (deck: CustomDeck) => void
@@ -74,6 +80,7 @@ export function useDeckEditor(): DeckEditorState &
   const [filterSeries, setFilterSeries] = useState<string | null>(null)
   const [filterLevel, setFilterLevel] = useState<number | null>(null)
   const [filterHp, setFilterHp] = useState<number | null>(null)
+  const [filterAttackPower, setFilterAttackPower] = useState<number | null>(null)
   const [filterEffect, setFilterEffect] = useState<string | null>(null)
 
   const addCard = useCallback((cardNumber: string) => {
@@ -195,6 +202,12 @@ export function useDeckEditor(): DeckEditorState &
       if (filterHp !== null && entry.hp !== filterHp) {
         return false
       }
+      if (
+        filterAttackPower !== null &&
+        getCardAttackPower(entry.attackText) !== filterAttackPower
+      ) {
+        return false
+      }
       if (filterEffect) {
         const text = entry.skill?.text ?? ''
         const attack = entry.attackText ?? ''
@@ -217,7 +230,17 @@ export function useDeckEditor(): DeckEditorState &
       }
       return true
     })
-  }, [searchText, filterColor, filterType, filterRarity, filterSeries, filterLevel, filterHp, filterEffect])
+  }, [
+    searchText,
+    filterColor,
+    filterType,
+    filterRarity,
+    filterSeries,
+    filterLevel,
+    filterHp,
+    filterAttackPower,
+    filterEffect,
+  ])
 
   const getDeckTotalCount = useCallback((): number => {
     return deckEntries.reduce((sum, e) => sum + e.count, 0)
@@ -243,6 +266,7 @@ export function useDeckEditor(): DeckEditorState &
     filterSeries,
     filterLevel,
     filterHp,
+    filterAttackPower,
     filterEffect,
     addCard,
     removeCard,
@@ -256,6 +280,7 @@ export function useDeckEditor(): DeckEditorState &
     setFilterSeries,
     setFilterLevel,
     setFilterHp,
+    setFilterAttackPower,
     setFilterEffect,
     clearDeck,
     loadDeck,

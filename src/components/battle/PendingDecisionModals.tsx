@@ -16,6 +16,27 @@ import type {
   BattleUiPendingEffectLike,
 } from '../../hooks/battleUiContracts'
 
+const describeDrawUpToReason = (
+  match: BattleUiMatchLike,
+  pending: NonNullable<BattleUiMatchLike['game']['pendingDrawUpTo']>,
+): string | undefined => {
+  const condition = pending.condition
+  if (!condition) return undefined
+
+  const sourceId = pending.sourceCardId
+  const sourceLabel = sourceId
+    ? `${sourceId} ${pending.sourceCardName}`
+    : pending.sourceCardName
+  if (condition.kind === 'active-support-count-at-least') {
+    const activeSupportCount = match.game.players[pending.sourcePlayerId].supportArea.filter(
+      (support) => !support.rested,
+    ).length
+    return `由「${sourceLabel}」技能效果觸發：支援區有 ${activeSupportCount} 張啟動卡（需要至少 ${condition.count} 張）`
+  }
+
+  return `由「${sourceLabel}」效果條件觸發抽牌`
+}
+
 export interface PendingDecisionModalsProps {
   match: BattleUiMatchLike
   pending: BattleUiPendingEffectLike
@@ -72,13 +93,16 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
     if (!autoResolveDrawUpTo || !pendingDrawUpTo) return
     const deckSize = match.game.players[match.viewerPlayerId].deck.length
     const drawCount = Math.min(1, deckSize)
+    const reasonText = describeDrawUpToReason(match, pendingDrawUpTo)
     match.dispatch(
       {
         kind: 'resolve-draw-up-to',
         playerId: match.viewerPlayerId,
         drawCount,
       },
-      drawCount === 0 ? '已選擇不抽牌。' : `已從牌庫抽取 ${drawCount} 張牌。`,
+      drawCount === 0
+        ? `${reasonText ?? '抽牌效果'}：已選擇不抽牌。`
+        : `${reasonText ?? '抽牌效果'}：已從牌庫抽取 ${drawCount} 張牌。`,
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoResolveDrawUpTo, pendingDrawUpTo?.sourceInstanceId])
@@ -348,6 +372,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
               sourceCardName={drawUpTo.sourceCardName}
               sourceCard={sourceDisplayCard}
               effectText={effectText}
+              reasonText={describeDrawUpToReason(match, drawUpTo)}
               max={drawUpTo.max}
               deckSize={match.game.players[match.viewerPlayerId].deck.length}
               followedByDiscard={Boolean(

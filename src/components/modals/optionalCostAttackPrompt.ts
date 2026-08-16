@@ -4,6 +4,8 @@ import {
   getEffectSelectionLimits,
   getEnergyCostTotal,
   getRemainingEnergyCost,
+  getHpToTrashCostCandidates,
+  getTrashToDeckCostCandidates,
   isEffectConditionMet,
   isEnergyColorCompatibleWithCost,
   requiresEffectCardSelection,
@@ -20,9 +22,15 @@ export interface OptionalCostAttackPromptData {
   sourceCardName: string
   effectText: string
   discardHandCost: number
+  supportToHandCost: number
+  hpToTrashCost: number
+  hpToTrashCandidates: { card: GameCard; instanceId: string }[]
+  trashToDeckCost: number
+  trashToDeckCandidates: { card: GameCard; instanceId: string }[]
   energyCostTotal: number
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
+  supportToHandCandidates: { card: GameCard; instanceId: string }[]
   targetCandidates: { card: GameCard; instanceId: string }[]
   needsTarget: boolean
   targetMin: number
@@ -73,6 +81,9 @@ const getUnmetConditionWarning = (
 const describeCost = (
   remainingEnergy: EnergyCost,
   discardHandCost: number,
+  supportToHandCost: number,
+  hpToTrashCost: number,
+  trashToDeckCost: number,
 ): string => {
   const parts: string[] = []
 
@@ -86,6 +97,13 @@ const describeCost = (
     parts.push(`支付支援區 ${energyParts.join('、')}`)
   }
   if (discardHandCost > 0) parts.push(`棄置 ${discardHandCost} 張手牌`)
+  if (supportToHandCost > 0) {
+    parts.push(`將 ${supportToHandCost} 張支援區卡返回手牌`)
+  }
+  if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
+  if (trashToDeckCost > 0) {
+    parts.push(`將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`)
+  }
 
   return parts.length > 0 ? parts.join('、') : '無'
 }
@@ -135,6 +153,12 @@ export function getOptionalCostAttackPrompt(
         : '對手支援區的卡'
       : targetedEffect?.kind === 'opponent-battle-to-trash'
         ? '對手餅乾'
+        : targetedEffect?.kind === 'break-to-battle'
+          ? '己方休息區餅乾'
+          : targetedEffect?.kind === 'trash-to-battle'
+            ? '己方棄牌區餅乾'
+            : targetedEffect?.kind === 'trash-to-deck'
+              ? '棄牌區卡牌'
         : targetSelector?.side === 'self'
           ? '己方餅乾'
           : '對手餅乾'
@@ -143,6 +167,22 @@ export function getOptionalCostAttackPrompt(
   const energyCost = getRemainingEnergyCost(costEnergy, pending.sourceEnergy)
   const energyCostTotal = getEnergyCostTotal(energyCost)
   const discardHandCost = pending.cost.discardHand ?? 0
+  const supportToHandCost = pending.cost.supportToHand ?? 0
+  const hpToTrashCost = pending.cost.hpToTrash ? 1 : 0
+  const hpToTrashCandidates = hpToTrashCost
+    ? getHpToTrashCostCandidates(
+        pending.cost,
+        game.players[viewerPlayerId].battleArea,
+        pending.sourceInstanceId,
+      ).map((cookie) => ({ card: cookie.card, instanceId: cookie.card.instanceId }))
+    : []
+  const trashToDeckCost = pending.cost.trashToDeck?.count ?? 0
+  const trashToDeckCandidates = trashToDeckCost
+    ? getTrashToDeckCostCandidates(
+        pending.cost,
+        game.players[viewerPlayerId].discardPile,
+      ).map((card) => ({ card, instanceId: card.instanceId }))
+    : []
   const supportCandidates = energyCostTotal === 0
     ? []
     : game.players[viewerPlayerId].supportArea
@@ -154,6 +194,16 @@ export function getOptionalCostAttackPrompt(
       ),
     )
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
+  const supportToHandCandidates =
+    supportToHandCost === 0
+      ? []
+      : game.players[viewerPlayerId].supportArea
+          .filter(
+            (support) =>
+              pending.cost.supportToHandType === undefined ||
+              support.card.type === pending.cost.supportToHandType,
+          )
+          .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return {
     sourceCard: game.players[viewerPlayerId].battleArea.find(
@@ -162,10 +212,22 @@ export function getOptionalCostAttackPrompt(
     sourceCardName: pending.sourceCardName,
     effectText: pending.effectText,
     discardHandCost,
+    supportToHandCost,
+    hpToTrashCost,
+    hpToTrashCandidates,
+    trashToDeckCost,
+    trashToDeckCandidates,
     energyCostTotal,
-    costText: describeCost(energyCost, discardHandCost),
+    costText: describeCost(
+      energyCost,
+      discardHandCost,
+      supportToHandCost,
+      hpToTrashCost,
+      trashToDeckCost,
+    ),
     playerHand: game.players[viewerPlayerId].hand,
     supportCandidates,
+    supportToHandCandidates,
     targetCandidates,
     needsTarget,
     targetMin,

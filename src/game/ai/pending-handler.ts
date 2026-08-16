@@ -16,7 +16,11 @@ import {
   requiresEffectCardSelection,
 } from '../effects'
 import { getRefreshCandidates } from '../refresh'
-import { getDiscardHandCostCandidates } from '../skills'
+import {
+  getDiscardHandCostCandidates,
+  getHpToTrashCostCandidates,
+  getTrashToDeckCostCandidates,
+} from '../skills'
 import { chooseAiEffectMode } from './choose-one-mode'
 import type { EffectContext } from '../types'
 import type { GameState, PlayerId } from '../types'
@@ -438,9 +442,43 @@ export const handleAiPendingDecision = (
       effectiveEnergyCost,
       state.players[playerId].supportArea,
     )
+    const supportToHandAmount = pendingDecision.cost.supportToHand ?? 0
+    const supportToHandIds = state.players[playerId].supportArea
+      .filter(
+        (support) =>
+          !paymentIds?.includes(support.card.instanceId) &&
+          (pendingDecision.cost.supportToHandType === undefined ||
+            support.card.type === pendingDecision.cost.supportToHandType),
+      )
+      .slice(0, supportToHandAmount)
+      .map((support) => support.card.instanceId)
     const canPay =
       hand.length >= (pendingDecision.cost.discardHand ?? 0) &&
-      Boolean(paymentIds)
+      Boolean(paymentIds) &&
+      supportToHandIds.length >= supportToHandAmount
+    const hpToTrashIds = pendingDecision.cost.hpToTrash
+      ? getHpToTrashCostCandidates(
+          pendingDecision.cost,
+          state.players[playerId].battleArea,
+          pendingDecision.sourceInstanceId,
+        )
+          .slice(0, 1)
+          .map((cookie) => cookie.card.instanceId)
+      : []
+    const canPayHpToTrash = pendingDecision.cost.hpToTrash
+      ? hpToTrashIds.length === 1
+      : true
+    const trashToDeckIds = pendingDecision.cost.trashToDeck
+      ? getTrashToDeckCostCandidates(
+          pendingDecision.cost,
+          state.players[playerId].discardPile,
+        )
+          .slice(0, pendingDecision.cost.trashToDeck.count)
+          .map((card) => card.instanceId)
+      : []
+    const canPayTrashToDeck = pendingDecision.cost.trashToDeck
+      ? trashToDeckIds.length === pendingDecision.cost.trashToDeck.count
+      : true
     const targetedEffect = pendingDecision.effects.find((effect) =>
       requiresEffectCardSelection(effect),
     )
@@ -461,7 +499,7 @@ export const handleAiPendingDecision = (
       targetedEffect
       ? targetIds.length >= (getEffectSelectionLimits(targetedEffect)?.min ?? 0)
         : true
-    if (canPay && hasTarget) {
+    if (canPay && canPayHpToTrash && canPayTrashToDeck && hasTarget) {
       return {
         state: applyGameCommand(state, {
           kind: 'resolve-optional-cost-attack',
@@ -472,9 +510,12 @@ export const handleAiPendingDecision = (
             .map((card) => card.instanceId),
           targetIds,
           paymentIds: paymentIds ?? [],
+          supportToHandIds,
+          hpToTrashIds,
+          trashToDeckIds,
         }),
         action: 'resolve-optional-cost-attack',
-        description: `${state.players[playerId].name}支付棄手牌代價發動攻擊後續效果。`,
+        description: `${state.players[playerId].name}支付攻擊後續效果代價。`,
       }
     }
     return {

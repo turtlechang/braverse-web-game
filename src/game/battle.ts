@@ -37,7 +37,10 @@ import {
   canPayTrashCookieToBreakAreaCost,
   getFaintTriggeredCost,
   getDiscardHandCostCandidates,
+  getHpToTrashCostCandidates,
+  getTrashToDeckCostCandidates,
   markSupportAreaDecreased,
+  payHpToTrashCost,
   payTrashBattleCookieCost,
   payTrashCookieToBreakAreaCost,
 } from './skills'
@@ -2193,6 +2196,9 @@ export const resolveOptionalCostAttack = (
   discardCardIds: string[] = [],
   targetIds: string[] = [],
   paymentIds: string[] = [],
+  supportToHandIds: string[] = [],
+  hpToTrashIds: string[] = [],
+  trashToDeckIds: string[] = [],
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
@@ -2216,6 +2222,78 @@ export const resolveOptionalCostAttack = (
   if (!allInHand) {
     throw new GameRuleError('Invalid battle action.')
   }
+  const supportToHandAmount = pending.cost.supportToHand ?? 0
+  const uniqueSupportToHandIds = [...new Set(supportToHandIds)]
+  if (uniqueSupportToHandIds.length !== supportToHandIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  if (uniqueSupportToHandIds.length !== supportToHandAmount) {
+    throw new GameRuleError(
+      `Must return exactly ${supportToHandAmount} support card(s) for this effect.`,
+    )
+  }
+  const supportToHandCandidates = player.supportArea.filter(
+    (support) =>
+      (pending.cost.supportToHandType === undefined ||
+        support.card.type === pending.cost.supportToHandType) &&
+      uniqueSupportToHandIds.includes(support.card.instanceId),
+  )
+  if (supportToHandCandidates.length !== supportToHandAmount) {
+    throw new GameRuleError('只能選擇符合條件的支援區卡牌返回手牌。')
+  }
+  const hpToTrashCost = pending.cost.hpToTrash
+  const uniqueHpToTrashIds = [...new Set(hpToTrashIds)]
+  if (uniqueHpToTrashIds.length !== hpToTrashIds.length) {
+    throw new GameRuleError('HP 費用不能重複選同一張餅乾。')
+  }
+  if (hpToTrashCost && uniqueHpToTrashIds.length !== 1) {
+    throw new GameRuleError('必須選擇 1 張餅乾支付 HP 費用。')
+  }
+  if (!hpToTrashCost && uniqueHpToTrashIds.length > 0) {
+    throw new GameRuleError('此攻擊後效果不需要支付 HP 費用。')
+  }
+  const hpToTrashCandidates = hpToTrashCost
+    ? getHpToTrashCostCandidates(
+        pending.cost,
+        player.battleArea,
+        pending.sourceInstanceId,
+      )
+    : []
+  if (
+    hpToTrashCost &&
+    !hpToTrashCandidates.some(
+      (cookie) => cookie.card.instanceId === uniqueHpToTrashIds[0],
+    )
+  ) {
+    throw new GameRuleError('選擇的 HP 費用餅乾不合法。')
+  }
+  const trashToDeckCost = pending.cost.trashToDeck
+  const uniqueTrashToDeckIds = [...new Set(trashToDeckIds)]
+  if (uniqueTrashToDeckIds.length !== trashToDeckIds.length) {
+    throw new GameRuleError('不能重複選擇同一張棄牌區卡牌作為代價。')
+  }
+  if (
+    trashToDeckCost &&
+    uniqueTrashToDeckIds.length !== trashToDeckCost.count
+  ) {
+    throw new GameRuleError(
+      `必須選擇 ${trashToDeckCost.count} 張棄牌區卡牌作為代價。`,
+    )
+  }
+  if (!trashToDeckCost && uniqueTrashToDeckIds.length > 0) {
+    throw new GameRuleError('此攻擊後效果不需要支付棄牌區代價。')
+  }
+  const trashToDeckCandidates = trashToDeckCost
+    ? getTrashToDeckCostCandidates(pending.cost, player.discardPile)
+    : []
+  if (
+    trashToDeckCost &&
+    uniqueTrashToDeckIds.some(
+      (id) => !trashToDeckCandidates.some((card) => card.instanceId === id),
+    )
+  ) {
+    throw new GameRuleError('選擇的棄牌區卡牌不符合洗回牌庫代價條件。')
+  }
   const energyCost = getRemainingEnergyCost(
     pending.cost.energy ?? {},
     pending.sourceEnergy,
@@ -2223,6 +2301,9 @@ export const resolveOptionalCostAttack = (
   const uniquePaymentIds = [...new Set(paymentIds)]
   if (uniquePaymentIds.length !== paymentIds.length) {
     throw new GameRuleError('Invalid battle action.')
+  }
+  if (uniquePaymentIds.some((id) => uniqueSupportToHandIds.includes(id))) {
+    throw new GameRuleError('同一張支援卡不能同時支付能量與返回手牌代價。')
   }
   const paymentValidation = validateEnergyPayment(
     energyCost,
@@ -2257,34 +2338,58 @@ export const resolveOptionalCostAttack = (
           pendingBattle: { ...battle, attackEffectIndex: nextIndex },
         })
   }
-  const sourceToTrash = pending.cost.selfToTrash
-    ? player.battleArea.find(
-        (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
-      )
-    : undefined
-  if (pending.cost.selfToTrash && !sourceToTrash) {
+  const hpToTrashPayment = payHpToTrashCost(
+    player,
+    pending.cost,
+    uniqueHpToTrashIds,
+    pending.sourceInstanceId,
+  )
+  let playerAfterSourceCosts = hpToTrashPayment.player
+  const sourceToLeaveBattle =
+    pending.cost.selfToTrash || pending.cost.selfToBreakArea
+      ? playerAfterSourceCosts.battleArea.find(
+          (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+        )
+      : undefined
+  if (
+    (pending.cost.selfToTrash || pending.cost.selfToBreakArea) &&
+    !sourceToLeaveBattle
+  ) {
     throw new GameRuleError('Invalid battle action.')
   }
-  const stateAfterSourceCost: GameState = sourceToTrash
-    ? {
-        ...state,
-        players: {
-          ...state.players,
-          [playerId]: {
-            ...player,
-            battleArea: player.battleArea.filter(
-              (cookie) => cookie.card.instanceId !== sourceToTrash.card.instanceId,
-            ),
-            discardPile: [
-              ...player.discardPile,
-              sourceToTrash.card,
-              ...sourceToTrash.hpCards,
-              ...(sourceToTrash.equippedCards ?? []),
+  if (sourceToLeaveBattle) {
+    const remainingBattleArea = playerAfterSourceCosts.battleArea.filter(
+      (cookie) => cookie.card.instanceId !== sourceToLeaveBattle.card.instanceId,
+    )
+    playerAfterSourceCosts = {
+      ...playerAfterSourceCosts,
+      battleArea: remainingBattleArea,
+      ...(pending.cost.selfToBreakArea
+        ? {
+            breakArea: [
+              ...playerAfterSourceCosts.breakArea,
+              sourceToLeaveBattle.card,
             ],
-          },
-        },
-      }
-    : state
+          }
+        : {}),
+      discardPile: [
+        ...playerAfterSourceCosts.discardPile,
+        ...(pending.cost.selfToTrash ? [sourceToLeaveBattle.card] : []),
+        ...sourceToLeaveBattle.hpCards,
+        ...(sourceToLeaveBattle.equippedCards ?? []),
+      ],
+    }
+  }
+  const stateAfterSourceCost: GameState = {
+    ...state,
+    ...(hpToTrashPayment.costRecord
+      ? { costRecord: hpToTrashPayment.costRecord }
+      : {}),
+    players: {
+      ...state.players,
+      [playerId]: playerAfterSourceCosts,
+    },
+  }
   const selectableEffects = applicableEffects.filter((effect) =>
     requiresEffectCardSelection(effect),
   )
@@ -2295,7 +2400,8 @@ export const resolveOptionalCostAttack = (
     }
     const hasValidTarget = selectableEffects.every((effect) => {
       const effectTargetIds =
-        effect.kind === 'battle-to-break' && effect.target.sourceOnly
+        ((effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
+          effect.target.sourceOnly)
           ? [pending.sourceInstanceId]
           : uniqueTargetIds
       const limits = getEffectSelectionLimits(effect)
@@ -2319,7 +2425,12 @@ export const resolveOptionalCostAttack = (
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
   const paymentSet = new Set(uniquePaymentIds)
+  const supportToHandSet = new Set(uniqueSupportToHandIds)
   const playerAfterSourceCost = stateAfterSourceCost.players[playerId]
+  const context = effectContext
+  const returnedSupportCards = playerAfterSourceCost.supportArea.filter((support) =>
+    supportToHandSet.has(support.card.instanceId),
+  )
   let nextState: GameState = {
     ...stateAfterSourceCost,
     pendingOptionalCostAttack: null,
@@ -2327,21 +2438,43 @@ export const resolveOptionalCostAttack = (
       ...stateAfterSourceCost.players,
       [playerId]: {
         ...playerAfterSourceCost,
-        hand: playerAfterSourceCost.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+        hand: [
+          ...playerAfterSourceCost.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+          ...returnedSupportCards.map((support) => support.card),
+        ],
         discardPile: [...playerAfterSourceCost.discardPile, ...discardedCards],
-        supportArea: playerAfterSourceCost.supportArea.map((support) =>
-          paymentSet.has(support.card.instanceId)
-            ? { ...support, rested: true }
-            : support,
-        ),
+        supportArea: playerAfterSourceCost.supportArea
+          .filter((support) => !supportToHandSet.has(support.card.instanceId))
+          .map((support) =>
+            paymentSet.has(support.card.instanceId)
+              ? { ...support, rested: true }
+              : support,
+          ),
       },
     },
   }
-  const context = effectContext
+  if (trashToDeckCost) {
+    nextState = executeCardEffect(
+      nextState,
+      context,
+      {
+        kind: 'trash-to-deck',
+        min: trashToDeckCost.count,
+        max: trashToDeckCost.count,
+        energyColor: trashToDeckCost.energyColor,
+        excludeFlip: trashToDeckCost.excludeFlip,
+        cookieOnly: trashToDeckCost.cookieOnly,
+        keyword: trashToDeckCost.keyword,
+        nonCookieOnly: trashToDeckCost.nonCookieOnly,
+      },
+      uniqueTrashToDeckIds,
+    )
+  }
   for (const effect of applicableEffects) {
     if (nextState.status !== 'playing') break
     const effectTargetIds =
-      effect.kind === 'battle-to-break' && effect.target.sourceOnly
+      ((effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
+        effect.target.sourceOnly)
         ? [pending.sourceInstanceId]
         : targetIds
     nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
@@ -2865,6 +2998,41 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         nextState.players[pending.playerId].supportArea,
       )
       const canPayEnergy = Boolean(paymentIds)
+      const supportToHandAmount = pending.cost.supportToHand ?? 0
+      const supportToHandIds = nextState.players[pending.playerId].supportArea
+        .filter(
+          (support) =>
+            !paymentIds?.includes(support.card.instanceId) &&
+            (pending.cost.supportToHandType === undefined ||
+              support.card.type === pending.cost.supportToHandType),
+        )
+        .slice(0, supportToHandAmount)
+        .map((support) => support.card.instanceId)
+      const canPaySupportToHand =
+        supportToHandIds.length >= supportToHandAmount
+      const hpToTrashIds = pending.cost.hpToTrash
+        ? getHpToTrashCostCandidates(
+            pending.cost,
+            nextState.players[pending.playerId].battleArea,
+            pending.sourceInstanceId,
+          )
+            .slice(0, 1)
+            .map((cookie) => cookie.card.instanceId)
+        : []
+      const canPayHpToTrash = pending.cost.hpToTrash
+        ? hpToTrashIds.length === 1
+        : true
+      const trashToDeckIds = pending.cost.trashToDeck
+        ? getTrashToDeckCostCandidates(
+            pending.cost,
+            nextState.players[pending.playerId].discardPile,
+          )
+            .slice(0, pending.cost.trashToDeck.count)
+            .map((card) => card.instanceId)
+        : []
+      const canPayTrashToDeck = pending.cost.trashToDeck
+        ? trashToDeckIds.length === pending.cost.trashToDeck.count
+        : true
       const context: EffectContext = {
         sourcePlayerId: pending.playerId,
         sourceInstanceId: pending.sourceInstanceId,
@@ -2911,9 +3079,26 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const hasTarget = selectableEffect
         ? autoTargetIds.length >= (selectionLimits?.min ?? Number.POSITIVE_INFINITY)
         : applicableEffects.length > 0
-      if (canPayHand && canPayEnergy && hasTarget) {
+      if (
+        canPayHand &&
+        canPayEnergy &&
+        canPaySupportToHand &&
+        canPayHpToTrash &&
+        canPayTrashToDeck &&
+        hasTarget
+      ) {
         const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
-        nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, autoTargetIds, paymentIds ?? undefined)
+        nextState = resolveOptionalCostAttack(
+          nextState,
+          pending.playerId,
+          'pay',
+          discardIds,
+          autoTargetIds,
+          paymentIds ?? undefined,
+          supportToHandIds,
+          hpToTrashIds,
+          trashToDeckIds,
+        )
       } else {
         nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'skip')
       }

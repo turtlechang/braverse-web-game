@@ -453,7 +453,9 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName,
+        sourceCardId: sourceCard?.id,
         effectText: effectText ?? itemText,
+        condition: effect.condition,
       },
     }
   }
@@ -489,6 +491,7 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: context.sourceCardName ?? sourceCard?.name ?? 'Unknown',
+        sourceCardId: sourceCard?.id,
         effectText:
           sourceCard && 'item' in sourceCard && sourceCard.item
             ? sourceCard.item.text
@@ -527,6 +530,7 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: context.sourceCardName ?? sourceCard?.name ?? 'Unknown',
+        sourceCardId: sourceCard?.id,
         effectText:
           sourceCard && 'item' in sourceCard && sourceCard.item
             ? sourceCard.item.text
@@ -569,7 +573,9 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName,
+        sourceCardId: sourceCard?.id,
         effectText: effectText ?? itemText,
+        condition: effect.condition,
         afterEffects: [
           {
             kind: 'discard-hand',
@@ -3198,6 +3204,7 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: context.sourceCardName ?? 'Unknown',
+        condition: effect.condition,
       },
     }
   }

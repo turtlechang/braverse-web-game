@@ -12,7 +12,35 @@ import { deployCookie } from './actions'
 import type { CookieCard, GameState } from './types'
 import { createBattleState, declareAttack } from './test-helpers/battle-helpers'
 import type { GameCard } from './types'
-import { createOfficialBlueStarterDeck } from './starter-deck'
+import officialBs6Formal from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import {
+  convertOfficialCardToGameCard,
+  type OfficialCardRecord,
+} from '../cards'
+import {
+  createOfficialBlueStarterDeck,
+} from './starter-deck'
+
+const officialBs6Cards = officialBs6Formal.cards as OfficialCardRecord[]
+
+const cookie = (id: string, level: number, hp: number): CookieCard => ({
+  id,
+  instanceId: id,
+  name: id,
+  type: 'cookie',
+  level,
+  hp,
+  attack: 0,
+  attackCost: 0,
+})
+
+const item = (id: string, energyColor: 'green' | 'red'): GameCard => ({
+  id,
+  instanceId: id,
+  name: id,
+  type: 'item',
+  energyColor,
+})
 
 const handCookie = (id: string): GameCard => ({
   id,
@@ -33,7 +61,86 @@ const advanceToAttackEffect = (state: GameState): GameState => {
   return s
 }
 
+const createBs6SupportReturnAttackState = (cardId: 'BS6-044' | 'BS6-061'): GameState => {
+  const sourceCard = officialBs6Cards.find((candidate) => candidate.cardNumber === cardId)
+  const conversion = sourceCard ? convertOfficialCardToGameCard(sourceCard, 'attack-test') : null
+  if (!conversion || conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') {
+    throw new Error(`${cardId} should be a runtime Cookie card.`)
+  }
+  const card = conversion.gameCard
+  const state = createBattleState()
+  const defender = state.players['player-one'].battleArea[0]
+  state.players['player-one'].battleArea = [
+    {
+      ...defender,
+      card: { ...defender.card, hp: 10 },
+      hpCards: Array.from({ length: 10 }, (_, index) =>
+        item(`${cardId}-defender-hp-${index + 1}`, 'red'),
+      ),
+    },
+  ]
+  const supportCookie = cookie(`${cardId}-support-cookie`, 0, 1)
+  supportCookie.energyColor = 'green'
+  state.players['player-two'].battleArea = [
+    { ...state.players['player-two'].battleArea[0], card, hpCards: [] },
+  ]
+  state.players['player-two'].supportArea = [
+    { card: supportCookie, rested: false },
+    { card: item(`${cardId}-attack-energy-1`, 'green'), rested: false },
+    { card: item(`${cardId}-attack-energy-2`, 'green'), rested: false },
+  ]
+  state.players['player-two'].hand = []
+  return beginAttack(
+    state,
+    card.instanceId,
+    'defender',
+    [`${cardId}-attack-energy-1`, `${cardId}-attack-energy-2`],
+  )
+}
+
 describe('optional-cost-attack', () => {
+  it.each(['BS6-044', 'BS6-061'] as const)(
+    '%s creates a skippable support-return cost and skip resolves the attack',
+    (cardId) => {
+      let state = advanceToAttackEffect(createBs6SupportReturnAttackState(cardId))
+      state = resolveAttackEffect(state, 'player-two', [])
+
+      expect(state.pendingOptionalCostAttack).toMatchObject({
+        cost: { supportToHand: 1, supportToHandType: 'cookie' },
+      })
+
+      state = resolveOptionalCostAttack(state, 'player-two', 'skip')
+
+      expect(state.pendingOptionalCostAttack).toBeNull()
+      expect(state.pendingBattle).toBeNull()
+      expect(
+        state.players['player-two'].supportArea.some(
+          (support) => support.card.instanceId === `${cardId}-support-cookie`,
+        ),
+      ).toBe(true)
+    },
+  )
+
+  it('BS6-044 returns a selected Cookie to hand before resolving its damage', () => {
+    let state = advanceToAttackEffect(createBs6SupportReturnAttackState('BS6-044'))
+    state = resolveAttackEffect(state, 'player-two', [])
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      ['defender'],
+      [],
+      ['BS6-044-support-cookie'],
+    )
+
+    expect(state.players['player-two'].hand.map((card) => card.instanceId)).toContain(
+      'BS6-044-support-cookie',
+    )
+    expect(state.players['player-one'].battleArea[0].hpCards.length).toBeLessThan(10)
+    expect(state.pendingBattle).toBeNull()
+  })
+
   it('reaches the pending decision through a real ST4-013 attack', () => {
     let state = createBattleState()
     const caviar = createOfficialBlueStarterDeck('player-two').find(

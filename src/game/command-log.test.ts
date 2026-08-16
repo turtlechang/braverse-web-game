@@ -561,6 +561,81 @@ describe('describeCommandSteps', () => {
       '額外代價：棄置手牌：p1-hand-a',
     ])
   })
+
+  it('explains that P-059 caused the draw and records its condition', () => {
+    const base = createBattleState()
+    const source = {
+      ...base.players['player-one'].battleArea[0].card,
+      id: 'P-059',
+      name: 'Chamomile Cookie',
+      skill: {
+        trigger: 'passive' as const,
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: {},
+        text: 'When your turn ends, if there are 2 active cards or more in your support area, draw up to 1 card from your deck.',
+        effects: [{
+          kind: 'draw-up-to' as const,
+          max: 1,
+          condition: { kind: 'active-support-count-at-least' as const, count: 2 },
+        }],
+      },
+    }
+    const sourceEntry = base.players['player-one'].battleArea[0]
+    const drawn = base.players['player-one'].deck[0]
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{ ...sourceEntry, card: source }],
+          supportArea: base.players['player-one'].supportArea.map((support) => ({
+            ...support,
+            rested: false,
+          })),
+        },
+      },
+      pendingDrawUpTo: {
+        playerId: 'player-one',
+        max: 1,
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source.instanceId,
+        sourceCardName: source.name,
+        sourceCardId: source.id,
+        condition: { kind: 'active-support-count-at-least', count: 2 },
+      },
+    }
+    const next: GameState = {
+      ...previous,
+      pendingDrawUpTo: null,
+      players: {
+        ...previous.players,
+        'player-one': {
+          ...previous.players['player-one'],
+          deck: previous.players['player-one'].deck.slice(1),
+          hand: [...previous.players['player-one'].hand, drawn],
+        },
+      },
+    }
+    const command = {
+      kind: 'resolve-draw-up-to' as const,
+      playerId: 'player-one' as const,
+      drawCount: 1,
+    }
+
+    expect(describeCommand(previous, next, command)).toContain(
+      '因「P-059 Chamomile Cookie」技能觸發抽牌：支援區有 2 張啟動卡（需要至少 2 張），抽了 1 張牌',
+    )
+    const steps = describeCommandSteps(previous, next, command)
+    expect(steps?.[0].text).toBe(
+      '抽牌原因：「P-059 Chamomile Cookie」技能觸發抽牌：支援區有 2 張啟動卡（需要至少 2 張）',
+    )
+    expect(steps?.[0].cards).toEqual([source])
+    expect(steps?.[1].cards).toEqual([drawn])
+    expect(resolveLogCard(previous, next, command)).toEqual(source)
+  })
 })
 
 describe('effect resolution log outcome', () => {

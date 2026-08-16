@@ -1564,6 +1564,8 @@ export type AbilityCost = EnergyCost & {
   discardHandType?: GameCard['type']
   supportToTrash?: number
   supportToHand?: number
+  /** Optional restriction for support cards returned as a cost (for example, Cookie only). */
+  supportToHandType?: GameCard['type']
   hpToTrash?: {
     amount?: number
     untilRemainingHp?: number
@@ -1618,6 +1620,8 @@ export type AbilityCost = EnergyCost & {
     count: number
     energyColor?: EnergyColor
     excludeFlip?: boolean
+    /** 限定只能選 Cookie（例如 BS5-094 的紫色 Cookie 代價）。 */
+    cookieOnly?: boolean
     keyword?: CardKeyword
     nonCookieOnly?: boolean
   }
@@ -1969,7 +1973,11 @@ export interface GameState {
     sourcePlayerId: PlayerId
     sourceInstanceId: string
     sourceCardName: string
+    /** 來源卡號，讓 UI／對戰紀錄能明確指出是哪一張卡的效果。 */
+    sourceCardId?: string
     effectText?: string
+    /** 觸發這次抽牌的條件（例如 P-059 的啟動支援卡數量）。 */
+    condition?: EffectCondition
     afterEffects?: CardEffect[]
     afterEffectContext?: EffectContext
     afterEffectsRequireDraw?: boolean

@@ -745,7 +745,14 @@ export function OnlineBattleView({
                     '已略過攻擊後續效果。',
                   )
                 },
-                onPay: (discardIds, targetIds, paymentIds) => {
+                onPay: (
+                  discardIds,
+                  targetIds,
+                  paymentIds,
+                  supportToHandIds,
+                  hpToTrashIds,
+                  trashToDeckIds,
+                ) => {
                   match.dispatch(
                     {
                       kind: 'resolve-optional-cost-attack',
@@ -754,6 +761,9 @@ export function OnlineBattleView({
                       discardCardIds: discardIds,
                       targetIds,
                       paymentIds,
+                      supportToHandIds,
+                      hpToTrashIds,
+                      trashToDeckIds,
                     },
                     '已支付攻擊後續效果費用。',
                   )

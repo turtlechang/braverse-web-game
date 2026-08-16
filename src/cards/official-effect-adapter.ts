@@ -5405,13 +5405,17 @@ export const convertOfficialAttackEffects = (
     ],
     // === BS5 RED 攻擊 Then ===
     // BS5-003 Strawberry Cream Cookie：Then, <discard 1 card.> Deals 1 damage.
-    // 強制代價比照 BS4-075 寫成第一個效果；傷害固定打在被攻擊的那張餅乾。
+    // 尖括號是攻擊後的可選代價；玩家可以略過棄牌與後續傷害。
     'BS5-003': [
-      { kind: 'discard-hand', count: 1 },
       {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+        }],
+        effectText: 'Discard 1 card to deal 1 damage to the attacked Cookie.',
       },
     ],
     // BS5-006 Marshmallow Cookie：Then, if your break area is LV.6 or higher,
@@ -5438,11 +5442,11 @@ export const convertOfficialAttackEffects = (
     // Cookie's HP into the trash.> Draw up to 1 card from your deck.
     'BS5-010': [
       {
-        kind: 'hp-to-trash',
-        amount: 1,
-        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, hpToTrash: { amount: 1, sourceOnly: true } },
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+        effectText: "Trash 1 HP card from this Cookie to draw up to 1 card.",
       },
-      { kind: 'draw-up-to', max: 1 },
     ],
     // BS5-012 Eggnog Cookie：Then, if the attacked Cookie is LV.3, that Cookie
     // receives 1 damage.
@@ -5454,18 +5458,20 @@ export const convertOfficialAttackEffects = (
         condition: { kind: 'attack-target-level-equals', level: 3 },
       },
     ],
-    // BS5-013 Pitaya Dragon Cookie：Then, <can be used as {R}.> If this
-    // Cookie's remaining HP is 4 or less, select up to 2 of your opponent's
-    // Cookies. Those Cookies receive 1 damage each。「can be used as {R}」是
-    // 攻擊費用的補充說明（此 Cookie 可當 {R} 支付），不是攻擊後的自選加費，
-    // 不建 optional-cost-attack；「4 or less」比照 BS3-028 慣例用
-    // source-hp-less-than 5。
+    // BS5-013 Pitaya Dragon Cookie：Then, <can be used as {R}.> 是攻擊後
+    // 可選的來源能量代價；未支付時不結算後續傷害。
     'BS5-013': [
       {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 0, max: 2 },
-        condition: { kind: 'source-hp-less-than', amount: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: { red: 1 } },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 2 },
+          condition: { kind: 'source-hp-less-than', amount: 5 },
+        }],
+        effectText:
+          'Use this Cookie as {R}. If its remaining HP is 4 or less, deal 1 damage to up to 2 opponent Cookies.',
       },
     ],
     // === BS5 YELLOW 攻擊 Then ===
@@ -5505,14 +5511,16 @@ export const convertOfficialAttackEffects = (
     // Cookie。
     'BS5-030': [
       {
-        kind: 'battle-to-break',
-        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-      },
-      {
-        kind: 'break-to-battle',
-        amount: 1,
-        exactLevel: 1,
-        energyColor: 'yellow',
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, selfToBreakArea: true },
+        effects: [{
+          kind: 'break-to-battle',
+          amount: 1,
+          exactLevel: 1,
+          energyColor: 'yellow',
+        }],
+        effectText:
+          'Place this Cookie in your break area to play up to 1 {Y} LV.1 Cookie from your break area.',
       },
     ],
     // BS5-032 Birthday Cake Cookie：Then, if your break area LV. is higher
@@ -5535,15 +5543,19 @@ export const convertOfficialAttackEffects = (
         condition: { kind: 'source-hp-less-than', amount: 2 },
       },
     ],
-    // BS5-040 Ananas Dragon Cookie：Then, <can be used as {Y}.> If this
-    // Cookie's remaining HP is 4 or less, this Cookie gains +1 HP（比照
-    // BS5-013 的「can be used as」與 BS3-028 的「less than N+1」慣例）。
+    // BS5-040 Ananas Dragon Cookie：Then, <can be used as {Y}.> 是可選代價。
     'BS5-040': [
       {
-        kind: 'gain-hp',
-        amount: 1,
-        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-        condition: { kind: 'source-hp-less-than', amount: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: { yellow: 1 } },
+        effects: [{
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'source-hp-less-than', amount: 5 },
+        }],
+        effectText:
+          'Use this Cookie as {Y}. If its remaining HP is 4 or less, it gains +1 HP.',
       },
     ],
     // === BS5 GREEN 攻擊 Then ===
@@ -5558,14 +5570,15 @@ export const convertOfficialAttackEffects = (
       },
     ],
     // BS5-059 Purple Yam Cookie：Then, <return 1 card from your support area
-    // to your hand.> Draw up to 1 card from your deck.
+    // to your hand.> 是可選支援區回手代價。
     'BS5-059': [
       {
-        kind: 'support-to-hand',
-        amount: 1,
-        optional: true,
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToHand: 1 },
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+        effectText:
+          'Return 1 card from your support area to your hand to draw up to 1 card.',
       },
-      { kind: 'draw-up-to', max: 1 },
     ],
     // BS5-060 Croissant Cookie：Then, when your turn ends, set up to 3 cards
     // from your support area as active.
@@ -5592,11 +5605,15 @@ export const convertOfficialAttackEffects = (
       },
     ],
     'BS5-080': [
-      { kind: 'discard-hand', count: 2 },
       {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 0, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+        effectText: 'Discard 2 cards to deal 1 damage to up to 1 opponent Cookie.',
       },
     ],
     'BS5-085': [
@@ -5611,17 +5628,23 @@ export const convertOfficialAttackEffects = (
     'BS5-089': [{ kind: 'deck-to-trash', amount: 3, side: 'self' }],
     'BS5-094': [
       {
-        kind: 'trash-to-deck',
-        min: 5,
-        max: 5,
-        excludeFlip: true,
-        energyColor: 'purple',
-        cookieOnly: true,
-      },
-      {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 0, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: {
+          energy: {},
+          trashToDeck: {
+            count: 5,
+            excludeFlip: true,
+            energyColor: 'purple',
+            cookieOnly: true,
+          },
+        },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+        effectText:
+          'Return 5 {P} Cookies without FLIP from your trash to your deck to deal 1 damage to up to 1 opponent Cookie.',
       },
     ],
     'BS5-097': [
@@ -5634,19 +5657,20 @@ export const convertOfficialAttackEffects = (
     ],
     'BS5-098': [
       {
-        kind: 'hp-to-trash',
-        amount: 1,
-        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-      },
-      {
-        kind: 'field-to-trash',
-        target: {
-          side: 'opponent',
-          min: 1,
-          max: 1,
-          maxLevel: 1,
-          attackTargetOnly: true,
-        },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, hpToTrash: { amount: 1, sourceOnly: true } },
+        effects: [{
+          kind: 'field-to-trash',
+          target: {
+            side: 'opponent',
+            min: 1,
+            max: 1,
+            maxLevel: 1,
+            attackTargetOnly: true,
+          },
+        }],
+        effectText:
+          "Trash 1 HP card from this Cookie to place the attacked LV.1 Cookie in the trash.",
       },
     ],
     'BS5-099': [
@@ -5658,18 +5682,18 @@ export const convertOfficialAttackEffects = (
       { kind: 'deck-to-trash', amount: 3, side: 'self' },
     ],
     // === BS6 RED attack Then ===
-    // BS6-003 Strawberry Stick Cookie：先處理自己的紅色餅乾 HP，
-    // 再分開選擇對手餅乾造成傷害。
+    // BS6-003 Strawberry Stick Cookie：HP 是攻擊後可選代價。
     'BS6-003': [
       {
-        kind: 'hp-to-trash',
-        amount: 1,
-        target: { side: 'self', min: 1, max: 1, energyColor: 'red' },
-      },
-      {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 0, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, hpToTrash: { amount: 1, energyColor: 'red' } },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
+        effectText:
+          'Place 1 card from the top of your red Cookie HP into the trash to deal 1 damage to up to 1 opponent Cookie.',
       },
     ],
     'BS6-007': [
@@ -5795,19 +5819,27 @@ export const convertOfficialAttackEffects = (
       },
     ],
     'BS6-044': [
-      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
       {
-        kind: 'damage',
-        amount: 2,
-        target: { side: 'opponent', min: 0, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToHand: 1, supportToHandType: 'cookie' },
+        effects: [{ kind: 'damage', amount: 2, target: { side: 'opponent', min: 0, max: 1 } }],
+        effectText:
+          'Return 1 Cookie from your support area to your hand to deal 2 damage.',
       },
     ],
     'BS6-061': [
-      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
       {
-        kind: 'gain-hp',
-        amount: 1,
-        target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToHand: 1, supportToHandType: 'cookie' },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+          },
+        ],
+        effectText:
+          'Return 1 Cookie from your support area to your hand to gain 1 HP.',
       },
     ],
     'BS6-036': [
@@ -5876,8 +5908,12 @@ export const convertOfficialAttackEffects = (
       },
     ],
     'BS6-072': [
-      { kind: 'discard-hand', count: 2 },
-      { kind: 'draw-up-to', max: 2 },
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [{ kind: 'draw-up-to', max: 2 }],
+        effectText: 'Discard 2 cards to draw up to 2 cards.',
+      },
     ],
     'BS6-074': [
       {
@@ -5887,24 +5923,39 @@ export const convertOfficialAttackEffects = (
       },
     ],
     'BS6-076': [
-      { kind: 'discard-hand', count: 1 },
-      { kind: 'draw-up-to', max: 1 },
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+        effectText: 'Discard 1 card to draw up to 1 card.',
+      },
     ],
-    // BS6-068／077 的「can be used as {B}」沿用同版 BS5-013 的既有
-    // 轉接：它是攻擊餘效的來源能量敘述，不額外建立一次付款視窗。
+    // BS6-068／077 的「can be used as {B}」是攻擊後可選來源能量代價。
     'BS6-068': [
       {
-        kind: 'field-to-deck-bottom',
-        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
-        condition: { kind: 'hand-count-at-most', count: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [{
+          kind: 'field-to-deck-bottom',
+          target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+          condition: { kind: 'hand-count-at-most', count: 5 },
+        }],
+        effectText:
+          'Use this Cookie as {B}. If your hand has 5 or fewer cards, place up to 1 opponent LV.1 Cookie on the bottom of its deck.',
       },
     ],
     'BS6-077': [
       {
-        kind: 'gain-hp',
-        amount: 1,
-        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-        condition: { kind: 'hand-count-at-most', count: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [{
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          condition: { kind: 'hand-count-at-most', count: 5 },
+        }],
+        effectText:
+          'Use this Cookie as {B}. If your hand has 5 or fewer cards, it gains +1 HP.',
       },
     ],
     'BS6-079': [
@@ -5926,11 +5977,19 @@ export const convertOfficialAttackEffects = (
     ],
     'BS6-093': [
       {
-        kind: 'trash-to-battle',
-        amount: 1,
-        optional: true,
-        energyColor: 'purple',
-        maxHp: 2,
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [
+          {
+            kind: 'trash-to-battle',
+            amount: 1,
+            optional: true,
+            energyColor: 'purple',
+            maxHp: 2,
+          },
+        ],
+        effectText:
+          'Use this Cookie as {P}. Play up to 1 {P} Cookie with 2 or less HP from your trash.',
       },
     ],
     'BS6-095': [

@@ -58,6 +58,29 @@ describe('BS6 attack definition normalization', () => {
   })
 })
 
+describe('BS6 angle-bracket attack costs', () => {
+  it.each([
+    'BS6-003',
+    'BS6-022',
+    'BS6-031',
+    'BS6-036',
+    'BS6-044',
+    'BS6-051',
+    'BS6-061',
+    'BS6-068',
+    'BS6-072',
+    'BS6-076',
+    'BS6-077',
+    'BS6-079',
+    'BS6-093',
+    'BS6-096',
+  ] as const)('%s exposes its angle-bracket attack cost as skippable', (cardNumber) => {
+    expect(convertOfficialAttackEffects(findBs6Card(cardNumber))?.[0]).toMatchObject({
+      kind: 'optional-cost-attack',
+    })
+  })
+})
+
 describe('BS6 basic FLIP effect adapter', () => {
   it.each(attachedHpBonusFlips)(
     '%s converts the discard cost and attached +1 HP bonus',
@@ -258,14 +281,13 @@ describe('BS6 RED effect adapter', () => {
   it('converts the first BS6 RED attack Then effects with their conditions', () => {
     expect(convertOfficialAttackEffects(findBs6Card('BS6-003'))).toMatchObject([
       {
-        kind: 'hp-to-trash',
-        amount: 1,
-        target: { side: 'self', min: 1, max: 1, energyColor: 'red' },
-      },
-      {
-        kind: 'damage',
-        amount: 1,
-        target: { side: 'opponent', min: 0, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, hpToTrash: { amount: 1, energyColor: 'red' } },
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }],
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-007'))).toMatchObject([
@@ -369,19 +391,44 @@ describe('BS6 RED effect adapter', () => {
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-044'))).toMatchObject([
-      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
       {
-        kind: 'damage',
-        amount: 2,
-        target: { side: 'opponent', min: 0, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToHand: 1, supportToHandType: 'cookie' },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-061'))).toMatchObject([
-      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
       {
-        kind: 'gain-hp',
-        amount: 1,
-        target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, supportToHand: 1, supportToHandType: 'cookie' },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 0, max: 1, maxRemainingHp: 5 },
+          },
+        ],
+      },
+    ])
+    expect(convertOfficialAttackEffects(findBs6Card('BS6-093'))).toMatchObject([
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [
+          {
+            kind: 'trash-to-battle',
+            amount: 1,
+            optional: true,
+            energyColor: 'purple',
+            maxHp: 2,
+          },
+        ],
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-036'))).toMatchObject([
@@ -950,7 +997,7 @@ describe('BS6 BLUE effect adapter', () => {
     })
   })
 
-  it('keeps attack Then discard and draw ordering', () => {
+  it('converts attack Then costs into skippable optional effects', () => {
     expect(convertOfficialAttackEffects(findBs6Card('BS6-065'))).toMatchObject([
       {
         kind: 'discard-hand',
@@ -959,8 +1006,11 @@ describe('BS6 BLUE effect adapter', () => {
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-072'))).toMatchObject([
-      { kind: 'discard-hand', count: 2 },
-      { kind: 'draw-up-to', max: 2 },
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [{ kind: 'draw-up-to', max: 2 }],
+      },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-074'))).toMatchObject([
       {
@@ -970,22 +1020,37 @@ describe('BS6 BLUE effect adapter', () => {
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-076'))).toMatchObject([
-      { kind: 'discard-hand', count: 1 },
-      { kind: 'draw-up-to', max: 1 },
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 1 },
+        effects: [{ kind: 'draw-up-to', max: 1 }],
+      },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-068'))).toMatchObject([
       {
-        kind: 'field-to-deck-bottom',
-        target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
-        condition: { kind: 'hand-count-at-most', count: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          {
+            kind: 'field-to-deck-bottom',
+            target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+            condition: { kind: 'hand-count-at-most', count: 5 },
+          },
+        ],
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-077'))).toMatchObject([
       {
-        kind: 'gain-hp',
-        amount: 1,
-        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-        condition: { kind: 'hand-count-at-most', count: 5 },
+        kind: 'optional-cost-attack',
+        cost: { energy: { blue: 1 } },
+        effects: [
+          {
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            condition: { kind: 'hand-count-at-most', count: 5 },
+          },
+        ],
       },
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-079'))).toMatchObject([
@@ -1131,7 +1196,11 @@ describe('BS6 PURPLE effect adapter', () => {
       expectedPlay,
     ])
     expect(convertOfficialAttackEffects(findBs6Card('BS6-093'))).toMatchObject([
-      expectedPlay,
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 } },
+        effects: [expectedPlay],
+      },
     ])
     expect(convertOfficialCookieSkill(findBs6Card('BS6-101'))).toMatchObject({
       faint: true,

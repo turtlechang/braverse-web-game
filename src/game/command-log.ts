@@ -45,6 +45,34 @@ const findCard = (state: GameState, instanceId: string): GameCard | undefined =>
 const findCardName = (state: GameState, instanceId: string): string =>
   findCard(state, instanceId)?.name ?? '未知卡牌'
 
+type PendingDrawUpTo = NonNullable<GameState['pendingDrawUpTo']>
+
+/** 將待處理抽牌的來源與條件寫成玩家看得懂的原因，避免只看到「抽了 N 張」。 */
+const describeDrawUpToReasonText = (
+  state: GameState,
+  pending: PendingDrawUpTo,
+): string => {
+  const sourceCard = findCard(state, pending.sourceInstanceId)
+  const sourceId = pending.sourceCardId ?? sourceCard?.id
+  const sourceLabel = sourceId
+    ? `${sourceId} ${pending.sourceCardName}`
+    : pending.sourceCardName
+  const isSkill = sourceId?.startsWith('P-') || Boolean(sourceCard?.skill)
+
+  let conditionText: string | undefined
+  const condition = pending.condition
+  if (condition?.kind === 'active-support-count-at-least') {
+    const activeSupportCount = state.players[pending.sourcePlayerId].supportArea.filter(
+      (support) => !support.rested,
+    ).length
+    conditionText = `支援區有 ${activeSupportCount} 張啟動卡（需要至少 ${condition.count} 張）`
+  }
+
+  return `「${sourceLabel}」${isSkill ? '技能' : '效果'}觸發抽牌${
+    conditionText ? `：${conditionText}` : ''
+  }`
+}
+
 const describeForcedAttackRestriction = (
   state: GameState,
   attackerPlayerId: PlayerId,
@@ -669,8 +697,15 @@ export const describeCommand = (
       return command.action === 'pay'
         ? `${actor} 支付了額外代價`
         : `${actor} 選擇不支付額外代價`
-    case 'resolve-draw-up-to':
-      return `${actor} 抽了 ${command.drawCount} 張牌`
+    case 'resolve-draw-up-to': {
+      const pending = state.pendingDrawUpTo
+      const reason = pending
+        ? describeDrawUpToReasonText(state, pending)
+        : undefined
+      return reason
+        ? `${actor} 因${reason}，抽了 ${command.drawCount} 張牌`
+        : `${actor} 抽了 ${command.drawCount} 張牌`
+    }
     case 'resolve-stage-trigger':
       return command.action === 'activate'
         ? `${actor} 發動了場景觸發效果`
@@ -1029,6 +1064,28 @@ export const describeCommandSteps = (
         { text: `自動結算戰鬥，${outcome}`, cards: targetCard ? [targetCard] : undefined },
       ]
     }
+    case 'resolve-draw-up-to': {
+      const pending = previous.pendingDrawUpTo
+      if (!pending) return undefined
+      const sourceCard = findCard(previous, pending.sourceInstanceId)
+      const drawnCards = previous.players[command.playerId].deck.slice(
+        0,
+        command.drawCount,
+      )
+      return [
+        {
+          text: `抽牌原因：${describeDrawUpToReasonText(previous, pending)}`,
+          cards: sourceCard ? [sourceCard] : undefined,
+        },
+        {
+          text:
+            command.drawCount > 0
+              ? `抽牌結果：抽了 ${command.drawCount} 張牌`
+              : '抽牌結果：選擇不抽牌',
+          cards: drawnCards.length > 0 ? drawnCards : undefined,
+        },
+      ]
+    }
     default:
       return undefined
   }
@@ -1072,6 +1129,10 @@ export const resolveLogCard = (
       return resolveRevealedDamageCard(previous, next, command.playerId)
     case 'resolve-flip':
       return previous.pendingBattle?.revealedHpCard ?? undefined
+    case 'resolve-draw-up-to':
+      return previous.pendingDrawUpTo
+        ? findCard(previous, previous.pendingDrawUpTo.sourceInstanceId)
+        : undefined
     default:
       return undefined
   }

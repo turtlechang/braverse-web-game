@@ -235,6 +235,7 @@ export const getTrashToDeckCostCandidates = (
       return false
     }
     if (trashCost.excludeFlip && card.flip) return false
+    if (trashCost.cookieOnly && card.type !== 'cookie') return false
     if (trashCost.keyword && !card.keywords?.includes(trashCost.keyword)) {
       return false
     }

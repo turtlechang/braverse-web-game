@@ -60,6 +60,9 @@ const TYPE_OPTIONS = [
 ]
 
 const RARITY_OPTIONS = ['', 'C', 'U', 'R', 'SR', 'SSR', 'UR', 'SEC', 'SUR']
+const LEVEL_OPTIONS = [1, 2, 3]
+const HP_OPTIONS = [1, 2, 3, 4, 5, 6]
+const ATTACK_POWER_OPTIONS = [1, 2, 3, 4, 5]
 
 const MAIN_DECK_SECTIONS = [
   { id: 'cookie', label: '餅乾' },
@@ -204,6 +207,9 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
     editor.filterColor,
     editor.filterSeries,
     editor.filterRarity,
+    editor.filterLevel,
+    editor.filterHp,
+    editor.filterAttackPower,
   ].filter(Boolean).length
   const deckCards = useMemo(
     () =>
@@ -693,6 +699,47 @@ export function DeckEditorPage({ initialDeck, onSave, onClose }: DeckEditorPageP
                 >
                   <option value="">全部稀有度</option>
                   {RARITY_OPTIONS.filter(Boolean).map((rarity) => <option value={rarity} key={rarity}>{rarity}</option>)}
+                </select>
+              </div>
+              <div className="deck-editor-page-filter-row deck-editor-page-filter-row-stats">
+                <select
+                  data-testid="deck-editor-filter-level"
+                  value={editor.filterLevel ?? ''}
+                  onChange={(event) =>
+                    editor.setFilterLevel(event.target.value ? Number(event.target.value) : null)
+                  }
+                  aria-label="卡牌 LV"
+                >
+                  <option value="">全部 LV</option>
+                  {LEVEL_OPTIONS.map((level) => (
+                    <option value={level} key={level}>LV {level}</option>
+                  ))}
+                </select>
+                <select
+                  data-testid="deck-editor-filter-hp"
+                  value={editor.filterHp ?? ''}
+                  onChange={(event) =>
+                    editor.setFilterHp(event.target.value ? Number(event.target.value) : null)
+                  }
+                  aria-label="卡牌 HP"
+                >
+                  <option value="">全部 HP</option>
+                  {HP_OPTIONS.map((hp) => (
+                    <option value={hp} key={hp}>HP {hp}</option>
+                  ))}
+                </select>
+                <select
+                  data-testid="deck-editor-filter-attack-power"
+                  value={editor.filterAttackPower ?? ''}
+                  onChange={(event) =>
+                    editor.setFilterAttackPower(event.target.value ? Number(event.target.value) : null)
+                  }
+                  aria-label="卡牌攻擊力"
+                >
+                  <option value="">全部攻擊力</option>
+                  {ATTACK_POWER_OPTIONS.map((attackPower) => (
+                    <option value={attackPower} key={attackPower}>攻擊力 {attackPower}</option>
+                  ))}
                 </select>
               </div>
             </div>
