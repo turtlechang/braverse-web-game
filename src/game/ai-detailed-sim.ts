@@ -9,6 +9,10 @@ import {
   aggregateLv4SearchTelemetry,
   type Lv4SearchTelemetry,
 } from './ai/strategy/search-telemetry'
+import {
+  aggregatePendingStrategyTelemetry,
+  type PendingStrategyTelemetry,
+} from './ai/strategy/pending-selection'
 import type {
   AiMatchMetrics,
   AiDetailedResult,
@@ -199,6 +203,7 @@ const computeBehaviorMetrics = (
   r6cBreakWorsenedCount: number,
   legalAttackSkippedCount: number,
   lv4SearchTelemetry: readonly Lv4SearchTelemetry[],
+  pendingStrategyTelemetry: readonly PendingStrategyTelemetry[],
 ): BehaviorMetrics => {
   const lowQualityCount = replacementEvents.filter((e) => e.level <= 1 && e.hp <= 1).length
 
@@ -260,6 +265,7 @@ const computeBehaviorMetrics = (
     r6cBreakWorsenedCount,
     legalAttackSkippedCount,
     lv4Search: aggregateLv4SearchTelemetry(lv4SearchTelemetry),
+    pendingStrategy: aggregatePendingStrategyTelemetry(pendingStrategyTelemetry),
   }
 }
 
@@ -299,6 +305,7 @@ export const simulateAiMatchDetailed = (
   let lethalOpportunityCount = 0
   let lethalConversionCount = 0
   const lv4SearchTelemetry: Lv4SearchTelemetry[] = []
+  const pendingStrategyTelemetry: PendingStrategyTelemetry[] = []
 
   resetR10Counters()
 
@@ -321,6 +328,9 @@ export const simulateAiMatchDetailed = (
     })
     if (decision.reason?.lv4Search) {
       lv4SearchTelemetry.push(decision.reason.lv4Search)
+    }
+    if (decision.reason?.pendingStrategy) {
+      pendingStrategyTelemetry.push(decision.reason.pendingStrategy)
     }
     if (legalAttacks.length > 0 && decision.action === 'advance-phase') {
       legalAttackSkippedCount += 1
@@ -464,6 +474,7 @@ export const simulateAiMatchDetailed = (
     r6cBreakWorsenedCount,
     legalAttackSkippedCount,
     lv4SearchTelemetry,
+    pendingStrategyTelemetry,
   )
 
   return {
@@ -479,5 +490,6 @@ export const simulateAiMatchDetailed = (
     endInfo,
     behavior,
     lv4SearchTelemetry,
+    pendingStrategyTelemetry,
   }
 }

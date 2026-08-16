@@ -143,3 +143,9 @@ G2 的 `KnowledgeState` 與完整 `GameState` 分離，只接受 `PlayerView` �
 ## G3 完成記錄（2026-08-16）
 
 Lv.3 已改由 `action-score.ts`、`tactical-plans.ts` 與 `lv3-strategy.ts` 對每一個既有合法候選進行一步評估。規則層仍負責 command 列舉、套用與多階段能力合法性；策略模組不匯入 `GameState`，只讀取前後 `PlayerView` 與 G2 snapshot。候選結果以 `ActionScoreBreakdown` 回傳到 `AiDecisionReason`，其中 `RelativeActionScore` 僅用於同一局面排序，終局／公開擊倒則以獨立 calibrated signal 判斷。未支援 capability 和沒有合法已知牌序的 deck-order payoff 會被保守扣分，並留在 breakdown 供 telemetry 消費者彙整。G3 維持一步，不啟動多步 beam 或跨步資源預留。
+
+## G5 實作記錄（進行中，2026-08-16）
+
+G5 將 R12～R16 所導出的 TacticalPlan 限縮為「只排序規則層候選」的 pending selector。新的 telemetry 分為 replacement、refresh、payment、effect target／order、choose-one、discard、FLIP、trap、blocker、multi-stage，並在 detailed simulation 彙總。任何不在 `PlayerView` 的 instance 一律得到中性、字典序穩定 fallback；不會因對手手牌、未知牌庫或未翻開 HP 的真實內容改變選擇。
+
+多階段 HP 重排是此邊界的回歸案例：卡面目標為可選時，AI 以空目標合法略過，既不取得也不重排未翻開 HP instance。此策略避免 deadlock，同時把完全資訊重排權維持在玩家 UI；其餘多階段流程（效果順序、inspect、reveal、draw-up-to、place-hand-hp、optional cost）仍只透過原有 typed `GameCommand` 推進。

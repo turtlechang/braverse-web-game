@@ -20,6 +20,7 @@ import {
   isEffectUntargeted,
 } from './effects'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
+import { getRefreshCandidates } from './refresh'
 import { getReplacementCandidates } from './replacement'
 import {
   activateCookieSkill,
@@ -54,6 +55,16 @@ import type {
 import { handleAiPendingDecision } from './ai/pending-handler'
 import { handleAiPendingBattle } from './ai/battle-handler'
 import { dispatchAiStep } from './ai/dispatcher'
+import { createPlayerView } from './player-view'
+import {
+  createKnowledgeStateFromPlayerView,
+  synchronizeKnowledgeWithPlayerView,
+} from './ai/strategy/knowledge-state'
+import type { KnowledgeState } from './ai/strategy/knowledge-state'
+import {
+  createPendingSelectionStrategy,
+  type PendingSelectionKind,
+} from './ai/strategy/pending-selection'
 import { handleAiRandomTurnState } from './ai/random-turn-handler'
 import { handleAiEvaluatedTurnState, handleAiTwoPlyTurnState } from './ai/evaluated-turn-handler'
 import {
@@ -1086,9 +1097,37 @@ const isSkillEffectTargetCountSufficient = (
   return true
 }
 
-const chooseReplacement = (state: GameState, playerId: PlayerId, level?: number) => {
+const createUniversalPendingStrategy = (
+  state: GameState,
+  playerId: PlayerId,
+  level: AiLevel | undefined,
+  knowledgeState: KnowledgeState | undefined,
+) => {
+  if (level !== 3 && level !== 4) return null
+
+  const view = createPlayerView(state, playerId)
+  const synchronizedKnowledge = knowledgeState?.observerId === playerId
+    ? synchronizeKnowledgeWithPlayerView(knowledgeState, view)
+    : createKnowledgeStateFromPlayerView(view)
+  return createPendingSelectionStrategy(view, synchronizedKnowledge, level)
+}
+
+const chooseReplacement = (state: GameState, playerId: PlayerId, level?: AiLevel) => {
   const candidates = getReplacementCandidates(state, playerId)
   if (candidates.length === 0) return undefined
+
+  const pendingStrategy = createUniversalPendingStrategy(
+    state,
+    playerId,
+    level,
+    aiTurnStrategy.knowledgeState,
+  )
+  if (pendingStrategy?.enabled) {
+    const selectedId = pendingStrategy.chooseReplacementId(
+      candidates.map((candidate) => candidate.instanceId),
+    )
+    return candidates.find((candidate) => candidate.instanceId === selectedId)
+  }
 
   const profile = getMatchupProfile(state, playerId)
   const breakPressure = evaluateBreakPressure(
@@ -1131,6 +1170,30 @@ const chooseReplacement = (state: GameState, playerId: PlayerId, level?: number)
     })[0]
 }
 
+const chooseRefresh = (
+  state: GameState,
+  playerId: PlayerId,
+  level?: AiLevel,
+) => {
+  const candidates = getRefreshCandidates(state, playerId)
+  if (candidates.length === 0) return undefined
+
+  const pendingStrategy = createUniversalPendingStrategy(
+    state,
+    playerId,
+    level,
+    aiTurnStrategy.knowledgeState,
+  )
+  if (pendingStrategy?.enabled) {
+    const selectedId = pendingStrategy.chooseRefreshId(
+      candidates.map((candidate) => candidate.instanceId),
+    )
+    return candidates.find((candidate) => candidate.instanceId === selectedId)
+  }
+
+  return candidates[0]
+}
+
 const chooseAttackTarget = (
   state: GameState,
   playerId: PlayerId,
@@ -1159,6 +1222,7 @@ const aiTurnStrategy: AiTurnStrategy = {
   resolveSkill: (state, playerId, source, trigger) =>
     resolveAiSkill(state, playerId, source, trigger, aiTurnStrategy.shuffleSeed),
   chooseReplacement,
+  chooseRefresh,
   chooseAttackTarget,
 }
 
@@ -1190,6 +1254,60 @@ const createStepShuffleSeed = (
   return (seed ^ entropy) >>> 0
 }
 
+const pendingSelectionForState = (
+  state: GameState,
+  playerId: PlayerId,
+  decision: AiDecision,
+): { kind: PendingSelectionKind; sourceInstanceId?: string } | null => {
+  if (state.pendingRefresh?.playerId === playerId) return { kind: 'refresh' }
+  if (state.pendingReplacement?.tasks[0]?.playerId === playerId) {
+    return { kind: 'replacement' }
+  }
+  if (state.pendingBattle) {
+    if (state.pendingBattle.stage === 'flip') return { kind: 'flip' }
+    if (state.pendingBattle.stage === 'trap') {
+      return {
+        kind: decision.action === 'play-blocker' ? 'blocker' : 'trap',
+        sourceInstanceId: state.pendingBattle.attackerInstanceId,
+      }
+    }
+    if (state.pendingBattle.stage === 'attack-effect') {
+      return {
+        kind: 'effect-target',
+        sourceInstanceId: state.pendingBattle.attackerInstanceId,
+      }
+    }
+  }
+  const pendingAbility = state.pendingAbilityEffect
+  if (pendingAbility?.playerId === playerId) {
+    return {
+      kind: pendingAbility.effects[pendingAbility.effectIndex]?.kind === 'choose-one'
+        ? 'choose-one'
+        : 'effect-target',
+      sourceInstanceId: pendingAbility.sourceInstanceId,
+    }
+  }
+  if (state.pendingOptionalCostAttack?.playerId === playerId) {
+    return {
+      kind: 'payment',
+      sourceInstanceId: state.pendingOptionalCostAttack.sourceInstanceId,
+    }
+  }
+  if (state.pendingOpponentHandDiscard?.playerId === playerId) {
+    return {
+      kind: 'discard',
+      sourceInstanceId: state.pendingOpponentHandDiscard.sourceInstanceId,
+    }
+  }
+  if (state.pendingEffectOrder?.playerId === playerId) {
+    return {
+      kind: 'effect-order',
+      sourceInstanceId: state.pendingEffectOrder.items[0]?.sourceInstanceId,
+    }
+  }
+  return null
+}
+
 export const takeAiStep = (
   state: GameState,
   playerId: PlayerId = 'player-two',
@@ -1207,6 +1325,7 @@ export const takeAiStep = (
 
     const shuffleSeed = createStepShuffleSeed(options.seed ?? 1, state, playerId)
     aiTurnStrategy.shuffleSeed = shuffleSeed
+    aiTurnStrategy.currentLevel = level
     // G3：外部只能提供以 PlayerView／合法事件建立的 KnowledgeState。
     // 每次決策明確覆寫，避免不同對局或玩家共用上一局的短期記憶。
     aiTurnStrategy.knowledgeState = options.knowledgeState
@@ -1237,8 +1356,17 @@ export const takeAiStep = (
 
     const decision =
       dispatchAiStep(state, playerId, [
-        handleAiPendingDecision,
-        (s, p) => handleAiPendingBattle(s, p, level),
+        (current, currentPlayerId) => handleAiPendingDecision(
+          current,
+          currentPlayerId,
+          { level, knowledgeState: aiTurnStrategy.knowledgeState },
+        ),
+        (s, p) => handleAiPendingBattle(
+          s,
+          p,
+          level,
+          aiTurnStrategy.knowledgeState,
+        ),
         turnHandler,
       ]) ?? {
         state,
@@ -1246,7 +1374,41 @@ export const takeAiStep = (
         description: `${state.players[playerId].name}等待行動。`,
       }
 
-    return decision.reason ? decision : { ...decision, reason: { level } }
+    const levelledDecision: AiDecision = {
+      ...decision,
+      reason: {
+        ...(decision.reason ?? {}),
+        level: decision.reason?.level ?? level,
+      },
+    }
+    // pending／battle handler 已為實際選擇記錄更精確的種類（例如 FLIP、
+    // blocker 或多階段）。只有既有 handler 尚未附帶 telemetry 時，才以
+    // 入口狀態補上通用分類，避免覆寫真實決策原因。
+    const pendingSelection = level >= 3 && !levelledDecision.reason?.pendingStrategy
+      ? pendingSelectionForState(state, playerId, levelledDecision)
+      : null
+    if (!pendingSelection) return levelledDecision
+
+    const view = createPlayerView(state, playerId)
+    const knowledgeState = aiTurnStrategy.knowledgeState?.observerId === playerId
+      ? synchronizeKnowledgeWithPlayerView(aiTurnStrategy.knowledgeState, view)
+      : createKnowledgeStateFromPlayerView(view)
+    const selectionStrategy = createPendingSelectionStrategy(
+      view,
+      knowledgeState,
+      level,
+    )
+    return {
+      ...levelledDecision,
+      reason: {
+        ...levelledDecision.reason,
+        level: levelledDecision.reason?.level ?? level,
+        pendingStrategy: selectionStrategy.telemetry(
+          pendingSelection.kind,
+          pendingSelection.sourceInstanceId,
+        ),
+      },
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'AI 執行失敗。'

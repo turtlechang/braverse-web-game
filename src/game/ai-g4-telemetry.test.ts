@@ -20,5 +20,12 @@ describe('G4 detailed telemetry integration', () => {
     expect(result.behavior.lethalOpportunityCount).toBeGreaterThanOrEqual(
       result.behavior.lethalConversionCount,
     )
+    expect(result.pendingStrategyTelemetry).toHaveLength(
+      result.behavior.pendingStrategy.decisions,
+    )
+    expect(
+      result.behavior.pendingStrategy.universalSelections +
+        result.behavior.pendingStrategy.fallbackSelections,
+    ).toBe(result.behavior.pendingStrategy.decisions)
   })
 })

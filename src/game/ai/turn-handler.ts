@@ -26,7 +26,7 @@ import type {
   AbilityCost,
 } from '../types'
 import type { KnowledgeState } from './strategy/knowledge-state'
-import type { AiDecision } from './types'
+import type { AiDecision, AiLevel } from './types'
 import {
   evaluateHandQuality,
   chooseBestCookieToDeploy,
@@ -34,7 +34,7 @@ import {
 } from './bs2MatchupProfiles'
 
 export interface AiTurnStrategy {
-  currentLevel?: number
+  currentLevel?: AiLevel
   /** 由 takeAiStep 注入，供 AI Refresh commandLog 重播。 */
   shuffleSeed?: number
   knowledgeState?: KnowledgeState
@@ -57,7 +57,16 @@ export interface AiTurnStrategy {
   chooseReplacement: (
     state: GameState,
     playerId: PlayerId,
-    level?: number,
+    level?: AiLevel,
+  ) => GameCard | undefined
+  /**
+   * G5 可提供公開資訊導出的 Refresh 偏好；未提供時維持既有首張候選行為，
+   * 讓 Lv.1/2 與既有測試策略不受影響。
+   */
+  chooseRefresh?: (
+    state: GameState,
+    playerId: PlayerId,
+    level?: AiLevel,
   ) => GameCard | undefined
   chooseAttackTarget: (
     state: GameState,
@@ -149,7 +158,11 @@ export const handleAiTurnState = (
   strategy: AiTurnStrategy,
 ): AiDecision => {
   if (state.pendingRefresh?.playerId === playerId) {
-    const candidate = getRefreshCandidates(state, playerId)[0]
+    const candidate = strategy.chooseRefresh?.(
+      state,
+      playerId,
+      strategy.currentLevel,
+    ) ?? getRefreshCandidates(state, playerId)[0]
     if (!candidate) {
       return {
         state,

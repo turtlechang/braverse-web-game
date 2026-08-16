@@ -39,7 +39,17 @@ export const chooseAiEffectMode = (
   state: GameState,
   context: EffectContext,
   effect: ChooseOneEffect,
+  preferredModeIndices: readonly number[] = [],
 ): number => {
+  for (const index of preferredModeIndices) {
+    if (
+      index >= 0 &&
+      index < effect.modes.length &&
+      isModePlayable(state, context, effect.modes[index].effects)
+    ) {
+      return index
+    }
+  }
   for (let index = effect.modes.length - 1; index >= 0; index -= 1) {
     if (isModePlayable(state, context, effect.modes[index].effects)) {
       return index

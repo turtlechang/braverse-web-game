@@ -2,6 +2,10 @@ import type { CardEffect, GameCard, GameState, PlayerId } from '../types'
 import type { ActionScoreBreakdown } from './strategy/action-score'
 import type { KnowledgeState } from './strategy/knowledge-state'
 import type {
+  PendingStrategyTelemetry,
+  PendingStrategyTelemetryAggregate,
+} from './strategy/pending-selection'
+import type {
   Lv4SearchTelemetry,
   Lv4SearchTelemetryAggregate,
 } from './strategy/search-telemetry'
@@ -26,6 +30,7 @@ export interface AiDecisionReason {
   chosenCommandKind?: string
   actionScore?: ActionScoreBreakdown
   lv4Search?: Lv4SearchTelemetry
+  pendingStrategy?: PendingStrategyTelemetry
 }
 
 export interface SimulateAiMatchOptions {
@@ -182,6 +187,7 @@ export interface BehaviorMetrics {
   r6cBreakWorsenedCount: number
   legalAttackSkippedCount: number
   lv4Search: Lv4SearchTelemetryAggregate
+  pendingStrategy: PendingStrategyTelemetryAggregate
 }
 
 export interface AiDetailedResult {
@@ -198,4 +204,6 @@ export interface AiDetailedResult {
   behavior: BehaviorMetrics
   /** 原始決策 telemetry，供 benchmark 正確計算跨對局 p95。 */
   lv4SearchTelemetry: readonly Lv4SearchTelemetry[]
+  /** G5 pending／防守選擇樣本，供 benchmark 稽核使用範圍與 fallback。 */
+  pendingStrategyTelemetry: readonly PendingStrategyTelemetry[]
 }
