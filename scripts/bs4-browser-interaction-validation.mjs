@@ -292,6 +292,27 @@ const driveDirectOptionalCost = async (page) => {
 const driveOtherPendingModal = async (page) => {
   const operations = []
 
+  // A cost can faint the source Cookie while another Cookie remains in the
+  // battle area. The rules layer therefore opens the optional replacement
+  // decision after the effect resolves; settle it before asserting the
+  // battle log so the replacement backdrop does not intercept the toggle.
+  const replacement = page.locator('.decision-modal[role="alertdialog"]')
+  if (await visible(replacement)) {
+    const skip = replacement.getByRole('button', { name: '不補餅乾' })
+    if (await visible(skip)) {
+      await skip.click({ force: true })
+      return ['replacement:skip']
+    }
+
+    // Refresh decisions do not expose a skip action. Select the first legal
+    // Cookie when the fixture intentionally leaves that decision pending.
+    const option = replacement.locator('.modal-card-options button:not(:disabled)').first()
+    if (await visible(option)) {
+      await option.click({ force: true })
+      return ['replacement:select']
+    }
+  }
+
   const stageTrigger = page.locator('.faint-response-modal[role="dialog"]')
   if (await visible(stageTrigger)) {
     const activate = stageTrigger.locator('.modal-button.primary')

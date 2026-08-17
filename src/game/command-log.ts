@@ -897,6 +897,9 @@ export const describeCommand = (
         command.playerId,
         effects,
       )
+      if (next.pendingBattle?.effectDamageSequence) {
+        return `${actor} 結算效果：等待後續傷害結算`
+      }
       return outcome
         ? `${actor} 結算效果：${outcome}`
         : `${actor} 結算了效果`
@@ -1000,8 +1003,26 @@ export const describeCommand = (
         ? `${actor} 翻開了 HP 卡「${revealed.name}」`
         : `${actor} 結算了下一段傷害`
     }
-    case 'resolve-battle':
+    case 'resolve-battle': {
+      // Ability damage uses the battle state machine internally, so one
+      // resolve-battle command may finish every selected target at once.
+      // Preserve the actual HP delta in the log instead of leaving the
+      // preceding target-selection entry as the only explanation.
+      const pendingAbility = previous.pendingAbilityEffect
+      const effectSequence = previous.pendingBattle?.effectDamageSequence
+      if (pendingAbility && effectSequence) {
+        const outcome = describeDamageOutcome(
+          previous,
+          next,
+          pendingAbility.sourcePlayerId,
+          pendingAbility.effects,
+        )
+        return outcome
+          ? `${actor} 自動結算了戰鬥：${outcome}`
+          : `${actor} 自動結算了戰鬥`
+      }
       return `${actor} 自動結算了戰鬥`
+    }
     case 'resolve-faint-effect':
       return `${actor} 決定了擊倒效果的目標`
     case 'resolve-opponent-hand-discard':

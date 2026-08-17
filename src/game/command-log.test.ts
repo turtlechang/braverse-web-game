@@ -898,6 +898,63 @@ describe('effect resolution log outcome', () => {
     ).toContain('「attacker」受到 1 點傷害')
   })
 
+  it('reports damage completed by an automatic effect-damage battle resolution', () => {
+    const base = createBattleState()
+    const previous: GameState = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'defender',
+        sourceKind: 'skill',
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        effectIndex: 0,
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId: 'defender',
+        targetInstanceId: 'attacker',
+        damagePlayerId: 'player-two',
+        damageTargetInstanceId: 'attacker',
+        stage: 'damage',
+        declaredDamage: 1,
+        remainingDamage: 1,
+        trapUsed: true,
+        preventKnockoutTargetIds: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        effectDamageSequence: {
+          remainingTargetInstanceIds: [],
+          damage: 1,
+        },
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = {
+      ...previous,
+      pendingAbilityEffect: undefined,
+      pendingBattle: null,
+      players: {
+        ...previous.players,
+        'player-two': {
+          ...previous.players['player-two'],
+          battleArea: previous.players['player-two'].battleArea.map((cookieInBattle) =>
+            cookieInBattle.card.instanceId === 'attacker'
+              ? { ...cookieInBattle, hpCards: [] }
+              : cookieInBattle,
+          ),
+        },
+      },
+    }
+
+    expect(
+      describeCommand(previous, next, {
+        kind: 'resolve-battle',
+        playerId: 'player-one',
+      }),
+    ).toContain('「attacker」受到 1 點傷害')
+  })
+
   it('reports when a damage effect resolves without dealing damage', () => {
     const base = createBattleState()
     const previous: GameState = {

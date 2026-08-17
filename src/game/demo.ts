@@ -3013,7 +3013,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     // false in the neutral spread above. Keep these adjustments local to the
     // browser fixture; they do not alter the official card pool or rules.
     const attackSourceHpCount =
-      cookieCard.id === 'BS4-039'
+      cookieCard.id === 'BS6-053'
+        ? cookieCard.hp
+      : cookieCard.id === 'BS4-039'
         ? 2
         : cookieCard.id === 'BS5-098'
           ? 1
@@ -3050,7 +3052,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ]
         : ownBreakArea
     const attackPlayerSupportArea =
-      cookieCard.id === 'BS4-053' || cookieCard.id === 'BS4-061'
+      cookieCard.id === 'BS6-053'
+        ? energySupports.slice(0, 5).map((card) => ({ card, rested: false }))
+      : cookieCard.id === 'BS4-053' || cookieCard.id === 'BS4-061'
         ? [
             ...energySupports.map((card) => ({ card, rested: false })),
             ...scenarioSupports(
@@ -3287,6 +3291,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const sourceHpCards =
       card.id === 'BS4-005'
         ? [testSupportCard('BS4-005-source-hp')]
+        : card.id === 'BS6-055'
+          ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+              testSupportCard(`BS6-055-source-hp-${index + 1}`, 'green'),
+            )
         // BS6-001 需要從同一張紅色餅乾的 HP 堆丟 2 張。卡面 HP 為 3，
         // 因此 card-check 也必須提供完整堆疊，才能驗證付款後仍可選擇
         // 自己的餅乾套用 +1 攻擊傷害。
@@ -3326,7 +3334,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
           ],
           supportArea:
-            card.id === 'BS6-057'
+            card.id === 'BS6-055'
+              ? scenarioSupports('BS6-055-player-support', 4, 'green')
+              : card.id === 'BS6-057'
               ? [
                   { card: handCookieFiller, rested: false },
                   ...energySupports.map((c) => ({ card: c, rested: false })),
@@ -3347,6 +3357,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
                   'green',
                 ),
               }
+            : card.id === 'BS6-055'
+              ? {
+                  supportArea: scenarioSupports(
+                    'BS6-055-opponent-support',
+                    6,
+                    'green',
+                  ),
+                }
             : {}),
           breakArea: opponentBreakArea,
         },

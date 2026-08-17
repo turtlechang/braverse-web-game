@@ -687,6 +687,57 @@ describe('createCardCheckDemoState', () => {
     ).not.toContain('BS6-091-break-excluded')
   })
 
+  it('prepares BS6-053 attack fixture with full HP and exactly five active supports', () => {
+    const state = createCardCheckDemoState('BS6-053')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-053',
+    )
+
+    expect(source?.hpCards).toHaveLength(3)
+    expect(source?.rested).toBe(true)
+    expect(state.players['player-one'].supportArea).toHaveLength(5)
+    expect(
+      state.players['player-one'].supportArea.every((support) => !support.rested),
+    ).toBe(true)
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackEffects: [
+        expect.objectContaining({
+          kind: 'gain-hp',
+          amount: 1,
+          target: {
+            side: 'self',
+            min: 1,
+            max: 1,
+            sourceOnly: true,
+          },
+        }),
+      ],
+    })
+  })
+
+  it('prepares BS6-055 passive fixture with fewer own supports than the opponent', () => {
+    const state = createCardCheckDemoState('BS6-055')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-055',
+    )
+
+    expect(source?.hpCards).toHaveLength(4)
+    expect(source?.rested).toBe(false)
+    expect(state.players['player-one'].supportArea).toHaveLength(4)
+    expect(state.players['player-two'].supportArea).toHaveLength(6)
+    expect(source?.card.skill).toMatchObject({
+      trigger: 'passive',
+      yourTurn: true,
+      effects: [
+        {
+          kind: 'modify-damage-received',
+          condition: { kind: 'support-count-less-than-opponent', difference: 1 },
+        },
+      ],
+    })
+  })
+
   it('builds BS6-079 OnPlay A/B fixtures with and without Timekeeper', () => {
     const clear = createBs6079OnPlayDemoState(false)
     const blocked = createBs6079OnPlayDemoState(true)
