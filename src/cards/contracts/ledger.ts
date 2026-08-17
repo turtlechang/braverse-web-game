@@ -151,9 +151,14 @@ const selectorMatches = (
     'attackTargetOnly',
     'excludeAttackTarget',
     'restedOnly',
+    'activeOnly',
+    'excludeFlip',
+    'cardType',
+    'nonCookieOnly',
     'keyword',
     'cardName',
     'costSelected',
+    'noSkillOnly',
   ] as const) {
     if (expected[key] !== undefined && actual[key] !== expected[key]) return false
   }
@@ -164,8 +169,45 @@ const runtimeSelectorForEffect = (
   record: Record<string, unknown>,
 ): Partial<EffectTargetSelector> | null => {
   if (typeof record.kind !== 'string') return null
-  const amount = typeof record.amount === 'number' ? record.amount : undefined
+  const amount =
+    typeof record.amount === 'number'
+      ? record.amount
+      : typeof record.max === 'number'
+        ? record.max
+        : undefined
   const optional = record.optional === true
+  const side =
+    record.side === 'opponent' || record.side === 'either'
+      ? (record.side as EffectTargetSelector['side'])
+      : record.supportSide === 'opponent'
+        ? 'opponent'
+        : 'self'
+  const common: Partial<EffectTargetSelector> = {
+    side,
+    ...(typeof record.energyColor === 'string'
+      ? { energyColor: record.energyColor as EffectTargetSelector['energyColor'] }
+      : {}),
+    ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
+    ...(typeof record.exactLevel === 'number'
+      ? { minLevel: record.exactLevel, maxLevel: record.exactLevel }
+      : {}),
+    ...(typeof record.minLevel === 'number' ? { minLevel: record.minLevel } : {}),
+    ...(typeof record.remainingHp === 'number' ? { remainingHp: record.remainingHp } : {}),
+    ...(typeof record.maxRemainingHp === 'number'
+      ? { maxRemainingHp: record.maxRemainingHp }
+      : {}),
+    ...(typeof record.minRemainingHp === 'number'
+      ? { minRemainingHp: record.minRemainingHp }
+      : {}),
+    ...(typeof record.excludeSource === 'boolean'
+      ? { excludeSource: record.excludeSource }
+      : {}),
+    ...(typeof record.sourceOnly === 'boolean' ? { sourceOnly: record.sourceOnly } : {}),
+    ...(typeof record.activeOnly === 'boolean' ? { activeOnly: record.activeOnly } : {}),
+    ...(typeof record.noSkillOnly === 'boolean'
+      ? { noSkillOnly: record.noSkillOnly }
+      : {}),
+  }
   const movementKinds = new Set([
     'trash-to-battle',
     'break-to-battle',
@@ -180,21 +222,189 @@ const runtimeSelectorForEffect = (
     'hand-to-support',
     'trash-to-support',
     'trash-to-hand',
+    'trash-to-deck',
     'flip-to-support',
   ])
-  if (!movementKinds.has(record.kind)) return null
-  return {
-    side: 'self',
-    ...(amount !== undefined ? { min: optional ? 0 : amount, max: amount } : {}),
-    ...(typeof record.energyColor === 'string'
-      ? { energyColor: record.energyColor as EffectTargetSelector['energyColor'] }
-      : {}),
-    ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
-    ...(typeof record.exactLevel === 'number'
-      ? { minLevel: record.exactLevel, maxLevel: record.exactLevel }
-      : {}),
-    ...(typeof record.minLevel === 'number' ? { minLevel: record.minLevel } : {}),
+  if (movementKinds.has(record.kind)) {
+    // break-to-battle/support-to-battle are defined as "up to" selections in
+    // the rules layer even when the adapter has no optional flag.  Preserve
+    // that evidence instead of manufacturing a required target of one.
+    const upToByRule =
+      record.kind === 'break-to-battle' || record.kind === 'support-to-battle'
+    const max =
+      record.kind === 'support-to-hand' && typeof record.keepCount === 'number'
+        ? record.keepCount
+        : record.kind === 'support-to-hand' && record.anyNumber === true
+          ? Number.MAX_SAFE_INTEGER
+          : amount
+    const min =
+      record.kind === 'trash-to-deck'
+        ? typeof record.min === 'number'
+          ? record.min
+          : 0
+        : record.kind === 'break-to-trash' || record.kind === 'trash-to-hand'
+          ? 0
+          : record.kind === 'support-to-hand' && typeof record.keepCount === 'number'
+            ? record.keepCount
+            : upToByRule || optional
+              ? 0
+              : max
+    return {
+      ...common,
+      ...(max !== undefined ? { min, max } : {}),
+      ...(record.kind === 'trash-to-deck'
+        ? {
+            ...(record.excludeFlip === true ? { excludeFlip: true } : {}),
+            ...(record.cookieOnly === true ? { cardType: 'cookie' as const } : {}),
+            ...(record.nonCookieOnly === true ? { nonCookieOnly: true } : {}),
+          }
+        : {}),
+    }
   }
+  if (
+    record.kind === 'support-to-trash' ||
+    record.kind === 'rest-support' ||
+    record.kind === 'opponent-rests-support'
+  ) {
+    const max = amount
+    return {
+      ...common,
+      ...(max !== undefined ? { min: optional ? 0 : max, max } : {}),
+    }
+  }
+  if (record.kind === 'rest-support-and-damage') {
+    const max =
+      typeof record.supportAmount === 'number' ? record.supportAmount : undefined
+    return {
+      ...common,
+      ...(max !== undefined ? { min: 0, max } : {}),
+      ...(record.activeOnly === true ? { activeOnly: true } : {}),
+    }
+  }
+  if (record.kind === 'inspect-deck') {
+    const max = typeof record.pickCount === 'number' ? record.pickCount : undefined
+    return {
+      side: 'self',
+      ...(max !== undefined
+        ? { min: record.optionalPick === true ? 0 : max, max }
+        : {}),
+      ...(typeof record.filterColor === 'string'
+        ? { energyColor: record.filterColor as EffectTargetSelector['energyColor'] }
+        : {}),
+      ...(typeof record.filterType === 'string'
+        ? { cardType: record.filterType as EffectTargetSelector['cardType'] }
+        : {}),
+    }
+  }
+  if (record.kind === 'opponent-trash-to-break') {
+    const max = typeof record.max === 'number' ? record.max : undefined
+    return {
+      side: 'opponent',
+      ...(max !== undefined ? { min: 0, max } : {}),
+      ...(typeof record.exactLevel === 'number'
+        ? { minLevel: record.exactLevel, maxLevel: record.exactLevel }
+        : {}),
+      ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
+    }
+  }
+  if (record.kind === 'opponent-battle-to-trash') {
+    return {
+      side: 'opponent',
+      min: typeof record.min === 'number' ? record.min : 0,
+      max: typeof record.max === 'number' ? record.max : 1,
+      ...(typeof record.remainingHp === 'number'
+        ? { remainingHp: record.remainingHp }
+        : {}),
+      ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
+      ...(typeof record.minLevel === 'number' ? { minLevel: record.minLevel } : {}),
+    }
+  }
+  return null
+}
+
+/** Convert a structured AbilityCost movement into selector evidence. */
+const runtimeSelectorsForCost = (
+  value: Record<string, unknown>,
+): Partial<EffectTargetSelector>[] => {
+  const selectors: Partial<EffectTargetSelector>[] = []
+  const add = (
+    amount: number,
+    fields: Partial<EffectTargetSelector> = {},
+  ): void => {
+    selectors.push({ side: 'self', min: amount, max: amount, ...fields })
+  }
+  if (typeof value.supportToTrash === 'number' && value.supportToTrash > 0) {
+    add(value.supportToTrash)
+  }
+  if (typeof value.supportToHand === 'number' && value.supportToHand > 0) {
+    add(value.supportToHand, {
+      ...(typeof value.supportToHandType === 'string'
+        ? { cardType: value.supportToHandType as EffectTargetSelector['cardType'] }
+        : {}),
+    })
+  }
+  const hpToTrash = value.hpToTrash
+  if (hpToTrash && typeof hpToTrash === 'object') {
+    const hp = hpToTrash as Record<string, unknown>
+    add(typeof hp.amount === 'number' ? hp.amount : 1, {
+      ...(hp.sourceOnly === true ? { sourceOnly: true } : {}),
+      ...(hp.excludeSource === true ? { excludeSource: true } : {}),
+      ...(typeof hp.energyColor === 'string'
+        ? { energyColor: hp.energyColor as EffectTargetSelector['energyColor'] }
+        : {}),
+      ...(typeof hp.minLevel === 'number' ? { minLevel: hp.minLevel } : {}),
+      ...(typeof hp.maxLevel === 'number' ? { maxLevel: hp.maxLevel } : {}),
+    })
+  }
+  const battleCookie = value.trashBattleCookie ?? value.battleCookieToHand
+  if (battleCookie && typeof battleCookie === 'object') {
+    const battle = battleCookie as Record<string, unknown>
+    add(typeof battle.count === 'number' ? battle.count : 1, {
+      ...(battle.sourceOnly === true ? { sourceOnly: true } : {}),
+      ...(battle.excludeSource === true ? { excludeSource: true } : {}),
+      ...(typeof battle.energyColor === 'string'
+        ? { energyColor: battle.energyColor as EffectTargetSelector['energyColor'] }
+        : {}),
+      ...(typeof battle.level === 'number'
+        ? { minLevel: battle.level, maxLevel: battle.level }
+        : {}),
+      ...(typeof battle.minLevel === 'number' ? { minLevel: battle.minLevel } : {}),
+      ...(typeof battle.maxLevel === 'number' ? { maxLevel: battle.maxLevel } : {}),
+    })
+  }
+  const trashCookie = value.trashCookieToBreakArea
+  if (trashCookie && typeof trashCookie === 'object') {
+    const trash = trashCookie as Record<string, unknown>
+    add(typeof trash.count === 'number' ? trash.count : 1, {
+      ...(typeof trash.energyColor === 'string'
+        ? { energyColor: trash.energyColor as EffectTargetSelector['energyColor'] }
+        : {}),
+      ...(trash.excludeFlip === true ? { excludeFlip: true } : {}),
+    })
+  }
+  const trashToDeck = value.trashToDeck ?? value.trashToDeckBottom
+  if (trashToDeck && typeof trashToDeck === 'object') {
+    const trash = trashToDeck as Record<string, unknown>
+    add(typeof trash.count === 'number' ? trash.count : 1, {
+      ...(typeof trash.energyColor === 'string'
+        ? { energyColor: trash.energyColor as EffectTargetSelector['energyColor'] }
+        : {}),
+      ...(trash.excludeFlip === true ? { excludeFlip: true } : {}),
+      ...(trash.cookieOnly === true ? { cardType: 'cookie' } : {}),
+      ...(trash.nonCookieOnly === true ? { nonCookieOnly: true } : {}),
+    })
+  }
+  const handToBreak = value.handToBreakArea
+  if (handToBreak && typeof handToBreak === 'object') {
+    const hand = handToBreak as Record<string, unknown>
+    add(typeof hand.count === 'number' ? hand.count : 1, {
+      cardType: 'cookie',
+      ...(typeof hand.energyColor === 'string'
+        ? { energyColor: hand.energyColor as EffectTargetSelector['energyColor'] }
+        : {}),
+    })
+  }
+  return selectors
 }
 
 const bracketClauses = (
@@ -330,6 +540,10 @@ const targetClauses = (
         ? 'either'
         : 'self'
     const descriptor = match[4] ?? ''
+    const fullPhrase = text.slice(
+      match.index ?? 0,
+      Math.min(text.length, (match.index ?? 0) + match[0].length + 180),
+    )
     const energyToken = descriptor.match(/\{([RYGBPK])\}/i)?.[1]?.toUpperCase()
     const energyColor = energyToken
       ? ENERGY_TOKEN_TO_COLOR[energyToken]
@@ -337,7 +551,11 @@ const targetClauses = (
     const levelMatch = descriptor.match(/LV\.\s*(\d+)(?:\s+(or\s+(?:lower|higher)))?/i)
     const level = levelMatch ? Number(levelMatch[1]) : undefined
     const levelQualifier = levelMatch?.[2]?.toLowerCase()
-    const remainingHp = descriptor.match(/remaining\s+HP\s+is\s+(\d+)/i)?.[1]
+    const remainingHpMatch = fullPhrase.match(
+      /remaining\s+HP\s+is\s+(\d+)(?:\s+or\s+(less|more))?/i,
+    )
+    const remainingHp = remainingHpMatch?.[1]
+    const remainingHpQualifier = remainingHpMatch?.[2]?.toLowerCase()
     const clauseId = `${source}-${clauses.length + 1}`
     const start = match.index ?? 0
     structuredRanges.push({ start, end: start + match[0].length })
@@ -355,12 +573,19 @@ const targetClauses = (
             : level !== undefined
               ? { minLevel: level, maxLevel: level }
               : {}),
-        ...(remainingHp !== undefined ? { remainingHp: Number(remainingHp) } : {}),
+        ...(remainingHp !== undefined && remainingHpQualifier === 'less'
+          ? { remainingHp: Number(remainingHp) }
+          : remainingHp !== undefined && remainingHpQualifier === 'more'
+            ? { minRemainingHp: Number(remainingHp) }
+            : remainingHp !== undefined
+              ? { remainingHp: Number(remainingHp) }
+              : {}),
+        ...( /\bother\b/i.test(descriptor) ? { excludeSource: true } : {}),
       },
       clauseIds: [clauseId],
     })
   }
-  const zoneSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:LV\.\s*(\d+)(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)\s+from\s+(your|the)\s+(trash|break\s+area|support\s+area|hand|deck)\b/gi
+  const zoneSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:LV\.\s*(\d+)(?:\s+or\s+(?:lower|higher))?\s+)?(?:other\s+)?(?:cookies?|cards?)(?:\s+other\s+than\s+\[[^\]]+\])?\s+(?:from|in)\s+(your opponent's|opponent's|your|the|either player's)\s+(trash|break\s+area|support\s+area|hand|deck)\b/gi
   for (const match of text.matchAll(zoneSelection)) {
     const start = match.index ?? 0
     const end = start + match[0].length
@@ -369,7 +594,9 @@ const targetClauses = (
     const level = match[4] ? Number(match[4]) : undefined
     const qualifier = match[0].match(/LV\.\s*\d+\s+(or\s+(?:lower|higher))/i)?.[1]?.toLowerCase()
     const color = match[3] ? ENERGY_TOKEN_TO_COLOR[match[3].toUpperCase()] : undefined
-    const zoneText = match[5]?.toLowerCase() ?? ''
+    const sideText = match[5]?.toLowerCase() ?? ''
+    const zoneText = match[6]?.toLowerCase() ?? ''
+    const side = sideText.includes('opponent') ? 'opponent' : 'self'
     const zone = zoneText.includes('trash')
       ? 'trash'
       : zoneText.includes('break')
@@ -383,7 +610,7 @@ const targetClauses = (
     addClause(clauses, source, match[0], 'target', start, end, 'pattern')
     targets.push({
       selector: {
-        side: 'self',
+        side,
         min: match[1] ? 0 : amount,
         max: amount,
         ...(color && color !== 'neutral' ? { energyColor: color } : {}),
@@ -400,7 +627,7 @@ const targetClauses = (
     })
     structuredRanges.push({ start, end })
   }
-  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?)\s+(?:in|from)\s+(your opponent's|your|either player's)\s+battle\s+area\b/gi
+  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:other\s+)?(?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?)\s+(?:in|from)\s+(your opponent's|your|either player's)\s+battle\s+area\b/gi
   for (const match of text.matchAll(battleAreaSelection)) {
     const start = match.index ?? 0
     const end = start + match[0].length
@@ -433,9 +660,95 @@ const targetClauses = (
             : level !== undefined
               ? { minLevel: level, maxLevel: level }
               : {}),
+        ...( /\bother\b/i.test(descriptor) ? { excludeSource: true } : {}),
       },
       clauseIds: [clauseId],
       zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const supportSelection = /\bselect\s+(?:(up\s+to)\s+)?(\d+|any\s+number)\s+(?:\{([RYGBPK])\}\s+)?(?:(active)\s+)?(?:cards?|cookies?)\s+(?:in|from)\s+(your opponent's|opponent's|your|the|either player's)\s+support\s+area\b/gi
+  for (const match of text.matchAll(supportSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const anyNumber = /^any\s+number$/i.test(match[2] ?? '')
+    const amount = anyNumber ? Number.MAX_SAFE_INTEGER : Number(match[2])
+    const sideText = (match[5] ?? '').toLowerCase()
+    const side = sideText.includes('opponent')
+      ? 'opponent'
+      : sideText.includes('either')
+        ? 'either'
+        : 'self'
+    const color = match[3]
+      ? ENERGY_TOKEN_TO_COLOR[match[3].toUpperCase()]
+      : undefined
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side,
+        min: match[1] || anyNumber ? 0 : amount,
+        max: amount,
+        ...(color && color !== 'neutral' ? { energyColor: color } : {}),
+        ...(match[4] ? { activeOnly: true } : {}),
+      },
+      clauseIds: [clauseId],
+      zone: 'support',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const eachPlayerSelection = /\bselect\s+1\s+(?:a\s+)?(?:cookie|card)s?\s+from\s+each\s+player\b/gi
+  for (const match of text.matchAll(eachPlayerSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    for (const side of ['self', 'opponent'] as const) {
+      targets.push({
+        selector: { side, min: 1, max: 1 },
+        clauseIds: [clauseId],
+        zone: 'battle',
+      })
+    }
+    structuredRanges.push({ start, end })
+  }
+  const viewedCardSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:cookies?|cards?)\s+from\s+(?:the\s+)?viewed\s+cards\b/gi
+  for (const match of text.matchAll(viewedCardSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const color = match[3]
+      ? ENERGY_TOKEN_TO_COLOR[match[3].toUpperCase()]
+      : undefined
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        ...(color && color !== 'neutral' ? { energyColor: color } : {}),
+      },
+      clauseIds: [clauseId],
+      zone: 'deck',
+    })
+    structuredRanges.push({ start, end })
+  }
+  const keepSupportSelection = /\bselect\s+(\d+)\s+cards?\s+to\s+keep\s+in\s+your\s+support\s+area\b/gi
+  for (const match of text.matchAll(keepSupportSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[1])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: { side: 'self', min: amount, max: amount },
+      clauseIds: [clauseId],
+      zone: 'support',
     })
     structuredRanges.push({ start, end })
   }
@@ -448,7 +761,7 @@ const targetClauses = (
     const end = start + match[0].length
     if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
     if (/\bof\s+(?:the\s+)?following\b/i.test(match[0])) continue
-    if (/\bfrom\s+(?:your|the)\s+(?:trash|break\s+area|support\s+area|hand|deck)/i.test(match[0])) continue
+    if (/\b(?:from|in)\s+(?:(?:your|the|opponent's|your opponent's|either player's)\s+)?(?:trash|break\s+area|support\s+area|hand|deck|viewed\s+cards)/i.test(match[0])) continue
     const clauseId = `${source}-${clauses.length + 1}`
     addClause(clauses, source, match[0], 'target', start, end, 'unknown')
     targets.push({
@@ -457,7 +770,7 @@ const targetClauses = (
       unresolved: 'selection phrase has no safe selector mapping',
     })
   }
-  const unresolvedZoneSelection = /\b(?:play|place|return|take|put)\s+(?:up\s+to\s+)?\d+\b[^.]*\bfrom\s+(?:your|the)\s+(?:trash|break\s+area|support\s+area|hand|deck)/gi
+  const unresolvedZoneSelection = /\b(?:play|place|return|take|put)\s+(?:up\s+to\s+)?\d+\b[^.]*\b(?:from|in)\s+(?:your opponent's|opponent's|your|the)\s+(?:trash|break\s+area|support\s+area|hand|deck)/gi
   for (const match of text.matchAll(unresolvedZoneSelection)) {
     const start = match.index ?? 0
     const amountMatch = match[0].match(/(?:up\s+to\s+)?(\d+)/i)
@@ -539,6 +852,20 @@ const collectRuntime = (value: unknown, result: {
     }
     const movementSelector = runtimeSelectorForEffect(record)
     if (movementSelector) result.targetSelectors.push(movementSelector)
+    // support-to-hp has two selection domains: a support card and a Cookie
+    // target.  The latter is already carried by `record.target`; expose the
+    // former as selector evidence so a bracketed support-card cost can bind
+    // without pretending it is a battlefield Cookie.
+    if (record.kind === 'support-to-hp') {
+      result.targetSelectors.push({
+        side: 'self',
+        min: record.optional === true ? 0 : 1,
+        max: 1,
+        ...(typeof record.energyColor === 'string'
+          ? { energyColor: record.energyColor as EffectTargetSelector['energyColor'] }
+          : {}),
+      })
+    }
   }
   if (record.energyCost && typeof record.energyCost === 'object') {
     result.energyCosts.push(record.energyCost as EnergyCost)
@@ -560,6 +887,7 @@ const collectRuntime = (value: unknown, result: {
     if (key === 'cost' && child && typeof child === 'object') {
       const cost = child as Record<string, unknown>
       Object.keys(cost).forEach((costKey) => result.abilityCostKeys.add(costKey))
+      result.targetSelectors.push(...runtimeSelectorsForCost(cost))
       const directEnergy: EnergyCost = {}
       for (const color of Object.keys(ENERGY_TOKEN_TO_COLOR).map(
         (token) => ENERGY_TOKEN_TO_COLOR[token],

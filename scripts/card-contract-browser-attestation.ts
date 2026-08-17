@@ -79,6 +79,58 @@ try {
     `完成合法目標後 contract trace 應通過：${positive.errors.join('; ')}`,
   )
 
+  // Positive OnPlay binding: the same selector pipeline must expose the
+  // legal Cookie target before the follow-up draw choice is shown.
+  const onPlayPositive = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  onPlayPositive.setDefaultTimeout(7000)
+  await onPlayPositive.goto(
+    `${baseUrl}?test-state=bs6-079-on-play-clear&contract-card=BS6-079`,
+    { waitUntil: 'networkidle' },
+  )
+  const onPlayPanel = onPlayPositive.locator('.effect-panel')
+  await onPlayPanel.waitFor({ state: 'visible' })
+  await onPlayPanel.locator('.effect-candidates-target > button').first().click()
+  await onPlayPanel.locator('.effect-panel-primary-action').click()
+  await onPlayPositive.waitForTimeout(150)
+  await onPlayPanel.locator('.effect-panel-primary-action').click()
+  await onPlayPositive.waitForTimeout(150)
+  const skipDraw = onPlayPositive.getByRole('button', { name: '略過抽牌' })
+  if (await skipDraw.isVisible().catch(() => false)) await skipDraw.click()
+  await onPlayPositive.waitForTimeout(150)
+  const onPlayPositiveTrace = await readTrace(onPlayPositive)
+  const onPlayPositiveAttestation = attestCardContractActionTrace(onPlayPositiveTrace, {
+    requiredCommandKinds: ['begin-activate-skill', 'resolve-draw-up-to'],
+    orderedStepFragments: ['抽牌原因：', '抽牌結果：選擇不抽牌'],
+  })
+  assert.equal(
+    onPlayPositiveAttestation.passed,
+    true,
+    `BS6-079 正向 selector trace 應通過：${onPlayPositiveAttestation.errors.join('; ')}`,
+  )
+  await onPlayPositive.close()
+
+  // Blocked path: the official Timekeeper movement protection must produce a
+  // public skip command and reason, with no misleading target-selection UI.
+  const blockedPage = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  blockedPage.setDefaultTimeout(7000)
+  await blockedPage.goto(
+    `${baseUrl}?test-state=bs6-079-on-play-blocked&contract-card=BS6-079`,
+    { waitUntil: 'networkidle' },
+  )
+  await blockedPage.waitForTimeout(150)
+  assert.equal(await blockedPage.locator('.effect-panel').count(), 0)
+  const blockedTrace = await readTrace(blockedPage)
+  const blockedAttestation = attestCardContractActionTrace(blockedTrace, {
+    requiredCommandKinds: ['skip-on-play'],
+    orderedStepFragments: ['效果未生效：被「Timekeeper Cookie」的效果阻止'],
+  })
+  assert.equal(
+    blockedAttestation.passed,
+    true,
+    `BS6-079 阻擋 trace 應說明來源與原因：${blockedAttestation.errors.join('; ')}`,
+  )
+  await blockedPage.close()
+
   console.log(
     JSON.stringify(
       {
@@ -92,6 +144,18 @@ try {
         negative: {
           passed: negative.passed,
           errors: negative.errors,
+        },
+        selectorBinding: {
+          positive: {
+            passed: onPlayPositiveAttestation.passed,
+            commandKinds: onPlayPositiveAttestation.observedCommandKinds,
+            steps: onPlayPositiveAttestation.observedSteps,
+          },
+          blocked: {
+            passed: blockedAttestation.passed,
+            commandKinds: blockedAttestation.observedCommandKinds,
+            steps: blockedAttestation.observedSteps,
+          },
         },
         traceEntries: positiveTrace.length,
       },

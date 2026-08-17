@@ -178,9 +178,11 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 通用型 Lv.3／Lv.4 AI 已完成 G0～G5：Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`；Lv.4 則以 width 5、depth 5、240 nodes、150ms 的有限 command search 維持 Setup→Payoff 計畫並預留攻擊資源。搜尋只使用 `PlayerView` 與合法 `KnowledgeState`，遇到未知抽牌、攻擊 pending、trap／blocker／FLIP／replacement 等決策即停止推演；timeout 一律回退 Lv.3。G5 已將合法的補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、阻擋、Refresh 與多階段 pending 決策接入 TacticalPlan，並輸出可稽核的 selection telemetry；Lv.1／Lv.2 行為不變。
 
-卡牌行為契約目前先以 shadow mode 盤點正式卡池；最新稽核為 1101 筆公開記錄，824 筆 `verified`、277 筆保守標記 `needs-review`、0 筆 `blocked`。報告會依 `target evidence unresolved`、`source contains unclassified clause`、`cost/payment evidence missing`、`Then`、`timing` 與 `resolution order` 分類原因；尚未宣稱 needs-review 卡已完成正式契約，仍須逐類補齊來源 parser 與 runtime selector binding。
+卡牌行為契約目前先以 shadow mode 盤點正式卡池；最新稽核為 1101 筆公開記錄，895 筆 `verified`、206 筆保守標記 `needs-review`、0 筆 `blocked`，其中 `target evidence unresolved` 為 102 筆。報告會依 `target evidence unresolved`、`source contains unclassified clause`、`cost/payment evidence missing`、`Then`、`timing` 與 `resolution order` 分類原因；尚未宣稱 needs-review 卡已完成正式契約，仍須逐類補齊來源 parser 與 runtime selector binding。
 
-契約遷移目前已完成 P1～P5 的可回退 shadow gate：`npm run cards:migrate:batch -- --limit 25` 與 `npm run cards:migrate:batch -- --offset 50 --limit 25` 均會在不寫入卡池的前提下選出 25 張 verified 卡並確認 runtime compile 可執行；批次綁定使用 `cardNumber`，可保留 `@1` 異圖變體。Browser 驗收可用 `npm run cards:attest:browser` 檢查 modal selector binding 與公開 command trace；這些批次仍未 promote 正式 runtime 卡池。
+本輪完成第一批 target evidence 修正：最新稽核為 1101 筆公開記錄，895 筆 `verified`、206 筆 `needs-review`、0 筆 `blocked`，其中 `target evidence unresolved` 為 102 筆。25 張 selector parser／binding 回歸、正向／阻擋 Browser command trace、AI／牌組編輯器 Browser smoke 均已通過；`cards:migrate:batch -- --offset 75 --limit 25` 回報 `selected=25、ready=true`。剩餘 needs-review 仍依原因分類處理，未轉為正式卡池資料。
+
+契約遷移目前已完成 P1～P5 的可回退 shadow gate：`npm run cards:migrate:batch -- --limit 25`、`npm run cards:migrate:batch -- --offset 50 --limit 25` 與 `npm run cards:migrate:batch -- --offset 75 --limit 25` 均會在不寫入卡池的前提下選出 25 張 verified 卡並確認 runtime compile 可執行；批次綁定使用 `cardNumber`，可保留 `@1` 異圖變體。Browser 驗收可用 `npm run cards:attest:browser` 檢查 modal selector binding 與公開 command trace；這些批次仍未 promote 正式 runtime 卡池。
 
 牌組編輯器的 LV／HP／攻擊力篩選、BS3-061／BS6-101 可選昏厥技能、BS5／BS6 尖括號攻擊後代價稽核、BS6-044 固定攻擊目標追傷、效果傷害 FLIP 結算、陷阱來源／代價與攻擊後效果詳細步驟對戰紀錄，以及 BS5-073、BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇、昏厥效果與對戰紀錄的正向／負向 Browser 路徑。
 

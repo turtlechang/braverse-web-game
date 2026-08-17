@@ -176,6 +176,13 @@ export interface EffectTargetSelector {
   excludeAttackTarget?: boolean
   /** 只有休息中的餅乾是合法目標，用於「設為活躍」類效果。 */
   restedOnly?: boolean
+  /** 支援區選擇只允許啟動中的卡；這是契約／支援區證據欄位，戰鬥區匹配會忽略。 */
+  activeOnly?: boolean
+  /** 牌庫／棄牌區代價的牌面限制，供契約 shadow evidence 比對。 */
+  excludeFlip?: boolean
+  cardType?: CardType
+  /** 牌面必須是非 Cookie（可包含道具／陷阱／場景）。 */
+  nonCookieOnly?: boolean
   /** Restrict Cookie targets to cards carrying an official runtime keyword. */
   keyword?: CardKeyword
   /**
