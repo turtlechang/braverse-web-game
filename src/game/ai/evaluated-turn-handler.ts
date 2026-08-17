@@ -30,6 +30,7 @@ import {
 } from './strategy/lv4-search'
 import { createLv4SearchTelemetry } from './strategy/search-telemetry'
 import { handleAiTurnState, type AiTurnStrategy } from './turn-handler'
+import { isAllowedAiDeploymentCommand } from './deployment-policy'
 
 const sumBreakLevel = (cards: CookieCard[]): number =>
   cards.reduce((sum, card) => sum + card.level, 0)
@@ -375,6 +376,8 @@ const commandCandidate = (
   context: ReturnType<typeof createLv3ContextForView>,
   legalAttackCountBefore: number,
 ): ScoredLv3ActionCandidate<AiDecision> | null => {
+  if (!isAllowedAiDeploymentCommand(state, playerId, command)) return null
+
   try {
     const nextState = applyChosenTurnCommand(state, command)
     const afterView = createPlayerView(nextState, playerId)
@@ -849,7 +852,10 @@ export const handleAiTwoPlyTurnState = (
   const rootContext = createLv3ContextForView(beforeView, knowledgeState)
   const deadlineMs = Date.now() + DEFAULT_LV4_SEARCH_OPTIONS.timeBudgetMs
   const searchHooks = {
-    getLegalCommands: getLegalTurnCommands,
+    getLegalCommands: (nextState: GameState, nextPlayerId: PlayerId) =>
+      getLegalTurnCommands(nextState, nextPlayerId).filter((command) =>
+        isAllowedAiDeploymentCommand(nextState, nextPlayerId, command),
+      ),
     applyCommand: applyChosenTurnCommand,
     createPlayerView,
     scorePublicView: (view: PlayerView) =>

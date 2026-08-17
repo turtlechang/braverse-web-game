@@ -33,6 +33,7 @@ import {
   chooseBestCookieToDeploy,
   getMatchupProfile,
 } from './bs2MatchupProfiles'
+import { shouldAvoidFlipDeployment } from './deployment-policy'
 
 export interface AiTurnStrategy {
   currentLevel?: AiLevel
@@ -483,7 +484,12 @@ export const handleAiTurnState = (
 
       // 只有手牌品質足夠時才部署
       if (handQuality >= 30) {
-        const deployable = chooseBestCookieToDeploy(player.hand, profile)
+        const deployable = chooseBestCookieToDeploy(
+          player.hand.filter(
+            (card) => !shouldAvoidFlipDeployment(state, playerId, card),
+          ),
+          profile,
+        )
         if (deployable) {
           const deployedState = applyGameCommand(state, {
             kind: 'deploy-cookie',

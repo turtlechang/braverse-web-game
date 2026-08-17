@@ -498,6 +498,11 @@ const chooseEffectTargets = (
     .map((cookie) => cookie.card.instanceId)
 }
 
+// Universal Lv.3/Lv.4 selection delegates unsupported or multi-group effects
+// to the long-standing effect-specific selector above. Keep the fallback
+// explicit so the descriptor-aware path never calls an undefined symbol.
+const legacyChooseEffectTargets = chooseEffectTargets
+
 const chooseAbilityCostIds = (
   state: GameState,
   playerId: PlayerId,
