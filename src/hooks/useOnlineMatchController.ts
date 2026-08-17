@@ -263,7 +263,8 @@ export function useOnlineMatchController(params: {
     ? getFaintEffectMinMax(game, pendingFaint.effect)
     : { min: 0, max: 0 }
   const faintEnergyCost =
-    pendingFaint?.effect.kind === 'hand-to-battle'
+    (pendingFaint?.effect.kind === 'hand-to-battle' ||
+      pendingFaint?.effect.kind === 'trash-to-battle')
       ? pendingFaint.effect.energyCost ?? {}
       : {}
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)

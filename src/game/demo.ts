@@ -2940,7 +2940,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           // BS3-061 pays its faint cost from the support area before checking
           // the 5-card condition. Start with six cards so the default
           // card-check route exercises the condition-met path.
-          ...(card.id === 'BS3-061' || card.id === 'BS5-047'
+          ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101'
             ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
             : {}),
           ...(card.id === 'BS5-007'

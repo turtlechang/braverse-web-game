@@ -202,6 +202,76 @@ describe('AI break-to-trash target selection', () => {
     ).toHaveLength(targetCookie.hp + 1)
   })
 
+  it('pays the purple energy before playing a faint trash Cookie', () => {
+    const base = createDemoGame()
+    const energyCard: GameCard = {
+      id: 'purple-energy',
+      instanceId: 'purple-energy',
+      name: 'Purple Support',
+      type: 'item',
+      energyColor: 'purple',
+    }
+    const targetCookie = {
+      ...base.players['player-two'].battleArea[0].card,
+      id: 'purple-trash-cookie',
+      instanceId: 'purple-trash-cookie',
+      name: 'Purple Cookie',
+      level: 1,
+      hp: 1,
+      energyColor: 'purple' as const,
+    }
+    const effect: CardEffect = {
+      kind: 'trash-to-battle',
+      amount: 1,
+      energyColor: 'purple',
+      energyCost: { purple: 1 },
+      optional: true,
+    }
+    const state: GameState = {
+      ...base,
+      activePlayerId: 'player-two',
+      phase: 'main',
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-two',
+          sourceInstanceId: 'bs6-101',
+          sourceCardName: 'Twizzly Gummy Cookie',
+          effect,
+          context: {
+            sourcePlayerId: 'player-two',
+            sourceInstanceId: 'bs6-101',
+          },
+        },
+      ],
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          deck: [energyCard, energyCard, energyCard],
+          battleArea: [],
+          breakArea: [
+            {
+              ...base.players['player-two'].battleArea[0].card,
+              id: 'bs6-101',
+              instanceId: 'bs6-101',
+              name: 'Twizzly Gummy Cookie',
+            },
+          ],
+          discardPile: [targetCookie],
+          supportArea: [{ card: energyCard, rested: false }],
+        },
+      },
+    }
+
+    const decision = takeAiStep(state, 'player-two')
+
+    expect(decision.action).toBe('resolve-faint')
+    expect(decision.state.players['player-two'].supportArea[0].rested).toBe(true)
+    expect(
+      decision.state.players['player-two'].battleArea[0].card.instanceId,
+    ).toBe('purple-trash-cookie')
+  })
+
   it('skips faint effect when target min is 0 and no candidates wanted', () => {
     const base = createDemoGame()
     const state: GameState = {

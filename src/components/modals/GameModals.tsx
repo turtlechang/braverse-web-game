@@ -1519,7 +1519,7 @@ export function FaintEffectResponseModal({
                 })}
               </div>
             ) : (
-              <small>沒有可支付的黃色支援卡</small>
+              <small>沒有可支付的支援區能量卡</small>
             )}
           </div>
         )}

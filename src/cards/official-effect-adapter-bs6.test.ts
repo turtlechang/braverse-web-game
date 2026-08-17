@@ -1234,6 +1234,7 @@ describe('BS6 PURPLE effect adapter', () => {
           amount: 1,
           optional: true,
           energyColor: 'purple',
+          energyCost: { purple: 1 },
         },
       ],
     })

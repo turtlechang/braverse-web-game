@@ -249,7 +249,8 @@ export const handleAiPendingDecision = (
     )
     const faintEffect = state.pendingFaintEffects?.[0]?.effect
     const faintEnergyCost =
-      faintEffect?.kind === 'hand-to-battle'
+      (faintEffect?.kind === 'hand-to-battle' ||
+        faintEffect?.kind === 'trash-to-battle')
         ? faintEffect.energyCost
         : undefined
     const pendingFaint = state.pendingFaintEffects?.[0]

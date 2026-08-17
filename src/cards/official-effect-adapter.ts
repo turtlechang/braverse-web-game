@@ -3339,14 +3339,16 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
       },
     ],
-    // BS6-101 的「最多 1 張」必須保留 0 張選擇；昏厥來源已離場，
-    // 因此「can be used as {P}」不另外要求支援區付款。
+    // BS6-101 的「最多 1 張」必須保留 0 張選擇；「can be used as {P}」
+    // 是這個昏厥效果本身的可選能量代價，必須先從支援區支付，才能
+    // 繼續選擇棄牌區的紫色餅乾登場。
     'BS6-101': [
       {
         kind: 'trash-to-battle',
         amount: 1,
         optional: true,
         energyColor: 'purple',
+        energyCost: { purple: 1 },
       },
     ],
     'BS6-105': [{ kind: 'draw-up-to-then-discard', max: 2, discardCount: 1 }],

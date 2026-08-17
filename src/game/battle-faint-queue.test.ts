@@ -700,6 +700,76 @@ describe('faint effect queue', () => {
     expect(next.players['player-one'].supportArea[0].rested).toBe(true)
   })
 
+  it('requires and pays the optional energy cost before a faint trash-to-battle effect', () => {
+    const effect = {
+      kind: 'trash-to-battle' as const,
+      amount: 1,
+      optional: true,
+      energyColor: 'purple' as const,
+      energyCost: { purple: 1 },
+    }
+    const trashCookie = {
+      ...cookie('purple-trash-cookie'),
+      level: 1,
+      hp: 1,
+      energyColor: 'purple' as const,
+    }
+    const base = createFaintState()
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          deck: [item('p1-hp-1'), item('p1-hp-2'), item('p1-hp-3')],
+          supportArea: [
+            { card: item('p1-purple-energy', 'purple'), rested: false },
+          ],
+          discardPile: [trashCookie],
+        },
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: 'faint-cookie',
+          sourceCardName: 'Twizzly Gummy Cookie',
+          effect,
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: 'faint-cookie',
+            sourceCardName: 'Twizzly Gummy Cookie',
+          },
+        },
+      ],
+    }
+
+    expect(getFaintEffectCardCandidates(state).map((card) => card.instanceId)).toEqual([
+      'purple-trash-cookie',
+    ])
+    expect(() => resolveFaintEffect(state, ['purple-trash-cookie'])).toThrow(
+      '昏厥效果能量費用',
+    )
+
+    const skipped = resolveFaintEffect(state, [])
+    expect(skipped.pendingFaintEffects).toBeUndefined()
+    expect(skipped.players['player-one'].supportArea[0].rested).toBe(false)
+    expect(skipped.players['player-one'].discardPile).toHaveLength(1)
+
+    const paid = applyGameCommand(state, {
+      kind: 'resolve-faint-effect',
+      playerId: 'player-one',
+      targetIds: ['purple-trash-cookie'],
+      paymentIds: ['p1-purple-energy'],
+    })
+    expect(paid.pendingFaintEffects).toBeUndefined()
+    expect(
+      paid.players['player-one'].battleArea.some(
+        (entry) => entry.card.instanceId === 'purple-trash-cookie',
+      ),
+    ).toBe(true)
+    expect(paid.players['player-one'].supportArea[0].rested).toBe(true)
+  })
+
   it('requires an empty battle area replacement before resolving BS3-029', () => {
     const effect = {
       kind: 'hand-to-battle' as const,
