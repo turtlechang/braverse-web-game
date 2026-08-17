@@ -102,7 +102,8 @@ try {
     assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 0)
     await filterToggle.click()
     assert.equal(await filterToggle.getAttribute('aria-expanded'), 'true')
-    assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 4)
+    // Four original filters plus the LV／HP／攻擊力 filters.
+    assert.equal(await editor.locator('.deck-editor-page-filter-row select').count(), 7)
     const seriesSelect = editor.locator('[aria-label="卡牌系列"]')
     await seriesSelect.selectOption('BS6')
     const bs6PoolCards = editor.locator('.deck-editor-page-pool-card-button')

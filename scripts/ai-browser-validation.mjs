@@ -583,9 +583,19 @@ try {
       `${viewport.width}x${viewport.height} 的支援區佔比超出合理範圍，實際 ${metrics.fieldRatio}`,
     )
     if (metrics.supportCardCount > 0) {
+      // The 901–1280px tablet tier intentionally shrinks support cards to
+      // preserve the battle/support rows on short viewports.  Its 58–78px
+      // height clamp produces roughly 41–55px wide cards; the wider desktop
+      // tier still uses the 58px minimum width check.
+      const isShortTabletTier =
+        viewport.width > 900 && viewport.width <= 1280 && viewport.height <= 840
+      let minSupportCardWidth = viewport.height > 400 ? 38 : 24
+      if (viewport.width > 900 && !isShortTabletTier) {
+        minSupportCardWidth = 58
+      }
       assert.ok(
         metrics.supportCardWidth >=
-          (metrics.width > 900 ? 58 : metrics.height > 400 ? 38 : 24),
+          minSupportCardWidth,
         `${viewport.width}x${viewport.height} 的支援卡不可過小，實際寬度 ${metrics.supportCardWidth}`,
       )
       assert.ok(

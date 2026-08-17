@@ -2,6 +2,10 @@ import { describe, it } from 'vitest'
 import { createDemoGame, simulateAiMatch } from '.'
 import type { BuiltInDeckChoice } from '.'
 
+// Each case runs 50 deterministic full matches; allow slower CI runners to
+// finish without changing the simulation step cap or masking a deadlock.
+const AI_BATCH_TEST_TIMEOUT_MS = 60_000
+
 const MATCHUPS_TO_TRAIN: Array<{
   label: string
   playerDeck: string
@@ -112,6 +116,6 @@ describe('BS2 AI Training Batch', () => {
       console.log(`Losing Seeds: [${results.losingSeeds.join(',')}]`)
       console.log(`Win Reasons:`, results.winReasons)
       console.log(`Losing Reasons:`, results.losingReasons)
-    })
+    }, AI_BATCH_TEST_TIMEOUT_MS)
   }
 })

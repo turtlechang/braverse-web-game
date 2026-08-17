@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { createDemoGame, simulateAiMatch } from '.'
 import type { AiMatchResult } from '.'
 
+// This case runs 50 deterministic full matches and is intentionally longer
+// than Vitest's default 5-second per-test timeout on slower CI runners.
+const AI_BATCH_TEST_TIMEOUT_MS = 60_000
+
 describe('BS2 bean deck energy payment color validation', () => {
   it('completes 50 seed games without color mismatch errors', () => {
     const results: {
@@ -67,5 +71,5 @@ describe('BS2 bean deck energy payment color validation', () => {
 
     expect(colorMismatchCount).toBe(0)
     expect(stuckCount).toBe(0)
-  })
+  }, AI_BATCH_TEST_TIMEOUT_MS)
 })
