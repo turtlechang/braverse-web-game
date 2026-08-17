@@ -3272,12 +3272,8 @@ export const convertOfficialCardEffects = (
       },
     ],
     // BS6-057 Coffee Candy Cookie：自身進棄牌區與支援區餅乾回手皆為
-    // 括號代價；自身離場由 skill cost 支付，接著強制選 1 張支援區餅乾
-    // 返回手牌，最後抽最多 1 張。
-    'BS6-057': [
-      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
-      { kind: 'draw-up-to', max: 1 },
-    ],
+    // 括號代價；兩項代價都在 skill cost 支付，效果只剩最後抽最多 1 張。
+    'BS6-057': [{ kind: 'draw-up-to', max: 1 }],
     'BS6-071': [{ kind: 'draw-up-to', max: 2 }],
     'BS6-072': [{ kind: 'draw-up-to', max: 3 }],
     // BS6-073 Schneeball Cookie：這是 On Play 技能效果，不是攻擊後效果。
@@ -7195,6 +7191,8 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { green: 1 },
     discardHand: 0,
     trashBattleCookie: { count: 1, sourceOnly: true },
+    supportToHand: 1,
+    supportToHandType: 'cookie',
   },
   'BS6-073': {
     energy: { blue: 1 },

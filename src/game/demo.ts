@@ -3336,12 +3336,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           supportArea:
             card.id === 'BS6-055'
               ? scenarioSupports('BS6-055-player-support', 4, 'green')
-              : card.id === 'BS6-057'
-              ? [
-                  { card: handCookieFiller, rested: false },
-                  ...energySupports.map((c) => ({ card: c, rested: false })),
-                ]
-              : energySupports.map((c) => ({ card: c, rested: false })),
+              : [...energySupports, ...supportCostCandidates].map((c) => ({
+                  card: c,
+                  rested: false,
+                })),
           breakArea: ownBreakArea,
           discardPile: trashFillers,
         },

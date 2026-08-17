@@ -832,18 +832,17 @@ describe('BS6 GREEN effect adapter', () => {
     })
   })
 
-  it('BS6-057 pays its self-trash cost before returning a support Cookie and drawing', () => {
+  it('BS6-057 exposes both bracketed costs before drawing', () => {
     expect(convertOfficialCookieSkill(findBs6Card('BS6-057'))).toMatchObject({
       trigger: 'activate',
       cost: {
         energy: { green: 1 },
         discardHand: 0,
         trashBattleCookie: { count: 1, sourceOnly: true },
+        supportToHand: 1,
+        supportToHandType: 'cookie',
       },
-      effects: [
-        { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
-        { kind: 'draw-up-to', max: 1 },
-      ],
+      effects: [{ kind: 'draw-up-to', max: 1 }],
     })
   })
 })

@@ -824,8 +824,23 @@ describe('createCardCheckDemoState', () => {
     expect(bs6045.players['player-two'].supportArea).toHaveLength(10)
 
     const bs6057 = createCardCheckDemoState('BS6-057')
+    const bs6057Source = bs6057.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-057',
+    )?.card
+    expect(bs6057Source?.skill?.cost).toMatchObject({
+      supportToHand: 1,
+      supportToHandType: 'cookie',
+    })
+    expect(bs6057Source?.skill?.effects).toEqual([
+      { kind: 'draw-up-to', max: 1 },
+    ])
     expect(bs6057.players['player-one'].supportArea).toEqual(
       expect.arrayContaining([expect.objectContaining({ card: expect.objectContaining({ type: 'cookie' }) })]),
+    )
+    expect(bs6057.players['player-one'].supportArea).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ card: expect.objectContaining({ id: 'hand-cookie-filler' }) }),
+      ]),
     )
 
     const bs6081 = createCardCheckDemoState('BS6-081')

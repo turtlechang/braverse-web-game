@@ -171,6 +171,75 @@ describe('cookie skill activation', () => {
     ).toBe(true)
   })
 
+  it('enforces the support-to-hand card type for skill costs', () => {
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        supportToHand: 1,
+        supportToHandType: 'cookie',
+      },
+      text: 'Return 1 Cookie from your support area to your hand.',
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    }
+    let state: GameState = {
+      ...withSkill(createDemoGame(), 'player-one', skill),
+      phase: 'main',
+      activePlayerId: 'player-one',
+    }
+    const sourceId = state.players['player-one'].battleArea[0].card.instanceId
+    const supportCookie: GameCard = {
+      id: 'support-cookie',
+      instanceId: 'support-cookie',
+      name: 'Support Cookie',
+      type: 'cookie',
+      energyColor: 'green',
+      level: 1,
+      hp: 2,
+      attack: 1,
+      attackCost: 0,
+    }
+    const supportItem = createSupport('support-item', 'red')
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          supportArea: [
+            { card: supportCookie, rested: false },
+            supportItem,
+          ],
+        },
+      },
+    }
+
+    expect(
+      canActivateCookieSkill(state, 'player-one', sourceId, 'activate'),
+    ).toBe(true)
+    expect(() =>
+      activateCookieSkill(
+        state,
+        'player-one',
+        sourceId,
+        'activate',
+        [],
+        [],
+        [],
+        [],
+        [],
+        [],
+        undefined,
+        [],
+        ['support-item'],
+      ),
+    ).toThrow('支援區回手費用必須選擇 cookie。')
+  })
+
   it('pays colored costs first and neutral costs with any energy', () => {
     const supports = [
       createSupport('red-1', 'red'),
