@@ -818,6 +818,10 @@
   padding: 0 14px 7px;
 }
 
+.deck-editor-page-filter-row-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .deck-editor-page-filter-row select {
   min-width: 0;
   padding: 0 7px;
@@ -1076,6 +1080,7 @@
   .deck-editor-page-search-tools { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; padding: 8px 10px 5px; }
   .deck-editor-page-filter-toggle { padding: 0 8px; font-size: 0.62rem; }
   .deck-editor-page-filter-row { padding-left: 10px; padding-right: 10px; }
+  .deck-editor-page-filter-row-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .deck-editor-page-pool-grid { padding-left: 10px; padding-right: 10px; }
   .deck-editor-page-pool-tools .deck-editor-page-io { justify-content: stretch; }
   .deck-editor-page-pool-tools .deck-editor-page-io button { flex: 1; }

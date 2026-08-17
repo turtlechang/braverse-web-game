@@ -35,6 +35,12 @@ const logEntry = (
   ...overrides,
 })
 
+const sourceTrapCard = {
+  ...item('source-trap'),
+  name: 'Prickly Cactus Bat',
+  type: 'trap' as const,
+}
+
 describe('OnlineActivityFeed', () => {
   it('shows player two a non-blocking prompt while player one chooses a replacement Cookie', async () => {
     const container = document.createElement('div')
@@ -180,6 +186,107 @@ describe('OnlineActivityFeed', () => {
     expect(
       container.querySelector('.online-activity-history-steps li')?.textContent,
     ).not.toContain('fallback summary')
+    await act(() => root.unmount())
+  })
+
+  it('shows the actual trap source before its payment and discard steps', async () => {
+    const base = createBattleState()
+    const game: GameState = {
+      ...base,
+      commandLog: [
+        logEntry(1, 'play-trap', 'Player One 設置了陷阱卡「Prickly Cactus Bat」', {
+          playerId: 'player-one',
+          card: sourceTrapCard,
+          steps: [
+            {
+              text: '發動陷阱卡：「Prickly Cactus Bat」',
+              cards: [sourceTrapCard],
+            },
+            { text: '支付能量（橫置）：Adventurer Cookie' },
+            { text: '額外代價：棄置手牌：Banquet of Victory' },
+          ],
+        }),
+      ],
+    }
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(<OnlineActivityFeed game={game} viewerPlayerId="player-one" />),
+    )
+    await act(() =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="online-activity-toggle"]')!
+        .click(),
+    )
+    const historyEntry = container.querySelector<HTMLButtonElement>(
+      '.online-activity-history-entry',
+    )
+    expect(historyEntry).not.toBeNull()
+    await act(() => historyEntry!.click())
+
+    const steps = container.querySelectorAll('.online-activity-history-steps li')
+    expect(steps).toHaveLength(3)
+    expect(steps[0].textContent).toContain('發動陷阱卡：「Prickly Cactus Bat」')
+    expect(steps[2].textContent).toContain('Banquet of Victory')
+    expect(container.querySelectorAll('.online-activity-step-card-face')).toHaveLength(1)
+    await act(() => root.unmount())
+  })
+
+  it('shows attack-after source, cost, target, and result steps in online history', async () => {
+    const base = createBattleState()
+    const sourceAttackCard = item('roguefort-source')
+    sourceAttackCard.name = 'Roguefort Cookie'
+    const returnedCard = item('walnut-cost')
+    returnedCard.name = 'Walnut Cookie'
+    const game: GameState = {
+      ...base,
+      commandLog: [
+        logEntry(1, 'resolve-optional-cost-attack', 'Roguefort Cookie 結算攻擊後效果', {
+          category: 'attack',
+          steps: [
+            {
+              text: '攻擊後效果來源：「Roguefort Cookie」；效果：Return 1 Cookie from your support area to your hand. Deal 2 damage to the attacked Cookie.',
+              cards: [sourceAttackCard],
+            },
+            {
+              text: '攻擊後代價：支援卡返回手牌：Walnut Cookie',
+              cards: [returnedCard],
+            },
+            { text: '攻擊後效果目標：Chamomile Cookie' },
+            { text: '攻擊後效果結果：「Chamomile Cookie」受到 2 點傷害' },
+          ],
+        }),
+      ],
+    }
+    const container = document.createElement('div')
+    containers.push(container)
+    document.body.append(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(<OnlineActivityFeed game={game} viewerPlayerId="player-one" />),
+    )
+    await act(() =>
+      container
+        .querySelector<HTMLButtonElement>('[data-testid="online-activity-toggle"]')!
+        .click(),
+    )
+    const historyEntry = container.querySelector<HTMLButtonElement>(
+      '.online-activity-history-entry',
+    )
+    expect(historyEntry).not.toBeNull()
+    await act(() => historyEntry!.click())
+
+    const steps = container.querySelectorAll('.online-activity-history-steps li')
+    expect(steps).toHaveLength(4)
+    expect(steps[0].textContent).toContain('攻擊後效果來源')
+    expect(steps[1].textContent).toContain('支援卡返回手牌')
+    expect(steps[2].textContent).toContain('攻擊後效果目標')
+    expect(steps[3].textContent).toContain('受到 2 點傷害')
+    expect(container.querySelectorAll('.online-activity-step-card-face')).toHaveLength(2)
     await act(() => root.unmount())
   })
 

@@ -601,6 +601,58 @@ describe('EffectPanel', () => {
     await act(() => root.unmount())
   })
 
+  it('labels a Cookie-only support return cost as a Cookie cost', async () => {
+    const paymentCard = createSupportCard(50, 'green')
+    const costCookie = createCookieCard(51)
+    const pending = createPendingEffect({
+      skill: {
+        trigger: 'activate',
+        oncePerTurn: false,
+        yourTurn: true,
+        restSource: false,
+        cost: {
+          energy: { green: 1 },
+          supportToHand: 1,
+          supportToHandType: 'cookie',
+        },
+        text: '<Return 1 Cookie from your support area to your hand.>',
+        effects: [],
+      },
+    })
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() => root.render(
+      <EffectPanel
+        pendingEffect={pending}
+        currentEffect={{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        }}
+        effectHistory={[]}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+        paymentCandidates={[paymentCard]}
+        selectedPaymentIds={new Set<string>()}
+        onTogglePayment={() => undefined}
+        costSupportCandidates={[costCookie]}
+        selectedCostSupportIds={new Set<string>()}
+        onToggleCostSupport={() => undefined}
+        energyPaymentValid={true}
+      />,
+    ))
+
+    await act(() => {
+      container.querySelector<HTMLButtonElement>('.effect-panel-primary-action')!.click()
+    })
+
+    expect(container.textContent).toContain('選擇要作為代價移動的支援區餅乾')
+    expect(container.querySelector('.effect-candidates-cost-support')).not.toBeNull()
+
+    await act(() => root.unmount())
+  })
+
   it('guides BS4-062 through energy payment, extra support rests, then opponent target', async () => {
     const supports = Array.from({ length: 8 }, (_, index) =>
       createSupportCard(index + 30, 'green'),

@@ -1960,22 +1960,6 @@
   }
 }
 
-/* Common desktop heights above the tablet band (1366x768, 1440x900,
- * 1920x1080): keep the hand inside the game canvas instead of letting the
- * final desktop fan offset clip its lower edge. The 901-1280 tablet rules
- * remain authoritative for 1164x777 and related tablet viewports. */
-@container game-shell (min-width: 1281px) and (min-height: 621px) {
-  .game-shell .hand-fan.bottom-hand .hand-card {
-    --hand-card-height: clamp(132px, 16.5vh, 178px);
-    width: calc(var(--hand-card-height) * 0.7);
-    height: var(--hand-card-height);
-  }
-
-  .game-shell .hand-fan.bottom-hand .hand-card-wrap {
-    bottom: 4px;
-  }
-}
-
 /* Rotated fan edges extend a few pixels beyond their untransformed box on
  * compact layouts. Lift the hand slightly so the visible card, not only its
  * parent dock, stays inside the canvas at 900x506 and smaller widths. */

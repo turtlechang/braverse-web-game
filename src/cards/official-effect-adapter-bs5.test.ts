@@ -390,11 +390,14 @@ describe('BS5 candidate RED effect adapter', () => {
   describe('攻擊 Then（exactAttackEffects）', () => {
     it('BS5-003 Strawberry Cream：棄 1 卡後打被攻擊的餅乾 1 傷害', () => {
       expect(convertOfficialAttackEffects(findBs5Card('BS5-003'))).toMatchObject([
-        { kind: 'discard-hand', count: 1 },
         {
-          kind: 'damage',
-          amount: 1,
-          target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, discardHand: 1 },
+          effects: [{
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
+          }],
         },
       ])
     })
@@ -424,11 +427,10 @@ describe('BS5 candidate RED effect adapter', () => {
     it('BS5-010 Starch Noodle：自身 HP 棄 1 後抽 1', () => {
       expect(convertOfficialAttackEffects(findBs5Card('BS5-010'))).toMatchObject([
         {
-          kind: 'hp-to-trash',
-          amount: 1,
-          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, hpToTrash: { amount: 1, sourceOnly: true } },
+          effects: [{ kind: 'draw-up-to', max: 1 }],
         },
-        { kind: 'draw-up-to', max: 1 },
       ])
     })
 
@@ -446,10 +448,14 @@ describe('BS5 candidate RED effect adapter', () => {
     it('BS5-013 Pitaya Dragon：自身剩餘 HP 4 以下時選至多 2 張各 1 傷害', () => {
       expect(convertOfficialAttackEffects(findBs5Card('BS5-013'))).toMatchObject([
         {
-          kind: 'damage',
-          amount: 1,
-          target: { side: 'opponent', min: 0, max: 2 },
-          condition: { kind: 'source-hp-less-than', amount: 5 },
+          kind: 'optional-cost-attack',
+          cost: { energy: { red: 1 } },
+          effects: [{
+            kind: 'damage',
+            amount: 1,
+            target: { side: 'opponent', min: 0, max: 2 },
+            condition: { kind: 'source-hp-less-than', amount: 5 },
+          }],
         },
       ])
     })
@@ -721,14 +727,14 @@ describe('BS5 candidate YELLOW effect adapter', () => {
     it('BS5-030 Buttercream Choco Cookie：自身進休息區後，休息區選 1 張黃色 LV.1 上場', () => {
       expect(convertOfficialAttackEffects(findBs5Card('BS5-030'))).toMatchObject([
         {
-          kind: 'battle-to-break',
-          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-        },
-        {
-          kind: 'break-to-battle',
-          amount: 1,
-          exactLevel: 1,
-          energyColor: 'yellow',
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, selfToBreakArea: true },
+          effects: [{
+            kind: 'break-to-battle',
+            amount: 1,
+            exactLevel: 1,
+            energyColor: 'yellow',
+          }],
         },
       ])
     })
@@ -758,10 +764,14 @@ describe('BS5 candidate YELLOW effect adapter', () => {
     it('BS5-040 Ananas Dragon Cookie：自身剩餘 HP 4 以下時 +1 HP', () => {
       expect(convertOfficialAttackEffects(findBs5Card('BS5-040'))).toMatchObject([
         {
-          kind: 'gain-hp',
-          amount: 1,
-          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
-          condition: { kind: 'source-hp-less-than', amount: 5 },
+          kind: 'optional-cost-attack',
+          cost: { energy: { yellow: 1 } },
+          effects: [{
+            kind: 'gain-hp',
+            amount: 1,
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+            condition: { kind: 'source-hp-less-than', amount: 5 },
+          }],
         },
       ])
     })
@@ -959,8 +969,11 @@ describe('BS5 candidate GREEN effect adapter', () => {
 
     it('BS5-059 Purple Yam Cookie：Then 支援區回手 1（可選）後抽至多 1', () => {
       expect(convertOfficialAttackEffects(findBs5Card('BS5-059'))).toMatchObject([
-        { kind: 'support-to-hand', amount: 1, optional: true },
-        { kind: 'draw-up-to', max: 1 },
+        {
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, supportToHand: 1 },
+          effects: [{ kind: 'draw-up-to', max: 1 }],
+        },
       ])
     })
 
@@ -993,9 +1006,29 @@ describe('BS5 candidate GREEN effect adapter', () => {
 
 describe('BS5 final trap and attack Then adapter coverage', () => {
   it.each([
+    'BS5-003',
+    'BS5-010',
+    'BS5-013',
+    'BS5-030',
+    'BS5-040',
+    'BS5-059',
+    'BS5-080',
+    'BS5-094',
+    'BS5-098',
+  ] as const)('%s exposes its angle-bracket attack cost as skippable', (cardNumber) => {
+    expect(convertOfficialAttackEffects(findBs5Card(cardNumber))?.[0]).toMatchObject({
+      kind: 'optional-cost-attack',
+    })
+  })
+
+  it.each([
     ['BS5-067', [{ kind: 'inspect-deck', lookCount: 3, pickCount: 0, restDestination: 'top' }]],
     ['BS5-071', [{ kind: 'draw-up-to', max: 2, condition: { kind: 'hand-count-at-most', count: 3 } }]],
-    ['BS5-080', [{ kind: 'discard-hand', count: 2 }, { kind: 'damage', amount: 1 }]],
+    ['BS5-080', [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, discardHand: 2 },
+      effects: [{ kind: 'damage', amount: 1 }],
+    }]],
     ['BS5-085', [
       {
         kind: 'gain-hp',
@@ -1005,30 +1038,33 @@ describe('BS5 final trap and attack Then adapter coverage', () => {
       { kind: 'draw-up-to', max: 1 },
     ]],
     ['BS5-089', [{ kind: 'deck-to-trash', amount: 3, side: 'self' }]],
-    ['BS5-094', [
-      {
-        kind: 'trash-to-deck',
-        min: 5,
-        max: 5,
-        excludeFlip: true,
-        energyColor: 'purple',
-        cookieOnly: true,
+    ['BS5-094', [{
+      kind: 'optional-cost-attack',
+      cost: {
+        energy: {},
+        trashToDeck: {
+          count: 5,
+          excludeFlip: true,
+          energyColor: 'purple',
+          cookieOnly: true,
+        },
       },
-      { kind: 'damage', amount: 1 },
-    ]],
+      effects: [{ kind: 'damage', amount: 1 }],
+    }]],
     ['BS5-097', [{
       kind: 'draw-up-to-then-discard',
       max: 2,
       discardCount: 2,
       condition: { kind: 'opponent-cookie-fainted-in-current-battle' },
     }]],
-    ['BS5-098', [
-      { kind: 'hp-to-trash', amount: 1 },
-      {
+    ['BS5-098', [{
+      kind: 'optional-cost-attack',
+      cost: { energy: {}, hpToTrash: { amount: 1, sourceOnly: true } },
+      effects: [{
         kind: 'field-to-trash',
         target: { side: 'opponent', min: 1, max: 1, maxLevel: 1, attackTargetOnly: true },
-      },
-    ]],
+      }],
+    }]],
     ['BS5-099', [
       { kind: 'deck-to-trash', amount: 2, side: 'self' },
       { kind: 'deck-to-trash', amount: 2, side: 'opponent' },

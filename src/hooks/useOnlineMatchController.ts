@@ -269,6 +269,7 @@ export function useOnlineMatchController(params: {
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
   const faintCostHandAmount = pendingFaint?.cost?.discardHand ?? 0
   const faintCostSupportAmount = pendingFaint?.cost?.supportToTrash ?? 0
+  const faintOptional = pendingFaint?.optional === true
   const faintCostHandCandidates =
     pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
       ? getDiscardHandCostCandidates(
@@ -805,6 +806,7 @@ export function useOnlineMatchController(params: {
     faintCostSupportAmount,
     faintCostSupportCandidates,
     toggleFaintCostSupport,
+    faintOptional,
     pendingFaint,
     faintSourceCard,
     faintCandidates,

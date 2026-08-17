@@ -935,6 +935,99 @@ describe('activate skill with discardHand cost', () => {
     ).toBe(false)
   })
 
+  it('allows BS4-077 to pay its self-to-deck-bottom cost while Timekeeper is in battle', () => {
+    const skill: CardSkill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: false,
+      restSource: false,
+      cost: { energy: { blue: 1 }, selfToDeckBottom: true },
+      text: 'Place this Cookie on the bottom of your deck. Draw up to 2 cards.',
+      effects: [
+        {
+          kind: 'draw-up-to',
+          max: 2,
+          condition: {
+            kind: 'all-of',
+            conditions: [
+              { kind: 'hand-count-at-most', count: 5 },
+              { kind: 'battle-area-has-color', side: 'self', color: 'blue' },
+            ],
+          },
+        },
+      ],
+    }
+    let state = withSkill(createDemoGame(), 'player-one', skill)
+    state = advancePhase(state)
+    state = advancePhase(state)
+    const source = state.players['player-one'].battleArea[0]
+    const sorbetShark = {
+      ...source.card,
+      id: 'BS4-077',
+      name: 'Sorbet Shark Cookie',
+      energyColor: 'blue' as const,
+      skill,
+    }
+    const timekeeper: GameCard = {
+      id: 'BS6-010',
+      instanceId: 'BS6-010-instance',
+      name: 'Timekeeper Cookie',
+      type: 'cookie',
+      level: 2,
+      hp: 4,
+      attack: 2,
+      attackCost: 2,
+      energyColor: 'red',
+      skill: {
+        trigger: 'passive',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Opponents cannot move Cookies out of battle by effects.',
+        effects: [{ kind: 'prevent-opponent-battle-movement' }],
+      },
+    }
+    state = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          battleArea: [{ ...source, card: sorbetShark }],
+        },
+        'player-two': {
+          ...state.players['player-two'],
+          battleArea: [{ card: timekeeper, hpCards: [], rested: false }],
+        },
+      },
+    }
+
+    expect(
+      canActivateCookieSkill(
+        state,
+        'player-one',
+        sorbetShark.instanceId,
+        'activate',
+      ),
+    ).toBe(true)
+
+    const activated = activateCookieSkill(
+      state,
+      'player-one',
+      sorbetShark.instanceId,
+      'activate',
+      ['blue-1'],
+    )
+
+    expect(activated.players['player-one'].deck.at(-1)).toEqual(sorbetShark)
+    expect(
+      activated.players['player-one'].battleArea.some(
+        (cookie) => cookie.card.instanceId === sorbetShark.instanceId,
+      ),
+    ).toBe(false)
+  })
+
   it('canActivateCookieSkill respects hand-count-at-most conditions', () => {
     const skill: CardSkill = {
       trigger: 'activate',

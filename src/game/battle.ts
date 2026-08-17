@@ -37,7 +37,10 @@ import {
   canPayTrashCookieToBreakAreaCost,
   getFaintTriggeredCost,
   getDiscardHandCostCandidates,
+  getHpToTrashCostCandidates,
+  getTrashToDeckCostCandidates,
   markSupportAreaDecreased,
+  payHpToTrashCost,
   payTrashBattleCookieCost,
   payTrashCookieToBreakAreaCost,
 } from './skills'
@@ -1620,6 +1623,7 @@ const removeFaintedCookie = (
     }
     const faintCost = getFaintTriggeredCost(faintSkill)
     let faintCostAttached = false
+    let faintOptionalAttached = false
     for (const effect of faintSkill.effects) {
       if (!isEffectConditionMet(nextState, context, effect)) continue
 
@@ -1638,6 +1642,9 @@ const removeFaintedCookie = (
                 sourcePlayerId: playerId,
                 sourceInstanceId: target.card.instanceId,
                 sourceCardName: target.card.name,
+                ...(faintSkill.faintOptional && !faintOptionalAttached
+                  ? { optional: true }
+                  : {}),
                 effect,
                 context,
                 ...(faintCost && !faintCostAttached
@@ -1647,6 +1654,7 @@ const removeFaintedCookie = (
             ],
           }
           faintCostAttached = true
+          faintOptionalAttached = true
         }
       } else {
         nextState = {
@@ -1657,6 +1665,9 @@ const removeFaintedCookie = (
               sourcePlayerId: playerId,
               sourceInstanceId: target.card.instanceId,
               sourceCardName: target.card.name,
+              ...(faintSkill.faintOptional && !faintOptionalAttached
+                ? { optional: true }
+                : {}),
               effect,
               context,
               ...(faintCost && !faintCostAttached
@@ -1666,6 +1677,7 @@ const removeFaintedCookie = (
           ],
         }
         faintCostAttached = true
+        faintOptionalAttached = true
       }
     }
   }
@@ -1735,6 +1747,30 @@ export const finishBattle = (state: GameState): GameState => {
         effect,
         [],
       )
+      if (completedState.pendingBattle?.effectDamageSequence) {
+        return {
+          ...completedState,
+          pendingAbilityEffect: {
+            playerId: battle.delayedTrap.playerId,
+            sourcePlayerId: battle.delayedTrap.playerId,
+            sourceInstanceId: battle.delayedTrap.sourceInstanceId,
+            sourceCardName: battle.delayedTrap.sourceCardName,
+            sourceKind: 'trap',
+            effects: battle.delayedTrap.effects,
+            effectIndex: i,
+            battleContinuation: 'finish',
+          },
+          pendingBattle: {
+            ...completedState.pendingBattle,
+            delayedTrap: undefined,
+            effectDamageSequence: {
+              ...completedState.pendingBattle.effectDamageSequence,
+              continuation: 'ability-effect',
+              resumeBattleAfterAbility: true,
+            },
+          },
+        }
+      }
       const remainingEffects = battle.delayedTrap.effects.slice(i + 1)
       if (completedState.pendingDrawUpTo && remainingEffects.length > 0) {
         completedState = {
@@ -1803,7 +1839,11 @@ const collectAfterDamageEffects = (
   battle: PendingBattle,
 ): GameState => {
   const damagedIds = battle.damagedInstanceIds ?? []
-  return collectAfterDamageEffectsFromIds(state, damagedIds)
+  return collectAfterDamageEffectsFromIds(
+    state,
+    damagedIds,
+    battle.effectDamageSequence ? 'effect' : undefined,
+  )
 }
 
 const getAttackEffectContext = (
@@ -1973,8 +2013,18 @@ const finishDamageSequence = (state: GameState): GameState => {
     // 逐一傷害要等目前目標衍生的所有決策完整處理後才可前往下一個。
     // `hasBlockingPending` 本身會把目前的 pendingBattle 視為阻塞，因此
     // 暫時移除它來檢查真正插入此序列的決策（FLIP、昏厥、Refresh、補位等）。
+    const sequenceInterruptState = {
+      ...afterCurrentDamageState,
+      pendingBattle: null,
+      // `pendingAbilityEffect` is the continuation owner for this sequence,
+      // not an external interruption. Other pending decisions still block the
+      // next target as before.
+      ...(sequence.continuation === 'ability-effect'
+        ? { pendingAbilityEffect: undefined }
+        : {}),
+    }
     const hasSequenceInterrupt =
-      hasBlockingPending({ ...afterCurrentDamageState, pendingBattle: null }) ||
+      hasBlockingPending(sequenceInterruptState) ||
       Boolean(afterCurrentDamageState.pendingEffectOrder)
     if (hasSequenceInterrupt) {
       return {
@@ -1989,31 +2039,97 @@ const finishDamageSequence = (state: GameState): GameState => {
       }
     }
 
-    const [nextTargetInstanceId, ...remainingTargetInstanceIds] =
-      sequence.remainingTargetInstanceIds
+    const nextTarget = sequence.remainingTargets?.[0]
+    const nextTargetInstanceId =
+      nextTarget?.instanceId ?? sequence.remainingTargetInstanceIds[0]
+    const remainingTargets = sequence.remainingTargets
+      ? sequence.remainingTargets.slice(1)
+      : undefined
+    const remainingTargetInstanceIds = sequence.remainingTargetInstanceIds.slice(1)
     if (!nextTargetInstanceId) {
       const completedBattle = {
         ...activeBattle,
         effectDamageSequence: undefined,
       }
-      return finishBattle({ ...afterCurrentDamageState, pendingBattle: completedBattle })
+      const completedState = {
+        ...afterCurrentDamageState,
+        pendingBattle: completedBattle,
+      }
+      const continuation = sequence.continuation
+
+      if (continuation === 'attack-effect') {
+        const nextIndex = completedBattle.attackEffectIndex + 1
+        return nextIndex < completedBattle.attackEffects.length
+          ? {
+              ...completedState,
+              pendingBattle: {
+                ...completedBattle,
+                attackEffectIndex: nextIndex,
+                stage: 'attack-effect',
+              },
+            }
+          : finishBattle(completedState)
+      }
+
+      if (continuation === 'after-trap') {
+        return advanceBattleAfterTrap(completedState)
+      }
+
+      if (continuation === 'ability-effect') {
+        const pendingAbility = completedState.pendingAbilityEffect
+        if (!pendingAbility) return finishBattle(completedState)
+
+        const nextIndex = pendingAbility.effectIndex + 1
+        const hasNextEffect = nextIndex < pendingAbility.effects.length
+        const nextPendingAbility = hasNextEffect
+          ? { ...pendingAbility, effectIndex: nextIndex }
+          : undefined
+        const keepBattle = sequence.resumeBattleAfterAbility === true
+        const resumedState: GameState = {
+          ...completedState,
+          pendingBattle: keepBattle ? completedBattle : null,
+          pendingAbilityEffect: nextPendingAbility,
+        }
+
+        if (nextPendingAbility) return resumedState
+        if (pendingAbility.battleContinuation === 'finish') {
+          return keepBattle ? finishBattle(resumedState) : resumedState
+        }
+        if (pendingAbility.battleContinuation === 'after-trap') {
+          return keepBattle ? advanceBattleAfterTrap(resumedState) : resumedState
+        }
+        if (pendingAbility.battleContinuation === 'attack-effect') {
+          return keepBattle
+            ? advanceAttackEffect(resumedState, completedBattle)
+            : resumedState
+        }
+        return resumedState
+      }
+
+      return finishBattle(completedState)
     }
+
+    const nextDamage = nextTarget?.damage ?? sequence.damage
+    const nextDamagePlayerId = nextTarget?.playerId ?? activeBattle.defenderPlayerId
 
     return {
       ...afterCurrentDamageState,
       pendingBattle: {
         ...activeBattle,
         targetInstanceId: nextTargetInstanceId,
-        declaredDamage: sequence.damage,
-        remainingDamage: sequence.damage,
+        declaredDamage: nextDamage,
+        remainingDamage: nextDamage,
         stage: 'damage',
         revealedHpCard: null,
-        damagePlayerId: activeBattle.defenderPlayerId,
+        damagePlayerId: nextDamagePlayerId,
         damageTargetInstanceId: nextTargetInstanceId,
         damagedInstanceIds: [],
         effectDamageSequence: {
           remainingTargetInstanceIds,
           damage: sequence.damage,
+          ...(remainingTargets ? { remainingTargets } : {}),
+          continuation: sequence.continuation,
+          resumeBattleAfterAbility: sequence.resumeBattleAfterAbility,
         },
       },
     }
@@ -2168,6 +2284,20 @@ export const resolveAttackEffect = (
       return { ...nextState, pendingBattle: null }
     }
 
+    if (nextState.pendingBattle?.effectDamageSequence) {
+      return {
+        ...nextState,
+        pendingBattle: {
+          ...nextState.pendingBattle,
+          effectDamageSequence: {
+            ...nextState.pendingBattle.effectDamageSequence,
+            continuation: 'attack-effect',
+            resumeBattleAfterAbility: false,
+          },
+        },
+      }
+    }
+
     const nextBattle = requirePendingBattle(nextState)
     return advanceAttackEffect(nextState, nextBattle)
   }
@@ -2182,6 +2312,20 @@ export const resolveAttackEffect = (
     return { ...nextState, pendingBattle: null }
   }
 
+  if (nextState.pendingBattle?.effectDamageSequence) {
+    return {
+      ...nextState,
+      pendingBattle: {
+        ...nextState.pendingBattle,
+        effectDamageSequence: {
+          ...nextState.pendingBattle.effectDamageSequence,
+          continuation: 'attack-effect',
+          resumeBattleAfterAbility: false,
+        },
+      },
+    }
+  }
+
   const nextBattle = requirePendingBattle(nextState)
   return advanceAttackEffect(nextState, nextBattle)
 }
@@ -2193,6 +2337,9 @@ export const resolveOptionalCostAttack = (
   discardCardIds: string[] = [],
   targetIds: string[] = [],
   paymentIds: string[] = [],
+  supportToHandIds: string[] = [],
+  hpToTrashIds: string[] = [],
+  trashToDeckIds: string[] = [],
 ): GameState => {
   const pending = state.pendingOptionalCostAttack
   if (!pending || pending.playerId !== playerId) {
@@ -2216,6 +2363,78 @@ export const resolveOptionalCostAttack = (
   if (!allInHand) {
     throw new GameRuleError('Invalid battle action.')
   }
+  const supportToHandAmount = pending.cost.supportToHand ?? 0
+  const uniqueSupportToHandIds = [...new Set(supportToHandIds)]
+  if (uniqueSupportToHandIds.length !== supportToHandIds.length) {
+    throw new GameRuleError('Invalid battle action.')
+  }
+  if (uniqueSupportToHandIds.length !== supportToHandAmount) {
+    throw new GameRuleError(
+      `Must return exactly ${supportToHandAmount} support card(s) for this effect.`,
+    )
+  }
+  const supportToHandCandidates = player.supportArea.filter(
+    (support) =>
+      (pending.cost.supportToHandType === undefined ||
+        support.card.type === pending.cost.supportToHandType) &&
+      uniqueSupportToHandIds.includes(support.card.instanceId),
+  )
+  if (supportToHandCandidates.length !== supportToHandAmount) {
+    throw new GameRuleError('只能選擇符合條件的支援區卡牌返回手牌。')
+  }
+  const hpToTrashCost = pending.cost.hpToTrash
+  const uniqueHpToTrashIds = [...new Set(hpToTrashIds)]
+  if (uniqueHpToTrashIds.length !== hpToTrashIds.length) {
+    throw new GameRuleError('HP 費用不能重複選同一張餅乾。')
+  }
+  if (hpToTrashCost && uniqueHpToTrashIds.length !== 1) {
+    throw new GameRuleError('必須選擇 1 張餅乾支付 HP 費用。')
+  }
+  if (!hpToTrashCost && uniqueHpToTrashIds.length > 0) {
+    throw new GameRuleError('此攻擊後效果不需要支付 HP 費用。')
+  }
+  const hpToTrashCandidates = hpToTrashCost
+    ? getHpToTrashCostCandidates(
+        pending.cost,
+        player.battleArea,
+        pending.sourceInstanceId,
+      )
+    : []
+  if (
+    hpToTrashCost &&
+    !hpToTrashCandidates.some(
+      (cookie) => cookie.card.instanceId === uniqueHpToTrashIds[0],
+    )
+  ) {
+    throw new GameRuleError('選擇的 HP 費用餅乾不合法。')
+  }
+  const trashToDeckCost = pending.cost.trashToDeck
+  const uniqueTrashToDeckIds = [...new Set(trashToDeckIds)]
+  if (uniqueTrashToDeckIds.length !== trashToDeckIds.length) {
+    throw new GameRuleError('不能重複選擇同一張棄牌區卡牌作為代價。')
+  }
+  if (
+    trashToDeckCost &&
+    uniqueTrashToDeckIds.length !== trashToDeckCost.count
+  ) {
+    throw new GameRuleError(
+      `必須選擇 ${trashToDeckCost.count} 張棄牌區卡牌作為代價。`,
+    )
+  }
+  if (!trashToDeckCost && uniqueTrashToDeckIds.length > 0) {
+    throw new GameRuleError('此攻擊後效果不需要支付棄牌區代價。')
+  }
+  const trashToDeckCandidates = trashToDeckCost
+    ? getTrashToDeckCostCandidates(pending.cost, player.discardPile)
+    : []
+  if (
+    trashToDeckCost &&
+    uniqueTrashToDeckIds.some(
+      (id) => !trashToDeckCandidates.some((card) => card.instanceId === id),
+    )
+  ) {
+    throw new GameRuleError('選擇的棄牌區卡牌不符合洗回牌庫代價條件。')
+  }
   const energyCost = getRemainingEnergyCost(
     pending.cost.energy ?? {},
     pending.sourceEnergy,
@@ -2223,6 +2442,9 @@ export const resolveOptionalCostAttack = (
   const uniquePaymentIds = [...new Set(paymentIds)]
   if (uniquePaymentIds.length !== paymentIds.length) {
     throw new GameRuleError('Invalid battle action.')
+  }
+  if (uniquePaymentIds.some((id) => uniqueSupportToHandIds.includes(id))) {
+    throw new GameRuleError('同一張支援卡不能同時支付能量與返回手牌代價。')
   }
   const paymentValidation = validateEnergyPayment(
     energyCost,
@@ -2257,34 +2479,58 @@ export const resolveOptionalCostAttack = (
           pendingBattle: { ...battle, attackEffectIndex: nextIndex },
         })
   }
-  const sourceToTrash = pending.cost.selfToTrash
-    ? player.battleArea.find(
-        (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
-      )
-    : undefined
-  if (pending.cost.selfToTrash && !sourceToTrash) {
+  const hpToTrashPayment = payHpToTrashCost(
+    player,
+    pending.cost,
+    uniqueHpToTrashIds,
+    pending.sourceInstanceId,
+  )
+  let playerAfterSourceCosts = hpToTrashPayment.player
+  const sourceToLeaveBattle =
+    pending.cost.selfToTrash || pending.cost.selfToBreakArea
+      ? playerAfterSourceCosts.battleArea.find(
+          (cookie) => cookie.card.instanceId === pending.sourceInstanceId,
+        )
+      : undefined
+  if (
+    (pending.cost.selfToTrash || pending.cost.selfToBreakArea) &&
+    !sourceToLeaveBattle
+  ) {
     throw new GameRuleError('Invalid battle action.')
   }
-  const stateAfterSourceCost: GameState = sourceToTrash
-    ? {
-        ...state,
-        players: {
-          ...state.players,
-          [playerId]: {
-            ...player,
-            battleArea: player.battleArea.filter(
-              (cookie) => cookie.card.instanceId !== sourceToTrash.card.instanceId,
-            ),
-            discardPile: [
-              ...player.discardPile,
-              sourceToTrash.card,
-              ...sourceToTrash.hpCards,
-              ...(sourceToTrash.equippedCards ?? []),
+  if (sourceToLeaveBattle) {
+    const remainingBattleArea = playerAfterSourceCosts.battleArea.filter(
+      (cookie) => cookie.card.instanceId !== sourceToLeaveBattle.card.instanceId,
+    )
+    playerAfterSourceCosts = {
+      ...playerAfterSourceCosts,
+      battleArea: remainingBattleArea,
+      ...(pending.cost.selfToBreakArea
+        ? {
+            breakArea: [
+              ...playerAfterSourceCosts.breakArea,
+              sourceToLeaveBattle.card,
             ],
-          },
-        },
-      }
-    : state
+          }
+        : {}),
+      discardPile: [
+        ...playerAfterSourceCosts.discardPile,
+        ...(pending.cost.selfToTrash ? [sourceToLeaveBattle.card] : []),
+        ...sourceToLeaveBattle.hpCards,
+        ...(sourceToLeaveBattle.equippedCards ?? []),
+      ],
+    }
+  }
+  const stateAfterSourceCost: GameState = {
+    ...state,
+    ...(hpToTrashPayment.costRecord
+      ? { costRecord: hpToTrashPayment.costRecord }
+      : {}),
+    players: {
+      ...state.players,
+      [playerId]: playerAfterSourceCosts,
+    },
+  }
   const selectableEffects = applicableEffects.filter((effect) =>
     requiresEffectCardSelection(effect),
   )
@@ -2295,7 +2541,8 @@ export const resolveOptionalCostAttack = (
     }
     const hasValidTarget = selectableEffects.every((effect) => {
       const effectTargetIds =
-        effect.kind === 'battle-to-break' && effect.target.sourceOnly
+        ((effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
+          effect.target.sourceOnly)
           ? [pending.sourceInstanceId]
           : uniqueTargetIds
       const limits = getEffectSelectionLimits(effect)
@@ -2319,7 +2566,12 @@ export const resolveOptionalCostAttack = (
   }
   const discardedCards = player.hand.filter((card) => uniqueDiscardIds.includes(card.instanceId))
   const paymentSet = new Set(uniquePaymentIds)
+  const supportToHandSet = new Set(uniqueSupportToHandIds)
   const playerAfterSourceCost = stateAfterSourceCost.players[playerId]
+  const context = effectContext
+  const returnedSupportCards = playerAfterSourceCost.supportArea.filter((support) =>
+    supportToHandSet.has(support.card.instanceId),
+  )
   let nextState: GameState = {
     ...stateAfterSourceCost,
     pendingOptionalCostAttack: null,
@@ -2327,24 +2579,77 @@ export const resolveOptionalCostAttack = (
       ...stateAfterSourceCost.players,
       [playerId]: {
         ...playerAfterSourceCost,
-        hand: playerAfterSourceCost.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+        hand: [
+          ...playerAfterSourceCost.hand.filter((card) => !uniqueDiscardIds.includes(card.instanceId)),
+          ...returnedSupportCards.map((support) => support.card),
+        ],
         discardPile: [...playerAfterSourceCost.discardPile, ...discardedCards],
-        supportArea: playerAfterSourceCost.supportArea.map((support) =>
-          paymentSet.has(support.card.instanceId)
-            ? { ...support, rested: true }
-            : support,
-        ),
+        supportArea: playerAfterSourceCost.supportArea
+          .filter((support) => !supportToHandSet.has(support.card.instanceId))
+          .map((support) =>
+            paymentSet.has(support.card.instanceId)
+              ? { ...support, rested: true }
+              : support,
+          ),
       },
     },
   }
-  const context = effectContext
-  for (const effect of applicableEffects) {
+  // 支援區回手也是「支援區張數減少」：BS6-061 的攻擊後代價可讓
+  // BS1-078 Awakening Ancient Forest 在同一回合依條件發動。這裡是
+  // 攻擊後代價的手動移動路徑，不能只依賴 executeCardEffect 的
+  // support-to-hand 分支來更新回合旗標。
+  if (returnedSupportCards.length > 0) {
+    nextState = markSupportAreaDecreased(nextState, playerId)
+  }
+  if (trashToDeckCost) {
+    nextState = executeCardEffect(
+      nextState,
+      context,
+      {
+        kind: 'trash-to-deck',
+        min: trashToDeckCost.count,
+        max: trashToDeckCost.count,
+        energyColor: trashToDeckCost.energyColor,
+        excludeFlip: trashToDeckCost.excludeFlip,
+        cookieOnly: trashToDeckCost.cookieOnly,
+        keyword: trashToDeckCost.keyword,
+        nonCookieOnly: trashToDeckCost.nonCookieOnly,
+      },
+      uniqueTrashToDeckIds,
+    )
+  }
+  for (let effectIndex = 0; effectIndex < applicableEffects.length; effectIndex += 1) {
+    const effect = applicableEffects[effectIndex]
     if (nextState.status !== 'playing') break
     const effectTargetIds =
-      effect.kind === 'battle-to-break' && effect.target.sourceOnly
+      ((effect.kind === 'battle-to-break' || effect.kind === 'hp-to-trash') &&
+        effect.target.sourceOnly)
         ? [pending.sourceInstanceId]
         : targetIds
     nextState = executeCardEffect(nextState, context, effect, effectTargetIds)
+    if (nextState.pendingBattle?.effectDamageSequence) {
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: pending.sourceInstanceId,
+          sourceCardName: pending.sourceCardName,
+          sourceKind: 'skill',
+          effects: applicableEffects,
+          effectIndex,
+          battleContinuation: 'attack-effect',
+        },
+        pendingBattle: {
+          ...nextState.pendingBattle,
+          effectDamageSequence: {
+            ...nextState.pendingBattle.effectDamageSequence,
+            continuation: 'ability-effect',
+            resumeBattleAfterAbility: true,
+          },
+        },
+      }
+    }
   }
   if (nextState.status !== 'playing') {
     return { ...nextState, pendingBattle: null }
@@ -2865,6 +3170,41 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
         nextState.players[pending.playerId].supportArea,
       )
       const canPayEnergy = Boolean(paymentIds)
+      const supportToHandAmount = pending.cost.supportToHand ?? 0
+      const supportToHandIds = nextState.players[pending.playerId].supportArea
+        .filter(
+          (support) =>
+            !paymentIds?.includes(support.card.instanceId) &&
+            (pending.cost.supportToHandType === undefined ||
+              support.card.type === pending.cost.supportToHandType),
+        )
+        .slice(0, supportToHandAmount)
+        .map((support) => support.card.instanceId)
+      const canPaySupportToHand =
+        supportToHandIds.length >= supportToHandAmount
+      const hpToTrashIds = pending.cost.hpToTrash
+        ? getHpToTrashCostCandidates(
+            pending.cost,
+            nextState.players[pending.playerId].battleArea,
+            pending.sourceInstanceId,
+          )
+            .slice(0, 1)
+            .map((cookie) => cookie.card.instanceId)
+        : []
+      const canPayHpToTrash = pending.cost.hpToTrash
+        ? hpToTrashIds.length === 1
+        : true
+      const trashToDeckIds = pending.cost.trashToDeck
+        ? getTrashToDeckCostCandidates(
+            pending.cost,
+            nextState.players[pending.playerId].discardPile,
+          )
+            .slice(0, pending.cost.trashToDeck.count)
+            .map((card) => card.instanceId)
+        : []
+      const canPayTrashToDeck = pending.cost.trashToDeck
+        ? trashToDeckIds.length === pending.cost.trashToDeck.count
+        : true
       const context: EffectContext = {
         sourcePlayerId: pending.playerId,
         sourceInstanceId: pending.sourceInstanceId,
@@ -2911,9 +3251,26 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       const hasTarget = selectableEffect
         ? autoTargetIds.length >= (selectionLimits?.min ?? Number.POSITIVE_INFINITY)
         : applicableEffects.length > 0
-      if (canPayHand && canPayEnergy && hasTarget) {
+      if (
+        canPayHand &&
+        canPayEnergy &&
+        canPaySupportToHand &&
+        canPayHpToTrash &&
+        canPayTrashToDeck &&
+        hasTarget
+      ) {
         const discardIds = hand.slice(0, pending.cost.discardHand ?? 0).map((c) => c.instanceId)
-        nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'pay', discardIds, autoTargetIds, paymentIds ?? undefined)
+        nextState = resolveOptionalCostAttack(
+          nextState,
+          pending.playerId,
+          'pay',
+          discardIds,
+          autoTargetIds,
+          paymentIds ?? undefined,
+          supportToHandIds,
+          hpToTrashIds,
+          trashToDeckIds,
+        )
       } else {
         nextState = resolveOptionalCostAttack(nextState, pending.playerId, 'skip')
       }
@@ -3209,6 +3566,29 @@ const skipUnmetPendingFaintEffects = (state: GameState): GameState => {
   }
 }
 
+/**
+ * 略過可選的昏厥技能時，必須跳過同一次觸發拆出的所有效果；
+ * 不能只移除支援區代價，否則 BS3-061 仍會繼續結算後面的全場傷害。
+ */
+const skipOptionalFaintTrigger = (
+  state: GameState,
+  sourceInstanceId: string,
+): GameState => {
+  const pending = state.pendingFaintEffects ?? []
+  let consumed = 0
+  while (
+    consumed < pending.length &&
+    pending[consumed].sourceInstanceId === sourceInstanceId
+  ) {
+    consumed += 1
+  }
+  return {
+    ...state,
+    pendingFaintEffects:
+      consumed < pending.length ? pending.slice(consumed) : undefined,
+  }
+}
+
 export const resolveFaintEffect = (
   state: GameState,
   targetIds: string[],
@@ -3234,6 +3614,20 @@ export const resolveFaintEffect = (
   }
 
   const faint = faints[0]
+  const discardHandIds = costOptions.discardHandIds ?? []
+  const supportToTrashIds = costOptions.supportToTrashIds ?? []
+  const isOptionalTriggerSkipped =
+    faint.optional === true &&
+    targetIds.length === 0 &&
+    paymentIds.length === 0 &&
+    discardHandIds.length === 0 &&
+    supportToTrashIds.length === 0
+  if (isOptionalTriggerSkipped) {
+    return continuePendingReplacements(
+      skipOptionalFaintTrigger(state, faint.sourceInstanceId),
+    )
+  }
+
   const remaining = faints.slice(1)
   let nextState: GameState = {
     ...state,
@@ -3253,8 +3647,6 @@ export const resolveFaintEffect = (
     return continuePendingReplacements(nextState)
   }
 
-  const discardHandIds = costOptions.discardHandIds ?? []
-  const supportToTrashIds = costOptions.supportToTrashIds ?? []
   const faintCost = faint.cost
   if (!faintCost && (discardHandIds.length > 0 || supportToTrashIds.length > 0)) {
     throw new GameRuleError('此昏厥效果不需要支付手牌或支援區代價。')
@@ -3394,12 +3786,44 @@ export const resolveFaintEffect = (
   ) {
     if (targetIds.length > 0) {
       selectEffectTargets(nextState, faint.context, faint.effect.target, targetIds)
+      const isDamageEffect = faint.effect.kind === 'damage'
+      if (isDamageEffect) {
+        nextState = {
+          ...nextState,
+          pendingAbilityEffect: {
+            playerId: faint.context.sourcePlayerId,
+            sourcePlayerId: faint.context.sourcePlayerId,
+            sourceInstanceId: faint.context.sourceInstanceId,
+            sourceCardName: faint.sourceCardName,
+            sourceKind: 'skill',
+            effects: [faint.effect],
+            effectIndex: 0,
+            battleContinuation: 'finish',
+          },
+        }
+      }
       nextState = executeCardEffect(
         nextState,
         faintExecutionContext,
         faint.effect,
         targetIds,
       )
+      if (isDamageEffect && !nextState.pendingBattle?.effectDamageSequence) {
+        nextState = { ...nextState, pendingAbilityEffect: undefined }
+      }
+      if (nextState.pendingBattle?.effectDamageSequence) {
+        return {
+          ...nextState,
+          pendingBattle: {
+            ...nextState.pendingBattle,
+            effectDamageSequence: {
+              ...nextState.pendingBattle.effectDamageSequence,
+              continuation: 'ability-effect',
+              resumeBattleAfterAbility: true,
+            },
+          },
+        }
+      }
     } else if (faint.effect.target.min > 0) {
     throw new GameRuleError('Invalid battle action.')
     }
@@ -3471,12 +3895,44 @@ export const resolveNextAfterDamageEffect = (
   ) {
     if (targetIds.length > 0) {
       selectEffectTargets(nextState, pending.context, pending.effect.target, targetIds)
+      const isDamageEffect = pending.effect.kind === 'damage'
+      if (isDamageEffect) {
+        nextState = {
+          ...nextState,
+          pendingAbilityEffect: {
+            playerId: pending.context.sourcePlayerId,
+            sourcePlayerId: pending.context.sourcePlayerId,
+            sourceInstanceId: pending.context.sourceInstanceId,
+            sourceCardName: pending.sourceCardName,
+            sourceKind: 'skill',
+            effects: [pending.effect],
+            effectIndex: 0,
+            battleContinuation: 'finish',
+          },
+        }
+      }
       nextState = executeCardEffect(
         nextState,
         pending.context,
         pending.effect,
         targetIds,
       )
+      if (isDamageEffect && !nextState.pendingBattle?.effectDamageSequence) {
+        nextState = { ...nextState, pendingAbilityEffect: undefined }
+      }
+      if (nextState.pendingBattle?.effectDamageSequence) {
+        nextState = {
+          ...nextState,
+          pendingBattle: {
+            ...nextState.pendingBattle,
+            effectDamageSequence: {
+              ...nextState.pendingBattle.effectDamageSequence,
+              continuation: 'ability-effect',
+              resumeBattleAfterAbility: true,
+            },
+          },
+        }
+      }
     } else if (pending.effect.target.min > 0) {
     throw new GameRuleError('Invalid battle action.')
     }

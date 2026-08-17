@@ -285,4 +285,73 @@ describe('pendingAbilityEffect 逐步效果鏈', () => {
     })
     expect(state.pendingAbilityEffect).toMatchObject({ effectIndex: 1 })
   })
+
+  it('效果佇列中的傷害會暫停在 FLIP，完成後才推進下一個效果', () => {
+    const flipHp: GameCard = {
+      ...createItem('effect-queue-flip-hp'),
+      officialType: 'flip',
+      flip: {
+        text: '抽 1 張牌。',
+        cost: { energy: {}, discardHand: 0 },
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    let state = createPlayingGame(
+      starterWithDrawSkill('one-starter'),
+      createCookie('two-starter', { hp: 1 }),
+    )
+    state = advanceToMain(state)
+    state.players['player-two'].battleArea[0].hpCards = [
+      createItem('effect-queue-normal-hp'),
+      flipHp,
+    ]
+    state.players['player-one'].battleArea[0].card.skill = {
+      trigger: 'activate',
+      oncePerTurn: false,
+      yourTurn: true,
+      restSource: false,
+      cost: {},
+      text: '造成 1 點傷害。',
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 1, max: 1 },
+        },
+      ],
+    }
+
+    state = applyGameCommand(state, {
+      kind: 'begin-activate-skill',
+      playerId: 'player-one',
+      sourceInstanceId: 'one-starter',
+      trigger: 'activate',
+      paymentIds: [],
+    })
+    state = applyGameCommand(state, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: ['two-starter'],
+    })
+
+    expect(state.pendingAbilityEffect).toBeDefined()
+    expect(state.pendingBattle?.stage).toBe('damage')
+    state = applyGameCommand(state, {
+      kind: 'resolve-next-damage',
+      playerId: 'player-two',
+    })
+    expect(state.pendingBattle?.stage).toBe('flip')
+
+    state = applyGameCommand(state, {
+      kind: 'resolve-flip',
+      playerId: 'player-two',
+      activate: false,
+    })
+
+    expect(state.pendingBattle).toBeNull()
+    expect(state.pendingAbilityEffect).toBeUndefined()
+    expect(state.players['player-two'].battleArea[0].hpCards.map((card) => card.instanceId)).toEqual([
+      'effect-queue-normal-hp',
+    ])
+  })
 })

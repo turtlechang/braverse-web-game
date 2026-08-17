@@ -33,6 +33,8 @@ import {
   createBreakToTrashDemoState,
   createCardCheckDemoState,
   createCardNegativeDemoState,
+  createBs4077TimekeeperCostDemoState,
+  createBs6008TrapDemoState,
   createBs6079OnPlayDemoState,
   createP082TrapDemoState,
   createPConditionDemoState,
@@ -278,6 +280,27 @@ describe('parseTestStateConfig', () => {
     ).toBeNull()
   })
 
+  it('parses the BS6-008 Trap A/B routes only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs6-008-trap-blocked', 'localhost'),
+    ).toEqual({ kind: 'bs6-008-trap', remainingHp: 4 })
+    expect(
+      parseTestStateConfig('?test-state=bs6-008-trap-open', 'localhost'),
+    ).toEqual({ kind: 'bs6-008-trap', remainingHp: 5 })
+    expect(
+      parseTestStateConfig('?test-state=bs6-008-trap-blocked', 'example.com'),
+    ).toBeNull()
+  })
+
+  it('parses the BS4-077 Timekeeper cost route only on localhost', () => {
+    expect(
+      parseTestStateConfig('?test-state=bs4-077-timekeeper-cost', 'localhost'),
+    ).toEqual({ kind: 'bs4-077-timekeeper-cost' })
+    expect(
+      parseTestStateConfig('?test-state=bs4-077-timekeeper-cost', 'example.com'),
+    ).toBeNull()
+  })
+
   it('creates BS6-012 hand-count A/B fixtures for end-phase verification', () => {
     const met = createBs6ConditionDemoState('BS6-012', true)
     const unmet = createBs6ConditionDemoState('BS6-012', false)
@@ -457,6 +480,28 @@ describe('createTrapResponseDemoState', () => {
   })
 })
 
+describe('createBs6008TrapDemoState', () => {
+  it('keeps a payable BS6-020 trap out of the response window at 4 HP', () => {
+    const blocked = createBs6008TrapDemoState(4)
+
+    expect(blocked.pendingBattle?.trapsDisabled).toBe(true)
+    expect(blocked.players['player-one'].supportArea).toHaveLength(2)
+    expect(blocked.players['player-one'].hand).toContainEqual(
+      expect.objectContaining({ id: 'BS6-020' }),
+    )
+    expect(getTrapCandidates(blocked, 'player-one')).toEqual([])
+  })
+
+  it('keeps the same payable trap available at 5 HP', () => {
+    const open = createBs6008TrapDemoState(5)
+
+    expect(open.pendingBattle?.trapsDisabled).toBeUndefined()
+    expect(getTrapCandidates(open, 'player-one')).toContainEqual(
+      expect.objectContaining({ id: 'BS6-020' }),
+    )
+  })
+})
+
 describe('createCardCheckDemoState', () => {
   it('keeps the generic FLIP scenario below the break-level defeat limit', () => {
     const state = createCardCheckDemoState('BS3-004')
@@ -627,6 +672,21 @@ describe('createCardCheckDemoState', () => {
     })
   })
 
+  it('builds BS4-077 with a blue ally and BS6-010 for the cost-not-effect Browser flow', () => {
+    const state = createBs4077TimekeeperCostDemoState()
+
+    expect(state.activePlayerId).toBe('player-one')
+    expect(state.phase).toBe('main')
+    expect(state.players['player-one'].battleArea.map((entry) => entry.card.id)).toEqual([
+      'BS4-077',
+      'bs4-077-blue-ally',
+    ])
+    expect(state.players['player-two'].battleArea[0]?.card.id).toBe('BS6-010')
+    expect(state.players['player-two'].battleArea[0]?.card.skill?.effects).toEqual([
+      { kind: 'prevent-opponent-battle-movement' },
+    ])
+  })
+
   it('creates a negative Browser fixture with every support card rested', () => {
     const state = createCardNegativeDemoState('BS6-020')
 
@@ -648,6 +708,15 @@ describe('createCardCheckDemoState', () => {
   })
 
   it('prepares BS6 Browser skill routes with their required legal candidates', () => {
+    const bs6062 = createCardCheckDemoState('BS6-062')
+    expect(bs6062.players['player-one'].supportArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          card: expect.objectContaining({ type: 'cookie' }),
+        }),
+      ]),
+    )
+
     const bs6025 = createCardCheckDemoState('BS6-025')
     expect(bs6025.players['player-one'].breakArea).toEqual([
       expect.objectContaining({ level: 2 }),

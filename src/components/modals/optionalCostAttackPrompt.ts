@@ -4,6 +4,8 @@ import {
   getEffectSelectionLimits,
   getEnergyCostTotal,
   getRemainingEnergyCost,
+  getHpToTrashCostCandidates,
+  getTrashToDeckCostCandidates,
   isEffectConditionMet,
   isEnergyColorCompatibleWithCost,
   requiresEffectCardSelection,
@@ -20,14 +22,25 @@ export interface OptionalCostAttackPromptData {
   sourceCardName: string
   effectText: string
   discardHandCost: number
+  supportToHandCost: number
+  hpToTrashCost: number
+  hpToTrashCandidates: { card: GameCard; instanceId: string }[]
+  trashToDeckCost: number
+  trashToDeckCandidates: { card: GameCard; instanceId: string }[]
   energyCostTotal: number
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
+  supportToHandCandidates: { card: GameCard; instanceId: string }[]
   targetCandidates: { card: GameCard; instanceId: string }[]
   needsTarget: boolean
   targetMin: number
   targetMax: number
   targetLabel: string
+  /**
+   * 目標若不是一般「餅乾／支援區卡」格式，提供完整的選取說明。
+   * 例如 BS6-051 必須明確告知玩家從自己的手牌選綠色卡牌。
+   */
+  targetInstruction?: string
   /**
    * 代價的完整說明文字。含來源餅乾自付的能量（BS3-076「Use this Cookie as
    * {B}」這類寫法）——這部分不會出現在 `energyCostTotal`（那是扣掉來源能量後
@@ -73,6 +86,9 @@ const getUnmetConditionWarning = (
 const describeCost = (
   remainingEnergy: EnergyCost,
   discardHandCost: number,
+  supportToHandCost: number,
+  hpToTrashCost: number,
+  trashToDeckCost: number,
 ): string => {
   const parts: string[] = []
 
@@ -86,8 +102,71 @@ const describeCost = (
     parts.push(`支付支援區 ${energyParts.join('、')}`)
   }
   if (discardHandCost > 0) parts.push(`棄置 ${discardHandCost} 張手牌`)
+  if (supportToHandCost > 0) {
+    parts.push(`將 ${supportToHandCost} 張支援區卡返回手牌`)
+  }
+  if (hpToTrashCost > 0) parts.push(`棄置 ${hpToTrashCost} 張餅乾的 HP 卡`)
+  if (trashToDeckCost > 0) {
+    parts.push(`將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`)
+  }
 
   return parts.length > 0 ? parts.join('、') : '無'
+}
+
+/**
+ * 攻擊後代價的目標要依「支付代價後」的區域判定。
+ *
+ * BS6-096 會先把來源餅乾放入棄牌區，再從棄牌區登場 LV.1 紫色餅乾。
+ * 當己方戰鬥區已經有兩張餅乾時，若直接用目前 state 找候選，
+ * `getTrashCookieCandidates` 會因戰鬥區已滿而回傳空陣列，讓支付按鈕被
+ * UI 錯誤地停用。規則引擎在實際結算時本來就先支付來源代價再驗證目標，
+ * 這裡只建立同樣的唯讀投影供提示框使用，不會改動正式 GameState。
+ */
+const getTargetSelectionState = (
+  game: GameState,
+  viewerPlayerId: PlayerId,
+  sourceInstanceId: string,
+  targetedEffect: CardEffect | undefined,
+  cost: EnergyCost & {
+    selfToTrash?: boolean
+    selfToBreakArea?: boolean
+  },
+): GameState => {
+  const projectsTrashToBattle =
+    cost.selfToTrash === true && targetedEffect?.kind === 'trash-to-battle'
+  const projectsBreakToBattle =
+    cost.selfToBreakArea === true && targetedEffect?.kind === 'break-to-battle'
+  if (!projectsTrashToBattle && !projectsBreakToBattle) return game
+
+  const player = game.players[viewerPlayerId]
+  const source = player.battleArea.find(
+    (cookie) => cookie.card.instanceId === sourceInstanceId,
+  )
+  if (!source) return game
+
+  const sourceCards = [
+    source.card,
+    ...source.hpCards,
+    ...(source.equippedCards ?? []),
+  ]
+  return {
+    ...game,
+    players: {
+      ...game.players,
+      [viewerPlayerId]: {
+        ...player,
+        battleArea: player.battleArea.filter(
+          (cookie) => cookie.card.instanceId !== sourceInstanceId,
+        ),
+        ...(projectsBreakToBattle
+          ? { breakArea: [...player.breakArea, source.card] }
+          : {}),
+        discardPile: projectsTrashToBattle
+          ? [...player.discardPile, ...sourceCards]
+          : player.discardPile,
+      },
+    },
+  }
 }
 
 export function getOptionalCostAttackPrompt(
@@ -107,10 +186,17 @@ export function getOptionalCostAttackPrompt(
       !(effect.kind === 'battle-to-break' && effect.target.sourceOnly),
   )
   const needsTarget = Boolean(targetedEffect)
+  const targetSelectionState = getTargetSelectionState(
+    game,
+    viewerPlayerId,
+    pending.sourceInstanceId,
+    targetedEffect,
+    pending.cost,
+  )
   const targetCandidates = (
     targetedEffect
       ? getEffectSelectionCandidates(
-          game,
+          targetSelectionState,
           {
             sourcePlayerId: viewerPlayerId,
             sourceInstanceId: pending.sourceInstanceId,
@@ -129,20 +215,53 @@ export function getOptionalCostAttackPrompt(
   // rest-support 的目標是支援區的卡，不是餅乾；依照目標面給出正確標籤，
   // 避免把「對手的支援區卡」顯示成「對手餅乾」。
   const targetLabel =
-    targetedEffect?.kind === 'rest-support'
+    targetedEffect?.kind === 'hand-to-support'
+      ? `自己的手牌中的${
+          energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'
+        }卡牌`
+      : targetedEffect?.kind === 'rest-support'
       ? targetedEffect.side === 'self'
         ? '己方支援區的卡'
         : '對手支援區的卡'
       : targetedEffect?.kind === 'opponent-battle-to-trash'
         ? '對手餅乾'
-        : targetSelector?.side === 'self'
+        : targetedEffect?.kind === 'break-to-battle'
+          ? '己方休息區餅乾'
+          : targetedEffect?.kind === 'trash-to-battle'
+            ? '己方棄牌區餅乾'
+            : targetedEffect?.kind === 'trash-to-deck'
+              ? '棄牌區卡牌'
+          : targetSelector?.side === 'self'
           ? '己方餅乾'
           : '對手餅乾'
+
+  const targetInstruction =
+    targetedEffect?.kind === 'hand-to-support'
+      ? `從自己的手牌選擇${targetMin === 0 ? '最多 ' : ''}${targetMax} 張${
+          energyColorLabel[targetedEffect.energyColor ?? ''] ?? '符合條件的'
+        }卡牌作為目標`
+      : undefined
 
   const costEnergy = pending.cost.energy ?? ({} as EnergyCost)
   const energyCost = getRemainingEnergyCost(costEnergy, pending.sourceEnergy)
   const energyCostTotal = getEnergyCostTotal(energyCost)
   const discardHandCost = pending.cost.discardHand ?? 0
+  const supportToHandCost = pending.cost.supportToHand ?? 0
+  const hpToTrashCost = pending.cost.hpToTrash ? 1 : 0
+  const hpToTrashCandidates = hpToTrashCost
+    ? getHpToTrashCostCandidates(
+        pending.cost,
+        game.players[viewerPlayerId].battleArea,
+        pending.sourceInstanceId,
+      ).map((cookie) => ({ card: cookie.card, instanceId: cookie.card.instanceId }))
+    : []
+  const trashToDeckCost = pending.cost.trashToDeck?.count ?? 0
+  const trashToDeckCandidates = trashToDeckCost
+    ? getTrashToDeckCostCandidates(
+        pending.cost,
+        game.players[viewerPlayerId].discardPile,
+      ).map((card) => ({ card, instanceId: card.instanceId }))
+    : []
   const supportCandidates = energyCostTotal === 0
     ? []
     : game.players[viewerPlayerId].supportArea
@@ -154,6 +273,16 @@ export function getOptionalCostAttackPrompt(
       ),
     )
     .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
+  const supportToHandCandidates =
+    supportToHandCost === 0
+      ? []
+      : game.players[viewerPlayerId].supportArea
+          .filter(
+            (support) =>
+              pending.cost.supportToHandType === undefined ||
+              support.card.type === pending.cost.supportToHandType,
+          )
+          .map((support) => ({ card: support.card, instanceId: support.card.instanceId }))
 
   return {
     sourceCard: game.players[viewerPlayerId].battleArea.find(
@@ -162,15 +291,28 @@ export function getOptionalCostAttackPrompt(
     sourceCardName: pending.sourceCardName,
     effectText: pending.effectText,
     discardHandCost,
+    supportToHandCost,
+    hpToTrashCost,
+    hpToTrashCandidates,
+    trashToDeckCost,
+    trashToDeckCandidates,
     energyCostTotal,
-    costText: describeCost(energyCost, discardHandCost),
+    costText: describeCost(
+      energyCost,
+      discardHandCost,
+      supportToHandCost,
+      hpToTrashCost,
+      trashToDeckCost,
+    ),
     playerHand: game.players[viewerPlayerId].hand,
     supportCandidates,
+    supportToHandCandidates,
     targetCandidates,
     needsTarget,
     targetMin,
     targetMax,
     targetLabel,
+    targetInstruction,
     unmetConditionWarning: getUnmetConditionWarning(
       game,
       viewerPlayerId,

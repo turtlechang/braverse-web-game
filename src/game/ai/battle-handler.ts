@@ -9,27 +9,38 @@ import { applyGameCommand } from '../commands'
 import {
   getAttackDamageAgainst,
   getBreakToTrashCandidates,
-  getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
   getEffectSelectionCandidates,
   getEffectiveAttack,
   getTrashToDeckCandidates,
   isEffectConditionMet,
-  requiresTargetSelection,
 } from '../effects'
+import { expandChooseOne } from '../effects/choose-one'
 import { selectEnergyPayment } from '../energy'
 import { getTrashBattleCookieCostCandidates } from '../skills'
+import { createPlayerView } from '../player-view'
 import type { CardEffect, CookieInBattle, EffectContext, GameState, GameCard, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
 import { chooseAiEffectMode } from './choose-one-mode'
 import { isRuleEnabled } from './rule-profiles'
 import { getCardEffectValue } from './bs2MatchupProfiles'
+import {
+  createKnowledgeStateFromPlayerView,
+  synchronizeKnowledgeWithPlayerView,
+  type KnowledgeState,
+} from './strategy/knowledge-state'
+import {
+  createPendingSelectionStrategy,
+  type PendingSelectionStrategy,
+} from './strategy/pending-selection'
+import { chooseSharedEffectTargets } from './shared-selection'
 
 const chooseAttackEffectTargets = (
   state: GameState,
   playerId: PlayerId,
   battle: NonNullable<GameState['pendingBattle']>,
   effect: CardEffect | undefined,
+  universal?: PendingSelectionStrategy,
 ): string[] => {
   if (!effect) return []
   const context: EffectContext = {
@@ -38,14 +49,16 @@ const chooseAttackEffectTargets = (
   }
 
   if (effect.kind === 'break-to-trash') {
-    return getBreakToTrashCandidates(state, context, effect)
-      .slice(0, effect.max)
+    const candidateIds = getBreakToTrashCandidates(state, context, effect)
       .map((card) => card.instanceId)
+    return universal?.enabled
+      ? universal.selectEffectTargetIds(effect, candidateIds, effect.max)
+      : candidateIds.slice(0, effect.max)
   }
 
   if (effect.kind === 'opponent-battle-to-trash') {
     const opponentId = playerId === 'player-one' ? 'player-two' : 'player-one'
-    return state.players[opponentId].battleArea
+    const candidateIds = state.players[opponentId].battleArea
       .filter((cookie) => {
         if (effect.maxLevel !== undefined && cookie.card.level > effect.maxLevel) return false
         if (effect.minLevel !== undefined && cookie.card.level < effect.minLevel) return false
@@ -53,15 +66,20 @@ const chooseAttackEffectTargets = (
         return true
       })
       .sort((left, right) => left.hpCards.length - right.hpCards.length)
-      .slice(0, 1)
       .map((cookie) => cookie.card.instanceId)
+    return universal?.enabled
+      ? universal.selectEffectTargetIds(effect, candidateIds, 1)
+      : candidateIds.slice(0, 1)
   }
 
   if (effect.kind === 'trash-to-deck') {
     const candidates = getTrashToDeckCandidates(state, context, effect)
     const count = Math.min(effect.max, candidates.length)
     if (count < (effect.min ?? 0)) return []
-    return candidates.slice(0, count).map((card) => card.instanceId)
+    const candidateIds = candidates.map((card) => card.instanceId)
+    return universal?.enabled
+      ? universal.selectEffectTargetIds(effect, candidateIds, count)
+      : candidateIds.slice(0, count)
   }
 
   if (effect.kind === 'support-to-hand') {
@@ -69,7 +87,10 @@ const chooseAttackEffectTargets = (
     const minimum = effect.optional ? 0 : effect.amount
     const maximum = effect.anyNumber ? candidates.length : effect.amount
     if (candidates.length < minimum) return []
-    return candidates.slice(0, maximum).map((card) => card.instanceId)
+    const candidateIds = candidates.map((card) => card.instanceId)
+    return universal?.enabled
+      ? universal.selectEffectTargetIds(effect, candidateIds, maximum)
+      : candidateIds.slice(0, maximum)
   }
 
   if (!('target' in effect) || !effect.target) return []
@@ -92,8 +113,12 @@ const chooseAttackEffectTargets = (
   })
   const count = Math.min(effect.target.max, ordered.length)
   if (count < effect.target.min) return []
-  return ordered.slice(0, count).map((cookie) => cookie.card.instanceId)
+  const candidateIds = ordered.map((cookie) => cookie.card.instanceId)
+  return universal?.enabled
+    ? universal.selectEffectTargetIds(effect, candidateIds, count)
+    : candidateIds.slice(0, count)
 }
+
 
 /**
  * R7: 評估陷阱是否值得使用
@@ -335,6 +360,7 @@ export const handleAiPendingBattle = (
   state: GameState,
   playerId: PlayerId,
   level?: AiLevel,
+  knowledgeState?: KnowledgeState,
 ): AiDecision | null => {
   if (
     !state.pendingBattle ||
@@ -347,6 +373,29 @@ export const handleAiPendingBattle = (
 
   const battle = state.pendingBattle
   const useR7 = level !== undefined && isRuleEnabled(level, 'R7')
+  const view = createPlayerView(state, playerId)
+  const synchronizedKnowledge = knowledgeState?.observerId === playerId
+    ? synchronizeKnowledgeWithPlayerView(knowledgeState, view)
+    : createKnowledgeStateFromPlayerView(view)
+  const universal = createPendingSelectionStrategy(
+    view,
+    synchronizedKnowledge,
+    level,
+  )
+  const withBattlePendingReason = (
+    decision: AiDecision,
+    kind: Parameters<typeof universal.telemetry>[0],
+    sourceInstanceId?: string,
+    effect?: CardEffect,
+  ): AiDecision => universal.enabled
+    ? {
+        ...decision,
+        reason: {
+          ...(decision.reason ?? { level: level ?? 2 }),
+          pendingStrategy: universal.telemetry(kind, sourceInstanceId, effect),
+        },
+      }
+    : decision
   if (
     battle.stage === 'attack-effect' &&
     battle.attackerPlayerId === playerId
@@ -357,8 +406,9 @@ export const handleAiPendingBattle = (
       playerId,
       battle,
       effect,
+      universal,
     )
-    return {
+    return withBattlePendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-attack-effect',
         playerId,
@@ -369,19 +419,19 @@ export const handleAiPendingBattle = (
         targetIds.length > 0
           ? `${state.players[playerId].name}結算攻擊後續效果。`
           : `${state.players[playerId].name}略過攻擊後續效果。`,
-    }
+    }, 'effect-target', battle.attackerInstanceId, effect)
   }
 
   if (battle.stage === 'damage') {
     const damagePlayerId = battle.damagePlayerId ?? battle.defenderPlayerId
-    return {
+    return withBattlePendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-next-damage',
         playerId: damagePlayerId,
       }),
       action: 'resolve-damage',
       description: '依序翻開並結算下一張 HP 卡。',
-    }
+    }, 'multi-stage', battle.attackerInstanceId)
   }
 
   if (
@@ -397,40 +447,59 @@ export const handleAiPendingBattle = (
           (a, b) => handCardDiscardValue(a) - handCardDiscardValue(b),
         )
       : state.players[playerId].hand
-    const discardHandIds = discardCandidates
-      .slice(0, discardCount)
-      .map((card) => card.instanceId)
+    const discardHandIds = universal.enabled
+      ? universal.orderCostIds(
+          discardCandidates.map((card) => card.instanceId),
+          discardCount,
+        )
+      : discardCandidates
+          .slice(0, discardCount)
+          .map((card) => card.instanceId)
     const flipContext: EffectContext = {
       sourcePlayerId: playerId,
       sourceInstanceId: revealed?.instanceId ?? '',
       sourceCardName: revealed?.name ?? '',
     }
-    const hasActivatableEffect = Boolean(revealed?.flip) &&
-      revealed!.flip!.effects.some((effect) =>
-        isEffectConditionMet(state, flipContext, effect),
-      )
-    const canActivate = hasActivatableEffect &&
-      discardHandIds.length === discardCount
     const chooseOneEffect = revealed?.flip?.effects.find(
       (effect): effect is Extract<CardEffect, { kind: 'choose-one' }> =>
         effect.kind === 'choose-one',
     )
     const chooseOneModeIndex = chooseOneEffect
-      ? chooseAiEffectMode(state, flipContext, chooseOneEffect)
+      ? chooseAiEffectMode(
+          state,
+          flipContext,
+          chooseOneEffect,
+          universal.enabled
+            ? universal.preferredModeIndices(chooseOneEffect, revealed?.instanceId)
+            : [],
+        )
       : undefined
-    const flipTargetEffect = revealed?.flip?.effects.find(
-      (effect) => requiresTargetSelection(effect),
-    )
-    const flipTargetSelector =
-      flipTargetEffect && 'target' in flipTargetEffect
-        ? flipTargetEffect.target
-        : null
-    const targetIds = flipTargetSelector
-      ? getEffectTargetCandidates(state, flipContext, flipTargetSelector)
-          .slice(0, flipTargetSelector.max)
-          .map((candidate) => candidate.card.instanceId)
-      : undefined
-    return {
+    const expandedFlipEffects = revealed?.flip
+      ? chooseOneEffect && chooseOneModeIndex !== undefined
+        ? expandChooseOne(
+            revealed.flip.effects,
+            revealed.flip.effects.indexOf(chooseOneEffect),
+            chooseOneModeIndex,
+          )
+        : revealed.flip.effects
+      : []
+    const hasActivatableEffect = Boolean(revealed?.flip) &&
+      expandedFlipEffects.some((effect) =>
+        isEffectConditionMet(state, flipContext, effect),
+      )
+    const sharedSelection = revealed?.flip
+      ? chooseSharedEffectTargets(
+          state,
+          flipContext,
+          expandedFlipEffects,
+          universal,
+        )
+      : { valid: true as const }
+    const canActivate = hasActivatableEffect &&
+      discardHandIds.length === discardCount &&
+      sharedSelection.valid
+    const targetIds = sharedSelection.targetIds
+    return withBattlePendingReason({
       state: applyGameCommand(state, {
         kind: 'resolve-flip',
         playerId,
@@ -444,7 +513,7 @@ export const handleAiPendingBattle = (
       description: canActivate
         ? `${state.players[playerId].name}發動${revealed?.name ?? 'FLIP'}。`
         : `${state.players[playerId].name}略過 FLIP。`,
-    }
+    }, 'flip', revealed?.instanceId, expandedFlipEffects[0])
   }
 
   if (battle.stage === 'trap' && battle.defenderPlayerId === playerId) {
@@ -468,10 +537,16 @@ export const handleAiPendingBattle = (
         : undefined
     if (attackResponse) {
       const skill = attackResponse.card.skill!
-      const discardHandIds = state.players[playerId].hand
-        .slice(0, skill.cost?.discardHand ?? 0)
-        .map((card) => card.instanceId)
-      return {
+      const hand = state.players[playerId].hand
+      const discardHandIds = universal.enabled
+        ? universal.orderCostIds(
+            hand.map((card) => card.instanceId),
+            skill.cost?.discardHand ?? 0,
+          )
+        : hand
+            .slice(0, skill.cost?.discardHand ?? 0)
+            .map((card) => card.instanceId)
+      return withBattlePendingReason({
         state: applyGameCommand(state, {
           kind: 'play-attack-response',
           playerId,
@@ -479,8 +554,9 @@ export const handleAiPendingBattle = (
           discardHandIds,
         }),
         action: 'play-attack-response',
+        revealedCard: attackResponse.card,
         description: `${state.players[playerId].name}發動${attackResponse.card.name}的對手指攻回應技能。`,
-      }
+      }, 'attack-response', attackResponse.card.instanceId, skill.effects[0])
     }
 
     const trapCandidates = getTrapCandidates(state, playerId)
@@ -492,7 +568,14 @@ export const handleAiPendingBattle = (
       let bestCandidate: GameCard | undefined
       for (const candidate of trapCandidates) {
         if (!candidate.trap) continue
-        const score = evaluateTrapWorth(state, playerId, candidate, battle)
+        const baseScore = evaluateTrapWorth(state, playerId, candidate, battle)
+        // R7 仍是陷阱是否值得支付的主要判斷；G5 只用一個有上限的
+        // TacticalPlan 加成處理接近候選，避免 setup／payoff 分數取代
+        // 規則層的保命與代價評估，也不讓公開策略來源造成硬門檻誤判。
+        const planBonus = universal.enabled
+          ? Math.min(12, universal.tacticalPlanValue(candidate.instanceId))
+          : 0
+        const score = baseScore + planBonus
         if (score > bestScore) {
           bestScore = score
           bestCandidate = candidate
@@ -517,11 +600,17 @@ export const handleAiPendingBattle = (
     const r7Skipped = useR7 && trapCandidates.length > 0 && !trapCard
 
     if (trapCard?.trap) {
-      const paymentIds =
-        selectEnergyPayment(
-          trapCard.trap.cost.energy ?? trapCard.trap.cost,
-          state.players[playerId].supportArea,
-        ) ?? []
+      const supports = state.players[playerId].supportArea
+      const orderedSupports = universal.enabled
+        ? universal.orderPaymentIds(supports.map((support) => support.card.instanceId))
+            .map((instanceId) => supports.find(
+              (support) => support.card.instanceId === instanceId,
+            )!)
+        : supports
+      const paymentIds = selectEnergyPayment(
+        trapCard.trap.cost.energy ?? trapCard.trap.cost,
+        orderedSupports,
+      ) ?? []
       // 優先以當前攻擊者作為陷阱目標（減攻擊／防昏厥類陷阱才會作用在實際攻擊者身上）。
       const trapTargets = getTrapTargetCandidates(
         state,
@@ -532,47 +621,86 @@ export const handleAiPendingBattle = (
         trapTargets.find(
           (target) => target.card.instanceId === battle.attackerInstanceId,
         ) ?? trapTargets[0]
-      const targetIds = preferredTarget
-        ? [preferredTarget.card.instanceId]
-        : []
+      // getTrapTargetCandidates 與 getTrapSelfTargetCandidates 各自依真正有
+      // target 的子效果推導合法候選；不可再假設 effects[0] 就是該子效果，
+      // 否則多段陷阱會拿錯效果做通用評分。
+      const trapTargetEffect = trapCard.trap.effects.find(
+        (effect) =>
+          'target' in effect && effect.target?.side !== 'self',
+      )
+      const targetIds = universal.enabled
+        ? trapTargetEffect && 'target' in trapTargetEffect && trapTargetEffect.target
+          ? (() => {
+              const candidateIds = trapTargets.map((target) => target.card.instanceId)
+              const selected = universal.selectEffectTargetIds(
+                trapTargetEffect,
+                candidateIds,
+                Math.min(trapTargetEffect.target.max, candidateIds.length),
+              )
+              return selected.length >= trapTargetEffect.target.min ? selected : []
+            })()
+          : []
+        : preferredTarget
+          ? [preferredTarget.card.instanceId]
+          : []
       const selfTargetCandidates = getTrapSelfTargetCandidates(
         state,
         playerId,
         trapCard.instanceId,
       )
-      const selfTargetIds =
-        selfTargetCandidates.length > 0
+      const trapSelfTargetEffect = trapCard.trap.effects.find(
+        (effect) =>
+          'target' in effect && effect.target?.side === 'self',
+      )
+      const selfTargetIds = universal.enabled
+        ? trapSelfTargetEffect && 'target' in trapSelfTargetEffect && trapSelfTargetEffect.target
+          ? (() => {
+              const candidateIds = selfTargetCandidates.map((target) => target.card.instanceId)
+              const selected = universal.selectEffectTargetIds(
+                trapSelfTargetEffect,
+                candidateIds,
+                Math.min(trapSelfTargetEffect.target.max, candidateIds.length),
+              )
+              return selected.length >= trapSelfTargetEffect.target.min ? selected : []
+            })()
+          : []
+        : selfTargetCandidates.length > 0
           ? [selfTargetCandidates[0].card.instanceId]
           : []
       const supportTrashEffect = trapCard.trap.effects.find(
         (effect) => effect.kind === 'support-to-trash',
       )
-      const supportTrashIds =
-        supportTrashEffect?.kind === 'support-to-trash'
-          ? state.players[playerId].supportArea
-              .slice(0, supportTrashEffect.amount)
-              .map((support) => support.card.instanceId)
-          : []
+      const supportTrashCandidateIds = supportTrashEffect?.kind === 'support-to-trash'
+        ? state.players[playerId].supportArea
+            .map((support) => support.card.instanceId)
+        : []
+      const supportTrashIds = supportTrashEffect?.kind === 'support-to-trash'
+        ? universal.enabled
+          ? universal.orderCostIds(supportTrashCandidateIds, supportTrashEffect.amount)
+          : supportTrashCandidateIds.slice(0, supportTrashEffect.amount)
+        : []
       const supportToHandEffect = trapCard.trap.effects.find(
         (effect) => effect.kind === 'support-to-hand',
       )
-      const supportToHandIds =
-        supportToHandEffect?.kind === 'support-to-hand'
-          ? state.players[playerId].supportArea
+      const supportToHandCandidateIds = supportToHandEffect?.kind === 'support-to-hand'
+        ? state.players[playerId].supportArea
               .slice()
               .sort((a, b) => {
                 if (a.rested !== b.rested) return a.rested ? -1 : 1
                 return 0
               })
-              .slice(0, supportToHandEffect.amount)
               .map((support) => support.card.instanceId)
-          : []
+        : []
+      const supportToHandIds = supportToHandEffect?.kind === 'support-to-hand'
+        ? universal.enabled
+          ? universal.orderCostIds(supportToHandCandidateIds, supportToHandEffect.amount)
+          : supportToHandCandidateIds.slice(0, supportToHandEffect.amount)
+        : []
       const handToSupportEffect = trapCard.trap.effects.find(
         (effect) => effect.kind === 'hand-to-support',
       )
-      const handToSupportIds =
-        handToSupportEffect?.kind === 'hand-to-support'
-          ? state.players[playerId].hand
+      const handToSupportCandidateIds = handToSupportEffect?.kind === 'hand-to-support'
+        ? state.players[playerId].hand
               .filter((card) => card.instanceId !== trapCard.instanceId)
               .slice()
               .sort((a, b) => {
@@ -581,20 +709,33 @@ export const handleAiPendingBattle = (
                 if (aCookie !== bCookie) return aCookie - bCookie
                 return 0
               })
-              .slice(0, handToSupportEffect.amount)
               .map((card) => card.instanceId)
-          : []
+        : []
+      const handToSupportIds = handToSupportEffect?.kind === 'hand-to-support'
+        ? universal.enabled
+          ? universal.selectEffectTargetIds(
+              handToSupportEffect,
+              handToSupportCandidateIds,
+              handToSupportEffect.amount,
+            )
+          : handToSupportCandidateIds.slice(0, handToSupportEffect.amount)
+        : []
       const discardHandColor = trapCard.trap.cost.discardHandColor
-      const discardHandIds = state.players[playerId].hand
+      const discardHandCandidateIds = state.players[playerId].hand
         .filter(
           (card) =>
             card.instanceId !== trapCard.instanceId &&
             (!discardHandColor || card.energyColor === discardHandColor),
         )
-        .slice(0, trapCard.trap.cost.discardHand ?? 0)
         .map((card) => card.instanceId)
+      const discardHandIds = universal.enabled
+        ? universal.orderCostIds(
+            discardHandCandidateIds,
+            trapCard.trap.cost.discardHand ?? 0,
+          )
+        : discardHandCandidateIds.slice(0, trapCard.trap.cost.discardHand ?? 0)
       const handToBreakCost = trapCard.trap.cost.handToBreakArea
-      const handToBreakIds = state.players[playerId].hand
+      const handToBreakCandidateIds = state.players[playerId].hand
         .filter(
           (card) =>
             card.instanceId !== trapCard.instanceId &&
@@ -609,59 +750,73 @@ export const handleAiPendingBattle = (
             (left.type === 'cookie' ? left.level : 0) -
             (right.type === 'cookie' ? right.level : 0),
         )
-        .slice(0, handToBreakCost?.count ?? 0)
         .map((card) => card.instanceId)
+      const handToBreakIds = universal.enabled
+        ? universal.orderCostIds(handToBreakCandidateIds, handToBreakCost?.count ?? 0)
+        : handToBreakCandidateIds.slice(0, handToBreakCost?.count ?? 0)
       if (handToBreakCost && handToBreakIds.length < handToBreakCost.count) {
-        return {
+        return withBattlePendingReason({
           state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
           action: 'play-trap',
           description: `${state.players[playerId].name}無法支付陷阱代價。`,
-        }
+        }, 'trap', trapCard.instanceId, trapCard.trap.effects[0])
       }
 
-      const trashBattleCookieIds = getTrashBattleCookieCostCandidates(
+      const trashBattleCandidateIds = getTrashBattleCookieCostCandidates(
         trapCard.trap.cost,
         state.players[playerId].battleArea,
       )
-        .slice(0, trapCard.trap.cost.trashBattleCookie?.count ?? 0)
         .map((cookie) => cookie.card.instanceId)
+      const trashBattleCookieIds = universal.enabled
+        ? universal.orderCostIds(
+            trashBattleCandidateIds,
+            trapCard.trap.cost.trashBattleCookie?.count ?? 0,
+          )
+        : trashBattleCandidateIds.slice(
+            0,
+            trapCard.trap.cost.trashBattleCookie?.count ?? 0,
+          )
       const trashToDeckEffect = trapCard.trap.effects.find(
         (effect) => effect.kind === 'trash-to-deck',
       )
-      const trashToDeckIds =
+      const trashToDeckCandidateIds =
         trashToDeckEffect?.kind === 'trash-to-deck'
           ? getTrashToDeckCandidates(
               state,
               { sourcePlayerId: playerId, sourceInstanceId: trapCard.instanceId },
               trashToDeckEffect,
             )
-              .slice(0, trashToDeckEffect.max)
               .map((card) => card.instanceId)
           : []
+      const trashToDeckIds = trashToDeckEffect?.kind === 'trash-to-deck'
+        ? universal.enabled
+          ? universal.orderCostIds(trashToDeckCandidateIds, trashToDeckEffect.max)
+          : trashToDeckCandidateIds.slice(0, trashToDeckEffect.max)
+        : []
 
       if (
         supportTrashEffect?.kind === 'support-to-trash' &&
         supportTrashIds.length < supportTrashEffect.amount
       ) {
-        return {
+        return withBattlePendingReason({
           state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
           action: 'play-trap',
           description: `${state.players[playerId].name}無法支付陷阱後續代價。`,
-        }
+        }, 'trap', trapCard.instanceId, trapCard.trap.effects[0])
       }
 
       if (
         supportToHandEffect?.kind === 'support-to-hand' &&
         supportToHandIds.length < supportToHandEffect.amount
       ) {
-        return {
+        return withBattlePendingReason({
           state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
           action: 'play-trap',
           description: `${state.players[playerId].name}無法支付陷阱後續代價。`,
-        }
+        }, 'trap', trapCard.instanceId, trapCard.trap.effects[0])
       }
 
-      return {
+      return withBattlePendingReason({
         state: applyGameCommand(state, {
           kind: 'play-trap',
           playerId,
@@ -680,7 +835,7 @@ export const handleAiPendingBattle = (
         action: 'play-trap',
         revealedCard: trapCard,
         description: `${state.players[playerId].name}發動${trapCard.name}。`,
-      }
+      }, 'trap', trapCard.instanceId, trapCard.trap.effects[0])
     }
 
     const blockerCandidates = getBlockerCandidates(state, playerId)
@@ -693,7 +848,13 @@ export const handleAiPendingBattle = (
         let bestScore = -Infinity
         let bestCandidate: CookieInBattle | undefined
         for (const candidate of blockerCandidates) {
-          const score = evaluateBlockWorth(state, playerId, candidate, battle)
+          const baseScore = evaluateBlockWorth(state, playerId, candidate, battle)
+          // Blocker 的救援／犧牲淨值優先；TacticalPlan 僅作 bounded tie-break
+          // 加成，讓已確認 payoff 的公開餅乾在同等防守價值時優先保留。
+          const planBonus = universal.enabled
+            ? Math.min(12, universal.tacticalPlanValue(candidate.card.instanceId))
+            : 0
+          const score = baseScore + planBonus
           if (score > bestScore) {
             bestScore = score
             bestCandidate = candidate
@@ -706,12 +867,18 @@ export const handleAiPendingBattle = (
 
       if (blocker) {
         const skill = blocker.card.skill!
-        const paymentIds =
-          selectEnergyPayment(
-            skill.cost.energy ?? skill.cost,
-            state.players[playerId].supportArea,
-          ) ?? []
-        return {
+        const supports = state.players[playerId].supportArea
+        const orderedSupports = universal.enabled
+          ? universal.orderPaymentIds(supports.map((support) => support.card.instanceId))
+              .map((instanceId) => supports.find(
+                (support) => support.card.instanceId === instanceId,
+              )!)
+          : supports
+        const paymentIds = selectEnergyPayment(
+          skill.cost.energy ?? skill.cost,
+          orderedSupports,
+        ) ?? []
+        return withBattlePendingReason({
           state: applyGameCommand(state, {
             kind: 'play-blocker',
             playerId,
@@ -719,17 +886,18 @@ export const handleAiPendingBattle = (
             paymentIds,
           }),
           action: 'play-blocker',
+          revealedCard: blocker.card,
           description: `${state.players[playerId].name}使用${blocker.card.name}阻擋攻擊。`,
-        }
+        }, 'blocker', blocker.card.instanceId, skill.effects[0])
       }
     }
 
-    return {
+    return withBattlePendingReason({
       state: applyGameCommand(state, { kind: 'skip-trap', playerId }),
       action: 'play-trap',
       description: `${state.players[playerId].name}未發動陷阱。`,
       r7TrapSkip: r7Skipped,
-    }
+    }, 'trap', battle.attackerInstanceId)
   }
 
   return {

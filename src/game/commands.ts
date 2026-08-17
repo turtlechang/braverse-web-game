@@ -77,6 +77,7 @@ import type {
   BattleContinuation,
   CardEffect,
   CommandLogEntry,
+  EffectCondition,
   EffectContext,
   EnergyCost,
   EnergyColor,
@@ -164,6 +165,8 @@ export interface DrawUpToDecision {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   sourceCardName: string
+  sourceCardId?: string
+  condition?: EffectCondition
   max: number
 }
 
@@ -269,6 +272,12 @@ export interface ResolveOptionalCostAttackCommand {
   discardCardIds?: string[]
   targetIds?: string[]
   paymentIds?: string[]
+  /** 支援區回手代價（例如 BS6-044／BS6-061）。 */
+  supportToHandIds?: string[]
+  /** 支付 HP 代價時選擇的戰鬥區餅乾（例如 BS6-003）。 */
+  hpToTrashIds?: string[]
+  /** 支付洗回牌庫代價時選擇的棄牌區卡牌（例如 BS5-094）。 */
+  trashToDeckIds?: string[]
 }
 
 export interface ResolveDrawUpToCommand {
@@ -930,6 +939,8 @@ export const getPendingDecision = (
       sourcePlayerId: pending.sourcePlayerId,
       sourceInstanceId: pending.sourceInstanceId,
       sourceCardName: pending.sourceCardName,
+      sourceCardId: pending.sourceCardId,
+      condition: pending.condition,
       max: pending.max,
     }
   }
@@ -987,9 +998,9 @@ const continueBattleAfterPending = (
   continuation: BattleContinuation | undefined,
 ): GameState => {
   if (!continuation || !state.pendingBattle) return state
-  return continuation === 'finish'
-    ? finishBattle(state)
-    : advanceBattleAfterTrap(state)
+  if (continuation === 'finish') return finishBattle(state)
+  if (continuation === 'after-trap') return advanceBattleAfterTrap(state)
+  return advanceAttackEffect(state, state.pendingBattle)
 }
 
 export const appendCommandLogEntry = (
@@ -1183,7 +1194,8 @@ const applyPendingDecisionCommand = (
       }
       // 不需目標選擇的效果直接執行。
       let resolved = nextState
-      for (const nestedEffect of applicableEffects) {
+      for (let effectIndex = 0; effectIndex < applicableEffects.length; effectIndex += 1) {
+        const nestedEffect = applicableEffects[effectIndex]
         if (resolved.status !== 'playing') break
         resolved = executeCardEffect(
           resolved,
@@ -1192,6 +1204,29 @@ const applyPendingDecisionCommand = (
           command.targetIds ?? [],
           options.shuffle,
         )
+        if (resolved.pendingBattle?.effectDamageSequence) {
+          return {
+            ...resolved,
+            pendingAbilityEffect: {
+              playerId: pending.playerId,
+              sourcePlayerId: pending.playerId,
+              sourceInstanceId: pending.sourceInstanceId,
+              sourceCardName: pending.sourceCardName,
+              sourceKind: 'item',
+              effects: applicableEffects,
+              effectIndex,
+              battleContinuation: pending.battleContinuation,
+            },
+            pendingBattle: {
+              ...resolved.pendingBattle,
+              effectDamageSequence: {
+                ...resolved.pendingBattle.effectDamageSequence,
+                continuation: 'ability-effect',
+                resumeBattleAfterAbility: true,
+              },
+            },
+          }
+        }
       }
       return continueBattle(resolved)
     }
@@ -1199,7 +1234,8 @@ const applyPendingDecisionCommand = (
       return resolveOptionalCostAttack(
         state, command.playerId, command.action,
         command.discardCardIds ?? [], command.targetIds ?? [],
-        command.paymentIds ?? [],
+        command.paymentIds ?? [], command.supportToHandIds ?? [],
+        command.hpToTrashIds ?? [], command.trashToDeckIds ?? [],
       )
     case 'resolve-draw-up-to':
       return resolveDrawUpTo(state, command.playerId, command.drawCount)
@@ -1266,13 +1302,35 @@ const applyPendingDecisionCommand = (
           }
         }
 
-        return effects.reduce(
-          (nextState, effect) =>
-            nextState.status === 'playing'
-              ? executeCardEffect(nextState, context, effect, [])
-              : nextState,
-          activatedState,
-        )
+        let resolvedState = activatedState
+        for (let effectIndex = 0; effectIndex < effects.length; effectIndex += 1) {
+          const effect = effects[effectIndex]
+          if (resolvedState.status !== 'playing') break
+          resolvedState = executeCardEffect(resolvedState, context, effect, [])
+          if (resolvedState.pendingBattle?.effectDamageSequence) {
+            return {
+              ...resolvedState,
+              pendingAbilityEffect: {
+                playerId,
+                sourcePlayerId: playerId,
+                sourceInstanceId: source.card.instanceId,
+                sourceCardName: source.card.name,
+                sourceKind: 'skill',
+                effects,
+                effectIndex,
+              },
+              pendingBattle: {
+                ...resolvedState.pendingBattle,
+                effectDamageSequence: {
+                  ...resolvedState.pendingBattle.effectDamageSequence,
+                  continuation: 'ability-effect',
+                  resumeBattleAfterAbility: Boolean(state.pendingBattle),
+                },
+              },
+            }
+          }
+        }
+        return resolvedState
       }
 
       const playerId = pending.playerId
@@ -1319,8 +1377,31 @@ const applyPendingDecisionCommand = (
           },
         }
       }
-      for (const effect of ability.effects) {
+      for (let effectIndex = 0; effectIndex < ability.effects.length; effectIndex += 1) {
+        const effect = ability.effects[effectIndex]
         nextState = executeCardEffect(nextState, context, effect, [])
+        if (nextState.pendingBattle?.effectDamageSequence) {
+          return {
+            ...nextState,
+            pendingAbilityEffect: {
+              playerId,
+              sourcePlayerId: playerId,
+              sourceInstanceId: stage.card.instanceId,
+              sourceCardName: stage.card.name,
+              sourceKind: 'stage',
+              effects: ability.effects,
+              effectIndex,
+            },
+            pendingBattle: {
+              ...nextState.pendingBattle,
+              effectDamageSequence: {
+                ...nextState.pendingBattle.effectDamageSequence,
+                continuation: 'ability-effect',
+                resumeBattleAfterAbility: Boolean(state.pendingBattle),
+              },
+            },
+          }
+        }
       }
       return nextState
     }
@@ -1597,6 +1678,7 @@ const executeAbilityEffects = (
   effectTargets: string[][] | undefined,
   shuffle?: Shuffle,
   chooseOneModes?: number[],
+  sourceKind: 'skill' | 'item' | 'stage' = 'skill',
 ): GameState => {
   let nextState = state
   // 迴圈骨架必須與 ai/ability-effects.ts 的 simulateAbilityEffects 一致，
@@ -1621,6 +1703,28 @@ const executeAbilityEffects = (
       effectTargets?.[index] ?? [],
       shuffle,
     )
+    if (nextState.pendingBattle?.effectDamageSequence) {
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId: context.sourcePlayerId,
+          sourcePlayerId: context.sourcePlayerId,
+          sourceInstanceId: context.sourceInstanceId,
+          sourceCardName: context.sourceCardName,
+          sourceKind,
+          effects: queue,
+          effectIndex: index,
+        },
+        pendingBattle: {
+          ...nextState.pendingBattle,
+          effectDamageSequence: {
+            ...nextState.pendingBattle.effectDamageSequence,
+            continuation: 'ability-effect',
+            resumeBattleAfterAbility: Boolean(state.pendingBattle),
+          },
+        },
+      }
+    }
     if (nextState.pendingRefresh || nextState.pendingOnPlay) break
     // 代價致昏後補位優先於後續效果結算（BS4-005 等 hpToTrash 代價場景）；
     // 只對「自己的」補位任務暫停，先前遺留的對側任務不該中斷本次效果。
@@ -1872,6 +1976,19 @@ const resolvePendingAbilityEffect = (
     targetIds,
     options.shuffle,
   )
+  if (resolved.pendingBattle?.effectDamageSequence) {
+    return {
+      ...resolved,
+      pendingBattle: {
+        ...resolved.pendingBattle,
+        effectDamageSequence: {
+          ...resolved.pendingBattle.effectDamageSequence,
+          continuation: 'ability-effect',
+          resumeBattleAfterAbility: Boolean(state.pendingBattle),
+        },
+      },
+    }
+  }
   return continueAbilityQueue(resolved, pending, context, 1, continueBattle)
 }
 
@@ -2029,6 +2146,7 @@ const applyPlayerActionCommand = (
         command.effectTargets,
         options.shuffle,
         command.chooseOneModes,
+        'skill',
       )
     }
     case 'begin-activate-skill': {
@@ -2124,6 +2242,7 @@ const applyPlayerActionCommand = (
         command.effectTargets,
         options.shuffle,
         command.chooseOneModes,
+        'item',
       )
     }
     case 'begin-play-item': {
@@ -2205,6 +2324,7 @@ const applyPlayerActionCommand = (
         command.effectTargets,
         options.shuffle,
         command.chooseOneModes,
+        'stage',
       )
     }
     case 'begin-activate-stage': {

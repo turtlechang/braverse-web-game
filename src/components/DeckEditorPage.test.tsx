@@ -4,6 +4,8 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import { DeckEditorPage } from './DeckEditorPage'
+import { getCardPoolEntry } from '../game/card-pool'
+import { getCardAttackPower } from '../hooks/useDeckEditor'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -116,7 +118,64 @@ describe('DeckEditorPage', () => {
 
     await act(() => filterToggle!.click())
     expect(filterToggle?.getAttribute('aria-expanded')).toBe('true')
-    expect(container.querySelectorAll('#deck-editor-pool-filters select')).toHaveLength(4)
+    expect(container.querySelectorAll('#deck-editor-pool-filters select')).toHaveLength(7)
+    expect(container.querySelector('[data-testid="deck-editor-filter-level"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="deck-editor-filter-hp"]')).not.toBeNull()
+    expect(container.querySelector('[data-testid="deck-editor-filter-attack-power"]')).not.toBeNull()
+
+    await act(() => root.unmount())
+  })
+
+  it('filters the card pool by LV, HP, and attack power', async () => {
+    const container = document.createElement('div')
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DeckEditorPage onSave={vi.fn()} onClose={vi.fn()} />,
+      ),
+    )
+
+    const filterToggle = container.querySelector<HTMLButtonElement>('[data-testid="deck-editor-filter-toggle"]')
+    await act(() => filterToggle!.click())
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    const setFilter = async (testId: string, value: string) => {
+      const select = container.querySelector<HTMLSelectElement>(`[data-testid="${testId}"]`)
+      expect(select).not.toBeNull()
+      await act(() => {
+        nativeSetter.call(select, value)
+        select!.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+    }
+    const visibleEntries = () =>
+      Array.from(
+        container.querySelectorAll<HTMLButtonElement>('.deck-editor-page-pool-card-select'),
+      )
+        .map((button) => button.querySelector('span')?.textContent ?? '')
+        .map((cardNumber) => getCardPoolEntry(cardNumber))
+
+    await setFilter('deck-editor-filter-level', '2')
+    const levelEntries = visibleEntries()
+    expect(levelEntries.length).toBeGreaterThan(0)
+    expect(levelEntries.every((entry) => entry?.level === 2)).toBe(true)
+
+    await setFilter('deck-editor-filter-hp', '4')
+    const hpEntries = visibleEntries()
+    expect(hpEntries.length).toBeGreaterThan(0)
+    expect(hpEntries.every((entry) => entry?.level === 2 && entry.hp === 4)).toBe(true)
+
+    await setFilter('deck-editor-filter-attack-power', '2')
+    const attackEntries = visibleEntries()
+    expect(attackEntries.length).toBeGreaterThan(0)
+    expect(
+      attackEntries.every(
+        (entry) => entry?.level === 2 && entry.hp === 4 && getCardAttackPower(entry.attackText) === 2,
+      ),
+    ).toBe(true)
 
     await act(() => root.unmount())
   })

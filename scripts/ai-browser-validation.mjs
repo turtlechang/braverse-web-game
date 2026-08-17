@@ -22,7 +22,9 @@ if (!chromium) {
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4173)
 const baseUrl = `http://127.0.0.1:${port}`
 const viteEntry = resolve(root, 'node_modules/vite/bin/vite.js')
-const outputDirectory = resolve(root, 'test-results')
+// 允許受檔案鎖定或唯讀工作目錄的驗證，將純測試產物導向外部暫存區；
+// 未設定時仍保留既有專案內 test-results 行為。
+const outputDirectory = process.env.BRAVERSE_TEST_RESULTS_DIR ?? resolve(root, 'test-results')
 const browserExecutable =
   process.env.PLAYWRIGHT_BROWSER_EXECUTABLE ??
   [
@@ -289,6 +291,9 @@ try {
       const sideZones = [
         ...document.querySelectorAll('.break-zone, .utility-zones'),
       ].map((element) => element.getBoundingClientRect())
+      const supportZones = [
+        ...document.querySelectorAll('.support-zone'),
+      ].map((element) => element.getBoundingClientRect())
       const cardsOverlap = handCards.some((handCard) =>
         battleCards.some(
           (battleCard) =>
@@ -316,6 +321,14 @@ try {
             overlapHeight > SIDE_ZONE_OVERLAP_TOLERANCE
           )
         }),
+      )
+      const handOverlapsTabletBoard = handCards.some((handCard) =>
+        [...battleCards, ...supportZones, ...sideZones].some((boardRegion) =>
+          Math.min(handCard.right, boardRegion.right) >
+            Math.max(handCard.left, boardRegion.left) + 1 &&
+          Math.min(handCard.bottom, boardRegion.bottom) >
+            Math.max(handCard.top, boardRegion.top) + 1,
+        ),
       )
       const topUtilityZones = document.querySelector(
         '.top-field .utility-zones',
@@ -450,6 +463,27 @@ try {
           })),
         cardsOverlap,
         cardRects: {
+          table: {
+            top: tableAreaRect.top,
+            bottom: tableAreaRect.bottom,
+            height: tableAreaRect.height,
+            computedHeight: getComputedStyle(tableArea).height,
+            padding: getComputedStyle(tableArea).padding,
+            margin: getComputedStyle(tableArea).margin,
+            handDockHeight: getComputedStyle(shell).getPropertyValue('--tablet-hand-dock-height'),
+          },
+          fields: {
+            top: {
+              top: topFieldRect.top,
+              bottom: topFieldRect.bottom,
+              height: topFieldRect.height,
+            },
+            bottom: {
+              top: bottomFieldRect.top,
+              bottom: bottomFieldRect.bottom,
+              height: bottomFieldRect.height,
+            },
+          },
           hand: handCards.map(({ left, right, top, bottom }) => ({
             left,
             right,
@@ -468,9 +502,21 @@ try {
             top,
             bottom,
           })),
+          support: supportZones.map(({ left, right, top, bottom }) => ({
+            left,
+            right,
+            top,
+            bottom,
+          })),
         },
         compactSideZonesVisible:
           rect.width >= 900 || !handOverlapsSideZone,
+        tabletHandClear:
+          rect.width < 681 ||
+          rect.width > 1280 ||
+          rect.height <= 400 ||
+          rect.height > 840 ||
+          !handOverlapsTabletBoard,
         bodyScrollHeight: document.body.scrollHeight,
         bodyClientHeight: document.body.clientHeight,
         documentScrollHeight: document.documentElement.scrollHeight,
@@ -487,14 +533,21 @@ try {
       `${viewport.width}x${viewport.height} 不應出現垂直捲軸`,
     )
     assert.ok(
-      metrics.bottomFieldBottom <= metrics.shellBottom + 1 &&
-        metrics.bottomHandBottom <= metrics.shellBottom + 1,
-      `${viewport.width}x${viewport.height} 的玩家場地與手牌必須完整位於遊戲畫布內`,
+      metrics.bottomFieldBottom <= metrics.shellBottom + 1,
+      `${viewport.width}x${viewport.height} 的玩家場地必須完整位於遊戲畫布內：場地底部 ${metrics.bottomFieldBottom}、畫布底部 ${metrics.shellBottom}；${JSON.stringify(metrics.cardRects.table)}`,
     )
     assert.ok(
-      metrics.bottomHandCardsBottom <= metrics.shellBottom + 1,
-      `${viewport.width}x${viewport.height} 的玩家手牌卡面不得被畫布裁切：實際底部 ${metrics.bottomHandCardsBottom}、畫布底部 ${metrics.shellBottom}`,
+      metrics.bottomHandBottom <= metrics.shellBottom + 1,
+      `${viewport.width}x${viewport.height} 的玩家手牌 dock 必須完整位於遊戲畫布內：dock 底部 ${metrics.bottomHandBottom}、畫布底部 ${metrics.shellBottom}`,
     )
+    // 桌機依使用者確認保留舊版「從畫布下緣露出」的手牌扇形；平板與
+    // 窄版則必須完整收在獨立 dock 裡，否則會重新遮蔽支援／資源區。
+    if (viewport.width <= 1280) {
+      assert.ok(
+        metrics.bottomHandCardsBottom <= metrics.shellBottom + 1,
+        `${viewport.width}x${viewport.height} 的平板玩家手牌卡面不得被畫布裁切：實際底部 ${metrics.bottomHandCardsBottom}、畫布底部 ${metrics.shellBottom}`,
+      )
+    }
     assert.ok(
       metrics.bottomSupportBottom <= metrics.shellBottom + 1,
       `${viewport.width}x${viewport.height} 的玩家支援區必須完整位於遊戲畫布內（支援區底部 ${metrics.bottomSupportBottom}、畫布底部 ${metrics.shellBottom}）`,
@@ -512,6 +565,10 @@ try {
       `${viewport.width}x${viewport.height} 的手牌不得遮蔽休息區、牌庫、場景區或棄牌區：${JSON.stringify(metrics.cardRects)}`,
     )
     assert.ok(
+      metrics.tabletHandClear,
+      `${viewport.width}x${viewport.height} 的平板手牌不得遮蔽戰鬥區、支援區或資源區：${JSON.stringify(metrics.cardRects)}`,
+    )
+    assert.ok(
       metrics.compactHudValid,
       `${viewport.width}x${viewport.height} 的窄版 HUD 應為頂部階段列、中央牌桌、底部工具列：${JSON.stringify(metrics.compactHudRects)}`,
     )
@@ -526,9 +583,19 @@ try {
       `${viewport.width}x${viewport.height} 的支援區佔比超出合理範圍，實際 ${metrics.fieldRatio}`,
     )
     if (metrics.supportCardCount > 0) {
+      // The 901–1280px tablet tier intentionally shrinks support cards to
+      // preserve the battle/support rows on short viewports.  Its 58–78px
+      // height clamp produces roughly 41–55px wide cards; the wider desktop
+      // tier still uses the 58px minimum width check.
+      const isShortTabletTier =
+        viewport.width > 900 && viewport.width <= 1280 && viewport.height <= 840
+      let minSupportCardWidth = viewport.height > 400 ? 38 : 24
+      if (viewport.width > 900 && !isShortTabletTier) {
+        minSupportCardWidth = 58
+      }
       assert.ok(
         metrics.supportCardWidth >=
-          (metrics.width > 900 ? 58 : metrics.height > 400 ? 38 : 24),
+          minSupportCardWidth,
         `${viewport.width}x${viewport.height} 的支援卡不可過小，實際寬度 ${metrics.supportCardWidth}`,
       )
       assert.ok(
@@ -573,10 +640,16 @@ try {
         )
       }
     }
-    if (viewport.width === 1907 && viewport.height === 868) {
+    if (viewport.width === 1600 && viewport.height === 900) {
       await mkdir(outputDirectory, { recursive: true })
       await page.screenshot({
-        path: resolve(outputDirectory, 'layout-1907x868.png'),
+        path: resolve(outputDirectory, 'layout-1600x900.png'),
+      })
+    }
+    if (viewport.width === 1164 && viewport.height === 777) {
+      await mkdir(outputDirectory, { recursive: true })
+      await page.screenshot({
+        path: resolve(outputDirectory, 'layout-1164x777.png'),
       })
     }
     if (viewport.width === 600 && viewport.height === 338) {

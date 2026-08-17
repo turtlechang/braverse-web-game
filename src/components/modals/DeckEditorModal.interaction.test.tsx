@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client'
 import { describe, expect, it } from 'vitest'
 import { DeckEditorModal } from './DeckEditorModal'
 import type { CustomDeck } from '../../game/custom-deck'
+import { getCardPoolEntry } from '../../game/card-pool'
+import { getCardAttackPower } from '../../hooks/useDeckEditor'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -152,6 +154,33 @@ describe('DeckEditorModal pool interactions', () => {
     ).map((button) => button.title)
     expect(bs6Titles.length).toBeGreaterThan(0)
     expect(bs6Titles.every((title) => title.startsWith('BS6-'))).toBe(true)
+
+    await cleanup()
+  })
+
+  it('filters the pool by attack power', async () => {
+    const { container, cleanup } = await render()
+    const attackSelect = Array.from(
+      container.querySelectorAll<HTMLSelectElement>('.deck-editor-filters select'),
+    ).find((select) =>
+      Array.from(select.options).some((option) => option.textContent === '攻擊力 2'),
+    )
+    expect(attackSelect).toBeTruthy()
+
+    const nativeSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      'value',
+    )!.set!
+    await act(() => {
+      nativeSetter.call(attackSelect, '2')
+      attackSelect!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const entries = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('.deck-editor-pool-card-btn'),
+    ).map((button) => getCardPoolEntry(button.dataset.cardNumber ?? ''))
+    expect(entries.length).toBeGreaterThan(0)
+    expect(entries.every((entry) => getCardAttackPower(entry?.attackText ?? null) === 2)).toBe(true)
 
     await cleanup()
   })

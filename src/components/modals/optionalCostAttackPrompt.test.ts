@@ -145,6 +145,110 @@ describe('getOptionalCostAttackPrompt', () => {
     })
   })
 
+  it('limits BS6-051 targets to green cards in the source player hand', () => {
+    const state = createBattleState()
+    state.players['player-two'].hand = [
+      item('green-hand-a', 'green'),
+      item('red-hand', 'red'),
+      item('green-hand-b', 'green'),
+    ]
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Timekeeper Cookie',
+      cost: { energy: { green: 1 } },
+      effects: [
+        {
+          kind: 'hand-to-support',
+          amount: 2,
+          rested: false,
+          optional: true,
+          energyColor: 'green',
+        },
+      ],
+      effectText:
+        'If your opponent has 3 or more support cards, place up to 2 {G} cards from your hand into your support area as active.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt).toMatchObject({
+      targetMin: 0,
+      targetMax: 2,
+      targetLabel: '自己的手牌中的綠色卡牌',
+      targetInstruction: '從自己的手牌選擇最多 2 張綠色卡牌作為目標',
+      targetCandidates: [
+        { instanceId: 'green-hand-a' },
+        { instanceId: 'green-hand-b' },
+      ],
+    })
+  })
+
+  it('keeps a self-to-trash attack effect payable when the battle area is full (BS6-096)', () => {
+    const state = createBattleState()
+    const sourceEntry = state.players['player-two'].battleArea[0]
+    const sourceCard = {
+      ...sourceEntry.card,
+      id: 'BS6-096',
+      instanceId: 'BS6-096-source',
+      name: 'Cherry Cookie',
+      level: 2,
+      energyColor: 'purple' as const,
+    }
+    const levelThree = {
+      ...sourceEntry,
+      card: {
+        ...sourceEntry.card,
+        id: 'lv3-cookie',
+        instanceId: 'lv3-cookie',
+        name: 'LV.3 Cookie',
+        level: 3,
+      },
+      battleEntryId: 'lv3-cookie:battle:3',
+    }
+    const purpleLevelOne = {
+      ...cookie('purple-lv1'),
+      energyColor: 'purple' as const,
+    }
+    state.players['player-two'].battleArea = [
+      { ...sourceEntry, card: sourceCard },
+      levelThree,
+    ]
+    state.players['player-two'].discardPile = [purpleLevelOne]
+    state.players['player-two'].supportArea = [
+      { card: item('purple-support', 'purple'), rested: false },
+    ]
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: sourceCard.instanceId,
+      sourceCardName: sourceCard.name,
+      cost: { energy: { purple: 1 }, selfToTrash: true },
+      effects: [
+        {
+          kind: 'trash-to-battle',
+          amount: 1,
+          exactLevel: 1,
+          energyColor: 'purple',
+          condition: {
+            kind: 'battle-area-has-cookie-with-level',
+            side: 'self',
+            level: 3,
+          },
+        },
+      ],
+      effectText:
+        'If there is a LV.3 Cookie in your battle area, pay {P}, place this Cookie in the trash, then play 1 {P} LV.1 Cookie from your trash.',
+    }
+
+    const prompt = getOptionalCostAttackPrompt(state, 'player-two')
+
+    expect(prompt?.energyCostTotal).toBe(1)
+    expect(prompt?.costText).toBe('支付支援區 1 點紫色能量')
+    expect(prompt?.targetCandidates).toEqual([
+      { card: purpleLevelOne, instanceId: 'purple-lv1' },
+    ])
+  })
+
   // 使用者問「其他類型的卡有嗎」——BS3-086 這類攻擊文字裡「Then, <discard
   // 1 card.> if there is a LV.3 Cookie in your battle area, deal 1 damage」
   // 是同樣的結構：optional-cost-attack 內嵌的子效果自己掛 condition，

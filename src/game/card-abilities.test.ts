@@ -71,6 +71,82 @@ describe('item and stage actions', () => {
     ).toBe(true)
   })
 
+  it('enforces a Cookie-only support return cost for items', () => {
+    const item: GameCard = {
+      id: 'time-rend-scissors',
+      instanceId: 'time-rend-scissors-1',
+      name: 'Time Rend Scissors',
+      type: 'item',
+      item: {
+        cost: {
+          energy: { red: 1 },
+          supportToHand: 1,
+          supportToHandType: 'cookie',
+        },
+        text: 'item',
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    const returnedCookie: GameCard = {
+      id: 'return-cookie',
+      instanceId: 'return-cookie',
+      name: 'return-cookie',
+      type: 'cookie',
+      level: 1,
+      hp: 1,
+      attack: 1,
+      attackCost: 1,
+      energyColor: 'red',
+    }
+    const state = readyState()
+    state.players['player-one'].hand = [item]
+    state.players['player-one'].supportArea = [
+      { card: support('pay-1'), rested: false },
+      { card: support('pay-2'), rested: false },
+      { card: returnedCookie, rested: false },
+    ]
+
+    expect(() =>
+      playItem(state, 'player-one', item.instanceId, ['pay-1'], [], ['pay-2']),
+    ).toThrow('支援區回手費用必須選擇 cookie')
+
+    const next = playItem(
+      state,
+      'player-one',
+      item.instanceId,
+      ['pay-1'],
+      [],
+      [returnedCookie.instanceId],
+    )
+    expect(next.players['player-one'].hand).toContainEqual(returnedCookie)
+    expect(next.players['player-one'].supportArea).toHaveLength(2)
+    expect(
+      next.players['player-one'].supportArea.map((entry) => entry.card.instanceId),
+    ).toEqual(['pay-1', 'pay-2'])
+  })
+
+  it('does not expose a Cookie-return item when no Cookie can pay its extra cost', () => {
+    const item: GameCard = {
+      id: 'time-rend-scissors',
+      instanceId: 'time-rend-scissors-2',
+      name: 'Time Rend Scissors',
+      type: 'item',
+      item: {
+        cost: {
+          energy: { red: 1 },
+          supportToHand: 1,
+          supportToHandType: 'cookie',
+        },
+        text: 'item',
+        effects: [{ kind: 'draw', amount: 1 }],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].hand = [item]
+
+    expect(canPlayItem(state, 'player-one', item.instanceId)).toBe(false)
+  })
+
   it('requires and pays a trashBattleCookie item cost (BS2-077 regression)', () => {
     const item: GameCard = {
       id: 'item',
@@ -425,6 +501,45 @@ describe('item and stage actions', () => {
     state.players['player-one'].stage = { card: stage, rested: false }
 
     expect(canActivateStage(state, 'player-one')).toBe(false)
+  })
+
+  it('only offers BS6-107 Machine Room after a Cookie was played from trash this turn', () => {
+    const machineRoom: GameCard = {
+      id: 'BS6-107',
+      instanceId: 'BS6-107-stage-1',
+      name: 'TBD Machine Room',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { purple: 1 },
+        cost: { purple: 1 },
+        text: "During this turn, if a Cookie was played from your trash, all of your opponent's Cookies receive 1 damage.",
+        restSource: true,
+        effects: [
+          {
+            kind: 'damage-all',
+            amount: 1,
+            side: 'opponent',
+            condition: { kind: 'cookie-played-from-trash-this-turn' },
+          },
+        ],
+      },
+    }
+    const state = readyState()
+    state.players['player-one'].stage = { card: machineRoom, rested: false }
+    state.players['player-one'].supportArea = [
+      {
+        card: { ...support('purple-pay'), energyColor: 'purple' },
+        rested: false,
+      },
+    ]
+
+    expect(canActivateStage(state, 'player-one')).toBe(false)
+
+    const eligibleState: GameState = {
+      ...state,
+      cookiesPlayedFromTrashThisTurn: { 'player-one': true },
+    }
+    expect(canActivateStage(eligibleState, 'player-one')).toBe(true)
   })
 
   it('does not offer stage activation when a required target is unavailable', () => {

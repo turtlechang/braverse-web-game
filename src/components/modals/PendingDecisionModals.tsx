@@ -120,6 +120,8 @@ export interface DrawUpToResponseModalProps {
   sourceCardName: string
   sourceCard?: GameCard
   effectText?: string
+  /** 例如 P-059：明確指出觸發抽牌的技能與條件。 */
+  reasonText?: string
   max: number
   deckSize: number
   onConfirm: (drawCount: number) => void
@@ -135,6 +137,7 @@ export function DrawUpToResponseModal({
   sourceCardName,
   sourceCard,
   effectText,
+  reasonText,
   max,
   deckSize,
   onConfirm,
@@ -192,6 +195,11 @@ export function DrawUpToResponseModal({
             {effectText && (
               <p className="faint-effect-text draw-up-to-effect">
                 <CardEffectText text={effectText} />
+              </p>
+            )}
+            {reasonText && (
+              <p className="faint-effect-text draw-up-to-reason">
+                {reasonText}
               </p>
             )}
           </div>
@@ -652,18 +660,33 @@ export interface OptionalCostAttackModalProps {
   sourceCard?: GameCard
   effectText: string
   discardHandCost: number
+  supportToHandCost?: number
+  hpToTrashCost?: number
+  hpToTrashCandidates?: { card: GameCard; instanceId: string }[]
+  trashToDeckCost?: number
+  trashToDeckCandidates?: { card: GameCard; instanceId: string }[]
   energyCostTotal: number
   /** 代價的完整說明；省略時退回依張數自行組字（來源餅乾自付的能量會顯示不出來）。 */
   costText?: string
   playerHand: GameCard[]
   supportCandidates: { card: GameCard; instanceId: string }[]
+  supportToHandCandidates?: { card: GameCard; instanceId: string }[]
   targetCandidates: { card: GameCard; instanceId: string }[]
   needsTarget: boolean
   targetMin: number
   targetMax: number
   targetLabel: string
+  /** 需要完整描述來源區域／顏色時使用，例如 BS6-051 的綠色手牌目標。 */
+  targetInstruction?: string
   onSkip: () => void
-  onPay: (discardIds: string[], targetIds: string[], paymentIds: string[]) => void
+  onPay: (
+    discardIds: string[],
+    targetIds: string[],
+    paymentIds: string[],
+    supportToHandIds: string[],
+    hpToTrashIds: string[],
+    trashToDeckIds: string[],
+  ) => void
   embedded?: boolean
   /**
    * 這個「Then, 付代價」攻擊附加效果裡，有子效果的 condition 目前不成立時
@@ -679,15 +702,22 @@ export function OptionalCostAttackModal({
   sourceCardName,
   effectText,
   discardHandCost,
+  supportToHandCost = 0,
+  hpToTrashCost = 0,
+  hpToTrashCandidates = [],
+  trashToDeckCost = 0,
+  trashToDeckCandidates = [],
   energyCostTotal,
   costText,
   playerHand,
   supportCandidates,
+  supportToHandCandidates = [],
   targetCandidates,
   needsTarget,
   targetMin,
   targetMax,
   targetLabel,
+  targetInstruction,
   onSkip,
   onPay,
   embedded = false,
@@ -698,11 +728,19 @@ export function OptionalCostAttackModal({
   const [phaseIndex, setPhaseIndex] = useState(0)
   const [selectedDiscardIds, setSelectedDiscardIds] = useState<string[]>([])
   const [selectedPaymentIds, setSelectedPaymentIds] = useState<string[]>([])
+  const [selectedSupportToHandIds, setSelectedSupportToHandIds] = useState<string[]>([])
+  const [selectedHpToTrashIds, setSelectedHpToTrashIds] = useState<string[]>([])
+  const [selectedTrashToDeckIds, setSelectedTrashToDeckIds] = useState<string[]>([])
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
 
   const canPay =
     playerHand.length >= discardHandCost &&
     supportCandidates.length >= energyCostTotal &&
+    supportToHandCandidates.filter(
+      (entry) => !selectedPaymentIds.includes(entry.instanceId),
+    ).length >= supportToHandCost &&
+    hpToTrashCandidates.length >= hpToTrashCost &&
+    trashToDeckCandidates.length >= trashToDeckCost &&
     (!needsTarget || targetCandidates.length >= targetMin)
 
   const toggleDiscard = useCallback((instanceId: string) => {
@@ -725,6 +763,40 @@ export function OptionalCostAttackModal({
     )
   }, [energyCostTotal])
 
+  const toggleSupportToHand = useCallback(
+    (instanceId: string) => {
+      if (selectedPaymentIds.includes(instanceId)) return
+      setSelectedSupportToHandIds((current) =>
+        current.includes(instanceId)
+          ? current.filter((id) => id !== instanceId)
+          : current.length < supportToHandCost
+            ? [...current, instanceId]
+            : current,
+      )
+    },
+    [selectedPaymentIds, supportToHandCost],
+  )
+
+  const toggleHpToTrash = useCallback((instanceId: string) => {
+    setSelectedHpToTrashIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < hpToTrashCost
+          ? [...current, instanceId]
+          : current,
+    )
+  }, [hpToTrashCost])
+
+  const toggleTrashToDeck = useCallback((instanceId: string) => {
+    setSelectedTrashToDeckIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < trashToDeckCost
+          ? [...current, instanceId]
+          : current,
+    )
+  }, [trashToDeckCost])
+
   const toggleTarget = useCallback((instanceId: string) => {
     setSelectedTargetIds((current) =>
       current.includes(instanceId)
@@ -738,26 +810,59 @@ export function OptionalCostAttackModal({
   const readyToConfirm =
     selectedDiscardIds.length === discardHandCost &&
     selectedPaymentIds.length === energyCostTotal &&
+    selectedSupportToHandIds.length === supportToHandCost &&
+    selectedHpToTrashIds.length === hpToTrashCost &&
+    selectedTrashToDeckIds.length === trashToDeckCost &&
     (!needsTarget ||
       (selectedTargetIds.length >= targetMin &&
         selectedTargetIds.length <= targetMax))
 
   const handlePay = useCallback(() => {
     if (!readyToConfirm) return
-    onPay(selectedDiscardIds, selectedTargetIds, selectedPaymentIds)
-  }, [readyToConfirm, selectedDiscardIds, selectedTargetIds, selectedPaymentIds, onPay])
+    onPay(
+      selectedDiscardIds,
+      selectedTargetIds,
+      selectedPaymentIds,
+      selectedSupportToHandIds,
+      selectedHpToTrashIds,
+      selectedTrashToDeckIds,
+    )
+  }, [
+    readyToConfirm,
+    selectedDiscardIds,
+    selectedTargetIds,
+    selectedPaymentIds,
+    selectedSupportToHandIds,
+    selectedHpToTrashIds,
+    selectedTrashToDeckIds,
+    onPay,
+  ])
 
   // 比照其他效果提示框的能量／代價／目標分步流程(見 EffectPanel.tsx 的
   // GuidedPhaseSteps),一次只處理一件事,而非把代價與目標塞進同一畫面。
   const phaseIds: GuidedPhaseId[] = [
     ...(energyCostTotal > 0 ? (['energy'] as const) : []),
     ...(discardHandCost > 0 ? (['cost'] as const) : []),
+    ...(supportToHandCost > 0 ? (['support-cost'] as const) : []),
+    ...(hpToTrashCost > 0 ? (['hp-cost'] as const) : []),
+    ...(trashToDeckCost > 0 ? (['trash-cost'] as const) : []),
     ...(needsTarget ? (['target'] as const) : []),
   ]
   const activePhase = phaseIds[phaseIndex] ?? null
   const phases: GuidedPhase[] = phaseIds.map((id, index) => ({
     id,
-    label: id === 'energy' ? '能量' : id === 'cost' ? '代價' : '目標',
+    label:
+      id === 'energy'
+        ? '能量'
+        : id === 'cost'
+          ? '代價'
+          : id === 'support-cost'
+            ? '支援代價'
+            : id === 'hp-cost'
+              ? 'HP 代價'
+              : id === 'trash-cost'
+                ? '棄牌區代價'
+            : '目標',
     complete: index < phaseIndex,
   }))
   const activePhaseReady =
@@ -765,10 +870,16 @@ export function OptionalCostAttackModal({
       ? selectedPaymentIds.length === energyCostTotal
       : activePhase === 'cost'
         ? selectedDiscardIds.length === discardHandCost
-        : activePhase === 'target'
-          ? selectedTargetIds.length >= targetMin &&
-            selectedTargetIds.length <= targetMax
-          : true
+        : activePhase === 'support-cost'
+          ? selectedSupportToHandIds.length === supportToHandCost
+          : activePhase === 'hp-cost'
+            ? selectedHpToTrashIds.length === hpToTrashCost
+            : activePhase === 'trash-cost'
+              ? selectedTrashToDeckIds.length === trashToDeckCost
+          : activePhase === 'target'
+            ? selectedTargetIds.length >= targetMin &&
+              selectedTargetIds.length <= targetMax
+            : true
   const hasPreviousPhase = phaseIndex > 0
   const hasNextPhase = phaseIndex < phaseIds.length - 1
 
@@ -784,6 +895,9 @@ export function OptionalCostAttackModal({
     }
     setSelectedDiscardIds([])
     setSelectedPaymentIds([])
+    setSelectedSupportToHandIds([])
+    setSelectedHpToTrashIds([])
+    setSelectedTrashToDeckIds([])
     setSelectedTargetIds([])
     setPhaseIndex(0)
     setStep('decision')
@@ -818,6 +932,13 @@ export function OptionalCostAttackModal({
   const fallbackCostText = [
     energyCostTotal > 0 ? `支付 ${energyCostTotal} 張能量支援卡` : null,
     discardHandCost > 0 ? `棄置 ${discardHandCost} 張手牌` : null,
+    supportToHandCost > 0
+      ? `將 ${supportToHandCost} 張支援區卡返回手牌`
+      : null,
+    hpToTrashCost > 0 ? `選擇 ${hpToTrashCost} 張餅乾支付 HP 代價` : null,
+    trashToDeckCost > 0
+      ? `將 ${trashToDeckCost} 張棄牌區卡洗回牌庫`
+      : null,
   ]
     .filter(Boolean)
     .join('、')
@@ -920,11 +1041,103 @@ export function OptionalCostAttackModal({
               </div>
             )}
 
+            {activePhase === 'support-cost' && (
+              <div className="optional-cost-col">
+                <span className="optional-cost-col-label">支援代價</span>
+                <strong>
+                  將 {supportToHandCost} 張支援區卡返回手牌（已選{' '}
+                  {selectedSupportToHandIds.length}）
+                </strong>
+                <div className="modal-card-options">
+                  {supportToHandCandidates.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedSupportToHandIds.includes(entry.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleSupportToHand(entry.instanceId)}
+                    >
+                      <CardFace
+                        card={entry.card}
+                        selected={selectedSupportToHandIds.includes(entry.instanceId)}
+                      />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activePhase === 'hp-cost' && (
+              <div className="optional-cost-col">
+                <span className="optional-cost-col-label">HP 代價</span>
+                <strong>
+                  選擇 {hpToTrashCost} 張餅乾支付 HP 代價（已選{' '}
+                  {selectedHpToTrashIds.length}）
+                </strong>
+                <div className="modal-card-options">
+                  {hpToTrashCandidates.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedHpToTrashIds.includes(entry.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleHpToTrash(entry.instanceId)}
+                    >
+                      <CardFace
+                        card={entry.card}
+                        selected={selectedHpToTrashIds.includes(entry.instanceId)}
+                      />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activePhase === 'trash-cost' && (
+              <div className="optional-cost-col">
+                <span className="optional-cost-col-label">棄牌區代價</span>
+                <strong>
+                  選擇 {trashToDeckCost} 張棄牌區卡牌洗回牌庫（已選{' '}
+                  {selectedTrashToDeckIds.length}）
+                </strong>
+                <div className="modal-card-options">
+                  {trashToDeckCandidates.map((entry) => (
+                    <button
+                      type="button"
+                      key={entry.instanceId}
+                      className={
+                        selectedTrashToDeckIds.includes(entry.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      onClick={() => toggleTrashToDeck(entry.instanceId)}
+                    >
+                      <CardFace
+                        card={entry.card}
+                        selected={selectedTrashToDeckIds.includes(entry.instanceId)}
+                      />
+                      <span>{entry.card.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activePhase === 'target' && (
               <div className="optional-cost-col">
                 <span className="optional-cost-col-label">目標</span>
                 <strong>
-                  {targetMin === 0
+                  {targetInstruction
+                    ? `${targetInstruction}（已選 ${selectedTargetIds.length}）`
+                    : targetMin === 0
                     ? `最多選擇 ${targetMax} 個${targetLabel}作為目標（已選 ${selectedTargetIds.length}）`
                     : `選擇 ${targetMax} 個${targetLabel}作為目標（已選 ${selectedTargetIds.length}）`}
                 </strong>

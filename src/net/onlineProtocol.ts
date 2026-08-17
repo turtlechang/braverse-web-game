@@ -398,7 +398,14 @@ const commandShapes = {
     requiredStringArrays: ['pickedCardIds', 'restOrder'],
   },
   'resolve-optional-cost-attack': {
-    optionalStringArrays: ['discardCardIds', 'targetIds', 'paymentIds'],
+    optionalStringArrays: [
+      'discardCardIds',
+      'targetIds',
+      'paymentIds',
+      'supportToHandIds',
+      'hpToTrashIds',
+      'trashToDeckIds',
+    ],
     enumFields: { action: ['skip', 'pay'] },
   },
   'resolve-draw-up-to': { requiredNumbers: ['drawCount'] },

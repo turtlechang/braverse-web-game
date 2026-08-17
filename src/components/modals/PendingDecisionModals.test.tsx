@@ -142,6 +142,40 @@ describe('DrawUpToResponseModal', () => {
     container.remove()
   })
 
+  it('shows the explicit skill condition when a card caused the draw', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <DrawUpToResponseModal
+          sourceCardName="Chamomile Cookie"
+          sourceCard={{
+            id: 'P-059',
+            instanceId: 'p-059-test',
+            name: 'Chamomile Cookie',
+            type: 'cookie',
+            level: 1,
+            hp: 2,
+            attack: 1,
+            attackCost: 1,
+          }}
+          max={1}
+          deckSize={20}
+          reasonText="由「P-059 Chamomile Cookie」技能效果觸發：支援區有 2 張啟動卡（需要至少 2 張）"
+          onConfirm={() => undefined}
+        />,
+      ),
+    )
+
+    expect(container.textContent).toContain('P-059 Chamomile Cookie')
+    expect(container.textContent).toContain('需要至少 2 張')
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
   // BS3-070（Puppet Theater of Chaos）「draw up to 2 cards ... and discard
   // 1 card」過去分成兩個完全獨立的彈窗（抽牌→棄牌），使用者反映感覺像是
   // 「跳出兩個視窗」。這裡驗證 followedByDiscard 會在抽牌彈窗上加一個
@@ -505,6 +539,9 @@ describe('OptionalCostAttackModal', () => {
       ['test-hand-1', 'test-hand-2'],
       ['cookie-2'],
       [],
+      [],
+      [],
+      [],
     )
     expect(onSkip).not.toHaveBeenCalled()
 
@@ -559,7 +596,48 @@ describe('OptionalCostAttackModal', () => {
       confirmButton!.click()
     })
 
-    expect(onPay).toHaveBeenCalledWith([], [], [])
+    expect(onPay).toHaveBeenCalledWith([], [], [], [], [], [])
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+
+  it('shows the full hand/color target instruction for BS6-051', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <OptionalCostAttackModal
+          sourceCardName="Timekeeper Cookie"
+          effectText="Place up to 2 green cards from your hand into your support area as active."
+          discardHandCost={0}
+          energyCostTotal={0}
+          supportCandidates={[]}
+          playerHand={[]}
+          targetCandidates={[
+            { card: createHandCard(1), instanceId: 'green-hand-1' },
+            { card: createHandCard(2), instanceId: 'green-hand-2' },
+          ]}
+          needsTarget={true}
+          targetMin={0}
+          targetMax={2}
+          targetLabel="自己的手牌中的綠色卡牌"
+          targetInstruction="從自己的手牌選擇最多 2 張綠色卡牌作為目標"
+          onSkip={() => undefined}
+          onPay={() => undefined}
+        />,
+      ),
+    )
+
+    await act(() => {
+      findButtonByText(container, '支付')!.click()
+    })
+
+    expect(container.textContent).toContain(
+      '從自己的手牌選擇最多 2 張綠色卡牌作為目標（已選 0）',
+    )
 
     await act(() => root.unmount())
     container.remove()
@@ -638,6 +716,9 @@ describe('OptionalCostAttackModal', () => {
     expect(onPay).toHaveBeenCalledWith(
       ['test-hand-1'],
       ['opp-support-1', 'opp-support-2', 'opp-support-3'],
+      [],
+      [],
+      [],
       [],
     )
 

@@ -19,6 +19,8 @@ import type {
   CookieInBattle,
   EffectContext,
   EffectDuration,
+  EffectDamageContinuation,
+  EffectDamageTarget,
   GameState,
   PendingBattle,
   PlayerId,
@@ -177,6 +179,7 @@ const resolveDamageOutcome = (
     if (faintSkill && faintSkill.faint) {
       const faintCost = getFaintTriggeredCost(faintSkill)
       let faintCostAttached = false
+      let faintOptionalAttached = false
       for (const effect of faintSkill.effects) {
         const context = {
           sourcePlayerId: damagedPlayerId,
@@ -207,6 +210,9 @@ const resolveDamageOutcome = (
                   sourcePlayerId: damagedPlayerId,
                   sourceInstanceId: cookie.instanceId,
                   sourceCardName: cookie.name,
+                  ...(faintSkill.faintOptional && !faintOptionalAttached
+                    ? { optional: true }
+                    : {}),
                   effect,
                   context,
                   ...(faintCost && !faintCostAttached
@@ -216,6 +222,7 @@ const resolveDamageOutcome = (
               ],
             }
             faintCostAttached = true
+            faintOptionalAttached = true
           }
         } else {
           const selectionLimits = getEffectSelectionLimits(effect)
@@ -238,6 +245,9 @@ const resolveDamageOutcome = (
                 sourcePlayerId: damagedPlayerId,
                 sourceInstanceId: cookie.instanceId,
                 sourceCardName: cookie.name,
+                ...(faintSkill.faintOptional && !faintOptionalAttached
+                  ? { optional: true }
+                  : {}),
                 effect,
                 context,
                 ...(faintCost && !faintCostAttached
@@ -247,6 +257,7 @@ const resolveDamageOutcome = (
             ],
           }
           faintCostAttached = true
+          faintOptionalAttached = true
         }
       }
     }
@@ -453,7 +464,9 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName,
+        sourceCardId: sourceCard?.id,
         effectText: effectText ?? itemText,
+        condition: effect.condition,
       },
     }
   }
@@ -489,6 +502,7 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: context.sourceCardName ?? sourceCard?.name ?? 'Unknown',
+        sourceCardId: sourceCard?.id,
         effectText:
           sourceCard && 'item' in sourceCard && sourceCard.item
             ? sourceCard.item.text
@@ -527,6 +541,7 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: context.sourceCardName ?? sourceCard?.name ?? 'Unknown',
+        sourceCardId: sourceCard?.id,
         effectText:
           sourceCard && 'item' in sourceCard && sourceCard.item
             ? sourceCard.item.text
@@ -569,7 +584,9 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName,
+        sourceCardId: sourceCard?.id,
         effectText: effectText ?? itemText,
+        condition: effect.condition,
         afterEffects: [
           {
             kind: 'discard-hand',
@@ -646,10 +663,31 @@ export const executeCardEffect = (
         effectDamageSequence: {
           remainingTargetInstanceIds,
           damage: effect.amount,
+          remainingTargets: remainingTargetInstanceIds.map((instanceId) => ({
+            playerId: targetPlayerId,
+            instanceId,
+            damage: effect.amount,
+          })),
+          continuation: state.pendingAbilityEffect
+            ? 'ability-effect'
+            : 'finish-battle',
+          resumeBattleAfterAbility: Boolean(state.pendingBattle),
         },
       }
       return { ...state, pendingBattle }
     }
+
+    const effectDamageTargets: EffectDamageTarget[] = targets.map((target) => ({
+      playerId: targetPlayerId,
+      instanceId: target.card.instanceId,
+      damage: effect.amount,
+    }))
+    const pendingEffectDamage = beginEffectDamageSequence(
+      state,
+      context,
+      effectDamageTargets,
+    )
+    if (pendingEffectDamage) return pendingEffectDamage
 
     const damagedPlayer = targets.reduce(
       (player, target) =>
@@ -1545,6 +1583,19 @@ export const executeCardEffect = (
     if (isEffectDamagePrevented(nextState, currentTarget, targetPlayerId)) {
       return nextState
     }
+    const pendingEffectDamage = beginEffectDamageSequence(
+      nextState,
+      context,
+      [
+        {
+          playerId: targetPlayerId,
+          instanceId: currentTarget.card.instanceId,
+          damage: amount,
+        },
+      ],
+    )
+    if (pendingEffectDamage) return pendingEffectDamage
+
     const previousBattleAreaCount = nextState.players[targetPlayerId].battleArea.length
     const damagedPlayer = damagePlayerCookie(
       nextState.players[targetPlayerId],
@@ -3198,6 +3249,7 @@ export const executeCardEffect = (
         sourcePlayerId: context.sourcePlayerId,
         sourceInstanceId: context.sourceInstanceId,
         sourceCardName: context.sourceCardName ?? 'Unknown',
+        condition: effect.condition,
       },
     }
   }
@@ -3370,6 +3422,20 @@ export const executeCardEffect = (
     const protectedTargets = targets.filter(
       (target) => !isEffectDamagePrevented(state, target, targetPlayerId),
     )
+    const effectDamageTargets: EffectDamageTarget[] = protectedTargets.map(
+      (target) => ({
+        playerId: targetPlayerId,
+        instanceId: target.card.instanceId,
+        damage: amount,
+      }),
+    )
+    const pendingEffectDamage = beginEffectDamageSequence(
+      state,
+      context,
+      effectDamageTargets,
+    )
+    if (pendingEffectDamage) return pendingEffectDamage
+
     const damagedPlayer = protectedTargets.reduce(
       (player, target) =>
         damagePlayerCookie(player, target.card.instanceId, amount),
@@ -3423,6 +3489,20 @@ export const executeCardEffect = (
     const appliedList = appliedTargets.flatMap((target, index) =>
       target ? [{ target, amount: amounts[index] }] : [],
     )
+    const effectDamageTargets: EffectDamageTarget[] = appliedList.map(
+      ({ target, amount }) => ({
+        playerId: targetPlayerId,
+        instanceId: target.card.instanceId,
+        damage: amount,
+      }),
+    )
+    const pendingEffectDamage = beginEffectDamageSequence(
+      state,
+      context,
+      effectDamageTargets,
+    )
+    if (pendingEffectDamage) return pendingEffectDamage
+
     for (const { target, amount } of appliedList) {
       damagedPlayer = damagePlayerCookie(
         damagedPlayer,
@@ -3599,6 +3679,107 @@ export const executeCardEffect = (
       ...state.damageReceivedModifiers,
       ...modifiers,
     ],
+  }
+}
+
+/**
+ * 效果傷害必須沿用戰鬥的逐點傷害流程，才能在每一張 HP 卡翻開時觸發
+ * FLIP。沒有可翻開的 FLIP 卡時仍可沿用原本的同步路徑，避免讓不需要玩家
+ * 決策的效果平白多出一個戰鬥視窗。
+ */
+const hasEffectDamageFlip = (
+  state: GameState,
+  targets: readonly EffectDamageTarget[],
+): boolean =>
+  targets.some(({ playerId, instanceId, damage }) => {
+    if (damage <= 0) return false
+    const cookie = state.players[playerId].battleArea.find(
+      (candidate) => candidate.card.instanceId === instanceId,
+    )
+    if (!cookie) return false
+    const firstRemovedIndex = Math.max(0, cookie.hpCards.length - damage)
+    return cookie.hpCards
+      .slice(firstRemovedIndex)
+      .some((card) => Boolean(card.flip?.effects.length))
+  })
+
+const getEffectDamageContinuation = (
+  state: GameState,
+): EffectDamageContinuation => {
+  if (state.pendingAbilityEffect) return 'ability-effect'
+  if (state.pendingBattle?.stage === 'attack-effect') {
+    return 'attack-effect'
+  }
+  if (state.pendingBattle?.stage === 'trap') return 'after-trap'
+  return 'finish-battle'
+}
+
+/**
+ * 建立效果傷害的 PendingBattle。這個 helper 只負責把傷害交給既有的
+ * resolveNextDamage／resolveFlip state machine；非傷害 HP 移動不會經過這裡。
+ */
+export const beginEffectDamageSequence = (
+  state: GameState,
+  context: EffectContext,
+  targets: readonly EffectDamageTarget[],
+): GameState | null => {
+  const normalizedTargets = targets.filter((target) => target.damage > 0)
+  if (
+    normalizedTargets.length === 0 ||
+    !hasEffectDamageFlip(state, normalizedTargets)
+  ) {
+    return null
+  }
+
+  const [first, ...remainingTargets] = normalizedTargets
+  const existingBattle = state.pendingBattle
+  const continuation = getEffectDamageContinuation(state)
+  const pendingBattle: PendingBattle = existingBattle
+    ? {
+        ...existingBattle,
+        targetInstanceId: first.instanceId,
+        declaredDamage: first.damage,
+        remainingDamage: first.damage,
+        stage: 'damage',
+        revealedHpCard: null,
+        damagePlayerId: first.playerId,
+        damageTargetInstanceId: first.instanceId,
+        damagedInstanceIds: [],
+      }
+    : {
+        attackerPlayerId: context.sourcePlayerId,
+        defenderPlayerId: first.playerId,
+        attackerInstanceId: context.sourceInstanceId,
+        targetInstanceId: first.instanceId,
+        declaredDamage: first.damage,
+        remainingDamage: first.damage,
+        stage: 'damage',
+        trapUsed: true,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        faintedColors: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        damagePlayerId: first.playerId,
+        damageTargetInstanceId: first.instanceId,
+        damagedInstanceIds: [],
+      }
+
+  return {
+    ...state,
+    pendingBattle: {
+      ...pendingBattle,
+      effectDamageSequence: {
+        remainingTargetInstanceIds: remainingTargets.map(
+          (target) => target.instanceId,
+        ),
+        damage: first.damage,
+        remainingTargets: remainingTargets.map((target) => ({ ...target })),
+        continuation,
+        resumeBattleAfterAbility:
+          continuation === 'ability-effect' && Boolean(existingBattle),
+      },
+    },
   }
 }
 

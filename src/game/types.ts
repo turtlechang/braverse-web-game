@@ -39,6 +39,11 @@ export interface CardSkill {
   effects: CardEffect[]
   /** Energy supplied by the Cookie itself when a triggered skill is used. */
   sourceEnergy?: EnergyCost
+  /**
+   * 「When this Cookie faints」整組技能可由持有者選擇是否發動。
+   * 與單一 CardEffect 的 optional 不同，略過時會跳過同一觸發佇列的所有效果。
+   */
+  faintOptional?: boolean
   /** Alternate cost used by an official Special Play instruction. */
   specialPlayCost?: AbilityCost
   faint?: boolean
@@ -1564,6 +1569,8 @@ export type AbilityCost = EnergyCost & {
   discardHandType?: GameCard['type']
   supportToTrash?: number
   supportToHand?: number
+  /** Optional restriction for support cards returned as a cost (for example, Cookie only). */
+  supportToHandType?: GameCard['type']
   hpToTrash?: {
     amount?: number
     untilRemainingHp?: number
@@ -1605,7 +1612,10 @@ export type AbilityCost = EnergyCost & {
   }
   selfToBreakArea?: boolean
   selfToTrash?: boolean
-  /** 來源自己離開戰鬥區、放到自己牌庫最下方作為代價（BS4-077）。 */
+  /**
+   * 來源自己離開戰鬥區、放到自己牌庫最下方作為發動代價（BS4-077）。
+   * 這不是卡牌效果，因此不受 BS6-010 的「效果移動」封鎖。
+   */
   selfToDeckBottom?: boolean
   /**
    * 從棄牌區選指定條件的卡牌洗回牌庫作為代價（BS3-098）。
@@ -1615,6 +1625,8 @@ export type AbilityCost = EnergyCost & {
     count: number
     energyColor?: EnergyColor
     excludeFlip?: boolean
+    /** 限定只能選 Cookie（例如 BS5-094 的紫色 Cookie 代價）。 */
+    cookieOnly?: boolean
     keyword?: CardKeyword
     nonCookieOnly?: boolean
   }
@@ -1809,6 +1821,8 @@ export interface PendingFaintEffect {
   sourcePlayerId: PlayerId
   sourceInstanceId: string
   sourceCardName?: string
+  /** 略過時跳過此來源本次昏厥觸發佇列的所有效果。 */
+  optional?: boolean
   effect: CardEffect
   context: EffectContext
   /**
@@ -1966,7 +1980,11 @@ export interface GameState {
     sourcePlayerId: PlayerId
     sourceInstanceId: string
     sourceCardName: string
+    /** 來源卡號，讓 UI／對戰紀錄能明確指出是哪一張卡的效果。 */
+    sourceCardId?: string
     effectText?: string
+    /** 觸發這次抽牌的條件（例如 P-059 的啟動支援卡數量）。 */
+    condition?: EffectCondition
     afterEffects?: CardEffect[]
     afterEffectContext?: EffectContext
     afterEffectsRequireDraw?: boolean
@@ -2123,7 +2141,25 @@ export interface GameState {
  * 待處理決策結算完之後，欠戰鬥流程的動作。
  * 見 `GameState.pendingRevealTopDeck.battleContinuation`。
  */
-export type BattleContinuation = 'finish' | 'after-trap'
+export type BattleContinuation = 'finish' | 'after-trap' | 'attack-effect'
+
+/**
+ * 效果傷害逐點結算完成後，原本被暫停的流程要如何接續。
+ *
+ * `ability-effect` 代表技能／物品／場景／陷阱佇列中的目前效果；
+ * `attack-effect` 代表一般攻擊後效果；其餘兩項則是保留原戰鬥流程。
+ */
+export type EffectDamageContinuation =
+  | 'ability-effect'
+  | 'attack-effect'
+  | 'finish-battle'
+  | 'after-trap'
+
+export interface EffectDamageTarget {
+  playerId: PlayerId
+  instanceId: string
+  damage: number
+}
 
 export type PendingBattleStage =
   | 'trap'
@@ -2178,6 +2214,12 @@ export interface PendingBattle {
     remainingTargetInstanceIds: string[]
     damage: number
     afterCurrentDamageResolved?: boolean
+    /** 目標可能跨玩家，或 split-damage 需要不同傷害量時使用。 */
+    remainingTargets?: EffectDamageTarget[]
+    /** 結算完這段效果傷害後，接回原本被暫停的流程。 */
+    continuation?: EffectDamageContinuation
+    /** 是否仍需保留建立序列前的外層 PendingBattle。 */
+    resumeBattleAfterAbility?: boolean
   }
 }
 

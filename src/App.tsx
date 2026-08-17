@@ -1,7 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import './styles/base.css'
 import './App.css'
-import './styles/tablet-layout.css'
 import {
   canActivateStage,
   canPlayItem,
@@ -729,7 +728,14 @@ function App() {
                     '已略過攻擊後續效果。',
                   )
                 },
-                onPay: (discardIds, targetIds, paymentIds) => {
+                onPay: (
+                  discardIds,
+                  targetIds,
+                  paymentIds,
+                  supportToHandIds,
+                  hpToTrashIds,
+                  trashToDeckIds,
+                ) => {
                   match.dispatch(
                     {
                       kind: 'resolve-optional-cost-attack',
@@ -738,6 +744,9 @@ function App() {
                       discardCardIds: discardIds,
                       targetIds,
                       paymentIds,
+                      supportToHandIds,
+                      hpToTrashIds,
+                      trashToDeckIds,
                     },
                     '已支付攻擊後續效果費用。',
                   )

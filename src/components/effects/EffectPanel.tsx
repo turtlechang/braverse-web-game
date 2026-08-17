@@ -204,6 +204,8 @@ function EffectPanelContent({
   const totalEnergyCost = skill ? getSkillCostTotal(skill) : 0
   const supportAreaCost =
     (skill?.cost.supportToTrash ?? 0) + (skill?.cost.supportToHand ?? 0)
+  const supportCostTypeLabel =
+    skill?.cost.supportToHandType === 'cookie' ? '餅乾' : '卡牌'
   const isRestSupportAndDamageEffect =
     currentEffect?.kind === 'rest-support-and-damage'
   const selectedRestSupportIds = new Set(
@@ -749,7 +751,9 @@ function EffectPanelContent({
                 )}
                 {costSupportCandidates.length > 0 && (
                   <>
-                    <small>選擇要作為代價移動的支援區卡牌</small>
+                    <small>
+                      選擇要作為代價移動的支援區{supportCostTypeLabel}
+                    </small>
                     <CandidateButtons
                       cards={costSupportCandidates}
                       selectedIds={selectedCostSupportIds}

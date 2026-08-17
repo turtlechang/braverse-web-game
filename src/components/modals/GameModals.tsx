@@ -1359,6 +1359,8 @@ export interface FaintEffectResponseModalProps {
   paymentCostTotal?: number
   paymentValid?: boolean
   onSelectPayment?: (instanceId: string) => void
+  /** 整組昏厥技能可選擇是否發動（例如 BS3-061）。 */
+  optional?: boolean
   costHandAmount?: number
   costHandCandidates?: GameCard[]
   selectedCostHandIds?: string[]
@@ -1389,6 +1391,7 @@ export function FaintEffectResponseModal({
   paymentCostTotal = 0,
   paymentValid = false,
   onSelectPayment,
+  optional = false,
   costHandAmount = 0,
   costHandCandidates = [],
   selectedCostHandIds = [],
@@ -1476,7 +1479,7 @@ export function FaintEffectResponseModal({
           縮小
         </button>
         <span>昏厥效果</span>
-        <h2>{card.name} 發動昏厥效果</h2>
+        <h2>{card.name} {optional ? '是否發動昏厥效果？' : '發動昏厥效果'}</h2>
         <div className="faint-effect-card-detail">
           <CardFace card={card} />
           <div>
@@ -1602,7 +1605,11 @@ export function FaintEffectResponseModal({
             })}
           </div>
         )}
-        <p className="faint-target-hint">{displayTargetHint}</p>
+        <p className="faint-target-hint">
+          {optional
+            ? '可以選擇發動或不發動；若發動，請先完成顯示的代價。'
+            : displayTargetHint}
+        </p>
         {selectedTargetName && (
           <div className="battle-response-summary">
             <strong>效果目標</strong>

@@ -1428,9 +1428,36 @@ describe('usePendingEffect attack-effect trigger', () => {
     let gameState = createCardCheckDemoState('BS5-098')
     const attackerInstanceId =
       gameState.players['player-one'].battleArea[0].card.instanceId
+    const followUpEffect = {
+      kind: 'damage' as const,
+      amount: 1,
+      target: { side: 'opponent' as const, min: 0, max: 1 },
+    }
+    if (!gameState.pendingBattle) throw new Error('Missing pending battle')
+    gameState = {
+      ...gameState,
+      pendingBattle: {
+        ...gameState.pendingBattle,
+        attackEffects: [...gameState.pendingBattle.attackEffects, followUpEffect],
+      },
+    }
     gameState = resolveAttackEffect(
       gameState,
       'player-one',
+      [attackerInstanceId],
+    )
+
+    expect(gameState.pendingOptionalCostAttack).toMatchObject({
+      cost: { hpToTrash: { amount: 1, sourceOnly: true } },
+    })
+    gameState = resolveOptionalCostAttack(
+      gameState,
+      'player-one',
+      'pay',
+      [],
+      ['opp-lv1'],
+      [],
+      [],
       [attackerInstanceId],
     )
 

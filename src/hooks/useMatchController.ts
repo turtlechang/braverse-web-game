@@ -44,7 +44,9 @@ import {
   createBreakToTrashDemoState,
   createBs2015CostDepartureDemoState,
   createCardCheckDemoState,
+  createBs4077TimekeeperCostDemoState,
   createBs6079OnPlayDemoState,
+  createBs6008TrapDemoState,
   createPConditionDemoState,
   createSoulJamEquippedDemoState,
   createSoulJam115ProtectionDemoState,
@@ -193,6 +195,12 @@ export function useMatchController(params: {
     }
     if (testStateConfig?.kind === 'bs6-079-on-play') {
       return createBs6079OnPlayDemoState(testStateConfig.blocked)
+    }
+    if (testStateConfig?.kind === 'bs6-008-trap') {
+      return createBs6008TrapDemoState(testStateConfig.remainingHp)
+    }
+    if (testStateConfig?.kind === 'bs4-077-timekeeper-cost') {
+      return createBs4077TimekeeperCostDemoState()
     }
     if (testStateConfig?.kind === 'bs5-060-end-phase') {
       return createBs5CroissantEndPhaseDemoState(testStateConfig.supportState)
@@ -633,6 +641,7 @@ export function useMatchController(params: {
   const faintEnergyCostTotal = getEnergyCostTotal(faintEnergyCost)
   const faintCostHandAmount = pendingFaint?.cost?.discardHand ?? 0
   const faintCostSupportAmount = pendingFaint?.cost?.supportToTrash ?? 0
+  const faintOptional = pendingFaint?.optional === true
   const faintCostHandCandidates =
     pendingFaint && pendingFaint.sourcePlayerId === viewerPlayerId
       ? getDiscardHandCostCandidates(
@@ -1387,6 +1396,7 @@ export function useMatchController(params: {
     faintCostSupportAmount,
     faintCostSupportCandidates,
     toggleFaintCostSupport,
+    faintOptional,
     pendingFaint,
     faintSourceCard,
     faintCandidates,

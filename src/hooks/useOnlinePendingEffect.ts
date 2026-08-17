@@ -171,6 +171,7 @@ export function useOnlinePendingEffect(params: {
       !game.pendingReplacement &&
       !game.pendingRefresh &&
       !game.pendingOnPlay &&
+      !game.pendingBattle?.effectDamageSequence &&
       !(pendingAbility.trigger === 'attacker-faint' && game.pendingBattle),
   )
 

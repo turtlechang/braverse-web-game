@@ -100,6 +100,8 @@ const SERIES_OPTIONS = [
   { value: 'PROMOTION CARD', label: '特典卡' },
 ]
 
+const ATTACK_POWER_OPTIONS = [1, 2, 3, 4, 5]
+
 export function DeckEditorModal({
   initialDeck,
   onSave,
@@ -341,6 +343,20 @@ export function DeckEditorModal({
                 <option value="6">HP 6</option>
               </select>
               <select
+                value={editor.filterAttackPower ?? ''}
+                onChange={(e) =>
+                  editor.setFilterAttackPower(e.target.value ? Number(e.target.value) : null)
+                }
+                aria-label="卡牌攻擊力"
+              >
+                <option value="">全部攻擊力</option>
+                {ATTACK_POWER_OPTIONS.map((attackPower) => (
+                  <option value={attackPower} key={attackPower}>
+                    攻擊力 {attackPower}
+                  </option>
+                ))}
+              </select>
+              <select
                 value={editor.filterEffect ?? ''}
                 onChange={(e) =>
                   editor.setFilterEffect(e.target.value || null)
@@ -384,6 +400,7 @@ export function DeckEditorModal({
                     <button
                       type="button"
                       className="deck-editor-pool-card-btn"
+                      data-card-number={entry.cardNumber}
                       title={`${baseCardNumber} ${entry.name}（點擊加入 1 張）`}
                       disabled={atMax || restriction === 'banned'}
                       onClick={() => editor.addCard(entry.cardNumber)}
