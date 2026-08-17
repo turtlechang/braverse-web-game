@@ -42,6 +42,17 @@ const readTrace = async (page: Page): Promise<CardContractActionTraceEntry[]> =>
     return trace ?? []
   })
 
+const legalNoOpReasons: Record<string, string> = {
+  'BS2-042': '官方卡面沒有技能或 FLIP 效果，部署後沒有可驗證的效果指令。',
+}
+
+const faintTraceCards = new Set(['BS2-040', 'BS2-043'])
+
+// Trap card-check routes begin in the real attack-response modal.  Selecting
+// "不發動" (the old generic fallback) meant BS2-049/050 never reached their
+// payment/target decisions and therefore produced no public effect trace.
+const trapTraceCards = new Set(['BS2-049', 'BS2-050'])
+
 const drainGenericEffectPanel = async (page: Page): Promise<boolean> => {
   const panel = page.locator('.effect-panel')
   if ((await panel.count()) === 0) return false
@@ -90,6 +101,86 @@ const drainGenericEffectPanel = async (page: Page): Promise<boolean> => {
   return true
 }
 
+const drainTrapResponseModal = async (page: Page): Promise<boolean> => {
+  const modal = page.locator('.trap-response-modal')
+  if ((await modal.count()) === 0) return false
+
+  for (let round = 0; round < 12; round += 1) {
+    if ((await modal.count()) === 0) return true
+
+    const chooser = modal.locator('h2').filter({ hasText: '是否發動陷阱' })
+    if ((await chooser.count()) > 0) {
+      const option = modal.locator('.modal-card-options > button').first()
+      if ((await option.count()) === 0) break
+      await option.click({ force: true })
+      await page.waitForTimeout(120)
+      continue
+    }
+
+    const primary = modal
+      .getByRole('button', { name: /確認發動|下一步|確認/ })
+      .last()
+    if (
+      (await primary.count()) > 0 &&
+      !(await primary.isDisabled().catch(() => true))
+    ) {
+      await primary.click({ force: true })
+      await page.waitForTimeout(180)
+      continue
+    }
+
+    // Guided trap phases render only the active payment/cost/target section.
+    // Select one legal candidate per pass, then let the modal advance when its
+    // real readiness predicate becomes true.  This handles both one-card and
+    // multi-card costs without duplicating payment rules in the test driver.
+    const activeSection = modal.locator('.trap-guided-section:visible').first()
+    const candidate = activeSection
+      .locator('button:not(.is-selected):not([disabled])')
+      .first()
+    if ((await candidate.count()) > 0) {
+      await candidate.click({ force: true })
+      await page.waitForTimeout(70)
+      continue
+    }
+
+    break
+  }
+
+  return true
+}
+
+const drainInspectDeckModal = async (page: Page): Promise<boolean> => {
+  const modal = page.locator('.inspect-deck-modal')
+  if ((await modal.count()) === 0) return false
+
+  // BS2-040 requires one card from the revealed top three. Pick the first
+  // legal card and then confirm the remaining order through the same modal
+  // rendered for a human player.
+  const pickable = modal.locator('.inspect-deck-grid button:not([disabled])')
+  if ((await pickable.count()) > 0) {
+    await pickable.first().click({ force: true })
+    await page.waitForTimeout(80)
+  }
+  const confirm = modal.getByRole('button', { name: '確認並放回' })
+  if ((await confirm.count()) > 0 && !(await confirm.first().isDisabled().catch(() => true))) {
+    await confirm.first().click({ force: true })
+    await page.waitForTimeout(180)
+  }
+  return true
+}
+
+const waitForTrace = async (
+  page: Page,
+  minimumEntries: number,
+): Promise<CardContractActionTraceEntry[]> => {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const trace = await readTrace(page)
+    if (trace.length >= minimumEntries) return trace
+    await page.waitForTimeout(100)
+  }
+  return readTrace(page)
+}
+
 const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
   const routeCardId = encodeURIComponent(cardId)
   const traceCardId = cardId.split('@')[0]
@@ -106,9 +197,32 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
     `${cardId} card-check route rendered an error boundary`,
   )
 
+  const noOpReason = legalNoOpReasons[traceCardId]
+  if (noOpReason) {
+    const trace = await readTrace(page)
+    assert.equal(trace.length, 0, `${cardId} legal no-op should not invent an effect trace`)
+    return {
+      cardId,
+      traceCardId,
+      passed: true,
+      evidence: 'legal-no-op' as const,
+      reason: noOpReason,
+      traceEntries: 0,
+      commandKinds: [],
+      steps: [],
+    }
+  }
+
   // Drain any response/faint/FLIP modal first; these routes are intentionally
   // positioned at different phases depending on the card type.
   for (let round = 0; round < 3; round += 1) {
+    if (trapTraceCards.has(traceCardId)) {
+      const handledTrap = await drainTrapResponseModal(page)
+      if (handledTrap) {
+        await page.waitForTimeout(120)
+        continue
+      }
+    }
     const response = page.locator('.battle-response-modal').filter({ hasText: /是否發動|是否使用|回應/ })
     const skip = response.getByRole('button', { name: /略過|不發動/ })
     if ((await skip.count()) > 0) {
@@ -117,11 +231,45 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
       continue
     }
     const faint = page.locator('.faint-response-modal')
-    const faintSkip = faint.getByRole('button', { name: /略過|不發動|確認/ })
-    if ((await faintSkip.count()) > 0) {
-      await faintSkip.first().click({ force: true }).catch(() => {})
-      await page.waitForTimeout(120)
-      continue
+    if ((await faint.count()) > 0) {
+      if (traceCardId === 'BS2-040') {
+        const confirm = faint.getByRole('button', { name: '確認結算' })
+        if ((await confirm.count()) > 0) {
+          await confirm.first().click({ force: true })
+          await page.waitForTimeout(180)
+          continue
+        }
+      }
+      if (traceCardId === 'BS2-043') {
+        const costCards = faint.locator('.faint-cost-hand-candidates > button')
+        for (let index = 0; index < Math.min(2, await costCards.count()); index += 1) {
+          await costCards.nth(index).click({ force: true })
+          await page.waitForTimeout(60)
+        }
+        const targetCards = faint.locator('.faint-target-candidates > button')
+        for (let index = 0; index < Math.min(2, await targetCards.count()); index += 1) {
+          await targetCards.nth(index).click({ force: true })
+          await page.waitForTimeout(60)
+        }
+        const confirm = faint.getByRole('button', { name: /確認 \(2\)/ })
+        if ((await confirm.count()) > 0 && !(await confirm.first().isDisabled().catch(() => true))) {
+          await confirm.first().click({ force: true })
+          await page.waitForTimeout(180)
+          continue
+        }
+      }
+      const faintConfirm = faint.getByRole('button', { name: '確認結算' })
+      if ((await faintConfirm.count()) > 0 && !(await faintConfirm.first().isDisabled().catch(() => true))) {
+        await faintConfirm.first().click({ force: true })
+        await page.waitForTimeout(180)
+        continue
+      }
+      const faintSkip = faint.getByRole('button', { name: /略過|不發動/ })
+      if ((await faintSkip.count()) > 0) {
+        await faintSkip.first().click({ force: true }).catch(() => {})
+        await page.waitForTimeout(120)
+        continue
+      }
     }
     const flip = page.locator('.flip-response-modal')
     const flipSkip = flip.getByRole('button', { name: /略過|不發動|確認/ })
@@ -133,14 +281,18 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
     break
   }
 
-  if ((await page.locator('.effect-panel').count()) > 0) {
-    await drainGenericEffectPanel(page)
-  } else {
+  for (let round = 0; round < 8; round += 1) {
+    const hadInspect = await drainInspectDeckModal(page)
+    const hadEffect = await drainGenericEffectPanel(page)
+    if (hadInspect || hadEffect) {
+      await page.waitForTimeout(100)
+      continue
+    }
     const skillButton = page.locator('.bottom-field .skill-action').first()
     if ((await skillButton.count()) > 0 && !(await skillButton.isDisabled().catch(() => true))) {
       await skillButton.click({ force: true }).catch(() => {})
       await page.waitForTimeout(180)
-      await drainGenericEffectPanel(page)
+      continue
     } else {
       const hand = page.locator('.bottom-hand .hand-card-wrap').first()
       if ((await hand.count()) > 0) {
@@ -150,20 +302,27 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
         if ((await action.count()) > 0 && !(await action.isDisabled().catch(() => true))) {
           await action.click({ force: true }).catch(() => {})
           await page.waitForTimeout(180)
-          await drainGenericEffectPanel(page)
+          continue
         }
       }
     }
+    break
   }
 
-  const trace = await readTrace(page)
+  const minimumTraceEntries = faintTraceCards.has(traceCardId) ? 1 : 1
+  const trace = await waitForTrace(page, minimumTraceEntries)
   const attestation = attestCardContractActionTrace(trace, {
-    requiredCommandKinds: trace.length > 0 ? [trace[0].commandKind] : [],
+    requiredCommandKinds: faintTraceCards.has(traceCardId)
+      ? ['resolve-faint-effect']
+      : [trace[0]?.commandKind ?? 'missing-effect-trace'],
   })
+  const passed = trace.length > 0 && attestation.passed
   return {
     cardId,
     traceCardId,
-    passed: attestation.passed,
+    passed,
+    evidence: 'effect-trace' as const,
+    ...(passed ? {} : { error: attestation.errors.join('; ') || 'missing public effect trace' }),
     traceEntries: trace.length,
     commandKinds: attestation.observedCommandKinds,
     steps: attestation.observedSteps,
@@ -274,6 +433,8 @@ try {
     traceEntries?: number
     commandKinds?: string[]
     steps?: string[]
+    evidence?: 'effect-trace' | 'legal-no-op'
+    reason?: string
     error?: string
   }> = []
   if (batchReportPath) {

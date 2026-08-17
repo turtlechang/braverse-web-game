@@ -32,14 +32,14 @@ const ENERGY_TOKEN_TO_COLOR: Record<string, keyof EnergyCost> = {
 }
 
 const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
-  [/\b(?:draw|reveal|inspect|look at|view|rearrange)\b/i, 'effect'],
-  [/\b(?:deal|receives?|gains?|damage|attack|faint|equip|redirect|mou)\b|\{da\}/i, 'effect'],
+  [/\b(?:draw\w*|reveal\w*|inspect\w*|look at|view\w*|rearrange\w*)\b/i, 'effect'],
+  [/\b(?:deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*)\b|\{da\}/i, 'effect'],
   [
     /\b(?:play|place|return|move|put|take|trash|discard|rest|set|make)\b/i,
     'effect',
   ],
   [
-    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be selected|be trashed)|only be used|sum reaches)\b/i,
+    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be activated|reach|be selected|be trashed)|only be used|sum reaches|higher than|lower than|less than|more than)\b/i,
     'condition',
   ],
   [/\bselect\b/i, 'target'],
@@ -119,7 +119,17 @@ const parseEnergy = (text: string): EnergyCost => {
   const energy: EnergyCost = {}
   for (const match of text.matchAll(/\{([RYGBPKN])\}/gi)) {
     const color = ENERGY_TOKEN_TO_COLOR[match[1].toUpperCase()]
-    if (color) energy[color] = (energy[color] ?? 0) + 1
+      if (color) energy[color] = (energy[color] ?? 0) + 1
+  }
+  // A small number of official exports omit the braces around a single
+  // energy icon (for example `<R>`).  Only accept a string made entirely of
+  // standalone energy letters so skill/attack names are never misread as a
+  // payment.
+  if (Object.keys(energy).length === 0 && /^[RYGBPKN](?:\s*[RYGBPKN])*$/i.test(text.trim())) {
+    for (const token of text.trim().split(/\s+/)) {
+      const color = ENERGY_TOKEN_TO_COLOR[token.toUpperCase()]
+      if (color) energy[color] = (energy[color] ?? 0) + 1
+    }
   }
   return energy
 }
@@ -573,7 +583,7 @@ const bracketClauses = (
     const end = start + match[0].length
     const energy = parseEnergy(inner)
     const clauseId = `${source}-${clauses.length + 1}`
-    if (/^\{[RYGBPKN]\}(?:\s*\{[RYGBPKN]\})*$/i.test(inner)) {
+    if (/^(?:\{[RYGBPKN]\}|[RYGBPKN])(?:\s*(?:\{[RYGBPKN]\}|[RYGBPKN]))*$/i.test(inner)) {
       addClause(clauses, source, match[0], 'payment', start, end, 'exact')
       payments.push({ kind: 'energy', energy, clauseIds: [clauseId] })
       continue
@@ -583,23 +593,36 @@ const bracketClauses = (
       payments.push({ kind: 'source-energy', energy, clauseIds: [clauseId] })
       continue
     }
-    const discard = inner.match(/discard\s+(\d+)\s+(?:\{[RYGBPK]\}\s+)?(?:cards?|cookies?|traps?|items?)/i)
+    const discard = inner.match(
+      /discard\s+(\d+)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?|traps?|items?)/i,
+    )
     const discardAll = /discard\s+(?:your|the)\s+entire\s+hand/i.test(inner)
     const supportTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+your\s+support/i)
-    const hpTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+the\s+top\s+of\s+(?:(?:this|your|your\s+other|an?|the|LV\.\d+\s+or\s+higher)\s+)?(?:\{[RYGBPK]\}\s+)?cookie'?s\s+hp(?:\s+cards?)?/i)
+    const hpTrash =
+      inner.match(
+        /place\s+(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?\s+(?:into|in)\s+the\s+trash/i,
+      ) ??
+      inner.match(/place\s+(\d+)\s+of\s+your\s+cookies?(?:['’]s?)?\s+hp\s+cards?\s+in\s+the\s+trash/i)
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
-    const selfTrash = /place\s+this\s+cookie\s+in\s+(?:the|your)\s+trash/i.test(inner)
+    const selfTrash = /place\s+this\s+(?:cookie|card)\s+in\s+(?:the|your)\s+trash/i.test(inner)
     const selfBreak = /(?:make\s+this\s+cookie\s+faint|place\s+this\s+cookie\s+in\s+(?:the|your)\s+break\s+area)/i.test(inner)
     const battleFaint = inner.match(/make\s+(\d+)\s+.*cookies?\s+faint/i)
     const battleBreak = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*break\s+area/i)
     const handBreak = inner.match(/place\s+(\d+)\s+.*cookie.*hand.*break\s+area/i)
+    const restCookie = /rest\s+\d+\s+cookie\s+in\s+your\s+battle\s+area/i.test(inner)
     const restSource = /(?:rest\s+this\s+card|card\s+rests?)/i.test(inner)
-    const fieldToDeckBottom = /place\s+(?:this\s+cookie|\d+\s+.*cookie)\s+(?:on|at)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
+    const fieldToDeckBottom = /\b(?:place|select)\b[\s\S]*\b(?:battle\s+area|stage\s+area)\b[\s\S]*\b(?:on|at|to)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
+    const selfDeckBottom = /place\s+this\s+cookie\s+(?:on|at|to)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
     const breakToTrash = /place\s+this\s+cookie\s+from\s+(?:the\s+)?break\s+area\s+into\s+the\s+trash/i.test(inner)
     const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
-    const supportHand = inner.match(/return\s+(\d+)\s+(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
-    const trashDeck = inner.match(/select\s+(\d+)\s+.*cards?\s+from\s+your\s+trash.*return\s+them\s+to\s+your\s+deck/i)
-    const trashDeckBottom = inner.match(/select\s+(\d+)\s+.*cards?\s+from\s+your\s+trash.*bottom\s+of\s+your\s+deck/i)
+    const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
+    const battleToHand = /return\s+(?:up\s+to\s+)?\d+[\s\S]*?from\s+your\s+battle\s+area\s+to\s+your\s+hand/i.test(inner)
+    const hpToHand = /return\s+\d+\s+card\s+from\s+the\s+top\s+of\s+your\s+cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.test(inner)
+    const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
+    const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
+    const trashToBreak = /place\s+\d+\s+cookie.*from\s+your\s+trash\s+into\s+your\s+break\s+area/i.test(inner)
+    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
+    const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
     if (
       discard ||
       discardAll ||
@@ -611,13 +634,20 @@ const bracketClauses = (
       battleFaint ||
       battleBreak ||
       handBreak ||
+      restCookie ||
       restSource ||
       fieldToDeckBottom ||
+      selfDeckBottom ||
       breakToTrash ||
       handToDeckBottom ||
+      battleToHand ||
+      hpToHand ||
       supportHand ||
       trashDeck ||
-      trashDeckBottom
+      trashDeckBottom ||
+      trashToBreak ||
+      revealHand ||
+      deckTrash
     ) {
       const kind = discard
         ? 'discard-hand'
@@ -629,8 +659,8 @@ const bracketClauses = (
             ? 'hp-to-trash'
             : battleTrash
               ? 'battle-to-trash'
-              : selfTrash
-                ? 'self-to-trash'
+                : selfTrash
+                  ? 'self-to-trash'
                 : selfBreak
                   ? 'self-to-break'
                   : battleFaint
@@ -639,17 +669,35 @@ const bracketClauses = (
                     ? 'battle-to-break'
                     : handBreak
                       ? 'hand-to-break'
-                  : restSource
-                        ? 'rest-source'
-                        : fieldToDeckBottom || breakToTrash || handToDeckBottom
-                          ? 'move'
-                          : supportHand
-                          ? 'support-to-hand'
-                          : trashDeck
-                            ? 'trash-to-deck'
-                            : trashDeckBottom
-                              ? 'trash-to-deck-bottom'
-                              : 'move'
+                      : restCookie
+                        ? 'rest-cookie'
+                        : restSource
+                          ? 'rest-source'
+                          : fieldToDeckBottom
+                            ? 'field-to-deck-bottom'
+                            : selfDeckBottom
+                              ? 'self-to-deck-bottom'
+                            : breakToTrash
+                              ? 'break-to-trash'
+                              : handToDeckBottom
+                                ? 'hand-to-deck-bottom'
+                                : battleToHand
+                                  ? 'battle-to-hand'
+                                  : hpToHand
+                                    ? 'hp-to-hand'
+                                    : supportHand
+                                      ? 'support-to-hand'
+                                      : trashDeck
+                                        ? 'trash-to-deck'
+                                        : trashDeckBottom
+                                          ? 'trash-to-deck-bottom'
+                                          : trashToBreak
+                                            ? 'trash-to-break'
+                                            : revealHand
+                                              ? 'reveal-hand'
+                                              : deckTrash
+                                                ? 'deck-to-trash'
+                                                : 'move'
       addClause(clauses, source, match[0], 'cost', start, end, 'pattern')
       const amountMatch =
         discard ??
@@ -1060,10 +1108,22 @@ const addActionClauses = (
       const role = /\bthen\b/i.test(normalized) ? 'then' : match[1]
       addClause(clauses, source, normalized, role, 0, text.length, 'pattern')
     } else {
-      // Cookie attack names are printed between the payment and `{da}` marker.
-      // They are display labels, not an omitted rule clause; the damage marker
-      // above already supplies the executable attack evidence.
-      if (source === 'attack' && /\{da\}|\bdeals?\s+\d+\s+damage\b/i.test(text)) continue
+      // Attack／FLIP names are printed between the payment marker and the
+      // executable text.  They are display labels, not omitted rule clauses;
+      // keeping them as unsupported text made every no-follow-up attack name
+      // look like a parser gap (for example BS6-040 and P-078).
+      if (source === 'attack' || source === 'flip') continue
+      // `{sk}` is the official display marker for a named skill.  A lone
+      // marker plus title (for example BS4-004) has no executable clause.
+      if (source === 'skill' && /^\s*\{sk\}/i.test(normalized)) continue
+      // A parenthetical ordering reminder is an explicit resolution rule, not
+      // an unsupported effect.  Preserve it as an order clause so the
+      // contract still records the source evidence without inventing a
+      // runtime effect kind.
+      if (/cannot switch the order of HP cards/i.test(normalized)) {
+        addClause(clauses, source, normalized, 'order', 0, text.length, 'pattern')
+        continue
+      }
       addClause(clauses, source, normalized, 'unsupported', 0, text.length, 'unknown')
     }
   }
@@ -1386,6 +1446,9 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'hand-to-break') {
       return keys.has('handToBreakArea') || kinds.has('hand-to-break')
     }
+    if (cost.kind === 'battle-to-hand') {
+      return keys.has('battleCookieToHand') || kinds.has('battle-to-hand') || kinds.has('return-to-hand')
+    }
     if (cost.kind === 'support-to-hand') {
       return keys.has('supportToHand') || kinds.has('support-to-hand')
     }
@@ -1395,7 +1458,15 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'trash-to-deck-bottom') {
       return keys.has('trashToDeckBottom') || kinds.has('trash-to-deck-bottom')
     }
-    if (cost.kind === 'self-to-trash') return keys.has('selfToTrash') || kinds.has('self-to-trash')
+    if (cost.kind === 'self-to-trash') {
+      return (
+        keys.has('selfToTrash') ||
+        // The adapter represents a self-trash payment as the generic
+        // battle-cookie trash key when the source is the attacking Cookie.
+        keys.has('trashBattleCookie') ||
+        kinds.has('self-to-trash')
+      )
+    }
     if (cost.kind === 'self-to-break') return keys.has('selfToBreakArea') || kinds.has('self-to-break')
     if (cost.kind === 'rest-source') {
       return evidence.skill?.restSource === true || evidence.ability?.restSource === true
@@ -1414,10 +1485,20 @@ export const analyzeOfficialCardBehavior = (
       'trash-to-hand',
       'battle-to-deck-bottom',
       'field-to-deck-bottom',
+      'self-to-deck-bottom',
+      'return-to-deck-bottom',
       'stage-source-to-deck',
       'break-to-trash',
+      'break-source-to-trash',
       'hand-to-deck-bottom',
       'place-source-to-support',
+      'rest-cookie',
+      'battle-to-hand',
+      'hp-to-hand',
+      'return-to-hand',
+      'trash-to-break',
+      'reveal-hand',
+      'deck-to-trash',
     ].some((kind) => kinds.has(kind))
       || [
         'battleToDeckBottom',

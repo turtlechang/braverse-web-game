@@ -28,6 +28,8 @@ BS6-051「Timekeeper Cookie」的攻擊後續目標會明確顯示「從自己�
 
 BS6-062「Time Rend Scissors」的物品能力已補回 `<{G}>` 能量與「將 1 張支援區餅乾返回手牌」的尖括號代價；發動後可選擇最多 1 張對手餅乾造成 1 點傷害，且 UI 會只列出支援區餅乾作為代價候選。
 
+BS6-063「Into a Time Pocket...」的 test-state 以正式卡文的「支援區正好 5 張」建立成立分支；支付 2 張綠色支援卡後，Browser 可實際進入 Then 二選一，選擇將牌庫頂 1 張牌以疲勞狀態放入支援區。這項 fixture 只負責快速建立合法局面，支付、條件、目標與效果結算仍由正式規則引擎驗證。
+
 卡牌詳情中的場景效果沿用官方卡圖換行，將放置場景文字與 Activate 效果分列顯示。
 
 桌面 `tactical-clean` 戰場以深藍桌墊與低對比菱格建立層次；對手場區採紅色、我方採青色完整圓角框，戰鬥區比支援區更深。休息區只保留加大的 `LV. x/10`，兩側功能欄分別依對手「棄牌 → 牌庫 → 場景」與我方「場景 → 牌庫 → 棄牌」排列，並與可見場區等高。全畫面裝飾框不延伸至手牌區，避免切過卡片與影響操作體感。
@@ -78,13 +80,13 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 206 個測試檔、3,262 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-053／BS6-055 的 card-check 初始 HP／支援區條件，並讓 BS4-005 代價昏厥後的補位與自動效果傷害完整記錄於 Browser 驗證流程。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 206 個測試檔、3,269 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-053／BS6-055／BS6-058～BS6-063 的 card-check 初始 HP、支援區門檻、合法候選與 Then 續接，並讓 BS4-005 代價昏厥後的補位與自動效果傷害完整記錄於 Browser 驗證流程。
 
 BS6-101「Twizzly Gummy Cookie」昏厥效果已先顯示可選的紫色能量支援卡付款，再進入棄牌區紫色餅乾登場目標；本機、線上與 AI 共用同一套規則驗證，並保留不支付而略過的合法路徑。
 
 卡牌轉接新增 shadow 行為契約稽核：`src/cards/contracts/` 會將官方來源拆成 clause ledger，交叉比對支付、代價、目標與 `Then` 的 runtime evidence，並產生 `verified`／`needs-review`／`blocked` 報告。`npm run cards:audit:contracts` 只讀取並報告，不改變正式決策；候選資料可用 `--strict-contracts` 阻止未完成契約進入 promote，`promote:candidate` 預設已啟用此 gate。完整流程與限制見 [卡牌行為契約](docs/card-behavior-contract.md)。
 
-卡牌契約 P1～P5 已接續實作：P1 提供契約型別與 shadow compiler；P2 將契約步驟投影到 `DecisionDescriptor`，並由規則層的 energy／cost／target helper 產生合法候選；P3 讓本機 pending modal 與線上效果候選先共用 descriptor，`GameCommand` 仍是唯一執行入口；P4 新增負向／隱藏資訊測試與 `cards:attest` 公開 command trace gate；P5 以 `cards:migrate:batch` 依 card.id、排序、批次執行 shadow migration，未 `verified` 卡牌不會進入批次，也不會改動正式卡池。
+卡牌契約 P1～P5 已接續實作：P1 提供契約型別與 shadow compiler；P2 將契約步驟投影到 `DecisionDescriptor`，並由規則層的 energy／cost／target helper 產生合法候選；P3 讓本機 pending modal 與線上效果候選先共用 descriptor，`GameCommand` 仍是唯一執行入口；P4 新增負向／隱藏資訊測試與 `cards:attest` 公開 command trace gate；P5 以 `cards:migrate:batch` 依 card.id、排序、批次執行 shadow migration，未 `verified` 卡牌不會進入批次，也不會改動正式卡池。offset 150 與 offset 175 的 25 張批次均已完成 Browser／runtime gate；契約 parser 另補齊 HP 代價、牌庫底／棄牌區移動、支援區回手、Reveal／Discard 與原始單字母能量標記。
 
 效果傷害（攻擊後追傷、技能、物品、場景與陷阱的傷害）現在統一進入逐點傷害／FLIP 結算流程；效果佇列會在 FLIP、昏厥與補位等決策完成後再續接下一段。丟棄、移除、HP 費用與 HP 區域移動仍不翻開或觸發 FLIP，並有正負向回歸測試。
 
@@ -178,11 +180,13 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 通用型 Lv.3／Lv.4 AI 已完成 G0～G5：Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`；Lv.4 則以 width 5、depth 5、240 nodes、150ms 的有限 command search 維持 Setup→Payoff 計畫並預留攻擊資源。搜尋只使用 `PlayerView` 與合法 `KnowledgeState`，遇到未知抽牌、攻擊 pending、trap／blocker／FLIP／replacement 等決策即停止推演；timeout 一律回退 Lv.3。G5 已將合法的補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、阻擋、Refresh 與多階段 pending 決策接入 TacticalPlan，並輸出可稽核的 selection telemetry；Lv.1／Lv.2 行為不變。
 
-卡牌行為契約目前先以 shadow mode 盤點正式卡池；最新稽核為 1101 筆公開記錄，978 筆 `verified`、123 筆保守標記 `needs-review`、0 筆 `blocked`，其中 `target evidence unresolved` 已降至 0 筆。報告會依 `target evidence unresolved`、`source contains unclassified clause`、`cost/payment evidence missing`、`Then`、`timing` 與 `resolution order` 分類原因；尚未宣稱其他 needs-review 卡已完成正式契約，仍須逐類補齊來源 parser 與 runtime selector binding。
+卡牌行為契約目前先以 shadow mode 盤點正式卡池；最新稽核為 1101 筆公開記錄，1,076 筆 `verified`、25 筆保守標記 `needs-review`、0 筆 `blocked`，其中 `target evidence unresolved` 與 `source contains unclassified clause` 均已降至 0 筆。剩餘原因為 payment／runtime energy evidence、cost evidence、Then／timing／resolution order，均保留為 needs-review，未以 parser 忽略或虛構 runtime evidence 代替修正；後續依原因分群補齊。
 
-本輪完成最後一筆 target evidence 修正：BS2-014 的「可選從 break 取回 LV.1 餅乾；若取回，再從手牌放 1 張餅乾進 break」已接入條件式 pending effect queue，並補上正／負向回歸。稽核更新為 978 筆 `verified`、123 筆 `needs-review`、0 筆 `blocked`、`target evidence unresolved=0`；offset 125 的 25 張 shadow migration 亦回報 `selected=25、ready=true`。本輪完整 Vitest（206 檔、3,262 項）、lint、build 與正向／阻擋 Browser command trace 均已通過；未轉為正式卡池資料。
+本輪完成最後一筆 target evidence 修正：BS2-014 的「可選從 break 取回 LV.1 餅乾；若取回，再從手牌放 1 張餅乾進 break」已接入條件式 pending effect queue，並補上正／負向回歸。另修正 BS6-063 test-state 的精確支援區門檻，並讓 Browser audit 正確完成 choose-one Then 與隱藏 modal shell 收斂。最新 audit 為 1,076 筆 `verified`、25 筆 `needs-review`、0 筆 `blocked`，`target evidence unresolved=0` 且 `source contains unclassified clause=0`；offset 125、150、175 的 25 張 shadow migration 均回報 `selected=25、ready=true`，offset 150 Browser attestation 25／25 取得 effect trace（含 BS2-049／050 陷阱代價與 BS2-060 昏厥＋抽牌）。本輪完整 Vitest（206 檔、3,273 項）、lint、build、AI replay 20／20 與 Browser smoke（AI／牌組編輯器／好友房）均已通過；未轉為正式卡池資料。
 
-契約遷移目前已完成 P1～P5 的可回退 shadow gate：`npm run cards:migrate:batch -- --limit 25`、`npm run cards:migrate:batch -- --offset 50 --limit 25`、`npm run cards:migrate:batch -- --offset 75 --limit 25`、`npm run cards:migrate:batch -- --offset 100 --limit 25` 與 `npm run cards:migrate:batch -- --offset 125 --limit 25` 均會在不寫入卡池的前提下選出 25 張 verified 卡並確認 runtime compile 可執行；批次綁定使用 `cardNumber`，可保留 `@1` 異圖變體。Browser 驗收可用 `npm run cards:attest:browser`，或以 `npm run cards:attest:browser -- --batch-report <migration-report.json>` 檢查批次 card-check route 與可取得的公開 command trace；offset 125 批次中有 4 張卡未由通用 fixture surfaced action trace，僅確認 route／無錯誤，未宣稱其完整效果流程已完成 Browser 驗證。這些批次仍未 promote 正式 runtime 卡池。
+契約遷移目前已完成 P1～P5 的可回退 shadow gate：`npm run cards:migrate:batch -- --limit 25`、`npm run cards:migrate:batch -- --offset 50 --limit 25`、`npm run cards:migrate:batch -- --offset 75 --limit 25`、`npm run cards:migrate:batch -- --offset 100 --limit 25`、`npm run cards:migrate:batch -- --offset 125 --limit 25`、`npm run cards:migrate:batch -- --offset 150 --limit 25` 與 `npm run cards:migrate:batch -- --offset 175 --limit 25` 均會在不寫入卡池的前提下選出 25 張 verified 卡並確認 runtime compile 可執行；批次綁定使用 `cardNumber`，可保留 `@1` 異圖變體。Browser 驗收可用 `npm run cards:attest:browser`，或以 `npm run cards:attest:browser -- --batch-report <migration-report.json>` 檢查批次 card-check route 與可取得的公開 command trace；offset 125／150 批次現已逐張取得效果 trace 或明確合法 no-op。這些批次仍未 promote 正式 runtime 卡池。
+
+卡牌效果驗收維持三層：先以 `test-state` 建立可重現的公開局面並跑 `GameCommand`／規則層回歸，再以相同 `test-state` 走正式 UI 的 Browser positive／blocked trace，最後用至少一條正式牌組或根路徑 smoke 確認開局、隨機抽牌、隱藏資訊與補位整合。前兩層共享正式卡牌 adapter、規則引擎與 UI command path，因此修正共享規則會套用正式對戰；fixture 本身只改測試局面，不能取代正式整合驗證。
 
 牌組編輯器的 LV／HP／攻擊力篩選、BS3-061／BS6-101 可選昏厥技能、BS5／BS6 尖括號攻擊後代價稽核、BS6-044 固定攻擊目標追傷、效果傷害 FLIP 結算、陷阱來源／代價與攻擊後效果詳細步驟對戰紀錄，以及 BS5-073、BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇、昏厥效果與對戰紀錄的正向／負向 Browser 路徑。
 
@@ -286,7 +290,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與三批各 25 張 verified shadow migration gate（含 `cardNumber` 異圖綁定）；補齊 LV／Blocker／markup／直接能量鍵 parser 與 selector binding，稽核原因改為可統計分類，並修正 Browser trace 不應載入 Node-only ledger 的啟動問題；補正 BS2-014 條件式 break→hand→break 效果，讓唯一 `target evidence unresolved` 歸零；讓 `promote:candidate` 預設阻擋未完成契約；修正 BS3-113 Caramel Arrow Cookie 登場後全體傷害的逐張目標順序與 AI 指令；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場；BS4-075 Black Pearl Cookie 攻擊後棄 2 張手牌改為可略過的代價選擇，並以 Browser／規則回歸驗證支付與目標流程；補正 BS6-053／BS6-055 card-check 條件、BS4-005 補位後效果傷害日誌；修正 BS6-057 Coffee Candy Cookie 將支援區 Cookie 回手正確建模為第二項技能代價，並補上規則層卡種驗證與 Browser 回歸，完整 Vitest 206 檔／3,262 項通過。 |
+| 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與七批各 25 張 verified shadow migration gate（含 `cardNumber` 異圖綁定）；補齊 LV／Blocker／markup／直接能量鍵、HP／牌庫底／棄牌區／支援區移動、Reveal／Discard parser 與 selector binding，讓 `source contains unclassified clause` 歸零；稽核原因改為可統計分類，並修正 Browser trace 不應載入 Node-only ledger 的啟動問題；補正 BS2-014 條件式 break→hand→break 效果，讓唯一 `target evidence unresolved` 歸零；讓 `promote:candidate` 預設阻擋未完成契約；修正 BS3-113 Caramel Arrow Cookie 登場後全體傷害的逐張目標順序與 AI 指令；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場；BS4-075 Black Pearl Cookie 攻擊後棄 2 張手牌改為可略過的代價選擇，並以 Browser／規則回歸驗證支付與目標流程；補正 BS6-053／BS6-055／BS6-058～BS6-062 card-check 條件、BS4-005 補位後效果傷害日誌；修正 BS6-057 Coffee Candy Cookie 將支援區 Cookie 回手正確建模為第二項技能代價，並補上規則層卡種驗證與 Browser 回歸；offset 125／150 25 張逐卡 attestation 已取得 effect trace 或合法 no-op，完整 Vitest 206 檔／3,273 項通過。 |
 | 2026-08-16 | 調整 Lv.2–Lv.4 AI 餅乾部署策略：不強制填滿兩張戰鬥區，已有餅乾時優先避免 FLIP 卡，僅在缺少非 FLIP 替代品或可直接補刀時允許登場；新增部署政策回歸測試，完整 Vitest 190 檔／3,110 項、lint、build 與 AI Browser 20／20 通過。 |
 | 2026-08-16 | 完成牌組編輯器 LV／HP／攻擊力篩選，修正並稽核 BS5／BS6 尖括號攻擊後代價可略過流程，補上 P-059 抽牌來源與條件紀錄；完成 BS6-008「Sugar Swan Cookie」陷阱封鎖、BS6-044 固定原攻擊目標追傷、BS6-061 支援區回手後 BS1-078 場景條件、BS6-051 綠色手牌目標提示、BS6-062 物品支援區餅乾回手代價、效果傷害 FLIP 逐點結算與 BS3-061 可選昏厥技能修正；補上本機／線上對戰紀錄的陷阱來源卡、代價與攻擊後效果來源／目標／結果步驟；完整 Vitest 189 檔／3,104 項、lint、build 通過。 |
 | 2026-08-15 | 依官方韓文資料與實體卡逐卡修正 BS6「Operation Timeguard」52 個基礎卡號（64 筆含異圖）的英文 API 攻擊傷害誤記，並補上 BS4-045@1／BS4-097@1 兩張異圖變體；修正 BS6-079 攻擊後可選代價的目標選擇只能選 1 張的問題（OptionalCostAttackModal 改為多選、支援「對手支援區的卡」標籤與上限進度），新增 `bs6-079-multi-target-probe` Browser 驗證「支付代價→選 3 張對手支援卡橫置」；補強 1164×777 與通用桌面 viewport 的手牌實際卡面邊界 gate；完整 Vitest 188 檔／3,039 項、lint、build 通過。 |

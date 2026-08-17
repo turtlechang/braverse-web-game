@@ -225,4 +225,34 @@ describe('card behavior contract shadow ledger', () => {
     expect(audit.contract.timing.markers).not.toContain('bl')
     expect(audit.checks.timingCovered).toBe(true)
   })
+
+  it('classifies HP, battle-area return, and reveal/discard clauses from official brackets', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Parser variants',
+        text: "<Place 1 card from the top of this Cookie's HP into the trash.> <Return 1 {B} LV.1 Cookie from your battle area to your hand.> <Reveal 2 【Arena】 cards from your hand.>",
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, makeCard())
+    expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+    expect(audit.contract.costs.map((cost) => cost.kind)).toEqual([
+      'hp-to-trash',
+      'battle-to-hand',
+      'reveal-hand',
+    ])
+  })
+
+  it('treats raw single-letter energy exports as payment evidence', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Raw payment',
+        text: '{mob} <R> Draw up to 1 card from your deck.',
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, makeCard())
+    expect(audit.contract.payments).toContainEqual(
+      expect.objectContaining({ kind: 'energy', energy: { red: 1 } }),
+    )
+    expect(audit.contract.clauses.filter((clause) => clause.role === 'unsupported')).toHaveLength(0)
+  })
 })

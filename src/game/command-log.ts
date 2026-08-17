@@ -1497,6 +1497,58 @@ export const describeCommandSteps = (
         ? [describeFieldToDeckBottomStep(previous, command, fieldToDeckBottom)]
         : undefined
     }
+    case 'resolve-faint-effect': {
+      const pending = previous.pendingFaintEffects?.[0]
+      if (!pending) return undefined
+      const steps: LogStepDetail[] = []
+      const sourceCard = findCard(previous, pending.sourceInstanceId)
+      if (sourceCard) {
+        steps.push({
+          text: `昏厥效果來源：「${sourceCard.name}」；效果：${
+            sourceCard.effectText ?? sourceCard.skill?.text ?? pending.sourceCardName ?? '昏厥效果'
+          }`,
+          cards: [sourceCard],
+        })
+      }
+      const paymentStep = describeCardListStep(
+        state,
+        '昏厥效果代價：支付能量（橫置）',
+        command.paymentIds,
+      )
+      if (paymentStep) steps.push(paymentStep)
+      const discardStep = describeCardListStep(
+        state,
+        '昏厥效果代價：棄置手牌',
+        command.discardHandIds,
+      )
+      if (discardStep) steps.push(discardStep)
+      const supportTrashStep = describeCardListStep(
+        state,
+        '昏厥效果代價：支援區送入棄牌區',
+        command.supportToTrashIds,
+      )
+      if (supportTrashStep) steps.push(supportTrashStep)
+      const targetStep = describeCardListStep(
+        state,
+        '昏厥效果目標',
+        command.targetIds,
+      )
+      if (targetStep) steps.push(targetStep)
+      const outcome = describeDamageOutcome(
+        previous,
+        next,
+        pending.sourcePlayerId,
+        [pending.effect],
+      )
+      if (outcome) {
+        steps.push({ text: `昏厥效果結果：${outcome}` })
+      } else if (next.pendingInspectDeck || next.pendingAbilityEffect) {
+        steps.push({ text: '昏厥效果結果：等待後續效果選擇' })
+      } else if (pending.effect) {
+        steps.push({ text: '昏厥效果結果：效果已結算' })
+      }
+      return steps
+    }
     case 'skip-on-play': {
       const blockedStep = describeBlockedOnPlayMovement(
         state,
@@ -1604,6 +1656,18 @@ export const resolveLogCard = (
       return previous.pendingBattle?.attackerInstanceId
         ? findCard(previous, previous.pendingBattle.attackerInstanceId)
         : undefined
+    case 'resolve-faint-effect': {
+      const pending = previous.pendingFaintEffects?.[0]
+      return pending
+        ? findCard(previous, pending.sourceInstanceId)
+        : undefined
+    }
+    case 'resolve-inspect-deck': {
+      const pending = previous.pendingInspectDeck
+      return pending
+        ? findCard(previous, pending.sourceInstanceId)
+        : undefined
+    }
     case 'resolve-optional-cost-attack':
       return previous.pendingOptionalCostAttack?.sourceInstanceId
         ? findCard(previous, previous.pendingOptionalCostAttack.sourceInstanceId)

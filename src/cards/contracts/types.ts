@@ -67,6 +67,16 @@ export interface ContractCost {
     | 'faint'
     | 'hp-to-trash'
     | 'move'
+    | 'rest-cookie'
+    | 'field-to-deck-bottom'
+    | 'self-to-deck-bottom'
+    | 'break-to-trash'
+    | 'hand-to-deck-bottom'
+    | 'battle-to-hand'
+    | 'hp-to-hand'
+    | 'trash-to-break'
+    | 'reveal-hand'
+    | 'deck-to-trash'
     | 'unknown'
   amount?: number
   clauseIds: string[]

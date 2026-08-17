@@ -49,7 +49,7 @@ import {
   isLocalhost,
   parseTestStateConfig,
 } from './demo'
-import { getTrapCandidates, resolveFlip } from './battle'
+import { getTrapCandidates, playTrap, resolveFlip } from './battle'
 import { cookie } from './test-helpers/battle-helpers'
 import { canActivateStage } from './card-abilities'
 import {
@@ -626,6 +626,56 @@ describe('createCardCheckDemoState', () => {
     ).toBe(true)
   })
 
+  it('prepares BS6-063 with exactly five supports so its trap Then effect can continue', () => {
+    const state = createCardCheckDemoState('BS6-063')
+    const trap = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-063',
+    )
+
+    expect(trap?.instanceId).toBe('player-one-BS6-063-1')
+    expect(state.players['player-one'].supportArea).toHaveLength(5)
+    expect(
+      state.players['player-one'].supportArea.every((support) => !support.rested),
+    ).toBe(true)
+
+    const played = playTrap(state, 'player-one', {
+      trapInstanceId: trap!.instanceId,
+      paymentIds: ['support-pay-0', 'support-pay-1'],
+      targetIds: ['trap-attacker'],
+    })
+
+    expect(played.pendingAbilityEffect).toMatchObject({
+      effectIndex: 1,
+      battleContinuation: 'after-trap',
+    })
+    expect(played.pendingAbilityEffect?.effects[1]).toMatchObject({
+      kind: 'choose-one',
+      condition: {
+        kind: 'all-of',
+        conditions: [
+          { kind: 'support-count-at-least', count: 5 },
+          { kind: 'support-count-at-most', count: 5 },
+        ],
+      },
+    })
+
+    const chosen = applyGameCommand(played, {
+      kind: 'resolve-choose-one',
+      playerId: 'player-one',
+      modeIndex: 0,
+    })
+    const resolved = applyGameCommand(chosen, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+
+    expect(resolved.players['player-one'].supportArea).toHaveLength(6)
+    expect(
+      resolved.players['player-one'].supportArea.at(-1),
+    ).toMatchObject({ rested: true, card: { id: 'p1-deck-0' } })
+  })
+
   it('loads BS6 formal cards for localhost card-check through the formal pool', () => {
     const prophet = createCardCheckDemoState('BS6-034')
     const prophetSource = prophet.players['player-one'].hand.find(
@@ -714,6 +764,59 @@ describe('createCardCheckDemoState', () => {
         }),
       ],
     })
+  })
+
+  it.each([
+    ['BS6-059', 3, 5],
+    ['BS6-060', 4, 6],
+    ['BS6-061', 2, 7],
+  ] as const)(
+    '%s attack fixture keeps the source at full HP and exposes its post-attack cost candidates',
+    (cardNumber, hpCount, supportCount) => {
+      const state = createCardCheckDemoState(cardNumber)
+      const source = state.players['player-one'].battleArea.find(
+        (entry) => entry.card.id === cardNumber,
+      )
+
+      expect(source?.hpCards).toHaveLength(hpCount)
+      expect(source?.rested).toBe(true)
+      expect(state.players['player-one'].supportArea).toHaveLength(supportCount)
+      expect(state.pendingBattle).toMatchObject({
+        stage: 'attack-effect',
+        attackerInstanceId: source?.card.instanceId,
+      })
+      if (cardNumber === 'BS6-061') {
+        expect(
+          state.players['player-one'].supportArea.some(
+            (support) => support.card.type === 'cookie',
+          ),
+        ).toBe(true)
+      }
+    },
+  )
+
+  it('prepares BS6-058 OnPlay with the required two-card support-count gap', () => {
+    const state = createCardCheckDemoState('BS6-058')
+    const source = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-058',
+    )
+
+    expect(source?.skill).toMatchObject({ trigger: 'on-play' })
+    expect(state.players['player-one'].supportArea).toHaveLength(2)
+    expect(state.players['player-two'].supportArea).toHaveLength(4)
+    expect(
+      state.players['player-two'].supportArea.length -
+        state.players['player-one'].supportArea.length,
+    ).toBeGreaterThanOrEqual(2)
+  })
+
+  it('prepares BS2-043 faint cost with two legal hand cards', () => {
+    const state = createCardCheckDemoState('BS2-043')
+
+    expect(state.pendingFaintEffects?.[0]?.cost).toMatchObject({
+      discardHand: 2,
+    })
+    expect(state.players['player-one'].hand).toHaveLength(4)
   })
 
   it('prepares BS6-055 passive fixture with fewer own supports than the opponent', () => {
@@ -809,6 +912,16 @@ describe('createCardCheckDemoState', () => {
         }),
       ]),
     )
+    expect(
+      bs6062.players['player-one'].supportArea.filter(
+        (support) => support.card.type === 'cookie',
+      ),
+    ).toHaveLength(3)
+    expect(
+      bs6062.players['player-one'].supportArea.filter(
+        (support) => support.card.type !== 'cookie',
+      ).length,
+    ).toBeGreaterThan(0)
 
     const bs6025 = createCardCheckDemoState('BS6-025')
     expect(bs6025.players['player-one'].breakArea).toEqual([
@@ -1259,6 +1372,28 @@ describe('BS4 condition fixtures', () => {
       sourceCardName: 'Chili Pepper Cookie',
       effects: [{ kind: 'draw' }, { kind: 'discard-hand' }],
     })
+  })
+
+  it('keeps BS2-049 and BS2-050 trap conditions reachable in card-check', () => {
+    const drawTrap = createCardCheckDemoState('BS2-049')
+    const returnTrap = createCardCheckDemoState('BS2-050')
+
+    expect(drawTrap.pendingBattle?.stage).toBe('trap')
+    expect(
+      drawTrap.players['player-one'].hand,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'BS2-049' })]))
+    expect(returnTrap.pendingBattle?.stage).toBe('trap')
+    expect(returnTrap.players['player-one'].battleArea[0].hpCards).toHaveLength(3)
+    expect(
+      returnTrap.players['player-one'].hand,
+    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: 'BS2-050' })]))
+  })
+
+  it('satisfies BS2-060 opponent-trash condition for the faint trace', () => {
+    const state = createCardCheckDemoState('BS2-060')
+
+    expect(state.pendingFaintEffects).toHaveLength(1)
+    expect(state.players['player-two'].discardPile).toHaveLength(20)
   })
 
   it('BS4-005 card-check fixture keeps one HP card for its activation cost', () => {

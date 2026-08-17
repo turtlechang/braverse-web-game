@@ -2503,8 +2503,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // A spread of opponent battle cookies covering several levels and
   // remaining-HP totals so level/remaining-HP-filtered target selectors have
   // at least one legal candidate.
-  const opp1 = cardCheckFillerCookie('opp-lv1', 1, 6, 0, 'red')
-  const opp2 = cardCheckFillerCookie('opp-lv3', 3, 8, 3, 'yellow')
+  const opp1 = cardCheckFillerCookie(
+    'opp-lv1',
+    1,
+    card.id === 'BS2-050' ? 3 : 6,
+    0,
+    'red',
+  )
+  const opp2 = cardCheckFillerCookie(
+    'opp-lv3',
+    3,
+    card.id === 'BS2-050' ? 3 : 8,
+    card.id === 'BS2-050' ? 0 : 3,
+    'yellow',
+  )
   const opponentStage: GameCard = {
     id: 'opp-stage-card',
     instanceId: 'opp-stage-card-1',
@@ -2562,15 +2574,25 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     card.stageAbility?.cost.supportToHandType
   const supportCostCandidates: GameCard[] =
     supportToHandType === 'cookie'
-      ? [
-          cardCheckFillerCookie(
-            `${card.id}-support-cost-cookie`,
-            1,
-            2,
-            0,
-            payColor,
-          ).cookie,
-        ]
+      ? card.id === 'BS6-062'
+        ? Array.from({ length: 3 }, (_, index) =>
+            cardCheckFillerCookie(
+              `${card.id}-support-cost-cookie-${index + 1}`,
+              1,
+              2,
+              0,
+              payColor,
+            ).cookie,
+          )
+        : [
+            cardCheckFillerCookie(
+              `${card.id}-support-cost-cookie`,
+              1,
+              2,
+              0,
+              payColor,
+            ).cookie,
+          ]
       : supportToHandType
         ? [testSupportCard(`${card.id}-support-cost-${supportToHandType}`, payColor)]
         : []
@@ -2786,7 +2808,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   }
 
   if (card.type === 'trap') {
-    const defender = cardCheckFillerCookie('trap-defender', 2, 5, 0, payColor)
+    // BS2-050 can only target an opponent Cookie with 3 or fewer remaining
+    // HP.  Keep that condition satisfied in the generic trap fixture so the
+    // response modal exposes the real target/payment flow instead of letting
+    // the attack resolve directly into a replacement prompt.
+    const defender = cardCheckFillerCookie(
+      'trap-defender',
+      2,
+      card.id === 'BS2-050' ? 3 : 5,
+      0,
+      payColor,
+    )
     // A high-attack attacker so "attacker attack more than N" trap
     // conditions have a chance of being met, plus 2 extra opponent battle
     // cookies (beyond the attacker) so traps that select an opponent target
@@ -2839,7 +2871,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-one'],
           hand: [card, ...handFillers],
           battleArea: trapBattleArea,
-          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          // BS6-063 的卡面寫的是「有 5 張卡牌」，不是「5 張以上」；
+          // 付款只會將支援卡橫置，不會減少張數，因此要以恰好 5 張
+          // 建立成立分支，才能在支付後繼續進入牌庫頂放置效果。
+          supportArea: (card.id === 'BS6-063'
+            ? energySupports.slice(0, 5)
+            : energySupports
+          ).map((c) => ({ card: c, rested: false })),
           breakArea: trapBreakArea,
           discardPile: trapTrashFillers,
         },
@@ -2956,6 +2994,15 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ...(faintCost && index === 0 ? { cost: faintCost } : {}),
       }),
     )
+    // BS2-060's faint skill checks the opponent's trash count.  Put the
+    // opponent on the condition-met side of that check so the card-check
+    // route reaches the real draw effect and emits a public effect trace.
+    const opponentTrashForFaint =
+      card.id === 'BS2-060'
+        ? Array.from({ length: 20 }, (_, index) =>
+            testSupportCard(`BS2-060-opponent-trash-${index + 1}`, 'purple'),
+          )
+        : []
     return {
       ...state,
       players: {
@@ -2973,7 +3020,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101'
             ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
             : {}),
-          ...(card.id === 'BS5-007'
+          ...(card.id === 'BS2-043' || card.id === 'BS5-007'
             ? { hand: handFillers }
             : card.id === 'BS5-026'
               ? { hand: [handCookieFiller, ...handFillers] }
@@ -2986,6 +3033,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             cardCheckBattleEntry(target.cookie, target.hpCards, 4),
             ...opponentBattleArea,
           ],
+          ...(opponentTrashForFaint.length > 0
+            ? { discardPile: opponentTrashForFaint }
+            : {}),
         },
       },
       pendingFaintEffects,
@@ -3025,7 +3075,12 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               ? 2
               : cookieCard.id.startsWith('P-')
                 ? Math.max(1, cookieCard.hp)
-          : 0
+          // A card-check attack fixture represents the attack as already
+          // declared, so the source Cookie is rested; it must nevertheless
+          // retain its full HP stack. An empty stack makes the card appear
+          // fainted (0/HP) and causes the real post-attack flow to be
+          // skipped, which is especially visible for BS6-059/060/061.
+          : cookieCard.hp
     const attackSourceHpCards = Array.from(
       { length: attackSourceHpCount },
       (_, index) => testSupportCard(`${cookieCard.id}-source-hp-${index + 1}`),
@@ -3051,8 +3106,29 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...ownBreakArea,
           ]
         : ownBreakArea
-    const attackPlayerSupportArea =
+    const optionalAttackCost = cookieCard.attackEffects?.find(
+      (effect) => effect.kind === 'optional-cost-attack',
+    )
+    const attackSupportToHandCandidates =
+      optionalAttackCost?.kind === 'optional-cost-attack' &&
+      optionalAttackCost.cost.supportToHandType === 'cookie'
+        ? [
+            {
+              card: cardCheckFillerCookie(
+                `${cookieCard.id}-attack-support-cookie`,
+                1,
+                2,
+                0,
+                payColor,
+              ).cookie,
+              rested: false,
+            },
+          ]
+        : []
+    const attackPlayerSupportAreaBase =
       cookieCard.id === 'BS6-053'
+        ? energySupports.slice(0, 5).map((card) => ({ card, rested: false }))
+      : cookieCard.id === 'BS6-059'
         ? energySupports.slice(0, 5).map((card) => ({ card, rested: false }))
       : cookieCard.id === 'BS4-053' || cookieCard.id === 'BS4-061'
         ? [
@@ -3064,6 +3140,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ),
           ]
         : energySupports.map((card) => ({ card, rested: false }))
+    const attackPlayerSupportArea = [
+      ...attackPlayerSupportAreaBase,
+      ...attackSupportToHandCandidates,
+    ]
     const attackOpponentSupportArea =
       cookieCard.id === 'BS4-049'
         ? scenarioSupports('BS4-049-condition-support', 7, 'green')
@@ -3261,6 +3341,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               origin: 'trash' as const,
             }
           : null
+      const onPlayPlayerSupportArea =
+        card.id === 'BS6-058'
+          ? scenarioSupports('BS6-058-player-support', 2, 'green')
+          : energySupports.map((c) => ({ card: c, rested: false }))
+      const onPlayOpponentSupportArea =
+        card.id === 'BS6-058'
+          ? scenarioSupports('BS6-058-opponent-support', 4, 'green')
+          : []
       return {
         ...state,
         players: {
@@ -3269,13 +3357,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...state.players['player-one'],
             hand: bs6091Hand,
             battleArea: bs6091BattleArea,
-            supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+            supportArea: onPlayPlayerSupportArea,
             breakArea: bs6091BreakArea,
             discardPile: bs6091DiscardPile,
           },
           'player-two': {
             ...state.players['player-two'],
             battleArea: opponentBattleArea,
+            supportArea: onPlayOpponentSupportArea,
             stage: { card: opponentStage, rested: false },
             breakArea: opponentBreakArea,
           },
