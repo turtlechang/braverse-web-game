@@ -55,6 +55,39 @@ describe('getOptionalCostAttackPrompt', () => {
     )
   })
 
+  it('exposes BS4-075 Black Pearl Cookie as a skippable discard-2 attack choice', () => {
+    const state = createBattleState()
+    state.players['player-two'].hand = [
+      item('black-pearl-cost-1', 'blue'),
+      item('black-pearl-cost-2', 'blue'),
+    ]
+    state.pendingOptionalCostAttack = {
+      playerId: 'player-two',
+      sourceInstanceId: 'attacker',
+      sourceCardName: 'Black Pearl Cookie',
+      cost: { energy: {}, discardHand: 2 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+      effectText:
+        'Discard 2 cards from your hand to deal 2 damage to up to 1 opponent Cookie.',
+    }
+
+    expect(getOptionalCostAttackPrompt(state, 'player-two')).toMatchObject({
+      sourceCardName: 'Black Pearl Cookie',
+      costText: '棄置 2 張手牌',
+      discardHandCost: 2,
+      needsTarget: true,
+      targetMin: 0,
+      targetMax: 1,
+      targetLabel: '對手餅乾',
+    })
+  })
+
   it('falls back to 無 when the effect genuinely has no cost', () => {
     const state = createBattleState()
     state.pendingOptionalCostAttack = {

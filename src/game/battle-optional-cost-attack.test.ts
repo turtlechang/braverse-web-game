@@ -36,7 +36,7 @@ const cookie = (id: string, level: number, hp: number): CookieCard => ({
   attackCost: 0,
 })
 
-const item = (id: string, energyColor: 'green' | 'red' | 'purple'): GameCard => ({
+const item = (id: string, energyColor: 'blue' | 'green' | 'red' | 'purple'): GameCard => ({
   id,
   instanceId: id,
   name: id,
@@ -134,6 +134,44 @@ const createBs4StardustAttackState = (): GameState => {
     card.instanceId,
     'defender',
     ['BS4-098-energy-1', 'BS4-098-energy-2', 'BS4-098-energy-3'],
+  )
+}
+
+const createBs4BlackPearlAttackState = (): GameState => {
+  const sourceCard = officialBs4Cards.find((candidate) => candidate.cardNumber === 'BS4-075')
+  const conversion = sourceCard ? convertOfficialCardToGameCard(sourceCard, 'attack-test') : null
+  if (!conversion || conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') {
+    throw new Error('BS4-075 should be a runtime Cookie card.')
+  }
+
+  const card = conversion.gameCard
+  const state = createBattleState()
+  const defender = state.players['player-one'].battleArea[0]
+  state.players['player-one'].battleArea = [
+    {
+      ...defender,
+      card: { ...defender.card, hp: 10 },
+      hpCards: Array.from({ length: 10 }, (_, index) =>
+        item(`BS4-075-defender-hp-${index + 1}`, 'red'),
+      ),
+    },
+  ]
+  state.players['player-two'].battleArea = [
+    { ...state.players['player-two'].battleArea[0], card, hpCards: [] },
+  ]
+  state.players['player-two'].supportArea = Array.from({ length: 3 }, (_, index) => ({
+    card: item(`BS4-075-energy-${index + 1}`, 'blue'),
+    rested: false,
+  }))
+  state.players['player-two'].hand = [
+    handCookie('BS4-075-cost-1'),
+    handCookie('BS4-075-cost-2'),
+  ]
+  return beginAttack(
+    state,
+    card.instanceId,
+    'defender',
+    ['BS4-075-energy-1', 'BS4-075-energy-2', 'BS4-075-energy-3'],
   )
 }
 
@@ -398,6 +436,55 @@ describe('optional-cost-attack', () => {
         (cookie) => cookie.card.instanceId,
       ),
     ).toContain(deployableCookie.instanceId)
+  })
+
+  it('BS4-075 exposes the discard-2 attack cost as a skippable pending choice', () => {
+    let state = advanceToAttackEffect(createBs4BlackPearlAttackState())
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingOptionalCostAttack).toMatchObject({
+      sourceCardName: 'Black Pearl Cookie',
+      cost: { discardHand: 2 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+
+    state = resolveOptionalCostAttack(state, 'player-two', 'skip')
+
+    expect(state.pendingOptionalCostAttack).toBeNull()
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-two'].hand.map((card) => card.instanceId)).toEqual([
+      'BS4-075-cost-1-instance',
+      'BS4-075-cost-2-instance',
+    ])
+    expect(state.players['player-two'].discardPile).toHaveLength(0)
+  })
+
+  it('BS4-075 pays the selected discard-2 cards before resolving its damage target', () => {
+    let state = advanceToAttackEffect(createBs4BlackPearlAttackState())
+    state = resolveAttackEffect(state, 'player-two', [])
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      ['BS4-075-cost-1-instance', 'BS4-075-cost-2-instance'],
+      ['defender'],
+    )
+
+    expect(state.pendingOptionalCostAttack).toBeNull()
+    expect(state.pendingBattle).toBeNull()
+    expect(state.players['player-two'].hand).toHaveLength(0)
+    expect(state.players['player-two'].discardPile.map((card) => card.instanceId)).toEqual([
+      'BS4-075-cost-1-instance',
+      'BS4-075-cost-2-instance',
+    ])
+    // Base attack deals 2, then BS4-075's paid follow-up deals 2 more.
+    expect(state.players['player-one'].battleArea[0].hpCards).toHaveLength(6)
   })
 
   it('resolves source-only battle-to-break before a chained break-to-battle target', () => {

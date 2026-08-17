@@ -447,4 +447,51 @@ describe('trash-to-support effect', () => {
       'discard-cookie-2',
     ])
   })
+
+  it('filters optional trash-to-support selection by color and permits skipping', () => {
+    const state = createStateWithDiscardCookies()
+    const player = state.players['player-one']
+    const greenCookie = {
+      ...player.battleArea[0].card,
+      instanceId: 'discard-green-cookie',
+      energyColor: 'green' as const,
+    }
+    const redCookie = {
+      ...player.battleArea[0].card,
+      instanceId: 'discard-red-cookie',
+      energyColor: 'red' as const,
+    }
+    const filteredState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...player,
+          discardPile: [greenCookie, redCookie],
+        },
+      },
+    }
+    const effect: CardEffect = {
+      kind: 'trash-to-support',
+      amount: 1,
+      optional: true,
+      energyColor: 'green',
+      rested: true,
+    }
+
+    expect(
+      getTrashToSupportCandidates(filteredState, trashSupportContext, effect).map(
+        (card) => card.instanceId,
+      ),
+    ).toEqual(['discard-green-cookie'])
+    const skipped = executeCardEffect(
+      filteredState,
+      trashSupportContext,
+      effect,
+      [],
+    )
+    expect(skipped.players['player-one'].supportArea).toEqual(
+      player.supportArea,
+    )
+  })
 })

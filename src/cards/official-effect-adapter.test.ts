@@ -530,7 +530,7 @@ describe('Starter Deck RED official effect adapter', () => {
           amount: 1,
           target: {
             side: 'opponent',
-            min: 1,
+            min: 0,
             max: 1,
           },
           condition: {
@@ -2196,7 +2196,7 @@ describe('Starter Deck RED official effect adapter', () => {
             {
               kind: 'damage',
               amount: 1,
-              target: { side: 'opponent', min: 1, max: 1 },
+              target: { side: 'opponent', min: 0, max: 1 },
             },
           ],
           effectText:
@@ -2238,6 +2238,7 @@ describe('Starter Deck RED official effect adapter', () => {
               kind: 'opponent-battle-to-trash',
               min: 0,
               remainingHp: 1,
+              minRemainingHp: 1,
               destination: 'break',
             },
           ],
@@ -3366,13 +3367,20 @@ describe('Starter Deck RED official effect adapter', () => {
   })
 
   describe('BS4 cards clarified via official Chinese card images', () => {
-    it('BS4-075 Black Pearl Cookie pays a mandatory discard-2 cost (no "you may") for a bonus attack Then', () => {
+    it('BS4-075 Black Pearl Cookie exposes a skippable discard-2 cost for its bonus attack Then', () => {
       expect(convertOfficialAttackEffects(findBs4Card('BS4-075'))).toEqual([
-        { kind: 'discard-hand', count: 2 },
         {
-          kind: 'damage',
-          amount: 2,
-          target: { side: 'opponent', min: 0, max: 1 },
+          kind: 'optional-cost-attack',
+          cost: { energy: {}, discardHand: 2 },
+          effects: [
+            {
+              kind: 'damage',
+              amount: 2,
+              target: { side: 'opponent', min: 0, max: 1 },
+            },
+          ],
+          effectText:
+            'Discard 2 cards from your hand to deal 2 damage to up to 1 opponent Cookie.',
         },
       ])
     })
@@ -3863,6 +3871,53 @@ describe('Starter Deck RED official effect adapter', () => {
             kind: 'gain-hp',
             amount: 1,
             target: { side: 'self', min: 0, max: 1, minLevel: 3, maxLevel: 3 },
+          },
+        ],
+      })
+    })
+
+    it('keeps dual-target and optional discard bindings for BS4 blue/trap effects', () => {
+      expect(convertOfficialCookieSkill(findBs4Card('BS4-073@2'))).toMatchObject({
+        trigger: 'activate',
+        effects: [
+          {
+            kind: 'field-to-deck-bottom',
+            target: { side: 'either', min: 1, max: 1, maxLevel: 1 },
+            allowStage: true,
+            battleSide: 'opponent',
+          },
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+          },
+        ],
+      })
+      expect(convertOfficialAttackEffects(findBs4Card('BS4-073@2'))).toMatchObject([
+        {
+          kind: 'optional-cost-attack',
+          cost: { discardHand: 2 },
+          effects: [
+            { kind: 'damage', target: { side: 'opponent', min: 0, max: 1 } },
+          ],
+        },
+      ])
+      expect(convertOfficialTrapAbility(findBs4Card('BS4-042'))).toMatchObject({
+        effects: [
+          { kind: 'modify-attack', target: { side: 'opponent', min: 0, max: 1 } },
+          { kind: 'gain-hp', target: { side: 'self', min: 0, max: 1 } },
+        ],
+      })
+      expect(convertOfficialTrapAbility(findBs4Card('BS4-064'))).toMatchObject({
+        effects: [
+          { kind: 'modify-attack', target: { side: 'opponent', min: 0, max: 1 } },
+          {
+            kind: 'trash-to-support',
+            amount: 1,
+            optional: true,
+            energyColor: 'green',
+            rested: true,
           },
         ],
       })

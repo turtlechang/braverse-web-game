@@ -146,6 +146,9 @@ const getEffectSelector = (
       ...(effect.remainingHp !== undefined
         ? { remainingHp: effect.remainingHp }
         : {}),
+      ...(effect.minRemainingHp !== undefined
+        ? { minRemainingHp: effect.minRemainingHp }
+        : {}),
     }
   }
   if ('target' in effect && effect.target) return effect.target

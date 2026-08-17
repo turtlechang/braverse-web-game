@@ -349,7 +349,7 @@ const hasRequiredTrapTargets = (
 
     const isTargetedGainHp =
       effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly
-    if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target || effect.target.min === 0) {
+    if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target) {
       return true
     }
 
@@ -368,7 +368,14 @@ const hasRequiredTrapTargets = (
         ? 1
         : 0
 
-    return battleCandidateCount + stageCandidateCount >= effect.target.min
+    // A trap with an optional target still needs at least one legal movement
+    // target to be offered. Once the trap is played, min=0 continues to let
+    // the player skip target selection; this gate only prevents a trap whose
+    // effect cannot do anything from appearing in the trap window.
+    return (
+      battleCandidateCount + stageCandidateCount > 0 &&
+      battleCandidateCount + stageCandidateCount >= effect.target.min
+    )
   })
 }
 
@@ -1352,6 +1359,32 @@ export const playTrap = (
       const candidates = getEffectSelectionCandidates(nextState, context, effect)
       if (candidates.length === 0) {
         nextState = executeCardEffect(nextState, context, effect, [])
+        continue
+      }
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
+    // 從棄牌區選餅乾放入支援區也必須沿用 pending ability 的選卡流程。
+    // 不能把前一段戰鬥目標的 targetIds 直接傳進 executeCardEffect，否則
+    // 會把對手戰鬥區 instanceId 當成自己的棄牌區餅乾而被規則層拒絕。
+    if (effect.kind === 'trash-to-support') {
+      const candidates = getEffectSelectionCandidates(nextState, context, effect)
+      if (candidates.length === 0) {
+        if (effect.optional) {
+          nextState = executeCardEffect(nextState, context, effect, [])
+        }
         continue
       }
       return {

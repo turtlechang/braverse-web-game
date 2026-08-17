@@ -78,7 +78,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 189 個測試檔、3,104 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 206 個測試檔、3,255 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。
 
 BS6-101「Twizzly Gummy Cookie」昏厥效果已先顯示可選的紫色能量支援卡付款，再進入棄牌區紫色餅乾登場目標；本機、線上與 AI 共用同一套規則驗證，並保留不支付而略過的合法路徑。
 
@@ -178,11 +178,11 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 通用型 Lv.3／Lv.4 AI 已完成 G0～G5：Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`；Lv.4 則以 width 5、depth 5、240 nodes、150ms 的有限 command search 維持 Setup→Payoff 計畫並預留攻擊資源。搜尋只使用 `PlayerView` 與合法 `KnowledgeState`，遇到未知抽牌、攻擊 pending、trap／blocker／FLIP／replacement 等決策即停止推演；timeout 一律回退 Lv.3。G5 已將合法的補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、阻擋、Refresh 與多階段 pending 決策接入 TacticalPlan，並輸出可稽核的 selection telemetry；Lv.1／Lv.2 行為不變。
 
-卡牌行為契約目前先以 shadow mode 盤點正式卡池；最新稽核為 1101 筆公開記錄，895 筆 `verified`、206 筆保守標記 `needs-review`、0 筆 `blocked`，其中 `target evidence unresolved` 為 102 筆。報告會依 `target evidence unresolved`、`source contains unclassified clause`、`cost/payment evidence missing`、`Then`、`timing` 與 `resolution order` 分類原因；尚未宣稱 needs-review 卡已完成正式契約，仍須逐類補齊來源 parser 與 runtime selector binding。
+卡牌行為契約目前先以 shadow mode 盤點正式卡池；最新稽核為 1101 筆公開記錄，977 筆 `verified`、124 筆保守標記 `needs-review`、0 筆 `blocked`，其中 `target evidence unresolved` 已降至 1 筆。報告會依 `target evidence unresolved`、`source contains unclassified clause`、`cost/payment evidence missing`、`Then`、`timing` 與 `resolution order` 分類原因；尚未宣稱其他 needs-review 卡已完成正式契約，仍須逐類補齊來源 parser 與 runtime selector binding。
 
-本輪完成第一批 target evidence 修正：最新稽核為 1101 筆公開記錄，895 筆 `verified`、206 筆 `needs-review`、0 筆 `blocked`，其中 `target evidence unresolved` 為 102 筆。25 張 selector parser／binding 回歸、正向／阻擋 Browser command trace、AI／牌組編輯器 Browser smoke 均已通過；`cards:migrate:batch -- --offset 75 --limit 25` 回報 `selected=25、ready=true`。剩餘 needs-review 仍依原因分類處理，未轉為正式卡池資料。
+本輪完成第二批 target evidence 修正：針對 LV／HP 上下限、`sourceOnly`／`excludeSource`、自己／對手雙目標、支援區／牌庫底與場景 alternate target 補齊 parser／runtime binding，新增第二批 25 張 selector 回歸；完整 Vitest（206 檔、3252 項）、lint、build 與正向／阻擋 Browser command trace 均已通過。`cards:migrate:batch -- --offset 100 --limit 25` 回報 `selected=25、ready=true`。剩餘 needs-review 仍依原因分類處理，未轉為正式卡池資料。
 
-契約遷移目前已完成 P1～P5 的可回退 shadow gate：`npm run cards:migrate:batch -- --limit 25`、`npm run cards:migrate:batch -- --offset 50 --limit 25` 與 `npm run cards:migrate:batch -- --offset 75 --limit 25` 均會在不寫入卡池的前提下選出 25 張 verified 卡並確認 runtime compile 可執行；批次綁定使用 `cardNumber`，可保留 `@1` 異圖變體。Browser 驗收可用 `npm run cards:attest:browser` 檢查 modal selector binding 與公開 command trace；這些批次仍未 promote 正式 runtime 卡池。
+契約遷移目前已完成 P1～P5 的可回退 shadow gate：`npm run cards:migrate:batch -- --limit 25`、`npm run cards:migrate:batch -- --offset 50 --limit 25`、`npm run cards:migrate:batch -- --offset 75 --limit 25` 與 `npm run cards:migrate:batch -- --offset 100 --limit 25` 均會在不寫入卡池的前提下選出 25 張 verified 卡並確認 runtime compile 可執行；批次綁定使用 `cardNumber`，可保留 `@1` 異圖變體。Browser 驗收可用 `npm run cards:attest:browser` 檢查 modal selector binding 與公開 command trace；這些批次仍未 promote 正式 runtime 卡池。
 
 牌組編輯器的 LV／HP／攻擊力篩選、BS3-061／BS6-101 可選昏厥技能、BS5／BS6 尖括號攻擊後代價稽核、BS6-044 固定攻擊目標追傷、效果傷害 FLIP 結算、陷阱來源／代價與攻擊後效果詳細步驟對戰紀錄，以及 BS5-073、BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇、昏厥效果與對戰紀錄的正向／負向 Browser 路徑。
 
@@ -286,7 +286,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與兩批各 25 張 verified shadow migration gate（含 `cardNumber` 異圖綁定）；補齊 LV／Blocker／markup／直接能量鍵 parser 與 selector binding，稽核原因改為可統計分類，並修正 Browser trace 不應載入 Node-only ledger 的啟動問題；讓 `promote:candidate` 預設阻擋未完成契約；修正 BS3-113 Caramel Arrow Cookie 登場後全體傷害的逐張目標順序與 AI 指令；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場。 |
+| 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與兩批各 25 張 verified shadow migration gate（含 `cardNumber` 異圖綁定）；補齊 LV／Blocker／markup／直接能量鍵 parser 與 selector binding，稽核原因改為可統計分類，並修正 Browser trace 不應載入 Node-only ledger 的啟動問題；讓 `promote:candidate` 預設阻擋未完成契約；修正 BS3-113 Caramel Arrow Cookie 登場後全體傷害的逐張目標順序與 AI 指令；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場；BS4-075 Black Pearl Cookie 攻擊後棄 2 張手牌改為可略過的代價選擇，並以 Browser／規則回歸驗證支付與目標流程。 |
 | 2026-08-16 | 調整 Lv.2–Lv.4 AI 餅乾部署策略：不強制填滿兩張戰鬥區，已有餅乾時優先避免 FLIP 卡，僅在缺少非 FLIP 替代品或可直接補刀時允許登場；新增部署政策回歸測試，完整 Vitest 190 檔／3,110 項、lint、build 與 AI Browser 20／20 通過。 |
 | 2026-08-16 | 完成牌組編輯器 LV／HP／攻擊力篩選，修正並稽核 BS5／BS6 尖括號攻擊後代價可略過流程，補上 P-059 抽牌來源與條件紀錄；完成 BS6-008「Sugar Swan Cookie」陷阱封鎖、BS6-044 固定原攻擊目標追傷、BS6-061 支援區回手後 BS1-078 場景條件、BS6-051 綠色手牌目標提示、BS6-062 物品支援區餅乾回手代價、效果傷害 FLIP 逐點結算與 BS3-061 可選昏厥技能修正；補上本機／線上對戰紀錄的陷阱來源卡、代價與攻擊後效果來源／目標／結果步驟；完整 Vitest 189 檔／3,104 項、lint、build 通過。 |
 | 2026-08-15 | 依官方韓文資料與實體卡逐卡修正 BS6「Operation Timeguard」52 個基礎卡號（64 筆含異圖）的英文 API 攻擊傷害誤記，並補上 BS4-045@1／BS4-097@1 兩張異圖變體；修正 BS6-079 攻擊後可選代價的目標選擇只能選 1 張的問題（OptionalCostAttackModal 改為多選、支援「對手支援區的卡」標籤與上限進度），新增 `bs6-079-multi-target-probe` Browser 驗證「支付代價→選 3 張對手支援卡橫置」；補強 1164×777 與通用桌面 viewport 的手牌實際卡面邊界 gate；完整 Vitest 188 檔／3,039 項、lint、build 通過。 |

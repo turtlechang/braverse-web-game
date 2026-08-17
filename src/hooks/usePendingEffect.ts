@@ -308,7 +308,7 @@ export function usePendingEffect(params: {
         ? getTrashCookieCandidates(game, pendingEffect.context, currentEffect).filter(
             (card) => isDescriptorCandidate(card.instanceId),
           )
-        : getTrashToSupportCandidates(game, pendingEffect.context).filter(
+        : getTrashToSupportCandidates(game, pendingEffect.context, currentEffect).filter(
             (card) => isDescriptorCandidate(card.instanceId),
           )
       : []

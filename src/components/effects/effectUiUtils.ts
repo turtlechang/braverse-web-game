@@ -110,7 +110,9 @@ export const describeEffect = (effect: CardEffect) => {
   }
   if (effect.kind === 'optional-cost-attack') return effect.effectText
   if (effect.kind === 'trash-to-support') {
-    return `從棄牌區選擇 ${effect.amount} 張餅乾放入支援區。`
+    return effect.optional
+      ? `從棄牌區選擇最多 ${effect.amount} 張符合條件的餅乾放入支援區。`
+      : `從棄牌區選擇 ${effect.amount} 張符合條件的餅乾放入支援區。`
   }
   if (effect.kind === 'disable-block') {
     return '本回合對手不能發動 {bl}。'

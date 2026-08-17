@@ -1935,10 +1935,15 @@ export const executeCardEffect = (
 
   if (effect.kind === 'trash-to-support') {
     const player = state.players[context.sourcePlayerId]
-    const cookieCandidates = getTrashToSupportCandidates(state, context)
+    const cookieCandidates = getTrashToSupportCandidates(state, context, effect)
     const uniqueIds = [...new Set(selectedTargetIds)]
-    if (uniqueIds.length !== effect.amount) {
-      throw new GameRuleError(`必須選擇 ${effect.amount} 張棄牌區餅乾。`)
+    const min = effect.optional ? 0 : effect.amount
+    if (uniqueIds.length < min || uniqueIds.length > effect.amount) {
+      throw new GameRuleError(
+        effect.optional
+          ? `最多選擇 ${effect.amount} 張棄牌區餅乾。`
+          : `必須選擇 ${effect.amount} 張棄牌區餅乾。`,
+      )
     }
     const selected = uniqueIds.map((id) =>
       cookieCandidates.find((card) => card.instanceId === id),
@@ -2222,7 +2227,14 @@ export const executeCardEffect = (
       }
       if (effect.target.maxLevel !== undefined && cookie.card.level > effect.target.maxLevel) return false
       if (effect.target.minLevel !== undefined && cookie.card.level < effect.target.minLevel) return false
-      if (effect.target.remainingHp !== undefined && cookie.hpCards.length > effect.target.remainingHp) return false
+      if (
+        effect.target.remainingHp !== undefined &&
+        cookie.hpCards.length > effect.target.remainingHp
+      ) return false
+      if (
+        effect.target.maxRemainingHp !== undefined &&
+        cookie.hpCards.length > effect.target.maxRemainingHp
+      ) return false
       return true
     })
 

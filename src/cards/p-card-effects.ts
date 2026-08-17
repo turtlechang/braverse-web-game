@@ -20,7 +20,14 @@ export const P_EXACT_EFFECTS: Partial<Record<string, CardEffect[]>> = {
   'P-043': [{
     kind: 'gain-hp',
     amount: 1,
-    target: { side: 'self', min: 0, max: 1, energyColor: 'yellow', maxLevel: 3 },
+    target: {
+      side: 'self',
+      min: 0,
+      max: 1,
+      energyColor: 'yellow',
+      minLevel: 3,
+      maxLevel: 3,
+    },
   }],
   'P-044': [{
     kind: 'battle-to-support',
@@ -336,7 +343,14 @@ export const P_EXACT_EFFECTS: Partial<Record<string, CardEffect[]>> = {
     condition: { kind: 'break-area-has-card', side: 'self', minLevel: 3 },
   }],
   'P-140': [{
-    kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, maxLevel: 3, maxRemainingHp: 5 },
+    kind: 'gain-hp', amount: 1, target: {
+      side: 'self',
+      min: 0,
+      max: 1,
+      minLevel: 3,
+      maxLevel: 3,
+      maxRemainingHp: 5,
+    },
   }],
   'P-141': [{
     kind: 'modify-attack', amount: 1, duration: 'this-turn', target: self(),

@@ -780,12 +780,12 @@ describe('BS5 candidate YELLOW effect adapter', () => {
 
 describe('BS5 candidate GREEN effect adapter', () => {
   describe('主效果（exactStarterEffects）', () => {
-    it('BS5-045 Potato Cookie 登場效果：支援區回手 1（可選）後抽至多 1', () => {
+    it('BS5-045 Potato Cookie 登場效果：支付代價回手支援卡 1 張後抽至多 1', () => {
       expect(convertOfficialCookieSkill(findBs5Card('BS5-045'))).toMatchObject({
         trigger: 'on-play',
         cost: { energy: {}, discardHand: 0 },
         effects: [
-          { kind: 'support-to-hand', amount: 1, optional: true },
+          { kind: 'support-to-hand', amount: 1 },
           { kind: 'draw-up-to', max: 1 },
         ],
       })

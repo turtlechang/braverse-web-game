@@ -1000,6 +1000,7 @@ export interface OpponentBattleToTrashEffect {
   maxLevel?: number
   minLevel?: number
   remainingHp?: number
+  minRemainingHp?: number
   destination?: 'trash' | 'break'
   condition?: EffectCondition
 }
@@ -1299,6 +1300,11 @@ export interface TrashToSupportEffect {
   kind: 'trash-to-support'
   amount: number
   rested?: boolean
+  optional?: boolean
+  energyColor?: EnergyColor
+  minLevel?: number
+  maxLevel?: number
+  condition?: EffectCondition
 }
 
 export interface TrashToHandEffect {

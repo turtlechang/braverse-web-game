@@ -347,6 +347,12 @@ export const getEffectTargetCandidatesForEffect = (
       ) {
         return false
       }
+      if (
+        bttEffect.minRemainingHp !== undefined &&
+        cookie.hpCards.length < bttEffect.minRemainingHp
+      ) {
+        return false
+      }
       return true
     })
   }
@@ -519,6 +525,7 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   effect.kind === 'break-to-battle' ||
   effect.kind === 'support-to-battle' ||
   effect.kind === 'trash-to-battle' ||
+  effect.kind === 'trash-to-support' ||
   effect.kind === 'support-to-trash' ||
   effect.kind === 'support-to-hand' ||
   effect.kind === 'hand-to-support' ||
@@ -545,6 +552,9 @@ export const getEffectSelectionLimits = (
     return { min: 0, max: effect.amount }
   }
   if (effect.kind === 'trash-to-battle') {
+    return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
+  }
+  if (effect.kind === 'trash-to-support') {
     return { min: effect.optional ? 0 : effect.amount, max: effect.amount }
   }
   if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
@@ -829,6 +839,9 @@ export const getEffectSelectionCandidates = (
   if (effect.kind === 'trash-to-break') {
     return getTrashToBreakCandidates(state, context, effect)
   }
+  if (effect.kind === 'trash-to-support') {
+    return getTrashToSupportCandidates(state, context, effect)
+  }
   return getEffectTargetCandidatesForEffect(state, context, effect).map(
     (cookie) => cookie.card,
   )
@@ -995,9 +1008,15 @@ export const getTrashCookieCandidates = (
 export const getTrashToSupportCandidates = (
   state: GameState,
   context: EffectContext,
+  effect?: Extract<CardEffect, { kind: 'trash-to-support' }>,
 ): CookieCard[] =>
   state.players[context.sourcePlayerId].discardPile.filter(
-    (card): card is CookieCard => card.type === 'cookie',
+    (card): card is CookieCard =>
+      card.type === 'cookie' &&
+      (effect?.energyColor === undefined ||
+        card.energyColor === effect.energyColor) &&
+      (effect?.minLevel === undefined || card.level >= effect.minLevel) &&
+      (effect?.maxLevel === undefined || card.level <= effect.maxLevel),
   )
 
 export const getBreakToTrashCandidates = (
