@@ -26,11 +26,14 @@ const effectOrderLabels: Record<PendingEffectOrderItem['kind'], string> = {
 export interface EffectOrderModalProps {
   items: PendingEffectOrderItem[]
   onConfirm: (orderedIds: string[]) => void
+  /** 規則層 descriptor 的步驟標籤；未提供時沿用既有文案。 */
+  stepLabel?: string
 }
 
 export function EffectOrderModal({
   items,
   onConfirm,
+  stepLabel = '選擇效果處理順序',
 }: EffectOrderModalProps) {
   const chooseFirst = (firstId: string) => {
     onConfirm([
@@ -48,7 +51,7 @@ export function EffectOrderModal({
         role="alertdialog"
       >
         <span>同時觸發</span>
-        <h2>選擇效果處理順序</h2>
+        <h2>{stepLabel}</h2>
         <p className="faint-effect-text">
           這些效果屬於同一位玩家，請選擇要先處理的效果。
         </p>

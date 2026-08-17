@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { getRefreshCandidates } from '../../game'
+import { describePendingDecision, getRefreshCandidates } from '../../game'
 import {
   DecisionModal,
   InspectDeckModal,
@@ -72,6 +72,20 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
     !match.game.pendingOnPlay
       ? match.game.pendingEffectOrder
       : null
+
+  const effectOrderDescriptor = pendingEffectOrder
+    ? describePendingDecision(
+        {
+          kind: 'effect-order',
+          playerId: pendingEffectOrder.playerId,
+          sourcePlayerId:
+            pendingEffectOrder.items[0]?.sourcePlayerId ?? pendingEffectOrder.playerId,
+          sourceInstanceId: pendingEffectOrder.items[0]?.sourceInstanceId ?? '',
+          items: pendingEffectOrder.items,
+        },
+        pendingEffectOrder.items.map((item) => item.id),
+      )
+    : null
 
   const pendingDrawUpTo =
     match.game.pendingDrawUpTo &&
@@ -518,6 +532,7 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       {pendingEffectOrder && !pending.pendingEffect && (
         <EffectOrderModal
           items={pendingEffectOrder.items}
+          stepLabel={effectOrderDescriptor?.steps[0]?.label}
           onConfirm={(orderedIds) => {
             match.dispatch(
               {

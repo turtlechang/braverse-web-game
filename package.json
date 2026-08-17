@@ -11,6 +11,7 @@
     "server:typecheck": "tsc --noEmit -p server/tsconfig.json",
     "typecheck": "tsc -b && npm run server:typecheck",
     "validate:cards": "tsx scripts/validate-cards.ts",
+    "cards:audit:contracts": "tsx scripts/validate-card-contracts.ts",
     "validate:candidate": "tsx scripts/validate-candidate-cards.ts",
     "promote:candidate": "tsx scripts/promote-candidate-cards.ts",
     "generate:card-pool": "tsx scripts/generate-card-pool.ts",

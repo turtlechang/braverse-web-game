@@ -3,6 +3,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { convertOfficialCardToGameCard } from '../src/cards'
+import { analyzeOfficialCardBehavior } from '../src/cards/contracts'
 import type { OfficialCardRecord } from '../src/cards/types'
 import { getAllCardPoolEntries } from '../src/game/card-pool'
 
@@ -163,6 +164,7 @@ const validateCandidateDocument = (
   file: string,
   existingPoolNumbers: ReadonlySet<string>,
   errors: string[],
+  requireContracts: boolean,
 ): { convertedCount: number; status: CandidateStatus } => {
   if (!isRecord(parsed)) {
     errors.push(`${file}: 頂層必須為物件`)
@@ -215,6 +217,14 @@ const validateCandidateDocument = (
       }
       convertedCount += 1
       const { gameCard } = conversion
+      if (requireContracts) {
+        const audit = analyzeOfficialCardBehavior(card, gameCard)
+        if (audit.contract.status !== 'verified') {
+          errors.push(
+            `${card.cardNumber} ${card.name}: 行為契約 ${audit.contract.status}（${audit.errors.join('; ')}）`,
+          )
+        }
+      }
       if (card.type === 'flip' && card.flipText && !gameCard.flip) {
         errors.push(`${card.cardNumber} ${card.name}: 有 FLIP 文字但未轉出 flip 效果`)
       }
@@ -241,6 +251,7 @@ export const validateCandidates = (
   directory = candidatesDir,
   existingPoolNumbers = new Set(getAllCardPoolEntries().map((entry) => entry.cardNumber)),
   requirePromotionReady = false,
+  requireContracts = false,
 ): {
   files: string[]
   totalCards: number
@@ -264,7 +275,7 @@ export const validateCandidates = (
       continue
     }
     if (isRecord(parsed) && Array.isArray(parsed.cards)) totalCards += parsed.cards.length
-    const result = validateCandidateDocument(parsed, file, existingPoolNumbers, errors)
+    const result = validateCandidateDocument(parsed, file, existingPoolNumbers, errors, requireContracts)
     convertedCount += result.convertedCount
     if (result.status === 'inventory') {
       inventoryFiles.push(file)
@@ -286,6 +297,7 @@ const result = validateCandidates(
   targetCandidatesDir,
   new Set(getAllCardPoolEntries().map((entry) => entry.cardNumber)),
   process.argv.includes('--require-promotion-ready'),
+  process.argv.includes('--strict-contracts'),
 )
 if (result.files.length === 0) {
   console.log(`${targetCandidatesDir} 中無 .json 檔案，無候選資料需驗證。`)

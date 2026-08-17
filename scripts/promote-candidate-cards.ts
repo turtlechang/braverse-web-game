@@ -16,6 +16,7 @@
  * - 只在複製全部成功 + registry 重新生成後才刪除候選檔案
  *
  * 執行方式：tsx scripts/promote-candidate-cards.ts
+ * 歷史相容診斷：加上 --allow-contract-gaps（不得作為正式 promote 依據）
  */
 import {
   readdirSync,
@@ -83,11 +84,20 @@ console.log('通過檔名檢查，開始驗證...')
 // --- Phase 2: 執行驗證 ---
 const tsxBin = join(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs')
 const validateScript = join(projectRoot, 'scripts', 'validate-candidate-cards.ts')
+const allowContractGaps = process.argv.includes('--allow-contract-gaps')
+const validationArgs = [
+  tsxBin,
+  validateScript,
+  '--require-promotion-ready',
+  ...(allowContractGaps ? [] : ['--strict-contracts']),
+  '--dir',
+  candidatesDir,
+]
 
 try {
   execFileSync(
     'node',
-    [tsxBin, validateScript, '--require-promotion-ready', '--dir', candidatesDir],
+    validationArgs,
     {
       stdio: 'inherit',
       cwd: projectRoot,

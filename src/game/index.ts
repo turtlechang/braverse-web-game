@@ -1,4 +1,10 @@
 export { GameRuleError } from './errors'
+export { describePendingDecision } from './decision-descriptor'
+export type {
+  DecisionDescriptor,
+  DecisionDescriptorStep,
+  DecisionDescriptorStepKind,
+} from './decision-descriptor'
 export {
   executeCardEffect,
   getAttackDamageAgainst,

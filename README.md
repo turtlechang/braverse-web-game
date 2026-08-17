@@ -82,6 +82,8 @@ BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成�
 
 BS6-101「Twizzly Gummy Cookie」昏厥效果已先顯示可選的紫色能量支援卡付款，再進入棄牌區紫色餅乾登場目標；本機、線上與 AI 共用同一套規則驗證，並保留不支付而略過的合法路徑。
 
+卡牌轉接新增 shadow 行為契約稽核：`src/cards/contracts/` 會將官方來源拆成 clause ledger，交叉比對支付、代價、目標與 `Then` 的 runtime evidence，並產生 `verified`／`needs-review`／`blocked` 報告。`npm run cards:audit:contracts` 只讀取並報告，不改變正式決策；候選資料可用 `--strict-contracts` 阻止未完成契約進入 promote，`promote:candidate` 預設已啟用此 gate。完整流程與限制見 [卡牌行為契約](docs/card-behavior-contract.md)。
+
 效果傷害（攻擊後追傷、技能、物品、場景與陷阱的傷害）現在統一進入逐點傷害／FLIP 結算流程；效果佇列會在 FLIP、昏厥與補位等決策完成後再續接下一段。丟棄、移除、HP 費用與 HP 區域移動仍不翻開或觸發 FLIP，並有正負向回歸測試。
 
 BS5-073「Cyborg Cookie」已依官方 `flipText` 在卡牌詳情與牌組編輯器顯示為 FLIP；BS4-024「Kumiho Cookie」在對手有黃色 LV.3 餅乾時，攻擊目標 UI 只允許 Kumiho，其他目標會顯示限制原因，展開對戰紀錄也會保留限制步驟與來源卡。兩條流程均已用 localhost-only Browser fixture 實際操作驗證。
@@ -221,6 +223,7 @@ P-0XX 已完成原 26 張正式卡的 promote 與高風險效果回歸；官方�
 ```bash
 npm run validate:cards
 npm run validate:candidate
+npm run cards:audit:contracts
 npm run generate:card-pool
 npm run check:card-pool
 npm run benchmark:bs6-competitive:round-robin
