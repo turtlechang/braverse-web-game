@@ -929,3 +929,60 @@ describe('independent multi-effect chains do not abort on an unrelated empty opp
     ).toBe(true)
   })
 })
+
+describe('AI simulation preserves nested sequential targets in untargeted Then effects', () => {
+  it('keeps BS3-113 target order when trash-to-deck-all wraps damage-all', () => {
+    const caramelArrow = asCookie('BS3-113')
+    const sourceInstanceId = 'caramel-arrow-ai'
+    const base = createBattleState()
+    const secondTarget = {
+      card: baseCookie('caramel-arrow-second-target', 1, 3),
+      hpCards: [item('caramel-arrow-second-hp-1'), item('caramel-arrow-second-hp-2')],
+      rested: false,
+      battleEntryId: 'caramel-arrow-second-target:battle:2',
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [...base.players['player-one'].battleArea, secondTarget],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            {
+              ...base.players['player-two'].battleArea[0],
+              card: { ...caramelArrow, instanceId: sourceInstanceId },
+            },
+          ],
+          discardPile: Array.from({ length: 15 }, (_, index) =>
+            item(`caramel-arrow-purple-${index}`, 'purple'),
+          ),
+        },
+      },
+    }
+    const context: EffectContext = {
+      sourcePlayerId: 'player-two',
+      sourceInstanceId,
+      sourceCardName: caramelArrow.name,
+    }
+    const targetIds = state.players['player-one'].battleArea.map(
+      (cookie) => cookie.card.instanceId,
+    )
+
+    const sim = simulateAbilityEffects(
+      state,
+      context,
+      caramelArrow.skill!.effects,
+      (_state, _context, effect) =>
+        effect.kind === 'trash-to-deck-all' ? targetIds : [],
+      () => true,
+      { sourceInstanceId, paymentIds: [] },
+    )
+
+    expect(sim.aborted).toBe(false)
+    expect(sim.effectTargets).toEqual([targetIds])
+  })
+})

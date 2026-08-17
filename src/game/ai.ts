@@ -103,7 +103,7 @@ export const selectAiEnergyPayment = (
 ): string[] | null =>
   selectEnergyPayment(skill.cost.energy ?? skill.cost, supportArea)
 
-const legacyChooseEffectTargets = (
+const chooseEffectTargets = (
   state: GameState,
   context: EffectContext,
   effect: CardEffect,
@@ -270,6 +270,34 @@ const legacyChooseEffectTargets = (
       .sort((left, right) => right.hpCards.length - left.hpCards.length)
       .slice(0, 1)
       .map((cookie) => cookie.card.instanceId)
+  }
+
+  // Sequential damage-all is still an explicit target-order decision even
+  // though the non-sequential form is untargeted. Composite effects such as
+  // BS3-113 carry the same decision on the nested `thenEffects` branch. The
+  // rules layer validates that every currently legal target appears exactly
+  // once, so the AI must pass the complete deterministic ordering rather than
+  // the empty target list used by ordinary untargeted effects.
+  const sequentialDamage =
+    effect.kind === 'damage-all' && effect.sequential
+      ? effect
+      : effect.kind === 'trash-to-deck-all'
+        ? effect.thenEffects?.find(
+            (thenEffect): thenEffect is Extract<CardEffect, { kind: 'damage-all' }> =>
+              thenEffect.kind === 'damage-all' && thenEffect.sequential === true,
+          )
+        : undefined
+  if (sequentialDamage?.target) {
+    const candidates = getEffectTargetCandidates(
+      state,
+      context,
+      sequentialDamage.target,
+    ).filter(
+      (cookie) =>
+        !sequentialDamage.excludeSource ||
+        cookie.card.instanceId !== context.sourceInstanceId,
+    )
+    return candidates.map((cookie) => cookie.card.instanceId)
   }
 
   if (isEffectUntargeted(effect)) {

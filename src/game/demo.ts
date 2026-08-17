@@ -2589,6 +2589,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     ...Array.from({ length: 5 }, (_, i) =>
       testSupportCard(`trash-purple-cost-${i}`, 'purple'),
     ),
+    // BS3-113 的 OnPlay 條件是自己的棄牌區至少 15 張紫色卡。card-check
+    // fixture 必須把條件建立成真，才能在實際瀏覽器驗證後續的逐一全體傷害
+    // 與目標排序 UI，而不是只停在「條件未滿足」的略過提示。
+    ...(card.id === 'BS3-113'
+      ? Array.from({ length: 8 }, (_, i) =>
+          testSupportCard(`BS3-113-purple-trash-${i}`, 'purple'),
+        )
+      : []),
     ...(card.id === 'BS5-094'
       ? Array.from({ length: 5 }, (_, i) =>
           cardCheckFillerCookie(
@@ -2965,7 +2973,18 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // Attack-post-effect cookies ("Then ..." attack text): mirror
   // createAttackEffectDemoState / createBlueOptionalCostAttackDemoState.
   const cookieCard = card as CookieCard
-  if (cookieCard.attackEffects && cookieCard.attackEffects.length > 0) {
+  // OnPlay 牌同時擁有攻擊後效果時，card-check 仍須優先驗證登場能力；否則
+  // 像 BS3-113 會被錯帶進 attack-effect fixture，根本無法在瀏覽器走到
+  // OnPlay 的逐一傷害目標選擇。
+  if (
+    cookieCard.attackEffects &&
+    cookieCard.attackEffects.length > 0 &&
+    // BS3-113 has both an OnPlay condition and an attack effect in the
+    // official record; its card-check route intentionally verifies the
+    // OnPlay damage-order selector. Other OnPlay + attack-effect cards keep
+    // the established attack-effect fixture path.
+    cookieCard.id !== 'BS3-113'
+  ) {
     const state = baseState()
     // The generic fixture should enter the card's real post-attack UI rather
     // than silently auto-skipping an effect whose condition happens to be

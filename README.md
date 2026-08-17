@@ -284,7 +284,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與 25 張 verified shadow migration gate；讓 `promote:candidate` 預設阻擋未完成契約；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場。 |
+| 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與 25 張 verified shadow migration gate；讓 `promote:candidate` 預設阻擋未完成契約；修正 BS3-113 Caramel Arrow Cookie 登場後全體傷害的逐張目標順序與 AI 指令；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場。 |
 | 2026-08-16 | 調整 Lv.2–Lv.4 AI 餅乾部署策略：不強制填滿兩張戰鬥區，已有餅乾時優先避免 FLIP 卡，僅在缺少非 FLIP 替代品或可直接補刀時允許登場；新增部署政策回歸測試，完整 Vitest 190 檔／3,110 項、lint、build 與 AI Browser 20／20 通過。 |
 | 2026-08-16 | 完成牌組編輯器 LV／HP／攻擊力篩選，修正並稽核 BS5／BS6 尖括號攻擊後代價可略過流程，補上 P-059 抽牌來源與條件紀錄；完成 BS6-008「Sugar Swan Cookie」陷阱封鎖、BS6-044 固定原攻擊目標追傷、BS6-061 支援區回手後 BS1-078 場景條件、BS6-051 綠色手牌目標提示、BS6-062 物品支援區餅乾回手代價、效果傷害 FLIP 逐點結算與 BS3-061 可選昏厥技能修正；補上本機／線上對戰紀錄的陷阱來源卡、代價與攻擊後效果來源／目標／結果步驟；完整 Vitest 189 檔／3,104 項、lint、build 通過。 |
 | 2026-08-15 | 依官方韓文資料與實體卡逐卡修正 BS6「Operation Timeguard」52 個基礎卡號（64 筆含異圖）的英文 API 攻擊傷害誤記，並補上 BS4-045@1／BS4-097@1 兩張異圖變體；修正 BS6-079 攻擊後可選代價的目標選擇只能選 1 張的問題（OptionalCostAttackModal 改為多選、支援「對手支援區的卡」標籤與上限進度），新增 `bs6-079-multi-target-probe` Browser 驗證「支付代價→選 3 張對手支援卡橫置」；補強 1164×777 與通用桌面 viewport 的手牌實際卡面邊界 gate；完整 Vitest 188 檔／3,039 項、lint、build 通過。 |

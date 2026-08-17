@@ -98,7 +98,19 @@ export const simulateAbilityEffects = (
       effect.kind === 'support-to-battle' ||
       effect.kind === 'hand-to-break' ||
       effect.kind === 'break-to-hand'
-    const targetIds = isEffectUntargeted(effect) && !usesCardSelection
+    // Composite effects such as BS3-113's `trash-to-deck-all` are untargeted
+    // at the outer level but carry a sequential damage-all `Then` branch that
+    // still requires every legal battle target in resolution order. Keep the
+    // nested target list in the same command payload instead of discarding it
+    // with the ordinary untargeted-effect path.
+    const hasNestedTargetSelection =
+      effect.kind === 'trash-to-deck-all' &&
+      effect.thenEffects?.some(
+        (thenEffect) =>
+          thenEffect.kind === 'damage-all' && thenEffect.sequential === true,
+      ) === true
+    const targetIds =
+      isEffectUntargeted(effect) && !usesCardSelection && !hasNestedTargetSelection
       ? []
       : chooseEffectTargets(nextState, context, effect)
     if (!isTargetCountSufficient(effect, targetIds)) {

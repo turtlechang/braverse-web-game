@@ -11,6 +11,7 @@ export {
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  getNestedSequentialDamageSelectionEffect,
   hasRequiredEffectTargets,
   getTargetPlayerId,
   getSupportEffectCandidates,

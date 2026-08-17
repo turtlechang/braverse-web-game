@@ -355,6 +355,14 @@ export const getEffectTargetCandidatesForEffect = (
     return getEffectTargetCandidates(state, context, effect.target)
   }
 
+  // `damage-all` normally has no individual selector, but sequential all-target
+  // damage explicitly carries one so the player can choose the resolution
+  // order. Treat it as a regular target effect here; otherwise the local
+  // OnPlay panel receives an empty candidate list (for example BS3-113).
+  if (effect.kind === 'damage-all' && effect.sequential && effect.target) {
+    return getEffectTargetCandidates(state, context, effect.target)
+  }
+
   if (
     effect.kind === 'return-to-hand' ||
     effect.kind === 'return-to-deck-bottom'
@@ -481,12 +489,33 @@ export const requiresTargetSelection = (
     !effect.target.sourceOnly)
 
 /**
+ * A composite effect can have to resolve an untargeted setup first (such as
+ * returning a discard pile to the deck) while its nested all-target damage
+ * still needs the player to choose a legal resolution order. The selected
+ * ids stay with the outer effect command and are validated by the nested
+ * effect when it resolves.
+ */
+export const getNestedSequentialDamageSelectionEffect = (
+  effect: CardEffect | null | undefined,
+): Extract<CardEffect, { kind: 'damage-all' }> | null => {
+  if (effect?.kind !== 'trash-to-deck-all') return null
+
+  return (
+    effect.thenEffects?.find(
+      (thenEffect): thenEffect is Extract<CardEffect, { kind: 'damage-all' }> =>
+        thenEffect.kind === 'damage-all' && thenEffect.sequential === true,
+    ) ?? null
+  )
+}
+
+/**
  * Cards selected from a non-battle zone use the same pending target channel as
  * battle targets. Keep the source of truth here so attack follow-ups, the UI,
  * and AI cannot disagree about legal selections.
  */
 export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
   requiresTargetSelection(effect) ||
+  getNestedSequentialDamageSelectionEffect(effect) !== null ||
   effect.kind === 'break-to-battle' ||
   effect.kind === 'support-to-battle' ||
   effect.kind === 'trash-to-battle' ||
@@ -507,6 +536,8 @@ export const requiresEffectCardSelection = (effect: CardEffect): boolean =>
 export const getEffectSelectionLimits = (
   effect: CardEffect,
 ): { min: number; max: number } | null => {
+  const nestedSequentialDamage = getNestedSequentialDamageSelectionEffect(effect)
+  if (nestedSequentialDamage) return nestedSequentialDamage.target ?? null
   if (effect.kind === 'damage-all' && effect.sequential) {
     return effect.target ?? null
   }
@@ -615,6 +646,12 @@ export const getEffectSelectionCandidates = (
   context: EffectContext,
   effect: CardEffect,
 ): GameCard[] => {
+  const nestedSequentialDamage = getNestedSequentialDamageSelectionEffect(effect)
+  if (nestedSequentialDamage?.target) {
+    return getEffectTargetCandidates(state, context, nestedSequentialDamage.target).map(
+      (cookie) => cookie.card,
+    )
+  }
   if (effect.kind === 'opponent-break-to-trash-then-battle-to-break') {
     const pending = state.pendingAbilityEffect
       ?.pendingOpponentBreakToTrashThenBattleToBreak
