@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
@@ -12,6 +13,13 @@ const require = createRequire(import.meta.url)
 const port = Number(process.env.BRAVERSE_TEST_PORT ?? 4179)
 const baseUrl = `http://127.0.0.1:${port}`
 const viteEntry = resolve(dirname(require.resolve('vite/package.json', { paths: [root] })), 'bin/vite.js')
+const batchReportArgumentIndex = process.argv.findIndex((argument) => argument === '--batch-report')
+const batchReportInline = process.argv.find((argument) => argument.startsWith('--batch-report='))
+const batchReportPath = batchReportInline
+  ? batchReportInline.slice('--batch-report='.length)
+  : batchReportArgumentIndex >= 0
+    ? process.argv[batchReportArgumentIndex + 1]
+    : undefined
 
 const waitForPreview = async (): Promise<void> => {
   for (let attempt = 0; attempt < 60; attempt += 1) {
@@ -33,6 +41,134 @@ const readTrace = async (page: Page): Promise<CardContractActionTraceEntry[]> =>
     }).__braverseContractTrace
     return trace ?? []
   })
+
+const drainGenericEffectPanel = async (page: Page): Promise<boolean> => {
+  const panel = page.locator('.effect-panel')
+  if ((await panel.count()) === 0) return false
+
+  const candidateGroups = [
+    '.effect-candidates-payment button',
+    '.effect-candidates-cost-support button',
+    '.effect-candidates-discard-hand button',
+    '.effect-candidates-trash-battle button',
+    '.effect-candidates-target button',
+  ]
+  for (let round = 0; round < 12; round += 1) {
+    let clicked = false
+    for (const selector of candidateGroups) {
+      const buttons = panel.locator(selector)
+      const count = await buttons.count()
+      for (let index = 0; index < count; index += 1) {
+        const button = buttons.nth(index)
+        const classes = (await button.getAttribute('class')) ?? ''
+        if (!classes.includes('is-selected')) {
+          await button.click({ force: true }).catch(() => {})
+          await page.waitForTimeout(60)
+          clicked = true
+          break
+        }
+      }
+    }
+
+    const primary = panel.locator('.effect-panel-primary-action')
+    if ((await primary.count()) > 0 && !(await primary.first().isDisabled().catch(() => true))) {
+      await primary.first().click({ force: true })
+      await page.waitForTimeout(140)
+      if ((await page.locator('.effect-panel').count()) === 0) return true
+      continue
+    }
+
+    const skip = panel.getByRole('button', { name: /略過|取消技能|不發動/ })
+    if (!clicked && (await skip.count()) > 0) {
+      await skip.first().click({ force: true }).catch(() => {})
+      await page.waitForTimeout(140)
+      return true
+    }
+    if (!clicked) break
+  }
+
+  return true
+}
+
+const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
+  const routeCardId = encodeURIComponent(cardId)
+  const traceCardId = cardId.split('@')[0]
+  await page.goto(
+    `${baseUrl}?test-state=card:${routeCardId}&contract-card=${encodeURIComponent(traceCardId)}`,
+    { waitUntil: 'networkidle' },
+  )
+  await page.locator('.game-shell').waitFor({ state: 'visible' })
+  await page.waitForTimeout(180)
+  const bodyText = await page.locator('body').innerText()
+  assert.equal(
+    /遊戲發生問題|Application Error|Unhandled Runtime Error/i.test(bodyText),
+    false,
+    `${cardId} card-check route rendered an error boundary`,
+  )
+
+  // Drain any response/faint/FLIP modal first; these routes are intentionally
+  // positioned at different phases depending on the card type.
+  for (let round = 0; round < 3; round += 1) {
+    const response = page.locator('.battle-response-modal').filter({ hasText: /是否發動|是否使用|回應/ })
+    const skip = response.getByRole('button', { name: /略過|不發動/ })
+    if ((await skip.count()) > 0) {
+      await skip.first().click({ force: true }).catch(() => {})
+      await page.waitForTimeout(120)
+      continue
+    }
+    const faint = page.locator('.faint-response-modal')
+    const faintSkip = faint.getByRole('button', { name: /略過|不發動|確認/ })
+    if ((await faintSkip.count()) > 0) {
+      await faintSkip.first().click({ force: true }).catch(() => {})
+      await page.waitForTimeout(120)
+      continue
+    }
+    const flip = page.locator('.flip-response-modal')
+    const flipSkip = flip.getByRole('button', { name: /略過|不發動|確認/ })
+    if ((await flipSkip.count()) > 0) {
+      await flipSkip.first().click({ force: true }).catch(() => {})
+      await page.waitForTimeout(120)
+      continue
+    }
+    break
+  }
+
+  if ((await page.locator('.effect-panel').count()) > 0) {
+    await drainGenericEffectPanel(page)
+  } else {
+    const skillButton = page.locator('.bottom-field .skill-action').first()
+    if ((await skillButton.count()) > 0 && !(await skillButton.isDisabled().catch(() => true))) {
+      await skillButton.click({ force: true }).catch(() => {})
+      await page.waitForTimeout(180)
+      await drainGenericEffectPanel(page)
+    } else {
+      const hand = page.locator('.bottom-hand .hand-card-wrap').first()
+      if ((await hand.count()) > 0) {
+        await hand.locator('.hand-card').click({ force: true }).catch(() => {})
+        await page.waitForTimeout(100)
+        const action = hand.locator('.hand-card-action').first()
+        if ((await action.count()) > 0 && !(await action.isDisabled().catch(() => true))) {
+          await action.click({ force: true }).catch(() => {})
+          await page.waitForTimeout(180)
+          await drainGenericEffectPanel(page)
+        }
+      }
+    }
+  }
+
+  const trace = await readTrace(page)
+  const attestation = attestCardContractActionTrace(trace, {
+    requiredCommandKinds: trace.length > 0 ? [trace[0].commandKind] : [],
+  })
+  return {
+    cardId,
+    traceCardId,
+    passed: attestation.passed,
+    traceEntries: trace.length,
+    commandKinds: attestation.observedCommandKinds,
+    steps: attestation.observedSteps,
+  }
+}
 
 const server = spawn(
   process.execPath,
@@ -131,6 +267,48 @@ try {
   )
   await blockedPage.close()
 
+  const batchResults: Array<{
+    cardId: string
+    traceCardId?: string
+    passed: boolean
+    traceEntries?: number
+    commandKinds?: string[]
+    steps?: string[]
+    error?: string
+  }> = []
+  if (batchReportPath) {
+    const reportPath = resolve(root, batchReportPath)
+    const report = JSON.parse(readFileSync(reportPath, 'utf8')) as {
+      batch?: { cardIds?: unknown }
+      ready?: boolean
+    }
+    const cardIds = Array.isArray(report.batch?.cardIds)
+      ? report.batch.cardIds.filter((id): id is string => typeof id === 'string')
+      : []
+    assert.equal(report.ready, true, `migration batch ${batchReportPath} is not ready`)
+    assert.equal(cardIds.length, 25, 'Browser batch attestation expects exactly 25 card ids')
+
+    for (const cardId of cardIds) {
+      try {
+        batchResults.push(await exerciseBatchCardRoute(page, cardId))
+      } catch (error) {
+        batchResults.push({
+          cardId,
+          passed: false,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+    assert.equal(
+      batchResults.every((result) => result.passed),
+      true,
+      `batch Browser attestation failed: ${batchResults
+        .filter((result) => !result.passed)
+        .map((result) => `${result.cardId}: ${result.error ?? 'trace failed'}`)
+        .join('; ')}`,
+    )
+  }
+
   console.log(
     JSON.stringify(
       {
@@ -158,6 +336,15 @@ try {
           },
         },
         traceEntries: positiveTrace.length,
+        ...(batchReportPath
+          ? {
+              batch: {
+                report: batchReportPath,
+                count: batchResults.length,
+                results: batchResults,
+              },
+            }
+          : {}),
       },
       null,
       2,

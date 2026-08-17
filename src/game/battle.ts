@@ -1402,6 +1402,36 @@ export const playTrap = (
       }
     }
 
+    // 陷阱的手牌／休息區移動效果也需要獨立的選卡步驟。若直接落入
+    // fallback，resolveTrapEffectTargetIds 會把前一段戰鬥目標傳入，
+    // 導致用對手戰鬥區 instanceId 嘗試支付自己的區域效果而失敗。
+    // pendingAbilityEffect 會在玩家選完後沿用一般效果佇列；若這段有
+    // thenEffects（例如 BS2-014），commands 層只在確實選到卡牌時展開。
+    if (effect.kind === 'hand-to-break' || effect.kind === 'break-to-hand') {
+      const candidates = getEffectSelectionCandidates(nextState, context, effect)
+      if (candidates.length === 0) {
+        // 沒有合法候選時，optional 效果等同選 0；mandatory 效果則依
+        // 既有 pending queue 規則略過不可完成的步驟，讓陷阱仍能收尾。
+        if (effect.optional) {
+          nextState = executeCardEffect(nextState, context, effect, [])
+        }
+        continue
+      }
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
     // 陷阱也可能包含「選擇一項」；先保留未展開的效果佇列，讓 UI／AI
     // 透過既有 resolve-choose-one 流程選模式，再接續同一場戰鬥。
     if (effect.kind === 'choose-one') {

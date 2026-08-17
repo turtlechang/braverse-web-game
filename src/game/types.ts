@@ -1071,6 +1071,13 @@ export interface BreakToHandEffect {
   minLevel?: number
   maxLevel?: number
   optional?: boolean
+  /**
+   * 效果成功移回休息區餅乾後才執行的後續效果（例如 BS2-014 的
+   * 「If you did, place 1 Cookie from your hand into your break area」）。
+   * 由 pending ability queue 在實際選到至少一張卡時展開，避免玩家略過
+   * 前一步後仍被錯誤要求支付／選擇後續效果。
+   */
+  thenEffects?: CardEffect[]
 }
 
 export interface HandToHpEffect {

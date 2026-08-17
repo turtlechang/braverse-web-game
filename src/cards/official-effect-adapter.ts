@@ -6734,6 +6734,27 @@ export const convertOfficialTrapAbility = (
         { kind: 'trash-to-deck', max: 5, excludeFlip: true },
       ],
     },
+    // BS2-014：先選擇是否將 LV.1 餅乾從自己的休息區返回手牌；只有
+    // 實際選到卡牌（「If you did」）時，才再選一張手牌放入休息區。
+    // 以 thenEffects 綁定兩段，避免略過第一段後錯誤執行第二段。
+    'BS2-014': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'break-to-hand',
+          amount: 1,
+          minLevel: 1,
+          maxLevel: 1,
+          optional: true,
+          thenEffects: [{ kind: 'hand-to-break', amount: 1 }],
+        },
+      ],
+    },
     'BS3-021': {
       effects: [
         {

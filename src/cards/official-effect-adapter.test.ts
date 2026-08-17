@@ -2490,6 +2490,27 @@ describe('Starter Deck RED official effect adapter', () => {
       })
     })
 
+    it('BS2-014 binds the optional break-to-hand step to its If you did follow-up', () => {
+      expect(
+        convertOfficialTrapAbility(findBraveBeginningBS2Card('BS2-014')),
+      ).toMatchObject({
+        effects: [
+          {
+            kind: 'modify-attack',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          {
+            kind: 'break-to-hand',
+            amount: 1,
+            minLevel: 1,
+            maxLevel: 1,
+            optional: true,
+            thenEffects: [{ kind: 'hand-to-break', amount: 1 }],
+          },
+        ],
+      })
+    })
+
     it('BS2-060 Beet Cookie faints into a conditional draw', () => {
       expect(convertOfficialCookieSkill(findBraveBeginningBS2Card('BS2-060')))
         .toMatchObject({

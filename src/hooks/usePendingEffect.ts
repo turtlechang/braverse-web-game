@@ -2003,10 +2003,15 @@ export function usePendingEffect(params: {
         }
       }
       const nextEffectIndex = pendingEffect.effectIndex + 1
+      // 規則層可能在本步成功後才展開條件式 thenEffects（例如 BS2-014
+      // 的「If you did」）；下一個面板必須使用更新後的效果佇列，不能沿用
+      // 本機啟動時快取的舊陣列。
+      const nextEffectQueue =
+        nextGame.pendingAbilityEffect?.effects ?? pendingEffect.effects
       const nextEffect =
         nextGame.status === 'playing' &&
-        nextEffectIndex < pendingEffect.effects.length
-          ? pendingEffect.effects[nextEffectIndex]
+        nextEffectIndex < nextEffectQueue.length
+          ? nextEffectQueue[nextEffectIndex]
           : null
       const skipNextEquip =
         nextEffect?.kind === 'equip-source' &&
@@ -2020,7 +2025,7 @@ export function usePendingEffect(params: {
         : nextEffectIndex
       const hasNextEffect =
         nextGame.status === 'playing' &&
-        effectiveNextIndex < pendingEffect.effects.length
+        effectiveNextIndex < nextEffectQueue.length
       const viewerMustAct =
         (nextGame.pendingRefresh?.playerId === viewerPlayerId) ||
         (nextGame.pendingOnPlay?.playerId === viewerPlayerId) ||
@@ -2041,6 +2046,7 @@ export function usePendingEffect(params: {
         setPendingEffect(null)
         setSuspendedEffect({
           ...pendingEffect,
+          effects: nextEffectQueue,
           effectIndex: effectiveNextIndex,
           selectedTargetIds: [],
           selectedDiscardHandIds: [],
@@ -2078,6 +2084,7 @@ export function usePendingEffect(params: {
         hasNextEffect
           ? {
               ...pendingEffect,
+              effects: nextEffectQueue,
               effectIndex: effectiveNextIndex,
               selectedTargetIds: [],
               selectedDiscardHandIds: [],
