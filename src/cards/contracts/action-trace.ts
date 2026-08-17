@@ -8,6 +8,18 @@ export interface CardContractActionTraceEntry {
   summary?: string
   steps: string[]
 }
+
+export interface CardContractAttestationExpectation {
+  requiredCommandKinds?: readonly string[]
+  orderedStepFragments?: readonly string[]
+}
+
+export interface CardContractAttestation {
+  passed: boolean
+  errors: string[]
+  observedCommandKinds: string[]
+  observedSteps: string[]
+}
 /**
  * 將正式 command log 壓縮成可保存的卡牌驗證 trace。
  * 只保留公開摘要與步驟文字，不複製 payload，避免把手牌／牌庫等私有資訊
@@ -35,4 +47,43 @@ export const traceContainsCommandKinds = (
 ): boolean => {
   const actual = new Set(trace.map((entry) => entry.commandKind))
   return kinds.every((kind) => actual.has(kind))
+}
+
+/**
+ * 驗證 Browser／Playwright 送回的公開 trace 是否真的走過預期的
+ * 支付→代價→目標→結算步驟。輸入只能是 `buildCardContractActionTrace`
+ * 的結果，因此不會把 payload、手牌或牌庫內容帶入 attestation artifact。
+ */
+export const attestCardContractActionTrace = (
+  trace: readonly CardContractActionTraceEntry[],
+  expectation: CardContractAttestationExpectation,
+): CardContractAttestation => {
+  const observedCommandKinds = [...new Set(trace.map((entry) => entry.commandKind))]
+  const observedSteps = trace.flatMap((entry) => entry.steps)
+  const errors: string[] = []
+
+  for (const kind of expectation.requiredCommandKinds ?? []) {
+    if (!observedCommandKinds.includes(kind)) {
+      errors.push(`missing command kind: ${kind}`)
+    }
+  }
+
+  let cursor = 0
+  for (const fragment of expectation.orderedStepFragments ?? []) {
+    const index = observedSteps.findIndex(
+      (step, stepIndex) => stepIndex >= cursor && step.includes(fragment),
+    )
+    if (index < 0) {
+      errors.push(`missing ordered step: ${fragment}`)
+      continue
+    }
+    cursor = index + 1
+  }
+
+  return {
+    passed: errors.length === 0,
+    errors,
+    observedCommandKinds,
+    observedSteps,
+  }
 }

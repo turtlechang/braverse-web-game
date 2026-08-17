@@ -3,9 +3,11 @@ import {
   canActivateCookieSkill,
   canPlayItem,
   canActivateStage,
+  compileEffectDecisionDescriptor,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
   getEffectTargetCandidates,
+  getNestedSequentialDamageSelectionEffect,
   getSupportEffectCandidates,
   hasRequiredEffectTargets as hasRequiredTargetsForEffect,
   getEnergyCostTotal,
@@ -229,6 +231,11 @@ export function useOnlinePendingEffect(params: {
     : null
   const displayedEffect = currentEffect ?? draftEffect
   const displayedContext = context ?? draftContext
+  // Keep the composite setup effect as the command being resolved, while the
+  // panel exposes its nested sequential damage so the player can order every
+  // target before that setup is executed.
+  const selectionEffect =
+    getNestedSequentialDamageSelectionEffect(displayedEffect) ?? displayedEffect
   const effectKey = attackEffectActive
     ? `attack:${attackBattle?.attackerInstanceId}:${attackBattle?.attackEffectIndex}`
     : abilityActiveForViewer
@@ -247,10 +254,35 @@ export function useOnlinePendingEffect(params: {
       ? isEffectConditionMet(game, displayedContext, displayedEffect)
       : true
 
-  const currentTargetSelector = getTargetSelector(displayedEffect)
-  const displayedSelectionLimits = displayedEffect
-    ? getEffectSelectionLimits(displayedEffect)
+  const currentTargetSelector = getTargetSelector(selectionEffect)
+  const displayedSelectionLimits = selectionEffect
+    ? getEffectSelectionLimits(selectionEffect)
     : null
+
+  const displayedDescriptor =
+    displayedEffect && displayedContext && !abilityCostDraft
+      ? compileEffectDecisionDescriptor({
+          state: game,
+          playerId: viewerPlayerId,
+          sourcePlayerId: displayedContext.sourcePlayerId,
+          sourceInstanceId: displayedContext.sourceInstanceId,
+          sourceCardName: displayedContext.sourceCardName,
+          context: displayedContext,
+          effect: selectionEffect ?? displayedEffect,
+          commandKind: attackEffectActive
+            ? 'resolve-attack-effect'
+            : 'resolve-ability-effect',
+          viewerPlayerId,
+        })
+      : null
+  const descriptorTargetIds = new Set(
+    displayedDescriptor?.steps
+      .filter((step) => step.kind === 'target')
+      .flatMap((step) => step.candidateIds) ?? [],
+  )
+  const descriptorControlsTargets = Boolean(
+    displayedDescriptor?.steps.some((step) => step.kind === 'target'),
+  )
 
   const restSupportAndDamageSupportCandidates =
     displayedEffect?.kind === 'rest-support-and-damage' && displayedContext
@@ -288,14 +320,27 @@ export function useOnlinePendingEffect(params: {
           ...restSupportAndDamageTargetCandidates,
         ]
       : currentTargetSelector
-      ? getEffectTargetCandidates(game, displayedContext, currentTargetSelector).map(
-          (candidate) => candidate.card,
-        )
-      : displayedEffect &&
-          (displayedEffect.kind === 'support-to-battle' ||
-            requiresEffectCardSelection(displayedEffect) ||
-            displayedEffect.kind === 'trash-to-deck')
-        ? getEffectSelectionCandidates(game, displayedContext, displayedEffect)
+        ? getEffectTargetCandidates(game, displayedContext, currentTargetSelector)
+          .filter((candidate) => {
+            if (!descriptorControlsTargets) return true
+            if (displayedDescriptor?.status === 'needs-review') return false
+            return (
+              descriptorTargetIds.size === 0 ||
+              descriptorTargetIds.has(candidate.card.instanceId)
+            )
+          })
+          .map((candidate) => candidate.card)
+      : selectionEffect &&
+          (selectionEffect.kind === 'support-to-battle' ||
+            requiresEffectCardSelection(selectionEffect) ||
+            selectionEffect.kind === 'trash-to-deck')
+        ? getEffectSelectionCandidates(game, displayedContext, selectionEffect).filter(
+            (card) =>
+              !descriptorControlsTargets ||
+              displayedDescriptor?.status !== 'needs-review' &&
+              (descriptorTargetIds.size === 0 ||
+                descriptorTargetIds.has(card.instanceId)),
+          )
         : []
     : []
   const isEffectPending = Boolean(currentEffect)
@@ -632,7 +677,7 @@ export function useOnlinePendingEffect(params: {
     if (abilityCostDraft) {
       const cost = abilityCostDraft.ability.cost
       const sequentialAllTargets =
-        displayedEffect?.kind === 'damage-all' && displayedEffect.sequential
+        selectionEffect?.kind === 'damage-all' && selectionEffect.sequential
       const targetMin = sequentialAllTargets
         ? candidateCards.length
         : (currentTargetSelector?.min ?? displayedSelectionLimits?.min ?? 0)
@@ -1163,7 +1208,7 @@ export function useOnlinePendingEffect(params: {
   }
 
   return {
-    currentEffect: displayedEffect,
+    currentEffect: selectionEffect,
     effectConditionMet: displayedEffectConditionMet,
     candidateCards,
     restSupportAndDamageSupportCandidates,

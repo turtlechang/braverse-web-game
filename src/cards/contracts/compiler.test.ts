@@ -60,6 +60,17 @@ describe('contract compiler bridge', () => {
       'resolve',
     ])
     expect(compiled.executable).toBe(true)
+    expect(compiled.decisionSteps.map((step) => step.kind)).toEqual([
+      'payment',
+      'payment',
+      'target',
+      'resolve',
+      'resolve',
+    ])
+    expect(compiled.decisionSteps.every((step) => step.candidateIds.length === 0)).toBe(true)
+    expect(compiled.decisionSteps.find((step) => step.kind === 'target')?.clauseIds).toEqual(
+      expect.any(Array),
+    )
   })
 
   it('does not mark a blocked contract executable', () => {

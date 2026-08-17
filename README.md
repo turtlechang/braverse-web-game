@@ -84,6 +84,8 @@ BS6-101「Twizzly Gummy Cookie」昏厥效果已先顯示可選的紫色能量�
 
 卡牌轉接新增 shadow 行為契約稽核：`src/cards/contracts/` 會將官方來源拆成 clause ledger，交叉比對支付、代價、目標與 `Then` 的 runtime evidence，並產生 `verified`／`needs-review`／`blocked` 報告。`npm run cards:audit:contracts` 只讀取並報告，不改變正式決策；候選資料可用 `--strict-contracts` 阻止未完成契約進入 promote，`promote:candidate` 預設已啟用此 gate。完整流程與限制見 [卡牌行為契約](docs/card-behavior-contract.md)。
 
+卡牌契約 P1～P5 已接續實作：P1 提供契約型別與 shadow compiler；P2 將契約步驟投影到 `DecisionDescriptor`，並由規則層的 energy／cost／target helper 產生合法候選；P3 讓本機 pending modal 與線上效果候選先共用 descriptor，`GameCommand` 仍是唯一執行入口；P4 新增負向／隱藏資訊測試與 `cards:attest` 公開 command trace gate；P5 以 `cards:migrate:batch` 依 card.id、排序、批次執行 shadow migration，未 `verified` 卡牌不會進入批次，也不會改動正式卡池。
+
 效果傷害（攻擊後追傷、技能、物品、場景與陷阱的傷害）現在統一進入逐點傷害／FLIP 結算流程；效果佇列會在 FLIP、昏厥與補位等決策完成後再續接下一段。丟棄、移除、HP 費用與 HP 區域移動仍不翻開或觸發 FLIP，並有正負向回歸測試。
 
 BS5-073「Cyborg Cookie」已依官方 `flipText` 在卡牌詳情與牌組編輯器顯示為 FLIP；BS4-024「Kumiho Cookie」在對手有黃色 LV.3 餅乾時，攻擊目標 UI 只允許 Kumiho，其他目標會顯示限制原因，展開對戰紀錄也會保留限制步驟與來源卡。兩條流程均已用 localhost-only Browser fixture 實際操作驗證。
@@ -159,7 +161,7 @@ BS5-111「覺醒!龍之怒」已依官方 Q&A 改為動態 HP 門檻：攻擊者
 
 - **規則引擎**：`src/game/` 純函式引擎，五色 + 第二彈官方起始牌組、typed `GameCommand` 指令層（8 決策 + 24 動作）、`commandLog` + replay（含 AI 對局重播）；多段能力效果不得繞過中途決策，已有 8 類決策回歸；`isEffectTargeted` 涵蓋 split-damage、prevent-effect-damage 等效果型別，AI 目標選擇已補齊 7 類效果排序；ST5-007／ST5-022 觸發、同時補位逐一處理 OnPlay 與傷害步驟鎖定皆有完整流程回歸。
 - **牌組編輯器**：搜尋／篩選、合法性即時檢查（60 張／同卡 4 張／≥1 餅乾／FLIP ≤16）、匯入匯出、版本化 localStorage 儲存；系列選單已分開 BS3 與 BS4，避免兩彈共用官方 product title 時混在一起。`@1` 卡面變體（如 `BS2-031@1`）與其 base（`BS2-031`）視為同一張卡共用 4 張上限，輸入／匯入時自動正規化為 base；卡池列表僅顯示 base，原始變體資料保留在 `data/cards/*.json` 並可透過 `getCardPoolVariants` 取得。
-- **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果。等級 benchmark 已強制驗證零卡死／deadlock／非法操作／turn cap 與最低勝率，失敗會輸出可重播問題包；見 [docs/ai-levels.md](docs/ai-levels.md)。Lv.5 為設計稿。
+- **AI**：Lv.1–4 已完成（隨機／啟發式／評估式／兩層前瞻），只讀 `PlayerView` 保證資訊邊界；效果目標選擇涵蓋 split-damage（列舉四種配置取最優）、hp-to-trash/support、disable-flip/attack、battle-to-support、prevent-effect-damage（sourceOnly）等 7 類效果。Lv.2–4 的部署策略採手牌品質門檻，不強制填滿兩張餅乾；戰鬥區已有餅乾時優先保留 FLIP 卡，僅在沒有非 FLIP 替代品或可直接補刀時登場。等級 benchmark 已強制驗證零卡死／deadlock／非法操作／turn cap 與最低勝率，失敗會輸出可重播問題包；見 [docs/ai-levels.md](docs/ai-levels.md)。Lv.5 為設計稿。
 - **卡牌池**：BS1/BS2 官方卡池、五色起始牌組、BS3 官方卡池與 P-0XX 特典卡均已匯入；BS3 的 176 筆資料（含 121 張基礎卡、異圖與促銷變體）及目前 26 張 P-0XX 已正式納入 `data/cards/`。另有官方 P-0XX 全量 153 筆資料（含異圖變體）已完成 adapter conversion，其中 127 筆仍在候選區等待 Browser 稽核與 promote；以 [P-0XX 匯入盤點](docs/p0xx-card-inventory.md) 與 [P-0XX 效果稽核](docs/p0xx-effect-coverage.md) 分開追蹤候選與正式狀態。靈魂果醬裝載與 BS3-115 保護（含攻擊附加例外、全場／棄置排除、無目標 Then 中止）已依官方 Q&A 落地。`npm run validate:cards` 接入 CI，除資料完整性外，也檢查 ability 非空、技能標記、可選抽牌、來源橫置及 8 張高風險卡的語意契約。
 - **UI**：滿版桌墊 HUD、扇形手牌、統一效果 modal、響應式（最低支援 600×338）；桌面戰場（≥901px）採參考圖的中央戰場、左右資源欄、左側卡牌焦點預覽與右側回合欄排版，底色維持既有深藍／青色基調；1164×777 平板與 1366×768、1440×900、1920×1080 通用桌面 viewport 均以實際卡面邊界驗證，短高度桌面的手牌高度依 viewport 縮放並完整留在畫布內；1280×720 已修正手牌裁切、提高戰鬥區比例與資源標籤／中央狀態提示對比，並保留 hover 與鍵盤 focus 的卡牌快速預覽；主選單使用 CookieRun BRAVERSE 金色／棕色品牌文字排版；餅乾、物品、場景與陷阱的效果操作共用「能量 → 代價 → 目標」導引步驟，缺少的步驟自動略過，支援下一步／上一步並只在最後確認發動；能量支付候選依卡牌明確顏色限制，只有真正沒有顏色的 `MIX` 卡才視為萬用能量；攻擊支付候選與規則層共用中性費用判定，本機與線上均可點選 BS1-007 的 3 張支援卡；ST3-019 支援區棄牌改由玩家在既有提示框選卡，BS2-021 目標清單可換行捲動，BS2-044 攻擊可選效果與攻擊提示合併為單一流程；BS1-037 攻擊後效果沿用同一個提示框，沒有合法 LV.1 目標時由規則層自動略過，玩家也能手動略過；`App.tsx` 協調邏輯已拆至多個自訂 hooks。
 - **戰鬥區卡槽**：中央「戰鬥區」文字固定不位移；單張餅乾落在左槽，雙張餅乾以放大的左右間隔排開。HP 卡 dock 置於卡片下緣；能量不足與技能提示以所屬卡片外側的垂直中線排列，左卡向左、右卡向右，本機與線上對戰共用。
@@ -176,7 +178,11 @@ BS4 五色強化牌組已依 BS3 preset 建立 5 份可匯入 JSON，並提供 `
 
 通用型 Lv.3／Lv.4 AI 已完成 G0～G5：Lv.3 會對規則層列舉的合法候選輸出 `ActionScoreBreakdown`；Lv.4 則以 width 5、depth 5、240 nodes、150ms 的有限 command search 維持 Setup→Payoff 計畫並預留攻擊資源。搜尋只使用 `PlayerView` 與合法 `KnowledgeState`，遇到未知抽牌、攻擊 pending、trap／blocker／FLIP／replacement 等決策即停止推演；timeout 一律回退 Lv.3。G5 已將合法的補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、阻擋、Refresh 與多階段 pending 決策接入 TacticalPlan，並輸出可稽核的 selection telemetry；Lv.1／Lv.2 行為不變。
 
-牌組編輯器的 LV／HP／攻擊力篩選、BS3-061 可選昏厥技能、BS5／BS6 尖括號攻擊後代價稽核、BS6-044 固定攻擊目標追傷、效果傷害 FLIP 結算、陷阱來源／代價與攻擊後效果詳細步驟對戰紀錄，以及 BS5-073、BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇、昏厥效果與對戰紀錄的正向／負向 Browser 路徑。
+卡牌行為契約目前先以 shadow mode 盤點正式卡池；1101 筆公開記錄中 631 筆通過基礎證據檢查、470 筆保守標記 `needs-review`，尚未宣稱這些卡已完成正式契約。下一個最小步驟是逐類補齊 clause parser、runtime selector binding 與 Browser command trace，再逐批將候選提升為可 promote。
+
+契約遷移目前已完成 P1～P5 的第一個可回退批次：`npm run cards:migrate:batch -- --limit 25` 會在不寫入卡池的前提下選出 25 張 verified 卡，並逐張確認 runtime compile 可執行；後續批次仍須通過相同 gate、公開 trace attestation 與 Browser 正／負向操作，才可提出正式 runtime 遷移設計。
+
+牌組編輯器的 LV／HP／攻擊力篩選、BS3-061／BS6-101 可選昏厥技能、BS5／BS6 尖括號攻擊後代價稽核、BS6-044 固定攻擊目標追傷、效果傷害 FLIP 結算、陷阱來源／代價與攻擊後效果詳細步驟對戰紀錄，以及 BS5-073、BS4-024 的本輪 UI／規則回歸已完成；後續若官方卡文、卡圖或目標限制規則更新，需同步重跑牌組編輯器、攻擊目標選擇、昏厥效果與對戰紀錄的正向／負向 Browser 路徑。
 
 BS6 已完成候選卡牌逐色逐卡 Browser 稽核、`promotion-ready` 審查與正式 promote；五色標準牌組已完成資料、固定 seed 矩陣與正式根路徑多場 Browser 驗證，五色各 20/20、合計 100/100 且卡死 0。BS5+6 競技環境五色 AI choice 已接入，BS6-020 的陷阱自身目標選擇也已納入回歸基線；512 副牌組 Swiss 已成為新的 AI 回歸基準，後續以其上位卡表進行 matchup-aware 迭代，並持續以真人對戰與官方賽事資料校準。
 
@@ -278,12 +284,8 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
-| 2026-08-17 | 補強通用型 Lv.3／Lv.4 AI G5：faint／after-damage 改以完整合法候選交由通用 selector 排序，陷阱依真正有 target 的子效果評估，inspect-deck 僅依本次合法揭露卡面選取；付款與送支援區成本不再可重複使用同一張卡。新增 33 項定向回歸、測試產物輸出覆寫，G5 原始碼 AI Browser 20／20、六種 preset 各 60-seed，以及 Lv.4 對 Lv.3 的 300-seed（181／300，60.3%，stuck／deadlock／非法指令／turn cap 均為 0）驗證；app／server typecheck 與 lint 通過，Vite build 受隔離 worktree 的 Windows `EPERM` 檔案鎖阻擋。 |
-| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G5：將只讀 `PlayerView`／`KnowledgeState` 的通用 pending 選擇策略接入補位、付款、目標、順序、二選一、棄牌、陷阱、FLIP、Blocker、Refresh 與多階段效果，保留規則層 `GameCommand` 驗證與 Lv.1／Lv.2 原行為；新增 selection telemetry 與 hidden-HP 保守略過。完整 Vitest 197 檔／3,143 項、lint、build 及 AI Browser 20／20 通過，stuck 0。 |
-| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G4：Lv.4 改為有限預算的合法 `GameCommand` 多步搜尋（width 5、depth 5、240 nodes、150ms），保留 R9～R11、加入 R16 資源預留，攻擊／防守 pending 與未知抽牌均保守停止推演，逾時回退 Lv.3；新增搜尋、combo、未知資訊與資源 telemetry。完整 Vitest 196 檔／3,138 項、lint、build 與 AI Browser 20／20 通過；60-seed Lv.4 vs Lv.3 為 40／60（66.7%）、stuck／deadlock／非法操作／turn cap 均為 0。 |
-| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G3：Lv.3 以結構化能力、牌組策略、合法已知資訊與前後公開局面評估每個合法候選，輸出可解釋 `ActionScoreBreakdown`；保守處理未知／未支援效果，Lv.1／Lv.2 行為不變；完整 Vitest 192 檔／3,128 項、lint、build 與 AI Browser 驗證通過。 |
-| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI G2：新增事件驅動的 `KnowledgeState`，僅保存合法已知頂／底與公開區資訊；洗牌／Refresh／mulligan／未知牌庫變動會清除牌序記憶，未知底牌、對手手牌與未翻 HP 無法影響 snapshot；尚未接入 AI 行動。 |
-| 2026-08-16 | 完成通用型 Lv.3／Lv.4 AI 的 G0 契約與 G1 shadow mode：新增結構化能力、牌組策略 profile 與 synergy graph；正式卡池 1,101 張共 2,909 筆能力證據，未知 `reveal-hand` 保守記錄 telemetry，尚未接入 AI 行動。 |
+| 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與 25 張 verified shadow migration gate；讓 `promote:candidate` 預設阻擋未完成契約；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場。 |
+| 2026-08-16 | 調整 Lv.2–Lv.4 AI 餅乾部署策略：不強制填滿兩張戰鬥區，已有餅乾時優先避免 FLIP 卡，僅在缺少非 FLIP 替代品或可直接補刀時允許登場；新增部署政策回歸測試，完整 Vitest 190 檔／3,110 項、lint、build 與 AI Browser 20／20 通過。 |
 | 2026-08-16 | 完成牌組編輯器 LV／HP／攻擊力篩選，修正並稽核 BS5／BS6 尖括號攻擊後代價可略過流程，補上 P-059 抽牌來源與條件紀錄；完成 BS6-008「Sugar Swan Cookie」陷阱封鎖、BS6-044 固定原攻擊目標追傷、BS6-061 支援區回手後 BS1-078 場景條件、BS6-051 綠色手牌目標提示、BS6-062 物品支援區餅乾回手代價、效果傷害 FLIP 逐點結算與 BS3-061 可選昏厥技能修正；補上本機／線上對戰紀錄的陷阱來源卡、代價與攻擊後效果來源／目標／結果步驟；完整 Vitest 189 檔／3,104 項、lint、build 通過。 |
 | 2026-08-15 | 依官方韓文資料與實體卡逐卡修正 BS6「Operation Timeguard」52 個基礎卡號（64 筆含異圖）的英文 API 攻擊傷害誤記，並補上 BS4-045@1／BS4-097@1 兩張異圖變體；修正 BS6-079 攻擊後可選代價的目標選擇只能選 1 張的問題（OptionalCostAttackModal 改為多選、支援「對手支援區的卡」標籤與上限進度），新增 `bs6-079-multi-target-probe` Browser 驗證「支付代價→選 3 張對手支援卡橫置」；補強 1164×777 與通用桌面 viewport 的手牌實際卡面邊界 gate；完整 Vitest 188 檔／3,039 項、lint、build 通過。 |
 | 2026-08-15 | 完成 BS5／BS6 全卡 Browser 效果語意稽核與代價交叉驗證：BS5 效果 143／143＋負向 153／153＋無效果攻擊 10／10、BS6 效果 97／97＋負向 138／138＋無效果攻擊 10／10；新增 `verify-bs5-bs6-semantics.ts` 對 291 筆記錄逐張比對官方文字與 runtime 能量代價／傷害／HP 代價／抽牌數量（BS5 400 項、BS6 325 項全相符）；修正稽核驅動對 cookie＋FLIP 文案（BS5-073）與 `battle-cookie-to-hand` 代價群（BS6-073）的分類／驅動缺口；盤點修復 3 項潛在 UI／AI 隱患（battle-cookie-to-hand 提示改為依 runtime 代價動態產生顏色與等級、hpToTrash 缺 amount 時自動代價描述與 AI 成本阻尼一致視為 1 張），並為慢速機器加長 AI benchmark 測試 timeout；完整 Vitest 187 檔／3,031 項、lint、build 通過。 |

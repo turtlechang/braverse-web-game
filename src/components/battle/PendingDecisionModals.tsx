@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { describePendingDecision, getRefreshCandidates } from '../../game'
+import { compilePendingDecisionDescriptor, getRefreshCandidates } from '../../game'
 import {
   DecisionModal,
   InspectDeckModal,
@@ -43,6 +43,10 @@ export interface PendingDecisionModalsProps {
 }
 
 export function PendingDecisionModals({ match, pending }: PendingDecisionModalsProps) {
+  const decisionDescriptor = compilePendingDecisionDescriptor(match.game, undefined, {
+    viewerPlayerId: match.viewerPlayerId,
+  })
+
   const pendingInspect =
     match.game.pendingInspectDeck &&
     match.game.pendingInspectDeck.playerId === match.viewerPlayerId &&
@@ -73,19 +77,10 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
       ? match.game.pendingEffectOrder
       : null
 
-  const effectOrderDescriptor = pendingEffectOrder
-    ? describePendingDecision(
-        {
-          kind: 'effect-order',
-          playerId: pendingEffectOrder.playerId,
-          sourcePlayerId:
-            pendingEffectOrder.items[0]?.sourcePlayerId ?? pendingEffectOrder.playerId,
-          sourceInstanceId: pendingEffectOrder.items[0]?.sourceInstanceId ?? '',
-          items: pendingEffectOrder.items,
-        },
-        pendingEffectOrder.items.map((item) => item.id),
-      )
-    : null
+  const effectOrderDescriptor =
+    decisionDescriptor?.decisionKind === 'effect-order'
+      ? decisionDescriptor
+      : null
 
   const pendingDrawUpTo =
     match.game.pendingDrawUpTo &&
@@ -254,13 +249,22 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             handDiscard.effectText !== 'opponent-discard-hand'
               ? handDiscard.effectText
               : undefined)
+          const descriptorCandidates =
+            decisionDescriptor?.decisionKind === 'opponent-hand-discard'
+              ? new Set(decisionDescriptor.steps[0]?.candidateIds)
+              : null
+          const hand = descriptorCandidates
+            ? match.game.players[match.viewerPlayerId].hand.filter((card) =>
+                descriptorCandidates.has(card.instanceId),
+              )
+            : match.game.players[match.viewerPlayerId].hand
 
           return (
             <HandDiscardResponseModal
               sourceCardName={handDiscard.sourceCardName}
               sourceCard={sourceCard}
               effectText={effectText}
-              hand={match.game.players[match.viewerPlayerId].hand}
+              hand={hand}
               requiredCount={handDiscard.count}
               continuesFromDraw={handDiscard.chainedFromDrawUpTo}
               selectedIds={match.selectedOpponentDiscardIds}
@@ -309,15 +313,21 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
             sourceCard?.trap?.text ??
             sourceCard?.item?.text ??
             restSupport.effectText
+          const descriptorCandidates =
+            decisionDescriptor?.decisionKind === 'opponent-rest-support'
+              ? new Set(decisionDescriptor.steps[0]?.candidateIds)
+              : null
           const candidates = match.game.players[match.viewerPlayerId]
             .supportArea
             .map((entry) => entry.card)
             .filter(
               (card) =>
-                !restSupport.activeOnly ||
-                !match.game.players[match.viewerPlayerId].supportArea.find(
-                  (entry) => entry.card.instanceId === card.instanceId,
-                )?.rested,
+                (descriptorCandidates
+                  ? descriptorCandidates.has(card.instanceId)
+                  : !restSupport.activeOnly ||
+                    !match.game.players[match.viewerPlayerId].supportArea.find(
+                      (entry) => entry.card.instanceId === card.instanceId,
+                    )?.rested),
             )
 
           return (

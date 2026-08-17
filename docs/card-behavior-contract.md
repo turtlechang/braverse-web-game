@@ -37,6 +37,8 @@ npm run cards:audit:contracts
 npm run cards:audit:contracts -- --file official-age-of-heroes-and-kingdoms-bs6.en.json
 npm run cards:audit:contracts -- --output docs/card-contract-audit.json
 npm run cards:audit:contracts -- --strict
+npm run cards:attest -- --input browser-trace.json --commands activate-skill,resolve-ability-effect --steps "支付,選擇目標,結算"
+npm run cards:migrate:batch -- --offset 0 --limit 25
 ```
 
 不帶 `--strict` 時是報告模式，適合盤點現況；`--strict` 會在仍有
@@ -48,18 +50,25 @@ npm run cards:audit:contracts -- --strict
 
 目前已提供唯讀 `compiler.ts` bridge 與規則層 `DecisionDescriptor`：前者把契約拆成
 支付 → 代價 → 目標 → 結算步驟，後者把既有 pending decision 正規化成可供 UI／AI
-消費的步驟與 command kind。descriptor 不會自行產生狀態變更或讀取私有牌面，候選
-仍由規則層依合法 `GameState`／`PlayerView` 產生，最後由 `applyGameCommand` 驗證。
-目前先把效果順序 modal 接上 descriptor，其他 pending UI 與線上／AI consumer 仍以
-同一介面逐步接入；既有 converter 在此期間維持為正式 runtime 來源，方便逐卡比較
-old/new 結果。
+消費的步驟與 command kind。`compileContractDecisionSteps` 只投影契約 metadata，
+不填入候選；`compileEffectDecisionDescriptor` 與 `compilePendingDecisionDescriptor`
+才可在合法 `GameState`／`PlayerView` 下呼叫 targeting、skills、energy helper 產生
+候選。descriptor 不自行產生狀態變更或讀取私有牌面，最後仍由 `applyGameCommand`
+驗證。
 
-每張卡進入 promotion-ready 前至少需要：
+本輪已把本機 pending modal 的效果順序、手牌／支援區回應，以及線上效果候選接到同一
+descriptor bridge；尚未接入的舊精靈仍可保留自己的暫態選取，但送出的 command 不得
+繞過規則層。P5 的 `migration.ts` 與 `cards:migrate:batch` 只做 deterministic shadow
+批次（依 `card.id` 排序），不修改正式 adapter、卡牌資料或 runtime registry。
+
+每張卡進入 promotion-ready 或下一個 shadow migration 批次前至少需要：
 
 1. 來源 hash 與 clause ledger 通過。
 2. 支付、代價、目標與順序各有 runtime 證據。
 3. 正向、無合法目標、條件不成立與錯誤付款測試。
-4. Browser 實際操作合法與不合法路徑，並保存 command trace。
+4. Browser 實際操作合法與不合法路徑，並以 `cards:attest` 驗證公開 command trace。
+5. 批次中的每張卡以 `compileCardBehaviorContract` 產生 executable 結果；任何一張
+   blocker 都讓整批停止，不得只跳過失敗卡片。
 
 任何未支援效果、歧義文字或規則文件標成 `[待確認]` 的項目都必須停在
 `needs-review`／`blocked`，不可用卡名、彈數或牌組名稱繞過稽核。

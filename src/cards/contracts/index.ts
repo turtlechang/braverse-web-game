@@ -1,7 +1,11 @@
 export { analyzeOfficialCardBehavior } from './ledger'
-export { compileCardBehaviorContract } from './compiler'
+export {
+  compileCardBehaviorContract,
+  compileContractDecisionSteps,
+} from './compiler'
 export {
   buildCardContractActionTrace,
+  attestCardContractActionTrace,
   traceContainsCommandKinds,
 } from './action-trace'
 export type {
@@ -16,9 +20,23 @@ export type {
   ContractTarget,
   ContractTiming,
 } from './types'
-export type { CardContractActionTraceEntry } from './action-trace'
+export type {
+  CardContractActionTraceEntry,
+  CardContractAttestation,
+  CardContractAttestationExpectation,
+} from './action-trace'
 export type {
   CompiledCardBehavior,
   ContractDecisionStep,
   ContractDecisionStepKind,
 } from './compiler'
+export {
+  checkContractMigrationBatch,
+  isContractMigrationBatchReady,
+  selectVerifiedMigrationBatch,
+} from './migration'
+export type {
+  ContractMigrationBatch,
+  ContractMigrationBatchOptions,
+  ContractMigrationCheck,
+} from './migration'

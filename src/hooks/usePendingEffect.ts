@@ -20,6 +20,7 @@ import {
   getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectTargetCandidatesForEffect,
+  getNestedSequentialDamageSelectionEffect,
   getFieldToDeckBottomBlocker,
   getEffectiveCardAbilityCost,
   getDiscardAllHandCostCandidates,
@@ -43,6 +44,7 @@ import {
   validateEnergyPayment,
 } from '../game'
 import { expandChooseOne } from '../game'
+import { compileEffectDecisionDescriptor } from '../game/decision-descriptor-compiler'
 import { describeEffectResult } from '../components/effects/effectUiUtils'
 import type { PendingEffect } from '../components/effects/effectUiTypes'
 import type { DispatchGameCommand } from './useBattleActions'
@@ -127,8 +129,13 @@ export function usePendingEffect(params: {
     pendingEffect && currentEffect
       ? isEffectConditionMet(game, pendingEffect.context, currentEffect)
       : true
+  // Keep the composite setup effect as the command payload. For a nested
+  // sequential all-target damage, the panel must instead expose its targets
+  // now, so the chosen order travels with that outer command.
+  const selectionEffect =
+    getNestedSequentialDamageSelectionEffect(currentEffect) ?? currentEffect
   const currentTargetSelector: EffectTargetSelector | null =
-    currentEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
+    selectionEffect?.kind === 'opponent-break-to-trash-then-battle-to-break'
       ? {
           side: 'opponent',
           min: game.pendingAbilityEffect?.pendingOpponentBreakToTrashThenBattleToBreak
@@ -136,52 +143,92 @@ export function usePendingEffect(params: {
             : 1,
           max: 1,
         }
-      : currentEffect?.kind === 'damage-all' && currentEffect.sequential
-      ? currentEffect.target ?? null
-      : currentEffect?.kind === 'gain-hp'
-      ? currentEffect.target?.sourceOnly
+      : selectionEffect?.kind === 'damage-all' && selectionEffect.sequential
+      ? selectionEffect.target ?? null
+      : selectionEffect?.kind === 'gain-hp'
+      ? selectionEffect.target?.sourceOnly
         ? null
-        : currentEffect.target ?? null
-      : currentEffect && !isEffectUntargeted(currentEffect)
-        ? currentEffect.kind === 'opponent-battle-to-trash'
+        : selectionEffect.target ?? null
+      : selectionEffect && !isEffectUntargeted(selectionEffect)
+        ? selectionEffect.kind === 'opponent-battle-to-trash'
           ? {
               side: 'opponent',
               min: 1,
               max: 1,
-              ...(currentEffect.maxLevel !== undefined
-                ? { maxLevel: currentEffect.maxLevel }
+              ...(selectionEffect.maxLevel !== undefined
+                ? { maxLevel: selectionEffect.maxLevel }
                 : {}),
-              ...(currentEffect.minLevel !== undefined
-                ? { minLevel: currentEffect.minLevel }
+              ...(selectionEffect.minLevel !== undefined
+                ? { minLevel: selectionEffect.minLevel }
                 : {}),
-              ...(currentEffect.remainingHp !== undefined
-                ? { remainingHp: currentEffect.remainingHp }
+              ...(selectionEffect.remainingHp !== undefined
+                ? { remainingHp: selectionEffect.remainingHp }
                 : {}),
             }
-          : currentEffect.kind === 'break-to-trash' ||
-          currentEffect.kind === 'trash-to-break' ||
-          currentEffect.kind === 'support-to-trash' ||
-          currentEffect.kind === 'support-to-hand' ||
-          currentEffect.kind === 'hand-to-support' ||
-          currentEffect.kind === 'trash-to-battle' ||
-          currentEffect.kind === 'trash-to-support' ||
-          currentEffect.kind === 'trash-to-hand' ||
-          currentEffect.kind === 'trash-to-deck' ||
-          currentEffect.kind === 'flip-to-support' ||
-          currentEffect.kind === 'hand-to-battle' ||
-          currentEffect.kind === 'opponent-trash-to-break' ||
-          currentEffect.kind === 'rest-support' ||
-          currentEffect.kind === 'hand-to-hp' ||
-          currentEffect.kind === 'support-to-hp' ||
-          currentEffect.kind === 'cycle-hp' ||
-          currentEffect.kind === 'rest-support-and-damage' ||
-          currentEffect.kind === 'field-to-deck-bottom' ||
-          currentEffect.kind === 'inspect-deck' ||
-          currentEffect.kind === 'optional-cost-attack' ||
-          currentEffect.kind === 'disable-block'
+          : selectionEffect.kind === 'break-to-trash' ||
+          selectionEffect.kind === 'trash-to-break' ||
+          selectionEffect.kind === 'support-to-trash' ||
+          selectionEffect.kind === 'support-to-hand' ||
+          selectionEffect.kind === 'hand-to-support' ||
+          selectionEffect.kind === 'trash-to-battle' ||
+          selectionEffect.kind === 'trash-to-support' ||
+          selectionEffect.kind === 'trash-to-hand' ||
+          selectionEffect.kind === 'trash-to-deck' ||
+          selectionEffect.kind === 'flip-to-support' ||
+          selectionEffect.kind === 'hand-to-battle' ||
+          selectionEffect.kind === 'opponent-trash-to-break' ||
+          selectionEffect.kind === 'rest-support' ||
+          selectionEffect.kind === 'hand-to-hp' ||
+          selectionEffect.kind === 'support-to-hp' ||
+          selectionEffect.kind === 'cycle-hp' ||
+          selectionEffect.kind === 'rest-support-and-damage' ||
+          selectionEffect.kind === 'field-to-deck-bottom' ||
+          selectionEffect.kind === 'inspect-deck' ||
+          selectionEffect.kind === 'optional-cost-attack' ||
+          selectionEffect.kind === 'disable-block'
           ? null
-          : ('target' in currentEffect ? currentEffect.target ?? null : null)
+          : ('target' in selectionEffect ? selectionEffect.target ?? null : null)
         : null
+
+  // P3 bridge: use the same shadow descriptor that pending modals, online
+  // effects, and AI consume. The existing arrays below remain the UI fallback
+  // for a descriptor that is not ready; a ready descriptor can only narrow
+  // candidates, never broaden them or bypass applyGameCommand validation.
+  const effectDecisionDescriptor =
+    pendingEffect && selectionEffect
+      ? compileEffectDecisionDescriptor({
+          state: game,
+          playerId: pendingEffect.context.sourcePlayerId,
+          sourcePlayerId: pendingEffect.context.sourcePlayerId,
+          sourceInstanceId: pendingEffect.context.sourceInstanceId,
+          sourceCardName: pendingEffect.sourceCard.name,
+          context: pendingEffect.context,
+          effect: selectionEffect,
+          cost: pendingEffect.skillActivated
+            ? undefined
+            : pendingEffect.skill.cost,
+          commandKind:
+            pendingEffect.sourceKind === 'attack'
+              ? 'resolve-attack-effect'
+              : 'resolve-ability-effect',
+          viewerPlayerId,
+        })
+      : null
+  const descriptorTargetStep = effectDecisionDescriptor?.steps.find(
+    (step) => step.kind === 'target',
+  )
+  const stagedCostSelectionPending = Boolean(
+    pendingEffect &&
+      !pendingEffect.skillActivated &&
+      pendingEffect.selectedHpToTrashTargetIds.length > 0 &&
+      currentTargetSelector?.costSelected,
+  )
+  const useDescriptorCandidates =
+    effectDecisionDescriptor?.status === 'ready' &&
+    Boolean(descriptorTargetStep) &&
+    !stagedCostSelectionPending
+  const isDescriptorCandidate = (instanceId: string): boolean =>
+    !useDescriptorCandidates || descriptorTargetStep!.candidateIds.includes(instanceId)
 
   const stagedCostSelectedTargetId =
     pendingEffect &&
@@ -189,19 +236,19 @@ export function usePendingEffect(params: {
     !pendingEffect.skillActivated
       ? pendingEffect.selectedHpToTrashTargetIds[0]
       : undefined
-  const effectTargetCandidates =
+  const rawEffectTargetCandidates =
     pendingEffect &&
-    currentEffect &&
+    selectionEffect &&
     currentTargetSelector
-      ? currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break'
+      ? selectionEffect.kind === 'opponent-break-to-trash-then-battle-to-break'
         ? []
-        : (currentEffect.kind === 'field-to-trash' && currentEffect.stageOnly)
+        : (selectionEffect.kind === 'field-to-trash' && selectionEffect.stageOnly)
         ? []
-        : currentEffect.kind === 'equip-source'
+        : selectionEffect.kind === 'equip-source'
           ? getEffectTargetCandidatesForEffect(
               game,
               pendingEffect.context,
-              currentEffect,
+              selectionEffect,
             )
           : (() => {
               // A stage/item/cookie ability keeps all costs in local pending
@@ -218,9 +265,9 @@ export function usePendingEffect(params: {
                     selector,
                   )
                 : getEffectTargetCandidatesForEffect(
-                    game,
-                    pendingEffect.context,
-                    currentEffect,
+                  game,
+                  pendingEffect.context,
+                  selectionEffect,
                   )
               return stagedCostSelectedTargetId
                 ? candidates.filter(
@@ -230,6 +277,9 @@ export function usePendingEffect(params: {
                 : candidates
             })()
       : []
+  const effectTargetCandidates = rawEffectTargetCandidates.filter((cookie) =>
+    isDescriptorCandidate(cookie.card.instanceId),
+  )
 
   const supportEffectCandidates =
     pendingEffect &&
@@ -247,6 +297,7 @@ export function usePendingEffect(params: {
                 (support.card.type === 'cookie' &&
                   support.card.level <= currentEffect.maxLevel))),
         )
+        .filter((support) => isDescriptorCandidate(support.card.instanceId))
       : []
 
   const trashCookieCandidates =
@@ -254,8 +305,12 @@ export function usePendingEffect(params: {
     (currentEffect?.kind === 'trash-to-battle' ||
       currentEffect?.kind === 'trash-to-support')
       ? currentEffect.kind === 'trash-to-battle'
-        ? getTrashCookieCandidates(game, pendingEffect.context, currentEffect)
-        : getTrashToSupportCandidates(game, pendingEffect.context)
+        ? getTrashCookieCandidates(game, pendingEffect.context, currentEffect).filter(
+            (card) => isDescriptorCandidate(card.instanceId),
+          )
+        : getTrashToSupportCandidates(game, pendingEffect.context).filter(
+            (card) => isDescriptorCandidate(card.instanceId),
+          )
       : []
 
   const fieldToTrashStageCandidate =
@@ -272,7 +327,9 @@ export function usePendingEffect(params: {
                 : 'player-one'
           const targetPlayer = game.players[targetPlayerId]
           return targetPlayer.stage
-            ? [targetPlayer.stage.card]
+            ? isDescriptorCandidate(targetPlayer.stage.card.instanceId)
+              ? [targetPlayer.stage.card]
+              : []
             : []
         })()
       : []
@@ -292,13 +349,12 @@ export function usePendingEffect(params: {
       currentEffect.kind === 'opponent-trash-to-break' ||
       currentEffect.kind === 'opponent-break-to-trash-then-battle-to-break' ||
       (currentEffect.kind === 'set-active' && currentEffect.selectable))
-      ? getEffectSelectionCandidates(
-          game,
-          pendingEffect.context,
-          currentEffect,
-        )
+          ? getEffectSelectionCandidates(
+              game,
+              pendingEffect.context,
+              currentEffect,
+        ).filter((card) => isDescriptorCandidate(card.instanceId))
       : []
-
   const nonBattleEffectCandidateCards = [
     ...supportEffectCandidates.map((support) => support.card),
     ...trashCookieCandidates,
@@ -312,37 +368,43 @@ export function usePendingEffect(params: {
           game,
           pendingEffect.context,
           currentEffect,
-        )
+        ).filter((card) => isDescriptorCandidate(card.instanceId))
       : []
 
   const breakToBattleCandidates =
     pendingEffect && currentEffect?.kind === 'break-to-battle'
       ? getBreakToBattleCandidates(game, pendingEffect.context, currentEffect)
+          .filter((card) => isDescriptorCandidate(card.instanceId))
       : []
 
   const supportToBattleCandidates =
     pendingEffect && currentEffect?.kind === 'support-to-battle'
       ? getSupportToBattleCandidates(game, pendingEffect.context, currentEffect)
+          .filter((card) => isDescriptorCandidate(card.instanceId))
       : []
 
   const breakToHandBySumCandidates =
     pendingEffect && currentEffect?.kind === 'break-to-hand-by-level-sum'
       ? getBreakToHandBySumCandidates(game, pendingEffect.context, currentEffect)
+          .filter((card) => isDescriptorCandidate(card.instanceId))
       : []
 
   const handToBreakBySumCandidates =
     pendingEffect && currentEffect?.kind === 'hand-to-break-by-level-sum'
       ? getHandToBreakBySumCandidates(game, pendingEffect.context, currentEffect)
+          .filter((card) => isDescriptorCandidate(card.instanceId))
       : []
 
   const trashToHandCandidates =
     pendingEffect && currentEffect?.kind === 'trash-to-hand'
       ? getTrashToHandCandidates(game, pendingEffect.context, currentEffect)
+          .filter((card) => isDescriptorCandidate(card.instanceId))
       : []
 
   const trashToDeckCandidates =
     pendingEffect && currentEffect?.kind === 'trash-to-deck'
       ? getTrashToDeckCandidates(game, pendingEffect.context, currentEffect)
+          .filter((card) => isDescriptorCandidate(card.instanceId))
       : []
 
   const restSupportAndDamageSupportCandidates =
@@ -353,6 +415,7 @@ export function usePendingEffect(params: {
         })
           .filter(
             (support) =>
+              isDescriptorCandidate(support.card.instanceId) &&
               (currentEffect.supportEnergyColor === undefined ||
                 support.card.energyColor ===
                   currentEffect.supportEnergyColor) &&
@@ -369,7 +432,9 @@ export function usePendingEffect(params: {
           game,
           pendingEffect.context,
           currentEffect.target,
-        ).map((cookie) => cookie.card)
+        )
+          .filter((cookie) => isDescriptorCandidate(cookie.card.instanceId))
+          .map((cookie) => cookie.card)
       : []
 
   const effectTargetIds = faintActive
@@ -1281,7 +1346,9 @@ export function usePendingEffect(params: {
     }
 
     const max =
-      currentEffect.kind === 'break-to-trash' ||
+      selectionEffect?.kind === 'damage-all' && selectionEffect.sequential
+        ? effectTargetCandidates.length
+        : currentEffect.kind === 'break-to-trash' ||
         currentEffect.kind === 'trash-to-hand' ||
         currentEffect.kind === 'trash-to-deck'
         ? currentEffect.max
@@ -2097,6 +2164,7 @@ export function usePendingEffect(params: {
     effectHistory,
     setEffectHistory,
     resetEffectContext,
+    effectDecisionDescriptor,
     beginCookieSkill,
     handleOnPlayTrigger,
     beginCardAbility,
@@ -2113,7 +2181,7 @@ export function usePendingEffect(params: {
     skipOptionalSkill,
     skipAttackEffect,
     cancelPendingSkill,
-    currentEffect,
+    currentEffect: selectionEffect,
     currentEffectConditionMet,
     effectTargetCandidates,
     supportEffectCandidates,

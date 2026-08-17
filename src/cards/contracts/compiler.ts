@@ -1,4 +1,5 @@
 import type { GameCard } from '../../game'
+import type { DecisionDescriptorStep } from '../../game/decision-descriptor'
 import { convertOfficialCardToGameCard } from '../official-card-adapter'
 import type { OfficialCardRecord } from '../types'
 import { analyzeOfficialCardBehavior } from './ledger'
@@ -33,10 +34,45 @@ export interface CompiledCardBehavior {
   blockers: string[]
   audit: CardBehaviorAudit
   steps: ContractDecisionStep[]
+  /** 共用 DecisionDescriptor 的 shadow 片段；候選仍須由 GameState 編譯。 */
+  decisionSteps: DecisionDescriptorStep[]
   /** 只有 descriptor 通過後才可交給規則層產生 GameCommand。 */
   executable: boolean
   gameCard: GameCard | null
 }
+
+const contractCommandKinds = (kind: ContractDecisionStepKind): string[] => {
+  if (kind === 'payment' || kind === 'cost') {
+    return ['begin-activate-skill', 'begin-play-item', 'begin-activate-stage']
+  }
+  if (kind === 'target') return ['resolve-ability-effect']
+  return ['resolve-ability-effect']
+}
+
+/**
+ * 把官方文字契約的步驟投影到共用 descriptor step。這個投影刻意不填
+ * candidateIds：契約沒有合法 GameState 視角，任何候選都必須稍後由
+ * `compileEffectDecisionDescriptor`／`compilePendingDecisionDescriptor`
+ * 使用規則層 helper 產生。
+ */
+export const compileContractDecisionSteps = (
+  steps: readonly ContractDecisionStep[],
+): DecisionDescriptorStep[] =>
+  steps.map((step) => ({
+    id: step.id,
+    kind: step.kind,
+    required: step.required,
+    ...(step.min !== undefined ? { min: step.min } : {}),
+    ...(step.max !== undefined ? { max: step.max } : {}),
+    candidateIds: [],
+    candidateSource: 'provided',
+    ...(step.selector ? { selector: step.selector } : {}),
+    ...(step.payment ? { payment: step.payment.energy } : {}),
+    ...(step.cost?.runtime ? { cost: step.cost.runtime as import('../../game').AbilityCost } : {}),
+    clauseIds: step.clauseIds,
+    commandKinds: contractCommandKinds(step.kind),
+    label: step.label,
+  }))
 
 const paymentLabel = (payment: ContractPayment): string =>
   payment.kind === 'source-energy' ? '支付來源能量' : '支付能量'
@@ -114,6 +150,7 @@ export const compileCardBehaviorContract = (
     blockers: audit.errors,
     audit,
     steps,
+    decisionSteps: compileContractDecisionSteps(steps),
     executable: contract.status === 'verified' && audit.errors.length === 0,
     gameCard: runtimeCard === undefined && conversion?.status === 'converted' ? conversion.gameCard : runtimeCard ?? null,
   }
