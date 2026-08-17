@@ -3732,7 +3732,8 @@ export const resolveFaintEffect = (
   }
 
   const faintEnergyCost =
-    faint.effect.kind === 'hand-to-battle'
+    faint.effect.kind === 'hand-to-battle' ||
+    faint.effect.kind === 'trash-to-battle'
       ? faint.effect.energyCost
       : undefined
   if (!faintEnergyCost && paymentIds.length > 0) {
@@ -3742,7 +3743,8 @@ export const resolveFaintEffect = (
     if (
       targetIds.length === 0 &&
       paymentIds.length === 0 &&
-      faint.effect.kind === 'hand-to-battle' &&
+      (faint.effect.kind === 'hand-to-battle' ||
+        faint.effect.kind === 'trash-to-battle') &&
       faint.effect.optional
     ) {
       return continuePendingReplacements(nextState)

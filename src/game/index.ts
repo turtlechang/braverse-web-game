@@ -1,4 +1,21 @@
 export { GameRuleError } from './errors'
+export { describePendingDecision } from './decision-descriptor'
+export {
+  compileEffectDecisionDescriptor,
+  compilePendingDecisionDescriptor,
+} from './decision-descriptor-compiler'
+export type {
+  DecisionDescriptor,
+  DecisionDescriptorCandidateSource,
+  DecisionDescriptorKind,
+  DecisionDescriptorStep,
+  DecisionDescriptorStepKind,
+} from './decision-descriptor'
+export type {
+  CompiledDecisionDescriptor,
+  DecisionDescriptorCompileOptions,
+  EffectDecisionDescriptorInput,
+} from './decision-descriptor-compiler'
 export {
   executeCardEffect,
   getAttackDamageAgainst,
@@ -13,6 +30,7 @@ export {
   getFieldToDeckBottomBlocker,
   getEffectSelectionCandidates,
   getEffectSelectionLimits,
+  getNestedSequentialDamageSelectionEffect,
   hasRequiredEffectTargets,
   getSupportEffectCandidates,
   getTrashCookieCandidates,

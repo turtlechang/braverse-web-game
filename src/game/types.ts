@@ -884,6 +884,12 @@ export interface TrashToBattleEffect {
   /** Restricts the printed HP value of the Cookie card in the trash. */
   maxHp?: number
   energyColor?: EnergyColor
+  /**
+   * Optional energy paid before a faint-triggered trash play resolves.
+   * Normal skill/attack costs remain on their parent ability; this field is
+   * for card text such as "can be used as {P}" attached to the effect itself.
+   */
+  energyCost?: EnergyCost
   keyword?: CardKeyword
   condition?: EffectCondition
 }

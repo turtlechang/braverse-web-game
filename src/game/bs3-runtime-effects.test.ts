@@ -10,6 +10,7 @@ import {
   getEffectTargetCandidates,
   resolveDrawUpTo,
 } from './effects'
+import { resolveNextDamage } from './battle'
 import type { CardEffect, CookieCard, EffectContext, GameState } from './types'
 import { cookie, createBattleState, item } from './test-helpers/battle-helpers'
 
@@ -394,26 +395,76 @@ describe('BS3-113 Caramel Arrow Cookie: trash-to-deck-all', () => {
           color: 'purple',
           count: 15,
         },
-        thenEffects: [{ kind: 'damage-all', amount: 2, side: 'opponent' }],
+        thenEffects: [
+          {
+            kind: 'damage-all',
+            amount: 2,
+            side: 'opponent',
+            sequential: true,
+            target: { side: 'opponent', min: 1, max: 2 },
+          },
+        ],
       },
     ])
   })
 
-  it('shuffles the whole trash back and then damages every opposing Cookie', () => {
-    const state = withPurpleTrash(createBattleState(), 15)
+  it('shuffles the whole trash back and then damages every opposing Cookie in the chosen order', () => {
+    const base = withPurpleTrash(createBattleState(), 15)
+    const secondTarget = {
+      card: levelledCookie('caramel-arrow-second-target', 1),
+      hpCards: [item('caramel-arrow-second-hp-1'), item('caramel-arrow-second-hp-2')],
+      rested: false,
+      battleEntryId: 'caramel-arrow-second-target:battle:2',
+    }
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [...base.players['player-one'].battleArea, secondTarget],
+        },
+      },
+    }
     const deckSizeBefore = state.players['player-two'].deck.length
-
-    const next = executeCardEffect(
+    const effect = effectsOf('BS3-113')[0]
+    if (effect.kind !== 'trash-to-deck-all') {
+      throw new Error('BS3-113 should start with trash-to-deck-all.')
+    }
+    const nestedDamage = effect.thenEffects?.[0]
+    if (nestedDamage?.kind !== 'damage-all' || !nestedDamage.target) {
+      throw new Error('BS3-113 should have sequential nested damage.')
+    }
+    const orderedTargetIds = getEffectTargetCandidates(
       state,
       sourceContext(),
-      effectsOf('BS3-113')[0],
-      [],
+      nestedDamage.target,
+    )
+      .map((cookie) => cookie.card.instanceId)
+      .reverse()
+
+    const pendingDamage = executeCardEffect(
+      state,
+      sourceContext(),
+      effect,
+      orderedTargetIds,
       (cards) => cards,
     )
 
-    expect(next.players['player-two'].discardPile).toHaveLength(0)
-    expect(next.players['player-two'].deck).toHaveLength(deckSizeBefore + 15)
-    expect(next.players['player-one'].battleArea[0].hpCards).toHaveLength(1)
+    expect(pendingDamage.players['player-two'].discardPile).toHaveLength(0)
+    expect(pendingDamage.players['player-two'].deck).toHaveLength(deckSizeBefore + 15)
+    expect(pendingDamage.pendingBattle).toMatchObject({
+      targetInstanceId: orderedTargetIds[0],
+      effectDamageSequence: {
+        remainingTargetInstanceIds: [orderedTargetIds[1]],
+      },
+    })
+
+    const afterFirstDamagePoint = resolveNextDamage(pendingDamage)
+    expect(afterFirstDamagePoint.pendingBattle?.targetInstanceId).toBe(orderedTargetIds[0])
+
+    const afterFirstTarget = resolveNextDamage(afterFirstDamagePoint)
+    expect(afterFirstTarget.pendingBattle?.targetInstanceId).toBe(orderedTargetIds[1])
   })
 
   it('throws when the purple trash threshold is not met', () => {

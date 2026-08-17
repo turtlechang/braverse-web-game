@@ -2536,6 +2536,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           keywords: ['arena'] as ['arena'],
         },
       }
+    : card.id === 'BS6-096'
+      ? {
+          ...selfExtra1Base,
+          cookie: {
+            ...selfExtra1Base.cookie,
+            level: 3,
+          },
+        }
     : selfExtra1Base
 
   // Generous energy support to pay any skill/item/trap/stage energy cost.
@@ -2589,6 +2597,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     ...Array.from({ length: 5 }, (_, i) =>
       testSupportCard(`trash-purple-cost-${i}`, 'purple'),
     ),
+    // BS3-113 的 OnPlay 條件是自己的棄牌區至少 15 張紫色卡。card-check
+    // fixture 必須把條件建立成真，才能在實際瀏覽器驗證後續的逐一全體傷害
+    // 與目標排序 UI，而不是只停在「條件未滿足」的略過提示。
+    ...(card.id === 'BS3-113'
+      ? Array.from({ length: 8 }, (_, i) =>
+          testSupportCard(`BS3-113-purple-trash-${i}`, 'purple'),
+        )
+      : []),
     ...(card.id === 'BS5-094'
       ? Array.from({ length: 5 }, (_, i) =>
           cardCheckFillerCookie(
@@ -2599,6 +2615,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             'purple',
           ).cookie,
         )
+      : []),
+    // BS6-096 pays by moving its source Cookie to the trash before playing
+    // a purple LV.1 Cookie.  Keep both the LV.3 condition and the legal
+    // purple LV.1 candidate visible in the generic Browser card-check route.
+    ...(card.id === 'BS6-096'
+      ? [
+          cardCheckFillerCookie(
+            'BS6-096-purple-lv1',
+            1,
+            3,
+            0,
+            'purple',
+          ).cookie,
+        ]
       : []),
   ]
   // Deploying a cookie draws HP cards from the top of the deck
@@ -2940,7 +2970,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           // BS3-061 pays its faint cost from the support area before checking
           // the 5-card condition. Start with six cards so the default
           // card-check route exercises the condition-met path.
-          ...(card.id === 'BS3-061' || card.id === 'BS5-047'
+          ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101'
             ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
             : {}),
           ...(card.id === 'BS5-007'
@@ -2965,7 +2995,18 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // Attack-post-effect cookies ("Then ..." attack text): mirror
   // createAttackEffectDemoState / createBlueOptionalCostAttackDemoState.
   const cookieCard = card as CookieCard
-  if (cookieCard.attackEffects && cookieCard.attackEffects.length > 0) {
+  // OnPlay 牌同時擁有攻擊後效果時，card-check 仍須優先驗證登場能力；否則
+  // 像 BS3-113 會被錯帶進 attack-effect fixture，根本無法在瀏覽器走到
+  // OnPlay 的逐一傷害目標選擇。
+  if (
+    cookieCard.attackEffects &&
+    cookieCard.attackEffects.length > 0 &&
+    // BS3-113 has both an OnPlay condition and an attack effect in the
+    // official record; its card-check route intentionally verifies the
+    // OnPlay damage-order selector. Other OnPlay + attack-effect cards keep
+    // the established attack-effect fixture path.
+    cookieCard.id !== 'BS3-113'
+  ) {
     const state = baseState()
     // The generic fixture should enter the card's real post-attack UI rather
     // than silently auto-skipping an effect whose condition happens to be

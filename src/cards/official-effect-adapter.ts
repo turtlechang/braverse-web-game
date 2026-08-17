@@ -1417,7 +1417,16 @@ export const convertOfficialCardEffects = (
           count: 15,
         },
         // 洗回牌庫會清空棄牌區，傷害必須內嵌才不會被條件重判時跳過。
-        thenEffects: [{ kind: 'damage-all', amount: 2, side: 'opponent' }],
+        // 全體傷害仍須讓玩家指定每個目標的結算順序，逐張處理 FLIP。
+        thenEffects: [
+          {
+            kind: 'damage-all',
+            amount: 2,
+            side: 'opponent',
+            sequential: true,
+            target: { side: 'opponent', min: 1, max: 2 },
+          },
+        ],
       },
     ],
     'BS2-013': [
@@ -3339,14 +3348,16 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 0, max: 1, maxLevel: 1 },
       },
     ],
-    // BS6-101 的「最多 1 張」必須保留 0 張選擇；昏厥來源已離場，
-    // 因此「can be used as {P}」不另外要求支援區付款。
+    // BS6-101 的「最多 1 張」必須保留 0 張選擇；「can be used as {P}」
+    // 是這個昏厥效果本身的可選能量代價，必須先從支援區支付，才能
+    // 繼續選擇棄牌區的紫色餅乾登場。
     'BS6-101': [
       {
         kind: 'trash-to-battle',
         amount: 1,
         optional: true,
         energyColor: 'purple',
+        energyCost: { purple: 1 },
       },
     ],
     'BS6-105': [{ kind: 'draw-up-to-then-discard', max: 2, discardCount: 1 }],
@@ -5376,7 +5387,8 @@ export const convertOfficialAttackEffects = (
           {
             kind: 'damage',
             amount: 2,
-            target: { side: 'opponent', min: 0, max: 1 },
+            // "Deals 2 damage" names no new target, so it follows the normal attack target.
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
             condition: {
               kind: 'trash-color-count-at-least',
               color: 'purple',
