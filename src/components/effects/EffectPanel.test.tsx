@@ -68,6 +68,51 @@ describe('BS6-039 compound target UI', () => {
   })
 })
 
+describe('sequential all-target damage UI', () => {
+  it('shows the click order when every opposing Cookie must be damaged', async () => {
+    const effect: CardEffect = {
+      kind: 'damage-all',
+      amount: 2,
+      side: 'opponent',
+      sequential: true,
+      target: { side: 'opponent', min: 1, max: 2 },
+    }
+    const first = createCookieCard(1)
+    const second = createCookieCard(2)
+    const pending = createPendingEffect({
+      effects: [effect],
+      selectedTargetIds: [second.instanceId, first.instanceId],
+    })
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    await act(() =>
+      root.render(
+        <EffectPanel
+          pendingEffect={pending}
+          currentEffect={effect}
+          effectHistory={[]}
+          onConfirm={() => undefined}
+          onSkip={() => undefined}
+          candidateCards={[first, second]}
+          onToggleCandidate={() => undefined}
+        />,
+      ),
+    )
+
+    expect(container.textContent).toContain('第 1 順位')
+    expect(container.textContent).toContain('第 2 順位')
+    expect(
+      (container.querySelector('.effect-panel-primary-action') as HTMLButtonElement)
+        .disabled,
+    ).toBe(false)
+
+    await act(() => root.unmount())
+    container.remove()
+  })
+})
+
 const createCookieCard = (index: number): CookieCard => ({
   id: `COOKIE-${index}`,
   instanceId: `cookie-${index}`,

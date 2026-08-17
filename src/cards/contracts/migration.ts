@@ -15,6 +15,15 @@ export interface ContractMigrationBatch {
 }
 
 /**
+ * 將官方來源記錄綁回 shadow batch；必須使用 cardNumber，因為異圖變體
+ * 可能是 `BS1-044@1`，不能用 baseCardNumber 把它錯誤合併成另一張卡。
+ */
+export const selectRecordsForMigrationBatch = <T extends { cardNumber: string }>(
+  records: readonly T[],
+  batch: ContractMigrationBatch,
+): T[] => records.filter((record) => batch.cardIds.includes(record.cardNumber))
+
+/**
  * 以 card.id（而非卡名、彈數或牌組）建立 deterministic 的 shadow migration
  * 批次。只有 audit 已標成 verified 的卡牌才會進入批次，未驗證資料留在
  * inventory／needs-review，不會被這個 helper 靜默升格。

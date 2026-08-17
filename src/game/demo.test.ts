@@ -571,6 +571,48 @@ describe('createCardCheckDemoState', () => {
     })
   })
 
+  it('prepares BS3-113 with the 15 purple discard cards required for its OnPlay damage order', () => {
+    const state = createCardCheckDemoState('BS3-113')
+    const source = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS3-113',
+    )
+
+    expect(source?.skill).toMatchObject({ trigger: 'on-play' })
+    expect(
+      state.players['player-one'].discardPile.filter(
+        (card) => card.energyColor === 'purple',
+      ),
+    ).toHaveLength(15)
+    expect(state.players['player-two'].battleArea).toHaveLength(2)
+  })
+
+  it('prepares BS6-096 with a full battle area, LV.3 condition and purple LV.1 trash target', () => {
+    const state = createCardCheckDemoState('BS6-096')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-096',
+    )
+    const effect = state.pendingBattle?.attackEffects[0]
+
+    expect(state.players['player-one'].battleArea).toHaveLength(2)
+    expect(
+      state.players['player-one'].battleArea.some((entry) => entry.card.level === 3),
+    ).toBe(true)
+    expect(
+      state.players['player-one'].discardPile,
+    ).toContainEqual(
+      expect.objectContaining({
+        id: 'BS6-096-purple-lv1',
+        type: 'cookie',
+        level: 1,
+        energyColor: 'purple',
+      }),
+    )
+    expect(source?.card.attackEffects).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'optional-cost-attack' }),
+    ]))
+    expect(effect).toMatchObject({ kind: 'optional-cost-attack' })
+  })
+
   it('prepares BS4-062 with eight active green supports for payment and effect selection', () => {
     const state = createCardCheckDemoState('BS4-062')
     const supports = state.players['player-one'].supportArea

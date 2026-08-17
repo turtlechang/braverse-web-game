@@ -58,7 +58,15 @@ describe('official ruling: replacement order lets BS3-028 disarm BS3-113', () =>
             color: 'purple',
             count: 15,
           },
-          thenEffects: [{ kind: 'damage-all', amount: 2, side: 'opponent' }],
+          thenEffects: [
+            {
+              kind: 'damage-all',
+              amount: 2,
+              side: 'opponent',
+              sequential: true,
+              target: { side: 'opponent', min: 1, max: 2 },
+            },
+          ],
         },
       ],
     },

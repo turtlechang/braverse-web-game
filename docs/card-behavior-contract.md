@@ -16,8 +16,8 @@
 
 - `sourceHash`：卡號、類型與原始 skill／attack／FLIP 文字的雜湊；來源改變時必須
   重新稽核。
-- `timing`：`{mob}`／`{ap}`／`{t1}`／`{mt}`／`{bl}` 與 runtime trigger、回合及一次
-  性旗標的對照。
+- `timing`：`{mob}`／`{ap}`／`{t1}`／`{mt}` 與 runtime trigger、回合及一次
+  性旗標的對照；`{bl}` 是 Blocker 關鍵字，不會被誤判為時機標記。
 - `clauses`：每個來源片段的角色（timing、condition、payment、cost、target、
   effect、then、order 或 unsupported）、位置、token 與信心等級。
 - `payments`：能量支付、來源能量或替代支付的來源 clause。
@@ -38,7 +38,9 @@ npm run cards:audit:contracts -- --file official-age-of-heroes-and-kingdoms-bs6.
 npm run cards:audit:contracts -- --output docs/card-contract-audit.json
 npm run cards:audit:contracts -- --strict
 npm run cards:attest -- --input browser-trace.json --commands activate-skill,resolve-ability-effect --steps "支付,選擇目標,結算"
+npm run cards:attest:browser
 npm run cards:migrate:batch -- --offset 0 --limit 25
+npm run cards:migrate:batch -- --offset 50 --limit 25
 ```
 
 不帶 `--strict` 時是報告模式，適合盤點現況；`--strict` 會在仍有
@@ -59,7 +61,14 @@ npm run cards:migrate:batch -- --offset 0 --limit 25
 本輪已把本機 pending modal 的效果順序、手牌／支援區回應，以及線上效果候選接到同一
 descriptor bridge；尚未接入的舊精靈仍可保留自己的暫態選取，但送出的 command 不得
 繞過規則層。P5 的 `migration.ts` 與 `cards:migrate:batch` 只做 deterministic shadow
-批次（依 `card.id` 排序），不修改正式 adapter、卡牌資料或 runtime registry。
+批次（依 `card.id` 排序），來源記錄則以 `cardNumber` 綁定以保留 `@1` 異圖變體；不修改正式 adapter、卡牌資料或 runtime registry。
+
+稽核報告會同步列出 `needs-review` 的原因計數，將 parser、payment、cost、target、
+Then、timing 與 resolution-order 證據分開；目前的主要缺口仍是來源目標語句與未分類
+條款，不會因為 runtime 有相似效果就自動升格。`scripts/card-contract-browser-attestation.ts`
+以 `?test-state=attack-effect&contract-card=...` 啟動公開 trace，先驗證未操作的負向
+pending，再透過 modal 內的 selector candidate 完成正向支付／目標／結算；trace 僅保留
+command kind、摘要與步驟文字，不含手牌、牌庫或未公開 HP 識別資訊。
 
 每張卡進入 promotion-ready 或下一個 shadow migration 批次前至少需要：
 

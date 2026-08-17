@@ -137,4 +137,92 @@ describe('card behavior contract shadow ledger', () => {
     const second = analyzeOfficialCardBehavior(makeRecord({ attackText: '<{R}> Attack {da} 2' }), makeCard())
     expect(first.contract.sourceHash).not.toBe(second.contract.sourceHash)
   })
+
+  it('keeps LV.1 in the target selector instead of truncating at the period', () => {
+    const source = makeRecord({
+      skill: {
+        name: 'Level target',
+        text: "Select up to 1 of your opponent's LV.1 Cookies.",
+      },
+    })
+    const runtime = makeCard({
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: source.skill.text ?? '',
+        effects: [{
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1, maxLevel: 1 },
+        }],
+      },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.targets[0]).toMatchObject({
+      selector: { side: 'opponent', min: 0, max: 1, minLevel: 1, maxLevel: 1 },
+    })
+    expect(audit.contract.targets[0].unresolved).toBeUndefined()
+  })
+
+  it('reads direct colour keys in an AbilityCost as payment evidence', () => {
+    const source = makeRecord({
+      attackText: '<{R}{N}> Deals 1 damage.',
+    })
+    const runtime = makeCard({
+      attackEnergyCost: { red: 1, neutral: 1 },
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.checks.paymentCovered).toBe(true)
+    expect(audit.errors).not.toContain('payment evidence missing')
+  })
+
+  it('binds a self-to-trash optional cost instead of classifying it as unknown', () => {
+    const source = makeRecord({
+      attackText: '<{P}> <Place this Cookie in the trash.> Then, play 1 Cookie.',
+    })
+    const runtime = makeCard({
+      attackEnergyCost: { purple: 1 },
+      attackEffects: [{
+        kind: 'optional-cost-attack',
+        cost: { energy: { purple: 1 }, selfToTrash: true },
+        effects: [],
+        effectText: 'Place this Cookie in the trash.',
+      }],
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.costs).toContainEqual(expect.objectContaining({ kind: 'self-to-trash' }))
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.contract.status).toBe('verified')
+  })
+
+  it('accepts the ordered attackEffects array as Then evidence', () => {
+    const source = makeRecord({
+      attackText: '<{R}> Deals 1 damage. Then, draw up to 1 card from your deck.',
+    })
+    const runtime = makeCard({
+      attackEnergyCost: { red: 1 },
+      attackEffects: [
+        { kind: 'draw-up-to', max: 1 },
+      ],
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.checks.resolutionOrderCovered).toBe(true)
+    expect(audit.errors).not.toContain('resolution order evidence missing')
+  })
+
+  it('does not treat the Blocker keyword as a timing marker', () => {
+    const source = makeRecord({
+      attackText: '<{R}> During this turn, your opponent cannot activate 【Blocker】.',
+    })
+    const runtime = makeCard({
+      attackEnergyCost: { red: 1 },
+      attackEffects: [{ kind: 'disable-block', duration: 'this-turn', side: 'opponent' }],
+    })
+    const audit = analyzeOfficialCardBehavior(source, runtime)
+    expect(audit.contract.timing.markers).not.toContain('bl')
+    expect(audit.checks.timingCovered).toBe(true)
+  })
 })

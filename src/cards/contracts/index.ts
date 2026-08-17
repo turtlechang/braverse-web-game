@@ -33,6 +33,7 @@ export type {
 export {
   checkContractMigrationBatch,
   isContractMigrationBatchReady,
+  selectRecordsForMigrationBatch,
   selectVerifiedMigrationBatch,
 } from './migration'
 export type {

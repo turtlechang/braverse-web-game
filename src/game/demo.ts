@@ -2536,6 +2536,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           keywords: ['arena'] as ['arena'],
         },
       }
+    : card.id === 'BS6-096'
+      ? {
+          ...selfExtra1Base,
+          cookie: {
+            ...selfExtra1Base.cookie,
+            level: 3,
+          },
+        }
     : selfExtra1Base
 
   // Generous energy support to pay any skill/item/trap/stage energy cost.
@@ -2607,6 +2615,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             'purple',
           ).cookie,
         )
+      : []),
+    // BS6-096 pays by moving its source Cookie to the trash before playing
+    // a purple LV.1 Cookie.  Keep both the LV.3 condition and the legal
+    // purple LV.1 candidate visible in the generic Browser card-check route.
+    ...(card.id === 'BS6-096'
+      ? [
+          cardCheckFillerCookie(
+            'BS6-096-purple-lv1',
+            1,
+            3,
+            0,
+            'purple',
+          ).cookie,
+        ]
       : []),
   ]
   // Deploying a cookie draws HP cards from the top of the deck

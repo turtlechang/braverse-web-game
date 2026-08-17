@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import './styles/base.css'
 import './App.css'
 import {
@@ -36,6 +36,10 @@ import { deriveInteractionLocked } from './hooks/deriveInteractionLocked'
 import { useFlipCardPreview } from './hooks/useFlipCardPreview'
 import { useAttentionIndicator } from './hooks/useAttentionIndicator'
 import { deriveAttentionState } from './components/panels/attentionState'
+// Import the browser-safe trace module directly.  The contracts barrel also
+// exports the Node-only shadow ledger (node:crypto), which must not enter the
+// client bundle just because the optional Browser attestation hook is enabled.
+import { buildCardContractActionTrace } from './cards/contracts/action-trace'
 import type { AiLevel } from './game'
 
 const InformationModals = lazy(async () => {
@@ -90,6 +94,10 @@ const testStateConfig = parseTestStateConfig(
   window.location.hostname,
 )
 
+const contractTraceCardId = new URLSearchParams(window.location.search).get(
+  'contract-card',
+)
+
 function App() {
   const [screen, setScreen] = useState<'menu' | 'battle'>(() =>
     testStateConfig ? 'battle' : 'menu',
@@ -102,6 +110,19 @@ function App() {
   const dialogs = useMatchDialogs()
   const { closeResourcePopover } = dialogs
   const match = useMatchController({ testStateConfig })
+  useEffect(() => {
+    if (!contractTraceCardId) return
+    const trace = buildCardContractActionTrace(
+      match.game.commandLog ?? [],
+      contractTraceCardId,
+    )
+    // Browser attestation exposes only the public command summary/steps.  It
+    // deliberately omits command payloads, hand contents, deck order and HP
+    // card identities; production routes never opt into this test hook.
+    ;(window as Window & {
+      __braverseContractTrace?: ReturnType<typeof buildCardContractActionTrace>
+    }).__braverseContractTrace = trace
+  }, [match.game.commandLog])
   const pending = usePendingEffect({
     game: match.game,
     setGame: match.setGame,

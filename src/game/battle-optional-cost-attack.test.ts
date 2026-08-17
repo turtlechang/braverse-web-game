@@ -13,6 +13,7 @@ import type { CookieCard, GameState } from './types'
 import { createBattleState, declareAttack } from './test-helpers/battle-helpers'
 import type { GameCard } from './types'
 import officialBs6Formal from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import officialBs4Formal from '../../data/cards/official-age-of-heroes-and-kingdoms-bs4.en.json'
 import {
   convertOfficialCardToGameCard,
   type OfficialCardRecord,
@@ -22,6 +23,7 @@ import {
 } from './starter-deck'
 
 const officialBs6Cards = officialBs6Formal.cards as OfficialCardRecord[]
+const officialBs4Cards = officialBs4Formal.cards as OfficialCardRecord[]
 
 const cookie = (id: string, level: number, hp: number): CookieCard => ({
   id,
@@ -34,7 +36,7 @@ const cookie = (id: string, level: number, hp: number): CookieCard => ({
   attackCost: 0,
 })
 
-const item = (id: string, energyColor: 'green' | 'red'): GameCard => ({
+const item = (id: string, energyColor: 'green' | 'red' | 'purple'): GameCard => ({
   id,
   instanceId: id,
   name: id,
@@ -98,6 +100,43 @@ const createBs6SupportReturnAttackState = (cardId: 'BS6-044' | 'BS6-061'): GameS
   )
 }
 
+const createBs4StardustAttackState = (): GameState => {
+  const sourceCard = officialBs4Cards.find((candidate) => candidate.cardNumber === 'BS4-098')
+  const conversion = sourceCard ? convertOfficialCardToGameCard(sourceCard, 'attack-test') : null
+  if (!conversion || conversion.status !== 'converted' || conversion.gameCard.type !== 'cookie') {
+    throw new Error('BS4-098 should be a runtime Cookie card.')
+  }
+
+  const card = conversion.gameCard
+  const state = createBattleState()
+  const defender = state.players['player-one'].battleArea[0]
+  state.players['player-one'].battleArea = [
+    {
+      ...defender,
+      card: { ...defender.card, hp: 10 },
+      hpCards: Array.from({ length: 10 }, (_, index) =>
+        item(`BS4-098-defender-hp-${index + 1}`, 'red'),
+      ),
+    },
+  ]
+  state.players['player-two'].battleArea = [
+    { ...state.players['player-two'].battleArea[0], card, hpCards: [] },
+  ]
+  state.players['player-two'].supportArea = Array.from({ length: 4 }, (_, index) => ({
+    card: item(`BS4-098-energy-${index + 1}`, 'purple'),
+    rested: false,
+  }))
+  state.players['player-two'].discardPile = Array.from({ length: 15 }, (_, index) =>
+    item(`BS4-098-purple-trash-${index + 1}`, 'purple'),
+  )
+  return beginAttack(
+    state,
+    card.instanceId,
+    'defender',
+    ['BS4-098-energy-1', 'BS4-098-energy-2', 'BS4-098-energy-3'],
+  )
+}
+
 describe('optional-cost-attack', () => {
   it.each(['BS6-044', 'BS6-061'] as const)(
     '%s creates a skippable support-return cost and skip resolves the attack',
@@ -139,6 +178,79 @@ describe('optional-cost-attack', () => {
     )
     expect(state.players['player-one'].battleArea[0].hpCards.length).toBeLessThan(10)
     expect(state.pendingBattle).toBeNull()
+  })
+
+  it('BS4-098 locks its follow-up damage to the original attack target', () => {
+    let state = createBs4StardustAttackState()
+    state.players['player-one'].battleArea.push({
+      card: cookie('BS4-098-bystander', 1, 5),
+      hpCards: Array.from({ length: 5 }, (_, index) =>
+        item(`BS4-098-bystander-hp-${index + 1}`, 'red'),
+      ),
+      rested: false,
+      battleEntryId: 'BS4-098-bystander:battle:2',
+    })
+    state = advanceToAttackEffect(state)
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(() =>
+      resolveOptionalCostAttack(
+        state,
+        'player-two',
+        'pay',
+        [],
+        ['BS4-098-bystander'],
+        ['BS4-098-energy-4'],
+      ),
+    ).toThrow()
+
+    state = resolveOptionalCostAttack(
+      state,
+      'player-two',
+      'pay',
+      [],
+      ['defender'],
+      ['BS4-098-energy-4'],
+    )
+
+    expect(state.players['player-one'].battleArea[0].hpCards.length).toBeLessThan(8)
+    expect(
+      state.players['player-one'].battleArea.find(
+        (cookieInBattle) => cookieInBattle.card.instanceId === 'BS4-098-bystander',
+      )?.hpCards.length,
+    ).toBe(5)
+  })
+
+  it('BS4-098 skips the follow-up when the original attack target faints', () => {
+    let state = createBs4StardustAttackState()
+    state.players['player-one'].battleArea[0].hpCards = [
+      item('BS4-098-defender-last-hp', 'red'),
+    ]
+    state.players['player-one'].battleArea.push({
+      card: cookie('BS4-098-bystander', 1, 5),
+      hpCards: Array.from({ length: 5 }, (_, index) =>
+        item(`BS4-098-bystander-hp-${index + 1}`, 'red'),
+      ),
+      rested: false,
+      battleEntryId: 'BS4-098-bystander:battle:2',
+    })
+    state = advanceToAttackEffect(state)
+
+    expect(
+      state.players['player-one'].battleArea.some(
+        (cookieInBattle) => cookieInBattle.card.instanceId === 'defender',
+      ),
+    ).toBe(false)
+
+    state = resolveAttackEffect(state, 'player-two', [])
+
+    expect(state.pendingOptionalCostAttack).toBeFalsy()
+    expect(state.pendingBattle).toBeNull()
+    expect(
+      state.players['player-one'].battleArea.some(
+        (cookieInBattle) => cookieInBattle.card.instanceId === 'BS4-098-bystander',
+      ),
+    ).toBe(true)
   })
 
   it('BS6-044 locks its follow-up damage to the original attack target', () => {

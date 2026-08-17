@@ -3,6 +3,7 @@ import { compileCardBehaviorContract } from './compiler'
 import {
   checkContractMigrationBatch,
   isContractMigrationBatchReady,
+  selectRecordsForMigrationBatch,
   selectVerifiedMigrationBatch,
 } from './migration'
 import type { CardBehaviorAudit } from './types'
@@ -60,6 +61,17 @@ describe('contract migration batches', () => {
     const checks = checkContractMigrationBatch(batch, [])
     expect(checks[0]).toMatchObject({ cardId: 'A-001', executable: false })
     expect(isContractMigrationBatchReady(checks)).toBe(false)
+  })
+
+  it('binds variant records by cardNumber instead of baseCardNumber', () => {
+    const batch = selectVerifiedMigrationBatch([audit('BS1-044@1', 'verified')])
+    const records = [
+      { cardNumber: 'BS1-044', baseCardNumber: 'BS1-044' },
+      { cardNumber: 'BS1-044@1', baseCardNumber: 'BS1-044' },
+    ]
+    expect(selectRecordsForMigrationBatch(records, batch)).toEqual([
+      records[1],
+    ])
   })
 
   it('does not change the contract compiler runtime authority', () => {

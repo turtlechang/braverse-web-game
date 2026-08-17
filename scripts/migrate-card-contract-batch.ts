@@ -13,6 +13,7 @@ import {
   checkContractMigrationBatch,
   compileCardBehaviorContract,
   isContractMigrationBatchReady,
+  selectRecordsForMigrationBatch,
   selectVerifiedMigrationBatch,
 } from '../src/cards/contracts'
 import { convertOfficialCardToGameCard } from '../src/cards/official-card-adapter'
@@ -67,8 +68,7 @@ export const migrateCardContractBatch = (options: Partial<Options> = {}) => {
     return analyzeOfficialCardBehavior(record, converted.status === 'converted' ? converted.gameCard : null)
   })
   const batch = selectVerifiedMigrationBatch(audits, resolved)
-  const compiled = records
-    .filter((record) => batch.cardIds.includes(record.baseCardNumber))
+  const compiled = selectRecordsForMigrationBatch(records, batch)
     .map((record) => {
       const converted = convertOfficialCardToGameCard(record)
       return compileCardBehaviorContract(

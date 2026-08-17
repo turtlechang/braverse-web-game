@@ -70,12 +70,17 @@ export const auditCardContracts = (
     },
     { verified: 0, 'needs-review': 0, blocked: 0 },
   )
+  const reasonCounts = audits.reduce<Record<string, number>>((result, audit) => {
+    for (const reason of audit.errors) result[reason] = (result[reason] ?? 0) + 1
+    return result
+  }, {})
   const report = {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     sourceDirectory: resolved.directory,
     totalCards: audits.length,
     counts,
+    reasonCounts,
     audits,
   }
   if (resolved.output) writeFileSync(resolved.output, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
@@ -88,6 +93,12 @@ if (fileURLToPath(import.meta.url) === process.argv[1]) {
   console.log(
     `卡牌行為契約 shadow audit：${report.totalCards} 張；` +
       `verified=${report.counts.verified}、needs-review=${report.counts['needs-review']}、blocked=${report.counts.blocked}`,
+  )
+  console.log(
+    `needs-review 原因：${Object.entries(report.reasonCounts)
+      .sort((left, right) => right[1] - left[1])
+      .map(([reason, count]) => `${reason}=${count}`)
+      .join('；')}`,
   )
   if (report.counts['needs-review'] > 0 || report.counts.blocked > 0) {
     for (const audit of report.audits.filter((item) => item.contract.status !== 'verified').slice(0, 30)) {

@@ -32,15 +32,28 @@ const ENERGY_TOKEN_TO_COLOR: Record<string, keyof EnergyCost> = {
 }
 
 const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
-  [/\b(?:draw|reveal|inspect|look at)\b/i, 'effect'],
-  [/\b(?:deal|receives?|gains?|damage|attack)\b|\{da\}/i, 'effect'],
-  [/\b(?:play|place|return|move|put|take|trash|discard|rest|set)\b/i, 'effect'],
-  [/\b(?:if|when|while|as long as|whenever)\b/i, 'condition'],
+  [/\b(?:draw|reveal|inspect|look at|view|rearrange)\b/i, 'effect'],
+  [/\b(?:deal|receives?|gains?|damage|attack|faint|equip|redirect|mou)\b|\{da\}/i, 'effect'],
+  [
+    /\b(?:play|place|return|move|put|take|trash|discard|rest|set|make)\b/i,
+    'effect',
+  ],
+  [
+    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be selected|be trashed)|only be used|sum reaches)\b/i,
+    'condition',
+  ],
   [/\bselect\b/i, 'target'],
 ]
 
+const stripMarkupTags = (text: string): string =>
+  text
+    // Official exports occasionally contain presentation-only HTML around a
+    // FLIP label.  Do not strip the rule brackets: those are parsed below.
+    .replace(/<\/?(?:em|strong|b|i|span|br|p)(?:\s[^>]*)?>/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+
 const normalizeWhitespace = (text: string): string =>
-  text.replace(/\s+/g, ' ').trim()
+  stripMarkupTags(text).replace(/\s+/g, ' ').trim()
 
 const hashSource = (record: OfficialCardRecord): string =>
   createHash('sha256')
@@ -69,7 +82,10 @@ const sourceSegments = (
   return segments
 }
 
-const TIMING_MARKERS = new Set(['mob', 'ap', 't1', 'mt', 'bl'])
+// `{bl}` is the printed Blocker keyword, not a skill timing marker.  Treating
+// it as timing made every item containing "cannot activate Blocker" fail the
+// contract even though the runtime effect was present.
+const TIMING_MARKERS = new Set(['mob', 'ap', 't1', 'mt'])
 
 const tokenize = (text: string): string[] =>
   [...text.matchAll(/\{([A-Za-z0-9_]+)\}|(?:<|《)([^>》]+)(?:>|》)/g)].map(
@@ -130,6 +146,14 @@ const selectorMatches = (
     'remainingHp',
     'minRemainingHp',
     'maxRemainingHp',
+    'excludeSource',
+    'sourceOnly',
+    'attackTargetOnly',
+    'excludeAttackTarget',
+    'restedOnly',
+    'keyword',
+    'cardName',
+    'costSelected',
   ] as const) {
     if (expected[key] !== undefined && actual[key] !== expected[key]) return false
   }
@@ -145,8 +169,10 @@ const runtimeSelectorForEffect = (
   const movementKinds = new Set([
     'trash-to-battle',
     'break-to-battle',
+    'break-to-hand',
     'support-to-battle',
     'hand-to-battle',
+    'hand-to-break',
     'trash-to-break',
     'break-to-trash',
     'support-to-hand',
@@ -167,6 +193,7 @@ const runtimeSelectorForEffect = (
     ...(typeof record.exactLevel === 'number'
       ? { minLevel: record.exactLevel, maxLevel: record.exactLevel }
       : {}),
+    ...(typeof record.minLevel === 'number' ? { minLevel: record.minLevel } : {}),
   }
 }
 
@@ -193,22 +220,88 @@ const bracketClauses = (
       payments.push({ kind: 'source-energy', energy, clauseIds: [clauseId] })
       continue
     }
-    const discard = inner.match(/discard\s+(\d+)\s+card/i)
+    const discard = inner.match(/discard\s+(\d+)\s+(?:\{[RYGBPK]\}\s+)?(?:cards?|cookies?|traps?|items?)/i)
+    const discardAll = /discard\s+(?:your|the)\s+entire\s+hand/i.test(inner)
     const supportTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+your\s+support/i)
-    const hpTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+the\s+top\s+of\s+(?:your\s+)?(?:\{[RYGBPK]\}\s+)?cookie's\s+hp/i)
+    const hpTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+the\s+top\s+of\s+(?:(?:this|your|your\s+other|an?|the|LV\.\d+\s+or\s+higher)\s+)?(?:\{[RYGBPK]\}\s+)?cookie'?s\s+hp(?:\s+cards?)?/i)
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
-    if (discard || supportTrash || hpTrash || battleTrash) {
+    const selfTrash = /place\s+this\s+cookie\s+in\s+(?:the|your)\s+trash/i.test(inner)
+    const selfBreak = /(?:make\s+this\s+cookie\s+faint|place\s+this\s+cookie\s+in\s+(?:the|your)\s+break\s+area)/i.test(inner)
+    const battleFaint = inner.match(/make\s+(\d+)\s+.*cookies?\s+faint/i)
+    const battleBreak = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*break\s+area/i)
+    const handBreak = inner.match(/place\s+(\d+)\s+.*cookie.*hand.*break\s+area/i)
+    const restSource = /(?:rest\s+this\s+card|card\s+rests?)/i.test(inner)
+    const fieldToDeckBottom = /place\s+(?:this\s+cookie|\d+\s+.*cookie)\s+(?:on|at)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
+    const breakToTrash = /place\s+this\s+cookie\s+from\s+(?:the\s+)?break\s+area\s+into\s+the\s+trash/i.test(inner)
+    const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
+    const supportHand = inner.match(/return\s+(\d+)\s+(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
+    const trashDeck = inner.match(/select\s+(\d+)\s+.*cards?\s+from\s+your\s+trash.*return\s+them\s+to\s+your\s+deck/i)
+    const trashDeckBottom = inner.match(/select\s+(\d+)\s+.*cards?\s+from\s+your\s+trash.*bottom\s+of\s+your\s+deck/i)
+    if (
+      discard ||
+      discardAll ||
+      supportTrash ||
+      hpTrash ||
+      battleTrash ||
+      selfTrash ||
+      selfBreak ||
+      battleFaint ||
+      battleBreak ||
+      handBreak ||
+      restSource ||
+      fieldToDeckBottom ||
+      breakToTrash ||
+      handToDeckBottom ||
+      supportHand ||
+      trashDeck ||
+      trashDeckBottom
+    ) {
       const kind = discard
         ? 'discard-hand'
+        : discardAll
+          ? 'discard-hand'
         : supportTrash
           ? 'support-to-trash'
           : hpTrash
             ? 'hp-to-trash'
-            : 'battle-to-trash'
+            : battleTrash
+              ? 'battle-to-trash'
+              : selfTrash
+                ? 'self-to-trash'
+                : selfBreak
+                  ? 'self-to-break'
+                  : battleFaint
+                    ? 'battle-to-break'
+                    : battleBreak
+                    ? 'battle-to-break'
+                    : handBreak
+                      ? 'hand-to-break'
+                  : restSource
+                        ? 'rest-source'
+                        : fieldToDeckBottom || breakToTrash || handToDeckBottom
+                          ? 'move'
+                          : supportHand
+                          ? 'support-to-hand'
+                          : trashDeck
+                            ? 'trash-to-deck'
+                            : trashDeckBottom
+                              ? 'trash-to-deck-bottom'
+                              : 'move'
       addClause(clauses, source, match[0], 'cost', start, end, 'pattern')
+      const amountMatch =
+        discard ??
+        supportTrash ??
+        hpTrash ??
+        battleTrash ??
+        battleFaint ??
+        battleBreak ??
+        handBreak ??
+        supportHand ??
+        trashDeck ??
+        trashDeckBottom
       costs.push({
         kind,
-        amount: Number((discard ?? supportTrash ?? hpTrash ?? battleTrash)?.[1]),
+        amount: amountMatch ? Number(amountMatch[1]) : 1,
         clauseIds: [clauseId],
       })
       continue
@@ -226,7 +319,7 @@ const targetClauses = (
 ): ContractTarget[] => {
   const targets: ContractTarget[] = []
   const structuredRanges: Array<{ start: number; end: number }> = []
-  const re = /select\s+(up\s+to\s+)?(\d+)\s+(?:of\s+)?(your opponent's|your|either player's)([^.]*?)(?:cookies?|cards?)/gi
+  const re = /select\s+(up\s+to\s+)?(\d+)\s+(?:of\s+)?(your opponent's|your|either player's)\s+([\s\S]*?)\b(?:cookies?|cards?)(?=\s|[.,;]|$)/gi
   for (const match of text.matchAll(re)) {
     const min = match[1] ? 0 : Number(match[2])
     const max = Number(match[2])
@@ -236,11 +329,115 @@ const targetClauses = (
       : sideText.includes('either')
         ? 'either'
         : 'self'
+    const descriptor = match[4] ?? ''
+    const energyToken = descriptor.match(/\{([RYGBPK])\}/i)?.[1]?.toUpperCase()
+    const energyColor = energyToken
+      ? ENERGY_TOKEN_TO_COLOR[energyToken]
+      : undefined
+    const levelMatch = descriptor.match(/LV\.\s*(\d+)(?:\s+(or\s+(?:lower|higher)))?/i)
+    const level = levelMatch ? Number(levelMatch[1]) : undefined
+    const levelQualifier = levelMatch?.[2]?.toLowerCase()
+    const remainingHp = descriptor.match(/remaining\s+HP\s+is\s+(\d+)/i)?.[1]
     const clauseId = `${source}-${clauses.length + 1}`
     const start = match.index ?? 0
     structuredRanges.push({ start, end: start + match[0].length })
     addClause(clauses, source, match[0], 'target', start, start + match[0].length, 'pattern')
-    targets.push({ selector: { side, min, max }, clauseIds: [clauseId] })
+    targets.push({
+      selector: {
+        side,
+        min,
+        max,
+        ...(energyColor && energyColor !== 'neutral' ? { energyColor } : {}),
+        ...(level !== undefined && levelQualifier === 'or lower'
+          ? { maxLevel: level }
+          : level !== undefined && levelQualifier === 'or higher'
+            ? { minLevel: level }
+            : level !== undefined
+              ? { minLevel: level, maxLevel: level }
+              : {}),
+        ...(remainingHp !== undefined ? { remainingHp: Number(remainingHp) } : {}),
+      },
+      clauseIds: [clauseId],
+    })
+  }
+  const zoneSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+(?:\{([RYGBPK])\}\s+)?(?:LV\.\s*(\d+)(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)\s+from\s+(your|the)\s+(trash|break\s+area|support\s+area|hand|deck)\b/gi
+  for (const match of text.matchAll(zoneSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[2])
+    const level = match[4] ? Number(match[4]) : undefined
+    const qualifier = match[0].match(/LV\.\s*\d+\s+(or\s+(?:lower|higher))/i)?.[1]?.toLowerCase()
+    const color = match[3] ? ENERGY_TOKEN_TO_COLOR[match[3].toUpperCase()] : undefined
+    const zoneText = match[5]?.toLowerCase() ?? ''
+    const zone = zoneText.includes('trash')
+      ? 'trash'
+      : zoneText.includes('break')
+        ? 'break'
+        : zoneText.includes('support')
+          ? 'support'
+          : zoneText.includes('hand')
+            ? 'hand'
+            : 'deck'
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side: 'self',
+        min: match[1] ? 0 : amount,
+        max: amount,
+        ...(color && color !== 'neutral' ? { energyColor: color } : {}),
+        ...(level !== undefined && qualifier === 'or lower'
+          ? { maxLevel: level }
+          : level !== undefined && qualifier === 'or higher'
+            ? { minLevel: level }
+            : level !== undefined
+              ? { minLevel: level, maxLevel: level }
+              : {}),
+      },
+      clauseIds: [clauseId],
+      zone,
+    })
+    structuredRanges.push({ start, end })
+  }
+  const battleAreaSelection = /\bselect\s+(up\s+to\s+)?(\d+)\s+((?:\{[RYGBPK]\}\s+)?(?:LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?\s+)?(?:cookies?|cards?)(?:\s+that\s+is\s+LV\.\s*\d+(?:\s+or\s+(?:lower|higher))?)?)\s+(?:in|from)\s+(your opponent's|your|either player's)\s+battle\s+area\b/gi
+  for (const match of text.matchAll(battleAreaSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const descriptor = match[3] ?? ''
+    const sideText = (match[4] ?? '').toLowerCase()
+    const side = sideText.includes('opponent')
+      ? 'opponent'
+      : sideText.includes('either')
+        ? 'either'
+        : 'self'
+    const amount = Number(match[2])
+    const colorToken = descriptor.match(/\{([RYGBPK])\}/i)?.[1]?.toUpperCase()
+    const color = colorToken ? ENERGY_TOKEN_TO_COLOR[colorToken] : undefined
+    const levelMatch = descriptor.match(/LV\.\s*(\d+)(?:\s+(or\s+(?:lower|higher)))?/i)
+    const level = levelMatch ? Number(levelMatch[1]) : undefined
+    const qualifier = levelMatch?.[2]?.toLowerCase()
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side,
+        min: match[1] ? 0 : amount,
+        max: amount,
+        ...(color && color !== 'neutral' ? { energyColor: color } : {}),
+        ...(level !== undefined && qualifier === 'or lower'
+          ? { maxLevel: level }
+          : level !== undefined && qualifier === 'or higher'
+            ? { minLevel: level }
+            : level !== undefined
+              ? { minLevel: level, maxLevel: level }
+              : {}),
+      },
+      clauseIds: [clauseId],
+      zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
   }
   // Any remaining Select / play-from-zone phrase is still a player choice.
   // Do not silently treat it as an untargeted effect when no safe selector
@@ -250,6 +447,7 @@ const targetClauses = (
     const start = match.index ?? 0
     const end = start + match[0].length
     if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    if (/\bof\s+(?:the\s+)?following\b/i.test(match[0])) continue
     if (/\bfrom\s+(?:your|the)\s+(?:trash|break\s+area|support\s+area|hand|deck)/i.test(match[0])) continue
     const clauseId = `${source}-${clauses.length + 1}`
     addClause(clauses, source, match[0], 'target', start, end, 'unknown')
@@ -300,7 +498,7 @@ const addActionClauses = (
   text: string,
   clauses: CardClauseFragment[],
 ): void => {
-  const stripped = text.replace(/(?:<|《)[^>》]+(?:>|》)/g, '')
+  const stripped = stripMarkupTags(text).replace(/(?:<|《)[^>》]+(?:>|》)/g, '')
   for (const sentence of stripped.split(/(?<=[.!?])\s+|;\s+|\bThen,?\s*/i)) {
     const normalized = normalizeWhitespace(sentence)
     if (!normalized) continue
@@ -362,6 +560,16 @@ const collectRuntime = (value: unknown, result: {
     if (key === 'cost' && child && typeof child === 'object') {
       const cost = child as Record<string, unknown>
       Object.keys(cost).forEach((costKey) => result.abilityCostKeys.add(costKey))
+      const directEnergy: EnergyCost = {}
+      for (const color of Object.keys(ENERGY_TOKEN_TO_COLOR).map(
+        (token) => ENERGY_TOKEN_TO_COLOR[token],
+      )) {
+        const amount = cost[color]
+        if (typeof amount === 'number' && amount > 0) {
+          directEnergy[color] = amount
+        }
+      }
+      if (hasEnergy(directEnergy)) result.energyCosts.push(directEnergy)
       if (cost.energy && typeof cost.energy === 'object') {
         result.energyCosts.push(cost.energy as EnergyCost)
       }
@@ -379,7 +587,9 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
       ? {
           trigger: card.skill.trigger,
           oncePerTurn: card.skill.oncePerTurn,
+          oncePerGame: card.skill.oncePerGame,
           yourTurn: card.skill.yourTurn,
+          restSource: card.skill.restSource,
           cost: card.skill.cost,
           sourceEnergy: card.skill.sourceEnergy,
           effects: card.skill.effects,
@@ -390,7 +600,11 @@ const runtimeEvidenceFromCard = (card: GameCard | null): RuntimeCardEvidence => 
     ability: card.item
       ? { cost: card.item.cost, effects: card.item.effects }
       : card.stageAbility
-        ? { cost: card.stageAbility.cost, effects: card.stageAbility.effects }
+        ? {
+            cost: card.stageAbility.cost,
+            restSource: card.stageAbility.restSource,
+            effects: card.stageAbility.effects,
+          }
         : card.trap
           ? { cost: card.trap.cost, effects: card.trap.effects }
           : undefined,
@@ -418,6 +632,13 @@ const flattenRuntimeEffects = (evidence: RuntimeCardEvidence): CardEffect[] => {
 }
 
 const hasRuntimeThenEffects = (evidence: RuntimeCardEvidence): boolean => {
+  // `attackEffects` is the runtime slot for the printed post-attack/Then
+  // sequence.  Older cards do not carry a nested `thenEffects` property, but
+  // the ordered array itself is the executable evidence and is consumed one
+  // effect at a time by the battle resolver.
+  if (evidence.attackEffects !== undefined && evidence.attackEffects.length > 0) {
+    return true
+  }
   let found = false
   const visit = (value: unknown): void => {
     if (found || !value || typeof value !== 'object') return
@@ -465,7 +686,8 @@ const buildContract = (
   const timingMarkers = new Set<string>()
   const segments = sourceSegments(record)
   for (const [source, text] of Object.entries(segments) as [CardTextSource, string][]) {
-    const parsed = parseOfficialCardText(text)
+    const normalizedSourceText = stripMarkupTags(text)
+    const parsed = parseOfficialCardText(normalizedSourceText)
     if (!parsed) continue
     parsed.markers
       .filter((marker) => TIMING_MARKERS.has(marker))
@@ -584,11 +806,57 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'energy') return runtime.energyCosts.length > 0
     const keys = new Set(runtime.abilityCostKeys)
     const kinds = new Set(runtime.effectKinds)
-    if (cost.kind === 'discard-hand') return keys.has('discardHand') || kinds.has('discard-hand')
+    if (cost.kind === 'discard-hand') {
+      return keys.has('discardHand') || keys.has('discardAllHand') || kinds.has('discard-hand')
+    }
     if (cost.kind === 'support-to-trash') return keys.has('supportToTrash') || kinds.has('support-to-trash')
     if (cost.kind === 'hp-to-trash') return keys.has('hpToTrash') || kinds.has('hp-to-trash')
     if (cost.kind === 'battle-to-trash') return keys.has('trashBattleCookie') || kinds.has('battle-to-trash')
-    return kinds.has('move')
+    if (cost.kind === 'battle-to-break' || cost.kind === 'faint') {
+      return keys.has('trashBattleCookie') || kinds.has('battle-to-break')
+    }
+    if (cost.kind === 'hand-to-break') {
+      return keys.has('handToBreakArea') || kinds.has('hand-to-break')
+    }
+    if (cost.kind === 'support-to-hand') {
+      return keys.has('supportToHand') || kinds.has('support-to-hand')
+    }
+    if (cost.kind === 'trash-to-deck') {
+      return keys.has('trashToDeck') || kinds.has('trash-to-deck')
+    }
+    if (cost.kind === 'trash-to-deck-bottom') {
+      return keys.has('trashToDeckBottom') || kinds.has('trash-to-deck-bottom')
+    }
+    if (cost.kind === 'self-to-trash') return keys.has('selfToTrash') || kinds.has('self-to-trash')
+    if (cost.kind === 'self-to-break') return keys.has('selfToBreakArea') || kinds.has('self-to-break')
+    if (cost.kind === 'rest-source') {
+      return evidence.skill?.restSource === true || evidence.ability?.restSource === true
+    }
+    return [
+      'move',
+      'trash-to-battle',
+      'break-to-battle',
+      'break-to-hand',
+      'hand-to-battle',
+      'hand-to-break',
+      'support-to-hand',
+      'support-to-support',
+      'hand-to-support',
+      'trash-to-support',
+      'trash-to-hand',
+      'battle-to-deck-bottom',
+      'field-to-deck-bottom',
+      'stage-source-to-deck',
+      'break-to-trash',
+      'hand-to-deck-bottom',
+      'place-source-to-support',
+    ].some((kind) => kinds.has(kind))
+      || [
+        'battleToDeckBottom',
+        'selfToDeckBottom',
+        'handToDeckBottom',
+        'breakToTrash',
+      ].some((key) => keys.has(key))
   })
   const targetCovered = contract.targets.every((target) =>
     target.unresolved !== undefined

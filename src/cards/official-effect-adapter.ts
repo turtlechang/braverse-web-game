@@ -1417,7 +1417,16 @@ export const convertOfficialCardEffects = (
           count: 15,
         },
         // 洗回牌庫會清空棄牌區，傷害必須內嵌才不會被條件重判時跳過。
-        thenEffects: [{ kind: 'damage-all', amount: 2, side: 'opponent' }],
+        // 全體傷害仍須讓玩家指定每個目標的結算順序，逐張處理 FLIP。
+        thenEffects: [
+          {
+            kind: 'damage-all',
+            amount: 2,
+            side: 'opponent',
+            sequential: true,
+            target: { side: 'opponent', min: 1, max: 2 },
+          },
+        ],
       },
     ],
     'BS2-013': [
@@ -5378,7 +5387,8 @@ export const convertOfficialAttackEffects = (
           {
             kind: 'damage',
             amount: 2,
-            target: { side: 'opponent', min: 0, max: 1 },
+            // "Deals 2 damage" names no new target, so it follows the normal attack target.
+            target: { side: 'opponent', min: 1, max: 1, attackTargetOnly: true },
             condition: {
               kind: 'trash-color-count-at-least',
               color: 'purple',

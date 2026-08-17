@@ -2000,6 +2000,195 @@ describe('usePendingEffect nested attack effect during a preserved battle', () =
   })
 })
 
+describe('usePendingEffect BS3-113 sequential all-target OnPlay', () => {
+  it('shows every opposing Cookie so the player can choose the 2-damage resolution order', async () => {
+    const base = createBattleState()
+    const caramelArrow: CookieCard = {
+      ...battleCookie('caramel-arrow', 2, 3),
+      id: 'BS3-113',
+      name: 'Caramel Arrow Cookie',
+      skill: {
+        trigger: 'on-play',
+        oncePerTurn: false,
+        yourTurn: false,
+        restSource: false,
+        cost: {},
+        text: 'Return all cards from your trash to your deck. Then deals 2 damage to all opponent Cookies.',
+        effects: [{
+          kind: 'trash-to-deck-all',
+          thenEffects: [{
+            kind: 'damage-all',
+            amount: 2,
+            side: 'opponent',
+            sequential: true,
+            target: { side: 'opponent', min: 1, max: 2 },
+          }],
+        }],
+      },
+    }
+    const secondOpponent = battleCookie('caramel-arrow-opponent-2', 1, 2)
+    const gameState: GameState = {
+      ...base,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: caramelArrow.instanceId,
+        origin: 'hand',
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          battleArea: [{
+            card: caramelArrow,
+            hpCards: base.players['player-one'].battleArea[0].hpCards,
+            rested: false,
+            battleEntryId: 'caramel-arrow:battle:1',
+          }],
+        },
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [
+            ...base.players['player-two'].battleArea,
+            {
+              card: secondOpponent,
+              hpCards: [battleItem('caramel-arrow-opponent-2-hp-a')],
+              rested: false,
+              battleEntryId: 'caramel-arrow-opponent-2:battle:2',
+            },
+          ],
+        },
+      },
+    }
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: gameState,
+        setGame: () => {},
+        dispatch: createDispatch(gameState, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => {
+      captured!.beginCookieSkill(
+        gameState,
+        caramelArrow,
+        'player-one',
+        'on-play',
+        'OnPlay 登場觸發',
+        true,
+      )
+    })
+
+    expect(captured!.currentEffect).toMatchObject({
+      kind: 'damage-all',
+      amount: 2,
+      sequential: true,
+    })
+    expect(captured!.effectTargetCandidates.map((cookie) => cookie.card.instanceId))
+      .toEqual(['attacker', 'caramel-arrow-opponent-2'])
+
+    await act(() => root.unmount())
+  })
+
+  it('keeps the targets when the skill comes from the formal BS3 card pool', async () => {
+    const base = createCardCheckDemoState('BS3-113')
+    const source = base.players['player-one'].hand.find(
+      (card) => card.id === 'BS3-113',
+    )
+    if (source?.type !== 'cookie' || !source.skill) {
+      throw new Error('BS3-113 card-check fixture requires its OnPlay skill')
+    }
+
+    const state: GameState = {
+      ...base,
+      pendingOnPlay: {
+        playerId: 'player-one',
+        sourceInstanceId: source.instanceId,
+        origin: 'hand',
+      },
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: base.players['player-one'].hand.filter(
+            (card) => card.instanceId !== source.instanceId,
+          ),
+          battleArea: [
+            {
+              card: source,
+              hpCards: [battleItem('bs3-113-formal-hp')],
+              rested: false,
+              battleEntryId: 'bs3-113-formal:battle:1',
+            },
+          ],
+        },
+      },
+    }
+    let captured: ReturnType<typeof usePendingEffect> | null = null
+    function TestHarness() {
+      captured = usePendingEffect({
+        game: state,
+        setGame: () => {},
+        dispatch: createDispatch(state, () => {}),
+        viewerPlayerId: 'player-one',
+        setMessage: () => {},
+        clearAttacker: () => {},
+        setInspectedHpPile: () => {},
+        hasFaint: false,
+        faintTargetIds: new Set(),
+        selectedFaintTargetIds: [],
+        faintMinMax: { min: 0, max: 0 },
+        setSelectedFaintTargetIds: () => {},
+        hasAfterDamage: false,
+        afterDamageTargetIds: new Set(),
+        selectedAfterDamageTargetIds: [],
+        afterDamageMinMax: { min: 0, max: 0 },
+        setSelectedAfterDamageTargetIds: () => {},
+      })
+      return null
+    }
+
+    const root = createRoot(document.createElement('div'))
+    await act(() => root.render(<TestHarness />))
+    await act(() => {
+      captured!.beginCookieSkill(
+        state,
+        source,
+        'player-one',
+        'on-play',
+        'OnPlay 登場觸發',
+        true,
+      )
+    })
+
+    expect(captured!.currentEffect).toMatchObject({
+      kind: 'damage-all',
+      amount: 2,
+      sequential: true,
+    })
+    expect(captured!.effectTargetCandidates).toHaveLength(2)
+
+    await act(() => root.unmount())
+  })
+})
+
 /**
  * 攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011 甜辣醬餅乾）
  * 依規則必須等本次戰鬥收尾與對手的空場補位完成後才能結算。規則層讓補位任務

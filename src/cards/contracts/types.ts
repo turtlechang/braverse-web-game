@@ -56,6 +56,15 @@ export interface ContractCost {
     | 'discard-hand'
     | 'support-to-trash'
     | 'battle-to-trash'
+    | 'battle-to-break'
+    | 'hand-to-break'
+    | 'support-to-hand'
+    | 'trash-to-deck'
+    | 'trash-to-deck-bottom'
+    | 'self-to-trash'
+    | 'self-to-break'
+    | 'rest-source'
+    | 'faint'
     | 'hp-to-trash'
     | 'move'
     | 'unknown'
@@ -105,7 +114,9 @@ export interface RuntimeCardEvidence {
   skill?: {
     trigger?: string
     oncePerTurn?: boolean
+    oncePerGame?: boolean
     yourTurn?: boolean
+    restSource?: boolean
     cost?: AbilityCost
     sourceEnergy?: EnergyCost
     effects?: CardEffect[]
@@ -117,6 +128,7 @@ export interface RuntimeCardEvidence {
   }
   ability?: {
     cost?: AbilityCost
+    restSource?: boolean
     effects?: CardEffect[]
   }
   unsupportedReason?: string
