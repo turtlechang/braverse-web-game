@@ -587,12 +587,13 @@ export interface PlayBlockerCommand {
   paymentIds: string[]
 }
 
-/** 對手指攻回應技能（BS5-081 Squid Ink Cookie）。 */
+/** 對手指攻回應技能（BS5-081 Squid Ink Cookie／BS5-092 Rambutan Cookie）。 */
 export interface PlayAttackResponseCommand {
   kind: 'play-attack-response'
   playerId: PlayerId
   sourceInstanceId: string
   discardHandIds: string[]
+  trashToDeckIds: string[]
 }
 
 export interface ResolveFlipCommand {
@@ -1989,7 +1990,30 @@ const resolvePendingAbilityEffect = (
       },
     }
   }
-  return continueAbilityQueue(resolved, pending, context, 1, continueBattle)
+
+  // 「If you did」後續效果不是獨立的同層步驟：只有前一段實際選到
+  // break-to-hand 目標時才加入效果佇列。這也讓玩家略過可選的第一段
+  // 時，不會錯誤看到或執行後續的 hand-to-break 選擇。
+  const pendingWithConditionalThen =
+    effect.kind === 'break-to-hand' &&
+    effect.thenEffects &&
+    new Set(targetIds).size > 0
+      ? {
+          ...pending,
+          effects: [
+            ...pending.effects.slice(0, pending.effectIndex + 1),
+            ...effect.thenEffects,
+            ...pending.effects.slice(pending.effectIndex + 1),
+          ],
+        }
+      : pending
+  return continueAbilityQueue(
+    resolved,
+    pendingWithConditionalThen,
+    context,
+    1,
+    continueBattle,
+  )
 }
 
 /**
@@ -2458,6 +2482,7 @@ const applyPlayerActionCommand = (
       return playAttackResponseSkill(state, command.playerId, {
         sourceInstanceId: command.sourceInstanceId,
         discardHandIds: command.discardHandIds,
+        trashToDeckIds: command.trashToDeckIds,
       })
     case 'resolve-flip':
       return resolveFlip(state, command.playerId, {

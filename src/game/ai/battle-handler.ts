@@ -17,7 +17,7 @@ import {
 } from '../effects'
 import { expandChooseOne } from '../effects/choose-one'
 import { selectEnergyPayment } from '../energy'
-import { getTrashBattleCookieCostCandidates } from '../skills'
+import { getTrashBattleCookieCostCandidates, getTrashToDeckCostCandidates } from '../skills'
 import { createPlayerView } from '../player-view'
 import type { CardEffect, CookieInBattle, EffectContext, GameState, GameCard, PlayerId } from '../types'
 import type { AiDecision, AiLevel } from './types'
@@ -484,9 +484,10 @@ export const handleAiPendingBattle = (
         : revealed.flip.effects
       : []
     const hasActivatableEffect = Boolean(revealed?.flip) &&
-      expandedFlipEffects.some((effect) =>
-        isEffectConditionMet(state, flipContext, effect),
-      )
+      ((revealed?.flip?.attachedHpBonus ?? 0) > 0 ||
+        expandedFlipEffects.some((effect) =>
+          isEffectConditionMet(state, flipContext, effect),
+        ))
     const sharedSelection = revealed?.flip
       ? chooseSharedEffectTargets(
           state,
@@ -546,12 +547,25 @@ export const handleAiPendingBattle = (
         : hand
             .slice(0, skill.cost?.discardHand ?? 0)
             .map((card) => card.instanceId)
+      const trashToDeckCandidates = getTrashToDeckCostCandidates(
+        skill.cost ?? {},
+        state.players[playerId].discardPile,
+      )
+      const trashToDeckIds = universal.enabled
+        ? universal.orderCostIds(
+            trashToDeckCandidates.map((card) => card.instanceId),
+            skill.cost?.trashToDeck?.count ?? 0,
+          )
+        : trashToDeckCandidates
+            .slice(0, skill.cost?.trashToDeck?.count ?? 0)
+            .map((card) => card.instanceId)
       return withBattlePendingReason({
         state: applyGameCommand(state, {
           kind: 'play-attack-response',
           playerId,
           sourceInstanceId: attackResponse.card.instanceId,
           discardHandIds,
+          trashToDeckIds,
         }),
         action: 'play-attack-response',
         revealedCard: attackResponse.card,

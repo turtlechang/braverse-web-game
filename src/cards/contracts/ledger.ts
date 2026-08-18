@@ -5,7 +5,10 @@ import type {
   EffectTargetSelector,
   GameCard,
 } from '../../game'
-import { convertOfficialCardToGameCard } from '../official-card-adapter'
+import {
+  convertOfficialCardToGameCard,
+  normalizeOfficialCardRecord,
+} from '../official-card-adapter'
 import { parseOfficialCardText } from '../official-text-parser'
 import type { OfficialCardRecord } from '../types'
 import type {
@@ -32,14 +35,14 @@ const ENERGY_TOKEN_TO_COLOR: Record<string, keyof EnergyCost> = {
 }
 
 const ACTION_PATTERNS: readonly [RegExp, CardClauseFragment['role']][] = [
-  [/\b(?:draw|reveal|inspect|look at|view|rearrange)\b/i, 'effect'],
-  [/\b(?:deal|receives?|gains?|damage|attack|faint|equip|redirect|mou)\b|\{da\}/i, 'effect'],
+  [/\b(?:draw\w*|reveal\w*|inspect\w*|look at|view\w*|rearrange\w*)\b/i, 'effect'],
+  [/\b(?:deal\w*|receiv\w*|gain\w*|damage\w*|attack\w*|faint\w*|equip\w*|redirect\w*|mou\w*|discard\w*)\b|\{da\}/i, 'effect'],
   [
     /\b(?:play|place|return|move|put|take|trash|discard|rest|set|make)\b/i,
     'effect',
   ],
   [
-    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be selected|be trashed)|only be used|sum reaches)\b/i,
+    /\b(?:if|when|while|as long as|whenever|cannot\s+(?:activate|be activated|reach|be selected|be trashed)|only be used|sum reaches|higher than|lower than|less than|more than)\b/i,
     'condition',
   ],
   [/\bselect\b/i, 'target'],
@@ -119,7 +122,17 @@ const parseEnergy = (text: string): EnergyCost => {
   const energy: EnergyCost = {}
   for (const match of text.matchAll(/\{([RYGBPKN])\}/gi)) {
     const color = ENERGY_TOKEN_TO_COLOR[match[1].toUpperCase()]
-    if (color) energy[color] = (energy[color] ?? 0) + 1
+      if (color) energy[color] = (energy[color] ?? 0) + 1
+  }
+  // A small number of official exports omit the braces around a single
+  // energy icon (for example `<R>`).  Only accept a string made entirely of
+  // standalone energy letters so skill/attack names are never misread as a
+  // payment.
+  if (Object.keys(energy).length === 0 && /^[RYGBPKN](?:\s*[RYGBPKN])*$/i.test(text.trim())) {
+    for (const token of text.trim().split(/\s+/)) {
+      const color = ENERGY_TOKEN_TO_COLOR[token.toUpperCase()]
+      if (color) energy[color] = (energy[color] ?? 0) + 1
+    }
   }
   return energy
 }
@@ -160,9 +173,156 @@ const selectorMatches = (
     'costSelected',
     'noSkillOnly',
   ] as const) {
-    if (expected[key] !== undefined && actual[key] !== expected[key]) return false
+    if (expected[key] !== undefined && actual[key] !== expected[key]) {
+      // LV.1 is the lower bound of the Cookie level domain.  A number of
+      // legacy effects express an exact LV.1 target with only `maxLevel: 1`;
+      // adding `minLevel: 1` to the shadow selector would claim a runtime
+      // distinction that does not exist (there is no LV.0 Cookie).  Keep all
+      // other level bounds exact so LV.2+ and HP qualifiers cannot be hidden.
+      if (
+        key === 'minLevel' &&
+        expected.minLevel === 1 &&
+        actual.minLevel === undefined &&
+        actual.maxLevel === 1
+      ) {
+        continue
+      }
+      // Older runtime selectors used `remainingHp` for an upper-bound
+      // qualifier (“N or less”).  Treat that representation as equivalent to
+      // the explicit `maxRemainingHp` field in the shadow contract.
+      if (
+        key === 'maxRemainingHp' &&
+        expected.maxRemainingHp !== undefined &&
+        actual.maxRemainingHp === undefined &&
+        actual.remainingHp === expected.maxRemainingHp
+      ) {
+        continue
+      }
+      // An exact HP target may be represented by the runtime as the paired
+      // lower/upper bounds.  This preserves evidence without widening a
+      // one-point target into an upper-bound-only selector.
+      if (
+        key === 'remainingHp' &&
+        expected.remainingHp !== undefined &&
+        actual.remainingHp === undefined &&
+        actual.minRemainingHp === expected.remainingHp &&
+        actual.maxRemainingHp === expected.remainingHp
+      ) {
+        continue
+      }
+      return false
+    }
   }
   return true
+}
+
+/**
+ * Some CardEffect variants intentionally keep a movement/selection domain in
+ * their discriminated fields instead of an EffectTargetSelector.  The
+ * runtime still exposes that domain to the player, so the shadow ledger must
+ * project it without changing the formal rule object.
+ */
+const additionalRuntimeSelectorsForEffect = (
+  record: Record<string, unknown>,
+): Partial<EffectTargetSelector>[] => {
+  if (typeof record.kind !== 'string') return []
+  const amount =
+    typeof record.amount === 'number'
+      ? record.amount
+      : typeof record.count === 'number'
+        ? record.count
+        : undefined
+  const selector =
+    record.target && typeof record.target === 'object'
+      ? (record.target as Partial<EffectTargetSelector>)
+      : undefined
+  const side =
+    record.side === 'opponent' || record.side === 'either'
+      ? (record.side as EffectTargetSelector['side'])
+      : 'self'
+  const movementFields: Partial<EffectTargetSelector> = {
+    side,
+    ...(typeof record.energyColor === 'string'
+      ? { energyColor: record.energyColor as EffectTargetSelector['energyColor'] }
+      : {}),
+    ...(typeof record.exactLevel === 'number'
+      ? { minLevel: record.exactLevel, maxLevel: record.exactLevel }
+      : {}),
+    ...(typeof record.minLevel === 'number' ? { minLevel: record.minLevel } : {}),
+    ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
+    ...(record.cookieOnly === true ? { cardType: 'cookie' as const } : {}),
+    ...(record.nonCookieOnly === true ? { nonCookieOnly: true } : {}),
+  }
+  const fixed = (count: number): Partial<EffectTargetSelector> => ({
+    ...movementFields,
+    min: count,
+    max: count,
+  })
+  const upTo = (count: number): Partial<EffectTargetSelector> => ({
+    ...movementFields,
+    min: 0,
+    max: count,
+  })
+
+  switch (record.kind) {
+    case 'deck-to-support':
+      return amount === undefined ? [] : [upTo(amount), fixed(amount)]
+    case 'trash-to-support':
+      return amount === undefined ? [] : [upTo(amount), fixed(amount)]
+    case 'opponent-random-discard':
+    case 'opponent-discard-hand':
+      return amount === undefined ? [] : [
+        { side: 'opponent', min: 0, max: amount },
+        { side: 'opponent', min: amount, max: amount },
+      ]
+    case 'discard-hand':
+      return record.destination === 'deck-top' || record.destination === 'deck-bottom'
+        ? amount === undefined
+          ? []
+          : [fixed(amount)]
+        : []
+    case 'draw-up-to-then-discard':
+      return record.handDestination === 'deck-top'
+        ? [{ side: 'self', min: 1, max: 1 }]
+        : []
+    case 'opponent-break-to-trash-then-battle-to-break':
+      // The first step chooses a Cookie from the opponent's break area; the
+      // second step optionally chooses an opponent battle Cookie.  The
+      // compound effect keeps both decisions in its own fields rather than a
+      // single `target`, so project both public selection domains here.
+      return [
+        { side: 'opponent', min: 1, max: 1 },
+        { side: 'opponent', min: 0, max: 1 },
+      ]
+    case 'hand-to-hp':
+      // Without selectTarget the actual choice is a hand card; the target
+      // field points at the destination Cookie and is therefore a second,
+      // source-only domain.
+      return [{ side: 'self', min: 0, max: 1 }]
+    case 'hp-to-support':
+      // The target field identifies the destination Cookie.  The attached HP
+      // card is a separate support-area selection exposed by the UI.
+      return [{ side: 'self', min: record.optional === true ? 0 : 1, max: 1 }]
+    case 'field-to-deck-bottom':
+    case 'field-to-trash':
+      if (!selector || record.allowStage !== true) return []
+      return [
+        {
+          ...selector,
+          side:
+            record.battleSide === 'opponent' ? 'opponent' : selector.side,
+          cardType: 'cookie',
+        },
+        {
+          side: selector.side ?? 'either',
+          min: selector.min,
+          max: selector.max,
+          cardType: 'stage',
+        },
+      ]
+    default:
+      return []
+  }
 }
 
 const runtimeSelectorForEffect = (
@@ -313,7 +473,13 @@ const runtimeSelectorForEffect = (
       min: typeof record.min === 'number' ? record.min : 0,
       max: typeof record.max === 'number' ? record.max : 1,
       ...(typeof record.remainingHp === 'number'
-        ? { remainingHp: record.remainingHp }
+        // This effect field is the upper-bound form of the target wording
+        // (“N or less HP”), while the shared selector names that dimension
+        // `maxRemainingHp`.
+        ? { maxRemainingHp: record.remainingHp }
+        : {}),
+      ...(typeof record.minRemainingHp === 'number'
+        ? { minRemainingHp: record.minRemainingHp }
         : {}),
       ...(typeof record.maxLevel === 'number' ? { maxLevel: record.maxLevel } : {}),
       ...(typeof record.minLevel === 'number' ? { minLevel: record.minLevel } : {}),
@@ -420,7 +586,7 @@ const bracketClauses = (
     const end = start + match[0].length
     const energy = parseEnergy(inner)
     const clauseId = `${source}-${clauses.length + 1}`
-    if (/^\{[RYGBPKN]\}(?:\s*\{[RYGBPKN]\})*$/i.test(inner)) {
+    if (/^(?:\{[RYGBPKN]\}|[RYGBPKN])(?:\s*(?:\{[RYGBPKN]\}|[RYGBPKN]))*$/i.test(inner)) {
       addClause(clauses, source, match[0], 'payment', start, end, 'exact')
       payments.push({ kind: 'energy', energy, clauseIds: [clauseId] })
       continue
@@ -430,23 +596,36 @@ const bracketClauses = (
       payments.push({ kind: 'source-energy', energy, clauseIds: [clauseId] })
       continue
     }
-    const discard = inner.match(/discard\s+(\d+)\s+(?:\{[RYGBPK]\}\s+)?(?:cards?|cookies?|traps?|items?)/i)
+    const discard = inner.match(
+      /discard\s+(\d+)(?:\s+or\s+more)?\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?|traps?|items?)/i,
+    )
     const discardAll = /discard\s+(?:your|the)\s+entire\s+hand/i.test(inner)
     const supportTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+your\s+support/i)
-    const hpTrash = inner.match(/place\s+(\d+)\s+cards?\s+from\s+the\s+top\s+of\s+(?:(?:this|your|your\s+other|an?|the|LV\.\d+\s+or\s+higher)\s+)?(?:\{[RYGBPK]\}\s+)?cookie'?s\s+hp(?:\s+cards?)?/i)
+    const hpTrash =
+      inner.match(
+        /place\s+(\d+)(?:\s+cards?)?\s+from\s+the\s+top\s+of\s+[\s\S]*?cookies?(?:['’]s?)?\s+hp(?:\s+cards?)?\s+(?:into|in)\s+the\s+trash/i,
+      ) ??
+      inner.match(/place\s+(\d+)\s+of\s+your\s+cookies?(?:['’]s?)?\s+hp\s+cards?\s+in\s+the\s+trash/i)
     const battleTrash = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*trash/i)
-    const selfTrash = /place\s+this\s+cookie\s+in\s+(?:the|your)\s+trash/i.test(inner)
+    const selfTrash = /place\s+this\s+(?:cookie|card)\s+in\s+(?:the|your)\s+trash/i.test(inner)
     const selfBreak = /(?:make\s+this\s+cookie\s+faint|place\s+this\s+cookie\s+in\s+(?:the|your)\s+break\s+area)/i.test(inner)
     const battleFaint = inner.match(/make\s+(\d+)\s+.*cookies?\s+faint/i)
     const battleBreak = inner.match(/place\s+(\d+)\s+.*cookie.*battle\s+area.*break\s+area/i)
     const handBreak = inner.match(/place\s+(\d+)\s+.*cookie.*hand.*break\s+area/i)
+    const restCookie = /rest\s+\d+\s+cookie\s+in\s+your\s+battle\s+area/i.test(inner)
     const restSource = /(?:rest\s+this\s+card|card\s+rests?)/i.test(inner)
-    const fieldToDeckBottom = /place\s+(?:this\s+cookie|\d+\s+.*cookie)\s+(?:on|at)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
+    const fieldToDeckBottom = /\b(?:place|select)\b[\s\S]*\b(?:battle\s+area|stage\s+area)\b[\s\S]*\b(?:on|at|to)\s+the\s+bottom\s+of\s+(?:the|your|the\s+owner's)\s+deck/i.test(inner)
+    const selfDeckBottom = /place\s+this\s+cookie\s+(?:on|at|to)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
     const breakToTrash = /place\s+this\s+cookie\s+from\s+(?:the\s+)?break\s+area\s+into\s+the\s+trash/i.test(inner)
     const handToDeckBottom = /place\s+(?:\d+\s+)?cards?\s+from\s+your\s+hand\s+(?:on|at)\s+the\s+bottom\s+of\s+your\s+deck/i.test(inner)
-    const supportHand = inner.match(/return\s+(\d+)\s+(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
-    const trashDeck = inner.match(/select\s+(\d+)\s+.*cards?\s+from\s+your\s+trash.*return\s+them\s+to\s+your\s+deck/i)
-    const trashDeckBottom = inner.match(/select\s+(\d+)\s+.*cards?\s+from\s+your\s+trash.*bottom\s+of\s+your\s+deck/i)
+    const supportHand = inner.match(/return\s+(?:up\s+to\s+)?(\d+)\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)?(?:cards?|cookies?)\s+from\s+your\s+support\s+area\s+to\s+your\s+hand/i)
+    const battleToHand = /return\s+(?:up\s+to\s+)?\d+[\s\S]*?from\s+your\s+battle\s+area\s+to\s+your\s+hand/i.test(inner)
+    const hpToHand = /return\s+\d+\s+card\s+from\s+the\s+top\s+of\s+your\s+cookie'?s\s+hp(?:\s+cards?)?\s+to\s+your\s+hand/i.test(inner)
+    const trashDeck = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?(?:return\s+them\s+to|to)\s+your\s+deck/i)
+    const trashDeckBottom = inner.match(/(?:select|return)\s+(\d+)[\s\S]*?from\s+your\s+trash[\s\S]*?bottom\s+of\s+your\s+deck/i)
+    const trashToBreak = /place\s+\d+\s+cookie.*from\s+your\s+trash\s+into\s+your\s+break\s+area/i.test(inner)
+    const revealHand = /reveal\s+\d+\s+(?:(?:\{[RYGBPK]\}|【[^】]+】)\s+)*(?:cards?|cookies?)(?:\s+from\s+your\s+hand|\s+in\s+your\s+hand)/i.test(inner)
+    const deckTrash = /place\s+\d+\s+cards?\s+from\s+the\s+top\s+of\s+your\s+deck\s+into\s+your\s+trash/i.test(inner)
     if (
       discard ||
       discardAll ||
@@ -458,13 +637,20 @@ const bracketClauses = (
       battleFaint ||
       battleBreak ||
       handBreak ||
+      restCookie ||
       restSource ||
       fieldToDeckBottom ||
+      selfDeckBottom ||
       breakToTrash ||
       handToDeckBottom ||
+      battleToHand ||
+      hpToHand ||
       supportHand ||
       trashDeck ||
-      trashDeckBottom
+      trashDeckBottom ||
+      trashToBreak ||
+      revealHand ||
+      deckTrash
     ) {
       const kind = discard
         ? 'discard-hand'
@@ -476,8 +662,8 @@ const bracketClauses = (
             ? 'hp-to-trash'
             : battleTrash
               ? 'battle-to-trash'
-              : selfTrash
-                ? 'self-to-trash'
+                : selfTrash
+                  ? 'self-to-trash'
                 : selfBreak
                   ? 'self-to-break'
                   : battleFaint
@@ -486,17 +672,35 @@ const bracketClauses = (
                     ? 'battle-to-break'
                     : handBreak
                       ? 'hand-to-break'
-                  : restSource
-                        ? 'rest-source'
-                        : fieldToDeckBottom || breakToTrash || handToDeckBottom
-                          ? 'move'
-                          : supportHand
-                          ? 'support-to-hand'
-                          : trashDeck
-                            ? 'trash-to-deck'
-                            : trashDeckBottom
-                              ? 'trash-to-deck-bottom'
-                              : 'move'
+                      : restCookie
+                        ? 'rest-cookie'
+                        : restSource
+                          ? 'rest-source'
+                          : fieldToDeckBottom
+                            ? 'field-to-deck-bottom'
+                            : selfDeckBottom
+                              ? 'self-to-deck-bottom'
+                            : breakToTrash
+                              ? 'break-to-trash'
+                              : handToDeckBottom
+                                ? 'hand-to-deck-bottom'
+                                : battleToHand
+                                  ? 'battle-to-hand'
+                                  : hpToHand
+                                    ? 'hp-to-hand'
+                                    : supportHand
+                                      ? 'support-to-hand'
+                                      : trashDeck
+                                        ? 'trash-to-deck'
+                                        : trashDeckBottom
+                                          ? 'trash-to-deck-bottom'
+                                          : trashToBreak
+                                            ? 'trash-to-break'
+                                            : revealHand
+                                              ? 'reveal-hand'
+                                              : deckTrash
+                                                ? 'deck-to-trash'
+                                                : 'move'
       addClause(clauses, source, match[0], 'cost', start, end, 'pattern')
       const amountMatch =
         discard ??
@@ -526,6 +730,7 @@ const targetClauses = (
   source: CardTextSource,
   text: string,
   clauses: CardClauseFragment[],
+  sourceType?: OfficialCardRecord['type'],
 ): ContractTarget[] => {
   const targets: ContractTarget[] = []
   const structuredRanges: Array<{ start: number; end: number }> = []
@@ -540,22 +745,29 @@ const targetClauses = (
         ? 'either'
         : 'self'
     const descriptor = match[4] ?? ''
-    const fullPhrase = text.slice(
-      match.index ?? 0,
-      Math.min(text.length, (match.index ?? 0) + match[0].length + 180),
-    )
+  const fullPhrase = text.slice(
+    match.index ?? 0,
+    Math.min(text.length, (match.index ?? 0) + match[0].length + 180),
+  )
+  // Restrict qualifiers to the current target clause.  A following Then/If
+  // clause can contain a different HP condition for the already selected
+  // Cookie and must not leak into this selector.
+  const targetWindow = fullPhrase.split(/\b(?:during|then|if)\b/i, 1)[0]
+  const targetQualifierWindow = targetWindow.split(/\b(?:that|this|their)\s+Cookie\b/i, 1)[0]
     const energyToken = descriptor.match(/\{([RYGBPK])\}/i)?.[1]?.toUpperCase()
     const energyColor = energyToken
       ? ENERGY_TOKEN_TO_COLOR[energyToken]
       : undefined
-    const levelMatch = descriptor.match(/LV\.\s*(\d+)(?:\s+(or\s+(?:lower|higher)))?/i)
+    const levelMatch = targetQualifierWindow.match(/LV\.\s*(\d+)(?:\s+(or\s+(?:lower|higher)))?/i)
     const level = levelMatch ? Number(levelMatch[1]) : undefined
     const levelQualifier = levelMatch?.[2]?.toLowerCase()
-    const remainingHpMatch = fullPhrase.match(
-      /remaining\s+HP\s+is\s+(\d+)(?:\s+or\s+(less|more))?/i,
+    const remainingHpMatch = targetQualifierWindow.match(
+      /(?:remaining\s+HP\s+is\s+(\d+)(?:\s+or\s+(less|more))?|(?:has|with)\s+(\d+)\s+or\s+(less|more)\s+HP\s+remaining)/i,
     )
-    const remainingHp = remainingHpMatch?.[1]
-    const remainingHpQualifier = remainingHpMatch?.[2]?.toLowerCase()
+    const remainingHp = remainingHpMatch?.[1] ?? remainingHpMatch?.[3]
+    const remainingHpQualifier = (
+      remainingHpMatch?.[2] ?? remainingHpMatch?.[4]
+    )?.toLowerCase()
     const clauseId = `${source}-${clauses.length + 1}`
     const start = match.index ?? 0
     structuredRanges.push({ start, end: start + match[0].length })
@@ -574,13 +786,15 @@ const targetClauses = (
               ? { minLevel: level, maxLevel: level }
               : {}),
         ...(remainingHp !== undefined && remainingHpQualifier === 'less'
-          ? { remainingHp: Number(remainingHp) }
+          ? { maxRemainingHp: Number(remainingHp) }
           : remainingHp !== undefined && remainingHpQualifier === 'more'
             ? { minRemainingHp: Number(remainingHp) }
             : remainingHp !== undefined
               ? { remainingHp: Number(remainingHp) }
               : {}),
-        ...( /\bother\b/i.test(descriptor) ? { excludeSource: true } : {}),
+        ...(sourceType === 'cookie' && /\bother\b/i.test(descriptor)
+          ? { excludeSource: true }
+          : {}),
       },
       clauseIds: [clauseId],
     })
@@ -660,10 +874,39 @@ const targetClauses = (
             : level !== undefined
               ? { minLevel: level, maxLevel: level }
               : {}),
-        ...( /\bother\b/i.test(descriptor) ? { excludeSource: true } : {}),
+        ...(sourceType === 'cookie' && /\bother\b/i.test(descriptor)
+          ? { excludeSource: true }
+          : {}),
       },
       clauseIds: [clauseId],
       zone: 'battle',
+    })
+    structuredRanges.push({ start, end })
+  }
+  // A few cards offer a Cookie *or* a Stage as one alternate target (for
+  // example, a LV.1 Cookie from the opponent's battle area or a Stage from
+  // either player's Stage area).  Keep the Stage branch as its own typed
+  // selector so the runtime `allowStage` binding can prove both domains.
+  const stageSelection = /\bor\s+(\d+)\s+stage(?:\s+cards?)?\s+from\s+(either player's|your opponent's|opponent's|your)\s+stage\s+area\b/gi
+  for (const match of text.matchAll(stageSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[1])
+    const previousText = text.slice(Math.max(0, start - 180), start)
+    const sideText = (match[2] ?? '').toLowerCase()
+    const side = sideText.includes('either') ? 'either' : sideText.includes('opponent') ? 'opponent' : 'self'
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: {
+        side,
+        min: /select\s+up\s+to\b/i.test(previousText) ? 0 : amount,
+        max: amount,
+        cardType: 'stage',
+      },
+      clauseIds: [clauseId],
+      zone: 'stage',
     })
     structuredRanges.push({ start, end })
   }
@@ -693,6 +936,25 @@ const targetClauses = (
         ...(color && color !== 'neutral' ? { energyColor: color } : {}),
         ...(match[4] ? { activeOnly: true } : {}),
       },
+      clauseIds: [clauseId],
+      zone: 'support',
+    })
+    structuredRanges.push({ start, end })
+  }
+  // Bracketed support-area movements are card-selection costs (for example
+  // BS3-061／BS3-069).  They are not effect targets in the prose, but the
+  // runtime exposes the public support selector and the contract must retain
+  // that evidence for binding regressions.
+  const bracketSupportSelection = /<[^>]*\b(?:place|return|take|put)\s+(\d+)\s+cards?\s+from\s+your\s+support\s+area\b[^>]*>/gi
+  for (const match of text.matchAll(bracketSupportSelection)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    if (structuredRanges.some((range) => start < range.end && end > range.start)) continue
+    const amount = Number(match[1])
+    const clauseId = `${source}-${clauses.length + 1}`
+    addClause(clauses, source, match[0], 'target', start, end, 'pattern')
+    targets.push({
+      selector: { side: 'self', min: amount, max: amount },
       clauseIds: [clauseId],
       zone: 'support',
     })
@@ -773,6 +1035,34 @@ const targetClauses = (
   const unresolvedZoneSelection = /\b(?:play|place|return|take|put)\s+(?:up\s+to\s+)?\d+\b[^.]*\b(?:from|in)\s+(?:your opponent's|opponent's|your|the)\s+(?:trash|break\s+area|support\s+area|hand|deck)/gi
   for (const match of text.matchAll(unresolvedZoneSelection)) {
     const start = match.index ?? 0
+    // Do not treat a bracketed cost/movement as a player target.  Costs are
+    // recorded by `bracketClauses`; this pass is only for effect targets.
+    const before = text.slice(0, start)
+    const openAngle = Math.max(before.lastIndexOf('<'), before.lastIndexOf('《'))
+    const closeAngle = Math.max(before.lastIndexOf('>'), before.lastIndexOf('》'))
+    if (openAngle > closeAngle) continue
+    // "that Cookie's top HP" is a dependent HP movement, not a second
+    // player-selected card.  The selected Cookie target already represents
+    // the decision; adding a synthetic self/trash selector makes valid cards
+    // (BS3-116, P-031) look unresolved.
+    if (
+      /\b(?:top\s+of\s+)?(?:that|this|their|the selected)\s+Cookie['’]?s\s+(?:top\s+)?HP/i.test(
+        match[0],
+      ) ||
+      /\b(?:that|this|their|the selected)\s+Cookie['’]?s\s+(?:top\s+)?HP/i.test(
+        match[0],
+      ) ||
+      /\b(?:their|that|this|your)\s+(?:attached\s+)?HP(?:\s+cards?)?/i.test(
+        match[0],
+      )
+    ) continue
+    // Moving cards from the top of a deck is an untargeted deck operation;
+    // only an explicit `select` phrase is a player choice.
+    if (
+      /\bfrom\s+(?:the\s+)?top\s+of\s+(?:your|their|the|your opponent's|opponent's)\s+deck/i.test(
+        match[0],
+      )
+    ) continue
     const amountMatch = match[0].match(/(?:up\s+to\s+)?(\d+)/i)
     if (!amountMatch) continue
     const amount = Number(amountMatch[1])
@@ -821,15 +1111,53 @@ const addActionClauses = (
       const role = /\bthen\b/i.test(normalized) ? 'then' : match[1]
       addClause(clauses, source, normalized, role, 0, text.length, 'pattern')
     } else {
-      // Cookie attack names are printed between the payment and `{da}` marker.
-      // They are display labels, not an omitted rule clause; the damage marker
-      // above already supplies the executable attack evidence.
-      if (source === 'attack' && /\{da\}|\bdeals?\s+\d+\s+damage\b/i.test(text)) continue
+      // Attack／FLIP names are printed between the payment marker and the
+      // executable text.  They are display labels, not omitted rule clauses;
+      // keeping them as unsupported text made every no-follow-up attack name
+      // look like a parser gap (for example BS6-040 and P-078).
+      if (source === 'attack' || source === 'flip') continue
+      // `{sk}` is the official display marker for a named skill.  A lone
+      // marker plus title (for example BS4-004) has no executable clause.
+      if (source === 'skill' && /^\s*\{sk\}/i.test(normalized)) continue
+      // A parenthetical ordering reminder is an explicit resolution rule, not
+      // an unsupported effect.  Preserve it as an order clause so the
+      // contract still records the source evidence without inventing a
+      // runtime effect kind.
+      if (/cannot switch the order of HP cards/i.test(normalized)) {
+        addClause(clauses, source, normalized, 'order', 0, text.length, 'pattern')
+        continue
+      }
       addClause(clauses, source, normalized, 'unsupported', 0, text.length, 'unknown')
     }
   }
   if (/\bthen\b/i.test(text)) {
     addClause(clauses, source, 'Then', 'then', text.toLowerCase().indexOf('then'), text.length, 'exact')
+  }
+}
+
+const collectCostEvidence = (
+  cost: Record<string, unknown>,
+  result: {
+    effectKinds: Set<string>
+    targetSelectors: Partial<EffectTargetSelector>[]
+    energyCosts: EnergyCost[]
+    abilityCostKeys: Set<string>
+  },
+): void => {
+  Object.keys(cost).forEach((costKey) => result.abilityCostKeys.add(costKey))
+  result.targetSelectors.push(...runtimeSelectorsForCost(cost))
+  const directEnergy: EnergyCost = {}
+  for (const color of Object.keys(ENERGY_TOKEN_TO_COLOR).map(
+    (token) => ENERGY_TOKEN_TO_COLOR[token],
+  )) {
+    const amount = cost[color]
+    if (typeof amount === 'number' && amount > 0) {
+      directEnergy[color] = amount
+    }
+  }
+  if (hasEnergy(directEnergy)) result.energyCosts.push(directEnergy)
+  if (cost.energy && typeof cost.energy === 'object') {
+    result.energyCosts.push(cost.energy as EnergyCost)
   }
 }
 
@@ -852,10 +1180,18 @@ const collectRuntime = (value: unknown, result: {
     }
     const movementSelector = runtimeSelectorForEffect(record)
     if (movementSelector) result.targetSelectors.push(movementSelector)
+    result.targetSelectors.push(...additionalRuntimeSelectorsForEffect(record))
     // support-to-hp has two selection domains: a support card and a Cookie
     // target.  The latter is already carried by `record.target`; expose the
     // former as selector evidence so a bracketed support-card cost can bind
     // without pretending it is a battlefield Cookie.
+    // A bracketed hand-to-deck-bottom cost is modeled by the adapter as a
+    // `discard-hand` effect whose destination is the deck bottom (for example
+    // P-045).  Expose that shape as the contract-level movement kind so the
+    // cost clause can bind to real runtime evidence.
+    if (record.kind === 'discard-hand' && record.destination === 'deck-bottom') {
+      result.effectKinds.add('hand-to-deck-bottom')
+    }
     if (record.kind === 'support-to-hp') {
       result.targetSelectors.push({
         side: 'self',
@@ -876,6 +1212,11 @@ const collectRuntime = (value: unknown, result: {
   if (record.sourceEnergy && typeof record.sourceEnergy === 'object') {
     result.energyCosts.push(record.sourceEnergy as EnergyCost)
   }
+  // Stage cards carry the printed placement cost on `StageAbility.placementCost`;
+  // it is the runtime evidence for the source's play-cost payment clause.
+  if (record.placementCost && typeof record.placementCost === 'object') {
+    result.energyCosts.push(record.placementCost as EnergyCost)
+  }
   for (const [key, child] of Object.entries(record)) {
     if (
       key === 'kind' ||
@@ -885,21 +1226,13 @@ const collectRuntime = (value: unknown, result: {
       key === 'sourceEnergy'
     ) continue
     if (key === 'cost' && child && typeof child === 'object') {
-      const cost = child as Record<string, unknown>
-      Object.keys(cost).forEach((costKey) => result.abilityCostKeys.add(costKey))
-      result.targetSelectors.push(...runtimeSelectorsForCost(cost))
-      const directEnergy: EnergyCost = {}
-      for (const color of Object.keys(ENERGY_TOKEN_TO_COLOR).map(
-        (token) => ENERGY_TOKEN_TO_COLOR[token],
-      )) {
-        const amount = cost[color]
-        if (typeof amount === 'number' && amount > 0) {
-          directEnergy[color] = amount
+      collectCostEvidence(child as Record<string, unknown>, result)
+    }
+    if (key === 'alternativeCosts' && Array.isArray(child)) {
+      for (const item of child) {
+        if (item && typeof item === 'object') {
+          collectCostEvidence(item as Record<string, unknown>, result)
         }
-      }
-      if (hasEnergy(directEnergy)) result.energyCosts.push(directEnergy)
-      if (cost.energy && typeof cost.energy === 'object') {
-        result.energyCosts.push(cost.energy as EnergyCost)
       }
     }
     collectRuntime(child, result)
@@ -1026,7 +1359,7 @@ const buildContract = (
     const bracket = bracketClauses(source, text, clauses)
     payments.push(...bracket.payments)
     costs.push(...bracket.costs)
-    targets.push(...targetClauses(source, text, clauses))
+    targets.push(...targetClauses(source, text, clauses, record.type))
     addActionClauses(source, text, clauses)
     if (parsed.unknownTokens.length > 0) {
       addClause(clauses, source, parsed.unknownTokens.join(' '), 'unsupported', 0, text.length, 'unknown')
@@ -1101,13 +1434,17 @@ export const analyzeOfficialCardBehavior = (
   record: OfficialCardRecord,
   runtimeCard?: GameCard | null,
 ): CardBehaviorAudit => {
-  const conversion = runtimeCard === undefined ? convertOfficialCardToGameCard(record) : null
+  // 契約必須稽核「runtime 實際消費的來源」：轉換邊界的正規化（例如
+  // BS4-080@2 欄位併寫、BS6 傷害 errata）發生在 adapter 內，若契約仍以
+  // 原始記錄建立子句，這些已修正的來源就永遠找不到 runtime evidence。
+  const normalized = normalizeOfficialCardRecord(record)
+  const conversion = runtimeCard === undefined ? convertOfficialCardToGameCard(normalized) : null
   const card = runtimeCard === undefined && conversion?.status === 'converted' ? conversion.gameCard : runtimeCard ?? null
   const evidence: RuntimeCardEvidence = {
     ...runtimeEvidenceFromCard(card),
     unsupportedReason: conversion?.status === 'unsupported' ? conversion.reason : undefined,
   }
-  const contract = buildContract(record, evidence)
+  const contract = buildContract(normalized, evidence)
   const runtime = {
     effectKinds: [] as string[],
     targetSelectors: [] as Partial<EffectTargetSelector>[],
@@ -1146,8 +1483,18 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'hand-to-break') {
       return keys.has('handToBreakArea') || kinds.has('hand-to-break')
     }
+    if (cost.kind === 'battle-to-hand') {
+      return keys.has('battleCookieToHand') || kinds.has('battle-to-hand') || kinds.has('return-to-hand')
+    }
     if (cost.kind === 'support-to-hand') {
       return keys.has('supportToHand') || kinds.has('support-to-hand')
+    }
+    if (cost.kind === 'trash-to-break') {
+      return (
+        // P-082 models「place 1 Cookie … from your trash into your break
+        // area」as the trap's alternative cost key.
+        keys.has('trashCookieToBreakArea') || kinds.has('trash-to-break')
+      )
     }
     if (cost.kind === 'trash-to-deck') {
       return keys.has('trashToDeck') || kinds.has('trash-to-deck')
@@ -1155,7 +1502,19 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'trash-to-deck-bottom') {
       return keys.has('trashToDeckBottom') || kinds.has('trash-to-deck-bottom')
     }
-    if (cost.kind === 'self-to-trash') return keys.has('selfToTrash') || kinds.has('self-to-trash')
+    if (cost.kind === 'self-to-trash') {
+      return (
+        keys.has('selfToTrash') ||
+        // The adapter represents a self-trash payment as the generic
+        // battle-cookie trash key when the source is the attacking Cookie.
+        keys.has('trashBattleCookie') ||
+        kinds.has('self-to-trash') ||
+        // Stage cards model「Place this card in the trash.」as the
+        // `stage-source-to-trash` effect instead of an AbilityCost key
+        // (BS2-081).
+        kinds.has('stage-source-to-trash')
+      )
+    }
     if (cost.kind === 'self-to-break') return keys.has('selfToBreakArea') || kinds.has('self-to-break')
     if (cost.kind === 'rest-source') {
       return evidence.skill?.restSource === true || evidence.ability?.restSource === true
@@ -1174,10 +1533,20 @@ export const analyzeOfficialCardBehavior = (
       'trash-to-hand',
       'battle-to-deck-bottom',
       'field-to-deck-bottom',
+      'self-to-deck-bottom',
+      'return-to-deck-bottom',
       'stage-source-to-deck',
       'break-to-trash',
+      'break-source-to-trash',
       'hand-to-deck-bottom',
       'place-source-to-support',
+      'rest-cookie',
+      'battle-to-hand',
+      'hp-to-hand',
+      'return-to-hand',
+      'trash-to-break',
+      'reveal-hand',
+      'deck-to-trash',
     ].some((kind) => kinds.has(kind))
       || [
         'battleToDeckBottom',
@@ -1218,7 +1587,7 @@ export const analyzeOfficialCardBehavior = (
     contract,
     runtime,
     checks: {
-      sourceHashStable: contract.sourceHash === hashSource(record),
+      sourceHashStable: contract.sourceHash === hashSource(normalized),
       paymentCovered,
       costCovered,
       targetCovered,

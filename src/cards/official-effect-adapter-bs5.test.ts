@@ -780,12 +780,12 @@ describe('BS5 candidate YELLOW effect adapter', () => {
 
 describe('BS5 candidate GREEN effect adapter', () => {
   describe('主效果（exactStarterEffects）', () => {
-    it('BS5-045 Potato Cookie 登場效果：支援區回手 1（可選）後抽至多 1', () => {
+    it('BS5-045 Potato Cookie 登場效果：支付代價回手支援卡 1 張後抽至多 1', () => {
       expect(convertOfficialCookieSkill(findBs5Card('BS5-045'))).toMatchObject({
         trigger: 'on-play',
         cost: { energy: {}, discardHand: 0 },
         effects: [
-          { kind: 'support-to-hand', amount: 1, optional: true },
+          { kind: 'support-to-hand', amount: 1 },
           { kind: 'draw-up-to', max: 1 },
         ],
       })
@@ -1177,6 +1177,50 @@ describe('BS5 candidate BLUE/PURPLE/PURE ability adapter', () => {
         {
           kind: 'prevent-knockout',
           target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        },
+      ],
+    })
+  })
+
+  it('converts BS5-092 as an opponent-attack response with a trash-to-deck cost', () => {
+    expect(convertOfficialCookieSkill(findBs5Card('BS5-092'))).toMatchObject({
+      trigger: 'opponent-attack',
+      oncePerTurn: true,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        trashToDeck: { count: 3, nonCookieOnly: true },
+      },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
+  it('converts BS5-093 with a purple non-FLIP trash-to-deck skill cost', () => {
+    expect(convertOfficialCookieSkill(findBs5Card('BS5-093'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: {
+        energy: { purple: 1 },
+        discardHand: 0,
+        trashToDeck: {
+          count: 3,
+          energyColor: 'purple',
+          excludeFlip: true,
+          cookieOnly: true,
+        },
+      },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
         },
       ],
     })

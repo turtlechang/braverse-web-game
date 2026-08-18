@@ -185,7 +185,7 @@ const chooseEffectTargets = (
   }
 
   if (effect.kind === 'trash-to-support') {
-    return getTrashToSupportCandidates(state, context)
+    return getTrashToSupportCandidates(state, context, effect)
       .slice(0, effect.amount)
       .map((card) => card.instanceId)
   }
@@ -817,7 +817,9 @@ const isItemEffectTargetCountSufficient = (
     targetIds.length <
       (effect.kind === 'trash-to-battle' && effect.optional
         ? 0
-        : effect.amount)
+        : effect.kind === 'trash-to-support' && effect.optional
+          ? 0
+          : effect.amount)
   ) {
     return false
   }

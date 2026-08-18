@@ -961,6 +961,17 @@ export const canActivateCookieSkill = (
   ) {
     return false
   }
+  if (
+    (skill.cost.supportToHand ?? 0) > 0 &&
+    player.supportArea.filter(
+      (support) =>
+        !energyPayment.includes(support.card.instanceId) &&
+        (skill.cost.supportToHandType === undefined ||
+          support.card.type === skill.cost.supportToHandType),
+    ).length < (skill.cost.supportToHand ?? 0)
+  ) {
+    return false
+  }
 
   if (
     skill.cost.hpToTrash &&
@@ -1106,6 +1117,16 @@ export const activateCookieSkill = (
     )
     if (returned.length !== cost.supportToHand) {
       throw new GameRuleError('只能選擇自己的支援區卡牌返回手牌。')
+    }
+    if (cost.supportToHandType) {
+      const invalidSupport = returned.find(
+        (support) => support.card.type !== cost.supportToHandType,
+      )
+      if (invalidSupport) {
+        throw new GameRuleError(
+          `支援區回手費用必須選擇 ${cost.supportToHandType}。`,
+        )
+      }
     }
   } else if (uniqueCostSupportToHandIds.length > 0) {
     throw new GameRuleError('此技能不需要支付支援區回手代價。')

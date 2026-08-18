@@ -211,6 +211,7 @@ export {
 } from './ai'
 export {
   beginAttack,
+  hasActivatableFlipEffect,
   getForcedAttackTargetId,
   getFaintEffectCardCandidates,
   getFaintEffectCandidateLabel,
@@ -218,6 +219,7 @@ export {
   getAfterDamageEffectMinMax,
   getFaintEffectCandidates,
   getFaintEffectMinMax,
+  getAttackResponseSkillCandidates,
   getBlockerCandidates,
   explainUnavailableTraps,
   getTrapCandidates,
@@ -236,7 +238,12 @@ export {
   resolveOptionalCostAttack,
   skipTrap,
 } from './battle'
-export type { PlayBlockerOptions, PlayTrapOptions, ResolveFlipOptions } from './battle'
+export type {
+  PlayAttackResponseSkillOptions,
+  PlayBlockerOptions,
+  PlayTrapOptions,
+  ResolveFlipOptions,
+} from './battle'
 export {
   canSpecialPlayCookie,
   attackCookie,

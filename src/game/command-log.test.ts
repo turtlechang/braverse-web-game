@@ -857,6 +857,74 @@ describe('describeCommandSteps', () => {
     expect(steps?.[1].cards).toEqual([drawn])
     expect(resolveLogCard(previous, next, command)).toEqual(source)
   })
+
+  it('records a faint-effect source, costs, targets, and result for Browser trace', () => {
+    const base = createBattleState()
+    const source = cookie('faint-source')
+    const targetBefore = base.players['player-two'].battleArea[0]
+    const effect: CardEffect = {
+      kind: 'damage',
+      amount: 1,
+      target: { side: 'opponent', min: 1, max: 1 },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          breakArea: [source],
+          hand: [
+            { id: 'discard-a', instanceId: 'discard-a', name: 'discard-a', type: 'item' },
+            { id: 'discard-b', instanceId: 'discard-b', name: 'discard-b', type: 'item' },
+          ],
+        },
+      },
+      pendingFaintEffects: [
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: source.instanceId,
+          sourceCardName: source.name,
+          effect,
+          context: {
+            sourcePlayerId: 'player-one',
+            sourceInstanceId: source.instanceId,
+          },
+          cost: { discardHand: 2 },
+        },
+      ],
+    }
+    const next: GameState = {
+      ...previous,
+      pendingFaintEffects: [],
+      players: {
+        ...previous.players,
+        'player-two': {
+          ...previous.players['player-two'],
+          battleArea: previous.players['player-two'].battleArea.map((entry) =>
+            entry.card.instanceId === targetBefore.card.instanceId
+              ? { ...entry, hpCards: entry.hpCards.slice(0, -1) }
+              : entry,
+          ),
+        },
+      },
+    }
+    const command = {
+      kind: 'resolve-faint-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: [targetBefore.card.instanceId],
+      discardHandIds: ['discard-a', 'discard-b'],
+    }
+
+    const steps = describeCommandSteps(previous, next, command)
+    expect(steps?.map((step) => step.text)).toEqual([
+      '昏厥效果來源：「faint-source」；效果：faint-source',
+      '昏厥效果代價：棄置手牌：discard-a、discard-b',
+      `昏厥效果目標：${targetBefore.card.instanceId}`,
+      `昏厥效果結果：「${targetBefore.card.name}」受到 1 點傷害`,
+    ])
+    expect(resolveLogCard(previous, next, command)).toEqual(source)
+  })
 })
 
 describe('effect resolution log outcome', () => {
@@ -894,6 +962,63 @@ describe('effect resolution log outcome', () => {
         kind: 'resolve-ability-effect',
         playerId: 'player-one',
         targetIds: [],
+      }),
+    ).toContain('「attacker」受到 1 點傷害')
+  })
+
+  it('reports damage completed by an automatic effect-damage battle resolution', () => {
+    const base = createBattleState()
+    const previous: GameState = {
+      ...base,
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'defender',
+        sourceKind: 'skill',
+        effects: [{ kind: 'damage-all', amount: 1, side: 'opponent' }],
+        effectIndex: 0,
+      },
+      pendingBattle: {
+        attackerPlayerId: 'player-one',
+        defenderPlayerId: 'player-two',
+        attackerInstanceId: 'defender',
+        targetInstanceId: 'attacker',
+        damagePlayerId: 'player-two',
+        damageTargetInstanceId: 'attacker',
+        stage: 'damage',
+        declaredDamage: 1,
+        remainingDamage: 1,
+        trapUsed: true,
+        preventKnockoutTargetIds: [],
+        attackEffects: [],
+        attackEffectIndex: 0,
+        effectDamageSequence: {
+          remainingTargetInstanceIds: [],
+          damage: 1,
+        },
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = {
+      ...previous,
+      pendingAbilityEffect: undefined,
+      pendingBattle: null,
+      players: {
+        ...previous.players,
+        'player-two': {
+          ...previous.players['player-two'],
+          battleArea: previous.players['player-two'].battleArea.map((cookieInBattle) =>
+            cookieInBattle.card.instanceId === 'attacker'
+              ? { ...cookieInBattle, hpCards: [] }
+              : cookieInBattle,
+          ),
+        },
+      },
+    }
+
+    expect(
+      describeCommand(previous, next, {
+        kind: 'resolve-battle',
+        playerId: 'player-one',
       }),
     ).toContain('「attacker」受到 1 點傷害')
   })

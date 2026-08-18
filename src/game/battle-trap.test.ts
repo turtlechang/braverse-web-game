@@ -2136,3 +2136,100 @@ describe('explainUnavailableTraps', () => {
     expect(explainUnavailableTraps(state, 'player-one')).toEqual([])
   })
 })
+
+describe('BS2-014 conditional break-to-hand follow-up', () => {
+  const makeTrap = (): GameCard => ({
+    id: 'BS2-014',
+    instanceId: 'bs2-014-test',
+    name: 'Erratic Yakgwa Robot',
+    type: 'trap',
+    officialType: 'trap',
+    energyColor: 'yellow',
+    trap: {
+      text: '《{Y}》 Select up to 1 of your opponent\'s Cookies. During this turn, that Cookie deals -1 attack damage. Then, you can return 1 LV.1 Cookie from your break area to your hand. If you did, place 1 Cookie from your hand into your break area.',
+      cost: { energy: { yellow: 1 }, discardHand: 0 },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'break-to-hand',
+          amount: 1,
+          minLevel: 1,
+          maxLevel: 1,
+          optional: true,
+          thenEffects: [{ kind: 'hand-to-break', amount: 1 }],
+        },
+      ],
+    },
+  })
+
+  it('only exposes and resolves the hand-to-break follow-up after a break card is returned', () => {
+    const trap = makeTrap()
+    const returned = cookie('break-lv1')
+    const handCookie = cookie('hand-lv1')
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, handCookie]
+    state.players['player-one'].breakArea = [returned]
+    state.players['player-one'].supportArea = [
+      { card: item('yellow-payment', 'yellow'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    const afterTrap = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['yellow-payment'],
+      targetIds: ['attacker'],
+    })
+    expect(afterTrap.pendingAbilityEffect?.effectIndex).toBe(1)
+
+    const returnedState = applyGameCommand(afterTrap, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [returned.instanceId],
+    })
+    expect(returnedState.pendingAbilityEffect?.effectIndex).toBe(2)
+    expect(returnedState.players['player-one'].hand).toContainEqual(returned)
+
+    const resolved = applyGameCommand(returnedState, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [handCookie.instanceId],
+    })
+    expect(resolved.pendingAbilityEffect).toBeUndefined()
+    expect(resolved.players['player-one'].breakArea).toContainEqual(handCookie)
+    expect(resolved.pendingBattle?.stage).toBe('damage')
+  })
+
+  it('does not run the If you did step when the optional return is skipped', () => {
+    const trap = makeTrap()
+    const returned = cookie('break-lv1')
+    const handCookie = cookie('hand-lv1')
+    let state = createBattleState()
+    state.players['player-one'].hand = [trap, handCookie]
+    state.players['player-one'].breakArea = [returned]
+    state.players['player-one'].supportArea = [
+      { card: item('yellow-payment', 'yellow'), rested: false },
+    ]
+    state = declareAttack(state)
+
+    const afterTrap = playTrap(state, 'player-one', {
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['yellow-payment'],
+      targetIds: ['attacker'],
+    })
+    const skipped = applyGameCommand(afterTrap, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: [],
+    })
+
+    expect(skipped.pendingAbilityEffect).toBeUndefined()
+    expect(skipped.players['player-one'].breakArea).toContainEqual(returned)
+    expect(skipped.players['player-one'].hand).toContainEqual(handCookie)
+    expect(skipped.pendingBattle?.stage).toBe('damage')
+  })
+})

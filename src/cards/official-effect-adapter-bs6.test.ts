@@ -733,6 +733,8 @@ describe('BS6 GREEN effect adapter', () => {
           kind: 'damage-all',
           amount: 2,
           side: 'opponent',
+          sequential: true,
+          target: { side: 'opponent', min: 1, max: 2 },
           condition: { kind: 'support-count-less-than-opponent', difference: 2 },
         },
       ],
@@ -832,18 +834,17 @@ describe('BS6 GREEN effect adapter', () => {
     })
   })
 
-  it('BS6-057 pays its self-trash cost before returning a support Cookie and drawing', () => {
+  it('BS6-057 exposes both bracketed costs before drawing', () => {
     expect(convertOfficialCookieSkill(findBs6Card('BS6-057'))).toMatchObject({
       trigger: 'activate',
       cost: {
         energy: { green: 1 },
         discardHand: 0,
         trashBattleCookie: { count: 1, sourceOnly: true },
+        supportToHand: 1,
+        supportToHandType: 'cookie',
       },
-      effects: [
-        { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
-        { kind: 'draw-up-to', max: 1 },
-      ],
+      effects: [{ kind: 'draw-up-to', max: 1 }],
     })
   })
 })
@@ -857,6 +858,17 @@ describe('BS6 BLUE effect adapter', () => {
     expect(convertOfficialCookieSkill(findBs6Card('BS6-072'))).toMatchObject({
       trigger: 'on-play',
       effects: [{ kind: 'draw-up-to', max: 3 }],
+    })
+    expect(convertOfficialCookieSkill(findBs6Card('BS6-074'))).toMatchObject({
+      trigger: 'on-play',
+      cost: { energy: { blue: 1 }, discardHand: 2 },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 2,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
     })
     expect(convertOfficialCookieSkill(findBs6Card('BS6-066'))).toMatchObject({
       trigger: 'on-play',

@@ -24,7 +24,7 @@ import {
   selectEnergyPayment,
   validateEnergyPayment,
 } from './energy'
-import { getCookieEffectiveHp, getOpponentId } from './helpers'
+import { defaultShuffle, getCookieEffectiveHp, getOpponentId } from './helpers'
 import {
   clearDepartedCookieModifiers,
   continuePendingReplacements,
@@ -35,6 +35,7 @@ import { hasBlockingPending } from './pending'
 import {
   canPayTrashBattleCookieCost,
   canPayTrashCookieToBreakAreaCost,
+  canPayTrashToDeckCost,
   getFaintTriggeredCost,
   getDiscardHandCostCandidates,
   getHpToTrashCostCandidates,
@@ -55,6 +56,7 @@ import type {
   GameCard,
   GameState,
   CookieCard,
+  FlipAbility,
   PendingBattle,
   PendingEffectOrderItem,
   PlayerId,
@@ -70,6 +72,20 @@ const requirePendingBattle = (state: GameState): PendingBattle => {
 
   return state.pendingBattle
 }
+
+/**
+ * A FLIP ability can be represented either by executable effects or by the
+ * attached-HP bonus used by cards such as BS6-069.  The latter still opens a
+ * real FLIP decision: paying its cost converts the temporary attached bonus
+ * into an HP gain during resolution.
+ */
+export const hasActivatableFlipEffect = (
+  state: GameState,
+  flip: FlipAbility,
+  context: EffectContext,
+): boolean =>
+  (flip.attachedHpBonus ?? 0) > 0 ||
+  flip.effects.some((effect) => isEffectConditionMet(state, context, effect))
 
 const markCookieHpReducedThisTurn = (
   state: GameState,
@@ -349,7 +365,7 @@ const hasRequiredTrapTargets = (
 
     const isTargetedGainHp =
       effect.kind === 'gain-hp' && Boolean(effect.target) && !effect.target?.sourceOnly
-    if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target || effect.target.min === 0) {
+    if ((!isEffectTargeted(effect) && !isTargetedGainHp) || !effect.target) {
       return true
     }
 
@@ -368,7 +384,14 @@ const hasRequiredTrapTargets = (
         ? 1
         : 0
 
-    return battleCandidateCount + stageCandidateCount >= effect.target.min
+    // A trap with an optional target still needs at least one legal movement
+    // target to be offered. Once the trap is played, min=0 continues to let
+    // the player skip target selection; this gate only prevents a trap whose
+    // effect cannot do anything from appearing in the trap window.
+    return (
+      battleCandidateCount + stageCandidateCount > 0 &&
+      battleCandidateCount + stageCandidateCount >= effect.target.min
+    )
   })
 }
 
@@ -779,7 +802,8 @@ export const getAttackResponseSkillCandidates = (
     }
     const cost = skill.cost ?? {}
     return (
-      state.players[playerId].hand.length >= (cost.discardHand ?? 0)
+      state.players[playerId].hand.length >= (cost.discardHand ?? 0) &&
+      canPayTrashToDeckCost(cost, state.players[playerId].discardPile)
     )
   })
 }
@@ -787,12 +811,17 @@ export const getAttackResponseSkillCandidates = (
 export interface PlayAttackResponseSkillOptions {
   sourceInstanceId: string
   discardHandIds: string[]
+  trashToDeckIds: string[]
 }
 
 /**
- * 對手指攻回應技能（BS5-081）：支付手牌代價後，這次戰鬥該餅乾的 HP
- * 不會歸零（寫入 pendingBattle.preventKnockoutTargetIds，與陷阱的
- * prevent-knockout 共用同一條傷害防護檢查）。回應窗維持 open。
+ * 對手指攻回應技能（BS5-081／BS5-092）：支付技能代價後結算效果。
+ * - BS5-081 的 prevent-knockout 寫入 pendingBattle.preventKnockoutTargetIds，
+ *   與陷阱的 prevent-knockout 共用同一條傷害防護檢查。
+ * - 其餘效果（BS5-092 的 modify-attack）排入 pendingAbilityEffect，由既有
+ *   逐段結算流程選目標；不掛 battleContinuation，讓陷阱視窗保持 open
+ *   （stage 仍為 'trap'），防守方之後仍可選陷阱／阻擋者或 skipTrap。
+ *   傷害在視窗真正關閉時由 advanceBattleAfterTrap 依 attackModifiers 重算。
  */
 export const playAttackResponseSkill = (
   state: GameState,
@@ -836,26 +865,92 @@ export const playAttackResponseSkill = (
     throw new GameRuleError('Invalid battle action.')
   }
 
-  return {
+  const trashToDeckCost = cost.trashToDeck
+  const uniqueTrashToDeckIds = [...new Set(options.trashToDeckIds)]
+  if (uniqueTrashToDeckIds.length !== options.trashToDeckIds.length) {
+    throw new GameRuleError('不能重複選擇同一張棄牌區卡牌作為代價。')
+  }
+  if (trashToDeckCost) {
+    if (uniqueTrashToDeckIds.length !== trashToDeckCost.count) {
+      throw new GameRuleError(
+        `必須選擇 ${trashToDeckCost.count} 張棄牌區卡牌作為技能代價。`,
+      )
+    }
+    const candidateIds = new Set(
+      getTrashToDeckCostCandidates(cost, player.discardPile).map(
+        (card) => card.instanceId,
+      ),
+    )
+    if (uniqueTrashToDeckIds.some((id) => !candidateIds.has(id))) {
+      throw new GameRuleError('棄牌區卡牌不符合洗回牌庫代價條件。')
+    }
+  } else if (uniqueTrashToDeckIds.length > 0) {
+    throw new GameRuleError('此技能不需要支付洗回牌庫代價。')
+  }
+
+  const trashToDeckSet = new Set(uniqueTrashToDeckIds)
+  const trashToDeckCards = player.discardPile.filter((card) =>
+    trashToDeckSet.has(card.instanceId),
+  )
+  const afterCostPlayer: PlayerState = {
+    ...player,
+    hand: player.hand.filter(
+      (card) => !uniqueDiscardIds.includes(card.instanceId),
+    ),
+    discardPile: [
+      ...player.discardPile.filter((card) => !trashToDeckSet.has(card.instanceId)),
+      ...discardedCards,
+    ],
+    deck: trashToDeckCost
+      ? defaultShuffle([...player.deck, ...trashToDeckCards])
+      : player.deck,
+  }
+
+  const preventKnockoutEffects = skill.effects.filter(
+    (effect) =>
+      effect.kind === 'prevent-knockout' && effect.target.sourceOnly === true,
+  )
+  const queuedEffects = skill.effects.filter(
+    (effect) =>
+      !(
+        effect.kind === 'prevent-knockout' &&
+        effect.target.sourceOnly === true
+      ),
+  )
+
+  const nextState: GameState = {
     ...state,
     players: {
       ...state.players,
-      [playerId]: {
-        ...player,
-        hand: player.hand.filter(
-          (card) => !uniqueDiscardIds.includes(card.instanceId),
-        ),
-        discardPile: [...player.discardPile, ...discardedCards],
-      },
+      [playerId]: afterCostPlayer,
     },
     pendingBattle: {
       ...battle,
-      preventKnockoutTargetIds: [
-        ...battle.preventKnockoutTargetIds,
-        source.card.instanceId,
-      ],
+      ...(preventKnockoutEffects.length > 0
+        ? {
+            preventKnockoutTargetIds: [
+              ...battle.preventKnockoutTargetIds,
+              source.card.instanceId,
+            ],
+          }
+        : {}),
     },
     skillUsesThisTurn: [...state.skillUsesThisTurn, useKey],
+  }
+
+  if (queuedEffects.length === 0) return nextState
+
+  return {
+    ...nextState,
+    pendingAbilityEffect: {
+      playerId,
+      sourcePlayerId: playerId,
+      sourceInstanceId: source.card.instanceId,
+      sourceCardName: source.card.name,
+      sourceKind: 'skill',
+      effects: queuedEffects,
+      effectIndex: 0,
+    },
   }
 }
 
@@ -1369,6 +1464,62 @@ export const playTrap = (
       }
     }
 
+    // 從棄牌區選餅乾放入支援區也必須沿用 pending ability 的選卡流程。
+    // 不能把前一段戰鬥目標的 targetIds 直接傳進 executeCardEffect，否則
+    // 會把對手戰鬥區 instanceId 當成自己的棄牌區餅乾而被規則層拒絕。
+    if (effect.kind === 'trash-to-support') {
+      const candidates = getEffectSelectionCandidates(nextState, context, effect)
+      if (candidates.length === 0) {
+        if (effect.optional) {
+          nextState = executeCardEffect(nextState, context, effect, [])
+        }
+        continue
+      }
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
+    // 陷阱的手牌／休息區移動效果也需要獨立的選卡步驟。若直接落入
+    // fallback，resolveTrapEffectTargetIds 會把前一段戰鬥目標傳入，
+    // 導致用對手戰鬥區 instanceId 嘗試支付自己的區域效果而失敗。
+    // pendingAbilityEffect 會在玩家選完後沿用一般效果佇列；若這段有
+    // thenEffects（例如 BS2-014），commands 層只在確實選到卡牌時展開。
+    if (effect.kind === 'hand-to-break' || effect.kind === 'break-to-hand') {
+      const candidates = getEffectSelectionCandidates(nextState, context, effect)
+      if (candidates.length === 0) {
+        // 沒有合法候選時，optional 效果等同選 0；mandatory 效果則依
+        // 既有 pending queue 規則略過不可完成的步驟，讓陷阱仍能收尾。
+        if (effect.optional) {
+          nextState = executeCardEffect(nextState, context, effect, [])
+        }
+        continue
+      }
+      return {
+        ...nextState,
+        pendingAbilityEffect: {
+          playerId,
+          sourcePlayerId: playerId,
+          sourceInstanceId: trapCard.instanceId,
+          sourceCardName: trapCard.name,
+          sourceKind: 'trap',
+          effects: trap.effects,
+          effectIndex,
+          battleContinuation: 'after-trap',
+        },
+      }
+    }
+
     // 陷阱也可能包含「選擇一項」；先保留未展開的效果佇列，讓 UI／AI
     // 透過既有 resolve-choose-one 流程選模式，再接續同一場戰鬥。
     if (effect.kind === 'choose-one') {
@@ -1479,25 +1630,9 @@ export const skipTrap = (state: GameState, playerId: PlayerId): GameState => {
     throw new GameRuleError('Invalid battle action.')
   }
 
-  const attackerExists = battleParticipantExists(
-    state,
-    battle.attackerInstanceId,
-  )
-  const targetExists = battleParticipantExists(
-    state,
-    battle.targetInstanceId,
-  )
-  if (!attackerExists || !targetExists) {
-    return finishBattle(state)
-  }
-
-  return {
-    ...state,
-    pendingBattle: {
-      ...battle,
-      stage: 'damage',
-    },
-  }
+  // 對手指攻回應技能（BS5-092）會在視窗內改動 attackModifiers，
+  // 即使防守方最後選擇略過陷阱，傷害也必須像 playTrap 路徑一樣重算。
+  return advanceBattleAfterTrap(state)
 }
 
 const addFaintedColor = (
@@ -2774,13 +2909,11 @@ export const resolveNextDamage = (state: GameState): GameState => {
         revealedHpCard.flip &&
         state.flipDisabledUntilTurn?.[target.card.instanceId] !==
           state.turnNumber &&
-        revealedHpCard.flip.effects.some((effect) =>
-          isEffectConditionMet(state, {
-            sourcePlayerId: defender.id,
-            sourceInstanceId: revealedHpCard.instanceId,
-            sourceCardName: revealedHpCard.name,
-          }, effect),
-        )
+        hasActivatableFlipEffect(state, revealedHpCard.flip, {
+          sourcePlayerId: defender.id,
+          sourceInstanceId: revealedHpCard.instanceId,
+          sourceCardName: revealedHpCard.name,
+        })
           ? 'flip'
           : 'damage',
     },
@@ -2805,13 +2938,11 @@ export const resolveNextDamage = (state: GameState): GameState => {
     revealedHpCard.flip &&
     state.flipDisabledUntilTurn?.[target.card.instanceId] !==
       state.turnNumber &&
-    revealedHpCard.flip.effects.some((effect) =>
-      isEffectConditionMet(state, {
-        sourcePlayerId: defender.id,
-        sourceInstanceId: revealedHpCard.instanceId,
-        sourceCardName: revealedHpCard.name,
-      }, effect),
-    )
+    hasActivatableFlipEffect(state, revealedHpCard.flip, {
+      sourcePlayerId: defender.id,
+      sourceInstanceId: revealedHpCard.instanceId,
+      sourceCardName: revealedHpCard.name,
+    })
   ) {
     return nextState
   }
@@ -2894,8 +3025,10 @@ export const resolveFlip = (
       sourceInstanceId: revealed.instanceId,
       sourceCardName: revealed.name,
     }
-    const hasActivatableEffect = revealed.flip.effects.some((effect) =>
-      isEffectConditionMet(state, flipContext, effect),
+    const hasActivatableEffect = hasActivatableFlipEffect(
+      state,
+      revealed.flip,
+      flipContext,
     )
     if (!hasActivatableEffect) {
       return {
@@ -2945,7 +3078,17 @@ export const resolveFlip = (
     const chooseOneIndex = revealed.flip.effects.findIndex(
       (effect) => effect.kind === 'choose-one',
     )
-    let flipEffects = revealed.flip.effects
+    const attachedHpBonus = revealed.flip.attachedHpBonus ?? 0
+    const attachedHpEffect: CardEffect | null = attachedHpBonus > 0
+      ? {
+          kind: 'gain-hp',
+          amount: attachedHpBonus,
+          target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+        }
+      : null
+    let flipEffects: CardEffect[] = attachedHpEffect
+      ? [...revealed.flip.effects, attachedHpEffect]
+      : [...revealed.flip.effects]
     if (chooseOneIndex >= 0) {
       if (options.chooseOneModeIndex === undefined) {
         throw new GameRuleError('Must choose a FLIP effect mode.')

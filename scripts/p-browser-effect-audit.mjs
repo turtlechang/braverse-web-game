@@ -281,7 +281,6 @@ const visible = async (locator) =>
   (await locator.count()) > 0 && (await locator.first().isVisible().catch(() => false))
 const enabled = async (locator) =>
   (await visible(locator)) && (await locator.first().isEnabled().catch(() => false))
-const count = async (page, selector) => page.locator(selector).count()
 
 const ignoredConsoleError = (message) => {
   if (message.type() !== 'error') return true
@@ -326,7 +325,7 @@ const clickFirstUnselected = async (panel, selectors, operations) => {
     // `hpToTrash.amount` means how many HP cards are discarded after one
     // Cookie is selected. It is not a count of selectable Cookies, so the
     // UI always accepts exactly one source Cookie for this cost.
-    const maxSelections = selector.includes('hp-cost')
+    const maxSelections = selector.includes('hp-cost') || selector.includes('choice')
       ? 1
       : progress
         ? Number(progress[2])
@@ -853,17 +852,28 @@ const settlePending = async (
       })
     )
       continue
-    const pendingCount =
-      (await count(page, '.effect-panel[role="alertdialog"]')) +
-      (await count(page, '.flip-response-modal')) +
-      (await count(page, '.trap-response-modal')) +
-      (await count(page, '.draw-up-to-modal')) +
-      (await count(page, '.hand-discard-modal[role="alertdialog"]')) +
-      (await count(page, '.inspect-deck-modal')) +
-      (await count(page, '.card-reveal-modal[role="alertdialog"]')) +
-      (await count(page, '.faint-response-modal')) +
-      (await count(page, '.effect-order-modal')) +
-      (await count(page, '.decision-modal'))
+    // React keeps some modal shells mounted while they are hidden.  Counting
+    // DOM nodes here would therefore report a false pending surface after a
+    // successful confirmation (notably after a choose-one Then effect).
+    const pendingSelectors = [
+      '.effect-panel[role="alertdialog"]',
+      '.flip-response-modal',
+      '.trap-response-modal',
+      '.draw-up-to-modal',
+      '.hand-discard-modal[role="alertdialog"]',
+      '.inspect-deck-modal',
+      '.card-reveal-modal[role="alertdialog"]',
+      '.faint-response-modal',
+      '.effect-order-modal',
+      '.decision-modal',
+    ]
+    const pendingCount = (
+      await Promise.all(
+        pendingSelectors.map(async (selector) =>
+          (await visible(page.locator(selector))) ? 1 : 0,
+        ),
+      )
+    ).reduce((total, present) => total + present, 0)
     if (pendingCount === 0) return
     await wait(180)
   }
@@ -997,17 +1007,49 @@ const clickNextPhase = async (page) => {
 
 const bodyText = async (page) => (await page.locator('body').innerText()).replace(/\s+/g, ' ').trim()
 
-const pendingSurfaceCount = async (page) =>
-  (await count(page, '.effect-panel[role="alertdialog"]')) +
-  (await count(page, '.flip-response-modal')) +
-  (await count(page, '.trap-response-modal')) +
-  (await count(page, '.draw-up-to-modal')) +
-  (await count(page, '.hand-discard-modal')) +
-  (await count(page, '.inspect-deck-modal')) +
-  (await count(page, '.card-reveal-modal')) +
-  (await count(page, '.faint-response-modal')) +
-  (await count(page, '.effect-order-modal')) +
-  (await count(page, '.decision-modal'))
+const pendingSurfaceCount = async (page) => {
+  const selectors = [
+    '.effect-panel[role="alertdialog"]',
+    '.flip-response-modal',
+    '.trap-response-modal',
+    '.draw-up-to-modal',
+    '.hand-discard-modal',
+    '.inspect-deck-modal',
+    '.card-reveal-modal',
+    '.faint-response-modal',
+    '.effect-order-modal',
+    '.decision-modal',
+  ]
+  return (
+    await Promise.all(
+      selectors.map(async (selector) =>
+        (await visible(page.locator(selector))) ? 1 : 0,
+      ),
+    )
+  ).reduce((total, present) => total + present, 0)
+}
+
+const visiblePendingSurfaceNames = async (page) => {
+  const selectors = [
+    '.effect-panel[role="alertdialog"]',
+    '.flip-response-modal',
+    '.trap-response-modal',
+    '.draw-up-to-modal',
+    '.hand-discard-modal',
+    '.inspect-deck-modal',
+    '.card-reveal-modal',
+    '.faint-response-modal',
+    '.effect-order-modal',
+    '.decision-modal',
+  ]
+  return (
+    await Promise.all(
+      selectors.map(async (selector) =>
+        (await visible(page.locator(selector))) ? selector : null,
+      ),
+    )
+  ).filter(Boolean)
+}
 
 const effectPanelDebug = async (page) => {
   const panel = activePanel(page)
@@ -1150,6 +1192,7 @@ const runCard = async (
       pendingSurface,
       debug: {
         ...(await effectPanelDebug(page)),
+        visiblePendingSurfaces: await visiblePendingSurfaceNames(page),
         ...(requireVanillaAttack ? { vanilla: await vanillaAttackDebug(page) } : {}),
       },
     }

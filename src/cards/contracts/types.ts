@@ -67,6 +67,16 @@ export interface ContractCost {
     | 'faint'
     | 'hp-to-trash'
     | 'move'
+    | 'rest-cookie'
+    | 'field-to-deck-bottom'
+    | 'self-to-deck-bottom'
+    | 'break-to-trash'
+    | 'hand-to-deck-bottom'
+    | 'battle-to-hand'
+    | 'hp-to-hand'
+    | 'trash-to-break'
+    | 'reveal-hand'
+    | 'deck-to-trash'
     | 'unknown'
   amount?: number
   clauseIds: string[]
@@ -76,7 +86,7 @@ export interface ContractCost {
 export interface ContractTarget {
   selector: Partial<EffectTargetSelector>
   clauseIds: string[]
-  zone?: 'battle' | 'hand' | 'support' | 'trash' | 'break' | 'deck'
+  zone?: 'battle' | 'hand' | 'support' | 'trash' | 'break' | 'deck' | 'stage'
   /** 來源文字沒有提供可安全推導的 selector 時，必須保留原因。 */
   unresolved?: string
 }

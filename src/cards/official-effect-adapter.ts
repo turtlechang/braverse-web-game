@@ -373,7 +373,7 @@ export const convertOfficialCardEffects = (
       {
         kind: 'damage',
         amount: 1,
-        target: { side: 'opponent', min: 1, max: 1 },
+        target: { side: 'opponent', min: 0, max: 1 },
         condition: { kind: 'break-level-at-least', level: 6 },
       },
     ],
@@ -747,7 +747,7 @@ export const convertOfficialCardEffects = (
       {
         kind: 'gain-hp',
         amount: 1,
-        target: { side: 'self', min: 1, max: 2 },
+        target: { side: 'self', min: 0, max: 2 },
       },
     ],
     'BS2-033': [
@@ -759,7 +759,7 @@ export const convertOfficialCardEffects = (
     'BS2-029': [
       {
         kind: 'return-to-hand',
-        target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
+        target: { side: 'self', min: 0, max: 1, maxLevel: 2 },
       },
     ],
     'BS2-031': [
@@ -767,14 +767,14 @@ export const convertOfficialCardEffects = (
         kind: 'split-damage',
         primaryAmount: 2,
         secondaryAmount: 1,
-        target: { side: 'opponent', min: 1, max: 2 },
+        target: { side: 'opponent', min: 0, max: 2 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-047': [
       {
         kind: 'damage',
         amount: 2,
-        target: { side: 'opponent', min: 1, max: 2 },
+        target: { side: 'opponent', min: 0, max: 2 },
       } satisfies CardEffect as CardEffect,
     ],
     'BS2-039': [
@@ -782,7 +782,7 @@ export const convertOfficialCardEffects = (
         kind: 'modify-attack',
         amount: 1,
         duration: 'this-turn',
-        target: { side: 'self', min: 1, max: 2 },
+        target: { side: 'self', min: 0, max: 2 },
       },
     ],
     'BS2-040': [
@@ -1385,6 +1385,19 @@ export const convertOfficialCardEffects = (
           excludeSource: true,
           energyColor: 'green',
           restedOnly: true,
+        },
+      },
+    ],
+    'BS3-052': [
+      {
+        kind: 'gain-hp',
+        amount: 1,
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          remainingHp: 2,
+          excludeSource: true,
         },
       },
     ],
@@ -2036,6 +2049,23 @@ export const convertOfficialCardEffects = (
       { kind: 'draw-up-to', max: 4 },
     ],
     // === BS4 效果稽核：可由既有 CardEffect 精確表達的能力 ===
+    // BS4-001 Cherry Cookie：【Activate】選至多 1 張其他 {R} Cookie。
+    // 代價本身由 exactCookieSkillCosts 處理；這裡補齊目標的顏色與
+    // excludeSource binding，避免 UI 列出來源卡或非紅色餅乾。
+    'BS4-001': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          energyColor: 'red',
+          excludeSource: true,
+        },
+      },
+    ],
     'BS4-020': [
       {
         kind: 'modify-attack',
@@ -2168,6 +2198,20 @@ export const convertOfficialCardEffects = (
         target: { side: 'self', min: 1, max: 1, maxLevel: 2 },
       },
       { kind: 'damage-all', amount: 1, side: 'opponent' },
+    ],
+    'BS4-073@2': [
+      {
+        kind: 'field-to-deck-bottom',
+        target: { side: 'either', min: 1, max: 1, maxLevel: 1 },
+        allowStage: true,
+        battleSide: 'opponent',
+      },
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: { side: 'self', min: 1, max: 1, sourceOnly: true },
+      },
     ],
     'BS4-074': [
       { kind: 'discard-hand-all' },
@@ -2449,6 +2493,24 @@ export const convertOfficialCardEffects = (
         },
       },
     ],
+    // BS5-037 Plum Cookie：【On Play】條件成立後選至多 1 張自己的其他
+    // {Y} Cookie。通用 parser 能辨識 side／optional，但顏色與排除來源是
+    // 目標 binding 的必要部分，明確保留在 runtime selector。
+    'BS5-037': [
+      {
+        kind: 'modify-attack',
+        amount: 1,
+        duration: 'this-turn',
+        target: {
+          side: 'self',
+          min: 0,
+          max: 1,
+          energyColor: 'yellow',
+          excludeSource: true,
+        },
+        condition: { kind: 'break-level-higher-than-opponent' },
+      },
+    ],
     // BS5-039 Cheesecake Cookie：【On Play】選至多 1 張對手的 LV.2 以下、
     // 剩餘 HP 3 以上的餅乾，1 傷害。
     'BS5-039': [
@@ -2515,7 +2577,6 @@ export const convertOfficialCardEffects = (
       {
         kind: 'support-to-hand',
         amount: 1,
-        optional: true,
       },
       { kind: 'draw-up-to', max: 1 },
     ],
@@ -3162,6 +3223,11 @@ export const convertOfficialCardEffects = (
         kind: 'damage-all',
         amount: 2,
         side: 'opponent',
+        // All opponent Cookies are damaged one at a time so the player can
+        // choose the resolution order and complete each Cookie's FLIP/faint
+        // handling before moving to the next target.
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
         condition: { kind: 'support-count-less-than-opponent', difference: 2 },
       },
     ],
@@ -3211,12 +3277,8 @@ export const convertOfficialCardEffects = (
       },
     ],
     // BS6-057 Coffee Candy Cookie：自身進棄牌區與支援區餅乾回手皆為
-    // 括號代價；自身離場由 skill cost 支付，接著強制選 1 張支援區餅乾
-    // 返回手牌，最後抽最多 1 張。
-    'BS6-057': [
-      { kind: 'support-to-hand', amount: 1, cardType: 'cookie' },
-      { kind: 'draw-up-to', max: 1 },
-    ],
+    // 括號代價；兩項代價都在 skill cost 支付，效果只剩最後抽最多 1 張。
+    'BS6-057': [{ kind: 'draw-up-to', max: 1 }],
     'BS6-071': [{ kind: 'draw-up-to', max: 2 }],
     'BS6-072': [{ kind: 'draw-up-to', max: 3 }],
     // BS6-073 Schneeball Cookie：這是 On Play 技能效果，不是攻擊後效果。
@@ -3398,7 +3460,11 @@ export const convertOfficialCardEffects = (
       },
     ],
   }
-  const exactEffects = exactStarterEffects[cardKey] ?? P_EXACT_EFFECTS[cardKey]
+  const exactEffects =
+    exactStarterEffects[card.cardNumber] ??
+    exactStarterEffects[cardKey] ??
+    P_EXACT_EFFECTS[card.cardNumber] ??
+    P_EXACT_EFFECTS[cardKey]
   if (exactEffects) {
     return {
       status: 'supported',
@@ -4658,7 +4724,7 @@ export const convertOfficialAttackEffects = (
           {
             kind: 'damage',
             amount: 1,
-            target: { side: 'opponent', min: 1, max: 1 },
+            target: { side: 'opponent', min: 0, max: 1 },
           },
         ],
         effectText:
@@ -4732,6 +4798,7 @@ export const convertOfficialAttackEffects = (
             kind: 'opponent-battle-to-trash',
             min: 0,
             remainingHp: 1,
+            minRemainingHp: 1,
             destination: 'break',
           },
         ],
@@ -4946,7 +5013,7 @@ export const convertOfficialAttackEffects = (
           {
             kind: 'damage',
             amount: 1,
-            target: { side: 'opponent', min: 1, max: 1 },
+            target: { side: 'opponent', min: 0, max: 1 },
           },
         ],
         effectText:
@@ -5165,6 +5232,15 @@ export const convertOfficialAttackEffects = (
       },
     ],
     // === BS4 藍色餅乾卡攻擊 Then ===
+    // BS4-080@2 異圖的攻擊文字帶有基礎版沒有的 Then 段：
+    // 「Then, if there are 5 cards or less in your hand, draw up to 2 cards.」
+    'BS4-080@2': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
     'BS4-076': [
       {
         kind: 'draw-up-to',
@@ -5424,15 +5500,34 @@ export const convertOfficialAttackEffects = (
           'If your hand contains 5 cards or more, use this Cookie as {B} to deal 2 additional damage to the attacked Cookie.',
       },
     ],
-    // BS4-075：中文卡面確認「棄2張手牌」沒有「可以／you may」字樣，是強制
-    // 代價，不是像「can be used as」那樣的自選加費，所以不用
-    // optional-cost-attack，直接照順序寫成兩個效果。
-    'BS4-075': [
-      { kind: 'discard-hand', count: 2 },
+    'BS4-073@2': [
       {
-        kind: 'damage',
-        amount: 2,
-        target: { side: 'opponent', min: 0, max: 1 },
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        effectText: 'Discard 2 cards from your hand to deal 2 damage to up to 1 opponent Cookie.',
+      },
+    ],
+    // BS4-075：攻擊後 Then 的尖括號是可選代價；玩家可略過棄 2 張手牌，
+    // 或先在攻擊後代價 UI 選牌並支付，再選擇最多 1 張對手餅乾造成 2 傷害。
+    'BS4-075': [
+      {
+        kind: 'optional-cost-attack',
+        cost: { energy: {}, discardHand: 2 },
+        effects: [
+          {
+            kind: 'damage',
+            amount: 2,
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+        ],
+        effectText: 'Discard 2 cards from your hand to deal 2 damage to up to 1 opponent Cookie.',
       },
     ],
     // === BS5 RED 攻擊 Then ===
@@ -6043,8 +6138,16 @@ export const convertOfficialAttackEffects = (
     ],
   }
 
+  if (exactAttackEffects[card.cardNumber]) {
+    return exactAttackEffects[card.cardNumber]
+  }
+
   if (exactAttackEffects[cardKey]) {
     return exactAttackEffects[cardKey]
+  }
+
+  if (P_EXACT_ATTACK_EFFECTS[card.cardNumber]) {
+    return P_EXACT_ATTACK_EFFECTS[card.cardNumber]
   }
 
   if (P_EXACT_ATTACK_EFFECTS[cardKey]) {
@@ -6594,10 +6697,45 @@ export const convertOfficialTrapAbility = (
       effects: [
         {
           kind: 'return-to-deck-bottom',
-          target: { side: 'opponent', min: 1, max: 1, remainingHp: 3 },
+          target: { side: 'opponent', min: 0, max: 1, remainingHp: 3 },
         },
       ],
       cost: { energy: { blue: 3 }, discardHand: 1 },
+    },
+    'BS4-042': {
+      cost: { energy: { yellow: 2 } },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'gain-hp',
+          amount: 1,
+          target: { side: 'self', min: 0, max: 1 },
+        },
+      ],
+    },
+    'BS4-064': {
+      cost: { energy: { green: 2 } },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'trash-to-support',
+          amount: 1,
+          optional: true,
+          energyColor: 'green',
+          condition: { kind: 'support-color-count-at-least', color: 'green', count: 8 },
+          rested: true,
+        },
+      ],
     },
     'BS2-079': {
       effects: [
@@ -6608,6 +6746,27 @@ export const convertOfficialTrapAbility = (
           target: { side: 'opponent', min: 0, max: 1 },
         },
         { kind: 'trash-to-deck', max: 5, excludeFlip: true },
+      ],
+    },
+    // BS2-014：先選擇是否將 LV.1 餅乾從自己的休息區返回手牌；只有
+    // 實際選到卡牌（「If you did」）時，才再選一張手牌放入休息區。
+    // 以 thenEffects 綁定兩段，避免略過第一段後錯誤執行第二段。
+    'BS2-014': {
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+        {
+          kind: 'break-to-hand',
+          amount: 1,
+          minLevel: 1,
+          maxLevel: 1,
+          optional: true,
+          thenEffects: [{ kind: 'hand-to-break', amount: 1 }],
+        },
       ],
     },
     'BS3-021': {
@@ -7067,6 +7226,8 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: { green: 1 },
     discardHand: 0,
     trashBattleCookie: { count: 1, sourceOnly: true },
+    supportToHand: 1,
+    supportToHandType: 'cookie',
   },
   'BS6-073': {
     energy: { blue: 1 },
@@ -7244,6 +7405,21 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: {},
     discardHand: 1,
   },
+  // BS5-092 Rambutan Cookie：被動回應的「<return 3 non-Cookie cards from
+  // your trash to your deck and shuffle it.>」是技能代價；generic parser
+  // 不認得「return … from your trash to your deck」句型。
+  'BS5-092': {
+    energy: {},
+    discardHand: 0,
+    trashToDeck: { count: 3, nonCookieOnly: true },
+  },
+  // BS5-093 Lychee Dragon Cookie：【Activate】<{P}><Return 3 {P} Cookies
+  // that do not have FLIP from your trash to your deck and shuffle it.>
+  'BS5-093': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashToDeck: { count: 3, energyColor: 'purple', excludeFlip: true, cookieOnly: true },
+  },
 }
 
 const exactCookieSkillSourceEnergy: Partial<
@@ -7261,6 +7437,9 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS3-025': 'activate',
   'BS4-004': 'on-play',
   'BS5-081': 'opponent-attack',
+  // BS5-092 與 BS5-081 同樣是「When your opponent's Cookie attacks」的
+  // 防守方一次性回應技能，在陷阱視窗內宣告並支付代價。
+  'BS5-092': 'opponent-attack',
 }
 
 /**

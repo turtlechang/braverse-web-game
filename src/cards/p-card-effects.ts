@@ -20,7 +20,14 @@ export const P_EXACT_EFFECTS: Partial<Record<string, CardEffect[]>> = {
   'P-043': [{
     kind: 'gain-hp',
     amount: 1,
-    target: { side: 'self', min: 0, max: 1, energyColor: 'yellow', maxLevel: 3 },
+    target: {
+      side: 'self',
+      min: 0,
+      max: 1,
+      energyColor: 'yellow',
+      minLevel: 3,
+      maxLevel: 3,
+    },
   }],
   'P-044': [{
     kind: 'battle-to-support',
@@ -336,7 +343,14 @@ export const P_EXACT_EFFECTS: Partial<Record<string, CardEffect[]>> = {
     condition: { kind: 'break-area-has-card', side: 'self', minLevel: 3 },
   }],
   'P-140': [{
-    kind: 'gain-hp', amount: 1, target: { side: 'self', min: 0, max: 1, maxLevel: 3, maxRemainingHp: 5 },
+    kind: 'gain-hp', amount: 1, target: {
+      side: 'self',
+      min: 0,
+      max: 1,
+      minLevel: 3,
+      maxLevel: 3,
+      maxRemainingHp: 5,
+    },
   }],
   'P-141': [{
     kind: 'modify-attack', amount: 1, duration: 'this-turn', target: self(),
@@ -488,7 +502,10 @@ export const P_EXACT_FLIP_EFFECTS: Partial<
 export const P_EXACT_SKILL_COSTS: Partial<Record<string, AbilityCost>> = {
   'P-012': { energy: { green: 3 } },
   'P-084': { energy: { green: 1 } },
-  'P-045': { energy: {}, discardHand: 1 },
+  // P-045 的「<Place 1 card from your hand at the bottom of your deck.>」
+  // 由效果鏈第一段（discard-hand, destination: 'deck-bottom'）支付，不能
+  // 再掛 discardHand 代價，否則玩家會先棄 1 張再被要求放 1 張到牌庫底。
+  'P-045': { energy: {}, discardHand: 0 },
   'P-046': { energy: { purple: 2 } },
   'P-050': { energy: {}, hpToTrash: { amount: 1, sourceOnly: true } },
   'P-051': { energy: { red: 1 } },

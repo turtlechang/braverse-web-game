@@ -1,6 +1,7 @@
 import { createSeededShuffle, defaultShuffle } from './helpers'
 import { getFaintTriggeredCost } from './skills'
 import { beginAttack } from './battle'
+import { applyGameCommand } from './commands'
 import {
   createGame,
   forceMulliganOpeningHand,
@@ -2503,8 +2504,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // A spread of opponent battle cookies covering several levels and
   // remaining-HP totals so level/remaining-HP-filtered target selectors have
   // at least one legal candidate.
-  const opp1 = cardCheckFillerCookie('opp-lv1', 1, 6, 0, 'red')
-  const opp2 = cardCheckFillerCookie('opp-lv3', 3, 8, 3, 'yellow')
+  const opp1 = cardCheckFillerCookie(
+    'opp-lv1',
+    1,
+    card.id === 'BS2-050' ? 3 : 6,
+    0,
+    'red',
+  )
+  const opp2 = cardCheckFillerCookie(
+    'opp-lv3',
+    3,
+    card.id === 'BS2-050' ? 3 : 8,
+    card.id === 'BS2-050' ? 0 : 3,
+    'yellow',
+  )
   const opponentStage: GameCard = {
     id: 'opp-stage-card',
     instanceId: 'opp-stage-card-1',
@@ -2562,15 +2575,25 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     card.stageAbility?.cost.supportToHandType
   const supportCostCandidates: GameCard[] =
     supportToHandType === 'cookie'
-      ? [
-          cardCheckFillerCookie(
-            `${card.id}-support-cost-cookie`,
-            1,
-            2,
-            0,
-            payColor,
-          ).cookie,
-        ]
+      ? card.id === 'BS6-062'
+        ? Array.from({ length: 3 }, (_, index) =>
+            cardCheckFillerCookie(
+              `${card.id}-support-cost-cookie-${index + 1}`,
+              1,
+              2,
+              0,
+              payColor,
+            ).cookie,
+          )
+        : [
+            cardCheckFillerCookie(
+              `${card.id}-support-cost-cookie`,
+              1,
+              2,
+              0,
+              payColor,
+            ).cookie,
+          ]
       : supportToHandType
         ? [testSupportCard(`${card.id}-support-cost-${supportToHandType}`, payColor)]
         : []
@@ -2629,6 +2652,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             'purple',
           ).cookie,
         ]
+      : []),
+    // BS5-093 的 Activate 代價要求 3 張紫色、非 FLIP 餅乾；generic
+    // trash filler 只有 2 張餅乾，會讓 Browser 只看到不合法分支，因此
+    // 專用正向 fixture 補上三張可實際選取的候選。
+    ...(card.id === 'BS5-093'
+      ? Array.from({ length: 3 }, (_, index) =>
+          cardCheckFillerCookie(
+            `BS5-093-purple-cookie-${index + 1}`,
+            1,
+            3,
+            0,
+            'purple',
+          ).cookie,
+        )
       : []),
   ]
   // Deploying a cookie draws HP cards from the top of the deck
@@ -2761,6 +2798,22 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       : ownBreakArea
     const oldStage: GameCard = { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
     const state = baseState()
+    // BS6-064 activates only while our support area is smaller than the
+    // opponent's.  The generic stage fixture normally supplies generous
+    // payment energy on our side, which made the condition false and left the
+    // card with no usable Activate path.  Keep enough active payment cards,
+    // but mirror the real support-count condition for this card.
+    const stagePlayerSupportArea =
+      card.id === 'BS6-064'
+        ? energySupports.slice(0, 2).map((c) => ({ card: c, rested: false }))
+        : [...energySupports, ...supportCostCandidates].map((c) => ({
+            card: c,
+            rested: false,
+          }))
+    const stageOpponentSupportArea =
+      card.id === 'BS6-064'
+        ? scenarioSupports('BS6-064-opponent-support', 4, 'green')
+        : undefined
     return {
       ...state,
       players: {
@@ -2769,10 +2822,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-one'],
           hand: stageHand,
           battleArea: [cardCheckBattleEntry(stageBattleCookie, selfExtra1.hpCards, 4)],
-          supportArea: [...energySupports, ...supportCostCandidates].map((c) => ({
-            card: c,
-            rested: false,
-          })),
+          supportArea: stagePlayerSupportArea,
           stage: { card: oldStage, rested: false },
           breakArea: stageBreakArea,
           discardPile: trashFillers,
@@ -2780,13 +2830,26 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-two': {
           ...state.players['player-two'],
           battleArea: opponentBattleArea,
+          ...(stageOpponentSupportArea
+            ? { supportArea: stageOpponentSupportArea }
+            : {}),
         },
       },
     }
   }
 
   if (card.type === 'trap') {
-    const defender = cardCheckFillerCookie('trap-defender', 2, 5, 0, payColor)
+    // BS2-050 can only target an opponent Cookie with 3 or fewer remaining
+    // HP.  Keep that condition satisfied in the generic trap fixture so the
+    // response modal exposes the real target/payment flow instead of letting
+    // the attack resolve directly into a replacement prompt.
+    const defender = cardCheckFillerCookie(
+      'trap-defender',
+      2,
+      card.id === 'BS2-050' ? 3 : 5,
+      0,
+      payColor,
+    )
     // A high-attack attacker so "attacker attack more than N" trap
     // conditions have a chance of being met, plus 2 extra opponent battle
     // cookies (beyond the attacker) so traps that select an opponent target
@@ -2839,7 +2902,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...state.players['player-one'],
           hand: [card, ...handFillers],
           battleArea: trapBattleArea,
-          supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+          // BS6-063 的卡面寫的是「有 5 張卡牌」，不是「5 張以上」；
+          // 付款只會將支援卡橫置，不會減少張數，因此要以恰好 5 張
+          // 建立成立分支，才能在支付後繼續進入牌庫頂放置效果。
+          supportArea: (card.id === 'BS6-063'
+            ? energySupports.slice(0, 5)
+            : energySupports
+          ).map((c) => ({ card: c, rested: false })),
           breakArea: trapBreakArea,
           discardPile: trapTrashFillers,
         },
@@ -2956,6 +3025,15 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ...(faintCost && index === 0 ? { cost: faintCost } : {}),
       }),
     )
+    // BS2-060's faint skill checks the opponent's trash count.  Put the
+    // opponent on the condition-met side of that check so the card-check
+    // route reaches the real draw effect and emits a public effect trace.
+    const opponentTrashForFaint =
+      card.id === 'BS2-060'
+        ? Array.from({ length: 20 }, (_, index) =>
+            testSupportCard(`BS2-060-opponent-trash-${index + 1}`, 'purple'),
+          )
+        : []
     return {
       ...state,
       players: {
@@ -2973,7 +3051,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           ...(card.id === 'BS3-061' || card.id === 'BS5-047' || card.id === 'BS6-101'
             ? { supportArea: energySupports.map((c) => ({ card: c, rested: false })) }
             : {}),
-          ...(card.id === 'BS5-007'
+          ...(card.id === 'BS2-043' || card.id === 'BS5-007'
             ? { hand: handFillers }
             : card.id === 'BS5-026'
               ? { hand: [handCookieFiller, ...handFillers] }
@@ -2986,6 +3064,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             cardCheckBattleEntry(target.cookie, target.hpCards, 4),
             ...opponentBattleArea,
           ],
+          ...(opponentTrashForFaint.length > 0
+            ? { discardPile: opponentTrashForFaint }
+            : {}),
         },
       },
       pendingFaintEffects,
@@ -3001,11 +3082,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   if (
     cookieCard.attackEffects &&
     cookieCard.attackEffects.length > 0 &&
-    // BS3-113 has both an OnPlay condition and an attack effect in the
-    // official record; its card-check route intentionally verifies the
-    // OnPlay damage-order selector. Other OnPlay + attack-effect cards keep
-    // the established attack-effect fixture path.
-    cookieCard.id !== 'BS3-113'
+    // BS3-113, BS6-072, BS6-074, and BS6-079 are card-check entries used to verify an
+    // OnPlay skill. Their secondary attack effects must not hide the deploy
+    // UI; dedicated attack fixtures still cover those later effects.
+    cookieCard.id !== 'BS3-113' &&
+    cookieCard.id !== 'BS6-072' &&
+    cookieCard.id !== 'BS6-074' &&
+    cookieCard.id !== 'BS6-079'
   ) {
     const state = baseState()
     // The generic fixture should enter the card's real post-attack UI rather
@@ -3013,7 +3096,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     // false in the neutral spread above. Keep these adjustments local to the
     // browser fixture; they do not alter the official card pool or rules.
     const attackSourceHpCount =
-      cookieCard.id === 'BS4-039'
+      cookieCard.id === 'BS6-053'
+        ? cookieCard.hp
+      : cookieCard.id === 'BS4-039'
         ? 2
         : cookieCard.id === 'BS5-098'
           ? 1
@@ -3023,7 +3108,12 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
               ? 2
               : cookieCard.id.startsWith('P-')
                 ? Math.max(1, cookieCard.hp)
-          : 0
+          // A card-check attack fixture represents the attack as already
+          // declared, so the source Cookie is rested; it must nevertheless
+          // retain its full HP stack. An empty stack makes the card appear
+          // fainted (0/HP) and causes the real post-attack flow to be
+          // skipped, which is especially visible for BS6-059/060/061.
+          : cookieCard.hp
     const attackSourceHpCards = Array.from(
       { length: attackSourceHpCount },
       (_, index) => testSupportCard(`${cookieCard.id}-source-hp-${index + 1}`),
@@ -3049,8 +3139,31 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...ownBreakArea,
           ]
         : ownBreakArea
-    const attackPlayerSupportArea =
-      cookieCard.id === 'BS4-053' || cookieCard.id === 'BS4-061'
+    const optionalAttackCost = cookieCard.attackEffects?.find(
+      (effect) => effect.kind === 'optional-cost-attack',
+    )
+    const attackSupportToHandCandidates =
+      optionalAttackCost?.kind === 'optional-cost-attack' &&
+      optionalAttackCost.cost.supportToHandType === 'cookie'
+        ? [
+            {
+              card: cardCheckFillerCookie(
+                `${cookieCard.id}-attack-support-cookie`,
+                1,
+                2,
+                0,
+                payColor,
+              ).cookie,
+              rested: false,
+            },
+          ]
+        : []
+    const attackPlayerSupportAreaBase =
+      cookieCard.id === 'BS6-053'
+        ? energySupports.slice(0, 5).map((card) => ({ card, rested: false }))
+      : cookieCard.id === 'BS6-059'
+        ? energySupports.slice(0, 5).map((card) => ({ card, rested: false }))
+      : cookieCard.id === 'BS4-053' || cookieCard.id === 'BS4-061'
         ? [
             ...energySupports.map((card) => ({ card, rested: false })),
             ...scenarioSupports(
@@ -3060,6 +3173,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ),
           ]
         : energySupports.map((card) => ({ card, rested: false }))
+    const attackPlayerSupportArea = [
+      ...attackPlayerSupportAreaBase,
+      ...attackSupportToHandCandidates,
+    ]
     const attackOpponentSupportArea =
       cookieCard.id === 'BS4-049'
         ? scenarioSupports('BS4-049-condition-support', 7, 'green')
@@ -3162,6 +3279,67 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   // Activatable / passive / block-triggered skill.
   if (card.skill) {
     const state = baseState()
+    if (card.skill.trigger === 'opponent-attack') {
+      // Opponent-attack response skills must begin in the real trap response
+      // window.  Keeping this state separate from the Activate/passive path
+      // makes BS5-092's human Browser fixture exercise payment and the later
+      // pendingAbilityEffect target selection instead of showing no button.
+      const source = card as CookieCard
+      const sourceHpCards = Array.from({ length: source.hp }, (_, index) =>
+        testSupportCard(`${card.id}-response-source-hp-${index + 1}`, payColor),
+      )
+      const attacker = cardCheckFillerCookie(
+        'response-attacker',
+        2,
+        5,
+        0,
+        'red',
+      )
+      return {
+        ...state,
+        firstPlayerId: 'player-two',
+        activePlayerId: 'player-two',
+        players: {
+          ...state.players,
+          'player-one': {
+            ...state.players['player-one'],
+            hand: handFillers,
+            battleArea: [
+              cardCheckBattleEntry(source, sourceHpCards, 4),
+              cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
+            ],
+            supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+            discardPile: trashFillers,
+          },
+          'player-two': {
+            ...state.players['player-two'],
+            battleArea: [
+              cardCheckBattleEntry(attacker.cookie, attacker.hpCards, 5),
+              cardCheckBattleEntry(opp1.cookie, opp1.hpCards, 7),
+            ],
+          },
+        },
+        pendingBattle: {
+          attackerPlayerId: 'player-two',
+          defenderPlayerId: 'player-one',
+          attackerInstanceId: attacker.cookie.instanceId,
+          // The opponent attacks a Cookie in the defender's battle area.
+          // Using the opponent-side filler here made the Browser arrow point
+          // across two cards on the same side, which was both misleading and
+          // not a legal attack declaration.
+          targetInstanceId: selfExtra1.cookie.instanceId,
+          declaredDamage: attacker.cookie.attack,
+          remainingDamage: attacker.cookie.attack,
+          stage: 'trap',
+          trapUsed: false,
+          revealedHpCard: null,
+          preventKnockoutTargetIds: [],
+          faintedColors: [],
+          attackEffects: [],
+          attackEffectIndex: 0,
+        },
+      }
+    }
     if (card.skill.trigger === 'block') {
       // Blocker-style skill: triggers when the opponent attacks another of
       // the player's cookies — mirror createBlockerResponseDemoState.
@@ -3214,6 +3392,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       // slot, with the opponent's diverse battle area (and one own-side
       // cookie already on the field) providing legal targets for whatever
       // the on-play effect selects.
+      const fromTrashOnPlay = Boolean(card.skill.fromTrashArea)
       const bs6091BreakArea =
         card.id === 'BS6-091'
           ? [
@@ -3234,29 +3413,40 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       const bs6091DiscardPile =
         trashFillers
       const bs6091Hand =
-        card.id === 'BS6-091'
+        fromTrashOnPlay
           ? [handCookieFiller, ...handFillers]
           : [card, handCookieFiller, ...handFillers]
       const bs6091BattleArea =
-        card.id === 'BS6-091'
+        fromTrashOnPlay
           ? [
               cardCheckBattleEntry(
                 card as CookieCard,
                 Array.from({ length: (card as CookieCard).hp }, (_, index) =>
-                  testSupportCard(`BS6-091-source-hp-${index + 1}`, 'purple'),
+                  testSupportCard(
+                    `${card.id}-source-hp-${index + 1}`,
+                    'purple',
+                  ),
                 ),
                 6,
               ),
             ]
           : [cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6)]
       const bs6091PendingOnPlay =
-        card.id === 'BS6-091'
+        fromTrashOnPlay
           ? {
               playerId: 'player-one' as const,
               sourceInstanceId: card.instanceId,
               origin: 'trash' as const,
             }
           : null
+      const onPlayPlayerSupportArea =
+        card.id === 'BS6-058'
+          ? scenarioSupports('BS6-058-player-support', 2, 'green')
+          : energySupports.map((c) => ({ card: c, rested: false }))
+      const onPlayOpponentSupportArea =
+        card.id === 'BS6-058'
+          ? scenarioSupports('BS6-058-opponent-support', 4, 'green')
+          : []
       return {
         ...state,
         players: {
@@ -3265,18 +3455,22 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             ...state.players['player-one'],
             hand: bs6091Hand,
             battleArea: bs6091BattleArea,
-            supportArea: energySupports.map((c) => ({ card: c, rested: false })),
+            supportArea: onPlayPlayerSupportArea,
             breakArea: bs6091BreakArea,
             discardPile: bs6091DiscardPile,
           },
           'player-two': {
             ...state.players['player-two'],
             battleArea: opponentBattleArea,
+            supportArea: onPlayOpponentSupportArea,
             stage: { card: opponentStage, rested: false },
             breakArea: opponentBreakArea,
           },
         },
         pendingOnPlay: bs6091PendingOnPlay,
+        cookiesPlayedFromTrashThisTurn: fromTrashOnPlay
+          ? { 'player-one': true }
+          : undefined,
       }
     }
 
@@ -3287,6 +3481,10 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const sourceHpCards =
       card.id === 'BS4-005'
         ? [testSupportCard('BS4-005-source-hp')]
+        : card.id === 'BS6-055'
+          ? Array.from({ length: (card as CookieCard).hp }, (_, index) =>
+              testSupportCard(`BS6-055-source-hp-${index + 1}`, 'green'),
+            )
         // BS6-001 需要從同一張紅色餅乾的 HP 堆丟 2 張。卡面 HP 為 3，
         // 因此 card-check 也必須提供完整堆疊，才能驗證付款後仍可選擇
         // 自己的餅乾套用 +1 攻擊傷害。
@@ -3326,12 +3524,12 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
             cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
           ],
           supportArea:
-            card.id === 'BS6-057'
-              ? [
-                  { card: handCookieFiller, rested: false },
-                  ...energySupports.map((c) => ({ card: c, rested: false })),
-                ]
-              : energySupports.map((c) => ({ card: c, rested: false })),
+            card.id === 'BS6-055'
+              ? scenarioSupports('BS6-055-player-support', 4, 'green')
+              : [...energySupports, ...supportCostCandidates].map((c) => ({
+                  card: c,
+                  rested: false,
+                })),
           breakArea: ownBreakArea,
           discardPile: trashFillers,
         },
@@ -3347,6 +3545,14 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
                   'green',
                 ),
               }
+            : card.id === 'BS6-055'
+              ? {
+                  supportArea: scenarioSupports(
+                    'BS6-055-opponent-support',
+                    6,
+                    'green',
+                  ),
+                }
             : {}),
           breakArea: opponentBreakArea,
         },
@@ -3395,11 +3601,22 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
 export const createCardNegativeDemoState = (cardNumber: string): GameState => {
   const state = createCardCheckDemoState(cardNumber)
   const player = state.players['player-one']
+  const negativeDiscardPile =
+    cardNumber === 'BS5-093' || cardNumber.startsWith('BS5-093@')
+      ? player.discardPile.filter(
+          (card) =>
+            card.id !== 'BS5-093-purple-cookie-2' &&
+            card.id !== 'BS5-093-purple-cookie-3',
+        )
+      : cardNumber === 'BS5-092' || cardNumber.startsWith('BS5-092@')
+        ? player.discardPile.filter((card) => card.type === 'cookie')
+        : player.discardPile
   return updateDemoPlayer(state, 'player-one', {
     supportArea: player.supportArea.map((support) => ({
       ...support,
       rested: true,
     })),
+    discardPile: negativeDiscardPile,
   })
 }
 
@@ -3409,7 +3626,21 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
  * valid-target path and the Timekeeper movement-protection path.
  */
 export const createBs6079OnPlayDemoState = (blocked: boolean): GameState => {
-  const state = createCardCheckDemoState('BS6-079')
+  const handState = createCardCheckDemoState('BS6-079')
+  const handSource = handState.players['player-one'].hand.find(
+    (card) => card.id === 'BS6-079',
+  )
+  if (!handSource) throw new Error('BS6-079 Browser fixture hand card is missing')
+
+  // Exercise the same legal command as the normal UI instead of manufacturing
+  // a battlefield card. This keeps the dedicated A/B fixture faithful to the
+  // OnPlay flow while still leaving the pending effect open for the blocker
+  // comparison below.
+  const state = applyGameCommand(handState, {
+    kind: 'deploy-cookie',
+    playerId: 'player-one',
+    instanceId: handSource.instanceId,
+  })
   const source = state.players['player-one'].battleArea.find(
     (entry) => entry.card.id === 'BS6-079',
   )

@@ -719,7 +719,7 @@ describe('ST4-012 and ST4-013 card skills', () => {
           {
             kind: 'damage',
             amount: 1,
-            target: { side: 'opponent', min: 1, max: 1 },
+            target: { side: 'opponent', min: 0, max: 1 },
           },
         ],
         effectText:

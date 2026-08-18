@@ -897,6 +897,9 @@ export const describeCommand = (
         command.playerId,
         effects,
       )
+      if (next.pendingBattle?.effectDamageSequence) {
+        return `${actor} 結算效果：等待後續傷害結算`
+      }
       return outcome
         ? `${actor} 結算效果：${outcome}`
         : `${actor} 結算了效果`
@@ -1000,8 +1003,26 @@ export const describeCommand = (
         ? `${actor} 翻開了 HP 卡「${revealed.name}」`
         : `${actor} 結算了下一段傷害`
     }
-    case 'resolve-battle':
+    case 'resolve-battle': {
+      // Ability damage uses the battle state machine internally, so one
+      // resolve-battle command may finish every selected target at once.
+      // Preserve the actual HP delta in the log instead of leaving the
+      // preceding target-selection entry as the only explanation.
+      const pendingAbility = previous.pendingAbilityEffect
+      const effectSequence = previous.pendingBattle?.effectDamageSequence
+      if (pendingAbility && effectSequence) {
+        const outcome = describeDamageOutcome(
+          previous,
+          next,
+          pendingAbility.sourcePlayerId,
+          pendingAbility.effects,
+        )
+        return outcome
+          ? `${actor} 自動結算了戰鬥：${outcome}`
+          : `${actor} 自動結算了戰鬥`
+      }
       return `${actor} 自動結算了戰鬥`
+    }
     case 'resolve-faint-effect':
       return `${actor} 決定了擊倒效果的目標`
     case 'resolve-opponent-hand-discard':
@@ -1300,6 +1321,29 @@ export const describeCommandSteps = (
       if (outcome) steps.push({ text: `效果結算：${outcome}` })
       return steps
     }
+    case 'play-attack-response': {
+      const steps: LogStepDetail[] = []
+      const sourceCard = findCard(state, command.sourceInstanceId)
+      if (sourceCard) {
+        steps.push({
+          text: `攻擊回應技能來源：「${sourceCard.name}」`,
+          cards: [sourceCard],
+        })
+      }
+      const discardStep = describeCardListStep(
+        state,
+        '攻擊回應代價：棄置手牌',
+        command.discardHandIds,
+      )
+      if (discardStep) steps.push(discardStep)
+      const trashToDeckStep = describeCardListStep(
+        state,
+        '攻擊回應代價：棄牌區卡片洗回牌庫',
+        command.trashToDeckIds,
+      )
+      if (trashToDeckStep) steps.push(trashToDeckStep)
+      return steps
+    }
     case 'play-item':
     case 'activate-stage': {
       const steps: LogStepDetail[] = []
@@ -1476,6 +1520,58 @@ export const describeCommandSteps = (
         ? [describeFieldToDeckBottomStep(previous, command, fieldToDeckBottom)]
         : undefined
     }
+    case 'resolve-faint-effect': {
+      const pending = previous.pendingFaintEffects?.[0]
+      if (!pending) return undefined
+      const steps: LogStepDetail[] = []
+      const sourceCard = findCard(previous, pending.sourceInstanceId)
+      if (sourceCard) {
+        steps.push({
+          text: `昏厥效果來源：「${sourceCard.name}」；效果：${
+            sourceCard.effectText ?? sourceCard.skill?.text ?? pending.sourceCardName ?? '昏厥效果'
+          }`,
+          cards: [sourceCard],
+        })
+      }
+      const paymentStep = describeCardListStep(
+        state,
+        '昏厥效果代價：支付能量（橫置）',
+        command.paymentIds,
+      )
+      if (paymentStep) steps.push(paymentStep)
+      const discardStep = describeCardListStep(
+        state,
+        '昏厥效果代價：棄置手牌',
+        command.discardHandIds,
+      )
+      if (discardStep) steps.push(discardStep)
+      const supportTrashStep = describeCardListStep(
+        state,
+        '昏厥效果代價：支援區送入棄牌區',
+        command.supportToTrashIds,
+      )
+      if (supportTrashStep) steps.push(supportTrashStep)
+      const targetStep = describeCardListStep(
+        state,
+        '昏厥效果目標',
+        command.targetIds,
+      )
+      if (targetStep) steps.push(targetStep)
+      const outcome = describeDamageOutcome(
+        previous,
+        next,
+        pending.sourcePlayerId,
+        [pending.effect],
+      )
+      if (outcome) {
+        steps.push({ text: `昏厥效果結果：${outcome}` })
+      } else if (next.pendingInspectDeck || next.pendingAbilityEffect) {
+        steps.push({ text: '昏厥效果結果：等待後續效果選擇' })
+      } else if (pending.effect) {
+        steps.push({ text: '昏厥效果結果：效果已結算' })
+      }
+      return steps
+    }
     case 'skip-on-play': {
       const blockedStep = describeBlockedOnPlayMovement(
         state,
@@ -1563,6 +1659,7 @@ export const resolveLogCard = (
       return findCard(previous, command.trapInstanceId)
     case 'skip-on-play':
     case 'play-blocker':
+    case 'play-attack-response':
     case 'activate-skill':
     case 'begin-activate-skill':
       return findCard(previous, command.sourceInstanceId)
@@ -1583,6 +1680,22 @@ export const resolveLogCard = (
       return previous.pendingBattle?.attackerInstanceId
         ? findCard(previous, previous.pendingBattle.attackerInstanceId)
         : undefined
+    case 'resolve-ability-effect':
+      return previous.pendingAbilityEffect?.sourceInstanceId
+        ? findCard(previous, previous.pendingAbilityEffect.sourceInstanceId)
+        : undefined
+    case 'resolve-faint-effect': {
+      const pending = previous.pendingFaintEffects?.[0]
+      return pending
+        ? findCard(previous, pending.sourceInstanceId)
+        : undefined
+    }
+    case 'resolve-inspect-deck': {
+      const pending = previous.pendingInspectDeck
+      return pending
+        ? findCard(previous, pending.sourceInstanceId)
+        : undefined
+    }
     case 'resolve-optional-cost-attack':
       return previous.pendingOptionalCostAttack?.sourceInstanceId
         ? findCard(previous, previous.pendingOptionalCostAttack.sourceInstanceId)
