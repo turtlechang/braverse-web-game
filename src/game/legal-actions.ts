@@ -5,6 +5,7 @@ import { getForcedAttackTargetId } from './battle'
 import { getAttackEnergyCostForState, selectEnergyPayment } from './energy'
 import { getOpponentId } from './helpers'
 import { getRefreshCandidates } from './refresh'
+import { hasPendingCardResolution } from './pending'
 import {
   getCurrentReplacementTask,
   getReplacementCandidates,
@@ -47,6 +48,12 @@ export const getLegalTurnCommands = (
       },
     ]
   }
+
+  // Replacement is deliberately lower priority than every unresolved card
+  // effect.  Keep the public legal-command enumerator aligned with the
+  // command/controller/AI paths so a stale or synchronised dual-pending state
+  // cannot expose replace/skip before the effect chain is complete.
+  if (hasPendingCardResolution(state)) return []
 
   const replacementTask = getCurrentReplacementTask(state)
   if (replacementTask) {

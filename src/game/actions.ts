@@ -30,24 +30,22 @@ const assertActiveGame = (state: GameState) => {
     throw new GameRuleError('必須先處理餅乾的登場效果。')
   }
 
+  if (
+    state.pendingAbilityEffect ||
+    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
+    (state.pendingAfterDamageEffects &&
+      state.pendingAfterDamageEffects.length > 0) ||
+    state.pendingEffectOrder
+  ) {
+    throw new GameRuleError('必須先完成目前的卡牌效果。')
+  }
+
   if (state.pendingRefresh) {
     throw new GameRuleError('必須先完成牌庫 Refresh。')
   }
 
   if (state.pendingBattle) {
     throw new GameRuleError('必須先完成目前的戰鬥。')
-  }
-
-  if (state.pendingAbilityEffect) {
-    throw new GameRuleError('必須先完成目前的技能/道具/場景效果。')
-  }
-
-  if (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) {
-    throw new GameRuleError('必須先處理昏厥效果。')
-  }
-
-  if (state.pendingAfterDamageEffects && state.pendingAfterDamageEffects.length > 0) {
-    throw new GameRuleError('必須先處理受傷後效果。')
   }
 
   if (state.pendingOpponentHandDiscard) {
@@ -252,6 +250,16 @@ export const replaceDefeatedCookie = (
     throw new GameRuleError('必須先處理餅乾的登場效果。')
   }
 
+  if (
+    state.pendingAbilityEffect ||
+    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
+    (state.pendingAfterDamageEffects &&
+      state.pendingAfterDamageEffects.length > 0) ||
+    state.pendingEffectOrder
+  ) {
+    throw new GameRuleError('必須先完成目前的卡牌效果。')
+  }
+
   if (state.pendingOpponentHandDiscard) {
     throw new GameRuleError('必須先處理對手棄牌。')
   }
@@ -322,6 +330,16 @@ export const skipDefeatedCookieReplacement = (
 
   if (state.pendingOnPlay) {
     throw new GameRuleError('必須先處理餅乾的登場效果。')
+  }
+
+  if (
+    state.pendingAbilityEffect ||
+    (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
+    (state.pendingAfterDamageEffects &&
+      state.pendingAfterDamageEffects.length > 0) ||
+    state.pendingEffectOrder
+  ) {
+    throw new GameRuleError('必須先完成目前的卡牌效果。')
   }
 
   if (state.pendingOpponentHandDiscard) {

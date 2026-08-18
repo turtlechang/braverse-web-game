@@ -160,7 +160,7 @@ describe('simple AI opponent', () => {
     ).toHaveLength(2)
   })
 
-  it('handles replacement before resolving its own pending faint effect', () => {
+  it('resolves a pending faint effect before replacement', () => {
     const base = asAiTurn(createDemoGame(), 'main')
     const replacement: CookieCard = {
       id: 'ai-replacement',
@@ -210,11 +210,18 @@ describe('simple AI opponent', () => {
 
     const decision = takeAiStep(state)
 
-    expect(decision.action).toBe('replace-cookie')
-    expect(decision.state.pendingReplacement).toBeNull()
-    expect(decision.state.pendingFaintEffects).toHaveLength(1)
+    expect(decision.action).toBe('resolve-faint')
+    expect(decision.state.pendingReplacement).toEqual({
+      tasks: [{ playerId: 'player-two', remaining: 1 }],
+    })
+    expect(decision.state.pendingFaintEffects).toBeUndefined()
+    expect(decision.state.players['player-two'].battleArea).toHaveLength(0)
+
+    const replacementDecision = takeAiStep(decision.state, 'player-two')
+    expect(replacementDecision.action).toBe('replace-cookie')
+    expect(replacementDecision.state.pendingReplacement).toBeNull()
     expect(
-      decision.state.players['player-two'].battleArea[0].card.instanceId,
+      replacementDecision.state.players['player-two'].battleArea[0].card.instanceId,
     ).toBe('ai-replacement')
   })
 

@@ -1770,7 +1770,7 @@ describe('BS4 condition fixtures', () => {
     expect(afterSecondDamage.pendingBattle).toBeNull()
   })
 
-  it('BS4-005 cost faint with an empty battle area queues replacement before the effect', () => {
+  it('BS4-005 cost faint with an empty battle area resolves the effect before replacement', () => {
     const base = createCardCheckDemoState('BS4-005')
     const source = base.players['player-one'].battleArea.find(
       (entry) => entry.card.id === 'BS4-005',
@@ -1800,48 +1800,42 @@ describe('BS4 condition fixtures', () => {
       hpToTrashTargetIds: [source!.card.instanceId],
     })
 
-    // 戰場清空：補位任務與效果佇列同時建立，但效果被強制補位擋下。
+    // 戰場清空：先保留完整效果佇列，不能先建立補位任務。
     expect(activated.players['player-one'].battleArea).toHaveLength(0)
-    expect(activated.pendingReplacement).toMatchObject({
-      tasks: [{ playerId: 'player-one', remaining: 1 }],
-    })
+    expect(activated.pendingReplacement).toBeNull()
     expect(activated.pendingAbilityEffect).toBeDefined()
-    expect(() =>
-      applyGameCommand(activated, {
-        kind: 'resolve-ability-effect',
-        playerId: 'player-one',
-        targetIds: state.players['player-two'].battleArea.map(
-          (entry) => entry.card.instanceId,
-        ),
-      }),
-    ).toThrowError()
 
-    // 補位完成後效果照常依序結算。
-    const replaced = applyGameCommand(activated, {
-      kind: 'replace-cookie',
-      playerId: 'player-one',
-      instanceId: replacementCookie.instanceId,
-    })
-    expect(replaced.pendingReplacement).toBeNull()
-    expect(replaced.pendingOnPlay).toBeNull()
-    const resolved = applyGameCommand(replaced, {
+    let resolved = applyGameCommand(activated, {
       kind: 'resolve-ability-effect',
       playerId: 'player-one',
       targetIds: state.players['player-two'].battleArea.map(
         (entry) => entry.card.instanceId,
       ),
     })
-    expect(resolved.pendingBattle).toMatchObject({
-      stage: 'damage',
-      effectDamageSequence: {
-        remainingTargetInstanceIds: [
-          state.players['player-two'].battleArea[1].card.instanceId,
-        ],
-      },
+    while (resolved.pendingBattle) {
+      resolved = applyGameCommand(resolved, {
+        kind: 'resolve-next-damage',
+        playerId: 'player-two',
+      })
+    }
+
+    expect(resolved.pendingAbilityEffect).toBeUndefined()
+    expect(resolved.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
     })
+
+    // 整條效果完成後才可補位。
+    const replaced = applyGameCommand(resolved, {
+      kind: 'replace-cookie',
+      playerId: 'player-one',
+      instanceId: replacementCookie.instanceId,
+    })
+    expect(replaced.pendingReplacement).toBeNull()
+    expect(replaced.pendingOnPlay).toBeNull()
+    expect(replaced.pendingBattle).toBeNull()
   })
 
-  it('BS4-005 cost faint with no cookies to replace loses before any damage', () => {
+  it('BS4-005 cost faint with no cookies to replace resolves damage before defeat', () => {
     const base = createCardCheckDemoState('BS4-005')
     const source = base.players['player-one'].battleArea.find(
       (entry) => entry.card.id === 'BS4-005',
@@ -1870,13 +1864,37 @@ describe('BS4 condition fixtures', () => {
       hpToTrashTargetIds: [source!.card.instanceId],
     })
 
-    expect(activated.status).toBe('finished')
-    expect(activated.result).toMatchObject({
+    expect(activated.status).toBe('playing')
+    expect(activated.pendingAbilityEffect).toBeDefined()
+
+    let resolved = applyGameCommand(activated, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-one',
+      targetIds: state.players['player-two'].battleArea.map(
+        (entry) => entry.card.instanceId,
+      ),
+    })
+    while (resolved.pendingBattle) {
+      resolved = applyGameCommand(resolved, {
+        kind: 'resolve-next-damage',
+        playerId: 'player-two',
+      })
+    }
+
+    expect(resolved.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+    const defeated = applyGameCommand(resolved, {
+      kind: 'skip-replacement',
+      playerId: 'player-one',
+    })
+    expect(defeated.status).toBe('finished')
+    expect(defeated.result).toMatchObject({
       loserId: 'player-one',
       reason: 'no-cookie-available',
     })
-    expect(activated.pendingBattle).toBeNull()
-    expect(activated.pendingAbilityEffect).toBeUndefined()
+    expect(defeated.pendingBattle).toBeNull()
+    expect(defeated.pendingAbilityEffect).toBeUndefined()
   })
 })
 

@@ -60,9 +60,9 @@ BS4 沿用 BS3 的候選資料流程：先將官方英文資料匯入 `data/cand
 
 複合效果若同時要求支付能量、額外操作支援區與選擇餅乾目標，UI 會依卡面順序拆成獨立步驟；已作為能量支付的支援卡不會再次出現在後續支援候選中。
 
-技能代價若令戰鬥區清空，UI 會先提交規則層產生的終局或強制補位狀態：沒有可補位餅乾時立即顯示對局結果；可補位時暫停原效果，完成補位與 OnPlay 後才繼續結算，不會略過優先決策或把規則錯誤留在舊提示框。
+技能代價若令戰鬥區清空，UI 會先保留規則層產生的原效果佇列：效果、傷害、FLIP 與昏厥後續都完成後，才建立強制補位；沒有可補位餅乾時也要先完成原效果，再顯示對局結果，不會讓補位或敗北判定插入卡牌效果鏈。
 
-昏厥效果遵守戰鬥區清空時的補位優先順序：先完成強制再登場及其 OnPlay，再處理昏厥技能；BS3-029 的黃色能量付款、手牌目標與 `+1 HP`，以及 BS6-101 從棄牌區登場前的紫色能量付款，均已接入離線、線上及 AI 決策流程。
+昏厥效果遵守「卡牌效果優先於補位」順序：同一狀態若同時有昏厥／傷害／OnPlay 效果與補位任務，先完成整條效果鏈，再開啟強制再登場及其 OnPlay；BS3-029 的黃色能量付款、手牌目標與 `+1 HP`，以及 BS6-101 從棄牌區登場前的紫色能量付款，均已接入離線、線上及 AI 決策流程。
 
 對戰資訊可視化依 P0–P2 分層：P0 固定顯示行動玩家、階段、來源卡、攻擊箭頭與一致事件句型；P1 顯示宣告 → 費用 → 代價 → 目標 → 結算進度、對手卡牌預覽與陷阱／FLIP／攻擊效果回應狀態；P2 提供活動紀錄篩選、連線同步細節與伺服器提供的決策期限。戰場採扇形手牌與左右資源欄；對手手牌以貼齊頂緣的淺弧牌背呈現，我方手牌以低弧度展開，卡牌僅於 hover 或鍵盤 focus 時顯示左側快速預覽。所有線上公開提示都只使用伺服器過濾後的公開卡牌與 instance ID，不揭露對手手牌或牌庫內容。
 
@@ -80,7 +80,7 @@ CI/CD 採 GitHub Actions + Vercel Git Integration：GitHub Actions 執行卡牌�
 
 BS6 正式卡池包含 138 筆記錄（107 個不同基礎卡號，其中 106 筆為基礎記錄、32 筆為異圖／變體；BS6-091 僅有變體）。主效果待轉接 0 張，攻擊後 `Then` 已完成 27／27；正式 Browser 效果矩陣以可互動效果的基礎卡代表稽核，97／97 通過（含 BS6-039 成立／不成立 A/B）。BS6-041 休息區條件物品、BS6-039 休息區連鎖與 BS6-042 陷阱條件的成立／不成立 test-state 也均通過 Browser 驗證。牌組編輯器已可用 BS6 篩選顯示與加入正式 BS6 卡牌。完整逐色結果見 [BS6 Browser 稽核報告](docs/bs6-browser-audit-2026-08-12.md) 與 [BS6 效果轉接覆蓋盤點](docs/bs6-effect-coverage.md)。
 
-BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 208 個測試檔、3,310 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-053／BS6-055／BS6-058～BS6-063 的 card-check 初始 HP、支援區門檻、合法候選與 Then 續接，並讓 BS4-005 代價昏厥後的補位與自動效果傷害完整記錄於 Browser 驗證流程。
+BS6-020 的規則層、離線／線上陷阱控制器與回應 Modal 已完成自身目標回歸測試；完整 Vitest 目前為 208 個測試檔、3,337 項通過，並以本機 Browser test-state 驗證選取與略過兩條路徑。牌組編輯器卡池篩選已支援 LV、HP 與攻擊力條件，攻擊力沿用官方卡文解析結果。BS5／BS6 尖括號攻擊後代價已完成逐卡轉接與可略過回歸，BS6-044 追傷目標與原攻擊目標昏厥分支、BS6-061 支援區回手後 BS1-078 場景條件、BS6-062 物品的支援區餅乾回手代價也已補回歸；攻擊後效果對戰紀錄已補齊來源、代價、目標與結果步驟。BS4-075 Black Pearl Cookie 的攻擊後棄牌代價也已接入可略過 UI，涵蓋支付、略過與最多一張目標的回歸測試。另修正 BS6-053／BS6-055／BS6-058～BS6-063 的 card-check 初始 HP、支援區門檻、合法候選與 Then 續接，並讓 BS4-005／BS2-015 代價昏厥後先完成原效果、再建立補位，完整記錄於 Browser／AI／規則回歸流程。
 
 BS6-101「Twizzly Gummy Cookie」昏厥效果已先顯示可選的紫色能量支援卡付款，再進入棄牌區紫色餅乾登場目標；本機、線上與 AI 共用同一套規則驗證，並保留不支付而略過的合法路徑。
 
@@ -108,7 +108,7 @@ BraverseFan 中文圖鑑與判例整理已列入文件參考來源；目前僅�
 
 2026-08-08 穩定化批次已將 AI benchmark 從報表改為 CI 品質閘門，強制要求卡死、deadlock、非法操作與 turn cap 全為 0，且未達等級勝率門檻即失敗並輸出 `ReplayIssueBundle`。新閘門抓出並修正空戰鬥區仍有合法補位餅乾時錯誤列出「略過補位」的根因；另修正 Google Chrome 聚焦手牌動作時牌桌自動捲動、導致「登場」click 落空的 UI 問題。完整基線與未完成項目見 [穩定化對帳與執行計畫](docs/stabilization-plan-2026-08-08.md)。
 
-BS2-015 已修正支付自身離場代價後按下「確認發動」看似無反應的問題；無可補位餅乾時會顯示敗北結果，有可補位餅乾時會先完成強制補位，再從目標選擇續接傷害與 `Then` 支援效果。`card:BS2-015` 及專用終局／補位 test-state 都維持合法正 HP。
+BS2-015 已修正支付自身離場代價後按下「確認發動」看似無反應的問題；無可補位餅乾時會先完成尚未結算的傷害／`Then` 效果再顯示敗北，有可補位餅乾時也會先完成整條效果鏈，再開啟強制補位並續接登場效果。`card:BS2-015` 及專用終局／補位 test-state 都維持合法正 HP。
 
 已完成 Equip（官方 `{mou}`）、On play、Your Turn、Once Per Turn、Activate、Blocker、Damage（`{da}`）、Skill（`{sk}`）八種卡牌標籤的圖片對應，以及黑色能量（`{K}`）圖示，並支援 `{token}` 與 `【Official Tag】` 兩種資料格式。
 
@@ -145,7 +145,7 @@ BS4-106／107 的一般 `card:` test-state 已分別準備 10／15 張對手棄�
 
 BS4 後續規則回歸已完成 AI benchmark 的 RNG 傳遞修正：同一個 step seed 會流經技能、物品、場景與 Refresh；固定 seed 的 100 場矩陣重跑結果完全一致。另為 22 張條件卡建立 `met`／`unmet` 專用 test-state，共 44 條路徑通過；24 張一般 fixture 卡的效果面板、支付、代價、目標與可略過流程也以 Chrome 實際互動 24／24 通過。111 張 BS4 基礎卡以 Chrome card-check 逐卡載入 111／111 通過，並在 AI browser 的 1280×720、1024×576 等 viewport 通過 responsive geometry gate；BS4-052 end-phase 目標結算與 BS4-029 chained optional attack 的回歸問題已修正。完整結果見 [BS4 卡牌、RNG、responsive 與互動稽核報告](docs/bs4-browser-audit-report-2026-08-04-final.md)。
 
-擊倒觸發的攻擊後技能（如 BS4-011 擊倒對手後抽 1 張並棄 1 張）已確認以「空場補位優先」結算：傷害結算後先完成戰鬥區再登場（空缺且無餅乾可補位時立即判負），補位完成後才執行技能佇列；離線、線上與 AI 決策流程共用同一判定，回歸測試涵蓋手牌為空時必棄唯一抽牌、以及無補位餅乾直接敗北兩條邊界路徑。
+擊倒觸發的攻擊後技能（如 BS4-011 擊倒對手後抽 1 張並棄 1 張）已確認以「效果鏈優先於空場補位」結算：傷害結算後先完成抽牌／棄牌及其他待處理效果（空缺且無餅乾可補位時也先完成效果再判負），全部清空後才建立補位；離線、線上與 AI 決策流程共用同一判定，回歸測試涵蓋手牌為空時必棄唯一抽牌、以及無補位餅乾直接敗北兩條邊界路徑。
 
 兩階段選擇效果已落地：BS4-030 桃花餅乾「世外桃源」與 BS4-044 千年寺場景的目標選擇拆為「先選目標餅乾 → 再選 1 張手牌放回其 HP 最上方」兩個順序決策，沒有合法目標時不詢問發動、第一階段目標昏厥時自動中止並略過第二階段，對戰紀錄只公開動作過程、不揭露被搬移的卡牌內容；本機、線上與 AI 共用同一判定。
 
@@ -292,6 +292,7 @@ BS5 本批次已完成 runtime 轉接、效果稽核與正式 promote；正式�
 
 | 日期 | 概要 |
 | --- | --- |
+| 2026-08-18 | 修正昏厥／離場後的全域待處理優先序：卡牌效果、效果傷害、FLIP、昏厥效果與 `pendingEffectOrder` 必須先完成，才建立或顯示餅乾補位；同步更新本機／線上 pending UI、AI 控制器與效果傷害序列，避免補位插入 BS2-015／BS4-005／BS4-011 等效果鏈。補上合法指令雙 pending 回歸與 BS2-015 Then→補位 Browser 3/3 驗證；完整 Vitest 208 檔／3,337 項、lint、typecheck、build 通過。 |
 | 2026-08-18 | FLIP 卡全面盤點與收尾：以 `scripts/inventory-flip-cards.ts` 列出 114 張 FLIP 基礎卡（效果 111、vanilla 無效果 2、修正 1）的 runtime FlipAbility，`scripts/verify-flip-kinds.ts` 在引擎層逐種效果 kind 驗證「翻開→決策窗→發動作」。修正四項：(1) P-099 Bell Pepper Cookie 官方把 FLIP 抽 1 效果併進 attackText 的欄位錯置（與 P-100 同型，補轉接與 battle 回歸）；(2) `hasFlipAbility` 改為與 runtime 一致，`type: cookie` 只有在轉接後真有 `FlipAbility` 才算 FLIP，P-056～P-069、BS4-004@1、BS5-039@2 等 flipText 重複攻擊名的 21 張普通餅乾／變體不再誤計入 Deck editor 的 FLIP 篩選與「FLIP N/16」上限（計數 144→123，補卡池回歸測試）；(3) `convertOfficialFlipAbility` 一般路徑對「The Cookie with this card attached for HP gains +N HP.」統一為 `attachedHpBonus`（附著期間剩餘 HP 連續 +N，與 BS5-004／BS6-069 同語意），BS3-012 等 29 張舊系列卡補回附著隱藏 +1（同步更新 7 處斷言）；(4) BS2-042／P-047 官方 flipText 為空的 vanilla FLIP 保留為 FLIP 卡但不開決策窗（待官方確認）。稽核矩陣見 [docs/flip-card-audit-matrix.md](docs/flip-card-audit-matrix.md)。完整驗證：Vitest 208 檔／3,336 項、typecheck、lint、build、`validate:cards`、`check:card-pool`、FLIP kinds verifier 全過；Browser smoke 的 AI 20／20、牌組編輯器 4 viewport、線上好友房同步與錯誤路徑全過。 |
 | 2026-08-18 | 卡牌行為契約稽核歸零：`cards:audit:contracts` verified=1,101、needs-review=0、blocked=0。修正最後 25 筆——16 筆 payment evidence（ledger 收集 `StageAbility.placementCost` 場景放置能量）與 3 筆 runtime energy、9 筆 cost evidence（BS5-092／BS5-093 `trashToDeck` 技能代價、BS5-092 改為對手指攻回應觸發並在陷阱視窗支付代價與結算 modify-attack，`skipTrap` 統一重算傷害、BS2-081 self-to-trash、P-082 trap 替代代價、P-045 雙重棄牌修正）、Then／once-per-turn／resolution order／timing 各 1 筆（BS4-080@2 欄位正規化與 Then 抽牌、P-100 FLIP 正規化）；契約改以 adapter 正規化來源建立。新增回歸 37 項；21 張修正卡＋4 錨卡 Browser batch attestation 全過（BS5-092／093 的對手指攻回應技能沿用 BS5-081 的無人機 UI 缺口，引擎層以 battle 回歸涵蓋）；完整 Vitest 208 檔／3,310 項、lint、build 通過。 |
 | 2026-08-17 | 建立卡牌行為契約 shadow ledger 與支付／代價／目標／Then 交叉稽核，完成 P1～P5 的 descriptor bridge、公開 trace attestation 與七批各 25 張 verified shadow migration gate（含 `cardNumber` 異圖綁定）；補齊 LV／Blocker／markup／直接能量鍵、HP／牌庫底／棄牌區／支援區移動、Reveal／Discard parser 與 selector binding，讓 `source contains unclassified clause` 歸零；稽核原因改為可統計分類，並修正 Browser trace 不應載入 Node-only ledger 的啟動問題；補正 BS2-014 條件式 break→hand→break 效果，讓唯一 `target evidence unresolved` 歸零；讓 `promote:candidate` 預設阻擋未完成契約；修正 BS3-113 Caramel Arrow Cookie 登場後全體傷害的逐張目標順序與 AI 指令；同時修正 BS6-096 Cherry Cookie 攻擊後「自身進棄牌區後再從棄牌區登場」的目標提示、BS6-107 Machine Room 的棄牌區登場條件按鈕，以及 BS6-101 Twizzly Gummy Cookie 昏厥後先支付紫色能量再選擇棄牌區餅乾登場；BS4-075 Black Pearl Cookie 攻擊後棄 2 張手牌改為可略過的代價選擇，並以 Browser／規則回歸驗證支付與目標流程；補正 BS6-053／BS6-055／BS6-058～BS6-062 card-check 條件、BS4-005 補位後效果傷害日誌；修正 BS6-057 Coffee Candy Cookie 將支援區 Cookie 回手正確建模為第二項技能代價，並補上規則層卡種驗證與 Browser 回歸；offset 125／150 25 張逐卡 attestation 已取得 effect trace 或合法 no-op，完整 Vitest 206 檔／3,273 項通過。 |

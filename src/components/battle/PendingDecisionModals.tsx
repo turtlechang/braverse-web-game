@@ -71,7 +71,6 @@ export function PendingDecisionModals({ match, pending }: PendingDecisionModalsP
     match.game.pendingEffectOrder &&
     !match.game.pendingEffectOrder.resolvedOrder &&
     match.game.pendingEffectOrder.playerId === match.viewerPlayerId &&
-    !match.game.pendingReplacement &&
     !match.game.pendingRefresh &&
     !match.game.pendingOnPlay
       ? match.game.pendingEffectOrder

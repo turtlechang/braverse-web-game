@@ -38,7 +38,7 @@ describe('getActingPlayerId', () => {
     expect(getActingPlayerId(state)).toBe('player-one')
   })
 
-  it('returns replacementTask playerId before pendingFaintEffects', () => {
+  it('returns pending faint effect playerId before replacementTask', () => {
     const state: GameState = {
       ...createDemoGame(),
       pendingReplacement: {
@@ -60,7 +60,7 @@ describe('getActingPlayerId', () => {
         },
       ],
     }
-    expect(getActingPlayerId(state)).toBe('player-two')
+    expect(getActingPlayerId(state)).toBe('player-one')
   })
 
   it('returns pendingDecision playerId for opponent-hand-discard', () => {

@@ -142,7 +142,7 @@ describe('faint effect queue', () => {
     expect(afterDamage.pendingFaintEffects![0].sourcePlayerId).toBe('player-one')
   })
 
-  it('queues BS4-011 after its attack faints an opponent, resolving the opponent replacement before the draw/discard', () => {
+  it('queues BS4-011 after its attack faints an opponent, resolving draw/discard before replacement', () => {
     const base = createFaintState()
     const attacker = base.players['player-two'].battleArea[0]
     const bs4011 = {
@@ -221,34 +221,14 @@ describe('faint effect queue', () => {
       }),
     ).toThrowError('必須先處理其他待處理的決策。')
 
-    // 完成本次戰鬥剩餘的傷害結算後，補位任務優先建立（attacker-faint 佇列
-    // 不阻塞補位），技能佇列在補位完成前仍被規則層拒絕。
+    // 完成本次戰鬥剩餘的傷害結算後，原攻擊者效果仍然優先，補位尚未建立。
     while (afterDamage.pendingBattle?.stage === 'damage') {
       afterDamage = resolveNextDamage(afterDamage)
     }
     expect(afterDamage.pendingBattle).toBeNull()
-    expect(afterDamage.pendingReplacement).toMatchObject({
-      tasks: [{ playerId: 'player-one', remaining: 1 }],
-    })
-    expect(() =>
-      applyGameCommand(afterDamage, {
-        kind: 'resolve-ability-effect',
-        playerId: 'player-two',
-        targetIds: [],
-      }),
-    ).toThrowError('必須先處理其他待處理的決策。')
+    expect(afterDamage.pendingReplacement).toBeNull()
 
-    const afterReplacement = applyGameCommand(afterDamage, {
-      kind: 'replace-cookie',
-      playerId: 'player-one',
-      instanceId: 'p1-replacement',
-    })
-    expect(afterReplacement.pendingReplacement).toBeNull()
-    expect(afterReplacement.pendingAbilityEffect).toMatchObject({
-      effectIndex: 0,
-    })
-
-    const afterDraw = applyGameCommand(afterReplacement, {
+    const afterDraw = applyGameCommand(afterDamage, {
       kind: 'resolve-ability-effect',
       playerId: 'player-two',
       targetIds: [],
@@ -275,6 +255,16 @@ describe('faint effect queue', () => {
       cardIds: [discardId],
     })
     expect(afterDiscard.players['player-two'].discardPile.map((card) => card.instanceId)).toContain(discardId)
+    expect(afterDiscard.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+
+    const afterReplacement = applyGameCommand(afterDiscard, {
+      kind: 'replace-cookie',
+      playerId: 'player-one',
+      instanceId: 'p1-replacement',
+    })
+    expect(afterReplacement.pendingReplacement).toBeNull()
   })
 
   it('forces BS4-011 to discard the only card drawn when the hand was empty', () => {
@@ -339,13 +329,10 @@ describe('faint effect queue', () => {
       afterDamage = resolveNextDamage(afterDamage)
     }
 
-    const afterReplacement = applyGameCommand(afterDamage, {
-      kind: 'replace-cookie',
-      playerId: 'player-one',
-      instanceId: 'p1-replacement',
-    })
+    expect(afterDamage.pendingReplacement).toBeNull()
+    expect(afterDamage.pendingAbilityEffect).toBeDefined()
 
-    const afterDraw = applyGameCommand(afterReplacement, {
+    const afterDraw = applyGameCommand(afterDamage, {
       kind: 'resolve-ability-effect',
       playerId: 'player-two',
       targetIds: [],
@@ -385,9 +372,19 @@ describe('faint effect queue', () => {
       afterResolution.players['player-two'].discardPile.map((card) => card.instanceId),
     ).toContain(drawnId)
     expect(afterResolution.pendingAbilityEffect).toBeUndefined()
+    expect(afterResolution.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+
+    const afterReplacement = applyGameCommand(afterResolution, {
+      kind: 'replace-cookie',
+      playerId: 'player-one',
+      instanceId: 'p1-replacement',
+    })
+    expect(afterReplacement.pendingReplacement).toBeNull()
   })
 
-  it('finishes the game with a defeat when the fainted opponent cannot replace, before BS4-011 resolves', () => {
+  it('finishes the game with a defeat when the fainted opponent cannot replace, after BS4-011 resolves', () => {
     const base = createFaintState()
     const attacker = base.players['player-two'].battleArea[0]
     const bs4011 = {
@@ -447,14 +444,33 @@ describe('faint effect queue', () => {
       afterDamage = resolveNextDamage(afterDamage)
     }
 
-    // 擊倒後對手戰場空缺且手牌沒有餅乾：補位任務優先建立（attacker-faint
-    // 佇列不阻塞補位），略過補位立即判負，BS4-011 的技能不會再結算。
-    expect(afterDamage.pendingReplacement).toMatchObject({
-      tasks: [{ playerId: 'player-one', remaining: 1 }],
-    })
+    // 擊倒後對手戰場空缺且手牌沒有餅乾：先完成 BS4-011 的抽牌／棄牌效果，
+    // 之後才建立補位任務並判定空場敗北。
+    expect(afterDamage.pendingReplacement).toBeNull()
     expect(afterDamage.pendingAbilityEffect).toBeDefined()
 
-    const defeated = applyGameCommand(afterDamage, {
+    const afterDraw = applyGameCommand(afterDamage, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [],
+    })
+    const discardId = afterDraw.players['player-two'].hand[0].instanceId
+    const afterDiscardDecision = applyGameCommand(afterDraw, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [discardId],
+    })
+    const afterDiscard = applyGameCommand(afterDiscardDecision, {
+      kind: 'resolve-opponent-hand-discard',
+      playerId: 'player-two',
+      cardIds: [discardId],
+    })
+    expect(afterDiscard.pendingAbilityEffect).toBeUndefined()
+    expect(afterDiscard.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+
+    const defeated = applyGameCommand(afterDiscard, {
       kind: 'skip-replacement',
       playerId: 'player-one',
     })
@@ -463,9 +479,7 @@ describe('faint effect queue', () => {
       loserId: 'player-one',
       reason: 'no-cookie-available',
     })
-    // 敗北判定優先：技能佇列殘留在 state 上但遊戲已結束（UI 不再顯示
-    // 效果結算），BS4-011 的抽牌／棄牌不曾執行。
-    expect(defeated.pendingAbilityEffect).toBeDefined()
+    expect(defeated.pendingAbilityEffect).toBeUndefined()
   })
 
   it('resolves BS4-005 targets in the selected order, including FLIP before the next Cookie', () => {
@@ -819,28 +833,19 @@ describe('faint effect queue', () => {
     }
 
     let next = finalizePendingReplacements(state)
+    expect(next.pendingReplacement).toBeNull()
+
+    // 昏厥效果先從手牌登場一張餅乾，完成後才建立離場餅乾的補位任務。
+    next = resolveFaintEffect(next, ['yellow-follow-up'], ['yellow-energy'])
+    expect(next.pendingFaintEffects).toBeUndefined()
     expect(next.pendingReplacement?.tasks).toEqual([
       { playerId: 'player-one', remaining: 1 },
     ])
-    expect(() => skipDefeatedCookieReplacement(next)).toThrow(
-      '戰鬥區沒有餅乾時必須先補位',
-    )
-    expect(() =>
-      resolveFaintEffect(next, ['yellow-follow-up'], ['yellow-energy']),
-    ).toThrow('必須先完成補位')
     next = replaceDefeatedCookie(next, 'forced-replacement')
     expect(next.pendingReplacement).toBeNull()
-    expect(next.pendingFaintEffects).toHaveLength(1)
-
-    next = resolveFaintEffect(
-      next,
-      ['yellow-follow-up'],
-      ['yellow-energy'],
-    )
-    expect(next.pendingFaintEffects).toBeUndefined()
     expect(next.players['player-one'].battleArea.map((entry) => entry.card.instanceId)).toEqual([
-      'forced-replacement',
       'yellow-follow-up',
+      'forced-replacement',
     ])
   })
 
@@ -859,11 +864,15 @@ describe('faint effect queue', () => {
     let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
     battleState = skipTrap(battleState, 'player-one')
     let afterDamage = resolveNextDamage(battleState)
-    afterDamage = replaceDefeatedCookie(afterDamage, 'p1-replacement')
 
     afterDamage = resolveFaintEffect(afterDamage, ['attacker'])
     expect(afterDamage.pendingFaintEffects).toBeUndefined()
     expect(afterDamage.players['player-two'].battleArea[0].hpCards.length).toBe(1)
+    expect(afterDamage.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+    const replaced = replaceDefeatedCookie(afterDamage, 'p1-replacement')
+    expect(replaced.pendingReplacement).toBeNull()
   })
 
   it('resolveFaintEffect skips when targets empty (up to 1 → 0)', () => {
@@ -877,11 +886,15 @@ describe('faint effect queue', () => {
     let battleState = beginAttack(state, 'attacker', 'faint-cookie', ['p2-s'])
     battleState = skipTrap(battleState, 'player-one')
     let afterDamage = resolveNextDamage(battleState)
-    afterDamage = replaceDefeatedCookie(afterDamage, 'p1-replacement')
 
     afterDamage = resolveFaintEffect(afterDamage, [])
     expect(afterDamage.pendingFaintEffects).toBeUndefined()
     expect(afterDamage.players['player-two'].battleArea[0].hpCards.length).toBe(1)
+    expect(afterDamage.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
+    const replaced = replaceDefeatedCookie(afterDamage, 'p1-replacement')
+    expect(replaced.pendingReplacement).toBeNull()
   })
 
   it('preserves the faint source name for deferred draw effects', () => {
@@ -1052,7 +1065,7 @@ describe('faint effect queue', () => {
     expect(result.pendingFaintEffects ?? []).toHaveLength(0)
   })
 
-  it('allows replacement before resolving faint effects', () => {
+  it('resolves faint effects before creating the replacement decision', () => {
     // Arrange: 直接建立一個有 pendingFaintEffects 的遊戲狀態
     const faintCookie: CookieCard = {
       id: 'faint-cookie',
@@ -1149,18 +1162,20 @@ describe('faint effect queue', () => {
       ],
     }
 
-    // Act: 觸發補位流程
+    // Act: 觸發補位流程；昏厥效果尚未完成，因此不建立補位。
     state = finalizePendingReplacements(state)
 
-    // Assert: 補位任務應該被建立（即使有 pendingFaintEffects）
-    expect(state.pendingReplacement).toBeDefined()
-    expect(state.pendingReplacement!.tasks).toEqual([
+    expect(state.pendingReplacement).toBeNull()
+
+    // Act: 先結算昏厥效果，再建立補位任務。
+    expect(state.pendingFaintEffects).toBeDefined()
+    expect(state.pendingFaintEffects!.length).toBe(1)
+    state = resolveFaintEffect(state, [])
+    expect(state.pendingReplacement?.tasks).toEqual([
       { playerId: 'player-one', remaining: 1 },
     ])
 
-    // Act: 執行補位 - 選擇手牌餅乾放入戰鬥區
-    expect(state.pendingFaintEffects).toBeDefined()
-    expect(state.pendingFaintEffects!.length).toBe(1)
+    // Act: 效果完成後執行補位。
     state = replaceDefeatedCookie(state, 'p1-replacement')
 
     // Assert: 餅乾已放入戰鬥區
@@ -1168,13 +1183,10 @@ describe('faint effect queue', () => {
     expect(state.players['player-one'].battleArea[0].card.instanceId).toBe('p1-replacement')
     expect(state.pendingReplacement).toBeNull()
 
-    // Assert: 昏厥效果仍然存在，留待後續處理
-    expect(state.pendingFaintEffects).toBeDefined()
-    expect(state.pendingFaintEffects!.length).toBe(1)
-    expect(state.pendingFaintEffects![0].sourceInstanceId).toBe('faint-cookie')
+    expect(state.pendingFaintEffects).toBeUndefined()
   })
 
-  it('allows skipping replacement when pendingFaintEffects exist', () => {
+  it('allows skipping replacement after faint effects finish', () => {
     const faintCookie: CookieCard = {
       id: 'faint-cookie',
       instanceId: 'faint-cookie',
@@ -1270,10 +1282,12 @@ describe('faint effect queue', () => {
       ],
     }
 
-    // Act: 觸發補位流程
+    // Act: 昏厥效果尚未完成時，不建立補位。
     state = finalizePendingReplacements(state)
 
-    // Assert: 補位任務已建立
+    expect(state.pendingReplacement).toBeNull()
+
+    state = resolveFaintEffect(state, [])
     expect(state.pendingReplacement).toBeDefined()
 
     // Act: 跳過補位
@@ -1282,15 +1296,12 @@ describe('faint effect queue', () => {
     // Assert: 補位已略過
     expect(state.pendingReplacement).toBeNull()
 
-    // Assert: 昏厥效果仍然存在
-    expect(state.pendingFaintEffects).toBeDefined()
-    expect(state.pendingFaintEffects!.length).toBe(1)
+    expect(state.pendingFaintEffects).toBeUndefined()
   })
 
   // 迴歸測試：UI 走 applyGameCommand（會經過 assertNoPendingDecision），
-  // 必須允許在昏厥效果待處理時補位／略過補位，否則會出現「無法補位」死結
-  // （對方回合我方餅乾被打死，補位視窗顯示卻點不動）。
-  describe('replacement command dispatch while faint effect pending', () => {
+  // 昏厥效果完成前不得補位；效果結算後才接受補位／略過補位指令。
+  describe('replacement command dispatch after faint effect resolution', () => {
     const faintCookie: CookieCard = {
       id: 'faint-cookie',
       instanceId: 'faint-cookie',
@@ -1398,14 +1409,28 @@ describe('faint effect queue', () => {
         ],
       })
 
-    it('replace-cookie command succeeds while a faint effect is pending', () => {
+    it('replace-cookie command succeeds after the faint effect completes', () => {
       const state = createPendingState()
-      expect(state.pendingReplacement?.tasks).toEqual([
+      expect(state.pendingReplacement).toBeNull()
+      expect(state.pendingFaintEffects!.length).toBe(1)
+      expect(() =>
+        applyGameCommand(state, {
+          kind: 'replace-cookie',
+          playerId: 'player-one',
+          instanceId: 'p1-replacement',
+        }),
+      ).toThrowError('必須先處理待處理的決策。')
+
+      const afterFaint = applyGameCommand(state, {
+        kind: 'resolve-faint-effect',
+        playerId: 'player-one',
+        targetIds: [],
+      })
+      expect(afterFaint.pendingReplacement?.tasks).toEqual([
         { playerId: 'player-one', remaining: 1 },
       ])
-      expect(state.pendingFaintEffects!.length).toBe(1)
 
-      const next = applyGameCommand(state, {
+      const next = applyGameCommand(afterFaint, {
         kind: 'replace-cookie',
         playerId: 'player-one',
         instanceId: 'p1-replacement',
@@ -1416,22 +1441,27 @@ describe('faint effect queue', () => {
         'p1-replacement',
       )
       expect(next.pendingReplacement).toBeNull()
-      // 昏厥效果留待補位後處理
-      expect(next.pendingFaintEffects!.length).toBe(1)
+      expect(next.pendingFaintEffects).toBeUndefined()
     })
 
-    it('skip-replacement command succeeds while a faint effect is pending', () => {
+    it('skip-replacement command succeeds after faint effect completion', () => {
       const state = createPendingState({ withExistingCookie: true })
+      expect(state.pendingReplacement).toBeNull()
 
-      const next = applyGameCommand(state, {
+      const afterFaint = applyGameCommand(state, {
+        kind: 'resolve-faint-effect',
+        playerId: 'player-one',
+        targetIds: [],
+      })
+
+      const next = applyGameCommand(afterFaint, {
         kind: 'skip-replacement',
         playerId: 'player-one',
       })
 
       expect(next.status).toBe('playing')
       expect(next.pendingReplacement).toBeNull()
-      // 昏厥效果留待略過補位後處理
-      expect(next.pendingFaintEffects!.length).toBe(1)
+      expect(next.pendingFaintEffects).toBeUndefined()
     })
 
     it('still blocks non-replacement actions while a faint effect is pending', () => {

@@ -6,6 +6,7 @@ import { applyGameCommand } from '../commands'
 import { getAttackEnergyCostForState, selectEnergyPayment } from '../energy'
 import { getRefreshCandidates } from '../refresh'
 import { getCurrentReplacementTask } from '../replacement'
+import { hasPendingCardResolution } from '../pending'
 import { advancePhase, canAttack } from '../turn'
 import {
   getActivatableSkillSources,
@@ -243,7 +244,11 @@ export const handleAiTurnState = (
   }
 
   const replacementTask = getCurrentReplacementTask(state)
-  if (!state.pendingOnPlay && replacementTask?.playerId === playerId) {
+  if (
+    !state.pendingOnPlay &&
+    !hasPendingCardResolution(state) &&
+    replacementTask?.playerId === playerId
+  ) {
     const replacement = strategy.chooseReplacement(state, playerId, strategy.currentLevel)
     if (!replacement) {
       return {
@@ -303,6 +308,7 @@ export const handleAiTurnState = (
 
   if (
     state.pendingRefresh ||
+    hasPendingCardResolution(state) ||
     state.pendingReplacement ||
     state.activePlayerId !== playerId
   ) {

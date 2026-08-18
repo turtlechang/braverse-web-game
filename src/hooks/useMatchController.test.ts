@@ -29,7 +29,7 @@ describe('getPendingChoicePlayerId', () => {
     expect(getPendingChoicePlayerId(state, replacementTask)).toBeUndefined()
   })
 
-  it('keeps replacement choice visible before pending faint effects', () => {
+  it('hides replacement choice before pending faint effects', () => {
     const state: GameState = {
       ...withReplacement(createDemoGame()),
       pendingFaintEffects: [
@@ -51,10 +51,10 @@ describe('getPendingChoicePlayerId', () => {
       ],
     }
 
-    expect(getPendingChoicePlayerId(state, replacementTask)).toBe('player-one')
+    expect(getPendingChoicePlayerId(state, replacementTask)).toBeUndefined()
   })
 
-  it('keeps replacement choice visible before unresolved effect order', () => {
+  it('hides replacement choice before unresolved effect order', () => {
     const state: GameState = {
       ...withReplacement(createDemoGame()),
       pendingEffectOrder: {
@@ -71,7 +71,7 @@ describe('getPendingChoicePlayerId', () => {
       },
     }
 
-    expect(getPendingChoicePlayerId(state, replacementTask)).toBe('player-one')
+    expect(getPendingChoicePlayerId(state, replacementTask)).toBeUndefined()
   })
 
   it('shows refresh choice before replacement choice', () => {

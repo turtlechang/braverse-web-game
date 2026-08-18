@@ -13,19 +13,6 @@ export const isPlayerControllingState = (
 export const getActingPlayerId = (state: GameState): PlayerId => {
   const pendingDecision = getPendingDecision(state)
   const replacementTask = getCurrentReplacementTask(state)
-  if (
-    replacementTask &&
-    (
-      !pendingDecision ||
-      pendingDecision.kind === 'faint-effect' ||
-      pendingDecision.kind === 'effect-order'
-    )
-  ) {
-    if (state.pendingRefresh) return state.pendingRefresh.playerId
-    if (state.pendingOnPlay) return state.pendingOnPlay.playerId
-    return replacementTask.playerId
-  }
-
   if (pendingDecision) return pendingDecision.playerId
 
   if (state.pendingRefresh) return state.pendingRefresh.playerId
@@ -43,6 +30,11 @@ export const getActingPlayerId = (state: GameState): PlayerId => {
   }
 
   if (state.pendingAbilityEffect) return state.pendingAbilityEffect.playerId
+
+  // Replacement is intentionally last. A replacement task may coexist with
+  // an effect chain after a faint; the effect owner (or battle responder) must
+  // finish that chain before the empty battle area can be filled.
+  if (replacementTask) return replacementTask.playerId
 
   return state.activePlayerId
 }

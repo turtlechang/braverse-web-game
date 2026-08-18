@@ -16,6 +16,7 @@ import {
   getSupportEffectCandidates,
   getPendingDecision,
   hasBlockingPending,
+  hasPendingCardResolution,
   getReplacementCandidates,
   getRefreshCandidates,
   explainUnavailableTraps,
@@ -106,6 +107,10 @@ export const getPendingChoicePlayerId = (
 
   const pendingDecision = getPendingDecision(game)
   if (!replacementTask) return undefined
+
+  // Effects have priority over replacement. Keep the replacement player
+  // hidden until the entire card-resolution chain is empty.
+  if (hasPendingCardResolution(game)) return undefined
 
   return !pendingDecision ||
     pendingDecision.kind === 'faint-effect' ||

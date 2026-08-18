@@ -466,14 +466,32 @@ const exerciseBs2015CostDeparture = async (page, mode) => {
   }
   await confirmButton.click()
 
+  // The skill's Then clause is still part of the original card-effect chain.
+  // It must resolve before either the terminal result or the forced
+  // replacement decision becomes visible.
+  await panel.getByText('第 2 / 2 段').waitFor({ state: 'visible' })
+  const thenConfirm = panel.getByRole('button', { name: '確認發動' })
+  if (await thenConfirm.isDisabled()) {
+    throw new Error('BS2-015 在補位前無法完成 Then 的牌庫頂放支援效果。')
+  }
+  await thenConfirm.click()
+  const activeEffectPanel = page.locator('.effect-panel[role="alertdialog"]')
+  await activeEffectPanel.waitFor({ state: 'detached' })
+
   if (mode === 'terminal') {
+    // The replacement decision is still shown after the effect chain even
+    // when there are no legal Cookie candidates; skipping it is what exposes
+    // the terminal result.
+    const terminalReplacement = page.locator('.decision-modal')
+    await terminalReplacement.waitFor({ state: 'visible' })
+    await terminalReplacement.getByRole('button', { name: '不補餅乾' }).click()
     const resultModal = page.locator('.result-modal')
     await resultModal.waitFor({ state: 'visible' })
     const resultText = await resultModal.innerText()
     if (!resultText.includes('我方沒有可登場的餅乾')) {
       throw new Error(`BS2-015 終局提示不正確：${resultText}`)
     }
-    if ((await panel.count()) > 0) {
+    if ((await activeEffectPanel.count()) > 0) {
       throw new Error('BS2-015 終局後技能面板仍未關閉。')
     }
     return 'ability-exercised:cost-terminal'
@@ -481,26 +499,14 @@ const exerciseBs2015CostDeparture = async (page, mode) => {
 
   const replacementModal = page.locator('.decision-modal')
   await replacementModal.waitFor({ state: 'visible' })
-  if ((await panel.count()) > 0) {
-    throw new Error('BS2-015 等待強制補位時不應提前顯示效果面板。')
+  if ((await activeEffectPanel.count()) > 0) {
+    throw new Error('BS2-015 效果完成後等待補位時不應殘留效果面板。')
   }
   await replacementModal.locator('.decision-card-options button').first().click()
-  await panel.waitFor({ state: 'visible' })
-  if ((await panel.locator('.effect-candidates-payment').count()) > 0) {
-    throw new Error('BS2-015 補位後重新顯示了已支付的能量步驟。')
+  await replacementModal.waitFor({ state: 'detached' })
+  if ((await activeEffectPanel.count()) > 0) {
+    throw new Error('BS2-015 補位後不應重新建立已完成的效果面板。')
   }
-  const resumedConfirm = panel.getByRole('button', { name: '確認發動' })
-  if (await resumedConfirm.isDisabled()) {
-    throw new Error('BS2-015 補位後無法以 0 個目標繼續結算。')
-  }
-  await resumedConfirm.click()
-  await panel.getByText('第 2 / 2 段').waitFor({ state: 'visible' })
-  const thenConfirm = panel.getByRole('button', { name: '確認發動' })
-  if (await thenConfirm.isDisabled()) {
-    throw new Error('BS2-015 補位後無法完成 Then 的牌庫頂放支援效果。')
-  }
-  await thenConfirm.click()
-  await panel.waitFor({ state: 'detached' })
   if ((await page.locator('.result-modal').count()) > 0) {
     throw new Error('BS2-015 有合法補位餅乾時不應立即敗北。')
   }
