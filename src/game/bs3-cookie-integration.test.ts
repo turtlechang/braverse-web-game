@@ -349,10 +349,11 @@ describe('BS3-011 Knight Cookie (integration)', () => {
 // BS3-012 Jungleberry Cookie - flip gain-hp
 // =====================================
 describe('BS3-012 Jungleberry Cookie (integration)', () => {
-  it('converts to flip ability with gain-hp', () => {
+  it('converts to flip ability with attachedHpBonus (gains +1 HP while attached)', () => {
     const flip = convertOfficialFlipAbility(findBs3Card('BS3-012'))
     expect(flip).toBeTruthy()
-    expect(flip!.effects[0]).toMatchObject({ kind: 'gain-hp', amount: 1 })
+    expect(flip!.attachedHpBonus).toBe(1)
+    expect(flip!.effects).toEqual([])
   })
 
   it('has no cookie skill', () => {

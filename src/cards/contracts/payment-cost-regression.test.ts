@@ -117,6 +117,24 @@ describe('contract payment/cost/then evidence regression', () => {
     expect(p100Card.flip?.attachedHpBonus).toBe(1)
   })
 
+  it('P-099 normalization restores the FLIP draw ability from its misplaced attack text', () => {
+    const record = records.find((card) => card.cardNumber === 'P-099')!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+    const p099Card = converted.gameCard
+    if (p099Card.type !== 'cookie') throw new Error('expected cookie card')
+    // 官方把「Draw up to 1 card from your deck.」併進 attackText 尾段；修正後
+    // 攻擊文字回復為 "<{G}> Alien Pup Secret Agent {da} 1"，FLIP 能力單獨存在。
+    expect(p099Card.attackText).toBe('<{G}> Alien Pup Secret Agent {da} 1')
+    expect(p099Card.attackEnergyCost).toEqual({ green: 1 })
+    expect(p099Card.flip?.text).toBe('Draw up to 1 card from your deck.')
+    expect(p099Card.flip?.cost).toEqual({ energy: {}, discardHand: 0 })
+    expect(p099Card.flip?.effects).toContainEqual({ kind: 'draw-up-to', max: 1 })
+    // effectText 不再空白，CardDetailModal 的 FLIP 段落能渲染。
+    expect(p099Card.effectText).toContain('Draw up to 1 card from your deck.')
+  })
+
   it('P-045 keeps the hand-to-deck-bottom payment as the first effect, not a double cost', () => {
     const record = records.find((card) => card.cardNumber === 'P-045')!
     const converted = convertOfficialCardToGameCard(record)

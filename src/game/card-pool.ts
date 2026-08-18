@@ -1,16 +1,36 @@
 import type { OfficialCardRecord } from '../cards/types'
 import { normalizeKnownOfficialCardRecord } from '../cards/official-card-normalization'
+import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import { officialCardDatasets } from './generated-card-pool'
 
 export interface CardPoolEntry extends OfficialCardRecord {
   poolId: string
 }
 
-export const hasFlipAbility = (
-  entry: Pick<CardPoolEntry, 'type' | 'flipText'>,
-): boolean =>
-  entry.type === 'flip' ||
-  (entry.type === 'cookie' && Boolean(entry.flipText?.trim()))
+// 一張卡是否為「具有 FLIP 的卡」應與 runtime 一致：官方 `type: flip` 的卡片一律視為
+// FLIP（即使 flipText 為空的 vanilla FLIP，例如 BS2-042／P-047）；`type: cookie`
+// 的卡片只有在轉接後真的有 `FlipAbility`（效果或附著加成）才算 FLIP。
+//
+// 修正前這裡只看 `cookie && flipText 非空`，會把官方將攻擊名重複寫進 flipText 的
+// 普通餅乾／變體（P-056～P-069、BS4-004@1、BS5-039@2 等，P-059 同型）誤計為 FLIP，
+// 造成 Deck editor 的「FLIP 篩選」與「FLIP N/16」上限（custom-deck.ts）偏差。
+export const hasFlipAbility = (entry: CardPoolEntry): boolean =>
+  entry.type === 'flip' || (entry.type === 'cookie' && cookieHasRuntimeFlip(entry))
+
+let cookieRuntimeFlipByNumber: Record<string, boolean> | null = null
+
+const cookieHasRuntimeFlip = (entry: CardPoolEntry): boolean => {
+  if (!cookieRuntimeFlipByNumber) {
+    cookieRuntimeFlipByNumber = {}
+    for (const raw of allRawCards) {
+      if (raw.type !== 'cookie') continue
+      const conversion = convertOfficialCardToGameCard(raw)
+      cookieRuntimeFlipByNumber[raw.cardNumber] =
+        conversion.status === 'converted' && Boolean(conversion.gameCard.flip)
+    }
+  }
+  return cookieRuntimeFlipByNumber[entry.cardNumber] ?? false
+}
 
 const allRawCards: OfficialCardRecord[] = [
   ...officialCardDatasets.flatMap(

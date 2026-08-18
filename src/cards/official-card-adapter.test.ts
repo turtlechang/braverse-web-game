@@ -480,11 +480,14 @@ describe('official card adapter', () => {
 
     expect(result.gameCard.flip).toMatchObject({
       cost: { discardHand: 1 },
-      effects: [{ kind: 'gain-hp', amount: 1 }],
+      effects: [],
+      attachedHpBonus: 1,
     })
     // 修復前這兩個欄位是 undefined，CardDetailModal 的 FLIP 段落因此不會渲染。
     expect(result.gameCard.effectText).toContain('gains +1 HP')
-    expect(result.gameCard.effects).toEqual([{ kind: 'gain-hp', amount: 1 }])
+    // 「gains +1 HP」統一以 attachedHpBonus 承載（附著期間連續 +1），
+    // 翻開發動時由 resolveFlip 轉成牌庫頂補 1 張 HP 卡。
+    expect(result.gameCard.effects).toEqual([])
   })
 
   it('uses base card number as runtime id while preserving art variant metadata', () => {

@@ -3,6 +3,7 @@ import {
   getAllCardPoolEntries,
   getCardPoolEntry,
   getCardPoolVariants,
+  hasFlipAbility,
   normalizeCardNumber,
 } from './card-pool'
 
@@ -11,6 +12,37 @@ const BS2_031_VARIANT = 'BS2-031@1'
 const BS6_091_BASE = 'BS6-091'
 const BS6_091_VARIANT = 'BS6-091@2'
 const ST1_001 = 'ST1-001'
+
+describe('hasFlipAbility runtime consistency', () => {
+  it.each([
+    // 官方 type=flip 一律算 FLIP（即使 flipText 為空的 vanilla FLIP）
+    ['P-099', true],
+    ['BS3-012', true],
+    ['BS2-042', true],
+    ['P-047', true],
+    // type=cookie 只有在轉接後真的有 FlipAbility 才算 FLIP
+    ['BS5-073', true],
+    ['BS5-074', true],
+    // 官方把攻擊名重複寫進 flipText 的普通餅乾／變體：不算 FLIP
+    ['P-056', false],
+    ['P-057', false],
+    ['P-069', false],
+    ['BS4-004@1', false],
+    ['BS4-045@1', false],
+    ['BS4-080@1', false],
+    ['BS5-039@2', false],
+  ])('hasFlipAbility(%s) matches runtime FlipAbility (%s)', (cardNumber, expected) => {
+    const entry = getCardPoolEntry(cardNumber)
+    expect(entry, 'missing pool entry ' + cardNumber).toBeDefined()
+    expect(hasFlipAbility(entry!)).toBe(expected)
+  })
+
+  it('counts a normal Cookie with a real FlipAbility toward the FLIP limit (BS5-073)', () => {
+    const entry = getCardPoolEntry('BS5-073')
+    expect(entry).toBeDefined()
+    expect(hasFlipAbility(entry!)).toBe(true)
+  })
+})
 
 describe('card-pool @ variant merging', () => {
   it('returns separate base and @1 variant entries via getCardPoolEntry', () => {

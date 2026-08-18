@@ -6428,15 +6428,17 @@ export const convertOfficialFlipAbility = (
   )
 
   if (gainHpMatch) {
+    // 「The Cookie with this card attached for HP gains +N HP.」是附著期間的連續
+    // 加成：只要這張卡還附在目標餅乾的 HP 上，剩餘 HP 就 +N（getCookieEffectiveHp
+    // 依 hpCard.flip.attachedHpBonus 計算），與 exact map 的 BS5-004／BS6-069 等
+    // 同一語意。翻開並發動時由 resolveFlip 把附著加成轉成牌庫頂補 N 張 HP 卡；
+    // 卡離開 HP（被傷害／代價磨掉……）加成就消失。修正前舊系列統一走一次性
+    // gain-hp，缺少「附著期間」的隱藏加成，與新版卡不一致。
     return {
       text: flipText,
       cost: parseAbilityCost(flipText),
-      effects: [
-        {
-          kind: 'gain-hp',
-          amount: Number(gainHpMatch[1]),
-        },
-      ],
+      effects: [],
+      attachedHpBonus: Number(gainHpMatch[1]),
     }
   }
 
