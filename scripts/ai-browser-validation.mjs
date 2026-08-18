@@ -1082,9 +1082,10 @@ try {
   await page.goto(`${baseUrl}?test-state=trap-payable`, {
     waitUntil: 'networkidle',
   })
-  await page.locator('.battle-response-modal').waitFor({ state: 'visible' })
+  const trapResponseModal = page.locator('.trap-response-modal')
+  await trapResponseModal.waitFor({ state: 'visible' })
   assert.strictEqual(
-    await page.locator('.battle-response-modal').count(),
+    await trapResponseModal.count(),
     1,
     '可支付陷阱應顯示回應視窗',
   )
@@ -1093,10 +1094,10 @@ try {
     waitUntil: 'networkidle',
   })
   await page.waitForFunction(
-    () => document.querySelector('.battle-response-modal') === null,
+    () => document.querySelector('.trap-response-modal') === null,
   )
   assert.strictEqual(
-    await page.locator('.battle-response-modal').count(),
+    await page.locator('.trap-response-modal').count(),
     0,
     '不可支付陷阱不應顯示回應視窗',
   )
@@ -1236,7 +1237,7 @@ try {
     const payableUrl = `${baseUrl}?test-state=trap-pretzel-payable`
     await page.goto(payableUrl, { waitUntil: 'networkidle' })
 
-    const battleModal = page.locator('.battle-response-modal')
+    const battleModal = page.locator('.trap-response-modal')
     await battleModal.waitFor({ state: 'visible' })
     assert.strictEqual(
       await battleModal.count(),
@@ -1340,10 +1341,10 @@ try {
       waitUntil: 'networkidle',
     })
     await page.waitForFunction(
-      () => document.querySelector('.battle-response-modal') === null,
+      () => document.querySelector('.trap-response-modal') === null,
     )
     assert.strictEqual(
-      await page.locator('.battle-response-modal').count(),
+      await page.locator('.trap-response-modal').count(),
       0,
       '攻擊 4 時 Pretzel Snare 不應顯示回應視窗',
     )
