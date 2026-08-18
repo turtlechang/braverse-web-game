@@ -3059,9 +3059,17 @@ export const convertOfficialCardEffects = (
     ],
     // BS6 YELLOW：本批只接入既有 effect primitive 可完整表示的效果。
     // 「從手牌放入休息區」保留為第一段 effect，確保先選牌並更新休息區後才進入後段。
+    // 全體傷害仍須逐一選擇對手餅乾，完成每張餅乾的傷害、FLIP 與昏厥處理後，
+    // 才能繼續下一個目標；因此不能使用無目標的普通 damage-all。
     'BS6-023': [
       { kind: 'hand-to-break', amount: 1 },
-      { kind: 'damage-all', amount: 1, side: 'opponent' },
+      {
+        kind: 'damage-all',
+        amount: 1,
+        side: 'opponent',
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
+      },
     ],
     'BS6-025': [
       {

@@ -525,7 +525,13 @@ describe('BS6 YELLOW effect adapter', () => {
       cost: { energy: {}, discardHand: 0 },
       effects: [
         { kind: 'hand-to-break', amount: 1 },
-        { kind: 'damage-all', amount: 1, side: 'opponent' },
+        {
+          kind: 'damage-all',
+          amount: 1,
+          side: 'opponent',
+          sequential: true,
+          target: { side: 'opponent', min: 1, max: 2 },
+        },
       ],
     })
     expect(convertOfficialCookieSkill(findBs6Card('BS6-032'))).toMatchObject({
