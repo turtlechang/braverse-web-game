@@ -5,7 +5,10 @@ import type {
   EffectTargetSelector,
   GameCard,
 } from '../../game'
-import { convertOfficialCardToGameCard } from '../official-card-adapter'
+import {
+  convertOfficialCardToGameCard,
+  normalizeOfficialCardRecord,
+} from '../official-card-adapter'
 import { parseOfficialCardText } from '../official-text-parser'
 import type { OfficialCardRecord } from '../types'
 import type {
@@ -1132,6 +1135,32 @@ const addActionClauses = (
   }
 }
 
+const collectCostEvidence = (
+  cost: Record<string, unknown>,
+  result: {
+    effectKinds: Set<string>
+    targetSelectors: Partial<EffectTargetSelector>[]
+    energyCosts: EnergyCost[]
+    abilityCostKeys: Set<string>
+  },
+): void => {
+  Object.keys(cost).forEach((costKey) => result.abilityCostKeys.add(costKey))
+  result.targetSelectors.push(...runtimeSelectorsForCost(cost))
+  const directEnergy: EnergyCost = {}
+  for (const color of Object.keys(ENERGY_TOKEN_TO_COLOR).map(
+    (token) => ENERGY_TOKEN_TO_COLOR[token],
+  )) {
+    const amount = cost[color]
+    if (typeof amount === 'number' && amount > 0) {
+      directEnergy[color] = amount
+    }
+  }
+  if (hasEnergy(directEnergy)) result.energyCosts.push(directEnergy)
+  if (cost.energy && typeof cost.energy === 'object') {
+    result.energyCosts.push(cost.energy as EnergyCost)
+  }
+}
+
 const collectRuntime = (value: unknown, result: {
   effectKinds: Set<string>
   targetSelectors: Partial<EffectTargetSelector>[]
@@ -1156,6 +1185,13 @@ const collectRuntime = (value: unknown, result: {
     // target.  The latter is already carried by `record.target`; expose the
     // former as selector evidence so a bracketed support-card cost can bind
     // without pretending it is a battlefield Cookie.
+    // A bracketed hand-to-deck-bottom cost is modeled by the adapter as a
+    // `discard-hand` effect whose destination is the deck bottom (for example
+    // P-045).  Expose that shape as the contract-level movement kind so the
+    // cost clause can bind to real runtime evidence.
+    if (record.kind === 'discard-hand' && record.destination === 'deck-bottom') {
+      result.effectKinds.add('hand-to-deck-bottom')
+    }
     if (record.kind === 'support-to-hp') {
       result.targetSelectors.push({
         side: 'self',
@@ -1176,6 +1212,11 @@ const collectRuntime = (value: unknown, result: {
   if (record.sourceEnergy && typeof record.sourceEnergy === 'object') {
     result.energyCosts.push(record.sourceEnergy as EnergyCost)
   }
+  // Stage cards carry the printed placement cost on `StageAbility.placementCost`;
+  // it is the runtime evidence for the source's play-cost payment clause.
+  if (record.placementCost && typeof record.placementCost === 'object') {
+    result.energyCosts.push(record.placementCost as EnergyCost)
+  }
   for (const [key, child] of Object.entries(record)) {
     if (
       key === 'kind' ||
@@ -1185,21 +1226,13 @@ const collectRuntime = (value: unknown, result: {
       key === 'sourceEnergy'
     ) continue
     if (key === 'cost' && child && typeof child === 'object') {
-      const cost = child as Record<string, unknown>
-      Object.keys(cost).forEach((costKey) => result.abilityCostKeys.add(costKey))
-      result.targetSelectors.push(...runtimeSelectorsForCost(cost))
-      const directEnergy: EnergyCost = {}
-      for (const color of Object.keys(ENERGY_TOKEN_TO_COLOR).map(
-        (token) => ENERGY_TOKEN_TO_COLOR[token],
-      )) {
-        const amount = cost[color]
-        if (typeof amount === 'number' && amount > 0) {
-          directEnergy[color] = amount
+      collectCostEvidence(child as Record<string, unknown>, result)
+    }
+    if (key === 'alternativeCosts' && Array.isArray(child)) {
+      for (const item of child) {
+        if (item && typeof item === 'object') {
+          collectCostEvidence(item as Record<string, unknown>, result)
         }
-      }
-      if (hasEnergy(directEnergy)) result.energyCosts.push(directEnergy)
-      if (cost.energy && typeof cost.energy === 'object') {
-        result.energyCosts.push(cost.energy as EnergyCost)
       }
     }
     collectRuntime(child, result)
@@ -1401,13 +1434,17 @@ export const analyzeOfficialCardBehavior = (
   record: OfficialCardRecord,
   runtimeCard?: GameCard | null,
 ): CardBehaviorAudit => {
-  const conversion = runtimeCard === undefined ? convertOfficialCardToGameCard(record) : null
+  // 契約必須稽核「runtime 實際消費的來源」：轉換邊界的正規化（例如
+  // BS4-080@2 欄位併寫、BS6 傷害 errata）發生在 adapter 內，若契約仍以
+  // 原始記錄建立子句，這些已修正的來源就永遠找不到 runtime evidence。
+  const normalized = normalizeOfficialCardRecord(record)
+  const conversion = runtimeCard === undefined ? convertOfficialCardToGameCard(normalized) : null
   const card = runtimeCard === undefined && conversion?.status === 'converted' ? conversion.gameCard : runtimeCard ?? null
   const evidence: RuntimeCardEvidence = {
     ...runtimeEvidenceFromCard(card),
     unsupportedReason: conversion?.status === 'unsupported' ? conversion.reason : undefined,
   }
-  const contract = buildContract(record, evidence)
+  const contract = buildContract(normalized, evidence)
   const runtime = {
     effectKinds: [] as string[],
     targetSelectors: [] as Partial<EffectTargetSelector>[],
@@ -1452,6 +1489,13 @@ export const analyzeOfficialCardBehavior = (
     if (cost.kind === 'support-to-hand') {
       return keys.has('supportToHand') || kinds.has('support-to-hand')
     }
+    if (cost.kind === 'trash-to-break') {
+      return (
+        // P-082 models「place 1 Cookie … from your trash into your break
+        // area」as the trap's alternative cost key.
+        keys.has('trashCookieToBreakArea') || kinds.has('trash-to-break')
+      )
+    }
     if (cost.kind === 'trash-to-deck') {
       return keys.has('trashToDeck') || kinds.has('trash-to-deck')
     }
@@ -1464,7 +1508,11 @@ export const analyzeOfficialCardBehavior = (
         // The adapter represents a self-trash payment as the generic
         // battle-cookie trash key when the source is the attacking Cookie.
         keys.has('trashBattleCookie') ||
-        kinds.has('self-to-trash')
+        kinds.has('self-to-trash') ||
+        // Stage cards model「Place this card in the trash.」as the
+        // `stage-source-to-trash` effect instead of an AbilityCost key
+        // (BS2-081).
+        kinds.has('stage-source-to-trash')
       )
     }
     if (cost.kind === 'self-to-break') return keys.has('selfToBreakArea') || kinds.has('self-to-break')
@@ -1539,7 +1587,7 @@ export const analyzeOfficialCardBehavior = (
     contract,
     runtime,
     checks: {
-      sourceHashStable: contract.sourceHash === hashSource(record),
+      sourceHashStable: contract.sourceHash === hashSource(normalized),
       paymentCovered,
       costCovered,
       targetCovered,

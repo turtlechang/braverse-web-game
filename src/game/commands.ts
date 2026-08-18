@@ -587,12 +587,13 @@ export interface PlayBlockerCommand {
   paymentIds: string[]
 }
 
-/** 對手指攻回應技能（BS5-081 Squid Ink Cookie）。 */
+/** 對手指攻回應技能（BS5-081 Squid Ink Cookie／BS5-092 Rambutan Cookie）。 */
 export interface PlayAttackResponseCommand {
   kind: 'play-attack-response'
   playerId: PlayerId
   sourceInstanceId: string
   discardHandIds: string[]
+  trashToDeckIds: string[]
 }
 
 export interface ResolveFlipCommand {
@@ -2481,6 +2482,7 @@ const applyPlayerActionCommand = (
       return playAttackResponseSkill(state, command.playerId, {
         sourceInstanceId: command.sourceInstanceId,
         discardHandIds: command.discardHandIds,
+        trashToDeckIds: command.trashToDeckIds,
       })
     case 'resolve-flip':
       return resolveFlip(state, command.playerId, {

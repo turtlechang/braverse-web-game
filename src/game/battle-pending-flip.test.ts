@@ -11,6 +11,9 @@ import {
   type GameCard,
 } from '.'
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
+import officialBs6 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
+import type { OfficialCardRecord } from '../cards/types'
 
 describe('pending battle and FLIP', () => {
   it('routes skill/item effect damage through the same FLIP flow as attack damage', () => {
@@ -199,6 +202,40 @@ describe('pending battle and FLIP', () => {
     ])
     expect(state.players['player-one'].discardPile.map((card) => card.instanceId))
       .toEqual(expect.arrayContaining(['p1-hand-a', 'gain-hp-flip']))
+  })
+
+  it('BS6-069 opens FLIP and converts its attached +1 HP into a real HP card', () => {
+    const source = (officialBs6.cards as OfficialCardRecord[]).find(
+      (card) => card.cardNumber === 'BS6-069',
+    )
+    expect(source).toBeDefined()
+    const conversion = convertOfficialCardToGameCard(source!)
+    expect(conversion.status).toBe('converted')
+    if (conversion.status !== 'converted') return
+    const flipCard = conversion.gameCard
+    expect(flipCard.flip).toMatchObject({
+      cost: { energy: {}, discardHand: 1 },
+      effects: [],
+      attachedHpBonus: 1,
+    })
+
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+
+    expect(state.pendingBattle?.stage).toBe('flip')
+    expect(state.pendingBattle?.revealedHpCard?.id).toBe('BS6-069')
+
+    state = resolveFlip(state, 'player-one', {
+      activate: true,
+      discardHandIds: ['p1-hand-a'],
+    })
+
+    expect(state.players['player-one'].battleArea[0].hpCards).toEqual([
+      expect.objectContaining({ instanceId: 'p1-deck-a' }),
+    ])
+    expect(state.players['player-one'].discardPile.map((card) => card.instanceId))
+      .toEqual(expect.arrayContaining(['p1-hand-a', 'BS6-069:1']))
   })
 
   it('rejects FLIP activation when its discard cost is not paid', () => {

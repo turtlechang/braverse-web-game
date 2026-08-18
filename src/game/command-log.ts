@@ -1321,6 +1321,29 @@ export const describeCommandSteps = (
       if (outcome) steps.push({ text: `效果結算：${outcome}` })
       return steps
     }
+    case 'play-attack-response': {
+      const steps: LogStepDetail[] = []
+      const sourceCard = findCard(state, command.sourceInstanceId)
+      if (sourceCard) {
+        steps.push({
+          text: `攻擊回應技能來源：「${sourceCard.name}」`,
+          cards: [sourceCard],
+        })
+      }
+      const discardStep = describeCardListStep(
+        state,
+        '攻擊回應代價：棄置手牌',
+        command.discardHandIds,
+      )
+      if (discardStep) steps.push(discardStep)
+      const trashToDeckStep = describeCardListStep(
+        state,
+        '攻擊回應代價：棄牌區卡片洗回牌庫',
+        command.trashToDeckIds,
+      )
+      if (trashToDeckStep) steps.push(trashToDeckStep)
+      return steps
+    }
     case 'play-item':
     case 'activate-stage': {
       const steps: LogStepDetail[] = []
@@ -1636,6 +1659,7 @@ export const resolveLogCard = (
       return findCard(previous, command.trapInstanceId)
     case 'skip-on-play':
     case 'play-blocker':
+    case 'play-attack-response':
     case 'activate-skill':
     case 'begin-activate-skill':
       return findCard(previous, command.sourceInstanceId)
@@ -1655,6 +1679,10 @@ export const resolveLogCard = (
     case 'resolve-attack-effect':
       return previous.pendingBattle?.attackerInstanceId
         ? findCard(previous, previous.pendingBattle.attackerInstanceId)
+        : undefined
+    case 'resolve-ability-effect':
+      return previous.pendingAbilityEffect?.sourceInstanceId
+        ? findCard(previous, previous.pendingAbilityEffect.sourceInstanceId)
         : undefined
     case 'resolve-faint-effect': {
       const pending = previous.pendingFaintEffects?.[0]

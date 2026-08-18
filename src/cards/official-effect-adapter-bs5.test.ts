@@ -1182,6 +1182,50 @@ describe('BS5 candidate BLUE/PURPLE/PURE ability adapter', () => {
     })
   })
 
+  it('converts BS5-092 as an opponent-attack response with a trash-to-deck cost', () => {
+    expect(convertOfficialCookieSkill(findBs5Card('BS5-092'))).toMatchObject({
+      trigger: 'opponent-attack',
+      oncePerTurn: true,
+      cost: {
+        energy: {},
+        discardHand: 0,
+        trashToDeck: { count: 3, nonCookieOnly: true },
+      },
+      effects: [
+        {
+          kind: 'modify-attack',
+          amount: -1,
+          duration: 'this-turn',
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
+  it('converts BS5-093 with a purple non-FLIP trash-to-deck skill cost', () => {
+    expect(convertOfficialCookieSkill(findBs5Card('BS5-093'))).toMatchObject({
+      trigger: 'activate',
+      oncePerTurn: true,
+      cost: {
+        energy: { purple: 1 },
+        discardHand: 0,
+        trashToDeck: {
+          count: 3,
+          energyColor: 'purple',
+          excludeFlip: true,
+          cookieOnly: true,
+        },
+      },
+      effects: [
+        {
+          kind: 'damage',
+          amount: 1,
+          target: { side: 'opponent', min: 0, max: 1 },
+        },
+      ],
+    })
+  })
+
   it('carries BS5-086 extra HP through inspect-deck conversion', () => {
     expect(convertOfficialItemAbility(findBs5Card('BS5-086'))).toMatchObject({
       cost: { energy: { blue: 2 }, discardHand: 0 },

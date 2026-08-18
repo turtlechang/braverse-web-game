@@ -118,6 +118,47 @@ export const normalizeOfficialCardRecord = (
     }
   }
 
+  // 官方 BS4-080@2 異圖把技能文字、攻擊文字與 FLIP 展示標籤全部併進
+  // attackText（技能欄位為空）。同系列異圖（BS4-027@1／047@1／100@1）
+  // 的 Blocker 技能都印有「<Rest this card.>」代價，此版本只是欄位併寫
+  // 遺失了括號文字；依基礎版本拆分欄位，並保留 @2 卡面獨有的 Then 段。
+  if (
+    sourceCard.cardNumber === 'BS4-080@2' &&
+    sourceCard.type === 'cookie' &&
+    /^Icy Glare/i.test(sourceCard.attackText ?? '') &&
+    /\{da\}\s*2\s+Then,/i.test(sourceCard.attackText ?? '')
+  ) {
+    return {
+      ...sourceCard,
+      skill: {
+        name: '{sk} Icy Glare',
+        text:
+          "{bl} <Rest this card.> (When one of your opponent's Cookies attacks, you can redirect the attack to this Cookie.)\r\n{t1} This Cookie receives -1 attack damage from LV.1 Cookies.",
+      },
+      attackText:
+        '<{B}{B}{N}> Set Sail! {da} 2 Then, if there are 5 cards or less in your hand, draw up to 2 cards from your deck.',
+    }
+  }
+
+  // 官方 P-100（FLIP）把 FLIP 效果文字誤併進 attackText，flipText 為空；
+  // 與 BS3-012 等 FLIP 的正式欄位形狀（攻擊文字＋獨立 flipText）對齊，
+  // 讓 FlipAbility 能正確取得「<Discard 1 card.>」代價與附著 HP +1。
+  if (
+    sourceCard.cardNumber === 'P-100' &&
+    sourceCard.type === 'flip' &&
+    !sourceCard.flipText &&
+    /<Discard 1 card\.>\s*The Cookie with this card attached for HP gains \+1 HP\./i.test(
+      sourceCard.attackText ?? '',
+    )
+  ) {
+    return {
+      ...sourceCard,
+      attackText: '<{B}> Bear Jelly Icicles {da} 1',
+      flipText:
+        '<Discard 1 card.> The Cookie with this card attached for HP gains +1 HP.',
+    }
+  }
+
   // 官方 BS4-004@1 異圖資料把 On Play 文字寫進 attackText，並把真正的
   // 攻擊文字寫進 flipText；轉換邊界修正欄位，不改動原始匯入資料。
   if (

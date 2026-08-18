@@ -1,0 +1,132 @@
+import { readdirSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { describe, expect, it } from 'vitest'
+import { convertOfficialCardToGameCard } from '../official-card-adapter'
+import type { OfficialCardRecord } from '../types'
+import { analyzeOfficialCardBehavior } from './ledger'
+
+/**
+ * 剩餘契約稽核的付款／代價／Then／時機證據回歸。
+ *
+ * 這批卡曾是 audit 的 needs-review（payment evidence missing ×16、
+ * payment clause has no runtime energy evidence ×3、cost evidence missing
+ * ×9、Then／once-per-turn／resolution order／timing 各 ×1，合計 25 筆）。
+ * 測試以正式 data/cards 記錄建立契約，確認每一張都已與 runtime 證據綁定。
+ */
+const REGRESSION_CARDS = [
+  'BS3-047', 'BS3-096', 'BS4-088', 'BS5-066', 'BS6-043', 'BS6-086',
+  'BS1-026', 'BS1-078', 'BS2-051', 'P-125', 'P-028', 'P-032',
+  'ST1-022', 'ST4-022', 'ST3-022', 'ST5-022',
+  'BS4-080@2', 'BS5-092@1', 'BS5-092', 'BS5-093@1', 'BS5-093',
+  'BS2-081', 'P-045', 'P-082', 'P-100',
+]
+
+const loadRecords = (): OfficialCardRecord[] => {
+  const cardsDir = resolve(process.cwd(), 'data', 'cards')
+  return readdirSync(cardsDir)
+    .filter((file) => file.endsWith('.json'))
+    .sort()
+    .flatMap((file) => {
+      const parsed = JSON.parse(readFileSync(resolve(cardsDir, file), 'utf8')) as {
+        cards?: OfficialCardRecord[]
+      }
+      return parsed.cards ?? []
+    })
+}
+
+const records = loadRecords()
+
+describe('contract payment/cost/then evidence regression', () => {
+  it.each(REGRESSION_CARDS)('%s binds all source clauses to runtime evidence', (cardNumber) => {
+    const record = records.find((card) => card.cardNumber === cardNumber)
+    expect(record, 'missing data record ' + cardNumber).toBeDefined()
+    const audit = analyzeOfficialCardBehavior(record!)
+    expect(audit.contract.status, audit.errors.join(' | ')).toBe('verified')
+    expect(audit.errors, audit.errors.join(' | ')).toEqual([])
+    expect(audit.checks.paymentCovered).toBe(true)
+    expect(audit.checks.costCovered).toBe(true)
+    expect(audit.checks.targetCovered).toBe(true)
+    expect(audit.checks.resolutionOrderCovered).toBe(true)
+    expect(audit.checks.timingCovered).toBe(true)
+  })
+
+  it('stage placement cost is collected as runtime energy evidence', () => {
+    const audit = analyzeOfficialCardBehavior(
+      records.find((card) => card.cardNumber === 'ST3-022')!,
+    )
+    // ST3-022 只有「《{G}》 Place in your stage area.」一個能量付款子句。
+    expect(audit.contract.payments).toHaveLength(1)
+    expect(audit.runtime.energyCosts).toContainEqual({ green: 1 })
+  })
+
+  it('BS5-092 models the bracketed return-to-deck clause as a trashToDeck cost', () => {
+    const record = records.find((card) => card.cardNumber === 'BS5-092')!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+    expect(converted.gameCard.skill?.trigger).toBe('opponent-attack')
+    expect(converted.gameCard.skill?.cost.trashToDeck).toEqual({
+      count: 3,
+      nonCookieOnly: true,
+    })
+  })
+
+  it('BS5-093 models the purple non-FLIP return-to-deck clause as a trashToDeck cost', () => {
+    const record = records.find((card) => card.cardNumber === 'BS5-093')!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+    expect(converted.gameCard.skill?.trigger).toBe('activate')
+    expect(converted.gameCard.skill?.cost.trashToDeck).toEqual({
+      count: 3,
+      energyColor: 'purple',
+      excludeFlip: true,
+      cookieOnly: true,
+    })
+  })
+
+  it('BS4-080@2 normalization splits skill and attack and carries the Then draw', () => {
+    const record = records.find((card) => card.cardNumber === 'BS4-080@2')!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+    const gameCard = converted.gameCard
+    if (gameCard.type !== 'cookie') throw new Error('expected cookie card')
+    expect(gameCard.skill?.trigger).toBe('block')
+    expect(gameCard.skill?.oncePerTurn).toBe(true)
+    expect(gameCard.skill?.restSource).toBe(true)
+    expect(gameCard.attackText).toContain('Then,')
+    expect(gameCard.attackEffects).toContainEqual(
+      expect.objectContaining({
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      }),
+    )
+  })
+
+  it('P-100 normalization restores the FLIP ability with its discard cost', () => {
+    const record = records.find((card) => card.cardNumber === 'P-100')!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+    const p100Card = converted.gameCard
+    if (p100Card.type !== 'cookie') throw new Error('expected cookie card')
+    expect(p100Card.attackEnergyCost).toEqual({ blue: 1 })
+    expect(p100Card.flip?.cost.discardHand).toBe(1)
+    expect(p100Card.flip?.attachedHpBonus).toBe(1)
+  })
+
+  it('P-045 keeps the hand-to-deck-bottom payment as the first effect, not a double cost', () => {
+    const record = records.find((card) => card.cardNumber === 'P-045')!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+    expect(converted.gameCard.skill?.cost).toEqual({ energy: {}, discardHand: 0 })
+    expect(converted.gameCard.skill?.effects[0]).toEqual({
+      kind: 'discard-hand',
+      count: 1,
+      destination: 'deck-bottom',
+    })
+  })
+})

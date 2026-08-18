@@ -3223,6 +3223,11 @@ export const convertOfficialCardEffects = (
         kind: 'damage-all',
         amount: 2,
         side: 'opponent',
+        // All opponent Cookies are damaged one at a time so the player can
+        // choose the resolution order and complete each Cookie's FLIP/faint
+        // handling before moving to the next target.
+        sequential: true,
+        target: { side: 'opponent', min: 1, max: 2 },
         condition: { kind: 'support-count-less-than-opponent', difference: 2 },
       },
     ],
@@ -5227,6 +5232,15 @@ export const convertOfficialAttackEffects = (
       },
     ],
     // === BS4 藍色餅乾卡攻擊 Then ===
+    // BS4-080@2 異圖的攻擊文字帶有基礎版沒有的 Then 段：
+    // 「Then, if there are 5 cards or less in your hand, draw up to 2 cards.」
+    'BS4-080@2': [
+      {
+        kind: 'draw-up-to',
+        max: 2,
+        condition: { kind: 'hand-count-at-most', count: 5 },
+      },
+    ],
     'BS4-076': [
       {
         kind: 'draw-up-to',
@@ -7391,6 +7405,21 @@ const exactCookieSkillCosts: Partial<Record<string, AbilityCost>> = {
     energy: {},
     discardHand: 1,
   },
+  // BS5-092 Rambutan Cookie：被動回應的「<return 3 non-Cookie cards from
+  // your trash to your deck and shuffle it.>」是技能代價；generic parser
+  // 不認得「return … from your trash to your deck」句型。
+  'BS5-092': {
+    energy: {},
+    discardHand: 0,
+    trashToDeck: { count: 3, nonCookieOnly: true },
+  },
+  // BS5-093 Lychee Dragon Cookie：【Activate】<{P}><Return 3 {P} Cookies
+  // that do not have FLIP from your trash to your deck and shuffle it.>
+  'BS5-093': {
+    energy: { purple: 1 },
+    discardHand: 0,
+    trashToDeck: { count: 3, energyColor: 'purple', excludeFlip: true, cookieOnly: true },
+  },
 }
 
 const exactCookieSkillSourceEnergy: Partial<
@@ -7408,6 +7437,9 @@ const exactCookieSkillTriggers: Partial<Record<string, SkillTrigger>> = {
   'BS3-025': 'activate',
   'BS4-004': 'on-play',
   'BS5-081': 'opponent-attack',
+  // BS5-092 與 BS5-081 同樣是「When your opponent's Cookie attacks」的
+  // 防守方一次性回應技能，在陷阱視窗內宣告並支付代價。
+  'BS5-092': 'opponent-attack',
 }
 
 /**
