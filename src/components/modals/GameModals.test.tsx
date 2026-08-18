@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { CookieCard, CookieInBattle, GameCard } from '../../game'
 import {
   AttackResponseModal,
+  AttackResponseSkillModal,
   CardDetailModal,
   DecisionModal,
   DiscardRevealModal,
@@ -568,6 +569,75 @@ describe('AttackResponseModal', () => {
         undefined,
     )
     expect(container.querySelector('.attack-response-modal')).not.toBeNull()
+
+    await act(() => root.unmount())
+  })
+
+  it('exposes opponent-attack response skills as a selectable response type', async () => {
+    const responseCookie: CookieInBattle = {
+      ...createBattleCookie(52),
+      card: {
+        ...createBattleCookie(52).card,
+        id: 'BS5-092',
+        name: 'Rambutan Cookie',
+      },
+    }
+    const onSelectAttackResponse = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <AttackResponseModal
+        trapCards={[]}
+        blockerCards={[]}
+        attackResponseSkills={[responseCookie]}
+        onSelectAttackResponse={onSelectAttackResponse}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    await click(findButton(container, 'Rambutan Cookie'))
+    expect(onSelectAttackResponse).toHaveBeenCalledWith(responseCookie.card.instanceId)
+    expect(container.querySelector('.attack-response-skill-option')).not.toBeNull()
+
+    await act(() => root.unmount())
+  })
+})
+
+describe('AttackResponseSkillModal', () => {
+  it('requires every trash-to-deck cost card before enabling payment', async () => {
+    const responseCookie: CookieInBattle = {
+      ...createBattleCookie(53),
+      card: {
+        ...createBattleCookie(53).card,
+        id: 'BS5-092',
+        name: 'Rambutan Cookie',
+      },
+    }
+    const costCards = [createHandCard(53), createHandCard(54), createHandCard(55)]
+    const onConfirm = vi.fn()
+    const onToggle = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <AttackResponseSkillModal
+        skills={[responseCookie]}
+        selectedSkillId={responseCookie.card.instanceId}
+        trashToDeckCards={costCards}
+        trashToDeckAmount={3}
+        selectedTrashToDeckIds={[]}
+        onSelectSkill={() => undefined}
+        onToggleTrashToDeck={onToggle}
+        onBack={() => undefined}
+        onSkip={() => undefined}
+        onConfirm={onConfirm}
+      />,
+    ))
+
+    const confirm = findButton(container, '支付代價並發動')
+    expect(confirm?.disabled).toBe(true)
+    await click(findButton(container, '測試手牌 53'))
+    expect(onToggle).toHaveBeenCalledWith(costCards[0].instanceId)
+    expect(container.querySelector('.attack-response-trash-to-deck-candidates')).not.toBeNull()
 
     await act(() => root.unmount())
   })

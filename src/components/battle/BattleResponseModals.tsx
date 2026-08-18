@@ -6,6 +6,7 @@ import {
 import type { CardEffect, GameCommand } from '../../game'
 import {
   AttackResponseModal,
+  AttackResponseSkillModal,
   TrapResponseModal,
   BlockerResponseModal,
   FlipResponseModal,
@@ -69,12 +70,14 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
     <>
       {match.game.pendingBattle?.stage === 'trap' &&
         match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
-        match.playerTrapCandidates.length > 0 &&
-        match.playerBlockerCandidates.length > 0 &&
-        match.pendingResponseMode === null && (
+        match.pendingResponseMode === null &&
+        (match.playerTrapCandidates.length > 0 ||
+          match.playerBlockerCandidates.length > 0 ||
+          match.playerAttackResponseCandidates.length > 0) && (
           <AttackResponseModal
             trapCards={match.playerTrapCandidates}
             blockerCards={match.playerBlockerCandidates}
+            attackResponseSkills={match.playerAttackResponseCandidates}
             attackerCard={attackAttackerCard}
             attackTargetCard={attackTargetCard}
             onSelectTrap={(id) => {
@@ -89,10 +92,19 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setTrapSelectNoTarget(false)
               match.setSelectedTrapSupportTrashIds([])
               match.setSelectedTrapTrashToDeckIds([])
+              match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseTrashToDeckIds([])
+              match.setSelectedAttackResponseDiscardIds([])
             }}
             onSelectBlocker={(id) => {
               match.setPendingResponseMode('blocker')
               match.setSelectedBlockerId(id)
+            }}
+            onSelectAttackResponse={(id) => {
+              match.setPendingResponseMode('attack-response')
+              match.setSelectedAttackResponseId(id)
+              match.setSelectedAttackResponseTrashToDeckIds([])
+              match.setSelectedAttackResponseDiscardIds([])
             }}
             onSkip={() => {
               match.dispatch(
@@ -106,8 +118,10 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
       {match.game.pendingBattle?.stage === 'trap' &&
         match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
         match.playerTrapCandidates.length > 0 &&
-        (match.playerBlockerCandidates.length === 0 ||
-          match.pendingResponseMode === 'trap') && (
+        (match.pendingResponseMode === 'trap' ||
+          (match.pendingResponseMode === null &&
+            match.playerBlockerCandidates.length === 0 &&
+            match.playerAttackResponseCandidates.length === 0)) && (
           <TrapResponseModal
             cards={match.playerTrapCandidates}
             selectedTrapId={match.selectedTrapId}
@@ -212,7 +226,9 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               )
             }
             onBack={
-              match.playerBlockerCandidates.length > 0
+              match.pendingResponseMode === 'trap' &&
+              (match.playerBlockerCandidates.length > 0 ||
+                match.playerAttackResponseCandidates.length > 0)
                 ? () => {
                     match.setSelectedTrapId(null)
                     match.setSelectedTrapDiscardIds([])
@@ -223,6 +239,9 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
                     match.setSelectedTrapSupportTrashIds([])
                     match.setPendingResponseMode(null)
                     match.setSelectedTrapTrashToDeckIds([])
+                    match.setSelectedAttackResponseId(null)
+                    match.setSelectedAttackResponseTrashToDeckIds([])
+                    match.setSelectedAttackResponseDiscardIds([])
                   }
                 : undefined
             }
@@ -238,6 +257,9 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
               match.setSelectedTrapSupportToHandIds([])
               match.setSelectedTrapHandToSupportIds([])
               match.setSelectedTrapTrashToDeckIds([])
+              match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseTrashToDeckIds([])
+              match.setSelectedAttackResponseDiscardIds([])
               match.dispatch(
                 { kind: 'skip-trap', playerId: match.viewerPlayerId },
                 '未發動陷阱，進入傷害結算。',
@@ -307,48 +329,6 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
 
       {match.game.pendingBattle?.stage === 'trap' &&
         match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
-        match.playerTrapCandidates.length === 0 &&
-        match.playerBlockerCandidates.length > 0 && (
-          <BlockerResponseModal
-            blockerCards={match.playerBlockerCandidates}
-            selectedBlockerId={match.selectedBlockerId}
-            attackerCard={attackAttackerCard}
-            attackTargetCard={attackTargetCard}
-            paymentCards={match.game.players[
-              match.viewerPlayerId
-            ].supportArea
-              .filter((support) =>
-                match.selectedBlockerPaymentIds.includes(
-                  support.card.instanceId,
-                ),
-              )
-              .map((support) => support.card)}
-            onSelectBlocker={(id) => match.setSelectedBlockerId(id)}
-            onConfirm={() => {
-              if (!match.selectedBlockerId) return
-              match.dispatch(
-                {
-                  kind: 'play-blocker',
-                  playerId: match.viewerPlayerId,
-                  sourceInstanceId: match.selectedBlockerId!,
-                  paymentIds: match.selectedBlockerPaymentIds,
-                },
-                '已使用 Blocker 阻擋攻擊。',
-              )
-            }}
-            onSkip={() => {
-              match.setSelectedBlockerId(null)
-              match.dispatch(
-                { kind: 'skip-trap', playerId: match.viewerPlayerId },
-                '未使用 Blocker，進入傷害結算。',
-              )
-            }}
-          />
-        )}
-
-      {match.game.pendingBattle?.stage === 'trap' &&
-        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
-        match.playerTrapCandidates.length > 0 &&
         match.playerBlockerCandidates.length > 0 &&
         match.pendingResponseMode === 'blocker' && (
           <BlockerResponseModal
@@ -389,6 +369,65 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
             onBack={() => {
               match.setSelectedBlockerId(null)
               match.setPendingResponseMode(null)
+            }}
+          />
+        )}
+
+      {match.game.pendingBattle?.stage === 'trap' &&
+        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
+        match.playerAttackResponseCandidates.length > 0 &&
+        match.pendingResponseMode === 'attack-response' && (
+          <AttackResponseSkillModal
+            skills={match.playerAttackResponseCandidates}
+            selectedSkillId={match.selectedAttackResponseId}
+            trashToDeckCards={match.attackResponseTrashToDeckCandidates}
+            trashToDeckAmount={match.attackResponseTrashToDeckAmount}
+            selectedTrashToDeckIds={match.selectedAttackResponseTrashToDeckIds}
+            onSelectSkill={(id) => {
+              match.setSelectedAttackResponseId(id)
+              match.setSelectedAttackResponseTrashToDeckIds([])
+              match.setSelectedAttackResponseDiscardIds([])
+            }}
+            onToggleTrashToDeck={match.toggleAttackResponseTrashToDeck}
+            discardHandCards={match.attackResponseDiscardCandidates}
+            discardHandAmount={match.attackResponseDiscardAmount}
+            selectedDiscardHandIds={match.selectedAttackResponseDiscardIds}
+            onToggleDiscardHand={match.toggleAttackResponseDiscard}
+            attackerCard={attackAttackerCard}
+            attackTargetCard={attackTargetCard}
+            onBack={() => {
+              match.setPendingResponseMode(null)
+              match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseTrashToDeckIds([])
+              match.setSelectedAttackResponseDiscardIds([])
+            }}
+            onSkip={() => {
+              match.setPendingResponseMode(null)
+              match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseTrashToDeckIds([])
+              match.setSelectedAttackResponseDiscardIds([])
+              match.dispatch(
+                { kind: 'skip-trap', playerId: match.viewerPlayerId },
+                '未發動攻擊回應，進入傷害結算。',
+              )
+            }}
+            onConfirm={() => {
+              if (!match.selectedAttackResponseId) return
+              const command: GameCommand = {
+                kind: 'play-attack-response',
+                playerId: match.viewerPlayerId,
+                sourceInstanceId: match.selectedAttackResponseId,
+                discardHandIds: match.selectedAttackResponseDiscardIds,
+                trashToDeckIds: match.selectedAttackResponseTrashToDeckIds,
+              }
+              const skill = match.playerAttackResponseCandidates.find(
+                (cookie) => cookie.card.instanceId === match.selectedAttackResponseId,
+              )
+              match.setPendingResponseMode(null)
+              match.setSelectedAttackResponseId(null)
+              match.setSelectedAttackResponseTrashToDeckIds([])
+              match.setSelectedAttackResponseDiscardIds([])
+              match.dispatch(command, `已發動${skill?.card.name ?? '攻擊回應技能'}。`)
             }}
           />
         )}

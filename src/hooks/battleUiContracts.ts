@@ -109,8 +109,28 @@ export interface BattleUiMatchLike {
   setSelectedBlockerId: (value: string | null) => void
   playerBlockerCandidates: CookieInBattle[]
   selectedBlockerPaymentIds: string[]
-  pendingResponseMode: 'trap' | 'blocker' | null
-  setPendingResponseMode: (value: 'trap' | 'blocker' | null) => void
+  pendingResponseMode: 'trap' | 'blocker' | 'attack-response' | null
+  setPendingResponseMode: (
+    value: 'trap' | 'blocker' | 'attack-response' | null,
+  ) => void
+  // Opponent-attack response skill
+  playerAttackResponseCandidates: CookieInBattle[]
+  selectedAttackResponseId: string | null
+  setSelectedAttackResponseId: (value: string | null) => void
+  selectedAttackResponseTrashToDeckIds: string[]
+  setSelectedAttackResponseTrashToDeckIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  attackResponseTrashToDeckCandidates: GameCard[]
+  attackResponseTrashToDeckAmount: number
+  toggleAttackResponseTrashToDeck: (instanceId: string) => void
+  selectedAttackResponseDiscardIds: string[]
+  setSelectedAttackResponseDiscardIds: (
+    value: string[] | ((current: string[]) => string[]),
+  ) => void
+  attackResponseDiscardCandidates: GameCard[]
+  attackResponseDiscardAmount: number
+  toggleAttackResponseDiscard: (instanceId: string) => void
   // Flip
   selectedFlipDiscardIds: string[]
   setSelectedFlipDiscardIds: (

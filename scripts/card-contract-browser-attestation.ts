@@ -44,14 +44,47 @@ const readTrace = async (page: Page): Promise<CardContractActionTraceEntry[]> =>
 
 const legalNoOpReasons: Record<string, string> = {
   'BS2-042': '官方卡面沒有技能或 FLIP 效果，部署後沒有可驗證的效果指令。',
+  'BS2-073': '官方技能是被動攻擊修正，沒有可由玩家單獨宣告的 UI 指令；本 fixture 以合法 no-op 記錄。',
+  'BS3-001': '官方技能是被動攻擊修正，沒有可由玩家單獨宣告的 UI 指令；本 fixture 以合法 no-op 記錄。',
+  'BS3-006': '官方技能是被動全域攻擊修正，沒有可由玩家單獨宣告的 UI 指令；本 fixture 以合法 no-op 記錄。',
 }
 
-const faintTraceCards = new Set(['BS2-040', 'BS2-043'])
+const faintTraceCards = new Set(['BS2-040', 'BS2-043', 'BS2-074'])
+const blockerTraceCards = new Set(['BS2-067'])
 
 // Trap card-check routes begin in the real attack-response modal.  Selecting
 // "不發動" (the old generic fallback) meant BS2-049/050 never reached their
 // payment/target decisions and therefore produced no public effect trace.
-const trapTraceCards = new Set(['BS2-049', 'BS2-050'])
+const trapTraceCards = new Set(['BS2-049', 'BS2-050', 'BS2-079', 'BS2-080', 'P-082'])
+
+const drainBlockerResponseModal = async (page: Page): Promise<boolean> => {
+  const modal = page.locator('.blocker-response-modal')
+  if ((await modal.count()) === 0) return false
+
+  const selected = modal.locator('.modal-card-options > button.is-selected')
+  if ((await selected.count()) === 0) {
+    const option = modal.locator('.modal-card-options > button').first()
+    if ((await option.count()) > 0) {
+      await option.click({ force: true })
+      await page.waitForTimeout(100)
+    }
+  }
+
+  const confirm = modal.getByRole('button', { name: /使用 Blocker/ })
+  if ((await confirm.count()) > 0 && !(await confirm.first().isDisabled().catch(() => true))) {
+    await confirm.first().click({ force: true })
+    await page.waitForTimeout(180)
+    return true
+  }
+
+  const skip = modal.getByRole('button', { name: /不使用/ })
+  if ((await skip.count()) > 0) {
+    await skip.first().click({ force: true })
+    await page.waitForTimeout(120)
+    return true
+  }
+  return true
+}
 
 const drainGenericEffectPanel = async (page: Page): Promise<boolean> => {
   const panel = page.locator('.effect-panel')
@@ -62,6 +95,8 @@ const drainGenericEffectPanel = async (page: Page): Promise<boolean> => {
     '.effect-candidates-cost-support button',
     '.effect-candidates-discard-hand button',
     '.effect-candidates-trash-battle button',
+    '.effect-candidates-trash-deck-bottom button',
+    '.effect-candidates-trash-deck button',
     '.effect-candidates-target button',
   ]
   for (let round = 0; round < 12; round += 1) {
@@ -139,6 +174,17 @@ const drainTrapResponseModal = async (page: Page): Promise<boolean> => {
       .first()
     if ((await candidate.count()) > 0) {
       await candidate.click({ force: true })
+      await page.waitForTimeout(70)
+      continue
+    }
+
+    // The self-target guided phase (e.g. P-082「Select 1 Cookie from each
+    // player」) renders its candidates outside `.trap-guided-section`.
+    const selfTarget = modal
+      .locator('.trap-target-options button:not(.is-selected):not([disabled])')
+      .first()
+    if ((await selfTarget.count()) > 0) {
+      await selfTarget.click({ force: true })
       await page.waitForTimeout(70)
       continue
     }
@@ -223,6 +269,13 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
         continue
       }
     }
+    if (blockerTraceCards.has(traceCardId)) {
+      const handledBlocker = await drainBlockerResponseModal(page)
+      if (handledBlocker) {
+        await page.waitForTimeout(120)
+        continue
+      }
+    }
     const response = page.locator('.battle-response-modal').filter({ hasText: /是否發動|是否使用|回應/ })
     const skip = response.getByRole('button', { name: /略過|不發動/ })
     if ((await skip.count()) > 0) {
@@ -252,6 +305,21 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
           await page.waitForTimeout(60)
         }
         const confirm = faint.getByRole('button', { name: /確認 \(2\)/ })
+        if ((await confirm.count()) > 0 && !(await confirm.first().isDisabled().catch(() => true))) {
+          await confirm.first().click({ force: true })
+          await page.waitForTimeout(180)
+          continue
+        }
+      }
+      if (traceCardId === 'BS2-074') {
+        const targets = faint.locator(
+          '.faint-target-candidates > button:not(.is-selected), .faint-card-candidates > button:not(.is-selected)',
+        )
+        if ((await targets.count()) > 0) {
+          await targets.first().click({ force: true })
+          await page.waitForTimeout(80)
+        }
+        const confirm = faint.getByRole('button', { name: /確認 \(\d+\)|確認結算/ })
         if ((await confirm.count()) > 0 && !(await confirm.first().isDisabled().catch(() => true))) {
           await confirm.first().click({ force: true })
           await page.waitForTimeout(180)
@@ -326,6 +394,197 @@ const exerciseBatchCardRoute = async (page: Page, cardId: string) => {
     traceEntries: trace.length,
     commandKinds: attestation.observedCommandKinds,
     steps: attestation.observedSteps,
+  }
+}
+
+/**
+ * Dedicated human-flow attestations for the two BS5 cards whose costs are not
+ * reachable through the generic card-check action loop.  Keep these routes
+ * explicit so a future fixture change cannot silently turn a payment or skip
+ * path into a no-op.
+ */
+const exerciseDedicatedBs5Routes = async (browser: Browser) => {
+  const bs5092PositivePage = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  bs5092PositivePage.setDefaultTimeout(7000)
+  await bs5092PositivePage.goto(
+    `${baseUrl}?test-state=card:BS5-092&contract-card=BS5-092`,
+    { waitUntil: 'networkidle' },
+  )
+  await bs5092PositivePage.locator('.game-shell').waitFor({ state: 'visible' })
+  const responseModal = bs5092PositivePage.locator('.attack-response-modal')
+  await responseModal.waitFor({ state: 'visible' })
+  const responseSkill = responseModal.locator(
+    '.attack-response-skill-option[data-card-id="BS5-092"]',
+  )
+  await responseSkill.click({ force: true })
+  const responseSkillModal = bs5092PositivePage.locator('.attack-response-skill-modal')
+  await responseSkillModal.waitFor({ state: 'visible' })
+  const responseConfirm = responseSkillModal.getByRole('button', {
+    name: '支付代價並發動',
+  })
+  assert.equal(
+    await responseConfirm.isDisabled(),
+    true,
+    'BS5-092 未選滿 3 張棄牌區代價時不得確認',
+  )
+  const responseCostCards = responseSkillModal.locator(
+    '.attack-response-trash-to-deck-candidates button',
+  )
+  assert.ok(
+    (await responseCostCards.count()) >= 3,
+    'BS5-092 正向 fixture 必須提供至少 3 張非餅乾棄牌區代價',
+  )
+  for (let index = 0; index < 3; index += 1) {
+    await responseCostCards.nth(index).click({ force: true })
+    await bs5092PositivePage.waitForTimeout(70)
+  }
+  assert.equal(
+    await responseConfirm.isDisabled(),
+    false,
+    'BS5-092 選滿棄牌區代價後應可確認發動',
+  )
+  await responseConfirm.click({ force: true })
+  await bs5092PositivePage.waitForTimeout(220)
+  await drainGenericEffectPanel(bs5092PositivePage)
+  const bs5092PositiveTrace = await waitForTrace(bs5092PositivePage, 1)
+  const bs5092PositiveAttestation = attestCardContractActionTrace(
+    bs5092PositiveTrace,
+    { requiredCommandKinds: ['play-attack-response'] },
+  )
+  assert.equal(
+    bs5092PositiveAttestation.passed,
+    true,
+    `BS5-092 正向 Browser trace 應包含支付與技能指令：${bs5092PositiveAttestation.errors.join('; ')}`,
+  )
+  await bs5092PositivePage.close()
+
+  const bs5092SkipPage = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  bs5092SkipPage.setDefaultTimeout(7000)
+  await bs5092SkipPage.goto(
+    `${baseUrl}?test-state=card:BS5-092&contract-card=BS5-092`,
+    { waitUntil: 'networkidle' },
+  )
+  await bs5092SkipPage.locator('.game-shell').waitFor({ state: 'visible' })
+  await bs5092SkipPage.locator('.attack-response-modal').waitFor({ state: 'visible' })
+  await bs5092SkipPage
+    .locator('.attack-response-skill-option[data-card-id="BS5-092"]')
+    .click({ force: true })
+  const skipSkillModal = bs5092SkipPage.locator('.attack-response-skill-modal')
+  await skipSkillModal.waitFor({ state: 'visible' })
+  await skipSkillModal.getByRole('button', { name: '略過此回應' }).click({ force: true })
+  await bs5092SkipPage.waitForTimeout(220)
+  assert.equal(
+    await skipSkillModal.count(),
+    0,
+    'BS5-092 略過路徑應關閉攻擊回應技能 UI',
+  )
+  await bs5092SkipPage.close()
+
+  const bs5092NegativePage = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  bs5092NegativePage.setDefaultTimeout(7000)
+  await bs5092NegativePage.goto(
+    `${baseUrl}?test-state=card-negative:BS5-092&contract-card=BS5-092`,
+    { waitUntil: 'networkidle' },
+  )
+  await bs5092NegativePage.locator('.game-shell').waitFor({ state: 'visible' })
+  await bs5092NegativePage.waitForTimeout(300)
+  assert.equal(
+    await bs5092NegativePage.locator('.attack-response-modal').count(),
+    0,
+    'BS5-092 負向 fixture 不足 3 張代價時不得顯示回應技能選擇',
+  )
+  const bs5092NegativeTrace = await readTrace(bs5092NegativePage)
+  const bs5092NegativeAttestation = attestCardContractActionTrace(
+    bs5092NegativeTrace,
+    { requiredCommandKinds: ['play-attack-response'] },
+  )
+  assert.equal(
+    bs5092NegativeAttestation.passed,
+    false,
+    'BS5-092 負向 fixture 不應產生攻擊回應技能 trace',
+  )
+  await bs5092NegativePage.close()
+
+  const bs5093PositivePage = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  bs5093PositivePage.setDefaultTimeout(7000)
+  await bs5093PositivePage.goto(
+    `${baseUrl}?test-state=card:BS5-093&contract-card=BS5-093`,
+    { waitUntil: 'networkidle' },
+  )
+  await bs5093PositivePage.locator('.game-shell').waitFor({ state: 'visible' })
+  const bs5093SkillButton = bs5093PositivePage.locator('.bottom-field .skill-action').first()
+  await bs5093SkillButton.waitFor({ state: 'visible' })
+  assert.equal(await bs5093SkillButton.isDisabled(), false, 'BS5-093 正向 fixture 應可支付 Activate')
+  await bs5093SkillButton.click({ force: true })
+  const bs5093Panel = bs5093PositivePage.locator('.effect-panel')
+  await bs5093Panel.waitFor({ state: 'visible' })
+  assert.ok(
+    (await bs5093Panel.locator('.effect-candidates-trash-deck button').count()) >= 3,
+    'BS5-093 正向 fixture 必須顯示 3 張紫色餅乾代價候選',
+  )
+  await drainGenericEffectPanel(bs5093PositivePage)
+  const bs5093PositiveTrace = await waitForTrace(bs5093PositivePage, 1)
+  const bs5093PositiveAttestation = attestCardContractActionTrace(
+    bs5093PositiveTrace,
+    { requiredCommandKinds: ['begin-activate-skill'] },
+  )
+  assert.equal(
+    bs5093PositiveAttestation.passed,
+    true,
+    `BS5-093 正向 Browser trace 應包含 Activate 與支付：${bs5093PositiveAttestation.errors.join('; ')}`,
+  )
+  await bs5093PositivePage.close()
+
+  const bs5093NegativePage = await browser.newPage({ viewport: { width: 1440, height: 960 } })
+  bs5093NegativePage.setDefaultTimeout(7000)
+  await bs5093NegativePage.goto(
+    `${baseUrl}?test-state=card-negative:BS5-093&contract-card=BS5-093`,
+    { waitUntil: 'networkidle' },
+  )
+  await bs5093NegativePage.locator('.game-shell').waitFor({ state: 'visible' })
+  await bs5093NegativePage.waitForTimeout(300)
+  const bs5093NegativeSkillButton = bs5093NegativePage.locator('.bottom-field .skill-action').first()
+  assert.equal(
+    await bs5093NegativeSkillButton.count(),
+    0,
+    'BS5-093 負向 fixture 不足代價時不應顯示可發動技能按鈕',
+  )
+  const bs5093NegativeTrace = await readTrace(bs5093NegativePage)
+  const bs5093NegativeAttestation = attestCardContractActionTrace(
+    bs5093NegativeTrace,
+    { requiredCommandKinds: ['begin-activate-skill'] },
+  )
+  assert.equal(
+    bs5093NegativeAttestation.passed,
+    false,
+    'BS5-093 負向 fixture 不應產生 Activate trace',
+  )
+  await bs5093NegativePage.close()
+
+  return {
+    bs5092: {
+      positive: {
+        passed: bs5092PositiveAttestation.passed,
+        commandKinds: bs5092PositiveAttestation.observedCommandKinds,
+        steps: bs5092PositiveAttestation.observedSteps,
+      },
+      skipped: true,
+      negative: {
+        passed: !bs5092NegativeAttestation.passed,
+        errors: bs5092NegativeAttestation.errors,
+      },
+    },
+    bs5093: {
+      positive: {
+        passed: bs5093PositiveAttestation.passed,
+        commandKinds: bs5093PositiveAttestation.observedCommandKinds,
+        steps: bs5093PositiveAttestation.observedSteps,
+      },
+      negative: {
+        passed: !bs5093NegativeAttestation.passed,
+        errors: bs5093NegativeAttestation.errors,
+      },
+    },
   }
 }
 
@@ -426,6 +685,8 @@ try {
   )
   await blockedPage.close()
 
+  const dedicatedBs5 = await exerciseDedicatedBs5Routes(browser)
+
   const batchResults: Array<{
     cardId: string
     traceCardId?: string
@@ -496,6 +757,7 @@ try {
             steps: blockedAttestation.observedSteps,
           },
         },
+        dedicatedBs5,
         traceEntries: positiveTrace.length,
         ...(batchReportPath
           ? {

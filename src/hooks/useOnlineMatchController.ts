@@ -12,6 +12,7 @@ import {
   buildReplayIssueBundle,
   getAfterDamageEffectCandidates,
   getAfterDamageEffectMinMax,
+  getAttackResponseSkillCandidates,
   getBlockerCandidates,
   getCurrentReplacementTask,
   getFaintEffectCardCandidates,
@@ -30,6 +31,7 @@ import {
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
   getTrashToDeckCandidates,
+  getTrashToDeckCostCandidates,
   getEnergyCostTotal,
   hasBlockingPending,
   isEnergyColorCompatibleWithCost,
@@ -83,8 +85,15 @@ export function useOnlineMatchController(params: {
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
   const [selectedTrapSelfTargetId, setSelectedTrapSelfTargetId] = useState<string | null>(null)
   const [selectedTrapSupportTrashIds, setSelectedTrapSupportTrashIds] = useState<string[]>([])
-  const [pendingResponseMode, setPendingResponseMode] = useState<'trap' | 'blocker' | null>(null)
+  const [pendingResponseMode, setPendingResponseMode] = useState<
+    'trap' | 'blocker' | 'attack-response' | null
+  >(null)
   const [selectedBlockerId, setSelectedBlockerId] = useState<string | null>(null)
+  const [selectedAttackResponseId, setSelectedAttackResponseId] = useState<string | null>(null)
+  const [selectedAttackResponseTrashToDeckIds, setSelectedAttackResponseTrashToDeckIds] =
+    useState<string[]>([])
+  const [selectedAttackResponseDiscardIds, setSelectedAttackResponseDiscardIds] =
+    useState<string[]>([])
   const [selectedFlipDiscardIds, setSelectedFlipDiscardIds] = useState<
     string[]
   >([])
@@ -205,7 +214,8 @@ export function useOnlineMatchController(params: {
       battle.trapUsed ||
       battle.defenderPlayerId !== viewerPlayerId ||
       getTrapCandidates(game, viewerPlayerId).length > 0 ||
-      getBlockerCandidates(game, viewerPlayerId).length > 0
+      getBlockerCandidates(game, viewerPlayerId).length > 0 ||
+      getAttackResponseSkillCandidates(game, viewerPlayerId).length > 0
     ) {
       return
     }
@@ -682,6 +692,65 @@ export function useOnlineMatchController(params: {
       ) ?? []
     : []
 
+  const playerAttackResponseCandidates =
+    game.pendingBattle?.stage === 'trap' &&
+    game.pendingBattle.defenderPlayerId === viewerPlayerId
+      ? getAttackResponseSkillCandidates(game, viewerPlayerId)
+      : []
+  const selectedAttackResponse = playerAttackResponseCandidates.find(
+    (cookie) => cookie.card.instanceId === selectedAttackResponseId,
+  )
+  const attackResponseCost = selectedAttackResponse?.card.skill?.cost ?? {}
+  const attackResponseTrashToDeckAmount =
+    attackResponseCost.trashToDeck?.count ?? 0
+  const attackResponseTrashToDeckCandidates =
+    attackResponseCost.trashToDeck
+      ? getTrashToDeckCostCandidates(
+          attackResponseCost,
+          game.players[viewerPlayerId].discardPile,
+        )
+      : []
+  const attackResponseDiscardAmount = attackResponseCost.discardHand ?? 0
+  const attackResponseDiscardCandidates = selectedAttackResponse
+    ? getDiscardHandCostCandidates(
+        attackResponseCost,
+        game.players[viewerPlayerId].hand,
+        selectedAttackResponse.card.instanceId,
+      )
+    : []
+  const toggleAttackResponseTrashToDeck = (instanceId: string) => {
+    if (
+      !attackResponseTrashToDeckCandidates.some(
+        (card) => card.instanceId === instanceId,
+      )
+    ) {
+      return
+    }
+    setSelectedAttackResponseTrashToDeckIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < attackResponseTrashToDeckAmount
+          ? [...current, instanceId]
+          : current,
+    )
+  }
+  const toggleAttackResponseDiscard = (instanceId: string) => {
+    if (
+      !attackResponseDiscardCandidates.some(
+        (card) => card.instanceId === instanceId,
+      )
+    ) {
+      return
+    }
+    setSelectedAttackResponseDiscardIds((current) =>
+      current.includes(instanceId)
+        ? current.filter((id) => id !== instanceId)
+        : current.length < attackResponseDiscardAmount
+          ? [...current, instanceId]
+          : current,
+    )
+  }
+
   const replacementTask = getCurrentReplacementTask(game)
   const viewerControlsState = isPlayerControllingState(game, viewerPlayerId)
 
@@ -784,6 +853,19 @@ export function useOnlineMatchController(params: {
     selectedBlockerPaymentIds,
     pendingResponseMode,
     setPendingResponseMode,
+    playerAttackResponseCandidates,
+    selectedAttackResponseId,
+    setSelectedAttackResponseId,
+    selectedAttackResponseTrashToDeckIds,
+    setSelectedAttackResponseTrashToDeckIds,
+    attackResponseTrashToDeckCandidates,
+    attackResponseTrashToDeckAmount,
+    toggleAttackResponseTrashToDeck,
+    selectedAttackResponseDiscardIds,
+    setSelectedAttackResponseDiscardIds,
+    attackResponseDiscardCandidates,
+    attackResponseDiscardAmount,
+    toggleAttackResponseDiscard,
     // Flip
     selectedFlipDiscardIds,
     setSelectedFlipDiscardIds,

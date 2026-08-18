@@ -546,7 +546,7 @@ const commandShapes = {
   },
   'play-attack-response': {
     requiredStrings: ['sourceInstanceId'],
-    requiredStringArrays: ['discardHandIds'],
+    requiredStringArrays: ['discardHandIds', 'trashToDeckIds'],
   },
   'resolve-flip': {
     requiredBooleans: ['activate'],

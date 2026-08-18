@@ -1237,10 +1237,12 @@ export function TrapResponseModal({
 export interface AttackResponseModalProps {
   trapCards: GameCard[]
   blockerCards: CookieInBattle[]
+  attackResponseSkills?: CookieInBattle[]
   attackerCard?: GameCard | null
   attackTargetCard?: GameCard | null
   onSelectTrap?: (instanceId: string) => void
   onSelectBlocker?: (instanceId: string) => void
+  onSelectAttackResponse?: (instanceId: string) => void
   onSkip: () => void
   onInspectCard?: (card: GameCard) => void
 }
@@ -1248,10 +1250,12 @@ export interface AttackResponseModalProps {
 export function AttackResponseModal({
   trapCards,
   blockerCards,
+  attackResponseSkills = [],
   attackerCard,
   attackTargetCard,
   onSelectTrap,
   onSelectBlocker,
+  onSelectAttackResponse,
   onSkip,
 }: AttackResponseModalProps) {
   const [minimized, setMinimized] = useState(false)
@@ -1266,7 +1270,8 @@ export function AttackResponseModal({
         <span>
           <strong>攻擊宣告回應</strong>
           <small>
-            陷阱 {trapCards.length} 張 · Blocker {blockerCards.length} 張
+            陷阱 {trapCards.length} 張 · Blocker {blockerCards.length} 張 ·
+            攻擊回應技能 {attackResponseSkills.length} 張
           </small>
         </span>
         <Maximize2 aria-hidden="true" />
@@ -1291,7 +1296,7 @@ export function AttackResponseModal({
         </button>
         <span>攻擊宣告回應</span>
         <h2>選擇回應方式</h2>
-        <p>每次攻擊只能發動一種回應，請選擇使用陷阱卡或 Blocker。</p>
+        <p>每次攻擊只能發動一種回應，請選擇陷阱、Blocker 或攻擊回應技能。</p>
         <AttackDeclarationSummary
           attackerCard={attackerCard}
           attackTargetCard={attackTargetCard}
@@ -1324,6 +1329,25 @@ export function AttackResponseModal({
                   onClick={() => onSelectBlocker?.(cookie.card.instanceId)}
                 >
               <CardFace card={cookie.card} />
+                  <span>{cookie.card.name}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        {attackResponseSkills.length > 0 && (
+          <>
+            <strong>攻擊回應技能</strong>
+            <div className="modal-card-options">
+              {attackResponseSkills.map((cookie) => (
+                <button
+                  type="button"
+                  className="attack-response-skill-option"
+                  data-card-id={cookie.card.id}
+                  key={cookie.card.instanceId}
+                  onClick={() => onSelectAttackResponse?.(cookie.card.instanceId)}
+                >
+                  <CardFace card={cookie.card} />
                   <span>{cookie.card.name}</span>
                 </button>
               ))}
@@ -2363,6 +2387,158 @@ export function SpecialPlayModal({
           <button type="button" onClick={onCancel}>取消</button>
           <button type="button" disabled={!selectedCandidateId} onClick={onConfirm}>
             確認特殊登場
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+export interface AttackResponseSkillModalProps {
+  skills: CookieInBattle[]
+  selectedSkillId: string | null
+  trashToDeckCards?: GameCard[]
+  trashToDeckAmount?: number
+  selectedTrashToDeckIds?: string[]
+  onSelectSkill: (instanceId: string) => void
+  onToggleTrashToDeck?: (instanceId: string) => void
+  discardHandCards?: GameCard[]
+  discardHandAmount?: number
+  selectedDiscardHandIds?: string[]
+  onToggleDiscardHand?: (instanceId: string) => void
+  attackerCard?: GameCard | null
+  attackTargetCard?: GameCard | null
+  onBack: () => void
+  onSkip: () => void
+  onConfirm: () => void
+}
+
+/**
+ * 對手指攻回應技能的正式人類操作入口。代價候選由規則層 hook
+ * 提供，Modal 只負責呈現與收集選取，確認後送出 play-attack-response；
+ * 技能的後續目標則由共用 EffectPanel 結算。
+ */
+export function AttackResponseSkillModal({
+  skills,
+  selectedSkillId,
+  trashToDeckCards = [],
+  trashToDeckAmount = 0,
+  selectedTrashToDeckIds = [],
+  onSelectSkill,
+  onToggleTrashToDeck,
+  discardHandCards = [],
+  discardHandAmount = 0,
+  selectedDiscardHandIds = [],
+  onToggleDiscardHand,
+  attackerCard,
+  attackTargetCard,
+  onBack,
+  onSkip,
+  onConfirm,
+}: AttackResponseSkillModalProps) {
+  const selectedSkill = skills.find(
+    (cookie) => cookie.card.instanceId === selectedSkillId,
+  )
+  const canConfirm = Boolean(
+    selectedSkill &&
+      selectedTrashToDeckIds.length === trashToDeckAmount &&
+      selectedDiscardHandIds.length === discardHandAmount,
+  )
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal attack-response-skill-modal"
+        role="alertdialog"
+      >
+        <button type="button" className="return-response" onClick={onBack}>
+          <ChevronLeft aria-hidden="true" />
+          返回回應選擇
+        </button>
+        <span>攻擊宣告回應</span>
+        <h2>發動攻擊回應技能</h2>
+        <AttackDeclarationSummary
+          attackerCard={attackerCard}
+          attackTargetCard={attackTargetCard}
+        />
+        <p>先完成技能代價；確認後會進入共用目標選擇流程。</p>
+        <div className="modal-card-options">
+          {skills.map((cookie) => (
+            <button
+              type="button"
+              className={
+                selectedSkillId === cookie.card.instanceId ? 'is-selected' : ''
+              }
+              key={cookie.card.instanceId}
+              onClick={() => onSelectSkill(cookie.card.instanceId)}
+            >
+              <CardFace card={cookie.card} />
+              <span>{cookie.card.name}</span>
+            </button>
+          ))}
+        </div>
+        {selectedSkill && (
+          <>
+            {discardHandAmount > 0 && (
+              <div className="trap-guided-section">
+                <strong>
+                  從手牌棄置 {discardHandAmount} 張（已選{' '}
+                  {selectedDiscardHandIds.length}/{discardHandAmount}）
+                </strong>
+                <div className="modal-card-options compact">
+                  <div className="attack-response-discard-candidates">
+                  {discardHandCards.map((card) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedDiscardHandIds.includes(card.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      key={card.instanceId}
+                      onClick={() => onToggleDiscardHand?.(card.instanceId)}
+                    >
+                      <CardFace card={card} />
+                      <span>{card.name}</span>
+                    </button>
+                  ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            {trashToDeckAmount > 0 && (
+              <div className="trap-guided-section">
+                <strong>
+                  從棄牌區洗回牌庫 {trashToDeckAmount} 張（已選{' '}
+                  {selectedTrashToDeckIds.length}/{trashToDeckAmount}）
+                </strong>
+                <div className="modal-card-options compact">
+                  <div className="attack-response-trash-to-deck-candidates">
+                  {trashToDeckCards.map((card) => (
+                    <button
+                      type="button"
+                      className={
+                        selectedTrashToDeckIds.includes(card.instanceId)
+                          ? 'is-selected'
+                          : ''
+                      }
+                      key={card.instanceId}
+                      onClick={() => onToggleTrashToDeck?.(card.instanceId)}
+                    >
+                      <CardFace card={card} />
+                      <span>{card.name}</span>
+                    </button>
+                  ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        <div className="modal-actions">
+          <button type="button" onClick={onSkip}>略過此回應</button>
+          <button type="button" disabled={!canConfirm} onClick={onConfirm}>
+            支付代價並發動
           </button>
         </div>
       </section>
