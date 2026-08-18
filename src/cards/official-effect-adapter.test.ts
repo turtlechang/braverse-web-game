@@ -1478,9 +1478,10 @@ describe('Starter Deck RED official effect adapter', () => {
       expect(result?.cost.discardHand).toBe(1)
     })
 
-    it('ST5-008 Fairy Cookie converts to flip gain-hp', () => {
+    it('ST5-008 Fairy Cookie converts to flip attachedHpBonus', () => {
       expect(convertOfficialFlipAbility(findPurpleCard('ST5-008'))).toMatchObject({
-        effects: [{ kind: 'gain-hp', amount: 1 }],
+        effects: [],
+        attachedHpBonus: 1,
       })
     })
 

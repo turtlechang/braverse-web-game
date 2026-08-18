@@ -53,8 +53,8 @@ export const HIGH_RISK_CARD_SEMANTIC_CONTRACTS: Record<string, CardSemanticContr
     reason: 'FLIP 棄手牌代價與增加 HP 必須同時存在',
     expectations: [
       { path: 'flip.cost.discardHand', expected: 1 },
-      { path: 'flip.effects.0.kind', expected: 'gain-hp' },
-      { path: 'flip.effects.0.amount', expected: 1 },
+      { path: 'flip.effects.length', expected: 0 },
+      { path: 'flip.attachedHpBonus', expected: 1 },
     ],
   },
   'BS2-058': {

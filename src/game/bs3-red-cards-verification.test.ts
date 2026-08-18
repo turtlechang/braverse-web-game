@@ -362,13 +362,11 @@ describe('紅色 BS3 Flip 卡效果', () => {
     })
   })
 
-  it('BS3-012 Jungleberry Cookie: gain-hp 1', () => {
+  it('BS3-012 Jungleberry Cookie: attachedHpBonus (gains +1 HP while attached)', () => {
     const flip = convertOfficialFlipAbility(findBs3Card('BS3-012'))
     expect(flip).toBeTruthy()
-    expect(flip!.effects[0]).toMatchObject({
-      kind: 'gain-hp',
-      amount: 1,
-    })
+    expect(flip!.attachedHpBonus).toBe(1)
+    expect(flip!.effects).toEqual([])
   })
 })
 

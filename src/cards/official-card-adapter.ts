@@ -159,6 +159,26 @@ export const normalizeOfficialCardRecord = (
     }
   }
 
+  // 官方 P-099（FLIP）把 FLIP 效果文字（抽 1 張）誤併進 attackText，flipText
+  // 為空。與 P-100 同屬「FLIP 效果文字併進 attackText」的欄位錯置：若不拆回，
+  // runtime 沒有 FlipAbility，這張 FLIP 卡在對戰中翻開時不會開啟 FLIP 決策窗，
+  // 卡牌詳情的 FLIP 段也會是一片空白（P_EXACT_FLIP_EFFECTS['P-099'] 因 flipText
+  // 為空而永遠到達不了）。依官方卡面拆回攻擊文字與獨立 flipText。
+  if (
+    sourceCard.cardNumber === 'P-099' &&
+    sourceCard.type === 'flip' &&
+    !sourceCard.flipText &&
+    /^<\{G\}>\s*Alien Pup Secret Agent\s*\{da\}\s*1\s*Draw up to 1 card from your deck\.?$/i.test(
+      sourceCard.attackText ?? '',
+    )
+  ) {
+    return {
+      ...sourceCard,
+      attackText: '<{G}> Alien Pup Secret Agent {da} 1',
+      flipText: 'Draw up to 1 card from your deck.',
+    }
+  }
+
   // 官方 BS4-004@1 異圖資料把 On Play 文字寫進 attackText，並把真正的
   // 攻擊文字寫進 flipText；轉換邊界修正欄位，不改動原始匯入資料。
   if (

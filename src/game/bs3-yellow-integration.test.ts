@@ -203,10 +203,11 @@ describe('BS3-034 Sparkling Cookie', () => {
 // BS3-035 High Priest Cheesenbird - flip gain-hp
 // =====================================
 describe('BS3-035 High Priest Cheesenbird', () => {
-  it('converts to flip ability with gain-hp', () => {
+  it('converts to flip ability with attachedHpBonus (gains +1 HP while attached)', () => {
     const flip = convertOfficialFlipAbility(findBs3Card('BS3-035'))
     expect(flip).toBeTruthy()
-    expect(flip!.effects[0]).toMatchObject({ kind: 'gain-hp', amount: 1 })
+    expect(flip!.attachedHpBonus).toBe(1)
+    expect(flip!.effects).toEqual([])
   })
 })
 

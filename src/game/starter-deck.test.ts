@@ -430,7 +430,8 @@ describe('official purple starter deck', () => {
       type: 'cookie',
       flip: {
         cost: { energy: {}, discardHand: 1 },
-        effects: [{ kind: 'gain-hp', amount: 1 }],
+        effects: [],
+        attachedHpBonus: 1,
       },
     })
     expect(windsweptValley).toMatchObject({
@@ -628,7 +629,11 @@ describe('official FLIP and TRAP abilities', () => {
       expect(flipCards.length).toBeGreaterThan(0)
       expect(flipCards.every((card) => Boolean(card.flip?.text))).toBe(true)
       expect(
-        flipCards.every((card) => (card.flip?.effects.length ?? 0) > 0),
+        flipCards.every(
+          (card) =>
+            (card.flip?.effects.length ?? 0) > 0 ||
+            card.flip?.attachedHpBonus !== undefined,
+        ),
       ).toBe(true)
     }
   })
@@ -667,7 +672,8 @@ describe('official FLIP and TRAP abilities', () => {
 
     expect(gainHpFlip?.flip).toMatchObject({
       cost: { energy: {}, discardHand: 1 },
-      effects: [{ kind: 'gain-hp', amount: 1 }],
+      effects: [],
+      attachedHpBonus: 1,
     })
     expect(drawFlip?.flip).toMatchObject({
       cost: { energy: {}, discardHand: 0 },

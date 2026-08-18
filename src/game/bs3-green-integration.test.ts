@@ -259,14 +259,12 @@ describe('BS3-055 White Lily Cookie: OnPlay support-to-hp + attack Then', () => 
   })
 })
 
-describe('BS3-056 Pinecone Cookie: flip gain-hp', () => {
+describe('BS3-056 Pinecone Cookie: flip attachedHpBonus (gains +1 HP while attached)', () => {
   it('flip converts correctly', () => {
     const flip = convertOfficialFlipAbility(findBs3Card('BS3-056'))
     expect(flip).toBeTruthy()
-    expect(flip!.effects[0]).toMatchObject({
-      kind: 'gain-hp',
-      amount: 1,
-    })
+    expect(flip!.attachedHpBonus).toBe(1)
+    expect(flip!.effects).toEqual([])
   })
 })
 

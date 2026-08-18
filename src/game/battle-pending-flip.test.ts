@@ -12,6 +12,7 @@ import {
 } from '.'
 import { cookie, createBattleState, declareAttack, item } from './test-helpers/battle-helpers'
 import officialBs6 from '../../data/cards/official-age-of-heroes-and-kingdoms-bs6.en.json'
+import officialP from '../../data/cards/official-p-0xx-remaining.en.json'
 import { convertOfficialCardToGameCard } from '../cards/official-card-adapter'
 import type { OfficialCardRecord } from '../cards/types'
 
@@ -236,6 +237,39 @@ describe('pending battle and FLIP', () => {
     ])
     expect(state.players['player-one'].discardPile.map((card) => card.instanceId))
       .toEqual(expect.arrayContaining(['p1-hand-a', 'BS6-069:1']))
+  })
+
+  it('P-099 FLIP opens a decision window and draws 1 card when revealed and activated', () => {
+    const source = (officialP.cards as OfficialCardRecord[]).find(
+      (card) => card.cardNumber === 'P-099',
+    )
+    expect(source).toBeDefined()
+    const conversion = convertOfficialCardToGameCard(source!)
+    expect(conversion.status).toBe('converted')
+    if (conversion.status !== 'converted') return
+    const flipCard = conversion.gameCard
+    // 修正前官方把 FLIP 效果併進 attackText、flipText 為空，這張 FLIP 卡沒有
+    // FlipAbility，翻開時不會停在 flip 決策窗；修正後會。
+    expect(flipCard.flip).toMatchObject({
+      text: 'Draw up to 1 card from your deck.',
+      effects: [{ kind: 'draw-up-to', max: 1 }],
+    })
+
+    let state = createBattleState()
+    state.players['player-one'].battleArea[0].hpCards = [flipCard]
+    state = resolveNextDamage(skipTrap(declareAttack(state), 'player-one'))
+
+    expect(state.pendingBattle?.stage).toBe('flip')
+    expect(state.pendingBattle?.revealedHpCard?.id).toBe('P-099')
+
+    const handBefore = state.players['player-one'].hand.length
+    state = resolveFlip(state, 'player-one', { activate: true })
+
+    expect(state.players['player-one'].hand.length).toBe(handBefore + 1)
+    expect(state.players['player-one'].discardPile).toContainEqual(
+      expect.objectContaining({ id: 'P-099' }),
+    )
+    expect(state.status).toBe('playing')
   })
 
   it('rejects FLIP activation when its discard cost is not paid', () => {
