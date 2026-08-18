@@ -322,7 +322,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
     await act(() => root.unmount())
   })
 
-  it('does not activate faint targeting while replacement is pending', async () => {
+  it('keeps faint targeting active before a pending replacement', async () => {
     const gameState: GameState = {
       ...createItemUsageDemoState(true),
       pendingReplacement: {
@@ -358,7 +358,7 @@ describe('usePendingEffect cancelPendingSkill', () => {
     const root = createRoot(container)
     await act(() => root.render(<TestHarness />))
 
-    expect(captured!.faintActive).toBe(false)
+    expect(captured!.faintActive).toBe(true)
 
     await act(() => root.unmount())
   })
@@ -1153,7 +1153,7 @@ describe('usePendingEffect BS4-062 staged selections', () => {
 })
 
 describe('usePendingEffect BS2-015 cost departure', () => {
-  it('commits the finished state when BS2-015 trashes the last battle Cookie without a replacement', async () => {
+  it('keeps BS2-015 effects pending before the replacement decision when no Cookie is available', async () => {
     const gameState = createBs2015CostDepartureGameState(false)
     const setGameMock = vi.fn()
     const setMessageMock = vi.fn()
@@ -1212,23 +1212,18 @@ describe('usePendingEffect BS2-015 cost departure', () => {
 
     expect(setGameMock).toHaveBeenCalledTimes(1)
     expect(setGameMock.mock.calls[0][0]).toMatchObject({
-      status: 'finished',
-      result: {
-        loserId: 'player-one',
-        reason: 'no-cookie-available',
-      },
+      status: 'playing',
       pendingReplacement: null,
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourceInstanceId: source.instanceId,
+      },
     })
-    expect(captured!.pendingEffect).toBeNull()
-    expect(captured!.suspendedEffect).toBeNull()
-    expect(setMessageMock).not.toHaveBeenLastCalledWith(
-      '目前沒有待處理的效果。',
-    )
 
     await act(() => root.unmount())
   })
 
-  it('commits BS2-015 cost departure and suspends its effect until forced replacement finishes', async () => {
+  it('commits BS2-015 cost departure and resolves its effect before forced replacement', async () => {
     const gameState = createBs2015CostDepartureGameState(true)
     let captured: ReturnType<typeof usePendingEffect> | null = null
     let currentGame = gameState
@@ -1292,19 +1287,26 @@ describe('usePendingEffect BS2-015 cost departure', () => {
 
     expect(currentGame).toMatchObject({
       status: 'playing',
-      pendingReplacement: {
-        tasks: [{ playerId: 'player-one', remaining: 1 }],
-      },
+      pendingReplacement: null,
       pendingAbilityEffect: {
         playerId: 'player-one',
         sourceInstanceId: source.instanceId,
       },
     })
-    expect(captured!.pendingEffect).toBeNull()
-    expect(captured!.suspendedEffect).toMatchObject({
+    expect(captured!.pendingEffect).toMatchObject({
+      effectIndex: 1,
       skillActivated: true,
       sourceCard: { id: 'BS2-015' },
       selectedTargetIds: [],
+    })
+    expect(captured!.suspendedEffect).toBeNull()
+
+    await act(() => {
+      captured!.confirmEffect()
+    })
+    expect(currentGame.pendingAbilityEffect).toBeUndefined()
+    expect(currentGame.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
     })
 
     const replacementId =
@@ -1324,11 +1326,7 @@ describe('usePendingEffect BS2-015 cost departure', () => {
 
     expect(currentGame.pendingReplacement).toBeNull()
     expect(captured!.suspendedEffect).toBeNull()
-    expect(captured!.pendingEffect).toMatchObject({
-      skillActivated: true,
-      sourceCard: { id: 'BS2-015' },
-      selectedTargetIds: [],
-    })
+    expect(captured!.pendingEffect).toBeNull()
 
     await act(() => root.unmount())
   })
@@ -2191,11 +2189,10 @@ describe('usePendingEffect BS3-113 sequential all-target OnPlay', () => {
 
 /**
  * 攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011 甜辣醬餅乾）
- * 依規則必須等本次戰鬥收尾與對手的空場補位完成後才能結算。規則層讓補位任務
- * 優先建立（佇列不阻塞補位），本機 UI 的面板建立條件也必須一致：補位／戰鬥
- * 未完成前不顯示效果面板，避免玩家點確認卻被規則層拒絕。
+ * 必須先等本次戰鬥收尾，再結算完整的攻擊後效果；效果鏈完成後才建立對手的
+ * 空場補位任務。本機 UI 的面板建立條件也必須一致，不能讓補位視窗搶在效果前面。
  */
-describe('usePendingEffect attacker-faint queue waits for battle wrap-up and replacement', () => {
+describe('usePendingEffect attacker-faint queue resolves effects before replacement', () => {
   const buildFaintQueueState = (): GameState => {
     const state = createBattleState()
     state.players['player-one'].battleArea[0] = {
@@ -2275,7 +2272,7 @@ describe('usePendingEffect attacker-faint queue waits for battle wrap-up and rep
     return result
   }
 
-  it('hides the effect panel until the battle wraps up and replacement completes', async () => {
+  it('shows the effect panel after battle wrap-up and delays replacement until it completes', async () => {
     vi.useFakeTimers()
     let state = buildFaintQueueState()
     state = beginAttack(state, 'attacker', 'defender', ['p2-support'])
@@ -2285,20 +2282,39 @@ describe('usePendingEffect attacker-faint queue waits for battle wrap-up and rep
       afterDamage = resolveNextDamage(afterDamage)
     }
 
-    // 前置：擊倒觸發佇列與補位任務並存，且補位優先
+    // 戰鬥結束後只保留攻擊者擊倒效果；補位尚未建立。
     expect(afterDamage.pendingAbilityEffect).toMatchObject({
       trigger: 'attacker-faint',
     })
-    expect(afterDamage.pendingReplacement).not.toBeNull()
+    expect(afterDamage.pendingReplacement).toBeNull()
+
+    // 原效果鏈仍未完成時，UI 應先顯示效果面板，而不是補位視窗。
+    const beforeReplacement = await renderPendingEffectHarness(
+      afterDamage,
+      'player-two',
+    )
+    expect(beforeReplacement.pendingEffect).not.toBeNull()
+    expect(beforeReplacement.currentEffect).toMatchObject({ kind: 'draw' })
+
+    // 完成攻擊後效果後，規則層才建立補位任務。
+    const afterEffect = applyGameCommand(afterDamage, {
+      kind: 'resolve-ability-effect',
+      playerId: 'player-two',
+      targetIds: [],
+    })
+    expect(afterEffect.pendingAbilityEffect).toBeUndefined()
+    expect(afterEffect.pendingReplacement).toMatchObject({
+      tasks: [{ playerId: 'player-one', remaining: 1 }],
+    })
 
     const duringReplacement = await renderPendingEffectHarness(
-      afterDamage,
+      afterEffect,
       'player-two',
     )
     expect(duringReplacement.pendingEffect).toBeNull()
 
-    // 補位完成後：佇列面板才會出現，玩家接著結算抽牌效果
-    const afterReplacement = applyGameCommand(afterDamage, {
+    // 補位完成後，攻擊後效果不會被重新建立或遺留。
+    const afterReplacement = applyGameCommand(afterEffect, {
       kind: 'replace-cookie',
       playerId: 'player-one',
       instanceId: 'p1-replacement',
@@ -2309,8 +2325,7 @@ describe('usePendingEffect attacker-faint queue waits for battle wrap-up and rep
       afterReplacement,
       'player-two',
     )
-    expect(afterReplacementView.pendingEffect).not.toBeNull()
-    expect(afterReplacementView.currentEffect).toMatchObject({ kind: 'draw' })
+    expect(afterReplacementView.pendingEffect).toBeNull()
 
     vi.useRealTimers()
   })

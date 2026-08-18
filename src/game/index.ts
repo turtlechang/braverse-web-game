@@ -264,7 +264,7 @@ export {
   playStage,
 } from './card-abilities'
 export { getRefreshCandidates, refreshDeck } from './refresh'
-export { hasBlockingPending } from './pending'
+export { hasBlockingPending, hasPendingCardResolution } from './pending'
 export { getActingPlayerId, isPlayerControllingState } from './controller'
 export {
   createGame,

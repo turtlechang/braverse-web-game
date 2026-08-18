@@ -31,7 +31,7 @@ import {
   finalizePendingReplacements,
   recordCookieDepartures,
 } from './replacement'
-import { hasBlockingPending } from './pending'
+import { hasPendingCardResolution } from './pending'
 import {
   canPayTrashBattleCookieCost,
   canPayTrashCookieToBreakAreaCost,
@@ -1648,10 +1648,10 @@ const addFaintedColor = (
 /**
  * 攻擊者的被動技能若明確檢查「本次戰鬥有對手餅乾昏厥」，要在昏厥實際發生
  * 後建立效果佇列。這和「此餅乾昏厥時」不同：來源仍在戰鬥區，且依官方規則
- * （昏厥後先維持戰線），對手的空場補位／Refresh 必須優先完成，補位完成後
- * 再由既有的 pendingAbilityEffect UI 逐步結算。佇列以
- * `trigger: 'attacker-faint'` 標記，讓 `continuePendingReplacements` 不會被它
- * 阻塞，但 `resolvePendingAbilityEffect` 仍會拒絕在補位完成前結算。
+ * （昏厥後先完成原效果鏈），對手的空場補位／Refresh 必須等戰鬥與攻擊者觸發
+ * 的效果都結算後才能建立。佇列以 `trigger: 'attacker-faint'` 標記，讓
+ * `resolvePendingAbilityEffect` 能保留正確的因果來源；補位會由統一出口在佇列
+ * 清空後建立。
  */
 const queueAttackerFaintTriggeredSkill = (
   state: GameState,
@@ -2146,8 +2146,9 @@ const finishDamageSequence = (state: GameState): GameState => {
     const activeBattle = requirePendingBattle(afterCurrentDamageState)
 
     // 逐一傷害要等目前目標衍生的所有決策完整處理後才可前往下一個。
-    // `hasBlockingPending` 本身會把目前的 pendingBattle 視為阻塞，因此
-    // 暫時移除它來檢查真正插入此序列的決策（FLIP、昏厥、Refresh、補位等）。
+    // 暫時移除 pendingBattle 來檢查真正插入此序列的決策（FLIP、昏厥、
+    // Refresh 等）。補位不是中斷條件：它必須等這個效果傷害序列完成後
+    // 才能開啟，否則最後一個目標會被反覆要求翻 HP 卡而無法收尾。
     const sequenceInterruptState = {
       ...afterCurrentDamageState,
       pendingBattle: null,
@@ -2159,7 +2160,7 @@ const finishDamageSequence = (state: GameState): GameState => {
         : {}),
     }
     const hasSequenceInterrupt =
-      hasBlockingPending(sequenceInterruptState) ||
+      hasPendingCardResolution(sequenceInterruptState) ||
       Boolean(afterCurrentDamageState.pendingEffectOrder)
     if (hasSequenceInterrupt) {
       return {
@@ -3292,11 +3293,7 @@ export const resolveBattleAutomatically = (state: GameState): GameState => {
       break
     }
 
-    if (
-      nextState.pendingReplacement ||
-      nextState.pendingRefresh ||
-      nextState.pendingOnPlay
-    ) {
+    if (nextState.pendingRefresh || nextState.pendingOnPlay) {
       break
     }
 
@@ -3741,9 +3738,6 @@ export const resolveFaintEffect = (
     supportToTrashIds?: string[]
   } = {},
 ): GameState => {
-  if (state.pendingReplacement) {
-    throw new GameRuleError('必須先完成補位。')
-  }
   if (state.pendingOnPlay) {
     throw new GameRuleError('必須先處理餅乾的登場效果。')
   }

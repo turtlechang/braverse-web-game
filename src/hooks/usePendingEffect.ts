@@ -118,7 +118,6 @@ export function usePendingEffect(params: {
   const faintActive =
     hasFaint &&
     !pendingEffect &&
-    !game.pendingReplacement &&
     !game.pendingRefresh &&
     !game.pendingOnPlay
   const afterDamageActive = hasAfterDamage && !pendingEffect
@@ -732,15 +731,14 @@ export function usePendingEffect(params: {
       pendingEffect ||
       suspendedEffect ||
       game.status !== 'playing' ||
-      game.pendingReplacement ||
       game.pendingRefresh ||
       game.pendingOnPlay ||
       // 效果傷害正在由 battle/FLIP state machine 逐點結算，
       // 先隱藏效果選擇面板，待序列完成後再依 effectIndex 恢復。
       game.pendingBattle?.effectDamageSequence ||
-      // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾與對手補位
-      // 完成後才結算，補位期間（pendingReplacement）上面已擋；這裡連
-      // pendingBattle 期間也不顯示效果面板，避免玩家點下去被規則層拒絕。
+      // 攻擊者擊倒觸發的佇列（例如 BS4-011）必須等本次戰鬥收尾後結算；
+      // 完整效果鏈完成後規則層才會建立對手補位。若仍在 pendingBattle，
+      // 這裡先不顯示效果面板，避免玩家點下去被規則層拒絕。
       (pendingAbility.trigger === 'attacker-faint' && game.pendingBattle) ||
       // 兩階段選擇第二階段等待放回手牌，面板交給
       // PendingDecisionModals 的 place-hand-hp 提示，不重開第一階段選目標。
@@ -845,8 +843,7 @@ export function usePendingEffect(params: {
     }
 
     const hasBlockingDecision = Boolean(
-      game.pendingReplacement ||
-        game.pendingRefresh ||
+      game.pendingRefresh ||
         game.pendingOnPlay ||
         getPendingDecision(game),
     )
@@ -1838,8 +1835,7 @@ export function usePendingEffect(params: {
         !pendingEffect.skillActivated &&
         (activatedGame.status !== 'playing' ||
           Boolean(
-            activatedGame.pendingReplacement ||
-              activatedGame.pendingRefresh ||
+            activatedGame.pendingRefresh ||
               activatedGame.pendingOnPlay ||
               getPendingDecision(activatedGame),
           ))

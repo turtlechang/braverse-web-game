@@ -43,14 +43,13 @@ import type { AiDecision, AiLevel } from './types'
  * pendingAbilityEffect，整個 AI 迴圈就卡在攻擊後階段。
  *
  * 例外：攻擊者擊倒觸發的佇列（trigger: 'attacker-faint'，例如 BS4-011）依
- * 規則必須等本次戰鬥收尾與對手的空場補位完成後才能結算，AI 在 pendingBattle
- * 期間不得嘗試結算（規則層會拒絕）。
+ * 規則必須等本次戰鬥收尾後才能結算；補位任務若已排入，仍要等這條效果鏈
+ * 完成後才可執行。AI 在 pendingBattle 期間仍不得搶先結算（規則層會拒絕）。
  */
 const hasBlockingAbilityPending = (state: GameState): boolean =>
   Boolean(
     state.pendingRefresh ||
       state.pendingOnPlay ||
-      state.pendingReplacement ||
       hasActiveEffectOrder(state) ||
       (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
       (state.pendingAfterDamageEffects &&
@@ -179,16 +178,6 @@ export const handleAiPendingDecision = (
     }, 'effect-target', pendingAbility.sourceInstanceId, effect)
   }
 
-  if (
-    state.pendingReplacement &&
-    (
-      pendingDecision?.kind === 'faint-effect' ||
-      pendingDecision?.kind === 'effect-order'
-    )
-  ) {
-    return null
-  }
-
   if (pendingDecision?.kind === 'effect-order') {
     if (pendingDecision.playerId !== playerId) {
       return {
@@ -228,7 +217,6 @@ export const handleAiPendingDecision = (
 
   if (
     pendingDecision?.kind === 'faint-effect' &&
-    !state.pendingReplacement &&
     !state.pendingRefresh &&
     !state.pendingOnPlay
   ) {

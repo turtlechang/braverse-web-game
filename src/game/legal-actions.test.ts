@@ -211,6 +211,37 @@ describe('getLegalTurnCommands', () => {
     }
   })
 
+  it('效果尚未結算時不列出補位或略過補位，即使補位任務已存在', () => {
+    const base = createPlayingGame()
+    const replacement = createCookie('effect-first-replacement')
+    const state: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-two': {
+          ...base.players['player-two'],
+          battleArea: [],
+          hand: [replacement, ...base.players['player-two'].hand],
+        },
+      },
+      pendingReplacement: {
+        tasks: [{ playerId: 'player-two', remaining: 1 }],
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: 'effect-source',
+        sourceCardName: '效果來源',
+        sourceKind: 'skill',
+        effects: [],
+        effectIndex: 0,
+      },
+    }
+
+    expect(getLegalTurnCommands(state, 'player-two')).toEqual([])
+    expect(getLegalTurnCommands(state, 'player-one')).toEqual([])
+  })
+
   it('有待處理決策時回傳空清單', () => {
     const base = createPlayingGame()
     const state: GameState = {

@@ -93,22 +93,19 @@ export const continuePendingReplacements = (
     return state
   }
 
-  // 排除 pendingFaintEffects 與攻擊者擊倒觸發的技能佇列後，檢查是否有其他
-  // 阻塞性狀態。
-  // 根據規則：餅乾昏厥後應先補位，再處理昏厥效果；攻擊者「擊倒觸發」型技能
-  // （例如 BS4-011 甜辣醬餅乾）同樣必須等對手的空場補位完成後才結算，因此
-  // 不阻塞補位任務的建立（`resolvePendingAbilityEffect` 本身仍會拒絕在補位
-  // 完成前結算）。
+  // 先檢查所有尚未完成的效果，再建立補位任務。
+  //
+  // `pendingFaintEffects`、`pendingAbilityEffect` 與 effect-order 都可能是
+  // 造成餅乾離場的同一條卡牌效果鏈的一部分。若在這裡先建立
+  // `pendingReplacement`，UI 會先開補位／替代餅乾的登場視窗，原效果就會被
+  // 掛起；特別是替代餅乾帶 OnPlay 時，會形成兩個同時待處理的決策。
+  // 因此補位只在整條效果鏈清空後才建立，讓所有正式入口（離場代價、戰鬥傷害、
+  // 昏厥效果、攻擊者擊倒觸發技能）共用相同優先序。
   const tempState = {
     ...state,
     pendingReplacement: null,
-    pendingFaintEffects: [],
-    pendingAbilityEffect:
-      state.pendingAbilityEffect?.trigger === 'attacker-faint'
-        ? undefined
-        : state.pendingAbilityEffect,
   }
-  if (hasBlockingPending(tempState)) {
+  if (state.pendingEffectOrder || hasBlockingPending(tempState)) {
     return state
   }
 

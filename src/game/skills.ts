@@ -828,6 +828,8 @@ export const canActivateCookieSkill = (
     state.pendingInspectDeck ||
     state.pendingOptionalCostAttack ||
     state.pendingStageTrigger ||
+    state.pendingAbilityEffect ||
+    state.pendingEffectOrder ||
     (state.pendingFaintEffects && state.pendingFaintEffects.length > 0) ||
     (state.pendingAfterDamageEffects && state.pendingAfterDamageEffects.length > 0)
   ) {
