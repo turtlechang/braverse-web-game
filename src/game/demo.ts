@@ -2708,6 +2708,15 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         ? [
             cardCheckFillerCookie('BS6-025-break-lv2', 2, 4, 0, payColor).cookie,
           ]
+      : card.id === 'BS6-036'
+        ? [
+            // Zombie Cookie gains +1 HP for each exact LV.3 Cookie in its
+            // break area. Keep a real LV.3 candidate visible in the generic
+            // attack fixture so paying the optional yellow cost exercises the
+            // actual HP-gain path instead of resolving as a zero-count no-op.
+            cardCheckFillerCookie('BS6-036-break-lv3', 3, 4, 0, payColor).cookie,
+            cardCheckFillerCookie('BS6-036-break-lv2', 2, 4, 0, payColor).cookie,
+          ]
       : [
           cardCheckFillerCookie('self-break-1', 2, 4, 0, payColor).cookie,
           cardCheckFillerCookie('self-break-2', 2, 4, 0, payColor).cookie,
@@ -2796,7 +2805,9 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       : selfExtra1.cookie
     const stageHand = card.id === 'P-028'
       ? [card, handCookieFiller, ...handFillers]
-      : [card, ...handFillers]
+      : card.id === 'BS6-043'
+        ? [card, handCookieFiller, ...handFillers]
+        : [card, ...handFillers]
     const stageBreakArea = card.id === 'P-028'
       ? [
           cardCheckFillerCookie('p028-break-lv1', 1, 2, 0, 'yellow').cookie,
@@ -2813,6 +2824,8 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     const stagePlayerSupportArea =
       card.id === 'BS6-064'
         ? energySupports.slice(0, 2).map((c) => ({ card: c, rested: false }))
+        : card.id === 'BS6-043'
+          ? energySupports.map((c, index) => ({ card: c, rested: index < 2 }))
         : [...energySupports, ...supportCostCandidates].map((c) => ({
             card: c,
             rested: false,
@@ -2874,7 +2887,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           cardCheckFillerCookie('BS5-087-break-1', 3, 4).cookie,
           cardCheckFillerCookie('BS5-087-break-2', 3, 4).cookie,
         ]
-      : []
+      : card.id === 'BS6-042'
+        ? [
+            // Clever Advice requires at least three Cookies in the owner's
+            // break area before it can be selected as an attack-response
+            // Trap. Keep the count condition true in the generic card-check
+            // state so the real payment/target flow is reachable.
+            cardCheckFillerCookie('BS6-042-break-1', 1, 3).cookie,
+            cardCheckFillerCookie('BS6-042-break-2', 1, 3).cookie,
+            cardCheckFillerCookie('BS6-042-break-3', 2, 4).cookie,
+          ]
+        : []
     const trapOpponentSecondCookie =
       card.id === 'BS5-109' ? opp1.cookie : opp2.cookie
     const trapBattleArea =
