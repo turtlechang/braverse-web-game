@@ -3,6 +3,7 @@ import {
   getAttackDamageAgainst,
   applyGameCommand,
   getBreakToBattleCandidates,
+  getEffectSelectionCandidates,
   getEffectTargetCandidates,
   getEffectiveAttack,
   getForcedAttackTargetId,
@@ -885,6 +886,41 @@ describe('createCardCheckDemoState', () => {
       state.players['player-two'].supportArea.length -
         state.players['player-one'].supportArea.length,
     ).toBeGreaterThanOrEqual(1)
+  })
+  it('prepares BS6-019 with its HP and opponent support conditions', () => {
+    const state = createCardCheckDemoState('BS6-019')
+    const item = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-019',
+    )
+
+    expect(item?.item?.effects).toMatchObject([
+      { kind: 'hp-to-hand', amount: 1 },
+      { kind: 'rest-support', side: 'opponent', amount: 2 },
+    ])
+    expect(state.players['player-one'].battleArea[0]?.hpCards.length).toBeGreaterThan(0)
+    expect(state.players['player-two'].breakArea).toHaveLength(0)
+    expect(state.players['player-two'].supportArea).toHaveLength(3)
+    expect(
+      state.players['player-two'].supportArea.every((support) => !support.rested),
+    ).toBe(true)
+
+    if (!item?.item) throw new Error('BS6-019 item ability is required')
+    const restEffect = item.item.effects.find(
+      (effect) => effect.kind === 'rest-support',
+    )
+    if (!restEffect || restEffect.kind !== 'rest-support') {
+      throw new Error('BS6-019 rest-support effect is required')
+    }
+    expect(
+      getEffectSelectionCandidates(
+        state,
+        {
+          sourcePlayerId: 'player-one',
+          sourceInstanceId: item.instanceId,
+        },
+        restEffect,
+      ),
+    ).toHaveLength(3)
   })
 
   it('prepares BS6-043 with a yellow Cookie in hand and rested supports for its end phase', () => {

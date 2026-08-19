@@ -2686,6 +2686,18 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     (_, index) =>
       testSupportCard(`${card.id}-opponent-trash-${index + 1}`, 'purple'),
   )
+  // BS6-019 requires all of the following public conditions before its
+  // second item effect can be exercised: our Cookie must still have an HP
+  // card (the generic battle Cookie has four), the opponent must have at
+  // most one Cookie in their break area (the base fixture is empty), and
+  // there must be active opponent support cards to rest.  The generic item
+  // fixture used to leave the opponent support area empty, so the card
+  // stopped after the first HP-to-hand step and never exposed the real
+  // second-step target UI.
+  const opponentSupportArea =
+    card.id === 'BS6-019'
+      ? scenarioSupports('BS6-019-opponent-support', 3, 'red')
+      : undefined
 
   // Own break area filler for break-area-level conditions (flip cards) and
   // for skills that select own-color cookies from the break area (e.g.
@@ -2794,6 +2806,15 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           battleArea: opponentBattleArea,
           stage: { card: opponentStage, rested: false },
           discardPile: opponentTrashFillers,
+          ...(opponentSupportArea
+            ? {
+                supportArea: opponentSupportArea,
+                // Keep the card's "1 Cookie or less" condition explicit in
+                // the fixture instead of relying on createTestPlayerState's
+                // empty default.
+                breakArea: [],
+              }
+            : {}),
         },
       },
     }
