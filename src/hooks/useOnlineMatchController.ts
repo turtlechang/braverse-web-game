@@ -27,6 +27,8 @@ import {
   getTrapCandidates,
   getTrapCostOptions,
   getTrapTargetCandidates,
+  getEffectTargetCandidatesForEffect,
+  getEffectSelectionLimits,
   getTrapSelfTargetCandidates,
   getTrashBattleCookieCostCandidates,
   getTrashCookieToBreakAreaCostCandidates,
@@ -36,6 +38,8 @@ import {
   hasBlockingPending,
   isEnergyColorCompatibleWithCost,
   isPlayerControllingState,
+  isEffectConditionMet,
+  requiresTargetSelection,
   selectEnergyPayment,
   validateEnergyPayment,
 } from '../game'
@@ -83,6 +87,7 @@ export function useOnlineMatchController(params: {
     useState<string[]>([])
   const [trapSelectNoTarget, setTrapSelectNoTarget] = useState(false)
   const [selectedTrapTargetId, setSelectedTrapTargetId] = useState<string | null>(null)
+  const [selectedTrapEffectTargets, setSelectedTrapEffectTargets] = useState<string[][]>([])
   const [selectedTrapSelfTargetId, setSelectedTrapSelfTargetId] = useState<string | null>(null)
   const [selectedTrapSupportTrashIds, setSelectedTrapSupportTrashIds] = useState<string[]>([])
   const [pendingResponseMode, setPendingResponseMode] = useState<
@@ -544,8 +549,80 @@ export function useOnlineMatchController(params: {
   const selectedTrapTargets = selectedTrapTarget
     ? [selectedTrapTarget]
     : trapTargetCandidates.slice(0, 1)
+  const trapEffectTargetContext = selectedTrap
+    ? {
+        sourcePlayerId: viewerPlayerId,
+        sourceInstanceId: selectedTrap.instanceId,
+        sourceCardName: selectedTrap.name,
+      }
+    : null
+  const trapEffectTargetSteps =
+    selectedTrap?.trap && trapEffectTargetContext
+      ? selectedTrap.trap.effects.flatMap((effect, effectIndex) => {
+          if (
+            !requiresTargetSelection(effect) ||
+            !isEffectConditionMet(game, trapEffectTargetContext, effect)
+          ) {
+            return []
+          }
+          const candidates = getEffectTargetCandidatesForEffect(
+            game,
+            trapEffectTargetContext,
+            effect,
+          )
+          if (candidates.length === 0) return []
+          const limits = getEffectSelectionLimits(effect)
+          return [
+            {
+              effectIndex,
+              candidates,
+              selectedTargetIds: selectedTrapEffectTargets[effectIndex] ?? [],
+              min: limits?.min ?? 0,
+              max: limits?.max ?? 1,
+              allowEmpty: (limits?.min ?? 0) === 0,
+            },
+          ]
+        })
+      : []
+  const selectTrapEffectTarget = (effectIndex: number, instanceId: string) => {
+    const step = trapEffectTargetSteps.find(
+      (candidate) => candidate.effectIndex === effectIndex,
+    )
+    const max = step?.max ?? 1
+    setSelectedTrapEffectTargets((current) => {
+      const next = current.map((ids) => [...ids])
+      const selected = next[effectIndex] ?? []
+      if (selected.includes(instanceId)) {
+        next[effectIndex] = selected.filter((id) => id !== instanceId)
+      } else if (max === 1) {
+        next[effectIndex] = [instanceId]
+      } else if (selected.length < max) {
+        next[effectIndex] = [...selected, instanceId]
+      }
+      return next
+    })
+  }
+  const skipTrapEffectTarget = (effectIndex: number) => {
+    setSelectedTrapEffectTargets((current) => {
+      const next = current.map((ids) => [...ids])
+      next[effectIndex] = []
+      return next
+    })
+  }
+  // Targeted trap effects are now represented by the per-effect steps above,
+  // including self-side targets.  Do not expose the legacy self-target phase
+  // for the same effect or the UI will show a duplicate step whose selection
+  // is ignored when `effectTargets` is submitted (BS6-020).
+  const hasPerEffectSelfTargetSelection = trapEffectTargetSteps.some((step) => {
+    const effect = selectedTrap?.trap?.effects[step.effectIndex]
+    return Boolean(
+      effect &&
+        'target' in effect &&
+        effect.target?.side === 'self',
+    )
+  })
   const trapSelfTargetCandidates =
-    selectedTrap
+    selectedTrap && !hasPerEffectSelfTargetSelection
       ? getTrapSelfTargetCandidates(game, viewerPlayerId, selectedTrap.instanceId)
       : []
   const selectedTrapSelfTarget = selectedTrapSelfTargetId
@@ -554,7 +631,8 @@ export function useOnlineMatchController(params: {
       )
     : undefined
   const trapSelfTargetRequired =
-    selectedTrap?.trap?.effects.some(
+    !hasPerEffectSelfTargetSelection &&
+    (selectedTrap?.trap?.effects.some(
       (effect) =>
         (effect.kind === 'damage' ||
           effect.kind === 'gain-hp' ||
@@ -562,7 +640,7 @@ export function useOnlineMatchController(params: {
         'target' in effect &&
         effect.target?.side === 'self' &&
         (effect.target.min ?? 0) > 0,
-    ) ?? false
+    ) ?? false)
   const selectedTrapSelfTargets = selectedTrapSelfTarget
     ? [selectedTrapSelfTarget]
     : trapSelfTargetRequired
@@ -817,6 +895,11 @@ export function useOnlineMatchController(params: {
     selectedTrapTrashBattleCookieCandidates,
     trapAllowEmptyTarget,
     trapTargetCandidates,
+    trapEffectTargetSteps,
+    selectedTrapEffectTargets,
+    setSelectedTrapEffectTargets,
+    selectTrapEffectTarget,
+    skipTrapEffectTarget,
     attackerInstanceId,
     selectedTrapTargetId,
     setSelectedTrapTargetId,

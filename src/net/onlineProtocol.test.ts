@@ -131,6 +131,35 @@ describe('online protocol validation', () => {
     ).toBe(false)
   })
 
+  it('accepts per-effect trap targets and rejects non-string matrix entries', () => {
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-trap',
+          playerId: 'player-one',
+          trapInstanceId: 'bs5-109-online',
+          paymentIds: ['purple-support'],
+          targetIds: [],
+          effectTargets: [['opponent-lv2'], ['opponent-lv1']],
+        },
+      }),
+    ).toBe(true)
+    expect(
+      isClientMessage({
+        type: 'submit-command',
+        command: {
+          kind: 'play-trap',
+          playerId: 'player-one',
+          trapInstanceId: 'bs5-109-online',
+          paymentIds: ['purple-support'],
+          targetIds: [],
+          effectTargets: [['opponent-lv2'], [2]],
+        },
+      }),
+    ).toBe(false)
+  })
+
   it('validates the stage activation faint cost (BS3-024)', () => {
     expect(
       isClientMessage({

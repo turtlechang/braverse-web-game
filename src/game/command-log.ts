@@ -1168,15 +1168,18 @@ const describeEffectTargetsSteps = (
   state: GameState,
   effectTargets: string[][] | undefined,
   effects: CardEffect[] = [],
+  labelForIndex: (index: number, effect: CardEffect | undefined) => string =
+    (index, effect) =>
+      effect?.kind === 'opponent-battle-to-trash'
+        ? '效果結算：放入棄牌區'
+        : `第 ${index + 1} 個效果目標`,
 ): LogStepDetail[] =>
   (effectTargets ?? [])
     .map((targetIds, index) => {
       const effect = effects[index]
       return describeCardListStep(
         state,
-        effect?.kind === 'opponent-battle-to-trash'
-          ? '效果結算：放入棄牌區'
-          : `第 ${index + 1} 個效果目標`,
+        labelForIndex(index, effect),
         targetIds,
       )
     })
@@ -1250,8 +1253,24 @@ export const describeCommandSteps = (
         command.trashToDeckIds,
       )
       if (trashToDeckStep) steps.push(trashToDeckStep)
-      const targetStep = describeCardListStep(state, '選擇目標', command.targetIds)
-      if (targetStep) steps.push(targetStep)
+      if (command.effectTargets !== undefined) {
+        steps.push(
+          ...describeEffectTargetsSteps(
+            state,
+            command.effectTargets,
+            trapCard?.type === 'trap' ? trapCard.trap?.effects : [],
+            (index, effect) =>
+              effect?.kind === 'opponent-battle-to-trash'
+                ? '效果結算：放入棄牌區'
+                : index === 0
+                  ? '選擇目標'
+                  : `選擇目標（第 ${index + 1} 段）`,
+          ),
+        )
+      } else {
+        const targetStep = describeCardListStep(state, '選擇目標', command.targetIds)
+        if (targetStep) steps.push(targetStep)
+      }
       const selfTargetStep = describeCardListStep(state, '選擇自身目標', command.selfTargetIds)
       if (selfTargetStep) steps.push(selfTargetStep)
       return steps

@@ -538,6 +538,7 @@ const commandShapes = {
       'trashToDeckIds',
       'selfTargetIds',
     ],
+    optionalStringMatrices: ['effectTargets'],
   },
   'skip-trap': {},
   'play-blocker': {

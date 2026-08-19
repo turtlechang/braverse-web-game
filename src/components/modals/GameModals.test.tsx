@@ -403,6 +403,73 @@ describe('TrapResponseModal', () => {
     expect((markup.match(/type="button"/g) ?? []).length).toBeGreaterThanOrEqual(9)
   })
 
+  it('renders independent target sections for each trap effect', async () => {
+    const trap: GameCard = {
+      id: 'BS5-109',
+      instanceId: 'bs5-109-modal-test',
+      name: 'Charmed Miners',
+      type: 'trap',
+    }
+    const levelTwo = createBattleCookie(1092)
+    levelTwo.card.level = 2
+    const levelOne = createBattleCookie(1091)
+    const onSelectTrapEffectTarget = vi.fn()
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    await act(() => root.render(
+      <TrapResponseModal
+        cards={[trap]}
+        selectedTrapId={trap.instanceId}
+        paymentCards={[]}
+        targetCards={[]}
+        discardHandCards={[]}
+        discardHandCost={0}
+        selectedDiscardHandIds={[]}
+        trapEffectTargetSteps={[
+          {
+            effectIndex: 0,
+            candidates: [levelTwo],
+            selectedTargetIds: [],
+            min: 0,
+            max: 1,
+            allowEmpty: true,
+          },
+          {
+            effectIndex: 1,
+            candidates: [levelOne],
+            selectedTargetIds: [],
+            min: 0,
+            max: 1,
+            allowEmpty: true,
+          },
+        ]}
+        onSelectTrap={() => undefined}
+        onSelectTrapEffectTarget={onSelectTrapEffectTarget}
+        onSkipTrapEffectTarget={() => undefined}
+        onToggleDiscardHand={() => undefined}
+        onConfirm={() => undefined}
+        onSkip={() => undefined}
+      />,
+    ))
+
+    expect(container.textContent).toContain('第 1 段目標')
+    expect(container.textContent).toContain('第 2 段目標')
+    await click(findButton(container, levelTwo.card.name))
+    await click(findButton(container, levelOne.card.name))
+    expect(onSelectTrapEffectTarget).toHaveBeenNthCalledWith(
+      1,
+      0,
+      levelTwo.card.instanceId,
+    )
+    expect(onSelectTrapEffectTarget).toHaveBeenNthCalledWith(
+      2,
+      1,
+      levelOne.card.instanceId,
+    )
+
+    await act(() => root.unmount())
+  })
+
   it('shows an optional self-target phase for BS6-020-style HP return effects', async () => {
     const trap: GameCard = {
       id: 'BS6-020',

@@ -67,6 +67,18 @@ export interface BattleUiMatchLike {
   selectedTrapTrashBattleCookieCandidates: CookieInBattle[]
   trapAllowEmptyTarget: boolean
   trapTargetCandidates: CookieInBattle[]
+  /**
+   * Effects with their own target selector.  The array index is the original
+   * trap effect index so the command can preserve empty slots for skipped
+   * optional effects (for example BS5-109's two independent targets).
+   */
+  trapEffectTargetSteps: BattleUiTrapEffectTargetStep[]
+  selectedTrapEffectTargets: string[][]
+  setSelectedTrapEffectTargets: (
+    value: string[][] | ((current: string[][]) => string[][]),
+  ) => void
+  selectTrapEffectTarget: (effectIndex: number, instanceId: string) => void
+  skipTrapEffectTarget: (effectIndex: number) => void
   attackerInstanceId: string | null
   selectedTrapTargetId: string | null
   setSelectedTrapTargetId: (value: string | null) => void
@@ -199,6 +211,15 @@ export interface BattleUiMatchLike {
   pendingPlayer: PlayerState | null
   pendingOptions: GameCard[]
   replacementTask: ReplacementTask | null
+}
+
+export interface BattleUiTrapEffectTargetStep {
+  effectIndex: number
+  candidates: CookieInBattle[]
+  selectedTargetIds: string[]
+  min: number
+  max: number
+  allowEmpty: boolean
 }
 
 export interface BattleUiPendingEffectLike {
