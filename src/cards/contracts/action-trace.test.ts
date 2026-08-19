@@ -3,6 +3,7 @@ import {
   attestCardContractActionTrace,
   buildCardContractActionTrace,
   traceContainsCommandKinds,
+  traceHasSubstantiveEffectEvidence,
 } from './action-trace'
 import type { CommandLogEntry } from '../../game'
 
@@ -47,5 +48,39 @@ describe('card contract action trace', () => {
     })
     expect(failed.passed).toBe(false)
     expect(failed.errors).toContain('missing ordered step: 未出現的步驟')
+  })
+
+  it('rejects source/payment-only traces and requires effect settlement evidence', () => {
+    expect(
+      traceHasSubstantiveEffectEvidence([
+        {
+          id: 1,
+          commandKind: 'play-trap',
+          steps: ['發動陷阱卡：「fixture」', '支付能量（橫置）：support-1'],
+        },
+      ]),
+    ).toBe(false)
+    expect(
+      traceHasSubstantiveEffectEvidence([
+        {
+          id: 1,
+          commandKind: 'declare-attack',
+          steps: ['宣告攻擊：「fixture」→「target」', '自動結算戰鬥，未造成傷害'],
+        },
+      ]),
+    ).toBe(false)
+    expect(
+      traceHasSubstantiveEffectEvidence([
+        {
+          id: 1,
+          commandKind: 'play-trap',
+          steps: [
+            '發動陷阱卡：「fixture」',
+            '選擇目標：target',
+            'Then 效果：棄牌區卡片洗回牌庫：trash-1',
+          ],
+        },
+      ]),
+    ).toBe(true)
   })
 })

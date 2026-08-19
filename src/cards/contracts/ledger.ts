@@ -1101,15 +1101,35 @@ const addActionClauses = (
   text: string,
   clauses: CardClauseFragment[],
 ): void => {
-  const stripped = stripMarkupTags(text).replace(/(?:<|《)[^>》]+(?:>|》)/g, '')
-  for (const sentence of stripped.split(/(?<=[.!?])\s+|;\s+|\bThen,?\s*/i)) {
-    const normalized = normalizeWhitespace(sentence)
+  const stripped = stripMarkupTags(text).replace(
+    /(?:<|《)[^>》]+(?:>|》)/g,
+    (markup) => ' '.repeat(markup.length),
+  )
+  const separator = /(?<=[.!?])\s+|;\s+|\bThen,?\s*/gi
+  let cursor = 0
+  const sentences: Array<{ text: string; start: number; end: number }> = []
+  for (const match of stripped.matchAll(separator)) {
+    const end = match.index ?? cursor
+    sentences.push({ text: stripped.slice(cursor, end), start: cursor, end })
+    cursor = end + match[0].length
+  }
+  sentences.push({ text: stripped.slice(cursor), start: cursor, end: stripped.length })
+
+  for (const sentence of sentences) {
+    const normalized = normalizeWhitespace(sentence.text)
     if (!normalized) continue
     const match = ACTION_PATTERNS.find(([pattern]) => pattern.test(normalized))
     if (match) {
       if (match[1] === 'target') continue
-      const role = /\bthen\b/i.test(normalized) ? 'then' : match[1]
-      addClause(clauses, source, normalized, role, 0, text.length, 'pattern')
+      addClause(
+        clauses,
+        source,
+        normalized,
+        match[1],
+        sentence.start,
+        sentence.end,
+        'pattern',
+      )
     } else {
       // Attack／FLIP names are printed between the payment marker and the
       // executable text.  They are display labels, not omitted rule clauses;
@@ -1124,14 +1144,31 @@ const addActionClauses = (
       // contract still records the source evidence without inventing a
       // runtime effect kind.
       if (/cannot switch the order of HP cards/i.test(normalized)) {
-        addClause(clauses, source, normalized, 'order', 0, text.length, 'pattern')
+        addClause(
+          clauses,
+          source,
+          normalized,
+          'order',
+          sentence.start,
+          sentence.end,
+          'pattern',
+        )
         continue
       }
-      addClause(clauses, source, normalized, 'unsupported', 0, text.length, 'unknown')
+      addClause(
+        clauses,
+        source,
+        normalized,
+        'unsupported',
+        sentence.start,
+        sentence.end,
+        'unknown',
+      )
     }
   }
-  if (/\bthen\b/i.test(text)) {
-    addClause(clauses, source, 'Then', 'then', text.toLowerCase().indexOf('then'), text.length, 'exact')
+  for (const match of stripped.matchAll(/\bthen\b/gi)) {
+    const start = match.index ?? 0
+    addClause(clauses, source, match[0], 'then', start, start + match[0].length, 'exact')
   }
 }
 
@@ -1325,15 +1362,126 @@ const hasRuntimeThenEffects = (evidence: RuntimeCardEvidence): boolean => {
 const hasRuntimeConditionalStep = (evidence: RuntimeCardEvidence): boolean =>
   flattenRuntimeEffects(evidence).some((effect) => 'condition' in effect)
 
+const runtimeEffectsForSource = (
+  evidence: RuntimeCardEvidence,
+  source: CardTextSource,
+): CardEffect[] => {
+  if (source === 'flip') return evidence.flip?.effects ?? []
+  if (source === 'attack') {
+    if (evidence.card?.type === 'cookie') return evidence.attackEffects ?? []
+    return evidence.ability?.effects ?? evidence.effects
+  }
+  if (source === 'skill') {
+    if (evidence.card?.type === 'cookie') {
+      return evidence.skill?.effects ?? evidence.effects
+    }
+    return evidence.ability?.effects ?? evidence.effects
+  }
+  return evidence.ability?.effects ?? evidence.effects
+}
+
+const hasConsistentMirroredEffectOrder = (
+  evidence: RuntimeCardEvidence,
+  source: CardTextSource,
+): boolean => {
+  if (
+    evidence.card?.type === 'cookie' ||
+    (source !== 'attack' && source !== 'skill') ||
+    !evidence.ability?.effects ||
+    evidence.effects.length === 0
+  ) return true
+  const rootKinds = evidence.effects.map((effect) => effect.kind)
+  const abilityKinds = evidence.ability.effects.map((effect) => effect.kind)
+  return (
+    rootKinds.length === abilityKinds.length &&
+    rootKinds.every((kind, index) => kind === abilityKinds[index])
+  )
+}
+
+const uniqueRuntimeEffectIndex = (
+  candidates: readonly string[],
+  runtimeKinds: readonly string[],
+): number | null => {
+  const candidateSet = new Set(candidates)
+  const indexes = runtimeKinds
+    .map((kind, index) => (candidateSet.has(kind) ? index : -1))
+    .filter((index) => index >= 0)
+  return indexes.length === 1 ? indexes[0] : null
+}
+
+/**
+ * Prove each printed Then boundary against concrete effect indexes.  Kinds
+ * are taken from the already-structured contract steps, while the runtime
+ * sequence comes from the source-specific ability array.  When both sides
+ * have unique anchors, their indexes must be strictly increasing; historical
+ * clauses without two classified anchors retain the existing structural gate.
+ */
+const coversResolutionOrder = (
+  contract: CardBehaviorContract,
+  evidence: RuntimeCardEvidence,
+): boolean => {
+  const hasLegacyStructuralEvidence = (): boolean =>
+    hasRuntimeThenEffects(evidence) ||
+    hasRuntimeConditionalStep(evidence) ||
+    flattenRuntimeEffects(evidence).length >= 2
+  const clausesById = new Map(contract.clauses.map((clause) => [clause.id, clause]))
+  const thenSteps = contract.steps.filter((step) => step.role === 'then')
+  if (thenSteps.length === 0) return true
+
+  return thenSteps.every((thenStep) => {
+    const thenClause = clausesById.get(thenStep.clauseIds[0])
+    if (!thenClause) return false
+    if (!hasConsistentMirroredEffectOrder(evidence, thenClause.source)) return false
+    const runtimeEffects = runtimeEffectsForSource(evidence, thenClause.source)
+    const runtimeKinds = runtimeEffects.map((effect) => effect.kind)
+    if (runtimeKinds.length === 0) return hasLegacyStructuralEvidence()
+
+    const beforeStep = [...contract.steps]
+      .slice(0, thenStep.order)
+      .reverse()
+      .find((step) => {
+        if (step.role !== 'effect' || step.runtimeKinds.length === 0) return false
+        return clausesById.get(step.clauseIds[0])?.source === thenClause.source
+      })
+    if (beforeStep && thenStep.runtimeKinds.length > 0) {
+      const beforeIndex = uniqueRuntimeEffectIndex(beforeStep.runtimeKinds, runtimeKinds)
+      const afterIndex = uniqueRuntimeEffectIndex(thenStep.runtimeKinds, runtimeKinds)
+      if (
+        beforeIndex !== null &&
+        afterIndex !== null &&
+        beforeIndex !== afterIndex
+      ) {
+        return beforeIndex < afterIndex
+      }
+    }
+
+    // Some historical contracts do not yet classify both sides into runtime
+    // kinds.  Keep their existing structural gate until the parser can supply
+    // two concrete anchors; do not manufacture effect indexes from prose.
+    return hasLegacyStructuralEvidence()
+  })
+}
+
 const effectKindsForClause = (clause: CardClauseFragment): string[] => {
   const text = clause.text.toLowerCase()
   const kinds: string[] = []
+
+  // Printed attack modifiers contain the word "damage", but they are not a
+  // direct damage effect.  Keep the exact runtime family so an order audit can
+  // bind the clause to a concrete effect index instead of merely observing
+  // that both kinds exist somewhere on the card.
+  if (/\b(?:gains?|deals?|receives?)\s+[+-]\d+\s+attack\s+damage\b/.test(text)) {
+    kinds.push('modify-attack', 'modify-all-attack')
+  }
+  if (/\breturn\b[\s\S]*\bto (?:your|the) deck\b/.test(text)) {
+    kinds.push('trash-to-deck', 'trash-to-deck-all', 'hand-to-deck-and-draw')
+  }
   if (/damage|deal|receives/.test(text)) kinds.push('damage', 'damage-all')
   if (/draw/.test(text)) kinds.push('draw', 'draw-up-to')
   if (/discard/.test(text)) kinds.push('discard-hand', 'opponent-discard-hand')
   if (/rest/.test(text)) kinds.push('rest-cookie', 'rest-support')
   if (/play|place|put|return|move|take/.test(text)) kinds.push('move')
-  return kinds
+  return [...new Set(kinds)]
 }
 
 const buildContract = (
@@ -1372,15 +1520,45 @@ const buildContract = (
     energyCosts: [],
     abilityCostKeys: new Set<string>(),
   })
-  const steps: ContractResolutionStep[] = []
-  let order = 0
-  for (const clause of clauses.filter((item) => item.role === 'effect' || item.role === 'then')) {
-    steps.push({
-      order: order++,
-      role: clause.role === 'then' ? 'then' : 'effect',
-      clauseIds: [clause.id],
-      runtimeKinds: effectKindsForClause(clause).filter((kind) => runtime.effectKinds.has(kind)),
-    })
+  const sourceOrder = new Map(
+    (Object.keys(segments) as CardTextSource[]).map((source, index) => [source, index]),
+  )
+  const resolutionClauses = clauses
+    .filter((item) => item.role === 'effect' || item.role === 'then')
+    .map((clause, insertionOrder) => ({ clause, insertionOrder }))
+    .sort((left, right) =>
+      (sourceOrder.get(left.clause.source) ?? Number.MAX_SAFE_INTEGER) -
+        (sourceOrder.get(right.clause.source) ?? Number.MAX_SAFE_INTEGER) ||
+      left.clause.start - right.clause.start ||
+      left.insertionOrder - right.insertionOrder,
+    )
+  const steps: ContractResolutionStep[] = resolutionClauses.map(({ clause }, order) => ({
+    order,
+    role: clause.role === 'then' ? 'then' : 'effect',
+    clauseIds: [clause.id],
+    runtimeKinds: effectKindsForClause(clause).filter((kind) => runtime.effectKinds.has(kind)),
+  }))
+  // A Then marker is an ordering edge, not an executable effect itself.  Bind
+  // it to the first classified continuation in the same source segment so the
+  // contract records which runtime kind must occur after the boundary.
+  for (let index = 0; index < steps.length; index += 1) {
+    const step = steps[index]
+    if (step.role !== 'then') continue
+    const clause = clauses.find((candidate) => step.clauseIds.includes(candidate.id))
+    if (!clause) continue
+    let continuation: ContractResolutionStep | undefined
+    for (const candidate of steps.slice(index + 1)) {
+      const candidateClause = clauses.find((item) =>
+        candidate.clauseIds.includes(item.id),
+      )
+      if (candidateClause?.source !== clause.source) break
+      if (candidate.role === 'then') break
+      if (candidate.runtimeKinds.length > 0) {
+        continuation = candidate
+        break
+      }
+    }
+    if (continuation) step.runtimeKinds = [...continuation.runtimeKinds]
   }
   const blockers: string[] = []
   if (evidence.unsupportedReason) blockers.push(`runtime:${evidence.unsupportedReason}`)
@@ -1560,12 +1738,7 @@ export const analyzeOfficialCardBehavior = (
       ? false
       : runtime.targetSelectors.some((selector) => selectorMatches(target.selector, selector)),
   )
-  const runtimeEffects = flattenRuntimeEffects(evidence)
-  const resolutionOrderCovered =
-    !contract.clauses.some((clause) => clause.role === 'then') ||
-    hasRuntimeThenEffects(evidence) ||
-    hasRuntimeConditionalStep(evidence) ||
-    runtimeEffects.length >= 2
+  const resolutionOrderCovered = coversResolutionOrder(contract, evidence)
   const timingCovered = contract.timing.markers.every((marker) => {
     if (marker === 't1') return evidence.skill?.oncePerTurn === true
     if (marker === 'mt') return evidence.skill?.yourTurn === true

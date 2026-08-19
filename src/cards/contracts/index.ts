@@ -7,6 +7,7 @@ export {
   buildCardContractActionTrace,
   attestCardContractActionTrace,
   traceContainsCommandKinds,
+  traceHasSubstantiveEffectEvidence,
 } from './action-trace'
 export type {
   CardBehaviorAudit,

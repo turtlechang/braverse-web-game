@@ -2837,6 +2837,15 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
       : ownBreakArea
     const oldStage: GameCard = { id: 'old-stage', instanceId: 'old-stage-1', name: '舊場景', type: 'stage' }
     const state = baseState()
+    const stageBattleFixture = card.id === 'BS6-021'
+      ? cardCheckFillerCookie(
+          'BS6-021-condition-cookie',
+          2,
+          4,
+          3,
+          payColor,
+        )
+      : { cookie: stageBattleCookie, hpCards: selfExtra1.hpCards }
     // BS6-064 activates only while our support area is smaller than the
     // opponent's.  The generic stage fixture normally supplies generous
     // payment energy on our side, which made the condition false and left the
@@ -2862,7 +2871,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         'player-one': {
           ...state.players['player-one'],
           hand: stageHand,
-          battleArea: [cardCheckBattleEntry(stageBattleCookie, selfExtra1.hpCards, 4)],
+          battleArea: [
+            cardCheckBattleEntry(
+              stageBattleFixture.cookie,
+              stageBattleFixture.hpCards,
+              4,
+            ),
+          ],
           supportArea: stagePlayerSupportArea,
           stage: { card: oldStage, rested: false },
           breakArea: stageBreakArea,
@@ -3143,12 +3158,18 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     cookieCard.id !== 'BS6-079'
   ) {
     const state = baseState()
+    // BS6-018 needs the player to declare a real attack while its source is at
+    // exactly 1 HP. Starting it in the generic post-attack window would rest
+    // the card and auto-skip the unmet condition before the player can test it.
+    const usesManualAttackFixture = cookieCard.id === 'BS6-018'
     // The generic fixture should enter the card's real post-attack UI rather
     // than silently auto-skipping an effect whose condition happens to be
     // false in the neutral spread above. Keep these adjustments local to the
     // browser fixture; they do not alter the official card pool or rules.
     const attackSourceHpCount =
-      cookieCard.id === 'BS6-053'
+      usesManualAttackFixture
+        ? 1
+      : cookieCard.id === 'BS6-053'
         ? cookieCard.hp
       : cookieCard.id === 'BS4-039'
         ? 2
@@ -3264,13 +3285,20 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
         : trashFillers
     const attackBattleArea =
       cookieCard.id === 'BS4-029'
-        ? [cardCheckBattleEntry(card as CookieCard, attackSourceHpCards, 4, true)]
+        ? [
+            cardCheckBattleEntry(
+              card as CookieCard,
+              attackSourceHpCards,
+              4,
+              !usesManualAttackFixture,
+            ),
+          ]
         : [
             cardCheckBattleEntry(
               card as CookieCard,
               attackSourceHpCards,
               4,
-              true,
+              !usesManualAttackFixture,
             ),
             cardCheckBattleEntry(selfExtra1.cookie, selfExtra1.hpCards, 6),
           ]
@@ -3307,24 +3335,26 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           discardPile: attackOpponentDiscard,
         },
       },
-      pendingBattle: {
-        attackerPlayerId: 'player-one',
-        defenderPlayerId: 'player-two',
-        attackerInstanceId: card.instanceId,
-        targetInstanceId: opp1.cookie.instanceId,
-        declaredDamage: cookieCard.attack,
-        remainingDamage: 0,
-        stage: 'attack-effect',
-        trapUsed: false,
-        revealedHpCard: null,
-        preventKnockoutTargetIds: [],
-        faintedColors:
-          cookieCard.id === 'BS5-085' || cookieCard.id === 'BS5-097'
-            ? ['yellow']
-            : [],
-        attackEffects: cookieCard.attackEffects,
-        attackEffectIndex: 0,
-      },
+      pendingBattle: usesManualAttackFixture
+        ? null
+        : {
+            attackerPlayerId: 'player-one',
+            defenderPlayerId: 'player-two',
+            attackerInstanceId: card.instanceId,
+            targetInstanceId: opp1.cookie.instanceId,
+            declaredDamage: cookieCard.attack,
+            remainingDamage: 0,
+            stage: 'attack-effect',
+            trapUsed: false,
+            revealedHpCard: null,
+            preventKnockoutTargetIds: [],
+            faintedColors:
+              cookieCard.id === 'BS5-085' || cookieCard.id === 'BS5-097'
+                ? ['yellow']
+                : [],
+            attackEffects: cookieCard.attackEffects,
+            attackEffectIndex: 0,
+          },
     }
   }
 
@@ -3653,6 +3683,7 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
 export const createCardNegativeDemoState = (cardNumber: string): GameState => {
   const state = createCardCheckDemoState(cardNumber)
   const player = state.players['player-one']
+  const baseCardNumber = cardNumber.split('@')[0]
   const negativeDiscardPile =
     cardNumber === 'BS5-093' || cardNumber.startsWith('BS5-093@')
       ? player.discardPile.filter(
@@ -3663,6 +3694,69 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
       : cardNumber === 'BS5-092' || cardNumber.startsWith('BS5-092@')
         ? player.discardPile.filter((card) => card.type === 'cookie')
         : player.discardPile
+  // Keep the negative route meaningful for cards whose legality depends on a
+  // board condition rather than only on payment.  BS6-042 must be blocked by
+  // its "3 Cookies in break" condition while leaving payment energy active;
+  // BS6-043 must reach its end-phase trigger with no yellow Cookie in hand so
+  // the mandatory first step is skipped by the real effect queue.
+  if (baseCardNumber === 'BS6-042') {
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      breakArea: player.breakArea.slice(0, 2),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS6-043') {
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      hand: player.hand.filter((card) => card.type !== 'cookie'),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS6-021') {
+    // Keep the red placement/activation payment available, but remove the
+    // LV.2+ target so the Then draw condition is provably unmet.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      battleArea: player.battleArea.map((entry) => ({
+        ...entry,
+        card: { ...entry.card, level: 1 },
+      })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS6-018') {
+    // Preserve the real attack declaration path and legal payment, but keep
+    // White Choco at full HP so its "remaining HP is 1" follow-up is blocked.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.id === 'BS6-018'
+          ? {
+              ...entry,
+              hpCards: [
+                ...entry.hpCards,
+                testSupportCard('BS6-018-negative-hp'),
+              ],
+              rested: false,
+            }
+          : entry,
+      ),
+      discardPile: negativeDiscardPile,
+    })
+  }
   return updateDemoPlayer(state, 'player-one', {
     supportArea: player.supportArea.map((support) => ({
       ...support,

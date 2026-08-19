@@ -2,8 +2,9 @@
  * 逐批執行 card contract 的 shadow migration gate。
  *
  * 這個腳本只讀取 data/cards，產生報告，不修改正式卡牌資料或 runtime
- * registry。未通過 contract 的卡牌不會被選進批次；若選入批次的 runtime
- * 編譯結果又變成不可執行，strict gate 會失敗。
+ * registry。offset 以所有唯一 cardId 為穩定游標；目前游標若是
+ * needs-review／blocked，仍會選入並讓 strict gate 失敗，不能被後面的
+ * verified 卡牌越過。選入批次的 runtime 編譯結果若不可執行也會失敗。
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'

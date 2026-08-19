@@ -25,8 +25,11 @@ export const selectRecordsForMigrationBatch = <T extends { cardNumber: string }>
 
 /**
  * 以 card.id（而非卡名、彈數或牌組）建立 deterministic 的 shadow migration
- * 批次。只有 audit 已標成 verified 的卡牌才會進入批次，未驗證資料留在
- * inventory／needs-review，不會被這個 helper 靜默升格。
+ * 批次。offset 是全部唯一 card ID 的 cursor；未 verified 的卡仍會進入目前
+ * 批次，再由 migration check 明確擋下，避免先過濾後跳過 serial gate。
+ *
+ * 函式名稱為相容現有呼叫端而保留；verified 是通過 check 的條件，
+ * 不是 cursor 的前置篩選條件。
  */
 export const selectVerifiedMigrationBatch = (
   audits: readonly CardBehaviorAudit[],
@@ -34,19 +37,15 @@ export const selectVerifiedMigrationBatch = (
 ): ContractMigrationBatch => {
   const offset = Math.max(0, Math.floor(options.offset ?? 0))
   const limit = Math.max(1, Math.floor(options.limit ?? 25))
-  const cardIds = audits
-    .filter((audit) => audit.contract.status === 'verified')
-    .map((audit) => audit.contract.cardId)
-    .filter((cardId, index, values) => values.indexOf(cardId) === index)
-    .sort()
-    .slice(offset, offset + limit)
+  const deterministicCardIds = [...new Set(audits.map((audit) => audit.contract.cardId))].sort()
+  const cardIds = deterministicCardIds.slice(offset, offset + limit)
 
   return {
     schemaVersion: 1,
     offset,
     limit,
     cardIds,
-    sourceCount: audits.length,
+    sourceCount: deterministicCardIds.length,
   }
 }
 
@@ -62,13 +61,25 @@ export const checkContractMigrationBatch = (
 ): ContractMigrationCheck[] =>
   batch.cardIds.map((cardId) => {
     const card = compiled.find((candidate) => candidate.cardId === cardId)
+    if (!card) {
+      return {
+        cardId,
+        executable: false,
+        blockers: ['missing compiled card'],
+      }
+    }
+    const blockers = [
+      ...(card.status === 'verified' ? [] : [`contract status is ${card.status}`]),
+      ...card.blockers,
+    ]
+    if (!card.executable && blockers.length === 0) blockers.push('compiled card is not executable')
     return {
       cardId,
-      executable: Boolean(card?.executable),
-      blockers: card?.blockers ?? ['missing compiled card'],
+      executable: card.status === 'verified' && card.executable,
+      blockers: [...new Set(blockers)],
     }
   })
 
 export const isContractMigrationBatchReady = (
   checks: readonly ContractMigrationCheck[],
-): boolean => checks.every((check) => check.executable && check.blockers.length === 0)
+): boolean => checks.length > 0 && checks.every((check) => check.executable && check.blockers.length === 0)

@@ -12,7 +12,7 @@ import {
   resolveLogCard,
   resolveLogCategory,
 } from './command-log'
-import { cookie, createBattleState } from './test-helpers/battle-helpers'
+import { cookie, createBattleState, item } from './test-helpers/battle-helpers'
 
 const withCommandLog = (
   state: GameState,
@@ -423,6 +423,59 @@ describe('describeCommandSteps', () => {
     )
   })
 
+  it('records trap effect selections in card-text order without calling a Then effect a cost', () => {
+    const base = createBattleState()
+    const trap: GameCard = {
+      id: 'two-step-trap',
+      instanceId: 'two-step-trap',
+      name: 'Two-step Trap',
+      type: 'trap',
+      trap: {
+        text: 'Choose an opponent Cookie. Then, return cards from your trash to your deck.',
+        cost: { energy: { purple: 1 }, discardHand: 0 },
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: -1,
+            duration: 'this-turn',
+            target: { side: 'opponent', min: 0, max: 1 },
+          },
+          { kind: 'trash-to-deck', max: 5, excludeFlip: true },
+        ],
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': {
+          ...base.players['player-one'],
+          hand: [trap, ...base.players['player-one'].hand],
+          discardPile: [item('trash-a'), item('trash-b')],
+        },
+      },
+    }
+    const command = {
+      kind: 'play-trap' as const,
+      playerId: 'player-one' as const,
+      trapInstanceId: trap.instanceId,
+      paymentIds: ['p1-support-a'],
+      targetIds: ['attacker'],
+      trashToDeckIds: ['trash-a', 'trash-b'],
+    }
+
+    expect(
+      describeCommandSteps(previous, previous, command)?.map(
+        (step) => step.text,
+      ),
+    ).toEqual([
+      '發動陷阱卡：「Two-step Trap」',
+      '支付能量（橫置）：p1-support-a',
+      '選擇目標：attacker',
+      'Then 效果：棄牌區卡片洗回牌庫：trash-a、trash-b',
+    ])
+  })
+
   it('details an attack-after optional cost, selected target, and actual result', () => {
     const base = createBattleState()
     const attackerEntry = base.players['player-two'].battleArea[0]
@@ -584,6 +637,44 @@ describe('describeCommandSteps', () => {
     expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
       '攻擊後效果來源：「attacker」；效果：Pay 1 energy to deal 1 damage.',
       '攻擊後效果：等待玩家選擇支付代價或略過',
+    ])
+  })
+
+  it('does not claim an attack modifier was applied when no optional target was selected', () => {
+    const base = createBattleState()
+    const effect: CardEffect = {
+      kind: 'modify-attack',
+      amount: 1,
+      duration: 'this-turn',
+      target: { side: 'self', min: 0, max: 1 },
+    }
+    const previous: GameState = {
+      ...base,
+      pendingBattle: {
+        attackerPlayerId: 'player-two',
+        defenderPlayerId: 'player-one',
+        attackerInstanceId: 'attacker',
+        targetInstanceId: 'defender',
+        stage: 'attack-effect',
+        declaredDamage: 1,
+        remainingDamage: 0,
+        trapUsed: false,
+        revealedHpCard: null,
+        preventKnockoutTargetIds: [],
+        attackEffects: [effect],
+        attackEffectIndex: 0,
+      } as unknown as GameState['pendingBattle'],
+    }
+    const next: GameState = { ...previous, pendingBattle: null }
+    const command = {
+      kind: 'resolve-attack-effect' as const,
+      playerId: 'player-two' as const,
+      targetIds: [],
+    }
+
+    expect(describeCommandSteps(previous, next, command)?.map((step) => step.text)).toEqual([
+      '攻擊後效果來源：「attacker」；效果：使目標攻擊力 +1',
+      '攻擊後效果目標：未選擇目標（效果未生效）',
     ])
   })
 

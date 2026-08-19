@@ -1267,12 +1267,6 @@ export const describeCommandSteps = (
         command.handToSupportIds,
       )
       if (handToSupportStep) steps.push(handToSupportStep)
-      const trashToDeckStep = describeCardListStep(
-        state,
-        '額外代價：棄牌區卡片洗回牌庫',
-        command.trashToDeckIds,
-      )
-      if (trashToDeckStep) steps.push(trashToDeckStep)
       if (command.effectTargets !== undefined) {
         steps.push(
           ...describeEffectTargetsSteps(
@@ -1291,6 +1285,15 @@ export const describeCommandSteps = (
         const targetStep = describeCardListStep(state, '選擇目標', command.targetIds)
         if (targetStep) steps.push(targetStep)
       }
+      // play-trap 的 trashToDeckIds 是 `trash-to-deck` 效果選擇，不是
+      // AbilityCost。它必須依卡面順序排在前段目標之後，不能誤標成
+      // 「額外代價」而讓公開 trace 看起來先付款、再選第一段目標。
+      const trashToDeckStep = describeCardListStep(
+        state,
+        'Then 效果：棄牌區卡片洗回牌庫',
+        command.trashToDeckIds,
+      )
+      if (trashToDeckStep) steps.push(trashToDeckStep)
       const selfTargetStep = describeCardListStep(state, '選擇自身目標', command.selfTargetIds)
       if (selfTargetStep) steps.push(selfTargetStep)
       return steps
@@ -1463,7 +1466,14 @@ export const describeCommandSteps = (
         command.targetIds,
         sourceCard,
       )
-      if (targetStep) steps.push(targetStep)
+      if (targetStep) {
+        steps.push(targetStep)
+        // An optional target may legitimately be left empty, and a required
+        // selector may have no legal candidate. In both cases the target step
+        // already records that the effect did not apply; do not append a
+        // generic action description that falsely claims the result happened.
+        if (targetStep.text.includes('未生效')) return steps
+      }
       if (effect) {
         steps.push(
           describeAttackEffectResultStep(

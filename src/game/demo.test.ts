@@ -832,6 +832,63 @@ describe('createCardCheckDemoState', () => {
     })
   })
 
+  it('prepares BS6-018 as an active 1-HP attacker for its conditional attack follow-up', () => {
+    const state = createCardCheckDemoState('BS6-018')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-018',
+    )
+    const target = state.players['player-two'].battleArea[0]
+    const supportPaymentIds = state.players['player-one'].supportArea
+      .slice(0, 2)
+      .map((support) => support.card.instanceId)
+
+    expect(source?.hpCards).toHaveLength(1)
+    expect(source?.rested).toBe(false)
+    expect(state.pendingBattle).toBeNull()
+
+    const declared = applyGameCommand(state, {
+      kind: 'declare-attack',
+      playerId: 'player-one',
+      attackerInstanceId: source!.card.instanceId,
+      targetInstanceId: target.card.instanceId,
+      supportPaymentIds,
+    })
+
+    expect(declared.pendingBattle).toMatchObject({
+      stage: 'trap',
+      attackerInstanceId: source?.card.instanceId,
+      targetInstanceId: target.card.instanceId,
+      attackEffects: [
+        expect.objectContaining({
+          kind: 'modify-attack',
+          amount: 1,
+          condition: { kind: 'source-hp-less-than', amount: 2 },
+        }),
+      ],
+    })
+    expect(
+      declared.players['player-one'].battleArea.find(
+        (entry) => entry.card.instanceId === source?.card.instanceId,
+      )?.rested,
+    ).toBe(true)
+  })
+
+  it('prepares BS6-018 negative route at full HP with a legal attack payment', () => {
+    const state = createCardNegativeDemoState('BS6-018')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-018',
+    )
+
+    expect(source?.hpCards).toHaveLength(2)
+    expect(source?.rested).toBe(false)
+    expect(state.pendingBattle).toBeNull()
+    expect(
+      state.players['player-one'].supportArea.filter(
+        (support) => !support.rested,
+      ),
+    ).toHaveLength(6)
+  })
+
   it.each([
     ['BS6-059', 3, 5],
     ['BS6-060', 4, 6],
@@ -887,6 +944,26 @@ describe('createCardCheckDemoState', () => {
         state.players['player-one'].supportArea.length,
     ).toBeGreaterThanOrEqual(1)
   })
+
+  it('prepares BS6-021 with an LV.2+ Cookie at exactly 1 remaining HP', () => {
+    const state = createCardCheckDemoState('BS6-021')
+    const stage = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-021',
+    )
+    const target = state.players['player-one'].battleArea[0]
+
+    expect(stage?.stageAbility?.effects).toMatchObject([
+      {
+        kind: 'modify-attack',
+        target: { minLevel: 2, maxRemainingHp: 3 },
+        thenDrawUpToIfTargetRemainingHp: { remainingHp: 1, max: 1 },
+      },
+    ])
+    expect(target?.card.level).toBeGreaterThanOrEqual(2)
+    expect(target?.hpCards).toHaveLength(1)
+    expect(state.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+  })
+
   it('prepares BS6-019 with its HP and opponent support conditions', () => {
     const state = createCardCheckDemoState('BS6-019')
     const item = state.players['player-one'].hand.find(
@@ -923,6 +1000,19 @@ describe('createCardCheckDemoState', () => {
     ).toHaveLength(3)
   })
 
+  it('keeps BS6-021 placement payment active while removing all legal targets on the negative route', () => {
+    const state = createCardNegativeDemoState('BS6-021')
+    const stage = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-021',
+    )
+
+    expect(stage).toBeDefined()
+    expect(state.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+    expect(
+      state.players['player-one'].battleArea.every((entry) => entry.card.level < 2),
+    ).toBe(true)
+  })
+
   it('prepares BS6-043 with a yellow Cookie in hand and rested supports for its end phase', () => {
     const state = createCardCheckDemoState('BS6-043')
     const stage = state.players['player-one'].hand.find(
@@ -942,6 +1032,22 @@ describe('createCardCheckDemoState', () => {
     expect(
       state.players['player-one'].supportArea.filter((support) => support.rested),
     ).toHaveLength(2)
+  })
+
+  it('prepares BS6-042 negative route with the break-area condition unmet', () => {
+    const state = createCardNegativeDemoState('BS6-042')
+
+    expect(state.players['player-one'].breakArea).toHaveLength(2)
+    expect(state.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+    expect(state.pendingBattle?.stage).toBe('trap')
+  })
+
+  it('prepares BS6-043 negative route with no yellow Cookie in hand but active payment', () => {
+    const state = createCardNegativeDemoState('BS6-043')
+
+    expect(state.players['player-one'].hand.some((card) => card.type === 'cookie')).toBe(false)
+    expect(state.players['player-one'].supportArea.every((support) => !support.rested)).toBe(true)
+    expect(state.players['player-one'].hand.some((card) => card.id === 'BS6-043')).toBe(true)
   })
 
   it('prepares BS6-059 attack follow-up with exactly five supports and a self target', () => {

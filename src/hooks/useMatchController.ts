@@ -1283,8 +1283,10 @@ export function useMatchController(params: {
     // Card-check test states normally auto-finish the attack after a trap is
     // played. A trap Then effect may create a real pending decision first
     // (for example BS5-087's draw up to 2), so wait until that decision is
-    // resolved before sending resolve-battle. Production matches never use
-    // this shortcut; they continue through the normal player/AI flow.
+    // resolved. When the local attacker has a printed attack-after effect,
+    // advance only one formal damage command at a time; resolve-battle would
+    // also auto-pick/skip the later target and hide the human decision UI.
+    // Production matches never use this shortcut.
     if (
       testStateConfig &&
       battle?.stage === 'damage' &&
@@ -1298,9 +1300,21 @@ export function useMatchController(params: {
           ) {
             return current
           }
+          const preserveHumanAttackEffect =
+            current.pendingBattle.attackerPlayerId === viewerPlayerId &&
+            current.pendingBattle.attackEffects.length > 0
           return applyGameCommand(current, {
-            kind: 'resolve-battle',
-            playerId: viewerPlayerId,
+            ...(preserveHumanAttackEffect
+              ? {
+                  kind: 'resolve-next-damage' as const,
+                  playerId:
+                    current.pendingBattle.damagePlayerId ??
+                    current.pendingBattle.defenderPlayerId,
+                }
+              : {
+                  kind: 'resolve-battle' as const,
+                  playerId: viewerPlayerId,
+                }),
           })
         })
       }, 0)

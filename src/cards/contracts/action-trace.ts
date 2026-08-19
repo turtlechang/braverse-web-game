@@ -50,6 +50,27 @@ export const traceContainsCommandKinds = (
 }
 
 /**
+ * A trace containing only a card source, attack declaration, or payment is
+ * not proof that the printed effect settled.  Browser serial gates use this
+ * predicate to require at least one public target/result/state-change step.
+ */
+export const traceHasSubstantiveEffectEvidence = (
+  trace: readonly CardContractActionTraceEntry[],
+): boolean =>
+  trace
+    .filter((entry) => entry.commandKind !== 'declare-attack')
+    .flatMap((entry) => entry.steps)
+    .filter(
+      (step) =>
+        !/^(?:發動|支付|額外代價|代價|宣告攻擊|攻擊後效果來源)/.test(step),
+    )
+    .some((step) =>
+      /目標|結果|Then|抽牌|傷害|HP|攻擊力|洗回|放置|移動|回到|送入|橫置|活躍|略過|未生效/.test(
+        step,
+      ),
+    )
+
+/**
  * 驗證 Browser／Playwright 送回的公開 trace 是否真的走過預期的
  * 支付→代價→目標→結算步驟。輸入只能是 `buildCardContractActionTrace`
  * 的結果，因此不會把 payload、手牌或牌庫內容帶入 attestation artifact。

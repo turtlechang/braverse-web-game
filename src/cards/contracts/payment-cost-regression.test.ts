@@ -105,6 +105,34 @@ describe('contract payment/cost/then evidence regression', () => {
     )
   })
 
+  it('BS2-079 binds the printed Then order to runtime effect indexes', () => {
+    const record = records.find((card) => card.cardNumber === 'BS2-079')!
+    const converted = convertOfficialCardToGameCard(record)
+    expect(converted.status).toBe('converted')
+    if (converted.status !== 'converted') throw new Error('conversion failed')
+    const gameCard = converted.gameCard
+    expect(gameCard.trap?.effects.map((effect) => effect.kind)).toEqual([
+      'modify-attack',
+      'trash-to-deck',
+    ])
+
+    const orderedAudit = analyzeOfficialCardBehavior(record, gameCard)
+    expect(orderedAudit.checks.resolutionOrderCovered).toBe(true)
+    expect(orderedAudit.contract.status).toBe('verified')
+
+    const swappedEffects = [...(gameCard.trap?.effects ?? [])].reverse()
+    const swappedAudit = analyzeOfficialCardBehavior(record, {
+      ...gameCard,
+      effects: swappedEffects,
+      trap: gameCard.trap
+        ? { ...gameCard.trap, effects: swappedEffects }
+        : undefined,
+    })
+    expect(swappedAudit.checks.resolutionOrderCovered).toBe(false)
+    expect(swappedAudit.errors).toContain('resolution order evidence missing')
+    expect(swappedAudit.contract.status).toBe('needs-review')
+  })
+
   it('P-100 normalization restores the FLIP ability with its discard cost', () => {
     const record = records.find((card) => card.cardNumber === 'P-100')!
     const converted = convertOfficialCardToGameCard(record)
