@@ -188,6 +188,97 @@ describe('appendCommandLogEntry breakLevel', () => {
 })
 
 describe('describeCommandSteps', () => {
+  it('records the Cookie selected by a stage modify-attack effect and its bonus', () => {
+    const base = createBattleState()
+    const stage: GameCard = {
+      id: 'BS6-021',
+      instanceId: 'bs6-021-stage',
+      name: 'TBD Hallway',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { red: 1 },
+        cost: { energy: { red: 1 } },
+        restSource: true,
+        text: 'Select a Cookie. It gains +1 attack damage.',
+        effects: [
+          {
+            kind: 'modify-attack',
+            amount: 1,
+            duration: 'this-turn',
+            target: { side: 'self', min: 0, max: 1 },
+          },
+        ],
+      },
+    }
+    const previous: GameState = {
+      ...base,
+      players: {
+        ...base.players,
+        'player-one': { ...base.players['player-one'], stage: { card: stage, rested: true } },
+      },
+      pendingAbilityEffect: {
+        playerId: 'player-one',
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: stage.instanceId,
+        sourceCardName: stage.name,
+        sourceKind: 'stage',
+        effects: stage.stageAbility?.effects ?? [],
+        effectIndex: 0,
+      },
+    }
+    const command = {
+      kind: 'resolve-ability-effect' as const,
+      playerId: 'player-one' as const,
+      targetIds: ['defender'],
+    }
+
+    expect(describeCommand(previous, previous, command)).toContain(
+      '「defender」攻擊力 +1',
+    )
+    expect(describeCommandSteps(previous, previous, command)?.map((step) => step.text)).toEqual([
+      '攻擊力效果目標：defender',
+      '效果結算：defender 攻擊力 +1',
+    ])
+  })
+
+  it('records the selected payment when a stage is placed', () => {
+    const state = createBattleState()
+    const stage: GameCard = {
+      id: 'stage-payment',
+      instanceId: 'stage-payment-1',
+      name: 'Stage Payment',
+      type: 'stage',
+      stageAbility: {
+        placementCost: { red: 1 },
+        cost: {},
+        restSource: false,
+        text: '',
+        effects: [],
+      },
+    }
+    const previous: GameState = {
+      ...state,
+      players: {
+        ...state.players,
+        'player-one': {
+          ...state.players['player-one'],
+          hand: [stage],
+        },
+      },
+    }
+
+    const steps = describeCommandSteps(previous, previous, {
+      kind: 'play-stage',
+      playerId: 'player-one',
+      instanceId: stage.instanceId,
+      paymentIds: ['p1-support-a'],
+    })
+
+    expect(steps?.map((step) => step.text)).toEqual([
+      '支付場景放置費用（橫置）：p1-support-a',
+    ])
+  })
+
   it('identifies the trap source before listing its payment and discard costs', () => {
     const state = createBattleState()
     const trap: GameCard = {

@@ -43,6 +43,109 @@ const DeckEditorModal = lazy(async () => {
 
 export { EffectOrderModal, OptionalCostAttackModal, InspectDeckModal, RevealTopDeckModal, DrawUpToResponseModal, HandDiscardResponseModal, OpponentRestSupportResponseModal, PlaceHandHpModal, ReorderHpModal } from './PendingDecisionModals'
 
+export interface StagePlacementModalProps {
+  card: GameCard
+  placementCost: EnergyCost
+  paymentCandidates: GameCard[]
+  selectedPaymentIds: string[]
+  paymentValid: boolean
+  paymentValidationReason?: string
+  onTogglePayment: (instanceId: string) => void
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+/**
+ * 場景卡放置時的明確能量付款選擇。
+ *
+ * 場景的 placement cost 是放置動作本身的費用，不應由 UI 自動挑卡代付；
+ * 這個視窗只負責收集玩家選擇，最後仍由 play-stage GameCommand 的規則驗證
+ * `paymentIds` 顏色、活躍狀態與數量。
+ */
+export function StagePlacementModal({
+  card,
+  placementCost,
+  paymentCandidates,
+  selectedPaymentIds,
+  paymentValid,
+  paymentValidationReason,
+  onTogglePayment,
+  onCancel,
+  onConfirm,
+}: StagePlacementModalProps) {
+  const totalCost = Object.values(placementCost).reduce(
+    (total, amount) => total + (amount ?? 0),
+    0,
+  )
+  const selectedIds = new Set(selectedPaymentIds)
+
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section
+        className="battle-response-modal stage-placement-modal"
+        role="alertdialog"
+        aria-label={`${card.name} 場景放置付款`}
+      >
+        <span>場景放置</span>
+        <h2>放置「{card.name}」</h2>
+        <div className="faint-effect-card-detail">
+          <CardFace card={card} />
+          <div>
+            <span>{card.id}</span>
+            <strong>{card.name}</strong>
+            <p>請從支援區選擇要橫置支付放置費用的活躍支援卡。</p>
+          </div>
+        </div>
+        <div className="faint-payment-section stage-placement-payment">
+          <strong>放置費用</strong>
+          <div className="faint-payment-cost">
+            <EnergyCostIcons cost={placementCost} />
+            <span>
+              已選 {selectedPaymentIds.length}/{totalCost}
+            </span>
+          </div>
+          {paymentCandidates.length > 0 ? (
+            <div className="modal-card-options compact faint-payment-candidates">
+              {paymentCandidates.map((candidate) => {
+                const selected = selectedIds.has(candidate.instanceId)
+                return (
+                  <button
+                    type="button"
+                    key={candidate.instanceId}
+                    className={selected ? 'is-selected' : ''}
+                    aria-pressed={selected}
+                    onClick={() => onTogglePayment(candidate.instanceId)}
+                  >
+                    <CardFace card={candidate} selected={selected} />
+                    <span>{candidate.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <small>沒有可支付的活躍支援卡</small>
+          )}
+          {!paymentValid && selectedPaymentIds.length > 0 && (
+            <small className="stage-placement-payment-error">
+              {paymentValidationReason ?? '所選支援卡無法支付此費用。'}
+            </small>
+          )}
+        </div>
+        <div className="modal-actions">
+          <button type="button" onClick={onCancel}>取消</button>
+          <button
+            type="button"
+            disabled={!paymentValid}
+            onClick={onConfirm}
+          >
+            支付並放置
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export type OpeningSetupStep =
   | 'deck-selection'
   | 'rps'

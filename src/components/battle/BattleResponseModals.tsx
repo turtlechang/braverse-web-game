@@ -13,6 +13,7 @@ import {
 } from '../modals/GameModals'
 import type { BattleUiMatchLike } from '../../hooks/battleUiContracts'
 import { getUnmetTrapConditionWarning } from './trapWarnings'
+import { shouldShowAttackResponseChooser } from './battleResponseSelectors'
 
 export interface BattleResponseModalsProps {
   match: BattleUiMatchLike
@@ -68,12 +69,14 @@ export function BattleResponseModals({ match }: BattleResponseModalsProps) {
 
   return (
     <>
-      {match.game.pendingBattle?.stage === 'trap' &&
-        match.game.pendingBattle.defenderPlayerId === match.viewerPlayerId &&
-        match.pendingResponseMode === null &&
-        (match.playerTrapCandidates.length > 0 ||
-          match.playerBlockerCandidates.length > 0 ||
-          match.playerAttackResponseCandidates.length > 0) && (
+      {shouldShowAttackResponseChooser({
+        pendingBattle: match.game.pendingBattle,
+        viewerPlayerId: match.viewerPlayerId,
+        pendingResponseMode: match.pendingResponseMode,
+        trapCount: match.playerTrapCandidates.length,
+        blockerCount: match.playerBlockerCandidates.length,
+        attackResponseCount: match.playerAttackResponseCandidates.length,
+      }) && (
           <AttackResponseModal
             trapCards={match.playerTrapCandidates}
             blockerCards={match.playerBlockerCandidates}

@@ -891,6 +891,18 @@ export const describeCommand = (
         }
         return `${actor} 選擇了「${findCardName(previous, command.targetIds[0])}」作為放置 HP 的目標`
       }
+      const modifyAttack = effects.find(
+        (effect): effect is Extract<CardEffect, { kind: 'modify-attack' }> =>
+          effect.kind === 'modify-attack',
+      )
+      if (modifyAttack) {
+        const targetName = command.targetIds[0]
+          ? findCardName(previous, command.targetIds[0])
+          : undefined
+        return targetName
+          ? `${actor} 使「${targetName}」攻擊力 ${modifyAttack.amount >= 0 ? '+' : ''}${modifyAttack.amount}`
+          : `${actor} 未選擇攻擊力效果目標，未套用攻擊力修改`
+      }
       const outcome = describeDamageOutcome(
         previous,
         next,
@@ -1204,6 +1216,14 @@ export const describeCommandSteps = (
   const state = previous
 
   switch (command.kind) {
+    case 'play-stage': {
+      const paymentStep = describeCardListStep(
+        state,
+        '支付場景放置費用（橫置）',
+        command.paymentIds,
+      )
+      return paymentStep ? [paymentStep] : undefined
+    }
     case 'play-trap': {
       const steps: LogStepDetail[] = []
       const trapCard = findCard(state, command.trapInstanceId)
@@ -1364,6 +1384,7 @@ export const describeCommandSteps = (
       return steps
     }
     case 'play-item':
+    case 'begin-activate-stage':
     case 'activate-stage': {
       const steps: LogStepDetail[] = []
       const paymentStep = describeCardListStep(state, '支付能量（橫置）', command.paymentIds)
@@ -1371,7 +1392,9 @@ export const describeCommandSteps = (
       const supportTrashStep = describeCardListStep(
         state,
         '額外代價：支援區送入棄牌區',
-        command.supportToTrashIds,
+        'supportToTrashIds' in command
+          ? command.supportToTrashIds
+          : undefined,
       )
       if (supportTrashStep) steps.push(supportTrashStep)
       const supportToHandStep = describeCardListStep(
@@ -1397,7 +1420,7 @@ export const describeCommandSteps = (
       steps.push(
         ...describeEffectTargetsSteps(
           state,
-          command.effectTargets,
+          'effectTargets' in command ? command.effectTargets : undefined,
           getResolvedEffects(state, command),
         ),
       )
@@ -1409,6 +1432,14 @@ export const describeCommandSteps = (
         getResolvedEffects(previous, command),
       )
       if (outcome) steps.push({ text: `效果結算：${outcome}` })
+      if (command.kind === 'begin-activate-stage' && 'targetIds' in command) {
+        const targetStep = describeCardListStep(
+          state,
+          '效果目標',
+          command.targetIds,
+        )
+        if (targetStep) steps.push(targetStep)
+      }
       return steps
     }
     case 'resolve-attack-effect': {
@@ -1537,7 +1568,34 @@ export const describeCommandSteps = (
       const fieldToDeckBottom = getFieldToDeckBottomEffect(resolvedEffects)
       return fieldToDeckBottom
         ? [describeFieldToDeckBottomStep(previous, command, fieldToDeckBottom)]
-        : undefined
+        : (() => {
+            const effect = resolvedEffects[0]
+            if (!effect) return undefined
+            const steps: LogStepDetail[] = []
+            const targetStep = describeCardListStep(
+              state,
+              effect.kind === 'modify-attack'
+                ? '攻擊力效果目標'
+                : '效果目標',
+              command.targetIds,
+            )
+            if (targetStep) steps.push(targetStep)
+            if (effect.kind === 'modify-attack') {
+              const amount = effect.amount
+              const targetNames = command.targetIds
+                .map((id) => findCardName(state, id))
+                .join('、')
+              steps.push({
+                text: targetNames
+                  ? `效果結算：${targetNames} 攻擊力 ${amount >= 0 ? '+' : ''}${amount}`
+                  : '效果結算：未選擇攻擊力效果目標，未套用攻擊力修改',
+                cards: command.targetIds
+                  .map((id) => findCard(state, id))
+                  .filter((card): card is GameCard => card !== undefined),
+              })
+            }
+            return steps.length > 0 ? steps : undefined
+          })()
     }
     case 'resolve-faint-effect': {
       const pending = previous.pendingFaintEffects?.[0]
