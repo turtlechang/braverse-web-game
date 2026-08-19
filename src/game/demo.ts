@@ -2697,6 +2697,13 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
           cardCheckFillerCookie('BS5-042-break-lv3', 3, 4, 0, payColor).cookie,
           cardCheckFillerCookie('BS5-042-break-lv2', 2, 4, 0, payColor).cookie,
         ]
+      : card.id === 'BS6-024'
+        ? [
+            // Roll Cake Cookie counts only LV.3 Cookies in the owner's break
+            // area. Keep one real LV.3 candidate visible for its attack Then.
+            cardCheckFillerCookie('BS6-024-break-lv3', 3, 4, 0, payColor).cookie,
+            cardCheckFillerCookie('BS6-024-break-lv2', 2, 4, 0, payColor).cookie,
+          ]
       : card.id === 'BS6-025'
         ? [
             cardCheckFillerCookie('BS6-025-break-lv2', 2, 4, 0, payColor).cookie,
@@ -3082,10 +3089,11 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
   if (
     cookieCard.attackEffects &&
     cookieCard.attackEffects.length > 0 &&
-    // BS3-113, BS6-072, BS6-074, and BS6-079 are card-check entries used to verify an
+    // BS3-113, BS6-031, BS6-072, BS6-074, and BS6-079 are card-check entries used to verify an
     // OnPlay skill. Their secondary attack effects must not hide the deploy
     // UI; dedicated attack fixtures still cover those later effects.
     cookieCard.id !== 'BS3-113' &&
+    cookieCard.id !== 'BS6-031' &&
     cookieCard.id !== 'BS6-072' &&
     cookieCard.id !== 'BS6-074' &&
     cookieCard.id !== 'BS6-079'

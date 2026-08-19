@@ -799,6 +799,33 @@ describe('createCardCheckDemoState', () => {
     })
   })
 
+  it('prepares BS6-024 attack follow-up with a LV.3 Cookie in the break area', () => {
+    const state = createCardCheckDemoState('BS6-024')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-024',
+    )
+
+    expect(source?.rested).toBe(true)
+    expect(state.players['player-one'].breakArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'BS6-024-break-lv3',
+          type: 'cookie',
+          level: 3,
+        }),
+      ]),
+    )
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackEffects: [
+        expect.objectContaining({
+          kind: 'damage-by-break-count',
+          exactBreakLevel: 3,
+        }),
+      ],
+    })
+  })
+
   it.each([
     ['BS6-059', 3, 5],
     ['BS6-060', 4, 6],
@@ -935,6 +962,43 @@ describe('createCardCheckDemoState', () => {
     expect(deployed.players['player-one'].battleArea).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ card: expect.objectContaining({ id: 'BS6-072' }) }),
+      ]),
+    )
+    expect(deployed.pendingOnPlay).toMatchObject({
+      playerId: 'player-one',
+      sourceInstanceId: source!.instanceId,
+      origin: 'hand',
+    })
+  })
+
+  it('keeps BS6-031 in hand so its OnPlay skill is tested through deployment', () => {
+    const state = createCardCheckDemoState('BS6-031')
+    const source = state.players['player-one'].hand.find(
+      (card) => card.id === 'BS6-031',
+    )
+
+    expect(source).toMatchObject({
+      id: 'BS6-031',
+      type: 'cookie',
+      skill: {
+        trigger: 'on-play',
+        cost: { energy: { yellow: 1 } },
+      },
+    })
+    expect(state.pendingBattle).toBeNull()
+    expect(state.pendingOnPlay).toBeNull()
+
+    const deployed = applyGameCommand(state, {
+      kind: 'deploy-cookie',
+      playerId: 'player-one',
+      instanceId: source!.instanceId,
+    })
+
+    expect(deployed.players['player-one'].battleArea).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          card: expect.objectContaining({ id: 'BS6-031' }),
+        }),
       ]),
     )
     expect(deployed.pendingOnPlay).toMatchObject({
