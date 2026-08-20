@@ -1582,6 +1582,55 @@ describe('createCardCheckDemoState', () => {
       .toBe(false)
   })
 
+  it('builds the BS6-016 positive card-check route with one remaining HP', () => {
+    const state = createCardCheckDemoState('BS6-016')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-016',
+    )
+
+    expect(source).toBeDefined()
+    expect(source?.hpCards).toHaveLength(1)
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackerPlayerId: 'player-one',
+      attackerInstanceId: source?.card.instanceId,
+    })
+
+    const effect = source?.card.attackEffects?.[0]
+    expect(effect).toMatchObject({
+      kind: 'damage',
+      condition: { kind: 'source-hp-less-than', amount: 2 },
+    })
+    expect(
+      isEffectConditionMet(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source!.card.instanceId,
+      }, effect!),
+    ).toBe(true)
+  })
+
+  it('builds the BS6-016 negative card-check route above the HP threshold', () => {
+    const state = createCardNegativeDemoState('BS6-016')
+    const source = state.players['player-one'].battleArea.find(
+      (entry) => entry.card.id === 'BS6-016',
+    )
+
+    expect(source).toBeDefined()
+    expect(source?.hpCards).toHaveLength(3)
+    expect(state.pendingBattle).toMatchObject({
+      stage: 'attack-effect',
+      attackerInstanceId: source?.card.instanceId,
+    })
+
+    const effect = source?.card.attackEffects?.[0]
+    expect(
+      isEffectConditionMet(state, {
+        sourcePlayerId: 'player-one',
+        sourceInstanceId: source!.card.instanceId,
+      }, effect!),
+    ).toBe(false)
+  })
+
   it('keeps BS5 Browser card-check Cookies at legal positive HP', () => {
     const bs5005 = createCardCheckDemoState('BS5-005')
     expect(bs5005.players['player-one'].battleArea).toEqual(

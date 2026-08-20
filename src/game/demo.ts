@@ -3162,12 +3162,17 @@ export const createCardCheckDemoState = (cardNumber: string): GameState => {
     // exactly 1 HP. Starting it in the generic post-attack window would rest
     // the card and auto-skip the unmet condition before the player can test it.
     const usesManualAttackFixture = cookieCard.id === 'BS6-018'
+    // BS6-016's Then requires the attacking Cookie to have exactly 1 remaining
+    // HP. Keep that condition true in the positive card-check route so the
+    // real target-selection UI is reachable instead of being auto-skipped.
+    const usesLowHpAttackFixture =
+      usesManualAttackFixture || cookieCard.id === 'BS6-016'
     // The generic fixture should enter the card's real post-attack UI rather
     // than silently auto-skipping an effect whose condition happens to be
     // false in the neutral spread above. Keep these adjustments local to the
     // browser fixture; they do not alter the official card pool or rules.
     const attackSourceHpCount =
-      usesManualAttackFixture
+      usesLowHpAttackFixture
         ? 1
       : cookieCard.id === 'BS6-053'
         ? cookieCard.hp
@@ -3731,6 +3736,29 @@ export const createCardNegativeDemoState = (cardNumber: string): GameState => {
         ...entry,
         card: { ...entry.card, level: 1 },
       })),
+      discardPile: negativeDiscardPile,
+    })
+  }
+  if (baseCardNumber === 'BS6-016') {
+    // The positive BS6-016 card-check fixture intentionally starts at 1 HP.
+    // Restore the Cookie to full HP here so the negative route proves the
+    // remaining-HP condition blocks the Then effect rather than relying on an
+    // unrelated unavailable payment.
+    return updateDemoPlayer(state, 'player-one', {
+      supportArea: player.supportArea.map((support) => ({
+        ...support,
+        rested: false,
+      })),
+      battleArea: player.battleArea.map((entry) =>
+        entry.card.id === 'BS6-016'
+          ? {
+              ...entry,
+              hpCards: Array.from({ length: entry.card.hp }, (_, index) =>
+                testSupportCard('BS6-016-negative-hp-' + (index + 1)),
+              ),
+            }
+          : entry,
+      ),
       discardPile: negativeDiscardPile,
     })
   }
